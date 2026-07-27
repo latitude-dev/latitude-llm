@@ -23,7 +23,9 @@ import {
   createTemporalClient,
   createWorkflowQuerier,
   createWorkflowStarter,
+  createWorkflowTerminator,
   loadTemporalConfig,
+  type WorkflowTerminator,
 } from "@platform/workflows-temporal"
 import { withTracing } from "@repo/observability"
 import { mcp } from "better-auth/plugins"
@@ -43,6 +45,7 @@ let redisInstance: RedisClient | undefined
 let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
+let workflowTerminatorPromise: Promise<WorkflowTerminator> | undefined
 
 /**
  * Postgres client using the admin (superuser) connection.
@@ -129,6 +132,18 @@ export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
       })
   }
   return workflowStarterPromise
+}
+
+export function getWorkflowTerminator(): Promise<WorkflowTerminator> {
+  if (!workflowTerminatorPromise) {
+    workflowTerminatorPromise = getTemporalClient()
+      .then((client) => createWorkflowTerminator(client))
+      .catch((error) => {
+        workflowTerminatorPromise = undefined
+        throw error
+      })
+  }
+  return workflowTerminatorPromise
 }
 
 export function getWorkflowQuerier(): Promise<WorkflowQuerierShape> {

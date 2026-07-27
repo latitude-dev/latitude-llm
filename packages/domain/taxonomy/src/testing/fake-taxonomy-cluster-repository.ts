@@ -167,6 +167,13 @@ export const createFakeTaxonomyClusterRepository = (
         }
       }),
 
+    deleteByBehavior: ({ projectId, customBehaviorId }) =>
+      Effect.sync(() => {
+        for (const [id, cluster] of clusters) {
+          if (cluster.projectId === projectId && cluster.customBehaviorId === customBehaviorId) clusters.delete(id)
+        }
+      }),
+
     ...overrides,
   }
 

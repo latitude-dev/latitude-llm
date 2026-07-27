@@ -30,9 +30,9 @@ export {
   FACET_EXTRACTION_INPUT_CHAR_CAP,
   FACET_INSTRUCTIONS_MAX_LENGTH,
   FACET_NAME_MAX_LENGTH,
+  FACET_PRESET_SLUG_PREFIX,
   FACET_PROJECTION_TEXT_MAX_LENGTH,
   MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
-  MAX_FACETS_PER_PROJECT,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODES,
   TAXONOMY_ADAPTIVE_POLICY_VERSION,
@@ -86,6 +86,7 @@ export {
   type TaxonomyObservationWeightScheme,
   type TaxonomyTreeRelativeDepthSchedule,
   type TaxonomyTreeStaticDepthSchedule,
+  TOPICS_BEHAVIOR_SLUG,
 } from "./constants.ts"
 export {
   type TaxonomyCentroid,
@@ -99,12 +100,17 @@ export {
   CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE,
   CUSTOM_BEHAVIOR_EXCLUDED_FILTER_FIELDS,
   CUSTOM_BEHAVIOR_EXCLUDED_FILTER_MESSAGE,
+  CUSTOM_BEHAVIOR_RESERVED_SLUG_MESSAGE,
   type CustomBehavior,
   CustomBehaviorStatus,
+  countCustomBehaviorViews,
+  customBehaviorFilterSetEquals,
   customBehaviorFilterSetHasConditions,
   customBehaviorFilterSetSchema,
   customBehaviorSchema,
   customBehaviorStatusSchema,
+  isCustomBehaviorView,
+  isReservedCustomBehaviorSlug,
   stripCustomBehaviorExcludedFields,
 } from "./entities/custom-behavior.ts"
 export { TaxonomyDimension, taxonomyDimensionSchema } from "./entities/dimension.ts"
@@ -113,9 +119,20 @@ export {
   taxonomyFacetSchema,
 } from "./entities/facet.ts"
 export {
+  FACET_PRESETS,
+  type FacetPreset,
+  findFacetPreset,
+} from "./entities/facet-preset.ts"
+export {
   type TaxonomyFacetProjection,
   taxonomyFacetProjectionSchema,
 } from "./entities/facet-projection.ts"
+export {
+  type FacetSelection,
+  facetSelectionSchema,
+  type NewFacetInput,
+  newFacetInputSchema,
+} from "./entities/facet-selection.ts"
 export {
   type TaxonomyClusterLineage,
   TaxonomyLineageTransitionType,
@@ -145,7 +162,6 @@ export {
   CustomBehaviorLimitReachedError,
   CustomBehaviorNameInvalidError,
   FacetInvalidError,
-  FacetLimitReachedError,
   TaxonomyClusterLockUnavailableError,
   TaxonomyClusterNotFoundError,
   TaxonomyQualityGateError,
@@ -296,12 +312,14 @@ export {
   type TaxonomyClusterBuildResult,
 } from "./use-cases/build-hierarchical-taxonomy.ts"
 export { type CreateCustomBehaviorInput, createCustomBehavior } from "./use-cases/create-custom-behavior.ts"
-export { type CreateFacetInput, createFacet } from "./use-cases/create-facet.ts"
+export { buildFacet, type CreateFacetInput, createFacet } from "./use-cases/create-facet.ts"
+export { type CreateFacetBehaviorInput, createFacetBehavior } from "./use-cases/create-facet-behavior.ts"
 export {
   type ClusterAssignmentDecision,
   decideClusterAssignment,
 } from "./use-cases/decide-cluster-assignment.ts"
 export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
+export { type DiscardBehaviorInput, discardBehavior } from "./use-cases/discard-behavior.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export { expandTopicFilterSetUseCase } from "./use-cases/expand-topic-filter-set.ts"
 export {
@@ -380,6 +398,7 @@ export {
   type PreviewCustomBehaviorSampleResult,
   previewCustomBehaviorSampleUseCase,
 } from "./use-cases/preview-custom-behavior-sample.ts"
+export { type ResolveFacetSelectionInput, resolveFacetSelection } from "./use-cases/resolve-facet-selection.ts"
 export { type RouteToDeepestClusterInput, routeToDeepestClusterUseCase } from "./use-cases/route-to-deepest-cluster.ts"
 export {
   type TriggerProjectGardeningInput,

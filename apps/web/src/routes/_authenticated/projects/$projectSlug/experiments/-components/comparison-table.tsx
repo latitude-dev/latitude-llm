@@ -51,6 +51,7 @@ import type {
   ExperimentVariantRecord,
   VariantPatch,
 } from "../../../../../../domains/experiments/experiments.collection.ts"
+import { topicBehaviourClusterLink } from "../../../../../../domains/taxonomy/topic-behaviour-link.ts"
 import { SearchInput } from "../../-components/search-input.tsx"
 import { TIME_PRESETS } from "../../-components/time-filter-dropdown.tsx"
 import { serializeFilters } from "../../-components/trace-page-state.ts"
@@ -817,12 +818,7 @@ function TopListRow({
   }
   if (entity === "behaviours") {
     return (
-      <Link
-        to="/projects/$projectSlug/behaviours"
-        params={{ projectSlug }}
-        search={{ behaviourPath: item.key }}
-        className={className}
-      >
+      <Link {...topicBehaviourClusterLink(projectSlug, item.key)} className={className}>
         {children}
       </Link>
     )

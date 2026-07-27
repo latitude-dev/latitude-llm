@@ -39,8 +39,15 @@ const {
     ...defaultActivityRetryPolicy,
     initialInterval: "1 minute",
     maximumInterval: "30 minutes",
-    // A staged plan lost from Redis (eviction, flush) cannot reappear; fail fast and let the next sweep rebuild.
-    nonRetryableErrorTypes: ["TaxonomyGardeningPlanMissingError"],
+    // Extends the default list rather than replacing it, so the default's
+    // `BadRequestError` keeps failing fast here too — that is what the AI metering
+    // gate raises when an organization is out of credits, and an hour of retries
+    // won't refill them. A staged plan lost from Redis (eviction, flush) likewise
+    // cannot reappear; fail fast and let the next sweep rebuild.
+    nonRetryableErrorTypes: [
+      ...(defaultActivityRetryPolicy.nonRetryableErrorTypes ?? []),
+      "TaxonomyGardeningPlanMissingError",
+    ],
   },
 })
 

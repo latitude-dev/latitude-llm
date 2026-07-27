@@ -46,9 +46,6 @@ export const createFakeFacetRepository = (
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
       ),
 
-    countByProject: ({ projectId }) =>
-      Effect.sync(() => [...rows.values()].filter((row) => row.projectId === projectId).length),
-
     countBySlug: ({ projectId, slug }) =>
       Effect.sync(() => [...rows.values()].filter((row) => row.projectId === projectId && row.slug === slug).length),
 
@@ -61,6 +58,16 @@ export const createFakeFacetRepository = (
           })
         }
         rows.set(facet.id, { ...facet, organizationId: FAKE_ORG_ID })
+      }),
+
+    findOrCreateBySlug: (facet) =>
+      Effect.sync(() => {
+        for (const row of rows.values()) {
+          if (row.projectId === facet.projectId && row.slug === facet.slug) return row
+        }
+        const created = { ...facet, organizationId: FAKE_ORG_ID }
+        rows.set(facet.id, created)
+        return created
       }),
 
     markGardened: ({ id, gardenedAt: at }) => Effect.sync(() => void gardenedAt.set(id, at)),

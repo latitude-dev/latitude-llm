@@ -69,8 +69,8 @@ const TOPIC_POLICY =
   "Conversation topic clusters describe what users come to do (e.g. 'Order Status', 'Returns and Refunds', 'Account Billing'). They are NOT conversational rituals (no 'user greets', 'user thanks', 'user says hello'), NOT model behaviours (no 'agent apologizes'), and NOT generic dispositions ('frustrated user'). If samples disagree, name the dominant topic of the conversation transcripts."
 
 /**
- * The per-tree naming policy — the wording that varies between the topic tree
- * and each facet lens. Everything else about naming (prompts, collision guard,
+ * The per-tree naming policy: the wording that varies between the topic tree
+ * and each facet. Everything else about naming (prompts, collision guard,
  * deepest-first ordering) is shared. `TOPIC_NAMING_POLICY` reproduces the
  * previously hard-coded topic strings byte-for-byte, so a topic tree named
  * without an explicit policy is unchanged.
@@ -94,18 +94,18 @@ export const TOPIC_NAMING_POLICY: ClusterNamingPolicy = {
 }
 
 /**
- * Naming policy for a facet lens: the clusters group one-sentence extracted
+ * Naming policy for a facet: the clusters group one-sentence extracted
  * statements (not raw transcripts), so the model is told to name the shared
  * answer to the facet's question rather than a conversation topic.
  */
 export const facetNamingPolicy = (facet: Pick<TaxonomyFacet, "name" | "instructions">): ClusterNamingPolicy => {
-  const lens = facet.name.trim()
-  const subject = lens.toLowerCase()
+  const facetName = facet.name.trim()
+  const subject = facetName.toLowerCase()
   return {
-    guidance: `Each cluster groups one-sentence statements extracted from separate conversations through the "${lens}" lens: ${facet.instructions} Name each cluster by the shared ${subject} its statements express — a short label, never the lens name itself, never a conversational ritual or generic disposition. If samples disagree, name the dominant one.`,
+    guidance: `Each cluster groups one-sentence statements extracted from separate conversations through the "${facetName}" facet: ${facet.instructions} Name each cluster by the shared ${subject} its statements express, a short label, never the facet name itself, never a conversational ritual or generic disposition. If samples disagree, name the dominant one.`,
     subjectLabel: "THEME",
     descriptionClause: `of the shared ${subject} these statements express`,
-    leafModeContext: `These are one-sentence statements extracted from separate conversations through the "${lens}" lens. Find the dominant ${subject} across them.`,
+    leafModeContext: `These are one-sentence statements extracted from separate conversations through the "${facetName}" facet. Find the dominant ${subject} across them.`,
   }
 }
 
@@ -224,7 +224,7 @@ const generateWithCollisionGuard = (input: Omit<GenerateInput, "retryForbiddenNa
 
 /**
  * The view a cluster is named within. Every tree (global topic, cohort topic,
- * and each facet lens) shares the same prompts, collision guard, and
+ * and each facet) shares the same prompts, collision guard, and
  * deepest-first ordering and differs only here: which sub-tree the
  * siblings/children come from (`customBehaviorId` × `facetId`), where the member
  * embeddings/summaries are read from (`listMembers`), and the wording `policy`.
@@ -233,7 +233,7 @@ const generateWithCollisionGuard = (input: Omit<GenerateInput, "retryForbiddenNa
 interface ClusterNamingSource {
   /** Omit/null for whole-project scope; set to scope the cluster tree to a cohort. */
   readonly customBehaviorId?: CustomBehaviorId | null
-  /** Omit/null for the topic lens; set to scope the cluster tree to a facet. */
+  /** Omit/null for the topic tree; set to scope the cluster tree to a facet. */
   readonly facetId?: FacetId | null
   /** Per-tree naming wording. Defaults to `TOPIC_NAMING_POLICY`. */
   readonly policy?: ClusterNamingPolicy

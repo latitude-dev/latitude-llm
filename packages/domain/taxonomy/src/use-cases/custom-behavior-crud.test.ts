@@ -1,10 +1,20 @@
 import { QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { CustomBehaviorId, FacetId, type FilterSet, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
+import {
+  ChSqlClient,
+  CustomBehaviorId,
+  FacetId,
+  type FilterSet,
+  OrganizationId,
+  ProjectId,
+  SqlClient,
+  TaxonomyClusterId,
+} from "@domain/shared"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Exit, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { CUSTOM_BEHAVIOR_GARDENING_MIN_INTERVAL_MS, MAX_CUSTOM_BEHAVIORS_PER_PROJECT } from "../constants.ts"
+import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { type CustomBehavior, CustomBehaviorStatus } from "../entities/custom-behavior.ts"
 import type { TaxonomyFacet } from "../entities/facet.ts"
 import {
@@ -14,9 +24,17 @@ import {
   FacetInvalidError,
 } from "../errors.ts"
 import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts"
+import { FacetProjectionRepository } from "../ports/facet-projection-repository.ts"
 import { FacetRepository } from "../ports/facet-repository.ts"
+import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
+import { TaxonomyRunRepository } from "../ports/taxonomy-run-repository.ts"
+import { TaxonomyViewAssignmentRepository } from "../ports/taxonomy-view-assignment-repository.ts"
 import { createFakeCustomBehaviorRepository } from "../testing/fake-custom-behavior-repository.ts"
+import { createFakeFacetProjectionRepository } from "../testing/fake-facet-projection-repository.ts"
 import { createFakeFacetRepository } from "../testing/fake-facet-repository.ts"
+import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
+import { createFakeTaxonomyRunRepository } from "../testing/fake-taxonomy-run-repository.ts"
+import { createFakeTaxonomyViewAssignmentRepository } from "../testing/fake-taxonomy-view-assignment-repository.ts"
 import { createCustomBehavior } from "./create-custom-behavior.ts"
 import { deleteCustomBehavior } from "./delete-custom-behavior.ts"
 import { generateCustomBehavior } from "./generate-custom-behavior.ts"
@@ -42,17 +60,64 @@ const makeBehavior = (overrides: Partial<CustomBehavior> = {}): CustomBehavior =
   ...overrides,
 })
 
+const makeFacetRow = (overrides: Partial<TaxonomyFacet> = {}): TaxonomyFacet => ({
+  id: FacetId("f".repeat(24)),
+  organizationId: ORG_ID,
+  projectId: PROJECT_ID,
+  slug: "user-goal",
+  name: "User goal",
+  description: "What the user is trying to accomplish.",
+  instructions: "In one sentence, what was the user trying to accomplish?",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  ...overrides,
+})
+
+const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => ({
+  id: TaxonomyClusterId("c".repeat(24)),
+  organizationId: ORG_ID,
+  projectId: PROJECT_ID,
+  customBehaviorId: null,
+  facetId: null,
+  dimension: "topic",
+  parentClusterId: null,
+  depth: 0,
+  path: "",
+  splitLinkThreshold: null,
+  name: "Refund requests",
+  description: "Users asking for refunds.",
+  centroid: { base: [1, 0], mass: 1, model: "fake", decay: 1, weights: { default: 1 } },
+  observationCount: 10,
+  state: "active",
+  mergedIntoClusterId: null,
+  firstObservedAt: new Date("2026-01-01T00:00:00.000Z"),
+  lastObservedAt: new Date("2026-01-01T00:00:00.000Z"),
+  clusteredAt: new Date("2026-01-01T00:00:00.000Z"),
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  ...overrides,
+})
+
 function makeLayer(facets: readonly TaxonomyFacet[] = []) {
   const { repository, rows } = createFakeCustomBehaviorRepository()
   const facetRepo = createFakeFacetRepository(facets)
   const queue = createFakeQueuePublisher()
+  const assignments = createFakeTaxonomyViewAssignmentRepository()
+  const clusterRepo = createFakeTaxonomyClusterRepository()
+  const runRepo = createFakeTaxonomyRunRepository()
+  const projectionRepo = createFakeFacetProjectionRepository()
   const layer = Layer.mergeAll(
     Layer.succeed(CustomBehaviorRepository, repository),
     Layer.succeed(FacetRepository, facetRepo.repository),
+    Layer.succeed(TaxonomyViewAssignmentRepository, assignments.repository),
+    Layer.succeed(TaxonomyClusterRepository, clusterRepo.repository),
+    Layer.succeed(TaxonomyRunRepository, runRepo.repository),
+    Layer.succeed(FacetProjectionRepository, projectionRepo.repository),
     Layer.succeed(QueuePublisher, queue.publisher),
     Layer.succeed(SqlClient, createFakeSqlClient()),
+    Layer.succeed(ChSqlClient, createFakeChSqlClient()),
   )
-  return { layer, rows, queue }
+  return { layer, rows, queue, assignments, clusterRepo, runRepo, projectionRepo, facetRepo }
 }
 
 describe("createCustomBehavior", () => {
@@ -84,6 +149,17 @@ describe("createCustomBehavior", () => {
     expect(result.slug).toMatch(/^refunds-[a-z0-9]{4}$/)
   })
 
+  it("rejects a name that slugifies into the reserved lat- namespace", async () => {
+    const { layer } = makeLayer()
+    await expect(
+      Effect.runPromise(
+        createCustomBehavior({ projectId: PROJECT_ID, name: "Lat topics", filterSet: FILTER }).pipe(
+          Effect.provide(layer),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(CustomBehaviorNameInvalidError)
+  })
+
   it("rejects a filter set containing topics", async () => {
     const { layer } = makeLayer()
     await expect(
@@ -106,30 +182,22 @@ describe("createCustomBehavior", () => {
     ).rejects.toBeInstanceOf(CustomBehaviorFilterInvalidError)
   })
 
-  const makeFacet = (overrides: Partial<TaxonomyFacet> = {}): TaxonomyFacet => ({
-    id: FacetId("f".repeat(24)),
-    organizationId: ORG_ID,
-    projectId: PROJECT_ID,
-    slug: "user-goal",
-    name: "User goal",
-    description: "What the user is trying to accomplish.",
-    instructions: "In one sentence, what was the user trying to accomplish?",
-    createdAt: new Date("2026-01-01T00:00:00.000Z"),
-    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-    ...overrides,
-  })
+  const makeFacet = makeFacetRow
 
-  it("allows an empty filter when a facet lens is chosen (a whole-project facet view) and stores the lens", async () => {
+  it("allows an empty filter when a facet is chosen (a whole-project facet view) and stores the facet", async () => {
     const facetId = FacetId("f".repeat(24))
     const { layer, rows } = makeLayer([makeFacet({ id: facetId })])
     const result = await Effect.runPromise(
-      createCustomBehavior({ projectId: PROJECT_ID, name: "User goal", filterSet: {}, facetId }).pipe(
-        Effect.provide(layer),
-      ),
+      createCustomBehavior({
+        projectId: PROJECT_ID,
+        name: "User goal",
+        filterSet: {},
+        facetSelection: { kind: "facet", facetId },
+      }).pipe(Effect.provide(layer)),
     )
     expect(result.facetId).toBe(facetId)
     expect(rows.get(result.id)?.facetId).toBe(facetId)
-    // Still auto-starts gardening — the lens gardens through the custom-behavior sweep.
+    // Still auto-starts gardening: the facet gardens through the custom-behavior sweep.
     expect(result.status).toBe(CustomBehaviorStatus.Generating)
   })
 
@@ -139,9 +207,9 @@ describe("createCustomBehavior", () => {
       Effect.runPromise(
         createCustomBehavior({
           projectId: PROJECT_ID,
-          name: "Dangling lens",
+          name: "Dangling facet",
           filterSet: {},
-          facetId: FacetId("f".repeat(24)),
+          facetSelection: { kind: "facet", facetId: FacetId("f".repeat(24)) },
         }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toBeInstanceOf(FacetInvalidError)
@@ -152,9 +220,12 @@ describe("createCustomBehavior", () => {
     const { layer } = makeLayer([makeFacet({ id: facetId, projectId: OTHER_PROJECT_ID })])
     await expect(
       Effect.runPromise(
-        createCustomBehavior({ projectId: PROJECT_ID, name: "Cross-project lens", filterSet: {}, facetId }).pipe(
-          Effect.provide(layer),
-        ),
+        createCustomBehavior({
+          projectId: PROJECT_ID,
+          name: "Cross-project facet",
+          filterSet: {},
+          facetSelection: { kind: "facet", facetId },
+        }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toBeInstanceOf(FacetInvalidError)
   })
@@ -230,6 +301,47 @@ describe("updateCustomBehavior", () => {
     ).rejects.toBeInstanceOf(CustomBehaviorNameInvalidError)
   })
 
+  it("rejects a rename into the reserved lat- namespace", async () => {
+    const { layer } = makeLayer()
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
+          return yield* updateCustomBehavior({ id: created.id, name: "Lat topics" })
+        }).pipe(Effect.provide(layer)),
+      ),
+    ).rejects.toBeInstanceOf(CustomBehaviorNameInvalidError)
+  })
+
+  it("purges the assignment slice and re-gardens when the cohort changes", async () => {
+    const { layer, queue, assignments } = makeLayer()
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
+        return yield* updateCustomBehavior({
+          id: created.id,
+          filterSet: { models: [{ op: "in", value: ["gpt-4o-mini"] }] },
+        })
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(assignments.deletedBehaviorIds).toHaveLength(1)
+    // One enqueue from the create, one from the cohort change.
+    expect(queue.published).toHaveLength(2)
+  })
+
+  it("leaves the gardened tree alone when the filter is re-sent unchanged", async () => {
+    const { layer, queue, assignments } = makeLayer()
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
+        // Same conditions, keys in a different order: re-serialization must not read as a change.
+        return yield* updateCustomBehavior({ id: created.id, name: "Chargebacks", filterSet: { ...FILTER } })
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(assignments.deletedBehaviorIds).toHaveLength(0)
+    expect(queue.published).toHaveLength(1)
+  })
+
   it("rejects a filter set containing topics on update", async () => {
     const { layer } = makeLayer()
     await expect(
@@ -258,6 +370,66 @@ describe("deleteCustomBehavior", () => {
       }).pipe(Effect.provide(layer)),
     )
     expect(listed).toHaveLength(0)
+  })
+
+  it("purges the scoped tree and the assignment slice, leaving the global topic tree alone", async () => {
+    const { layer, clusterRepo, assignments } = makeLayer()
+    const behaviorId = await Effect.runPromise(
+      Effect.gen(function* () {
+        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
+        const clusters = yield* TaxonomyClusterRepository
+        // One node of this behavior's scoped tree, and one of the live global tree.
+        yield* clusters.save(makeCluster({ id: TaxonomyClusterId("c".repeat(24)), customBehaviorId: created.id }))
+        yield* clusters.save(makeCluster({ id: TaxonomyClusterId("d".repeat(24)), customBehaviorId: null }))
+        yield* deleteCustomBehavior({ id: created.id })
+        return created.id
+      }).pipe(Effect.provide(layer)),
+    )
+    const remaining = [...clusterRepo.clusters.values()]
+    expect(remaining.map((cluster) => cluster.customBehaviorId)).toEqual([null])
+    expect(assignments.deletedBehaviorIds).toEqual([behaviorId])
+  })
+
+  it("purges the facet and its projections when the deleted view was its last user", async () => {
+    const facetId = FacetId("f".repeat(24))
+    const { layer, facetRepo, projectionRepo } = makeLayer([makeFacetRow({ id: facetId })])
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const created = yield* createCustomBehavior({
+          projectId: PROJECT_ID,
+          name: "User goal",
+          filterSet: {},
+          facetSelection: { kind: "facet", facetId },
+        })
+        yield* deleteCustomBehavior({ id: created.id })
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(facetRepo.rows.has(facetId)).toBe(false)
+    expect(projectionRepo.deletedFacetIds).toEqual([facetId])
+  })
+
+  it("keeps the facet when another view still uses it", async () => {
+    const facetId = FacetId("f".repeat(24))
+    const { layer, facetRepo, projectionRepo } = makeLayer([makeFacetRow({ id: facetId })])
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const whole = yield* createCustomBehavior({
+          projectId: PROJECT_ID,
+          name: "User goal",
+          filterSet: {},
+          facetSelection: { kind: "facet", facetId },
+        })
+        yield* createCustomBehavior({
+          projectId: PROJECT_ID,
+          name: "Marvin's goals",
+          filterSet: FILTER,
+          facetSelection: { kind: "facet", facetId },
+        })
+        yield* deleteCustomBehavior({ id: whole.id })
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(facetRepo.rows.has(facetId)).toBe(true)
+    expect(projectionRepo.deletedFacetIds).toEqual([])
   })
 
   it("fails to delete a missing behavior with NotFoundError", async () => {

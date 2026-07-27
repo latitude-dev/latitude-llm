@@ -1,5 +1,5 @@
 import { MOMENT_KINDS, type MomentKind } from "@domain/conversation-intelligence"
-import { CustomBehaviorId, normalizeCentroid, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import { CustomBehaviorId, FacetId, normalizeCentroid, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import {
   type ClusterAnalysisAggregate,
   getBehaviourTrajectoryUseCase,
@@ -393,6 +393,7 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
       limit: z.number().int().positive().max(500).optional(),
       timeRange: behaviourTimeRangeSchema,
       customBehaviorId: z.string().optional(),
+      facetId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<ProjectBehavioursRecord> => {
@@ -406,6 +407,7 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId,
           ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+          ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
           ...(data.dimension ? { dimension: data.dimension } : {}),
           // high_escalation filters on intelligence rollups below, after the
           // tree and aggregates are loaded; the domain use-case has no
@@ -436,6 +438,7 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
                 sourceWindowStart,
                 sourceWindowEnd,
                 ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+                ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
               })
               .pipe(Effect.map((aggregate) => [node.cluster.id, aggregate] as const)),
           { concurrency: 6 },
@@ -467,6 +470,7 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
       axis: z.enum(["day", "turn"]),
       timeRange: behaviourTimeRangeSchema,
       customBehaviorId: z.string().optional(),
+      facetId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<BehaviourTrajectoryRecord> => {
@@ -485,6 +489,7 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
         ...(timeRange.from ? { startTimeFrom: timeRange.from } : {}),
         ...(timeRange.to ? { startTimeTo: timeRange.to } : {}),
         ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+        ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
       }).pipe(
         withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
         withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
@@ -504,6 +509,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
       timeRange: behaviourTimeRangeSchema,
       momentRange: behaviourMomentRangeSchema,
       customBehaviorId: z.string().optional(),
+      facetId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<BehaviourSessionsRecord> => {
@@ -522,6 +528,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
         offset: data.offset ?? 0,
         limit: data.limit ?? 50,
         ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+        ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
       }).pipe(
         withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
         withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
@@ -555,6 +562,7 @@ export const getClusterProfile = createServerFn({ method: "GET" })
       clusterId: z.string(),
       timeRange: behaviourTimeRangeSchema,
       customBehaviorId: z.string().optional(),
+      facetId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<ClusterSessionIntelligenceRecord> => {
@@ -570,6 +578,7 @@ export const getClusterProfile = createServerFn({ method: "GET" })
         sourceWindowStart: timeRange.from ?? new Date(0),
         sourceWindowEnd: timeRange.to ?? new Date(),
         ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+        ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
       }).pipe(
         Effect.map((result) => ({
           rates: result.rates,

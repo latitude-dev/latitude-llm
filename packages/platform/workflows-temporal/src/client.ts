@@ -322,3 +322,29 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
       }),
   }
 }
+
+export interface WorkflowTerminator {
+  /** Hard-terminate a running workflow by id. A missing or already-closed workflow is a no-op. */
+  readonly terminate: (workflowId: string, reason?: string) => Promise<void>
+}
+
+/**
+ * Hard-stop a running workflow (e.g. a facet garden the user chose to stop or
+ * refine). Best-effort: a workflow that finished or was GC'd between the user's
+ * click and this call is treated as already stopped.
+ */
+export function createWorkflowTerminator(client: Client): WorkflowTerminator {
+  return {
+    terminate: async (workflowId, reason) => {
+      try {
+        await client.workflow.getHandle(workflowId).terminate(reason)
+      } catch (error) {
+        if (error instanceof WorkflowNotFoundError) return
+        // A completed/terminated workflow can't be terminated again. Nothing to stop.
+        const message = error instanceof Error ? error.message.toLowerCase() : ""
+        if (message.includes("completed") || message.includes("not found") || message.includes("terminated")) return
+        throw error
+      }
+    },
+  }
+}
