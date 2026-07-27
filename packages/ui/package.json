@@ -69,6 +69,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "jsdom": "29.0.2",
     "postcss": "8.5.14",
     "react": "catalog:",
     "react-dom": "catalog:",
