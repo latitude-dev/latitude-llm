@@ -11,7 +11,7 @@ describe("FileCard activation", () => {
     )
 
     expect(markup).toContain('aria-label="Open PDF preview"')
-    expect(markup).toContain("cursor-pointer")
+    expect(markup).toContain('class="absolute inset-0 cursor-pointer')
     expect(markup).toContain("hover:bg-muted")
   })
 

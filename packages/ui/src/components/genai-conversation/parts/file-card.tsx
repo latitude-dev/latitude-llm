@@ -224,7 +224,7 @@ export function FileCard({
           type="button"
           onClick={onActivate}
           aria-label={activateLabel}
-          className="absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          className="absolute inset-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         />
       ) : null}
     </div>
