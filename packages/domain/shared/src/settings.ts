@@ -166,13 +166,52 @@ export function resolveSettingsCascade(input: {
   }
 }
 
-/** `source` is display only: which layer the policy the user is looking at came from. */
-export interface ResolvedRedactionPolicy {
+/** Everything the redaction engine needs. Deliberately excludes `source`, which only the UI reads. */
+export interface RedactionPolicy {
   readonly mode: RedactionMode
   readonly entities: ReadonlySet<RedactionEntity>
   readonly redactMetadata: boolean
   readonly identities: RedactionIdentityHandling
+}
+
+/** `source` is display only: which layer the policy the user is looking at came from. */
+export interface ResolvedRedactionPolicy extends RedactionPolicy {
   readonly source: "organization" | "project" | "default"
+}
+
+/**
+ * Wire form for the queue payload. `entities` becomes an array because a `Set`
+ * does not survive JSON, and `off` is unrepresentable because such projects are
+ * omitted from the map entirely.
+ */
+export const serializedRedactionPolicySchema = z.object({
+  mode: z.enum(["dryRun", "enforce"]),
+  entities: z.array(redactionEntitySchema),
+  redactMetadata: z.boolean(),
+  identities: redactionIdentityHandlingSchema,
+})
+export type SerializedRedactionPolicy = z.infer<typeof serializedRedactionPolicySchema>
+
+/** `null` for an `off` policy, so callers omit it from the map rather than encoding a no-op. */
+export const serializeRedactionPolicy = (policy: RedactionPolicy): SerializedRedactionPolicy | null =>
+  policy.mode === "off"
+    ? null
+    : {
+        mode: policy.mode,
+        entities: [...policy.entities],
+        redactMetadata: policy.redactMetadata,
+        identities: policy.identities,
+      }
+
+/**
+ * `null` when the wire value is missing or malformed. Callers must treat that as a
+ * failure rather than as "no redaction": a corrupt policy on a project that opted
+ * in must never resolve to a plaintext write.
+ */
+export const deserializeRedactionPolicy = (wire: unknown): RedactionPolicy | null => {
+  const parsed = serializedRedactionPolicySchema.safeParse(wire)
+
+  return parsed.success ? { ...parsed.data, entities: new Set(parsed.data.entities) } : null
 }
 
 const REDACTION_SYSTEM_DEFAULTS: {

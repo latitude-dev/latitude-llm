@@ -92,6 +92,10 @@ export { TaxonomyRunRepositoryLive } from "./repositories/taxonomy-run-repositor
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
 export { WrappedReportRepositoryLive } from "./repositories/wrapped-report-repository.ts"
 export { invalidateEffectivePlanCache, resolveEffectivePlanCached } from "./resolve-effective-plan-cached.ts"
+export {
+  invalidateOrganizationRedactionCache,
+  resolveOrganizationRedactionCached,
+} from "./resolve-redaction-policy-cached.ts"
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"
 export { withPostgres } from "./with-postgres.ts"

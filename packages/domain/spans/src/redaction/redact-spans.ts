@@ -1,4 +1,4 @@
-import type { OrganizationId, ResolvedRedactionPolicy } from "@domain/shared"
+import type { OrganizationId, RedactionPolicy } from "@domain/shared"
 import { hmacSha256Hex } from "@repo/utils"
 import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
@@ -37,7 +37,7 @@ interface RedactSpansInput {
   readonly spans: readonly SpanDetail[]
   readonly organizationId: OrganizationId
   /** Projects resolving to `off` are absent, so an empty map means redact nothing. */
-  readonly policyByProjectId: ReadonlyMap<string, ResolvedRedactionPolicy>
+  readonly policyByProjectId: ReadonlyMap<string, RedactionPolicy>
   readonly pseudonymSecret: string | undefined
   readonly timeoutMs?: number
 }
@@ -54,7 +54,7 @@ export const redactSpans = (
     const budgetMs = input.timeoutMs ?? REDACTION_BATCH_TIMEOUT_MS
     const deadline = performance.now() + budgetMs
 
-    const policyFor = (span: SpanDetail): ResolvedRedactionPolicy | undefined => {
+    const policyFor = (span: SpanDetail): RedactionPolicy | undefined => {
       const policy = input.policyByProjectId.get(span.projectId as string)
 
       return policy?.mode === "off" ? undefined : policy
@@ -81,7 +81,7 @@ export const redactSpans = (
 
 function applyRedaction(
   spans: readonly SpanDetail[],
-  policyFor: (span: SpanDetail) => ResolvedRedactionPolicy | undefined,
+  policyFor: (span: SpanDetail) => RedactionPolicy | undefined,
   pseudonyms: PseudonymLookup,
   identityFallback: boolean,
   deadline: number,

@@ -1,4 +1,4 @@
-import type { ResolvedRedactionPolicy } from "@domain/shared"
+import type { RedactionPolicy } from "@domain/shared"
 import type { SpanDetail } from "../entities/span.ts"
 import { isContentAttributeKey } from "../otlp/content/index.ts"
 import { REDACTED_IDENTITY_PLACEHOLDER } from "./labels.ts"
@@ -25,7 +25,7 @@ export type PseudonymLookup = ReadonlyMap<string, string>
 
 export function redactSpanDetail(
   span: SpanDetail,
-  policy: ResolvedRedactionPolicy,
+  policy: RedactionPolicy,
   pseudonyms: PseudonymLookup,
 ): { span: SpanDetail; stats: SpanRedactionStats } {
   const options: JsonRedactionOptions = { entities: policy.entities, mutate: policy.mode === "enforce" }
@@ -117,7 +117,7 @@ const replaceIdentity = (value: string, pseudonyms: PseudonymLookup): string => 
 
 export function collectIdentityValues(
   spans: readonly SpanDetail[],
-  policyFor: (span: SpanDetail) => ResolvedRedactionPolicy | undefined,
+  policyFor: (span: SpanDetail) => RedactionPolicy | undefined,
 ): Set<string> {
   const values = new Set<string>()
 

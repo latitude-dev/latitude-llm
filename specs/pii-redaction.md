@@ -674,7 +674,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 ### Phase 2 - Pipeline wiring
 
-- [ ] **P2-1**: `packages/platform/db-postgres/src/resolve-redaction-policy-cached.ts`, modeled on `resolve-effective-plan-cached.ts`: key `org:${organizationId}:settings:redaction`, 60 s TTL, Zod-validated payload, `cache.hit` annotation, `invalidateRedactionPolicyCache`.
+- [x] **P2-1**: `packages/platform/db-postgres/src/resolve-redaction-policy-cached.ts`, modeled on `resolve-effective-plan-cached.ts`: key `org:${organizationId}:settings:redaction`, 60 s TTL, Zod-validated payload, `cache.hit` annotation, `invalidateRedactionPolicyCache`.
 - [ ] **P2-2**: Add `redaction?: Record<string, SerializedRedactionPolicy>` to `span-ingestion:ingest` in `packages/domain/queue/src/topic-registry.ts`.
 - [ ] **P2-3**: In `ingestSpansUseCase`, resolve the per-project policy from the already-loaded `projectBySlug` plus the cached org settings, and stamp the map onto the published job. Omit `off` projects and omit the field entirely when the map is empty.
 - [ ] **P2-4**: Provide the Redis cache layer the resolver needs in `apps/ingest/src/routes/traces.ts`.
