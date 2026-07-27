@@ -1,5 +1,6 @@
 import { DEFAULT_REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
+import { OVERSIZED_FIELD_PLACEHOLDER, REDACTION_MAX_DEPTH } from "./labels.ts"
 import { type JsonRedactionOptions, redactJsonString, redactJsonValue, redactStringMap } from "./redact-json.ts"
 
 const ENTITIES: ReadonlySet<RedactionEntity> = new Set(DEFAULT_REDACTION_ENTITIES)
@@ -181,6 +182,52 @@ describe("redactJsonValue in dry run", () => {
     const input = { blob: { type: "blob", content: "a@b.co" }, file: { type: "file", content: "a@b.co" } }
 
     expect(redactJsonValue(input, DRY_RUN).counts).toEqual({})
+  })
+})
+
+describe("redactJsonValue depth cap", () => {
+  const nest = (depth: number, leaf: unknown): unknown => {
+    let value = leaf
+    for (let i = 0; i < depth; i++) value = [value]
+
+    return value
+  }
+
+  it("survives serialized nesting deep enough to overflow a recursive walk", () => {
+    const deep = `${"[".repeat(2_000)}"john@example.com"${"]".repeat(2_000)}`
+    const result = redactJsonString(deep, ENFORCE)
+
+    expect(result.value).not.toContain("john@example.com")
+    expect(result.scan.oversized).toBe(1)
+  })
+
+  it("falls back to a text scan when the payload is too deep even to parse", () => {
+    const deeper = `${"[".repeat(5_000)}"john@example.com"${"]".repeat(5_000)}`
+
+    expect(redactJsonString(deeper, ENFORCE).value).not.toContain("john@example.com")
+  })
+
+  it("drops the subtree at the cap rather than leaving it unscanned", () => {
+    const result = redactJsonValue(nest(REDACTION_MAX_DEPTH + 5, "john@example.com"), ENFORCE)
+
+    expect(JSON.stringify(result.value)).not.toContain("john@example.com")
+    expect(JSON.stringify(result.value)).toContain(OVERSIZED_FIELD_PLACEHOLDER)
+    expect(result.scan.oversized).toBe(1)
+  })
+
+  it("counts the over-deep subtree in dry run without touching it", () => {
+    const input = nest(REDACTION_MAX_DEPTH + 5, "john@example.com")
+    const result = redactJsonValue(input, DRY_RUN)
+
+    expect(result.value).toBe(input)
+    expect(result.scan.oversized).toBe(1)
+  })
+
+  it("walks structures just under the cap normally", () => {
+    const result = redactJsonValue(nest(REDACTION_MAX_DEPTH - 1, "john@example.com"), ENFORCE)
+
+    expect(JSON.stringify(result.value)).toContain("[REDACTED_EMAIL]")
+    expect(result.scan.oversized).toBe(0)
   })
 })
 

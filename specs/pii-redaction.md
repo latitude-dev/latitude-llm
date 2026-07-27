@@ -413,6 +413,7 @@ Additional rules:
 Ingestion is the hot path of the entire product, so this is a capacity question, not a footnote. "Sub-ms and deterministic" is meaningless without a size.
 
 - `REDACTION_MAX_FIELD_CHARS = 1_000_000` (1 M UTF-16 code units). A field above the cap is **not scanned**. In `enforce` mode it is replaced wholesale with `[REDACTED_OVERSIZED_FIELD]` and counted; in `dryRun` it is counted and left alone. Passing it through unscanned would break the promise, and partial scanning would leak the tail. Per the design invariant, degrade toward more redaction. 1 MB is generous: the realistic trigger is multi-MB file content in coding-agent tool outputs.
+- `REDACTION_MAX_DEPTH = 256`. The walk is recursive and `JSON.parse` accepts nesting tens of thousands deep, so a crafted `tool_input` overflows the stack; fail-closed then turns one hostile span into a dropped batch for every project in it. A subtree at the cap is treated exactly like an oversized leaf, which keeps the failure local. Payloads too deep for `JSON.parse` itself fall back to a plain-text scan, so they are still scanned rather than skipped.
 - `REDACTION_BATCH_TIMEOUT_MS = 30_000`, enforced as a **deadline checked before each span**, not as an `Effect.timeout` around the whole pass. The walk is synchronous, so a fiber-level timeout cannot fire until the work it was meant to bound has already finished; wrapping the pass in one would advertise a limit that never applies. Overrun is therefore bounded by a single span's walk, which the field cap bounds in turn. The async pseudonym phase does yield, so that one keeps a real `Effect.timeoutOrElse`. Either way the pass fails and the job retries ([§4.6](#46-failure-policy)).
 - **Benchmark acceptance criterion:** measure and record added wall-clock per span at p50 and p99 for a representative batch, and the total CPU delta at concurrency 50. Target ≤ 5 ms per span at 32 KB of scanned content. If the measured number misses the target, the finding goes in the PR description and the cap gets revisited; do not silently ship a regression on the ingest path.
 
@@ -429,7 +430,7 @@ Without these, nobody can answer "is it working" or "why did my content disappea
 | `redaction.matches` | total accepted matches |
 | `redaction.matches.<entity>` | per-entity counts, one annotation per enabled entity with a nonzero count |
 | `redaction.droppedAttributeKeys` | content attribute keys removed from `attr_string` |
-| `redaction.oversizedFields` | fields over `REDACTION_MAX_FIELD_CHARS` |
+| `redaction.oversizedFields` | leaves dropped for exceeding `REDACTION_MAX_FIELD_CHARS` or `REDACTION_MAX_DEPTH` |
 | `redaction.pseudonymizedIdentities` | identity values replaced |
 | `redaction.durationMs` | pass duration |
 
@@ -509,7 +510,7 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 | File | Contents |
 | --- | --- |
-| `labels.ts` | entity → label mapping, `[REDACTED_<LABEL>]` formatter, `REDACTION_MAX_FIELD_CHARS`, `REDACTION_BATCH_TIMEOUT_MS` |
+| `labels.ts` | entity → label mapping, `[REDACTED_<LABEL>]` formatter, `REDACTION_MAX_FIELD_CHARS`, `REDACTION_MAX_DEPTH`, `REDACTION_BATCH_TIMEOUT_MS` |
 | `detectors.ts` | One detector per entity per [§5](#5-detector-specification), plus Luhn and IBAN mod-97 helpers |
 | `redact-text.ts` | `redactText(text, policy) => { text, matchesByEntity }`, including overlap resolution |
 | `redact-json.ts` | Structure-aware walk over unknown JSON, string-leaf redaction, number-literal preservation |

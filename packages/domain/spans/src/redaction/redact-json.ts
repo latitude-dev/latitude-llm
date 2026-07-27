@@ -1,4 +1,5 @@
 import type { RedactionEntity } from "@domain/shared"
+import { OVERSIZED_FIELD_PLACEHOLDER, REDACTION_MAX_DEPTH } from "./labels.ts"
 import { mergeRedactionCounts, type RedactionCounts, redactLeaf } from "./redact-text.ts"
 
 interface JsonRedactionResult<T> {
@@ -59,12 +60,18 @@ const isSkippedPart = (value: Record<string, unknown>): boolean =>
 export function redactJsonValue<T>(value: T, options: JsonRedactionOptions): JsonRedactionResult<T> {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
-  const walked = walk(value, options, counts, scan)
+  const walked = walk(value, options, counts, scan, 0)
 
   return { value: walked as T, counts, scan }
 }
 
-function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCounts, scan: ScanTally): unknown {
+function walk(
+  value: unknown,
+  options: JsonRedactionOptions,
+  counts: RedactionCounts,
+  scan: ScanTally,
+  depth: number,
+): unknown {
   if (typeof value === "string") {
     const outcome = redactLeaf(value, options.entities, options.mutate)
     mergeRedactionCounts(counts, outcome.counts)
@@ -78,10 +85,18 @@ function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCo
   // A raw number literal is an object, so it would otherwise be walked as one and its digits scanned.
   if (rawJson.isRawJSON(value)) return value
 
+  const isContainer = Array.isArray(value) || isPlainObject(value)
+  // Dropping the subtree rather than leaving it unscanned keeps a crafted payload from being a way to smuggle content past.
+  if (isContainer && depth >= REDACTION_MAX_DEPTH) {
+    scan.oversized += 1
+
+    return options.mutate ? OVERSIZED_FIELD_PLACEHOLDER : value
+  }
+
   if (Array.isArray(value)) {
     let changed = false
     const next = value.map((item) => {
-      const walkedItem = walk(item, options, counts, scan)
+      const walkedItem = walk(item, options, counts, scan, depth + 1)
       if (walkedItem !== item) changed = true
       return walkedItem
     })
@@ -95,7 +110,7 @@ function walk(value: unknown, options: JsonRedactionOptions, counts: RedactionCo
     let changed = false
     const next: Record<string, unknown> = {}
     for (const [key, entry] of Object.entries(value)) {
-      const walkedEntry = walk(entry, options, counts, scan)
+      const walkedEntry = walk(entry, options, counts, scan, depth + 1)
       if (walkedEntry !== entry) changed = true
       next[key] = walkedEntry
     }

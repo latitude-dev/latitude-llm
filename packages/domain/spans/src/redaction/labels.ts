@@ -21,4 +21,7 @@ export const REDACTED_IDENTITY_PLACEHOLDER = "[REDACTED_USER]"
 // UTF-16 code units, not bytes: `String.length` is exact and needs no encoding pass to size a leaf.
 export const REDACTION_MAX_FIELD_CHARS = 1_000_000
 
+// `JSON.parse` accepts nesting tens of thousands deep, well past what a recursive walk can survive.
+export const REDACTION_MAX_DEPTH = 256
+
 export const REDACTION_BATCH_TIMEOUT_MS = 30_000
