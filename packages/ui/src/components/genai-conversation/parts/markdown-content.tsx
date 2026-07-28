@@ -9,6 +9,8 @@ import { CodeBlockControls } from "../../code-block/code-block-controls.tsx"
 import { type HighlightRange, TextSelectionContext } from "../text-selection.tsx"
 import { CodeBlockShell } from "./code-block-shell.tsx"
 import { JsonContent } from "./json-content.tsx"
+import { RedactionChip } from "./redaction-chip.tsx"
+import { REDACTION_CHIP_LABEL_ATTR, rehypeRedactionChips } from "./rehype-redaction-chips.ts"
 import { remarkCodeContentPositions } from "./remark-code-content-positions.ts"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
@@ -65,6 +67,11 @@ const markdownComponents: Components = {
       <table>{children}</table>
     </div>
   ),
+  mark: ({ children, ...props }) => {
+    const label = (props as Record<string, unknown>)[REDACTION_CHIP_LABEL_ATTR]
+    if (typeof label !== "string") return <mark>{children}</mark>
+    return <RedactionChip label={label} />
+  },
 }
 export const LARGE_MARKDOWN_HEAD_LENGTH = 6_000
 export const LARGE_MARKDOWN_TAIL_LENGTH = 2_000
@@ -136,7 +143,7 @@ function MarkdownBody({
   return (
     <ReactMarkdown
       remarkPlugins={[...remarkPlugins]}
-      rehypePlugins={[rehypeHighlightPlugin, sourcePlugin]}
+      rehypePlugins={[rehypeHighlightPlugin, rehypeRedactionChips, sourcePlugin]}
       components={markdownComponents}
     >
       {content}
