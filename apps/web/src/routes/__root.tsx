@@ -6,6 +6,7 @@ import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
 import { ReadOnlyProjectModal } from "../components/read-only-project-modal.tsx"
 import { getThemePreference } from "../domains/theme/theme.functions.ts"
+import { clarityHeadScripts } from "../lib/analytics/clarity.ts"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 import { PostHogProvider } from "../lib/posthog/posthog-provider.tsx"
@@ -47,6 +48,7 @@ export const Route = createRootRoute({
       { name: "twitter:description", content: DESCRIPTION },
     ],
     links: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
+    scripts: clarityHeadScripts(),
   }),
   component: RootComponent,
 })
