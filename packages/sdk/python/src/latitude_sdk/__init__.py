@@ -646,6 +646,7 @@ if typing.TYPE_CHECKING:
         PaginatedTraces,
         Project,
         ProjectSettings,
+        ProjectSettingsPatch,
         ProjectUser,
         QuerySpans,
         RecentToolCall,
@@ -872,7 +873,7 @@ if typing.TYPE_CHECKING:
     from .members import InviteMemberBodyRole, UpdateMemberRoleBodyRole
     from .memory import ListStoresMemoryRequestDirection, ListStoresMemoryRequestSort
     from .monitors import ListMonitorsForTargetBodyTargetType, UpdateMonitorBodySeverity
-    from .projects import UpdateProjectBodyFlaggers, UpdateProjectBodySettings
+    from .projects import UpdateProjectBodyFlaggers
     from .saved_searches import ListTracesSavedSearchesRequestSortBy, ListTracesSavedSearchesRequestSortDirection
     from .sessions import (
         ListSessionsBodySortBy,
@@ -1709,6 +1710,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ParametersToolsRequestErrorsOnly": ".tools",
     "Project": ".types",
     "ProjectSettings": ".types",
+    "ProjectSettingsPatch": ".types",
     "ProjectUser": ".types",
     "QuerySpans": ".types",
     "QuerySpansBodyOrderBy": ".spans",
@@ -1849,7 +1851,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "UpdateMemberRoleBodyRole": ".members",
     "UpdateMonitorBodySeverity": ".monitors",
     "UpdateProjectBodyFlaggers": ".projects",
-    "UpdateProjectBodySettings": ".projects",
     "UpdateSignalResponse": ".types",
     "UsageUsersRequestDimension": ".users",
     "UsageUsersRequestErrorsOnly": ".users",
@@ -2670,6 +2671,7 @@ __all__ = [
     "ParametersToolsRequestErrorsOnly",
     "Project",
     "ProjectSettings",
+    "ProjectSettingsPatch",
     "ProjectUser",
     "QuerySpans",
     "QuerySpansBodyOrderBy",
@@ -2810,7 +2812,6 @@ __all__ = [
     "UpdateMemberRoleBodyRole",
     "UpdateMonitorBodySeverity",
     "UpdateProjectBodyFlaggers",
-    "UpdateProjectBodySettings",
     "UpdateSignalResponse",
     "UsageUsersRequestDimension",
     "UsageUsersRequestErrorsOnly",

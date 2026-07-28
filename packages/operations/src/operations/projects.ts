@@ -142,25 +142,29 @@ const RedactionSettingSchema = z
   })
   .openapi("RedactionSetting")
 
-const ProjectSettingsSchema = z
-  .object({
-    keepMonitoring: z
-      .boolean()
-      .optional()
-      .describe(
-        "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
-      ),
-    redaction: RedactionSettingSchema.optional().describe(
-      "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+const projectSettingsShape = {
+  keepMonitoring: z
+    .boolean()
+    .optional()
+    .describe(
+      "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
     ),
-    notifications: NotificationsSettingSchema.optional().describe(
-      "Per-group project-level notification toggles (`incidents`, `destinations`).",
-    ),
-    escalation: EscalationSettingSchema.optional().describe(
-      "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
-    ),
-  })
-  .openapi("ProjectSettings")
+  redaction: RedactionSettingSchema.optional().describe(
+    "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+  ),
+  notifications: NotificationsSettingSchema.optional().describe(
+    "Per-group project-level notification toggles (`incidents`, `destinations`).",
+  ),
+  escalation: EscalationSettingSchema.optional().describe(
+    "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
+  ),
+}
+
+const ProjectSettingsSchema = z.object(projectSettingsShape).openapi("ProjectSettings")
+
+// Registered separately from the nullable response schema: sharing one component leaks `"type": ["object", "null"]`
+// into the request contract, advertising a `settings: null` that `.optional()` rejects at runtime.
+const ProjectSettingsPatchSchema = z.object(projectSettingsShape).openapi("ProjectSettingsPatch")
 
 const ResponseSchema = z
   .object({
@@ -200,7 +204,7 @@ const CreateRequestSchema = z
 const UpdateRequestSchema = z
   .object({
     name: z.string().min(1).optional().describe("New human-readable name. Renaming never changes the slug."),
-    settings: ProjectSettingsSchema.optional().describe(
+    settings: ProjectSettingsPatchSchema.optional().describe(
       "Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.",
     ),
     flaggers: z

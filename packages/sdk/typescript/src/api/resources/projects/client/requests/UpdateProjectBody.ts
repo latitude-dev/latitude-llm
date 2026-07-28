@@ -9,24 +9,12 @@ import type * as Latitude from "../../../../index.js";
 export interface UpdateProjectBody {
     /** New human-readable name. Renaming never changes the slug. */
     name?: string;
-    /** Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI. */
-    settings?: UpdateProjectBody.Settings | null;
+    settings?: Latitude.ProjectSettingsPatch;
     /** Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched. */
     flaggers?: UpdateProjectBody.Flaggers;
 }
 
 export namespace UpdateProjectBody {
-    /**
-     * Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.
-     */
-    export interface Settings {
-        /** When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted. */
-        keepMonitoring?: boolean | undefined;
-        redaction?: Latitude.RedactionSetting | undefined;
-        notifications?: Latitude.NotificationsSetting | undefined;
-        escalation?: Latitude.EscalationSetting | undefined;
-    }
-
     /**
      * Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
      */

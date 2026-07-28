@@ -17,8 +17,8 @@ from ..errors.unauthorized_error import UnauthorizedError
 from ..types.error import Error
 from ..types.paginated_projects import PaginatedProjects
 from ..types.project import Project
+from ..types.project_settings_patch import ProjectSettingsPatch
 from .types.update_project_body_flaggers import UpdateProjectBodyFlaggers
-from .types.update_project_body_settings import UpdateProjectBodySettings
 from pydantic import ValidationError
 
 # this is used as the default value for optional parameters
@@ -319,7 +319,7 @@ class RawProjectsClient:
         project_slug: str,
         *,
         name: typing.Optional[str] = OMIT,
-        settings: typing.Optional[UpdateProjectBodySettings] = OMIT,
+        settings: typing.Optional[ProjectSettingsPatch] = OMIT,
         flaggers: typing.Optional[UpdateProjectBodyFlaggers] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Project]:
@@ -334,8 +334,7 @@ class RawProjectsClient:
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
 
-        settings : typing.Optional[UpdateProjectBodySettings]
-            Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.
+        settings : typing.Optional[ProjectSettingsPatch]
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
@@ -354,7 +353,7 @@ class RawProjectsClient:
             json={
                 "name": name,
                 "settings": convert_and_respect_annotation_metadata(
-                    object_=settings, annotation=typing.Optional[UpdateProjectBodySettings], direction="write"
+                    object_=settings, annotation=ProjectSettingsPatch, direction="write"
                 ),
                 "flaggers": convert_and_respect_annotation_metadata(
                     object_=flaggers, annotation=UpdateProjectBodyFlaggers, direction="write"
@@ -717,7 +716,7 @@ class AsyncRawProjectsClient:
         project_slug: str,
         *,
         name: typing.Optional[str] = OMIT,
-        settings: typing.Optional[UpdateProjectBodySettings] = OMIT,
+        settings: typing.Optional[ProjectSettingsPatch] = OMIT,
         flaggers: typing.Optional[UpdateProjectBodyFlaggers] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Project]:
@@ -732,8 +731,7 @@ class AsyncRawProjectsClient:
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
 
-        settings : typing.Optional[UpdateProjectBodySettings]
-            Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.
+        settings : typing.Optional[ProjectSettingsPatch]
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
@@ -752,7 +750,7 @@ class AsyncRawProjectsClient:
             json={
                 "name": name,
                 "settings": convert_and_respect_annotation_metadata(
-                    object_=settings, annotation=typing.Optional[UpdateProjectBodySettings], direction="write"
+                    object_=settings, annotation=ProjectSettingsPatch, direction="write"
                 ),
                 "flaggers": convert_and_respect_annotation_metadata(
                     object_=flaggers, annotation=UpdateProjectBodyFlaggers, direction="write"

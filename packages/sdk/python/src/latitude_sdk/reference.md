@@ -502,7 +502,7 @@ client.projects.update(
 <dl>
 <dd>
 
-**settings:** `typing.Optional[UpdateProjectBodySettings]` — Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.
+**settings:** `typing.Optional[ProjectSettingsPatch]` 
     
 </dd>
 </dl>

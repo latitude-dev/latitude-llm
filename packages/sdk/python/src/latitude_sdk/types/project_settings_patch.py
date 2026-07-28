@@ -4,14 +4,14 @@ import typing
 
 import pydantic
 import typing_extensions
-from ...core.pydantic_utilities import UniversalBaseModel
-from ...core.serialization import FieldMetadata
-from ...types.escalation_setting import EscalationSetting
-from ...types.notifications_setting import NotificationsSetting
-from ...types.redaction_setting import RedactionSetting
+from ..core.pydantic_utilities import UniversalBaseModel
+from ..core.serialization import FieldMetadata
+from .escalation_setting import EscalationSetting
+from .notifications_setting import NotificationsSetting
+from .redaction_setting import RedactionSetting
 
 
-class UpdateProjectBodySettings(UniversalBaseModel):
+class ProjectSettingsPatch(UniversalBaseModel):
     """
     Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.
     """

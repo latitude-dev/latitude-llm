@@ -692,6 +692,7 @@ if typing.TYPE_CHECKING:
     from .paginated_traces import PaginatedTraces
     from .project import Project
     from .project_settings import ProjectSettings
+    from .project_settings_patch import ProjectSettingsPatch
     from .project_user import ProjectUser
     from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
@@ -1466,6 +1467,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedTraces": ".paginated_traces",
     "Project": ".project",
     "ProjectSettings": ".project_settings",
+    "ProjectSettingsPatch": ".project_settings_patch",
     "ProjectUser": ".project_user",
     "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
@@ -2268,6 +2270,7 @@ __all__ = [
     "PaginatedTraces",
     "Project",
     "ProjectSettings",
+    "ProjectSettingsPatch",
     "ProjectUser",
     "QuerySpans",
     "RecentToolCall",
