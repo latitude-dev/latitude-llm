@@ -101,7 +101,7 @@ export function getModelPricing(model: Model): ModelPricing | null {
  * (e.g. `amazon_bedrock` -> `bedrock`) are resolved automatically.
  */
 export function getModelsForProvider(provider: string): Model[] {
-  const name = resolveProviderName(provider).toLowerCase()
+  const name = resolveProviderName(provider)
   return getAllModels().filter((m) => m.provider.toLowerCase() === name)
 }
 
@@ -117,7 +117,7 @@ export function getModelForProvider(provider: string, modelId: string): Model | 
   const match = findModel(models, modelId)
   if (match) return match
 
-  const resolvedProvider = resolveProviderName(provider).toLowerCase()
+  const resolvedProvider = resolveProviderName(provider)
   if (resolvedProvider === "amazon-bedrock") {
     const stripped = stripBedrockRegionPrefix(modelId)
     if (stripped !== modelId) {
