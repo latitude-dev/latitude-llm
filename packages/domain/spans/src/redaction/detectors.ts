@@ -40,15 +40,24 @@ const E164_PHONE_PATTERN = /(?<![\w+])\+[1-9]\d{7,14}(?!\d)/g
 const NANP_PHONE_PATTERN = /(?<![\w.-])(?:\(\d{3}\) ?|\d{3}[-. ])\d{3}[-. ]\d{4}(?![\d.-])/g
 
 /**
- * Compact and grouped forms are separate patterns, and the grouped ones backreference
- * their separator, for the same reason the IBAN detector does: a single pattern
- * allowing an optional space between any two digits bridges two adjacent numbers,
- * consumes both greedily, fails the checksum, and never reconsiders the real card
- * inside. `+14155552671 4111111111111111` lost the card that way.
+ * Compact and grouped forms are separate patterns, and each grouped one backreferences
+ * its separator, for the same reason the IBAN detector does: a single pattern allowing
+ * an optional separator between any two digits bridges two adjacent numbers, consumes
+ * both greedily, fails the checksum, and never reconsiders the real card inside.
+ * `4111111111111111 123` lost the card that way.
+ *
+ * The grouped shapes are enumerated rather than expressed as "groups of 4 to 6" because
+ * an open-ended repetition reintroduces the same bridging: it would swallow a trailing
+ * group, overrun 19 digits, and fail the length gate with the card inside it.
  */
 const CREDIT_CARD_COMPACT_PATTERN = /(?<![\d.])\d{13,19}(?![\d.])/g
-const CREDIT_CARD_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{4}\1\d{4}\1\d{1,7}(?![\d.])/g
+/** 4-4-4-N covers 13 to 16 digits: Visa, Mastercard, Discover, JCB. */
+const CREDIT_CARD_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{4}\1\d{4}\1\d{1,4}(?![\d.])/g
+/** 4-4-4-4-3 is the 19-digit Visa and Discover form. */
+const CREDIT_CARD_GROUPED_19_PATTERN = /(?<![\d.])\d{4}([ -])\d{4}\1\d{4}\1\d{4}\1\d{3}(?![\d.])/g
+/** 4-6-5 is Amex, 4-6-4 is Diners Club. Disjoint by trailing length plus the lookahead. */
 const CREDIT_CARD_AMEX_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{6}\1\d{5}(?![\d.])/g
+const CREDIT_CARD_DINERS_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{6}\1\d{4}(?![\d.])/g
 
 const digitsOf = (value: string): string => value.replace(/[^\d]/g, "")
 
@@ -158,7 +167,9 @@ const DETECTORS: readonly Detector[] = [
   { entity: "phone", pattern: NANP_PHONE_PATTERN },
   { entity: "credit_card", pattern: CREDIT_CARD_COMPACT_PATTERN, validate: isCreditCard },
   { entity: "credit_card", pattern: CREDIT_CARD_GROUPED_PATTERN, validate: isCreditCard },
+  { entity: "credit_card", pattern: CREDIT_CARD_GROUPED_19_PATTERN, validate: isCreditCard },
   { entity: "credit_card", pattern: CREDIT_CARD_AMEX_GROUPED_PATTERN, validate: isCreditCard },
+  { entity: "credit_card", pattern: CREDIT_CARD_DINERS_GROUPED_PATTERN, validate: isCreditCard },
   { entity: "iban", pattern: IBAN_COMPACT_PATTERN, validate: isIban },
   { entity: "iban", pattern: IBAN_GROUPED_PATTERN, validate: isIban },
   { entity: "us_ssn", pattern: US_SSN_PATTERN },

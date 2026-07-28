@@ -104,6 +104,29 @@ describe("credit_card detector", () => {
     expect(found(`card ${value} charged`, "credit_card")).toEqual([value])
   })
 
+  /**
+   * Every grouping a real issuer prints, in both separators. Enumerated because the
+   * shapes are what the patterns encode: an earlier version covered only 4-4-4-N and
+   * 4-6-5, so Diners' 4-6-4 silently stopped being detected while the compact form
+   * still was. A shape absent from this list is a shape nothing is checking.
+   */
+  it.each([
+    ["4-4-4-4 Visa", "4111 1111 1111 1111"],
+    ["4-4-4-4 Mastercard", "5500 0055 5555 5559"],
+    ["4-4-4-4 Discover", "6011 1111 1111 1117"],
+    ["4-4-4-1 Visa 13", "4222 2222 2222 2"],
+    ["4-6-5 Amex", "3782 822463 10005"],
+    ["4-6-4 Diners", "3056 930902 5904"],
+  ])("detects the %s grouping", (_shape, value) => {
+    expect(found(`card ${value} charged`, "credit_card")).toEqual([value])
+    const dashed = value.replaceAll(" ", "-")
+    expect(found(`card ${dashed} charged`, "credit_card")).toEqual([dashed])
+  })
+
+  it("does not accept a card whose groups use mixed separators", () => {
+    expect(detects("card 4111 1111-1111 1111 charged", "credit_card")).toBe(false)
+  })
+
   it("rejects a Luhn-invalid card number", () => {
     expect(detects("card 4111111111111112 charged", "credit_card")).toBe(false)
   })
