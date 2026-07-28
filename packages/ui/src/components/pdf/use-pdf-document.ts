@@ -41,7 +41,11 @@ export function usePdfDocument(url: string | null): PdfDocumentState {
       } catch (error) {
         // A revoked blob URL or an aborted fetch during teardown lands here; `cancelled` filters it.
         if (cancelled) return
-        setState({ doc: null, status: "error", error: classifyPdfError(error) })
+        // An unclassified cancellation is not a failure, and surfacing it as one would strip the
+        // card's open affordance for the rest of the session.
+        const classified = classifyPdfError(error)
+        if (!classified) return
+        setState({ doc: null, status: "error", error: classified })
       }
     })()
 
