@@ -1,4 +1,4 @@
-import type { IncidentSourceType } from "@domain/shared"
+import type { IncidentSourceType, OrganizationRedactionSetting, RedactionSetting } from "@domain/shared"
 
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
@@ -275,6 +275,29 @@ export interface EventPayloads {
     readonly flaggerSlug: string
     readonly enabled: boolean
     readonly sampling: number
+  }
+  /**
+   * Emitted when a project's PII redaction policy changes. Audit-only: nothing
+   * consumes it. Redaction is destructive, non-retroactive, and unrecoverable,
+   * so "who turned this off, and when" has to be answerable after the fact.
+   * Both snapshots live in the payload because `projects.settings` is mutable
+   * and a delta on it cannot be reconstructed later. Scoped to `redaction`
+   * rather than whole-settings blobs so the transition is the payload rather
+   * than something a query has to dig out of one.
+   */
+  ProjectRedactionPolicyChanged: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly fromRedaction: RedactionSetting | null
+    readonly toRedaction: RedactionSetting | null
+  }
+  /** Organization-level twin of `ProjectRedactionPolicyChanged`, including the `locked` flag. */
+  OrganizationRedactionPolicyChanged: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly fromRedaction: OrganizationRedactionSetting | null
+    readonly toRedaction: OrganizationRedactionSetting | null
   }
   SavedSearchCreated: {
     readonly organizationId: string
