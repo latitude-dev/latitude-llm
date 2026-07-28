@@ -54,7 +54,6 @@
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignoreDependencies": [
         "@temporalio/client",
-        "pdfjs-dist",
         "quickjs-emscripten",
         "voyageai"
       ]

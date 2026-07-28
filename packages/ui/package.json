@@ -9,6 +9,7 @@
     ".": {
       "import": "./src/index.ts"
     },
+    "./package.json": "./package.json",
     "./styles/globals.css": "./src/styles/globals.css"
   },
   "scripts": {

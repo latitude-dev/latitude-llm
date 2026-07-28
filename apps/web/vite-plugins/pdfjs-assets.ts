@@ -3,9 +3,11 @@ import { createRequire } from "node:module"
 import path from "node:path"
 import type { Plugin } from "vite"
 
-const require_ = createRequire(import.meta.url)
-const pdfjsDir = path.dirname(require_.resolve("pdfjs-dist/package.json"))
-const pdfjsVersion = (require_("pdfjs-dist/package.json") as { version: string }).version
+// Resolved through @repo/ui, which owns the copy that gets bundled: serving from a second copy would
+// 404 every cmap, font and wasm decoder the moment the two versions drifted.
+const uiRequire = createRequire(createRequire(import.meta.url).resolve("@repo/ui/package.json"))
+const pdfjsDir = path.dirname(uiRequire.resolve("pdfjs-dist/package.json"))
+const pdfjsVersion = (uiRequire("pdfjs-dist/package.json") as { version: string }).version
 
 // Keep these air-gapped assets in sync with `documentAssetOptions` in @repo/ui.
 const ASSET_DIRS = ["cmaps", "standard_fonts", "wasm", "iccs"] as const

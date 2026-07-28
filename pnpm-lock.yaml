@@ -693,9 +693,6 @@ importers:
       jsdom:
         specifier: 29.0.2
         version: 29.0.2(@noble/hashes@2.2.0)
-      pdfjs-dist:
-        specifier: 'catalog:'
-        version: 6.1.200
       postcss:
         specifier: 8.5.14
         version: 8.5.14
