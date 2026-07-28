@@ -108,6 +108,9 @@ catalogs:
     mustache:
       specifier: 4.2.0
       version: 4.2.0
+    pdfjs-dist:
+      specifier: 6.1.200
+      version: 6.1.200
     pg:
       specifier: 8.16.0
       version: 8.16.0
@@ -3369,6 +3372,9 @@ importers:
       lucide-react:
         specifier: 1.9.0
         version: 1.9.0(react@19.2.5)
+      pdfjs-dist:
+        specifier: 'catalog:'
+        version: 6.1.200
       react-day-picker:
         specifier: 8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@19.2.5)
@@ -3418,6 +3424,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20260705.1
+      jsdom:
+        specifier: 29.0.2
+        version: 29.0.2(@noble/hashes@2.2.0)
       postcss:
         specifier: 8.5.14
         version: 8.5.14
@@ -12370,6 +12379,10 @@ packages:
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
 
+  pdfjs-dist@6.1.200:
+    resolution: {integrity: sha512-o8MolyzirkkLrcdsae/HEOiIcXWI7DS5zGpvqW8xTC2YUsW30rltFw2bDGvw/fskUdEMrQm2br68jzDS5BH2vw==}
+    engines: {node: '>=22.13.0 || >=24'}
+
   peberminta@0.9.0:
     resolution: {integrity: sha512-XIxfHpEuSJbITd1H3EeQwpcZbTLHc+VVr8ANI9t5sit565tsI4/xK3KWTUFE2e6QiangUkh3B0jihzmGnNrRsQ==}
 
@@ -14159,6 +14172,9 @@ packages:
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
+
+ignoredOptionalDependencies:
+  - '@napi-rs/canvas'
 
 snapshots:
 
@@ -24930,6 +24946,8 @@ snapshots:
   pathe@1.1.2: {}
 
   pathe@2.0.3: {}
+
+  pdfjs-dist@6.1.200: {}
 
   peberminta@0.9.0: {}
 
