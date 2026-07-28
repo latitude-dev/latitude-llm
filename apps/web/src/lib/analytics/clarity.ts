@@ -1,4 +1,4 @@
-export const CLARITY_PROJECT_ID: string | undefined = import.meta.env.VITE_LAT_CLARITY_PROJECT_ID
+const CLARITY_PROJECT_ID: string | undefined = import.meta.env.VITE_LAT_CLARITY_PROJECT_ID
 
 export const clarityHeadScripts = (): Array<{ children: string }> =>
   CLARITY_PROJECT_ID
