@@ -12,6 +12,13 @@ const claritySnippet = (projectId: string): string =>
 export const clarityHeadScripts = (): Array<{ children: string }> =>
   CLARITY_PROJECT_ID ? [{ children: claritySnippet(CLARITY_PROJECT_ID) }] : []
 
+// For authenticated routes that render `head` outside the `_authenticated` guard.
+// `loaderData` is undefined until the loader resolves, and an unknown session must
+// count as excluded — recording a staff or impersonated session cannot be undone.
+export const clarityHeadScriptsUnlessExcluded = (
+  excludeFromAnalytics: boolean | undefined,
+): Array<{ children: string }> => (excludeFromAnalytics === false ? clarityHeadScripts() : [])
+
 // Clarity has no stop/disable API, so a session excluded from analytics must never
 // load the tag at all — hence the client-side injection instead of a root `head`
 // entry. Moving this to `__root.tsx` would silently record staff and impersonated
