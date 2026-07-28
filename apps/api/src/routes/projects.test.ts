@@ -162,6 +162,45 @@ describe("Projects Routes Integration", () => {
     expect(body.settings).toEqual({ keepMonitoring: true })
   })
 
+  // `ProjectSettingsSchema` exposes a subset of what's stored, so a replace here would let
+  // a caller patching one field silently clear a compliance control it cannot even see.
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug patches settings without clearing fields it does not expose", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Patch Settings")
+
+    await database.db
+      .update(projects)
+      .set({
+        settings: {
+          redaction: { mode: "enforce", entities: ["email"] },
+          sampling: { enabled: true, rate: 0.25 },
+          onboardingCompleted: true,
+        },
+      })
+      .where(eq(projects.id, project.id))
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { keepMonitoring: true } }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.settings).toEqual({
+      keepMonitoring: true,
+      redaction: { mode: "enforce", entities: ["email"] },
+      sampling: { enabled: true, rate: 0.25 },
+      onboardingCompleted: true,
+    })
+  })
+
   it<ApiTestContext>("PATCH /v1/projects/:projectSlug toggles flaggers when the body includes them", async ({
     app,
     database,

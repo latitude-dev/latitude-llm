@@ -163,7 +163,9 @@ export const updateOrganization = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     return await Effect.runPromise(
-      updateOrganizationUseCase({ name: data.name, settings: data.settings }).pipe(
+      // Patch, not replace: the schema above narrows `settings` to the keys this
+      // endpoint owns, so a replace would drop billing and showcase state.
+      updateOrganizationUseCase({ name: data.name, settingsPatch: data.settings }).pipe(
         withPostgres(OrganizationRepositoryLive, client, organizationId),
         withTracing,
       ),

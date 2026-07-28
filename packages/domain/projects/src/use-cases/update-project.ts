@@ -18,7 +18,10 @@ export interface UpdateProjectInput {
   readonly id: ProjectId
   readonly name?: string | undefined
   readonly slug?: string | undefined
+  /** Replaces `settings` wholesale. Use `settingsPatch` unless you mean to drop the keys you omit. */
   readonly settings?: ProjectSettings | undefined
+  /** Shallow-merged over the stored settings inside the transaction, so keys the caller doesn't know about survive. */
+  readonly settingsPatch?: ProjectSettings | undefined
 }
 
 export type UpdateProjectError =
@@ -105,12 +108,17 @@ export const updateProjectUseCase = Effect.fn("projects.updateProject")(function
         }
       }
 
+      const nextSettings =
+        input.settingsPatch !== undefined
+          ? { ...(existingProject.settings ?? {}), ...input.settingsPatch }
+          : input.settings
+
       const now = new Date()
       const updatedProject: Project = {
         ...existingProject,
         name: nextName,
         slug: nextSlug,
-        ...(input.settings !== undefined ? { settings: input.settings } : {}),
+        ...(nextSettings !== undefined ? { settings: nextSettings } : {}),
         lastEditedAt: now,
         updatedAt: now,
       }

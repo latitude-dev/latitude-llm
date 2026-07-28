@@ -97,6 +97,7 @@ export function createProjectMutation(name: string) {
       onboardingCompleted: undefined,
       isSample: undefined,
       sampling: undefined,
+      redaction: undefined,
     },
     firstTraceAt: null,
     deletedAt: null,

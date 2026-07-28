@@ -108,4 +108,70 @@ describe("updateProjectUseCase", () => {
     expect(result.slug).toBe("checkout-agent")
     expect(rows.get(id)?.slug).toBe("checkout-agent")
   })
+
+  describe("settings", () => {
+    const seeded = (id: ProjectId): Project => ({
+      ...makeProject({ id, slug: "checkout-agent", name: "Checkout agent" }),
+      settings: {
+        redaction: { mode: "enforce", entities: ["email"] },
+        sampling: { enabled: true, rate: 0.5 },
+        isShowcase: true,
+      },
+    })
+
+    it("merges settingsPatch over the stored settings, keeping keys the caller omitted", async () => {
+      const id = ProjectId("1".repeat(24))
+      const { layer, rows } = makeLayer([seeded(id)])
+
+      const result = await Effect.runPromise(
+        updateProjectUseCase({ id, settingsPatch: { keepMonitoring: false } }).pipe(Effect.provide(layer)),
+      )
+
+      expect(result.settings).toEqual({
+        keepMonitoring: false,
+        redaction: { mode: "enforce", entities: ["email"] },
+        sampling: { enabled: true, rate: 0.5 },
+        isShowcase: true,
+      })
+      expect(rows.get(id)?.settings?.redaction).toEqual({ mode: "enforce", entities: ["email"] })
+    })
+
+    // The web client narrows `settings` to the fields it renders, so a patch carrying
+    // `sampling` must not take `redaction` with it. This is the shape of T-11.
+    it("preserves redaction when a client patches only the fields it knows about", async () => {
+      const id = ProjectId("1".repeat(24))
+      const { layer, rows } = makeLayer([seeded(id)])
+
+      await Effect.runPromise(
+        updateProjectUseCase({
+          id,
+          settingsPatch: { keepMonitoring: true, sampling: { enabled: false, rate: 1 } },
+        }).pipe(Effect.provide(layer)),
+      )
+
+      expect(rows.get(id)?.settings?.redaction).toEqual({ mode: "enforce", entities: ["email"] })
+      expect(rows.get(id)?.settings?.isShowcase).toBe(true)
+      expect(rows.get(id)?.settings?.sampling).toEqual({ enabled: false, rate: 1 })
+    })
+
+    it("replaces wholesale when given settings, so a caller can still clear keys", async () => {
+      const id = ProjectId("1".repeat(24))
+      const { layer, rows } = makeLayer([seeded(id)])
+
+      await Effect.runPromise(
+        updateProjectUseCase({ id, settings: { keepMonitoring: false } }).pipe(Effect.provide(layer)),
+      )
+
+      expect(rows.get(id)?.settings).toEqual({ keepMonitoring: false })
+    })
+
+    it("leaves settings untouched when neither field is given", async () => {
+      const id = ProjectId("1".repeat(24))
+      const { layer, rows } = makeLayer([seeded(id)])
+
+      await Effect.runPromise(updateProjectUseCase({ id, name: "Billing agent" }).pipe(Effect.provide(layer)))
+
+      expect(rows.get(id)?.settings).toEqual(seeded(id).settings)
+    })
+  })
 })

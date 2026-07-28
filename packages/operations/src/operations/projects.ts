@@ -156,7 +156,7 @@ const UpdateRequestSchema = z
   .object({
     name: z.string().min(1).optional().describe("New human-readable name. Renaming never changes the slug."),
     settings: ProjectSettingsSchema.optional().describe(
-      "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
+      "Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.",
     ),
     flaggers: z
       .partialRecord(z.enum(FLAGGER_STRATEGY_SLUGS), z.boolean())
@@ -296,7 +296,9 @@ const updateProject = projectEndpoint({
       const updated = yield* updateProjectUseCase({
         id: project.id,
         ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.settings !== undefined ? { settings: body.settings } : {}),
+        // Patch, not replace: this schema exposes a subset of the stored settings,
+        // so a replace would let one field's update silently clear the others.
+        ...(body.settings !== undefined ? { settingsPatch: body.settings } : {}),
       })
 
       if (body.flaggers) {

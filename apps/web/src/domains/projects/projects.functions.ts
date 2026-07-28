@@ -68,6 +68,7 @@ export const toRecord = (project: Project) => ({
     onboardingCompleted: project.settings?.onboardingCompleted,
     isSample: project.settings?.isSample,
     sampling: project.settings?.sampling,
+    redaction: project.settings?.redaction,
   },
   firstTraceAt: project.firstTraceAt ? project.firstTraceAt.toISOString() : null,
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
@@ -142,7 +143,9 @@ export const updateProject = createServerFn({ method: "POST" })
         id: ProjectId(data.id),
         name: data.name,
         slug: data.slug,
-        settings: data.settings,
+        // Patch, not replace: `toRecord` narrows `settings` to what the client needs,
+        // so a replace here would drop every key it omits.
+        settingsPatch: data.settings,
       }).pipe(
         Effect.catchTag("InvalidProjectSlugError", (e) =>
           Effect.fail(new Error(JSON.stringify([{ path: ["slug"], message: e.reason ?? "Invalid project slug" }]))),
@@ -164,13 +167,9 @@ export const completeProjectOnboarding = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        const current = yield* repo.findById(ProjectId(data.projectId))
-        return yield* updateProjectUseCase({
-          id: current.id,
-          settings: { ...(current.settings ?? {}), onboardingCompleted: true },
-        })
+      updateProjectUseCase({
+        id: ProjectId(data.projectId),
+        settingsPatch: { onboardingCompleted: true },
       }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId), withTracing),
     )
 
