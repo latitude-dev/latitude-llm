@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## v0.3.71 - 2026-07-28
+
+### Behaviors
+
+- Reshaped Behaviours into a catalog: `/behaviours` lists behavior cards (Topics plus curated presets or a custom one), each behavior has its own page with a tree and its saved views under `/behaviours/:slug/views/:view`, old flat view links redirect, and creating a behavior streams a cold-start analysis with a health read and refine/stop. Behind the `customBehaviors` flag; orgs without it keep the current page (ref: #4204).
+- Documented behaviors, views, and facets in the public docs and moved the page under Understand, with a redirect from `/search/behaviours` to `/behaviours/overview` (ref: #4247).
+
+### Web
+
+- Fixed PostHog session stitching so anonymous latitude.so visitors merge into the signed-up user, and the first authenticated pageview carries its organization group (ref: #4205).
+
+### Conversation intelligence
+
+- Prevented lone UTF-16 surrogates from truncated transcripts and moment evidence, which broke ClickHouse writes and Bedrock prompts (ref: #4225).
+- Skipped user-centric flaggers on taxonomy nested samples so wording quoted inside cluster samples no longer triggers frustration flags (ref: #4226).
+
+### Models
+
+- Refreshed the bundled model catalog with updated providers, capabilities, limits, and pricing (ref: #4227, #4232, #4251).
+
+### Internal
+
+- Landed the span ingestion PII redaction core (detectors, JSON and text redaction, policy cascade) plus its spec. Not wired into ingestion yet, so behavior is unchanged (ref: #4245).
+
 ## v0.3.70 - 2026-07-26
 
 ### Traces
