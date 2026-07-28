@@ -133,6 +133,10 @@ describe("buildRelativeHierarchicalClusters — bounded diagnostics", () => {
   })
 })
 
+// A re-searched build runs the K sweep at the escalation budget (25 restarts),
+// which is ~8× a plain build and runs past Vitest's 5s default on CI hardware.
+const RE_SEARCH_TIMEOUT_MS = 60_000
+
 describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
   const escalation = {
     restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
@@ -151,34 +155,42 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
       ...(withEscalation ? { escalation } : {}),
     })
 
-  it("omitting the escalation config leaves the build byte-identical", () => {
-    const corpus = buildNarrowDomainCorpus()
-    expect(partitionSignature(buildWith(corpus, false).root)).toBe(
-      partitionSignature(
-        buildRelativeHierarchicalClusters({
-          embeddings: corpus.embeddings,
-          depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
-          restarts: TAXONOMY_KMEANS_RESTARTS,
-          maxIter: TAXONOMY_KMEANS_MAX_ITER,
-          tolerance: TAXONOMY_KMEANS_TOLERANCE,
-          seed: corpus.seed,
-          globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
-        }).root,
-      ),
-    )
-  })
+  it(
+    "omitting the escalation config leaves the build byte-identical",
+    () => {
+      const corpus = buildNarrowDomainCorpus()
+      expect(partitionSignature(buildWith(corpus, false).root)).toBe(
+        partitionSignature(
+          buildRelativeHierarchicalClusters({
+            embeddings: corpus.embeddings,
+            depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+            restarts: TAXONOMY_KMEANS_RESTARTS,
+            maxIter: TAXONOMY_KMEANS_MAX_ITER,
+            tolerance: TAXONOMY_KMEANS_TOLERANCE,
+            seed: corpus.seed,
+            globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+          }).root,
+        ),
+      )
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
 
   // A comfortable root is left alone: identical partition AND no re-search, so
   // the projects that do not need this pay nothing for it.
   it.each([
     ["retail", buildRetailSupportCorpus()],
     ["telecom", buildTelecomSupportCorpus()],
-  ] as const)("%s: a comfortable root is returned untouched", (_name, corpus) => {
-    const escalated = buildWith(corpus, true)
-    expect(escalated.diagnostics.bestRootSeparation).toBeGreaterThanOrEqual(escalation.marginThreshold)
-    expect(escalated.diagnostics.escalated).toBe(false)
-    expect(partitionSignature(escalated.root)).toBe(partitionSignature(buildWith(corpus, false).root))
-  })
+  ] as const)(
+    "%s: a comfortable root is returned untouched",
+    (_name, corpus) => {
+      const escalated = buildWith(corpus, true)
+      expect(escalated.diagnostics.bestRootSeparation).toBeGreaterThanOrEqual(escalation.marginThreshold)
+      expect(escalated.diagnostics.escalated).toBe(false)
+      expect(partitionSignature(escalated.root)).toBe(partitionSignature(buildWith(corpus, false).root))
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
 
   // Below the floor there is no structure to find. Without it every unimodal
   // project would spend the larger budget every pass to reconfirm its leaf.
@@ -193,20 +205,28 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
   it.each([
     ["narrow-domain", buildNarrowDomainCorpus()],
     ["narrow-pilot", loadNarrowPilotCorpus()],
-  ] as const)("%s: a near-gate root is re-searched and still resolves 3–5 children", (_name, corpus) => {
-    const result = buildWith(corpus, true)
-    expect(result.diagnostics.escalated).toBe(true)
-    expect(result.root.children.length).toBeGreaterThanOrEqual(3)
-    expect(result.root.children.length).toBeLessThanOrEqual(5)
-  })
+  ] as const)(
+    "%s: a near-gate root is re-searched and still resolves 3–5 children",
+    (_name, corpus) => {
+      const result = buildWith(corpus, true)
+      expect(result.diagnostics.escalated).toBe(true)
+      expect(result.root.children.length).toBeGreaterThanOrEqual(3)
+      expect(result.root.children.length).toBeLessThanOrEqual(5)
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
 
-  it("the re-search is deterministic — repeated builds agree", () => {
-    const corpus = buildNarrowDomainCorpus()
-    const first = buildWith(corpus, true)
-    const second = buildWith(corpus, true)
-    expect(first.diagnostics.escalated).toBe(true)
-    expect(partitionSignature(second.root)).toBe(partitionSignature(first.root))
-  })
+  it(
+    "the re-search is deterministic — repeated builds agree",
+    () => {
+      const corpus = buildNarrowDomainCorpus()
+      const first = buildWith(corpus, true)
+      const second = buildWith(corpus, true)
+      expect(first.diagnostics.escalated).toBe(true)
+      expect(partitionSignature(second.root)).toBe(partitionSignature(first.root))
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
 })
 
 describe("quantile — linear interpolation at (n-1)·q", () => {
