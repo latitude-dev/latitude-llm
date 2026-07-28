@@ -74,12 +74,15 @@ export function redactSpanDetail(
   // Identity handling is its own control, so it applies to metadata and tags whether or not the metadata scope is on.
   const metadataSource = substitute(span.metadata)
   const metadata = policy.redactMetadata ? take(redactStringMap(metadataSource, entities)) : metadataSource
-  const tagsSource = span.tags.map((tag) => {
-    const replacement = identities.get(tag)
-    if (replacement === undefined) return tag
-    pseudonymizedIdentities += 1
-    return replacement
-  })
+  const tagsSource =
+    identities.size === 0
+      ? span.tags
+      : span.tags.map((tag) => {
+          const replacement = identities.get(tag)
+          if (replacement === undefined) return tag
+          pseudonymizedIdentities += 1
+          return replacement
+        })
   const tags = policy.redactMetadata
     ? tagsSource.map((tag) => {
         const outcome = redactLeaf(tag, entities)
