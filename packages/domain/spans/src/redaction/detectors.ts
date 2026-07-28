@@ -43,8 +43,9 @@ const NANP_PHONE_PATTERN = /(?<![\w.-])(?:\(\d{3}\) ?|\d{3}[-. ])\d{3}[-. ]\d{4}
  * Compact and grouped forms are separate patterns, and each grouped one backreferences
  * its separator, for the same reason the IBAN detector does: a single pattern allowing
  * an optional separator between any two digits bridges two adjacent numbers, consumes
- * both greedily, fails the checksum, and never reconsiders the real card inside.
- * `4111111111111111 123` lost the card that way.
+ * both greedily, fails the checksum, and never reconsiders the real card inside. A
+ * sixteen-digit card followed by a three-digit number was lost that way: the bridged
+ * nineteen-digit run is a length Visa issues, so it matched and then failed Luhn.
  *
  * The grouped shapes are enumerated rather than expressed as "groups of 4 to 6" because
  * an open-ended repetition reintroduces the same bridging: it would swallow a trailing

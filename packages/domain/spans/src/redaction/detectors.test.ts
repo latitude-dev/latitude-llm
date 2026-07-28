@@ -1,6 +1,7 @@
 import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { findRedactionMatches, type RedactionMatch } from "./detectors.ts"
+import { redactText } from "./redact-text.ts"
 
 const ALL_ENTITIES: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
 
@@ -109,6 +110,10 @@ describe("credit_card detector", () => {
    * shapes are what the patterns encode: an earlier version covered only 4-4-4-N and
    * 4-6-5, so Diners' 4-6-4 silently stopped being detected while the compact form
    * still was. A shape absent from this list is a shape nothing is checking.
+   *
+   * The numbers are the card networks' published test values, which exist to be used
+   * as fixtures and belong to no cardholder. A detector for card numbers cannot be
+   * tested without card-shaped input.
    */
   it.each([
     ["4-4-4-4 Visa", "4111 1111 1111 1111"],
@@ -121,6 +126,21 @@ describe("credit_card detector", () => {
     expect(found(`card ${value} charged`, "credit_card")).toEqual([value])
     const dashed = value.replaceAll(" ", "-")
     expect(found(`card ${dashed} charged`, "credit_card")).toEqual([dashed])
+  })
+
+  /**
+   * The 4-4-4-4-3 grouping is excluded from the table above because it legitimately
+   * produces two matches: its first four groups are themselves a Luhn-valid 16-digit
+   * Visa, so the 4-4-4-N pattern matches at the same offset. Leftmost-longest has to
+   * pick the full number. Picking the shorter one would leave the last three digits
+   * sitting next to a placeholder.
+   */
+  it.each([
+    "4111 1111 1111 1111 110",
+    "4111-1111-1111-1111-110",
+  ])("redacts the whole 19-digit card in %s rather than the 16-digit card inside it", (value) => {
+    expect(found(`card ${value} charged`, "credit_card")[0]).toBe(value)
+    expect(redactText(`card ${value} charged`, only("credit_card")).text).toBe("card [REDACTED_CREDIT_CARD] charged")
   })
 
   it("does not accept a card whose groups use mixed separators", () => {
