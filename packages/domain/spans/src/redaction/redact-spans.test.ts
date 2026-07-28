@@ -345,6 +345,123 @@ describe("redactSpans identity handling", () => {
 
     expect(result.summary.pseudonymizedIdentities).toBe(2)
   })
+
+  it("pseudonymizes the attribute the identity column was resolved from", async () => {
+    const span = makeSpan({
+      userEmail: "devin@example.com",
+      userId: ExternalUserId("usr_devin_hartley"),
+      attrString: { "user.id": "usr_devin_hartley", "user.email": "devin@example.com" },
+    })
+    const [result] = (
+      await run({ spans: [span], organizationId: ORG, policyByProjectId: pseudonymizeFor(), pseudonymSecret: "secret" })
+    ).spans
+
+    expect(result?.attrString["user.id"]).toBe(result?.userId)
+    expect(result?.attrString["user.id"]).toMatch(/^anon_[0-9a-f]{16}$/)
+  })
+
+  it("gives the identity email the pseudonym, not the email placeholder, so the row agrees with itself", async () => {
+    const span = makeSpan({
+      userEmail: "devin@example.com",
+      attrString: { "user.email": "devin@example.com" },
+    })
+    const [result] = (
+      await run({ spans: [span], organizationId: ORG, policyByProjectId: pseudonymizeFor(), pseudonymSecret: "secret" })
+    ).spans
+
+    expect(result?.attrString["user.email"]).toBe(result?.userEmail)
+    expect(result?.attrString["user.email"]).not.toBe("[REDACTED_EMAIL]")
+  })
+
+  it("covers every vendor spelling of the identity attribute, not just the one that resolved", async () => {
+    const span = makeSpan({
+      userId: ExternalUserId("usr_devin_hartley"),
+      attrString: {
+        "user.id": "usr_devin_hartley",
+        "langfuse.user.id": "usr_devin_hartley",
+        "traceloop.association.properties.user_id": "usr_devin_hartley",
+        "our.own.customer_ref": "usr_devin_hartley",
+      },
+    })
+    const [result] = (
+      await run({ spans: [span], organizationId: ORG, policyByProjectId: pseudonymizeFor(), pseudonymSecret: "secret" })
+    ).spans
+
+    expect(Object.values(result?.attrString ?? {})).toEqual(Array(4).fill(result?.userId))
+  })
+
+  it("pseudonymizes the identity in resource attributes", async () => {
+    const span = makeSpan({
+      userId: ExternalUserId("usr_devin_hartley"),
+      resourceString: { "enduser.id": "usr_devin_hartley" },
+    })
+    const [result] = (
+      await run({ spans: [span], organizationId: ORG, policyByProjectId: pseudonymizeFor(), pseudonymSecret: "secret" })
+    ).spans
+
+    expect(result?.resourceString["enduser.id"]).toBe(result?.userId)
+  })
+
+  it("pseudonymizes the identity in metadata and tags even when the metadata scope is off", async () => {
+    const span = makeSpan({
+      userId: ExternalUserId("usr_devin_hartley"),
+      metadata: { user_id: "usr_devin_hartley", plan: "pro" },
+      tags: ["usr_devin_hartley", "beta"],
+    })
+    const [result] = (
+      await run({
+        spans: [span],
+        organizationId: ORG,
+        policyByProjectId: new Map([[PROJECT, policy({ identities: "pseudonymize", scopes: { metadata: false } })]]),
+        pseudonymSecret: "secret",
+      })
+    ).spans
+
+    expect(result?.metadata).toEqual({ user_id: result?.userId, plan: "pro" })
+    expect(result?.tags).toEqual([result?.userId, "beta"])
+  })
+
+  it("degrades the identity attribute to the placeholder when no secret is configured", async () => {
+    const span = makeSpan({
+      userId: ExternalUserId("usr_devin_hartley"),
+      attrString: { "user.id": "usr_devin_hartley" },
+    })
+    const [result] = (
+      await run({
+        spans: [span],
+        organizationId: ORG,
+        policyByProjectId: pseudonymizeFor(),
+        pseudonymSecret: undefined,
+      })
+    ).spans
+
+    expect(result?.attrString["user.id"]).toBe("[REDACTED_USER]")
+  })
+
+  it("leaves identity attributes alone when identities are kept", async () => {
+    const span = makeSpan({
+      userId: ExternalUserId("usr_devin_hartley"),
+      attrString: { "user.id": "usr_devin_hartley" },
+    })
+    const [result] = (
+      await run({ spans: [span], organizationId: ORG, policyByProjectId: enforceFor(), pseudonymSecret: "secret" })
+    ).spans
+
+    expect(result?.attrString["user.id"]).toBe("usr_devin_hartley")
+  })
+
+  it("matches whole values only, so a short user id cannot corrupt an unrelated attribute", async () => {
+    const span = makeSpan({
+      userId: ExternalUserId("4"),
+      attrString: { "user.id": "4", "gen_ai.request.model": "gpt-4" },
+    })
+    const [result] = (
+      await run({ spans: [span], organizationId: ORG, policyByProjectId: pseudonymizeFor(), pseudonymSecret: "secret" })
+    ).spans
+
+    expect(result?.attrString["gen_ai.request.model"]).toBe("gpt-4")
+    expect(result?.attrString["user.id"]).toBe(result?.userId)
+  })
 })
 
 describe("redactSpans size cap", () => {

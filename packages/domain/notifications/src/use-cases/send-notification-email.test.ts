@@ -94,6 +94,10 @@ function setup(
       project && project.id === id
         ? Effect.succeed(project)
         : Effect.fail(new NotFoundError({ entity: "Project", id })),
+    findByIdForUpdate: (id) =>
+      project && project.id === id
+        ? Effect.succeed(project)
+        : Effect.fail(new NotFoundError({ entity: "Project", id })),
     findBySlug: () => Effect.die("not used"),
     list: () => Effect.die("not used"),
     listIncludingDeleted: () => Effect.die("not used"),

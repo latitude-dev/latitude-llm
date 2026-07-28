@@ -567,6 +567,9 @@ export const createDomainEventsWorker = ({
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
+    // Redaction policy changes are audit-only for the same reason.
+    ProjectRedactionPolicyChanged: () => Effect.void,
+    OrganizationRedactionPolicyChanged: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

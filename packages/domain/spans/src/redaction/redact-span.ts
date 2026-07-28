@@ -60,19 +60,38 @@ export function redactSpanDetail(
     contentKeys.length > 0
       ? Object.fromEntries(Object.entries(span.attrString).filter(([key]) => !isContentAttributeKey(key)))
       : span.attrString
-  const attrString = take(redactStringMap(attrStringSource, entities))
-  const resourceString = take(redactStringMap(span.resourceString, entities))
+  // Not redundant with the identity columns below: those are resolved copies, and these maps hold the originals.
+  const identities = identityReplacements(span, policy, pseudonyms)
+  const substitute = (map: Readonly<Record<string, string>>): Readonly<Record<string, string>> => {
+    const outcome = substituteIdentities(map, identities)
+    pseudonymizedIdentities += outcome.replaced
+    return outcome.value
+  }
 
-  const metadata = policy.redactMetadata ? take(redactStringMap(span.metadata, entities)) : span.metadata
+  const attrString = take(redactStringMap(substitute(attrStringSource), entities))
+  const resourceString = take(redactStringMap(substitute(span.resourceString), entities))
+
+  // Identity handling is its own control, so it applies to metadata and tags whether or not the metadata scope is on.
+  const metadataSource = substitute(span.metadata)
+  const metadata = policy.redactMetadata ? take(redactStringMap(metadataSource, entities)) : metadataSource
+  const tagsSource =
+    identities.size === 0
+      ? span.tags
+      : span.tags.map((tag) => {
+          const replacement = identities.get(tag)
+          if (replacement === undefined) return tag
+          pseudonymizedIdentities += 1
+          return replacement
+        })
   const tags = policy.redactMetadata
-    ? span.tags.map((tag) => {
+    ? tagsSource.map((tag) => {
         const outcome = redactLeaf(tag, entities)
         mergeRedactionCounts(counts, outcome.counts)
         scan.leaves += 1
         scan.chars += outcome.scannedChars
         return outcome.text
       })
-    : span.tags
+    : tagsSource
 
   let userId = span.userId
   let userEmail = span.userEmail
@@ -112,6 +131,46 @@ const replaceIdentity = (value: string, pseudonyms: PseudonymLookup): string => 
   if (value === "") return value
 
   return pseudonyms.get(value) ?? REDACTED_IDENTITY_PLACEHOLDER
+}
+
+const NO_IDENTITIES: ReadonlyMap<string, string> = new Map()
+
+/** Keyed by the raw value rather than the attribute key, so every vendor spelling of `user.id` is covered at once. */
+function identityReplacements(
+  span: SpanDetail,
+  policy: RedactionPolicy,
+  pseudonyms: PseudonymLookup,
+): ReadonlyMap<string, string> {
+  if (policy.identities !== "pseudonymize") return NO_IDENTITIES
+
+  const replacements = new Map<string, string>()
+  for (const value of [span.userId as string, span.userEmail]) {
+    if (value !== "") replacements.set(value, replaceIdentity(value, pseudonyms))
+  }
+
+  return replacements
+}
+
+/** Whole-value matches only: a substring pass would rewrite `gpt-4` for a project whose user ids are short numbers. */
+function substituteIdentities(
+  map: Readonly<Record<string, string>>,
+  identities: ReadonlyMap<string, string>,
+): { value: Readonly<Record<string, string>>; replaced: number } {
+  if (identities.size === 0) return { value: map, replaced: 0 }
+
+  let replaced = 0
+  const next: Record<string, string> = {}
+  for (const [key, value] of Object.entries(map)) {
+    const replacement = identities.get(value)
+    if (replacement === undefined) {
+      next[key] = value
+      continue
+    }
+    next[key] = replacement
+    replaced += 1
+  }
+
+  return replaced === 0 ? { value: map, replaced: 0 } : { value: next, replaced }
 }
 
 export function collectIdentityValues(

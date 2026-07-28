@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.7.0] - 2026-07-28
+
+### Added
+
+- `latitude projects update` accepts `settings.redaction`, configuring server-side PII redaction for spans ingested from then on.
+
+### Changed
+
+- `latitude projects update` now patches `settings` instead of replacing it, so omitted fields keep their stored values.
+
 ## [7.6.1] - 2026-07-24
 
 ### Changed

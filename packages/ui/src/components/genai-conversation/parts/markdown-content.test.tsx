@@ -187,4 +187,70 @@ describe("MarkdownContent", () => {
     expect(markup).not.toContain('data-content-type="json"')
     expect(markup).toMatch(/Show [\d,]+ more characters/)
   })
+
+  describe("redaction placeholders", () => {
+    it("renders a placeholder as a chip carrying its category, not the raw string", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="Contact [REDACTED_EMAIL] for access." />)
+
+      expect(textContentOf(markup)).not.toContain("[REDACTED_EMAIL]")
+      expect(textContentOf(markup)).toContain("EMAIL")
+      expect(markup).toContain("font-mono")
+    })
+
+    it("keeps the prose around the chip intact", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="Contact [REDACTED_EMAIL] for access." />)
+
+      expect(textContentOf(markup)).toContain("Contact ")
+      expect(textContentOf(markup)).toContain(" for access.")
+    })
+
+    it("opens underscores in the label so it reads as words", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="ssn [REDACTED_US_SSN] end" />)
+
+      expect(textContentOf(markup)).toContain("US SSN")
+    })
+
+    // Offsets after a chip must still address the original string, or search
+    // highlighting in the same message lands on the wrong characters.
+    it("keeps source offsets addressing the original content after a chip", () => {
+      const content = "before [REDACTED_EMAIL] after"
+      const markup = renderToStaticMarkup(<MarkdownContent content={content} />)
+
+      const spans = [...markup.matchAll(/data-source-start="(\d+)" data-source-end="(\d+)"/g)]
+      expect(spans.length).toBeGreaterThan(0)
+      for (const [, start, end] of spans) {
+        const slice = content.slice(Number(start), Number(end))
+        expect(content).toContain(slice)
+      }
+      const lastEnd = Math.max(...spans.map(([, , end]) => Number(end)))
+      expect(lastEnd).toBe(content.length)
+    })
+
+    it("leaves the literal placeholder alone inside a code fence", () => {
+      const fenced = '```json\n{"email":"[REDACTED_EMAIL]"}\n```'
+      const markup = renderToStaticMarkup(<MarkdownContent content={fenced} />)
+
+      expect(textContentOf(markup)).toContain("[REDACTED_EMAIL]")
+    })
+
+    it("chips an oversized-field placeholder too", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="output [REDACTED_OVERSIZED_FIELD] end" />)
+
+      expect(textContentOf(markup)).toContain("OVERSIZED FIELD")
+      expect(textContentOf(markup)).not.toContain("[REDACTED_OVERSIZED_FIELD]")
+    })
+
+    it("makes the chip keyboard reachable and names the explanation for screen readers", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="Contact [REDACTED_EMAIL] now." />)
+
+      expect(markup).toContain("<button")
+      expect(markup).toMatch(/aria-label="[^"]*cannot be recovered/)
+    })
+
+    it("does not chip a bare [REDACTED] with no category", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="value [REDACTED] here" />)
+
+      expect(textContentOf(markup)).toContain("[REDACTED] here")
+    })
+  })
 })
