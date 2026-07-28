@@ -648,10 +648,14 @@ describe("createSpanIngestionWorker", () => {
     const disk = new FakeStorageDisk()
     const pub = createFakeEventsPublisher()
     const queue = createFakeQueuePublisher()
-    const fileKey = `span-ingestion/${generateId()}-duplicate.json`
+    // A key per request, as production does: `putInDisk` mints a fresh id per OTLP
+    // request, so two ingests of the same trace never share a buffered payload.
+    const firstFileKey = `span-ingestion/${generateId()}-duplicate.json`
+    const secondFileKey = `span-ingestion/${generateId()}-duplicate.json`
     const organizationId = generateId()
     const projectId = generateId()
-    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+    disk.putBytes(firstFileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+    disk.putBytes(secondFileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
 
     createSpanIngestionWorker({
       consumer,
@@ -669,7 +673,7 @@ describe("createSpanIngestionWorker", () => {
 
     let processedEvents = 0
 
-    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchValidIngest(consumer, firstFileKey, organizationId, projectId)
     await dispatchPublishedDomainEvents(consumer, pub.published, processedEvents)
     processedEvents = pub.published.length
     for (const message of queue.published.filter(
@@ -678,7 +682,7 @@ describe("createSpanIngestionWorker", () => {
       await consumer.dispatchTask("billing", "recordTraceUsageBatch", message.payload)
     }
 
-    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchValidIngest(consumer, secondFileKey, organizationId, projectId)
     await dispatchPublishedDomainEvents(consumer, pub.published, processedEvents)
     processedEvents = pub.published.length
     for (const message of queue.published

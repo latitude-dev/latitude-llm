@@ -1,4 +1,4 @@
-import type { OrganizationId, ResolvedRedactionPolicy } from "@domain/shared"
+import type { OrganizationId, RedactionPolicy } from "@domain/shared"
 import { hmacSha256Hex } from "@repo/utils"
 import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
@@ -8,10 +8,9 @@ import { emptyScanTally, mergeScanTally } from "./redact-json.ts"
 import { collectIdentityValues, type PseudonymLookup, redactSpanDetail } from "./redact-span.ts"
 import { mergeRedactionCounts, type RedactionCounts } from "./redact-text.ts"
 
-interface SpanRedactionSummary {
+export interface SpanRedactionSummary {
   readonly counts: RedactionCounts
-  readonly enforceSpans: number
-  readonly dryRunSpans: number
+  readonly redactedSpans: number
   readonly leavesScanned: number
   readonly charsScanned: number
   readonly droppedAttributeKeys: number
@@ -23,8 +22,7 @@ interface SpanRedactionSummary {
 
 const EMPTY_SUMMARY: SpanRedactionSummary = {
   counts: {},
-  enforceSpans: 0,
-  dryRunSpans: 0,
+  redactedSpans: 0,
   leavesScanned: 0,
   charsScanned: 0,
   droppedAttributeKeys: 0,
@@ -37,7 +35,7 @@ interface RedactSpansInput {
   readonly spans: readonly SpanDetail[]
   readonly organizationId: OrganizationId
   /** Projects resolving to `off` are absent, so an empty map means redact nothing. */
-  readonly policyByProjectId: ReadonlyMap<string, ResolvedRedactionPolicy>
+  readonly policyByProjectId: ReadonlyMap<string, RedactionPolicy>
   readonly pseudonymSecret: string | undefined
   readonly timeoutMs?: number
 }
@@ -54,11 +52,9 @@ export const redactSpans = (
     const budgetMs = input.timeoutMs ?? REDACTION_BATCH_TIMEOUT_MS
     const deadline = performance.now() + budgetMs
 
-    const policyFor = (span: SpanDetail): ResolvedRedactionPolicy | undefined => {
-      const policy = input.policyByProjectId.get(span.projectId as string)
-
-      return policy?.mode === "off" ? undefined : policy
-    }
+    // A policy exists only for a project that redacts, so presence is the decision.
+    const policyFor = (span: SpanDetail): RedactionPolicy | undefined =>
+      input.policyByProjectId.get(span.projectId as string)
 
     const identityValues = collectIdentityValues(input.spans, policyFor)
     const { pseudonyms, identityFallback } = yield* buildPseudonyms({
@@ -81,15 +77,14 @@ export const redactSpans = (
 
 function applyRedaction(
   spans: readonly SpanDetail[],
-  policyFor: (span: SpanDetail) => ResolvedRedactionPolicy | undefined,
+  policyFor: (span: SpanDetail) => RedactionPolicy | undefined,
   pseudonyms: PseudonymLookup,
   identityFallback: boolean,
   deadline: number,
 ): { spans: readonly SpanDetail[]; summary: SpanRedactionSummary } {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
-  let enforceSpans = 0
-  let dryRunSpans = 0
+  let redactedSpans = 0
   let droppedAttributeKeys = 0
   let pseudonymizedIdentities = 0
 
@@ -107,8 +102,7 @@ function applyRedaction(
     mergeScanTally(scan, result.stats.scan)
     droppedAttributeKeys += result.stats.droppedAttributeKeys
     pseudonymizedIdentities += result.stats.pseudonymizedIdentities
-    if (policy.mode === "enforce") enforceSpans += 1
-    else dryRunSpans += 1
+    redactedSpans += 1
 
     return result.span
   })
@@ -117,8 +111,7 @@ function applyRedaction(
     spans: redacted,
     summary: {
       counts,
-      enforceSpans,
-      dryRunSpans,
+      redactedSpans,
       leavesScanned: scan.leaves,
       charsScanned: scan.chars,
       droppedAttributeKeys,

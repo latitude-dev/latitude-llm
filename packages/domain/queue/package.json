@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@domain/events": "workspace:*",
+    "@domain/shared": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

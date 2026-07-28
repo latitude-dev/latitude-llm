@@ -22,12 +22,6 @@ export const mergeScanTally = (target: ScanTally, source: ScanTally): void => {
   target.oversized += source.oversized
 }
 
-export interface JsonRedactionOptions {
-  readonly entities: ReadonlySet<RedactionEntity>
-  /** When false, walk and count but return the input untouched. This is `dryRun`. */
-  readonly mutate: boolean
-}
-
 /** Their `content` is base64 binary, so PII inside one is out of scope rather than overlooked. */
 const SKIPPED_PART_TYPES: ReadonlySet<string> = new Set(["blob", "file"])
 
@@ -57,23 +51,23 @@ const isSkippedPart = (value: Record<string, unknown>): boolean =>
  * Array length and order, object keys, and non-string leaves are all preserved; only strings change.
  * Every string leaf is scanned whatever its key, since customer JSON stores content under names like `id`.
  */
-export function redactJsonValue<T>(value: T, options: JsonRedactionOptions): JsonRedactionResult<T> {
+export function redactJsonValue<T>(value: T, entities: ReadonlySet<RedactionEntity>): JsonRedactionResult<T> {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
-  const walked = walk(value, options, counts, scan, 0)
+  const walked = walk(value, entities, counts, scan, 0)
 
   return { value: walked as T, counts, scan }
 }
 
 function walk(
   value: unknown,
-  options: JsonRedactionOptions,
+  entities: ReadonlySet<RedactionEntity>,
   counts: RedactionCounts,
   scan: ScanTally,
   depth: number,
 ): unknown {
   if (typeof value === "string") {
-    const outcome = redactLeaf(value, options.entities, options.mutate)
+    const outcome = redactLeaf(value, entities)
     mergeRedactionCounts(counts, outcome.counts)
     scan.leaves += 1
     scan.chars += outcome.scannedChars
@@ -90,13 +84,13 @@ function walk(
   if (isContainer && depth >= REDACTION_MAX_DEPTH) {
     scan.oversized += 1
 
-    return options.mutate ? OVERSIZED_FIELD_PLACEHOLDER : value
+    return OVERSIZED_FIELD_PLACEHOLDER
   }
 
   if (Array.isArray(value)) {
     let changed = false
     const next = value.map((item) => {
-      const walkedItem = walk(item, options, counts, scan, depth + 1)
+      const walkedItem = walk(item, entities, counts, scan, depth + 1)
       if (walkedItem !== item) changed = true
       return walkedItem
     })
@@ -110,7 +104,7 @@ function walk(
     let changed = false
     const next: Record<string, unknown> = {}
     for (const [key, entry] of Object.entries(value)) {
-      const walkedEntry = walk(entry, options, counts, scan, depth + 1)
+      const walkedEntry = walk(entry, entities, counts, scan, depth + 1)
       if (walkedEntry !== entry) changed = true
       next[key] = walkedEntry
     }
@@ -122,12 +116,12 @@ function walk(
 }
 
 /** A bare scalar is treated as text rather than re-serialized, which would rewrite `"hi"` as `"\"hi\""`. */
-export function redactJsonString(value: string, options: JsonRedactionOptions): JsonRedactionResult<string> {
-  if (value === "" || options.entities.size === 0) return { value, counts: {}, scan: emptyScanTally() }
+export function redactJsonString(value: string, entities: ReadonlySet<RedactionEntity>): JsonRedactionResult<string> {
+  if (value === "" || entities.size === 0) return { value, counts: {}, scan: emptyScanTally() }
 
   const parsed = tryParseJsonContainer(value)
   if (parsed === undefined) {
-    const outcome = redactLeaf(value, options.entities, options.mutate)
+    const outcome = redactLeaf(value, entities)
 
     return {
       value: outcome.text,
@@ -136,9 +130,9 @@ export function redactJsonString(value: string, options: JsonRedactionOptions): 
     }
   }
 
-  const walked = redactJsonValue(parsed, options)
+  const walked = redactJsonValue(parsed, entities)
   // The walk returns the same reference when no leaf changed, so the original bytes survive an unmatched scan.
-  if (!options.mutate || walked.value === parsed) return { value, counts: walked.counts, scan: walked.scan }
+  if (walked.value === parsed) return { value, counts: walked.counts, scan: walked.scan }
 
   return { value: JSON.stringify(walked.value), counts: walked.counts, scan: walked.scan }
 }
@@ -157,14 +151,14 @@ const tryParseJsonContainer = (value: string): unknown => {
 
 export function redactStringMap(
   map: Readonly<Record<string, string>>,
-  options: JsonRedactionOptions,
+  entities: ReadonlySet<RedactionEntity>,
 ): JsonRedactionResult<Record<string, string>> {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
   const next: Record<string, string> = {}
 
   for (const [key, value] of Object.entries(map)) {
-    const outcome = redactLeaf(value, options.entities, options.mutate)
+    const outcome = redactLeaf(value, entities)
     mergeRedactionCounts(counts, outcome.counts)
     scan.leaves += 1
     scan.chars += outcome.scannedChars

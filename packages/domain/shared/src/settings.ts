@@ -5,7 +5,7 @@ import type { RepositoryError } from "./errors.ts"
 import type { ProjectId } from "./id.ts"
 import type { SqlClient } from "./sql-client.ts"
 
-export const REDACTION_MODES = ["off", "dryRun", "enforce"] as const
+export const REDACTION_MODES = ["off", "enforce"] as const
 export const redactionModeSchema = z.enum(REDACTION_MODES)
 export type RedactionMode = z.infer<typeof redactionModeSchema>
 
@@ -166,13 +166,52 @@ export function resolveSettingsCascade(input: {
   }
 }
 
-/** `source` is display only: which layer the policy the user is looking at came from. */
-export interface ResolvedRedactionPolicy {
-  readonly mode: RedactionMode
+/**
+ * Everything the redaction engine needs.
+ *
+ * Carries no mode: a policy exists only for a project that redacts, so its presence
+ * is the decision. `off` projects have no policy at all, which is why the engine
+ * never has to ask.
+ */
+export interface RedactionPolicy {
   readonly entities: ReadonlySet<RedactionEntity>
   readonly redactMetadata: boolean
   readonly identities: RedactionIdentityHandling
+}
+
+/** The settings view: `mode` is the user-facing toggle and `source` says which layer set it. */
+export interface ResolvedRedactionPolicy extends RedactionPolicy {
+  readonly mode: RedactionMode
   readonly source: "organization" | "project" | "default"
+}
+
+/** Wire form for the queue payload: `entities` becomes an array because a `Set` does not survive JSON. */
+export const serializedRedactionPolicySchema = z.object({
+  entities: z.array(redactionEntitySchema),
+  redactMetadata: z.boolean(),
+  identities: redactionIdentityHandlingSchema,
+})
+export type SerializedRedactionPolicy = z.infer<typeof serializedRedactionPolicySchema>
+
+/** `null` for an `off` policy, so callers omit it from the map rather than encoding a no-op. */
+export const serializeRedactionPolicy = (policy: ResolvedRedactionPolicy): SerializedRedactionPolicy | null =>
+  policy.mode === "off"
+    ? null
+    : {
+        entities: [...policy.entities],
+        redactMetadata: policy.redactMetadata,
+        identities: policy.identities,
+      }
+
+/**
+ * `null` when the wire value is missing or malformed. Callers must treat that as a
+ * failure rather than as "no redaction": a corrupt policy on a project that opted
+ * in must never resolve to a plaintext write.
+ */
+export const deserializeRedactionPolicy = (wire: unknown): RedactionPolicy | null => {
+  const parsed = serializedRedactionPolicySchema.safeParse(wire)
+
+  return parsed.success ? { ...parsed.data, entities: new Set(parsed.data.entities) } : null
 }
 
 const REDACTION_SYSTEM_DEFAULTS: {

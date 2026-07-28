@@ -72,7 +72,7 @@ Write this sentence into the docs and the UI copy before writing code, because i
 
 Postgres layers already provided in this worker (`:43-48`): `BillingOverrideRepositoryLive`, **`SettingsReaderLive`**, `StripeSubscriptionLookupLive`, `OrganizationRepositoryLive`. `SettingsReader` is therefore reachable in the worker but unused by the span pipeline today.
 
-`SpanDecodingError` is swallowed as a warning (`:105-107`): undecodable payloads are dropped, not retried. Any other error propagates and BullMQ retries.
+`SpanDecodingError` is swallowed as a warning (`:105-107`): undecodable payloads are dropped. Any other error propagates and fails the job. **The topic configures no `attempts`, and `new Queue` sets no `defaultJobOptions`, so BullMQ's default of a single attempt applies: a failed ingest job is not retried.** Stalled-job recovery can still redeliver a job whose worker died mid-processing, which is a different mechanism from retry.
 
 `processIngestedSpansUseCase` (`packages/domain/spans/src/use-cases/process-ingested-spans.ts:120-187`) stages:
 
@@ -159,7 +159,7 @@ Therefore **ingested content cannot be removed before its retention TTL expires.
 
 **Takeaway:** neither bundles a model; both make contextual detection an optional separately-deployed component. Neither ships deterministic detectors out of the box, which is where we can beat both cheaply.
 
-**Two constraints we must not inherit.** Both designs sit on a synchronous export path, which is why both chose fail-open and sub-second timeouts. Our redaction point is in an async BullMQ worker at concurrency 50; the OTLP client already has its `200`. We can retry, and we can afford seconds. Copying fail-open and a 500 ms timeout would import their constraints without their reason. See [§4.6](#46-failure-policy) and [§4.7](#47-size-and-time-budget).
+**Two constraints we must not inherit.** Both designs sit on a synchronous export path, which is why both chose fail-open and sub-second timeouts. Our redaction point is in an async BullMQ worker at concurrency 50; the OTLP client already has its `200`. We can fail the batch instead of degrading it, and we can afford seconds. Copying fail-open and a 500 ms timeout would import their constraints without their reason. See [§4.6](#46-failure-policy) and [§4.7](#47-size-and-time-budget).
 
 **Engine research (permissive licenses only):**
 
@@ -263,14 +263,10 @@ The risk this trades into is redacting a tool-call id and breaking the tool-call
 
 `isContentAttributeKey` must **not** be a hand-maintained list in the redaction module. Each parser in `packages/domain/spans/src/otlp/content/` already knows its own keys; have each module export a key matcher and compose them in `content/index.ts` next to the existing vendor dispatch table (`content/index.ts:41-87`). A new vendor parser then gets redaction coverage automatically. Known families to cover: `genai`, `genai_deprecated`, `openinference`, `vercel`, `livekit`, `flue`, `claude-code`, `json-value`.
 
-In `dryRun` mode, count what pass 1 *would* drop; do not drop it.
-
 ### 4.3 Policy model
 
-Not a boolean. A boolean cannot express "let me validate this before it destroys my data," which is the single biggest adoption blocker for a destructive, non-retroactive, unrecoverable transform.
-
 ```ts
-export const REDACTION_MODES = ["off", "dryRun", "enforce"] as const
+export const REDACTION_MODES = ["off", "enforce"] as const
 
 export const REDACTION_ENTITIES = [
   "email",
@@ -296,10 +292,18 @@ export const DEFAULT_REDACTION_ENTITIES = [
 **Modes:**
 
 - `off` (default) — no scanning, zero cost. Projects in this mode never appear in the queue policy map.
-- `dryRun` — run every detector, count matches per entity and per field, annotate the trace, **mutate nothing**. Costs the same CPU as `enforce`.
 - `enforce` — replace matches with `[REDACTED_<LABEL>]`.
 
-`dryRun` is not a nice-to-have. It is how a customer answers "will this eat my tool outputs" before it does, and it is the only non-destructive way to tune `entities`.
+**There is deliberately no dry-run mode.** An earlier draft had one, on the reasoning that a destructive, non-retroactive, unrecoverable transform needs a way to validate a policy before it destroys data. That reasoning is sound; a dry-run *mode* was the wrong answer to it. It redacted nothing and surfaced nothing a customer could read — its only output was the [§4.8](#48-observability) span annotations, which land in Latitude's own telemetry — so from the outside it was indistinguishable from `off` while still costing a full scan and still able to fail closed on a deadline overrun. A mode that stores what `off` stores and can lose spans that `off` would keep is worse than not having it.
+
+Two consequences worth stating, because removing it removed a safety net:
+
+- **A false negative is now invisible to everyone.** Nothing reports what redaction did *not* catch. That raises the stakes on detector precision being right by construction ([§5](#5-detector-specification)) and makes per-entity toggles and the visible placeholder the only feedback a customer gets.
+- **Detector tuning needs a script, not a product mode.** Measuring how a detector behaves against real traffic is an offline question: read spans from ClickHouse and run the detectors over them. That answers [open question 5](#10-open-questions) without shipping a customer-visible surface that does nothing.
+
+Giving customers a real answer to "will this eat my tool outputs" needs a preview that runs the detectors on demand over spans already in ClickHouse and returns counts plus before/after samples. That is a genuine feature, out of scope here, and it is the thing a dry-run mode was pretending to be.
+
+Because `off` projects are omitted from the queue map entirely, a policy's *presence* is the decision. The engine-facing `RedactionPolicy` therefore carries no mode at all, and the wire format has no `mode` field: only the settings-facing `ResolvedRedactionPolicy` has one, for the UI toggle.
 
 **Placeholder format:** `[REDACTED_EMAIL]`, `[REDACTED_CREDIT_CARD]`, and so on. Uppercased entity label, no counters or ordinals (keeps `content_hash` deterministic for identical inputs). The placeholder is visible in the UI, which is intentional: users must be able to see *why* content is missing.
 
@@ -328,7 +332,7 @@ export const organizationRedactionSettingSchema = redactionSettingSchema.extend(
 
 ```ts
 export interface ResolvedRedactionPolicy {
-  readonly mode: "off" | "dryRun" | "enforce"
+  readonly mode: "off" | "enforce"
   readonly entities: ReadonlySet<RedactionEntity>
   readonly redactMetadata: boolean
   readonly identities: "keep" | "pseudonymize"
@@ -366,8 +370,9 @@ Why not resolve in the worker: it would add an uncached `SettingsReader` Postgre
 **Org settings do need a read at the boundary.** `SettingsReaderLive` is already in `traceIngestionBillingLayers` (`apps/ingest/src/routes/traces.ts:32-39`), so `getOrganizationSettings()` is reachable, but an uncached query on the hottest path in the product is not acceptable. Add a Redis-cached resolver modeled exactly on `packages/platform/db-postgres/src/resolve-effective-plan-cached.ts`:
 
 - Key `org:${organizationId}:settings:redaction` (org prefix first, per the repo-wide rule in `CLAUDE.md`).
-- 60 s TTL, Zod-validated cached payload, `cache.hit` span annotation, and an `invalidateRedactionPolicyCache(organizationId)` export mirroring `invalidateEffectivePlanCache` (`:95-101`).
-- Failure to read the cache or the row resolves to "no org policy," which per the design invariant means the project policy applies unchanged. This is the one place the invariant permits a non-tightening default, because the org layer can only *raise* strictness and treating an unavailable org row as `locked` would halt ingestion cluster-wide on a Redis blip. Say so in a one-line comment at the call site, since it looks like a bug otherwise.
+- 60 s TTL, Zod-validated cached payload, `cache.hit` span annotation, and an `invalidateOrganizationRedactionCache(organizationId)` export mirroring `invalidateEffectivePlanCache` (`:95-101`).
+- **A cache failure degrades to a database read. A database failure propagates.** An earlier draft of this spec had the row read degrade to "no org policy" on the theory that the org layer can only raise strictness. That was wrong: degrading lets a `locked` org policy fall back to a weaker project policy and write plaintext, which is the exact failure the design invariant exists to prevent. It also buys no availability, because project resolution on this path already hard-depends on Postgres (`ingest-spans.ts:146-149`; `RepositoryError` is already in the use case's error union) and the request fails regardless.
+- Cache the *absence* of a policy explicitly rather than as a bare `null`. Almost every organization has no policy, and if a cached absence were indistinguishable from a miss the cache would never serve the common case.
 
 **60 s of staleness is a documented behavior, not a defect.** Enabling redaction takes effect within a minute. Say it in the UI copy.
 
@@ -379,7 +384,6 @@ readonly redaction?: Readonly<Record<string, SerializedRedactionPolicy>> // proj
 
 ```ts
 interface SerializedRedactionPolicy {
-  readonly mode: "dryRun" | "enforce"
   readonly entities: readonly RedactionEntity[]
   readonly redactMetadata: boolean
   readonly identities: "keep" | "pseudonymize"
@@ -392,15 +396,15 @@ Projects resolving to `mode: "off"` are **absent from the map**, and the whole f
 
 ### 4.6 Failure policy
 
-**The deterministic tier fails closed.** If the redaction pass throws or times out, the effect fails, nothing is inserted, and BullMQ retries. On final failure the payload is dropped.
+**The deterministic tier fails closed.** If the redaction pass throws or overruns its deadline, the effect fails and nothing is inserted. The batch is then dropped, because `span-ingestion` runs with BullMQ's default single attempt ([§2.2](#22-worker-path)) — it is not retried first.
 
 Justification, and this is a deliberate divergence from both competitors:
 
-1. We are async. lmnr and langfuse chose fail-open because a synchronous export path made "drop the customer's telemetry" the only alternative. We have retries.
+1. We are async. lmnr and langfuse chose fail-open because a synchronous export path made "drop the customer's telemetry" the only alternative, and dropping it would have surfaced to the caller as a failed export. Ours is already acknowledged, so failing the batch costs the customer that batch rather than an error at their exporter.
 2. For the in-process deterministic tier, "failure" means a code bug, so fail-open reduces to *silently writing plaintext PII for a customer who explicitly asked us not to*.
 3. There is no delete path ([§2.5](#25-what-does-not-exist)) and redaction is non-retroactive, so a fail-open write is permanent and unremediable.
 
-**The cost is explicit and accepted:** a persistent redaction bug loses spans for opted-in projects rather than leaking their PII. That is the correct trade for a compliance control, it is loud (failed jobs, error logs, retry exhaustion), and the customer has two self-service escapes: set `mode` back to `off`, or to `dryRun`.
+**The cost is explicit and accepted:** a persistent redaction bug loses spans for opted-in projects rather than leaking their PII. That is the correct trade for a compliance control, it is loud (failed jobs, error logs), and the customer has a self-service escape as long as the effective policy is project-controlled: set `mode` back to `off`. Under a `locked` organization policy the project setting is ignored ([§4.4](#44-settings-cascade-authorization)), so recovery there means changing the organization policy, which only an owner can do. Whether ingest should retry before dropping is a real open question ([§10](#10-open-questions)); it is deliberately not changed here, because adding `attempts` alters failure handling for all ingest, not just redaction.
 
 Additional rules:
 
@@ -412,9 +416,9 @@ Additional rules:
 
 Ingestion is the hot path of the entire product, so this is a capacity question, not a footnote. "Sub-ms and deterministic" is meaningless without a size.
 
-- `REDACTION_MAX_FIELD_CHARS = 1_000_000` (1 M UTF-16 code units). A field above the cap is **not scanned**. In `enforce` mode it is replaced wholesale with `[REDACTED_OVERSIZED_FIELD]` and counted; in `dryRun` it is counted and left alone. Passing it through unscanned would break the promise, and partial scanning would leak the tail. Per the design invariant, degrade toward more redaction. 1 MB is generous: the realistic trigger is multi-MB file content in coding-agent tool outputs.
+- `REDACTION_MAX_FIELD_CHARS = 1_000_000` (1 M UTF-16 code units). A field above the cap is **not scanned**: it is replaced wholesale with `[REDACTED_OVERSIZED_FIELD]` and counted. Passing it through unscanned would break the promise, and partial scanning would leak the tail. Per the design invariant, degrade toward more redaction. 1 MB is generous: the realistic trigger is multi-MB file content in coding-agent tool outputs.
 - `REDACTION_MAX_DEPTH = 256`. The walk is recursive and `JSON.parse` accepts nesting tens of thousands deep, so a crafted `tool_input` overflows the stack; fail-closed then turns one hostile span into a dropped batch for every project in it. A subtree at the cap is treated exactly like an oversized leaf, which keeps the failure local. Payloads too deep for `JSON.parse` itself fall back to a plain-text scan, so they are still scanned rather than skipped.
-- `REDACTION_BATCH_TIMEOUT_MS = 30_000`, enforced as a **deadline checked before each span**, not as an `Effect.timeout` around the whole pass. The walk is synchronous, so a fiber-level timeout cannot fire until the work it was meant to bound has already finished; wrapping the pass in one would advertise a limit that never applies. Overrun is therefore bounded by a single span's walk, which the field cap bounds in turn. The async pseudonym phase does yield, so that one keeps a real `Effect.timeoutOrElse`. Either way the pass fails and the job retries ([§4.6](#46-failure-policy)).
+- `REDACTION_BATCH_TIMEOUT_MS = 30_000`, enforced as a **deadline checked before each span**, not as an `Effect.timeout` around the whole pass. The walk is synchronous, so a fiber-level timeout cannot fire until the work it was meant to bound has already finished; wrapping the pass in one would advertise a limit that never applies. Overrun is therefore bounded by a single span's walk, which the field cap bounds in turn. The async pseudonym phase does yield, so that one keeps a real `Effect.timeoutOrElse`. Either way the pass fails and the batch is dropped ([§4.6](#46-failure-policy)).
 - **Benchmark acceptance criterion:** measure and record added wall-clock per span at p50 and p99 for a representative batch, and the total CPU delta at concurrency 50. Target ≤ 5 ms per span at 32 KB of scanned content. If the measured number misses the target, the finding goes in the PR description and the cap gets revisited; do not silently ship a regression on the ingest path.
 
 ### 4.8 Observability
@@ -423,8 +427,7 @@ Without these, nobody can answer "is it working" or "why did my content disappea
 
 | Annotation | Meaning |
 | --- | --- |
-| `redaction.enforceSpans` | spans processed in `enforce` |
-| `redaction.dryRunSpans` | spans processed in `dryRun` |
+| `redaction.spans` | spans redacted |
 | `redaction.fields` | fields scanned |
 | `redaction.bytes` | bytes scanned |
 | `redaction.matches` | total accepted matches |
@@ -483,7 +486,7 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 ## 5. Detector specification
 
-`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label }` matches. Precision is the design goal, not recall: a false negative is a missed redaction the customer can catch in `dryRun`, while a false positive is permanent silent data corruption with no delete path.
+`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label }` matches. Precision is the design goal, not recall: a false negative leaves content visible, which the customer can see and report, while a false positive is permanent silent data corruption with no delete path.
 
 **The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, and file paths appearing in `tool_output`.
 
@@ -534,18 +537,18 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 | `apps/web/.../settings/general.tsx` | PII redaction section, modeled on `TraceSamplingSection` (`:196-257`) |
 | `apps/web/.../settings/organization.tsx` | Org-level section incl. `locked`, alongside `OrganizationNameSection` (`:22`) |
 | `apps/web/src/domains/organizations/organizations.functions.ts` | Widen the local `organizationSettingsSchema` (`:150-152`). **See [T-5](#8-traps): this is a data-loss trap** |
-| `.env.example` | `LAT_REDACTION_PSEUDONYM_SECRET`, commented with its default-absent behavior, in the workers block near `:134` |
+| `.env.example` | `LAT_REDACTION_PSEUDONYM_SECRET` in the workers block near `:134`, with a development value rather than commented out, matching `LAT_MASTER_ENCRYPTION_KEY` and `LAT_BETTER_AUTH_SECRET`. A commented-out secret reads as "required but unconfigured" and made a reviewer ask whether local PII work needed it. |
 | `docs/security/pii-redaction.mdx` | New "Ingest PII redaction" section; keep and rename the existing SDK section per [§2.4](#24-what-already-exists) |
 
 ### 6.3 UI
 
 Project section, in `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/general.tsx`, following the existing `Draft`/`pending`/`dirtyFields` pattern (`:34-106`) and the `rounded-lg bg-muted/30` card shape of `TraceSamplingSection` (`:196-257`):
 
-- Mode selector (`Off` / `Dry run` / `Enforce`), not a `Switch`, because there are three states.
-- Entity checkboxes, revealed when mode is not `Off`, in a `border-t` sub-row.
+- A `Switch`: redaction is on or off ([§4.3](#43-policy-model)).
+- Entity checkboxes, revealed when redaction is on, in a `border-t` sub-row.
 - Metadata-and-tags toggle and identity-handling selector in the same sub-row.
 - `DotIndicator` on dirty, participating in the existing `dirtyCount` / Apply / Discard / cmd-S / `useBlocker` machinery.
-- Copy must state: applies only to spans ingested from now on, takes effect within a minute, redacted content cannot be recovered, and dry run changes nothing.
+- Copy must state: applies only to spans ingested from now on, takes effect within a minute, and redacted content cannot be recovered.
 - When the org policy is `locked`, render the whole section read-only with an explanation naming the org policy.
 
 Org section in `settings/organization.tsx`: same controls plus `locked`, owner-only, with copy explaining that locking prevents projects from weakening it.
@@ -606,14 +609,13 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - JSON walk: array length and order preserved, object keys preserved, non-string leaves untouched, `blob`/`file` parts skipped, nested stringified JSON handled, `JSON.stringify` round-trip stable, unknown part types fall through to the generic walk.
 - `resolveRedactionPolicy`: every cascade combination, `locked` overriding a project policy entirely, `source` correctness, defaults when both sides are empty.
 - Pseudonymization: determinism, cross-org divergence for the same input, empty values stay empty, missing secret degrades to `[REDACTED_USER]`.
-- Oversized field: `enforce` replaces and counts, `dryRun` counts and leaves alone.
+- Oversized field: replaced wholesale and counted.
 
 **Integration, `packages/domain/spans/src/use-cases/process-ingested-spans.test.ts` (extend the existing file):**
 
 - `enforce` project: content redacted, **`attr_string` content keys dropped**, `events_json` redacted, `resource_string` values redacted.
 - Project absent from the policy map: byte-identical to today's output. Add this as a regression guard against accidental unconditional redaction.
 - Mixed batch: one `enforce` project and one absent project in the same OTLP batch, each handled correctly.
-- `dryRun`: inserted rows are byte-identical to unredacted, and match counts are annotated.
 - `metadata` scope off by default and applied when on.
 - Detector throw: no insert happens and the effect fails ([§4.6](#46-failure-policy)).
 - Timeout: fails rather than inserting.
@@ -624,7 +626,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - `redaction` field absent when every project is `off`.
 - Org `locked` policy overriding a project's weaker policy.
 - Multi-project batch produces one map entry per non-`off` project.
-- Cached org resolver: cache hit performs no query; cache failure resolves to no org policy.
+- Cached org resolver: cache hit performs no query; a cached absence is served rather than re-queried; a cache failure falls back to a database read; a database read failure propagates rather than resolving to "no org policy", so a `locked` organization policy can never fall through to a weaker project policy.
 
 **Web:** org settings round-trip preserves `billing.spendingLimitCents` and `wantsShowcase` ([T-5](#8-traps)).
 
@@ -637,8 +639,9 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 1. **Latitude's own API key format** for the `secret` detector. Derive it from `packages/domain/*/api-keys` rather than guessing, or drop it from the detector.
 2. **Should the UI surface a per-span "content was redacted" indicator** beyond the inline placeholder? Placeholders alone may read as data loss on a trace a user did not know was redacted.
 3. **ClickHouse deletion mechanics for Phase 5.** Lightweight `DELETE FROM` versus `ALTER TABLE … DELETE`, cost at our partition sizes, and how `traces`/`sessions` aggregate state is corrected. Needs its own design pass before that phase is scoped.
-4. **Is `dryRun` worth exposing through the public API**, or is it a UI-only affordance? Leaning expose, since a platform team rolling this out across many projects wants it scripted.
-5. **Should `phone` default off** rather than on? It is the highest-FP on-by-default detector. Resolve with a `dryRun` measurement against real coding-agent traffic before Phase 3 ships.
+4. **Should `phone` default off** rather than on? It is the highest-false-positive detector that is on by default. Answer it offline: a script that reads a sample of real spans from ClickHouse and runs `findRedactionMatches` over them, reporting matches per entity with surrounding context. That needs no product surface, and it is the general answer for tuning any detector default. Worth doing before Phase 3 ships the toggle to customers.
+5. **Should `span-ingestion` retry before dropping a batch?** It runs on BullMQ's default single attempt today, so any failure — redaction or otherwise — drops the batch immediately. Fail-closed redaction is correct either way, but "retry then drop" loses far less data than "drop", and a transient ClickHouse or object-store blip currently costs the whole batch. Adding `attempts` changes failure handling for all ingest, not just redaction, so it needs its own decision. Duplicate inserts on retry are safe: `spans` is a `ReplacingMergeTree`.
+6. **Is a customer-facing redaction preview worth building?** Running the detectors on demand over spans already in ClickHouse, returning counts plus before/after samples, is the only honest way to answer "will this eat my tool outputs" before enabling it. It is out of scope here ([§4.3](#43-policy-model)) but it is the feature a dry-run mode was standing in for, and without it a customer's first enforce is their validation.
 
 ---
 
@@ -674,24 +677,59 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 ### Phase 2 - Pipeline wiring
 
-- [ ] **P2-1**: `packages/platform/db-postgres/src/resolve-redaction-policy-cached.ts`, modeled on `resolve-effective-plan-cached.ts`: key `org:${organizationId}:settings:redaction`, 60 s TTL, Zod-validated payload, `cache.hit` annotation, `invalidateRedactionPolicyCache`.
-- [ ] **P2-2**: Add `redaction?: Record<string, SerializedRedactionPolicy>` to `span-ingestion:ingest` in `packages/domain/queue/src/topic-registry.ts`.
-- [ ] **P2-3**: In `ingestSpansUseCase`, resolve the per-project policy from the already-loaded `projectBySlug` plus the cached org settings, and stamp the map onto the published job. Omit `off` projects and omit the field entirely when the map is empty.
-- [ ] **P2-4**: Provide the Redis cache layer the resolver needs in `apps/ingest/src/routes/traces.ts`.
-- [ ] **P2-5**: In `processIngestedSpansUseCase`, accept `redaction`, apply the pass between `decodeAndTransform` and `repo.insert`, fail closed, and wrap in `Effect.timeout(REDACTION_BATCH_TIMEOUT_MS)`.
-- [ ] **P2-6**: Pass `wire.redaction` through `apps/workers/src/workers/span-ingestion.ts`; parse `LAT_REDACTION_PSEUDONYM_SECRET` with `parseEnvOptional` at the use site; add it to `.env.example` in the workers block.
-- [ ] **P2-7**: Emit every annotation in [§4.8](#48-observability), plus the `warn`/`error` logs.
-- [ ] **P2-8**: Delete the `tmp-ingest` blob after a successful insert via `deleteFromDisk` ([T-3](#8-traps)). Delete only after `repo.insert` succeeds, and treat a delete failure as non-fatal (the lifecycle rule is the backstop).
-- [ ] **P2-9**: Integration tests per [§9](#9-testing-plan) in both `process-ingested-spans.test.ts` and `ingest-spans.test.ts`.
-- [ ] **P2-10**: Run the benchmark in [§4.7](#47-size-and-time-budget) and record p50/p99 per-span cost and the concurrency-50 CPU delta in the PR description.
+- [x] **P2-1**: `packages/platform/db-postgres/src/resolve-redaction-policy-cached.ts`, modeled on `resolve-effective-plan-cached.ts`: key `org:${organizationId}:settings:redaction`, 60 s TTL, Zod-validated payload, `cache.hit` annotation, `invalidateOrganizationRedactionCache`.
+- [x] **P2-2**: Add `redaction?: Record<string, SerializedRedactionPolicy>` to `span-ingestion:ingest` in `packages/domain/queue/src/topic-registry.ts`.
+- [x] **P2-3**: In `ingestSpansUseCase`, resolve the per-project policy from the already-loaded `projectBySlug` plus the cached org settings, and stamp the map onto the published job. Omit `off` projects and omit the field entirely when the map is empty.
+- [x] **P2-4**: Provide the Redis cache layer the resolver needs in `apps/ingest/src/routes/traces.ts`.
+- [x] **P2-5**: In `processIngestedSpansUseCase`, accept `redaction`, apply the pass between `decodeAndTransform` and `repo.insert`, and fail closed. No timeout wrapper is needed here: Phase 1's `redactSpans` already owns the budget with a per-span deadline, because the walk is synchronous and an `Effect` timeout around it could not fire until it had already finished.
+- [x] **P2-6**: Pass `wire.redaction` through `apps/workers/src/workers/span-ingestion.ts`; parse `LAT_REDACTION_PSEUDONYM_SECRET` with `parseEnvOptional` at the use site; add it to `.env.example` in the workers block.
+- [x] **P2-7**: Emit every annotation in [§4.8](#48-observability), plus the `warn`/`error` logs.
+- [x] **P2-8**: Delete the `tmp-ingest` blob after a successful insert via `deleteFromDisk` ([T-3](#8-traps)). Delete only after `repo.insert` succeeds, and treat a delete failure as non-fatal (the lifecycle rule is the backstop).
+- [x] **P2-9**: Integration tests per [§9](#9-testing-plan) in both `process-ingested-spans.test.ts` and `ingest-spans.test.ts`.
+- [x] **P2-10**: Run the benchmark in [§4.7](#47-size-and-time-budget) and record p50/p99 per-span cost and the concurrency-50 CPU delta in the PR description.
 
-**Exit gate**:
+**Exit gate** — met:
 
-- With every project `off`, inserted rows are byte-identical to pre-change output, asserted by test.
-- An `enforce` project's inserted row has redacted content **and** no content keys left in `attr_string`, asserted by test.
-- A detector throw produces zero inserts.
-- Benchmark numbers are in the PR description; a miss against the 5 ms target is called out explicitly rather than omitted.
-- The `tmp-ingest` object is gone after a successful large-payload ingest, asserted by test.
+- [x] With every project `off`, inserted rows are byte-identical to pre-change output, asserted two ways: no `redaction` field, and an empty `redaction` map.
+- [x] An `enforce` project's inserted row has redacted content **and** no content keys left in `attr_string`, while its operational attributes survive.
+- [x] A malformed policy produces zero inserts and fails the job. Verified by mutation: skipping malformed policies instead of failing breaks two tests.
+- [x] The `tmp-ingest` object is gone after a successful large-payload ingest, and a failed delete does not fail the ingest. Verified by mutation: removing the delete breaks one test.
+- [x] Benchmark run and recorded below; the target is met with headroom rather than missed.
+
+**Benchmark results.** Measured over 200 coding-agent-shaped spans (prose, a diff, a tool call carrying that diff, plus real hits), redacting through `redactSpans` after the real `transformOtlpToSpans`. Warm-up discarded, 40 batches sampled.
+
+| Scanned content | per-span p50 | per-span p99 |
+| --- | --- | --- |
+| ~8 KB/span | 0.153 ms | 0.182 ms |
+| ~29 KB/span | 0.685 ms | 1.223 ms |
+
+Added CPU at the 29 KB point is **0.590 ms/span**, i.e. roughly **1,700 spans/sec per core** of redaction capacity. Against the §4.7 target of ≤ 5 ms/span at ~32 KB, that is about 4× headroom at p99.
+
+Two notes on interpreting this, because "concurrency 50" invites a wrong reading:
+
+- The worker event loop is single threaded, so concurrency 50 **interleaves** batches rather than parallelising this cost. The number that matters is the per-core throughput above, not a 50× multiple.
+- Projects with redaction `off` cost **0.000 ms**: `redactSpans` returns the identical array before touching a span. So this cost applies only to opted-in projects, not to ingestion generally.
+
+The benchmark was run as a throwaway script and not committed. The repository has no benchmark convention, and adding one would put ~15 s on every `@domain/spans` CI run for a number that only needs re-measuring when the engine changes. Re-derive it from the methodology above if the walk is modified.
+
+**Findings from Phase 2** (fold into the relevant sections when promoting to `dev-docs/`):
+
+- **Deleting the buffered payload has to happen after the events are published, not after the insert.** The first placement made a job that died mid-processing unrecoverable: stalled-job redelivery found no payload, so the batch stayed inserted with `TracesIngested` never fired, silently losing trace-end, billing, and search indexing. Caught by an existing worker test that ingests the same `fileKey` twice.
+- **`span-ingestion` has no retries.** No `attempts` on the topic and no `defaultJobOptions` on the queue, so BullMQ's default of one attempt applies. Several earlier notes in this spec claimed a failed pass "retries"; it does not, it drops. Corrected in [§2.2](#22-worker-path) and [§4.6](#46-failure-policy), and raised as [open question 5](#10-open-questions).
+- **Fixing the bridging bug narrowed the grouped shapes and lost Diners.** Splitting the credit-card pattern left only 4-4-4-N and 4-6-5, so the 4-6-4 form stopped matching while its compact form still did. Every grouping a real issuer prints is now enumerated and tested in both separators. Generalising to "groups of four to six digits" is the wrong fix: an open-ended repetition swallows a trailing group, overruns 19 digits, and fails the length gate with the card inside the discarded match, which is the bridging bug again.
+- **The buffered-payload delete has to run on the empty-batch path too.** The early return for a batch whose spans were all rejected skipped it, leaving an unredacted object behind with no lifecycle rule under it on self-hosted disk. The delete belongs on every success exit and on none of the failure paths, so a finalizer is the wrong tool: a failed job may be redelivered and redelivery needs the payload.
+- **A separator-bridging pattern loses the value it was meant to catch.** The credit-card candidate allowed an optional space or dash between *any* two digits, so in `+14155552671 4111111111111111` it consumed both numbers as one over-long run, failed the issuer check, and never reconsidered the real card inside — a silent missed redaction. Fixed the way IBAN already was: separate compact and grouped patterns, with the grouped ones backreferencing their own separator so a match cannot span two numbers. The class is easy to reintroduce and invisible without an adjacency test, so every multi-part detector needs one.
+- **Removing dry run removed the only feedback on false negatives.** Nothing now reports what redaction missed, which is why detector precision has to be right by construction and why detector tuning belongs in an offline script rather than a product mode ([§4.3](#43-policy-model)).
+- `RedactionPolicy` was split out of `ResolvedRedactionPolicy`. The engine never needed `source`, which exists only so the UI can say "inherited from organization", and keeping it out of the wire format avoids either shipping a display field through the queue or inventing a fake value on deserialize. With one active mode, presence in the policy map *is* the decision, so `RedactionPolicy` carries no mode and the wire format has no `mode` field.
+- A malformed wire policy must fail the job. The obvious reading of "degrade toward more redaction" would skip it, but skipping is the *less* redacting choice: it resolves a corrupt policy on a project that opted in to a plaintext write. Absent and malformed are therefore handled differently, which is worth stating because they look interchangeable.
+- `@domain/queue` gained a dependency on `@domain/shared` for the wire type. No cycle, since `@domain/shared` has no workspace dependencies beyond `@repo/utils`.
+- Effect `4.0.0-beta.57` has no `Effect.catchAll`. Use `Effect.ignore` for "discard any failure"; the available surface is `catchCause`, `catchTag`, `catchIf`, `catchDefect`, `ignore`, `orElseSucceed`.
+- The `@platform/db-postgres` suite has pre-existing PGlite `beforeAll` contention flakiness: the same tree produced 47/47 passing and 5 timed-out `setupTestPostgres` hooks on consecutive full runs, while the affected files pass in isolation. Unrelated to redaction; do not chase it when it appears.
+- **The single-write-path claim is verified structurally, not just by test.** `spans` has exactly one writer (`SpanRepository.insert`, called only from `processIngestedSpansUseCase`), the table is written from exactly one place in the ClickHouse adapter, and `span-ingestion:ingest` has exactly one publisher and one consumer. Seed tooling POSTs to `/v1/traces` rather than writing directly, so it traverses the same path. Re-check these four facts if redaction ever appears to be bypassed:
+  - `grep -rn 'table: "spans"'` → only `span-repository.ts`
+  - `grep -rn 'repo.insert'` → only `process-ingested-spans.ts`
+  - `grep -rn '"span-ingestion"'` → only `ingest-spans.ts` (publish) and the worker (subscribe)
+  - `grep -rn 'v1/traces' tools/live-seeds` → seeds use the HTTP boundary
 
 ### Phase 3 - Surfaces: UI, API, docs
 
@@ -700,7 +738,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - [ ] **P3-3**: Widen the local `organizationSettingsSchema` in `organizations.functions.ts` to preserve every existing field, with a round-trip test ([T-5](#8-traps)).
 - [ ] **P3-4**: Role checks: project section requires `admin`/`owner`, org section requires `owner`. Log actor plus before/after on every change.
 - [ ] **P3-5**: `RedactionSettingSchema` in `packages/operations/src/operations/projects.ts` with a `.describe()` on every field, added to `ProjectSettingsSchema`; regenerate `openapi.json` and `mcp.json` per the api-endpoints skill.
-- [ ] **P3-6**: Extend `docs/security/pii-redaction.mdx` with the ingest-redaction section: the exact promise from [§1](#1-purpose-and-the-exact-promise), the entity coverage matrix, mode semantics, the 60 s propagation window, non-retroactivity, buffer lifetime ([T-3](#8-traps)), and the search/dedup notes ([T-9](#8-traps), [T-10](#8-traps)). Rename the existing section to "SDK attribute redaction."
+- [ ] **P3-6**: Extend `docs/security/pii-redaction.mdx` with the ingest-redaction section: the exact promise from [§1](#1-purpose-and-the-exact-promise), the entity coverage matrix, the 60 s propagation window, non-retroactivity, buffer lifetime ([T-3](#8-traps)), and the search/dedup notes ([T-9](#8-traps), [T-10](#8-traps)). Rename the existing section to "SDK attribute redaction."
 - [ ] **P3-7**: Write `dev-docs/spans.md` and `dev-docs/settings.md` sections for the redaction stage and the settings cascade.
 
 **Exit gate**:

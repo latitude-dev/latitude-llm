@@ -2,7 +2,7 @@ import {
   ExternalUserId,
   OrganizationId,
   ProjectId,
-  type ResolvedRedactionPolicy,
+  type RedactionPolicy,
   resolveRedactionPolicy,
   SessionId,
   SimulationId,
@@ -82,12 +82,12 @@ const makeSpan = (overrides: Partial<SpanDetail> = {}): SpanDetail => ({
   ...overrides,
 })
 
-const policy = (mode: "enforce" | "dryRun", extra: Record<string, unknown> = {}): ResolvedRedactionPolicy =>
-  resolveRedactionPolicy({ organization: null, project: { redaction: { mode, ...extra } } })
+const policy = (extra: Record<string, unknown> = {}): RedactionPolicy =>
+  resolveRedactionPolicy({ organization: null, project: { redaction: { mode: "enforce", ...extra } } })
 
 const run = (input: Parameters<typeof redactSpans>[0]) => Effect.runPromise(redactSpans(input))
 
-const enforceFor = (projectId = PROJECT) => new Map([[projectId, policy("enforce")]])
+const enforceFor = (projectId = PROJECT) => new Map([[projectId, policy()]])
 
 const textMessage = (content: string) => [{ role: "user", parts: [{ type: "text", content }] }]
 
@@ -97,7 +97,7 @@ describe("redactSpans", () => {
     const result = await run({ spans, organizationId: ORG, policyByProjectId: new Map(), pseudonymSecret: undefined })
 
     expect(result.spans).toBe(spans)
-    expect(result.summary.enforceSpans).toBe(0)
+    expect(result.summary.redactedSpans).toBe(0)
   })
 
   it("leaves a span whose project is absent from the policy map byte-identical", async () => {
@@ -113,7 +113,7 @@ describe("redactSpans", () => {
     })
 
     expect(result.spans[0]).toBe(untouched)
-    expect(result.summary.enforceSpans).toBe(0)
+    expect(result.summary.redactedSpans).toBe(0)
   })
 
   it("redacts content of an opted-in project only, in a mixed batch", async () => {
@@ -131,7 +131,7 @@ describe("redactSpans", () => {
 
     expect(JSON.stringify(result.spans[0]?.inputMessages)).toContain("[REDACTED_EMAIL]")
     expect(JSON.stringify(result.spans[1]?.inputMessages)).toContain("john@example.com")
-    expect(result.summary.enforceSpans).toBe(1)
+    expect(result.summary.redactedSpans).toBe(1)
   })
 
   it("redacts every content field of the span surface", async () => {
@@ -217,7 +217,7 @@ describe("redactSpans", () => {
       await run({
         spans: [span],
         organizationId: ORG,
-        policyByProjectId: new Map([[PROJECT, policy("enforce", { scopes: { metadata: true } })]]),
+        policyByProjectId: new Map([[PROJECT, policy({ scopes: { metadata: true } })]]),
         pseudonymSecret: undefined,
       })
     ).spans
@@ -242,77 +242,8 @@ describe("redactSpans", () => {
   })
 })
 
-describe("redactSpans dry run", () => {
-  const dryRunFor = () => new Map([[PROJECT, policy("dryRun")]])
-
-  it("does not modify content", async () => {
-    const span = makeSpan({ toolOutput: "mail john@example.com", statusMessage: "john@example.com" })
-    const [result] = (
-      await run({ spans: [span], organizationId: ORG, policyByProjectId: dryRunFor(), pseudonymSecret: undefined })
-    ).spans
-
-    expect(result?.toolOutput).toBe("mail john@example.com")
-    expect(result?.statusMessage).toBe("john@example.com")
-  })
-
-  it("does not drop content attribute keys", async () => {
-    const span = makeSpan({ attrString: { "gen_ai.input.messages": "john@example.com" } })
-    const [result] = (
-      await run({ spans: [span], organizationId: ORG, policyByProjectId: dryRunFor(), pseudonymSecret: undefined })
-    ).spans
-
-    expect(result?.attrString["gen_ai.input.messages"]).toBe("john@example.com")
-  })
-
-  it("still reports what enforce would have removed", async () => {
-    const span = makeSpan({ toolOutput: "john@example.com +14155552671" })
-    const dry = await run({
-      spans: [span],
-      organizationId: ORG,
-      policyByProjectId: dryRunFor(),
-      pseudonymSecret: undefined,
-    })
-    const enforced = await run({
-      spans: [span],
-      organizationId: ORG,
-      policyByProjectId: enforceFor(),
-      pseudonymSecret: undefined,
-    })
-
-    expect(dry.summary.counts).toEqual(enforced.summary.counts)
-    expect(dry.summary.dryRunSpans).toBe(1)
-    expect(dry.summary.enforceSpans).toBe(0)
-  })
-
-  it("still reports the attribute keys enforce would drop", async () => {
-    const span = makeSpan({ attrString: { "gen_ai.input.messages": "x" } })
-    const result = await run({
-      spans: [span],
-      organizationId: ORG,
-      policyByProjectId: dryRunFor(),
-      pseudonymSecret: undefined,
-    })
-
-    expect(result.summary.droppedAttributeKeys).toBe(1)
-  })
-
-  it("does not pseudonymize identities", async () => {
-    const span = makeSpan({ userEmail: "john@example.com", userId: ExternalUserId("u-1") })
-    const [result] = (
-      await run({
-        spans: [span],
-        organizationId: ORG,
-        policyByProjectId: new Map([[PROJECT, policy("dryRun", { identities: "pseudonymize" })]]),
-        pseudonymSecret: "secret",
-      })
-    ).spans
-
-    expect(result?.userEmail).toBe("john@example.com")
-  })
-})
-
 describe("redactSpans identity handling", () => {
-  const pseudonymizeFor = () => new Map([[PROJECT, policy("enforce", { identities: "pseudonymize" })]])
+  const pseudonymizeFor = () => new Map([[PROJECT, policy({ identities: "pseudonymize" })]])
 
   it("keeps identities by default", async () => {
     const span = makeSpan({ userEmail: "john@example.com", userId: ExternalUserId("u-1") })
@@ -428,18 +359,6 @@ describe("redactSpans size cap", () => {
     })
 
     expect(result.spans[0]?.toolOutput).toBe("[REDACTED_OVERSIZED_FIELD]")
-    expect(result.summary.oversizedFields).toBe(1)
-  })
-
-  it("counts an oversized leaf in dry run without replacing it", async () => {
-    const result = await run({
-      spans: [makeSpan({ toolOutput: oversized })],
-      organizationId: ORG,
-      policyByProjectId: new Map([[PROJECT, policy("dryRun")]]),
-      pseudonymSecret: undefined,
-    })
-
-    expect(result.spans[0]?.toolOutput).toBe(oversized)
     expect(result.summary.oversizedFields).toBe(1)
   })
 
