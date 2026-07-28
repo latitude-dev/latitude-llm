@@ -36,6 +36,10 @@ let notify: ((entries: Entries) => void) | null = null
 let createObjectUrl: ReturnType<typeof vi.fn>
 let revokeObjectUrl: ReturnType<typeof vi.fn>
 
+// Assigned directly because jsdom leaves these undefined, which rules out vi.spyOn.
+const originalCreateObjectUrl = URL.createObjectURL
+const originalRevokeObjectUrl = URL.revokeObjectURL
+
 class FakeObserver {
   constructor(callback: (entries: Entries) => void) {
     notify = callback
@@ -84,6 +88,8 @@ describe("PdfAttachment loading gate", () => {
   })
 
   afterEach(() => {
+    URL.createObjectURL = originalCreateObjectUrl
+    URL.revokeObjectURL = originalRevokeObjectUrl
     vi.unstubAllGlobals()
   })
 
