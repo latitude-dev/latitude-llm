@@ -47,4 +47,12 @@ describe("buildSubagentToolCalls", () => {
     const decorations = buildSubagentToolCalls({ graph })
     expect(decorations.has("dup")).toBe(false)
   })
+
+  it("excludes the node whose own conversation is being decorated", () => {
+    clock = 0
+    const graph = buildAgentGraph({ spans: subagentSpans("t1", "tc", "research") })
+    const [node] = [...graph.nodeByToolCallId.values()]
+    const decorations = buildSubagentToolCalls({ graph, excludeNodeId: node?.id })
+    expect(decorations.has("tc")).toBe(false)
+  })
 })
