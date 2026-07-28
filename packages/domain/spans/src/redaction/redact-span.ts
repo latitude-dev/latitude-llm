@@ -151,10 +151,7 @@ function identityReplacements(
   return replacements
 }
 
-/**
- * Whole-value matches only. A substring pass would rewrite `gpt-4` for a project whose user ids
- * are short numbers, and every resolver reads the identity from a value of its own anyway.
- */
+/** Whole-value matches only: a substring pass would rewrite `gpt-4` for a project whose user ids are short numbers. */
 function substituteIdentities(
   map: Readonly<Record<string, string>>,
   identities: ReadonlyMap<string, string>,
