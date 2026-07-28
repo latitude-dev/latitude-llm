@@ -12,6 +12,21 @@ export interface UpdateOrganizationInput {
   readonly settingsPatch?: OrganizationSettings | undefined
 }
 
+/**
+ * `redaction` is writable only through `updateOrganizationRedactionUseCase`, which gates on
+ * role and records an audit event. This endpoint has neither, so it pins the stored value
+ * whatever the caller sent.
+ */
+const withStoredRedaction = (
+  stored: OrganizationSettings | null | undefined,
+  next: OrganizationSettings | undefined,
+): OrganizationSettings | undefined => {
+  if (next === undefined) return undefined
+  const storedRedaction = stored?.redaction
+  const { redaction: _ignored, ...withoutRedaction } = next
+  return storedRedaction === undefined ? withoutRedaction : { ...withoutRedaction, redaction: storedRedaction }
+}
+
 export const updateOrganizationUseCase = Effect.fn("organizations.updateOrganization")(function* (
   input: UpdateOrganizationInput,
 ) {
@@ -20,8 +35,10 @@ export const updateOrganizationUseCase = Effect.fn("organizations.updateOrganiza
 
   const org = yield* repo.findById(sqlClient.organizationId)
 
-  const nextSettings =
-    input.settingsPatch !== undefined ? { ...(org.settings ?? {}), ...input.settingsPatch } : input.settings
+  const nextSettings = withStoredRedaction(
+    org.settings,
+    input.settingsPatch !== undefined ? { ...(org.settings ?? {}), ...input.settingsPatch } : input.settings,
+  )
 
   const updated: Organization = {
     ...org,

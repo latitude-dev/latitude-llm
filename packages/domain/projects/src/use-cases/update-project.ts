@@ -33,6 +33,21 @@ export type UpdateProjectError =
   | InvalidProjectNameError
   | InvalidProjectSlugError
 
+/**
+ * `redaction` is writable only through `updateProjectRedactionUseCase`, which gates on role
+ * and records an audit event. This endpoint has neither, so it pins the stored value
+ * whatever the caller sent.
+ */
+const withStoredRedaction = (
+  stored: ProjectSettings | null | undefined,
+  next: ProjectSettings | undefined,
+): ProjectSettings | undefined => {
+  if (next === undefined) return undefined
+  const storedRedaction = stored?.redaction
+  const { redaction: _ignored, ...withoutRedaction } = next
+  return storedRedaction === undefined ? withoutRedaction : { ...withoutRedaction, redaction: storedRedaction }
+}
+
 export const updateProjectUseCase = Effect.fn("projects.updateProject")(function* (input: UpdateProjectInput) {
   yield* Effect.annotateCurrentSpan("project.id", input.id)
   const sqlClient = yield* SqlClient
@@ -108,10 +123,12 @@ export const updateProjectUseCase = Effect.fn("projects.updateProject")(function
         }
       }
 
-      const nextSettings =
+      const nextSettings = withStoredRedaction(
+        existingProject.settings,
         input.settingsPatch !== undefined
           ? { ...(existingProject.settings ?? {}), ...input.settingsPatch }
-          : input.settings
+          : input.settings,
+      )
 
       const now = new Date()
       const updatedProject: Project = {

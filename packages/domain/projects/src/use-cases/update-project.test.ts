@@ -162,7 +162,68 @@ describe("updateProjectUseCase", () => {
         updateProjectUseCase({ id, settings: { keepMonitoring: false } }).pipe(Effect.provide(layer)),
       )
 
-      expect(rows.get(id)?.settings).toEqual({ keepMonitoring: false })
+      // `redaction` survives a replace on purpose — see the bypass tests below.
+      expect(rows.get(id)?.settings).toEqual({
+        keepMonitoring: false,
+        redaction: { mode: "enforce", entities: ["email"] },
+      })
+    })
+
+    // This endpoint has no role gate and emits no audit event, so letting it write
+    // `redaction` would hand every member a way to switch a compliance control off.
+    describe("redaction cannot be written through this endpoint", () => {
+      it("ignores a redaction patch, keeping the stored policy", async () => {
+        const id = ProjectId("1".repeat(24))
+        const { layer, rows } = makeLayer([seeded(id)])
+
+        await Effect.runPromise(
+          updateProjectUseCase({ id, settingsPatch: { redaction: { mode: "off" } } }).pipe(Effect.provide(layer)),
+        )
+
+        expect(rows.get(id)?.settings?.redaction).toEqual({ mode: "enforce", entities: ["email"] })
+      })
+
+      it("ignores redaction in a wholesale replace too", async () => {
+        const id = ProjectId("1".repeat(24))
+        const { layer, rows } = makeLayer([seeded(id)])
+
+        await Effect.runPromise(
+          updateProjectUseCase({ id, settings: { redaction: { mode: "off" } } }).pipe(Effect.provide(layer)),
+        )
+
+        expect(rows.get(id)?.settings?.redaction).toEqual({ mode: "enforce", entities: ["email"] })
+      })
+
+      it("does not invent a policy when none is stored", async () => {
+        const id = ProjectId("1".repeat(24))
+        const { layer, rows } = makeLayer([
+          {
+            ...makeProject({ id, slug: "checkout-agent", name: "Checkout agent" }),
+            settings: { keepMonitoring: true },
+          },
+        ])
+
+        await Effect.runPromise(
+          updateProjectUseCase({ id, settingsPatch: { redaction: { mode: "enforce" } } }).pipe(Effect.provide(layer)),
+        )
+
+        expect(rows.get(id)?.settings).toEqual({ keepMonitoring: true })
+      })
+
+      it("still applies the sibling fields sent alongside a redaction attempt", async () => {
+        const id = ProjectId("1".repeat(24))
+        const { layer, rows } = makeLayer([seeded(id)])
+
+        await Effect.runPromise(
+          updateProjectUseCase({
+            id,
+            settingsPatch: { keepMonitoring: false, redaction: { mode: "off" } },
+          }).pipe(Effect.provide(layer)),
+        )
+
+        expect(rows.get(id)?.settings?.keepMonitoring).toBe(false)
+        expect(rows.get(id)?.settings?.redaction).toEqual({ mode: "enforce", entities: ["email"] })
+      })
     })
 
     it("leaves settings untouched when neither field is given", async () => {

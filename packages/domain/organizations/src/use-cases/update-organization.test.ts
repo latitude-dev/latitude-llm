@@ -77,7 +77,36 @@ describe("updateOrganizationUseCase", () => {
   it("replaces wholesale when given settings, so a caller can still clear a key", async () => {
     const { updated } = await run(seedOrg(FULL_SETTINGS), { settings: { keepMonitoring: false } })
 
-    expect(updated.settings).toEqual({ keepMonitoring: false })
+    // `redaction` survives a replace on purpose — see the bypass tests below.
+    expect(updated.settings).toEqual({ keepMonitoring: false, redaction: FULL_SETTINGS.redaction })
+  })
+
+  // This endpoint has no role gate and emits no audit event, so letting it write
+  // `redaction` would hand every member a way to switch a compliance control off.
+  describe("redaction cannot be written through this endpoint", () => {
+    it("ignores a redaction patch, keeping the stored policy", async () => {
+      const { organizations } = await run(seedOrg(FULL_SETTINGS), {
+        settingsPatch: { redaction: { mode: "off", locked: false } },
+      })
+
+      expect(organizations.get(ORG_ID)?.settings?.redaction).toEqual(FULL_SETTINGS.redaction)
+    })
+
+    it("ignores redaction in a wholesale replace too", async () => {
+      const { organizations } = await run(seedOrg(FULL_SETTINGS), {
+        settings: { redaction: { mode: "off" } },
+      })
+
+      expect(organizations.get(ORG_ID)?.settings?.redaction).toEqual(FULL_SETTINGS.redaction)
+    })
+
+    it("does not invent a policy when none is stored", async () => {
+      const { organizations } = await run(seedOrg({ keepMonitoring: true }), {
+        settingsPatch: { redaction: { mode: "enforce" } },
+      })
+
+      expect(organizations.get(ORG_ID)?.settings).toEqual({ keepMonitoring: true })
+    })
   })
 
   it("prefers settingsPatch when a caller passes both", async () => {

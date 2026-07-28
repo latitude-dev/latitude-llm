@@ -4,6 +4,7 @@ import {
   createProjectUseCase,
   type Project,
   ProjectRepository,
+  updateProjectRedactionUseCase,
   updateProjectUseCase,
 } from "@domain/projects"
 import {
@@ -336,13 +337,23 @@ const updateProject = projectEndpoint({
       const repo = yield* ProjectRepository
       const project = yield* repo.findBySlug(input.params.projectSlug)
 
-      const updated = yield* updateProjectUseCase({
+      let updated = yield* updateProjectUseCase({
         id: project.id,
         ...(body.name !== undefined ? { name: body.name } : {}),
         // Patch, not replace: this schema exposes a subset of the stored settings,
         // so a replace would let one field's update silently clear the others.
         ...(body.settings !== undefined ? { settingsPatch: body.settings } : {}),
       })
+
+      // `updateProjectUseCase` refuses to write `redaction`, so the policy goes through its
+      // own use case to pick up the audit event that an irreversible change needs.
+      if (body.settings?.redaction !== undefined) {
+        updated = yield* updateProjectRedactionUseCase({
+          projectId: project.id,
+          actorUserId: actorUserId ?? "",
+          redaction: body.settings.redaction,
+        })
+      }
 
       if (body.flaggers) {
         for (const [slug, enabled] of Object.entries(body.flaggers)) {
