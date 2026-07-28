@@ -9,7 +9,9 @@ import {
   customBehaviorFilterSetSchema,
   deleteCustomBehavior,
   facetSelectionSchema,
+  isCustomBehaviorView,
   previewCustomBehaviorSampleUseCase,
+  taxonomyGardenCustomBehaviorDedupeKey,
   updateCustomBehavior,
 } from "@domain/taxonomy"
 import {
@@ -22,7 +24,12 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getWorkflowTerminator,
+} from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
@@ -152,26 +159,56 @@ export const updateCustomBehaviorFn = createServerFn({ method: "POST" })
     return toCustomBehaviorRecord(updated)
   })
 
+const deleteCustomBehaviorLayers = (orgId: Awaited<ReturnType<typeof resolveOrgScope>>) =>
+  ({
+    postgres: withScopedPostgres(
+      Layer.mergeAll(CustomBehaviorRepositoryLive, TaxonomyClusterRepositoryLive, FacetRepositoryLive),
+      getPostgresClient(),
+      orgId,
+    ),
+    clickhouse: withScopedClickHouse(
+      Layer.mergeAll(TaxonomyViewAssignmentRepositoryLive, FacetProjectionRepositoryLive),
+      getClickhouseClient(),
+      orgId,
+    ),
+  }) as const
+
 export const deleteCustomBehaviorFn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data, context }): Promise<void> => {
     const orgId = await resolveOrgScope(context)
+    const customBehaviorId = CustomBehaviorId(data.id)
+    const layers = deleteCustomBehaviorLayers(orgId)
 
-    await Effect.runPromise(
-      deleteCustomBehavior({ id: CustomBehaviorId(data.id) }).pipe(
-        withScopedPostgres(
-          Layer.mergeAll(CustomBehaviorRepositoryLive, TaxonomyClusterRepositoryLive, FacetRepositoryLive),
-          getPostgresClient(),
-          orgId,
-        ),
-        withScopedClickHouse(
-          Layer.mergeAll(TaxonomyViewAssignmentRepositoryLive, FacetProjectionRepositoryLive),
-          getClickhouseClient(),
-          orgId,
-        ),
-        withTracing,
-      ),
+    const idsToDelete = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* CustomBehaviorRepository
+        const target = yield* repo.findById(customBehaviorId)
+        if (target.facetId != null && !isCustomBehaviorView(target)) {
+          const behaviors = yield* repo.listByProject({ projectId: target.projectId })
+          const views = behaviors.filter(
+            (behavior) =>
+              behavior.facetId === target.facetId && isCustomBehaviorView(behavior) && behavior.id !== target.id,
+          )
+          return [...views.map((view) => view.id), target.id]
+        }
+        return [target.id]
+      }).pipe(layers.postgres, withTracing),
     )
+
+    const terminator = await getWorkflowTerminator()
+    for (const id of idsToDelete) {
+      await terminator.terminate(
+        taxonomyGardenCustomBehaviorDedupeKey({ organizationId: orgId, customBehaviorId: id }),
+        "behavior deleted by user",
+      )
+    }
+
+    for (const id of idsToDelete) {
+      await Effect.runPromise(
+        deleteCustomBehavior({ id }).pipe(layers.postgres, layers.clickhouse, withTracing),
+      )
+    }
   })
 
 export const previewCustomBehaviorSample = createServerFn({ method: "GET" })
