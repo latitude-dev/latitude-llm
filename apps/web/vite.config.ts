@@ -124,6 +124,12 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             {
+              // Every chunk containing a dynamic import needs this helper, so leaving it to fall
+              // into a vendor group drags that entire vendor into the entry graph.
+              test: /preload-helper/,
+              name: "vite-preload",
+            },
+            {
               // The Effect runtime leaks into the client bundle via shared domain/server-fn
               // modules and is the single largest vendor in the entry chunk. Peel it into its
               // own cacheable chunk so `main` stays under the client-asset size budget.
