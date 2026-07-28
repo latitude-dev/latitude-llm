@@ -1,5 +1,6 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
+import { HEARD_ABOUT_US_OTHER, type HeardAboutUs } from "../constants.ts"
 import type { User } from "../entities/user.ts"
 import type { UserRepository } from "../ports/user-repository.ts"
 
@@ -7,7 +8,13 @@ type UserRepositoryShape = (typeof UserRepository)["Service"]
 
 export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape>) => {
   const users = new Map<string, User>()
-  const updates: { userId: string; jobTitle?: string; phoneNumber?: string }[] = []
+  const updates: {
+    userId: string
+    jobTitle?: string
+    phoneNumber?: string
+    heardAboutUs?: HeardAboutUs
+    heardAboutUsOther?: string | null
+  }[] = []
 
   const repository: UserRepositoryShape = {
     findById: (userId) => {
@@ -26,11 +33,20 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
       Effect.sync(() => {
         const trimmedJobTitle = params.jobTitle?.trim() || undefined
         const trimmedPhoneNumber = params.phoneNumber?.trim() || undefined
-        if (!trimmedJobTitle && !trimmedPhoneNumber) return
+        const trimmedHeardAboutUsOther = params.heardAboutUsOther?.trim() || undefined
+        if (!trimmedJobTitle && !trimmedPhoneNumber && !params.heardAboutUs) return
+        const heardAboutUsFields = params.heardAboutUs
+          ? {
+              heardAboutUs: params.heardAboutUs,
+              heardAboutUsOther:
+                params.heardAboutUs === HEARD_ABOUT_US_OTHER ? (trimmedHeardAboutUsOther ?? null) : null,
+            }
+          : {}
         updates.push({
           userId: params.userId,
           ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
           ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
+          ...heardAboutUsFields,
         })
         const existing = users.get(params.userId)
         if (existing) {
@@ -38,6 +54,7 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
             ...existing,
             ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
             ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
+            ...heardAboutUsFields,
           })
         }
       }),

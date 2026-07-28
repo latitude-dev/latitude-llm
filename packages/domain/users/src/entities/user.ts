@@ -1,5 +1,6 @@
 import { notificationPreferencesSchema, userIdSchema } from "@domain/shared"
 import { z } from "zod"
+import { heardAboutUsSchema } from "../constants.ts"
 
 /**
  * User entity - represents a user in the system.
@@ -15,6 +16,13 @@ export const userSchema = z.object({
   name: z.string().nullable(),
   jobTitle: z.string().nullable(),
   phoneNumber: z.string().nullable(),
+  /**
+   * Attribution channel from the onboarding form. `null` for users who
+   * onboarded before the question existed.
+   */
+  heardAboutUs: heardAboutUsSchema.nullable(),
+  /** Free-text source, only ever set alongside `heardAboutUs === "other"`. */
+  heardAboutUsOther: z.string().nullable(),
   emailVerified: z.boolean(),
   image: z.string().nullable(),
   role: userRoleSchema,

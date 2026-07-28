@@ -54,6 +54,8 @@ describe("registerContact", () => {
       name: "Ada Lovelace",
       jobTitle: null,
       phoneNumber: null,
+      heardAboutUs: null,
+      heardAboutUsOther: null,
       emailVerified: true,
       image: null,
       role: "user",

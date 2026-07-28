@@ -20,20 +20,19 @@ import { composePhoneNumber } from "../../../../../lib/phone-countries.ts"
 import { OnboardingRightPane } from "./onboarding/onboarding-right-pane.tsx"
 import * as FlaggersStep from "./onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./onboarding/steps/role-step.tsx"
+import { EMPTY_ONBOARDING_FORM_VALUES, ROLE_STEP_REQUIRED_FIELDS } from "./onboarding/steps/role-step-form.ts"
 import * as SlackStep from "./onboarding/steps/slack-step.tsx"
 import * as TelemetryStep from "./onboarding/steps/telemetry-step.tsx"
 
 export const ONBOARDING_STEPS = ["role", "flaggers", "slack", "telemetry"] as const
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
 
-type OnboardingFormValues = { jobTitle: string; phoneCallingCode: string; phoneNumber: string }
-
 // Helper exists purely for type inference — `useForm` has 12 generic parameters and
 // `ReturnType<typeof useForm<T>>` doesn't auto-default the rest. Calling it here in a
 // never-invoked function lets TS infer the full instance type from the actual call shape.
 function _onboardingFormTypeHelper() {
   return useForm({
-    defaultValues: { jobTitle: "", phoneCallingCode: "", phoneNumber: "" } as OnboardingFormValues,
+    defaultValues: EMPTY_ONBOARDING_FORM_VALUES,
   })
 }
 export type OnboardingForm = ReturnType<typeof _onboardingFormTypeHelper>
@@ -113,17 +112,18 @@ export function OnboardingFlow({
   const sampleProject = allProjects.find((project) => project.isShowcase === true)
 
   const form = useForm({
-    defaultValues: {
-      jobTitle: "",
-      phoneCallingCode: "",
-      phoneNumber: "",
-    } satisfies OnboardingFormValues,
+    defaultValues: EMPTY_ONBOARDING_FORM_VALUES,
     onSubmit: createFormSubmitHandler(
-      async ({ jobTitle, phoneCallingCode, phoneNumber }) => {
+      async ({ jobTitle, phoneCallingCode, phoneNumber, heardAboutUs, heardAboutUsOther }) => {
+        // `handleAdvanceFromRole` gates on this, so an empty channel here would
+        // mean a programming error rather than user input.
+        if (heardAboutUs === "") return
         await submitOnboarding({
           data: {
             jobTitle,
             phoneNumber: composePhoneNumber(phoneCallingCode, phoneNumber),
+            heardAboutUs,
+            heardAboutUsOther,
             stackChoice: "production-agent",
             projectId,
           },
@@ -139,11 +139,8 @@ export function OnboardingFlow({
   })
 
   const handleAdvanceFromRole = async () => {
-    await Promise.all([form.validateField("jobTitle", "change"), form.validateField("phoneNumber", "change")])
-    const hasErrors = (["jobTitle", "phoneNumber"] as const).some((name) => {
-      const meta = form.getFieldMeta(name)
-      return meta !== undefined && meta.errors.length > 0
-    })
+    await Promise.all(ROLE_STEP_REQUIRED_FIELDS.map((field) => form.validateField(field, "change")))
+    const hasErrors = ROLE_STEP_REQUIRED_FIELDS.some((field) => (form.getFieldMeta(field)?.errors.length ?? 0) > 0)
     if (hasErrors) return
     void form.handleSubmit()
   }

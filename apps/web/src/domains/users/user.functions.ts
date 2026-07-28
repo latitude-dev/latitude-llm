@@ -2,7 +2,7 @@ import { OutboxEventWriter } from "@domain/events"
 import { stackChoiceSchema, stackChoiceToOnboardingType } from "@domain/marketing"
 import { ProjectRepository } from "@domain/projects"
 import { BadRequestError, ProjectId, SqlClient } from "@domain/shared"
-import { UserRepository } from "@domain/users"
+import { HEARD_ABOUT_US_OTHER_MAX_LENGTH, heardAboutUsSchema, UserRepository } from "@domain/users"
 import { OutboxEventWriterLive, ProjectRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -31,6 +31,17 @@ const submitOnboardingSchema = z.object({
         .refine((v) => v.length === 0 || E164_SHAPE.test(v), {
           message: "Phone number must include a calling code, e.g. +15550100",
         })
+        .transform((v) => (v.length > 0 ? v : undefined)),
+    )
+    .optional(),
+  heardAboutUs: heardAboutUsSchema,
+  heardAboutUsOther: z
+    .string()
+    .transform((v) => v.trim())
+    .pipe(
+      z
+        .string()
+        .max(HEARD_ABOUT_US_OTHER_MAX_LENGTH)
         .transform((v) => (v.length > 0 ? v : undefined)),
     )
     .optional(),
@@ -64,6 +75,8 @@ export const submitOnboarding = createServerFn({ method: "POST" })
               userId,
               jobTitle: data.jobTitle,
               phoneNumber: data.phoneNumber,
+              heardAboutUs: data.heardAboutUs,
+              heardAboutUsOther: data.heardAboutUsOther,
             })
             yield* outbox.write({
               eventName: "UserOnboardingCompleted",

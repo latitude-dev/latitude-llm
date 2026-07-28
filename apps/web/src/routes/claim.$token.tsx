@@ -25,6 +25,10 @@ import { composePhoneNumber } from "../lib/phone-countries.ts"
 import { OnboardingRightPane } from "./_authenticated/projects/$projectSlug/-components/onboarding/onboarding-right-pane.tsx"
 import * as FlaggersStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/role-step.tsx"
+import {
+  EMPTY_ONBOARDING_FORM_VALUES,
+  ROLE_STEP_REQUIRED_FIELDS,
+} from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/role-step-form.ts"
 import * as SlackStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/slack-step.tsx"
 
 export const Route = createFileRoute("/claim/$token")({
@@ -172,7 +176,6 @@ function ClaimPage() {
 }
 
 type ClaimOnboardingStep = "role" | "flaggers" | "slack"
-type OnboardingFormValues = { jobTitle: string; phoneCallingCode: string; phoneNumber: string }
 
 function ClaimOnboarding({
   project,
@@ -202,13 +205,18 @@ function ClaimOnboarding({
   }
 
   const form = useForm({
-    defaultValues: { jobTitle: "", phoneCallingCode: "", phoneNumber: "" } satisfies OnboardingFormValues,
+    defaultValues: EMPTY_ONBOARDING_FORM_VALUES,
     onSubmit: createFormSubmitHandler(
-      async ({ jobTitle, phoneCallingCode, phoneNumber }) => {
+      async ({ jobTitle, phoneCallingCode, phoneNumber, heardAboutUs, heardAboutUsOther }) => {
+        // `handleAdvanceFromRole` gates on this, so an empty channel here would
+        // mean a programming error rather than user input.
+        if (heardAboutUs === "") return
         await submitOnboarding({
           data: {
             jobTitle,
             phoneNumber: composePhoneNumber(phoneCallingCode, phoneNumber),
+            heardAboutUs,
+            heardAboutUsOther,
             stackChoice: "production-agent",
             projectId: project.id,
           },
@@ -224,11 +232,8 @@ function ClaimOnboarding({
   })
 
   const handleAdvanceFromRole = async () => {
-    await Promise.all([form.validateField("jobTitle", "change"), form.validateField("phoneNumber", "change")])
-    const hasErrors = (["jobTitle", "phoneNumber"] as const).some((name) => {
-      const meta = form.getFieldMeta(name)
-      return meta !== undefined && meta.errors.length > 0
-    })
+    await Promise.all(ROLE_STEP_REQUIRED_FIELDS.map((field) => form.validateField(field, "change")))
+    const hasErrors = ROLE_STEP_REQUIRED_FIELDS.some((field) => (form.getFieldMeta(field)?.errors.length ?? 0) > 0)
     if (hasErrors) return
     void form.handleSubmit()
   }
