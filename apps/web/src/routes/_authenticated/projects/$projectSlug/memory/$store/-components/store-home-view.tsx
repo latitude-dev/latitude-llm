@@ -16,7 +16,8 @@ import {
   formatElapsed,
   formatPercent,
   formatRatio,
-  pickMemoryTrendBucketSeconds,
+  MEMORY_TREND_BUCKET_SECONDS,
+  resolveMemoryTrendWindow,
 } from "../../-components/memory-formatters.ts"
 import { recordDisplayLabel } from "../../-components/store-encoding.ts"
 import { StoreInsightList } from "./store-insight-list.tsx"
@@ -179,22 +180,25 @@ export function StoreHomeView({
     () => ({ fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso }),
     [tw.listRange, tw.trendRange],
   )
-  const bucketSeconds = useMemo(
-    () => pickMemoryTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
-    [range],
-  )
+  const trendRange = useMemo(() => {
+    const fromMs = Date.parse(range.fromIso)
+    const toMs = Date.parse(range.toIso)
+    const { fromMs: trendFromMs } = resolveMemoryTrendWindow(fromMs, toMs)
+    return { fromIso: new Date(trendFromMs).toISOString(), toIso: range.toIso }
+  }, [range])
+  const bucketSeconds = MEMORY_TREND_BUCKET_SECONDS
 
   const { data: overview, isLoading: overviewLoading } = useMemoryOverview({ projectId: project.id, storeId, range })
   const { data: histogram = [], isLoading: histogramLoading } = useMemoryActivityHistogram({
     projectId: project.id,
     storeId,
-    range,
+    range: trendRange,
     bucketSeconds,
   })
   const { data: insights, isLoading: insightsLoading } = useStoreInsights({
     projectId: project.id,
     storeId,
-    range,
+    range: trendRange,
     bucketSeconds,
   })
 
@@ -207,8 +211,13 @@ export function StoreHomeView({
 
   const denseTokens = useMemo(
     () =>
-      denseTokenSeries(insights?.tokenHistory ?? [], Date.parse(range.fromIso), Date.parse(range.toIso), bucketSeconds),
-    [insights, range, bucketSeconds],
+      denseTokenSeries(
+        insights?.tokenHistory ?? [],
+        Date.parse(trendRange.fromIso),
+        Date.parse(trendRange.toIso),
+        bucketSeconds,
+      ),
+    [insights, trendRange, bucketSeconds],
   )
   const tokenCategories = useMemo(
     () => denseTokens.map((point) => formatBucketLabel(new Date(point.startMs).toISOString(), bucketSeconds)),
@@ -250,8 +259,8 @@ export function StoreHomeView({
           tiles={tiles}
           histogram={histogram}
           bucketSeconds={bucketSeconds}
-          rangeFromIso={range.fromIso}
-          rangeToIso={range.toIso}
+          rangeFromIso={trendRange.fromIso}
+          rangeToIso={trendRange.toIso}
           isAllTime={tw.isAllTime}
           isLoading={overviewLoading || histogramLoading}
         />
