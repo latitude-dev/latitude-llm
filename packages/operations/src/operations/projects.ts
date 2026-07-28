@@ -6,7 +6,13 @@ import {
   ProjectRepository,
   updateProjectUseCase,
 } from "@domain/projects"
-import type { INCIDENT_NOTIFICATION_KEYS } from "@domain/shared"
+import {
+  DEFAULT_REDACTION_ENTITIES,
+  type INCIDENT_NOTIFICATION_KEYS,
+  REDACTION_ENTITIES,
+  REDACTION_IDENTITY_HANDLINGS,
+  REDACTION_MODES,
+} from "@domain/shared"
 import { createRoute, z } from "@hono/zod-openapi"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
@@ -100,6 +106,40 @@ const EscalationSettingSchema = z
   })
   .openapi("EscalationSetting")
 
+const RedactionSettingSchema = z
+  .object({
+    mode: z
+      .enum(REDACTION_MODES)
+      .optional()
+      .describe(
+        "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+      ),
+    entities: z
+      .array(z.enum(REDACTION_ENTITIES))
+      .optional()
+      .describe(
+        `Which categories to look for. Defaults to ${DEFAULT_REDACTION_ENTITIES.join(", ")} when omitted; \`ip_address\` and \`crypto_wallet\` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.`,
+      ),
+    scopes: z
+      .object({
+        metadata: z
+          .boolean()
+          .optional()
+          .describe(
+            "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+          ),
+      })
+      .optional()
+      .describe("Which span fields to scan beyond message and tool content."),
+    identities: z
+      .enum(REDACTION_IDENTITY_HANDLINGS)
+      .optional()
+      .describe(
+        "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+      ),
+  })
+  .openapi("RedactionSetting")
+
 const ProjectSettingsSchema = z
   .object({
     keepMonitoring: z
@@ -108,6 +148,9 @@ const ProjectSettingsSchema = z
       .describe(
         "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
       ),
+    redaction: RedactionSettingSchema.optional().describe(
+      "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+    ),
     notifications: NotificationsSettingSchema.optional().describe(
       "Per-group project-level notification toggles (`incidents`, `destinations`).",
     ),

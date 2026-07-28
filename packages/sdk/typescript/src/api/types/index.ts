@@ -130,6 +130,7 @@ export * from "./ProjectSettings.js";
 export * from "./ProjectUser.js";
 export * from "./QuerySpans.js";
 export * from "./RecentToolCall.js";
+export * from "./RedactionSetting.js";
 export * from "./RelativeVariantTimeRange.js";
 export * from "./ResolvedRange.js";
 export * from "./SavedSearch.js";

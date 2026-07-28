@@ -8,11 +8,12 @@ from ...core.pydantic_utilities import UniversalBaseModel
 from ...core.serialization import FieldMetadata
 from ...types.escalation_setting import EscalationSetting
 from ...types.notifications_setting import NotificationsSetting
+from ...types.redaction_setting import RedactionSetting
 
 
 class UpdateProjectBodySettings(UniversalBaseModel):
     """
-    Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
+    Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.
     """
 
     keep_monitoring: typing_extensions.Annotated[
@@ -24,6 +25,7 @@ class UpdateProjectBodySettings(UniversalBaseModel):
             description="When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
         ),
     ]
+    redaction: typing.Optional[RedactionSetting] = None
     notifications: typing.Optional[NotificationsSetting] = None
     escalation: typing.Optional[EscalationSetting] = None
 

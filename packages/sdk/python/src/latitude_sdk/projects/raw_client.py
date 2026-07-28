@@ -335,7 +335,7 @@ class RawProjectsClient:
             New human-readable name. Renaming never changes the slug.
 
         settings : typing.Optional[UpdateProjectBodySettings]
-            Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
+            Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
@@ -733,7 +733,7 @@ class AsyncRawProjectsClient:
             New human-readable name. Renaming never changes the slug.
 
         settings : typing.Optional[UpdateProjectBodySettings]
-            Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
+            Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.

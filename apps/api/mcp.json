@@ -64,6 +64,57 @@
                     "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
+                  "redaction": {
+                    "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                        "type": "string",
+                        "enum": [
+                          "off",
+                          "enforce"
+                        ]
+                      },
+                      "entities": {
+                        "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "email",
+                            "phone",
+                            "credit_card",
+                            "iban",
+                            "us_ssn",
+                            "ip_address",
+                            "secret",
+                            "crypto_wallet"
+                          ]
+                        }
+                      },
+                      "scopes": {
+                        "description": "Which span fields to scan beyond message and tool content.",
+                        "type": "object",
+                        "properties": {
+                          "metadata": {
+                            "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "identities": {
+                        "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                        "type": "string",
+                        "enum": [
+                          "keep",
+                          "pseudonymize"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "notifications": {
                     "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                     "type": "object",
@@ -224,6 +275,57 @@
                         "keepMonitoring": {
                           "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                           "type": "boolean"
+                        },
+                        "redaction": {
+                          "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                              "type": "string",
+                              "enum": [
+                                "off",
+                                "enforce"
+                              ]
+                            },
+                            "entities": {
+                              "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "email",
+                                  "phone",
+                                  "credit_card",
+                                  "iban",
+                                  "us_ssn",
+                                  "ip_address",
+                                  "secret",
+                                  "crypto_wallet"
+                                ]
+                              }
+                            },
+                            "scopes": {
+                              "description": "Which span fields to scan beyond message and tool content.",
+                              "type": "object",
+                              "properties": {
+                                "metadata": {
+                                  "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                                  "type": "boolean"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "identities": {
+                              "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                              "type": "string",
+                              "enum": [
+                                "keep",
+                                "pseudonymize"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
                         },
                         "notifications": {
                           "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
@@ -414,6 +516,57 @@
                     "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
+                  "redaction": {
+                    "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                        "type": "string",
+                        "enum": [
+                          "off",
+                          "enforce"
+                        ]
+                      },
+                      "entities": {
+                        "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "email",
+                            "phone",
+                            "credit_card",
+                            "iban",
+                            "us_ssn",
+                            "ip_address",
+                            "secret",
+                            "crypto_wallet"
+                          ]
+                        }
+                      },
+                      "scopes": {
+                        "description": "Which span fields to scan beyond message and tool content.",
+                        "type": "object",
+                        "properties": {
+                          "metadata": {
+                            "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "identities": {
+                        "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                        "type": "string",
+                        "enum": [
+                          "keep",
+                          "pseudonymize"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "notifications": {
                     "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                     "type": "object",
@@ -549,12 +702,63 @@
             "minLength": 1
           },
           "settings": {
-            "description": "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
+            "description": "Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.",
             "type": "object",
             "properties": {
               "keepMonitoring": {
                 "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                 "type": "boolean"
+              },
+              "redaction": {
+                "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "enforce"
+                    ]
+                  },
+                  "entities": {
+                    "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "email",
+                        "phone",
+                        "credit_card",
+                        "iban",
+                        "us_ssn",
+                        "ip_address",
+                        "secret",
+                        "crypto_wallet"
+                      ]
+                    }
+                  },
+                  "scopes": {
+                    "description": "Which span fields to scan beyond message and tool content.",
+                    "type": "object",
+                    "properties": {
+                      "metadata": {
+                        "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "identities": {
+                    "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                    "type": "string",
+                    "enum": [
+                      "keep",
+                      "pseudonymize"
+                    ]
+                  }
+                },
+                "additionalProperties": false
               },
               "notifications": {
                 "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
@@ -673,6 +877,57 @@
                   "keepMonitoring": {
                     "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
+                  },
+                  "redaction": {
+                    "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                        "type": "string",
+                        "enum": [
+                          "off",
+                          "enforce"
+                        ]
+                      },
+                      "entities": {
+                        "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "email",
+                            "phone",
+                            "credit_card",
+                            "iban",
+                            "us_ssn",
+                            "ip_address",
+                            "secret",
+                            "crypto_wallet"
+                          ]
+                        }
+                      },
+                      "scopes": {
+                        "description": "Which span fields to scan beyond message and tool content.",
+                        "type": "object",
+                        "properties": {
+                          "metadata": {
+                            "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "identities": {
+                        "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                        "type": "string",
+                        "enum": [
+                          "keep",
+                          "pseudonymize"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
                   },
                   "notifications": {
                     "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",

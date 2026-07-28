@@ -696,6 +696,11 @@ if typing.TYPE_CHECKING:
     from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
     from .recent_tool_call_status_code import RecentToolCallStatusCode
+    from .redaction_setting import RedactionSetting
+    from .redaction_setting_entities_item import RedactionSettingEntitiesItem
+    from .redaction_setting_identities import RedactionSettingIdentities
+    from .redaction_setting_mode import RedactionSettingMode
+    from .redaction_setting_scopes import RedactionSettingScopes
     from .relative_variant_time_range import RelativeVariantTimeRange
     from .relative_variant_time_range_type import RelativeVariantTimeRangeType
     from .resolved_range import ResolvedRange
@@ -1465,6 +1470,11 @@ _dynamic_imports: typing.Dict[str, str] = {
     "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
     "RecentToolCallStatusCode": ".recent_tool_call_status_code",
+    "RedactionSetting": ".redaction_setting",
+    "RedactionSettingEntitiesItem": ".redaction_setting_entities_item",
+    "RedactionSettingIdentities": ".redaction_setting_identities",
+    "RedactionSettingMode": ".redaction_setting_mode",
+    "RedactionSettingScopes": ".redaction_setting_scopes",
     "RelativeVariantTimeRange": ".relative_variant_time_range",
     "RelativeVariantTimeRangeType": ".relative_variant_time_range_type",
     "ResolvedRange": ".resolved_range",
@@ -2262,6 +2272,11 @@ __all__ = [
     "QuerySpans",
     "RecentToolCall",
     "RecentToolCallStatusCode",
+    "RedactionSetting",
+    "RedactionSettingEntitiesItem",
+    "RedactionSettingIdentities",
+    "RedactionSettingMode",
+    "RedactionSettingScopes",
     "RelativeVariantTimeRange",
     "RelativeVariantTimeRangeType",
     "ResolvedRange",

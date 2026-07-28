@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.7.0] - 2026-07-28
+
+### Added
+
+- `settings.redaction` on `client.projects.update` and on the project response: server-side PII redaction applied before spans are stored. Set `mode: "enforce"` to scan span content for the configured categories and replace matches with a labelled placeholder, with `entities` choosing the categories, `scopes.metadata` extending the scan to metadata and tags, and `identities` controlling whether user identifiers are kept or pseudonymised. Applies only to spans ingested after the change and cannot be undone.
+
+### Changed
+
+- `client.projects.update` now *patches* `settings` instead of replacing it. Fields you omit keep their stored values, so updating one setting no longer clears the others.
+
 ## [9.6.1] - 2026-07-24
 
 ### Changed
