@@ -27,10 +27,10 @@ export function usePdfDocument(url: string | null): PdfDocumentState {
     let destroy: (() => void) | null = null
     setState(INITIAL)
     ;(async () => {
-      const { getDocument, documentAssetOptions } = await import("./configure-pdfjs.ts")
+      const { loadDocument } = await import("./configure-pdfjs.ts")
       if (cancelled) return
 
-      const task = getDocument({ url, ...documentAssetOptions })
+      const task = loadDocument(url)
       // Destroying the loading task also destroys the document it produced; don't destroy both.
       destroy = () => void task.destroy()
 
