@@ -421,6 +421,33 @@ export const TAXONOMY_KMEANS_MAX_ITER = 25
 /** k-means convergence tolerance in (1 - cosine) centroid drift. */
 export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
 
+/**
+ * Restart budget for a re-search of the relative build when the root split lands
+ * near the separation gate. k-means only finds a local optimum, so the tree it
+ * returns depends on where k-means++ seeded — and because seeds are drawn as
+ * indices into the member list, a few percent of window turnover redraws them
+ * entirely. On corpora whose root split sits close to `minRelativeSeparation`,
+ * three restarts is too small a sample: some runs find a partition that clears
+ * the gate and some do not, so the tree alternates between a real split and a
+ * bare leaf. Re-searching with a larger budget finds the good optimum reliably.
+ */
+export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 25
+/**
+ * Root relative separation at or above which the first-pass build is kept as-is.
+ * Measured on real corpora across historical 7-day windows: an unstable project
+ * sits at 0.35–0.57 while a stable one sits at 1.06 and above, with no overlap.
+ * 0.8 centres the threshold in that gap. Builds above it are returned untouched,
+ * so projects that do not need the re-search are unaffected by it.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN = 0.8
+/**
+ * Lower edge of the re-search band. A corpus with no structure to find reaches
+ * only ~0.09 at its best root candidate, while a corpus whose real split merely
+ * fell short on this run reaches ~0.4. Without this floor every unimodal project
+ * would re-search on every pass to reconfirm the leaf it already had.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
+
 // ---------------------------------------------------------------------------
 // Clustering worker resource bounds
 //

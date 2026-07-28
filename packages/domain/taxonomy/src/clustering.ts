@@ -120,6 +120,25 @@ export interface BuildRelativeHierarchicalClustersInput {
   readonly seed: number
   /** Global absolute floor on the per-split routing threshold (mirrors TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD). */
   readonly globalAbsoluteThreshold: number
+  /**
+   * Re-search budget for a root split that lands near the separation gate. Omit
+   * to disable, which makes the build byte-identical to a plain `restarts` run.
+   */
+  readonly escalation?: RelativeClusteringEscalation
+}
+
+/**
+ * Both fields are explicit inputs rather than module constants so the builder
+ * stays a pure function of its arguments — a Temporal replay of the same request
+ * must reproduce the same tree.
+ */
+export interface RelativeClusteringEscalation {
+  /** Restart budget for the re-search. */
+  readonly restarts: number
+  /** Best observed root separation at or above which the first pass is kept. */
+  readonly marginThreshold: number
+  /** Below this the corpus has no structure to find and the re-search is skipped. */
+  readonly marginFloor: number
 }
 
 export interface BuildStaticHierarchicalClustersInput {
@@ -157,6 +176,15 @@ export interface RelativeClusteringDiagnostics {
   readonly routingThresholds: number[]
   /** True when a non-finite relative metric slipped through (fallback trigger for later phases). */
   readonly fellBackToStatic: boolean
+  /**
+   * Best relative separation any ROOT candidate reached, accepted or rejected.
+   * Distinguishes a corpus with no structure at all (well under the gate) from
+   * one whose real split merely fell short on this run — the accepted-splits
+   * percentiles cannot, since a collapsed root contributes nothing to them.
+   */
+  readonly bestRootSeparation: number
+  /** True when the root landed near the separation gate and the build was re-searched. */
+  readonly escalated: boolean
 }
 
 export interface BuildRelativeHierarchicalClustersResult {
@@ -425,11 +453,23 @@ interface ChooseBestRelativeKInput {
   readonly globalAbsoluteThreshold: number
   readonly rng: () => number
   readonly onReject: (reason: RelativeClusteringRejectionReason) => void
+  /** Every candidate that reached the separation gate, accepted or not. */
+  readonly onCandidateSeparation: (relativeSeparation: number) => void
 }
 
 const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate | null => {
-  const { embeddings, memberIndices, schedule, restarts, maxIter, tolerance, globalAbsoluteThreshold, rng, onReject } =
-    input
+  const {
+    embeddings,
+    memberIndices,
+    schedule,
+    restarts,
+    maxIter,
+    tolerance,
+    globalAbsoluteThreshold,
+    rng,
+    onReject,
+    onCandidateSeparation,
+  } = input
   const n = memberIndices.length
   const minByFraction = Math.ceil(n * schedule.minClusterFraction)
   const minClusterSize = Math.max(schedule.minClusterAbs, minByFraction)
@@ -506,6 +546,7 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
       }
 
       const relativeSeparation = closestSiblingDistance / Math.max(withinDistance, 1e-6)
+      onCandidateSeparation(relativeSeparation)
       if (relativeSeparation < schedule.minRelativeSeparation) {
         onReject("lowRelativeSeparation")
         continue
@@ -543,9 +584,7 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
 // Divisive builder — node-relative separation.
 // ---------------------------------------------------------------------------
 
-export const buildRelativeHierarchicalClusters = (
-  input: BuildRelativeHierarchicalClustersInput,
-): BuildRelativeHierarchicalClustersResult => {
+const buildRelativeOnce = (input: BuildRelativeHierarchicalClustersInput): BuildRelativeHierarchicalClustersResult => {
   const { embeddings, depthSchedule, restarts, maxIter, tolerance, seed, globalAbsoluteThreshold } = input
   const dimensions = embeddings[0]?.length ?? 0
   const allIndices = embeddings
@@ -567,6 +606,7 @@ export const buildRelativeHierarchicalClusters = (
   let maxDepth = 0
   let acceptedSplits = 0
   let rejectedCandidates = 0
+  let bestRootSeparation = 0
 
   const recurse = (memberIndices: readonly number[], depth: number): ClusteringTreeNode => {
     nodeCount++
@@ -589,6 +629,9 @@ export const buildRelativeHierarchicalClusters = (
       onReject: (reason) => {
         rejectedCandidates++
         rejectionReasonCounts[reason]++
+      },
+      onCandidateSeparation: (relativeSeparation) => {
+        if (depth === 0 && relativeSeparation > bestRootSeparation) bestRootSeparation = relativeSeparation
       },
     })
     if (!best) {
@@ -624,8 +667,36 @@ export const buildRelativeHierarchicalClusters = (
       acceptedRelativeSeparations,
       routingThresholds,
       fellBackToStatic,
+      bestRootSeparation,
+      escalated: false,
     },
   }
+}
+
+/**
+ * A re-search is worth its cost only inside a band. Above the ceiling the root
+ * split is comfortably clear of the gate and more search cannot change it. Below
+ * the floor the corpus has no structure to find — a unimodal project's best root
+ * candidate reaches ~0.09, and re-searching it burns the larger budget every run
+ * to confirm the leaf it already had.
+ */
+const shouldEscalate = (
+  result: BuildRelativeHierarchicalClustersResult,
+  escalation: RelativeClusteringEscalation,
+): boolean => {
+  const observed = result.diagnostics.bestRootSeparation
+  return observed >= escalation.marginFloor && observed < escalation.marginThreshold
+}
+
+export const buildRelativeHierarchicalClusters = (
+  input: BuildRelativeHierarchicalClustersInput,
+): BuildRelativeHierarchicalClustersResult => {
+  const first = buildRelativeOnce(input)
+  const escalation = input.escalation
+  if (!escalation || !shouldEscalate(first, escalation)) return first
+
+  const rescued = buildRelativeOnce({ ...input, restarts: escalation.restarts })
+  return { root: rescued.root, diagnostics: { ...rescued.diagnostics, escalated: true } }
 }
 
 // ---------------------------------------------------------------------------
