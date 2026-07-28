@@ -240,6 +240,13 @@ describe("MarkdownContent", () => {
       expect(textContentOf(markup)).not.toContain("[REDACTED_OVERSIZED_FIELD]")
     })
 
+    it("makes the chip keyboard reachable and names the explanation for screen readers", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="Contact [REDACTED_EMAIL] now." />)
+
+      expect(markup).toContain("<button")
+      expect(markup).toMatch(/aria-label="[^"]*cannot be recovered/)
+    })
+
     it("does not chip a bare [REDACTED] with no category", () => {
       const markup = renderToStaticMarkup(<MarkdownContent content="value [REDACTED] here" />)
 

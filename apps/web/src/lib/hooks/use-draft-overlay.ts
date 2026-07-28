@@ -10,14 +10,7 @@ interface UseDraftOverlay<Draft> {
   readonly reset: () => void
 }
 
-/**
- * Overlay of pending edits on top of a live baseline, for a settings form whose
- * saved values keep arriving from a collection while the user types.
- *
- * Setting a field back to its baseline drops it from the overlay rather than
- * recording an equal-valued edit, so the dirty count means "changes you would
- * save" and not "fields you touched".
- */
+/** Setting a field back to its baseline drops it, so the dirty count means "changes you would save". */
 export function useDraftOverlay<Draft extends object>(baseline: Draft): UseDraftOverlay<Draft> {
   const [pending, setPending] = useState<Partial<Draft>>({})
 

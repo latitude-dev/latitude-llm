@@ -86,13 +86,8 @@ const projectsCollection = createAppCollection(
   }),
 )
 
-/**
- * Writes the project redaction policy through its own role-gated server function
- * rather than the collection's generic update, so it bypasses optimistic mutation
- * entirely and refetches instead. Worth the extra round trip: the server may reject
- * on role, and an optimistic "redaction is on" that silently rolls back is the last
- * thing a compliance control should show.
- */
+// Refetches instead of mutating optimistically: the server may reject on role, and a
+// rolled-back "redaction is on" is the worst thing a compliance control could flash.
 export async function updateProjectRedactionMutation(projectId: string, redaction: RedactionSetting | null) {
   await updateProjectRedaction({ data: { projectId, redaction } })
   await queryClient.invalidateQueries({ queryKey: ["projects"] })

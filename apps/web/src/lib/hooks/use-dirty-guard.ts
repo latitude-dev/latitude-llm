@@ -12,15 +12,7 @@ interface UseDirtyGuardInput {
   readonly onDiscard: () => void
 }
 
-/**
- * Keyboard and navigation guards for a settings page with unsaved changes:
- * cmd/ctrl-S applies, Escape discards outside a text field, and both an in-app
- * navigation and a tab close prompt for confirmation.
- *
- * Owns behaviour only — the caller owns the draft state, because the pages that
- * need this disagree on its shape (a flat field diff on one, a row-keyed overlay
- * on another).
- */
+/** Takes the dirty state rather than owning it: the pages that need this disagree on its shape. */
 export function useDirtyGuard(input: UseDirtyGuardInput): void {
   // Latest-value refs so the mount-only keydown listener never re-subscribes.
   const latest = useRef(input)

@@ -18,11 +18,6 @@ export interface UpdateOrganizationRedactionInput {
 
 export type UpdateOrganizationRedactionError = RepositoryError | NotFoundError
 
-/**
- * Changes only the `redaction` key on the session organization, leaving every sibling
- * setting alone, and records the transition in the same transaction as the write.
- * See `updateProjectRedactionUseCase` for why this is separate from the generic update.
- */
 export const updateOrganizationRedactionUseCase = Effect.fn("organizations.updateOrganizationRedaction")(function* (
   input: UpdateOrganizationRedactionInput,
 ) {

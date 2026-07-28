@@ -33,11 +33,8 @@ export type UpdateProjectError =
   | InvalidProjectNameError
   | InvalidProjectSlugError
 
-/**
- * `redaction` is writable only through `updateProjectRedactionUseCase`, which gates on role
- * and records an audit event. This endpoint has neither, so it pins the stored value
- * whatever the caller sent.
- */
+// Pins `redaction`: this endpoint has no role gate and no audit event, so only
+// `updateProjectRedactionUseCase` may change it.
 const withStoredRedaction = (
   stored: ProjectSettings | null | undefined,
   next: ProjectSettings | undefined,

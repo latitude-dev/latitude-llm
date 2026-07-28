@@ -12,11 +12,8 @@ export interface UpdateOrganizationInput {
   readonly settingsPatch?: OrganizationSettings | undefined
 }
 
-/**
- * `redaction` is writable only through `updateOrganizationRedactionUseCase`, which gates on
- * role and records an audit event. This endpoint has neither, so it pins the stored value
- * whatever the caller sent.
- */
+// Pins `redaction`: this endpoint has no role gate and no audit event, so only
+// `updateOrganizationRedactionUseCase` may change it.
 const withStoredRedaction = (
   stored: OrganizationSettings | null | undefined,
   next: OrganizationSettings | undefined,
@@ -32,8 +29,7 @@ export const updateOrganizationUseCase = Effect.fn("organizations.updateOrganiza
 ) {
   const sqlClient = yield* SqlClient
 
-  // Transaction plus a locking read: a patch merges against the stored row, so two concurrent
-  // patches would otherwise both read the same snapshot and the later save would drop the earlier.
+  // Locking read: two concurrent patches would otherwise merge against the same snapshot.
   return yield* sqlClient.transaction(
     Effect.gen(function* () {
       const repo = yield* OrganizationRepository

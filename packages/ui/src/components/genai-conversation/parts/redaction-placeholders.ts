@@ -1,13 +1,4 @@
-/**
- * Server-side PII redaction replaces matches with `[REDACTED_<LABEL>]` before a span
- * is stored. Rendering those literally reads as model output or corruption, so they
- * become chips instead.
- *
- * The pattern is deliberately open rather than an allowlist of our own labels. The SDKs
- * emit the same grammar for client-side attribute masking, no per-span flag records who
- * redacted what, so the copy below never claims a specific origin — and matching the
- * shape rather than a fixed list means a new detector needs no change here.
- */
+/** Open by design: the SDKs emit this grammar too, and no per-span flag records who redacted what. */
 export const REDACTION_PLACEHOLDER_PATTERN = /\[REDACTED_([A-Z][A-Z0-9_]*)\]/g
 
 /**
@@ -30,7 +21,7 @@ const OVERSIZED_FIELD_EXPLANATION =
   "This field was too large to scan, so it was removed whole rather than stored unchecked. Nothing in it was identified as personal data."
 
 const USER_EXPLANATION =
-  "The user identifier was replaced before this span was stored, because this project pseudonymises or removes user identity."
+  "The user identifier was replaced before this span was stored. Where identifiers are pseudonymized rather than removed, the replacement is stable, so grouping by user still works."
 
 /** What the chip shows: the label, underscores opened up so it reads as words. */
 export const redactionChipLabel = (label: string): string => label.replace(/_/g, " ")

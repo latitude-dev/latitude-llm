@@ -39,7 +39,7 @@ describe("redactionChipExplanation", () => {
     const copy = redactionChipExplanation("USER")
 
     expect(copy).toContain("user identifier")
-    expect(copy).toContain("pseudonymises or removes")
+    expect(copy).toContain("stable")
   })
 
   // Client-side SDK masking emits the same grammar with labels we don't define, and no
@@ -51,9 +51,14 @@ describe("redactionChipExplanation", () => {
     expect(copy).not.toContain("undefined")
   })
 
-  it("never claims which layer performed the redaction", () => {
-    for (const label of ["EMAIL", "USER", "OVERSIZED_FIELD", "PASSWORD"]) {
-      expect(redactionChipExplanation(label)).not.toContain("this project's policy")
+  // Asserting on the bare subject, not a longer phrase: the first version of this test
+  // only forbade "this project's policy" and so missed copy that said "this project".
+  it("never attributes the redaction to a particular layer", () => {
+    for (const label of ["EMAIL", "PHONE", "USER", "OVERSIZED_FIELD", "PASSWORD"]) {
+      const copy = redactionChipExplanation(label)
+      expect(copy).not.toContain("this project")
+      expect(copy).not.toContain("this organization")
+      expect(copy).not.toContain("the SDK")
     }
   })
 })

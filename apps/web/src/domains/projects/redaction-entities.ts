@@ -7,12 +7,6 @@ interface RedactionEntityMeta {
   readonly caution?: string
 }
 
-/**
- * Display copy for the redaction toggles. Descriptions name what the detector
- * actually matches rather than the category in the abstract, because the only
- * feedback a customer gets after enabling this is a placeholder where their
- * content used to be.
- */
 export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta> = {
   email: {
     label: "Email addresses",

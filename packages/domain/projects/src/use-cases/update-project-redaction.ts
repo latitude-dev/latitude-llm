@@ -21,12 +21,6 @@ export interface UpdateProjectRedactionInput {
 
 export type UpdateProjectRedactionError = RepositoryError | NotFoundError | ProjectNotFoundError
 
-/**
- * Changes only the `redaction` key, leaving every sibling setting alone, and records
- * the transition in the same transaction as the write. Separate from
- * `updateProjectUseCase` because a compliance control needs an audit trail that
- * cannot come apart from the change it describes.
- */
 export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRedaction")(function* (
   input: UpdateProjectRedactionInput,
 ) {
