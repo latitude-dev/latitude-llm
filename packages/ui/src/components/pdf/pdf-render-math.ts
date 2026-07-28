@@ -1,6 +1,9 @@
 /** Safari refuses to allocate a canvas backing store beyond this, returning a blank surface. */
 export const MAX_CANVAS_PIXELS = 16_777_216
 
+/** Shared by the resolved band, the suspense fallback and the not-yet-scrolled-to placeholder. */
+export const PREVIEW_HEIGHT = 224
+
 /** Beyond 2x the extra detail is not perceptible and the memory cost quadruples. */
 const MAX_DEVICE_PIXEL_RATIO = 2
 

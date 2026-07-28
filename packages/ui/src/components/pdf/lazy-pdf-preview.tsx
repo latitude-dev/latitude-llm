@@ -1,5 +1,6 @@
 import { type ComponentProps, lazy, Suspense } from "react"
 import { Skeleton } from "../skeleton/skeleton.tsx"
+import { PREVIEW_HEIGHT } from "./pdf-render-math.ts"
 
 const PdfPreviewLazy = lazy(() => import("./pdf-preview.tsx").then((m) => ({ default: m.PdfPreview })))
 
@@ -10,7 +11,11 @@ const PdfPreviewLazy = lazy(() => import("./pdf-preview.tsx").then((m) => ({ def
 export function LazyPdfPreview(props: ComponentProps<typeof PdfPreviewLazy>) {
   return (
     // Same footprint as the resolved preview band, so the card doesn't resize on hydration.
-    <Suspense fallback={props.showThumbnail ? <Skeleton className="h-56 w-full rounded-none" /> : null}>
+    <Suspense
+      fallback={
+        props.showThumbnail ? <Skeleton className="w-full rounded-none" style={{ height: PREVIEW_HEIGHT }} /> : null
+      }
+    >
       <PdfPreviewLazy {...props} />
     </Suspense>
   )

@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useMountEffect } from "../../../hooks/use-mount-effect.ts"
 import { LazyPdfPreview } from "../../pdf/lazy-pdf-preview.tsx"
+import { PREVIEW_HEIGHT } from "../../pdf/pdf-render-math.ts"
 import { isInlineRenderableUrl, shouldAutoRenderThumbnail } from "../../pdf/pdf-source.ts"
+import { useHasBeenInView } from "../../pdf/use-has-been-in-view.ts"
 import { FileCard } from "./file-card.tsx"
+
+/** A screen of lead time, so a page is decoded before the card is scrolled to. */
+const PRELOAD_MARGIN = "100% 0px"
 
 /**
  * Wraps {@link FileCard} for PDFs with an inline first-page thumbnail and an expandable viewer.
@@ -26,7 +31,22 @@ export function PdfAttachment({
 }) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [activated, setActivated] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
+  const bandRef = useRef<HTMLDivElement | null>(null)
+
+  const autoPreview = shouldAutoRenderThumbnail(sizeBytes)
+  // Conversations are not virtualized, so without this gate every PDF in a thread decodes at once.
+  const revealed = useHasBeenInView(bandRef, PRELOAD_MARGIN) || activated
+  const showBand = autoPreview && revealed
+  // Latches, unlike `open`: revoking the object URL when the modal closes would leave `objectUrl`
+  // holding a dead string, and reopening would then fail the load and mark the card unavailable.
+  const wantsBytes = autoPreview ? revealed : activated
+
+  const handleActivate = useCallback(() => {
+    setActivated(true)
+    setOpen(true)
+  }, [])
 
   const handleUnavailable = useCallback(() => {
     setUnavailable(true)
@@ -34,7 +54,7 @@ export function PdfAttachment({
   }, [])
 
   useEffect(() => {
-    if (!base64) return
+    if (!base64 || !wantsBytes) return
 
     let cancelled = false
     let created: string | null = null
@@ -52,19 +72,18 @@ export function PdfAttachment({
       cancelled = true
       if (created) URL.revokeObjectURL(created)
     }
-  }, [base64])
+  }, [base64, wantsBytes])
 
   const url = base64 ? objectUrl : (href ?? null)
-  const autoPreview = shouldAutoRenderThumbnail(sizeBytes)
   const title = fileName ?? "PDF document"
 
   // Mounted before `url` resolves so the band reserves its height from the first paint.
   const previewNode =
-    autoPreview || open ? (
+    showBand || open ? (
       <LazyPdfPreview
         url={url}
         title={title}
-        showThumbnail={autoPreview}
+        showThumbnail={showBand}
         open={open}
         onOpenChange={setOpen}
         onUnavailable={handleUnavailable}
@@ -72,6 +91,9 @@ export function PdfAttachment({
         {...(base64 && objectUrl ? { openHref: objectUrl } : href ? { openHref: href } : {})}
       />
     ) : null
+
+  // Same height and fill as the resolved band, and the element the observer watches.
+  const placeholder = <div ref={bandRef} className="w-full bg-muted" style={{ height: PREVIEW_HEIGHT }} />
 
   return (
     <>
@@ -82,8 +104,8 @@ export function PdfAttachment({
         {...(sizeBytes != null ? { sizeBytes } : {})}
         {...(href ? { href } : {})}
         {...(downloadDataUri ? { downloadDataUri } : {})}
-        preview={autoPreview ? previewNode : null}
-        {...(unavailable ? {} : { onActivate: () => setOpen(true), activateLabel: "Open PDF preview" })}
+        preview={autoPreview ? (showBand ? previewNode : placeholder) : null}
+        {...(unavailable ? {} : { onActivate: handleActivate, activateLabel: "Open PDF preview" })}
       />
       {/* Past the size guard there is no inline band, but the modal still has to mount somewhere. */}
       {autoPreview ? null : previewNode}

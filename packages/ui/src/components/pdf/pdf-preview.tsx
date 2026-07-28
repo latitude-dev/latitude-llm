@@ -7,12 +7,11 @@ import { Skeleton } from "../skeleton/skeleton.tsx"
 import { Text } from "../text/text.tsx"
 import type { PageSize } from "./pdf-page-canvas.tsx"
 import { PdfPageCanvas } from "./pdf-page-canvas.tsx"
+import { PREVIEW_HEIGHT } from "./pdf-render-math.ts"
 import { PdfViewer } from "./pdf-viewer.tsx"
 import { useElementWidth } from "./use-element-width.ts"
 import { usePdfDocument } from "./use-pdf-document.ts"
 
-/** Fixed so the card footprint is identical before and after the page resolves. */
-const PREVIEW_HEIGHT = 224
 const PREVIEW_PADDING = 24
 
 function PreviewMessage({ label }: { readonly label: string }) {
