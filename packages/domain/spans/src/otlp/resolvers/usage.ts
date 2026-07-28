@@ -28,10 +28,10 @@ const costTotalCandidates = [
 
 // ─── Resolve ─────────────────────────────────────────────
 
-interface EstimatedCost {
-  readonly input: number
-  readonly output: number
-}
+type CostEstimation =
+  | { readonly kind: "estimated"; readonly input: number; readonly output: number }
+  | { readonly kind: "unpriced" }
+  | { readonly kind: "noTokens" }
 
 function estimateCostFromTokens({
   provider,
@@ -49,11 +49,13 @@ function estimateCostFromTokens({
   tokensCacheRead: number
   tokensCacheCreate: number
   tokensReasoning: number
-}): EstimatedCost | undefined {
-  if (tokensInput + tokensOutput + tokensCacheRead + tokensCacheCreate + tokensReasoning === 0) return undefined
+}): CostEstimation {
+  if (tokensInput + tokensOutput + tokensCacheRead + tokensCacheCreate + tokensReasoning === 0) {
+    return { kind: "noTokens" }
+  }
 
   const { cost, costImplemented } = getCostSpec(provider, model)
-  if (!costImplemented) return undefined
+  if (!costImplemented) return { kind: "unpriced" }
 
   const inputUsd =
     computeTokenCost(cost, tokensInput, "input") +
@@ -64,6 +66,7 @@ function estimateCostFromTokens({
     computeTokenCost(cost, tokensOutput, "output") + computeTokenCost(cost, tokensReasoning, "reasoning")
 
   return {
+    kind: "estimated",
     input: Math.round(inputUsd * MICROCENTS_PER_USD),
     output: Math.round(outputUsd * MICROCENTS_PER_USD),
   }
@@ -84,6 +87,8 @@ export interface ResolvedUsage {
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
   readonly costIsEstimated: boolean
+  /** Tokens were reported but no models.dev pricing matched provider/model, so cost stayed 0. */
+  readonly costPricingMissing: boolean
 }
 
 // ─── OpenClaw embedded usage ──────────────────────────────
@@ -168,19 +173,21 @@ function resolveEmbeddedMessageUsage(
       costOutputMicrocents: usdToMicrocents(nonNegative(cost.output)),
       costTotalMicrocents: usdToMicrocents(nonNegative(cost.total)),
       costIsEstimated: false,
+      costPricingMissing: false,
     }
   }
 
   // No embedded cost — estimate from the tokens, same as flat-attr spans.
   const estimation = estimateCostFromTokens({ provider, model, ...tokens })
-  const costInputMicrocents = estimation?.input ?? 0
-  const costOutputMicrocents = estimation?.output ?? 0
+  const costInputMicrocents = estimation.kind === "estimated" ? estimation.input : 0
+  const costOutputMicrocents = estimation.kind === "estimated" ? estimation.output : 0
   return {
     ...tokens,
     costInputMicrocents,
     costOutputMicrocents,
     costTotalMicrocents: costInputMicrocents + costOutputMicrocents,
-    costIsEstimated: estimation !== undefined,
+    costIsEstimated: estimation.kind === "estimated",
+    costPricingMissing: estimation.kind === "unpriced",
   }
 }
 
@@ -223,9 +230,10 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
         tokensReasoning,
       })
 
-  const costIsEstimated = !hasAttrCosts && costEstimation !== undefined
-  const costInput = attrCostInput ?? costEstimation?.input ?? 0
-  const costOutput = attrCostOutput ?? costEstimation?.output ?? 0
+  const estimated = costEstimation?.kind === "estimated" ? costEstimation : undefined
+  const costIsEstimated = estimated !== undefined
+  const costInput = attrCostInput ?? estimated?.input ?? 0
+  const costOutput = attrCostOutput ?? estimated?.output ?? 0
   const costTotal = attrCostTotal ?? (costInput + costOutput > 0 ? costInput + costOutput : 0)
 
   return {
@@ -238,5 +246,7 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
     costOutputMicrocents: costOutput,
     costTotalMicrocents: costTotal,
     costIsEstimated,
+    // A provider-supplied total still counts as priced even when the model is unknown to models.dev.
+    costPricingMissing: costEstimation?.kind === "unpriced" && attrCostTotal === undefined,
   }
 }

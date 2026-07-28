@@ -86,6 +86,7 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
+export type { UnpricedSpanGroup } from "./otlp/transform.ts"
 export type { AnalyticsQueryInput, AnalyticsQueryReaderShape } from "./ports/analytics-query-reader.ts"
 export { AnalyticsQueryReader } from "./ports/analytics-query-reader.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"

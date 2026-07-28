@@ -93,10 +93,19 @@ export interface TransformContext {
   readonly projectIdBySlug: ReadonlyMap<string, string>
 }
 
+/** Spans carrying token usage that no models.dev pricing matched, grouped for reporting. */
+export interface UnpricedSpanGroup {
+  readonly projectId: string
+  readonly provider: string
+  readonly model: string
+  readonly spans: number
+}
+
 interface TransformResult {
   readonly spans: readonly SpanDetail[]
   /** Spans skipped for lacking a resolvable `projectId` or a valid `traceId`. */
   readonly rejectedSpans: number
+  readonly unpricedSpanGroups: readonly UnpricedSpanGroup[]
 }
 
 /** Reads `latitude.project` from span attrs first, falling back to resource attrs. */
@@ -132,6 +141,11 @@ function hasParentSpan(parentSpanId: string | undefined): boolean {
   return !!parentSpanId && !/^0+$/.test(parentSpanId)
 }
 
+interface TransformedSpan {
+  readonly span: SpanDetail
+  readonly costPricingMissing: boolean
+}
+
 function transformSpan({
   span,
   traceId,
@@ -150,7 +164,7 @@ function transformSpan({
   context: TransformContext
   projectId: string
   ingestedAt: Date
-}): SpanDetail {
+}): TransformedSpan {
   const spanAttrs = attrArray(span.attributes)
   const spanEvents = span.events ?? []
   const resourceAttrs = attrArray(resource?.attributes)
@@ -197,7 +211,7 @@ function transformSpan({
     }
   }
 
-  return {
+  const detail: SpanDetail = {
     organizationId: OrganizationId(context.organizationId),
     projectId: ProjectId(projectId),
     sessionId: SessionId(resolved.sessionId),
@@ -258,6 +272,8 @@ function transformSpan({
     toolOutput: toolExecution.toolOutput,
     ingestedAt,
   }
+
+  return { span: detail, costPricingMissing: resolved.costPricingMissing }
 }
 
 export function transformOtlpToSpans(
@@ -266,6 +282,7 @@ export function transformOtlpToSpans(
 ): TransformResult {
   const spans: SpanDetail[] = []
   let rejectedSpans = 0
+  const unpricedByKey = new Map<string, { projectId: string; provider: string; model: string; spans: number }>()
   const { ingestedAt } = context
 
   for (const resourceSpans of request.resourceSpans ?? []) {
@@ -291,10 +308,28 @@ export function transformOtlpToSpans(
           rejectedSpans++
           continue
         }
-        spans.push(transformSpan({ span, traceId, resource, scopeName, scopeVersion, context, projectId, ingestedAt }))
+        const transformed = transformSpan({
+          span,
+          traceId,
+          resource,
+          scopeName,
+          scopeVersion,
+          context,
+          projectId,
+          ingestedAt,
+        })
+        spans.push(transformed.span)
+
+        if (transformed.costPricingMissing) {
+          const { provider, model } = transformed.span
+          const key = `${projectId} ${provider} ${model}`
+          const existing = unpricedByKey.get(key)
+          if (existing) existing.spans++
+          else unpricedByKey.set(key, { projectId, provider, model, spans: 1 })
+        }
       }
     }
   }
 
-  return { spans, rejectedSpans }
+  return { spans, rejectedSpans, unpricedSpanGroups: [...unpricedByKey.values()] }
 }
