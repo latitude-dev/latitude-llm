@@ -16,7 +16,7 @@ import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
 import { RedactionError, SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
-import { transformOtlpToSpans } from "../otlp/transform.ts"
+import { transformOtlpToSpans, type UnpricedSpanGroup } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import { SpanRepository } from "../ports/span-repository.ts"
 import { redactSpans, type SpanRedactionSummary } from "../redaction/redact-spans.ts"
@@ -94,10 +94,15 @@ function resolvePayload(
   )
 }
 
+interface DecodedSpans {
+  readonly spans: readonly SpanDetail[]
+  readonly unpricedSpanGroups: readonly UnpricedSpanGroup[]
+}
+
 function decodeAndTransform(
   payload: Uint8Array,
   input: ProcessIngestedSpansInput,
-): Effect.Effect<readonly SpanDetail[], SpanDecodingError> {
+): Effect.Effect<DecodedSpans, SpanDecodingError> {
   return Effect.gen(function* () {
     const request = decodeRequest(payload, input.contentType)
     if (!request) {
@@ -107,10 +112,10 @@ function decodeAndTransform(
     }
 
     if (!request.resourceSpans?.length) {
-      return []
+      return { spans: [], unpricedSpanGroups: [] }
     }
 
-    const { spans, rejectedSpans } = transformOtlpToSpans(request, {
+    const { spans, rejectedSpans, unpricedSpanGroups } = transformOtlpToSpans(request, {
       organizationId: input.organizationId,
       apiKeyId: input.apiKeyId,
       ingestedAt: input.ingestedAt,
@@ -122,7 +127,7 @@ function decodeAndTransform(
       yield* Effect.annotateCurrentSpan("rejectedSpans", rejectedSpans)
     }
 
-    return spans
+    return { spans, unpricedSpanGroups }
   })
 }
 
@@ -206,10 +211,20 @@ function discardBufferedPayload(fileKey: string | null): Effect.Effect<void, nev
 
 export interface ProcessIngestedSpansDeps<TPublishError = unknown> {
   readonly eventsPublisher: EventsPublisher<TPublishError>
+  /**
+   * Reports token usage that no pricing matched, so a customer seeing $0 on real usage surfaces as
+   * our bug rather than staying silent. Observability infrastructure stays out of the domain, so the
+   * adapter owns log/error-tracking shape and rate limiting. Must not fail: the spans are valid and
+   * still have to land.
+   */
+  readonly onUnpricedSpans?: (
+    groups: readonly UnpricedSpanGroup[],
+    organizationId: OrganizationId,
+  ) => Effect.Effect<void>
 }
 
 export const processIngestedSpansUseCase =
-  <TPublishError>({ eventsPublisher }: ProcessIngestedSpansDeps<TPublishError>) =>
+  <TPublishError>({ eventsPublisher, onUnpricedSpans }: ProcessIngestedSpansDeps<TPublishError>) =>
   (
     input: ProcessIngestedSpansInput,
   ): Effect.Effect<
@@ -221,7 +236,15 @@ export const processIngestedSpansUseCase =
       yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
 
       const payload = yield* resolvePayload(input)
-      const transformed = yield* decodeAndTransform(payload, input)
+      const { spans: transformed, unpricedSpanGroups } = yield* decodeAndTransform(payload, input)
+
+      if (unpricedSpanGroups.length > 0) {
+        yield* Effect.annotateCurrentSpan(
+          "cost.unpricedSpans",
+          unpricedSpanGroups.reduce((total, group) => total + group.spans, 0),
+        )
+        if (onUnpricedSpans) yield* onUnpricedSpans(unpricedSpanGroups, input.organizationId)
+      }
 
       // Redaction runs before the retention stamp and the insert, which makes it the
       // single choke point for every content sink: `traces` and `sessions` are

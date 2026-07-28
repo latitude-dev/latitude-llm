@@ -40,6 +40,30 @@ const PROVIDER_ALIASES: Record<string, string> = {
   "azure.ai.inference": "azure",
   x_ai: "xai",
   "gcp.vertex.agent": "google-vertex", // Google ADK generate_content leaves
+  "gcp.gen_ai": "google", // Mastra's canonical key for the direct Gemini API
+  "@anthropic-ai/claude-agent-sdk": "anthropic",
+  "@anthropic-ai/claude-code": "anthropic",
+  "@anthropic-ai/sdk": "anthropic",
+  "@google-cloud/vertexai": "google-vertex",
+  "@google/genai": "google",
+  "@mistralai/mistralai": "mistral",
+  "@openai/agents": "openai",
+  "@ai-sdk/amazon-bedrock": "amazon-bedrock",
+  "@ai-sdk/anthropic": "anthropic",
+  "@ai-sdk/azure": "azure",
+  "@ai-sdk/cerebras": "cerebras",
+  "@ai-sdk/cohere": "cohere",
+  "@ai-sdk/deepinfra": "deepinfra",
+  "@ai-sdk/deepseek": "deepseek",
+  "@ai-sdk/fireworks": "fireworks-ai",
+  "@ai-sdk/google": "google",
+  "@ai-sdk/google-vertex": "google-vertex",
+  "@ai-sdk/groq": "groq",
+  "@ai-sdk/mistral": "mistral",
+  "@ai-sdk/openai": "openai",
+  "@ai-sdk/perplexity": "perplexity",
+  "@ai-sdk/togetherai": "togetherai",
+  "@ai-sdk/xai": "xai",
 }
 
 // Case-fold before alias lookup so non-canonical casings (`Google`, `OpenAI`) resolve to
@@ -70,7 +94,9 @@ const providerCandidates: Candidate<string>[] = [
   fromString("llm.provider", aliasProvider), // OpenInference (DSPy, LiteLLM) — no llm.system
   { resolve: (attrs) => providerFromOpenInferenceMetadata(attrs) }, // OpenInference LangChain (LangSmith metadata)
   fromString("ai.model.provider", (v) => aliasProvider(v.replace(VERCEL_PROVIDER_SUFFIX, ""))), // Vercel AI SDK
-  { resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined) }, // Claude Code
+  {
+    resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined),
+  }, // Claude Code
 ]
 
 function anthropicProviderFromClaudeCodeSpanName(spanName: string): string | undefined {
