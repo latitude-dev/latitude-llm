@@ -2,7 +2,21 @@
 
 ## Unreleased
 
+## v0.3.72 - 2026-07-28
+
+### Conversation intelligence
+
+- Stabilized adaptive taxonomy root splits. When the best root candidate lands just below the separation gate, the build now re-searches with a larger restart budget instead of collapsing, so top-level topic counts stop swinging run to run as the window turns over. Corpora comfortably above or below the gate behave exactly as before (ref: #4274).
+
+### Web
+
+- Fixed the "Linear API settings" link in the agent dispatch setup modal, which pointed at a hardcoded Linear workspace instead of the reader's own (ref: #4256).
+
 ## v0.3.71 - 2026-07-28
+
+### Traces
+
+- Added inline PDF previews to conversation attachments: a first-page thumbnail inside the file card that expands into a scrollable viewer with zoom, page navigation, and keyboard control. Cross-origin PDFs keep the open-in-new-tab card. Assets are self-hosted so air-gapped deployments render correctly (ref: #4246).
 
 ### Behaviors
 
@@ -25,6 +39,7 @@
 ### Internal
 
 - Landed the span ingestion PII redaction core (detectors, JSON and text redaction, policy cascade) plus its spec. Not wired into ingestion yet, so behavior is unchanged (ref: #4245).
+- Wired PII redaction into the ingest pipeline. The organization/project policy cascade resolves at ingest time and redaction runs before spans are written, failing the batch rather than writing plaintext if a policy is malformed. There is no configuration surface yet, so organizations that have not opted in are unaffected. New optional `LAT_REDACTION_PSEUDONYM_SECRET` keys identity pseudonymization (ref: #4248).
 
 ## v0.3.70 - 2026-07-26
 
