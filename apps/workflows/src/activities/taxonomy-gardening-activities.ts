@@ -642,6 +642,11 @@ const adaptiveSpanAttributes = (
     attributes["taxonomy.adaptive.rejection.lowScore"] = diagnostics.rejectionReasonCounts.lowScore
     attributes["taxonomy.adaptive.rejection.lowRelativeSeparation"] =
       diagnostics.rejectionReasonCounts.lowRelativeSeparation
+    // The quantity the root gate actually decides on, and whether it forced a
+    // re-search. The relSep percentiles above cover accepted splits tree-wide, so
+    // they say nothing about a run whose root collapsed.
+    attributes["taxonomy.adaptive.bestRootSeparation"] = diagnostics.bestRootSeparation
+    attributes["taxonomy.adaptive.escalated"] = diagnostics.escalated ? 1 : 0
   }
   const comparison = plan.comparison
   if (comparison) {
