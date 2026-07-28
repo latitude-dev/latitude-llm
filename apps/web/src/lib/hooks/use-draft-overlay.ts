@@ -8,6 +8,8 @@ interface UseDraftOverlay<Draft> {
   readonly dirtyCount: number
   readonly hasDirty: boolean
   readonly reset: () => void
+  /** Drops pending edits for a subset of fields, for a form that saves in independent parts. */
+  readonly resetFields: (predicate: (key: keyof Draft) => boolean) => void
 }
 
 /** Setting a field back to its baseline drops it, so the dirty count means "changes you would save". */
@@ -33,5 +35,10 @@ export function useDraftOverlay<Draft extends object>(baseline: Draft): UseDraft
     dirtyCount: dirtyFields.length,
     hasDirty: dirtyFields.length > 0,
     reset: () => setPending({}),
+    resetFields: (predicate) =>
+      setPending(
+        (prev) =>
+          Object.fromEntries(Object.entries(prev).filter(([key]) => !predicate(key as keyof Draft))) as Partial<Draft>,
+      ),
   }
 }

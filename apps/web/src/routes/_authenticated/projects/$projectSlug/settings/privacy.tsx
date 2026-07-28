@@ -97,14 +97,20 @@ function ProjectPrivacySettingsPage() {
   }
 
   const [isApplying, setIsApplying] = useState(false)
-  const { view, setField, dirtyFields, dirtyCount, hasDirty, reset } = useDraftOverlay(baseline)
+  const { view, setField, dirtyFields, dirtyCount, hasDirty, reset, resetFields } = useDraftOverlay(baseline)
 
-  const projectIsDirty = dirtyFields.some((field) => field.startsWith("project"))
-  const orgIsDirty = dirtyFields.some((field) => field.startsWith("org"))
+  const isProjectField = (field: keyof Draft) => field.startsWith("project")
+  const isOrgField = (field: keyof Draft) => field.startsWith("org")
+  const projectIsDirty = dirtyFields.some(isProjectField)
+  const orgIsDirty = dirtyFields.some(isOrgField)
 
   const apply = async () => {
     if (!hasDirty || isApplying) return
     setIsApplying(true)
+    // The two policies are separate writes, so each clears its own edits as it lands and the
+    // toast names what actually stuck. Otherwise a project failure after an organization
+    // success reads as though nothing saved, and the applied edits vanish from the form.
+    let savedOrg = false
     try {
       // Organization first: under `locked` it decides what the project policy even means,
       // so applying it second could leave the two briefly contradicting each other.
@@ -119,6 +125,8 @@ function ProjectPrivacySettingsPage() {
           locked: view.orgLocked,
         }
         await updateOrganizationRedactionMutation(setting)
+        savedOrg = true
+        resetFields(isOrgField)
       }
       if (projectIsDirty) {
         await updateProjectRedactionMutation(
@@ -130,11 +138,16 @@ function ProjectPrivacySettingsPage() {
             identities: view.projectIdentities,
           }),
         )
+        resetFields(isProjectField)
       }
-      reset()
       toast({ description: "Redaction settings updated" })
     } catch (error) {
-      toast({ variant: "destructive", description: toUserMessage(error) })
+      toast({
+        variant: "destructive",
+        description: savedOrg
+          ? `Organization policy saved, but the project policy did not: ${toUserMessage(error)}`
+          : toUserMessage(error),
+      })
     } finally {
       setIsApplying(false)
     }
@@ -144,7 +157,7 @@ function ProjectPrivacySettingsPage() {
     setIsApplying(true)
     try {
       await updateProjectRedactionMutation(currentProject.id, null)
-      reset()
+      resetFields(isProjectField)
       toast({ description: "Project now follows the organization policy" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
