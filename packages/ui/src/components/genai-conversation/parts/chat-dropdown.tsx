@@ -74,6 +74,11 @@ export function ChatDropdown({
               {collapsedPreview}
             </Text.H5>
           )}
+          {!hasLabel && expanded && (
+            <span className="flex shrink-0 items-center text-muted-foreground">
+              <Icon icon={ChevronUpIcon} size="sm" />
+            </span>
+          )}
         </button>
         {hasLabel && !expanded && collapsedPreview && (
           <div
