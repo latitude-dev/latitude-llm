@@ -35,7 +35,7 @@ function SemanticRegionFrame({
   readonly tooltip?: ReactNode
 }) {
   return (
-    <div className="relative flex min-w-0 flex-col gap-6 rounded-lg bg-primary/3 px-4 py-6 ring-1 ring-primary/30 dark:bg-primary/6">
+    <div className="relative flex min-w-0 flex-col gap-4 rounded-lg bg-primary/3 px-4 py-6 ring-1 ring-primary/30 dark:bg-primary/6">
       <div className="absolute -top-3 right-3 z-10 inline-flex h-6 items-center gap-1.5 rounded bg-primary px-2 text-xs font-medium text-primary-foreground">
         <span className="leading-none">{label}</span>
         {tooltip ? (
@@ -148,6 +148,7 @@ export function Conversation({
   messageAnnotationSlot,
   messageTrailingSlot,
   regionLabel,
+  flat = false,
 }: {
   readonly messages: readonly (GenAIMessage | null)[]
   readonly enableNavigator?: boolean
@@ -192,6 +193,8 @@ export function Conversation({
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Overrides the corner label/tooltip on `search-semantic-region` frames (defaults to the search copy). */
   readonly regionLabel?: { readonly label: ReactNode; readonly tooltip?: ReactNode } | undefined
+  /** Renders every message full-width with no chat-bubble treatment, for nested contexts like a subagent's inline conversation. */
+  readonly flat?: boolean
 }) {
   const internalNavItemRefs = useRef<(HTMLDivElement | null)[]>([])
   // If the parent provides navItemRefsRef it owns the ScrollNavigator; use their ref directly.
@@ -292,7 +295,7 @@ export function Conversation({
     <div
       ref={containerRef}
       onClick={handleContainerClick}
-      className={cn("flex min-w-0 flex-col gap-6", {
+      className={cn("flex min-w-0 flex-col", flat ? "gap-3 pb-3" : "gap-4", {
         "select-none": !enableTextSelection,
         [SELECTION_HIGHLIGHT_CLASSES]: enableTextSelection,
       })}
@@ -312,11 +315,11 @@ export function Conversation({
                 navItemRefs.current[flatIndex] = el
               }}
               data-message-index={index}
-              className={cn("group group/message relative min-w-0 rounded-lg pl-4 pr-4", {
-                "pl-10 py-2 transition-colors hover:bg-muted/50": isAssistant && messageActions,
+              className={cn("group group/message relative min-w-0 rounded-lg", flat ? "px-0" : "pl-4 pr-4", {
+                "pl-10": isAssistant && messageActions,
               })}
             >
-              {isUser ? (
+              {isUser && !flat ? (
                 <div className="flex min-w-0 flex-col items-end">
                   <div className="flex min-w-0 max-w-[85%] flex-col items-start">
                     <Message
@@ -334,6 +337,7 @@ export function Conversation({
                     message={message}
                     messageIndex={index}
                     alignment="left"
+                    flat={flat}
                     toolResults={message.role === "assistant" ? resultMap : undefined}
                     {...(onNavigate ? { onNavigate } : {})}
                     {...(toolCallActions ? { toolCallActions } : {})}

@@ -1,40 +1,43 @@
-import type { AgentGraph, AgentNode } from "@domain/spans"
-import { Icon, Text } from "@repo/ui"
-import { BotIcon, ChevronLeftIcon } from "lucide-react"
+import { Text } from "@repo/ui"
+
+export interface AgentBreadcrumbSegment {
+  readonly label: string
+}
 
 /**
- * Header for the subagent conversation view: a full-width, clickable "back" bar
- * that steps one level up — to the parent subagent, or to the main conversation
- * when there is none. Its height matches the main conversation's search header.
+ * Full-width trail above a drilled-into subagent conversation: one segment
+ * per level from the main conversation down to the one currently shown.
+ * Every segment but the last is clickable and jumps straight to that depth,
+ * truncating anything deeper — the last segment is the current view.
  */
 export function AgentBreadcrumb({
-  node,
-  graph,
+  segments,
   onSelect,
 }: {
-  readonly node: AgentNode
-  readonly graph: AgentGraph
-  readonly onSelect: (node: AgentNode | null) => void
+  readonly segments: readonly AgentBreadcrumbSegment[]
+  readonly onSelect: (index: number) => void
 }) {
-  const parent = node.parentId ? graph.nodesById.get(node.parentId) : undefined
-
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(parent && parent.kind === "subagent" ? parent : null)}
-      className="flex w-full shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2 text-left transition-colors hover:bg-muted cursor-pointer"
-    >
-      <div className="flex h-8 min-w-0 flex-1 items-center gap-2">
-        <Icon icon={ChevronLeftIcon} size="sm" color="foregroundMuted" />
-        <Text.H6 color="foregroundMuted" noWrap>
-          Back
-        </Text.H6>
-        <span className="min-w-0 flex-1" />
-        <Icon icon={BotIcon} size="sm" color="foregroundMuted" />
-        <Text.H5M noWrap ellipsis>
-          {node.label}
-        </Text.H5M>
-      </div>
-    </button>
+    <div className="flex w-full shrink-0 items-center gap-4 border-b border-border bg-background px-4 py-2">
+      {segments.map((segment, index) => {
+        const isLast = index === segments.length - 1
+        return (
+          <div key={index} className="flex items-center gap-4">
+            {index > 0 && <Text.H5M color="foregroundMuted">/</Text.H5M>}
+            {isLast ? (
+              <Text.H5M color="foreground" noWrap>
+                {segment.label}
+              </Text.H5M>
+            ) : (
+              <button type="button" onClick={() => onSelect(index)} className="cursor-pointer">
+                <Text.H5M color="foregroundMuted" noWrap>
+                  {segment.label}
+                </Text.H5M>
+              </button>
+            )}
+          </div>
+        )
+      })}
+    </div>
   )
 }
