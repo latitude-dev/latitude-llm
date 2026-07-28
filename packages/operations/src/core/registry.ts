@@ -1,4 +1,9 @@
-import { type AnyOperation, accessToAnnotations, type McpToolAnnotations } from "./define-operation.ts"
+import {
+  type AnyOperation,
+  accessToAnnotations,
+  type McpToolAnnotations,
+  type OperationAuthRequirement,
+} from "./define-operation.ts"
 import { type ExtractedOutput, extractOutputSchema } from "./extract-output.ts"
 import { type FlatInput, flattenRouteInputSchema } from "./flatten-input.ts"
 
@@ -57,6 +62,11 @@ interface ToolDescriptor {
   readonly description: string
   /** MCP tool annotations (read-only / destructive hints) declared at the endpoint. */
   readonly annotations: McpToolAnnotations
+  /**
+   * Auth methods that can call this tool. `"oauth"` tools are omitted from the
+   * live MCP `tools/list` for API-key sessions.
+   */
+  readonly authRequirement: OperationAuthRequirement
   /** Flattened Zod input schema + per-field source map for HTTP dispatch. */
   readonly input: FlatInput
   /**
@@ -79,12 +89,13 @@ interface ToolDescriptor {
  * route configuration mistakes surface at boot, not on a tool call.
  */
 export const collectToolDescriptors = (): ToolDescriptor[] =>
-  operationRegistry.map(({ route, access, prefix }) => {
+  operationRegistry.map(({ route, access, authRequirement, prefix }) => {
     return {
       name: route.name,
       title: route.summary ?? route.name,
       description: route.description ?? "",
       annotations: accessToAnnotations(access),
+      authRequirement,
       input: flattenRouteInputSchema(route),
       output: extractOutputSchema(route),
       routerPrefix: prefix,

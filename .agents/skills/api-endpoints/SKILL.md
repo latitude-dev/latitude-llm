@@ -281,6 +281,26 @@ const internalReindex = widgetOperation({
 })
 ```
 
+## OAuth-only operations
+
+Some operations need a real acting user (`requireOAuthUserId`) and reject API-key callers with 403. Declare that on the operation so the live MCP transport can hide the tool from API-key sessions — otherwise agents discover a tool that always fails:
+
+```ts
+const createWidget = widgetOperation({
+  route: createRoute({ ... }),
+  access: "write",
+  authRequirement: "oauth", // ← omit from MCP tools/list when auth.method === "api-key"
+  rateLimitTier: "low",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const userId = yield* requireOAuthUserId(ctx.auth)
+      // ...
+    }),
+})
+```
+
+Defaults to `"any"`. Only set `"oauth"` when the execute path calls `requireOAuthUserId`. The static `mcp.json` emits `authRequirement: "oauth"` for those tools; runtime `/v1/mcp` filters them per session.
+
 ## Verification checklist
 
 Run before opening the PR:

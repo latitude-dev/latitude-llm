@@ -61,6 +61,23 @@ const deleteItem = itemEndpoint({
   handler: async (c) => c.body(null, 204),
 })
 
+const createItemOAuthOnly = itemEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/",
+    name: "createItem",
+    group: "test",
+    sdkMethod: "createItem",
+    description: "Create an item (OAuth only)",
+    responses: {
+      201: { content: { "application/json": { schema: ItemSchema } }, description: "Created" },
+    },
+  }),
+  access: "write",
+  authRequirement: "oauth",
+  handler: async (c) => c.json({ id: "new" }, 201),
+})
+
 const hiddenItem = itemEndpoint({
   route: createRoute({
     method: "get",
@@ -184,6 +201,16 @@ describe("registry", () => {
         readOnlyHint: false,
         destructiveHint: true,
       })
+    })
+
+    it("defaults authRequirement to any and carries oauth when declared", () => {
+      const sub = new OpenAPIHono<TestEnv>()
+      listItems.mountHttp(sub)
+      createItemOAuthOnly.mountHttp(sub)
+
+      const tools = collectToolDescriptors()
+      expect(tools.find((t) => t.name === "listItems")?.authRequirement).toBe("any")
+      expect(tools.find((t) => t.name === "createItem")?.authRequirement).toBe("oauth")
     })
 
     it("returns undefined `output` for routes whose success response has no body (204)", () => {

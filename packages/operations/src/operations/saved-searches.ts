@@ -180,6 +180,7 @@ const createSavedSearchEndpoint = savedSearchEndpoint({
     responses: typedResponses({ status: 201, schema: SavedSearchSchema, description: "Saved search created" }),
   }),
   access: "write",
+  authRequirement: "oauth",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {

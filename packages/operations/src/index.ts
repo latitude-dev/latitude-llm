@@ -4,6 +4,7 @@ export {
   type AppRouteConfig,
   defineOperation,
   type McpToolAnnotations,
+  type OperationAuthRequirement,
   type RateLimitTier,
 } from "./core/define-operation.ts"
 export type { ExecuteFn, OperationInput, OperationOutput } from "./core/execute.ts"

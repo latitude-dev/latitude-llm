@@ -54,6 +54,16 @@ export type AppRouteConfig = Omit<RouteConfig, "operationId"> & {
 export type OperationAccess = "read-only" | "write" | "destructive"
 
 /**
+ * Which authentication methods may call the operation successfully.
+ *
+ * - `"any"` (default) — API-key and OAuth callers both work.
+ * - `"oauth"` — only OAuth (`loa_*`) callers succeed; API-key callers get 403
+ *   via `requireOAuthUserId`. The live MCP transport hides these tools from
+ *   API-key sessions so agents don't discover tools that always fail.
+ */
+export type OperationAuthRequirement = "any" | "oauth"
+
+/**
  * Internal MCP wire type — the `ToolAnnotations` shape registered on the MCP
  * server and emitted into `mcp.json`. Produced only by {@link accessToAnnotations};
  * operation authors declare {@link OperationAccess} instead.
@@ -97,6 +107,8 @@ interface Operation<R extends AppRouteConfig, E extends Env> {
   readonly handler: RouteHandler<R, E>
   /** What the operation does to org data — drives MCP annotations + toolset ceiling. */
   readonly access: OperationAccess
+  /** Auth methods that can call this operation. Defaults to `"any"`. */
+  readonly authRequirement: OperationAuthRequirement
   /** Transport-neutral implementation; present only for execute-form operations. */
   readonly execute?: ExecuteFn<R>
   /** Whether this operation should be exposed as an MCP tool. Defaults to `true`. */
@@ -124,6 +136,7 @@ interface Operation<R extends AppRouteConfig, E extends Env> {
 export interface AnyOperation {
   readonly route: AppRouteConfig
   readonly access: OperationAccess
+  readonly authRequirement: OperationAuthRequirement
   readonly tool: boolean
   readonly prefix: string
   readonly rateLimitTier?: RateLimitTier
@@ -137,6 +150,12 @@ type OperationArgs<R extends AppRouteConfig, E extends Env> = {
   route: R
   /** What the operation does to organization data. See {@link OperationAccess}. */
   access: OperationAccess
+  /**
+   * Auth methods that can call this operation. Defaults to `"any"`. Set to
+   * `"oauth"` when the execute path uses `requireOAuthUserId` so the live
+   * MCP transport can hide the tool from API-key sessions.
+   */
+  authRequirement?: OperationAuthRequirement
   /** Set to `false` to keep the operation HTTP-only (no MCP tool). Defaults to `true`. */
   tool?: boolean
   /** Rate-limit tier applied at HTTP mount time. Required once all modules declare it. */
@@ -204,7 +223,7 @@ type OperationArgs<R extends AppRouteConfig, E extends Env> = {
 export const defineOperation =
   <E extends Env>(prefix: string) =>
   <R extends AppRouteConfig>(args: OperationArgs<R, E>): Operation<R, E> => {
-    const { route, access, tool = true, rateLimitTier } = args
+    const { route, access, authRequirement = "any", tool = true, rateLimitTier } = args
     const handler = args.execute !== undefined ? executeToHandler<R, E>(route, args.execute) : args.handler
     if (handler === undefined) throw new Error(`Operation "${route.name}" must declare either handler or execute`)
     // Build the config handed to the OpenAPI generator as an order-preserving
@@ -231,6 +250,7 @@ export const defineOperation =
       route,
       handler,
       access,
+      authRequirement,
       tool,
       prefix: normalizedPrefix,
       ...(args.execute !== undefined ? { execute: args.execute } : {}),

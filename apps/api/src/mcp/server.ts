@@ -63,8 +63,11 @@ export const registerMcpRoute = ({
 
   routes.all("/mcp", async (c) => {
     const mcpServer = new McpServer(MCP_INFO, { instructions: MCP_INFO.instructions, capabilities: { tools: {} } })
+    const authMethod = c.get("auth").method
 
     for (const tool of toolDescriptors) {
+      if (tool.authRequirement === "oauth" && authMethod !== "oauth") continue
+
       // Capture each descriptor in the closure — the loop variable would
       // otherwise alias inside async callbacks once the iteration ends.
       const descriptor = tool

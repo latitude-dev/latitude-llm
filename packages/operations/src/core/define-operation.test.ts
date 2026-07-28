@@ -55,6 +55,41 @@ describe("defineOperation", () => {
     expect(ep.tool).toBe(true)
   })
 
+  it("defaults `authRequirement` to `any` when not specified", () => {
+    const ep = endpoint({
+      route: createRoute({
+        method: "get",
+        path: "/x",
+        name: "x",
+        group: "test",
+        sdkMethod: "x",
+        description: "x",
+        responses: { 200: { description: "OK" } },
+      }),
+      access: "read-only",
+      handler: async (c) => c.body(null, 200),
+    })
+    expect(ep.authRequirement).toBe("any")
+  })
+
+  it("respects `authRequirement: oauth`", () => {
+    const ep = endpoint({
+      route: createRoute({
+        method: "post",
+        path: "/x",
+        name: "x",
+        group: "test",
+        sdkMethod: "x",
+        description: "x",
+        responses: { 200: { description: "OK" } },
+      }),
+      access: "write",
+      authRequirement: "oauth",
+      handler: async (c) => c.body(null, 200),
+    })
+    expect(ep.authRequirement).toBe("oauth")
+  })
+
   it("respects `tool: false`", () => {
     const ep = endpoint({
       route: createRoute({

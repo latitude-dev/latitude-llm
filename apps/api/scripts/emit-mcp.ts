@@ -42,6 +42,7 @@ const tools = collectToolDescriptors().map((tool) => ({
   // rely on `"outputSchema" in tool` to mean "structured output is available".
   ...(tool.output ? { outputSchema: z.toJSONSchema(tool.output.schema, { target: "draft-2020-12" }) } : {}),
   annotations: tool.annotations,
+  ...(tool.authRequirement !== "any" ? { authRequirement: tool.authRequirement } : {}),
 }))
 
 const manifest = { ...MCP_INFO, tools }

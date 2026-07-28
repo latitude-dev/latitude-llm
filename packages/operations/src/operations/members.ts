@@ -194,6 +194,7 @@ const inviteMember = memberEndpoint({
     responses: typedResponses({ status: 201, schema: InvitedMemberSchema, description: "Invitation created" }),
   }),
   access: "write",
+  authRequirement: "oauth",
   rateLimitTier: "high",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -252,6 +253,7 @@ const updateMemberRole = memberEndpoint({
     }),
   }),
   access: "destructive",
+  authRequirement: "oauth",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {
@@ -291,6 +293,7 @@ const removeMember = memberEndpoint({
     responses: openApiNoContentResponses({ description: "Member removed" }),
   }),
   access: "destructive",
+  authRequirement: "oauth",
   rateLimitTier: "low",
   execute: (input, ctx) =>
     Effect.gen(function* () {

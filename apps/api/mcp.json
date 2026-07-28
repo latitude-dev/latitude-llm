@@ -7362,7 +7362,8 @@
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false
-      }
+      },
+      "authRequirement": "oauth"
     },
     {
       "name": "updateSavedSearch",
@@ -16061,7 +16062,8 @@
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false
-      }
+      },
+      "authRequirement": "oauth"
     },
     {
       "name": "getMember",
@@ -16266,7 +16268,8 @@
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true
-      }
+      },
+      "authRequirement": "oauth"
     },
     {
       "name": "removeMember",
@@ -16290,7 +16293,8 @@
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": true
-      }
+      },
+      "authRequirement": "oauth"
     },
     {
       "name": "listMonitors",

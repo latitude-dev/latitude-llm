@@ -8,6 +8,8 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import {
   type ApiTestContext,
+  createOAuthAuthHeaders,
+  createOAuthTenantSetup,
   createTenantSetup,
   setupTestApi,
   TEST_ENCRYPTION_KEY,
@@ -52,12 +54,16 @@ const insertProject = async (database: InMemoryPostgres, organizationId: string)
 
 const PROTOCOL_VERSION = "2025-03-26"
 
-const sendMcpRequest = async (app: ApiTestContext["app"], authToken: string, body: object): Promise<Response> => {
+const sendMcpRequest = async (
+  app: ApiTestContext["app"],
+  authHeaders: Record<string, string>,
+  body: object,
+): Promise<Response> => {
   return app.fetch(
     new Request("http://localhost/v1/mcp", {
       method: "POST",
       headers: {
-        ...createApiKeyAuthHeaders(authToken),
+        ...authHeaders,
         "Content-Type": "application/json",
         Accept: "application/json, text/event-stream",
       },
@@ -65,6 +71,11 @@ const sendMcpRequest = async (app: ApiTestContext["app"], authToken: string, bod
     }),
   )
 }
+
+const sendMcpApiKeyRequest = async (app: ApiTestContext["app"], apiKeyToken: string, body: object): Promise<Response> =>
+  sendMcpRequest(app, createApiKeyAuthHeaders(apiKeyToken), body)
+
+const OAUTH_ONLY_TOOLS = ["createSavedSearch", "inviteMember", "updateMember", "removeMember"] as const
 
 /**
  * The MCP streamable HTTP transport returns SSE for non-initialize responses
@@ -101,7 +112,7 @@ describe("/v1/mcp", () => {
 
   it<ApiTestContext>("initialize returns the server info + capabilities", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
       jsonrpc: "2.0",
       id: 1,
       method: "initialize",
@@ -117,7 +128,7 @@ describe("/v1/mcp", () => {
 
   it<ApiTestContext>("tools/list returns the registered API-key tools", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
       jsonrpc: "2.0",
       id: 2,
       method: "tools/list",
@@ -128,9 +139,38 @@ describe("/v1/mcp", () => {
     expect(toolNames).toEqual(expect.arrayContaining(["createApiKey", "listApiKeys", "revokeApiKey"]))
   })
 
+  it<ApiTestContext>("tools/list omits OAuth-only tools for API-key sessions", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/list",
+    })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
+    const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
+    expect(toolNames).toEqual(expect.arrayContaining(["listSavedSearches", "listMembers", "createApiKey"]))
+    for (const name of OAUTH_ONLY_TOOLS) {
+      expect(toolNames).not.toContain(name)
+    }
+  })
+
+  it<ApiTestContext>("tools/list includes OAuth-only tools for OAuth sessions", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const res = await sendMcpRequest(app, createOAuthAuthHeaders(tenant.oauthAccessToken), {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/list",
+    })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
+    const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
+    expect(toolNames).toEqual(expect.arrayContaining([...OAUTH_ONLY_TOOLS, "listSavedSearches", "createApiKey"]))
+  })
+
   it<ApiTestContext>("tools/list includes the tool-analytics tools", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 20, method: "tools/list" })
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 20, method: "tools/list" })
     expect(res.status).toBe(200)
     const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
     const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
@@ -139,7 +179,7 @@ describe("/v1/mcp", () => {
 
   it<ApiTestContext>("tools/list includes the monitor tools", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 24, method: "tools/list" })
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 24, method: "tools/list" })
     expect(res.status).toBe(200)
     const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
     const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
@@ -159,7 +199,7 @@ describe("/v1/mcp", () => {
 
   it<ApiTestContext>("tools/list includes the experiment tools", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 26, method: "tools/list" })
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 26, method: "tools/list" })
     expect(res.status).toBe(200)
     const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
     const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
@@ -176,7 +216,7 @@ describe("/v1/mcp", () => {
 
   it<ApiTestContext>("tools/list includes the user-analytics tools", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 22, method: "tools/list" })
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, { jsonrpc: "2.0", id: 22, method: "tools/list" })
     expect(res.status).toBe(200)
     const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
     const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
@@ -192,7 +232,7 @@ describe("/v1/mcp", () => {
     const tenant = await createTenantSetup(database)
     const project = await insertProject(database, tenant.organizationId)
 
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
       jsonrpc: "2.0",
       id: 23,
       method: "tools/call",
@@ -215,7 +255,7 @@ describe("/v1/mcp", () => {
     const tenant = await createTenantSetup(database)
     const project = await insertProject(database, tenant.organizationId)
 
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
       jsonrpc: "2.0",
       id: 21,
       method: "tools/call",
@@ -244,7 +284,7 @@ describe("/v1/mcp", () => {
     await insertApiKey(database, tenant.organizationId, generateApiKeyToken())
     await insertApiKey(database, tenant.organizationId, generateApiKeyToken())
 
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
       jsonrpc: "2.0",
       id: 3,
       method: "tools/call",
@@ -269,7 +309,7 @@ describe("/v1/mcp", () => {
     const tenant = await createTenantSetup(database)
     const project = await insertProject(database, tenant.organizationId)
 
-    const createRes = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const createRes = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
       jsonrpc: "2.0",
       id: 25,
       method: "tools/call",
@@ -301,7 +341,7 @@ describe("/v1/mcp", () => {
     expect(createdPayload.result?.structuredContent?.target?.stream).toBe("sessions")
     expect(createdPayload.result?.structuredContent?.target?.metric?.kind).toBe("count")
 
-    const listRes = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const listRes = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
       jsonrpc: "2.0",
       id: 26,
       method: "tools/call",
@@ -320,7 +360,7 @@ describe("/v1/mcp", () => {
     database,
   }) => {
     const tenant = await createTenantSetup(database)
-    const res = await sendMcpRequest(app, tenant.apiKeyToken, {
+    const res = await sendMcpApiKeyRequest(app, tenant.apiKeyToken, {
       jsonrpc: "2.0",
       id: 4,
       method: "tools/call",
@@ -350,7 +390,7 @@ describe("/v1/mcp", () => {
     const tenantB = await createTenantSetup(database)
     // Try to revoke tenant B's API key with tenant A's bearer — the inner
     // route's org-scoped repository returns 404, which surfaces as isError.
-    const res = await sendMcpRequest(app, tenantA.apiKeyToken, {
+    const res = await sendMcpApiKeyRequest(app, tenantA.apiKeyToken, {
       jsonrpc: "2.0",
       id: 5,
       method: "tools/call",
