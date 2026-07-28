@@ -8,7 +8,6 @@
  */
 
 import { describe, expect, it } from "vitest"
-import { buildAdaptiveClusters } from "./calibration/adaptive-clustering.ts"
 import {
   buildImbalancedLongTailCorpus,
   buildNarrowDomainCorpus,
@@ -20,7 +19,6 @@ import {
   loadNarrowPilotCorpus,
 } from "./calibration/fixtures.ts"
 import { partitionSignature, rootChildMajorityLabels, treeShape } from "./calibration/metrics.ts"
-import { ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD, ADAPTIVE_TREE_DEPTH_SCHEDULE } from "./calibration/schedule.ts"
 import { buildRelativeHierarchicalClusters, quantile } from "./clustering.ts"
 import {
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
@@ -32,6 +30,10 @@ import {
   TAXONOMY_KMEANS_TOLERANCE,
   TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
 } from "./constants.ts"
+
+// Multi-corpus k-means builds run 1-1.5s locally and ~3x that on CI hardware,
+// which straddles Vitest's 5s default. Every heavy case gets an explicit budget.
+const HEAVY_BUILD_TIMEOUT_MS = 60_000
 
 const build = (corpus: LabeledCorpus) =>
   buildRelativeHierarchicalClusters({
@@ -53,29 +55,56 @@ const fixtures: readonly [string, LabeledCorpus][] = [
 ]
 
 describe("buildRelativeHierarchicalClusters — determinism", () => {
-  it.each(fixtures)("%s: identical partition signature + selected K across repeated builds", (_name, corpus) => {
-    const first = build(corpus)
-    const second = build(corpus)
-    expect(partitionSignature(second.root)).toBe(partitionSignature(first.root))
-    expect(second.diagnostics.selectedKByDepth).toEqual(first.diagnostics.selectedKByDepth)
-  })
+  it.each(fixtures)(
+    "%s: identical partition signature + selected K across repeated builds",
+    (_name, corpus) => {
+      const first = build(corpus)
+      const second = build(corpus)
+      expect(partitionSignature(second.root)).toBe(partitionSignature(first.root))
+      expect(second.diagnostics.selectedKByDepth).toEqual(first.diagnostics.selectedKByDepth)
+    },
+    HEAVY_BUILD_TIMEOUT_MS,
+  )
+})
 
-  it.each(fixtures)("%s: matches the calibrated candidate builder exactly", (_name, corpus) => {
-    // The shipped schedule/threshold are the calibrated values, so the promoted
-    // builder must reproduce the Phase-1 candidate's partition.
-    const shipped = build(corpus)
-    const calibrated = buildAdaptiveClusters({
-      embeddings: corpus.embeddings,
-      depthSchedule: ADAPTIVE_TREE_DEPTH_SCHEDULE,
-      restarts: TAXONOMY_KMEANS_RESTARTS,
-      maxIter: TAXONOMY_KMEANS_MAX_ITER,
-      tolerance: TAXONOMY_KMEANS_TOLERANCE,
-      seed: corpus.seed,
-      globalAbsoluteThreshold: ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD,
-    })
-    expect(partitionSignature(shipped.root)).toBe(partitionSignature(calibrated.root))
-    expect(shipped.diagnostics.routingThresholds).toEqual(calibrated.diagnostics.routingThresholds)
-  })
+// The committed schedule is `root + depth*0.1`; scheduleWithRoot(0.45) reproduces
+// it and 0.60 is the stricter setting the real pilot ruled out.
+const scheduleWithRoot = (root: number) =>
+  TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.map((depth, index) => ({
+    ...depth,
+    minRelativeSeparation: root + index * 0.1,
+  }))
+
+describe("buildRelativeHierarchicalClusters — the calibrated separation is load-bearing", () => {
+  // Migrated from the retired calibration gate. The fixtures reproduce the real
+  // pilot's geometry, so this pins the value rather than passing for any
+  // threshold: raising the root back toward the synthetic-only ~0.60 that the
+  // real corpus disproved collapses both trees and fails here. See
+  // calibration/BASELINES.md for the measurement it encodes.
+  it.each([
+    ["narrow-domain", buildNarrowDomainCorpus()],
+    ["narrow-pilot", loadNarrowPilotCorpus()],
+  ] as const)(
+    "%s: resolves at the calibrated 0.45 gate and collapses at 0.60",
+    (_name, corpus) => {
+      const buildAt = (root: number) =>
+        buildRelativeHierarchicalClusters({
+          embeddings: corpus.embeddings,
+          depthSchedule: scheduleWithRoot(root),
+          restarts: TAXONOMY_KMEANS_RESTARTS,
+          maxIter: TAXONOMY_KMEANS_MAX_ITER,
+          tolerance: TAXONOMY_KMEANS_TOLERANCE,
+          seed: corpus.seed,
+          globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+        })
+      const calibrated = buildAt(0.45)
+      const tooStrict = buildAt(0.6)
+      expect(calibrated.root.children.length).toBeGreaterThanOrEqual(3)
+      expect(calibrated.root.children.length).toBeLessThanOrEqual(5)
+      expect(tooStrict.root.children.length).toBeLessThan(3)
+    },
+    HEAVY_BUILD_TIMEOUT_MS,
+  )
 })
 
 describe("buildRelativeHierarchicalClusters — narrow-domain separation", () => {
@@ -133,9 +162,8 @@ describe("buildRelativeHierarchicalClusters — bounded diagnostics", () => {
   })
 })
 
-// A re-searched build runs the K sweep at the escalation budget (25 restarts),
-// which is ~8× a plain build and runs past Vitest's 5s default on CI hardware.
-const RE_SEARCH_TIMEOUT_MS = 60_000
+// A re-searched build runs the K sweep at the escalation budget (25 restarts), ~8× a plain build.
+const RE_SEARCH_TIMEOUT_MS = HEAVY_BUILD_TIMEOUT_MS
 
 describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
   const escalation = {
