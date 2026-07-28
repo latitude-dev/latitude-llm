@@ -2,7 +2,7 @@ import { OrganizationId } from "@domain/shared"
 import type { UnpricedSpanGroup } from "@domain/spans"
 import { Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { reportUnpricedSpans, resetUnpricedSpanReportThrottle } from "./unpriced-spans-report.ts"
+import { MAX_TRACKED_PAIRS, reportUnpricedSpans, resetUnpricedSpanReportThrottle } from "./unpriced-spans-report.ts"
 
 const organizationId = OrganizationId("org_1")
 
@@ -74,5 +74,20 @@ describe("reportUnpricedSpans", () => {
     Effect.runSync(reportUnpricedSpans([], organizationId))
 
     expect(lines).toHaveLength(0)
+  })
+
+  // Overflow used to clear the whole map, which re-opened every pair still inside its window.
+  it("keeps throttling a pair when a flood of new pairs overflows the tracked set", () => {
+    Effect.runSync(reportUnpricedSpans([group({ model: "evicted-first" })], organizationId))
+    Effect.runSync(reportUnpricedSpans([group()], organizationId))
+
+    // Overflows the set by exactly one, so only the decoy above is old enough to be evicted.
+    const flood = Array.from({ length: MAX_TRACKED_PAIRS - 1 }, (_, i) => group({ model: `flood-${i}` }))
+    Effect.runSync(reportUnpricedSpans(flood, organizationId))
+
+    const before = reported().length
+    Effect.runSync(reportUnpricedSpans([group()], organizationId))
+
+    expect(reported()).toHaveLength(before)
   })
 })

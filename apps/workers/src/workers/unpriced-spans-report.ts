@@ -25,14 +25,31 @@ const REPORT_INTERVAL_MS = 60 * 60 * 1000
  * Emission is driven by customer traffic, so an unmapped SDK on a busy project would otherwise
  * report on every batch forever. One report per hour per pair carries the same information.
  */
-const MAX_TRACKED_PAIRS = 500
+export const MAX_TRACKED_PAIRS = 500
 
+/** Insertion order is kept as least-recently-reported first, so the first key is the eviction target. */
 const lastReportedAt = new Map<string, number>()
+
+function evictToMakeRoom(now: number): void {
+  if (lastReportedAt.size < MAX_TRACKED_PAIRS) return
+
+  for (const [tracked, at] of lastReportedAt) {
+    if (now - at >= REPORT_INTERVAL_MS) lastReportedAt.delete(tracked)
+  }
+  // Still full of live claims: drop only the oldest. Clearing the whole map here would lift the
+  // throttle off every pair at once, so a flood of new pairs could re-open the ones it displaced.
+  if (lastReportedAt.size >= MAX_TRACKED_PAIRS) {
+    const oldest = lastReportedAt.keys().next().value
+    if (oldest !== undefined) lastReportedAt.delete(oldest)
+  }
+}
 
 function claimReportSlot(key: string, now: number): boolean {
   const previous = lastReportedAt.get(key)
   if (previous !== undefined && now - previous < REPORT_INTERVAL_MS) return false
-  if (lastReportedAt.size >= MAX_TRACKED_PAIRS) lastReportedAt.clear()
+
+  evictToMakeRoom(now)
+  lastReportedAt.delete(key)
   lastReportedAt.set(key, now)
   return true
 }
