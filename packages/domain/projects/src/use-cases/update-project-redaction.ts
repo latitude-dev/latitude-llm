@@ -40,7 +40,7 @@ export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRe
     Effect.gen(function* () {
       const repo = yield* ProjectRepository
       const existing = yield* repo
-        .findById(input.projectId)
+        .findByIdForUpdate(input.projectId)
         .pipe(
           Effect.catchTag("NotFoundError", () =>
             Effect.fail(new ProjectNotFoundError({ id: input.projectId, organizationId })),

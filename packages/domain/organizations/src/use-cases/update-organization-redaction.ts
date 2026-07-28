@@ -34,7 +34,7 @@ export const updateOrganizationRedactionUseCase = Effect.fn("organizations.updat
   return yield* sqlClient.transaction(
     Effect.gen(function* () {
       const repo = yield* OrganizationRepository
-      const existing = yield* repo.findById(organizationId)
+      const existing = yield* repo.findByIdForUpdate(organizationId)
 
       const fromRedaction = existing.settings?.redaction ?? null
       const toRedaction = input.redaction

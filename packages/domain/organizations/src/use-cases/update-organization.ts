@@ -31,23 +31,29 @@ export const updateOrganizationUseCase = Effect.fn("organizations.updateOrganiza
   input: UpdateOrganizationInput,
 ) {
   const sqlClient = yield* SqlClient
-  const repo = yield* OrganizationRepository
 
-  const org = yield* repo.findById(sqlClient.organizationId)
+  // Transaction plus a locking read: a patch merges against the stored row, so two concurrent
+  // patches would otherwise both read the same snapshot and the later save would drop the earlier.
+  return yield* sqlClient.transaction(
+    Effect.gen(function* () {
+      const repo = yield* OrganizationRepository
+      const org = yield* repo.findByIdForUpdate(sqlClient.organizationId)
 
-  const nextSettings = withStoredRedaction(
-    org.settings,
-    input.settingsPatch !== undefined ? { ...(org.settings ?? {}), ...input.settingsPatch } : input.settings,
+      const nextSettings = withStoredRedaction(
+        org.settings,
+        input.settingsPatch !== undefined ? { ...(org.settings ?? {}), ...input.settingsPatch } : input.settings,
+      )
+
+      const updated: Organization = {
+        ...org,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(nextSettings !== undefined ? { settings: nextSettings } : {}),
+        updatedAt: new Date(),
+      }
+
+      yield* repo.save(updated)
+
+      return updated
+    }),
   )
-
-  const updated: Organization = {
-    ...org,
-    ...(input.name !== undefined ? { name: input.name } : {}),
-    ...(nextSettings !== undefined ? { settings: nextSettings } : {}),
-    updatedAt: new Date(),
-  }
-
-  yield* repo.save(updated)
-
-  return updated
 })

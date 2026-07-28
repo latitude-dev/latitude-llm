@@ -117,6 +117,7 @@ const makeProjectRepository = (
 ) =>
   ProjectRepository.of({
     findById: () => Effect.die("not used"),
+    findByIdForUpdate: () => Effect.die("not used"),
     findBySlug: (slug: string) => {
       const id = resolutions[slug]
       if (!id) return Effect.fail(new NotFoundError({ entity: "Project", id: slug }))
@@ -386,6 +387,7 @@ describe("ingestSpansUseCase project scoping", () => {
         ProjectRepository,
         ProjectRepository.of({
           findById: () => Effect.die("not used"),
+          findByIdForUpdate: () => Effect.die("not used"),
           findBySlug: (slug: string) => {
             findBySlugCalls++
             return Effect.succeed(makeProject(slug, slug === "primary" ? PRIMARY_PROJECT_ID : SECONDARY_PROJECT_ID))
