@@ -16,7 +16,7 @@
 export const PROVIDER_ALIASES: Record<string, string> = {
   amazon_bedrock: "amazon-bedrock",
   google_vertex: "google-vertex",
-  anthropic_vertex: "anthropic-vertex",
+  anthropic_vertex: "google-vertex-anthropic",
   "openai-codex": "openai",
 }
 

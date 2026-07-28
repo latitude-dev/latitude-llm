@@ -217,6 +217,7 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
   const attrCostTotal = first(costTotalCandidates, attrs)
 
   const hasAttrCosts = attrCostInput !== undefined && attrCostOutput !== undefined
+  const hasAnyAttrCost = attrCostInput !== undefined || attrCostOutput !== undefined || attrCostTotal !== undefined
 
   const costEstimation = hasAttrCosts
     ? undefined
@@ -246,7 +247,8 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
     costOutputMicrocents: costOutput,
     costTotalMicrocents: costTotal,
     costIsEstimated,
-    // A provider-supplied total still counts as priced even when the model is unknown to models.dev.
-    costPricingMissing: costEstimation?.kind === "unpriced" && attrCostTotal === undefined,
+    // Any provider-supplied cost counts as priced even when the model is unknown to models.dev.
+    // Checking only the total would report a span carrying a real one-sided cost as unpriced.
+    costPricingMissing: costEstimation?.kind === "unpriced" && !hasAnyAttrCost,
   }
 }

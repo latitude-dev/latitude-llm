@@ -15,7 +15,9 @@ function sanitizeModelName(raw: string): string {
     .trim()
 }
 
-const PROVIDER_ALIASES: Record<string, string> = {
+// Exported for the drift guard in `provider-aliases.test.ts`: every target must be a provider
+// models.dev actually prices, or the alias silently resolves cost to 0.
+export const PROVIDER_ALIASES: Record<string, string> = {
   bedrock: "amazon-bedrock",
   amazon_bedrock: "amazon-bedrock",
   gemini: "google",
