@@ -21,7 +21,7 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
   phone: {
     label: "Phone numbers",
     description: "International +NNNNNNNNN numbers and separated North American forms such as (555) 123-4567.",
-    caution: "The most likely to match something that is not a phone number. Turn it off if numeric ids disappear.",
+    caution: "Numeric ids such as 402-118-2260 may be falsely redacted as phone numbers.",
   },
   credit_card: {
     label: "Credit card numbers",
@@ -38,7 +38,7 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
   ip_address: {
     label: "IP addresses",
     description: "IPv4 and IPv6 addresses.",
-    caution: "Also matches version strings such as 1.2.3.4, which is why it is off by default.",
+    caution: "Version numbers such as 1.2.3.4 may be falsely redacted as IP addresses.",
   },
   secret: {
     label: "API keys and secrets",
@@ -47,7 +47,7 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
   crypto_wallet: {
     label: "Crypto wallet addresses",
     description: "Bitcoin and Ethereum address formats.",
-    caution: "Can match long hex strings such as commit hashes, which is why it is off by default.",
+    caution: "Long alphanumeric ids may be falsely redacted as wallet addresses.",
   },
 }
 

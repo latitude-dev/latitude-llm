@@ -1,9 +1,4 @@
-import {
-  DEFAULT_REDACTION_ENTITIES,
-  type RedactionEntity,
-  type RedactionIdentityHandling,
-  type RedactionMode,
-} from "@domain/shared"
+import type { RedactionEntity, RedactionIdentityHandling, RedactionMode } from "@domain/shared"
 import { Checkbox, DotIndicator, Label, Select, Switch, Text } from "@repo/ui"
 import type { ReactNode } from "react"
 import {
@@ -60,8 +55,8 @@ export function RedactionCard({
 
   return (
     <div className="flex w-full flex-col rounded-lg bg-muted/30">
-      {notice ? <div className="border-border border-b p-4">{notice}</div> : null}
-      <div className="flex w-full flex-row items-start justify-between gap-4 p-4">
+      {notice ? <div className="border-border border-b p-5">{notice}</div> : null}
+      <div className="flex w-full flex-row items-start justify-between gap-4 p-5">
         <div className="flex flex-col gap-1">
           <Label htmlFor={`${idPrefix}-enabled`} className="flex flex-row items-center gap-2">
             {title}
@@ -78,14 +73,14 @@ export function RedactionCard({
       </div>
 
       {enabled ? (
-        <div className="flex w-full flex-col gap-4 border-border border-t p-4">
-          <div className="flex flex-col gap-2">
+        <div className="flex w-full flex-col gap-6 border-border border-t p-5">
+          <div className="flex flex-col gap-4">
             <Text.H6M>What to look for</Text.H6M>
             {REDACTION_ENTITY_ORDER.map((entity) => {
               const meta = REDACTION_ENTITY_META[entity]
               const id = `${idPrefix}-entity-${entity}`
               return (
-                <div key={entity} className="flex flex-row items-start gap-2">
+                <div key={entity} className="flex flex-row items-start gap-3">
                   <Checkbox
                     id={id}
                     checked={selected.has(entity)}
@@ -93,13 +88,8 @@ export function RedactionCard({
                     onCheckedChange={(checked) => toggleEntity(entity, checked === true)}
                     aria-label={meta.label}
                   />
-                  <div className="flex flex-col gap-0.5">
-                    <Label htmlFor={id} className="flex flex-row items-center gap-2">
-                      {meta.label}
-                      {DEFAULT_REDACTION_ENTITIES.includes(entity) ? null : (
-                        <Text.H6 color="foregroundMuted">(off by default)</Text.H6>
-                      )}
-                    </Label>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor={id}>{meta.label}</Label>
                     <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
                     {meta.caution ? <Text.H6 color="warningMutedForeground">{meta.caution}</Text.H6> : null}
                   </div>
@@ -108,12 +98,11 @@ export function RedactionCard({
             })}
           </div>
 
-          <div className="flex flex-row items-start justify-between gap-4 border-border border-t pt-4">
+          <div className="flex flex-row items-start justify-between gap-4 border-border border-t pt-6">
             <div className="flex flex-col gap-1">
               <Label htmlFor={`${idPrefix}-metadata`}>Also scan metadata and tags</Label>
               <Text.H6 color="foregroundMuted">
-                Off by default. Metadata is usually operational, and scanning it can remove values you filter and group
-                by.
+                Metadata is usually operational, and scanning it can remove values you filter and group by.
               </Text.H6>
             </div>
             <Switch
@@ -124,7 +113,7 @@ export function RedactionCard({
             />
           </div>
 
-          <div className="flex flex-col gap-1 border-border border-t pt-4">
+          <div className="flex flex-col gap-2 border-border border-t pt-6">
             <Select
               name={`${idPrefix}-identities`}
               label="User identifiers"
@@ -141,7 +130,7 @@ export function RedactionCard({
         </div>
       ) : null}
 
-      {footer ? <div className="border-border border-t p-4">{footer}</div> : null}
+      {footer ? <div className="border-border border-t p-5">{footer}</div> : null}
     </div>
   )
 }

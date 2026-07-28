@@ -6,7 +6,7 @@ import {
   type RedactionSetting,
   resolveRedactionPolicy,
 } from "@domain/shared"
-import { Alert, Button, Label, Switch, Text, useToast } from "@repo/ui"
+import { Button, Label, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
@@ -170,12 +170,13 @@ function ProjectPrivacySettingsPage() {
       }
       headerSticky={hasDirty}
     >
-      <div className="flex w-full flex-col gap-6 @[900px]:w-2/3">
-        <Alert
-          variant="warning"
-          title="Redaction cannot be undone"
-          description="Latitude scans span content for the categories you pick and replaces matches with a labelled placeholder before storing the span. It applies only to spans ingested from now on, takes effect within a minute, and redacted content cannot be recovered. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail."
-        />
+      <div className="flex w-full flex-col gap-8 @[900px]:w-2/3">
+        <Text.H6 color="foregroundMuted">
+          Latitude scans span content for the categories you pick and replaces matches with a labelled placeholder
+          before storing the span. It applies only to spans ingested from now on, takes effect within a minute, and
+          redacted content cannot be recovered. Detection is pattern based: it reliably catches structured identifiers,
+          and does not catch names, addresses, or free-form personal detail.
+        </Text.H6>
 
         <RedactionCard
           idPrefix="project-redaction"
