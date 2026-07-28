@@ -404,7 +404,7 @@ Justification, and this is a deliberate divergence from both competitors:
 2. For the in-process deterministic tier, "failure" means a code bug, so fail-open reduces to *silently writing plaintext PII for a customer who explicitly asked us not to*.
 3. There is no delete path ([§2.5](#25-what-does-not-exist)) and redaction is non-retroactive, so a fail-open write is permanent and unremediable.
 
-**The cost is explicit and accepted:** a persistent redaction bug loses spans for opted-in projects rather than leaking their PII. That is the correct trade for a compliance control, it is loud (failed jobs, error logs), and the customer has a self-service escape: set `mode` back to `off`. Whether ingest should retry before dropping is a real open question ([§10](#10-open-questions)); it is deliberately not changed here, because adding `attempts` alters failure handling for all ingest, not just redaction.
+**The cost is explicit and accepted:** a persistent redaction bug loses spans for opted-in projects rather than leaking their PII. That is the correct trade for a compliance control, it is loud (failed jobs, error logs), and the customer has a self-service escape as long as the effective policy is project-controlled: set `mode` back to `off`. Under a `locked` organization policy the project setting is ignored ([§4.4](#44-settings-cascade-authorization)), so recovery there means changing the organization policy, which only an owner can do. Whether ingest should retry before dropping is a real open question ([§10](#10-open-questions)); it is deliberately not changed here, because adding `attempts` alters failure handling for all ingest, not just redaction.
 
 Additional rules:
 
@@ -626,7 +626,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - `redaction` field absent when every project is `off`.
 - Org `locked` policy overriding a project's weaker policy.
 - Multi-project batch produces one map entry per non-`off` project.
-- Cached org resolver: cache hit performs no query; cache failure resolves to no org policy.
+- Cached org resolver: cache hit performs no query; a cached absence is served rather than re-queried; a cache failure falls back to a database read; a database read failure propagates rather than resolving to "no org policy", so a `locked` organization policy can never fall through to a weaker project policy.
 
 **Web:** org settings round-trip preserves `billing.spendingLimitCents` and `wantsShowcase` ([T-5](#8-traps)).
 
@@ -677,7 +677,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 ### Phase 2 - Pipeline wiring
 
-- [x] **P2-1**: `packages/platform/db-postgres/src/resolve-redaction-policy-cached.ts`, modeled on `resolve-effective-plan-cached.ts`: key `org:${organizationId}:settings:redaction`, 60 s TTL, Zod-validated payload, `cache.hit` annotation, `invalidateRedactionPolicyCache`.
+- [x] **P2-1**: `packages/platform/db-postgres/src/resolve-redaction-policy-cached.ts`, modeled on `resolve-effective-plan-cached.ts`: key `org:${organizationId}:settings:redaction`, 60 s TTL, Zod-validated payload, `cache.hit` annotation, `invalidateOrganizationRedactionCache`.
 - [x] **P2-2**: Add `redaction?: Record<string, SerializedRedactionPolicy>` to `span-ingestion:ingest` in `packages/domain/queue/src/topic-registry.ts`.
 - [x] **P2-3**: In `ingestSpansUseCase`, resolve the per-project policy from the already-loaded `projectBySlug` plus the cached org settings, and stamp the map onto the published job. Omit `off` projects and omit the field entirely when the map is empty.
 - [x] **P2-4**: Provide the Redis cache layer the resolver needs in `apps/ingest/src/routes/traces.ts`.
@@ -716,6 +716,8 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 
 - **Deleting the buffered payload has to happen after the events are published, not after the insert.** The first placement made a job that died mid-processing unrecoverable: stalled-job redelivery found no payload, so the batch stayed inserted with `TracesIngested` never fired, silently losing trace-end, billing, and search indexing. Caught by an existing worker test that ingests the same `fileKey` twice.
 - **`span-ingestion` has no retries.** No `attempts` on the topic and no `defaultJobOptions` on the queue, so BullMQ's default of one attempt applies. Several earlier notes in this spec claimed a failed pass "retries"; it does not, it drops. Corrected in [§2.2](#22-worker-path) and [§4.6](#46-failure-policy), and raised as [open question 5](#10-open-questions).
+- **Fixing the bridging bug narrowed the grouped shapes and lost Diners.** Splitting the credit-card pattern left only 4-4-4-N and 4-6-5, so the 4-6-4 form stopped matching while its compact form still did. Every grouping a real issuer prints is now enumerated and tested in both separators. Generalising to "groups of four to six digits" is the wrong fix: an open-ended repetition swallows a trailing group, overruns 19 digits, and fails the length gate with the card inside the discarded match, which is the bridging bug again.
+- **The buffered-payload delete has to run on the empty-batch path too.** The early return for a batch whose spans were all rejected skipped it, leaving an unredacted object behind with no lifecycle rule under it on self-hosted disk. The delete belongs on every success exit and on none of the failure paths, so a finalizer is the wrong tool: a failed job may be redelivered and redelivery needs the payload.
 - **A separator-bridging pattern loses the value it was meant to catch.** The credit-card candidate allowed an optional space or dash between *any* two digits, so in `+14155552671 4111111111111111` it consumed both numbers as one over-long run, failed the issuer check, and never reconsidered the real card inside — a silent missed redaction. Fixed the way IBAN already was: separate compact and grouped patterns, with the grouped ones backreferencing their own separator so a match cannot span two numbers. The class is easy to reintroduce and invisible without an adjacency test, so every multi-part detector needs one.
 - **Removing dry run removed the only feedback on false negatives.** Nothing now reports what redaction missed, which is why detector precision has to be right by construction and why detector tuning belongs in an offline script rather than a product mode ([§4.3](#43-policy-model)).
 - `RedactionPolicy` was split out of `ResolvedRedactionPolicy`. The engine never needed `source`, which exists only so the UI can say "inherited from organization", and keeping it out of the wire format avoids either shipping a display field through the queue or inventing a fake value on deserialize. With one active mode, presence in the policy map *is* the decision, so `RedactionPolicy` carries no mode and the wire format has no `mode` field.
