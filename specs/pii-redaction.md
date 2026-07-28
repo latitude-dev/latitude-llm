@@ -72,7 +72,7 @@ Write this sentence into the docs and the UI copy before writing code, because i
 
 Postgres layers already provided in this worker (`:43-48`): `BillingOverrideRepositoryLive`, **`SettingsReaderLive`**, `StripeSubscriptionLookupLive`, `OrganizationRepositoryLive`. `SettingsReader` is therefore reachable in the worker but unused by the span pipeline today.
 
-`SpanDecodingError` is swallowed as a warning (`:105-107`): undecodable payloads are dropped, not retried. Any other error propagates and BullMQ retries.
+`SpanDecodingError` is swallowed as a warning (`:105-107`): undecodable payloads are dropped. Any other error propagates and fails the job. **The topic configures no `attempts`, and `new Queue` sets no `defaultJobOptions`, so BullMQ's default of a single attempt applies: a failed ingest job is not retried.** Stalled-job recovery can still redeliver a job whose worker died mid-processing, which is a different mechanism from retry.
 
 `processIngestedSpansUseCase` (`packages/domain/spans/src/use-cases/process-ingested-spans.ts:120-187`) stages:
 
@@ -159,7 +159,7 @@ Therefore **ingested content cannot be removed before its retention TTL expires.
 
 **Takeaway:** neither bundles a model; both make contextual detection an optional separately-deployed component. Neither ships deterministic detectors out of the box, which is where we can beat both cheaply.
 
-**Two constraints we must not inherit.** Both designs sit on a synchronous export path, which is why both chose fail-open and sub-second timeouts. Our redaction point is in an async BullMQ worker at concurrency 50; the OTLP client already has its `200`. We can retry, and we can afford seconds. Copying fail-open and a 500 ms timeout would import their constraints without their reason. See [§4.6](#46-failure-policy) and [§4.7](#47-size-and-time-budget).
+**Two constraints we must not inherit.** Both designs sit on a synchronous export path, which is why both chose fail-open and sub-second timeouts. Our redaction point is in an async BullMQ worker at concurrency 50; the OTLP client already has its `200`. We can fail the batch instead of degrading it, and we can afford seconds. Copying fail-open and a 500 ms timeout would import their constraints without their reason. See [§4.6](#46-failure-policy) and [§4.7](#47-size-and-time-budget).
 
 **Engine research (permissive licenses only):**
 
@@ -396,15 +396,15 @@ Projects resolving to `mode: "off"` are **absent from the map**, and the whole f
 
 ### 4.6 Failure policy
 
-**The deterministic tier fails closed.** If the redaction pass throws or times out, the effect fails, nothing is inserted, and BullMQ retries. On final failure the payload is dropped.
+**The deterministic tier fails closed.** If the redaction pass throws or overruns its deadline, the effect fails and nothing is inserted. The batch is then dropped, because `span-ingestion` runs with BullMQ's default single attempt ([§2.2](#22-worker-path)) — it is not retried first.
 
 Justification, and this is a deliberate divergence from both competitors:
 
-1. We are async. lmnr and langfuse chose fail-open because a synchronous export path made "drop the customer's telemetry" the only alternative. We have retries.
+1. We are async. lmnr and langfuse chose fail-open because a synchronous export path made "drop the customer's telemetry" the only alternative, and dropping it would have surfaced to the caller as a failed export. Ours is already acknowledged, so failing the batch costs the customer that batch rather than an error at their exporter.
 2. For the in-process deterministic tier, "failure" means a code bug, so fail-open reduces to *silently writing plaintext PII for a customer who explicitly asked us not to*.
 3. There is no delete path ([§2.5](#25-what-does-not-exist)) and redaction is non-retroactive, so a fail-open write is permanent and unremediable.
 
-**The cost is explicit and accepted:** a persistent redaction bug loses spans for opted-in projects rather than leaking their PII. That is the correct trade for a compliance control, it is loud (failed jobs, error logs, retry exhaustion), and the customer has a self-service escape: set `mode` back to `off`.
+**The cost is explicit and accepted:** a persistent redaction bug loses spans for opted-in projects rather than leaking their PII. That is the correct trade for a compliance control, it is loud (failed jobs, error logs), and the customer has a self-service escape: set `mode` back to `off`. Whether ingest should retry before dropping is a real open question ([§10](#10-open-questions)); it is deliberately not changed here, because adding `attempts` alters failure handling for all ingest, not just redaction.
 
 Additional rules:
 
@@ -418,7 +418,7 @@ Ingestion is the hot path of the entire product, so this is a capacity question,
 
 - `REDACTION_MAX_FIELD_CHARS = 1_000_000` (1 M UTF-16 code units). A field above the cap is **not scanned**: it is replaced wholesale with `[REDACTED_OVERSIZED_FIELD]` and counted. Passing it through unscanned would break the promise, and partial scanning would leak the tail. Per the design invariant, degrade toward more redaction. 1 MB is generous: the realistic trigger is multi-MB file content in coding-agent tool outputs.
 - `REDACTION_MAX_DEPTH = 256`. The walk is recursive and `JSON.parse` accepts nesting tens of thousands deep, so a crafted `tool_input` overflows the stack; fail-closed then turns one hostile span into a dropped batch for every project in it. A subtree at the cap is treated exactly like an oversized leaf, which keeps the failure local. Payloads too deep for `JSON.parse` itself fall back to a plain-text scan, so they are still scanned rather than skipped.
-- `REDACTION_BATCH_TIMEOUT_MS = 30_000`, enforced as a **deadline checked before each span**, not as an `Effect.timeout` around the whole pass. The walk is synchronous, so a fiber-level timeout cannot fire until the work it was meant to bound has already finished; wrapping the pass in one would advertise a limit that never applies. Overrun is therefore bounded by a single span's walk, which the field cap bounds in turn. The async pseudonym phase does yield, so that one keeps a real `Effect.timeoutOrElse`. Either way the pass fails and the job retries ([§4.6](#46-failure-policy)).
+- `REDACTION_BATCH_TIMEOUT_MS = 30_000`, enforced as a **deadline checked before each span**, not as an `Effect.timeout` around the whole pass. The walk is synchronous, so a fiber-level timeout cannot fire until the work it was meant to bound has already finished; wrapping the pass in one would advertise a limit that never applies. Overrun is therefore bounded by a single span's walk, which the field cap bounds in turn. The async pseudonym phase does yield, so that one keeps a real `Effect.timeoutOrElse`. Either way the pass fails and the batch is dropped ([§4.6](#46-failure-policy)).
 - **Benchmark acceptance criterion:** measure and record added wall-clock per span at p50 and p99 for a representative batch, and the total CPU delta at concurrency 50. Target ≤ 5 ms per span at 32 KB of scanned content. If the measured number misses the target, the finding goes in the PR description and the cap gets revisited; do not silently ship a regression on the ingest path.
 
 ### 4.8 Observability
@@ -640,7 +640,8 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 2. **Should the UI surface a per-span "content was redacted" indicator** beyond the inline placeholder? Placeholders alone may read as data loss on a trace a user did not know was redacted.
 3. **ClickHouse deletion mechanics for Phase 5.** Lightweight `DELETE FROM` versus `ALTER TABLE … DELETE`, cost at our partition sizes, and how `traces`/`sessions` aggregate state is corrected. Needs its own design pass before that phase is scoped.
 4. **Should `phone` default off** rather than on? It is the highest-false-positive detector that is on by default. Answer it offline: a script that reads a sample of real spans from ClickHouse and runs `findRedactionMatches` over them, reporting matches per entity with surrounding context. That needs no product surface, and it is the general answer for tuning any detector default. Worth doing before Phase 3 ships the toggle to customers.
-5. **Is a customer-facing redaction preview worth building?** Running the detectors on demand over spans already in ClickHouse, returning counts plus before/after samples, is the only honest way to answer "will this eat my tool outputs" before enabling it. It is out of scope here ([§4.3](#43-policy-model)) but it is the feature a dry-run mode was standing in for, and without it a customer's first enforce is their validation.
+5. **Should `span-ingestion` retry before dropping a batch?** It runs on BullMQ's default single attempt today, so any failure — redaction or otherwise — drops the batch immediately. Fail-closed redaction is correct either way, but "retry then drop" loses far less data than "drop", and a transient ClickHouse or object-store blip currently costs the whole batch. Adding `attempts` changes failure handling for all ingest, not just redaction, so it needs its own decision. Duplicate inserts on retry are safe: `spans` is a `ReplacingMergeTree`.
+6. **Is a customer-facing redaction preview worth building?** Running the detectors on demand over spans already in ClickHouse, returning counts plus before/after samples, is the only honest way to answer "will this eat my tool outputs" before enabling it. It is out of scope here ([§4.3](#43-policy-model)) but it is the feature a dry-run mode was standing in for, and without it a customer's first enforce is their validation.
 
 ---
 
@@ -713,6 +714,8 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 
 **Findings from Phase 2** (fold into the relevant sections when promoting to `dev-docs/`):
 
+- **Deleting the buffered payload has to happen after the events are published, not after the insert.** The first placement made a job that died mid-processing unrecoverable: stalled-job redelivery found no payload, so the batch stayed inserted with `TracesIngested` never fired, silently losing trace-end, billing, and search indexing. Caught by an existing worker test that ingests the same `fileKey` twice.
+- **`span-ingestion` has no retries.** No `attempts` on the topic and no `defaultJobOptions` on the queue, so BullMQ's default of one attempt applies. Several earlier notes in this spec claimed a failed pass "retries"; it does not, it drops. Corrected in [§2.2](#22-worker-path) and [§4.6](#46-failure-policy), and raised as [open question 5](#10-open-questions).
 - **A separator-bridging pattern loses the value it was meant to catch.** The credit-card candidate allowed an optional space or dash between *any* two digits, so in `+14155552671 4111111111111111` it consumed both numbers as one over-long run, failed the issuer check, and never reconsidered the real card inside — a silent missed redaction. Fixed the way IBAN already was: separate compact and grouped patterns, with the grouped ones backreferencing their own separator so a match cannot span two numbers. The class is easy to reintroduce and invisible without an adjacency test, so every multi-part detector needs one.
 - **Removing dry run removed the only feedback on false negatives.** Nothing now reports what redaction missed, which is why detector precision has to be right by construction and why detector tuning belongs in an offline script rather than a product mode ([§4.3](#43-policy-model)).
 - `RedactionPolicy` was split out of `ResolvedRedactionPolicy`. The engine never needed `source`, which exists only so the UI can say "inherited from organization", and keeping it out of the wire format avoids either shipping a display field through the queue or inventing a fake value on deserialize. With one active mode, presence in the policy map *is* the decision, so `RedactionPolicy` carries no mode and the wire format has no `mode` field.
