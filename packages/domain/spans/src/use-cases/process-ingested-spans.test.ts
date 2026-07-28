@@ -1,5 +1,5 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
-import type { QueuePublishError } from "@domain/queue"
+import { QueuePublishError } from "@domain/queue"
 import { ChSqlClient, type ChSqlClientShape, OrganizationId, StorageDisk } from "@domain/shared"
 import { createFakeStorageDisk } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -297,5 +297,50 @@ describe("processIngestedSpansUseCase redaction", () => {
 
     expect(exit._tag).toBe("Success")
     expect(inserted).toHaveLength(1)
+  })
+})
+
+describe("processIngestedSpansUseCase buffered payload recovery", () => {
+  /**
+   * The delete must come after the events are published, not right after the insert.
+   * Deleting earlier makes a job that dies mid-processing unrecoverable: redelivery
+   * finds no payload, so the batch ends up inserted with `TracesIngested` never fired,
+   * silently losing trace-end, billing, and search indexing.
+   */
+  it("keeps the buffered payload when publishing the event fails", async () => {
+    const { repository: spanRepo, inserted } = createFakeSpanRepository()
+    const payload = payloadFor([spanWith(contentAttributes, "b7ad6b7169203331")])
+    const storage = createFakeStorageDisk({
+      getBytes: async () => new Uint8Array(Buffer.from(payload, "base64")),
+    })
+    const failingPublisher: EventsPublisher<QueuePublishError> = {
+      publish: () => Effect.fail(new QueuePublishError({ cause: "redis down", queue: "domain-events" })),
+    }
+
+    const effect = processIngestedSpansUseCase({ eventsPublisher: failingPublisher })({
+      organizationId: ORGANIZATION_ID,
+      apiKeyId: "key-1",
+      contentType: "application/json",
+      ingestedAt: new Date("2026-03-18T10:00:00.000Z"),
+      isSandbox: false,
+      inlinePayload: null,
+      fileKey: "tmp-ingest/org/proj/abc.json",
+      defaultProjectId: PROJECT_ID,
+      projectIdBySlug: {},
+    }).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          Layer.succeed(SpanRepository, spanRepo),
+          Layer.succeed(StorageDisk, storage.disk),
+          Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
+        ),
+      ),
+    )
+
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Failure")
+    expect(inserted).toHaveLength(1)
+    expect(storage.deleted).toEqual([])
   })
 })

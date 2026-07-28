@@ -233,15 +233,6 @@ export const processIngestedSpansUseCase =
       const repo = yield* SpanRepository
       yield* repo.insert(persistedSpans)
 
-      // The buffered payload holds unredacted content. It is dropped as soon as the
-      // spans are durable, so the object-store lifecycle rule is a backstop rather
-      // than the only bound — self-hosted disk backends have no lifecycle rule at
-      // all. A failed delete must not fail an already-successful ingest.
-      if (input.fileKey) {
-        const disk = yield* StorageDisk
-        yield* Effect.ignore(deleteFromDisk(disk, input.fileKey))
-      }
-
       // Spans in a single OTLP batch may now belong to different projects (per-span scoping).
       // Group by projectId so each TracesIngested event addresses one project at a time —
       // downstream consumers (issues discovery, billing, flaggers, etc.) are project-scoped.
@@ -279,5 +270,17 @@ export const processIngestedSpansUseCase =
               : {}),
           },
         } satisfies DomainEvent)
+      }
+
+      // Last, not right after the insert. The buffered payload holds unredacted
+      // content, so it should not outlive the job — but deleting it before the events
+      // are published makes a stalled job unrecoverable: BullMQ redelivery would find
+      // no payload, and the batch would end up inserted with `TracesIngested` never
+      // fired, silently losing trace-end, billing, and search indexing. Deleting here
+      // leaves only the window between publish and delete, which the object-store
+      // lifecycle rule covers. A failed delete must not fail a successful ingest.
+      if (input.fileKey) {
+        const disk = yield* StorageDisk
+        yield* Effect.ignore(deleteFromDisk(disk, input.fileKey))
       }
     }).pipe(Effect.withSpan("spans.processIngestedSpans"))
