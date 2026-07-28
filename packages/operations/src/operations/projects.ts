@@ -117,6 +117,7 @@ const RedactionSettingSchema = z
       ),
     entities: z
       .array(z.enum(REDACTION_ENTITIES))
+      .max(REDACTION_ENTITIES.length)
       .optional()
       .describe(
         `Which categories to look for. Defaults to ${DEFAULT_REDACTION_ENTITIES.join(", ")} when omitted; \`ip_address\` and \`crypto_wallet\` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.`,

@@ -78,6 +78,7 @@
                       },
                       "entities": {
                         "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "maxItems": 8,
                         "type": "array",
                         "items": {
                           "type": "string",
@@ -290,6 +291,7 @@
                             },
                             "entities": {
                               "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                              "maxItems": 8,
                               "type": "array",
                               "items": {
                                 "type": "string",
@@ -530,6 +532,7 @@
                       },
                       "entities": {
                         "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "maxItems": 8,
                         "type": "array",
                         "items": {
                           "type": "string",
@@ -723,6 +726,7 @@
                   },
                   "entities": {
                     "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                    "maxItems": 8,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -892,6 +896,7 @@
                       },
                       "entities": {
                         "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "maxItems": 8,
                         "type": "array",
                         "items": {
                           "type": "string",
