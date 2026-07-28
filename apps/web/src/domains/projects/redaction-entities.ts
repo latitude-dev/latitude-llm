@@ -36,7 +36,7 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
   },
   secret: {
     label: "API keys and secrets",
-    description: "Recognisable key formats from common providers, plus private key blocks.",
+    description: "Recognizable key formats from common providers, plus private key blocks.",
   },
   crypto_wallet: {
     label: "Crypto wallet addresses",
