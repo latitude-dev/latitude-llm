@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react"
 import { useState } from "react"
 import { AuthScreen } from "../../components/auth-screen.tsx"
 import { getSession } from "../../domains/sessions/session.functions.ts"
+import { clarityHeadScripts } from "../../lib/analytics/clarity.ts"
 import { gtmHeadScripts, validateTrackingSearch } from "../../lib/analytics/gtm.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { type Organization, resolveEntryDestination } from "../../lib/entry-destination.ts"
@@ -25,7 +26,7 @@ function OrgAvatar({ name }: { name: string }) {
 export const Route = createFileRoute("/choose-organization/")({
   component: ChooseOrganizationPage,
   validateSearch: validateTrackingSearch,
-  head: () => ({ scripts: gtmHeadScripts() }),
+  head: () => ({ scripts: [...gtmHeadScripts(), ...clarityHeadScripts()] }),
   loader: () => chooseOrganizationLoader({ getSession, resolveEntryDestination }),
 })
 

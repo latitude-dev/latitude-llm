@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { AuthScreen } from "../../components/auth-screen.tsx"
 import { completeOnboarding } from "../../domains/organizations/organizations.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
+import { clarityHeadScripts } from "../../lib/analytics/clarity.ts"
 import { gtmHeadScripts, validateTrackingSearch } from "../../lib/analytics/gtm.ts"
 import { resolveEntryDestination } from "../../lib/entry-destination.ts"
 import { toUserMessage } from "../../lib/errors.ts"
@@ -13,7 +14,7 @@ import { welcomeLoader } from "./-lib/loader.ts"
 export const Route = createFileRoute("/welcome/")({
   component: WelcomePage,
   validateSearch: validateTrackingSearch,
-  head: () => ({ scripts: gtmHeadScripts() }),
+  head: () => ({ scripts: [...gtmHeadScripts(), ...clarityHeadScripts()] }),
   loader: () => welcomeLoader({ getSession, resolveEntryDestination }),
 })
 
