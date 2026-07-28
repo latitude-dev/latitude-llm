@@ -225,6 +225,8 @@ Default off because both are explicitly customer-supplied filtering dimensions; 
 
 `userId`, `userEmail`. Two modes, `keep` or `pseudonymize` ([§4.9](#49-identity-pseudonymization)). Deliberately **not** a plain redact option: a feature called PII redaction that leaves `user_email` in plaintext across `spans`, `traces`, and `sessions` fails the first compliance review, but blanking it breaks every user-analytics query. Pseudonymization keeps equality filters and group-bys working and removes the plaintext, which is strictly better than either.
 
+Both columns are *resolved copies* of span attributes, so the substitution also covers the maps holding the originals — `attrString`, `resourceString`, `metadata`, `tags` — matched by raw value in all four, and in the last two whether or not `scopes.metadata` is on. Replacing only the columns leaves the plaintext id one panel away in the UI ([T-15](#8-traps)).
+
 #### Never touched, with reasons
 
 `linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrInt`/`attrFloat`/`attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
@@ -454,6 +456,7 @@ anon_${hmacSha256Hex(secret, `${organizationId}:${value}`).slice(0, 16)}
 - **Memoize per batch**: build a `Map<string, string>` of distinct identity values so a 500-span batch performs a handful of HMACs, not 1000.
 - **Empty values stay empty.** `userId`/`userEmail` default to `""`; pseudonymizing `""` would fabricate a user.
 - **Missing secret degrades to full redaction** (`[REDACTED_USER]`), counted and logged at error level, rather than failing the job or passing plaintext through. Degrade toward more privacy, never less, and never block a self-hoster's ingestion on a config gap.
+- **The columns are copies, so the substitution runs over the maps that hold the originals too** — `attr_string`, `resource_string`, `metadata`, `tags` ([T-15](#8-traps)). Keyed by raw value rather than attribute key, so every vendor spelling is covered by one pass; whole-value matches only, so a short numeric user id cannot rewrite `gpt-4`. Metadata and tags are substituted regardless of `redactMetadata`, because identity handling is its own control.
 
 ### 4.10 Ports
 
@@ -627,6 +630,10 @@ Numbered so PR review can reference them.
 **T-14. Gating the dedicated write does not gate the field.** Adding role checks and audit events to `updateProjectRedaction` / `updateOrganizationRedaction` leaves `redaction` writable through every *other* settings path: the web `updateProject` server fn (no role check at all), `updateOrganizationUseCase` for any direct caller, and `PATCH /v1/projects/{slug}`. Patch semantics make it worse rather than better, because the field then persists instead of being incidentally dropped. So any member could turn the compliance control off with nothing recorded.
 
 The fix is a pin inside both generic use cases: `redaction` is forced to the stored value whatever the caller sent. That closes it for every current and future caller at one point each, rather than relying on each boundary schema to keep excluding the field. A replace therefore no longer fully replaces, which is the intended asymmetry. The public API keeps working by routing `settings.redaction` to the dedicated use case so it picks up the audit event; API keys are organization-scoped and carry no member role, so there is no role to check on that path.
+
+**T-15. `identities` is [T-1](#8-traps) again, and Phase 2 shipped it broken.** [§4.9](#49-identity-pseudonymization) originally said "replace `userId` and `userEmail`", and `redactSpanDetail` did exactly that. But those two columns are *resolved copies*: `resolveAttributes` (`packages/domain/spans/src/otlp/resolvers/index.ts:64-65`) reads them from span attributes via `userIdCandidates` / `userEmailCandidates`, and `transform.ts:180-198` also copies **every** string attribute verbatim into `attr_string`. So a project on `pseudonymize` got `anon_…` in the `user_id` column while `attr_string["user.id"]` kept the plaintext id — visible in the UI's attribute viewer, which is how this was found. Same for `metadata`, since `resolveMetadata` lifts `traceloop.association.properties.user_id` and `langsmith.metadata.user_id` into it.
+
+The entity detectors do not cover the gap: an opaque id like `usr_devin_hartley` matches nothing, and where the value *was* an email the row disagreed with itself — `[REDACTED_EMAIL]` in the attribute against `anon_…` in the column, breaking the join the pseudonym exists to preserve. The substitution is therefore keyed by **raw value, not attribute key** — the candidate lists build accessor closures that never expose their keys, and a key allowlist would silently miss both custom attributes and the metadata copies. It matches **whole values only**: a substring pass would rewrite `gpt-4` for a project whose user ids are short numbers. This is the identity-shaped instance of T-1, so treat any new identity-derived column as leaking into `attr_string` until proven otherwise.
 ---
 
 ## 9. Testing plan

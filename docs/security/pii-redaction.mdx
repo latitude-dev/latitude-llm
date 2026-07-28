@@ -65,6 +65,8 @@ Never scanned: span names, service names, model identifiers, and other enum or i
 
 `userId` and `userEmail` can be kept as-is or replaced with a stable pseudonym. Pseudonyms are deterministic and scoped to your organization, so filtering, grouping, and per-user analytics keep working while the underlying identity is no longer stored. Self-hosted deployments with no pseudonym secret configured remove the identifier entirely rather than pseudonymizing it.
 
+The pseudonym replaces the identifier everywhere it appears on the span, not only in the user column: the attribute it was read from, resource attributes, metadata, and tags all get the same value. Metadata and tags are covered here even when the metadata scope is off.
+
 ### What redacted content looks like
 
 Redacted values appear as a labeled marker in place of the original — the dashboard renders them as a small tag naming the category. This is intentional: you need to be able to tell the difference between content that was removed and content that was never sent.
