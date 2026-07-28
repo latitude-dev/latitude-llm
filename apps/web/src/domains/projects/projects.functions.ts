@@ -1,7 +1,19 @@
+import { MembershipRepository } from "@domain/organizations"
 import type { Project } from "@domain/projects"
-import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
-import { isValidId, ProjectId, projectSettingsSchema } from "@domain/shared"
-import { OutboxEventWriterLive, ProjectRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
+import {
+  createProjectUseCase,
+  ProjectRepository,
+  updateProjectRedactionUseCase,
+  updateProjectUseCase,
+} from "@domain/projects"
+import { ForbiddenError, isValidId, ProjectId, projectSettingsSchema, redactionSettingSchema } from "@domain/shared"
+import {
+  MembershipRepositoryLive,
+  OutboxEventWriterLive,
+  ProjectRepositoryLive,
+  SqlClientLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getCookies, setCookie } from "@tanstack/react-start/server"
@@ -157,6 +169,52 @@ export const updateProject = createServerFn({ method: "POST" })
         withTracing,
       ),
     )
+    return toRecord(project)
+  })
+
+/**
+ * Change a project's PII redaction policy. Separate from `updateProject` because it
+ * is the only project setting that needs a role gate, and gating `updateProject`
+ * itself would take renames and the sampling slider away from members who have them
+ * today. Owners and admins only; `null` clears the override so the organization
+ * policy applies.
+ */
+export const updateProjectRedaction = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      redaction: redactionSettingSchema.nullable(),
+    }),
+  )
+  .handler(async ({ data }): Promise<ProjectRecord> => {
+    const { organizationId, userId } = await requireSession()
+    const client = getPostgresClient()
+
+    const project = await Effect.runPromise(
+      Effect.gen(function* () {
+        const memberships = yield* MembershipRepository
+        const isAdmin = yield* memberships.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({
+            message: "Only organization owners and admins can change the redaction policy",
+          })
+        }
+
+        return yield* updateProjectRedactionUseCase({
+          projectId: ProjectId(data.projectId),
+          actorUserId: userId,
+          redaction: data.redaction,
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
+          client,
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+
     return toRecord(project)
   })
 

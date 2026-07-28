@@ -1,4 +1,4 @@
-import { generateId, OrganizationId, ProjectId } from "@domain/shared"
+import { generateId, OrganizationId, ProjectId, type RedactionSetting } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { useLiveQuery } from "@tanstack/react-db"
@@ -6,7 +6,13 @@ import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { getShowcaseProjectRecord } from "../showcase/showcase.functions.ts"
 import type { ProjectRecord } from "./projects.functions.ts"
-import { createProject, deleteProject, listProjects, updateProject } from "./projects.functions.ts"
+import {
+  createProject,
+  deleteProject,
+  listProjects,
+  updateProject,
+  updateProjectRedaction,
+} from "./projects.functions.ts"
 import { mergeShowcaseProject } from "./showcase-project.ts"
 
 const queryClient = getQueryClient()
@@ -79,6 +85,18 @@ const projectsCollection = createAppCollection(
     },
   }),
 )
+
+/**
+ * Writes the project redaction policy through its own role-gated server function
+ * rather than the collection's generic update, so it bypasses optimistic mutation
+ * entirely and refetches instead. Worth the extra round trip: the server may reject
+ * on role, and an optimistic "redaction is on" that silently rolls back is the last
+ * thing a compliance control should show.
+ */
+export async function updateProjectRedactionMutation(projectId: string, redaction: RedactionSetting | null) {
+  await updateProjectRedaction({ data: { projectId, redaction } })
+  await queryClient.invalidateQueries({ queryKey: ["projects"] })
+}
 
 export function createProjectMutation(name: string) {
   const now = new Date().toISOString()
