@@ -144,6 +144,7 @@ const runRedaction = (opts: {
   fileKey?: string | null
   redaction?: Record<string, unknown>
   projectIdBySlug?: Record<string, string>
+  defaultProjectId?: string | null
 }) => {
   const eventsPublisher = createFakeEventsPublisher()
   const { repository: spanRepo, inserted } = createFakeSpanRepository()
@@ -160,7 +161,7 @@ const runRedaction = (opts: {
     isSandbox: false,
     inlinePayload: opts.fileKey ? null : payload,
     fileKey: opts.fileKey ?? null,
-    defaultProjectId: PROJECT_ID,
+    defaultProjectId: opts.defaultProjectId === undefined ? PROJECT_ID : opts.defaultProjectId,
     projectIdBySlug: opts.projectIdBySlug ?? {},
     ...(opts.redaction ? { redaction: opts.redaction as never } : {}),
   }).pipe(
@@ -253,6 +254,24 @@ describe("processIngestedSpansUseCase redaction", () => {
 
     expect(inserted).toHaveLength(1)
     expect(storage.deleted).toEqual(["tmp-ingest/org/proj/abc.json"])
+  })
+
+  /**
+   * A batch whose spans are all dropped by the transform still had a payload, and that
+   * payload is unredacted. The early return skipped the cleanup, so on a self-hosted disk
+   * backend with no lifecycle rule the raw object stayed forever and repeated malformed
+   * batches grew without bound.
+   */
+  it("deletes the buffered payload when every span is dropped", async () => {
+    const { effect, inserted, storage } = runRedaction({
+      payload: payloadFor([spanWith(contentAttributes, "b7ad6b7169203331", "unknown-project-slug")]),
+      defaultProjectId: null,
+      fileKey: "tmp-ingest/org/proj/all-dropped.json",
+    })
+    await Effect.runPromise(effect)
+
+    expect(inserted).toHaveLength(0)
+    expect(storage.deleted).toEqual(["tmp-ingest/org/proj/all-dropped.json"])
   })
 
   it("does not delete an inline payload, which has no object to delete", async () => {

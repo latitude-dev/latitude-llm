@@ -185,6 +185,25 @@ function decodeRedactionPolicies(
   return Effect.succeed(policies)
 }
 
+/**
+ * Drop the buffered payload once the job has genuinely finished with it.
+ *
+ * Called on the success paths only, never from a finalizer: a job that failed may be
+ * redelivered, and redelivery needs the payload. Deleting it before the events are
+ * published would leave a stalled batch inserted with `TracesIngested` never fired,
+ * silently losing trace-end, billing, and search indexing. A failed delete must not
+ * fail an otherwise successful ingest, so the object-store lifecycle rule stays the
+ * backstop.
+ */
+function discardBufferedPayload(fileKey: string | null): Effect.Effect<void, never, StorageDisk> {
+  if (!fileKey) return Effect.void
+
+  return Effect.gen(function* () {
+    const disk = yield* StorageDisk
+    yield* Effect.ignore(deleteFromDisk(disk, fileKey))
+  })
+}
+
 export interface ProcessIngestedSpansDeps<TPublishError = unknown> {
   readonly eventsPublisher: EventsPublisher<TPublishError>
 }
@@ -226,7 +245,10 @@ export const processIngestedSpansUseCase =
               retentionDays: input.retentionDays,
             }))
 
+      // Nothing survived the transform, so there is nothing to insert — but the payload
+      // that produced it still holds unredacted content and must not be left behind.
       if (persistedSpans.length === 0) {
+        yield* discardBufferedPayload(input.fileKey)
         return
       }
 
@@ -272,15 +294,5 @@ export const processIngestedSpansUseCase =
         } satisfies DomainEvent)
       }
 
-      // Last, not right after the insert. The buffered payload holds unredacted
-      // content, so it should not outlive the job — but deleting it before the events
-      // are published makes a stalled job unrecoverable: BullMQ redelivery would find
-      // no payload, and the batch would end up inserted with `TracesIngested` never
-      // fired, silently losing trace-end, billing, and search indexing. Deleting here
-      // leaves only the window between publish and delete, which the object-store
-      // lifecycle rule covers. A failed delete must not fail a successful ingest.
-      if (input.fileKey) {
-        const disk = yield* StorageDisk
-        yield* Effect.ignore(deleteFromDisk(disk, input.fileKey))
-      }
+      yield* discardBufferedPayload(input.fileKey)
     }).pipe(Effect.withSpan("spans.processIngestedSpans"))
