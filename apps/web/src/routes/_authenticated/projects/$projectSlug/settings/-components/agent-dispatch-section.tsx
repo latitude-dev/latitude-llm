@@ -1243,7 +1243,7 @@ function ConnectAgentDispatchModal({
             </div>
             <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
               <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
-                <a href="https://linear.app/latitude/settings/account/security" target="_blank" rel="noreferrer">
+                <a href="https://linear.app/settings/account/security" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API settings
                 </a>
