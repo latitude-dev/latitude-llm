@@ -55,7 +55,6 @@ export function SubagentCard({
     >
       <button
         type="button"
-        onClick={onOpenConversation}
         disabled={!onOpenConversation}
         className="flex shrink-0 cursor-pointer items-center gap-1.5"
       >
