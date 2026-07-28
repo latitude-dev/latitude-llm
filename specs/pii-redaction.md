@@ -537,7 +537,7 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 | `apps/web/.../settings/general.tsx` | PII redaction section, modeled on `TraceSamplingSection` (`:196-257`) |
 | `apps/web/.../settings/organization.tsx` | Org-level section incl. `locked`, alongside `OrganizationNameSection` (`:22`) |
 | `apps/web/src/domains/organizations/organizations.functions.ts` | Widen the local `organizationSettingsSchema` (`:150-152`). **See [T-5](#8-traps): this is a data-loss trap** |
-| `.env.example` | `LAT_REDACTION_PSEUDONYM_SECRET`, commented with its default-absent behavior, in the workers block near `:134` |
+| `.env.example` | `LAT_REDACTION_PSEUDONYM_SECRET` in the workers block near `:134`, with a development value rather than commented out, matching `LAT_MASTER_ENCRYPTION_KEY` and `LAT_BETTER_AUTH_SECRET`. A commented-out secret reads as "required but unconfigured" and made a reviewer ask whether local PII work needed it. |
 | `docs/security/pii-redaction.mdx` | New "Ingest PII redaction" section; keep and rename the existing SDK section per [§2.4](#24-what-already-exists) |
 
 ### 6.3 UI
