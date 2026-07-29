@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c2ad3841-fb77-4d54-bd3f-738d046d6df0",
+  "id": "62e9ad7b-87d9-4181-9086-6bc065b80d9a",
   "prevIds": [
     "89be924e-4375-415e-b147-99d1aae2d46a"
   ],
@@ -2964,19 +2964,6 @@
       "generated": null,
       "identity": null,
       "name": "heard_about_us",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "users"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "heard_about_us_other",
       "entityType": "columns",
       "schema": "latitude",
       "table": "users"

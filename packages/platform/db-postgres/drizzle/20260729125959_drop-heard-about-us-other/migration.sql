@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."users" DROP COLUMN "heard_about_us_other";
