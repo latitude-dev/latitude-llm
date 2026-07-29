@@ -32,13 +32,12 @@ export function resolveLastLlmCompletionSpanId(spans: readonly Span[]): SpanId |
     return undefined
   }
 
-  const primaryModel = [...candidates].sort((a, b) => a.startTime.getTime() - b.startTime.getTime()).find((s) => s.model !== "")
-    ?.model
+  const primaryModel = [...candidates]
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+    .find((s) => s.model !== "")?.model
 
   const preferred =
-    primaryModel === undefined
-      ? candidates
-      : candidates.filter((s) => s.model === primaryModel || s.model === "")
+    primaryModel === undefined ? candidates : candidates.filter((s) => s.model === primaryModel || s.model === "")
   const pool = preferred.length > 0 ? preferred : candidates
 
   const sorted = [...pool].sort(compareLlmCompletionSpans)
