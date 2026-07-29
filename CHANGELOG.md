@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.73 - 2026-07-29
+
+### Privacy
+
+- Added a Privacy page under Project settings that turns PII redaction on. It holds both layers of the cascade: the organization policy (owner only, with a lock that stops admins from weakening it) and the project policy, which shows the effective values the ingest pipeline resolves. Redaction was already wired end to end but had no control surface, so every project resolved to `off`. Enabling it invalidates the ingest cache so it applies immediately, and policy changes emit audit events with before/after snapshots (ref: #4257).
+- Exposed the redaction policy on the public projects API: `settings.redaction` (mode, entity categories, metadata scope, identity handling) is now readable and patchable (ref: #4257).
+- Rendered redaction placeholders such as `[REDACTED_EMAIL]` as inline chips in conversation content, so a placeholder reads as something the platform did rather than as model output or corrupted text (ref: #4257).
+- Fixed settings writes clobbering each other. Every writer sent the whole settings object to a use case that replaced it, so renaming an organization wiped the spending limit and the showcase flag, and the project Signals toggle and sampling slider each dropped the keys they do not render. Writers now patch only the keys they own, merged inside the same transaction (ref: #4257).
+
+### Traces
+
+- Fixed $0 cost on Claude Agent SDK spans. Mastra reports the SDK's npm package name in `gen_ai.provider.name`, which never matched a pricing entry, so spans carrying millions of tokens priced at zero. Added aliases for the agent SDK package names and corrected the `anthropic_vertex` alias, which pointed at a provider id that does not exist and silently zeroed Vertex Anthropic span cost and credit metering. Cost is computed at ingest, so existing spans keep their stored value (ref: #4278, #4284).
+- Reported spans that cannot be priced instead of failing silently. Ingest aggregates them per project, provider and model and reports them on a dedicated error span, throttled to one report per hour per combination. The batch still succeeds, since the spans themselves are valid (ref: #4278, #4284).
+
+### Web
+
+- Redesigned the subagent chat view: tool calls render as labeled Input/Output disclosures, subagent cards collapse to a single-line preview, and nested subagent conversations are navigable through a breadcrumb trail that collapses past four levels (ref: #4281).
+
 ## v0.3.72 - 2026-07-28
 
 ### Conversation intelligence
