@@ -44,8 +44,6 @@ export const submitOnboarding = createServerFn({ method: "POST" })
     const { userId, organizationId } = await requireSession()
     const adminClient = getAdminPostgresClient()
 
-    // A prefix that looks like a calling code but matches none is either junk or a country code
-    // assigned since the table was last updated, so it is reported before the rejection.
     if (data.phoneNumber !== undefined && !isStorablePhoneNumber(data.phoneNumber)) {
       reportUnknownCallingCode(data.phoneNumber)
       throw new BadRequestError({ message: "Phone number must start with a known calling code" })

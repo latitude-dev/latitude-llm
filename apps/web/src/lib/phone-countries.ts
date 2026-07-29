@@ -346,10 +346,7 @@ export function sanitizeNationalNumberInput(raw: string): string {
   return trimmed.startsWith("+") ? `+${cleaned}` : cleaned
 }
 
-/**
- * Flags a national number still carrying its trunk digit. Advisory only — auto-stripping would
- * corrupt Italian landlines, where the leading 0 is significant.
- */
+/** Advisory only: auto-stripping would corrupt Italian landlines, where the leading 0 is significant. */
 export function trunkPrefixHint(callingCode: string, nationalNumber: string): string | undefined {
   const digits = nationalNumberDigits(nationalNumber)
   if (digits.length < 2 || !isKnownCallingCode(callingCode)) return undefined
@@ -374,11 +371,7 @@ export function splitInternationalPhoneNumber(
 
 type LocaleWithTimeZones = Intl.Locale & { getTimeZones?: () => string[] | undefined }
 
-/**
- * Resolves an IANA zone to its country's calling code by scanning ICU's per-region zone lists.
- * Both sides come from the same engine's ICU, so legacy zone aliases (Asia/Calcutta vs
- * Asia/Kolkata) agree once the input is canonicalised through `resolvedOptions`.
- */
+/** Canonicalising through `resolvedOptions` makes legacy zone aliases match ICU's own region lists. */
 export function callingCodeForTimeZone(timeZone: string): string | undefined {
   try {
     const canonical = new Intl.DateTimeFormat("en-US", { timeZone }).resolvedOptions().timeZone
