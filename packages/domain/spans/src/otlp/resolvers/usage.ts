@@ -217,7 +217,8 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
   const attrCostTotal = first(costTotalCandidates, attrs)
 
   const hasAttrCosts = attrCostInput !== undefined && attrCostOutput !== undefined
-  const hasAnyAttrCost = attrCostInput !== undefined || attrCostOutput !== undefined || attrCostTotal !== undefined
+  // Positive, not merely present: a zero side cost supplies no price, and the total candidates already drop zero.
+  const hasAnyAttrCost = (attrCostInput ?? 0) > 0 || (attrCostOutput ?? 0) > 0 || attrCostTotal !== undefined
 
   const costEstimation = hasAttrCosts
     ? undefined
@@ -247,8 +248,7 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
     costOutputMicrocents: costOutput,
     costTotalMicrocents: costTotal,
     costIsEstimated,
-    // Any provider-supplied cost counts as priced even when the model is unknown to models.dev.
-    // Checking only the total would report a span carrying a real one-sided cost as unpriced.
+    // Any provider-supplied cost counts as priced, even for a model models.dev does not know.
     costPricingMissing: costEstimation?.kind === "unpriced" && !hasAnyAttrCost,
   }
 }

@@ -297,8 +297,6 @@ describe("resolveAttributes", () => {
       expect(result.costPricingMissing).toBe(true)
     })
 
-    // A one-sided cost attribute still means the provider priced the call, so reporting it as
-    // unpriced would send someone hunting for a mapping that was never needed.
     it("does not flag an unknown model that reported only an input cost", () => {
       const attrs: OtlpKeyValue[] = [
         strAttr("gen_ai.provider.name", "@some-vendor/unmapped-sdk"),
@@ -312,6 +310,22 @@ describe("resolveAttributes", () => {
 
       expect(result.costInputMicrocents).toBe(25_000_000)
       expect(result.costPricingMissing).toBe(false)
+    })
+
+    // A zero side cost supplies no price, so it must not suppress the report.
+    it("still flags an unknown model whose only cost attribute is zero", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.provider.name", "@some-vendor/unmapped-sdk"),
+        strAttr("gen_ai.request.model", "mystery-model"),
+        intAttr("gen_ai.usage.input_tokens", 1_000),
+        intAttr("gen_ai.usage.output_tokens", 500),
+        floatAttr("gen_ai.usage.input_cost", 0),
+      ]
+
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+      expect(result.costTotalMicrocents).toBe(0)
+      expect(result.costPricingMissing).toBe(true)
     })
 
     it("does not flag spans that carry no token usage", () => {

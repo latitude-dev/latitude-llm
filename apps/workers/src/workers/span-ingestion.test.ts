@@ -475,7 +475,8 @@ describe("createSpanIngestionWorker", () => {
     expect(Number(rows[1]?.cost_total_microcents ?? 0)).toBeGreaterThan(0)
     expect(rows[1]?.parent_span_id).toBe("aaaaaaaaaaaaaaaa")
     expect(rows[1]?.ai_operation_id).toBe("ai.generateText.doGenerate")
-    expect(rows[1]?.provider).toBe("openai.responses")
+    // Normalized like the wrapper above, though it arrives on `gen_ai.system` rather than `ai.model.provider`.
+    expect(rows[1]?.provider).toBe("openai")
     expect(rows[1]?.model).toBe("gpt-4o")
 
     expect(pub.published).toHaveLength(1)
