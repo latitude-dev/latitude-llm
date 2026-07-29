@@ -10,6 +10,7 @@ import {
   deleteCustomBehavior,
   facetSelectionSchema,
   previewCustomBehaviorSampleUseCase,
+  taxonomyGardenCustomBehaviorDedupeKey,
   updateCustomBehavior,
 } from "@domain/taxonomy"
 import {
@@ -22,7 +23,12 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getWorkflowTerminator,
+} from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
@@ -133,13 +139,23 @@ export const updateCustomBehaviorFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<CustomBehaviorRecord> => {
     const orgId = await resolveOrgScope(context)
+    const customBehaviorId = CustomBehaviorId(data.id)
+
+    if (data.filterSet !== undefined) {
+      const terminator = await getWorkflowTerminator()
+      await terminator.terminate(
+        taxonomyGardenCustomBehaviorDedupeKey({ organizationId: orgId, customBehaviorId }),
+        "view cohort filter changed",
+      )
+    }
+
     // A cohort change re-gardens the view from scratch, so the use-case needs both the
     // assignment slice (to purge) and a QueuePublisher (to enqueue the run).
     const publisher = await getQueuePublisher()
 
     const updated = await Effect.runPromise(
       updateCustomBehavior({
-        id: CustomBehaviorId(data.id),
+        id: customBehaviorId,
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.filterSet !== undefined ? { filterSet: data.filterSet } : {}),
       }).pipe(

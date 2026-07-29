@@ -88,7 +88,9 @@ export const updateCustomBehavior = Effect.fn("taxonomy.updateCustomBehavior")(f
   // has to be rebuilt: the assignment slice is a ReplacingMergeTree that never
   // deletes, so the old cohort's edges would keep serving alongside the new ones.
   // Projections are keyed by facet, not by cohort, so this re-clusters without
-  // re-extracting.
+  // re-extracting. The caller must terminate any in-flight garden workflow first,
+  // or the running workflow keeps the old FilterSet snapshot and the replacement
+  // enqueue is dropped as WorkflowAlreadyStartedError.
   const cohortChanged =
     input.filterSet !== undefined && !customBehaviorFilterSetEquals(current.filterSet, nextFilterSet)
 
