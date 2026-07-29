@@ -174,11 +174,18 @@ describe("isStorablePhoneNumber", () => {
   it("accepts a composed number whose prefix is a real calling code", () => {
     expect(isStorablePhoneNumber("+34612345678")).toBe(true)
     expect(isStorablePhoneNumber("+18092345678")).toBe(true)
+  })
+
+  it("accepts a real 7-digit territory number, which the PII detector's floor would reject", () => {
     expect(isStorablePhoneNumber("+2904256")).toBe(true)
   })
 
   it("rejects an unassigned prefix that a digits-only pattern would allow", () => {
     expect(isStorablePhoneNumber("+99999999")).toBe(false)
+    expect(isStorablePhoneNumber("+8881234567")).toBe(false)
+  })
+
+  it("rejects a known calling code whose national number is too short", () => {
     expect(isStorablePhoneNumber("+45678")).toBe(false)
   })
 
