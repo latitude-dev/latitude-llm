@@ -9,11 +9,21 @@ import { z } from "zod"
  * its place, so `other` itself is never written to the database. See
  * `User.heardAboutUs`.
  *
- * The seven real channels are stable slugs rather than the display labels so
+ * The eight real channels are stable slugs rather than the display labels so
  * marketing can keep re-wording the options without breaking historical
  * segments. Add new slugs at the end; never repurpose an existing one.
  */
-const heardAboutUsSchema = z.enum(["recommendation", "search", "ai", "reddit", "github", "social", "video", "other"])
+const heardAboutUsSchema = z.enum([
+  "recommendation",
+  "search",
+  "ai",
+  "reddit",
+  "github",
+  "x",
+  "linkedin",
+  "video",
+  "other",
+])
 export type HeardAboutUs = z.infer<typeof heardAboutUsSchema>
 
 /**
@@ -26,7 +36,8 @@ export const HEARD_ABOUT_US_OPTIONS: readonly { readonly value: HeardAboutUs; re
   { value: "ai", label: "ChatGPT or other AI" },
   { value: "reddit", label: "Reddit" },
   { value: "github", label: "GitHub" },
-  { value: "social", label: "X or LinkedIn" },
+  { value: "x", label: "X" },
+  { value: "linkedin", label: "LinkedIn" },
   { value: "video", label: "YouTube or podcast" },
   { value: "other", label: "Other" },
 ]
