@@ -8,11 +8,12 @@ describe("rollupCostDisplay", () => {
     })
   })
 
-  // The case the column previously showed as "-", indistinguishable from a gap.
-  it("shows Free when tokens were priced at zero", () => {
-    expect(rollupCostDisplay({ costTotalMicrocents: 0, unpricedSpanCount: 0, tokensTotal: 500 })).toEqual({
-      label: "Free",
-    })
+  // A rollup cannot claim Free: unpricedSpanCount is 0 both when every span priced and on any row
+  // rolled up before the column existed, so Free would be wrong for every pre-existing trace.
+  it("does not claim Free for a zero total, even when no span is known to be unpriced", () => {
+    const display = rollupCostDisplay({ costTotalMicrocents: 0, unpricedSpanCount: 0, tokensTotal: 500 })
+    expect(display.label).toBe("-")
+    expect(display.note).toContain("cannot tell free apart from unpriced")
   })
 
   it("does not claim Free when a span in the group could not be priced", () => {

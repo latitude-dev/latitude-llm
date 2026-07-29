@@ -73,7 +73,12 @@ const COLUMNS: InfiniteTableColumn<SessionRecord>[] = [
     sortKey: "cost",
     render: (session) => {
       const cost = rollupCostDisplay(session)
-      return <span {...(cost.note ? { title: cost.note } : {})}>{cost.label}</span>
+      if (!cost.note) return <span>{cost.label}</span>
+      return (
+        <Tooltip trigger={<span>{cost.label}</span>} asChild>
+          {cost.note}
+        </Tooltip>
+      )
     },
   },
 ]

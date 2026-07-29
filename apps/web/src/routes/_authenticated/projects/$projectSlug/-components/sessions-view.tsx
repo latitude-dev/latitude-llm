@@ -524,13 +524,19 @@ export function SessionsView({
             unpricedSpanCount: field(row, "unpricedSpanCount"),
             tokensTotal: field(row, "tokensTotal"),
           })
-          return (
-            <span className="flex items-center justify-end gap-1" {...(cost.note ? { title: cost.note } : {})}>
+          const cell = (
+            <span className="flex items-center justify-end gap-1">
               {row.kind === "session" && (
                 <SessionOutlierBadge projectId={projectId} value={costTotalMicrocents} metric="costTotalMicrocents" />
               )}
               {cost.label}
             </span>
+          )
+          if (!cost.note) return cell
+          return (
+            <Tooltip trigger={cell} asChild>
+              {cost.note}
+            </Tooltip>
           )
         },
         renderSubheader: () => (

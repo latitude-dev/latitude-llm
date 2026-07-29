@@ -14,15 +14,15 @@ const NOT_KNOWN: CostDisplay = { label: "-" }
 
 function unpricedNote(unpricedSpanCount: number): string {
   const spans = unpricedSpanCount === 1 ? "1 span" : `${unpricedSpanCount} spans`
-  return `Excludes ${spans} whose model has no known pricing, so real spend is higher.`
+  return `Excludes ${spans} whose model has no known pricing, so the real total may be higher.`
 }
 
 /**
  * Cost for a trace or session, where the total is a sum over spans.
  *
- * A zero total only means "free" when every span that could carry a cost was priced. With unpriced
- * spans in the group, or with rows stored before cost sources were recorded, the total is a floor
- * rather than the answer, so it is not shown as free.
+ * A zero total is never shown as free, unlike a single span. `unpricedSpanCount` reads 0 both for a
+ * group where every span was priced and for any row rolled up before the column existed, so the two
+ * cannot be told apart here. Claiming free would be wrong for every pre-existing trace.
  */
 export function rollupCostDisplay({
   costTotalMicrocents,
@@ -38,7 +38,10 @@ export function rollupCostDisplay({
     return unpricedSpanCount > 0 ? { label, note: unpricedNote(unpricedSpanCount) } : { label }
   }
   if (unpricedSpanCount > 0) return { label: "-", note: unpricedNote(unpricedSpanCount) }
-  return tokensTotal > 0 ? { label: "Free" } : NOT_KNOWN
+  if (tokensTotal > 0) {
+    return { label: "-", note: "No cost recorded here. A group total cannot tell free apart from unpriced." }
+  }
+  return NOT_KNOWN
 }
 
 /**
