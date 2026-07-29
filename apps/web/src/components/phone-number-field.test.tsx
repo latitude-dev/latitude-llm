@@ -74,6 +74,31 @@ describe("PhoneNumberField", () => {
     await waitFor(() => expect(state()).toBe("44|1234567890"))
   })
 
+  it("follows an international number typed one character at a time", async () => {
+    render(<Harness initialCallingCode="34" />)
+    const input = screen.getByRole("textbox")
+
+    for (const character of "+447700900000") {
+      fireEvent.change(input, { target: { value: (input as HTMLInputElement).value + character } })
+    }
+
+    await waitFor(() => expect(state()).toBe("44|7700900000"))
+  })
+
+  it("holds an incomplete prefix on the field instead of silently dropping the plus", async () => {
+    render(<Harness initialCallingCode="34" />)
+    const input = screen.getByRole("textbox")
+
+    fireEvent.change(input, { target: { value: "+" } })
+    await waitFor(() => expect(state()).toBe("34|+"))
+
+    fireEvent.change(input, { target: { value: "+4" } })
+    await waitFor(() => expect(state()).toBe("34|+4"))
+
+    fireEvent.change(input, { target: { value: "+44" } })
+    await waitFor(() => expect(state()).toBe("44|"))
+  })
+
   it("warns about a trunk zero without rewriting what the user typed", async () => {
     render(<Harness initialCallingCode="44" />)
 

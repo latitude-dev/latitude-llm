@@ -7,6 +7,7 @@ import {
   PHONE_COUNTRIES,
   phoneCountryFlag,
   phoneCountrySearchText,
+  sanitizeNationalNumberInput,
   splitInternationalPhoneNumber,
   trunkPrefixHint,
 } from "../lib/phone-countries.ts"
@@ -52,7 +53,7 @@ export function PhoneNumberField({
         return
       }
     }
-    onNationalNumberChange(raw.replace(/[^\d\s().-]/g, ""))
+    onNationalNumberChange(sanitizeNationalNumberInput(raw))
   }
 
   const hint = trunkPrefixHint(callingCode, nationalNumber)

@@ -315,17 +315,35 @@ function nationalNumberDigits(value: string): string {
 
 export function composePhoneNumber(callingCode: string, nationalNumber: string): string {
   const digits = nationalNumberDigits(nationalNumber)
-  if (digits.length === 0 || !isKnownCallingCode(callingCode)) return ""
+  if (digits.length === 0) return ""
+  // Bare digits rather than "" so a bypassed client surfaces the server's error instead of dropping the number.
+  if (!isKnownCallingCode(callingCode) || nationalNumber.includes("+")) return digits
   return `+${callingCode}${digits}`
+}
+
+/** Whether a composed value is storable: a known calling code followed by a national number. */
+export function isStorablePhoneNumber(value: string): boolean {
+  if (!/^\+[1-9]\d{4,14}$/.test(value)) return false
+  const parsed = splitInternationalPhoneNumber(value)
+  return parsed !== undefined && parsed.nationalNumber.length >= MIN_NATIONAL_NUMBER_DIGITS
 }
 
 export function phoneNumberError(nationalNumber: string, callingCode: string): string | undefined {
   const digits = nationalNumberDigits(nationalNumber)
   if (digits.length === 0) return undefined
+  if (nationalNumber.includes("+")) return "That international prefix isn't recognised"
   if (!isKnownCallingCode(callingCode)) return "Select your calling code"
   if (digits.length < MIN_NATIONAL_NUMBER_DIGITS) return "Enter a valid phone number"
   if (callingCode.length + digits.length > MAX_E164_DIGITS) return "Enter a valid phone number"
   return undefined
+}
+
+/** Keeps a still-unparseable international prefix intact so further keystrokes can complete it. */
+export function sanitizeNationalNumberInput(raw: string): string {
+  const trimmed = raw.trimStart()
+  const body = trimmed.startsWith("+") ? trimmed.slice(1) : trimmed
+  const cleaned = body.replace(/[^\d\s().-]/g, "")
+  return trimmed.startsWith("+") ? `+${cleaned}` : cleaned
 }
 
 /**
@@ -362,24 +380,26 @@ type LocaleWithTimeZones = Intl.Locale & { getTimeZones?: () => string[] | undef
  * Asia/Kolkata) agree once the input is canonicalised through `resolvedOptions`.
  */
 export function callingCodeForTimeZone(timeZone: string): string | undefined {
-  let canonical: string
   try {
-    canonical = new Intl.DateTimeFormat("en-US", { timeZone }).resolvedOptions().timeZone
+    const canonical = new Intl.DateTimeFormat("en-US", { timeZone }).resolvedOptions().timeZone
+    for (const { iso2, dialCode } of PHONE_COUNTRIES) {
+      const zones = (new Intl.Locale(`und-${iso2}`) as LocaleWithTimeZones).getTimeZones?.()
+      if (zones?.includes(canonical)) return dialCode
+    }
   } catch {
     return undefined
-  }
-  for (const { iso2, dialCode } of PHONE_COUNTRIES) {
-    const zones = (new Intl.Locale(`und-${iso2}`) as LocaleWithTimeZones).getTimeZones?.()
-    if (zones?.includes(canonical)) return dialCode
   }
   return undefined
 }
 
 /** Best-effort guess from the browser's timezone; users can always override it in the picker. */
 export function detectCallingCode(): string | undefined {
-  if (typeof Intl === "undefined") return undefined
-  if (typeof (new Intl.Locale("und-ES") as LocaleWithTimeZones).getTimeZones !== "function") return undefined
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-  if (!timeZone) return undefined
-  return callingCodeForTimeZone(timeZone)
+  try {
+    if (typeof (new Intl.Locale("und-ES") as LocaleWithTimeZones).getTimeZones !== "function") return undefined
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (!timeZone) return undefined
+    return callingCodeForTimeZone(timeZone)
+  } catch {
+    return undefined
+  }
 }
