@@ -1,23 +1,19 @@
 import { z } from "zod"
 
 /**
- * Attribution channel captured by the "How did you hear about us?" question on
- * the project-onboarding form.
+ * Choices offered by the "How did you hear about us?" question on the
+ * project-onboarding form.
  *
- * Stored as stable slugs rather than the display labels so marketing can keep
- * re-wording the options without breaking historical segments. Add new slugs at
- * the end; never repurpose an existing one.
+ * These are the *select* values, not the stored ones. `other` is a UI sentinel
+ * that reveals a required free-text input — what the user types is persisted in
+ * its place, so `other` itself is never written to the database. See
+ * `User.heardAboutUs`.
+ *
+ * The seven real channels are stable slugs rather than the display labels so
+ * marketing can keep re-wording the options without breaking historical
+ * segments. Add new slugs at the end; never repurpose an existing one.
  */
-export const heardAboutUsSchema = z.enum([
-  "recommendation",
-  "search",
-  "ai",
-  "reddit",
-  "github",
-  "social",
-  "video",
-  "other",
-])
+const heardAboutUsSchema = z.enum(["recommendation", "search", "ai", "reddit", "github", "social", "video", "other"])
 export type HeardAboutUs = z.infer<typeof heardAboutUsSchema>
 
 /**
@@ -35,8 +31,8 @@ export const HEARD_ABOUT_US_OPTIONS: readonly { readonly value: HeardAboutUs; re
   { value: "other", label: "Other" },
 ]
 
-/** Slug that unlocks the optional free-text "tell us more" input. */
+/** Sentinel option that swaps the select for a required free-text source. */
 export const HEARD_ABOUT_US_OTHER = "other" satisfies HeardAboutUs
 
-/** Ceiling for the free-text source, matching the column and Loops' limits. */
-export const HEARD_ABOUT_US_OTHER_MAX_LENGTH = 256
+/** Ceiling for the stored value, matching the column and Loops' limits. */
+export const HEARD_ABOUT_US_MAX_LENGTH = 256

@@ -1,7 +1,6 @@
 import type { NotFoundError, NotificationPreferences, RepositoryError, SqlClient } from "@domain/shared"
 import type { Effect } from "effect"
 import { Context } from "effect"
-import type { HeardAboutUs } from "../constants.ts"
 import type { User } from "../entities/user.ts"
 
 export class UserRepository extends Context.Service<
@@ -13,8 +12,7 @@ export class UserRepository extends Context.Service<
       userId: string
       jobTitle?: string | undefined
       phoneNumber?: string | undefined
-      heardAboutUs?: HeardAboutUs | undefined
-      heardAboutUsOther?: string | undefined
+      heardAboutUs?: string | undefined
     }) => Effect.Effect<void, RepositoryError, SqlClient>
     updateNotificationPreferences: (params: {
       userId: string

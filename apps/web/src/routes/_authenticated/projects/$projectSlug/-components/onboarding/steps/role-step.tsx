@@ -1,4 +1,4 @@
-import { HEARD_ABOUT_US_OPTIONS, HEARD_ABOUT_US_OTHER, HEARD_ABOUT_US_OTHER_MAX_LENGTH } from "@domain/users"
+import { HEARD_ABOUT_US_MAX_LENGTH, HEARD_ABOUT_US_OPTIONS, HEARD_ABOUT_US_OTHER } from "@domain/users"
 import { Button, Input, Select, Text } from "@repo/ui"
 import { PhoneNumberField } from "../../../../../../../components/phone-number-field.tsx"
 import { fieldErrorsAsStrings } from "../../../../../../../lib/form-server-action.ts"
@@ -61,7 +61,8 @@ export function Left({
               onChange={(value) => {
                 field.handleChange(value)
                 // Drop anything already typed when the answer is no longer "Other",
-                // so we never submit a source that contradicts the selection.
+                // so switching back later can't submit a stale source the user has
+                // stopped looking at.
                 if (value !== HEARD_ABOUT_US_OTHER) form.setFieldValue("heardAboutUsOther", "")
               }}
               errors={fieldErrorsAsStrings(field.state.meta.errors)}
@@ -71,16 +72,22 @@ export function Left({
         <form.Subscribe selector={(state) => state.values.heardAboutUs}>
           {(heardAboutUs) =>
             heardAboutUs === HEARD_ABOUT_US_OTHER ? (
-              <form.Field name="heardAboutUsOther">
+              <form.Field
+                name="heardAboutUsOther"
+                validators={{
+                  onChange: ({ value }) =>
+                    value.trim() === "" ? "Please tell us where you heard about us" : undefined,
+                }}
+              >
                 {(field) => (
                   <Input
                     type="text"
-                    label="Where did you hear about us? (optional)"
+                    label="Where did you hear about us?"
                     placeholder="e.g. a conference, a newsletter, a friend's blog"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                    maxLength={HEARD_ABOUT_US_OTHER_MAX_LENGTH}
+                    maxLength={HEARD_ABOUT_US_MAX_LENGTH}
                   />
                 )}
               </form.Field>

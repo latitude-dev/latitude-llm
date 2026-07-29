@@ -5,8 +5,8 @@ import {
   type SqlClientShape,
   type UserId,
 } from "@domain/shared"
-import type { HeardAboutUs, User } from "@domain/users"
-import { HEARD_ABOUT_US_OTHER, UserRepository } from "@domain/users"
+import type { User } from "@domain/users"
+import { UserRepository } from "@domain/users"
 import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -18,8 +18,7 @@ const toDomainUser = (row: typeof users.$inferSelect): User => ({
   name: row.name ?? null,
   jobTitle: row.jobTitle ?? null,
   phoneNumber: row.phoneNumber ?? null,
-  heardAboutUs: (row.heardAboutUs as HeardAboutUs | null) ?? null,
-  heardAboutUsOther: row.heardAboutUsOther ?? null,
+  heardAboutUs: row.heardAboutUs ?? null,
   emailVerified: row.emailVerified,
   image: row.image ?? null,
   role: row.role,
@@ -71,20 +70,17 @@ export const UserRepositoryLive = Layer.effect(
         jobTitle,
         phoneNumber,
         heardAboutUs,
-        heardAboutUsOther,
       }: {
         userId: string
         jobTitle?: string | undefined
         phoneNumber?: string | undefined
-        heardAboutUs?: HeardAboutUs | undefined
-        heardAboutUsOther?: string | undefined
+        heardAboutUs?: string | undefined
       }) =>
         Effect.gen(function* () {
           const trimmedJobTitle = jobTitle?.trim() || undefined
           const trimmedPhoneNumber = phoneNumber?.trim() || undefined
-          const trimmedHeardAboutUsOther = heardAboutUsOther?.trim() || undefined
-          // The free text is meaningless on its own, so it never triggers a write.
-          if (!trimmedJobTitle && !trimmedPhoneNumber && !heardAboutUs) return
+          const trimmedHeardAboutUs = heardAboutUs?.trim() || undefined
+          if (!trimmedJobTitle && !trimmedPhoneNumber && !trimmedHeardAboutUs) return
 
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db) =>
@@ -93,16 +89,7 @@ export const UserRepositoryLive = Layer.effect(
               .set({
                 ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
                 ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
-                ...(heardAboutUs
-                  ? {
-                      heardAboutUs,
-                      // Keep the pair consistent: the free text only survives while
-                      // "other" is the answer, so re-submitting with a different
-                      // channel clears a previously typed source.
-                      heardAboutUsOther:
-                        heardAboutUs === HEARD_ABOUT_US_OTHER ? (trimmedHeardAboutUsOther ?? null) : null,
-                    }
-                  : {}),
+                ...(trimmedHeardAboutUs ? { heardAboutUs: trimmedHeardAboutUs } : {}),
                 updatedAt: new Date(),
               })
               .where(eq(users.id, userId)),

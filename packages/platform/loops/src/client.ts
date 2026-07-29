@@ -18,10 +18,6 @@ const sanitizeString = (value: string | null | undefined): string | undefined =>
   return trimmed.length > MARKETING_FIELD_MAX_LENGTH ? trimmed.slice(0, MARKETING_FIELD_MAX_LENGTH) : trimmed
 }
 
-// Loops keeps any property left out of an update, so clearing one needs an explicit null.
-const sanitizeClearableString = (value: string | null | undefined): string | null | undefined =>
-  value === undefined ? undefined : (sanitizeString(value) ?? null)
-
 const omitUndefined = (input: Record<string, string | number | boolean | null | undefined>): LoopsProperties => {
   const out: LoopsProperties = {}
   for (const [key, value] of Object.entries(input)) {
@@ -116,7 +112,6 @@ export const createLoopsContactsSender = (config: LoopsConfig | undefined): Mark
               jobTitle: sanitizeString(parsed.jobTitle),
               phoneNumber: sanitizeString(parsed.phoneNumber),
               heardAboutUs: sanitizeString(parsed.heardAboutUs),
-              heardAboutUsOther: sanitizeClearableString(parsed.heardAboutUsOther),
               userGroup: parsed.userGroup,
               telemetryEnabled: parsed.telemetryEnabled,
             }),

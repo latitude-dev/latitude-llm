@@ -53,7 +53,6 @@ describe("updateContactOnboarding", () => {
       jobTitle: "Founder",
       phoneNumber: "+1 555 0100",
       heardAboutUs: "reddit",
-      heardAboutUsOther: null,
       emailVerified: true,
       image: null,
       role: "user",
@@ -77,13 +76,12 @@ describe("updateContactOnboarding", () => {
         jobTitle: "Founder",
         phoneNumber: "+1 555 0100",
         heardAboutUs: "reddit",
-        heardAboutUsOther: null,
         userGroup: MARKETING_USER_GROUP_CODE_AGENTS,
       },
     ])
   })
 
-  it("forwards the free-text source when the user answered 'other'", async () => {
+  it("forwards a typed source as the channel when the user answered 'other'", async () => {
     const { users, layers } = buildLayers()
     users.set(USER_ID, {
       id: USER_ID,
@@ -91,8 +89,7 @@ describe("updateContactOnboarding", () => {
       name: "Ada Lovelace",
       jobTitle: "Founder",
       phoneNumber: null,
-      heardAboutUs: "other",
-      heardAboutUsOther: "A talk at PyData",
+      heardAboutUs: "A talk at PyData",
       emailVerified: true,
       image: null,
       role: "user",
@@ -108,8 +105,7 @@ describe("updateContactOnboarding", () => {
       }).pipe(Effect.provide(layers)),
     )
 
-    expect(sender.updates[0]?.heardAboutUs).toBe("other")
-    expect(sender.updates[0]?.heardAboutUsOther).toBe("A talk at PyData")
+    expect(sender.updates[0]?.heardAboutUs).toBe("A talk at PyData")
   })
 
   it("maps production-agent to prod-traces", async () => {
@@ -121,7 +117,6 @@ describe("updateContactOnboarding", () => {
       jobTitle: "Founder",
       phoneNumber: null,
       heardAboutUs: null,
-      heardAboutUsOther: null,
       emailVerified: true,
       image: null,
       role: "user",

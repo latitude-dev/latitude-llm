@@ -1,6 +1,5 @@
 import { notificationPreferencesSchema, userIdSchema } from "@domain/shared"
 import { z } from "zod"
-import { heardAboutUsSchema } from "../constants.ts"
 
 /**
  * User entity - represents a user in the system.
@@ -17,12 +16,13 @@ export const userSchema = z.object({
   jobTitle: z.string().nullable(),
   phoneNumber: z.string().nullable(),
   /**
-   * Attribution channel from the onboarding form. `null` for users who
-   * onboarded before the question existed.
+   * How the user found Latitude, from the onboarding form: either one of the
+   * `HEARD_ABOUT_US_OPTIONS` channel slugs, or — when they picked "Other" — the
+   * source they typed verbatim. Deliberately not enum-constrained: the free-text
+   * case means anything can land here. `null` for users who onboarded before the
+   * question existed.
    */
-  heardAboutUs: heardAboutUsSchema.nullable(),
-  /** Free-text source, only ever set alongside `heardAboutUs === "other"`. */
-  heardAboutUsOther: z.string().nullable(),
+  heardAboutUs: z.string().nullable(),
   emailVerified: z.boolean(),
   image: z.string().nullable(),
   role: userRoleSchema,

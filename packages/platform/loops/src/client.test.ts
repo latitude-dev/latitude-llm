@@ -131,24 +131,15 @@ describe("createLoopsContactsSender", () => {
     })
   })
 
-  it("sends an explicit null for heardAboutUsOther so Loops clears a replaced free-text answer", async () => {
+  it("forwards a typed source as the channel when the user picked Other", async () => {
     const sender = createLoopsContactsSender({ apiKey: "test-key" })
     updateContactMock.mockResolvedValueOnce(successResponse)
 
-    await Effect.runPromise(
-      sender.updateContact({
-        userId: "user_123",
-        heardAboutUs: "conference",
-        heardAboutUsOther: null,
-      }),
-    )
+    await Effect.runPromise(sender.updateContact({ userId: "user_123", heardAboutUs: " A talk at PyData " }))
 
     expect(updateContactMock).toHaveBeenCalledWith({
       userId: "user_123",
-      properties: {
-        heardAboutUs: "conference",
-        heardAboutUsOther: null,
-      },
+      properties: { heardAboutUs: "A talk at PyData" },
     })
   })
 

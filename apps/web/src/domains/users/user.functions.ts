@@ -2,7 +2,7 @@ import { OutboxEventWriter } from "@domain/events"
 import { stackChoiceSchema, stackChoiceToOnboardingType } from "@domain/marketing"
 import { ProjectRepository } from "@domain/projects"
 import { BadRequestError, ProjectId, SqlClient } from "@domain/shared"
-import { HEARD_ABOUT_US_OTHER_MAX_LENGTH, heardAboutUsSchema, UserRepository } from "@domain/users"
+import { HEARD_ABOUT_US_MAX_LENGTH, UserRepository } from "@domain/users"
 import { OutboxEventWriterLive, ProjectRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -34,17 +34,12 @@ const submitOnboardingSchema = z.object({
         .transform((v) => (v.length > 0 ? v : undefined)),
     )
     .optional(),
-  heardAboutUs: heardAboutUsSchema,
-  heardAboutUsOther: z
+  // Either a channel slug or, when the user picked "Other", the source they
+  // typed — so this can't be enum-validated. Required either way.
+  heardAboutUs: z
     .string()
     .transform((v) => v.trim())
-    .pipe(
-      z
-        .string()
-        .max(HEARD_ABOUT_US_OTHER_MAX_LENGTH)
-        .transform((v) => (v.length > 0 ? v : undefined)),
-    )
-    .optional(),
+    .pipe(z.string().min(1).max(HEARD_ABOUT_US_MAX_LENGTH)),
   stackChoice: stackChoiceSchema,
   projectId: z.string(),
 })
@@ -76,7 +71,6 @@ export const submitOnboarding = createServerFn({ method: "POST" })
               jobTitle: data.jobTitle,
               phoneNumber: data.phoneNumber,
               heardAboutUs: data.heardAboutUs,
-              heardAboutUsOther: data.heardAboutUsOther,
             })
             yield* outbox.write({
               eventName: "UserOnboardingCompleted",

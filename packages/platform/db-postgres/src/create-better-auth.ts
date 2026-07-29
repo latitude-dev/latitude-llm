@@ -178,7 +178,6 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         jobTitle: { type: "string", required: false, input: false },
         phoneNumber: { type: "string", required: false, input: false },
         heardAboutUs: { type: "string", required: false, input: false },
-        heardAboutUsOther: { type: "string", required: false, input: false },
       },
     },
     /**

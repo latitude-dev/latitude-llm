@@ -20,7 +20,11 @@ import { composePhoneNumber } from "../../../../../lib/phone-countries.ts"
 import { OnboardingRightPane } from "./onboarding/onboarding-right-pane.tsx"
 import * as FlaggersStep from "./onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./onboarding/steps/role-step.tsx"
-import { EMPTY_ONBOARDING_FORM_VALUES, ROLE_STEP_REQUIRED_FIELDS } from "./onboarding/steps/role-step-form.ts"
+import {
+  EMPTY_ONBOARDING_FORM_VALUES,
+  requiredRoleStepFields,
+  resolveHeardAboutUs,
+} from "./onboarding/steps/role-step-form.ts"
 import * as SlackStep from "./onboarding/steps/slack-step.tsx"
 import * as TelemetryStep from "./onboarding/steps/telemetry-step.tsx"
 
@@ -114,16 +118,16 @@ export function OnboardingFlow({
   const form = useForm({
     defaultValues: EMPTY_ONBOARDING_FORM_VALUES,
     onSubmit: createFormSubmitHandler(
-      async ({ jobTitle, phoneCallingCode, phoneNumber, heardAboutUs, heardAboutUsOther }) => {
-        // `handleAdvanceFromRole` gates on this, so an empty channel here would
+      async (values) => {
+        const heardAboutUs = resolveHeardAboutUs(values)
+        // `handleAdvanceFromRole` gates on this, so an empty answer here would
         // mean a programming error rather than user input.
         if (heardAboutUs === "") return
         await submitOnboarding({
           data: {
-            jobTitle,
-            phoneNumber: composePhoneNumber(phoneCallingCode, phoneNumber),
+            jobTitle: values.jobTitle,
+            phoneNumber: composePhoneNumber(values.phoneCallingCode, values.phoneNumber),
             heardAboutUs,
-            heardAboutUsOther,
             stackChoice: "production-agent",
             projectId,
           },
@@ -139,8 +143,9 @@ export function OnboardingFlow({
   })
 
   const handleAdvanceFromRole = async () => {
-    await Promise.all(ROLE_STEP_REQUIRED_FIELDS.map((field) => form.validateField(field, "change")))
-    const hasErrors = ROLE_STEP_REQUIRED_FIELDS.some((field) => (form.getFieldMeta(field)?.errors.length ?? 0) > 0)
+    const fields = requiredRoleStepFields(form.state.values)
+    await Promise.all(fields.map((field) => form.validateField(field, "change")))
+    const hasErrors = fields.some((field) => (form.getFieldMeta(field)?.errors.length ?? 0) > 0)
     if (hasErrors) return
     void form.handleSubmit()
   }

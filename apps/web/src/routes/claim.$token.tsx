@@ -27,7 +27,8 @@ import * as FlaggersStep from "./_authenticated/projects/$projectSlug/-component
 import * as RoleStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/role-step.tsx"
 import {
   EMPTY_ONBOARDING_FORM_VALUES,
-  ROLE_STEP_REQUIRED_FIELDS,
+  requiredRoleStepFields,
+  resolveHeardAboutUs,
 } from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/role-step-form.ts"
 import * as SlackStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/slack-step.tsx"
 
@@ -207,16 +208,16 @@ function ClaimOnboarding({
   const form = useForm({
     defaultValues: EMPTY_ONBOARDING_FORM_VALUES,
     onSubmit: createFormSubmitHandler(
-      async ({ jobTitle, phoneCallingCode, phoneNumber, heardAboutUs, heardAboutUsOther }) => {
-        // `handleAdvanceFromRole` gates on this, so an empty channel here would
+      async (values) => {
+        const heardAboutUs = resolveHeardAboutUs(values)
+        // `handleAdvanceFromRole` gates on this, so an empty answer here would
         // mean a programming error rather than user input.
         if (heardAboutUs === "") return
         await submitOnboarding({
           data: {
-            jobTitle,
-            phoneNumber: composePhoneNumber(phoneCallingCode, phoneNumber),
+            jobTitle: values.jobTitle,
+            phoneNumber: composePhoneNumber(values.phoneCallingCode, values.phoneNumber),
             heardAboutUs,
-            heardAboutUsOther,
             stackChoice: "production-agent",
             projectId: project.id,
           },
@@ -232,8 +233,9 @@ function ClaimOnboarding({
   })
 
   const handleAdvanceFromRole = async () => {
-    await Promise.all(ROLE_STEP_REQUIRED_FIELDS.map((field) => form.validateField(field, "change")))
-    const hasErrors = ROLE_STEP_REQUIRED_FIELDS.some((field) => (form.getFieldMeta(field)?.errors.length ?? 0) > 0)
+    const fields = requiredRoleStepFields(form.state.values)
+    await Promise.all(fields.map((field) => form.validateField(field, "change")))
+    const hasErrors = fields.some((field) => (form.getFieldMeta(field)?.errors.length ?? 0) > 0)
     if (hasErrors) return
     void form.handleSubmit()
   }
