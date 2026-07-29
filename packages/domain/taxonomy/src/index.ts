@@ -323,6 +323,7 @@ export {
   decideClusterAssignment,
 } from "./use-cases/decide-cluster-assignment.ts"
 export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
+export { deleteCustomBehaviorWithViews } from "./use-cases/delete-custom-behavior-with-views.ts"
 export { type DiscardBehaviorInput, discardBehavior } from "./use-cases/discard-behavior.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export { expandTopicFilterSetUseCase } from "./use-cases/expand-topic-filter-set.ts"

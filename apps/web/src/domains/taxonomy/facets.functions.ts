@@ -1,4 +1,4 @@
-import { QueuePublisher } from "@domain/queue"
+import { QueuePublisher, WorkflowTerminator } from "@domain/queue"
 import { CustomBehaviorId, FacetId, ProjectId } from "@domain/shared"
 import {
   createFacetBehavior,
@@ -9,7 +9,6 @@ import {
   facetSelectionSchema,
   newFacetInputSchema,
   type TaxonomyFacet,
-  taxonomyGardenCustomBehaviorDedupeKey,
 } from "@domain/taxonomy"
 import { FacetProjectionRepositoryLive, TaxonomyViewAssignmentRepositoryLive } from "@platform/db-clickhouse"
 import { CustomBehaviorRepositoryLive, FacetRepositoryLive, TaxonomyClusterRepositoryLive } from "@platform/db-postgres"
@@ -178,10 +177,9 @@ export const createAuthoredBehaviorFn = createServerFn({ method: "POST" })
 // Postgres facet/view). Shared by Stop and the instructions branch of Refine.
 const terminateAndDiscard = async (orgId: ScopedOrgId, customBehaviorId: CustomBehaviorId, reason: string) => {
   const terminator = await getWorkflowTerminator()
-  const workflowId = taxonomyGardenCustomBehaviorDedupeKey({ organizationId: orgId, customBehaviorId })
-  await terminator.terminate(workflowId, reason)
   await Effect.runPromise(
-    discardBehavior({ customBehaviorId }).pipe(
+    discardBehavior({ customBehaviorId, reason }).pipe(
+      Effect.provideService(WorkflowTerminator, terminator),
       withScopedPostgres(
         Layer.mergeAll(CustomBehaviorRepositoryLive, FacetRepositoryLive, TaxonomyClusterRepositoryLive),
         getPostgresClient(),

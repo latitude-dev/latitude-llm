@@ -98,6 +98,23 @@ export class WorkflowQuerier extends Context.Service<WorkflowQuerier, WorkflowQu
 ) {}
 
 /**
+ * Hard-stops a running workflow by id, discarding whatever it was doing. Use it
+ * when the work itself became invalid (the record it gardens is being deleted),
+ * not to shut a workflow down gracefully.
+ *
+ * `terminate` is best-effort by contract: a workflow that is missing, already
+ * closed, or GC'd counts as stopped and succeeds, so callers can terminate
+ * without first querying whether the run is alive.
+ */
+export interface WorkflowTerminatorShape {
+  readonly terminate: (workflowId: string, reason?: string) => Effect.Effect<void>
+}
+
+export class WorkflowTerminator extends Context.Service<WorkflowTerminator, WorkflowTerminatorShape>()(
+  "@domain/queue/WorkflowTerminator",
+) {}
+
+/**
  * Whether the workflow with `workflowId` is still live — it exists and hasn't
  * reached a terminal status. A missing workflow (never durably started, or
  * already GC'd) counts as not alive.

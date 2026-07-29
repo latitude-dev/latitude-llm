@@ -1,3 +1,4 @@
+import { WorkflowTerminator } from "@domain/queue"
 import type { CustomBehaviorId } from "@domain/shared"
 import { Effect } from "effect"
 import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts"
@@ -5,9 +6,12 @@ import { FacetProjectionRepository } from "../ports/facet-projection-repository.
 import { FacetRepository } from "../ports/facet-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyViewAssignmentRepository } from "../ports/taxonomy-view-assignment-repository.ts"
+import { taxonomyGardenCustomBehaviorDedupeKey } from "./trigger-project-gardening.ts"
 
 interface DeleteCustomBehaviorInput {
   readonly id: CustomBehaviorId
+  /** Termination reason recorded on the garden workflow, for Temporal history. */
+  readonly reason?: string
 }
 
 interface DeleteCustomBehaviorResult {
@@ -28,10 +32,11 @@ interface DeleteCustomBehaviorResult {
  *     that is what makes the extracted answers reusable instead of re-extracted.
  *   - Postgres `custom_behaviors` — the row itself, deleted last.
  *
- * Order matters. Children go first and the behavior row last, so a crash midway leaves
- * a behavior whose tree is gone (the next scheduled garden rebuilds it) rather than
- * orphans with no owner left to find them by. The caller MUST terminate any in-flight
- * garden workflow first, or a running extraction keeps writing rows after the purge.
+ * Order matters. The in-flight garden is terminated first — a run that outlives the rows
+ * keeps writing clusters and assignments for a behavior nothing owns any more — then
+ * children go and the behavior row last, so a crash midway leaves a behavior whose tree
+ * is gone (the next scheduled garden rebuilds it) rather than orphans with no owner left
+ * to find them by.
  *
  * Two tables are deliberately not touched, both because they don't record which
  * behavior a row belongs to: `taxonomy_runs` has a `custom_behavior_id` column that
@@ -47,6 +52,12 @@ export const deleteCustomBehavior = Effect.fn("taxonomy.deleteCustomBehavior")(f
   const behaviors = yield* CustomBehaviorRepository
   // findById is org-scoped, so a cross-org/missing id surfaces NotFoundError instead of a silent no-op.
   const view = yield* behaviors.findById(input.id)
+
+  const terminator = yield* WorkflowTerminator
+  yield* terminator.terminate(
+    taxonomyGardenCustomBehaviorDedupeKey({ organizationId: view.organizationId, customBehaviorId: view.id }),
+    input.reason ?? "behavior deleted",
+  )
 
   // Decide the facet's fate BEFORE deleting anything, so the "other views?" check
   // still sees the full set.

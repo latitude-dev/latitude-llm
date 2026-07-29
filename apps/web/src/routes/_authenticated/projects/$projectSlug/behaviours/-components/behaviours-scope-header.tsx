@@ -119,11 +119,11 @@ export function BehavioursScopeHeader({
 
   const { main, view, views } = scope
   const projectSlug = project.slug
-  // A view can only be gardened once its behavior has finished its first
-  // extraction. Until then there are no cached answers to slice.
-  const behaviorCooking = main.record?.status === "generating"
   // Deleting the target the page is about: the open view, or the behavior itself.
   const deleteTarget = view ?? main.record
+  // A view can only be gardened once its behavior has finished its first
+  // extraction. Until then there are no cached answers to slice.
+  const behaviorCooking = main.record?.status === "generating" || deleteTarget?.status === "generating"
 
   useMountEffect(() => {
     if (!initialForm) return
