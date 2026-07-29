@@ -1,7 +1,7 @@
 import { OutboxEventWriter } from "@domain/events"
 import { stackChoiceSchema, stackChoiceToOnboardingType } from "@domain/marketing"
 import { ProjectRepository } from "@domain/projects"
-import { ProjectId, SqlClient } from "@domain/shared"
+import { BadRequestError, ProjectId, SqlClient } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { OutboxEventWriterLive, ProjectRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -11,6 +11,10 @@ import { z } from "zod"
 import { isStorablePhoneNumber } from "../../lib/phone-countries.ts"
 import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient } from "../../server/clients.ts"
+import { reportUnknownCallingCode } from "../../server/unknown-calling-code-report.ts"
+
+// Shape only, so obvious junk is rejected at the boundary and never reaches the reporter below.
+const E164_SHAPE = /^\+[1-9]\d{4,14}$/
 
 const submitOnboardingSchema = z.object({
   jobTitle: z
@@ -24,8 +28,8 @@ const submitOnboardingSchema = z.object({
       z
         .string()
         .max(64)
-        .refine((v) => v.length === 0 || isStorablePhoneNumber(v), {
-          message: "Phone number must start with a known calling code, e.g. +15550100",
+        .refine((v) => v.length === 0 || E164_SHAPE.test(v), {
+          message: "Phone number must include a calling code, e.g. +15550100",
         })
         .transform((v) => (v.length > 0 ? v : undefined)),
     )
@@ -39,6 +43,13 @@ export const submitOnboarding = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { userId, organizationId } = await requireSession()
     const adminClient = getAdminPostgresClient()
+
+    // A prefix that looks like a calling code but matches none is either junk or a country code
+    // assigned since the table was last updated, so it is reported before the rejection.
+    if (data.phoneNumber !== undefined && !isStorablePhoneNumber(data.phoneNumber)) {
+      reportUnknownCallingCode(data.phoneNumber)
+      throw new BadRequestError({ message: "Phone number must start with a known calling code" })
+    }
 
     const onboardingType = stackChoiceToOnboardingType(data.stackChoice)
 
