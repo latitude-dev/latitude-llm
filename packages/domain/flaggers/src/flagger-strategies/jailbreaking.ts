@@ -129,20 +129,84 @@ Return no explanation outside the structured output.
 
 // Claude Code / Conductor embed session scaffolding in user-role turns. The
 // harness (not the user) authors these; treating them as injection is a FP.
-const CODING_AGENT_HARNESS_WRAPPER_PATTERNS = [
-  /<system-reminder\b[^>]*>[\s\S]*?<\/system-reminder>/gi,
-  /<system_instruction\b[^>]*>[\s\S]*?<\/system_instruction>/gi,
+// Parsed with indexOf (not regex) so long user text cannot trip ReDoS.
+const CODING_AGENT_HARNESS_WRAPPERS = [
+  { open: "<system-reminder", close: "</system-reminder>" },
+  { open: "<system_instruction", close: "</system_instruction>" },
 ] as const
 
-export function stripCodingAgentHarnessWrappers(text: string): string {
-  let result = text
-  for (const pattern of CODING_AGENT_HARNESS_WRAPPER_PATTERNS) {
-    result = result.replace(pattern, "\n")
+function trimTrailingSpacesAndTabs(line: string): string {
+  let end = line.length
+  while (end > 0) {
+    const code = line.charCodeAt(end - 1)
+    if (code !== 32 && code !== 9) break
+    end--
   }
-  return result
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
+  return end === line.length ? line : line.slice(0, end)
+}
+
+function collapseBlankLines(text: string): string {
+  const lines = text.split("\n")
+  const out: string[] = []
+  let blankRun = 0
+
+  for (const line of lines) {
+    const trimmedRight = trimTrailingSpacesAndTabs(line)
+    if (trimmedRight.length === 0) {
+      blankRun++
+      if (blankRun === 1) out.push("")
+      continue
+    }
+    blankRun = 0
+    out.push(trimmedRight)
+  }
+
+  return out.join("\n").trim()
+}
+
+function stripHarnessWrappersLinear(text: string): string {
+  const lower = text.toLowerCase()
+  let cursor = 0
+  let out = ""
+
+  while (cursor < text.length) {
+    let nextOpenStart = -1
+    let nextOpen: (typeof CODING_AGENT_HARNESS_WRAPPERS)[number] | null = null
+
+    for (const wrapper of CODING_AGENT_HARNESS_WRAPPERS) {
+      const at = lower.indexOf(wrapper.open, cursor)
+      if (at !== -1 && (nextOpenStart === -1 || at < nextOpenStart)) {
+        nextOpenStart = at
+        nextOpen = wrapper
+      }
+    }
+
+    if (nextOpenStart === -1 || nextOpen === null) {
+      out += text.slice(cursor)
+      break
+    }
+
+    const openEnd = text.indexOf(">", nextOpenStart + nextOpen.open.length)
+    if (openEnd === -1) {
+      out += text.slice(cursor)
+      break
+    }
+
+    const closeStart = lower.indexOf(nextOpen.close, openEnd + 1)
+    if (closeStart === -1) {
+      out += text.slice(cursor)
+      break
+    }
+
+    out += `${text.slice(cursor, nextOpenStart)}\n`
+    cursor = closeStart + nextOpen.close.length
+  }
+
+  return out
+}
+
+export function stripCodingAgentHarnessWrappers(text: string): string {
+  return collapseBlankLines(stripHarnessWrappersLinear(text))
 }
 
 function extractJailbreakUserTexts(conversation: Pick<FlaggerConversation, "allMessages">): string[] {
