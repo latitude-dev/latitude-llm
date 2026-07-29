@@ -8,6 +8,7 @@ import {
   LinkIcon,
   LogOutIcon,
   MoonIcon,
+  PlugIcon,
   PlusIcon,
   ShieldAlertIcon,
   SunIcon,
@@ -123,6 +124,16 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
         keywords: "docs help guide",
         perform: () => {
           window.open(DOCS_URL, "_blank", "noopener,noreferrer")
+        },
+      },
+      {
+        id: "action:mcp-docs",
+        title: "Connect via MCP",
+        icon: PlugIcon,
+        section: "actions",
+        keywords: "mcp model context protocol integrations add connect docs claude code cursor zed",
+        perform: () => {
+          window.open(`${DOCS_URL}/getting-started/mcp`, "_blank", "noopener,noreferrer")
         },
       },
     )
