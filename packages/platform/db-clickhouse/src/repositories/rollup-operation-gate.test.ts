@@ -30,6 +30,7 @@ const ORG_ID = OrganizationId("oooooooooooooooooooooooo")
 const PROJECT_ID = ProjectId("pppppppppppppppppppppppp")
 const VERCEL_TRACE = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as TraceId
 const ADK_TRACE = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as TraceId
+const MEMORY_EXTRACT_TRACE = "cccccccccccccccccccccccccccccccc" as TraceId
 
 const T0 = new Date("2026-06-18T10:00:00.000Z")
 const at = (ms: number) => new Date(T0.getTime() + ms)
@@ -45,6 +46,27 @@ const assistantToolCall = {
 }
 const toolResult = { role: "tool", parts: [{ type: "tool_call_response", id: "call_1", response: "sunny, 22C" }] }
 const assistantFinal = { role: "assistant", parts: [{ type: "text", content: "LEAF_FINAL: sunny, 22C in SF." }] }
+const agentRecommendation = {
+  role: "assistant",
+  parts: [
+    {
+      type: "text",
+      content:
+        "In Vienna under 90 EUR/night: Alfama Guesthouse at 58 EUR is the pick — ten minutes from the centre on foot.",
+    },
+  ],
+}
+const memoryExtractInput = {
+  role: "user",
+  parts: [
+    {
+      type: "text",
+      content:
+        "Traveler: Where should I stay in Vienna?\n\nAssistant: In Vienna under 90 EUR/night: Alfama Guesthouse at 58 EUR is the pick.",
+    },
+  ],
+}
+const memoryExtractOutput = { role: "assistant", parts: [{ type: "text", content: "[]" }] }
 // The Vercel wrapper's lossy summary: final text welded with an orphan tool_call
 // and no tool result — must never become the rolled-up conversation.
 const wrapperSummary = {
@@ -179,6 +201,38 @@ const VERCEL_SPANS: SpanRow[] = [
   }),
 ]
 
+// Agent reply followed by a later memory-extract `chat` leaf that returns only
+// a JSON array. Plain end_time ranking would pick the extractor; prose ranking
+// must keep the recommendation as the rolled-up conversation.
+const MEMORY_EXTRACT_SPANS: SpanRow[] = [
+  makeSpanRow({
+    traceId: MEMORY_EXTRACT_TRACE,
+    spanId: "bbbb111111111111",
+    operation: "chat",
+    startTime: at(0),
+    endTime: at(2_000),
+    tokensInput: 200,
+    tokensOutput: 80,
+    costTotalMicrocents: 900,
+    inputMessages: [userMsg],
+    outputMessages: [agentRecommendation],
+    systemInstructions: "You are Atlas, a travel planning assistant.",
+  }),
+  makeSpanRow({
+    traceId: MEMORY_EXTRACT_TRACE,
+    spanId: "bbbb222222222222",
+    operation: "chat",
+    startTime: at(2_100),
+    endTime: at(3_000), // ends LAST — would win un-gated / end_time-only ranking
+    tokensInput: 100,
+    tokensOutput: 12,
+    costTotalMicrocents: 50,
+    inputMessages: [memoryExtractInput],
+    outputMessages: [memoryExtractOutput],
+    systemInstructions: "You extract durable travel facts. Respond with only a JSON array.",
+  }),
+]
+
 // A Google-ADK-shaped trace: a single `generate_content` leaf (the real model
 // call) under an inert `invoke_agent` wrapper with no usage/conversation.
 const ADK_SPANS: SpanRow[] = [
@@ -226,7 +280,9 @@ describe("operation-gated rollup", () => {
 
   // Insert after the testkit's beforeEach TRUNCATE (registered first, so it runs first).
   beforeEach(async () => {
-    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [...VERCEL_SPANS, ...ADK_SPANS]))
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [...VERCEL_SPANS, ...ADK_SPANS, ...MEMORY_EXTRACT_SPANS]),
+    )
   })
 
   const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient | AI>) =>
@@ -276,6 +332,22 @@ describe("operation-gated rollup", () => {
       expect(serialize(detail.allMessages)).toContain("LEAF_FINAL")
       expect(detail.tokensInput).toBe(80)
       expect(detail.tokensOutput).toBe(40)
+    })
+
+    it("keeps the agent prose reply when a later memory-extract chat returns a JSON array", async () => {
+      const detail = await runCh(
+        traceRepo.findByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: MEMORY_EXTRACT_TRACE,
+        }),
+      )
+
+      const serialized = serialize(detail.allMessages)
+      expect(serialized).toContain("Alfama Guesthouse")
+      expect(serialized).not.toContain("Traveler:")
+      expect(serialize(detail.outputMessages)).toContain("Alfama Guesthouse")
+      expect(serialize(detail.outputMessages)).not.toContain('"content":"[]"')
     })
   })
 

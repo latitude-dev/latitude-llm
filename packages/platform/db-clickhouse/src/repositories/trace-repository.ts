@@ -94,18 +94,22 @@ const MESSAGE_OPERATION_FILTER = "operation IN ('chat', 'text_completion', 'gene
 const SYSTEM_INSTRUCTION_OPERATION_FILTER =
   "operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent')"
 
+// Sidecar extractors emit a JSON array as the sole text part. Collapse their
+// ranking time to epoch so a prior prose leaf wins argMaxIf (same rule as MV 00055).
+const CONVERSATION_RANK_TIME = `if(match(output_messages, '"content":"\\\\[(\\\\]|\\\\{|\\\\\\\\)'), toDateTime64('1970-01-01 00:00:00.000000000', 9, 'UTC'), end_time)`
+
 const SPAN_MESSAGES_SELECT = `
   trace_id,
   argMinIf(input_messages, start_time, input_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS first_input_messages,
-  argMaxIf(input_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS last_input_messages,
-  argMaxIf(output_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS final_output_messages,
+  argMaxIf(input_messages, ${CONVERSATION_RANK_TIME}, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS last_input_messages,
+  argMaxIf(output_messages, ${CONVERSATION_RANK_TIME}, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS final_output_messages,
   argMinIf(system_instructions, start_time, system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS first_system_instructions
 `
 
 const SPAN_METADATA_MESSAGES_SELECT = `
   trace_id,
   argMinIf(input_messages, start_time, input_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS first_input_messages,
-  argMaxIf(output_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS final_output_messages,
+  argMaxIf(output_messages, ${CONVERSATION_RANK_TIME}, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS final_output_messages,
   argMinIf(system_instructions, start_time, system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS first_system_instructions
 `
 
@@ -1669,8 +1673,8 @@ export const TraceRepositoryLive = Layer.effect(
                           FROM (
                             SELECT
                               argMinIf(system_instructions, start_time, system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS system_instructions_json,
-                              argMaxIf(input_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS last_input_messages_json,
-                              argMaxIf(output_messages, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS output_messages_json
+                              argMaxIf(input_messages, ${CONVERSATION_RANK_TIME}, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS last_input_messages_json,
+                              argMaxIf(output_messages, ${CONVERSATION_RANK_TIME}, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS output_messages_json
                             FROM ${dedupedSpanMessageRowsSubquery("trace_id = {traceId:FixedString(32)}")}
                             GROUP BY trace_id
                             LIMIT 1

@@ -110,4 +110,22 @@ describe("resolveLastLlmCompletionSpanId", () => {
     })
     expect(resolveLastLlmCompletionSpanId([s])).toBe(s.spanId)
   })
+
+  it("prefers the primary-model leaf over a later sidecar extractor model", () => {
+    const agentReply = baseSpan({
+      spanId: SpanId("a".repeat(16)),
+      operation: "chat",
+      model: "claude-opus-5",
+      startTime: new Date("2026-01-01T00:00:00Z"),
+      endTime: new Date("2026-01-01T00:00:04Z"),
+    })
+    const memoryExtract = baseSpan({
+      spanId: SpanId("b".repeat(16)),
+      operation: "chat",
+      model: "claude-haiku-4-5",
+      startTime: new Date("2026-01-01T00:00:05Z"),
+      endTime: new Date("2026-01-01T00:00:06Z"),
+    })
+    expect(resolveLastLlmCompletionSpanId([agentReply, memoryExtract])).toBe(agentReply.spanId)
+  })
 })

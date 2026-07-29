@@ -309,8 +309,8 @@ AS SELECT
     argMinIfState(s.span_id, s.start_time, (s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AS root_span_id,
     argMinIfState(s.name, s.start_time, (s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AS root_span_name,
     argMinIfState(s.input_messages, s.start_time, (s.input_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS input_messages,
-    argMaxIfState(s.input_messages, s.end_time, (s.output_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS last_input_messages,
-    argMaxIfState(s.output_messages, s.end_time, (s.output_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS output_messages,
+    argMaxIfState(s.input_messages, if(match(s.output_messages, '"content":"\\[(\\]|\\{|\\\\)'), toDateTime64('1970-01-01 00:00:00.000000000', 9, 'UTC'), s.end_time), (s.output_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS last_input_messages,
+    argMaxIfState(s.output_messages, if(match(s.output_messages, '"content":"\\[(\\]|\\{|\\\\)'), toDateTime64('1970-01-01 00:00:00.000000000', 9, 'UTC'), s.end_time), (s.output_messages != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content'))) AS output_messages,
     argMinIfState(s.system_instructions, s.start_time, (s.system_instructions != '') AND (s.operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent'))) AS system_instructions,
     max(s.retention_days) AS retention_days
 FROM spans AS s
@@ -618,8 +618,8 @@ AS SELECT
     argMinIfState(span_id, start_time, parent_span_id = '') AS root_span_id,
     argMinIfState(name, start_time, parent_span_id = '') AS root_span_name,
     argMinIfState(spans.input_messages, start_time, (spans.input_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS input_messages,
-    argMaxIfState(spans.input_messages, end_time, (spans.output_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS last_input_messages,
-    argMaxIfState(spans.output_messages, end_time, (spans.output_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS output_messages,
+    argMaxIfState(spans.input_messages, if(match(spans.output_messages, '"content":"\\[(\\]|\\{|\\\\)'), toDateTime64('1970-01-01 00:00:00.000000000', 9, 'UTC'), end_time), (spans.output_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS last_input_messages,
+    argMaxIfState(spans.output_messages, if(match(spans.output_messages, '"content":"\\[(\\]|\\{|\\\\)'), toDateTime64('1970-01-01 00:00:00.000000000', 9, 'UTC'), end_time), (spans.output_messages != '') AND (operation IN ('chat', 'text_completion', 'generate_content'))) AS output_messages,
     argMinIfState(spans.system_instructions, start_time, (spans.system_instructions != '') AND (operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent'))) AS system_instructions,
     max(retention_days) AS retention_days
 FROM spans
