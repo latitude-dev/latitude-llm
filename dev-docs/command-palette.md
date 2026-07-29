@@ -195,12 +195,14 @@ To add a section/settings page: add an entry with `{ key, label, icon, path(slug
 sidebar, the settings sub-nav, **and** the palette automatically — no palette-specific change.
 Do **not** hardcode a new nav command in the palette; that would duplicate the source of truth.
 
-Integrations are the one navigable surface that isn't a settings page, because they render as
-sections of the Integrations page rather than sidebar entries. Agent-dispatch integrations are
-derived in `use-navigation-commands.ts` from `AGENT_DISPATCH_KIND_LABELS` /
-`AGENT_DISPATCH_KIND_ICONS` (`domains/agent-dispatch/agent-dispatch-kinds.ts`), so a new dispatch
-kind surfaces in the palette with no palette change. Slack and GitHub have no per-integration
-route, so they are listed explicitly and point at the Integrations page.
+Individual integrations are the one navigable surface not modeled in `project-sections.ts`, since
+they sit under the Integrations settings page rather than being sidebar entries of their own.
+Agent-dispatch integrations (Cursor, Claude Code, Linear, Webhook) are route-backed — each has a
+`settings/integrations/$integrationKind` page — and their palette entries are derived in
+`use-navigation-commands.ts` from `AGENT_DISPATCH_KIND_LABELS` / `AGENT_DISPATCH_KIND_ICONS`
+(`domains/agent-dispatch/agent-dispatch-kinds.ts`), so a new dispatch kind surfaces with no palette
+change. Slack and GitHub render as sections of the Integrations page with no route of their own, so
+they are listed explicitly and point at that page.
 
 ### 2. New global action → `use-global-commands.tsx`
 
