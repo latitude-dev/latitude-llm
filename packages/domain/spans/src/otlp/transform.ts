@@ -322,8 +322,7 @@ export function transformOtlpToSpans(
 
         if (transformed.costPricingMissing) {
           const { provider, model } = transformed.span
-          // JSON-encoded, not separator-joined: a separator inside a provider or model would merge groups.
-          const key = JSON.stringify([projectId, provider, model])
+          const key = `${projectId} ${provider} ${model}`
           const existing = unpricedByKey.get(key)
           if (existing) existing.spans++
           else unpricedByKey.set(key, { projectId, provider, model, spans: 1 })
