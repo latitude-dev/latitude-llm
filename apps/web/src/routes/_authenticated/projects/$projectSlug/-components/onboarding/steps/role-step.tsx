@@ -1,7 +1,7 @@
 import { Button, Input, Text } from "@repo/ui"
 import { PhoneNumberField } from "../../../../../../../components/phone-number-field.tsx"
 import { fieldErrorsAsStrings } from "../../../../../../../lib/form-server-action.ts"
-import { phoneNumberError } from "../../../../../../../lib/phone-countries.ts"
+import { phoneNumberError, phoneNumberSubmitError } from "../../../../../../../lib/phone-countries.ts"
 import type { OnboardingForm } from "../../onboarding-flow.tsx"
 
 export function Left({
@@ -50,6 +50,7 @@ export function Left({
               name="phoneNumber"
               validators={{
                 onChange: ({ value }) => phoneNumberError(value, form.getFieldValue("phoneCallingCode")),
+                onSubmit: ({ value }) => phoneNumberSubmitError(value, form.getFieldValue("phoneCallingCode")),
               }}
             >
               {(numberField) => (

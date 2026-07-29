@@ -328,14 +328,29 @@ export function isStorablePhoneNumber(value: string): boolean {
   return parsed !== undefined && parsed.nationalNumber.length >= MIN_NATIONAL_NUMBER_DIGITS
 }
 
+function couldStillBecomeCallingCode(digits: string): boolean {
+  for (const code of KNOWN_CALLING_CODES) if (code.startsWith(digits)) return true
+  return false
+}
+
 export function phoneNumberError(nationalNumber: string, callingCode: string): string | undefined {
   const digits = nationalNumberDigits(nationalNumber)
   if (digits.length === 0) return undefined
-  if (nationalNumber.includes("+")) return "That international prefix isn't recognised"
+  if (nationalNumber.includes("+")) {
+    return couldStillBecomeCallingCode(digits) ? undefined : "That international prefix isn't recognised"
+  }
   if (!isKnownCallingCode(callingCode)) return "Select your calling code"
   if (digits.length < MIN_NATIONAL_NUMBER_DIGITS) return "Enter a valid phone number"
   if (callingCode.length + digits.length > MAX_E164_DIGITS) return "Enter a valid phone number"
   return undefined
+}
+
+/** Stricter than the on-change check, which tolerates a prefix the next keystroke could complete. */
+export function phoneNumberSubmitError(nationalNumber: string, callingCode: string): string | undefined {
+  if (nationalNumberDigits(nationalNumber).length > 0 && nationalNumber.includes("+")) {
+    return "That international prefix isn't recognised"
+  }
+  return phoneNumberError(nationalNumber, callingCode)
 }
 
 /** Keeps a still-unparseable international prefix intact so further keystrokes can complete it. */

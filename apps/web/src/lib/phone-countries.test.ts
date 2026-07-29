@@ -8,6 +8,7 @@ import {
   phoneCountryFlag,
   phoneCountrySearchText,
   phoneNumberError,
+  phoneNumberSubmitError,
   sanitizeNationalNumberInput,
   splitInternationalPhoneNumber,
   trunkPrefixHint,
@@ -118,8 +119,33 @@ describe("phoneNumberError", () => {
     expect(phoneNumberError("612345678", "")).toBe("Select your calling code")
   })
 
-  it("flags a national number still holding an unresolved international prefix", () => {
-    expect(phoneNumberError("+4412", "34")).toBe("That international prefix isn't recognised")
+  it("flags a national number holding a prefix that can never resolve", () => {
+    expect(phoneNumberError("+8881234567", "34")).toBe("That international prefix isn't recognised")
+    expect(phoneNumberError("+999", "34")).toBe("That international prefix isn't recognised")
+  })
+
+  it("stays quiet while a prefix could still be completed by the next keystroke", () => {
+    expect(phoneNumberError("+3", "34")).toBeUndefined()
+    expect(phoneNumberError("+35", "34")).toBeUndefined()
+    expect(phoneNumberError("+99", "34")).toBeUndefined()
+  })
+
+  it("does not flag a prefix that resolved, however short the national number is left", () => {
+    expect(splitInternationalPhoneNumber("+4412")).toEqual({ callingCode: "44", nationalNumber: "12" })
+    expect(phoneNumberError("12", "44")).toBe("Enter a valid phone number")
+  })
+})
+
+describe("phoneNumberSubmitError", () => {
+  it("rejects a prefix left unfinished, which the on-change check tolerates", () => {
+    expect(phoneNumberError("+3", "34")).toBeUndefined()
+    expect(phoneNumberSubmitError("+3", "34")).toBe("That international prefix isn't recognised")
+  })
+
+  it("otherwise matches the on-change check", () => {
+    expect(phoneNumberSubmitError("", "34")).toBeUndefined()
+    expect(phoneNumberSubmitError("612 34 56 78", "34")).toBeUndefined()
+    expect(phoneNumberSubmitError("12", "34")).toBe("Enter a valid phone number")
   })
 
   it("rejects numbers that are too short or exceed E.164 length", () => {
