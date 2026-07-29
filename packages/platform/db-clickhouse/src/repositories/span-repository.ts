@@ -27,7 +27,7 @@ import type {
   ToolDefinition,
   TraceConversationChunk,
 } from "@domain/spans"
-import { MEMORY_OPERATIONS, SpanRepository, type SpanRepositoryShape } from "@domain/spans"
+import { MEMORY_OPERATIONS, parseCostSource, SpanRepository, type SpanRepositoryShape } from "@domain/spans"
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -76,7 +76,8 @@ const LIST_COLUMNS_LEAN = `
   tokens_input, tokens_output, tokens_cache_read,
   tokens_cache_create, tokens_reasoning,
   cost_input_microcents, cost_output_microcents,
-  cost_total_microcents, cost_is_estimated,
+  cost_total_microcents, cost_is_estimated, cost_source,
+  cost_priced_provider, cost_priced_model,
   time_to_first_token_ns, is_streaming,
   response_id, finish_reasons,
   scope_name, scope_version,
@@ -166,6 +167,9 @@ type SpanListRow = {
   cost_total_microcents: string
   duration_ns: string
   cost_is_estimated: number
+  cost_source: string
+  cost_priced_provider: string
+  cost_priced_model: string
   time_to_first_token_ns: string
   is_streaming: number
   response_id: string
@@ -250,6 +254,14 @@ const toBaseFields = (row: SpanListRow) => ({
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
   costIsEstimated: row.cost_is_estimated !== 0,
+  costSource: parseCostSource(normalizeCHString(row.cost_source), {
+    costTotalMicrocents: Number(row.cost_total_microcents),
+    costIsEstimated: row.cost_is_estimated !== 0,
+    hasTokens:
+      row.tokens_input + row.tokens_output + row.tokens_cache_read + row.tokens_cache_create + row.tokens_reasoning > 0,
+  }),
+  costPricedProvider: normalizeCHString(row.cost_priced_provider),
+  costPricedModel: normalizeCHString(row.cost_priced_model),
   timeToFirstTokenNs: Number(row.time_to_first_token_ns),
   isStreaming: row.is_streaming !== 0,
   responseId: normalizeCHString(row.response_id),
@@ -386,6 +398,9 @@ const toInsertRow = (span: SpanDetail) => ({
   cost_output_microcents: span.costOutputMicrocents,
   cost_total_microcents: span.costTotalMicrocents,
   cost_is_estimated: span.costIsEstimated ? 1 : 0,
+  cost_source: span.costSource,
+  cost_priced_provider: span.costPricedProvider,
+  cost_priced_model: span.costPricedModel,
   time_to_first_token_ns: span.timeToFirstTokenNs,
   is_streaming: span.isStreaming ? 1 : 0,
   response_id: span.responseId,

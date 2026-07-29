@@ -43,11 +43,21 @@ export {
 export type { Session, SessionDetail } from "./entities/session.ts"
 export { sessionConversationMessages, sessionDetailSchema, sessionSchema } from "./entities/session.ts"
 export type { SessionSearchMatch } from "./entities/session-search-match.ts"
-export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
+export type {
+  CostSource,
+  Operation,
+  Span,
+  SpanDetail,
+  SpanKind,
+  SpanStatusCode,
+  ToolDefinition,
+} from "./entities/span.ts"
 export {
+  costSourceSchema,
   isMemoryOperation,
   MEMORY_OPERATIONS,
   operationSchema,
+  parseCostSource,
   spanDetailSchema,
   spanKindSchema,
   spanSchema,

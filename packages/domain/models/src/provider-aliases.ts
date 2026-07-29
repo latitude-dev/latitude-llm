@@ -25,6 +25,7 @@ export const PROVIDER_ALIASES: Record<string, string> = {
   "workersai.chat": "cloudflare-workers-ai",
   "internal-workers-ai": "cloudflare-workers-ai", // Cloudflare AI Gateway (Workers AI upstream)
   "openai-codex": "openai",
+  gateway: "vercel", // Vercel AI Gateway's own provider id; models.dev files it under `vercel`
   // OTel GenAI well-known names from Vercel AI SDK v7's @ai-sdk/otel.
   "gcp.vertex_ai": "google-vertex",
   "gcp.gemini": "google",
@@ -32,6 +33,8 @@ export const PROVIDER_ALIASES: Record<string, string> = {
   "azure.ai.openai": "azure",
   "azure.ai.inference": "azure",
   x_ai: "xai",
+  "x-ai": "xai",
+  "xai-oauth": "xai",
   "gcp.vertex.agent": "google-vertex", // Google ADK generate_content leaves
   "gcp.gen_ai": "google", // Mastra's canonical key for the direct Gemini API
   // Mastra reports npm package names. Listed, not scope-derived: `@ai-sdk/fireworks` is `fireworks-ai`.

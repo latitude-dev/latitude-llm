@@ -7,8 +7,9 @@ import {
   Text,
   Tooltip,
 } from "@repo/ui"
-import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
+import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import type { SessionRecord } from "../../../../../../../domains/sessions/sessions.functions.ts"
+import { rollupCostDisplay } from "../../../../../../../domains/spans/cost-display.ts"
 
 const COLUMNS: InfiniteTableColumn<SessionRecord>[] = [
   {
@@ -70,8 +71,10 @@ const COLUMNS: InfiniteTableColumn<SessionRecord>[] = [
     minWidth: 96,
     align: "end",
     sortKey: "cost",
-    render: (session) =>
-      session.costTotalMicrocents > 0 ? formatPrice(session.costTotalMicrocents / 100_000_000) : "-",
+    render: (session) => {
+      const cost = rollupCostDisplay(session)
+      return <span {...(cost.note ? { title: cost.note } : {})}>{cost.label}</span>
+    },
   },
 ]
 
