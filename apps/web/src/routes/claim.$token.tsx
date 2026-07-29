@@ -21,6 +21,7 @@ import { submitOnboarding } from "../domains/users/user.functions.ts"
 import { getQueryClient } from "../lib/data/query-client.tsx"
 import { toUserMessage } from "../lib/errors.ts"
 import { createFormSubmitHandler } from "../lib/form-server-action.ts"
+import { composePhoneNumber } from "../lib/phone-countries.ts"
 import { OnboardingRightPane } from "./_authenticated/projects/$projectSlug/-components/onboarding/onboarding-right-pane.tsx"
 import * as FlaggersStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./_authenticated/projects/$projectSlug/-components/onboarding/steps/role-step.tsx"
@@ -171,7 +172,7 @@ function ClaimPage() {
 }
 
 type ClaimOnboardingStep = "role" | "flaggers" | "slack"
-type OnboardingFormValues = { jobTitle: string; phoneNumber: string }
+type OnboardingFormValues = { jobTitle: string; phoneCallingCode: string; phoneNumber: string }
 
 function ClaimOnboarding({
   project,
@@ -201,11 +202,16 @@ function ClaimOnboarding({
   }
 
   const form = useForm({
-    defaultValues: { jobTitle: "", phoneNumber: "" } satisfies OnboardingFormValues,
+    defaultValues: { jobTitle: "", phoneCallingCode: "", phoneNumber: "" } satisfies OnboardingFormValues,
     onSubmit: createFormSubmitHandler(
-      async ({ jobTitle, phoneNumber }) => {
+      async ({ jobTitle, phoneCallingCode, phoneNumber }) => {
         await submitOnboarding({
-          data: { jobTitle, phoneNumber, stackChoice: "production-agent", projectId: project.id },
+          data: {
+            jobTitle,
+            phoneNumber: composePhoneNumber(phoneCallingCode, phoneNumber),
+            stackChoice: "production-agent",
+            projectId: project.id,
+          },
         })
       },
       {
@@ -218,9 +224,12 @@ function ClaimOnboarding({
   })
 
   const handleAdvanceFromRole = async () => {
-    await form.validateField("jobTitle", "change")
-    const meta = form.getFieldMeta("jobTitle")
-    if (meta && meta.errors.length > 0) return
+    await Promise.all([form.validateField("jobTitle", "change"), form.validateField("phoneNumber", "change")])
+    const hasErrors = (["jobTitle", "phoneNumber"] as const).some((name) => {
+      const meta = form.getFieldMeta(name)
+      return meta !== undefined && meta.errors.length > 0
+    })
+    if (hasErrors) return
     void form.handleSubmit()
   }
 

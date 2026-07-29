@@ -1,5 +1,7 @@
 import { Button, Input, Text } from "@repo/ui"
+import { PhoneNumberField } from "../../../../../../../components/phone-number-field.tsx"
 import { fieldErrorsAsStrings } from "../../../../../../../lib/form-server-action.ts"
+import { phoneNumberError, phoneNumberSubmitError } from "../../../../../../../lib/phone-countries.ts"
 import type { OnboardingForm } from "../../onboarding-flow.tsx"
 
 export function Left({
@@ -42,19 +44,30 @@ export function Left({
             />
           )}
         </form.Field>
-        <form.Field name="phoneNumber">
-          {(field) => (
-            <Input
-              type="tel"
-              label="Phone number (optional)"
-              description="Helpful if we need to reach you about your setup."
-              placeholder="+1 555 0100"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              errors={fieldErrorsAsStrings(field.state.meta.errors)}
-              maxLength={64}
-              autoComplete="tel"
-            />
+        <form.Field name="phoneCallingCode">
+          {(callingCodeField) => (
+            <form.Field
+              name="phoneNumber"
+              validators={{
+                onChange: ({ value }) => phoneNumberError(value, form.getFieldValue("phoneCallingCode")),
+                onSubmit: ({ value }) => phoneNumberSubmitError(value, form.getFieldValue("phoneCallingCode")),
+              }}
+            >
+              {(numberField) => (
+                <PhoneNumberField
+                  label="Phone number (optional)"
+                  description="Helpful if we need to reach you about your setup."
+                  callingCode={callingCodeField.state.value}
+                  nationalNumber={numberField.state.value}
+                  errors={fieldErrorsAsStrings(numberField.state.meta.errors)}
+                  onCallingCodeChange={(callingCode) => {
+                    callingCodeField.handleChange(callingCode)
+                    void form.validateField("phoneNumber", "change")
+                  }}
+                  onNationalNumberChange={(value) => numberField.handleChange(value)}
+                />
+              )}
+            </form.Field>
           )}
         </form.Field>
         <div>
