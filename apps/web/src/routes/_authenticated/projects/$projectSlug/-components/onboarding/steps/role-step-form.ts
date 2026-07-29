@@ -1,14 +1,6 @@
 import type { HeardAboutUs } from "@domain/users"
 
-/**
- * Field contract for the "Tell us about yourself" onboarding step.
- *
- * Lives in its own module because two routes build this form independently —
- * the project onboarding flow (`onboarding-flow.tsx`) and the invite-claim flow
- * (`claim.$token.tsx`) — and both render the same `RoleStep.Left`. Keeping the
- * shape here means adding a field can't leave one of them behind.
- */
-export type OnboardingFormValues = {
+type OnboardingFormValues = {
   jobTitle: string
   /** Dialling prefix chosen in the phone field; composed with the number on submit. */
   phoneCallingCode: string
