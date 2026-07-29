@@ -5,6 +5,9 @@ import { fitPromptToJudgeContextWindow } from "./evaluation-execution.ts"
 const encoder = getEncoding("o200k_base")
 const countTokens = (text: string) => encoder.encode(text).length
 
+// ~165k tokens: over the ~119k budget the 128k fallback window leaves, without tokenizing 500k of filler.
+const OVERSIZED_FILLER = "the quick brown fox jumps over the lazy dog. ".repeat(15_000)
+
 describe("fitPromptToJudgeContextWindow", () => {
   it("returns the prompt unchanged when it fits comfortably", () => {
     const prompt = "Criteria: is the user happy?\n\nConversation:\n[user] hi\n[assistant] hello"
@@ -14,8 +17,7 @@ describe("fitPromptToJudgeContextWindow", () => {
   it("truncates a prompt that exceeds the resolved model's context window, keeping it under budget", () => {
     const head = "Criteria: the user got frustrated.\n\nConversation:\n"
     const tail = "\n[assistant] final resolution message"
-    const filler = "the quick brown fox jumps over the lazy dog. ".repeat(50_000)
-    const prompt = `${head}${filler}${tail}`
+    const prompt = `${head}${OVERSIZED_FILLER}${tail}`
 
     const fitted = fitPromptToJudgeContextWindow(prompt, "amazon-bedrock", "minimax.minimax-m2.5")
 
@@ -29,10 +31,13 @@ describe("fitPromptToJudgeContextWindow", () => {
   })
 
   it("sizes the budget off a configured maxOutputTokens instead of the hardcoded default", () => {
-    const filler = "the quick brown fox jumps over the lazy dog. ".repeat(50_000)
-
-    const fittedDefault = fitPromptToJudgeContextWindow(filler, "amazon-bedrock", "minimax.minimax-m2.5")
-    const fittedLargerOutput = fitPromptToJudgeContextWindow(filler, "amazon-bedrock", "minimax.minimax-m2.5", 40_000)
+    const fittedDefault = fitPromptToJudgeContextWindow(OVERSIZED_FILLER, "amazon-bedrock", "minimax.minimax-m2.5")
+    const fittedLargerOutput = fitPromptToJudgeContextWindow(
+      OVERSIZED_FILLER,
+      "amazon-bedrock",
+      "minimax.minimax-m2.5",
+      40_000,
+    )
 
     expect(countTokens(fittedLargerOutput)).toBeLessThan(countTokens(fittedDefault))
   })
