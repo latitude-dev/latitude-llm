@@ -26,9 +26,10 @@ import type { PaletteCommand } from "../types.ts"
 const DOCS_URL = "https://docs.latitude.so"
 
 /**
- * Always-available global actions: theme toggle, create project/organization (open modals
- * owned by the provider), switch organization (a drill-down sub-page), docs, log out, and
- * backoffice (admins only). Mirrors the handlers already wired into the app header.
+ * Always-available global actions, independent of the current route: organization switching
+ * (a drill-down sub-page), theme, the create modals owned by the provider, links out to the
+ * docs, and account actions. Ordering convention: switch/navigate before create, Log out last;
+ * admin-only actions are gated on the user role.
  */
 export function useGlobalCommands(): readonly PaletteCommand[] {
   const router = useRouter()

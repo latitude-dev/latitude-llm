@@ -9,13 +9,15 @@ import {
   sendToDestinationsQueryKey,
   upsertProjectDispatchOverride,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
+import {
+  AGENT_DISPATCH_KIND_ICONS,
+  AGENT_DISPATCH_KIND_LABELS,
+  type AgentDispatchKindKey,
+} from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import {
   AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
-  AGENT_DISPATCH_KIND_ICONS,
-  AGENT_DISPATCH_KIND_LABELS,
   AgentDispatchConfigFormInner,
-  type AgentDispatchKindKey,
   projectDispatchSettingsQueryKey,
 } from "./agent-dispatch-section.tsx"
 

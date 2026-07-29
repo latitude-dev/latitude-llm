@@ -34,12 +34,12 @@ import {
   setProjectDispatchRepo,
   signalAgentDispatchesQueryKey,
 } from "../../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
-import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import {
   AGENT_DISPATCH_KIND_ICONS,
   AGENT_DISPATCH_KIND_LABELS,
-  projectDispatchSettingsQueryKey,
-} from "../../../settings/-components/agent-dispatch-section.tsx"
+} from "../../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import { toUserMessage } from "../../../../../../../lib/errors.ts"
+import { projectDispatchSettingsQueryKey } from "../../../settings/-components/agent-dispatch-section.tsx"
 import { SignalDispatchHistory } from "./signal-dispatch-history.tsx"
 
 const MCP_DOCS_URL = "https://docs.latitude.so/getting-started/mcp"
