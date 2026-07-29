@@ -2,14 +2,14 @@ import { Button, Icon, Text, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
 import { ArrowLeftIcon } from "lucide-react"
-import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
-import { useRouteProject } from "../../-route-data.ts"
 import {
   AGENT_DISPATCH_KIND_ICONS,
   AGENT_DISPATCH_KIND_LABELS,
-  AgentDispatchIntegrationDetails,
   type AgentDispatchKindKey,
-} from "../-components/agent-dispatch-section.tsx"
+} from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
+import { useRouteProject } from "../../-route-data.ts"
+import { AgentDispatchIntegrationDetails } from "../-components/agent-dispatch-section.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind")({
