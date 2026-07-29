@@ -30,7 +30,7 @@ The E.164 dial prefix a user selects during onboarding, stored as bare digits (`
 _Avoid_: country code, dial code, area code, IDD prefix
 
 **National number**:
-The subscriber portion a user types after the calling code, excluding any trunk digit.
+The subscriber portion typed after the calling code. E.164 excludes the trunk digit, which the field flags rather than enforces.
 _Avoid_: local number, subscriber number
 
 **Phone number**:
@@ -38,7 +38,7 @@ The composed value persisted on the user: a calling code and national number as 
 _Avoid_: telephone, contact number, mobile
 
 **Trunk digit**:
-The leading digit (usually `0`, `8` on `+7`) written domestically and dropped internationally.
+The leading digit (usually `0`, `8` on `+7`) written domestically and omitted in E.164.
 _Avoid_: trunk code, national prefix, leading zero
 
 ## Phone number
@@ -60,7 +60,7 @@ The default comes from the browser's IANA timezone, resolved by scanning ICU's p
 
 ### What the server guarantees
 
-The write path enforces that a stored number carries a calling code and is digits-only within E.164 length (`+`, then 5 to 15 digits). It does **not** claim the number is dialable, since `+12345` passes.
+The write path enforces that a stored number starts with a calling code that exists in the country table and is digits-only within E.164 length (`+`, then 5 to 15 digits). It does **not** claim the number is dialable, since `+12345` passes. Checking the prefix against the table rather than a bare `\d` pattern means an unassigned prefix such as `+99999999` is rejected, at the cost of the table having to stay current if a new country code is assigned.
 
 This is deliberately looser than the `phone` PII detector's 8-digit floor ([`../specs/pii-redaction.md`](../specs/pii-redaction.md)). The two have opposite risk profiles: a detector scanning free trace text must not fire on incidental digit runs, whereas a signup validator must not reject a real number. An 8-digit floor would reject genuine 7-digit numbers from `+290`, `+683` and `+690`.
 
