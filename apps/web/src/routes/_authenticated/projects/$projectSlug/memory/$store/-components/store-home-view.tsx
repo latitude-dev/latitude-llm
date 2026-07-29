@@ -180,25 +180,27 @@ export function StoreHomeView({
     () => ({ fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso }),
     [tw.listRange, tw.trendRange],
   )
-  const trendRange = useMemo(() => {
-    const fromMs = Date.parse(range.fromIso)
-    const toMs = Date.parse(range.toIso)
-    const { fromMs: trendFromMs } = resolveMemoryTrendWindow(fromMs, toMs)
-    return { fromIso: new Date(trendFromMs).toISOString(), toIso: range.toIso }
+  // The activity chart spans the most recent trend window rather than all time: a bar per
+  // day of the store's whole life is unreadable, and it scans every one of those days.
+  const histogramRange = useMemo(() => {
+    const { fromMs } = resolveMemoryTrendWindow(Date.parse(range.fromIso), Date.parse(range.toIso))
+    return { fromIso: new Date(fromMs).toISOString(), toIso: range.toIso }
   }, [range])
+  // One-day buckets everywhere. Sizing them from the range (as the trend sparklines do)
+  // asks for multi-day buckets on an all-time range, which the analytics reads reject.
   const bucketSeconds = MEMORY_TREND_BUCKET_SECONDS
 
   const { data: overview, isLoading: overviewLoading } = useMemoryOverview({ projectId: project.id, storeId, range })
   const { data: histogram = [], isLoading: histogramLoading } = useMemoryActivityHistogram({
     projectId: project.id,
     storeId,
-    range: trendRange,
+    range: histogramRange,
     bucketSeconds,
   })
   const { data: insights, isLoading: insightsLoading } = useStoreInsights({
     projectId: project.id,
     storeId,
-    range: trendRange,
+    range,
     bucketSeconds,
   })
 
@@ -211,13 +213,8 @@ export function StoreHomeView({
 
   const denseTokens = useMemo(
     () =>
-      denseTokenSeries(
-        insights?.tokenHistory ?? [],
-        Date.parse(trendRange.fromIso),
-        Date.parse(trendRange.toIso),
-        bucketSeconds,
-      ),
-    [insights, trendRange, bucketSeconds],
+      denseTokenSeries(insights?.tokenHistory ?? [], Date.parse(range.fromIso), Date.parse(range.toIso), bucketSeconds),
+    [insights, range, bucketSeconds],
   )
   const tokenCategories = useMemo(
     () => denseTokens.map((point) => formatBucketLabel(new Date(point.startMs).toISOString(), bucketSeconds)),
@@ -259,8 +256,8 @@ export function StoreHomeView({
           tiles={tiles}
           histogram={histogram}
           bucketSeconds={bucketSeconds}
-          rangeFromIso={trendRange.fromIso}
-          rangeToIso={trendRange.toIso}
+          rangeFromIso={histogramRange.fromIso}
+          rangeToIso={histogramRange.toIso}
           isAllTime={tw.isAllTime}
           isLoading={overviewLoading || histogramLoading}
         />

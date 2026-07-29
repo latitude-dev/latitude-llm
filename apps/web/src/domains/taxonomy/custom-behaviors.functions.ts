@@ -1,4 +1,4 @@
-import { QueuePublisher } from "@domain/queue"
+import { QueuePublisher, WorkflowTerminator } from "@domain/queue"
 import { CustomBehaviorId, type FilterSet, ProjectId, toSlug } from "@domain/shared"
 import {
   CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
@@ -7,11 +7,9 @@ import {
   type CustomBehaviorStatus,
   createCustomBehavior,
   customBehaviorFilterSetSchema,
-  deleteCustomBehavior,
+  deleteCustomBehaviorWithViews,
   facetSelectionSchema,
-  isCustomBehaviorView,
   previewCustomBehaviorSampleUseCase,
-  taxonomyGardenCustomBehaviorDedupeKey,
   updateCustomBehavior,
 } from "@domain/taxonomy"
 import {
@@ -159,56 +157,32 @@ export const updateCustomBehaviorFn = createServerFn({ method: "POST" })
     return toCustomBehaviorRecord(updated)
   })
 
-const deleteCustomBehaviorLayers = (orgId: Awaited<ReturnType<typeof resolveOrgScope>>) =>
-  ({
-    postgres: withScopedPostgres(
-      Layer.mergeAll(CustomBehaviorRepositoryLive, TaxonomyClusterRepositoryLive, FacetRepositoryLive),
-      getPostgresClient(),
-      orgId,
-    ),
-    clickhouse: withScopedClickHouse(
-      Layer.mergeAll(TaxonomyViewAssignmentRepositoryLive, FacetProjectionRepositoryLive),
-      getClickhouseClient(),
-      orgId,
-    ),
-  }) as const
-
 export const deleteCustomBehaviorFn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data, context }): Promise<void> => {
     const orgId = await resolveOrgScope(context)
-    const customBehaviorId = CustomBehaviorId(data.id)
-    const layers = deleteCustomBehaviorLayers(orgId)
-
-    const idsToDelete = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* CustomBehaviorRepository
-        const target = yield* repo.findById(customBehaviorId)
-        if (target.facetId != null && !isCustomBehaviorView(target)) {
-          const behaviors = yield* repo.listByProject({ projectId: target.projectId })
-          const views = behaviors.filter(
-            (behavior) =>
-              behavior.facetId === target.facetId && isCustomBehaviorView(behavior) && behavior.id !== target.id,
-          )
-          return [...views.map((view) => view.id), target.id]
-        }
-        return [target.id]
-      }).pipe(layers.postgres, withTracing),
-    )
-
+    // Deleting stops the garden that feeds the behavior, so the use-case needs a terminator.
     const terminator = await getWorkflowTerminator()
-    for (const id of idsToDelete) {
-      await terminator.terminate(
-        taxonomyGardenCustomBehaviorDedupeKey({ organizationId: orgId, customBehaviorId: id }),
-        "behavior deleted by user",
-      )
-    }
 
-    for (const id of idsToDelete) {
-      await Effect.runPromise(
-        deleteCustomBehavior({ id }).pipe(layers.postgres, layers.clickhouse, withTracing),
-      )
-    }
+    await Effect.runPromise(
+      deleteCustomBehaviorWithViews({
+        id: CustomBehaviorId(data.id),
+        reason: "behavior deleted by user",
+      }).pipe(
+        Effect.provideService(WorkflowTerminator, terminator),
+        withScopedPostgres(
+          Layer.mergeAll(CustomBehaviorRepositoryLive, TaxonomyClusterRepositoryLive, FacetRepositoryLive),
+          getPostgresClient(),
+          orgId,
+        ),
+        withScopedClickHouse(
+          Layer.mergeAll(TaxonomyViewAssignmentRepositoryLive, FacetProjectionRepositoryLive),
+          getClickhouseClient(),
+          orgId,
+        ),
+        withTracing,
+      ),
+    )
   })
 
 export const previewCustomBehaviorSample = createServerFn({ method: "GET" })

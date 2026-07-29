@@ -1,5 +1,5 @@
-import { QueuePublisher } from "@domain/queue"
-import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { QueuePublisher, WorkflowTerminator } from "@domain/queue"
+import { createFakeQueuePublisher, createFakeWorkflowTerminator } from "@domain/queue/testing"
 import {
   ChSqlClient,
   CustomBehaviorId,
@@ -37,6 +37,7 @@ import { createFakeTaxonomyRunRepository } from "../testing/fake-taxonomy-run-re
 import { createFakeTaxonomyViewAssignmentRepository } from "../testing/fake-taxonomy-view-assignment-repository.ts"
 import { createCustomBehavior } from "./create-custom-behavior.ts"
 import { deleteCustomBehavior } from "./delete-custom-behavior.ts"
+import { deleteCustomBehaviorWithViews } from "./delete-custom-behavior-with-views.ts"
 import { generateCustomBehavior } from "./generate-custom-behavior.ts"
 import { taxonomyGardenCustomBehaviorDedupeKey } from "./trigger-project-gardening.ts"
 import { updateCustomBehavior } from "./update-custom-behavior.ts"
@@ -106,6 +107,7 @@ function makeLayer(facets: readonly TaxonomyFacet[] = []) {
   const clusterRepo = createFakeTaxonomyClusterRepository()
   const runRepo = createFakeTaxonomyRunRepository()
   const projectionRepo = createFakeFacetProjectionRepository()
+  const workflows = createFakeWorkflowTerminator()
   const layer = Layer.mergeAll(
     Layer.succeed(CustomBehaviorRepository, repository),
     Layer.succeed(FacetRepository, facetRepo.repository),
@@ -114,10 +116,11 @@ function makeLayer(facets: readonly TaxonomyFacet[] = []) {
     Layer.succeed(TaxonomyRunRepository, runRepo.repository),
     Layer.succeed(FacetProjectionRepository, projectionRepo.repository),
     Layer.succeed(QueuePublisher, queue.publisher),
+    Layer.succeed(WorkflowTerminator, workflows.terminator),
     Layer.succeed(SqlClient, createFakeSqlClient()),
     Layer.succeed(ChSqlClient, createFakeChSqlClient()),
   )
-  return { layer, rows, queue, assignments, clusterRepo, runRepo, projectionRepo, facetRepo }
+  return { layer, rows, queue, workflows, assignments, clusterRepo, runRepo, projectionRepo, facetRepo }
 }
 
 describe("createCustomBehavior", () => {
@@ -432,10 +435,111 @@ describe("deleteCustomBehavior", () => {
     expect(projectionRepo.deletedFacetIds).toEqual([])
   })
 
+  it("terminates the behavior's garden workflow with the caller's reason", async () => {
+    const { layer, workflows } = makeLayer()
+    const behavior = await Effect.runPromise(
+      Effect.gen(function* () {
+        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
+        yield* deleteCustomBehavior({ id: created.id, reason: "behavior deleted by user" })
+        return created
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(workflows.terminated).toEqual([
+      {
+        workflowId: taxonomyGardenCustomBehaviorDedupeKey({
+          organizationId: behavior.organizationId,
+          customBehaviorId: behavior.id,
+        }),
+        reason: "behavior deleted by user",
+      },
+    ])
+  })
+
   it("fails to delete a missing behavior with NotFoundError", async () => {
     const { layer } = makeLayer()
     await expect(
       Effect.runPromise(deleteCustomBehavior({ id: CustomBehaviorId("z".repeat(24)) }).pipe(Effect.provide(layer))),
+    ).rejects.toThrow()
+  })
+})
+
+describe("deleteCustomBehaviorWithViews", () => {
+  const facetId = FacetId("f".repeat(24))
+
+  const seedLens = Effect.gen(function* () {
+    const whole = yield* createCustomBehavior({
+      projectId: PROJECT_ID,
+      name: "User goal",
+      filterSet: {},
+      facetSelection: { kind: "facet", facetId },
+    })
+    const view = yield* createCustomBehavior({
+      projectId: PROJECT_ID,
+      name: "Marvin's goals",
+      filterSet: FILTER,
+      facetSelection: { kind: "facet", facetId },
+    })
+    return { whole, view }
+  })
+
+  it("deletes the lens's filtered views along with its whole-project behavior, tearing the lens down last", async () => {
+    const { layer, rows, workflows, facetRepo, projectionRepo } = makeLayer([makeFacetRow({ id: facetId })])
+    const { deleted, whole, view } = await Effect.runPromise(
+      Effect.gen(function* () {
+        const seeded = yield* seedLens
+        const result = yield* deleteCustomBehaviorWithViews({ id: seeded.whole.id, reason: "behavior deleted by user" })
+        return { deleted: result.deletedCount, ...seeded }
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(deleted).toBe(2)
+    expect(rows.size).toBe(0)
+    expect(workflows.terminated.map((termination) => termination.workflowId)).toEqual([
+      taxonomyGardenCustomBehaviorDedupeKey({ organizationId: view.organizationId, customBehaviorId: view.id }),
+      taxonomyGardenCustomBehaviorDedupeKey({ organizationId: whole.organizationId, customBehaviorId: whole.id }),
+    ])
+    // The lens survives its filtered view and dies with the whole-project behavior.
+    expect(facetRepo.rows.has(facetId)).toBe(false)
+    expect(projectionRepo.deletedFacetIds).toEqual([facetId])
+  })
+
+  it("leaves the lens and its whole-project behavior alone when only a filtered view is deleted", async () => {
+    const { layer, rows, workflows, facetRepo, projectionRepo } = makeLayer([makeFacetRow({ id: facetId })])
+    const { whole, view } = await Effect.runPromise(
+      Effect.gen(function* () {
+        const seeded = yield* seedLens
+        yield* deleteCustomBehaviorWithViews({ id: seeded.view.id })
+        return seeded
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect([...rows.keys()]).toEqual([whole.id])
+    expect(workflows.terminated.map((termination) => termination.workflowId)).toEqual([
+      taxonomyGardenCustomBehaviorDedupeKey({ organizationId: view.organizationId, customBehaviorId: view.id }),
+    ])
+    expect(facetRepo.rows.has(facetId)).toBe(true)
+    expect(projectionRepo.deletedFacetIds).toEqual([])
+  })
+
+  it("deletes a behavior with no lens on its own", async () => {
+    const { layer, rows } = makeLayer()
+    const deleted = await Effect.runPromise(
+      Effect.gen(function* () {
+        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
+        const result = yield* deleteCustomBehaviorWithViews({ id: created.id })
+        return result.deletedCount
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(deleted).toBe(1)
+    expect(rows.size).toBe(0)
+  })
+
+  it("fails with NotFoundError when the target does not exist", async () => {
+    const { layer } = makeLayer()
+    await expect(
+      Effect.runPromise(
+        deleteCustomBehaviorWithViews({ id: CustomBehaviorId("z".repeat(24)) }).pipe(Effect.provide(layer)),
+      ),
     ).rejects.toThrow()
   })
 })
