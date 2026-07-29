@@ -170,50 +170,8 @@ function collapseBlankLines(text: string): string {
   return out.join("\n").trim()
 }
 
-function rewriteHarnessBlocks(text: string): string {
-  const lower = text.toLowerCase()
-  let cursor = 0
-  let out = ""
-
-  while (cursor < text.length) {
-    let nextOpenStart = -1
-    let nextBlock: (typeof CODING_AGENT_HARNESS_BLOCKS)[number] | null = null
-
-    for (const block of CODING_AGENT_HARNESS_BLOCKS) {
-      const at = lower.indexOf(block.open, cursor)
-      if (at !== -1 && (nextOpenStart === -1 || at < nextOpenStart)) {
-        nextOpenStart = at
-        nextBlock = block
-      }
-    }
-
-    if (nextOpenStart === -1 || nextBlock === null) {
-      out += text.slice(cursor)
-      break
-    }
-
-    const openEnd = text.indexOf(">", nextOpenStart + nextBlock.open.length)
-    if (openEnd === -1) {
-      out += text.slice(cursor)
-      break
-    }
-
-    const closeStart = lower.indexOf(nextBlock.close, openEnd + 1)
-    if (closeStart === -1) {
-      out += text.slice(cursor)
-      break
-    }
-
-    out += text.slice(cursor, nextOpenStart)
-    if (nextBlock.keepInner) {
-      out += `\n${text.slice(openEnd + 1, closeStart)}\n`
-    } else {
-      out += "\n"
-    }
-    cursor = closeStart + nextBlock.close.length
-  }
-
-  return out
+function isHtmlTagNameBoundary(code: number): boolean {
+  return code === 62 || code === 32 || code === 9 || code === 10 || code === 13 || code === 47
 }
 
 function neutralizeExactPhrase(text: string, phrase: string): string {
@@ -243,8 +201,61 @@ function neutralizeClaudeMdHarnessBoilerplate(text: string): string {
   return result
 }
 
+function rewriteHarnessBlocks(text: string): string {
+  const lower = text.toLowerCase()
+  let cursor = 0
+  let out = ""
+
+  while (cursor < text.length) {
+    let nextOpenStart = -1
+    let nextBlock: (typeof CODING_AGENT_HARNESS_BLOCKS)[number] | null = null
+
+    for (const block of CODING_AGENT_HARNESS_BLOCKS) {
+      const at = lower.indexOf(block.open, cursor)
+      if (at !== -1 && (nextOpenStart === -1 || at < nextOpenStart)) {
+        nextOpenStart = at
+        nextBlock = block
+      }
+    }
+
+    if (nextOpenStart === -1 || nextBlock === null) {
+      out += text.slice(cursor)
+      break
+    }
+
+    const nameEnd = nextOpenStart + nextBlock.open.length
+    if (nameEnd >= text.length || !isHtmlTagNameBoundary(text.charCodeAt(nameEnd))) {
+      out += text.slice(cursor, nextOpenStart + 1)
+      cursor = nextOpenStart + 1
+      continue
+    }
+
+    const openEnd = text.indexOf(">", nameEnd)
+    if (openEnd === -1) {
+      out += text.slice(cursor)
+      break
+    }
+
+    const closeStart = lower.indexOf(nextBlock.close, openEnd + 1)
+    if (closeStart === -1) {
+      out += text.slice(cursor)
+      break
+    }
+
+    out += text.slice(cursor, nextOpenStart)
+    if (nextBlock.keepInner) {
+      out += `\n${neutralizeClaudeMdHarnessBoilerplate(text.slice(openEnd + 1, closeStart))}\n`
+    } else {
+      out += "\n"
+    }
+    cursor = closeStart + nextBlock.close.length
+  }
+
+  return out
+}
+
 export function stripCodingAgentHarnessWrappers(text: string): string {
-  return collapseBlankLines(neutralizeClaudeMdHarnessBoilerplate(rewriteHarnessBlocks(text)))
+  return collapseBlankLines(rewriteHarnessBlocks(text))
 }
 
 function extractJailbreakUserTexts(conversation: Pick<FlaggerConversation, "allMessages">): string[] {
