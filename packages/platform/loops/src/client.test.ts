@@ -131,6 +131,27 @@ describe("createLoopsContactsSender", () => {
     })
   })
 
+  it("sends an explicit null for heardAboutUsOther so Loops clears a replaced free-text answer", async () => {
+    const sender = createLoopsContactsSender({ apiKey: "test-key" })
+    updateContactMock.mockResolvedValueOnce(successResponse)
+
+    await Effect.runPromise(
+      sender.updateContact({
+        userId: "user_123",
+        heardAboutUs: "conference",
+        heardAboutUsOther: null,
+      }),
+    )
+
+    expect(updateContactMock).toHaveBeenCalledWith({
+      userId: "user_123",
+      properties: {
+        heardAboutUs: "conference",
+        heardAboutUsOther: null,
+      },
+    })
+  })
+
   it("propagates update failures as MarketingContactsError", async () => {
     const sender = createLoopsContactsSender({ apiKey: "test-key" })
     updateContactMock.mockRejectedValueOnce(new APIError(404, { success: false, message: "contact not found" }))
