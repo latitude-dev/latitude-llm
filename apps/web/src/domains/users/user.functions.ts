@@ -11,6 +11,11 @@ import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient } from "../../server/clients.ts"
 
+// Guarantees a calling code is present and the value is digits-only within E.164 length — not that the
+// number is dialable. Deliberately looser than the PII detector's 8-digit floor (`specs/pii-redaction.md`),
+// which is tuned against false positives in free text and would reject real 7-digit territory numbers.
+const PHONE_NUMBER_WITH_CALLING_CODE = /^\+[1-9]\d{4,14}$/
+
 const submitOnboardingSchema = z.object({
   jobTitle: z
     .string()
@@ -23,6 +28,9 @@ const submitOnboardingSchema = z.object({
       z
         .string()
         .max(64)
+        .refine((v) => v.length === 0 || PHONE_NUMBER_WITH_CALLING_CODE.test(v), {
+          message: "Phone number must include a calling code, e.g. +15550100",
+        })
         .transform((v) => (v.length > 0 ? v : undefined)),
     )
     .optional(),

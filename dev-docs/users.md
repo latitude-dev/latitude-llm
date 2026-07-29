@@ -22,3 +22,53 @@ Keeping reliability user settings small avoids:
 2. shared operational behavior depending on who is signed in
 
 User scope should shape personal UX, not shared operational policy.
+
+## Language
+
+**Calling code**:
+The E.164 dial prefix a user selects during onboarding, stored as bare digits (`34`, `1`).
+_Avoid_: country code, dial code, area code, IDD prefix
+
+**National number**:
+The subscriber portion a user types after the calling code, excluding any trunk digit.
+_Avoid_: local number, subscriber number
+
+**Phone number**:
+The composed value persisted on the user: a calling code and national number as one `+`-prefixed string.
+_Avoid_: telephone, contact number, mobile
+
+**Trunk digit**:
+The leading digit (usually `0`, `8` on `+7`) written domestically and dropped internationally.
+_Avoid_: trunk code, national prefix, leading zero
+
+## Phone number
+
+`users.phone_number` is a nullable free-text column holding a single composed value. Onboarding is the only write path; the value feeds the backoffice user detail view and the Loops marketing contact, whose purpose is a human sales or support dial.
+
+Onboarding collects the calling code and the national number as two inputs and composes them on submit. **The country is deliberately not part of the model**: not a column, not a form value, not derived at read time. Users pick from a country-labelled list purely as a finding affordance; the selection collapses to a calling code the moment it is made.
+
+That choice is irreversible for stored data and should not be "fixed" by adding a country column later. Roughly fifty countries share `+1` and four share `+44`, so no column added after the fact can recover which country a past user chose. Adding one would only describe users onboarded after the change, leaving a permanently mixed dataset.
+
+Two consequences follow and are intentional:
+
+- The picker's trigger shows a bare `+44`, never a flag. After the collapse, no single country is determinable, so any flag would be a guess. Flags appear only on list rows, where each row genuinely is one country.
+- Per-country validation is impossible, which is why no phone-parsing library is a dependency. There is nothing for one to validate against.
+
+### Default calling code
+
+The default comes from the browser's IANA timezone, resolved by scanning ICU's per-region zone lists for the current zone. Timezone is used rather than the browser locale because locale carries *language*, not location: every English-language browser maximizes to region `US`, so a Spanish developer running an English OS would silently default to `+1`. Renamed IANA zones are handled by canonicalising the input through `Intl.DateTimeFormat`, so both sides of the comparison come from the same engine's ICU and agree. Detection is feature-detected and falls back to no default.
+
+### What the server guarantees
+
+The write path enforces that a stored number carries a calling code and is digits-only within E.164 length (`+`, then 5 to 15 digits). It does **not** claim the number is dialable, since `+12345` passes.
+
+This is deliberately looser than the `phone` PII detector's 8-digit floor ([`../specs/pii-redaction.md`](../specs/pii-redaction.md)). The two have opposite risk profiles: a detector scanning free trace text must not fire on incidental digit runs, whereas a signup validator must not reject a real number. An 8-digit floor would reject genuine 7-digit numbers from `+290`, `+683` and `+690`.
+
+### Trunk digits are flagged, never stripped
+
+A national number still carrying its trunk digit is surfaced as a non-blocking hint showing what would be stored; the user decides. Auto-stripping is wrong because the leading `0` is significant on Italian landlines (`+39 06 …` is Rome), and a zero-only rule would miss `+7`, where the trunk digit is `8`.
+
+### Known gaps
+
+- The value is write-once. Account settings expose name only, so a user cannot correct a mistyped number, and the backoffice has no edit affordance. Making it editable additionally requires a marketing re-sync, since the Loops contact updates only on `UserOnboardingCompleted`.
+- Rows written before calling codes were collected hold bare national digits. They cannot be backfilled, because a calling code is not inferable from `612345678` without the country, which was never recorded. The leading `+` is the marker distinguishing a dialable value.

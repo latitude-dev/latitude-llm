@@ -25,6 +25,8 @@ export type SelectOption<V = unknown> = {
   value: V
   icon?: ReactNode
   disabled?: boolean
+  /** Text a searchable Select filters on instead of `label`, for aliases the label doesn't spell out. */
+  searchText?: string
 }
 
 export type SelectOptionGroup<V = unknown> = {

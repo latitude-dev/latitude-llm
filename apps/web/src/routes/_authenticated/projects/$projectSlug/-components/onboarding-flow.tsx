@@ -16,6 +16,7 @@ import { submitOnboarding } from "../../../../../domains/users/user.functions.ts
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../lib/form-server-action.ts"
+import { composePhoneNumber } from "../../../../../lib/phone-countries.ts"
 import { OnboardingRightPane } from "./onboarding/onboarding-right-pane.tsx"
 import * as FlaggersStep from "./onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./onboarding/steps/role-step.tsx"
@@ -25,14 +26,14 @@ import * as TelemetryStep from "./onboarding/steps/telemetry-step.tsx"
 export const ONBOARDING_STEPS = ["role", "flaggers", "slack", "telemetry"] as const
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
 
-type OnboardingFormValues = { jobTitle: string; phoneNumber: string }
+type OnboardingFormValues = { jobTitle: string; phoneCallingCode: string; phoneNumber: string }
 
 // Helper exists purely for type inference — `useForm` has 12 generic parameters and
 // `ReturnType<typeof useForm<T>>` doesn't auto-default the rest. Calling it here in a
 // never-invoked function lets TS infer the full instance type from the actual call shape.
 function _onboardingFormTypeHelper() {
   return useForm({
-    defaultValues: { jobTitle: "", phoneNumber: "" } as OnboardingFormValues,
+    defaultValues: { jobTitle: "", phoneCallingCode: "", phoneNumber: "" } as OnboardingFormValues,
   })
 }
 export type OnboardingForm = ReturnType<typeof _onboardingFormTypeHelper>
@@ -114,12 +115,18 @@ export function OnboardingFlow({
   const form = useForm({
     defaultValues: {
       jobTitle: "",
+      phoneCallingCode: "",
       phoneNumber: "",
     } satisfies OnboardingFormValues,
     onSubmit: createFormSubmitHandler(
-      async ({ jobTitle, phoneNumber }) => {
+      async ({ jobTitle, phoneCallingCode, phoneNumber }) => {
         await submitOnboarding({
-          data: { jobTitle, phoneNumber, stackChoice: "production-agent", projectId },
+          data: {
+            jobTitle,
+            phoneNumber: composePhoneNumber(phoneCallingCode, phoneNumber),
+            stackChoice: "production-agent",
+            projectId,
+          },
         })
       },
       {
@@ -132,9 +139,12 @@ export function OnboardingFlow({
   })
 
   const handleAdvanceFromRole = async () => {
-    await form.validateField("jobTitle", "change")
-    const meta = form.getFieldMeta("jobTitle")
-    if (meta && meta.errors.length > 0) return
+    await Promise.all([form.validateField("jobTitle", "change"), form.validateField("phoneNumber", "change")])
+    const hasErrors = (["jobTitle", "phoneNumber"] as const).some((name) => {
+      const meta = form.getFieldMeta(name)
+      return meta !== undefined && meta.errors.length > 0
+    })
+    if (hasErrors) return
     void form.handleSubmit()
   }
 
