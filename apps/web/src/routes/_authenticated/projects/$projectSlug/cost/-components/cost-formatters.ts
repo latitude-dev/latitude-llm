@@ -104,20 +104,24 @@ export function computeDailyAverageMicrocents({
   const fromMs = Date.parse(fromIso)
   const toMs = Date.parse(toIso)
   if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) return null
-  const edgeMs = Math.min(toMs, nowMs)
   const stepMs = bucketSeconds * 1000
+  const edgeMs = Math.min(toMs, nowMs)
 
-  let completeCount = 0
+  // The elapsed span comes from the window, never from the rows: a grouped query
+  // omits buckets with no spend, and counting only the buckets it returned would
+  // divide by days-with-spend and inflate the figure on a quiet week.
+  const firstCompleteMs = Math.ceil(fromMs / stepMs) * stepMs
+  const lastCompleteEndMs = Math.floor(edgeMs / stepMs) * stepMs
+  const completeSeconds = Math.max(0, (lastCompleteEndMs - firstCompleteMs) / 1000)
+  if (completeSeconds < DAY_SECONDS) return null
+
   let completeMicrocents = 0
   for (const bucket of buckets) {
     const startMs = Date.parse(bucket.bucketStartIso)
-    if (!Number.isFinite(startMs) || startMs < fromMs || startMs + stepMs > edgeMs) continue
-    completeCount += 1
+    if (!Number.isFinite(startMs) || startMs < firstCompleteMs || startMs >= lastCompleteEndMs) continue
     completeMicrocents += bucket.valueMicrocents
   }
 
-  const completeSeconds = completeCount * bucketSeconds
-  if (completeSeconds < DAY_SECONDS) return null
   return completeMicrocents / (completeSeconds / DAY_SECONDS)
 }
 

@@ -86,6 +86,22 @@ describe("computeDailyAverageMicrocents", () => {
     ).toBe(200)
   })
 
+  it("counts quiet days the grouped query omitted", () => {
+    // Only two of the six completed days recorded spend. Dividing by the rows
+    // present would read 0.92/day on a week that actually averaged 0.31.
+    const sparse = [bucket("2026-07-24T00:00:00.000Z", 81), bucket("2026-07-29T00:00:00.000Z", 103)]
+
+    expect(
+      computeDailyAverageMicrocents({
+        buckets: sparse,
+        bucketSeconds: DAY_SECONDS,
+        fromIso: "2026-07-23T10:00:00.000Z",
+        toIso: "2026-07-30T10:00:00.000Z",
+        nowMs: Date.parse("2026-07-30T10:00:00.000Z"),
+      }),
+    ).toBeCloseTo((81 + 103) / 6)
+  })
+
   it("has nothing to average before a full day has elapsed", () => {
     expect(
       computeDailyAverageMicrocents({

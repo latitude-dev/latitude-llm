@@ -162,7 +162,10 @@ export function CostOverTimePanel({
           />
           {provisionalIndex === undefined ? null : (
             <Text.H6 color="foregroundMuted">
-              The {metric === "total" ? "hatched" : "dashed"} {unit} is still in progress.
+              {/* A zero current bucket draws nothing, so naming the marking would point at empty space. */}
+              {(buckets[provisionalIndex]?.valueMicrocents ?? 0) > 0
+                ? `The ${metric === "total" ? "hatched" : "dashed"} ${unit} is still in progress.`
+                : `No spend recorded yet in the current ${unit} (UTC).`}
             </Text.H6>
           )}
         </div>
