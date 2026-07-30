@@ -1,12 +1,14 @@
 import { StripeSubscriptionLookup, type StripeSubscriptionRow } from "@domain/billing"
 import { type OrganizationId as OrganizationIdType, SqlClient, type SqlClientShape } from "@domain/shared"
 import { parseEnvOptional } from "@platform/env"
-import { and, desc, eq, inArray } from "drizzle-orm"
+import { and, desc, eq, inArray, isNull, lt, or } from "drizzle-orm"
 import { Effect, Layer, Result } from "effect"
 import Stripe from "stripe"
 import type { Operator } from "../client.ts"
 import { subscriptions } from "../schema/better-auth.ts"
 import { isSubscriptionPeriodStale, pickLicensedSubscriptionPeriod } from "./stripe-subscription-period.ts"
+
+const STRIPE_PERIOD_REFRESH_TIMEOUT_MS = 3_000
 
 const toRow = (result: {
   plan: string
@@ -31,6 +33,8 @@ export const StripeSubscriptionLookupLive = Layer.effect(
     const stripeClient = stripeSecretKey
       ? new Stripe(stripeSecretKey, {
           apiVersion: "2026-05-27.dahlia",
+          timeout: STRIPE_PERIOD_REFRESH_TIMEOUT_MS,
+          maxNetworkRetries: 0,
         })
       : null
 
@@ -79,7 +83,12 @@ export const StripeSubscriptionLookupLive = Layer.effect(
         Effect.tryPromise({
           try: () => stripeClient.subscriptions.retrieve(stripeSubscriptionId),
           catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
-        }),
+        }).pipe(
+          Effect.timeoutOrElse({
+            duration: STRIPE_PERIOD_REFRESH_TIMEOUT_MS,
+            orElse: () => Effect.fail(new Error("Stripe subscription period refresh timed out")),
+          }),
+        ),
       )
 
       if (Result.isFailure(retrieveResult)) {
@@ -97,15 +106,46 @@ export const StripeSubscriptionLookupLive = Layer.effect(
         return row
       }
 
-      yield* sqlClient.query((db) =>
+      const [updated] = yield* sqlClient.query((db) =>
         db
           .update(subscriptions)
           .set({
             periodStart: refreshed.periodStart,
             periodEnd: refreshed.periodEnd,
           })
-          .where(eq(subscriptions.id, result.id)),
+          .where(
+            and(
+              eq(subscriptions.id, result.id),
+              or(isNull(subscriptions.periodEnd), lt(subscriptions.periodEnd, refreshed.periodEnd)),
+            ),
+          )
+          .returning({
+            plan: subscriptions.plan,
+            status: subscriptions.status,
+            periodStart: subscriptions.periodStart,
+            periodEnd: subscriptions.periodEnd,
+            stripeCustomerId: subscriptions.stripeCustomerId,
+            stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+          }),
       )
+
+      if (!updated) {
+        const [current] = yield* sqlClient.query((db) =>
+          db
+            .select({
+              plan: subscriptions.plan,
+              status: subscriptions.status,
+              periodStart: subscriptions.periodStart,
+              periodEnd: subscriptions.periodEnd,
+              stripeCustomerId: subscriptions.stripeCustomerId,
+              stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+            })
+            .from(subscriptions)
+            .where(eq(subscriptions.id, result.id))
+            .limit(1),
+        )
+        return current ? toRow(current) : row
+      }
 
       yield* Effect.annotateCurrentSpan({
         "billing.subscription_period_refreshed": "true",
@@ -113,11 +153,7 @@ export const StripeSubscriptionLookupLive = Layer.effect(
         "billing.period_end": refreshed.periodEnd.toISOString(),
       })
 
-      return {
-        ...row,
-        periodStart: refreshed.periodStart,
-        periodEnd: refreshed.periodEnd,
-      }
+      return toRow(updated)
     })
 
     return {
