@@ -232,6 +232,10 @@ describe("ingestSpansUseCase", () => {
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("span-ingestion")
     expect(published[0]?.task).toBe("ingest")
+    expect(published[0]?.options).toEqual({
+      attempts: 10,
+      backoff: { type: "exponential", delayMs: 1_000 },
+    })
 
     const payload = published[0]?.payload as {
       fileKey: string | null
