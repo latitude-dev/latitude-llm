@@ -221,7 +221,7 @@ function BreakdownTable({
   return (
     <div className="flex flex-col gap-2">
       <Table wrapperClassName="border-0 rounded-none">
-        <TableHeader>
+        <TableHeader className="[&_tr]:border-b-0">
           <TableRow hoverable={false}>
             <SortableHead column="name" label={meta.label} align="left" isFirst {...headProps} />
             <SortableHead column="total" label="Total cost" align="right" isFirst={false} {...headProps} />
@@ -249,12 +249,8 @@ function BreakdownTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sorted.map((row, index) => (
-            <TableRow
-              key={row.key || meta.unknown}
-              borderBottom={false}
-              className={cn({ "bg-secondary/40": index % 2 === 1 })}
-            >
+          {sorted.map((row) => (
+            <TableRow key={row.key || meta.unknown} className="border-background bg-secondary/40">
               <TableCell>
                 <Text.H5 color="foreground" ellipsis noWrap>
                   {row.key || meta.unknown}
@@ -306,10 +302,9 @@ function BreakdownTable({
               }
               totalMicrocents={totals.totalMicrocents}
               showCacheColumn={showCacheColumn}
-              striped={sorted.length % 2 === 1}
             />
           ) : null}
-          <TableRow hoverable={false} borderBottom={false} className="border-t border-border">
+          <TableRow hoverable={false} borderBottom={false} className="bg-secondary">
             <TableCell>
               <Text.H5M color="foregroundMuted" noWrap>
                 {`All ${meta.plural}`}
@@ -373,16 +368,14 @@ function RemainderRow({
   label,
   totalMicrocents,
   showCacheColumn,
-  striped,
 }: {
   readonly remainder: BreakdownRemainder
   readonly label: string
   readonly totalMicrocents: number
   readonly showCacheColumn: boolean
-  readonly striped: boolean
 }) {
   return (
-    <TableRow borderBottom={false} className={cn({ "bg-secondary/40": striped })}>
+    <TableRow className="border-background bg-secondary/40">
       <TableCell>
         <Text.H5 color="foregroundMuted" ellipsis noWrap>
           {label}
