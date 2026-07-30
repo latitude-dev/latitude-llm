@@ -151,7 +151,7 @@ describe("listOrganizationsByUsageUseCase", () => {
     )
 
     expect(result.items.map((i) => i.id)).toEqual(["a"])
-    expect(result.nextCursor).toEqual({ consumedCredits: 90, organizationId: "ghost" })
+    expect(result.nextCursor).toEqual({ consumedCredits: 90, organizationId: "ghost", asOf: NOW })
   })
 
   it("forwards now and limit to the credit ranking without enriching traces on an empty page", async () => {
@@ -199,16 +199,18 @@ describe("listOrganizationsByUsageUseCase", () => {
   })
 
   it("forwards the cursor to the repository when set", async () => {
-    const capture: { lastCursor?: unknown } = {}
+    const capture: { lastNow?: Date; lastCursor?: unknown } = {}
+    const asOf = new Date("2026-04-01T00:00:00Z")
     await Effect.runPromise(
       listOrganizationsByUsageUseCase({
         now: NOW,
-        cursor: { consumedCredits: 7, organizationId: "x" },
+        cursor: { consumedCredits: 7, organizationId: "x", asOf },
       }).pipe(
         Effect.provide(orgRepo({ rows: [], hasMore: false }, new Map(), capture)),
         Effect.provide(usageRepo(new Map())),
       ),
     )
-    expect(capture.lastCursor).toEqual({ consumedCredits: 7, organizationId: "x" })
+    expect(capture.lastCursor).toEqual({ consumedCredits: 7, organizationId: "x", asOf })
+    expect(capture.lastNow).toEqual(asOf)
   })
 })

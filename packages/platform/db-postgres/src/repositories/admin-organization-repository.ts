@@ -264,8 +264,9 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           // One current-period row per org (earliest period_start wins if
           // overlapping rows exist — same tie-break as findOptionalCurrent),
-          // then rank by consumed credits. Sandbox orgs are excluded here so
-          // they never consume a page slot.
+          // then drop zero-spend rows in the outer query so the DISTINCT ON
+          // pick is not skewed by the spend filter. Sandbox orgs are excluded
+          // here so they never consume a page slot.
           const ranked = yield* sqlClient.query((db) => {
             const currentPeriods = db
               .selectDistinctOn([billingUsagePeriods.organizationId], {
@@ -278,33 +279,30 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
                 and(
                   lte(billingUsagePeriods.periodStart, now),
                   gt(billingUsagePeriods.periodEnd, now),
-                  gt(billingUsagePeriods.consumedCredits, 0),
                   isNull(organizations.parentOrgId),
                 ),
               )
               .orderBy(billingUsagePeriods.organizationId, asc(billingUsagePeriods.periodStart))
               .as("current_periods")
 
-            const base = db
-              .select({
-                organizationId: currentPeriods.organizationId,
-                consumedCredits: currentPeriods.consumedCredits,
-              })
-              .from(currentPeriods)
-
-            const filtered = cursor
-              ? base.where(
-                  sql`(
+            const spendFilter = gt(currentPeriods.consumedCredits, 0)
+            const cursorFilter = cursor
+              ? sql`(
                     ${currentPeriods.consumedCredits} < ${cursor.consumedCredits}
                     OR (
                       ${currentPeriods.consumedCredits} = ${cursor.consumedCredits}
                       AND ${currentPeriods.organizationId} > ${cursor.organizationId}
                     )
-                  )`,
-                )
-              : base
+                  )`
+              : undefined
 
-            return filtered
+            return db
+              .select({
+                organizationId: currentPeriods.organizationId,
+                consumedCredits: currentPeriods.consumedCredits,
+              })
+              .from(currentPeriods)
+              .where(cursorFilter ? and(spendFilter, cursorFilter) : spendFilter)
               .orderBy(desc(currentPeriods.consumedCredits), asc(currentPeriods.organizationId))
               .limit(limit + 1)
           })

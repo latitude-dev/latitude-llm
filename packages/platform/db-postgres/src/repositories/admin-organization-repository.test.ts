@@ -413,6 +413,7 @@ describe("AdminOrganizationRepositoryLive.listByConsumedCredits", () => {
           cursor: {
             consumedCredits: firstRow.consumedCredits,
             organizationId: firstRow.organizationId as string,
+            asOf: NOW,
           },
         })
       }),
@@ -420,5 +421,63 @@ describe("AdminOrganizationRepositoryLive.listByConsumedCredits", () => {
 
     expect(second.rows.map((r) => r.organizationId as string)).toEqual([ORG_MID, ORG_LOW])
     expect(second.hasMore).toBe(false)
+  })
+
+  it("picks the earliest overlapping current period before applying the zero-spend filter", async () => {
+    // Earliest overlapping row has 0 credits; a later overlapping row has spend.
+    // findOptionalCurrent would pick the earliest (zero) — ranking must match
+    // and therefore exclude the org rather than promote the later spend row.
+    const ORG_OVERLAP = makeId("org-credit-overlap")
+    const baseTime = new Date("2025-06-01T12:00:00.000Z")
+    const earlyStart = new Date("2026-03-15T00:00:00.000Z")
+    const lateStart = new Date("2026-04-01T00:00:00.000Z")
+    const lateEnd = new Date("2026-05-15T00:00:00.000Z")
+
+    await pg.db.insert(organizations).values({
+      id: ORG_OVERLAP,
+      name: "Overlap",
+      slug: "overlap",
+      createdAt: baseTime,
+      updatedAt: baseTime,
+    })
+    await pg.db.insert(billingUsagePeriods).values([
+      {
+        id: makeId("bup-ov-early"),
+        organizationId: ORG_OVERLAP,
+        planSlug: "free",
+        periodStart: earlyStart,
+        periodEnd: lateEnd,
+        includedCredits: 20_000,
+        consumedCredits: 0,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: makeId("bup-ov-late"),
+        organizationId: ORG_OVERLAP,
+        planSlug: "pro",
+        periodStart: lateStart,
+        periodEnd: lateEnd,
+        includedCredits: 100_000,
+        consumedCredits: 75_000,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+    ])
+
+    const page = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminOrganizationRepository
+        return yield* repo.listByConsumedCredits({ now: NOW, limit: 50 })
+      }),
+    )
+
+    expect(page.rows.map((r) => r.organizationId as string)).not.toContain(ORG_OVERLAP)
   })
 })

@@ -43,9 +43,15 @@ export type AdminOrganizationUsageSummary = z.infer<typeof adminOrganizationUsag
  * sorted by `consumedCredits DESC, organizationId ASC`, so a stable cursor
  * needs both halves: the credit count alone repeats across orgs, the id
  * alone doesn't reflect the sort dimension.
+ *
+ * `asOf` pins the billing-period + traces window for the whole listing
+ * session so a page fetched after a period boundary still ranks against
+ * the same instant as the first page (otherwise counters reset mid-scroll
+ * and rows can duplicate or vanish).
  */
 export const adminOrganizationUsageCursorSchema = z.object({
   consumedCredits: z.number().int().nonnegative(),
   organizationId: z.string().min(1),
+  asOf: z.coerce.date(),
 })
 export type AdminOrganizationUsageCursor = z.infer<typeof adminOrganizationUsageCursorSchema>

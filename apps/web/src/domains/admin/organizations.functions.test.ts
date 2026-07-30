@@ -26,7 +26,7 @@ describe("adminGetOrganizationInputSchema", () => {
 })
 
 describe("adminListOrganizationsByUsageInputSchema", () => {
-  const encodeCursor = (cursor: { consumedCredits: number; organizationId: string }): string =>
+  const encodeCursor = (cursor: { consumedCredits: number; organizationId: string; asOf: string }): string =>
     Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url")
 
   it("accepts an empty payload (first page, default limit)", () => {
@@ -34,11 +34,16 @@ describe("adminListOrganizationsByUsageInputSchema", () => {
   })
 
   it("accepts and decodes a valid base64url-encoded cursor", () => {
-    const cursor = encodeCursor({ consumedCredits: 42, organizationId: "org-1" })
+    const asOf = "2026-04-30T12:00:00.000Z"
+    const cursor = encodeCursor({ consumedCredits: 42, organizationId: "org-1", asOf })
     const result = adminListOrganizationsByUsageInputSchema.safeParse({ cursor, limit: 25 })
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.cursor).toEqual({ consumedCredits: 42, organizationId: "org-1" })
+      expect(result.data.cursor).toEqual({
+        consumedCredits: 42,
+        organizationId: "org-1",
+        asOf: new Date(asOf),
+      })
     }
   })
 
@@ -49,6 +54,13 @@ describe("adminListOrganizationsByUsageInputSchema", () => {
 
   it("rejects a cursor whose decoded shape doesn't match the schema", () => {
     const cursor = Buffer.from(JSON.stringify({ consumedCredits: -1, organizationId: "" }), "utf8").toString(
+      "base64url",
+    )
+    expect(adminListOrganizationsByUsageInputSchema.safeParse({ cursor }).success).toBe(false)
+  })
+
+  it("rejects a cursor missing asOf", () => {
+    const cursor = Buffer.from(JSON.stringify({ consumedCredits: 42, organizationId: "org-1" }), "utf8").toString(
       "base64url",
     )
     expect(adminListOrganizationsByUsageInputSchema.safeParse({ cursor }).success).toBe(false)
