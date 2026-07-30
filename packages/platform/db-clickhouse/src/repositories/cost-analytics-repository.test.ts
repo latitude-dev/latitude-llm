@@ -22,8 +22,9 @@ const toCh = (value: Date): string => value.toISOString().replace("T", " ").repl
 const traceId = (n: number) => `ca${n}`.padEnd(32, "0")
 const spanId = (n: number) => `ca${n}`.padEnd(16, "0")
 
-// The seed builders predate `cost_source`, so fixtures carry it themselves.
-type CostSpanRow = SpanRow & { cost_source: string }
+// Widened past `CostSource` so a fixture can store the empty string a row written
+// before the column carries — the state `parseCostSource` has to reclassify.
+type CostSpanRow = Omit<SpanRow, "cost_source"> & { cost_source: string }
 
 const span = (
   n: number,

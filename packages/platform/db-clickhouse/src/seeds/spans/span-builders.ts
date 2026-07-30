@@ -1,4 +1,5 @@
 import type { ModelConfig, SeedUser, ToolConfig } from "@domain/shared/seeding"
+import type { CostSource } from "@domain/spans"
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -40,6 +41,12 @@ export type SpanRow = {
   cost_output_microcents: number
   cost_total_microcents: number
   cost_is_estimated: number
+  /**
+   * Optional so hand-built test rows can omit it; ClickHouse defaults it to ''.
+   * Set it wherever a row carries cost — the `unpriced_span_count` rollups read
+   * this column raw, with none of `parseCostSource`'s fallback for empty values.
+   */
+  cost_source?: CostSource
   time_to_first_token_ns: number
   is_streaming: number
   response_id: string
@@ -271,6 +278,7 @@ function makeBaseSpan(base: SpanBase): SpanRow {
     cost_output_microcents: 0,
     cost_total_microcents: 0,
     cost_is_estimated: 0,
+    cost_source: "no_tokens",
     time_to_first_token_ns: 0,
     is_streaming: 0,
     response_id: "",
@@ -337,6 +345,7 @@ export function makeLlmSpan({
   span.cost_output_microcents = costOut
   span.cost_total_microcents = costIn + costOut
   span.cost_is_estimated = 1
+  span.cost_source = "estimated"
   span.response_id = randomResponseId(modelConfig.provider)
   span.finish_reasons = [finishReason]
   // Empty lists serialize to "" (not "[]") to match the real span writer: the
@@ -415,6 +424,7 @@ export function makeEmbeddingSpan({
   span.cost_input_microcents = costIn
   span.cost_total_microcents = costIn
   span.cost_is_estimated = 1
+  span.cost_source = "estimated"
   span.scope_name = modelConfig.scopeName
   span.scope_version = "1.0.0"
   return span
