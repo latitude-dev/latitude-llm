@@ -10,11 +10,7 @@ export const DAY_SECONDS = 24 * HOUR_SECONDS
 
 export const microcentsToUsd = (microcents: number): number => microcents / MICROCENTS_PER_USD
 
-/**
- * Bucket width for the spend chart. Cost is read per day (providers bill in UTC
- * days), so day buckets are the default and hourly only kicks in for windows too
- * short to hold a day.
- */
+/** Day buckets by default, matching how providers bill; hours only below two days. */
 export function pickCostBucketSeconds(rangeMs: number): number {
   const rangeSeconds = Math.max(1, Math.round(rangeMs / 1000))
   if (rangeSeconds <= 2 * DAY_SECONDS) return HOUR_SECONDS
@@ -28,10 +24,7 @@ const alignBucketStartMs = (ms: number, bucketSeconds: number): number => {
   return Math.floor(ms / stepMs) * stepMs
 }
 
-/**
- * Fills the gaps a grouped query leaves out. Empty buckets must render as $0
- * rather than closing the gap, or a quiet day reads as a shorter window.
- */
+/** Fills the empty buckets a grouped query omits, so a quiet day renders as $0 rather than closing the gap. */
 export function densifyCostBuckets({
   buckets,
   fromIso,
@@ -56,11 +49,7 @@ export function densifyCostBuckets({
   return dense
 }
 
-/**
- * Index of the bucket still filling up — the one whose span runs past the end of
- * the window (or past now). Without flagging it, the last bar always reads as
- * "spend is falling".
- */
+/** The bucket whose span runs past the window's end or past now, so it is still filling. */
 export function resolveIncompleteBucketIndex({
   buckets,
   bucketSeconds,
@@ -82,11 +71,8 @@ export function resolveIncompleteBucketIndex({
 }
 
 /**
- * Spend per day over the buckets that have fully elapsed. Dividing the window's
- * total by its nominal length instead makes the figure crater every morning and
- * climb all day on unchanged usage, because the newest bucket is always partial.
- * Null until a full day has elapsed inside the window — there is nothing to
- * average yet, and extrapolating from a few hours would be a projection.
+ * Spend per day over the buckets that have fully elapsed. Null until a full day
+ * has elapsed in the window, rather than extrapolating from a partial one.
  */
 export function computeDailyAverageMicrocents({
   buckets,
@@ -107,9 +93,7 @@ export function computeDailyAverageMicrocents({
   const stepMs = bucketSeconds * 1000
   const edgeMs = Math.min(toMs, nowMs)
 
-  // The elapsed span comes from the window, never from the rows: a grouped query
-  // omits buckets with no spend, and counting only the buckets it returned would
-  // divide by days-with-spend and inflate the figure on a quiet week.
+  // From the window, never the rows: a grouped query omits buckets with no spend.
   const firstCompleteMs = Math.ceil(fromMs / stepMs) * stepMs
   const lastCompleteEndMs = Math.floor(edgeMs / stepMs) * stepMs
   const completeSeconds = Math.max(0, (lastCompleteEndMs - firstCompleteMs) / 1000)
@@ -125,11 +109,7 @@ export function computeDailyAverageMicrocents({
   return completeMicrocents / (completeSeconds / DAY_SECONDS)
 }
 
-/**
- * Bucket labels in UTC. `toLocaleDateString` without a timezone would shift a
- * `00:00Z` day bucket onto the previous day for western viewers — a chart of UTC
- * buckets with local labels is the silently-wrong combination.
- */
+/** UTC labels: without the timezone, a `00:00Z` day bucket shifts onto the previous day for western viewers. */
 export function formatUtcBucketLabel(bucketStartIso: string, bucketSeconds: number): string {
   const date = new Date(bucketStartIso)
   if (Number.isNaN(date.getTime())) return bucketStartIso

@@ -23,9 +23,7 @@ const SOURCE_LABEL: Record<ClassifiedUnpricedPair["source"], string> = {
 
 function ProvenanceLine({ confidence }: { readonly confidence: CostConfidenceRecord }) {
   const recorded = confidence.verifiedMicrocents + confidence.estimatedMicrocents
-  // The provider-reported share is a statement of method, not a quality score:
-  // almost no instrumentation reports cost, so it never moves. Priced coverage
-  // above is the figure that does.
+  // States the method rather than a quality: almost nothing reports cost, so it never moves.
   const verifiedShare = recorded > 0 ? confidence.verifiedMicrocents / recorded : 0
 
   return (
@@ -81,10 +79,7 @@ function GapPairList({ pairs }: { readonly pairs: readonly ClassifiedUnpricedPai
   )
 }
 
-/**
- * What the page can and cannot stand behind. Load-bearing rather than a footnote:
- * every figure above is only as exact as the pricing behind it.
- */
+/** What the page can stand behind: every figure above is only as exact as the pricing behind it. */
 export function CostConfidenceStrip({
   confidence,
   isLoading,
@@ -104,8 +99,7 @@ export function CostConfidenceStrip({
   const coverage = confidence.pricedCoverage
   const hasGap = confidence.gapPairs.length > 0
   const isBelowThreshold = coverage !== null && coverage < COVERAGE_WARNING_THRESHOLD
-  // A pre-`costSource` row cannot say whether its zero was free or unpriced, so
-  // coverage over such a window is reconstructed from today's pricing, not read.
+  // A pre-`costSource` zero cannot say whether it was free or unpriced.
   const isLowerBound = confidence.unknownTokens > 0
 
   return (

@@ -68,7 +68,7 @@ export interface CostOverview {
    */
   readonly tracesWithUsage: number
   readonly avgPerTraceMicrocents: number
-  /** Highest total spend in the window, not highest unit price. Null when the window is empty. */
+  /** Highest total spend in the window, not highest unit price. Null when no model spent anything. */
   readonly topSpendModel: CostModelSpend | null
   readonly confidence: CostConfidence
 }

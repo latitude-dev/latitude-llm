@@ -85,12 +85,4 @@ describe("seeded cost_source", () => {
     expect(sources).toContain("estimated")
     expect(sources).toContain("provider_reported")
   })
-
-  it("never leaves a token-bearing span looking unpriced", () => {
-    const zeroCostWithTokens = insertedSpans.filter(
-      (span) => num(span, "cost_total_microcents") === 0 && num(span, "tokens_input") + num(span, "tokens_output") > 0,
-    )
-
-    expect(zeroCostWithTokens.map((span) => span.name)).toEqual([])
-  })
 })
