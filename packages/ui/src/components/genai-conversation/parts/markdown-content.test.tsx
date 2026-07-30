@@ -86,6 +86,37 @@ describe("MarkdownContent", () => {
     expect(markup).toMatch(/Show [\d,]+ more characters/)
   })
 
+  // Text with no `data-source-*` cannot be annotated: the popover opens, then the thumb click resolves to no anchor.
+  describe("source coverage", () => {
+    function sourceSpans(markup: string, content: string) {
+      return [...markup.matchAll(/data-source-start="(\d+)" data-source-end="(\d+)"/g)].map(([, start, end]) =>
+        content.slice(Number(start), Number(end)),
+      )
+    }
+
+    it("keeps offsets on both sides of a soft line break", () => {
+      const content = "line one\nline two"
+      const markup = renderToStaticMarkup(<MarkdownContent content={content} />)
+
+      expect(markup).toContain("<br/>")
+      expect(sourceSpans(markup, content)).toEqual(["line one", "line two"])
+    })
+
+    it("maps every line of a multi-line paragraph", () => {
+      const content = "Heyyy this is a test.\nName: Ada\nRole: engineer"
+      const markup = renderToStaticMarkup(<MarkdownContent content={content} />)
+
+      expect(sourceSpans(markup, content)).toEqual(["Heyyy this is a test.", "Name: Ada", "Role: engineer"])
+    })
+
+    it("maps raw HTML blocks, which render as escaped text", () => {
+      const content = "<system-reminder>\nbe brief\n</system-reminder>\n\nAfter"
+      const markup = renderToStaticMarkup(<MarkdownContent content={content} />)
+
+      expect(sourceSpans(markup, content)).toEqual(["<system-reminder>\nbe brief\n</system-reminder>", "After"])
+    })
+  })
+
   it("routes JSON object content to the JSON code-block renderer", () => {
     const json = '{"hello":"world","n":42}'
     const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
