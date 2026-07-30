@@ -11,9 +11,14 @@ const COVERAGE_WARNING_THRESHOLD = 0.98
 const GAP_PAIRS_SHOWN = 5
 
 const CAUSE_LABEL: Record<ClassifiedUnpricedPair["cause"], string> = {
-  missingPricing: "no pricing",
+  missingPricing: "no known pricing",
   ingestGap: "priced now, recorded at $0",
   freePricing: "free",
+}
+
+const SOURCE_LABEL: Record<ClassifiedUnpricedPair["source"], string> = {
+  unpriced: "unpriced at ingest",
+  unknown: "before cost sources were tracked",
 }
 
 function ProvenanceLine({ confidence }: { readonly confidence: CostConfidenceRecord }) {
@@ -57,9 +62,16 @@ function GapPairList({ pairs }: { readonly pairs: readonly ClassifiedUnpricedPai
           <Text.H6 color="foregroundMuted" noWrap>
             {pair.provider || "unknown provider"} · {formatCount(pair.tokens)} tokens · {formatCount(pair.calls)} calls
           </Text.H6>
-          <Badge variant="muted" size="small">
-            {CAUSE_LABEL[pair.cause]}
-          </Badge>
+          <Tooltip
+            asChild
+            trigger={
+              <Badge variant="muted" size="small">
+                {CAUSE_LABEL[pair.cause]}
+              </Badge>
+            }
+          >
+            {SOURCE_LABEL[pair.source]}
+          </Tooltip>
         </div>
       ))}
       {pairs.length > GAP_PAIRS_SHOWN ? (
@@ -92,6 +104,9 @@ export function CostConfidenceStrip({
   const coverage = confidence.pricedCoverage
   const hasGap = confidence.gapPairs.length > 0
   const isBelowThreshold = coverage !== null && coverage < COVERAGE_WARNING_THRESHOLD
+  // A pre-`costSource` row cannot say whether its zero was free or unpriced, so
+  // coverage over such a window is reconstructed from today's pricing, not read.
+  const isLowerBound = confidence.unknownTokens > 0
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
@@ -104,10 +119,18 @@ export function CostConfidenceStrip({
               color={isBelowThreshold ? "warningMutedForeground" : "foregroundMuted"}
             />
             <Text.H5 color="foreground" className="tabular-nums">
-              {coverage === null ? "No billable usage yet" : `${formatPercentage(coverage)} of usage priced`}
+              {coverage === null
+                ? "No billable usage yet"
+                : `${isLowerBound ? "At least " : ""}${formatPercentage(coverage)} of usage priced`}
             </Text.H5>
           </div>
           <ProvenanceLine confidence={confidence} />
+          {isLowerBound ? (
+            <Text.H6 color="foregroundMuted">
+              {formatCount(confidence.unknownTokens)} tokens predate cost-source tracking, so their zero cannot be read
+              as free or unpriced.
+            </Text.H6>
+          ) : null}
         </div>
         {hasGap ? (
           <div className="flex flex-col gap-1">

@@ -115,7 +115,7 @@ export type {
   CostSeriesBucket,
   CostSeriesMetric,
   CostSeriesModelSlice,
-  CostUnpricedPair,
+  CostZeroCostPair,
 } from "./ports/cost-analytics-repository.ts"
 export { COST_SERIES_METRICS, CostAnalyticsRepository } from "./ports/cost-analytics-repository.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"

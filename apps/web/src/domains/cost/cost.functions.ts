@@ -25,6 +25,11 @@ export interface CostConfidenceRecord {
   readonly gapCalls: number
   readonly gapPairs: readonly ClassifiedUnpricedPair[]
   readonly freeTokens: number
+  /** Spans whose cost is excluded from the total, for the shared rollup cost display. */
+  readonly unpricedCalls: number
+  /** Zero-cost usage stored before `costSource` existed, so coverage is a lower bound. */
+  readonly unknownTokens: number
+  readonly unknownCalls: number
 }
 
 export interface CostOverviewRecord {
@@ -64,7 +69,7 @@ export const getCostOverview = createServerFn({ method: "GET" })
         const overview = yield* repo.getCostOverview(toScope(orgId, data))
         const { confidence } = overview
         const unpriced = summarizeUnpricedUsage({
-          candidatePairs: confidence.unpricedCandidatePairs,
+          zeroCostPairs: confidence.zeroCostPairs,
           billableTokens: confidence.billableTokens,
         })
         return {
@@ -81,6 +86,9 @@ export const getCostOverview = createServerFn({ method: "GET" })
             gapCalls: unpriced.gapCalls,
             gapPairs: unpriced.pairs.filter(isUnpricedGap),
             freeTokens: unpriced.freeTokens,
+            unpricedCalls: confidence.unpricedCalls,
+            unknownTokens: confidence.unknownTokens,
+            unknownCalls: confidence.unknownCalls,
           },
         }
       }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),

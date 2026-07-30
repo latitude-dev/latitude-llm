@@ -6,9 +6,9 @@ import type {
   CostSeriesBucket,
   CostSeriesMetric,
   CostSeriesModelSlice,
-  CostUnpricedPair,
+  CostZeroCostPair,
 } from "@domain/spans"
-import { CostAnalyticsRepository } from "@domain/spans"
+import { CostAnalyticsRepository, costSourceSchema } from "@domain/spans"
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { USAGE_OPERATIONS_SQL } from "../metric-sql/helpers.ts"
@@ -21,7 +21,7 @@ const OTHER_MODELS_LABEL = "Other models"
 // Distinct provider/model pairs listed for the unpriced-usage disclosure. Priced
 // coverage is derived from these after classification, so the cap has to be
 // generous enough that truncation can't hide a real pricing gap.
-const UNPRICED_PAIR_LIMIT = 50
+const ZERO_COST_PAIR_LIMIT = 50
 
 // The spans table's primary-key prefix, so range scans stay index-bound.
 const SCOPE_FILTER = `organization_id = {organizationId:String}
@@ -35,8 +35,20 @@ const SCOPE_FILTER = `organization_id = {organizationId:String}
 const BILLABLE_FILTER = `${SCOPE_FILTER}
   AND operation IN ${USAGE_OPERATIONS_SQL}`
 
-// Tokens recorded but nothing charged for them.
-const UNPRICED_PREDICATE = "cost_total_microcents = 0 AND tokens_total > 0"
+const COST_SOURCE_VALUES_SQL = `(${costSourceSchema.options.map((value) => `'${value}'`).join(", ")})`
+
+// SQL mirror of `parseCostSource`: rows stored before the column read back empty,
+// a non-zero cost still says which side it came from, and a zero with tokens among
+// them cannot say whether it was free or unpriced — so it stays `unknown`.
+const COST_SOURCE = `if(
+  cost_source IN ${COST_SOURCE_VALUES_SQL},
+  cost_source,
+  if(
+    cost_total_microcents > 0,
+    if(cost_is_estimated = 1, 'estimated', 'provider_reported'),
+    if(tokens_total > 0, 'unknown', 'no_tokens')
+  )
+)`
 
 const BUCKET_START = `toDateTime(
   intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
@@ -67,7 +79,9 @@ type OverviewRow = {
   traces_with_usage: string
   billable_tokens: string
   unpriced_tokens: string
-  unpriced_traces: string
+  unpriced_calls: string
+  unknown_tokens: string
+  unknown_calls: string
 }
 
 type TopSpendRow = {
@@ -76,11 +90,12 @@ type TopSpendRow = {
   cost_microcents: string
 }
 
-type UnpricedPairRow = {
+type ZeroCostPairRow = {
   provider: string
   model: string
   tokens: string
   calls: string
+  cost_source: string
 }
 
 type ModelSeriesRow = {
@@ -94,11 +109,12 @@ type TraceSeriesRow = {
   value_microcents: number
 }
 
-const toUnpricedPair = (row: UnpricedPairRow): CostUnpricedPair => ({
+const toZeroCostPair = (row: ZeroCostPairRow): CostZeroCostPair => ({
   provider: normalizeCHString(row.provider),
   model: normalizeCHString(row.model),
   tokens: num(row.tokens),
   calls: num(row.calls),
+  source: row.cost_source === "unpriced" ? "unpriced" : "unknown",
 })
 
 export const CostAnalyticsRepositoryLive = Layer.effect(
@@ -111,18 +127,25 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const params = scopeParams(input)
-              const [overviewResult, topSpendResult, unpricedResult] = await Promise.all([
+              const [overviewResult, topSpendResult, zeroCostResult] = await Promise.all([
                 client.query({
+                  // `cost_source` is resolved in a subquery so the aggregates below
+                  // can filter on it without nesting inside the alias.
                   query: `SELECT
                         sum(cost_total_microcents) AS total_microcents,
-                        sumIf(cost_total_microcents, cost_is_estimated = 0) AS verified_microcents,
-                        sumIf(cost_total_microcents, cost_is_estimated = 1) AS estimated_microcents,
+                        sumIf(cost_total_microcents, cost_source = 'provider_reported') AS verified_microcents,
+                        sumIf(cost_total_microcents, cost_source = 'estimated') AS estimated_microcents,
                         uniqExact(trace_id) AS traces_with_usage,
                         sum(tokens_total) AS billable_tokens,
-                        sumIf(tokens_total, ${UNPRICED_PREDICATE}) AS unpriced_tokens,
-                        uniqExactIf(trace_id, ${UNPRICED_PREDICATE}) AS unpriced_traces
-                      FROM spans
-                      WHERE ${BILLABLE_FILTER}`,
+                        sumIf(tokens_total, cost_source = 'unpriced') AS unpriced_tokens,
+                        countIf(cost_source = 'unpriced') AS unpriced_calls,
+                        sumIf(tokens_total, cost_source = 'unknown') AS unknown_tokens,
+                        countIf(cost_source = 'unknown') AS unknown_calls
+                      FROM (
+                        SELECT trace_id, tokens_total, cost_total_microcents, ${COST_SOURCE} AS cost_source
+                        FROM spans
+                        WHERE ${BILLABLE_FILTER}
+                      )`,
                   query_params: params,
                   format: "JSONEachRow",
                 }),
@@ -139,27 +162,35 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                   format: "JSONEachRow",
                 }),
                 client.query({
+                  // Both zero-cost buckets: what ingestion called unpriced, and
+                  // pre-`cost_source` rows it can't speak for. The caller decides
+                  // which are real gaps by re-reading the pricing registry.
                   query: `SELECT
                         provider,
                         model,
+                        cost_source,
                         sum(tokens_total) AS tokens,
                         count() AS calls
-                      FROM spans
-                      WHERE ${BILLABLE_FILTER} AND ${UNPRICED_PREDICATE}
-                      GROUP BY provider, model
+                      FROM (
+                        SELECT provider, model, tokens_total, ${COST_SOURCE} AS cost_source
+                        FROM spans
+                        WHERE ${BILLABLE_FILTER}
+                      )
+                      WHERE cost_source IN ('unpriced', 'unknown')
+                      GROUP BY provider, model, cost_source
                       ORDER BY tokens DESC, model ASC
                       LIMIT {pairLimit:UInt16}`,
-                  query_params: { ...params, pairLimit: UNPRICED_PAIR_LIMIT },
+                  query_params: { ...params, pairLimit: ZERO_COST_PAIR_LIMIT },
                   format: "JSONEachRow",
                 }),
               ])
               const overviewRows = await overviewResult.json<OverviewRow>()
               const topSpendRows = await topSpendResult.json<TopSpendRow>()
-              const unpricedRows = await unpricedResult.json<UnpricedPairRow>()
-              return { overviewRows, topSpendRows, unpricedRows }
+              const zeroCostRows = await zeroCostResult.json<ZeroCostPairRow>()
+              return { overviewRows, topSpendRows, zeroCostRows }
             })
             .pipe(
-              Effect.map(({ overviewRows, topSpendRows, unpricedRows }): CostOverview => {
+              Effect.map(({ overviewRows, topSpendRows, zeroCostRows }): CostOverview => {
                 const row = overviewRows[0]
                 const totalMicrocents = num(row?.total_microcents)
                 const tracesWithUsage = num(row?.traces_with_usage)
@@ -179,9 +210,11 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                     verifiedMicrocents: num(row?.verified_microcents),
                     estimatedMicrocents: num(row?.estimated_microcents),
                     billableTokens: num(row?.billable_tokens),
-                    unpricedCandidateTokens: num(row?.unpriced_tokens),
-                    unpricedCandidateTraces: num(row?.unpriced_traces),
-                    unpricedCandidatePairs: unpricedRows.map(toUnpricedPair),
+                    unpricedTokens: num(row?.unpriced_tokens),
+                    unpricedCalls: num(row?.unpriced_calls),
+                    unknownTokens: num(row?.unknown_tokens),
+                    unknownCalls: num(row?.unknown_calls),
+                    zeroCostPairs: zeroCostRows.map(toZeroCostPair),
                   },
                 }
               }),
@@ -218,6 +251,7 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                         WHERE ${BILLABLE_FILTER}
                       )
                       GROUP BY bucket_start, model
+                      HAVING cost_microcents > 0
                       ORDER BY bucket_start ASC, cost_microcents DESC, model ASC`,
                   query_params: { ...params, modelLimit: SERIES_MODEL_LIMIT, otherLabel: OTHER_MODELS_LABEL },
                   format: "JSONEachRow",

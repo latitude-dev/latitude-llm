@@ -1,22 +1,35 @@
 import { describe, expect, it } from "vitest"
+import type { CostZeroCostPair } from "../ports/cost-analytics-repository.ts"
 import { classifyUnpricedPair, summarizeUnpricedUsage } from "./classify-unpriced-cost.ts"
 
-const pair = (provider: string, model: string, tokens = 1_000, calls = 10) => ({ provider, model, tokens, calls })
+const pair = (provider: string, model: string, tokens = 1_000, calls = 10): CostZeroCostPair => ({
+  provider,
+  model,
+  tokens,
+  calls,
+  source: "unpriced",
+})
 
 describe("classifyUnpricedPair", () => {
-  it("reports a model the registry prices as an ingest gap", () => {
+  it("calls a pair the registry prices today a repairable ingest gap", () => {
     expect(classifyUnpricedPair(pair("anthropic", "claude-sonnet-4-5")).cause).toBe("ingestGap")
   })
 
-  it("reports an unknown model as missing pricing", () => {
+  it("calls a pair the registry still cannot price a standing gap", () => {
     expect(classifyUnpricedPair(pair("acme-proxy", "our-own-llama")).cause).toBe("missingPricing")
+  })
+
+  it("classifies a pre-cost-source row the same way, from the registry alone", () => {
+    const legacy = { ...pair("acme-proxy", "our-own-llama"), source: "unknown" } as const
+
+    expect(classifyUnpricedPair(legacy)).toMatchObject({ cause: "missingPricing", source: "unknown" })
   })
 })
 
 describe("summarizeUnpricedUsage", () => {
   it("keeps free models out of the gap figures", () => {
     const summary = summarizeUnpricedUsage({
-      candidatePairs: [pair("acme-proxy", "our-own-llama", 400, 4)],
+      zeroCostPairs: [pair("acme-proxy", "our-own-llama", 400, 4)],
       billableTokens: 1_000,
     })
 
@@ -26,13 +39,13 @@ describe("summarizeUnpricedUsage", () => {
   })
 
   it("reads full coverage when nothing is unpriced", () => {
-    const summary = summarizeUnpricedUsage({ candidatePairs: [], billableTokens: 1_000 })
+    const summary = summarizeUnpricedUsage({ zeroCostPairs: [], billableTokens: 1_000 })
 
     expect(summary.gapTokens).toBe(0)
     expect(summary.pricedCoverage).toBe(1)
   })
 
   it("has no coverage to report without billable tokens", () => {
-    expect(summarizeUnpricedUsage({ candidatePairs: [], billableTokens: 0 }).pricedCoverage).toBeNull()
+    expect(summarizeUnpricedUsage({ zeroCostPairs: [], billableTokens: 0 }).pricedCoverage).toBeNull()
   })
 })

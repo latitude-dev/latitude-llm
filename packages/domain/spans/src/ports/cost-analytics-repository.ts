@@ -1,5 +1,6 @@
 import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
 import { Context, type Effect } from "effect"
+import type { CostSource } from "../entities/span.ts"
 
 /**
  * Repository port for cost analytics (ClickHouse spans table).
@@ -79,7 +80,8 @@ export interface CostModelSpend {
 }
 
 /**
- * How much of the window's spend we can stand behind.
+ * How much of the window's spend we can stand behind, read from each span's
+ * `costSource` rather than inferred from a zero.
  *
  * `verifiedMicrocents` is spend the provider reported; the remainder is priced
  * by Latitude from token counts. In practice almost nothing is provider-reported,
@@ -93,27 +95,37 @@ export interface CostConfidence {
   /** Denominator for priced coverage: all tokens on billable spans in the window. */
   readonly billableTokens: number
   /**
-   * Tokens on spans carrying no cost, which contribute nothing to
-   * `totalMicrocents` — the window's spend is understated by whatever they
-   * would have cost.
-   *
-   * These are *candidates*, not confirmed pricing gaps: SQL cannot tell a
-   * missing price from a legitimately free model (a `:free` variant or a
-   * customer's own model both correctly cost nothing). The pricing registry is
-   * the only authority, so callers classify `candidatePairs` through
-   * `getCostSpec` before presenting a number — otherwise the figure cries wolf.
+   * Usage ingestion recorded as `unpriced`: tokens that contributed nothing to
+   * `totalMicrocents`, so the window's spend is understated by whatever they
+   * would have cost. A decided pricing gap, not a guess about a zero.
    */
-  readonly unpricedCandidateTokens: number
-  readonly unpricedCandidateTraces: number
-  /** The provider/model pairs behind the candidate tokens, largest first. */
-  readonly unpricedCandidatePairs: readonly CostUnpricedPair[]
+  readonly unpricedTokens: number
+  readonly unpricedCalls: number
+  /**
+   * Zero-cost usage stored before `costSource` existed. Such a row cannot say
+   * whether it was free or unpriced, so it is neither counted as a gap nor
+   * waved through: while this is non-zero, priced coverage is a lower bound.
+   */
+  readonly unknownTokens: number
+  readonly unknownCalls: number
+  /**
+   * Provider/model pairs behind both buckets, largest first.
+   *
+   * Still classify these through `getCostSpec` before presenting a figure. What
+   * the registry says *now* is what makes a gap actionable: a pair ingestion
+   * marked `unpriced` that prices today is a repairable ingest gap, while one
+   * that prices at zero was always free and must not be reported as missing.
+   */
+  readonly zeroCostPairs: readonly CostZeroCostPair[]
 }
 
-export interface CostUnpricedPair {
+export interface CostZeroCostPair {
   readonly provider: string
   readonly model: string
   readonly tokens: number
   readonly calls: number
+  /** Whether ingestion decided this was unpriced, or the row predates `costSource`. */
+  readonly source: Extract<CostSource, "unpriced" | "unknown">
 }
 
 export class CostAnalyticsRepository extends Context.Service<CostAnalyticsRepository, CostAnalyticsRepositoryShape>()(

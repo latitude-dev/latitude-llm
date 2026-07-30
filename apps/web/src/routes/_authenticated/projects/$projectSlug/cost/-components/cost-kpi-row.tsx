@@ -3,6 +3,7 @@ import { formatCount, formatPrice } from "@repo/utils"
 import { InfoIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import type { CostOverviewRecord } from "../../../../../../domains/cost/cost.functions.ts"
+import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { bucketUnitLabel, microcentsToUsd } from "./cost-formatters.ts"
 
 const DASH = "—"
@@ -67,13 +68,20 @@ export function CostKpiRow({
   const topSpend = overview?.topSpendModel
   const perTrace = overview?.avgPerTraceMicrocents ?? 0
   const unit = bucketUnitLabel(bucketSeconds)
+  // The same rollup vocabulary the traces and sessions tables use, so a total of
+  // zero reads as "not known" rather than as free.
+  const total = rollupCostDisplay({
+    costTotalMicrocents: overview?.totalMicrocents ?? 0,
+    unpricedSpanCount: (overview?.confidence.unpricedCalls ?? 0) + (overview?.confidence.unknownCalls ?? 0),
+    tokensTotal: overview?.confidence.billableTokens ?? 0,
+  })
 
   return (
     <div className="flex flex-row flex-wrap gap-3 rounded-lg bg-secondary p-4">
       <KpiTile
         label="Total spend"
-        value={formatPrice(microcentsToUsd(overview?.totalMicrocents ?? 0))}
-        hint="Cost recorded on billable LLM calls in this window. Excludes tool and wrapper spans, which carry no usage."
+        value={total.label}
+        hint={`Cost recorded on billable LLM calls in this window. Excludes tool and wrapper spans, which carry no usage.${total.note ? ` ${total.note}` : ""}`}
         isLoading={isLoading}
       />
       <KpiTile

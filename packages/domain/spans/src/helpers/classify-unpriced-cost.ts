@@ -1,20 +1,23 @@
 import { getCostSpec, type ModelCostTier } from "@domain/models"
-import type { CostUnpricedPair } from "../ports/cost-analytics-repository.ts"
+import type { CostZeroCostPair } from "../ports/cost-analytics-repository.ts"
 
 /**
- * Why a provider/model pair recorded usage but no cost.
+ * Why a provider/model pair carried tokens but no cost, decided by what the
+ * pricing registry says *now* about a pair whose cost was already recorded as
+ * zero. `costSource` says what happened at ingest; this says what to do about it.
  *
- * - `missingPricing` — the registry has no price for the pair, so cost stayed 0
- *   silently. A real gap: the window's spend is understated.
- * - `ingestGap` — the registry prices the pair today, yet stored cost is 0. Past
- *   ingest ran without pricing (or with a different model string); repairable.
+ * - `missingPricing` — the registry still has no price. A standing gap: the
+ *   window's spend is understated and only a catalog entry fixes it.
+ * - `ingestGap` — the registry prices the pair today, so the zero is stale.
+ *   Re-ingesting recovers the spend; this is what a pricing or alias fix leaves
+ *   behind in already-stored rows.
  * - `freePricing` — the registry prices the pair at zero. `:free` variants and
- *   self-hosted models genuinely cost nothing, so this is not a gap.
+ *   self-hosted models genuinely cost nothing, so this is not a gap at all.
  */
 export const UNPRICED_CAUSES = ["missingPricing", "ingestGap", "freePricing"] as const
 export type UnpricedCause = (typeof UNPRICED_CAUSES)[number]
 
-export interface ClassifiedUnpricedPair extends CostUnpricedPair {
+export interface ClassifiedUnpricedPair extends CostZeroCostPair {
   readonly cause: UnpricedCause
 }
 
@@ -42,7 +45,7 @@ export interface UnpricedUsageSummary {
 const hasNonZeroRate = (tier: ModelCostTier): boolean =>
   [tier.input, tier.output, tier.reasoning, tier.cacheRead, tier.cacheWrite].some((rate) => (rate ?? 0) > 0)
 
-export function classifyUnpricedPair(pair: CostUnpricedPair): ClassifiedUnpricedPair {
+export function classifyUnpricedPair(pair: CostZeroCostPair): ClassifiedUnpricedPair {
   const { cost, costImplemented } = getCostSpec(pair.provider, pair.model)
   if (!costImplemented) return { ...pair, cause: "missingPricing" }
   const priced = Array.isArray(cost) ? cost.some(hasNonZeroRate) : hasNonZeroRate(cost)
@@ -52,13 +55,13 @@ export function classifyUnpricedPair(pair: CostUnpricedPair): ClassifiedUnpriced
 export const isUnpricedGap = (pair: ClassifiedUnpricedPair): boolean => pair.cause !== "freePricing"
 
 export function summarizeUnpricedUsage({
-  candidatePairs,
+  zeroCostPairs,
   billableTokens,
 }: {
-  readonly candidatePairs: readonly CostUnpricedPair[]
+  readonly zeroCostPairs: readonly CostZeroCostPair[]
   readonly billableTokens: number
 }): UnpricedUsageSummary {
-  const pairs = candidatePairs.map(classifyUnpricedPair)
+  const pairs = zeroCostPairs.map(classifyUnpricedPair)
   const gaps = pairs.filter(isUnpricedGap)
   const free = pairs.filter((pair) => !isUnpricedGap(pair))
   const gapTokens = gaps.reduce((sum, pair) => sum + pair.tokens, 0)

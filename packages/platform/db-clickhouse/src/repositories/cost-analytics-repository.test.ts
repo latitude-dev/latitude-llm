@@ -22,6 +22,9 @@ const toCh = (value: Date): string => value.toISOString().replace("T", " ").repl
 const traceId = (n: number) => `ca${n}`.padEnd(32, "0")
 const spanId = (n: number) => `ca${n}`.padEnd(16, "0")
 
+// The seed builders predate `cost_source`, so fixtures carry it themselves.
+type CostSpanRow = SpanRow & { cost_source: string }
+
 const span = (
   n: number,
   startTime: Date,
@@ -33,8 +36,9 @@ const span = (
     costTotal?: number
     isEstimated?: boolean
     tokensInput?: number
+    costSource?: string
   } = {},
-): SpanRow =>
+): CostSpanRow =>
   ({
     organization_id: ORG_ID,
     project_id: PROJECT_ID,
@@ -69,6 +73,7 @@ const span = (
     cost_output_microcents: 0,
     cost_total_microcents: opts.costTotal ?? 0,
     cost_is_estimated: opts.isEstimated ? 1 : 0,
+    cost_source: opts.costSource ?? "",
     time_to_first_token_ns: 0,
     is_streaming: 0,
     response_id: "",
@@ -88,7 +93,7 @@ const span = (
     resource_string: {},
     scope_name: "",
     scope_version: "",
-  }) satisfies SpanRow
+  }) satisfies CostSpanRow
 
 const ch = setupTestClickHouse()
 
@@ -112,15 +117,25 @@ describe("CostAnalyticsRepositoryLive", () => {
     await Effect.runPromise(
       insertJsonEachRow(ch.client, "spans", [
         // Trace 1: two billable spans, plus a tool span that must not count.
-        span(1, DAY1, { trace: 1, costTotal: 300, isEstimated: true }),
-        span(2, DAY1, { trace: 1, costTotal: 100, isEstimated: true, model: "gpt-4o-mini" }),
+        span(1, DAY1, { trace: 1, costTotal: 300, isEstimated: true, costSource: "estimated" }),
+        span(2, DAY1, { trace: 1, costTotal: 100, isEstimated: true, costSource: "estimated", model: "gpt-4o-mini" }),
         span(3, DAY1, { trace: 1, operation: "execute_tool", costTotal: 9_999 }),
-        // Trace 2: provider-reported cost.
-        span(4, DAY2, { trace: 2, costTotal: 200, isEstimated: false }),
-        // Trace 3: tokens but no cost — an unpriced candidate.
-        span(5, DAY2, { trace: 3, costTotal: 0, tokensInput: 500, model: "mystery-1", provider: "acme" }),
+        // Trace 2: cost the provider reported.
+        span(4, DAY2, { trace: 2, costTotal: 200, costSource: "provider_reported" }),
+        // Trace 3: ingestion could not price the model, so the total understates spend.
+        span(5, DAY2, {
+          trace: 3,
+          costSource: "unpriced",
+          tokensInput: 500,
+          model: "mystery-1",
+          provider: "acme",
+        }),
         // Trace 4: tool spans only — must never reach a denominator.
         span(6, DAY2, { trace: 4, operation: "execute_tool", costTotal: 7_777 }),
+        // Trace 5: stored before `cost_source` existed, so its zero is ambiguous.
+        span(7, DAY2, { trace: 5, costSource: "", tokensInput: 300, model: "legacy-1", provider: "acme" }),
+        // Trace 6: priced at zero — genuinely free, and must not read as a gap.
+        span(8, DAY2, { trace: 6, costSource: "estimated", tokensInput: 100, model: "freebie-1", provider: "acme" }),
       ]),
     )
   })
@@ -135,25 +150,39 @@ describe("CostAnalyticsRepositoryLive", () => {
     it("counts only traces with billable usage in the per-trace denominator", async () => {
       const overview = await runCh(repo.getCostOverview(scope))
 
-      expect(overview.tracesWithUsage).toBe(3)
-      expect(overview.avgPerTraceMicrocents).toBe(200)
+      // Traces 1, 2, 3, 5, 6 — the tool-only trace 4 is excluded.
+      expect(overview.tracesWithUsage).toBe(5)
+      expect(overview.avgPerTraceMicrocents).toBe(120)
     })
 
-    it("splits provider-reported from estimated spend", async () => {
+    it("splits provider-reported from estimated spend by cost source", async () => {
       const { confidence } = await runCh(repo.getCostOverview(scope))
 
       expect(confidence.verifiedMicrocents).toBe(200)
       expect(confidence.estimatedMicrocents).toBe(400)
-      expect(confidence.billableTokens).toBe(500)
+      expect(confidence.billableTokens).toBe(900)
     })
 
-    it("reports zero-cost usage as candidate pairs", async () => {
+    it("counts what ingestion recorded as unpriced, and nothing else", async () => {
       const { confidence } = await runCh(repo.getCostOverview(scope))
 
-      expect(confidence.unpricedCandidateTokens).toBe(500)
-      expect(confidence.unpricedCandidateTraces).toBe(1)
-      expect(confidence.unpricedCandidatePairs).toEqual([
-        { provider: "acme", model: "mystery-1", tokens: 500, calls: 1 },
+      expect(confidence.unpricedTokens).toBe(500)
+      expect(confidence.unpricedCalls).toBe(1)
+    })
+
+    it("keeps pre-cost-source zeros in their own bucket", async () => {
+      const { confidence } = await runCh(repo.getCostOverview(scope))
+
+      expect(confidence.unknownTokens).toBe(300)
+      expect(confidence.unknownCalls).toBe(1)
+    })
+
+    it("lists both zero-cost buckets but never a model priced at zero", async () => {
+      const { confidence } = await runCh(repo.getCostOverview(scope))
+
+      expect(confidence.zeroCostPairs).toEqual([
+        { provider: "acme", model: "mystery-1", tokens: 500, calls: 1, source: "unpriced" },
+        { provider: "acme", model: "legacy-1", tokens: 300, calls: 1, source: "unknown" },
       ])
     })
 
@@ -179,11 +208,18 @@ describe("CostAnalyticsRepositoryLive", () => {
       ])
     })
 
+    it("leaves models that spent nothing in the bucket out of the stack", async () => {
+      const buckets = await runCh(repo.getCostSeries({ ...scope, metric: "total", bucketSeconds: DAY_SECONDS }))
+
+      // Day 2 carries three zero-cost models beside the one that spent.
+      expect(buckets[1]?.byModel).toEqual([{ model: "gpt-4o", costMicrocents: 200 }])
+    })
+
     it("summarises per-trace cost for the non-additive metrics", async () => {
       const buckets = await runCh(repo.getCostSeries({ ...scope, metric: "average", bucketSeconds: DAY_SECONDS }))
 
-      // Day 1 holds one trace worth 400; day 2 holds a 200 trace and a 0 trace.
-      expect(buckets.map((bucket) => bucket.valueMicrocents)).toEqual([400, 100])
+      // Day 1 holds one trace worth 400; day 2 holds a 200 trace and three at 0.
+      expect(buckets.map((bucket) => bucket.valueMicrocents)).toEqual([400, 50])
       expect(buckets.every((bucket) => bucket.byModel.length === 0)).toBe(true)
     })
   })
