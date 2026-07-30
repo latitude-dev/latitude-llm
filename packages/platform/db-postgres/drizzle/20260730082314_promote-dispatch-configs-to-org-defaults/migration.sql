@@ -5,8 +5,7 @@
 -- An empty target overrides the default with nothing, so clear it to inherit before promoting.
 UPDATE "latitude"."agent_dispatch_configs"
 SET target = NULL, updated_at = now()
-WHERE project_id IS NOT NULL AND target = '{}'::jsonb;
-
+WHERE project_id IS NOT NULL AND target = '{}'::jsonb;--> statement-breakpoint
 INSERT INTO "latitude"."agent_dispatch_configs" (id, organization_id, project_id, integration_id, kind, enabled, triggers, target, guardrails)
 SELECT DISTINCT ON (c.integration_id)
   substr(md5(gen_random_uuid()::text), 1, 24),
