@@ -22,15 +22,15 @@
 -- are preserved. The count carries the same operation gate as the cost sums, so a non-zero count
 -- always means the cost total beside it understates real spend.
 
+-- Must stay one ALTER. Every ALTER on a replicated table bumps the shared metadata version, and the
+-- next one fails with code 517 until each server has caught up; split into three, the retry re-runs
+-- the first and re-bumps the version, so it never converges. The commands still apply in order, so
+-- each AFTER can name the column added before it.
 ALTER TABLE spans ON CLUSTER default
     ADD COLUMN IF NOT EXISTS cost_source LowCardinality(String)
-        DEFAULT '' CODEC(ZSTD(1)) AFTER cost_is_estimated;
-
-ALTER TABLE spans ON CLUSTER default
+        DEFAULT '' CODEC(ZSTD(1)) AFTER cost_is_estimated,
     ADD COLUMN IF NOT EXISTS cost_priced_provider LowCardinality(String)
-        DEFAULT '' CODEC(ZSTD(1)) AFTER cost_source;
-
-ALTER TABLE spans ON CLUSTER default
+        DEFAULT '' CODEC(ZSTD(1)) AFTER cost_source,
     ADD COLUMN IF NOT EXISTS cost_priced_model LowCardinality(String)
         DEFAULT '' CODEC(ZSTD(1)) AFTER cost_priced_provider;
 
@@ -152,12 +152,8 @@ DROP VIEW IF EXISTS traces_mv ON CLUSTER default;
 DROP VIEW IF EXISTS sessions_mv ON CLUSTER default;
 
 ALTER TABLE spans ON CLUSTER default
-    DROP COLUMN IF EXISTS cost_source;
-
-ALTER TABLE spans ON CLUSTER default
-    DROP COLUMN IF EXISTS cost_priced_provider;
-
-ALTER TABLE spans ON CLUSTER default
+    DROP COLUMN IF EXISTS cost_source,
+    DROP COLUMN IF EXISTS cost_priced_provider,
     DROP COLUMN IF EXISTS cost_priced_model;
 
 ALTER TABLE traces ON CLUSTER default
