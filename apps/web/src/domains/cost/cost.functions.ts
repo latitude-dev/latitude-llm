@@ -46,6 +46,9 @@ export interface CostSeriesBucketRecord {
   readonly byModel: readonly { readonly model: string; readonly costMicrocents: number }[]
 }
 
+// Well above what any window the picker offers can ask for at its bucket width.
+const MAX_SERIES_BUCKETS = 1_000
+
 const costScopeSchema = z.object({
   projectId: z.string(),
   fromIso: z.string().datetime(),
@@ -70,6 +73,8 @@ export const getCostOverview = createServerFn({ method: "GET" })
         const { confidence } = overview
         const unpriced = summarizeUnpricedUsage({
           zeroCostPairs: confidence.zeroCostPairs,
+          zeroCostTokens: confidence.unpricedTokens + confidence.unknownTokens,
+          zeroCostCalls: confidence.unpricedCalls + confidence.unknownCalls,
           billableTokens: confidence.billableTokens,
         })
         return {
@@ -97,14 +102,25 @@ export const getCostOverview = createServerFn({ method: "GET" })
 
 export const getCostSeries = createServerFn({ method: "GET" })
   .inputValidator(
-    costScopeSchema.extend({
-      metric: z.enum(COST_SERIES_METRICS),
-      bucketSeconds: z
-        .number()
-        .int()
-        .positive()
-        .max(90 * 24 * 60 * 60),
-    }),
+    costScopeSchema
+      .extend({
+        metric: z.enum(COST_SERIES_METRICS),
+        bucketSeconds: z
+          .number()
+          .int()
+          .positive()
+          .max(90 * 24 * 60 * 60),
+      })
+      // Validating the width alone leaves the bucket *count* unbounded: fine
+      // buckets over a wide window would aggregate and return millions of rows.
+      .refine(
+        (input) =>
+          (Date.parse(input.toIso) - Date.parse(input.fromIso)) / (input.bucketSeconds * 1000) <= MAX_SERIES_BUCKETS,
+        {
+          message: `The window and bucket width must yield at most ${MAX_SERIES_BUCKETS} buckets`,
+          path: ["bucketSeconds"],
+        },
+      ),
   )
   .handler(async ({ data, context }): Promise<readonly CostSeriesBucketRecord[]> => {
     const orgId = await resolveOrgScope(context)

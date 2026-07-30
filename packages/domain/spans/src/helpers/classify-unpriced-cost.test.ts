@@ -30,6 +30,8 @@ describe("summarizeUnpricedUsage", () => {
   it("keeps free models out of the gap figures", () => {
     const summary = summarizeUnpricedUsage({
       zeroCostPairs: [pair("acme-proxy", "our-own-llama", 400, 4)],
+      zeroCostTokens: 400,
+      zeroCostCalls: 4,
       billableTokens: 1_000,
     })
 
@@ -39,13 +41,35 @@ describe("summarizeUnpricedUsage", () => {
   })
 
   it("reads full coverage when nothing is unpriced", () => {
-    const summary = summarizeUnpricedUsage({ zeroCostPairs: [], billableTokens: 1_000 })
+    const summary = summarizeUnpricedUsage({
+      zeroCostPairs: [],
+      zeroCostTokens: 0,
+      zeroCostCalls: 0,
+      billableTokens: 1_000,
+    })
 
     expect(summary.gapTokens).toBe(0)
     expect(summary.pricedCoverage).toBe(1)
   })
 
   it("has no coverage to report without billable tokens", () => {
-    expect(summarizeUnpricedUsage({ zeroCostPairs: [], billableTokens: 0 }).pricedCoverage).toBeNull()
+    expect(
+      summarizeUnpricedUsage({ zeroCostPairs: [], zeroCostTokens: 0, zeroCostCalls: 0, billableTokens: 0 })
+        .pricedCoverage,
+    ).toBeNull()
+  })
+
+  it("derives the gap from the exact totals, so a capped pair list cannot flatter coverage", () => {
+    // The list shows one free pair; the exact totals say far more went unpriced.
+    const summary = summarizeUnpricedUsage({
+      zeroCostPairs: [{ provider: "acme-proxy", model: "our-own-llama", tokens: 100, calls: 1, source: "unpriced" }],
+      zeroCostTokens: 900,
+      zeroCostCalls: 9,
+      billableTokens: 1_000,
+    })
+
+    expect(summary.gapTokens).toBe(900)
+    expect(summary.gapCalls).toBe(9)
+    expect(summary.pricedCoverage).toBeCloseTo(0.1)
   })
 })

@@ -54,24 +54,40 @@ export function classifyUnpricedPair(pair: CostZeroCostPair): ClassifiedUnpriced
 
 export const isUnpricedGap = (pair: ClassifiedUnpricedPair): boolean => pair.cause !== "freePricing"
 
+/**
+ * `zeroCostTokens` / `zeroCostCalls` are the window's exact totals; `zeroCostPairs`
+ * is a capped list for display. The gap is therefore derived by subtracting what
+ * the registry vouches for from the exact total, never by re-summing the pairs —
+ * summing a truncated list would silently report coverage better than reality,
+ * which is the one thing this figure exists to catch.
+ *
+ * Truncation can only ever hide a *free* pair, so it biases coverage low. Pairs
+ * arrive largest-first, so the hidden ones are the smallest.
+ */
 export function summarizeUnpricedUsage({
   zeroCostPairs,
+  zeroCostTokens,
+  zeroCostCalls,
   billableTokens,
 }: {
   readonly zeroCostPairs: readonly CostZeroCostPair[]
+  readonly zeroCostTokens: number
+  readonly zeroCostCalls: number
   readonly billableTokens: number
 }): UnpricedUsageSummary {
   const pairs = zeroCostPairs.map(classifyUnpricedPair)
   const gaps = pairs.filter(isUnpricedGap)
   const free = pairs.filter((pair) => !isUnpricedGap(pair))
-  const gapTokens = gaps.reduce((sum, pair) => sum + pair.tokens, 0)
+  const freeTokens = free.reduce((sum, pair) => sum + pair.tokens, 0)
+  const freeCalls = free.reduce((sum, pair) => sum + pair.calls, 0)
+  const gapTokens = Math.max(0, zeroCostTokens - freeTokens)
   return {
     pairs,
     gapTokens,
-    gapCalls: gaps.reduce((sum, pair) => sum + pair.calls, 0),
+    gapCalls: Math.max(0, zeroCostCalls - freeCalls),
     gapPairCount: gaps.length,
-    freeTokens: free.reduce((sum, pair) => sum + pair.tokens, 0),
-    freeCalls: free.reduce((sum, pair) => sum + pair.calls, 0),
+    freeTokens,
+    freeCalls,
     pricedCoverage: billableTokens > 0 ? Math.max(0, 1 - gapTokens / billableTokens) : null,
   }
 }
