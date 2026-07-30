@@ -1,7 +1,12 @@
 import { Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { useMemo } from "react"
-import { useCostOverview, useCostSeries } from "../../../../../domains/cost/cost.collection.ts"
+import {
+  useCostBreakdown,
+  useCostOverview,
+  useCostSeries,
+  useModelUsageSeries,
+} from "../../../../../domains/cost/cost.collection.ts"
 import { useFeatureFlagGate } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../domains/traces/traces.collection.ts"
@@ -10,16 +15,21 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { CostBreakdownPanel } from "./-components/cost-breakdown-panel.tsx"
 import { CostConfidenceStrip } from "./-components/cost-confidence-strip.tsx"
 import {
   computeDailyAverageMicrocents,
   densifyCostBuckets,
+  densifyModelUsageBuckets,
+  isCostBreakdownDimension,
   isCostSeriesMetric,
+  isModelUsageMeasure,
   pickCostBucketSeconds,
   resolveIncompleteBucketIndex,
 } from "./-components/cost-formatters.ts"
 import { CostKpiRow } from "./-components/cost-kpi-row.tsx"
 import { CostOverTimePanel } from "./-components/cost-over-time-panel.tsx"
+import { ModelUsagePanel } from "./-components/model-usage-panel.tsx"
 
 function CostBreadcrumb() {
   return <BreadcrumbText variant="current">Cost</BreadcrumbText>
@@ -44,6 +54,8 @@ function CostPageContent() {
     lastActivityIso: lastTraceAt,
   })
   const [metric, setMetric] = useParamState("costMetric", "total", { validate: isCostSeriesMetric })
+  const [dimension, setDimension] = useParamState("costDimension", "model", { validate: isCostBreakdownDimension })
+  const [usageMeasure, setUsageMeasure] = useParamState("costUsage", "cost", { validate: isModelUsageMeasure })
   const costDashboard = useFeatureFlagGate("costDashboard")
 
   // One window for the KPIs and the chart, so the two can be reconciled.
@@ -77,6 +89,18 @@ function CostPageContent() {
     bucketSeconds,
     enabled,
   })
+  const { data: modelUsage, isLoading: modelUsageLoading } = useModelUsageSeries({
+    projectId: project.id,
+    range,
+    bucketSeconds,
+    enabled,
+  })
+  const { data: breakdown, isLoading: breakdownLoading } = useCostBreakdown({
+    projectId: project.id,
+    range,
+    dimension,
+    enabled,
+  })
 
   const buckets = useMemo(
     () => densifyCostBuckets({ buckets: series, ...range, bucketSeconds }),
@@ -85,6 +109,23 @@ function CostPageContent() {
   const provisionalIndex = useMemo(
     () => resolveIncompleteBucketIndex({ buckets, bucketSeconds, toIso: range.toIso, nowMs: Date.now() }),
     [buckets, bucketSeconds, range.toIso],
+  )
+  const denseModelUsage = useMemo(
+    () =>
+      modelUsage
+        ? { ...modelUsage, buckets: densifyModelUsageBuckets({ buckets: modelUsage.buckets, ...range, bucketSeconds }) }
+        : undefined,
+    [modelUsage, range, bucketSeconds],
+  )
+  const modelUsageProvisionalIndex = useMemo(
+    () =>
+      resolveIncompleteBucketIndex({
+        buckets: denseModelUsage?.buckets ?? [],
+        bucketSeconds,
+        toIso: range.toIso,
+        nowMs: Date.now(),
+      }),
+    [denseModelUsage, bucketSeconds, range.toIso],
   )
   const dailyAverageMicrocents = useMemo(
     () => computeDailyAverageMicrocents({ buckets: totalSeries, bucketSeconds, ...range, nowMs: Date.now() }),
@@ -133,6 +174,23 @@ function CostPageContent() {
           rangeToIso={range.toIso}
           isAllTime={tw.isAllTime}
           isLoading={seriesLoading}
+        />
+        <ModelUsagePanel
+          series={denseModelUsage}
+          measure={usageMeasure}
+          onMeasureChange={setUsageMeasure}
+          bucketSeconds={bucketSeconds}
+          provisionalIndex={modelUsageProvisionalIndex}
+          rangeFromIso={range.fromIso}
+          rangeToIso={range.toIso}
+          isAllTime={tw.isAllTime}
+          isLoading={modelUsageLoading}
+        />
+        <CostBreakdownPanel
+          breakdown={breakdown}
+          dimension={dimension}
+          onDimensionChange={setDimension}
+          isLoading={breakdownLoading}
         />
         <CostConfidenceStrip confidence={overview?.confidence} isLoading={overviewLoading} />
       </div>

@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest"
 import {
   computeDailyAverageMicrocents,
+  costPerCallMultiple,
   DAY_SECONDS,
   densifyCostBuckets,
+  densifyModelUsageBuckets,
+  formatCostMultiple,
   formatUtcBucketLabel,
   pickCostBucketSeconds,
   resolveIncompleteBucketIndex,
+  shareOf,
 } from "./cost-formatters.ts"
 
 const bucket = (bucketStartIso: string, valueMicrocents: number) => ({
@@ -33,6 +37,60 @@ describe("densifyCostBuckets", () => {
 
     expect(dense.map((b) => b.valueMicrocents)).toEqual([0, 500, 0])
     expect(dense[0]?.bucketStartIso).toBe("2026-07-19T00:00:00.000Z")
+  })
+})
+
+describe("densifyModelUsageBuckets", () => {
+  it("fills quiet buckets with an empty model set rather than closing the gap", () => {
+    const dense = densifyModelUsageBuckets({
+      buckets: [
+        {
+          bucketStartIso: "2026-07-20T00:00:00.000Z",
+          byModel: [{ model: "gpt-4o", costMicrocents: 500, tokens: 10 }],
+          other: { costMicrocents: 5, tokens: 1 },
+        },
+      ],
+      fromIso: "2026-07-19T00:00:00.000Z",
+      toIso: "2026-07-21T00:00:00.000Z",
+      bucketSeconds: DAY_SECONDS,
+    })
+
+    expect(dense.map((b) => b.bucketStartIso)).toEqual(["2026-07-19T00:00:00.000Z", "2026-07-20T00:00:00.000Z"])
+    expect(dense[0]).toEqual({
+      bucketStartIso: "2026-07-19T00:00:00.000Z",
+      byModel: [],
+      other: { costMicrocents: 0, tokens: 0 },
+    })
+  })
+})
+
+describe("shareOf", () => {
+  it("is null without a denominator, so an unknown share never reads as 0%", () => {
+    expect(shareOf(0, 0)).toBeNull()
+    expect(shareOf(3, 12)).toBe(0.25)
+  })
+})
+
+describe("costPerCallMultiple", () => {
+  it("compares a row's cost per call against the window average", () => {
+    expect(costPerCallMultiple({ totalMicrocents: 1_000, calls: 10, avgPerCallMicrocents: 50 })).toBe(2)
+  })
+
+  it("has no baseline when nothing was called or nothing was spent", () => {
+    expect(costPerCallMultiple({ totalMicrocents: 1_000, calls: 0, avgPerCallMicrocents: 50 })).toBeNull()
+    expect(costPerCallMultiple({ totalMicrocents: 0, calls: 10, avgPerCallMicrocents: 0 })).toBeNull()
+  })
+})
+
+describe("formatCostMultiple", () => {
+  it("keeps a decimal where the comparison is close and drops it where it is not", () => {
+    expect(formatCostMultiple(2.34)).toBe("2.3×")
+    expect(formatCostMultiple(0.3)).toBe("0.3×")
+    expect(formatCostMultiple(41.6)).toBe("42×")
+  })
+
+  it("does not round a real difference down to zero", () => {
+    expect(formatCostMultiple(0.004)).toBe("<0.1×")
   })
 })
 

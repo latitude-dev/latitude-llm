@@ -11,6 +11,10 @@ import { CostAnalyticsRepositoryLive } from "./cost-analytics-repository.ts"
 const ORG_ID = OrganizationId("o".repeat(24))
 // Own project so fixtures from other suites can't leak into the aggregates.
 const PROJECT_ID = ProjectId("costanalytics00000000000")
+// Separate projects so the overview's exact totals stay readable while the
+// breakdown and model-usage fixtures grow their own shapes.
+const BREAKDOWN_PROJECT_ID = ProjectId("costbreakdown00000000000")
+const MODEL_USAGE_PROJECT_ID = ProjectId("costmodelusage0000000000")
 
 const DAY1 = new Date("2026-06-01T10:00:00.000Z")
 const DAY2 = new Date("2026-06-02T10:00:00.000Z")
@@ -26,23 +30,25 @@ const spanId = (n: number) => `ca${n}`.padEnd(16, "0")
 // before the column carries — the state `parseCostSource` has to reclassify.
 type CostSpanRow = Omit<SpanRow, "cost_source"> & { cost_source: string }
 
-const span = (
-  n: number,
-  startTime: Date,
-  opts: {
-    trace?: number
-    operation?: string
-    model?: string
-    provider?: string
-    costTotal?: number
-    isEstimated?: boolean
-    tokensInput?: number
-    costSource?: string
-  } = {},
-): CostSpanRow =>
+type SpanOpts = {
+  project?: ProjectId
+  trace?: number
+  operation?: string
+  model?: string
+  provider?: string
+  serviceName?: string
+  costTotal?: number
+  costInput?: number
+  costOutput?: number
+  isEstimated?: boolean
+  tokensInput?: number
+  costSource?: string
+}
+
+const span = (n: number, startTime: Date, opts: SpanOpts = {}): CostSpanRow =>
   ({
     organization_id: ORG_ID,
-    project_id: PROJECT_ID,
+    project_id: opts.project ?? PROJECT_ID,
     session_id: "",
     user_id: "",
     trace_id: traceId(opts.trace ?? n),
@@ -53,7 +59,7 @@ const span = (
     start_time: toCh(startTime),
     end_time: toCh(new Date(startTime.getTime() + 1_000)),
     name: "ca-span",
-    service_name: "ca-service",
+    service_name: opts.serviceName ?? "ca-service",
     kind: 0,
     status_code: 0,
     status_message: "",
@@ -70,8 +76,8 @@ const span = (
     tokens_cache_read: 0,
     tokens_cache_create: 0,
     tokens_reasoning: 0,
-    cost_input_microcents: 0,
-    cost_output_microcents: 0,
+    cost_input_microcents: opts.costInput ?? 0,
+    cost_output_microcents: opts.costOutput ?? 0,
     cost_total_microcents: opts.costTotal ?? 0,
     cost_is_estimated: opts.isEstimated ? 1 : 0,
     cost_source: opts.costSource ?? "",
@@ -102,6 +108,23 @@ const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
   Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
 
 const scope = { organizationId: ORG_ID, projectId: PROJECT_ID, from: FROM, to: TO }
+const breakdownScope = { ...scope, projectId: BREAKDOWN_PROJECT_ID }
+const modelUsageScope = { ...scope, projectId: MODEL_USAGE_PROJECT_ID }
+
+const breakdownSpan = (n: number, startTime: Date, opts: Omit<SpanOpts, "project">): CostSpanRow =>
+  span(n, startTime, { ...opts, project: BREAKDOWN_PROJECT_ID })
+
+// Seven models whose spend order is the exact reverse of their token order, so a
+// ranking that used volume instead of spend would be visible in the assertions.
+const MODEL_USAGE_MODELS = [
+  { model: "mu1", costTotal: 700, tokensInput: 10 },
+  { model: "mu2", costTotal: 600, tokensInput: 20 },
+  { model: "mu3", costTotal: 500, tokensInput: 30 },
+  { model: "mu4", costTotal: 400, tokensInput: 40 },
+  { model: "mu5", costTotal: 300, tokensInput: 50 },
+  { model: "mu6", costTotal: 200, tokensInput: 60 },
+  { model: "mu7", costTotal: 100, tokensInput: 70 },
+] as const
 
 describe("CostAnalyticsRepositoryLive", () => {
   let repo: CostAnalyticsRepositoryShape
@@ -137,6 +160,65 @@ describe("CostAnalyticsRepositoryLive", () => {
         span(7, DAY2, { trace: 5, costSource: "", tokensInput: 300, model: "legacy-1", provider: "acme" }),
         // Trace 6: priced at zero — genuinely free, and must not read as a gap.
         span(8, DAY2, { trace: 6, costSource: "estimated", tokensInput: 100, model: "freebie-1", provider: "acme" }),
+
+        // Breakdown fixture: gpt-4o spans both traces, gpt-4o-mini only one, so a
+        // per-dimension average divided by every trace would read differently.
+        breakdownSpan(11, DAY1, {
+          trace: 11,
+          model: "gpt-4o",
+          serviceName: "api",
+          costTotal: 1_000,
+          costInput: 700,
+          costOutput: 200,
+          costSource: "estimated",
+        }),
+        breakdownSpan(12, DAY1, {
+          trace: 11,
+          model: "gpt-4o-mini",
+          serviceName: "api",
+          costTotal: 200,
+          costInput: 150,
+          costOutput: 50,
+          costSource: "estimated",
+        }),
+        breakdownSpan(13, DAY2, {
+          trace: 12,
+          model: "gpt-4o",
+          serviceName: "worker",
+          costTotal: 500,
+          costInput: 300,
+          costOutput: 100,
+          costSource: "estimated",
+        }),
+        breakdownSpan(14, DAY2, {
+          trace: 12,
+          model: "mystery-1",
+          provider: "acme",
+          operation: "embeddings",
+          serviceName: "worker",
+          costSource: "unpriced",
+          tokensInput: 400,
+        }),
+        breakdownSpan(15, DAY2, { trace: 12, operation: "execute_tool", serviceName: "worker", costTotal: 9_999 }),
+
+        ...MODEL_USAGE_MODELS.map((entry, index) =>
+          span(21 + index, DAY1, {
+            project: MODEL_USAGE_PROJECT_ID,
+            trace: 21,
+            model: entry.model,
+            costTotal: entry.costTotal,
+            costSource: "estimated",
+            tokensInput: entry.tokensInput,
+          }),
+        ),
+        span(28, DAY2, {
+          project: MODEL_USAGE_PROJECT_ID,
+          trace: 22,
+          model: "mu1",
+          costTotal: 50,
+          costSource: "estimated",
+          tokensInput: 5,
+        }),
       ]),
     )
   })
@@ -222,6 +304,108 @@ describe("CostAnalyticsRepositoryLive", () => {
       // Day 1 holds one trace worth 400; day 2 holds a 200 trace and three at 0.
       expect(buckets.map((bucket) => bucket.valueMicrocents)).toEqual([400, 50])
       expect(buckets.every((bucket) => bucket.byModel.length === 0)).toBe(true)
+    })
+  })
+
+  describe("getCostBreakdown", () => {
+    it("orders rows by spend and excludes non-billable operations", async () => {
+      const { rows } = await runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "model" }))
+
+      expect(rows.map((row) => row.key)).toEqual(["gpt-4o", "gpt-4o-mini", "mystery-1"])
+      expect(rows.map((row) => row.totalMicrocents)).toEqual([1_500, 200, 0])
+    })
+
+    it("closes each row with a cache-and-other remainder", async () => {
+      const { rows } = await runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "model" }))
+
+      const gpt4o = rows[0]
+      expect(gpt4o?.inputMicrocents).toBe(1_000)
+      expect(gpt4o?.outputMicrocents).toBe(300)
+      expect(gpt4o?.cacheAndOtherMicrocents).toBe(200)
+      expect(
+        rows.every(
+          (row) => row.inputMicrocents + row.outputMicrocents + row.cacheAndOtherMicrocents === row.totalMicrocents,
+        ),
+      ).toBe(true)
+    })
+
+    it("divides a row by the traces containing that value, not by every trace", async () => {
+      const { rows, totals } = await runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "model" }))
+
+      // gpt-4o-mini appears in one of the two traces: 200/1, never 200/2.
+      const mini = rows.find((row) => row.key === "gpt-4o-mini")
+      expect(mini?.tracesWithValue).toBe(1)
+      expect(mini?.avgPerTraceMicrocents).toBe(200)
+      expect(rows[0]?.tracesWithValue).toBe(2)
+      expect(rows[0]?.avgPerTraceMicrocents).toBe(750)
+      expect(totals.tracesWithUsage).toBe(2)
+    })
+
+    it("reports unpriced usage on the row whose total it understates", async () => {
+      const { rows } = await runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "model" }))
+
+      const mystery = rows.find((row) => row.key === "mystery-1")
+      expect(mystery?.unpricedTokens).toBe(400)
+      expect(mystery?.unpricedCalls).toBe(1)
+      expect(rows[0]?.unpricedCalls).toBe(0)
+    })
+
+    it("totals the window rather than the returned rows", async () => {
+      const { totals } = await runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "model" }))
+
+      expect(totals.totalMicrocents).toBe(1_700)
+      expect(totals.calls).toBe(4)
+      expect(totals.avgPerCallMicrocents).toBe(425)
+      expect(totals.distinctValues).toBe(3)
+    })
+
+    it("groups by provider, operation, and service from the same measures", async () => {
+      const [byProvider, byOperation, byService] = await Promise.all([
+        runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "provider" })),
+        runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "operation" })),
+        runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "service" })),
+      ])
+
+      expect(byProvider.rows.map((row) => [row.key, row.totalMicrocents])).toEqual([
+        ["openai", 1_700],
+        ["acme", 0],
+      ])
+      expect(byOperation.rows.map((row) => [row.key, row.totalMicrocents])).toEqual([
+        ["chat", 1_700],
+        ["embeddings", 0],
+      ])
+      expect(byService.rows.map((row) => [row.key, row.totalMicrocents])).toEqual([
+        ["api", 1_200],
+        ["worker", 500],
+      ])
+    })
+  })
+
+  describe("getModelUsageSeries", () => {
+    it("ranks the charted models by spend, not by token volume", async () => {
+      const series = await runCh(repo.getModelUsageSeries({ ...modelUsageScope, bucketSeconds: DAY_SECONDS }))
+
+      expect(series.models).toEqual(["mu1", "mu2", "mu3", "mu4", "mu5", "mu6"])
+      // mu7 carries the most tokens of any model and is still the one collapsed.
+      expect(series.otherModels).toBe(1)
+    })
+
+    it("collapses the models outside the ranks into each bucket's other slice", async () => {
+      const series = await runCh(repo.getModelUsageSeries({ ...modelUsageScope, bucketSeconds: DAY_SECONDS }))
+
+      expect(series.buckets[0]?.other).toEqual({ costMicrocents: 100, tokens: 70 })
+      expect(series.buckets[1]?.other).toEqual({ costMicrocents: 0, tokens: 0 })
+    })
+
+    it("carries cost and tokens per model per UTC day from one query", async () => {
+      const series = await runCh(repo.getModelUsageSeries({ ...modelUsageScope, bucketSeconds: DAY_SECONDS }))
+
+      expect(series.buckets.map((bucket) => bucket.bucketStart.toISOString())).toEqual([
+        "2026-06-01T00:00:00.000Z",
+        "2026-06-02T00:00:00.000Z",
+      ])
+      expect(series.buckets[0]?.byModel).toContainEqual({ model: "mu1", costMicrocents: 700, tokens: 10 })
+      expect(series.buckets[1]?.byModel).toEqual([{ model: "mu1", costMicrocents: 50, tokens: 5 }])
     })
   })
 })

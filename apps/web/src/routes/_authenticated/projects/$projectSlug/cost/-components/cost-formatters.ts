@@ -1,8 +1,24 @@
-import { COST_SERIES_METRICS, type CostSeriesMetric } from "@domain/spans"
-import type { CostSeriesBucketRecord } from "../../../../../../domains/cost/cost.functions.ts"
+import {
+  COST_BREAKDOWN_DIMENSIONS,
+  COST_SERIES_METRICS,
+  type CostBreakdownDimension,
+  type CostSeriesMetric,
+} from "@domain/spans"
+import { formatPrice } from "@repo/utils"
+import type { CostSeriesBucketRecord, ModelUsageBucketRecord } from "../../../../../../domains/cost/cost.functions.ts"
 
 export const isCostSeriesMetric = (value: string): value is CostSeriesMetric =>
   COST_SERIES_METRICS.some((metric) => metric === value)
+
+export const isCostBreakdownDimension = (value: string): value is CostBreakdownDimension =>
+  COST_BREAKDOWN_DIMENSIONS.some((dimension) => dimension === value)
+
+/** Which measure the model-usage chart plots; both arrive in one payload, so this is client-only. */
+const MODEL_USAGE_MEASURES = ["cost", "tokens"] as const
+export type ModelUsageMeasure = (typeof MODEL_USAGE_MEASURES)[number]
+
+export const isModelUsageMeasure = (value: string): value is ModelUsageMeasure =>
+  MODEL_USAGE_MEASURES.some((measure) => measure === value)
 
 const MICROCENTS_PER_USD = 100_000_000
 const HOUR_SECONDS = 60 * 60
@@ -25,29 +41,53 @@ const alignBucketStartMs = (ms: number, bucketSeconds: number): number => {
 }
 
 /** Fills the empty buckets a grouped query omits, so a quiet day renders as $0 rather than closing the gap. */
-export function densifyCostBuckets({
+function densifyBuckets<T extends { readonly bucketStartIso: string }>({
   buckets,
   fromIso,
   toIso,
   bucketSeconds,
+  emptyBucket,
 }: {
-  readonly buckets: readonly CostSeriesBucketRecord[]
+  readonly buckets: readonly T[]
   readonly fromIso: string
   readonly toIso: string
   readonly bucketSeconds: number
-}): readonly CostSeriesBucketRecord[] {
+  readonly emptyBucket: (bucketStartIso: string) => T
+}): readonly T[] {
   const fromMs = Date.parse(fromIso)
   const toMs = Date.parse(toIso)
   if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs <= fromMs) return buckets
 
   const byStart = new Map(buckets.map((bucket) => [Date.parse(bucket.bucketStartIso), bucket]))
   const stepMs = bucketSeconds * 1000
-  const dense: CostSeriesBucketRecord[] = []
+  const dense: T[] = []
   for (let ms = alignBucketStartMs(fromMs, bucketSeconds); ms < toMs; ms += stepMs) {
-    dense.push(byStart.get(ms) ?? { bucketStartIso: new Date(ms).toISOString(), valueMicrocents: 0, byModel: [] })
+    dense.push(byStart.get(ms) ?? emptyBucket(new Date(ms).toISOString()))
   }
   return dense
 }
+
+export const densifyCostBuckets = (input: {
+  readonly buckets: readonly CostSeriesBucketRecord[]
+  readonly fromIso: string
+  readonly toIso: string
+  readonly bucketSeconds: number
+}): readonly CostSeriesBucketRecord[] =>
+  densifyBuckets({
+    ...input,
+    emptyBucket: (bucketStartIso) => ({ bucketStartIso, valueMicrocents: 0, byModel: [] }),
+  })
+
+export const densifyModelUsageBuckets = (input: {
+  readonly buckets: readonly ModelUsageBucketRecord[]
+  readonly fromIso: string
+  readonly toIso: string
+  readonly bucketSeconds: number
+}): readonly ModelUsageBucketRecord[] =>
+  densifyBuckets({
+    ...input,
+    emptyBucket: (bucketStartIso) => ({ bucketStartIso, byModel: [], other: { costMicrocents: 0, tokens: 0 } }),
+  })
 
 /** The bucket whose span runs past the window's end or past now, so it is still filling. */
 export function resolveIncompleteBucketIndex({
@@ -56,7 +96,7 @@ export function resolveIncompleteBucketIndex({
   toIso,
   nowMs,
 }: {
-  readonly buckets: readonly CostSeriesBucketRecord[]
+  readonly buckets: readonly { readonly bucketStartIso: string }[]
   readonly bucketSeconds: number
   readonly toIso: string
   readonly nowMs: number
@@ -137,6 +177,37 @@ export function formatUtcBucketRange(bucketStartIso: string, bucketSeconds: numb
     })} UTC`
   }
   return `${formatUtcBucketLabel(bucketStartIso, bucketSeconds)} · UTC day`
+}
+
+/** Null rather than 0 when there is no denominator, so a share renders as "—" instead of "0%". */
+export const shareOf = (part: number, whole: number): number | null => (whole > 0 ? part / whole : null)
+
+/** `formatPrice` assumes a non-negative amount, and a non-additive provider total can leave a negative remainder. */
+export const formatSignedPrice = (amountUsd: number): string =>
+  amountUsd < 0 ? `-${formatPrice(-amountUsd)}` : formatPrice(amountUsd)
+
+/**
+ * A row's cost per call against the window's average, the figure that says a
+ * dimension eats a share of the money out of proportion to how much it is used.
+ * Null when there is no baseline: nothing called here, or nothing spent at all.
+ */
+export function costPerCallMultiple({
+  totalMicrocents,
+  calls,
+  avgPerCallMicrocents,
+}: {
+  readonly totalMicrocents: number
+  readonly calls: number
+  readonly avgPerCallMicrocents: number
+}): number | null {
+  if (calls <= 0 || avgPerCallMicrocents <= 0) return null
+  return totalMicrocents / calls / avgPerCallMicrocents
+}
+
+export function formatCostMultiple(multiple: number): string {
+  if (multiple >= 10) return `${Math.round(multiple)}×`
+  if (multiple > 0 && multiple < 0.05) return "<0.1×"
+  return `${multiple.toFixed(1)}×`
 }
 
 /** Per-bucket unit for the y-axis and tooltips ("$/day" and friends). */

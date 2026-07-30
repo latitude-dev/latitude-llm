@@ -1,0 +1,204 @@
+import { Button, Chart, type ChartSeries, cn, HistogramSkeleton, Tabs, Text } from "@repo/ui"
+import { formatCount, formatPrice } from "@repo/utils"
+import { useState } from "react"
+import type { ModelUsageSeriesRecord } from "../../../../../../domains/cost/cost.functions.ts"
+import { ChartHeader } from "../../-components/chart-header.tsx"
+import {
+  bucketUnitLabel,
+  formatUtcBucketLabel,
+  formatUtcBucketRange,
+  isModelUsageMeasure,
+  type ModelUsageMeasure,
+  microcentsToUsd,
+} from "./cost-formatters.ts"
+import { modelColorAt, OTHER_SERIES_COLOR } from "./cost-series-colors.ts"
+
+const CHART_HEIGHT = 260
+
+const MEASURE_OPTIONS: readonly { readonly id: ModelUsageMeasure; readonly label: string; readonly tooltip: string }[] =
+  [
+    { id: "cost", label: "Cost", tooltip: "Spend per model per bucket." },
+    { id: "tokens", label: "Tokens", tooltip: "Tokens per model per bucket — volume, not money." },
+  ]
+
+const modelLabel = (model: string): string => model || "unknown model"
+
+const otherLabel = (otherModels: number): string =>
+  otherModels === 1 ? "Other (1 model)" : `Other (${otherModels} models)`
+
+interface UsageSeries {
+  readonly name: string
+  readonly color: string
+  readonly values: readonly number[]
+}
+
+function buildUsageSeries({
+  series,
+  measure,
+}: {
+  readonly series: ModelUsageSeriesRecord
+  readonly measure: ModelUsageMeasure
+}): readonly UsageSeries[] {
+  const measureOf = (slice: { readonly costMicrocents: number; readonly tokens: number }): number =>
+    measure === "cost" ? microcentsToUsd(slice.costMicrocents) : slice.tokens
+
+  const modelSeries = series.models.map((model, index) => ({
+    name: modelLabel(model),
+    color: modelColorAt(index),
+    values: series.buckets.map((bucket) => {
+      const slice = bucket.byModel.find((entry) => entry.model === model)
+      return slice ? measureOf(slice) : 0
+    }),
+  }))
+
+  if (series.otherModels <= 0) return modelSeries
+  return [
+    ...modelSeries,
+    {
+      name: otherLabel(series.otherModels),
+      color: OTHER_SERIES_COLOR,
+      values: series.buckets.map((bucket) => measureOf(bucket.other)),
+    },
+  ]
+}
+
+/** Click-to-isolate, so a model outside the charted ranks is still reachable by muting the rest. */
+function UsageLegend({
+  series,
+  isolated,
+  onIsolate,
+}: {
+  readonly series: readonly UsageSeries[]
+  readonly isolated: string | null
+  readonly onIsolate: (name: string | null) => void
+}) {
+  return (
+    <div className="flex flex-row flex-wrap items-center gap-1">
+      {series.map((entry) => {
+        const isMuted = isolated !== null && isolated !== entry.name
+        return (
+          <Button
+            key={entry.name}
+            variant="ghost"
+            size="sm"
+            onClick={() => onIsolate(isolated === entry.name ? null : entry.name)}
+            aria-pressed={isolated === entry.name}
+            className={cn({ "opacity-50": isMuted })}
+          >
+            <span className="h-2 w-3 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }} aria-hidden="true" />
+            {entry.name}
+          </Button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * Cost or tokens per model over time. Both measures come from one payload and share
+ * one spend-ranked series set, so toggling changes the axis and nothing else.
+ */
+export function ModelUsagePanel({
+  series,
+  measure,
+  onMeasureChange,
+  bucketSeconds,
+  provisionalIndex,
+  rangeFromIso,
+  rangeToIso,
+  isAllTime,
+  isLoading,
+}: {
+  readonly series: ModelUsageSeriesRecord | undefined
+  readonly measure: ModelUsageMeasure
+  readonly onMeasureChange: (measure: ModelUsageMeasure) => void
+  readonly bucketSeconds: number
+  readonly provisionalIndex: number | undefined
+  readonly rangeFromIso: string
+  readonly rangeToIso: string
+  readonly isAllTime: boolean
+  readonly isLoading: boolean
+}) {
+  const [isolated, setIsolated] = useState<string | null>(null)
+  const unit = bucketUnitLabel(bucketSeconds)
+  const buckets = series?.buckets ?? []
+  const usageSeries = series ? buildUsageSeries({ series, measure }) : []
+  const isEmpty = usageSeries.every((entry) => entry.values.every((value) => value === 0))
+  const visible = isolated === null ? usageSeries : usageSeries.filter((entry) => entry.name === isolated)
+  const chartSeries: readonly ChartSeries[] = visible.map((entry) => ({
+    kind: "line" as const,
+    name: entry.name,
+    values: entry.values,
+    color: entry.color,
+  }))
+
+  return (
+    <div className="flex flex-col rounded-lg bg-secondary">
+      <ChartHeader
+        title="Model usage over time"
+        fromIso={rangeFromIso}
+        toIso={rangeToIso}
+        isAllTime={isAllTime}
+        actions={
+          <Tabs
+            variant="bordered"
+            size="sm"
+            className="border-none bg-muted"
+            indicatorClassName="border-none"
+            options={MEASURE_OPTIONS.map((option) => ({
+              id: option.id,
+              label: option.label,
+              tooltip: option.tooltip,
+            }))}
+            active={measure}
+            onSelect={(value) => {
+              if (isModelUsageMeasure(value)) onMeasureChange(value)
+            }}
+          />
+        }
+      />
+      {isLoading ? (
+        <div className="px-4 py-3">
+          <HistogramSkeleton height={CHART_HEIGHT} />
+        </div>
+      ) : isEmpty ? (
+        <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
+          <Text.H6 color="foregroundMuted">
+            {measure === "cost"
+              ? "No spend recorded in this time window"
+              : "No token usage recorded in this time window"}
+          </Text.H6>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 px-4 py-3">
+          <UsageLegend series={usageSeries} isolated={isolated} onIsolate={setIsolated} />
+          <Chart
+            categories={buckets.map((bucket) => formatUtcBucketLabel(bucket.bucketStartIso, bucketSeconds))}
+            series={chartSeries}
+            height={CHART_HEIGHT}
+            hideLegend
+            xAxisLabelFontSize={10}
+            primaryAxis={{
+              name: measure === "cost" ? `$/${unit}` : `tokens/${unit}`,
+              minInterval: measure === "cost" ? 0 : 1,
+              formatValue: (value) => (measure === "cost" ? formatPrice(value) : formatCount(value)),
+            }}
+            tooltipTitle={(_category, dataIndex) => {
+              const bucket = buckets[dataIndex]
+              if (!bucket) return ""
+              const range = formatUtcBucketRange(bucket.bucketStartIso, bucketSeconds)
+              return dataIndex === provisionalIndex ? `${range} · still in progress` : range
+            }}
+            ariaLabel="Model usage over time"
+          />
+          <Text.H6 color="foregroundMuted">
+            {/* Ranking by volume would crowd out the expensive model that is the story. */}
+            Top {series?.models.length ?? 0} models by spend in this window
+            {(series?.otherModels ?? 0) > 0 ? `; the remaining ${series?.otherModels} are grouped as Other` : null}.
+            Select a model to isolate it.
+          </Text.H6>
+        </div>
+      )}
+    </div>
+  )
+}

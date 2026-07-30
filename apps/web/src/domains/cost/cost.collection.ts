@@ -1,7 +1,7 @@
-import type { CostSeriesMetric } from "@domain/spans"
+import type { CostBreakdownDimension, CostSeriesMetric } from "@domain/spans"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
-import { getCostOverview, getCostSeries } from "./cost.functions.ts"
+import { getCostBreakdown, getCostOverview, getCostSeries, getModelUsageSeries } from "./cost.functions.ts"
 
 /** Time window shared by every cost query — lower bound inclusive, upper bound exclusive. */
 interface CostTimeRange {
@@ -24,6 +24,49 @@ export function useCostOverview({
   return useQuery({
     queryKey: [...projectScopeKey(scope), "cost-overview", projectId, range],
     queryFn: () => getCostOverview({ data: { ...projectScopeData(scope), projectId, ...range } }),
+    staleTime: COST_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+export function useCostBreakdown({
+  projectId,
+  range,
+  dimension,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: CostTimeRange
+  readonly dimension: CostBreakdownDimension
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "cost-breakdown", projectId, range, dimension],
+    queryFn: () => getCostBreakdown({ data: { ...projectScopeData(scope), projectId, ...range, dimension } }),
+    staleTime: COST_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** One payload carries cost and tokens, so the panel's measure toggle is not a query key. */
+export function useModelUsageSeries({
+  projectId,
+  range,
+  bucketSeconds,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: CostTimeRange
+  readonly bucketSeconds: number
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "model-usage-series", projectId, range, bucketSeconds],
+    queryFn: () => getModelUsageSeries({ data: { ...projectScopeData(scope), projectId, ...range, bucketSeconds } }),
     staleTime: COST_STALE_TIME_MS,
     placeholderData: keepPreviousData,
     enabled: enabled && projectId.length > 0,
