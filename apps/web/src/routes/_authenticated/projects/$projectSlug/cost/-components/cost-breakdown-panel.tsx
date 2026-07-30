@@ -347,7 +347,7 @@ function BreakdownTable({
         </TableBody>
       </Table>
       {hidden > 0 || showAll ? (
-        <div className="flex flex-row items-center gap-2 px-4 pb-1">
+        <div className="flex flex-row items-center gap-2">
           <Button variant="link" size="sm" onClick={() => setShowAll(!showAll)}>
             {showAll ? `Show top ${BREAKDOWN_ROWS_SHOWN}` : `Show all ${formatCount(breakdown.rows.length)}`}
           </Button>
@@ -435,8 +435,9 @@ export function CostBreakdownPanel({
   const meta = DIMENSION_META[dimension]
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border py-3">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-2 px-4">
+    // The row separators are painted in `--background`, so the card must actually carry it.
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
         <Text.H6 color="foreground">Cost breakdown</Text.H6>
         <Tabs
           variant="bordered"
@@ -454,11 +455,9 @@ export function CostBreakdownPanel({
         />
       </div>
       {isLoading || !breakdown ? (
-        <div className="px-4">
-          <TableSkeleton rows={5} cols={6} />
-        </div>
+        <TableSkeleton rows={5} cols={6} />
       ) : breakdown.rows.length === 0 ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center px-4">
+        <div className="flex w-full min-h-[120px] items-center justify-center">
           <Text.H6 color="foregroundMuted">{`No billable usage by ${meta.plural} in this time window`}</Text.H6>
         </div>
       ) : (
