@@ -1,5 +1,13 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
-import { ChSqlClient, OrganizationId, ProjectId, SessionId, SqlClient, TaxonomyRunId } from "@domain/shared"
+import {
+  ChSqlClient,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SqlClient,
+  type TaxonomyClusterId,
+  TaxonomyRunId,
+} from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -26,7 +34,7 @@ const groupVector = (group: 0 | 1, jitterIndex: number): number[] => {
   return values
 }
 
-const observation = (index: number, group: 0 | 1, clusterId: string | null): TaxonomyMomentObservation => ({
+const observation = (index: number, group: 0 | 1, clusterId: TaxonomyClusterId | null): TaxonomyMomentObservation => ({
   organizationId,
   projectId,
   observationId: String(index).padStart(24, "o").slice(0, 24),
@@ -97,7 +105,7 @@ const priorTree = (): readonly TaxonomyCluster[] => {
 
 const corpus = (): TaxonomyMomentObservation[] =>
   Array.from({ length: 40 }, (_, index) =>
-    observation(index, index < 20 ? 0 : 1, index < 20 ? "b".repeat(24) : "c".repeat(24)),
+    observation(index, index < 20 ? 0 : 1, (index < 20 ? "b".repeat(24) : "c".repeat(24)) as TaxonomyClusterId),
   )
 
 type Fakes = {
