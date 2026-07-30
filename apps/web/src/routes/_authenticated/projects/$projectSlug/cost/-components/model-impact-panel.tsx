@@ -172,7 +172,7 @@ export function ModelImpactPanel({
   const hasSpend = (breakdown?.totals.totalMicrocents ?? 0) > 0
 
   return (
-    <div className="flex flex-col rounded-lg bg-secondary">
+    <div className="flex flex-1 flex-col rounded-lg bg-secondary">
       <ChartHeader
         title="Spend against usage"
         fromIso={rangeFromIso}

@@ -133,7 +133,7 @@ export function ModelUsagePanel({
   }))
 
   return (
-    <div className="flex flex-col rounded-lg bg-secondary">
+    <div className="flex flex-1 flex-col rounded-lg bg-secondary">
       <ChartHeader
         title="Model usage over time"
         fromIso={rangeFromIso}
