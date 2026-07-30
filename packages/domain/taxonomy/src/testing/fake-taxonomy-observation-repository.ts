@@ -335,6 +335,17 @@ export const createFakeTaxonomyObservationRepository = (
           .slice(0, limit),
       ),
 
+    listAllByObservationIds: ({ organizationId, projectId, observationIds, limit }) =>
+      Effect.sync(() => {
+        const requested = new Set(observationIds)
+        return latestProjectWindow(organizationId, projectId)
+          .filter((observation) => requested.has(observation.observationId))
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .slice(0, limit)
+      }),
+
     listBySession: ({ organizationId, projectId, sessionId, analysisHash }) =>
       Effect.sync(() =>
         [...rows.values()]

@@ -200,6 +200,14 @@ interface StoredGardenTaxonomyPlan {
   readonly leafClusters?: readonly StagingLeafCluster[]
   /** Adaptive-only: the full old active tree the atomic swap deprecates. Empty/absent on off. */
   readonly supersededClusterIds?: readonly string[]
+  /**
+   * Clusters saved `staging` that the publish swap activates. Absent on plans
+   * staged by pre-change code, where the adaptive path activated `clusters`
+   * wholesale — `publishClusterIds` falls back to that.
+   */
+  readonly stagedClusterIds?: readonly string[]
+  /** Per-leaf sample member ids, so a staged leaf can be named before its assignments exist. */
+  readonly namingMembers?: readonly { readonly clusterId: string; readonly observationIds: readonly string[] }[]
 }
 
 /**
@@ -237,6 +245,12 @@ export interface GardenTaxonomyNamingPlanResult {
    */
   readonly clusterIdsByDepth: ReadonlyArray<{ readonly depth: number; readonly clusterIds: readonly string[] }>
   readonly clustersScanned: number
+  /**
+   * Sample member ids per cluster to name, for the pre-publish pass where a
+   * staged cluster has no ClickHouse assignments yet. Empty on the post-publish
+   * path, which reads members by `assigned_cluster_id`.
+   */
+  readonly memberObservationIdsByClusterId: Readonly<Record<string, readonly string[]>>
 }
 
 export interface GardenTaxonomyQualityResult {
@@ -704,6 +718,11 @@ const finalizeGardenPlan = (input: GardenTaxonomyStepInput, plan: HierarchicalTa
       fallbackReason: plan.fallbackReason,
       leafClusters: plan.leafClusters,
       supersededClusterIds: plan.supersededClusterIds.map((clusterId) => clusterId as string),
+      stagedClusterIds: plan.stagedClusterIds.map((clusterId) => clusterId as string),
+      namingMembers: plan.namingMembers.map((members) => ({
+        clusterId: members.clusterId as string,
+        observationIds: members.observationIds,
+      })),
     })
     return {
       observationsScanned: plan.observationsScanned,
@@ -944,25 +963,54 @@ export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomy
       // the whole-project topic tree reassigns the inline column. Facet plans are
       // always off-mode (no staging leaves), so they take the sample-only branch.
       const isView = plan.customBehaviorId != null || plan.facetId != null
-      if (planPersistsAdaptive(plan)) {
-        return yield* plan.customBehaviorId
+      const reassigned = yield* planPersistsAdaptive(plan)
+        ? plan.customBehaviorId
           ? reassignFullWindowScoped(input, plan)
           : reassignFullWindowGlobal(input, plan)
-      }
-      return yield* isView ? reassignScopedAssignments(input, plan) : reassignGlobalObservations(input, plan)
+        : isView
+          ? reassignScopedAssignments(input, plan)
+          : reassignGlobalObservations(input, plan)
+      // Publish here, not one activity later: the write above moved the counts the
+      // Behaviours read drives visibility from onto the staged tree, so anything
+      // between it and the swap is a window where neither tree is visible. The
+      // staged tree is already named by now, so activating it is safe.
+      yield* publishStagedTree(input, plan)
+      return reassigned
     }),
   )
 
-// Off: deprecate exactly the non-continued old clusters (byte-identical to the
-// pre-change path — continuations kept their ids via in-place upsert).
-const deprecateOffClusters = (input: GardenTaxonomyDeprecateClustersInput, plan: StoredGardenTaxonomyPlan) =>
+// The ids the publish swap activates. Pre-change adaptive plans carry no
+// `stagedClusterIds`, so fall back to their whole cluster set (all staging).
+const publishClusterIds = (plan: StoredGardenTaxonomyPlan): TaxonomyClusterId[] =>
+  (
+    plan.stagedClusterIds ?? (planPersistsAdaptive(plan) ? plan.clusters.map((cluster) => cluster.id as string) : [])
+  ).map((clusterId) => TaxonomyClusterId(clusterId))
+
+// The old tree this publish retires: the whole previous tree on the adaptive
+// path, exactly the non-continued clusters when continuations were upserted in
+// place (static persist).
+const supersededByPublish = (plan: StoredGardenTaxonomyPlan): TaxonomyClusterId[] =>
+  (planPersistsAdaptive(plan) ? (plan.supersededClusterIds ?? []) : plan.deprecatedClusterIds).map((clusterId) =>
+    TaxonomyClusterId(clusterId),
+  )
+
+/**
+ * The single publication point: in ONE Postgres transaction retire the old tree
+ * and activate the staged one. Idempotent (activation is guarded to
+ * `state = 'staging'`), so running it again from the next activity is a no-op —
+ * which is what keeps the publish atomic while the workflow keeps its activity
+ * shape.
+ */
+const publishStagedTree = (input: GardenTaxonomyPlanReferenceInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
-    const clusters = yield* TaxonomyClusterRepository
-    for (const clusterId of plan.deprecatedClusterIds) {
-      yield* clusters.markDeprecated({ clusterId: TaxonomyClusterId(clusterId), timestamp: new Date(input.now) })
-    }
-    return { clustersDeprecated: plan.deprecatedClusterIds.length }
-  }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId))
+    const supersededClusterIds = supersededByPublish(plan)
+    const stagingClusterIds = publishClusterIds(plan)
+    yield* Effect.gen(function* () {
+      const clusters = yield* TaxonomyClusterRepository
+      yield* clusters.swapActiveTree({ supersededClusterIds, stagingClusterIds, timestamp: new Date(input.now) })
+    }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId))
+    return { clustersDeprecated: supersededClusterIds.length, clustersActivated: stagingClusterIds.length }
+  })
 
 const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
@@ -999,30 +1047,18 @@ const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: Stored
     return assignments.length
   }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
 
-// Adaptive: atomically swap the staged tree in for the old one, then run one
-// bounded catch-up pass for observations indexed during reassignment.
+// Adaptive: confirm publication (a no-op when the reassign activity already
+// swapped), then run one bounded catch-up pass for observations indexed during
+// reassignment.
 const swapAndCatchUp = (input: GardenTaxonomyDeprecateClustersInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
-    const supersededClusterIds = (plan.supersededClusterIds ?? []).map((clusterId) => TaxonomyClusterId(clusterId))
-    const stagingClusterIds = plan.clusters.map((cluster) => cluster.id)
-    yield* Effect.gen(function* () {
-      const clusters = yield* TaxonomyClusterRepository
-      yield* clusters.swapActiveTree({
-        supersededClusterIds,
-        stagingClusterIds,
-        timestamp: new Date(input.now),
-      })
-    }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId))
+    const published = yield* publishStagedTree(input, plan)
 
     const caughtUp = plan.customBehaviorId
       ? (yield* reassignFullWindowScoped(input, plan)).observationsReassigned
       : yield* catchUpGlobal(input, plan)
 
-    return {
-      clustersDeprecated: supersededClusterIds.length,
-      clustersActivated: stagingClusterIds.length,
-      caughtUp,
-    }
+    return { ...published, caughtUp }
   })
 
 export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDeprecateClustersInput) =>
@@ -1031,7 +1067,7 @@ export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDep
     input,
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
-      return planPersistsAdaptive(plan) ? yield* swapAndCatchUp(input, plan) : yield* deprecateOffClusters(input, plan)
+      return planPersistsAdaptive(plan) ? yield* swapAndCatchUp(input, plan) : yield* publishStagedTree(input, plan)
     }),
   )
 
@@ -1051,7 +1087,9 @@ export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInp
     ),
   )
 
-export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput & GardenTaxonomyLineageResult) =>
+export const planGardenTaxonomyNamingActivity = (
+  input: GardenTaxonomyStepInput & GardenTaxonomyLineageResult & { readonly planKey?: string },
+) =>
   runGardenStep(
     "GardenTaxonomyWorkflow plan naming",
     input,
@@ -1065,17 +1103,25 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
         input.lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])),
       )
       const projectId = ProjectId(input.projectId)
-      const activeClusters = yield* clusters.listActiveByProject({
-        projectId,
-        dimension: input.dimension,
-        ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
-        ...(input.facetId ? { facetId: FacetId(input.facetId) } : {}),
-      })
+      // With a plan key the tree is named BEFORE the swap, so read this run's own
+      // clusters by id (they are still `staging`). Without one this is the
+      // post-publish path and reads the active tree, unchanged.
+      const plan =
+        input.planKey === undefined ? null : yield* loadGardenTaxonomyPlan({ ...input, planKey: input.planKey })
+      const candidates =
+        plan === null
+          ? yield* clusters.listActiveByProject({
+              projectId,
+              dimension: input.dimension,
+              ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+              ...(input.facetId ? { facetId: FacetId(input.facetId) } : {}),
+            })
+          : yield* clusters.listByIds(plan.clusters.map((cluster) => cluster.id))
       // Name deepest clusters first. Interior naming falls back to its
       // children's already-assigned names; if we name top-down the interior
       // gets handed "Pending" descriptions and either stays Pending or
       // collapses onto the dominant child's name.
-      const ordered = [...activeClusters]
+      const ordered = [...candidates]
         .filter((cluster) => bornClusterIds.has(cluster.id) || !isDisplayableTaxonomyName(cluster.name))
         .sort((a, b) => b.depth - a.depth)
       const byDepth = new Map<number, string[]>()
@@ -1087,10 +1133,17 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
       const clusterIdsByDepth = [...byDepth.entries()]
         .sort(([leftDepth], [rightDepth]) => rightDepth - leftDepth)
         .map(([depth, clusterIds]) => ({ depth, clusterIds }))
+      const named = new Set(ordered.map((cluster) => cluster.id as string))
+      const memberObservationIdsByClusterId = Object.fromEntries(
+        (plan?.namingMembers ?? [])
+          .filter((members) => named.has(members.clusterId))
+          .map((members) => [members.clusterId, members.observationIds] as const),
+      )
       return {
         clusterIds: ordered.map((cluster) => cluster.id),
         clusterIdsByDepth,
-        clustersScanned: activeClusters.length,
+        clustersScanned: candidates.length,
+        memberObservationIdsByClusterId,
       } satisfies GardenTaxonomyNamingPlanResult
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )

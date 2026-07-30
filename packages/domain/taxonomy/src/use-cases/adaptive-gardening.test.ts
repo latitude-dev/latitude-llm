@@ -164,14 +164,16 @@ describe("planHierarchicalTaxonomyUseCase adaptive (enforced) publish plan", () 
 })
 
 describe("planHierarchicalTaxonomyUseCase off is a byte-identical no-op", () => {
-  it("global: active clusters, sample assignments, no staging machinery", async () => {
+  it("global: staged clusters, sample assignments, no full-window routing leaves", async () => {
     const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
     const clusters = createFakeTaxonomyClusterRepository([])
 
     const plan = await runPlan(observations, clusters, { now })
 
     expect(plan.mode).toBe("off")
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    // Fresh births stage on every mode: the swap publishes a named tree.
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
+    expect([...plan.stagedClusterIds].sort()).toEqual(plan.clusters.map((cluster) => cluster.id).sort())
     expect(plan.leafClusters).toEqual([])
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.decisionMetadata).toBeNull()
@@ -179,7 +181,7 @@ describe("planHierarchicalTaxonomyUseCase off is a byte-identical no-op", () => 
     expect(plan.customAssignments).toEqual([])
   })
 
-  it("scoped: active clusters, custom assignments, no staging machinery", async () => {
+  it("scoped: active clusters (views publish in place), custom assignments, no staging machinery", async () => {
     const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
     const clusters = createFakeTaxonomyClusterRepository([])
     const customBehaviorId = CustomBehaviorId("b".repeat(24))
@@ -225,8 +227,8 @@ describe("planHierarchicalTaxonomyUseCase shadow persists static and computes ad
     const plan = await runPlan(observations, clusters, { now, mode: "shadow" })
 
     expect(plan.mode).toBe("shadow")
-    // Persisted tree is static: active clusters, sample-only assignments, no staging machinery.
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    // Persisted tree is static: sample-only assignments, no full-window routing leaves.
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
@@ -254,7 +256,7 @@ describe("planHierarchicalTaxonomyUseCase shadow persists static and computes ad
 
     expect(shadowPlan.clusters.length).toBe(offPlan.clusters.length)
     expect(depthMultiset(shadowPlan)).toEqual(depthMultiset(offPlan))
-    expect(shadowPlan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(shadowPlan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(shadowPlan.observationAssignments.length).toBe(offPlan.observationAssignments.length)
   })
 })
@@ -293,9 +295,9 @@ describe("planHierarchicalTaxonomyUseCase enforced falls back to static on unsaf
 
     expect(plan.mode).toBe("enforced")
     expect(plan.fallbackReason).toBe(kind)
-    // Fell back to the static publish path: active clusters, sample assignments, no staging.
+    // Fell back to the static publish path: sample assignments, no full-window leaves.
     expect(plan.clusters.length).toBeGreaterThan(0)
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
@@ -327,7 +329,7 @@ describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive b
     )
 
     expect(plan.clusters.length).toBeGreaterThan(0)
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
     expect(plan.comparison).toBeNull()
     expect(plan.decisionMetadata).toBeNull()
@@ -344,7 +346,7 @@ describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive b
 
     expect(plan.mode).toBe("enforced")
     expect(plan.fallbackReason).toBe("buildError")
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
   })
@@ -367,9 +369,9 @@ describe("shadow guardrails hold across contrasting corpora", () => {
       expect(shape?.maxDepth ?? 0).toBeLessThanOrEqual(TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length)
       expect(shape?.nodeCount ?? 0).toBeLessThanOrEqual(TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES)
     }
-    // Shadow never persists adaptive, so it never falls back and never stages.
+    // Shadow never persists adaptive, so it never falls back.
     expect(plan.fallbackReason).toBeNull()
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.leafClusters).toEqual([])
   })
 })
 

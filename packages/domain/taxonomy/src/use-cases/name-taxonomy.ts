@@ -37,6 +37,13 @@ export interface NameClusterInput {
   readonly projectId: ProjectId
   readonly clusterId: TaxonomyCluster["id"]
   readonly now?: Date
+  /**
+   * Naming sample for a cluster whose membership is not in ClickHouse yet: a
+   * `staging` tree is named before the reassignment repoints assignments at it,
+   * so the publish passes the staged plan's own member ids. Omit to read members
+   * by `assigned_cluster_id` (the post-publish path).
+   */
+  readonly memberObservationIds?: readonly string[]
 }
 
 export interface NameTaxonomyResult {
@@ -243,6 +250,17 @@ interface ClusterNamingSource {
     readonly clusterId: TaxonomyCluster["id"]
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyClusterNamingMember[], RepositoryError, ChSqlClient>
+  /**
+   * Members by explicit observation id, used when `NameClusterInput` carries the
+   * staged plan's member ids. Absent ⇒ that tree is always named after its
+   * assignments land, so `listMembers` is the only source.
+   */
+  readonly listMembersByIds?: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly observationIds: readonly string[]
+    readonly limit: number
+  }) => Effect.Effect<readonly TaxonomyClusterNamingMember[], RepositoryError, ChSqlClient>
 }
 
 interface NamingContext {
@@ -272,16 +290,22 @@ const loadNamingContext = (input: NameClusterInput, source: ClusterNamingSource)
       ...(source.customBehaviorId ? { customBehaviorId: source.customBehaviorId } : {}),
       ...(source.facetId ? { facetId: source.facetId } : {}),
     }
+    // A staged tree is named before the swap activates it, so the family lookups
+    // must span both states — a staging node's parent/siblings/children are
+    // staging too, and only a reused-id continuation is already active.
+    const states = ["active", "staging"] as const
     const siblings = (yield* clusters.listActiveByProject({
       projectId: input.projectId,
       dimension: cluster.dimension,
       parentClusterId: cluster.parentClusterId,
+      states,
       ...scope,
     })).filter((candidate) => candidate.id !== cluster.id && candidate.name !== "Pending")
     const children = (yield* clusters.listActiveByProject({
       projectId: input.projectId,
       dimension: cluster.dimension,
       parentClusterId: cluster.id,
+      states,
       ...scope,
     })).filter((child) => child.name !== "Pending" && child.description.trim().length > 0)
     return { cluster, parent, siblings, children } satisfies NamingContext
@@ -289,12 +313,21 @@ const loadNamingContext = (input: NameClusterInput, source: ClusterNamingSource)
 
 const loadMemberSummaries = (input: NameClusterInput, source: ClusterNamingSource) =>
   Effect.gen(function* () {
-    const rows = yield* source.listMembers({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      clusterId: input.clusterId,
-      limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
-    })
+    const stagedMemberIds = input.memberObservationIds ?? []
+    const rows =
+      stagedMemberIds.length > 0 && source.listMembersByIds !== undefined
+        ? yield* source.listMembersByIds({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            observationIds: stagedMemberIds,
+            limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
+          })
+        : yield* source.listMembers({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            clusterId: input.clusterId,
+            limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
+          })
     const ranked = [...rows].sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
     return ranked.flatMap((row) => {
       const summary = readableObservationSummary(row.projectionMetadata.summary)
@@ -418,5 +451,6 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
     const observations = yield* TaxonomyObservationRepository
     return yield* nameClusterCore(input, {
       listMembers: (params) => observations.listAllByCluster(params),
+      listMembersByIds: (params) => observations.listAllByObservationIds(params),
     })
   }).pipe(Effect.withSpan("taxonomy.nameCluster"))

@@ -141,8 +141,13 @@ const runBuild = (
       })
       const clustersRepo = yield* TaxonomyClusterRepository
       for (const cluster of plan.clusters) yield* clustersRepo.save(cluster)
-      for (const clusterId of plan.deprecatedClusterIds)
-        yield* clustersRepo.markDeprecated({ clusterId, timestamp: now })
+      // Publish like the gardening activities do: fresh nodes are saved `staging`
+      // and only the swap activates them (and retires what they replace).
+      yield* clustersRepo.swapActiveTree({
+        supersededClusterIds: plan.deprecatedClusterIds,
+        stagingClusterIds: plan.stagedClusterIds,
+        timestamp: now,
+      })
       return plan
     }).pipe(
       Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
