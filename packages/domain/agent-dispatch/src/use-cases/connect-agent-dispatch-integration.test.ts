@@ -121,6 +121,7 @@ describe("connectAgentDispatchIntegrationUseCase", () => {
 
     await connect(layer)
 
+    expect(upserted).toHaveLength(1)
     expect(upserted[0]).toMatchObject({
       projectId: null,
       enabled: true,
@@ -136,6 +137,7 @@ describe("connectAgentDispatchIntegrationUseCase", () => {
 
     await connect(layer)
 
+    expect(upserted).toHaveLength(1)
     expect(upserted[0]).toMatchObject({
       enabled: true,
       triggers: ["incident.opened"],
