@@ -28,11 +28,12 @@ const integration: AgentDispatchIntegration = {
   revokedAt: null,
 }
 
-const makeLayer = (opts: { existingDefault?: AgentDispatchConfigRow | null } = {}) => {
+const makeLayer = (opts: { existingIntegration?: boolean; existingDefault?: AgentDispatchConfigRow | null } = {}) => {
   const upserted: AgentDispatchConfigRow[] = []
 
   const integrationRepository: (typeof AgentDispatchIntegrationRepository)["Service"] = {
-    findActiveByKind: () => Effect.succeed(opts.existingDefault ? integration : null),
+    findActiveByKind: () =>
+      Effect.succeed((opts.existingIntegration ?? Boolean(opts.existingDefault)) ? integration : null),
     install: () => Effect.succeed(integration),
     revoke: () => Effect.void,
   }
@@ -109,6 +110,19 @@ describe("connectAgentDispatchIntegrationUseCase", () => {
       projectId: null,
       integrationId,
       kind: "claude_code",
+      enabled: true,
+      triggers: ["signal.discovered"],
+      target: { routineTriggerId: "trig_abc" },
+    })
+  })
+
+  it("seeds the default for an integration the backfill left without one", async () => {
+    const { layer, upserted } = makeLayer({ existingIntegration: true })
+
+    await connect(layer)
+
+    expect(upserted[0]).toMatchObject({
+      projectId: null,
       enabled: true,
       triggers: ["signal.discovered"],
       target: { routineTriggerId: "trig_abc" },
