@@ -1,4 +1,5 @@
-import { Button, Input, Text } from "@repo/ui"
+import { HEARD_ABOUT_US_MAX_LENGTH, HEARD_ABOUT_US_OPTIONS, HEARD_ABOUT_US_OTHER } from "@domain/users"
+import { Button, Input, Select, Text } from "@repo/ui"
 import { PhoneNumberField } from "../../../../../../../components/phone-number-field.tsx"
 import { fieldErrorsAsStrings } from "../../../../../../../lib/form-server-action.ts"
 import { phoneNumberError, phoneNumberSubmitError } from "../../../../../../../lib/phone-countries.ts"
@@ -44,6 +45,55 @@ export function Left({
             />
           )}
         </form.Field>
+        <form.Field
+          name="heardAboutUs"
+          validators={{
+            onChange: ({ value }) => (value === "" ? "Please let us know how you found us" : undefined),
+          }}
+        >
+          {(field) => (
+            <Select
+              name="heardAboutUs"
+              label="How did you hear about us?"
+              placeholder="Select an option"
+              options={HEARD_ABOUT_US_OPTIONS.map((option) => ({ label: option.label, value: option.value }))}
+              value={field.state.value || undefined}
+              onChange={(value) => {
+                field.handleChange(value)
+                // Drop anything already typed when the answer is no longer "Other",
+                // so switching back later can't submit a stale source the user has
+                // stopped looking at.
+                if (value !== HEARD_ABOUT_US_OTHER) form.setFieldValue("heardAboutUsOther", "")
+              }}
+              errors={fieldErrorsAsStrings(field.state.meta.errors)}
+            />
+          )}
+        </form.Field>
+        <form.Subscribe selector={(state) => state.values.heardAboutUs}>
+          {(heardAboutUs) =>
+            heardAboutUs === HEARD_ABOUT_US_OTHER ? (
+              <form.Field
+                name="heardAboutUsOther"
+                validators={{
+                  onChange: ({ value }) =>
+                    value.trim() === "" ? "Please tell us where you heard about us" : undefined,
+                }}
+              >
+                {(field) => (
+                  <Input
+                    type="text"
+                    label="Where did you hear about us?"
+                    placeholder="e.g. a conference, a newsletter, a friend's blog"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                    maxLength={HEARD_ABOUT_US_MAX_LENGTH}
+                  />
+                )}
+              </form.Field>
+            ) : null
+          }
+        </form.Subscribe>
         <form.Field name="phoneCallingCode">
           {(callingCodeField) => (
             <form.Field
