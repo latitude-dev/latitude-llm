@@ -15,6 +15,7 @@ export { AdminOrganizationUsageRepositoryLive } from "./repositories/admin-organ
 export { AdminProjectMetricsRepositoryLive } from "./repositories/admin-project-metrics-repository.ts"
 export { AnalyticsQueryReaderLive } from "./repositories/analytics-query-repository.ts"
 export { ClaudeCodeSpanReaderLive } from "./repositories/claude-code-span-reader.ts"
+export { CostAnalyticsRepositoryLive } from "./repositories/cost-analytics-repository.ts"
 export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
 export { FacetProjectionRepositoryLive } from "./repositories/facet-projection-repository.ts"
 export { MemoryAnalyticsRepositoryLive } from "./repositories/memory-analytics-repository.ts"

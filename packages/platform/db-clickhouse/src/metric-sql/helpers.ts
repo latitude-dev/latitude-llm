@@ -131,7 +131,7 @@ export const traceFamilyAggregate = (metric: MonitorMetric, c: TraceFamilyColumn
 
 // Operations whose token/cost usage should sum. Mirrors the rollup usage allowlist
 // (traces_mv / sessions_mv) so wrapper spans don't double-count cost/tokens.
-const USAGE_OPERATIONS_SQL = "('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker')"
+export const USAGE_OPERATIONS_SQL = "('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker')"
 
 /** Gate a span column to billable operations (NULL otherwise) so sum/avg ignore wrapper + tool spans. */
 export const usageGated = (column: string): string => `if(operation IN ${USAGE_OPERATIONS_SQL}, ${column}, NULL)`

@@ -3,6 +3,7 @@ import {
   BellRingIcon,
   BrainIcon,
   Building2,
+  CircleDollarSignIcon,
   CreditCard,
   DatabaseIcon,
   EyeOffIcon,
@@ -71,6 +72,15 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     group: "observe",
     path: (slug) => `/projects/${slug}/memory`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/memory`),
+  },
+  {
+    key: "cost",
+    label: "Cost",
+    icon: CircleDollarSignIcon,
+    group: "observe",
+    path: (slug) => `/projects/${slug}/cost`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/cost`),
+    featureFlag: "costDashboard",
   },
   {
     key: "signals",

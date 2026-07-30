@@ -67,6 +67,13 @@ export {
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
+export type { ClassifiedUnpricedPair, UnpricedCause, UnpricedUsageSummary } from "./helpers/classify-unpriced-cost.ts"
+export {
+  classifyUnpricedPair,
+  isUnpricedGap,
+  summarizeUnpricedUsage,
+  UNPRICED_CAUSES,
+} from "./helpers/classify-unpriced-cost.ts"
 export {
   canonicalizeMessageForEmbedding,
   hashMessageContent,
@@ -99,6 +106,18 @@ export {
 export type { UnpricedSpanGroup } from "./otlp/transform.ts"
 export type { AnalyticsQueryInput, AnalyticsQueryReaderShape } from "./ports/analytics-query-reader.ts"
 export { AnalyticsQueryReader } from "./ports/analytics-query-reader.ts"
+export type {
+  CostAnalyticsRepositoryShape,
+  CostAnalyticsScope,
+  CostConfidence,
+  CostModelSpend,
+  CostOverview,
+  CostSeriesBucket,
+  CostSeriesMetric,
+  CostSeriesModelSlice,
+  CostZeroCostPair,
+} from "./ports/cost-analytics-repository.ts"
+export { COST_SERIES_METRICS, CostAnalyticsRepository } from "./ports/cost-analytics-repository.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
 export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
 export type {
