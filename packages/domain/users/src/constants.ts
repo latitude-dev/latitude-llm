@@ -36,7 +36,7 @@ export const HEARD_ABOUT_US_OPTIONS: readonly { readonly value: HeardAboutUs; re
   { value: "ai", label: "ChatGPT or other AI" },
   { value: "reddit", label: "Reddit" },
   { value: "github", label: "GitHub" },
-  { value: "x", label: "X" },
+  { value: "x", label: "X/Twitter" },
   { value: "linkedin", label: "LinkedIn" },
   { value: "video", label: "YouTube or podcast" },
   { value: "other", label: "Other" },
