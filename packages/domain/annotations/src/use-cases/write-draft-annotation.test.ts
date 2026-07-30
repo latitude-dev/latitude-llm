@@ -130,6 +130,48 @@ describe("persistDraftAnnotation", () => {
     expect(score.metadata.rawFeedback).toBe("Signal with refund policy")
   })
 
+  // Every assistant turn before the final answer in a coding-agent trace is
+  // `reasoning` + `tool_call`, so a thinking block is the only text a reviewer
+  // can highlight there — the final plain-text answer is the exception.
+  it("creates draft anchored to an assistant reasoning part", async () => {
+    const thinking = "The user asked about refunds; the policy allows 30 days."
+    const allMessages: GenAIMessage[] = [
+      { role: "system", parts: [{ type: "text", content: "You are a support agent." }] },
+      {
+        role: "assistant",
+        parts: [
+          { type: "reasoning", content: thinking },
+          { type: "tool_call", name: "Read" },
+        ],
+      },
+      { role: "assistant", parts: [{ type: "text", content: "Refunds are accepted for 30 days." }] },
+    ]
+    const { layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
+
+    const score = await Effect.runPromise(
+      writeDraftAnnotationUseCase({
+        projectId: projectCuid,
+        sourceId: queueId,
+        traceId: traceIdRaw,
+        value: 0,
+        passed: false,
+        feedback: "Reasoning contradicts the answer",
+        anchor: {
+          messageIndex: 1,
+          partIndex: 0,
+          startOffset: 4,
+          endOffset: 8,
+        },
+        organizationId: cuid,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(score.metadata.messageIndex).toBe(1)
+    expect(score.metadata.partIndex).toBe(0)
+    expect(score.metadata.startOffset).toBe(4)
+    expect(score.metadata.endOffset).toBe(8)
+  })
+
   it("writes ScoreCreated for draft persistence", async () => {
     const { events, layer } = createTestLayers()
 

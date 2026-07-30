@@ -35,6 +35,7 @@ export {
   safeStringifyJson,
   stableStringify,
 } from "./format.ts"
+export { getAnchorPartText, joinAnchorPartText } from "./genai-anchor-text.ts"
 export * from "./http-errors.ts"
 export {
   detectPartTextFormat,

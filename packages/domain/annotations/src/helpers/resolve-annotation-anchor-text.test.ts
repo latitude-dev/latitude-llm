@@ -46,6 +46,58 @@ describe("resolveAnnotationAnchorText", () => {
     ).toBe(text.slice(4, 10))
   })
 
+  it("selects a reasoning part, which the conversation UI also lets users highlight", () => {
+    const thinking = "Let me check the refund policy before answering."
+    const reasoningMessages: GenAIMessage[] = [{ role: "assistant", parts: [{ type: "reasoning", content: thinking }] }]
+
+    expect(resolveAnnotationAnchorText(reasoningMessages, { messageIndex: 0, partIndex: 0 })).toBe(thinking)
+  })
+
+  it("applies offsets within a reasoning part", () => {
+    const thinking = "Let me check the refund policy before answering."
+    const reasoningMessages: GenAIMessage[] = [{ role: "assistant", parts: [{ type: "reasoning", content: thinking }] }]
+
+    expect(
+      resolveAnnotationAnchorText(reasoningMessages, {
+        messageIndex: 0,
+        partIndex: 0,
+        startOffset: 12,
+        endOffset: 30,
+      }),
+    ).toBe(thinking.slice(12, 30))
+  })
+
+  it("joins reasoning alongside text when partIndex is absent", () => {
+    const mixed: GenAIMessage[] = [
+      {
+        role: "assistant",
+        parts: [
+          { type: "reasoning", content: "Thinking. " },
+          { type: "text", content: "Answering." },
+        ],
+      },
+    ]
+
+    expect(resolveAnnotationAnchorText(mixed, { messageIndex: 0 })).toBe("Thinking. Answering.")
+  })
+
+  it("falls back to a synthesized text part when the message carries only `content`", () => {
+    // `normalizeMessage` / `getPartText` in the conversation UI synthesize
+    // `parts: [{ type: "text", content }]` for these and emit `partIndex: 0`.
+    const contentOnly = [{ role: "assistant", content: "hello there" }] as unknown as GenAIMessage[]
+
+    expect(
+      resolveAnnotationAnchorText(contentOnly, { messageIndex: 0, partIndex: 0, startOffset: 0, endOffset: 5 }),
+    ).toBe("hello")
+    expect(resolveAnnotationAnchorText(contentOnly, { messageIndex: 0 })).toBe("hello there")
+  })
+
+  it("returns undefined for parts the UI cannot select", () => {
+    const toolCall: GenAIMessage[] = [{ role: "assistant", parts: [{ type: "tool_call", name: "Read" }] }]
+
+    expect(resolveAnnotationAnchorText(toolCall, { messageIndex: 0, partIndex: 0 })).toBeUndefined()
+  })
+
   it("returns undefined when indices are out of range", () => {
     expect(
       resolveAnnotationAnchorText(messages, {
