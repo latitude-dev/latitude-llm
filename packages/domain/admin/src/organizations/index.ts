@@ -17,12 +17,17 @@ export {
   adminOrganizationProjectSchema,
   adminOrganizationSandboxSchema,
 } from "./organization-details.ts"
-export { AdminOrganizationRepository, type AdminOrganizationSummary } from "./organization-repository.ts"
+export {
+  type AdminOrganizationCreditSpendRow,
+  AdminOrganizationRepository,
+  type AdminOrganizationSummary,
+  type ListOrganizationsByConsumedCreditsInput,
+  type OrganizationsByConsumedCreditsPage,
+} from "./organization-repository.ts"
 export {
   AdminOrganizationUsageRepository,
   type AdminOrganizationUsageRow,
-  type ListOrganizationsByTraceCountInput,
-  type OrganizationsByTraceCountPage,
+  type FindOrganizationUsageByIdsInput,
 } from "./organization-usage-repository.ts"
 export {
   type AdminOrganizationUsageCursor,

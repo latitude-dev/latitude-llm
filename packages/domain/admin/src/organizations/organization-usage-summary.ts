@@ -3,14 +3,13 @@ import { z } from "zod"
 /**
  * One row of the backoffice "organisations by usage" table — surfaces the
  * compact identity / billing / membership signals next to the activity
- * metric the page is sorted by.
+ * metrics the page is sorted by.
  *
- * The trace count is scoped to a rolling window (see
- * `ORGANIZATION_USAGE_WINDOW_DAYS` in `list-organizations-by-usage.ts`)
- * so the table answers "who's using the product right now?" rather than
- * "who has historically produced traces?". Orgs with zero traces in
- * that window do not appear at all — the listing is a usage ranking,
- * not an org directory.
+ * Credit spend is the current billing period's `consumedCredits`. Trace
+ * count is scoped to a rolling window (see `ORGANIZATION_USAGE_WINDOW_DAYS`
+ * in `list-organizations-by-usage.ts`). Orgs with zero credit spend in the
+ * current period do not appear — the listing is a spend ranking, not an
+ * org directory.
  */
 export const adminOrganizationUsageSummarySchema = z.object({
   id: z.string(),
@@ -23,11 +22,16 @@ export const adminOrganizationUsageSummarySchema = z.object({
   plan: z.string().nullable(),
   memberCount: z.number().int().nonnegative(),
   /**
-   * Trace count over the rolling usage window. Always > 0 for rows that
-   * reach this DTO — orgs with no traces in the window don't appear in
-   * the listing at all.
+   * Credits consumed in the organisation's current billing period.
+   * Always > 0 for rows that reach this DTO — orgs with no current-period
+   * spend don't appear in the listing at all.
    */
-  traceCount: z.number().int().positive(),
+  consumedCredits: z.number().int().positive(),
+  /**
+   * Trace count over the rolling usage window. May be 0 when the org has
+   * billed credits without producing traces in that window.
+   */
+  traceCount: z.number().int().nonnegative(),
   /** End time of the most recent trace in the window. */
   lastTraceAt: z.date().nullable(),
   createdAt: z.date(),
@@ -36,12 +40,18 @@ export type AdminOrganizationUsageSummary = z.infer<typeof adminOrganizationUsag
 
 /**
  * Composite cursor for `listOrganizationsByUsageUseCase`. The page is
- * sorted by `traceCount DESC, organizationId ASC`, so a stable cursor
- * needs both halves: the count alone repeats across orgs, the id alone
- * doesn't reflect the sort dimension.
+ * sorted by `consumedCredits DESC, organizationId ASC`, so a stable cursor
+ * needs both halves: the credit count alone repeats across orgs, the id
+ * alone doesn't reflect the sort dimension.
+ *
+ * `asOf` pins the billing-period + traces window for the whole listing
+ * session so a page fetched after a period boundary still ranks against
+ * the same instant as the first page (otherwise counters reset mid-scroll
+ * and rows can duplicate or vanish).
  */
 export const adminOrganizationUsageCursorSchema = z.object({
-  traceCount: z.number().int().nonnegative(),
+  consumedCredits: z.number().int().nonnegative(),
   organizationId: z.string().min(1),
+  asOf: z.coerce.date(),
 })
 export type AdminOrganizationUsageCursor = z.infer<typeof adminOrganizationUsageCursorSchema>
