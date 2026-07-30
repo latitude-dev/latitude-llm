@@ -86,8 +86,7 @@ describe("MarkdownContent", () => {
     expect(markup).toMatch(/Show [\d,]+ more characters/)
   })
 
-  // Text runs that carry no `data-source-*` cannot be annotated: the selection
-  // popover opens, then the thumb click silently resolves to no anchor.
+  // Text with no `data-source-*` cannot be annotated: the popover opens, then the thumb click resolves to no anchor.
   describe("source coverage", () => {
     function sourceSpans(markup: string, content: string) {
       return [...markup.matchAll(/data-source-start="(\d+)" data-source-end="(\d+)"/g)].map(([, start, end]) =>

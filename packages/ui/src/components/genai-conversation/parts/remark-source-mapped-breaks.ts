@@ -30,9 +30,6 @@ function splitTextNode(node: Text, source: string): (Text | Break)[] | null {
   const endOffset = node.position?.end?.offset
   const sourceParts =
     startOffset != null && endOffset != null ? splitOnLineEndings(source.slice(startOffset, endOffset)) : null
-  // Markdown escapes and character references make `value` shorter than its
-  // source span, so offsets are only trustworthy when both sides split the
-  // same number of times.
   const aligned = sourceParts?.length === parts.length ? sourceParts : null
 
   const replacements: (Text | Break)[] = []
@@ -42,7 +39,8 @@ function splitTextNode(node: Text, source: string): (Text | Break)[] | null {
 
     const text: Text = { type: "text", value: part.value }
     const sourcePart = aligned?.[index]
-    if (sourcePart && start && startOffset != null) {
+    // Escapes and character references decode shorter than their source span, and consumers interpolate across it.
+    if (sourcePart?.value === part.value && start && startOffset != null) {
       const line = start.line + index
       const column = index === 0 ? start.column : 1
       text.position = {
@@ -56,13 +54,7 @@ function splitTextNode(node: Text, source: string): (Text | Break)[] | null {
   return replacements
 }
 
-/**
- * Drop-in for `remark-breaks` that keeps `position` on the split text nodes.
- * Upstream rebuilds them through `mdast-util-find-and-replace`, which emits
- * position-less nodes, and the rehype source mapper can only stamp
- * `data-source-*` on positioned text — so every paragraph written with soft
- * line breaks would silently lose annotation and search-highlight anchoring.
- */
+/** Drop-in for `remark-breaks` that keeps `position` on the split text nodes. */
 export function remarkSourceMappedBreaks() {
   return (tree: Root, file: unknown) => {
     const source = String(file)

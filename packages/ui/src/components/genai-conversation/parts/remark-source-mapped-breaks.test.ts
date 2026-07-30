@@ -1,4 +1,4 @@
-import type { Paragraph, Root, RootContent, Text } from "mdast"
+import type { Paragraph, PhrasingContent, Root, Text } from "mdast"
 import { describe, expect, it } from "vitest"
 import { remarkSourceMappedBreaks } from "./remark-source-mapped-breaks.ts"
 
@@ -17,14 +17,14 @@ function paragraphTree(source: string): Root {
   return { type: "root", children: [paragraph] }
 }
 
-function run(source: string, tree: Root = paragraphTree(source)): RootContent[] {
+function run(source: string, tree: Root = paragraphTree(source)): PhrasingContent[] {
   remarkSourceMappedBreaks()(tree, source)
   const paragraph = tree.children[0]
   if (paragraph?.type !== "paragraph") throw new Error("expected a paragraph")
   return paragraph.children
 }
 
-function offsetsOf(children: readonly RootContent[]): [number, number][] {
+function offsetsOf(children: readonly PhrasingContent[]): [number, number][] {
   return children
     .filter((child): child is Text => child.type === "text")
     .map((child) => [child.position?.start.offset ?? -1, child.position?.end.offset ?? -1])
@@ -62,6 +62,35 @@ describe("remarkSourceMappedBreaks", () => {
     const children = run("just one line")
     expect(children.map((child) => child.type)).toEqual(["text"])
     expect(offsetsOf(children)).toEqual([[0, 13]])
+  })
+
+  it("leaves a line unmapped when its decoded value diverges from the source", () => {
+    const source = "a &amp; b\nnext"
+    const tree: Root = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "text",
+              value: "a & b\nnext",
+              position: {
+                start: { line: 1, column: 1, offset: 0 },
+                end: { line: 2, column: 5, offset: source.length },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    const children = run(source, tree)
+    expect(children.map((child) => child.type)).toEqual(["text", "break", "text"])
+    expect(offsetsOf(children)).toEqual([
+      [-1, -1],
+      [10, 14],
+    ])
   })
 
   it("still splits when the node carries no position", () => {
