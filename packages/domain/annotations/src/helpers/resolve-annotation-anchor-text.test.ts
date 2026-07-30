@@ -82,8 +82,7 @@ describe("resolveAnnotationAnchorText", () => {
   })
 
   it("falls back to a synthesized text part when the message carries only `content`", () => {
-    // `normalizeMessage` / `getPartText` in the conversation UI synthesize
-    // `parts: [{ type: "text", content }]` for these and emit `partIndex: 0`.
+    // The conversation UI synthesizes a text part for these and emits `partIndex: 0`.
     const contentOnly = [{ role: "assistant", content: "hello there" }] as unknown as GenAIMessage[]
 
     expect(

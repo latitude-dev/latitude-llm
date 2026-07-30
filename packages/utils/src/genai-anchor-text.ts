@@ -1,14 +1,6 @@
-/**
- * Which text a GenAI message part exposes to annotation anchors.
- *
- * Shared by the conversation UI (which decides what a user may highlight and
- * measures the offsets) and the backend anchor resolver (which replays those
- * offsets). The two must agree part-for-part: a part the UI lets a user select
- * but the resolver rejects turns every annotation on it into a 400.
- *
- * Typed structurally so this stays free of a `rosetta-ai` dependency.
- */
+// A part the conversation UI lets a user select but this rejects 400s every annotation on it.
 
+// Structural rather than `rosetta-ai`'s GenAIMessage: @repo/utils takes no domain dependencies.
 interface AnchorPart {
   readonly type?: string | undefined
   readonly content?: unknown

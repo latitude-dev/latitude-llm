@@ -130,9 +130,7 @@ describe("persistDraftAnnotation", () => {
     expect(score.metadata.rawFeedback).toBe("Signal with refund policy")
   })
 
-  // Every assistant turn before the final answer in a coding-agent trace is
-  // `reasoning` + `tool_call`, so a thinking block is the only text a reviewer
-  // can highlight there — the final plain-text answer is the exception.
+  // Shaped like a coding-agent trace: reasoning is the only selectable text before the final answer.
   it("creates draft anchored to an assistant reasoning part", async () => {
     const thinking = "The user asked about refunds; the policy allows 30 days."
     const allMessages: GenAIMessage[] = [
