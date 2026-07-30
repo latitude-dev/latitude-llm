@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## v0.3.75 - 2026-07-30
+
+### Cost
+
+- Added a project-scoped Cost section behind the `costDashboard` organization flag: a KPI row, a cost-over-time chart with Total/Average/p95, and the data-confidence strip later cost panels build on. Every figure is gated to billable operations so wrapper and tool spans cannot double-count spend, per-trace denominators count only traces with at least one billable span, buckets and labels are UTC, and the still-filling bucket is drawn hatched or dashed so the last point is not read as spend falling (ref: #4290).
+
+### Behaviors
+
+- Fixed Behaviours going blank on every rebuild. Publication activated the new tree while its clusters were still named "Pending", so the read filtered out every node for the whole naming phase, and until the next garden run if naming failed. A fresh tree is now saved as staging, named, then reassigned and swapped in one step, so the previous tree keeps serving until the new one is displayable (ref: #4305).
+
+### Annotations
+
+- Fixed annotating reasoning blocks. The anchor resolver accepted only text parts, and in a coding-agent trace every turn before the final answer is reasoning plus tool calls, so annotating anything but the last message failed (ref: #4304).
+- Fixed annotating user messages written with soft line breaks or raw HTML. Those text runs lost their source offsets, so the selection popover opened and then closed without resolving an anchor (ref: #4302).
+
+### Integrations
+
+- Fixed integration dispatch targets being stored per project. Connecting an integration wrote a project override only, so "Send to agent" reported "Finish setting up <kind>" from signals in every other project and auto-dispatch never fired there. Connect now seeds the organization default and the repo picker updates it; existing override targets are backfilled to the default with triggers left off, so the current auto-dispatch scope is unchanged (ref: #4308).
+
+### Email
+
+- Restored the logo image in notification email headers, which broke when the app switched to an inline SVG wordmark and the PNG was removed (ref: #4309).
+
+### Models
+
+- Updated the bundled models.dev catalog data (ref: #4287).
+
 ## v0.3.74 - 2026-07-30
 
 ### Traces
