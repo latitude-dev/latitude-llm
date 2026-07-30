@@ -140,7 +140,7 @@ Naming runs **deepest-first** so an interior node sees its children's final name
 
 Three modes:
 
-- **Leaf** — name from farthest-point-sampled member summaries (budget clamped to `[TAXONOMY_FPS_SAMPLE_BUDGET_MIN, TAXONOMY_FPS_SAMPLE_BUDGET_MAX]`).
+- **Leaf** — name from farthest-point-sampled member summaries (count budget clamped to `[TAXONOMY_FPS_SAMPLE_BUDGET_MIN, TAXONOMY_FPS_SAMPLE_BUDGET_MAX]`). Each summary is middle-truncated to `TAXONOMY_NAMING_SAMPLE_CHAR_CAP` (2KB) and the concatenated `Samples:` block is capped at `TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP` (12KB) so topic digests (stored up to ~24KB for embedding) cannot blow the naming model's structured-output window.
 - **Interior** — collapse the already-named children into a single umbrella topic broader than every child.
 - **Root** — produce a project-wide umbrella that covers *every* top-level category (a different prompt because the model otherwise picks a name fitting its biggest child).
 
