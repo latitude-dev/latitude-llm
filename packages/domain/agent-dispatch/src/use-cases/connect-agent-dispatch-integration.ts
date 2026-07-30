@@ -26,11 +26,6 @@ export interface ConnectAgentDispatchIntegrationInput {
   readonly webhookSecret?: string | null
 }
 
-/**
- * Connecting seeds the organization-wide default config, so every project can
- * dispatch to the integration. Existing triggers survive a reconnect, and the
- * incoming target is merged field-wise so omitted fields keep their value.
- */
 export const connectAgentDispatchIntegrationUseCase = (input: ConnectAgentDispatchIntegrationInput) =>
   Effect.gen(function* () {
     const integrationRepo = yield* AgentDispatchIntegrationRepository

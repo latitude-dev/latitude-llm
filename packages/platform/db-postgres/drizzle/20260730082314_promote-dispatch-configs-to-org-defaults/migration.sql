@@ -1,9 +1,6 @@
 -- Custom SQL migration file, put your code below! --
--- Backfill: connecting an integration used to store its target as a project override only, so manual
--- "Send to agent" and auto-dispatch worked in the connecting project alone. Connect now seeds the
--- organization default, so promote a target for every active integration that still lacks one.
--- Triggers stay empty and disabled: the existing project override keeps its auto-dispatch, and the rest
--- of the organization gains manual sends without silently fanning dispatches out to other projects.
+-- Backfill: promote a project override's target to the organization default that connect now seeds.
+-- Triggers stay off so the promoted default cannot fan auto-dispatch out to other projects.
 
 -- An empty target overrides the default with nothing, so clear it to inherit before promoting.
 UPDATE "latitude"."agent_dispatch_configs"
