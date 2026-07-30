@@ -23,6 +23,49 @@ const translator = new Translator({
   providerMetadata: 'preserve',
 })
 
+/**
+ * Config attributes named after the provider's public API that the Vercel AI
+ * SDK exposes under a different name. The SDK validates provider options with
+ * a zod schema that silently drops unknown keys, so without these aliases the
+ * attribute never reaches the provider.
+ *
+ * Keys are the metadata keys from PROVIDER_TO_METADATA_KEY, not provider names,
+ * so aliases apply to every provider sharing an SDK adapter (e.g. OpenAI and
+ * Azure).
+ */
+const PROVIDER_OPTIONS_ALIASES: Record<string, Record<string, string>> = {
+  openai: {
+    // https://platform.openai.com/docs/api-reference/chat/create#chat_create-verbosity
+    verbosity: 'textVerbosity',
+  },
+}
+
+function aliasProviderOptions({
+  providerKey,
+  providerOptions,
+}: {
+  providerKey: string
+  providerOptions: Record<string, JSONValue>
+}): Record<string, JSONValue> {
+  const aliases = PROVIDER_OPTIONS_ALIASES[providerKey]
+  if (!aliases) return providerOptions
+
+  return Object.entries(providerOptions).reduce(
+    (acc, [key, value]) => {
+      const alias = aliases[key]
+      if (!alias) {
+        acc[key] = value
+        return acc
+      }
+
+      if (acc[alias] === undefined) acc[alias] = value
+
+      return acc
+    },
+    {} as Record<string, JSONValue>,
+  )
+}
+
 function convertLatitudeMessagesToVercelFormat({
   messages,
   provider,
@@ -57,7 +100,10 @@ export function applyAllRules({ providerType, messages, config }: Props) {
   })
 
   const providerKey = getProviderMetadataKey(providerType)
-  const providerOptions = toCamelCaseDeep(config)
+  const providerOptions = aliasProviderOptions({
+    providerKey,
+    providerOptions: toCamelCaseDeep(config) as Record<string, JSONValue>,
+  })
 
   return {
     ...rules,

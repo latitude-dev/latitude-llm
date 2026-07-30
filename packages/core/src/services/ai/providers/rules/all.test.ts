@@ -75,6 +75,77 @@ describe('rules', () => {
     })
   })
 
+  it('aliases openai verbosity to the name the AI SDK expects', () => {
+    const result = applyAllRules({
+      providerType: Providers.OpenAI,
+      messages: [],
+      config: {
+        model: 'gpt-5.1',
+        verbosity: 'low',
+      },
+    })
+
+    expect(result.config.providerOptions.openai).toEqual({
+      model: 'gpt-5.1',
+      textVerbosity: 'low',
+    })
+  })
+
+  it('aliases openai verbosity for Azure too', () => {
+    const result = applyAllRules({
+      providerType: Providers.Azure,
+      messages: [],
+      config: {
+        model: 'gpt-5.1',
+        reasoning_effort: 'medium',
+        verbosity: 'low',
+        azure: { resourceName: 'my-resource' },
+      },
+    })
+
+    expect(result.config.providerOptions.openai).toEqual({
+      model: 'gpt-5.1',
+      reasoningEffort: 'medium',
+      textVerbosity: 'low',
+      azure: { resourceName: 'my-resource' },
+    })
+  })
+
+  it('keeps an explicit textVerbosity over the aliased verbosity', () => {
+    const result = applyAllRules({
+      providerType: Providers.OpenAI,
+      messages: [],
+      config: {
+        model: 'gpt-5.1',
+        verbosity: 'low',
+        text_verbosity: 'high',
+      },
+    })
+
+    expect(result.config.providerOptions.openai).toEqual({
+      model: 'gpt-5.1',
+      textVerbosity: 'high',
+    })
+  })
+
+  it('does not alias verbosity for providers without openai options', () => {
+    const result = applyAllRules({
+      providerType: Providers.Google,
+      messages: [
+        { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
+      ] as Message[],
+      config: {
+        model: 'gemini-2.5-pro',
+        verbosity: 'low',
+      },
+    })
+
+    expect(result.config.providerOptions.google).toEqual({
+      model: 'gemini-2.5-pro',
+      verbosity: 'low',
+    })
+  })
+
   it('camelCase all providerOptions', () => {
     expect(
       applyAllRules({
