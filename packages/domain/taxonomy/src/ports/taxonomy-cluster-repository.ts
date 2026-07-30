@@ -64,6 +64,12 @@ export interface TaxonomyClusterRepositoryShape {
     readonly customBehaviorId?: CustomBehaviorId | null
     /** Omit/null = topic (facet_id IS NULL); an id scopes to that facet's tree. */
     readonly facetId?: FacetId | null
+    /**
+     * States to read. Defaults to `["active"]` — every product read. The publish
+     * sequence names a tree while it is still `staging`, so naming passes
+     * `["active", "staging"]` to resolve a staged node's parent/siblings/children.
+     */
+    readonly states?: readonly TaxonomyCluster["state"][]
   }): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   /** Active ids of the node plus all its descendants (path prefix match). */
   listSubtreeIds(input: {

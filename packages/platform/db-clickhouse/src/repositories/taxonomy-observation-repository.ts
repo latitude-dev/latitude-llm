@@ -904,6 +904,39 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             )
         }),
 
+      listAllByObservationIds: ({ organizationId, projectId, observationIds, limit }) =>
+        Effect.gen(function* () {
+          if (observationIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${selectColumns}
+                        FROM taxonomy_observations FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
+                          AND observation_id IN {observationIds:Array(String)}
+                        ORDER BY start_time DESC, observation_id ASC
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  observationIds: observationIds as readonly string[],
+                  limit,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<TaxonomyObservationRow>()
+              return rows.map(toDomainObservation)
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyObservationRepository.listAllByObservationIds"),
+              ),
+            )
+        }),
+
       listBySession: ({ organizationId, projectId, sessionId, analysisHash }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

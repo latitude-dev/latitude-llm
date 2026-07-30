@@ -232,6 +232,27 @@ export interface StagingLeafCluster {
   readonly centroid: readonly number[]
 }
 
+/** A leaf's sample member ids, the naming sample for a not-yet-assigned staging leaf. */
+export interface TaxonomyClusterNamingMembers {
+  readonly clusterId: TaxonomyClusterId
+  readonly observationIds: readonly string[]
+}
+
+/**
+ * What a reused (continuation) row looked like before the plan overwrote it, so a
+ * publish that fails before the swap can put the live tree back. Only the fields
+ * reads resolve a node through: centroid and counters are left as the run found
+ * them, because online routing mutates those concurrently.
+ */
+export interface TaxonomyContinuedRestore {
+  readonly clusterId: TaxonomyClusterId
+  readonly parentClusterId: TaxonomyClusterId | null
+  readonly path: string
+  readonly depth: number
+  readonly name: string
+  readonly description: string
+}
+
 export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResult {
   readonly mode: TaxonomyAdaptiveClusteringMode
   /** Depth-ascending; write boundaries must preserve order so children are not saved before parents. */
@@ -245,6 +266,24 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
   readonly customAssignments: readonly TaxonomyViewAssignment[]
   /** Leaf id + centroid for adaptive full-window routing. Empty on the off path. */
   readonly leafClusters: readonly StagingLeafCluster[]
+  /**
+   * The clusters this plan saves as `staging` — what the atomic swap activates
+   * once they are named and ClickHouse points at them. Empty only when nothing
+   * fresh was staged (a view's off path, which upserts active rows in place).
+   */
+  readonly stagedClusterIds: readonly TaxonomyClusterId[]
+  /**
+   * Sample members per leaf, so a `staging` leaf can be named before the
+   * reassignment gives it any `assigned_cluster_id` rows. Bounded by the
+   * clustering sample cap.
+   */
+  readonly namingMembers: readonly TaxonomyClusterNamingMembers[]
+  /**
+   * Prior state of the rows this plan upserts in place (static continuations,
+   * which keep their id). Empty on the adaptive path, which never touches a live
+   * row. Cleanup restores these when a publish fails before the swap.
+   */
+  readonly continuedRestore: readonly TaxonomyContinuedRestore[]
   /** Non-null ⇒ the plan's scope is this cohort. */
   readonly customBehaviorId: CustomBehaviorId | null
   /** Non-null ⇒ the plan's facet is this facet. Any non-null id here (or a non-null
@@ -450,6 +489,8 @@ interface ResolvedTaxonomyLineage {
   readonly oldById: ReadonlyMap<string, TaxonomyCluster>
   readonly decisionByTempId: ReadonlyMap<string, LineageDecision>
   readonly finalIdByTempId: ReadonlyMap<string, string>
+  /** Final ids that ARE a live active row (a static-persist continuation upserted in place). */
+  readonly reusedIds: ReadonlySet<string>
   /** Old ids a new node continued — the rest are deaths, in both modes. */
   readonly matchedOldIds: ReadonlySet<string>
 }
@@ -499,6 +540,7 @@ const resolveTaxonomyLineage = (input: {
   })
   const decisionByTempId = new Map(match.decisions.map((decision) => [decision.tempId, decision] as const))
   const finalIdByTempId = new Map<string, string>()
+  const reusedIds = new Set<string>()
   for (const node of input.descriptors) {
     const decision = decisionByTempId.get(node.tempId)
     // Static-persist runs (off, shadow, enforced-fallback) reuse the continued id
@@ -507,9 +549,11 @@ const resolveTaxonomyLineage = (input: {
     // a fresh id and continuity is carried by the lineage rows, not the literal id
     // — a live upsert onto a reused id would collapse the old tree before the swap.
     const reuse = decision?.transition === "continuation" && !input.persistAdaptive
-    finalIdByTempId.set(node.tempId, reuse ? decision.reuseId : generateId())
+    const finalId = reuse ? decision.reuseId : generateId()
+    if (reuse) reusedIds.add(finalId)
+    finalIdByTempId.set(node.tempId, finalId)
   }
-  return { oldById, decisionByTempId, finalIdByTempId, matchedOldIds: match.matchedOldIds }
+  return { oldById, decisionByTempId, finalIdByTempId, reusedIds, matchedOldIds: match.matchedOldIds }
 }
 
 export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyInput) =>
@@ -600,6 +644,9 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         observationAssignments: [],
         customAssignments: [],
         leafClusters: [],
+        stagedClusterIds: [],
+        namingMembers: [],
+        continuedRestore: [],
         customBehaviorId: scopedBehaviorId,
         facetId: scopedFacetId,
         deprecatedClusterIds: [],
@@ -663,7 +710,14 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
 
     const persistAdaptive = mode === "enforced" && adaptiveBuild !== null && fallbackReason === null
     const adaptive = persistAdaptive
-    const clusterState: TaxonomyClusterState = adaptive ? "staging" : "active"
+    // On the whole-project topic tree a fresh id is born `staging`: it becomes
+    // visible to reads only in the swap, once it is named AND ClickHouse points
+    // at it. A reused id (a static-persist continuation) IS the live row, so it
+    // stays active and keeps serving its subtree across the rebuild. A view names
+    // from its assignment slice, which the reassignment writes after naming would
+    // run, so views keep publishing as before.
+    const isView = scopedBehaviorId !== null || scopedFacetId !== null
+    const freshClusterState: TaxonomyClusterState = adaptive || !isView ? "staging" : "active"
     const persistBuild = persistAdaptive && adaptiveBuild ? adaptiveBuild : staticBuild
     const tree = persistBuild.root
 
@@ -687,7 +741,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
       ...(input.facetId ? { facetId: input.facetId } : {}),
     })
-    const { oldById, decisionByTempId, finalIdByTempId, matchedOldIds } = resolveTaxonomyLineage({
+    const { oldById, decisionByTempId, finalIdByTempId, reusedIds, matchedOldIds } = resolveTaxonomyLineage({
       descriptors,
       previouslyActive,
       persistAdaptive,
@@ -726,7 +780,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         path,
         depth: node.depth,
         splitLinkThreshold: node.splitLinkThreshold,
-        state: clusterState,
+        state: reusedIds.has(finalId) ? "active" : freshClusterState,
         memberEmbeddings,
         memberStartTimes,
         memberCount: directCount,
@@ -869,6 +923,30 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       observationAssignments,
       customAssignments,
       leafClusters,
+      stagedClusterIds: bornClusters
+        .filter((cluster) => cluster.state === "staging")
+        .map((cluster) => cluster.id as TaxonomyClusterId),
+      namingMembers: bornLeaves.map((leaf) => ({
+        clusterId: leaf.clusterId as TaxonomyClusterId,
+        observationIds: leaf.observationIndices.flatMap((index) => {
+          const observationId = observations[index]?.observationId
+          return observationId === undefined ? [] : [observationId]
+        }),
+      })),
+      continuedRestore: [...reusedIds].flatMap((clusterId) => {
+        const previous = oldById.get(clusterId)
+        if (previous === undefined) return []
+        return [
+          {
+            clusterId: previous.id,
+            parentClusterId: previous.parentClusterId,
+            path: previous.path,
+            depth: previous.depth,
+            name: previous.name,
+            description: previous.description,
+          } satisfies TaxonomyContinuedRestore,
+        ]
+      }),
       customBehaviorId: scopedBehaviorId,
       facetId: scopedFacetId,
       deprecatedClusterIds,
