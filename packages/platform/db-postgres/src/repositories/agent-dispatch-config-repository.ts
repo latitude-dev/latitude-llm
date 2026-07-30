@@ -52,6 +52,20 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
       return rows.map(toDomainConfig)
     }),
 
+  listByKind: (kind) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select()
+            .from(agentDispatchConfigs)
+            .where(and(eq(agentDispatchConfigs.organizationId, organizationId), eq(agentDispatchConfigs.kind, kind))),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatchConfigsByKind")))
+      return rows.map(toDomainConfig)
+    }),
+
   findDefaultByIntegration: (integrationId) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

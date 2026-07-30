@@ -42,7 +42,7 @@ Settings → Integrations:
 
 1. Connect a target (org-level credential)
 2. Per-project dispatch config: enable, triggers, target mapping, guardrails
-3. Dispatch history audit log
+3. Dispatch history audit log, org-wide across every project (`AgentDispatchRepository.listByKind`)
 
 The settings UI exposes `signal.discovered` (new signal), `incident.opened` (escalating signal), `signal.regressed` (a resolved signal started occurring again), and `monitor.incident` (threshold or escalating monitor) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `signal.discovered` fires only for `origin = 'system'` signals (auto-discovered); hand-built `origin = 'user'` signals are skipped on creation — humans already chose to create them. Runtime conditions dispatch for any signal origin: `incident.opened` when the signal opens an incident, `signal.regressed` when a `SignalRegressed` claim reopens it. Muted, ignored, or resolved signals (and muted monitors) suppress dispatch (same as notifications) — resolved matters because a delayed request can land after the user archived the signal.
 

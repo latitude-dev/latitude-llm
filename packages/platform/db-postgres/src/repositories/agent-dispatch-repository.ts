@@ -1,4 +1,4 @@
-import { type AgentDispatch, AgentDispatchRepository } from "@domain/agent-dispatch"
+import { type AgentDispatch, AgentDispatchRepository, dispatchIdempotencyKeyPrefix } from "@domain/agent-dispatch"
 import {
   generateId,
   OrganizationId,
@@ -7,10 +7,12 @@ import {
   type SqlClientShape,
   toRepositoryError,
 } from "@domain/shared"
-import { and, desc, eq, isNull } from "drizzle-orm"
+import { and, desc, eq, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { agentDispatches } from "../schema/agent-dispatches.ts"
+
+const DISPATCH_HISTORY_LIMIT = 100
 
 const toDomainDispatch = (row: typeof agentDispatches.$inferSelect): AgentDispatch => ({
   id: row.id,
@@ -158,9 +160,31 @@ export const AgentDispatchRepositoryLive = Layer.succeed(AgentDispatchRepository
             .from(agentDispatches)
             .where(and(eq(agentDispatches.projectId, projectId), eq(agentDispatches.organizationId, organizationId)))
             .orderBy(desc(agentDispatches.claimedAt))
-            .limit(100),
+            .limit(DISPATCH_HISTORY_LIMIT),
         )
         .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatches")))
+      return rows.map(toDomainDispatch)
+    }),
+
+  listByKind: (kind) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select()
+            .from(agentDispatches)
+            .where(
+              and(
+                eq(agentDispatches.organizationId, organizationId),
+                // starts_with, not LIKE: the claude_code prefix contains an underscore, a LIKE wildcard.
+                sql`starts_with(${agentDispatches.idempotencyKey}, ${dispatchIdempotencyKeyPrefix(kind)})`,
+              ),
+            )
+            .orderBy(desc(agentDispatches.claimedAt))
+            .limit(DISPATCH_HISTORY_LIMIT),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatchesByKind")))
       return rows.map(toDomainDispatch)
     }),
 

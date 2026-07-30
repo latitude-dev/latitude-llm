@@ -63,6 +63,29 @@ describe("AgentDispatchConfigRepositoryLive", () => {
     expect(found?.guardrails).toBeNull()
   })
 
+  it("lists the default and every project override of one kind", async () => {
+    const OTHER_INTEGRATION = generateId()
+    await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchConfigRepository
+        yield* repo.upsert(row({}))
+        yield* repo.upsert(row({ projectId: PROJECT_A }))
+        yield* repo.upsert(row({ projectId: PROJECT_B }))
+        yield* repo.upsert(row({ kind: "cursor", integrationId: OTHER_INTEGRATION }))
+      }),
+    )
+
+    const webhookConfigs = await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchConfigRepository
+        return yield* repo.listByKind("webhook")
+      }),
+    )
+
+    expect(webhookConfigs).toHaveLength(3)
+    expect(new Set(webhookConfigs.map((config) => config.projectId))).toEqual(new Set([null, PROJECT_A, PROJECT_B]))
+  })
+
   it("enforces one default per integration", async () => {
     await run(
       Effect.gen(function* () {

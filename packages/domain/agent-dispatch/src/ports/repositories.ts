@@ -17,6 +17,9 @@ export interface AgentDispatchConfigRepositoryShape {
   readonly listByProjectIncludingDefaults: (
     projectId: ProjectId,
   ) => Effect.Effect<readonly AgentDispatchConfigRow[], RepositoryError, SqlClient>
+  readonly listByKind: (
+    kind: AgentDispatchKind,
+  ) => Effect.Effect<readonly AgentDispatchConfigRow[], RepositoryError, SqlClient>
   readonly findDefaultByIntegration: (
     integrationId: string,
   ) => Effect.Effect<AgentDispatchConfigRow | null, RepositoryError, SqlClient>
@@ -103,6 +106,7 @@ export interface AgentDispatchRepositoryShape {
     readonly errorDetail: string
   }) => Effect.Effect<boolean, RepositoryError, SqlClient>
   readonly listByProject: (projectId: ProjectId) => Effect.Effect<readonly AgentDispatch[], RepositoryError, SqlClient>
+  readonly listByKind: (kind: AgentDispatchKind) => Effect.Effect<readonly AgentDispatch[], RepositoryError, SqlClient>
   readonly listBySource: (input: {
     readonly projectId: ProjectId
     readonly sourceType: "signal" | "monitor"

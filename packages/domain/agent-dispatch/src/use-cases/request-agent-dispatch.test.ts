@@ -119,6 +119,7 @@ const makeLayer = (opts: {
   const configRepository: (typeof AgentDispatchConfigRepository)["Service"] = {
     listByProjectIncludingDefaults: (forProjectId) =>
       Effect.succeed(configs.filter((row) => row.projectId === null || row.projectId === forProjectId)),
+    listByKind: (kind) => Effect.succeed(configs.filter((row) => row.kind === kind)),
     findDefaultByIntegration: (forIntegrationId) =>
       Effect.succeed(configs.find((row) => row.projectId === null && row.integrationId === forIntegrationId) ?? null),
     findOverrideByProjectAndIntegration: (query) =>

@@ -102,6 +102,72 @@ describe("AgentDispatchRepositoryLive", () => {
     expect(newest.claimedAt.getTime()).toBeGreaterThanOrEqual(oldest.claimedAt.getTime())
   })
 
+  it("lists dispatches of one kind across every project in the organization", async () => {
+    const OTHER_PROJECT = ProjectId("c".repeat(24))
+    const claim = (idempotencyKey: string, projectId: ProjectId) =>
+      run(
+        Effect.gen(function* () {
+          const repo = yield* AgentDispatchRepository
+          return yield* repo.claim({
+            configId: CONFIG,
+            projectId,
+            idempotencyKey,
+            trigger: "manual" as const,
+            sourceType: "signal" as const,
+            sourceId: "sigA",
+          })
+        }),
+      )
+
+    await claim("cursor:cfg:manual:sigA:1", PROJECT)
+    await claim("cursor:cfg:manual:sigA:2", OTHER_PROJECT)
+    await claim("claude_code:cfg:manual:sigA:3", OTHER_PROJECT)
+    await claim("linear:cfg:manual:sigA:4", PROJECT)
+
+    const cursorDispatches = await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchRepository
+        return yield* repo.listByKind("cursor")
+      }),
+    )
+
+    expect(cursorDispatches).toHaveLength(2)
+    expect(new Set(cursorDispatches.map((dispatch) => dispatch.projectId))).toEqual(new Set([PROJECT, OTHER_PROJECT]))
+    const [newest, oldest] = cursorDispatches
+    if (!newest || !oldest) throw new Error("unreachable")
+    expect(newest.claimedAt.getTime()).toBeGreaterThanOrEqual(oldest.claimedAt.getTime())
+  })
+
+  it("does not treat the underscore in claude_code as a wildcard when filtering by kind", async () => {
+    const claim = (idempotencyKey: string) =>
+      run(
+        Effect.gen(function* () {
+          const repo = yield* AgentDispatchRepository
+          return yield* repo.claim({
+            configId: CONFIG,
+            projectId: PROJECT,
+            idempotencyKey,
+            trigger: "manual" as const,
+            sourceType: "signal" as const,
+            sourceId: "sigA",
+          })
+        }),
+      )
+
+    await claim("claude_code:cfg:manual:sigA:1")
+    await claim("claudeXcode:cfg:manual:sigA:2")
+
+    const claudeDispatches = await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchRepository
+        return yield* repo.listByKind("claude_code")
+      }),
+    )
+
+    expect(claudeDispatches).toHaveLength(1)
+    expect(claudeDispatches[0]?.idempotencyKey).toBe("claude_code:cfg:manual:sigA:1")
+  })
+
   it("marks claimed rows failed by idempotency key", async () => {
     const input = {
       configId: CONFIG,

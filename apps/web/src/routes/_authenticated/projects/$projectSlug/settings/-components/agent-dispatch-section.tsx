@@ -18,6 +18,8 @@ import {
   Modal,
   Select,
   Skeleton,
+  Status,
+  type StatusProps,
   Text,
   useToast,
 } from "@repo/ui"
@@ -30,8 +32,10 @@ import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import {
   type AgentDispatchConfigRecord,
+  type AgentDispatchHistoryRecord,
   type AgentDispatchIntegrationRecord,
   type AgentDispatchRecord,
+  agentDispatchesQueryKey,
   connectClaudeIntegration,
   connectCursorIntegration,
   connectLinearIntegration,
@@ -87,6 +91,12 @@ export const DISPATCH_ERROR_TITLES: Record<string, string> = {
   config: "Dispatch request rejected",
   rate_limited: "Rate limited",
   transport: "Network error",
+}
+
+const DISPATCH_STATUS_META: Record<string, { label: string; variant: StatusProps["variant"] }> = {
+  claimed: { label: "Claimed", variant: "neutral" },
+  dispatched: { label: "Dispatched", variant: "success" },
+  failed: { label: "Failed", variant: "destructive" },
 }
 
 const DISPATCH_ERROR_FALLBACKS: Record<string, string> = {
@@ -412,7 +422,7 @@ export function AgentDispatchIntegrationDetails({
         vendorAccountId={integration.vendorAccountId}
         webhookSecret={kind === "webhook" ? webhookSecret : null}
       />
-      <AgentDispatchHistorySection projectId={projectId} projectSlug={projectSlug} kind={kind} />
+      <AgentDispatchHistorySection kind={kind} />
     </div>
   )
 }
@@ -1321,51 +1331,60 @@ function ConnectAgentDispatchModal({
   )
 }
 
-function AgentDispatchHistorySection({
-  projectId,
-  projectSlug,
-  kind,
-}: {
-  readonly projectId: string
-  readonly projectSlug: string
-  readonly kind: AgentDispatchKindKey
-}) {
+function AgentDispatchHistorySection({ kind }: { readonly kind: AgentDispatchKindKey }) {
   const [errorDetailModal, setErrorDetailModal] = useState<{ title: string; detail: string } | null>(null)
   const { data: dispatches = [], isLoading } = useQuery({
-    queryKey: ["agent-dispatches", projectId],
-    queryFn: () => listAgentDispatches({ data: { projectId } }),
+    queryKey: agentDispatchesQueryKey(kind),
+    queryFn: () => listAgentDispatches({ data: { kind } }),
   })
 
   if (isLoading) return null
 
-  const filteredDispatches = dispatches.filter((dispatch: AgentDispatchRecord) => dispatch.kind === kind)
-
-  const columns: InfiniteTableColumn<AgentDispatchRecord>[] = [
+  const columns: InfiniteTableColumn<AgentDispatchHistoryRecord>[] = [
+    {
+      key: "project",
+      header: "Project",
+      width: 180,
+      render: (dispatch) =>
+        dispatch.projectSlug ? (
+          <Link
+            to="/projects/$projectSlug"
+            params={{ projectSlug: dispatch.projectSlug }}
+            aria-label={`Open project ${dispatch.projectName ?? dispatch.projectSlug}`}
+            className="flex min-w-0 items-center gap-1 text-xs font-semibold text-foreground hover:underline"
+          >
+            <span className="truncate">{dispatch.projectName ?? dispatch.projectSlug}</span>
+            <Icon icon={ExternalLink} size="xs" />
+          </Link>
+        ) : (
+          <Text.H6 color="foregroundMuted">Deleted project</Text.H6>
+        ),
+    },
     {
       key: "trigger",
       header: "Trigger",
-      width: 180,
+      width: 160,
       render: (dispatch) => DISPATCH_TRIGGER_TITLES[dispatch.trigger] ?? dispatch.trigger.replaceAll(".", " "),
     },
     {
       key: "source",
       header: "Source",
-      width: 260,
+      width: 240,
       render: (dispatch) =>
-        dispatch.sourceType === "signal" && dispatch.sourceSlug ? (
+        dispatch.sourceType === "signal" && dispatch.sourceSlug && dispatch.projectSlug ? (
           <Link
             to="/projects/$projectSlug/signals/$signalSlug"
-            params={{ projectSlug, signalSlug: dispatch.sourceSlug }}
+            params={{ projectSlug: dispatch.projectSlug, signalSlug: dispatch.sourceSlug }}
             aria-label={`Open signal ${dispatch.sourceName ?? dispatch.sourceSlug}`}
             className="flex min-w-0 items-center gap-1 text-xs font-semibold text-foreground hover:underline"
           >
             <span className="truncate">{dispatch.sourceName ?? dispatch.sourceSlug}</span>
             <Icon icon={ExternalLink} size="xs" />
           </Link>
-        ) : dispatch.sourceType === "monitor" && dispatch.sourceSlug ? (
+        ) : dispatch.sourceType === "monitor" && dispatch.sourceSlug && dispatch.projectSlug ? (
           <Link
             to="/projects/$projectSlug/monitors/$monitorSlug"
-            params={{ projectSlug, monitorSlug: dispatch.sourceSlug }}
+            params={{ projectSlug: dispatch.projectSlug, monitorSlug: dispatch.sourceSlug }}
             aria-label={`Open monitor ${dispatch.sourceName ?? dispatch.sourceId}`}
             className="flex min-w-0 items-center gap-1 text-xs font-semibold text-foreground hover:underline"
           >
@@ -1386,23 +1405,16 @@ function AgentDispatchHistorySection({
     {
       key: "status",
       header: "Status",
-      width: 240,
+      width: 220,
       render: (dispatch) => {
-        const statusVariant =
-          dispatch.status === "dispatched"
-            ? "successMuted"
-            : dispatch.status === "failed"
-              ? "destructiveMuted"
-              : "muted"
+        const statusMeta = DISPATCH_STATUS_META[dispatch.status] ?? { label: dispatch.status, variant: "neutral" }
         const errorTitle = getDispatchErrorTitle(dispatch)
         const errorDetail = getDispatchErrorDetail(dispatch)
 
         return (
           <div className="flex min-w-0 items-end gap-2">
             <div className="flex min-w-0 flex-col gap-1">
-              <Badge variant={statusVariant} size="small" className="w-fit capitalize">
-                {dispatch.status}
-              </Badge>
+              <Status variant={statusMeta.variant} label={statusMeta.label} className="w-fit" />
               {errorTitle ? <Text.H7 color="destructive">{errorTitle}</Text.H7> : null}
             </div>
             {errorDetail ? (
@@ -1458,11 +1470,12 @@ function AgentDispatchHistorySection({
           Dispatch history
         </Text.H5>
         <Text.H6 display="block" color="foregroundMuted">
-          Audit log of dispatches triggered by signals, monitors, incidents, and manual sends.
+          Audit log of dispatches across every project in your organization, triggered by signals, monitors, incidents,
+          and manual sends.
         </Text.H6>
       </div>
       <InfiniteTable
-        data={filteredDispatches}
+        data={dispatches}
         isLoading={isLoading}
         columns={columns}
         getRowKey={(dispatch) => dispatch.id}

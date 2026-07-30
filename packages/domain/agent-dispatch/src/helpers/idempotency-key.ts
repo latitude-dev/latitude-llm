@@ -17,3 +17,5 @@ export const buildManualDispatchIdempotencyKey = (input: {
   readonly sourceId: string
   readonly sendId: string
 }): string => `${input.vendor}:${input.configId}:manual:${input.sourceId}:${input.sendId}`
+
+export const dispatchIdempotencyKeyPrefix = (vendor: AgentDispatchKind): string => `${vendor}:`

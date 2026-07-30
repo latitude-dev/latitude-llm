@@ -41,7 +41,11 @@ export {
   DispatchAdapterError,
 } from "./errors.ts"
 export { buildDispatchContextFromSignal } from "./helpers/build-dispatch-context.ts"
-export { buildDispatchIdempotencyKey, buildManualDispatchIdempotencyKey } from "./helpers/idempotency-key.ts"
+export {
+  buildDispatchIdempotencyKey,
+  buildManualDispatchIdempotencyKey,
+  dispatchIdempotencyKeyPrefix,
+} from "./helpers/idempotency-key.ts"
 export { defaultDispatchPromptTemplate, renderDispatchPrompt } from "./helpers/render-prompt.ts"
 export type { ResolveEffectiveConfigInput, TargetReadiness } from "./helpers/resolve-effective-config.ts"
 export {

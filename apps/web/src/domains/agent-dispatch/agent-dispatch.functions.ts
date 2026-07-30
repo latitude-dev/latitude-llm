@@ -32,6 +32,7 @@ import {
   upsertProjectDispatchOverrideUseCase,
 } from "@domain/agent-dispatch"
 import { IncidentMonitorReader } from "@domain/notifications"
+import { ProjectRepository } from "@domain/projects"
 import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
 import { TraceRepository } from "@domain/spans"
@@ -72,6 +73,12 @@ export interface AgentDispatchRecord {
   readonly errorCategory: string | null
   readonly errorDetail: string | null
   readonly kind: AgentDispatchKind | null
+}
+
+export interface AgentDispatchHistoryRecord extends AgentDispatchRecord {
+  readonly projectId: string
+  readonly projectName: string | null
+  readonly projectSlug: string | null
 }
 
 export interface AgentDispatchIntegrationRecord {
@@ -338,26 +345,45 @@ export const listAgentDispatchIntegrations = createServerFn({ method: "GET" }).h
   return integrations
 })
 
+export const agentDispatchesQueryKey = (kind: string) => ["agent-dispatches", kind] as const
+
 export const listAgentDispatches = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string() }))
-  .handler(async ({ data }) => {
+  .inputValidator(z.object({ kind: agentDispatchKindSchema }))
+  .handler(async ({ data }): Promise<readonly AgentDispatchHistoryRecord[]> => {
     const { organizationId } = await requireSession()
-    const projectId = ProjectId(data.projectId)
     const rows = await Effect.runPromise(
       Effect.gen(function* () {
         const dispatchRepo = yield* AgentDispatchRepository
         const configRepo = yield* AgentDispatchConfigRepository
+        const projectRepository = yield* ProjectRepository
         const signalRepository = yield* SignalRepository
         const monitorReader = yield* IncidentMonitorReader
-        const dispatches = yield* dispatchRepo.listByProject(projectId)
-        const configs = yield* configRepo.listByProjectIncludingDefaults(projectId)
+        const dispatches = yield* dispatchRepo.listByKind(data.kind)
+        if (dispatches.length === 0) return []
+
+        const configs = yield* configRepo.listByKind(data.kind)
         const configById = new Map(configs.map((config) => [config.id, config]))
-        const signalIds = dispatches
-          .filter((dispatch) => dispatch.sourceType === "signal")
-          .map((dispatch) => SignalId(dispatch.sourceId))
-        const signals = signalIds.length > 0 ? yield* signalRepository.findByIds({ projectId, signalIds }) : []
-        const signalNameById = new Map<string, string>(signals.map((signal) => [signal.id, signal.name]))
-        const signalSlugById = new Map<string, string>(signals.map((signal) => [signal.id, signal.slug]))
+        // Deleted projects keep their dispatches in the audit log, so resolve names from the full list.
+        const projects = yield* projectRepository.listIncludingDeleted()
+        const projectById = new Map(projects.map((project) => [String(project.id), project]))
+
+        const signalIdsByProject = new Map<ProjectId, SignalId[]>()
+        for (const dispatch of dispatches) {
+          if (dispatch.sourceType !== "signal") continue
+          const signalIds = signalIdsByProject.get(dispatch.projectId)
+          if (signalIds) signalIds.push(SignalId(dispatch.sourceId))
+          else signalIdsByProject.set(dispatch.projectId, [SignalId(dispatch.sourceId)])
+        }
+        const signalsPerProject = yield* Effect.forEach([...signalIdsByProject], ([projectId, signalIds]) =>
+          signalRepository.findByIds({ projectId, signalIds }),
+        )
+        const signalNameById = new Map<string, string>()
+        const signalSlugById = new Map<string, string>()
+        for (const signal of signalsPerProject.flat()) {
+          signalNameById.set(signal.id, signal.name)
+          signalSlugById.set(signal.id, signal.slug)
+        }
+
         const monitorIds = [
           ...new Set(
             dispatches.filter((dispatch) => dispatch.sourceType === "monitor").map((dispatch) => dispatch.sourceId),
@@ -382,9 +408,13 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
               ? `https://claude.ai/code/routines/${config.target.routineTriggerId}`
               : null
           const monitor = dispatch.sourceType === "monitor" ? monitorById.get(dispatch.sourceId) : undefined
+          const project = projectById.get(String(dispatch.projectId))
 
           return {
             ...toDispatchRecord(dispatch),
+            projectId: String(dispatch.projectId),
+            projectName: project?.name ?? null,
+            projectSlug: project?.slug ?? null,
             sourceName:
               dispatch.sourceType === "signal"
                 ? (signalNameById.get(dispatch.sourceId) ?? null)
@@ -405,6 +435,7 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
           Layer.mergeAll(
             AgentDispatchRepositoryLive,
             AgentDispatchConfigRepositoryLive,
+            ProjectRepositoryLive,
             SignalRepositoryLive,
             IncidentMonitorReaderLive,
           ),
