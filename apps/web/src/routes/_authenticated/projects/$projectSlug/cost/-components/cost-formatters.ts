@@ -1,7 +1,10 @@
 import {
   COST_BREAKDOWN_DIMENSIONS,
+  COST_PER_CALL_MIN_SAMPLE_CALLS,
   COST_SERIES_METRICS,
+  type CostBreakdown,
   type CostBreakdownDimension,
+  type CostBreakdownRow,
   type CostSeriesMetric,
 } from "@domain/spans"
 import { formatPrice } from "@repo/utils"
@@ -179,6 +182,24 @@ export function formatUtcBucketRange(bucketStartIso: string, bucketSeconds: numb
   return `${formatUtcBucketLabel(bucketStartIso, bucketSeconds)} · UTC day`
 }
 
+/**
+ * Everything outside the shown rows, collapsed. Carries only the columns that sum,
+ * so it can be rendered as a row without inventing a per-trace average.
+ */
+export interface BreakdownRemainder {
+  readonly valueCount: number
+  readonly totalMicrocents: number
+  readonly inputMicrocents: number
+  readonly outputMicrocents: number
+  readonly cacheAndOtherMicrocents: number
+  readonly calls: number
+  readonly tokens: number
+  readonly unpricedTokens: number
+  readonly unpricedCalls: number
+  readonly unknownTokens: number
+  readonly unknownCalls: number
+}
+
 /** Null rather than 0 when there is no denominator, so a share renders as "—" instead of "0%". */
 export const shareOf = (part: number, whole: number): number | null => (whole > 0 ? part / whole : null)
 
@@ -189,7 +210,12 @@ export const formatSignedPrice = (amountUsd: number): string =>
 /**
  * A row's cost per call against the window's average, the figure that says a
  * dimension eats a share of the money out of proportion to how much it is used.
- * Null when there is no baseline: nothing called here, or nothing spent at all.
+ *
+ * Null unless the row can support the claim. Below `COST_PER_CALL_MIN_SAMPLE_CALLS`
+ * the ratio is a one-sample artefact, and on a row that spent nothing it is either
+ * `0.0x` or undefined — in both cases showing it puts a number where there is no
+ * finding. The gate lives here rather than at the call site so the chip cannot come
+ * back ungated somewhere else.
  */
 export function costPerCallMultiple({
   totalMicrocents,
@@ -200,8 +226,90 @@ export function costPerCallMultiple({
   readonly calls: number
   readonly avgPerCallMicrocents: number
 }): number | null {
-  if (calls <= 0 || avgPerCallMicrocents <= 0) return null
+  if (totalMicrocents <= 0 || avgPerCallMicrocents <= 0) return null
+  if (calls < COST_PER_CALL_MIN_SAMPLE_CALLS) return null
   return totalMicrocents / calls / avgPerCallMicrocents
+}
+
+/**
+ * The values worth showing, plus everything else as one remainder.
+ *
+ * Additive columns on the remainder are the window total minus the shown rows, which
+ * stays exact even when the query itself truncated: the remainder then covers both
+ * the rows below the cut and the tail the query never returned. Trace counts are
+ * absent by construction — a trace can span several values, so they do not sum.
+ *
+ * `minShare` drops values too small to read as a proportion into the remainder; the
+ * table leaves it unset because a detail table's job is the exact figure.
+ */
+export function splitBreakdownRows({
+  breakdown,
+  limit,
+  minShare = 0,
+}: {
+  readonly breakdown: CostBreakdown
+  readonly limit: number
+  readonly minShare?: number
+}): { readonly visible: readonly CostBreakdownRow[]; readonly remainder: BreakdownRemainder | null } {
+  const { rows, totals } = breakdown
+  const isReadable = (row: CostBreakdownRow): boolean =>
+    minShare <= 0 ||
+    (shareOf(row.totalMicrocents, totals.totalMicrocents) ?? 0) >= minShare ||
+    (shareOf(row.calls, totals.calls) ?? 0) >= minShare
+
+  const visible: CostBreakdownRow[] = []
+  for (const row of rows) {
+    if (visible.length >= limit) break
+    if (!isReadable(row)) break
+    visible.push(row)
+  }
+
+  const hiddenValues = totals.distinctValues - visible.length
+  if (hiddenValues <= 0) return { visible, remainder: null }
+
+  const shown = visible.reduce(
+    (sum, row) => ({
+      totalMicrocents: sum.totalMicrocents + row.totalMicrocents,
+      inputMicrocents: sum.inputMicrocents + row.inputMicrocents,
+      outputMicrocents: sum.outputMicrocents + row.outputMicrocents,
+      cacheAndOtherMicrocents: sum.cacheAndOtherMicrocents + row.cacheAndOtherMicrocents,
+      calls: sum.calls + row.calls,
+      tokens: sum.tokens + row.tokens,
+      unpricedTokens: sum.unpricedTokens + row.unpricedTokens,
+      unpricedCalls: sum.unpricedCalls + row.unpricedCalls,
+      unknownTokens: sum.unknownTokens + row.unknownTokens,
+      unknownCalls: sum.unknownCalls + row.unknownCalls,
+    }),
+    {
+      totalMicrocents: 0,
+      inputMicrocents: 0,
+      outputMicrocents: 0,
+      cacheAndOtherMicrocents: 0,
+      calls: 0,
+      tokens: 0,
+      unpricedTokens: 0,
+      unpricedCalls: 0,
+      unknownTokens: 0,
+      unknownCalls: 0,
+    },
+  )
+
+  return {
+    visible,
+    remainder: {
+      valueCount: hiddenValues,
+      totalMicrocents: totals.totalMicrocents - shown.totalMicrocents,
+      inputMicrocents: totals.inputMicrocents - shown.inputMicrocents,
+      outputMicrocents: totals.outputMicrocents - shown.outputMicrocents,
+      cacheAndOtherMicrocents: totals.cacheAndOtherMicrocents - shown.cacheAndOtherMicrocents,
+      calls: totals.calls - shown.calls,
+      tokens: totals.tokens - shown.tokens,
+      unpricedTokens: totals.unpricedTokens - shown.unpricedTokens,
+      unpricedCalls: totals.unpricedCalls - shown.unpricedCalls,
+      unknownTokens: totals.unknownTokens - shown.unknownTokens,
+      unknownCalls: totals.unknownCalls - shown.unknownCalls,
+    },
+  }
 }
 
 export function formatCostMultiple(multiple: number): string {

@@ -17,6 +17,12 @@ const MODEL_COLORS: readonly string[] = [
 
 export const TREND_COLOR = "hsl(217 91% 60%)"
 
+/**
+ * The impact panel encodes measure, not model, so its usage bar takes a fixed hue
+ * rather than a slot from the per-model ramp above. Spend reuses `TREND_COLOR`.
+ */
+export const CALLS_SERIES_COLOR = "hsl(174 62% 42%)"
+
 /** Reserved for the collapsed remainder, so it never reads as a model of its own. */
 export const OTHER_SERIES_COLOR = "hsl(211 11% 55%)"
 

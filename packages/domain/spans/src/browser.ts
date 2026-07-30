@@ -71,7 +71,11 @@ export type {
   ModelUsageMeasures,
   ModelUsageSlice,
 } from "./ports/cost-analytics-repository.ts"
-export { COST_BREAKDOWN_DIMENSIONS, COST_SERIES_METRICS } from "./ports/cost-analytics-repository.ts"
+export {
+  COST_BREAKDOWN_DIMENSIONS,
+  COST_PER_CALL_MIN_SAMPLE_CALLS,
+  COST_SERIES_METRICS,
+} from "./ports/cost-analytics-repository.ts"
 export type {
   MessageEmbedding,
   MessageEmbeddingRepositoryShape,

@@ -29,6 +29,7 @@ import {
 } from "./-components/cost-formatters.ts"
 import { CostKpiRow } from "./-components/cost-kpi-row.tsx"
 import { CostOverTimePanel } from "./-components/cost-over-time-panel.tsx"
+import { ModelImpactPanel } from "./-components/model-impact-panel.tsx"
 import { ModelUsagePanel } from "./-components/model-usage-panel.tsx"
 
 function CostBreadcrumb() {
@@ -99,6 +100,14 @@ function CostPageContent() {
     projectId: project.id,
     range,
     dimension,
+    enabled,
+  })
+  // The impact panel is about models whichever dimension the table below is showing.
+  // Same query key as above while the Model tab is selected, so that costs no request.
+  const { data: modelBreakdown, isLoading: modelBreakdownLoading } = useCostBreakdown({
+    projectId: project.id,
+    range,
+    dimension: "model",
     enabled,
   })
 
@@ -175,17 +184,31 @@ function CostPageContent() {
           isAllTime={tw.isAllTime}
           isLoading={seriesLoading}
         />
-        <ModelUsagePanel
-          series={denseModelUsage}
-          measure={usageMeasure}
-          onMeasureChange={setUsageMeasure}
-          bucketSeconds={bucketSeconds}
-          provisionalIndex={modelUsageProvisionalIndex}
-          rangeFromIso={range.fromIso}
-          rangeToIso={range.toIso}
-          isAllTime={tw.isAllTime}
-          isLoading={modelUsageLoading}
-        />
+        {/* The two model questions side by side: how spend moves, and who it goes to. */}
+        <div className="flex flex-col gap-4 xl:flex-row">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ModelUsagePanel
+              series={denseModelUsage}
+              measure={usageMeasure}
+              onMeasureChange={setUsageMeasure}
+              bucketSeconds={bucketSeconds}
+              provisionalIndex={modelUsageProvisionalIndex}
+              rangeFromIso={range.fromIso}
+              rangeToIso={range.toIso}
+              isAllTime={tw.isAllTime}
+              isLoading={modelUsageLoading}
+            />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ModelImpactPanel
+              breakdown={modelBreakdown}
+              rangeFromIso={range.fromIso}
+              rangeToIso={range.toIso}
+              isAllTime={tw.isAllTime}
+              isLoading={modelBreakdownLoading}
+            />
+          </div>
+        </div>
         <CostBreakdownPanel
           breakdown={breakdown}
           dimension={dimension}

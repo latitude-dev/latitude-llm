@@ -131,6 +131,14 @@ export interface CostBreakdownRow extends CostBreakdownUsage {
   readonly avgPerTraceMicrocents: number
 }
 
+/**
+ * Calls a value needs before its cost per call may be shown as a multiple of the
+ * window average. Below this the ratio is a one-sample artefact: a single expensive
+ * call reads as a `278x` finding, which is both the loudest figure on the panel and
+ * the least true one.
+ */
+export const COST_PER_CALL_MIN_SAMPLE_CALLS = 20
+
 export interface CostBreakdownTotals extends CostBreakdownUsage {
   readonly tracesWithUsage: number
   /** The baseline a row's own cost per call is a multiple of. */
