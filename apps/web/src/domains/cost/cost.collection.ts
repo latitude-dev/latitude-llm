@@ -11,14 +11,22 @@ interface CostTimeRange {
 
 const COST_STALE_TIME_MS = 30_000
 
-export function useCostOverview({ projectId, range }: { readonly projectId: string; readonly range: CostTimeRange }) {
+export function useCostOverview({
+  projectId,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: CostTimeRange
+  readonly enabled?: boolean
+}) {
   const scope = useProjectScope()
   return useQuery({
     queryKey: [...projectScopeKey(scope), "cost-overview", projectId, range],
     queryFn: () => getCostOverview({ data: { ...projectScopeData(scope), projectId, ...range } }),
     staleTime: COST_STALE_TIME_MS,
     placeholderData: keepPreviousData,
-    enabled: projectId.length > 0,
+    enabled: enabled && projectId.length > 0,
   })
 }
 
@@ -27,11 +35,13 @@ export function useCostSeries({
   range,
   metric,
   bucketSeconds,
+  enabled = true,
 }: {
   readonly projectId: string
   readonly range: CostTimeRange
   readonly metric: CostSeriesMetric
   readonly bucketSeconds: number
+  readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   return useQuery({
@@ -39,6 +49,6 @@ export function useCostSeries({
     queryFn: () => getCostSeries({ data: { ...projectScopeData(scope), projectId, ...range, metric, bucketSeconds } }),
     staleTime: COST_STALE_TIME_MS,
     placeholderData: keepPreviousData,
-    enabled: projectId.length > 0,
+    enabled: enabled && projectId.length > 0,
   })
 }
