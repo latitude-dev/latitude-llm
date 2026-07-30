@@ -1,6 +1,7 @@
 import type { ApiKeyId, NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { AdminOrganizationDetails } from "./organization-details.ts"
+import type { AdminOrganizationUsageCursor } from "./organization-usage-summary.ts"
 
 /**
  * Compact org summary keyed by id for the "organisations by usage" page.
@@ -14,6 +15,26 @@ export interface AdminOrganizationSummary {
   readonly plan: string | null
   readonly memberCount: number
   readonly createdAt: Date
+}
+
+/** One org's current-period credit spend for the backoffice spend ranking. */
+export interface AdminOrganizationCreditSpendRow {
+  readonly organizationId: OrganizationId
+  readonly consumedCredits: number
+}
+
+export interface ListOrganizationsByConsumedCreditsInput {
+  /** Instant used to resolve "current" billing periods. */
+  readonly now: Date
+  /** Page size; the adapter probes `limit + 1` internally to set `hasMore`. */
+  readonly limit: number
+  /** Resume marker from a previous page; absent on the first page. */
+  readonly cursor?: AdminOrganizationUsageCursor
+}
+
+export interface OrganizationsByConsumedCreditsPage {
+  readonly rows: readonly AdminOrganizationCreditSpendRow[]
+  readonly hasMore: boolean
 }
 
 /**
@@ -48,6 +69,16 @@ export class AdminOrganizationRepository extends Context.Service<
     findManySummariesByIds(
       ids: readonly OrganizationId[],
     ): Effect.Effect<ReadonlyMap<OrganizationId, AdminOrganizationSummary>, RepositoryError>
+
+    /**
+     * Rank non-sandbox organisations by current billing-period
+     * `consumedCredits` desc (+ organisation id asc), returning up to
+     * `limit` rows starting strictly after `cursor` when present. Orgs
+     * with zero current-period spend are excluded.
+     */
+    listByConsumedCredits(
+      input: ListOrganizationsByConsumedCreditsInput,
+    ): Effect.Effect<OrganizationsByConsumedCreditsPage, RepositoryError>
 
     /**
      * Return the first non-deleted api-key id for the org, or `null` when

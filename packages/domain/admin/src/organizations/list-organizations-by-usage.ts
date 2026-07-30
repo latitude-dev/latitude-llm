@@ -5,10 +5,10 @@ import { AdminOrganizationUsageRepository } from "./organization-usage-repositor
 import type { AdminOrganizationUsageCursor, AdminOrganizationUsageSummary } from "./organization-usage-summary.ts"
 
 /**
- * Rolling window for the usage ranking. 30d is short enough to track
- * "current" customers (a churned org drops out after a month) and long
- * enough to absorb weekend/holiday lulls without reshuffling the top
- * of the list.
+ * Rolling window for the traces column. Credit spend uses each org's
+ * current billing period instead. 30d is short enough to track "current"
+ * customers (a churned org drops out after a month) and long enough to
+ * absorb weekend/holiday lulls without reshuffling the activity signal.
  */
 export const ORGANIZATION_USAGE_WINDOW_DAYS = 30
 export const ORGANIZATION_USAGE_DEFAULT_LIMIT = 50
@@ -18,8 +18,8 @@ export interface ListOrganizationsByUsageInput {
   readonly cursor?: AdminOrganizationUsageCursor
   readonly limit?: number
   /**
-   * Anchor for the rolling window — defaults to "now". Tests pin this for
-   * determinism; production callers should leave it unset.
+   * Anchor for "now" (current billing period + rolling traces window).
+   * Tests pin this for determinism; production callers should leave it unset.
    */
   readonly now?: Date
 }
@@ -51,11 +51,11 @@ export const listOrganizationsByUsageUseCase = (
     yield* Effect.annotateCurrentSpan("admin.usage.windowDays", ORGANIZATION_USAGE_WINDOW_DAYS)
     yield* Effect.annotateCurrentSpan("admin.usage.limit", limit)
 
-    const usageRepo = yield* AdminOrganizationUsageRepository
     const orgRepo = yield* AdminOrganizationRepository
+    const usageRepo = yield* AdminOrganizationUsageRepository
 
-    const page = yield* usageRepo.listByTraceCount({
-      since,
+    const page = yield* orgRepo.listByConsumedCredits({
+      now,
       limit,
       ...(input.cursor ? { cursor: input.cursor } : {}),
     })
@@ -64,34 +64,37 @@ export const listOrganizationsByUsageUseCase = (
       return { items: [], nextCursor: null }
     }
 
-    const summaries = yield* orgRepo.findManySummariesByIds(page.rows.map((r) => r.organizationId))
+    const organizationIds = page.rows.map((r) => r.organizationId)
+    const [summaries, usageByOrg] = yield* Effect.all([
+      orgRepo.findManySummariesByIds(organizationIds),
+      usageRepo.findManyByOrganizationIds({ organizationIds, since }),
+    ])
 
     const items: AdminOrganizationUsageSummary[] = []
     for (const row of page.rows) {
-      // CH knows the org id; PG is authoritative for the rest. If a row
-      // appears in CH but is missing from PG (hard-deleted org with
-      // residual traces) we drop it silently — surfacing "(unknown)"
-      // would be confusing in a customer-ranking page.
+      // Ranking knows the org id; summaries are authoritative for the rest.
+      // If a row appears in billing but is missing from the summary map
+      // (hard-deleted org, or sandbox filtered out) we drop it silently —
+      // the cursor still anchors on the ranking row so pagination skips it.
       const summary = summaries.get(row.organizationId)
       if (!summary) continue
+      const usage = usageByOrg.get(row.organizationId)
       items.push({
         id: summary.id,
         name: summary.name,
         slug: summary.slug,
         plan: summary.plan,
         memberCount: summary.memberCount,
-        traceCount: row.traceCount,
-        lastTraceAt: row.lastTraceAt,
+        consumedCredits: row.consumedCredits,
+        traceCount: usage?.traceCount ?? 0,
+        lastTraceAt: usage?.lastTraceAt ?? null,
         createdAt: summary.createdAt,
       })
     }
 
-    // Cursor anchors on the last CH row (not the last *kept* item) so
-    // the next page query strictly skips past dropped/missing orgs and
-    // never re-fetches them.
     const lastRow = page.hasMore ? page.rows[page.rows.length - 1] : undefined
     const nextCursor = lastRow
-      ? { traceCount: lastRow.traceCount, organizationId: lastRow.organizationId as string }
+      ? { consumedCredits: lastRow.consumedCredits, organizationId: lastRow.organizationId as string }
       : null
 
     return { items, nextCursor }

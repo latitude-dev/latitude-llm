@@ -1,4 +1,5 @@
 import {
+  type AdminOrganizationCreditSpendRow,
   type AdminOrganizationDetails,
   type AdminOrganizationMember,
   type AdminOrganizationProject,
@@ -14,11 +15,12 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { apiKeys } from "../schema/api-keys.ts"
 import { members, organizations, subscriptions, users } from "../schema/better-auth.ts"
+import { billingUsagePeriods } from "../schema/billing.ts"
 import { projects } from "../schema/projects.ts"
 import { sandboxes } from "../schema/sandboxes.ts"
 
@@ -256,6 +258,64 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
             })
           }
           return result
+        }),
+
+      listByConsumedCredits: ({ now, cursor, limit }) =>
+        Effect.gen(function* () {
+          // One current-period row per org (earliest period_start wins if
+          // overlapping rows exist — same tie-break as findOptionalCurrent),
+          // then rank by consumed credits. Sandbox orgs are excluded here so
+          // they never consume a page slot.
+          const ranked = yield* sqlClient.query((db) => {
+            const currentPeriods = db
+              .selectDistinctOn([billingUsagePeriods.organizationId], {
+                organizationId: billingUsagePeriods.organizationId,
+                consumedCredits: billingUsagePeriods.consumedCredits,
+              })
+              .from(billingUsagePeriods)
+              .innerJoin(organizations, eq(organizations.id, billingUsagePeriods.organizationId))
+              .where(
+                and(
+                  lte(billingUsagePeriods.periodStart, now),
+                  gt(billingUsagePeriods.periodEnd, now),
+                  gt(billingUsagePeriods.consumedCredits, 0),
+                  isNull(organizations.parentOrgId),
+                ),
+              )
+              .orderBy(billingUsagePeriods.organizationId, asc(billingUsagePeriods.periodStart))
+              .as("current_periods")
+
+            const base = db
+              .select({
+                organizationId: currentPeriods.organizationId,
+                consumedCredits: currentPeriods.consumedCredits,
+              })
+              .from(currentPeriods)
+
+            const filtered = cursor
+              ? base.where(
+                  sql`(
+                    ${currentPeriods.consumedCredits} < ${cursor.consumedCredits}
+                    OR (
+                      ${currentPeriods.consumedCredits} = ${cursor.consumedCredits}
+                      AND ${currentPeriods.organizationId} > ${cursor.organizationId}
+                    )
+                  )`,
+                )
+              : base
+
+            return filtered
+              .orderBy(desc(currentPeriods.consumedCredits), asc(currentPeriods.organizationId))
+              .limit(limit + 1)
+          })
+
+          const hasMore = ranked.length > limit
+          const pageRows = hasMore ? ranked.slice(0, limit) : ranked
+          const rows: AdminOrganizationCreditSpendRow[] = pageRows.map((row) => ({
+            organizationId: OrganizationId(row.organizationId),
+            consumedCredits: Number(row.consumedCredits),
+          }))
+          return { rows, hasMore }
         }),
 
       findFirstApiKeyId: (organizationId: OrganizationId) =>
