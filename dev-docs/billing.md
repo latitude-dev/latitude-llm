@@ -120,6 +120,8 @@ Billing periods are resolved from the effective plan source:
 - `subscription`: Stripe `periodStart` / `periodEnd`
 - `override`: current UTC calendar month unless a future contract model replaces it
 
+Better Auth's Stripe webhook (`/api/auth/stripe/webhook` on the web app host) is the primary path that advances `subscriptions.period_start` / `period_end` on renewal. If that mirror is stale (`period_end` in the past while status is still `active`/`trialing`), `StripeSubscriptionLookupLive` refreshes the licensed item's `current_period_*` from the Stripe API, persists the new bounds, and returns them so metering opens a new `billing_usage_periods` row instead of accruing overage against the closed period. Refresh failures fail open to the mirrored row and annotate `billing.alert=stale_subscription_period_refresh_failed` for Datadog.
+
 ## Runtime Metering
 
 Billable runtime work is charged through a two-step billing flow: authorize first when the action can still be avoided, then record an append-only usage event once the logical action has happened.
@@ -308,7 +310,7 @@ Better Auth Stripe owns:
 
 - checkout session creation
 - billing-portal session creation
-- Stripe webhook synchronization into `subscriptions`
+- Stripe webhook synchronization into `subscriptions` via `https://console.latitude.so/api/auth/stripe/webhook` (must stay enabled; signing secret = `LAT_STRIPE_WEBHOOK_SECRET`)
 
 Latitude billing code owns:
 
