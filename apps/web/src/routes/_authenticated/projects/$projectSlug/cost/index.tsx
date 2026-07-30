@@ -36,6 +36,15 @@ function CostBreadcrumb() {
   return <BreadcrumbText variant="current">Cost</BreadcrumbText>
 }
 
+/** Groups the panels below it. Sits outside the cards, above their own titles. */
+function SectionHeading({ children }: { readonly children: string }) {
+  return (
+    <div className="flex flex-col pt-2">
+      <Text.H5M color="foreground">{children}</Text.H5M>
+    </div>
+  )
+}
+
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/cost/")({
   staticData: {
     breadcrumb: CostBreadcrumb,
@@ -157,7 +166,7 @@ function CostPageContent() {
     <Layout>
       <Layout.Header
         title="Cost dashboard"
-        description="Optimization cost"
+        description="Optimize your spending"
         actions={
           <TimeFilterDropdown
             {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
@@ -184,6 +193,7 @@ function CostPageContent() {
           isAllTime={tw.isAllTime}
           isLoading={seriesLoading}
         />
+        <SectionHeading>Model</SectionHeading>
         {/* The two model questions side by side: how spend moves, and who it goes to. */}
         <div className="flex flex-col gap-4 xl:flex-row">
           <div className="flex min-w-0 flex-1 flex-col">

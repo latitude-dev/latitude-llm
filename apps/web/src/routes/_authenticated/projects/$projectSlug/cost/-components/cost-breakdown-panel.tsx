@@ -1,6 +1,7 @@
 import { COST_BREAKDOWN_DIMENSIONS, type CostBreakdown, type CostBreakdownDimension } from "@domain/spans"
 import {
   Button,
+  cn,
   Icon,
   Table,
   TableBody,
@@ -14,7 +15,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
-import { TriangleAlertIcon } from "lucide-react"
+import { ArrowDown01, ArrowDownAZ, ArrowUp01, ArrowUpAZ, TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import {
@@ -34,13 +35,16 @@ const BREAKDOWN_ROWS_SHOWN = 8
 
 const DIMENSION_META: Record<
   CostBreakdownDimension,
-  { readonly label: string; readonly unknown: string; readonly plural: string }
+  { readonly label: string; readonly unknown: string; readonly plural: string; readonly singular: string }
 > = {
-  model: { label: "Model", unknown: "unknown model", plural: "models" },
-  provider: { label: "Provider", unknown: "unknown provider", plural: "providers" },
-  operation: { label: "Operation", unknown: "unknown operation", plural: "operations" },
-  service: { label: "Service", unknown: "unattributed", plural: "services" },
+  model: { label: "Model", unknown: "unknown model", plural: "models", singular: "model" },
+  provider: { label: "Provider", unknown: "unknown provider", plural: "providers", singular: "provider" },
+  operation: { label: "Operation", unknown: "unknown operation", plural: "operations", singular: "operation" },
+  service: { label: "Service", unknown: "unattributed", plural: "services", singular: "service" },
 }
+
+const SORT_COLUMNS = ["name", "total", "input", "output", "cacheAndOther", "share", "avgPerTrace"] as const
+type SortColumn = (typeof SORT_COLUMNS)[number]
 
 const usd = (microcents: number): string => formatSignedPrice(microcentsToUsd(microcents))
 
@@ -49,6 +53,65 @@ function MutedCell({ children }: { readonly children: string }) {
     <Text.H5 color="foregroundMuted" noWrap className="tabular-nums">
       {children}
     </Text.H5>
+  )
+}
+
+/**
+ * Sorting only reorders the rows already selected — the selection itself is always the
+ * highest spenders, so sorting ascending cannot smuggle the uninformative tail into view.
+ */
+function SortableHead({
+  column,
+  label,
+  align,
+  isFirst,
+  sort,
+  onSort,
+  tooltipMessage,
+}: {
+  readonly column: SortColumn
+  readonly label: string
+  readonly align: "left" | "right"
+  readonly isFirst: boolean
+  readonly sort: { readonly column: SortColumn; readonly direction: "asc" | "desc" }
+  readonly onSort: (column: SortColumn) => void
+  readonly tooltipMessage?: string
+}) {
+  const isActive = sort.column === column
+  const isAscending = isActive && sort.direction === "asc"
+  const alphabetical = column === "name"
+  const icon = alphabetical ? (isAscending ? ArrowUpAZ : ArrowDownAZ) : isAscending ? ArrowUp01 : ArrowDown01
+
+  const trigger = (
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      aria-label={`Sort by ${label}`}
+      className={cn("group flex cursor-pointer flex-row items-center gap-1.5", {
+        "flex-row-reverse": align === "left",
+      })}
+    >
+      <Icon icon={icon} size="sm" color={isActive ? "foreground" : "foregroundMuted"} />
+      <Text.H5M color={isActive ? "foreground" : "foregroundMuted"} noWrap>
+        {label}
+      </Text.H5M>
+    </button>
+  )
+
+  return (
+    <TableHead
+      align={align}
+      className={cn("bg-transparent", { "border-l border-border": !isFirst })}
+      aria-sort={isActive ? (isAscending ? "ascending" : "descending") : "none"}
+    >
+      {tooltipMessage ? (
+        <Tooltip asChild trigger={trigger}>
+          {tooltipMessage}
+        </Tooltip>
+      ) : (
+        trigger
+      )}
+    </TableHead>
   )
 }
 
@@ -112,6 +175,10 @@ function BreakdownTable({
   readonly dimension: CostBreakdownDimension
 }) {
   const [showAll, setShowAll] = useState(false)
+  const [sort, setSort] = useState<{ column: SortColumn; direction: "asc" | "desc" }>({
+    column: "total",
+    direction: "desc",
+  })
   const meta = DIMENSION_META[dimension]
   const { totals } = breakdown
   const { visible, remainder } = splitBreakdownRows({
@@ -120,28 +187,74 @@ function BreakdownTable({
   })
   const hidden = totals.distinctValues - visible.length
 
-  const remainderLabel = (count: number): string =>
-    count === 1 ? `Other (1 ${meta.plural.replace(/s$/, "")})` : `Other (${formatCount(count)} ${meta.plural})`
+  // Rendered only when it carries something. When every row reads $0 the two named
+  // sides already sum to the total, so dropping it cannot hide a non-closing row.
+  const showCacheColumn =
+    totals.cacheAndOtherMicrocents !== 0 ||
+    (remainder?.cacheAndOtherMicrocents ?? 0) !== 0 ||
+    visible.some((row) => row.cacheAndOtherMicrocents !== 0)
+
+  const sorted = [...visible].sort((a, b) => {
+    const ascending = sort.direction === "asc" ? 1 : -1
+    if (sort.column === "name") return (a.key || meta.unknown).localeCompare(b.key || meta.unknown) * ascending
+    const measure = {
+      total: (r: typeof a) => r.totalMicrocents,
+      share: (r: typeof a) => r.totalMicrocents,
+      input: (r: typeof a) => r.inputMicrocents,
+      output: (r: typeof a) => r.outputMicrocents,
+      cacheAndOther: (r: typeof a) => r.cacheAndOtherMicrocents,
+      avgPerTrace: (r: typeof a) => r.avgPerTraceMicrocents,
+    }[sort.column]
+    return (measure(a) - measure(b)) * ascending
+  })
+
+  const onSort = (column: SortColumn) =>
+    setSort((current) =>
+      current.column === column
+        ? { column, direction: current.direction === "desc" ? "asc" : "desc" }
+        : // Names read naturally A-Z; every measure is most useful largest first.
+          { column, direction: column === "name" ? "asc" : "desc" },
+    )
+
+  const headProps = { sort, onSort } as const
 
   return (
     <div className="flex flex-col gap-2">
-      <Table>
+      <Table wrapperClassName="border-0 rounded-none">
         <TableHeader>
           <TableRow hoverable={false}>
-            <TableHead>{meta.label}</TableHead>
-            <TableHead align="right">Total cost</TableHead>
-            <TableHead align="right">% of total</TableHead>
-            <TableHead
+            <SortableHead column="name" label={meta.label} align="left" isFirst {...headProps} />
+            <SortableHead column="total" label="Total cost" align="right" isFirst={false} {...headProps} />
+            <SortableHead column="input" label="Input" align="right" isFirst={false} {...headProps} />
+            <SortableHead column="output" label="Output" align="right" isFirst={false} {...headProps} />
+            {showCacheColumn ? (
+              <SortableHead
+                column="cacheAndOther"
+                label="Cache & other"
+                align="right"
+                isFirst={false}
+                tooltipMessage="Total minus input and output. Provider-reported cost folds cache reads and writes into the input side, and some providers return a total that is not the sum of the two, so this column is what closes each row."
+                {...headProps}
+              />
+            ) : null}
+            <SortableHead column="share" label="% of total" align="right" isFirst={false} {...headProps} />
+            <SortableHead
+              column="avgPerTrace"
+              label="Avg per trace"
               align="right"
-              tooltipMessage={`Spend divided by the traces containing this ${meta.label.toLowerCase()}, not by every trace in the window — a trace can hit several.`}
-            >
-              Avg per trace
-            </TableHead>
+              isFirst={false}
+              tooltipMessage={`Spend divided by the traces containing this ${meta.singular}, not by every trace in the window — a trace can hit several.`}
+              {...headProps}
+            />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {visible.map((row) => (
-            <TableRow key={row.key || meta.unknown}>
+          {sorted.map((row, index) => (
+            <TableRow
+              key={row.key || meta.unknown}
+              borderBottom={false}
+              className={cn({ "bg-secondary/40": index % 2 === 1 })}
+            >
               <TableCell>
                 <Text.H5 color="foreground" ellipsis noWrap>
                   {row.key || meta.unknown}
@@ -155,6 +268,17 @@ function BreakdownTable({
                   tokens={row.tokens}
                 />
               </TableCell>
+              <TableCell align="right">
+                <MutedCell>{usd(row.inputMicrocents)}</MutedCell>
+              </TableCell>
+              <TableCell align="right">
+                <MutedCell>{usd(row.outputMicrocents)}</MutedCell>
+              </TableCell>
+              {showCacheColumn ? (
+                <TableCell align="right">
+                  <MutedCell>{usd(row.cacheAndOtherMicrocents)}</MutedCell>
+                </TableCell>
+              ) : null}
               <TableCell align="right">
                 <Text.H5 color="foreground" noWrap className="tabular-nums">
                   {formatPercentage(shareOf(row.totalMicrocents, totals.totalMicrocents) ?? 0)}
@@ -175,15 +299,21 @@ function BreakdownTable({
           {remainder ? (
             <RemainderRow
               remainder={remainder}
-              label={remainderLabel(remainder.valueCount)}
+              label={
+                remainder.valueCount === 1
+                  ? `Other (1 ${meta.singular})`
+                  : `Other (${formatCount(remainder.valueCount)} ${meta.plural})`
+              }
               totalMicrocents={totals.totalMicrocents}
+              showCacheColumn={showCacheColumn}
+              striped={sorted.length % 2 === 1}
             />
           ) : null}
-          <TableRow hoverable={false} borderBottom={false} className="bg-secondary">
+          <TableRow hoverable={false} borderBottom={false} className="border-t border-border">
             <TableCell>
-              <Text.H5 color="foregroundMuted" noWrap>
+              <Text.H5M color="foregroundMuted" noWrap>
                 {`All ${meta.plural}`}
-              </Text.H5>
+              </Text.H5M>
             </TableCell>
             <TableCell align="right">
               <TotalCostCell
@@ -194,6 +324,17 @@ function BreakdownTable({
                 muted
               />
             </TableCell>
+            <TableCell align="right">
+              <MutedCell>{usd(totals.inputMicrocents)}</MutedCell>
+            </TableCell>
+            <TableCell align="right">
+              <MutedCell>{usd(totals.outputMicrocents)}</MutedCell>
+            </TableCell>
+            {showCacheColumn ? (
+              <TableCell align="right">
+                <MutedCell>{usd(totals.cacheAndOtherMicrocents)}</MutedCell>
+              </TableCell>
+            ) : null}
             <TableCell align="right">
               <MutedCell>{totals.totalMicrocents > 0 ? formatPercentage(1) : DASH}</MutedCell>
             </TableCell>
@@ -211,7 +352,7 @@ function BreakdownTable({
         </TableBody>
       </Table>
       {hidden > 0 || showAll ? (
-        <div className="flex flex-row items-center gap-2">
+        <div className="flex flex-row items-center gap-2 px-4 pb-1">
           <Button variant="link" size="sm" onClick={() => setShowAll(!showAll)}>
             {showAll ? `Show top ${BREAKDOWN_ROWS_SHOWN}` : `Show all ${formatCount(breakdown.rows.length)}`}
           </Button>
@@ -231,13 +372,17 @@ function RemainderRow({
   remainder,
   label,
   totalMicrocents,
+  showCacheColumn,
+  striped,
 }: {
   readonly remainder: BreakdownRemainder
   readonly label: string
   readonly totalMicrocents: number
+  readonly showCacheColumn: boolean
+  readonly striped: boolean
 }) {
   return (
-    <TableRow>
+    <TableRow borderBottom={false} className={cn({ "bg-secondary/40": striped })}>
       <TableCell>
         <Text.H5 color="foregroundMuted" ellipsis noWrap>
           {label}
@@ -252,6 +397,17 @@ function RemainderRow({
           muted
         />
       </TableCell>
+      <TableCell align="right">
+        <MutedCell>{usd(remainder.inputMicrocents)}</MutedCell>
+      </TableCell>
+      <TableCell align="right">
+        <MutedCell>{usd(remainder.outputMicrocents)}</MutedCell>
+      </TableCell>
+      {showCacheColumn ? (
+        <TableCell align="right">
+          <MutedCell>{usd(remainder.cacheAndOtherMicrocents)}</MutedCell>
+        </TableCell>
+      ) : null}
       <TableCell align="right">
         <MutedCell>{formatPercentage(shareOf(remainder.totalMicrocents, totalMicrocents) ?? 0)}</MutedCell>
       </TableCell>
@@ -271,7 +427,7 @@ function RemainderRow({
   )
 }
 
-/** The detail table: exact figures per value. Proportions live in the panel above it. */
+/** The detail table: exact figures per value. Proportions live in the panels above it. */
 export function CostBreakdownPanel({
   breakdown,
   dimension,
@@ -286,9 +442,9 @@ export function CostBreakdownPanel({
   const meta = DIMENSION_META[dimension]
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <Text.H5 color="foreground">Cost breakdown</Text.H5>
+    <div className="flex flex-col gap-3 rounded-lg border border-border py-3">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-2 px-4">
+        <Text.H6 color="foreground">Cost breakdown</Text.H6>
         <Tabs
           variant="bordered"
           size="sm"
@@ -305,9 +461,11 @@ export function CostBreakdownPanel({
         />
       </div>
       {isLoading || !breakdown ? (
-        <TableSkeleton rows={5} cols={4} />
+        <div className="px-4">
+          <TableSkeleton rows={5} cols={6} />
+        </div>
       ) : breakdown.rows.length === 0 ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center rounded-lg bg-secondary px-4 py-3">
+        <div className="flex w-full min-h-[120px] items-center justify-center px-4">
           <Text.H6 color="foregroundMuted">{`No billable usage by ${meta.plural} in this time window`}</Text.H6>
         </div>
       ) : (
