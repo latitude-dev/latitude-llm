@@ -21,7 +21,10 @@ export interface ChartBarSeries {
   readonly color: string
   readonly axis?: "left" | "right"
   readonly stack?: string
-  /** Index drawn as still-filling (hatched bar / dashed line segment) — the current, incomplete bucket. */
+  /**
+   * Index drawn hatched, marking a still-filling bucket. Bars only: echarts has
+   * no per-point `lineStyle`, so a line's tail cannot be dashed from a data item.
+   */
   readonly provisionalIndex?: number
 }
 
@@ -39,8 +42,6 @@ export interface ChartLineSeries {
   readonly stack?: string
   readonly area?: boolean
   readonly smooth?: boolean
-  /** Index drawn as still-filling (hatched bar / dashed line segment) — the current, incomplete bucket. */
-  readonly provisionalIndex?: number
 }
 
 export type ChartSeries = ChartBarSeries | ChartLineSeries
@@ -179,18 +180,10 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
         emphasis: { disabled: true },
       }
     }
-    // A line data item's `lineStyle` applies to the segment arriving at it, so
-    // dashing the provisional index dashes only the still-filling tail.
-    const data =
-      s.provisionalIndex === undefined
-        ? [...s.values]
-        : s.values.map((value, index) =>
-            index === s.provisionalIndex ? { value, lineStyle: { type: "dashed" as const } } : value,
-          )
     return {
       name: s.name,
       type: "line" as const,
-      data,
+      data: [...s.values],
       yAxisIndex,
       ...(s.stack ? { stack: s.stack } : {}),
       smooth: s.smooth ?? false,

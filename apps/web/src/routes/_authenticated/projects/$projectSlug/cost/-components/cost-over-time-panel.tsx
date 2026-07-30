@@ -102,9 +102,9 @@ export function CostOverTimePanel({
             name: metric === "p95" ? "p95 cost per trace" : "Avg cost per trace",
             values: buckets.map((bucket) => microcentsToUsd(bucket.valueMicrocents)),
             color: TREND_COLOR,
-            ...(provisionalIndex === undefined ? {} : { provisionalIndex }),
           },
         ]
+  // Reads as spend, not usage: an all-free-priced window also sums to zero.
   const isEmpty = buckets.length === 0 || buckets.every((bucket) => bucket.valueMicrocents === 0)
 
   return (
@@ -138,7 +138,7 @@ export function CostOverTimePanel({
         </div>
       ) : isEmpty ? (
         <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
-          <Text.H6 color="foregroundMuted">No billable LLM usage in this time window</Text.H6>
+          <Text.H6 color="foregroundMuted">No spend recorded in this time window</Text.H6>
         </div>
       ) : (
         <div className="flex flex-col gap-1 px-4 py-3">
@@ -164,7 +164,9 @@ export function CostOverTimePanel({
             <Text.H6 color="foregroundMuted">
               {/* A zero current bucket draws nothing, so naming the marking would point at empty space. */}
               {(buckets[provisionalIndex]?.valueMicrocents ?? 0) > 0
-                ? `The ${metric === "total" ? "hatched" : "dashed"} ${unit} is still in progress.`
+                ? metric === "total"
+                  ? `The hatched ${unit} is still in progress.`
+                  : `The current ${unit} is still in progress.`
                 : `No spend recorded yet in the current ${unit} (UTC).`}
             </Text.H6>
           )}
