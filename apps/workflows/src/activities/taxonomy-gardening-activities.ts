@@ -1273,7 +1273,7 @@ export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInput
 // swap: leaves the old tree active and removes the orphaned staging tree. Safe
 // and idempotent — `deleteStaging` is guarded to `state = 'staging'`, so a swap
 // that already activated the tree makes this a no-op, and a missing plan
-// (start failed before staging) cleans nothing. Off runs are a no-op.
+// (start failed before staging) cleans nothing.
 export const cleanupGardenTaxonomyStagingActivity = (input: GardenTaxonomyActivityInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow cleanup staging",
@@ -1282,10 +1282,15 @@ export const cleanupGardenTaxonomyStagingActivity = (input: GardenTaxonomyActivi
       const step = baseStepInput(input)
       const reference: GardenTaxonomyPlanReferenceInput = { ...step, planKey: gardenTaxonomyPlanKey(step) }
       const plan = yield* loadGardenTaxonomyPlan(reference).pipe(Effect.orElseSucceed(() => null))
-      if (plan === null || !planPersistsAdaptive(plan)) return { stagingDeleted: 0 }
+      if (plan === null) return { stagingDeleted: 0 }
+      // Keyed on what the plan actually staged, NOT on the adaptive shape: every
+      // mode stages fresh clusters on the whole-project tree, so gating this on
+      // adaptive leaked a staging tree per failed run.
+      const stagedClusterIds = publishClusterIds(plan)
+      if (stagedClusterIds.length === 0) return { stagingDeleted: 0 }
       const clusters = yield* TaxonomyClusterRepository
-      yield* clusters.deleteStaging({ clusterIds: plan.clusters.map((cluster) => cluster.id) })
-      return { stagingDeleted: plan.clusters.length }
+      yield* clusters.deleteStaging({ clusterIds: stagedClusterIds })
+      return { stagingDeleted: stagedClusterIds.length }
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 

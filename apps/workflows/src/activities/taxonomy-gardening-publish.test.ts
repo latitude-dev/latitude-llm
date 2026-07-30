@@ -5,12 +5,10 @@ import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-// These activities own the publish ORDER (reassign, then swap) and the id sets
-// the swap acts on, which is exactly what the blank-Behaviours fix changed. They
-// reach Postgres/ClickHouse/Redis through module singletons, so the seams are
-// mocked the same way `evaluation-alignment-activities.test.ts` does it: real
-// domain fakes behind mocked `withPostgres` / `withClickHouse`, and an in-memory
-// stand-in for the Redis plan artifact.
+// These activities own the publish order and the id sets the swap acts on. They reach
+// Postgres/ClickHouse/Redis through module singletons, so the seams are mocked as in
+// `evaluation-alignment-activities.test.ts`: domain fakes behind `withPostgres` /
+// `withClickHouse`, plus an in-memory stand-in for the Redis plan artifact.
 const { fakes, redis, calls } = vi.hoisted(() => ({
   fakes: { clusters: null as unknown, observations: null as unknown },
   redis: new Map<string, string>(),
@@ -67,6 +65,7 @@ vi.mock("@platform/db-clickhouse", async (importOriginal) => {
 })
 
 import {
+  cleanupGardenTaxonomyStagingActivity,
   deprecateGardenTaxonomyClustersActivity,
   planGardenTaxonomyNamingActivity,
   reassignGardenTaxonomyObservationsActivity,
@@ -236,6 +235,28 @@ describe("taxonomy gardening publish activities", () => {
     expect(stateOf(clusters, NEW_ROOT)).toBe("active")
     expect(stateOf(clusters, OLD_ROOT)).toBe("deprecated")
     expect(result).toEqual(expect.objectContaining({ clustersDeprecated: 2, clustersActivated: 2 }))
+  })
+
+  it("deletes the staged tree on a static plan too, so a failed run leaks nothing", async () => {
+    const clusters = seedRepositories(publishedTree())
+    // A static plan stages fresh clusters but has no adaptive routing leaves, so
+    // gating cleanup on the adaptive shape leaked one staging tree per failed run.
+    storePlan()
+
+    const result = await cleanupGardenTaxonomyStagingActivity({
+      organizationId,
+      projectId,
+      dimension: "topic",
+      trigger: "manual",
+      taxonomyRunId: runId,
+    } as never)
+
+    expect(result).toEqual(expect.objectContaining({ stagingDeleted: 2 }))
+    expect(clusters.clusters.get(NEW_ROOT as TaxonomyClusterId)).toBeUndefined()
+    expect(clusters.clusters.get(NEW_LEAF as TaxonomyClusterId)).toBeUndefined()
+    // The tree that was serving reads is untouched.
+    expect(stateOf(clusters, OLD_ROOT)).toBe("active")
+    expect(stateOf(clusters, OLD_LEAF)).toBe("active")
   })
 
   it("retires the whole previous tree on an adaptive plan, the dead ids on a static one", async () => {

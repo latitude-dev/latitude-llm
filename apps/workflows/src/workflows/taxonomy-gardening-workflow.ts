@@ -102,10 +102,7 @@ export const gardenTaxonomyWorkflow = async (
   try {
     const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
     useStagingSwap = patched("taxonomy-gardening-staging-swap-v1")
-    // Naming moved from after publication to before it: an activated tree whose
-    // names are still "Pending" is filtered out of the Behaviours read, so naming a
-    // published tree blanked the page for the whole naming phase (and permanently
-    // when naming failed). Fixed position, like the marker above.
+    // Fixed position, like the marker above: reads hide "Pending" names, so name before publishing.
     const nameBeforePublish = patched("taxonomy-gardening-name-before-publish-v1")
     const built = await planHierarchicalGardenTaxonomyActivity(started)
     // Scoped cold-start: the plan sampled below the gardening minimum and built
@@ -146,10 +143,7 @@ export const gardenTaxonomyWorkflow = async (
         })
       }
     }
-    // A view names from its assignment slice, which only exists after the
-    // reassignment, so it keeps naming a published tree. The whole-project topic
-    // tree names its staged clusters from the plan's own member ids first, so the
-    // swap publishes a tree that is named AND has matching ClickHouse counts.
+    // Only the topic tree can name first: a view's naming samples come from the slice the reassignment writes.
     const namesBeforePublish =
       nameBeforePublish && started.customBehaviorId === undefined && started.facetId === undefined
     if (namesBeforePublish) {
@@ -186,7 +180,7 @@ export const gardenTaxonomyWorkflow = async (
       // Clean up an orphaned staging tree ONLY when reassignment never ran, so no
       // observation can already point at a staging leaf we would delete. Once
       // reassignment has started, the staging tree is left for the swap retry /
-      // next pass. No-op on off runs (guarded to state='staging').
+      // next pass.
       if (useStagingSwap && !reassignmentStarted) {
         await cleanupGardenTaxonomyStagingActivity({ ...input, workflowRunId: workflowInfo().runId })
       }

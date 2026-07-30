@@ -335,11 +335,18 @@ export const createFakeTaxonomyObservationRepository = (
           .slice(0, limit),
       ),
 
+    // Matches the live lookup: bounded by the requested ids, NOT by the newest-N
+    // window, so a naming sample drawn from the wider lookback resolves in full.
     listAllByObservationIds: ({ organizationId, projectId, observationIds, limit }) =>
       Effect.sync(() => {
         const requested = new Set(observationIds)
-        return latestProjectWindow(organizationId, projectId)
-          .filter((observation) => requested.has(observation.observationId))
+        return [...rows.values()]
+          .filter(
+            (observation) =>
+              observation.organizationId === organizationId &&
+              observation.projectId === projectId &&
+              requested.has(observation.observationId),
+          )
           .sort(
             (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
           )
