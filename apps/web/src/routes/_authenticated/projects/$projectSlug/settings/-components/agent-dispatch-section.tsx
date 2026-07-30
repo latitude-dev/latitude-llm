@@ -837,7 +837,6 @@ function ConnectAgentDispatchModal({
           await connectCursorIntegration({
             data: {
               kind: "cursor",
-              projectId,
               cursorApiKey: parsed.cursorApiKey,
               ...(parsed.repoUrl ? { repoUrl: parsed.repoUrl } : {}),
               ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
@@ -859,7 +858,6 @@ function ConnectAgentDispatchModal({
           await connectClaudeIntegration({
             data: {
               kind: "claude_code",
-              projectId,
               claudeRoutineToken: parsed.claudeRoutineToken,
               routineTriggerId: extractClaudeRoutineTriggerId(parsed.routineUrl)!,
             },
@@ -867,12 +865,12 @@ function ConnectAgentDispatchModal({
         } else if (kind === "linear") {
           const parsed = z.object({ linearApiKey: z.string().min(1), teamId: z.string().uuid() }).parse(values)
           await connectLinearIntegration({
-            data: { kind: "linear", projectId, linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
+            data: { kind: "linear", linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
           })
         } else {
           const parsed = z.object({ webhookUrl: z.string().url() }).parse(values)
           const result = await connectWebhookIntegration({
-            data: { kind: "webhook", projectId, webhookUrl: parsed.webhookUrl },
+            data: { kind: "webhook", webhookUrl: parsed.webhookUrl },
           })
           setWebhookSecret(result.webhookSecret)
           onWebhookSecret(result.webhookSecret)
