@@ -141,11 +141,6 @@ function hasParentSpan(parentSpanId: string | undefined): boolean {
   return !!parentSpanId && !/^0+$/.test(parentSpanId)
 }
 
-interface TransformedSpan {
-  readonly span: SpanDetail
-  readonly costPricingMissing: boolean
-}
-
 function transformSpan({
   span,
   traceId,
@@ -164,7 +159,7 @@ function transformSpan({
   context: TransformContext
   projectId: string
   ingestedAt: Date
-}): TransformedSpan {
+}): SpanDetail {
   const spanAttrs = attrArray(span.attributes)
   const spanEvents = span.events ?? []
   const resourceAttrs = attrArray(resource?.attributes)
@@ -250,6 +245,9 @@ function transformSpan({
     costOutputMicrocents: resolved.costOutputMicrocents,
     costTotalMicrocents: resolved.costTotalMicrocents,
     costIsEstimated: resolved.costIsEstimated,
+    costSource: resolved.costSource,
+    costPricedProvider: resolved.costPricedProvider,
+    costPricedModel: resolved.costPricedModel,
     timeToFirstTokenNs: performance.timeToFirstTokenNs,
     isStreaming: performance.isStreaming,
     responseId: resolved.responseId,
@@ -273,7 +271,7 @@ function transformSpan({
     ingestedAt,
   }
 
-  return { span: detail, costPricingMissing: resolved.costPricingMissing }
+  return detail
 }
 
 export function transformOtlpToSpans(
@@ -318,10 +316,10 @@ export function transformOtlpToSpans(
           projectId,
           ingestedAt,
         })
-        spans.push(transformed.span)
+        spans.push(transformed)
 
-        if (transformed.costPricingMissing) {
-          const { provider, model } = transformed.span
+        if (transformed.costSource === "unpriced") {
+          const { provider, model } = transformed
           const key = `${projectId} ${provider} ${model}`
           const existing = unpricedByKey.get(key)
           if (existing) existing.spans++

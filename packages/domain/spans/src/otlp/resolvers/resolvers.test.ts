@@ -259,7 +259,7 @@ describe("resolveAttributes", () => {
       expect(result.provider).toBe("openai")
       expect(result.costTotalMicrocents).toBe(750_000)
       expect(result.costIsEstimated).toBe(true)
-      expect(result.costPricingMissing).toBe(false)
+      expect(result.costSource).toBe("estimated")
     })
 
     it("prices a Mastra-wrapped Claude Agent SDK span instead of reporting $0", () => {
@@ -279,7 +279,7 @@ describe("resolveAttributes", () => {
       expect(result.tokensInput).toBe(24)
       expect(result.costTotalMicrocents).toBe(142_228_150)
       expect(result.costIsEstimated).toBe(true)
-      expect(result.costPricingMissing).toBe(false)
+      expect(result.costSource).toBe("estimated")
     })
 
     it("flags token usage that no pricing matched", () => {
@@ -294,7 +294,7 @@ describe("resolveAttributes", () => {
 
       expect(result.costTotalMicrocents).toBe(0)
       expect(result.costIsEstimated).toBe(false)
-      expect(result.costPricingMissing).toBe(true)
+      expect(result.costSource).toBe("unpriced")
     })
 
     it("does not flag an unknown model that reported only an input cost", () => {
@@ -309,7 +309,7 @@ describe("resolveAttributes", () => {
       const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
 
       expect(result.costInputMicrocents).toBe(25_000_000)
-      expect(result.costPricingMissing).toBe(false)
+      expect(result.costSource).toBe("provider_reported")
     })
 
     // A zero side cost supplies no price, so it must not suppress the report.
@@ -325,7 +325,7 @@ describe("resolveAttributes", () => {
       const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
 
       expect(result.costTotalMicrocents).toBe(0)
-      expect(result.costPricingMissing).toBe(true)
+      expect(result.costSource).toBe("unpriced")
     })
 
     it("does not flag spans that carry no token usage", () => {
@@ -333,13 +333,93 @@ describe("resolveAttributes", () => {
 
       const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
 
-      expect(result.costPricingMissing).toBe(false)
+      expect(result.costSource).toBe("no_tokens")
     })
 
     it("returns empty string for missing provider", () => {
       const result = resolveAttributes({ spanAttrs: [], statusCode: "unset" })
       expect(result.provider).toBe("")
     })
+  })
+
+  // A `:free` variant the catalog does not list stays unpriced. Reporting no cost is recoverable;
+  // billing it at the unmodified model's rate would look like a real number and never be questioned.
+  it("leaves a free-tier variant unpriced rather than charging the paid model's rate", () => {
+    const attrs: OtlpKeyValue[] = [
+      strAttr("gen_ai.system", "nous"),
+      strAttr("gen_ai.request.model", "stepfun/step-3.7-flash:free"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+    ]
+
+    const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+    expect(result.costSource).toBe("unpriced")
+    expect(result.costTotalMicrocents).toBe(0)
+  })
+
+  // OpenClaw writes the provider id from the user's config into gen_ai.system, so the reported
+  // provider can be a billing label like `stripe`. The slug's vendor prices it; the span keeps the
+  // reported name, since what the customer called it and what priced it are different concerns.
+  describe("a reported provider that prices nothing", () => {
+    const openclawStripeSpan: OtlpKeyValue[] = [
+      strAttr("gen_ai.system", "stripe"),
+      strAttr("gen_ai.request.model", "openai/gpt-5.4"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+    ]
+
+    it("prices the span from the vendor named in the model slug", () => {
+      const result = resolveAttributes({ spanAttrs: openclawStripeSpan, statusCode: "unset" })
+
+      expect(result.costSource).toBe("estimated")
+      expect(result.costTotalMicrocents).toBeGreaterThan(0)
+    })
+
+    it("keeps the reported provider on the span rather than the one it priced against", () => {
+      const result = resolveAttributes({ spanAttrs: openclawStripeSpan, statusCode: "unset" })
+
+      expect(result.provider).toBe("stripe")
+      expect(result.model).toBe("openai/gpt-5.4")
+    })
+
+    // Neither reported field says what the number was computed from, so the pairing is recorded.
+    it("records the catalog entry it priced against", () => {
+      const result = resolveAttributes({ spanAttrs: openclawStripeSpan, statusCode: "unset" })
+
+      expect(result.costPricedProvider).toBe("openai")
+      expect(result.costPricedModel).toBe("gpt-5.4")
+    })
+  })
+
+  it("records no catalog entry when the cost came from the provider", () => {
+    const attrs: OtlpKeyValue[] = [
+      strAttr("gen_ai.system", "openai"),
+      strAttr("gen_ai.request.model", "gpt-4o"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      floatAttr("gen_ai.usage.input_cost", 0.5),
+    ]
+
+    const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+    expect(result.costSource).toBe("provider_reported")
+    expect(result.costPricedProvider).toBe("")
+    expect(result.costPricedModel).toBe("")
+  })
+
+  it("records no catalog entry when nothing priced the span", () => {
+    const attrs: OtlpKeyValue[] = [
+      strAttr("gen_ai.system", "anthropic"),
+      strAttr("gen_ai.request.model", "qwen3.7-max"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+    ]
+
+    const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+    expect(result.costSource).toBe("unpriced")
+    expect(result.costPricedProvider).toBe("")
+    expect(result.costPricedModel).toBe("")
   })
 
   describe("model resolution", () => {

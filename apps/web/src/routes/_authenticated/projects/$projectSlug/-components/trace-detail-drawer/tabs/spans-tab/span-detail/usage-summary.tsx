@@ -2,6 +2,7 @@ import { SegmentBar, type SegmentBarItem, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
 import type React from "react"
 import { useMemo } from "react"
+import type { CostDisplay } from "../../../../../../../../../domains/spans/cost-display.ts"
 import { SegmentBreakdownRows } from "../../../segment-breakdown-rows.tsx"
 
 export interface UsageData {
@@ -14,6 +15,17 @@ export interface UsageData {
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
   readonly costIsEstimated?: boolean
+}
+
+function costTotalLabel(data: UsageData, costDisplay: CostDisplay | undefined): string {
+  const total = costDisplay?.label ?? formatPrice(microcentsToDollars(data.costTotalMicrocents))
+  // The estimated marker only qualifies a real amount; it says nothing about "Free" or "-".
+  return data.costIsEstimated && data.costTotalMicrocents > 0 ? `${total}*` : total
+}
+
+function costFooter(data: UsageData, costDisplay: CostDisplay | undefined): { footer?: string } {
+  if (costDisplay?.note) return { footer: costDisplay.note }
+  return data.costIsEstimated && data.costTotalMicrocents > 0 ? { footer: "Cost is estimated" } : {}
 }
 
 const TOKEN_COLORS = {
@@ -127,9 +139,15 @@ function microcentsToDollars(microcents: number): number {
 export function UsageSummary({
   data,
   costBadges,
+  costDisplay,
 }: {
   readonly data: UsageData
   readonly costBadges?: React.ReactNode
+  /**
+   * How to read this cost, from the caller that knows whether it is one span or a rollup. Without it
+   * a zero cost hides the row, which cannot distinguish a free call from one we failed to price.
+   */
+  readonly costDisplay?: CostDisplay
 }) {
   const tokenSegments = useMemo(() => buildTokenSegments(data), [data])
   const costSegments = useMemo(() => buildCostSegments(data), [data])
@@ -137,6 +155,7 @@ export function UsageSummary({
   const totalTokens = computeTotalTokens(data)
   const hasCost = data.costTotalMicrocents > 0
   const hasTokens = hasAnyUsage(data)
+  const showCost = hasCost || (costDisplay !== undefined && hasTokens)
 
   if (!hasTokens && !hasCost) return null
 
@@ -151,13 +170,13 @@ export function UsageSummary({
         />
       )}
 
-      {hasCost && (
+      {showCost && (
         <UsageRow
           label="Cost"
-          formattedTotal={`${formatPrice(microcentsToDollars(data.costTotalMicrocents))}${data.costIsEstimated ? "*" : ""}`}
+          formattedTotal={costTotalLabel(data, costDisplay)}
           segments={costSegments}
           formatValue={(v) => formatPrice(microcentsToDollars(v))}
-          {...(data.costIsEstimated ? { footer: "Cost is estimated" } : {})}
+          {...costFooter(data, costDisplay)}
           badges={costBadges}
         />
       )}
