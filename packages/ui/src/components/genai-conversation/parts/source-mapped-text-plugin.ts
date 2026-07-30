@@ -60,7 +60,9 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[], sl
 
         for (const child of children) {
           if (!child) continue
-          if (child.type !== "text") {
+          // `raw` carries HTML that react-markdown renders as escaped text, so
+          // its value maps 1:1 onto the source the same way a text node does.
+          if (child.type !== "text" && child.type !== "raw") {
             visit(child, childCodeCtx)
             nextChildren.push(child)
             continue

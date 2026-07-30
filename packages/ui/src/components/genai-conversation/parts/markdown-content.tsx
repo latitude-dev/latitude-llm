@@ -2,7 +2,6 @@ import { isJsonBlock, LARGE_MARKDOWN_CONTENT_THRESHOLD, prettifyCompactJson } fr
 import { isValidElement, type ReactNode, use, useEffect, useMemo, useState } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import rehypeHighlight from "rehype-highlight"
-import remarkBreaks from "remark-breaks"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { cn } from "../../../utils/cn.ts"
@@ -13,9 +12,10 @@ import { JsonContent } from "./json-content.tsx"
 import { RedactionChip } from "./redaction-chip.tsx"
 import { REDACTION_CHIP_LABEL_ATTR, rehypeRedactionChips } from "./rehype-redaction-chips.ts"
 import { remarkCodeContentPositions } from "./remark-code-content-positions.ts"
+import { remarkSourceMappedBreaks } from "./remark-source-mapped-breaks.ts"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
-const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks, remarkCodeContentPositions] as const
+const remarkPlugins = [remarkGfm, remarkEmoji, remarkSourceMappedBreaks, remarkCodeContentPositions] as const
 
 // `rehype-highlight` only tokenizes `<code>` elements that carry a
 // `language-*` class (i.e. fences with an explicit language); it leaves
