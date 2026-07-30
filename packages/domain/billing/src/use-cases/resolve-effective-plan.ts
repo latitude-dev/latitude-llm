@@ -91,12 +91,6 @@ const resolveSubscriptionPlan = Effect.fn("billing.resolveSubscriptionPlan")(fun
       "billing.subscription_status": subscription.status ?? "unknown",
       "billing.stripe_plan_name": subscription.plan,
     })
-  } else if (subscription.periodEnd.getTime() <= Date.now()) {
-    yield* Effect.annotateCurrentSpan({
-      "billing.alert": "subscription_period_still_stale",
-      "billing.subscription_status": subscription.status ?? "unknown",
-      "billing.period_end": subscription.periodEnd.toISOString(),
-    })
   }
 
   return {

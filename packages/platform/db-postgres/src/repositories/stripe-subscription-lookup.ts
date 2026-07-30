@@ -6,6 +6,7 @@ import { Effect, Layer, Result } from "effect"
 import Stripe from "stripe"
 import type { Operator } from "../client.ts"
 import { subscriptions } from "../schema/better-auth.ts"
+import { reportStaleSubscriptionPeriod } from "./stale-subscription-period-report.ts"
 import { isSubscriptionPeriodStale, pickLicensedSubscriptionPeriod } from "./stripe-subscription-period.ts"
 
 const STRIPE_PERIOD_REFRESH_TIMEOUT_MS = 3_000
@@ -64,16 +65,32 @@ export const StripeSubscriptionLookupLive = Layer.effect(
       if (!result) return null
 
       const row = toRow(result)
-      if (
-        !stripeClient ||
-        result.stripeSubscriptionId === null ||
-        !isSubscriptionPeriodStale(result.periodEnd, new Date())
-      ) {
+      if (!isSubscriptionPeriodStale(result.periodEnd, new Date())) {
+        return row
+      }
+
+      if (!stripeClient || result.stripeSubscriptionId === null) {
+        reportStaleSubscriptionPeriod({
+          organizationId,
+          stripeSubscriptionId: result.stripeSubscriptionId,
+          alert: "stale_subscription_period_refresh_unavailable",
+          periodEnd: result.periodEnd,
+        })
+        yield* Effect.annotateCurrentSpan({
+          "billing.alert": "stale_subscription_period_refresh_unavailable",
+          ...(result.stripeSubscriptionId ? { "billing.stripe_subscription_id": result.stripeSubscriptionId } : {}),
+        })
         return row
       }
 
       const stripeSubscriptionId = result.stripeSubscriptionId
 
+      reportStaleSubscriptionPeriod({
+        organizationId,
+        stripeSubscriptionId,
+        alert: "stale_subscription_period",
+        periodEnd: result.periodEnd,
+      })
       yield* Effect.annotateCurrentSpan({
         "billing.alert": "stale_subscription_period",
         "billing.stripe_subscription_id": stripeSubscriptionId,
@@ -92,6 +109,13 @@ export const StripeSubscriptionLookupLive = Layer.effect(
       )
 
       if (Result.isFailure(retrieveResult)) {
+        reportStaleSubscriptionPeriod({
+          organizationId,
+          stripeSubscriptionId,
+          alert: "stale_subscription_period_refresh_failed",
+          periodEnd: result.periodEnd,
+          errorMessage: retrieveResult.failure.message,
+        })
         yield* Effect.annotateCurrentSpan({
           "billing.alert": "stale_subscription_period_refresh_failed",
           "billing.stripe_subscription_id": stripeSubscriptionId,
