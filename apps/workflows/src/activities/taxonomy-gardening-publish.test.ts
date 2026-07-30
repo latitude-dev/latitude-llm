@@ -139,6 +139,16 @@ type StoredPlan = {
   readonly namingMembers?:
     | readonly { readonly clusterId: string; readonly observationIds: readonly string[] }[]
     | undefined
+  readonly continuedRestore?:
+    | readonly {
+        readonly clusterId: string
+        readonly parentClusterId: string | null
+        readonly path: string
+        readonly depth: number
+        readonly name: string
+        readonly description: string
+      }[]
+    | undefined
 }
 
 const storePlan = (overrides: Partial<StoredPlan> = {}) => {
@@ -158,6 +168,7 @@ const storePlan = (overrides: Partial<StoredPlan> = {}) => {
     supersededClusterIds: [],
     stagedClusterIds: [NEW_ROOT, NEW_LEAF],
     namingMembers: [{ clusterId: NEW_LEAF, observationIds: ["obs-1", "obs-2"] }],
+    continuedRestore: [],
     ...overrides,
   }
   redis.set(planKey, JSON.stringify(plan))
@@ -257,6 +268,50 @@ describe("taxonomy gardening publish activities", () => {
     // The tree that was serving reads is untouched.
     expect(stateOf(clusters, OLD_ROOT)).toBe("active")
     expect(stateOf(clusters, OLD_LEAF)).toBe("active")
+  })
+
+  it("restores the rows a failed publish overwrote in place, so no live node is orphaned", async () => {
+    // The worst shape: a continuation whose id was reused, re-parented under a node
+    // this run staged. Deleting staging alone would leave it pointing at a row that
+    // no longer exists, so the read could not reach it or its subtree.
+    const continued = {
+      ...cluster({ id: OLD_LEAF, parentClusterId: NEW_ROOT, name: "Pending", state: "active" }),
+      depth: 1,
+    }
+    const clusters = seedRepositories([
+      cluster({ id: OLD_ROOT, parentClusterId: null, name: "Prior Umbrella", state: "active" }),
+      continued,
+      cluster({ id: NEW_ROOT, parentClusterId: null, name: "Rebuilt Umbrella", state: "staging" }),
+      cluster({ id: NEW_LEAF, parentClusterId: NEW_ROOT, name: "Rebuilt Leaf", state: "staging" }),
+    ])
+    storePlan({
+      continuedRestore: [
+        {
+          clusterId: OLD_LEAF,
+          parentClusterId: OLD_ROOT,
+          path: `${OLD_ROOT}/`,
+          depth: 1,
+          name: "Prior Leaf",
+          description: "Description of Prior Leaf.",
+        },
+      ],
+    })
+
+    const result = await cleanupGardenTaxonomyStagingActivity({
+      organizationId,
+      projectId,
+      dimension: "topic",
+      trigger: "manual",
+      taxonomyRunId: runId,
+    } as never)
+
+    expect(result).toEqual(expect.objectContaining({ stagingDeleted: 2, continuationsRestored: 1 }))
+    const restored = clusters.clusters.get(OLD_LEAF as TaxonomyClusterId)
+    // Reachable from the prior root again, under its prior name — not the staged parent.
+    expect(restored?.parentClusterId).toBe(OLD_ROOT)
+    expect(restored?.path).toBe(`${OLD_ROOT}/`)
+    expect(restored?.name).toBe("Prior Leaf")
+    expect(restored?.state).toBe("active")
   })
 
   it("retires the whole previous tree on an adaptive plan, the dead ids on a static one", async () => {

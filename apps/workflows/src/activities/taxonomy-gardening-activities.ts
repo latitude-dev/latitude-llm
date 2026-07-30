@@ -208,6 +208,15 @@ interface StoredGardenTaxonomyPlan {
   readonly stagedClusterIds?: readonly string[]
   /** Per-leaf sample member ids, so a staged leaf can be named before its assignments exist. */
   readonly namingMembers?: readonly { readonly clusterId: string; readonly observationIds: readonly string[] }[]
+  /** Prior state of the rows this plan upserts in place, for the failure path to restore. Absent on pre-change plans. */
+  readonly continuedRestore?: readonly {
+    readonly clusterId: string
+    readonly parentClusterId: string | null
+    readonly path: string
+    readonly depth: number
+    readonly name: string
+    readonly description: string
+  }[]
 }
 
 /**
@@ -723,6 +732,11 @@ const finalizeGardenPlan = (input: GardenTaxonomyStepInput, plan: HierarchicalTa
         clusterId: members.clusterId as string,
         observationIds: members.observationIds,
       })),
+      continuedRestore: plan.continuedRestore.map((row) => ({
+        ...row,
+        clusterId: row.clusterId as string,
+        parentClusterId: row.parentClusterId === null ? null : (row.parentClusterId as string),
+      })),
     })
     return {
       observationsScanned: plan.observationsScanned,
@@ -993,6 +1007,34 @@ const supersededByPublish = (plan: StoredGardenTaxonomyPlan): TaxonomyClusterId[
   (planPersistsAdaptive(plan) ? (plan.supersededClusterIds ?? []) : plan.deprecatedClusterIds).map((clusterId) =>
     TaxonomyClusterId(clusterId),
   )
+
+// Put the rows a failed publish overwrote back the way the read resolves them:
+// parent, path, depth and naming. Centroid and counters are deliberately left
+// alone — online routing keeps updating those while a garden runs, so writing the
+// pre-run values back would discard live work to fix a visibility problem.
+const restoreContinuedRows = (rows: NonNullable<StoredGardenTaxonomyPlan["continuedRestore"]>, timestamp: Date) =>
+  Effect.gen(function* () {
+    if (rows.length === 0) return 0
+    const clusters = yield* TaxonomyClusterRepository
+    const live = yield* clusters.listByIds(rows.map((row) => TaxonomyClusterId(row.clusterId)))
+    const liveById = new Map(live.map((cluster) => [cluster.id as string, cluster] as const))
+    let restored = 0
+    for (const row of rows) {
+      const current = liveById.get(row.clusterId)
+      if (current === undefined) continue
+      yield* clusters.save({
+        ...current,
+        parentClusterId: row.parentClusterId === null ? null : TaxonomyClusterId(row.parentClusterId),
+        path: row.path,
+        depth: row.depth,
+        name: row.name,
+        description: row.description,
+        updatedAt: timestamp,
+      })
+      restored += 1
+    }
+    return restored
+  })
 
 /**
  * The single publication point: in ONE Postgres transaction retire the old tree
@@ -1282,15 +1324,22 @@ export const cleanupGardenTaxonomyStagingActivity = (input: GardenTaxonomyActivi
       const step = baseStepInput(input)
       const reference: GardenTaxonomyPlanReferenceInput = { ...step, planKey: gardenTaxonomyPlanKey(step) }
       const plan = yield* loadGardenTaxonomyPlan(reference).pipe(Effect.orElseSucceed(() => null))
-      if (plan === null) return { stagingDeleted: 0 }
+      if (plan === null) return { stagingDeleted: 0, continuationsRestored: 0 }
       // Keyed on what the plan actually staged, NOT on the adaptive shape: every
       // mode stages fresh clusters on the whole-project tree, so gating this on
       // adaptive leaked a staging tree per failed run.
       const stagedClusterIds = publishClusterIds(plan)
-      if (stagedClusterIds.length === 0) return { stagingDeleted: 0 }
+      const restore = plan.continuedRestore ?? []
+      if (stagedClusterIds.length === 0 && restore.length === 0) {
+        return { stagingDeleted: 0, continuationsRestored: 0 }
+      }
       const clusters = yield* TaxonomyClusterRepository
-      yield* clusters.deleteStaging({ clusterIds: stagedClusterIds })
-      return { stagingDeleted: stagedClusterIds.length }
+      if (stagedClusterIds.length > 0) yield* clusters.deleteStaging({ clusterIds: stagedClusterIds })
+      // A static continuation was upserted in place, so deleting staging alone would
+      // leave the live tree rewritten — and any continuation re-parented under a
+      // staged node pointing at a row that no longer exists.
+      const continuationsRestored = yield* restoreContinuedRows(restore, new Date(step.now))
+      return { stagingDeleted: stagedClusterIds.length, continuationsRestored }
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 

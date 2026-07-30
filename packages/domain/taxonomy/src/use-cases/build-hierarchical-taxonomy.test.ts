@@ -191,6 +191,30 @@ describe("planHierarchicalTaxonomyUseCase continuity matching", () => {
     expect(secondCluster?.firstObservedAt).toEqual(firstCluster?.firstObservedAt)
   })
 
+  it("carries the prior state of every reused row so a failed publish can put it back", async () => {
+    const pass1At = new Date("2026-05-24T12:00:00.000Z")
+    const observations = createFakeTaxonomyObservationRepository(
+      Array.from({ length: 20 }, (_, index) => makeObservation(index, E1, pass1At)),
+    )
+    const clusters = createFakeTaxonomyClusterRepository([])
+
+    await runBuild(observations, clusters, pass1At)
+    const published = [...clusters.clusters.values()]
+    const second = await runBuild(observations, clusters, new Date("2026-05-24T18:00:00.000Z"))
+
+    // The second pass reuses the id, overwriting a live row — so the plan has to
+    // record what that row looked like first.
+    expect(second.clustersContinued).toBe(1)
+    expect(second.continuedRestore).toHaveLength(1)
+    const restore = second.continuedRestore[0]
+    const previous = published[0]
+    expect(restore?.clusterId).toBe(previous?.id)
+    expect(restore?.name).toBe(previous?.name)
+    expect(restore?.parentClusterId).toBe(previous?.parentClusterId ?? null)
+    expect(restore?.path).toBe(previous?.path)
+    expect(restore?.depth).toBe(previous?.depth)
+  })
+
   it("births a fresh cluster and deprecates the old one when the topic changed", async () => {
     const old = makeCluster({
       id: "a".repeat(24) as TaxonomyClusterId,

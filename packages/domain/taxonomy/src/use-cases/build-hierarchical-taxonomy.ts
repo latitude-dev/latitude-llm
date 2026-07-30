@@ -238,6 +238,21 @@ export interface TaxonomyClusterNamingMembers {
   readonly observationIds: readonly string[]
 }
 
+/**
+ * What a reused (continuation) row looked like before the plan overwrote it, so a
+ * publish that fails before the swap can put the live tree back. Only the fields
+ * reads resolve a node through: centroid and counters are left as the run found
+ * them, because online routing mutates those concurrently.
+ */
+export interface TaxonomyContinuedRestore {
+  readonly clusterId: TaxonomyClusterId
+  readonly parentClusterId: TaxonomyClusterId | null
+  readonly path: string
+  readonly depth: number
+  readonly name: string
+  readonly description: string
+}
+
 export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResult {
   readonly mode: TaxonomyAdaptiveClusteringMode
   /** Depth-ascending; write boundaries must preserve order so children are not saved before parents. */
@@ -263,6 +278,12 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
    * clustering sample cap.
    */
   readonly namingMembers: readonly TaxonomyClusterNamingMembers[]
+  /**
+   * Prior state of the rows this plan upserts in place (static continuations,
+   * which keep their id). Empty on the adaptive path, which never touches a live
+   * row. Cleanup restores these when a publish fails before the swap.
+   */
+  readonly continuedRestore: readonly TaxonomyContinuedRestore[]
   /** Non-null ⇒ the plan's scope is this cohort. */
   readonly customBehaviorId: CustomBehaviorId | null
   /** Non-null ⇒ the plan's facet is this facet. Any non-null id here (or a non-null
@@ -625,6 +646,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         leafClusters: [],
         stagedClusterIds: [],
         namingMembers: [],
+        continuedRestore: [],
         customBehaviorId: scopedBehaviorId,
         facetId: scopedFacetId,
         deprecatedClusterIds: [],
@@ -911,6 +933,20 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
           return observationId === undefined ? [] : [observationId]
         }),
       })),
+      continuedRestore: [...reusedIds].flatMap((clusterId) => {
+        const previous = oldById.get(clusterId)
+        if (previous === undefined) return []
+        return [
+          {
+            clusterId: previous.id,
+            parentClusterId: previous.parentClusterId,
+            path: previous.path,
+            depth: previous.depth,
+            name: previous.name,
+            description: previous.description,
+          } satisfies TaxonomyContinuedRestore,
+        ]
+      }),
       customBehaviorId: scopedBehaviorId,
       facetId: scopedFacetId,
       deprecatedClusterIds,
