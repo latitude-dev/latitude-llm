@@ -45,8 +45,7 @@ export const listOrganizationsByUsageUseCase = (
 > =>
   Effect.gen(function* () {
     const limit = clampLimit(input.limit)
-    // Prefer the cursor's asOf so later pages stay on the same ranking
-    // instant as the first page (period boundaries mid-scroll).
+    // Prefer cursor asOf so later pages keep the first page's ranking instant across period boundaries.
     const now = input.cursor?.asOf ?? input.now ?? new Date()
     const since = new Date(now.getTime() - ORGANIZATION_USAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000)
 
