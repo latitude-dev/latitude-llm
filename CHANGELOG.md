@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## v0.3.74 - 2026-07-30
+
+### Traces
+
+- Recorded why a span's cost is zero. A stored 0 could mean a provider reporting a free call, a model we could not price, or a span with no tokens, and all three read identically. Spans now carry `cost_source` (`provider_reported`, `estimated`, `unpriced`, `no_tokens`, `unknown`), and traces and sessions carry an unpriced span count so a rollup total can say when it is a floor rather than an answer. Spans stored before this keep their cost and read back as `unknown` where a zero is genuinely ambiguous (ref: #4293).
+- Priced gateway-routed models. A gateway names itself as the provider and carries the real vendor in the model slug, so those spans matched no pricing entry and priced at zero. Spans now also record which catalog entry an estimate came from, in `cost_priced_provider` and `cost_priced_model`, which makes a partial model match a plain query (ref: #4293).
+
+### Behaviors
+
+- Stopped coding-agent harness context from firing jailbreak flags. Claude Code `<system-reminder>` blocks and Conductor `<system_instruction>` blocks are product-injected session context rather than user prompt injection, so they no longer count as jailbreak evidence and harness-only turns are skipped (ref: #4286).
+- Fixed deleting a behavior or filtered view while it was still generating. The in-flight garden workflow was not terminated first, so it kept writing clusters and assignments for a deleted view. Deleting a whole-project behavior now cascades to its filtered views, and the UI blocks delete while the target view is generating (ref: #4252).
+
+### Onboarding
+
+- Added a required "How did you hear about us?" question, with optional free text when "Other" is picked so it never blocks completing onboarding. Answers are stored as stable slugs, so the options can be re-worded without breaking historical segments, and they sync to Loops alongside job title and phone number (ref: #4282).
+- Added country-code selection to the onboarding phone field, including the invite-claim flow, which had its own copy of the form (ref: #4294).
+
+### Web
+
+- Added command palette entries for MCP setup and for each integration (Slack, GitHub, Cursor, Claude Code, Linear, Webhook). None of them previously answered a Cmd+K search for the tool's own name, and the MCP guide was reachable only from the signal detail page (ref: #4296).
+- Fixed the organization switcher hiding every other organization after a switch, caused by a stale internal filter query persisting between opens (ref: #4295).
+- Fixed the Store Home dashboard failing for projects older than about 30 days, where the all-time range produced trend buckets larger than the one-day cap the server functions accept (ref: #4252).
+
+### Analytics
+
+- Added Microsoft Clarity session recording across the app, gated on `VITE_LAT_CLARITY_PROJECT_ID`. It is absent when the variable is unset, so local development and the public self-host images load no third-party recorder, and it is kept out of staff and impersonated sessions (ref: #4279).
+
 ## v0.3.73 - 2026-07-29
 
 ### Privacy
