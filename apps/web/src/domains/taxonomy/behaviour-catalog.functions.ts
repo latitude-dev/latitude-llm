@@ -19,6 +19,7 @@ import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
+import { isOpenableBehaviourTree } from "./behaviour-tree-visibility.ts"
 
 /** The whole-project topic behavior has no row, so its card copy lives here rather than in a table. */
 export const TOPICS_BEHAVIOR_NAME = "Topics"
@@ -145,13 +146,19 @@ export const getBehaviourCatalog = createServerFn({ method: "GET" })
               // A behavior whose tree isn't built yet is a normal card state
               // (waiting / analyzing), never a failed catalog.
               Effect.orElseSucceed(() => ({ topics: [] as readonly ProjectBehaviourNode[] })),
-              Effect.map(
-                (result): BehaviourCatalogEntryRecord => ({
+              Effect.map((result): BehaviourCatalogEntryRecord => {
+                // The card is a way into the tree, so it holds to the same rule the
+                // tree screen does: a tree too small to render there teases nothing
+                // here, and stays a waiting card instead of a link to an empty page.
+                const openable = isOpenableBehaviourTree(result.topics)
+                return {
                   ...scope,
-                  sessionCount: result.topics.reduce((sum, node) => sum + node.subtreeObservationCount, 0),
-                  groups: toGroupRecords(result.topics),
-                }),
-              ),
+                  sessionCount: openable
+                    ? result.topics.reduce((sum, node) => sum + node.subtreeObservationCount, 0)
+                    : 0,
+                  groups: openable ? toGroupRecords(result.topics) : [],
+                }
+              }),
             ),
           { concurrency: 4 },
         )

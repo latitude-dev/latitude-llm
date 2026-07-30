@@ -123,7 +123,12 @@ export function BehaviourCardBody({ entry }: { readonly entry: BehaviourCatalogE
   )
 }
 
-/** One behavior on the Behaviors home; the whole card is the link into its tree. */
+/**
+ * One behavior on the Behaviors home; the whole card is the link into its tree —
+ * unless there is no tree to open yet, in which case it is inert. The catalog read
+ * empties `groups` for a tree the tree screen would refuse to render, so linking
+ * here would land on "No behaviors yet".
+ */
 export function BehaviourCatalogCard({
   projectSlug,
   entry,
@@ -131,6 +136,13 @@ export function BehaviourCatalogCard({
   readonly projectSlug: string
   readonly entry: BehaviourCatalogEntryRecord
 }) {
+  if (entry.groups.length === 0) {
+    return (
+      <div className={BEHAVIOUR_CARD_CLASS}>
+        <BehaviourCardBody entry={entry} />
+      </div>
+    )
+  }
   return (
     <Link
       to="/projects/$projectSlug/behaviours/$behaviourSlug"
