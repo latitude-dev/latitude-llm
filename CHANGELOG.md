@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.3.76 - 2026-07-30
+
+### Sessions
+
+- Made the statistics panel actually follow the sessions/traces toggle. The histogram was pinned to sessions, four of the seven cards are sums that read identically either way, and the Sessions card ignored the mode. The panel now resolves its metric per mode, shows the per-trace average under each sum card, and drops the Sessions card in traces mode (ref: #4312).
+
+### Backoffice
+
+- Ranked the Organizations table by credit spend for the current billing period and surfaced it as a column, still enriched with 30-day trace activity. Listing is pinned to an `asOf` cursor so a period boundary crossed mid-scroll cannot reshuffle pages (ref: #4306).
+
 ## v0.3.75 - 2026-07-30
 
 ### Cost
