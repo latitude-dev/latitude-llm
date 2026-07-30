@@ -178,6 +178,8 @@ export function ModelImpactPanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
+        // The picker above states this window; only the All-time slice differs from it.
+        showWindow={isAllTime}
         actions={
           <div className="flex flex-row items-center gap-3">
             {[

@@ -139,6 +139,8 @@ export function ModelUsagePanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
+        // The picker above states this window; only the All-time slice differs from it.
+        showWindow={isAllTime}
         actions={
           <Tabs
             variant="bordered"

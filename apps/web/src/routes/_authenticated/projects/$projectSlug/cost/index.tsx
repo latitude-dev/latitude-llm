@@ -155,17 +155,17 @@ function CostPageContent() {
 
   return (
     <Layout>
-      <Layout.Actions>
-        <Layout.ActionsRow>
-          <Layout.ActionRowItem>
-            <TimeFilterDropdown
-              {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
-              {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
-              onChange={tw.onTimeChange}
-            />
-          </Layout.ActionRowItem>
-        </Layout.ActionsRow>
-      </Layout.Actions>
+      <Layout.Header
+        title="Cost dashboard"
+        description="Optimization cost"
+        actions={
+          <TimeFilterDropdown
+            {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+            {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+            onChange={tw.onTimeChange}
+          />
+        }
+      />
       <div className="flex flex-col gap-4 px-6 pb-6">
         <CostKpiRow
           overview={overview}
