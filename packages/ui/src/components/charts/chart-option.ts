@@ -87,10 +87,14 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
   const showLegend = series.length > 1
   const hasBarSeries = series.some((s) => s.kind === "bar")
 
+  // Thinning is strided from the newest category, not the oldest, so the latest
+  // bucket always keeps its label — on a time series that's the one being read,
+  // and an unlabeled trailing bucket looks like missing data.
+  const lastCategoryIndex = categories.length - 1
+  const categoryLabelStride =
+    categories.length <= maxCategoryAxisLabels ? 1 : Math.max(1, Math.ceil(categories.length / maxCategoryAxisLabels))
   const categoryLabelInterval =
-    categories.length <= maxCategoryAxisLabels
-      ? 0
-      : Math.max(1, Math.ceil(categories.length / maxCategoryAxisLabels)) - 1
+    categoryLabelStride === 1 ? 0 : (index: number) => (lastCategoryIndex - index) % categoryLabelStride === 0
   const capBarWidth = categories.length > barMaxWidthCategoryThreshold
   const splitLineColor = colors.isDark ? colors.mutedForeground : colors.border
   const splitLineOpacity = colors.isDark ? 0.3 : 0.6

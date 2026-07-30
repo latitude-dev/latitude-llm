@@ -1,4 +1,3 @@
-import { Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { useMemo } from "react"
 import { useCostOverview, useCostSeries } from "../../../../../domains/cost/cost.collection.ts"
@@ -95,7 +94,6 @@ function CostPageContent() {
               {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
               onChange={tw.onTimeChange}
             />
-            <Text.H6 color="foregroundMuted">Times in UTC</Text.H6>
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
       </Layout.Actions>
