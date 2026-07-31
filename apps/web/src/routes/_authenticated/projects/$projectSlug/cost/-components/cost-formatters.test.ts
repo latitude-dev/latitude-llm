@@ -179,6 +179,20 @@ describe("splitBreakdownRows", () => {
     expect(splitBreakdownRows({ breakdown: breakdownFixture, limit: 10 }).remainder).toBeNull()
   })
 
+  it("keeps a low-spend value that still carries a readable share of calls", () => {
+    // Ranked below `c` on spend, but 30% of all calls — the shape the impact panel
+    // exists to show. Stopping at the first unreadable row would bury it in Other.
+    const withHighVolume: CostBreakdown = {
+      ...breakdownFixture,
+      rows: [...breakdownFixture.rows, breakdownRow("cheap-and-busy", 50, 300)],
+      totals: { ...breakdownFixture.totals, distinctValues: 5 },
+    }
+
+    const split = splitBreakdownRows({ breakdown: withHighVolume, limit: 10, minShare: 0.1 })
+
+    expect(split.visible.map((row) => row.key)).toEqual(["a", "b", "cheap-and-busy"])
+  })
+
   it("folds values too small to read as a proportion into the remainder", () => {
     const split = splitBreakdownRows({ breakdown: breakdownFixture, limit: 10, minShare: 0.1 })
 

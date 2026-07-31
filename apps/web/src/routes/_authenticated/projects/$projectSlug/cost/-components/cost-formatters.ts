@@ -257,10 +257,12 @@ export function splitBreakdownRows({
     (shareOf(row.totalMicrocents, totals.totalMicrocents) ?? 0) >= minShare ||
     (shareOf(row.calls, totals.calls) ?? 0) >= minShare
 
+  // Skips rather than stops: rows are ranked by spend, but a row can also qualify on
+  // its share of calls, which is not monotonic down that ranking.
   const visible: CostBreakdownRow[] = []
   for (const row of rows) {
     if (visible.length >= limit) break
-    if (!isReadable(row)) break
+    if (!isReadable(row)) continue
     visible.push(row)
   }
 
