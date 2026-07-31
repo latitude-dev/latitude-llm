@@ -73,6 +73,26 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
       return rows[0] ? toDomainConfig(rows[0]) : null
     }),
 
+  countProjectOverrides: (integrationId) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(agentDispatchConfigs)
+            .where(
+              and(
+                sql`${agentDispatchConfigs.projectId} is not null`,
+                eq(agentDispatchConfigs.integrationId, integrationId),
+                eq(agentDispatchConfigs.organizationId, organizationId),
+              ),
+            ),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "countAgentDispatchProjectOverrides")))
+      return rows[0]?.count ?? 0
+    }),
+
   findOverrideByProjectAndIntegration: ({ projectId, integrationId }) =>
     Effect.gen(function* () {
       const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

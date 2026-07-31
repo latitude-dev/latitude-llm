@@ -553,6 +553,7 @@ interface ProjectDispatchSettingsRecord {
   readonly defaultConfig: AgentDispatchConfigRecord | null
   readonly override: AgentDispatchOverrideRecord | null
   readonly effective: AgentDispatchConfigRecord | null
+  readonly overrideCount: number
 }
 
 export const getProjectDispatchSettings = createServerFn({ method: "GET" })
@@ -567,10 +568,12 @@ export const getProjectDispatchSettings = createServerFn({ method: "GET" })
         const integrationRepo = yield* AgentDispatchIntegrationRepository
         const configRepo = yield* AgentDispatchConfigRepository
         const integration = yield* integrationRepo.findActiveByKind(data.kind)
-        if (!integration) return { integrationId: null, defaultConfig: null, override: null, effective: null }
-        const [defaultRow, overrideRow] = yield* Effect.all([
+        if (!integration)
+          return { integrationId: null, defaultConfig: null, override: null, effective: null, overrideCount: 0 }
+        const [defaultRow, overrideRow, overrideCount] = yield* Effect.all([
           configRepo.findDefaultByIntegration(integration.id),
           configRepo.findOverrideByProjectAndIntegration({ projectId, integrationId: integration.id }),
+          configRepo.countProjectOverrides(integration.id),
         ])
         const effective = resolveEffectiveConfig({ projectId, defaultConfig: defaultRow, override: overrideRow })
         const effectiveUpdatedAt = new Date(
@@ -581,6 +584,7 @@ export const getProjectDispatchSettings = createServerFn({ method: "GET" })
           defaultConfig: defaultRow ? toConfigRecord(defaultRow) : null,
           override: overrideRow ? toOverrideRecord(overrideRow) : null,
           effective: effective ? toEffectiveRecord(effective, effectiveUpdatedAt) : null,
+          overrideCount,
         }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )

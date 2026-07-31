@@ -119,6 +119,27 @@ describe("AgentDispatchConfigRepositoryLive", () => {
     expect(projectIds).not.toContain(PROJECT_B)
   })
 
+  it("counts project overrides for an integration, excluding the org default row", async () => {
+    const otherIntegration = generateId()
+    await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchConfigRepository
+        yield* repo.upsert(row({ id: generateId(), projectId: null }))
+        yield* repo.upsert(row({ id: generateId(), projectId: PROJECT_A }))
+        yield* repo.upsert(row({ id: generateId(), projectId: PROJECT_B }))
+        yield* repo.upsert(row({ id: generateId(), projectId: PROJECT_A, integrationId: otherIntegration }))
+      }),
+    )
+
+    const count = await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchConfigRepository
+        return yield* repo.countProjectOverrides(INTEGRATION)
+      }),
+    )
+    expect(count).toBe(2)
+  })
+
   it("counts dispatches per project so a shared config's budget does not bleed across projects", async () => {
     const configId = generateId()
     await run(
