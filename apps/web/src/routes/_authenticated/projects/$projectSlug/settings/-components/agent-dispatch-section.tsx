@@ -369,6 +369,7 @@ function DispatchBehaviorSection({
   const { toast } = useToast()
   const [editingDefault, setEditingDefault] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
+  const [stagedScope, setStagedScope] = useState<SettingScope | null>(null)
 
   const { data: settings, isLoading } = useQuery({
     queryKey: projectDispatchSettingsQueryKey(projectId, kind),
@@ -384,33 +385,20 @@ function DispatchBehaviorSection({
 
   const effective = settings?.effective ?? null
   const overrideCount = settings?.overrideCount ?? 0
-  const scope: SettingScope = settings?.override != null ? "project" : "organization"
+  const storedScope: SettingScope = settings?.override != null ? "project" : "organization"
+  const scope = stagedScope ?? storedScope
+  // Dropping the override is the only destructive direction, so it waits for an explicit apply.
+  const pendingRemoval = storedScope === "project" && scope === "organization"
 
-  const changeScope = async (next: SettingScope) => {
+  const shown = scope === "organization" ? (settings?.defaultConfig ?? null) : effective
+
+  const applyRemoval = async () => {
     setIsSwitching(true)
     try {
-      if (next === "project") {
-        // Seeded from the effective config, so switching is a no-op on behaviour: the
-        // project starts from exactly what it was already inheriting.
-        await upsertProjectDispatchOverride({
-          data: {
-            projectId,
-            integrationId: integration.id,
-            kind,
-            enabled: effective?.enabled ?? false,
-            triggers: [...(effective?.triggers ?? [])],
-            target: effective?.target ?? null,
-            guardrails: effective?.guardrails ?? null,
-          },
-        })
-      } else {
-        await resetProjectDispatchOverride({ data: { projectId, integrationId: integration.id } })
-      }
+      await resetProjectDispatchOverride({ data: { projectId, integrationId: integration.id } })
+      setStagedScope(null)
       await invalidate()
-      toast({
-        description:
-          next === "project" ? "This project now sets its own behavior" : "This project now follows the organization",
-      })
+      toast({ description: "This project now follows the organization" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
@@ -427,15 +415,40 @@ function DispatchBehaviorSection({
         scope={{
           kind: "selectable",
           value: scope,
-          loading: isSwitching,
-          onChange: (next) => void changeScope(next),
+          onChange: (next) => setStagedScope(next === storedScope ? null : next),
         }}
+        pendingChange={
+          pendingRemoval
+            ? {
+                description:
+                  "This project will follow the organization default, and its own dispatch behavior is discarded.",
+                applyLabel: "Follow organization",
+                isApplying: isSwitching,
+                onApply: () => void applyRemoval(),
+                onDiscard: () => setStagedScope(null),
+              }
+            : undefined
+        }
         notice={
-          scope === "organization" ? (
+          storedScope === "organization" && scope === "project" ? (
             <Text.H6 color="foregroundMuted">
-              Showing the organization default. Switching to “This project” copies these values and then replaces the
-              whole block, so later changes to the default won’t reach this project.
+              This project has no behavior of its own yet. Saving copies these values into one, and replaces the whole
+              block, so later changes to the organization default won’t reach this project.
             </Text.H6>
+          ) : scope === "organization" && !pendingRemoval ? (
+            <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+              <Text.H6 color="foregroundMuted">
+                These values come from the organization default, so they can’t be edited here.
+              </Text.H6>
+              <div className="flex shrink-0 flex-row items-center gap-2">
+                <Button variant="outline" onClick={() => setStagedScope("project")}>
+                  Override for this project
+                </Button>
+                <Button variant="outline" onClick={() => setEditingDefault(true)}>
+                  Edit organization default
+                </Button>
+              </div>
+            </div>
           ) : null
         }
         footer={
@@ -445,18 +458,20 @@ function DispatchBehaviorSection({
                 ? `Organization default in effect for ${projectCount - overrideCount} of ${projectCount} projects · ${overrideCount} override it`
                 : `Organization default in effect for all ${projectCount} projects`}
             </Text.H6>
-            <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
-              Edit default
-            </Button>
+            {scope === "project" ? (
+              <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
+                Edit organization default
+              </Button>
+            ) : null}
           </div>
         }
       >
         <AgentDispatchConfigFormInner
-          key={`${kind}:${scope}:${effective?.updatedAt ?? "new"}`}
+          key={`${kind}:${scope}:${shown?.updatedAt ?? "new"}`}
           kind={kind}
           integrationId={integration.id}
           vendorAccountId={integration.vendorAccountId}
-          initial={effective}
+          initial={shown}
           webhookSecret={null}
           readOnly={scope === "organization"}
           submitLabel="Save for this project"
@@ -472,6 +487,7 @@ function DispatchBehaviorSection({
                 guardrails: values.guardrails,
               },
             })
+            setStagedScope(null)
             await invalidate()
             toast({ description: `${KIND_LABELS[kind]} settings saved for this project` })
           }}

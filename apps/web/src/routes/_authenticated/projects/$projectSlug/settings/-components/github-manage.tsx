@@ -355,9 +355,21 @@ function MonitoringSection({
   const { toast } = useToast()
   const [editingDefault, setEditingDefault] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
-  const scope: SettingScope = config.hasBehaviorOverride ? "project" : "organization"
+  const [stagedScope, setStagedScope] = useState<SettingScope | null>(null)
 
-  const changeScope = async (next: SettingScope) => {
+  const storedScope: SettingScope = config.hasBehaviorOverride ? "project" : "organization"
+  const scope = stagedScope ?? storedScope
+  // Dropping the override is the only destructive direction, so it waits for an explicit apply.
+  const pendingRemoval = storedScope === "project" && scope === "organization"
+
+  // `config.settings` is already merged, so the inherited preview needs the default on its own.
+  const { data: orgDefaults } = useQuery({
+    queryKey: GITHUB_ORG_DEFAULTS_QUERY_KEY,
+    queryFn: () => getGithubOrgDefaults(),
+  })
+  const shown = scope === "organization" ? (orgDefaults?.settings ?? config.settings) : config.settings
+
+  const applyRemoval = async () => {
     if (config.repoId === null) {
       toast({ variant: "destructive", description: "Pick a repository for this project first." })
       return
@@ -367,18 +379,11 @@ function MonitoringSection({
       // `resetGithubProjectOverride` would delete the whole row, repo binding included.
       // Nulling the four behavior columns keeps the binding and restores inheritance.
       await upsertGithubProjectConfig({
-        data: {
-          projectId,
-          repoId: config.repoId,
-          branch: config.branch ?? "",
-          overrides: next === "project" ? config.settings : null,
-        },
+        data: { projectId, repoId: config.repoId, branch: config.branch ?? "", overrides: null },
       })
+      setStagedScope(null)
       onChanged()
-      toast({
-        description:
-          next === "project" ? "This project now sets its own monitoring" : "This project now follows the organization",
-      })
+      toast({ description: "This project now follows the organization" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
@@ -395,15 +400,40 @@ function MonitoringSection({
         scope={{
           kind: "selectable",
           value: scope,
-          loading: isSwitching,
-          onChange: (next) => void changeScope(next),
+          onChange: (next) => setStagedScope(next === storedScope ? null : next),
         }}
+        pendingChange={
+          pendingRemoval
+            ? {
+                description:
+                  "This project will follow the organization default, and its own monitoring settings are discarded. The repository binding is kept.",
+                applyLabel: "Follow organization",
+                isApplying: isSwitching,
+                onApply: () => void applyRemoval(),
+                onDiscard: () => setStagedScope(null),
+              }
+            : undefined
+        }
         notice={
-          scope === "organization" ? (
+          storedScope === "organization" && scope === "project" ? (
             <Text.H6 color="foregroundMuted">
-              Showing the organization default. Switching to “This project” copies these values and then replaces the
-              whole block, so later changes to the default won’t reach this project.
+              This project has no monitoring settings of its own yet. Saving copies these values into one, and replaces
+              the whole block, so later changes to the organization default won’t reach this project.
             </Text.H6>
+          ) : scope === "organization" && !pendingRemoval ? (
+            <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+              <Text.H6 color="foregroundMuted">
+                These values come from the organization default, so they can’t be edited here.
+              </Text.H6>
+              <div className="flex shrink-0 flex-row items-center gap-2">
+                <Button variant="outline" onClick={() => setStagedScope("project")}>
+                  Override for this project
+                </Button>
+                <Button variant="outline" onClick={() => setEditingDefault(true)}>
+                  Edit organization default
+                </Button>
+              </div>
+            </div>
           ) : null
         }
         footer={
@@ -413,15 +443,17 @@ function MonitoringSection({
                 ? `Organization default in effect for ${projectCount - config.overrideCount} of ${projectCount} projects · ${config.overrideCount} override it`
                 : `Organization default in effect for all ${projectCount} projects`}
             </Text.H6>
-            <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
-              Edit default
-            </Button>
+            {scope === "project" ? (
+              <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
+                Edit organization default
+              </Button>
+            ) : null}
           </div>
         }
       >
         <GithubMonitorSettingsForm
           key={`${scope}:${config.repoId ?? "none"}`}
-          initial={config.settings}
+          initial={shown}
           readOnly={scope === "organization"}
           submitLabel="Save for this project"
           submitDisabled={config.repoId === null}
@@ -430,6 +462,7 @@ function MonitoringSection({
             await upsertGithubProjectConfig({
               data: { projectId, repoId: config.repoId, branch: config.branch ?? "", overrides: settings },
             })
+            setStagedScope(null)
             onChanged()
           }}
         />
