@@ -71,7 +71,6 @@ export function RedactionRuleSheet({
       cancelled = true
       clearTimeout(timer)
       setIsValidating(false)
-      clearTimeout(timer)
     }
   }, [open, ready, draft])
 

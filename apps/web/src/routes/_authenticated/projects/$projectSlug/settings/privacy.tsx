@@ -25,6 +25,7 @@ import { useRouteProject } from "../-route-data.ts"
 import { DirtyActions } from "./-components/dirty-actions.tsx"
 import { OrganizationRedactionModal } from "./-components/organization-redaction-modal.tsx"
 import { RedactionCard, type RedactionCardValue } from "./-components/redaction-card.tsx"
+import { RedactionPreview } from "./-components/redaction-preview.tsx"
 import { ScopedSetting, type SettingScope } from "./-components/scoped-setting.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
@@ -253,6 +254,10 @@ function ProjectPrivacySettingsPage() {
             onChange={(key, next) => setField(key, next)}
           />
         </ScopedSetting>
+
+        {view.mode === "enforce" ? (
+          <RedactionPreview projectId={currentProject.id} disabled={!canEditProject} setting={toSetting(view)} />
+        ) : null}
       </div>
 
       {editingDefault ? (

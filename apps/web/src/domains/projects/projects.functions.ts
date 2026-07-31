@@ -14,8 +14,15 @@ import {
   projectSettingsSchema,
   redactionRuleSchema,
   redactionSettingSchema,
+  resolveRedactionPolicy,
 } from "@domain/shared"
-import { type RuleValidation, validateRedactionRule } from "@domain/spans"
+import {
+  previewRedactionUseCase,
+  type RedactionPreviewResult,
+  type RuleValidation,
+  validateRedactionRule,
+} from "@domain/spans"
+import { SpanRepositoryLive } from "@platform/db-clickhouse"
 import {
   MembershipRepositoryLive,
   OutboxEventWriterLive,
@@ -30,7 +37,9 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { rejectInvalidRedactionRules } from "../../lib/redaction-rules.ts"
 import { requireSession } from "../../server/auth.ts"
-import { getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
 const LAST_PROJECT_COOKIE_NAME = "latitude-last-project-slug"
 const LAST_PROJECT_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
@@ -246,6 +255,45 @@ export const validateRedactionRuleDraft = createServerFn({ method: "POST" })
     await requireSession()
 
     return validateRedactionRule(data.rule)
+  })
+
+/** Kept modest: a preview that scans a thousand spans buys no more confidence than one that scans fifty. */
+const PREVIEW_SAMPLE_SIZE = 50
+
+/**
+ * Run a redaction policy over spans already stored, without saving the policy or the result.
+ *
+ * The only honest answer to "will this eat my tool outputs" before the first enforce, because
+ * redaction is destructive and not retroactive. Gated like the policy write itself: this reads
+ * customer content, so a member who cannot change the policy cannot preview against it either.
+ */
+export const previewRedaction = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ projectId: z.string(), redaction: redactionSettingSchema }))
+  .handler(async ({ data, context }): Promise<RedactionPreviewResult> => {
+    const { organizationId, userId } = await requireSession()
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const memberships = yield* MembershipRepository
+        const isAdmin = yield* memberships.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({ message: "Only organization owners and admins can preview redaction" })
+        }
+      }).pipe(withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
+
+    // Branded org id from `resolveOrgScope`, never the raw one: ClickHouse has no RLS, so this is
+    // the only thing keeping the read inside the tenant.
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      previewRedactionUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        policy: resolveRedactionPolicy({ organization: null, project: { redaction: data.redaction } }),
+        sampleSize: PREVIEW_SAMPLE_SIZE,
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
   })
 
 export const completeProjectOnboarding = createServerFn({ method: "POST" })
