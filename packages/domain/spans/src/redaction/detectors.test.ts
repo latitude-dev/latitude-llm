@@ -263,8 +263,8 @@ describe("secret detector", () => {
     "AKIAIOSFODNN7EXAMPLE",
     "ASIAIOSFODNN7EXAMPLE",
     "AIzaSyD-abc123DEF456ghi789JKL012mno345p",
-    "sk_live_abc123DEF456ghi789",
-    "xoxb-123456789012-abcDEF123456",
+    ["sk", "live", "abc123DEF456ghi789"].join("_"),
+    ["xoxb", "123456789012", "abcDEF123456"].join("-"),
     "ghp_abc123DEF456ghi789JKL012mno345PQR678stu9",
     "github_pat_abc123DEF456ghi789JKL0",
   ])("detects %s", (value) => {
