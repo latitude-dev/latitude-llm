@@ -1,11 +1,10 @@
-import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
+import { REDACTION_ENTITIES, REDACTION_ENTITY_LABELS, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { REDACTION_ENTITY_LABELS } from "./labels.ts"
 import { redactText } from "./redact-text.ts"
 import { type CompiledRuleSet, compileRuleSet, findRedactionMatches, type RedactionMatch } from "./rules.ts"
 
 const ruleSetOf = (...entities: RedactionEntity[]): CompiledRuleSet =>
-  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep" })
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep", rules: [] })
 
 const ALL_ENTITIES = ruleSetOf(...REDACTION_ENTITIES)
 

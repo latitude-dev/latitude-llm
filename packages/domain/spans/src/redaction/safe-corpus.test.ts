@@ -4,7 +4,7 @@ import { compileRuleSet, findRedactionMatches } from "./rules.ts"
 import { SAFE_CORPUS } from "./safe-corpus.ts"
 
 const ruleSetOf = (...entities: RedactionEntity[]) =>
-  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep" })
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep", rules: [] })
 
 const DEFAULTS = ruleSetOf(...DEFAULT_REDACTION_ENTITIES)
 

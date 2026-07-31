@@ -105,4 +105,16 @@ describe("updateOrganizationRedactionUseCase", () => {
 
     expect(organizations.get(ORG_ID)?.settings).toEqual({ redaction: LOCKED })
   })
+
+  // Change detection compared a hand-listed set of fields, so a rules-only edit looked identical
+  // to the stored policy and was discarded with no save and no audit event.
+  it("saves and audits a change that touches only the rules", async () => {
+    const rules: OrganizationRedactionSetting["rules"] = [
+      { id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] },
+    ]
+    const { organizations, written } = await run(seedOrg({ redaction: LOCKED }), { ...LOCKED, rules })
+
+    expect(organizations.get(ORG_ID)?.settings?.redaction?.rules).toEqual(rules)
+    expect(written).toHaveLength(1)
+  })
 })

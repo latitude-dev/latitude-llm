@@ -5,7 +5,7 @@ import { redactJsonString, redactJsonValue, redactStringMap } from "./redact-jso
 import { type CompiledRuleSet, compileRuleSet } from "./rules.ts"
 
 const ruleSetOf = (...entities: RedactionEntity[]): CompiledRuleSet =>
-  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep" })
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep", rules: [] })
 
 const ENTITIES = ruleSetOf(...DEFAULT_REDACTION_ENTITIES)
 

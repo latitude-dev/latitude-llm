@@ -1,6 +1,5 @@
-import type { RedactionIdentityHandling, RedactionPolicy } from "@domain/shared"
+import { REDACTION_ENTITY_LABELS, type RedactionIdentityHandling, type RedactionPolicy } from "@domain/shared"
 import { BUILT_IN_DETECTORS } from "./detectors.ts"
-import { REDACTION_ENTITY_LABELS } from "./labels.ts"
 
 /**
  * One pattern plus the label its matches are replaced with.

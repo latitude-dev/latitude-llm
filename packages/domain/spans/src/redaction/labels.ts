@@ -1,15 +1,3 @@
-import type { RedactionEntity } from "@domain/shared"
-
-export const REDACTION_ENTITY_LABELS: Record<RedactionEntity, string> = {
-  email: "EMAIL",
-  phone: "PHONE",
-  credit_card: "CREDIT_CARD",
-  iban: "IBAN",
-  us_ssn: "US_SSN",
-  ip_address: "IP_ADDRESS",
-  secret: "SECRET",
-}
-
 /** Placeholders are visible in the UI on purpose: users must be able to see why content is missing. */
 export const redactionPlaceholder = (label: string): string => `[REDACTED_${label}]`
 

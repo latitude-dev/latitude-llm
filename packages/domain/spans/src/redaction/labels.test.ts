@@ -1,10 +1,9 @@
-import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
+import { REDACTION_ENTITIES, REDACTION_ENTITY_LABELS, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import {
   OVERSIZED_FIELD_PLACEHOLDER,
   REDACTED_IDENTITY_PLACEHOLDER,
   REDACTION_BATCH_TIMEOUT_MS,
-  REDACTION_ENTITY_LABELS,
   REDACTION_MAX_FIELD_CHARS,
   redactionPlaceholder,
 } from "./labels.ts"

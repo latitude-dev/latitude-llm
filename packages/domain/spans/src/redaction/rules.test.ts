@@ -1,14 +1,18 @@
-import { DEFAULT_REDACTION_ENTITIES, REDACTION_ENTITIES, type RedactionPolicy } from "@domain/shared"
+import {
+  DEFAULT_REDACTION_ENTITIES,
+  REDACTION_ENTITIES,
+  REDACTION_ENTITY_LABELS,
+  type RedactionPolicy,
+} from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { BUILT_IN_DETECTORS } from "./detectors.ts"
-import { REDACTION_ENTITY_LABELS } from "./labels.ts"
 import { compilePolicy, compileRuleSet } from "./rules.ts"
 
 const policy = (overrides: Partial<RedactionPolicy> = {}): RedactionPolicy => ({
-  entities: new Set(DEFAULT_REDACTION_ENTITIES),
-  redactMetadata: false,
-  identities: "keep",
-  ...overrides,
+  entities: overrides.entities ?? new Set(DEFAULT_REDACTION_ENTITIES),
+  redactMetadata: overrides.redactMetadata ?? false,
+  identities: overrides.identities ?? "keep",
+  rules: overrides.rules ?? [],
 })
 
 describe("compileRuleSet", () => {

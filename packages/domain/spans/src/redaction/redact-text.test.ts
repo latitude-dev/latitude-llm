@@ -4,7 +4,7 @@ import { mergeRedactionCounts, type RedactionCounts, redactText, totalRedactionC
 import { type CompiledRuleSet, compileRuleSet } from "./rules.ts"
 
 const ruleSetOf = (...entities: RedactionEntity[]): CompiledRuleSet =>
-  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep" })
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep", rules: [] })
 
 const DEFAULTS = ruleSetOf(...DEFAULT_REDACTION_ENTITIES)
 const ALL = ruleSetOf(...REDACTION_ENTITIES)
