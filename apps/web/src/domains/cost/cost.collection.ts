@@ -1,7 +1,13 @@
 import type { CostBreakdownDimension, CostSeriesMetric } from "@domain/spans"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { projectScopeData, projectScopeKey, useProjectScope } from "../projects/project-scope.tsx"
-import { getCostBreakdown, getCostOverview, getCostSeries, getModelUsageSeries } from "./cost.functions.ts"
+import {
+  getCacheEconomics,
+  getCostBreakdown,
+  getCostOverview,
+  getCostSeries,
+  getModelUsageSeries,
+} from "./cost.functions.ts"
 
 /** Time window shared by every cost query — lower bound inclusive, upper bound exclusive. */
 interface CostTimeRange {
@@ -51,6 +57,25 @@ export function useCostBreakdown({
     queryKey: [...projectScopeKey(scope), "cost-breakdown", projectId, range, dimension],
     queryFn: () => getCostBreakdown({ data: { ...projectScopeData(scope), projectId, ...range, dimension } }),
     staleTime: COST_STALE_TIME_MS,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+export function useCacheEconomics({
+  projectId,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: CostTimeRange
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "cache-economics", projectId, range],
+    queryFn: () => getCacheEconomics({ data: { ...projectScopeData(scope), projectId, ...range } }),
+    staleTime: COST_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
     enabled: enabled && projectId.length > 0,
   })
 }

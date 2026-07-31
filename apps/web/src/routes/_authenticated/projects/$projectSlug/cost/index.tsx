@@ -2,6 +2,7 @@ import { Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { useMemo } from "react"
 import {
+  useCacheEconomics,
   useCostBreakdown,
   useCostOverview,
   useCostSeries,
@@ -15,6 +16,7 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { CacheEconomicsPanel } from "./-components/cache-economics-panel.tsx"
 import { CostBreakdownPanel } from "./-components/cost-breakdown-panel.tsx"
 import { CostConfidenceStrip } from "./-components/cost-confidence-strip.tsx"
 import {
@@ -103,6 +105,11 @@ function CostPageContent() {
     projectId: project.id,
     range,
     bucketSeconds,
+    enabled,
+  })
+  const { data: cacheEconomics, isLoading: cacheEconomicsLoading } = useCacheEconomics({
+    projectId: project.id,
+    range,
     enabled,
   })
   const { data: breakdown, isLoading: breakdownLoading } = useCostBreakdown({
@@ -219,6 +226,8 @@ function CostPageContent() {
             />
           </div>
         </div>
+        <SectionHeading>Cache</SectionHeading>
+        <CacheEconomicsPanel economics={cacheEconomics} isLoading={cacheEconomicsLoading} />
         <CostBreakdownPanel
           breakdown={breakdown}
           dimension={dimension}

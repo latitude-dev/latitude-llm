@@ -15,6 +15,7 @@ const PROJECT_ID = ProjectId("costanalytics00000000000")
 // breakdown and model-usage fixtures grow their own shapes.
 const BREAKDOWN_PROJECT_ID = ProjectId("costbreakdown00000000000")
 const MODEL_USAGE_PROJECT_ID = ProjectId("costmodelusage0000000000")
+const CACHE_PROJECT_ID = ProjectId("costcache00000000000000a")
 
 const DAY1 = new Date("2026-06-01T10:00:00.000Z")
 const DAY2 = new Date("2026-06-02T10:00:00.000Z")
@@ -42,6 +43,8 @@ type SpanOpts = {
   costOutput?: number
   isEstimated?: boolean
   tokensInput?: number
+  tokensCacheRead?: number
+  tokensCacheCreate?: number
   costSource?: string
 }
 
@@ -73,8 +76,8 @@ const span = (n: number, startTime: Date, opts: SpanOpts = {}): CostSpanRow =>
     response_model: "",
     tokens_input: opts.tokensInput ?? 0,
     tokens_output: 0,
-    tokens_cache_read: 0,
-    tokens_cache_create: 0,
+    tokens_cache_read: opts.tokensCacheRead ?? 0,
+    tokens_cache_create: opts.tokensCacheCreate ?? 0,
     tokens_reasoning: 0,
     cost_input_microcents: opts.costInput ?? 0,
     cost_output_microcents: opts.costOutput ?? 0,
@@ -110,6 +113,10 @@ const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
 const scope = { organizationId: ORG_ID, projectId: PROJECT_ID, from: FROM, to: TO }
 const breakdownScope = { ...scope, projectId: BREAKDOWN_PROJECT_ID }
 const modelUsageScope = { ...scope, projectId: MODEL_USAGE_PROJECT_ID }
+const cacheScope = { ...scope, projectId: CACHE_PROJECT_ID }
+
+const cacheSpan = (n: number, startTime: Date, opts: Omit<SpanOpts, "project">): CostSpanRow =>
+  span(n, startTime, { ...opts, project: CACHE_PROJECT_ID })
 
 const breakdownSpan = (n: number, startTime: Date, opts: Omit<SpanOpts, "project">): CostSpanRow =>
   span(n, startTime, { ...opts, project: BREAKDOWN_PROJECT_ID })
@@ -218,6 +225,49 @@ describe("CostAnalyticsRepositoryLive", () => {
           costTotal: 50,
           costSource: "estimated",
           tokensInput: 5,
+        }),
+
+        // Cache fixture: one model caching, one not, plus an unpriced model and a
+        // tool span that must stay out of every cache figure.
+        cacheSpan(31, DAY1, {
+          trace: 31,
+          model: "cached-1",
+          costTotal: 400,
+          costSource: "estimated",
+          tokensInput: 100,
+          tokensCacheRead: 300,
+          tokensCacheCreate: 100,
+        }),
+        cacheSpan(32, DAY2, {
+          trace: 31,
+          model: "cached-1",
+          costTotal: 200,
+          costSource: "estimated",
+          tokensInput: 100,
+          tokensCacheRead: 100,
+          tokensCacheCreate: 0,
+        }),
+        cacheSpan(33, DAY1, {
+          trace: 32,
+          model: "uncached-1",
+          costTotal: 900,
+          costSource: "estimated",
+          tokensInput: 500,
+        }),
+        cacheSpan(34, DAY2, {
+          trace: 32,
+          model: "mystery-1",
+          provider: "acme",
+          costSource: "unpriced",
+          tokensInput: 700,
+        }),
+        cacheSpan(35, DAY2, {
+          trace: 32,
+          operation: "execute_tool",
+          model: "cached-1",
+          costTotal: 9_999,
+          tokensInput: 9_999,
+          tokensCacheRead: 9_999,
         }),
       ]),
     )
@@ -421,6 +471,55 @@ describe("CostAnalyticsRepositoryLive", () => {
       ])
       expect(series.buckets[0]?.byModel).toContainEqual({ model: "mu1", costMicrocents: 700, tokens: 10 })
       expect(series.buckets[1]?.byModel).toEqual([{ model: "mu1", costMicrocents: 50, tokens: 5 }])
+    })
+  })
+
+  describe("getCacheEconomics", () => {
+    it("splits cache token flow per provider/model pair, ranked by spend", async () => {
+      const economics = await runCh(repo.getCacheEconomics(cacheScope))
+
+      expect(economics.rows.map((row) => `${row.provider}/${row.model}`)).toEqual([
+        "openai/uncached-1",
+        "openai/cached-1",
+        "acme/mystery-1",
+      ])
+      expect(economics.rows[1]).toMatchObject({
+        model: "cached-1",
+        calls: 2,
+        inputTokens: 200,
+        cacheReadTokens: 400,
+        cacheCreateTokens: 100,
+        costMicrocents: 600,
+      })
+    })
+
+    it("keeps tool spans out of every cache figure", async () => {
+      const economics = await runCh(repo.getCacheEconomics(cacheScope))
+
+      // The excluded tool span carries 9,999 cache reads on `cached-1`.
+      expect(economics.rows.find((row) => row.model === "cached-1")?.cacheReadTokens).toBe(400)
+      expect(economics.totals.calls).toBe(4)
+    })
+
+    it("reports a caching-off model as zero cache tokens rather than omitting it", async () => {
+      const economics = await runCh(repo.getCacheEconomics(cacheScope))
+
+      expect(economics.rows.find((row) => row.model === "uncached-1")).toMatchObject({
+        cacheReadTokens: 0,
+        cacheCreateTokens: 0,
+        inputTokens: 500,
+      })
+    })
+
+    it("carries the unpriced caveat so a row's spend is never read as complete", async () => {
+      const economics = await runCh(repo.getCacheEconomics(cacheScope))
+
+      expect(economics.rows.find((row) => row.model === "mystery-1")).toMatchObject({
+        unpricedCalls: 1,
+        unpricedTokens: 700,
+        costMicrocents: 0,
+      })
+      expect(economics.totals).toMatchObject({ distinctModels: 3, unpricedCalls: 1, costMicrocents: 1_500 })
     })
   })
 })

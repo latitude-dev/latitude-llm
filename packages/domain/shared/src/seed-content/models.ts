@@ -5,6 +5,13 @@ export type ModelConfig = {
   readonly scopeName: string
   readonly costInPerMToken: number
   readonly costOutPerMToken: number
+  /**
+   * Per-1M-token cache rates. Absent means the provider charges no separate cache
+   * price, so the input rate applies — which is also what collapses a model's
+   * cache break-even to 0%.
+   */
+  readonly cacheReadPerMToken?: number
+  readonly cacheWritePerMToken?: number
   readonly latencyRange: readonly [min: number, max: number]
   readonly isReasoning?: boolean
   readonly finishReasonStop: string
