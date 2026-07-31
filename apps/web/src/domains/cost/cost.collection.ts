@@ -30,6 +30,11 @@ export function useCostOverview({
   })
 }
 
+/**
+ * Carries no previous data across a change: the rows are labelled by the dimension
+ * that fetched them, so holding the last result would render model rows under a
+ * Provider heading until the refetch lands.
+ */
 export function useCostBreakdown({
   projectId,
   range,
@@ -46,7 +51,6 @@ export function useCostBreakdown({
     queryKey: [...projectScopeKey(scope), "cost-breakdown", projectId, range, dimension],
     queryFn: () => getCostBreakdown({ data: { ...projectScopeData(scope), projectId, ...range, dimension } }),
     staleTime: COST_STALE_TIME_MS,
-    placeholderData: keepPreviousData,
     enabled: enabled && projectId.length > 0,
   })
 }
