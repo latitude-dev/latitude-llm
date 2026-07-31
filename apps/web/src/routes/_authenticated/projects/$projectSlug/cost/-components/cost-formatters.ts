@@ -1,8 +1,27 @@
-import { COST_SERIES_METRICS, type CostSeriesMetric } from "@domain/spans"
-import type { CostSeriesBucketRecord } from "../../../../../../domains/cost/cost.functions.ts"
+import {
+  COST_BREAKDOWN_DIMENSIONS,
+  COST_PER_CALL_MIN_SAMPLE_CALLS,
+  COST_SERIES_METRICS,
+  type CostBreakdown,
+  type CostBreakdownDimension,
+  type CostBreakdownRow,
+  type CostSeriesMetric,
+} from "@domain/spans"
+import { formatPrice } from "@repo/utils"
+import type { CostSeriesBucketRecord, ModelUsageBucketRecord } from "../../../../../../domains/cost/cost.functions.ts"
 
 export const isCostSeriesMetric = (value: string): value is CostSeriesMetric =>
   COST_SERIES_METRICS.some((metric) => metric === value)
+
+export const isCostBreakdownDimension = (value: string): value is CostBreakdownDimension =>
+  COST_BREAKDOWN_DIMENSIONS.some((dimension) => dimension === value)
+
+/** Which measure the model-usage chart plots; both arrive in one payload, so this is client-only. */
+const MODEL_USAGE_MEASURES = ["cost", "tokens"] as const
+export type ModelUsageMeasure = (typeof MODEL_USAGE_MEASURES)[number]
+
+export const isModelUsageMeasure = (value: string): value is ModelUsageMeasure =>
+  MODEL_USAGE_MEASURES.some((measure) => measure === value)
 
 const MICROCENTS_PER_USD = 100_000_000
 const HOUR_SECONDS = 60 * 60
@@ -25,29 +44,53 @@ const alignBucketStartMs = (ms: number, bucketSeconds: number): number => {
 }
 
 /** Fills the empty buckets a grouped query omits, so a quiet day renders as $0 rather than closing the gap. */
-export function densifyCostBuckets({
+function densifyBuckets<T extends { readonly bucketStartIso: string }>({
   buckets,
   fromIso,
   toIso,
   bucketSeconds,
+  emptyBucket,
 }: {
-  readonly buckets: readonly CostSeriesBucketRecord[]
+  readonly buckets: readonly T[]
   readonly fromIso: string
   readonly toIso: string
   readonly bucketSeconds: number
-}): readonly CostSeriesBucketRecord[] {
+  readonly emptyBucket: (bucketStartIso: string) => T
+}): readonly T[] {
   const fromMs = Date.parse(fromIso)
   const toMs = Date.parse(toIso)
   if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs <= fromMs) return buckets
 
   const byStart = new Map(buckets.map((bucket) => [Date.parse(bucket.bucketStartIso), bucket]))
   const stepMs = bucketSeconds * 1000
-  const dense: CostSeriesBucketRecord[] = []
+  const dense: T[] = []
   for (let ms = alignBucketStartMs(fromMs, bucketSeconds); ms < toMs; ms += stepMs) {
-    dense.push(byStart.get(ms) ?? { bucketStartIso: new Date(ms).toISOString(), valueMicrocents: 0, byModel: [] })
+    dense.push(byStart.get(ms) ?? emptyBucket(new Date(ms).toISOString()))
   }
   return dense
 }
+
+export const densifyCostBuckets = (input: {
+  readonly buckets: readonly CostSeriesBucketRecord[]
+  readonly fromIso: string
+  readonly toIso: string
+  readonly bucketSeconds: number
+}): readonly CostSeriesBucketRecord[] =>
+  densifyBuckets({
+    ...input,
+    emptyBucket: (bucketStartIso) => ({ bucketStartIso, valueMicrocents: 0, byModel: [] }),
+  })
+
+export const densifyModelUsageBuckets = (input: {
+  readonly buckets: readonly ModelUsageBucketRecord[]
+  readonly fromIso: string
+  readonly toIso: string
+  readonly bucketSeconds: number
+}): readonly ModelUsageBucketRecord[] =>
+  densifyBuckets({
+    ...input,
+    emptyBucket: (bucketStartIso) => ({ bucketStartIso, byModel: [], other: { costMicrocents: 0, tokens: 0 } }),
+  })
 
 /** The bucket whose span runs past the window's end or past now, so it is still filling. */
 export function resolveIncompleteBucketIndex({
@@ -56,7 +99,7 @@ export function resolveIncompleteBucketIndex({
   toIso,
   nowMs,
 }: {
-  readonly buckets: readonly CostSeriesBucketRecord[]
+  readonly buckets: readonly { readonly bucketStartIso: string }[]
   readonly bucketSeconds: number
   readonly toIso: string
   readonly nowMs: number
@@ -137,6 +180,144 @@ export function formatUtcBucketRange(bucketStartIso: string, bucketSeconds: numb
     })} UTC`
   }
   return `${formatUtcBucketLabel(bucketStartIso, bucketSeconds)} · UTC day`
+}
+
+/**
+ * Everything outside the shown rows, collapsed. Carries only the columns that sum,
+ * so it can be rendered as a row without inventing a per-trace average.
+ */
+export interface BreakdownRemainder {
+  readonly valueCount: number
+  readonly totalMicrocents: number
+  readonly inputMicrocents: number
+  readonly outputMicrocents: number
+  readonly cacheAndOtherMicrocents: number
+  readonly calls: number
+  readonly tokens: number
+  readonly unpricedTokens: number
+  readonly unpricedCalls: number
+  readonly unknownTokens: number
+  readonly unknownCalls: number
+}
+
+/** Null rather than 0 when there is no denominator, so a share renders as "—" instead of "0%". */
+export const shareOf = (part: number, whole: number): number | null => (whole > 0 ? part / whole : null)
+
+/** `formatPrice` assumes a non-negative amount, and a non-additive provider total can leave a negative remainder. */
+export const formatSignedPrice = (amountUsd: number): string =>
+  amountUsd < 0 ? `-${formatPrice(-amountUsd)}` : formatPrice(amountUsd)
+
+/**
+ * A row's cost per call against the window's average, the figure that says a
+ * dimension eats a share of the money out of proportion to how much it is used.
+ *
+ * Null unless the row can support the claim. Below `COST_PER_CALL_MIN_SAMPLE_CALLS`
+ * the ratio is a one-sample artefact, and on a row that spent nothing it is either
+ * `0.0x` or undefined — in both cases showing it puts a number where there is no
+ * finding. The gate lives here rather than at the call site so the chip cannot come
+ * back ungated somewhere else.
+ */
+export function costPerCallMultiple({
+  totalMicrocents,
+  calls,
+  avgPerCallMicrocents,
+}: {
+  readonly totalMicrocents: number
+  readonly calls: number
+  readonly avgPerCallMicrocents: number
+}): number | null {
+  if (totalMicrocents <= 0 || avgPerCallMicrocents <= 0) return null
+  if (calls < COST_PER_CALL_MIN_SAMPLE_CALLS) return null
+  return totalMicrocents / calls / avgPerCallMicrocents
+}
+
+/**
+ * The values worth showing, plus everything else as one remainder.
+ *
+ * Additive columns on the remainder are the window total minus the shown rows, which
+ * stays exact even when the query itself truncated: the remainder then covers both
+ * the rows below the cut and the tail the query never returned. Trace counts are
+ * absent by construction — a trace can span several values, so they do not sum.
+ *
+ * `minShare` drops values too small to read as a proportion into the remainder; the
+ * table leaves it unset because a detail table's job is the exact figure.
+ */
+export function splitBreakdownRows({
+  breakdown,
+  limit,
+  minShare = 0,
+}: {
+  readonly breakdown: CostBreakdown
+  readonly limit: number
+  readonly minShare?: number
+}): { readonly visible: readonly CostBreakdownRow[]; readonly remainder: BreakdownRemainder | null } {
+  const { rows, totals } = breakdown
+  const isReadable = (row: CostBreakdownRow): boolean =>
+    minShare <= 0 ||
+    (shareOf(row.totalMicrocents, totals.totalMicrocents) ?? 0) >= minShare ||
+    (shareOf(row.calls, totals.calls) ?? 0) >= minShare
+
+  // Skips rather than stops: rows are ranked by spend, but a row can also qualify on
+  // its share of calls, which is not monotonic down that ranking.
+  const visible: CostBreakdownRow[] = []
+  for (const row of rows) {
+    if (visible.length >= limit) break
+    if (!isReadable(row)) continue
+    visible.push(row)
+  }
+
+  const hiddenValues = totals.distinctValues - visible.length
+  if (hiddenValues <= 0) return { visible, remainder: null }
+
+  const shown = visible.reduce(
+    (sum, row) => ({
+      totalMicrocents: sum.totalMicrocents + row.totalMicrocents,
+      inputMicrocents: sum.inputMicrocents + row.inputMicrocents,
+      outputMicrocents: sum.outputMicrocents + row.outputMicrocents,
+      cacheAndOtherMicrocents: sum.cacheAndOtherMicrocents + row.cacheAndOtherMicrocents,
+      calls: sum.calls + row.calls,
+      tokens: sum.tokens + row.tokens,
+      unpricedTokens: sum.unpricedTokens + row.unpricedTokens,
+      unpricedCalls: sum.unpricedCalls + row.unpricedCalls,
+      unknownTokens: sum.unknownTokens + row.unknownTokens,
+      unknownCalls: sum.unknownCalls + row.unknownCalls,
+    }),
+    {
+      totalMicrocents: 0,
+      inputMicrocents: 0,
+      outputMicrocents: 0,
+      cacheAndOtherMicrocents: 0,
+      calls: 0,
+      tokens: 0,
+      unpricedTokens: 0,
+      unpricedCalls: 0,
+      unknownTokens: 0,
+      unknownCalls: 0,
+    },
+  )
+
+  return {
+    visible,
+    remainder: {
+      valueCount: hiddenValues,
+      totalMicrocents: totals.totalMicrocents - shown.totalMicrocents,
+      inputMicrocents: totals.inputMicrocents - shown.inputMicrocents,
+      outputMicrocents: totals.outputMicrocents - shown.outputMicrocents,
+      cacheAndOtherMicrocents: totals.cacheAndOtherMicrocents - shown.cacheAndOtherMicrocents,
+      calls: totals.calls - shown.calls,
+      tokens: totals.tokens - shown.tokens,
+      unpricedTokens: totals.unpricedTokens - shown.unpricedTokens,
+      unpricedCalls: totals.unpricedCalls - shown.unpricedCalls,
+      unknownTokens: totals.unknownTokens - shown.unknownTokens,
+      unknownCalls: totals.unknownCalls - shown.unknownCalls,
+    },
+  }
+}
+
+export function formatCostMultiple(multiple: number): string {
+  if (multiple >= 10) return `${Math.round(multiple)}×`
+  if (multiple > 0 && multiple < 0.05) return "<0.1×"
+  return `${multiple.toFixed(1)}×`
 }
 
 /** Per-bucket unit for the y-axis and tooltips ("$/day" and friends). */

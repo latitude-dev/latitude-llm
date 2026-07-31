@@ -42,3 +42,24 @@ describe("category axis labels", () => {
     expect(labelledIndices(8)).toEqual([1, 3, 5, 7])
   })
 })
+
+describe("legend", () => {
+  const twoSeries: readonly ChartSeries[] = [
+    { kind: "line", name: "a", values: [1], color: "#000" },
+    { kind: "line", name: "b", values: [2], color: "#111" },
+  ]
+  const legendOf = (hideLegend: boolean) =>
+    (
+      buildChartOption({ categories: ["c0"], series: twoSeries, colors, hideLegend }) as {
+        legend: { show?: boolean }
+      }
+    ).legend
+
+  it("renders for multiple series by default", () => {
+    expect(legendOf(false).show).not.toBe(false)
+  })
+
+  it("is suppressed when the caller renders its own", () => {
+    expect(legendOf(true)).toEqual({ show: false })
+  })
+})

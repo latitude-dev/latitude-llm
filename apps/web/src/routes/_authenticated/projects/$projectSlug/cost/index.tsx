@@ -1,7 +1,12 @@
 import { Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { useMemo } from "react"
-import { useCostOverview, useCostSeries } from "../../../../../domains/cost/cost.collection.ts"
+import {
+  useCostBreakdown,
+  useCostOverview,
+  useCostSeries,
+  useModelUsageSeries,
+} from "../../../../../domains/cost/cost.collection.ts"
 import { useFeatureFlagGate } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../domains/traces/traces.collection.ts"
@@ -10,19 +15,34 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { CostBreakdownPanel } from "./-components/cost-breakdown-panel.tsx"
 import { CostConfidenceStrip } from "./-components/cost-confidence-strip.tsx"
 import {
   computeDailyAverageMicrocents,
   densifyCostBuckets,
+  densifyModelUsageBuckets,
+  isCostBreakdownDimension,
   isCostSeriesMetric,
+  isModelUsageMeasure,
   pickCostBucketSeconds,
   resolveIncompleteBucketIndex,
 } from "./-components/cost-formatters.ts"
 import { CostKpiRow } from "./-components/cost-kpi-row.tsx"
 import { CostOverTimePanel } from "./-components/cost-over-time-panel.tsx"
+import { ModelImpactPanel } from "./-components/model-impact-panel.tsx"
+import { ModelUsagePanel } from "./-components/model-usage-panel.tsx"
 
 function CostBreadcrumb() {
   return <BreadcrumbText variant="current">Cost</BreadcrumbText>
+}
+
+/** Groups the panels below it. Sits outside the cards, above their own titles. */
+function SectionHeading({ children }: { readonly children: string }) {
+  return (
+    <div className="flex flex-col pt-2">
+      <Text.H5M color="foreground">{children}</Text.H5M>
+    </div>
+  )
 }
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/cost/")({
@@ -44,6 +64,8 @@ function CostPageContent() {
     lastActivityIso: lastTraceAt,
   })
   const [metric, setMetric] = useParamState("costMetric", "total", { validate: isCostSeriesMetric })
+  const [dimension, setDimension] = useParamState("costDimension", "model", { validate: isCostBreakdownDimension })
+  const [usageMeasure, setUsageMeasure] = useParamState("costUsage", "cost", { validate: isModelUsageMeasure })
   const costDashboard = useFeatureFlagGate("costDashboard")
 
   // One window for the KPIs and the chart, so the two can be reconciled.
@@ -77,6 +99,26 @@ function CostPageContent() {
     bucketSeconds,
     enabled,
   })
+  const { data: modelUsage, isLoading: modelUsageLoading } = useModelUsageSeries({
+    projectId: project.id,
+    range,
+    bucketSeconds,
+    enabled,
+  })
+  const { data: breakdown, isLoading: breakdownLoading } = useCostBreakdown({
+    projectId: project.id,
+    range,
+    dimension,
+    enabled,
+  })
+  // The impact panel is about models whichever dimension the table below is showing.
+  // Same query key as above while the Model tab is selected, so that costs no request.
+  const { data: modelBreakdown, isLoading: modelBreakdownLoading } = useCostBreakdown({
+    projectId: project.id,
+    range,
+    dimension: "model",
+    enabled,
+  })
 
   const buckets = useMemo(
     () => densifyCostBuckets({ buckets: series, ...range, bucketSeconds }),
@@ -85,6 +127,23 @@ function CostPageContent() {
   const provisionalIndex = useMemo(
     () => resolveIncompleteBucketIndex({ buckets, bucketSeconds, toIso: range.toIso, nowMs: Date.now() }),
     [buckets, bucketSeconds, range.toIso],
+  )
+  const denseModelUsage = useMemo(
+    () =>
+      modelUsage
+        ? { ...modelUsage, buckets: densifyModelUsageBuckets({ buckets: modelUsage.buckets, ...range, bucketSeconds }) }
+        : undefined,
+    [modelUsage, range, bucketSeconds],
+  )
+  const modelUsageProvisionalIndex = useMemo(
+    () =>
+      resolveIncompleteBucketIndex({
+        buckets: denseModelUsage?.buckets ?? [],
+        bucketSeconds,
+        toIso: range.toIso,
+        nowMs: Date.now(),
+      }),
+    [denseModelUsage, bucketSeconds, range.toIso],
   )
   const dailyAverageMicrocents = useMemo(
     () => computeDailyAverageMicrocents({ buckets: totalSeries, bucketSeconds, ...range, nowMs: Date.now() }),
@@ -105,17 +164,17 @@ function CostPageContent() {
 
   return (
     <Layout>
-      <Layout.Actions>
-        <Layout.ActionsRow>
-          <Layout.ActionRowItem>
-            <TimeFilterDropdown
-              {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
-              {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
-              onChange={tw.onTimeChange}
-            />
-          </Layout.ActionRowItem>
-        </Layout.ActionsRow>
-      </Layout.Actions>
+      <Layout.Header
+        title="Cost dashboard"
+        description="Optimize your spending"
+        actions={
+          <TimeFilterDropdown
+            {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+            {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+            onChange={tw.onTimeChange}
+          />
+        }
+      />
       <div className="flex flex-col gap-4 px-6 pb-6">
         <CostKpiRow
           overview={overview}
@@ -133,6 +192,38 @@ function CostPageContent() {
           rangeToIso={range.toIso}
           isAllTime={tw.isAllTime}
           isLoading={seriesLoading}
+        />
+        <SectionHeading>Model</SectionHeading>
+        {/* The two model questions side by side: how spend moves, and who it goes to. */}
+        <div className="flex flex-col gap-4 xl:flex-row">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ModelUsagePanel
+              series={denseModelUsage}
+              measure={usageMeasure}
+              onMeasureChange={setUsageMeasure}
+              bucketSeconds={bucketSeconds}
+              provisionalIndex={modelUsageProvisionalIndex}
+              rangeFromIso={range.fromIso}
+              rangeToIso={range.toIso}
+              isAllTime={tw.isAllTime}
+              isLoading={modelUsageLoading}
+            />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ModelImpactPanel
+              breakdown={modelBreakdown}
+              rangeFromIso={range.fromIso}
+              rangeToIso={range.toIso}
+              isAllTime={tw.isAllTime}
+              isLoading={modelBreakdownLoading}
+            />
+          </div>
+        </div>
+        <CostBreakdownPanel
+          breakdown={breakdown}
+          dimension={dimension}
+          onDimensionChange={setDimension}
+          isLoading={breakdownLoading}
         />
         <CostConfidenceStrip confidence={overview?.confidence} isLoading={overviewLoading} />
       </div>

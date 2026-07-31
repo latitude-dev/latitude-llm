@@ -28,6 +28,23 @@ export interface CostAnalyticsRepositoryShape {
   getCostSeries(
     input: CostAnalyticsScope & { readonly metric: CostSeriesMetric; readonly bucketSeconds: number },
   ): Effect.Effect<readonly CostSeriesBucket[], RepositoryError, ChSqlClient>
+
+  /**
+   * Every cost measure the breakdown table shows, per value of one dimension, in
+   * one query rather than one round trip per column. The generic analytics
+   * operation returns a single metric per call, which this table cannot use.
+   */
+  getCostBreakdown(
+    input: CostAnalyticsScope & { readonly dimension: CostBreakdownDimension },
+  ): Effect.Effect<CostBreakdown, RepositoryError, ChSqlClient>
+
+  /**
+   * Cost *and* tokens per model per bucket from one scan, so the chart's
+   * measure toggle costs no second request and cannot reshuffle its own legend.
+   */
+  getModelUsageSeries(
+    input: CostAnalyticsScope & { readonly bucketSeconds: number },
+  ): Effect.Effect<ModelUsageSeries, RepositoryError, ChSqlClient>
 }
 
 export interface CostAnalyticsScope {
@@ -71,6 +88,103 @@ export interface CostOverview {
   /** Highest total spend in the window, not highest unit price. Null when no model spent anything. */
   readonly topSpendModel: CostModelSpend | null
   readonly confidence: CostConfidence
+}
+
+/** All four are plain span columns, so no dimension costs more than another to group by. */
+export const COST_BREAKDOWN_DIMENSIONS = ["model", "provider", "operation", "service"] as const
+export type CostBreakdownDimension = (typeof COST_BREAKDOWN_DIMENSIONS)[number]
+
+/**
+ * Rows returned per dimension. Beyond this the table stops being read and starts
+ * being searched; `distinctValues` tells the caller how much was left off.
+ */
+export const COST_BREAKDOWN_ROW_LIMIT = 25
+
+/**
+ * The measures shared by a breakdown row and the window totals it is a share of,
+ * so a row can always be divided by the total it belongs to.
+ *
+ * `cacheAndOtherMicrocents` is `total - input - output` and is not decoration:
+ * provider-reported cost folds cache read/write into the input side and some
+ * providers return a non-additive total, so the two named sides do not close.
+ */
+export interface CostBreakdownUsage {
+  readonly totalMicrocents: number
+  readonly inputMicrocents: number
+  readonly outputMicrocents: number
+  readonly cacheAndOtherMicrocents: number
+  readonly calls: number
+  readonly tokens: number
+  /** Usage ingestion could not price, so this row's total is understated by whatever it would have cost. */
+  readonly unpricedTokens: number
+  readonly unpricedCalls: number
+  /** Zero-cost usage stored before `costSource` existed, which cannot say whether it was free or unpriced. */
+  readonly unknownTokens: number
+  readonly unknownCalls: number
+}
+
+export interface CostBreakdownRow extends CostBreakdownUsage {
+  /** The dimension's value; empty when the span did not record one. */
+  readonly key: string
+  /** Traces containing this value — a trace can hit several, so these do not sum to `tracesWithUsage`. */
+  readonly tracesWithValue: number
+  readonly avgPerTraceMicrocents: number
+}
+
+/**
+ * Minimum calls behind a cost-per-call figure before it may be compared to the
+ * window average. Below this the ratio is a one-sample artefact: a single expensive
+ * call reads as a `278x` finding, the loudest figure on the panel and the least true.
+ */
+export const COST_PER_CALL_MIN_SAMPLE_CALLS = 20
+
+export interface CostBreakdownTotals extends CostBreakdownUsage {
+  readonly tracesWithUsage: number
+  /** The baseline a row's own cost per call is a multiple of. */
+  readonly avgPerCallMicrocents: number
+  /** Distinct values in the window, so a caller can tell whether `rows` was truncated. */
+  readonly distinctValues: number
+}
+
+export interface CostBreakdown {
+  /** Highest spend first, capped at `COST_BREAKDOWN_ROW_LIMIT`. */
+  readonly rows: readonly CostBreakdownRow[]
+  /** Window-wide, so shares stay honest even when `rows` is truncated. */
+  readonly totals: CostBreakdownTotals
+}
+
+/**
+ * Models charted individually. Past this the palette runs out of distinguishable
+ * hues and the legend becomes a lookup table, so the rest collapse into `other`.
+ */
+export const MODEL_USAGE_SERIES_LIMIT = 6
+
+export interface ModelUsageMeasures {
+  readonly costMicrocents: number
+  readonly tokens: number
+}
+
+export interface ModelUsageSlice extends ModelUsageMeasures {
+  readonly model: string
+}
+
+export interface ModelUsageBucket {
+  readonly bucketStart: Date
+  /** Only the ranked models, and only where they recorded a span; absent means zero. */
+  readonly byModel: readonly ModelUsageSlice[]
+  readonly other: ModelUsageMeasures
+}
+
+export interface ModelUsageSeries {
+  readonly buckets: readonly ModelUsageBucket[]
+  /**
+   * Ranked by spend in the window, not by call count: on a cost chart, ranking by
+   * volume crowds out the expensive model that is the story. Both measures share
+   * this ranking so toggling between them never reshuffles the legend.
+   */
+  readonly models: readonly string[]
+  /** Distinct models folded into every bucket's `other`, so the legend can name how many. */
+  readonly otherModels: number
 }
 
 export interface CostModelSpend {

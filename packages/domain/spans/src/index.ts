@@ -109,6 +109,11 @@ export { AnalyticsQueryReader } from "./ports/analytics-query-reader.ts"
 export type {
   CostAnalyticsRepositoryShape,
   CostAnalyticsScope,
+  CostBreakdown,
+  CostBreakdownDimension,
+  CostBreakdownRow,
+  CostBreakdownTotals,
+  CostBreakdownUsage,
   CostConfidence,
   CostModelSpend,
   CostOverview,
@@ -116,8 +121,19 @@ export type {
   CostSeriesMetric,
   CostSeriesModelSlice,
   CostZeroCostPair,
+  ModelUsageBucket,
+  ModelUsageMeasures,
+  ModelUsageSeries,
+  ModelUsageSlice,
 } from "./ports/cost-analytics-repository.ts"
-export { COST_SERIES_METRICS, CostAnalyticsRepository } from "./ports/cost-analytics-repository.ts"
+export {
+  COST_BREAKDOWN_DIMENSIONS,
+  COST_BREAKDOWN_ROW_LIMIT,
+  COST_PER_CALL_MIN_SAMPLE_CALLS,
+  COST_SERIES_METRICS,
+  CostAnalyticsRepository,
+  MODEL_USAGE_SERIES_LIMIT,
+} from "./ports/cost-analytics-repository.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
 export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
 export type {

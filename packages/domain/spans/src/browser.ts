@@ -61,8 +61,23 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
-export type { CostSeriesMetric } from "./ports/cost-analytics-repository.ts"
-export { COST_SERIES_METRICS } from "./ports/cost-analytics-repository.ts"
+export type {
+  CostBreakdown,
+  CostBreakdownDimension,
+  CostBreakdownRow,
+  CostBreakdownTotals,
+  CostBreakdownUsage,
+  CostSeriesMetric,
+  ModelUsageBucket,
+  ModelUsageMeasures,
+  ModelUsageSeries,
+  ModelUsageSlice,
+} from "./ports/cost-analytics-repository.ts"
+export {
+  COST_BREAKDOWN_DIMENSIONS,
+  COST_PER_CALL_MIN_SAMPLE_CALLS,
+  COST_SERIES_METRICS,
+} from "./ports/cost-analytics-repository.ts"
 export type {
   MessageEmbedding,
   MessageEmbeddingRepositoryShape,
