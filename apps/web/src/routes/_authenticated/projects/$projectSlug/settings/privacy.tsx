@@ -1,20 +1,16 @@
 import {
-  DEFAULT_REDACTION_ENTITIES,
-  type OrganizationRedactionSetting,
+  hasRedactionField,
   type RedactionIdentityHandling,
   type RedactionMode,
   type RedactionSetting,
   resolveRedactionPolicy,
 } from "@domain/shared"
-import { Button, Label, Switch, Text, useToast } from "@repo/ui"
+import { Button, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
-import {
-  updateOrganizationRedactionMutation,
-  useOrganizationsCollection,
-} from "../../../../../domains/organizations/organizations.collection.ts"
+import { useOrganizationsCollection } from "../../../../../domains/organizations/organizations.collection.ts"
 import {
   updateProjectRedactionMutation,
   useProjectsCollection,
@@ -26,7 +22,9 @@ import { useDraftOverlay } from "../../../../../lib/hooks/use-draft-overlay.ts"
 import { useAuthenticatedOrganizationId, useAuthenticatedUser } from "../../../-route-data.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { DirtyActions } from "./-components/dirty-actions.tsx"
+import { OrganizationRedactionModal } from "./-components/organization-redaction-modal.tsx"
 import { RedactionCard, type RedactionCardValue } from "./-components/redaction-card.tsx"
+import { ScopedSetting, type SettingScope } from "./-components/scoped-setting.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/privacy")({
@@ -34,15 +32,10 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 })
 
 interface Draft {
-  readonly projectMode: RedactionMode
-  readonly projectEntities: string
-  readonly projectMetadata: boolean
-  readonly projectIdentities: RedactionIdentityHandling
-  readonly orgMode: RedactionMode
-  readonly orgEntities: string
-  readonly orgMetadata: boolean
-  readonly orgIdentities: RedactionIdentityHandling
-  readonly orgLocked: boolean
+  readonly mode: RedactionMode
+  readonly entities: string
+  readonly metadata: boolean
+  readonly identities: RedactionIdentityHandling
 }
 
 const toSetting = (value: RedactionCardValue): RedactionSetting => ({
@@ -57,12 +50,15 @@ function ProjectPrivacySettingsPage() {
   const routeProject = useRouteProject()
   const organizationId = useAuthenticatedOrganizationId()
   const user = useAuthenticatedUser()
+  const [editingDefault, setEditingDefault] = useState(false)
 
   const { data: liveProject } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.id, routeProject.id)).findOne(),
     [routeProject.id],
   )
   const currentProject = liveProject ?? routeProject
+
+  const { data: allProjects } = useProjectsCollection()
 
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
@@ -84,81 +80,49 @@ function ProjectPrivacySettingsPage() {
     project: currentProject.settings,
   })
 
+  // The shared Showcase project is merged into this collection but isn't the org's, so it
+  // would inflate both the total and the "in effect for" count.
+  const projects = (allProjects ?? []).filter((row) => !row.isShowcase)
+  const projectCount = projects.length
+  const overrideCount = projects.filter((row) => hasRedactionField(row.settings?.redaction)).length
+
+  const scope: SettingScope = hasRedactionField(projectRedaction) ? "project" : "organization"
+
   const baseline: Draft = {
-    projectMode: effective.mode,
-    projectEntities: encodeEntities(effective.entities),
-    projectMetadata: effective.redactMetadata,
-    projectIdentities: effective.identities,
-    orgMode: orgRedaction?.mode ?? "off",
-    orgEntities: encodeEntities(orgRedaction?.entities ?? DEFAULT_REDACTION_ENTITIES),
-    orgMetadata: orgRedaction?.scopes?.metadata ?? false,
-    orgIdentities: orgRedaction?.identities ?? "keep",
-    orgLocked: orgRedaction?.locked ?? false,
+    mode: effective.mode,
+    entities: encodeEntities(effective.entities),
+    metadata: effective.redactMetadata,
+    identities: effective.identities,
   }
 
   const [isApplying, setIsApplying] = useState(false)
-  const { view, setField, dirtyFields, dirtyCount, hasDirty, reset, resetFields } = useDraftOverlay(baseline)
-
-  const isProjectField = (field: keyof Draft) => field.startsWith("project")
-  const isOrgField = (field: keyof Draft) => field.startsWith("org")
-  const projectIsDirty = dirtyFields.some(isProjectField)
-  const orgIsDirty = dirtyFields.some(isOrgField)
+  const { view, setField, dirtyCount, hasDirty, reset } = useDraftOverlay(baseline)
 
   const apply = async () => {
     if (!hasDirty || isApplying) return
     setIsApplying(true)
-    // The two policies are separate writes, so each clears its own edits as it lands and the
-    // toast names what actually stuck. Otherwise a project failure after an organization
-    // success reads as though nothing saved, and the applied edits vanish from the form.
-    let savedOrg = false
     try {
-      // Organization first: under `locked` it decides what the project policy even means,
-      // so applying it second could leave the two briefly contradicting each other.
-      if (orgIsDirty) {
-        const setting: OrganizationRedactionSetting = {
-          ...toSetting({
-            mode: view.orgMode,
-            entities: view.orgEntities,
-            metadata: view.orgMetadata,
-            identities: view.orgIdentities,
-          }),
-          locked: view.orgLocked,
-        }
-        await updateOrganizationRedactionMutation(setting)
-        savedOrg = true
-        resetFields(isOrgField)
-      }
-      if (projectIsDirty) {
-        await updateProjectRedactionMutation(
-          currentProject.id,
-          toSetting({
-            mode: view.projectMode,
-            entities: view.projectEntities,
-            metadata: view.projectMetadata,
-            identities: view.projectIdentities,
-          }),
-        )
-        resetFields(isProjectField)
-      }
+      await updateProjectRedactionMutation(currentProject.id, toSetting(view))
+      reset()
       toast({ description: "Redaction settings updated" })
     } catch (error) {
-      toast({
-        variant: "destructive",
-        description: savedOrg
-          ? `Organization policy saved, but the project policy did not: ${toUserMessage(error)}`
-          : toUserMessage(error),
-      })
+      toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
       setIsApplying(false)
     }
   }
 
-  const clearProjectOverride = async () => {
+  const changeScope = async (next: SettingScope) => {
     setIsApplying(true)
     try {
-      await updateProjectRedactionMutation(currentProject.id, null)
-      resetFields(isProjectField)
-      toast({ description: "Project now follows the organization policy" })
+      // Seeding the override from the effective policy keeps the switch a no-op on behaviour:
+      // the project starts from exactly what it was already inheriting.
+      await updateProjectRedactionMutation(currentProject.id, next === "project" ? toSetting(view) : null)
+      reset()
+      toast({
+        description:
+          next === "project" ? "This project now sets its own policy" : "This project now follows the organization",
+      })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
@@ -191,91 +155,67 @@ function ProjectPrivacySettingsPage() {
           and does not catch names, addresses, or free-form personal detail.
         </Text.H6>
 
-        <RedactionCard
+        <ScopedSetting
           idPrefix="project-redaction"
           title="Redact PII in this project"
           description="Scans messages, tool calls, and span attributes as they are ingested."
-          value={{
-            mode: view.projectMode,
-            entities: view.projectEntities,
-            metadata: view.projectMetadata,
-            identities: view.projectIdentities,
+          isDirty={hasDirty}
+          scope={{
+            kind: "selectable",
+            value: scope,
+            loading: isApplying,
+            disabled: !canEditProject,
+            locked: isLocked,
+            onChange: (next) => void changeScope(next),
           }}
-          isDirty={projectIsDirty}
-          disabled={isLocked || !canEditProject}
           notice={
             isLocked ? (
               <Text.H6 color="foregroundMuted">
-                Locked by the organization policy, so this project cannot change it. Ask an organization owner if it
+                Locked by the organization default, so this project cannot change it. Ask an organization owner if it
                 needs to be different here.
               </Text.H6>
             ) : !canEditProject ? (
               <Text.H6 color="foregroundMuted">
                 Only organization owners and admins can change the redaction policy.
               </Text.H6>
-            ) : effective.source === "organization" ? (
+            ) : scope === "organization" ? (
               <Text.H6 color="foregroundMuted">
-                Following the organization policy. Changing anything here creates a project override.
+                Showing the organization default. Switch to “This project” to give this project its own policy.
               </Text.H6>
             ) : null
           }
           footer={
-            projectRedaction && !isLocked && canEditProject ? (
-              <div className="flex flex-row items-center justify-between gap-4">
-                <Text.H6 color="foregroundMuted">
-                  This project overrides the organization policy. Existing spans are unaffected either way.
-                </Text.H6>
-                <Button variant="outline" onClick={() => void clearProjectOverride()} disabled={isApplying}>
-                  Follow organization
+            <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+              <Text.H6 color="foregroundMuted">
+                {overrideCount > 0
+                  ? `Organization default in effect for ${projectCount - overrideCount} of ${projectCount} projects · ${overrideCount} override it`
+                  : `Organization default in effect for all ${projectCount} projects`}
+              </Text.H6>
+              {isOwner ? (
+                <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isApplying}>
+                  Edit default
                 </Button>
-              </div>
-            ) : null
+              ) : null}
+            </div>
           }
-          onChange={(key, next) => {
-            if (key === "mode") setField("projectMode", next as RedactionMode)
-            if (key === "entities") setField("projectEntities", next as string)
-            if (key === "metadata") setField("projectMetadata", next as boolean)
-            if (key === "identities") setField("projectIdentities", next as RedactionIdentityHandling)
-          }}
-        />
-
-        {isOwner ? (
+        >
           <RedactionCard
-            idPrefix="org-redaction"
-            title="Organization-wide policy"
-            description="A default for every project in the organization. Owners only."
-            value={{
-              mode: view.orgMode,
-              entities: view.orgEntities,
-              metadata: view.orgMetadata,
-              identities: view.orgIdentities,
-            }}
-            isDirty={orgIsDirty}
-            footer={
-              <div className="flex flex-row items-start justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="org-redaction-locked">Prevent projects from weakening this</Label>
-                  <Text.H6 color="foregroundMuted">
-                    When locked, project settings are ignored entirely rather than merged, and only an owner can change
-                    the policy back.
-                  </Text.H6>
-                </div>
-                <Switch
-                  id="org-redaction-locked"
-                  checked={view.orgLocked}
-                  onCheckedChange={(checked) => setField("orgLocked", checked)}
-                />
-              </div>
-            }
-            onChange={(key, next) => {
-              if (key === "mode") setField("orgMode", next as RedactionMode)
-              if (key === "entities") setField("orgEntities", next as string)
-              if (key === "metadata") setField("orgMetadata", next as boolean)
-              if (key === "identities") setField("orgIdentities", next as RedactionIdentityHandling)
-            }}
+            idPrefix="project-redaction"
+            value={view}
+            disabled={isLocked || !canEditProject || scope === "organization"}
+            onChange={(key, next) => setField(key, next)}
           />
-        ) : null}
+        </ScopedSetting>
       </div>
+
+      {editingDefault ? (
+        <OrganizationRedactionModal
+          current={orgRedaction}
+          projectCount={projectCount}
+          overrideCount={overrideCount}
+          onClose={() => setEditingDefault(false)}
+        />
+      ) : null}
     </SettingsPage>
   )
 }

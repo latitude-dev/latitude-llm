@@ -1,6 +1,5 @@
 import type { RedactionEntity, RedactionIdentityHandling, RedactionMode } from "@domain/shared"
-import { Checkbox, DotIndicator, Label, Select, Switch, Text } from "@repo/ui"
-import type { ReactNode } from "react"
+import { Checkbox, Label, Select, Switch, Text } from "@repo/ui"
 import {
   decodeEntities,
   encodeEntities,
@@ -21,26 +20,16 @@ export interface RedactionCardValue {
   readonly identities: RedactionIdentityHandling
 }
 
+/** Redaction controls only. Card chrome, title, and scope live in `ScopedSetting`. */
 export function RedactionCard({
   idPrefix,
-  title,
-  description,
   value,
-  isDirty,
   disabled = false,
-  notice,
-  footer,
   onChange,
 }: {
   readonly idPrefix: string
-  readonly title: string
-  readonly description: ReactNode
   readonly value: RedactionCardValue
-  readonly isDirty: boolean
   readonly disabled?: boolean
-  /** Rendered above the controls — the place to explain a read-only card. */
-  readonly notice?: ReactNode
-  readonly footer?: ReactNode
   readonly onChange: <K extends keyof RedactionCardValue>(key: K, next: RedactionCardValue[K]) => void
 }) {
   const enabled = value.mode === "enforce"
@@ -54,16 +43,9 @@ export function RedactionCard({
   }
 
   return (
-    <div className="flex w-full flex-col rounded-lg bg-muted/30">
-      {notice ? <div className="border-border border-b p-5">{notice}</div> : null}
-      <div className="flex w-full flex-row items-start justify-between gap-4 p-5">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor={`${idPrefix}-enabled`} className="flex flex-row items-center gap-2">
-            {title}
-            {isDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
-          </Label>
-          <Text.H6 color="foregroundMuted">{description}</Text.H6>
-        </div>
+    <div className="flex w-full flex-col gap-6">
+      <div className="flex w-full flex-row items-center justify-between gap-4">
+        <Label htmlFor={`${idPrefix}-enabled`}>Redact personal data</Label>
         <Switch
           id={`${idPrefix}-enabled`}
           checked={enabled}
@@ -73,8 +55,8 @@ export function RedactionCard({
       </div>
 
       {enabled ? (
-        <div className="flex w-full flex-col gap-6 border-border border-t p-5">
-          <div className="flex flex-col gap-4">
+        <>
+          <div className="flex flex-col gap-4 border-border border-t pt-6">
             <Text.H6M>What to look for</Text.H6M>
             {REDACTION_ENTITY_ORDER.map((entity) => {
               const meta = REDACTION_ENTITY_META[entity]
@@ -127,10 +109,8 @@ export function RedactionCard({
               pseudonym secret configured remove the identifier entirely instead.
             </Text.H6>
           </div>
-        </div>
+        </>
       ) : null}
-
-      {footer ? <div className="border-border border-t p-5">{footer}</div> : null}
     </div>
   )
 }
