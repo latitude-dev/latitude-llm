@@ -30,6 +30,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
+import { rejectInvalidRedactionRules } from "../../lib/redaction-rules.ts"
 import { requireSession, requireUserSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getBetterAuth, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import {
@@ -205,6 +206,11 @@ export const updateOrganizationRedaction = createServerFn({ method: "POST" })
           return yield* new ForbiddenError({
             message: "Only the organization owner can change the organization redaction policy",
           })
+        }
+
+        const rejected = rejectInvalidRedactionRules(data.redaction)
+        if (rejected) {
+          return yield* new BadRequestError({ message: `Rule ${rejected.rule.label} ${rejected.reason}` })
         }
 
         return yield* updateOrganizationRedactionUseCase({ actorUserId: userId, redaction: data.redaction })

@@ -7,7 +7,7 @@ import {
 } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { BUILT_IN_DETECTORS } from "./detectors.ts"
-import { redactText } from "./redact-text.ts"
+import { redactLeaf, redactText } from "./redact-text.ts"
 import { compilePolicy, compileRuleSet } from "./rules.ts"
 
 const policy = (overrides: Partial<RedactionPolicy> = {}): RedactionPolicy => ({
@@ -181,6 +181,31 @@ describe("pattern rules", () => {
     expect(() => custom(pattern("ACCT-(\\d{9}"))).toThrow(
       expect.objectContaining({ _tag: "RedactionError", reason: expect.stringContaining("uncompilable") }),
     )
+  })
+})
+
+describe("the batch deadline reaches the leaves", () => {
+  /**
+   * The per-span check cannot see inside a span carrying hundreds of slow leaves, so the deadline
+   * has to reach `redactLeaf`, which is the one choke point every string passes through.
+   */
+  it("throws from the leaf scan once the budget is spent", () => {
+    const spent = () => {
+      throw new Error("budget spent")
+    }
+    const ruleSet = compileRuleSet(policy({ entities: new Set(["email"]) }), spent)
+
+    expect(() => redactLeaf("mail john@example.com", ruleSet)).toThrow("budget spent")
+  })
+
+  it("does not consult the deadline when there is nothing to scan", () => {
+    let consulted = 0
+    const ruleSet = compileRuleSet(policy({ entities: new Set() }), () => {
+      consulted += 1
+    })
+    redactLeaf("mail john@example.com", ruleSet)
+
+    expect(consulted).toBe(0)
   })
 })
 

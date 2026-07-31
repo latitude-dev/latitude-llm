@@ -267,6 +267,8 @@ export type {
   UserUsageSlice,
 } from "./ports/user-analytics-repository.ts"
 export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./ports/user-analytics-repository.ts"
+export type { RuleCorpusHit, RuleValidation, RuleValidationIssue } from "./redaction/validate-rule.ts"
+export { REDACTION_VALIDATOR_VERSION, validateRedactionRule } from "./redaction/validate-rule.ts"
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {

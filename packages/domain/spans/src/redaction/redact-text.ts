@@ -77,9 +77,19 @@ interface LeafRedactionOutcome {
   readonly scannedChars: number
 }
 
-/** Every path that touches a string goes through this, so the size cap applies uniformly. */
+/**
+ * Every path that touches a string goes through this, so the size cap and the batch deadline
+ * apply uniformly.
+ *
+ * Checking the deadline here rather than only per span bounds a span carrying hundreds of slow
+ * leaves, which the per-span check cannot see inside. It does not bound a single leaf: one
+ * `matchAll` call is not interruptible, so a genuinely catastrophic pattern still has to be kept
+ * out at write time.
+ */
 export function redactLeaf(text: string, ruleSet: CompiledRuleSet): LeafRedactionOutcome {
   if (text === "" || ruleSet.rules.length === 0) return { text, counts: {}, oversized: false, scannedChars: 0 }
+
+  ruleSet.checkDeadline?.()
 
   if (text.length > REDACTION_MAX_FIELD_CHARS) {
     return { text: OVERSIZED_FIELD_PLACEHOLDER, counts: {}, oversized: true, scannedChars: 0 }

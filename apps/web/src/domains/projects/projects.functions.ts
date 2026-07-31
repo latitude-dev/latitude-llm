@@ -6,7 +6,14 @@ import {
   updateProjectRedactionUseCase,
   updateProjectUseCase,
 } from "@domain/projects"
-import { ForbiddenError, isValidId, ProjectId, projectSettingsSchema, redactionSettingSchema } from "@domain/shared"
+import {
+  BadRequestError,
+  ForbiddenError,
+  isValidId,
+  ProjectId,
+  projectSettingsSchema,
+  redactionSettingSchema,
+} from "@domain/shared"
 import {
   MembershipRepositoryLive,
   OutboxEventWriterLive,
@@ -19,6 +26,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { getCookies, setCookie } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
+import { rejectInvalidRedactionRules } from "../../lib/redaction-rules.ts"
 import { requireSession } from "../../server/auth.ts"
 import { getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
 
@@ -198,6 +206,11 @@ export const updateProjectRedaction = createServerFn({ method: "POST" })
           return yield* new ForbiddenError({
             message: "Only organization owners and admins can change the redaction policy",
           })
+        }
+
+        const rejected = rejectInvalidRedactionRules(data.redaction)
+        if (rejected) {
+          return yield* new BadRequestError({ message: `Rule ${rejected.rule.label} ${rejected.reason}` })
         }
 
         return yield* updateProjectRedactionUseCase({

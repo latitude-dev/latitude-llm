@@ -35,6 +35,13 @@ export interface CompiledRuleSet {
    * the same contract the value passes follow.
    */
   readonly maskedKeyLabel: (key: string) => string | null
+  /**
+   * Called before each leaf is scanned, to throw once the batch budget is spent.
+   *
+   * Rides on the rule set because it shares its lifetime — both are built once per policy per
+   * batch — and because that puts it where the leaves are without threading it through the walk.
+   */
+  readonly checkDeadline?: () => void
 }
 
 /** A policy with its patterns already built, so a batch compiles once rather than per span or per leaf. */
@@ -57,7 +64,7 @@ export interface RedactionMatch {
  * input order, and a validated label describes the value more accurately than a
  * customer-supplied one.
  */
-export function compileRuleSet(policy: RedactionPolicy): CompiledRuleSet {
+export function compileRuleSet(policy: RedactionPolicy, checkDeadline?: () => void): CompiledRuleSet {
   const rules: CompiledRule[] = []
 
   for (const detector of BUILT_IN_DETECTORS) {
@@ -81,7 +88,7 @@ export function compileRuleSet(policy: RedactionPolicy): CompiledRuleSet {
     if (rule.kind === "pattern") rules.push({ label: rule.label, pattern: compilePattern(rule) })
   }
 
-  return { rules, maskedKeyLabel: compileKeyMatcher(keyRules) }
+  return { rules, maskedKeyLabel: compileKeyMatcher(keyRules), ...(checkDeadline ? { checkDeadline } : {}) }
 }
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -167,8 +174,8 @@ const compileKeyMatcher = (rules: readonly RedactionRule[]): ((key: string) => s
   return (key) => exact.get(key) ?? prefixes.find((entry) => key.startsWith(entry.prefix))?.label ?? null
 }
 
-export const compilePolicy = (policy: RedactionPolicy): CompiledPolicy => ({
-  ruleSet: compileRuleSet(policy),
+export const compilePolicy = (policy: RedactionPolicy, checkDeadline?: () => void): CompiledPolicy => ({
+  ruleSet: compileRuleSet(policy, checkDeadline),
   redactMetadata: policy.redactMetadata,
   identities: policy.identities,
 })
