@@ -130,10 +130,13 @@ const bucketSecondsSchema = z
   .positive()
   .max(90 * 24 * 60 * 60)
 
-// Validating the width alone leaves the bucket *count* unbounded: fine buckets
-// over a wide window would aggregate and return millions of rows.
-const withinBucketBudget = (input: { fromIso: string; toIso: string; bucketSeconds: number }) =>
-  (Date.parse(input.toIso) - Date.parse(input.fromIso)) / (input.bucketSeconds * 1000) <= MAX_SERIES_BUCKETS
+// Counts the aligned positions the client will densify to, not the raw duration: the start floors to a boundary.
+const withinBucketBudget = (input: { fromIso: string; toIso: string; bucketSeconds: number }) => {
+  const stepMs = input.bucketSeconds * 1000
+  return (
+    Math.ceil(Date.parse(input.toIso) / stepMs) - Math.floor(Date.parse(input.fromIso) / stepMs) <= MAX_SERIES_BUCKETS
+  )
+}
 
 const bucketBudgetIssue = {
   message: `The window and bucket width must yield at most ${MAX_SERIES_BUCKETS} buckets`,
