@@ -2,6 +2,7 @@ import type { SpanDetail } from "../entities/span.ts"
 import { REDACTED_IDENTITY_PLACEHOLDER } from "./labels.ts"
 import {
   emptyScanTally,
+  maskKeyedValues,
   mergeScanTally,
   type NumberMapRedactionResult,
   redactJsonString,
@@ -76,8 +77,13 @@ export function redactSpanDetail(
     return outcome.value
   }
 
-  const redactedAttrString = take(redactStringMap(substitute(span.attrString), ruleSet))
-  const resourceString = take(redactStringMap(substitute(span.resourceString), ruleSet))
+  // A key rule masks the whole value wherever the key appears. Unlike the value pass it is not
+  // gated on the metadata scope: a key named explicitly is meant everywhere, and masking one
+  // cannot produce a false positive.
+  const maskedAttrString = take(maskKeyedValues(substitute(span.attrString), ruleSet))
+  const maskedResourceString = take(maskKeyedValues(substitute(span.resourceString), ruleSet))
+  const redactedAttrString = take(redactStringMap(maskedAttrString, ruleSet))
+  const resourceString = take(redactStringMap(maskedResourceString, ruleSet))
 
   // `attrBool` is not scanned: no detector can match "true" or "false".
   const attrInt = takeNumbers(redactNumberMap(span.attrInt, ruleSet))
@@ -85,7 +91,7 @@ export function redactSpanDetail(
   const attrString = { ...relocated, ...redactedAttrString }
 
   // Identity handling is its own control, so it applies to metadata and tags whether or not the metadata scope is on.
-  const metadataSource = substitute(span.metadata)
+  const metadataSource = take(maskKeyedValues(substitute(span.metadata), ruleSet))
   const metadata = policy.redactMetadata ? take(redactStringMap(metadataSource, ruleSet)) : metadataSource
   const tagsSource =
     identities.size === 0
@@ -140,6 +146,7 @@ export function redactSpanDetail(
     stats: { counts, scan, relocatedNumericAttributes, pseudonymizedIdentities },
   }
 }
+
 
 /** Empty identities stay empty: pseudonymizing `""` would invent a user that never existed. */
 const replaceIdentity = (value: string, pseudonyms: PseudonymLookup): string => {

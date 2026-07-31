@@ -1,4 +1,11 @@
-import { REDACTION_ENTITY_LABELS, type RedactionIdentityHandling, type RedactionPolicy } from "@domain/shared"
+import {
+  isRuleEnabled,
+  REDACTION_ENTITY_LABELS,
+  type RedactionIdentityHandling,
+  type RedactionPolicy,
+  type RedactionRule,
+} from "@domain/shared"
+import { RedactionError } from "../errors.ts"
 import { BUILT_IN_DETECTORS } from "./detectors.ts"
 
 /**
@@ -20,6 +27,14 @@ export interface CompiledRule {
 
 export interface CompiledRuleSet {
   readonly rules: readonly CompiledRule[]
+  /**
+   * The label to replace a whole attribute value with, when a key rule names that key.
+   *
+   * Separate from `rules` because it matches the key rather than the value. It masks rather than
+   * deletes, so a redacting project's attribute panel still shows every key the exporter sent —
+   * the same contract the value passes follow.
+   */
+  readonly maskedKeyLabel: (key: string) => string | null
 }
 
 /** A policy with its patterns already built, so a batch compiles once rather than per span or per leaf. */
@@ -57,7 +72,99 @@ export function compileRuleSet(policy: RedactionPolicy): CompiledRuleSet {
     })
   }
 
-  return { rules }
+  const enabled = policy.rules.filter(isRuleEnabled)
+  const keyRules: RedactionRule[] = []
+
+  for (const rule of enabled) {
+    if (rule.kind === "attribute_key") keyRules.push(rule)
+    if (rule.kind === "terms") rules.push({ label: rule.label, pattern: compileTerms(rule) })
+    if (rule.kind === "pattern") rules.push({ label: rule.label, pattern: compilePattern(rule) })
+  }
+
+  return { rules, maskedKeyLabel: compileKeyMatcher(keyRules) }
+}
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+const WORD_CHARACTER = /[A-Za-z0-9_]/
+
+/**
+ * Boundaries are per term rather than wrapped around the whole alternation. A term with a
+ * non-word edge (`+1-555`, `-verbose`) can never match behind a blanket `(?<![A-Za-z0-9_])`,
+ * because the character before it is not a word character either.
+ */
+const boundedTerm = (term: string, wholeWord: boolean): string => {
+  const escaped = escapeRegExp(term)
+  if (!wholeWord) return escaped
+
+  const opensOnWord = WORD_CHARACTER.test(term.slice(0, 1))
+  const closesOnWord = WORD_CHARACTER.test(term.slice(-1))
+
+  return `${opensOnWord ? "(?<![A-Za-z0-9_])" : ""}${escaped}${closesOnWord ? "(?![A-Za-z0-9_])" : ""}`
+}
+
+/**
+ * One alternation per rule, so a 200-term list costs a single pass per leaf.
+ *
+ * Terms are sorted longest first because JS alternation is leftmost-*first*, not
+ * leftmost-longest: given `ACME|ACME_CORP`, the input `ACME_CORP` matches only `ACME` and
+ * `_CORP` survives in the stored content. Harmless for a boolean `test`, which is why
+ * `compileKeywordMatcher` in `@domain/github` gets away without it, and corrupting here.
+ */
+const compileTerms = (rule: Extract<RedactionRule, { kind: "terms" }>): RegExp => {
+  const wholeWord = rule.wholeWord !== false
+  const alternatives = [...new Set(rule.terms)]
+    .sort((left, right) => right.length - left.length)
+    .map((term) => boundedTerm(term, wholeWord))
+
+  return new RegExp(`(?:${alternatives.join("|")})`, rule.caseSensitive === true ? "g" : "gi")
+}
+
+/**
+ * Patterns are validated at write time, never here: a validator on the ingest path would cost
+ * more than the scan. An uncompilable pattern therefore throws, which fails the batch rather
+ * than silently writing the content a project asked us to strip.
+ */
+const compilePattern = (rule: Extract<RedactionRule, { kind: "pattern" }>): RegExp => {
+  const flags = `g${rule.ignoreCase ? "i" : ""}${rule.dotAll ? "s" : ""}`
+
+  try {
+    return new RegExp(rule.pattern, flags)
+  } catch (cause) {
+    throw new RedactionError({ reason: `redaction rule ${rule.label} has an uncompilable pattern`, cause })
+  }
+}
+
+const MATCHES_NO_KEY = () => null
+
+/**
+ * Exact keys and `prefix.*` globs, matched with `startsWith` rather than compiled to a regex.
+ * Keys are short and structured, so a glob buys nothing a prefix does not, and a prefix cannot
+ * be made to backtrack.
+ */
+/**
+ * Exact keys and `prefix.*` globs, matched with `startsWith` rather than compiled to a regex.
+ * Keys are short and structured, so a glob buys nothing a prefix does not, and a prefix cannot
+ * be made to backtrack.
+ *
+ * First rule wins when two name the same key, which makes the label deterministic.
+ */
+const compileKeyMatcher = (rules: readonly RedactionRule[]): ((key: string) => string | null) => {
+  const exact = new Map<string, string>()
+  const prefixes: { prefix: string; label: string }[] = []
+
+  for (const rule of rules) {
+    if (rule.kind !== "attribute_key") continue
+
+    for (const key of rule.keys) {
+      if (key.endsWith("*")) prefixes.push({ prefix: key.slice(0, -1), label: rule.label })
+      else if (!exact.has(key)) exact.set(key, rule.label)
+    }
+  }
+
+  if (exact.size === 0 && prefixes.length === 0) return MATCHES_NO_KEY
+
+  return (key) => exact.get(key) ?? prefixes.find((entry) => key.startsWith(entry.prefix))?.label ?? null
 }
 
 export const compilePolicy = (policy: RedactionPolicy): CompiledPolicy => ({

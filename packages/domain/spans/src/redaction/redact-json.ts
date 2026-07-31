@@ -1,4 +1,4 @@
-import { OVERSIZED_FIELD_PLACEHOLDER, REDACTION_MAX_DEPTH } from "./labels.ts"
+import { OVERSIZED_FIELD_PLACEHOLDER, REDACTION_MAX_DEPTH, redactionPlaceholder } from "./labels.ts"
 import { mergeRedactionCounts, type RedactionCounts, redactLeaf, redactWholeValue } from "./redact-text.ts"
 import type { CompiledRuleSet } from "./rules.ts"
 
@@ -147,6 +147,36 @@ const tryParseJsonContainer = (value: string): unknown => {
   } catch {
     return undefined
   }
+}
+
+/**
+ * Replaces the whole value of any attribute a key rule names, leaving the key in place.
+ *
+ * Run before the value pass, whose scan of the resulting placeholder is a harmless no-op: no
+ * detector matches a placeholder, which the safe corpus pins by including one.
+ */
+export function maskKeyedValues(
+  map: Readonly<Record<string, string>>,
+  ruleSet: CompiledRuleSet,
+): JsonRedactionResult<Record<string, string>> {
+  const counts: RedactionCounts = {}
+  const scan = emptyScanTally()
+  let masked = 0
+  const next: Record<string, string> = {}
+
+  for (const [key, value] of Object.entries(map)) {
+    const label = ruleSet.maskedKeyLabel(key)
+    if (label === null) {
+      next[key] = value
+      continue
+    }
+    next[key] = redactionPlaceholder(label)
+    counts[label] = (counts[label] ?? 0) + 1
+    scan.chars += value.length
+    masked += 1
+  }
+
+  return { value: masked === 0 ? map : next, counts, scan }
 }
 
 // `redactJsonString`, not `redactLeaf`: these values duplicate the typed columns and must get the identical walk.
