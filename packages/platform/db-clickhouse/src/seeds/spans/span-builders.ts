@@ -1,5 +1,6 @@
 import type { ModelConfig, SeedUser, ToolConfig } from "@domain/shared/seeding"
-import type { CostSource } from "@domain/spans"
+import type { CostSource, ModelRegistryPricing } from "@domain/spans"
+import { modelRegistryPricing } from "@domain/spans"
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -45,8 +46,10 @@ export type SpanRow = {
    * Optional so hand-built test rows can omit it; ClickHouse defaults it to ''.
    * Set it wherever a row carries cost — the `unpriced_span_count` rollups read
    * this column raw, with none of `parseCostSource`'s fallback for empty values.
+   * `""` is what a row written before the column existed reads back as, which is
+   * the only way to seed the `unknown` bucket.
    */
-  cost_source?: CostSource
+  cost_source?: CostSource | ""
   time_to_first_token_ns: number
   is_streaming: number
   response_id: string
@@ -194,9 +197,21 @@ function estimateTokens(text: string): number {
   return Math.max(10, Math.ceil(text.length / 4))
 }
 
-function computeCost(tokens: number, costPerMToken: number): number {
-  return Math.round((tokens / 1_000_000) * costPerMToken * 100_000_000)
+const MICROCENTS_PER_USD = 100_000_000
+
+/** `usdPerMToken` is a registry rate, so the unit is fixed at the one place it is read. */
+function computeCost(tokens: number, usdPerMToken: number): number {
+  return Math.round((tokens / 1_000_000) * usdPerMToken * MICROCENTS_PER_USD)
 }
+
+/**
+ * Seeded spans are costed from the same registry the ingest path prices real traffic
+ * from, so a fixture can never state a price the dashboard disagrees with — and an
+ * unpriced pair produces the `unpriced` rows it produces in production rather than
+ * needing a fixture to assert them.
+ */
+const seedModelPricing = (modelConfig: ModelConfig): ModelRegistryPricing | null =>
+  modelRegistryPricing({ provider: modelConfig.provider, model: modelConfig.model })
 
 // ---------------------------------------------------------------------------
 // Prompt cache
@@ -231,13 +246,15 @@ export function splitCacheTokens(promptTokens: number, profile: CacheProfile): C
 /**
  * Input-side dollars with cache reads and writes folded in — the shape
  * provider-reported cost arrives in, where the cache portion cannot be recovered
- * by subtraction. A model with no cache rate is charged at its input rate.
+ * by subtraction. A model with no cache rate is charged at its input rate, and an
+ * unpriced pair costs nothing at all.
  */
-export function inputSideCostMicrocents(split: CacheTokenSplit, modelConfig: ModelConfig): number {
+export function inputSideCostMicrocents(split: CacheTokenSplit, pricing: ModelRegistryPricing | null): number {
+  if (!pricing) return 0
   return (
-    computeCost(split.input, modelConfig.costInPerMToken) +
-    computeCost(split.cacheRead, modelConfig.cacheReadPerMToken ?? modelConfig.costInPerMToken) +
-    computeCost(split.cacheCreate, modelConfig.cacheWritePerMToken ?? modelConfig.costInPerMToken)
+    computeCost(split.input, pricing.input) +
+    computeCost(split.cacheRead, pricing.cacheRead ?? pricing.input) +
+    computeCost(split.cacheCreate, pricing.cacheWrite ?? pricing.input)
   )
 }
 
@@ -363,6 +380,7 @@ export function makeLlmSpan({
   finishReason,
   temperature,
   promptTokens,
+  completionTokens,
   cacheProfile,
 }: {
   base: SpanBase
@@ -375,15 +393,22 @@ export function makeLlmSpan({
   temperature?: number
   /** Overrides the estimate from the message text, for fixtures that need a specific prompt size. */
   promptTokens?: number
+  /** The output-side counterpart of `promptTokens`, so a fixture can pin its input/output cost split. */
+  completionTokens?: number
   cacheProfile?: CacheProfile
 }): SpanRow {
   const span = makeBaseSpan(base)
   const inputTokens = promptTokens ?? estimateTokens(JSON.stringify(inputMessages))
-  const outputTokens = estimateTokens(JSON.stringify(outputMessages))
+  const outputTokens = completionTokens ?? estimateTokens(JSON.stringify(outputMessages))
   const cache = splitCacheTokens(inputTokens, cacheProfile ?? randomCacheProfile())
   const reasoningTokens = modelConfig.isReasoning ? Math.floor(outputTokens * randFloat(1.5, 4)) : 0
-  const costIn = inputSideCostMicrocents(cache, modelConfig)
-  const costOut = computeCost(outputTokens + reasoningTokens, modelConfig.costOutPerMToken)
+  const pricing = seedModelPricing(modelConfig)
+  const costIn = inputSideCostMicrocents(cache, pricing)
+  // Reasoning tokens bill at their own rate, falling back to output — same split
+  // `estimateCostFromTokens` applies to real traffic.
+  const costOut = pricing
+    ? computeCost(outputTokens, pricing.output) + computeCost(reasoningTokens, pricing.reasoning ?? pricing.output)
+    : 0
 
   span.name = `chat ${modelConfig.model}`
   span.operation = "chat"
@@ -398,8 +423,8 @@ export function makeLlmSpan({
   span.cost_input_microcents = costIn
   span.cost_output_microcents = costOut
   span.cost_total_microcents = costIn + costOut
-  span.cost_is_estimated = 1
-  span.cost_source = "estimated"
+  span.cost_is_estimated = pricing ? 1 : 0
+  span.cost_source = pricing ? "estimated" : "unpriced"
   span.response_id = randomResponseId(modelConfig.provider)
   span.finish_reasons = [finishReason]
   // Empty lists serialize to "" (not "[]") to match the real span writer: the
@@ -467,7 +492,8 @@ export function makeEmbeddingSpan({
   inputTokens: number
 }): SpanRow {
   const span = makeBaseSpan(base)
-  const costIn = computeCost(inputTokens, modelConfig.costInPerMToken)
+  const pricing = seedModelPricing(modelConfig)
+  const costIn = pricing ? computeCost(inputTokens, pricing.input) : 0
 
   span.name = `embeddings ${modelConfig.model}`
   span.operation = "embeddings"
@@ -477,8 +503,8 @@ export function makeEmbeddingSpan({
   span.tokens_input = inputTokens
   span.cost_input_microcents = costIn
   span.cost_total_microcents = costIn
-  span.cost_is_estimated = 1
-  span.cost_source = "estimated"
+  span.cost_is_estimated = pricing ? 1 : 0
+  span.cost_source = pricing ? "estimated" : "unpriced"
   span.scope_name = modelConfig.scopeName
   span.scope_version = "1.0.0"
   return span

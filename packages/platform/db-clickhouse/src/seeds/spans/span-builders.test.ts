@@ -1,30 +1,11 @@
-import type { ModelConfig } from "@domain/shared/seeding"
+import type { ModelRegistryPricing } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import { CACHE_OFF, inputSideCostMicrocents, splitCacheTokens } from "./span-builders.ts"
 
-const anthropicStyle: ModelConfig = {
-  provider: "anthropic",
-  model: "claude-opus-4-5",
-  responseModel: "claude-opus-4-5",
-  scopeName: "anthropic-instrumentation",
-  costInPerMToken: 5,
-  costOutPerMToken: 25,
-  cacheReadPerMToken: 0.5,
-  cacheWritePerMToken: 6.25,
-  latencyRange: [600, 2500],
-  finishReasonStop: "end_turn",
-}
+/** `claude-opus-4-5`'s registry rates: a 1.25x write premium and a 0.1x read. */
+const anthropicStyle: ModelRegistryPricing = { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 }
 
-const noCachePricing: ModelConfig = {
-  provider: "openai",
-  model: "gpt-5-mini",
-  responseModel: "gpt-5-mini",
-  scopeName: "openai-instrumentation",
-  costInPerMToken: 5,
-  costOutPerMToken: 25,
-  latencyRange: [600, 2500],
-  finishReasonStop: "stop",
-}
+const noCachePricing: ModelRegistryPricing = { input: 5, output: 25 }
 
 describe("splitCacheTokens", () => {
   it("carves reads and writes out of the prompt so the token columns stay additive", () => {
@@ -57,5 +38,9 @@ describe("inputSideCostMicrocents", () => {
     expect(inputSideCostMicrocents(split, noCachePricing)).toBe(
       inputSideCostMicrocents(splitCacheTokens(1_000_000, CACHE_OFF), noCachePricing),
     )
+  })
+
+  it("costs an unpriced pair at nothing rather than guessing a rate", () => {
+    expect(inputSideCostMicrocents(splitCacheTokens(1_000_000, CACHE_OFF), null)).toBe(0)
   })
 })
