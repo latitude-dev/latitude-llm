@@ -37,13 +37,45 @@ const isEmail = (value: string): boolean => {
 const E164_PHONE_PATTERN = /(?<![\w+])\+[1-9]\d{7,14}(?!\d)/g
 
 /**
+ * International numbers written with separators, which is how people actually write them. One pattern per
+ * separator so a match cannot bridge two numbers formatted differently, exactly as the card and IBAN
+ * detectors do.
+ *
+ * `[1-9]` because no country calling code starts with zero, which is what stops `+0 123 4567` matching.
+ *
+ * Four groups, not three: `+46 70 123 45 67` has five in total, and capping at three matched only its
+ * first four components and left the last two digits in the span.
+ */
+const INTL_PHONE_SPACED_PATTERN = /(?<![\w+])\+[1-9]\d{0,2}(?: \d{1,5}){1,4}(?!\d)/g
+const INTL_PHONE_DASHED_PATTERN = /(?<![\w+])\+[1-9]\d{0,2}(?:-\d{1,5}){1,4}(?!\d)/g
+const INTL_PHONE_DOTTED_PATTERN = /(?<![\w+])\+[1-9]\d{0,2}(?:\.\d{1,5}){1,4}(?!\d)/g
+
+/**
+ * E.164 allows 15 digits; this accepts 20 on purpose.
+ *
+ * The group repetition is greedy, so a number followed by a numeric list runs past its own end:
+ * `+44 20 7183 8750 4471` matches 16 digits. Rejecting at 16 would discard the match and store the phone
+ * number verbatim, because the regex has already committed and a validator cannot shorten it. Accepting
+ * it over-redacts the adjacent number instead, which is the direction we want to fail in.
+ */
+const isSeparatedInternationalPhone = (value: string): boolean => {
+  const digits = digitsOf(value).length
+
+  return digits >= 8 && digits <= 20
+}
+
+/**
  * Separated NANP forms only: a bare ten-digit run is indistinguishable from the numeric ids in tool output.
  *
  * Area and exchange codes are `[2-9]\d\d` in the NANP, which is the whole reason this shape is usable at
  * all. Without it the pattern is "three numbers of length 3, 3 and 4", and it matched row counts
  * (`100 200 3000`) and grid offsets (`123 456 7890`) in tool output.
+ *
+ * The optional leading `1` is the North American trunk code, so `1-415-555-2671` is matched whole rather
+ * than from the area code onwards.
  */
-const NANP_PHONE_PATTERN = /(?<![\w.-])(?:\([2-9]\d{2}\) ?|[2-9]\d{2}[-. ])[2-9]\d{2}[-. ]\d{4}(?!\d)(?![.-]\d)/g
+const NANP_PHONE_PATTERN =
+  /(?<![\w.-])(?:1[-. ])?(?:\([2-9]\d{2}\) ?|[2-9]\d{2}[-. ])[2-9]\d{2}[-. ]\d{4}(?!\d)(?![.-]\d)/g
 
 /**
  * Compact and grouped forms are separate patterns, and each grouped one backreferences
@@ -177,6 +209,9 @@ const ETHEREUM_PATTERN = /\b0x[a-fA-F0-9]{40}\b/g
 const DETECTORS: readonly Detector[] = [
   { entity: "email", pattern: EMAIL_PATTERN, validate: isEmail },
   { entity: "phone", pattern: E164_PHONE_PATTERN },
+  { entity: "phone", pattern: INTL_PHONE_SPACED_PATTERN, validate: isSeparatedInternationalPhone },
+  { entity: "phone", pattern: INTL_PHONE_DASHED_PATTERN, validate: isSeparatedInternationalPhone },
+  { entity: "phone", pattern: INTL_PHONE_DOTTED_PATTERN, validate: isSeparatedInternationalPhone },
   { entity: "phone", pattern: NANP_PHONE_PATTERN },
   { entity: "credit_card", pattern: CREDIT_CARD_COMPACT_PATTERN, validate: isCreditCard },
   { entity: "credit_card", pattern: CREDIT_CARD_GROUPED_PATTERN, validate: isCreditCard },

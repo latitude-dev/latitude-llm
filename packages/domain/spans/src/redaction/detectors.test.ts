@@ -74,6 +74,52 @@ describe("phone detector", () => {
     expect(found(`call ${value} now`, "phone")).toEqual([value])
   })
 
+  /**
+   * Written international forms, matched whole. Partial coverage is the failure mode that matters here:
+   * matching `415 555 2671` inside `+1 415 555 2671` leaves the country code sitting in the stored span.
+   * Asserted through `redactText` because the international and NANP patterns both match these, and it is
+   * overlap resolution that has to pick the one including the country code.
+   */
+  it.each([
+    "+1 415 555 2671",
+    "+1-415-555-2671",
+    "+1.415.555.2671",
+    "+44 20 7183 8750",
+    "+34 600 123 456",
+    "+91 98765 43210",
+    "+46 70 123 45 67",
+    "+81 90 1234 5678",
+    "1-415-555-2671",
+  ])("redacts the whole of %s", (value) => {
+    expect(redactText(`call ${value} now`, only("phone")).text).toBe("call [REDACTED_PHONE] now")
+  })
+
+  it.each([
+    "version +1 2 3",
+    "diff +12 -4 lines",
+    "commit +2 -3",
+    "+0 123 4567",
+    "span +1710590400200000000 ns",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "phone")).toBe(false)
+  })
+
+  /**
+   * The group repetition is greedy, so a number followed by a numeric list runs past its own end. The
+   * validator's 20-digit ceiling is what keeps that an over-redaction rather than a lost number: at
+   * E.164's 15 the match would be discarded and the phone number stored verbatim, because a validator
+   * cannot shorten a match the regex has already committed to.
+   */
+  it("over-redacts into an adjacent number rather than losing the phone number", () => {
+    expect(redactText("ids +44 20 7183 8750 4471 9982", only("phone")).text).toBe("ids [REDACTED_PHONE] 9982")
+  })
+
+  it("stops at a separator that is not part of the number", () => {
+    expect(redactText("+1 415 555 2671, +44 20 7183 8750", only("phone")).text).toBe(
+      "[REDACTED_PHONE], [REDACTED_PHONE]",
+    )
+  })
+
   it.each([
     "2024-01-15",
     "2024-01-15T10:30:00Z",

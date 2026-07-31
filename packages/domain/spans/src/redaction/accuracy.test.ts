@@ -268,44 +268,44 @@ const PHONE_CASES: readonly PiiCase[] = [
   {
     id: "phone-e164-spaced-country",
     entity: "phone",
-    outcome: "partial",
+    outcome: "redacted",
     text: "Call me at +1 415 555 2671 tomorrow",
     value: "+1 415 555 2671",
-    note: "NANP catches the last ten digits and leaves the country code behind",
+    note: "must be matched whole, not from the area code onwards",
   },
   {
     id: "phone-e164-dashed-country",
     entity: "phone",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Direct dial +1-415-555-2671 during business hours",
     value: "+1-415-555-2671",
-    note: "E.164 wants contiguous digits and the NANP lookbehind rejects the leading dash",
+    note: "the most common written form in North America",
   },
   {
     id: "phone-dotted-country",
     entity: "phone",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Support desk +1.415.555.2671 x220",
     value: "+1.415.555.2671",
   },
   {
     id: "phone-uk-spaced",
     entity: "phone",
-    outcome: "missed",
+    outcome: "redacted",
     text: "London office: +44 20 7183 8750",
     value: "+44 20 7183 8750",
   },
   {
     id: "phone-es-spaced",
     entity: "phone",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Móvil del cliente: +34 600 123 456",
     value: "+34 600 123 456",
   },
   {
     id: "phone-in-spaced",
     entity: "phone",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Reachable on +91 98765 43210 via WhatsApp",
     value: "+91 98765 43210",
   },
@@ -855,7 +855,7 @@ const CRYPTO_CASES: readonly PiiCase[] = [
 const REALISTIC_CASES: readonly PiiCase[] = [
   { id: "chat-email", entity: "email", outcome: "redacted", text: CHAT, value: "maria.gonzalez@gmail.com" },
   { id: "chat-card", entity: "credit_card", outcome: "redacted", text: CHAT, value: "4111 1111 1111 1111" },
-  { id: "chat-phone", entity: "phone", outcome: "missed", text: CHAT, value: "+1-415-555-2671" },
+  { id: "chat-phone", entity: "phone", outcome: "redacted", text: CHAT, value: "+1-415-555-2671" },
   { id: "sql-email-first", entity: "email", outcome: "redacted", text: SQL_TABLE, value: "a.chen@corp.io" },
   { id: "sql-email-second", entity: "email", outcome: "redacted", text: SQL_TABLE, value: "b.patel@corp.io" },
   { id: "sql-phone-dashed", entity: "phone", outcome: "redacted", text: SQL_TABLE, value: "415-555-2671" },
@@ -871,7 +871,7 @@ const REALISTIC_CASES: readonly PiiCase[] = [
     text: TOOL_JSON,
     value: "eyJhbGciOiJIUzI1NiJ9.eyJhIjoxfQ.QWxhZGRpbjpvcGVuc2VzYW1l",
   },
-  { id: "json-phone-intl", entity: "phone", outcome: "missed", text: TOOL_JSON, value: "+46 70 123 45 67" },
+  { id: "json-phone-intl", entity: "phone", outcome: "redacted", text: TOOL_JSON, value: "+46 70 123 45 67" },
   { id: "stack-ip", entity: "ip_address", outcome: "redacted", text: STACK_TRACE, value: "127.0.0.1" },
   {
     id: "stack-dsn-password",
@@ -890,7 +890,7 @@ const REALISTIC_CASES: readonly PiiCase[] = [
     value: "c2tfbGl2ZV81MUg5YVpxMUxtVDR2Qm43WGtSMndFczhZdQ==",
   },
   { id: "vcard-email", entity: "email", outcome: "redacted", text: VCARD, value: "yuki.tanaka@example.jp" },
-  { id: "vcard-phone", entity: "phone", outcome: "missed", text: VCARD, value: "+81 90 1234 5678" },
+  { id: "vcard-phone", entity: "phone", outcome: "redacted", text: VCARD, value: "+81 90 1234 5678" },
 ]
 
 const PII_CASES: readonly PiiCase[] = [
@@ -964,7 +964,12 @@ const CLEAN_CASES: readonly CleanCase[] = [
     note: "genuinely ambiguous without prose context",
   },
   { id: "fp-row-counts", text: "Rows scanned per shard: 100 200 3000 (total 3300)", matched: [] },
-  { id: "fp-thousands-groups", text: "Revenue reached 1 234 567 8901 cents last quarter", matched: ["234 567 8901"] },
+  {
+    id: "fp-thousands-groups",
+    text: "Revenue reached 1 234 567 8901 cents last quarter",
+    matched: ["1 234 567 8901"],
+    note: "the NANP trunk prefix absorbs the leading 1, so the same false positive is one digit wider",
+  },
   { id: "fp-part-number", text: "Replace part 100-200-3000 with the revised assembly", matched: [] },
   { id: "fp-coordinates", text: "Grid offsets 123 456 7890 were emitted by the solver", matched: [] },
   {
@@ -1009,11 +1014,11 @@ describe("accuracy totals", () => {
   })
 
   it("pins how much PII is stored verbatim", () => {
-    expect(counted("missed")).toBe(37)
+    expect(counted("missed")).toBe(29)
   })
 
   it("pins how much PII is only partially removed", () => {
-    expect(counted("partial")).toBe(5)
+    expect(counted("partial")).toBe(4)
   })
 
   it("pins how many matches land under the wrong entity", () => {
