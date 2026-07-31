@@ -1,5 +1,7 @@
 import { type OrganizationId, ProjectId } from "@domain/shared"
 import type {
+  CacheClassification,
+  CacheUsageMeasures,
   ClassifiedUnpricedPair,
   CostAnalyticsScope,
   CostBreakdown,
@@ -10,11 +12,14 @@ import {
   COST_BREAKDOWN_DIMENSIONS,
   COST_SERIES_METRICS,
   CostAnalyticsRepository,
+  classifyCacheState,
   isUnpricedGap,
+  modelCacheBreakEvenRate,
   summarizeUnpricedUsage,
 } from "@domain/spans"
 import { CostAnalyticsRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
+import { cacheHitRate } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -68,6 +73,24 @@ export interface ModelUsageSeriesRecord {
   readonly buckets: readonly ModelUsageBucketRecord[]
   readonly models: readonly string[]
   readonly otherModels: number
+}
+
+/**
+ * One model's cache position. Rates are exactly measured from token counts;
+ * `breakEvenRate` comes from the pricing registry, which the browser entry
+ * cannot reach, so it is resolved here rather than in the panel.
+ */
+export interface CacheModelRecord extends CacheUsageMeasures, CacheClassification {
+  readonly model: string
+  readonly provider: string
+  readonly cachingOn: boolean
+  readonly actualRate: number | null
+  readonly breakEvenRate: number | null
+}
+
+export interface CacheEconomicsRecord {
+  readonly rows: readonly CacheModelRecord[]
+  readonly totals: CacheUsageMeasures & { readonly distinctModels: number }
 }
 
 // Well above what any window the picker offers can ask for at its bucket width.
@@ -176,6 +199,47 @@ export const getCostBreakdown = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* CostAnalyticsRepository
         return yield* repo.getCostBreakdown({ ...toScope(orgId, data), dimension: data.dimension })
+      }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+export const getCacheEconomics = createServerFn({ method: "GET" })
+  .inputValidator(costScopeSchema)
+  .handler(async ({ data, context }): Promise<CacheEconomicsRecord> => {
+    const orgId = await resolveOrgScope(context)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* CostAnalyticsRepository
+        const economics = yield* repo.getCacheEconomics(toScope(orgId, data))
+        return {
+          rows: economics.rows.map((row): CacheModelRecord => {
+            const cachingOn = row.cacheReadTokens + row.cacheCreateTokens > 0
+            const actualRate = cacheHitRate({
+              input: row.inputTokens,
+              cacheRead: row.cacheReadTokens,
+              cacheCreate: row.cacheCreateTokens,
+            })
+            const breakEvenRate = modelCacheBreakEvenRate({ provider: row.provider, model: row.model })
+            return {
+              ...row,
+              cachingOn,
+              actualRate,
+              breakEvenRate,
+              // The achievable ceiling lands with the recommendation cards; until
+              // then the classifier only returns verdicts that hold for any ceiling.
+              ...classifyCacheState({
+                cachingOn,
+                actualRate,
+                ceilingRate: null,
+                breakEvenRate,
+                calls: row.calls,
+                avgInputTokensPerCall:
+                  row.calls > 0 ? (row.inputTokens + row.cacheReadTokens + row.cacheCreateTokens) / row.calls : 0,
+              }),
+            }
+          }),
+          totals: economics.totals,
+        }
       }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
   })

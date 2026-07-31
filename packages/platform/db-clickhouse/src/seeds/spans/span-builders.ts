@@ -199,6 +199,54 @@ function computeCost(tokens: number, costPerMToken: number): number {
 }
 
 // ---------------------------------------------------------------------------
+// Prompt cache
+// ---------------------------------------------------------------------------
+
+/** What share of a call's prompt the provider served from cache, and wrote to it. */
+export type CacheProfile = {
+  readonly hitRate: number
+  readonly writeShare: number
+}
+
+type CacheTokenSplit = {
+  readonly input: number
+  readonly cacheRead: number
+  readonly cacheCreate: number
+}
+
+export const CACHE_OFF: CacheProfile = { hitRate: 0, writeShare: 0 }
+
+/**
+ * Carves reads and writes *out* of the prompt rather than adding them alongside
+ * it: `spans.tokens_total` is materialized as the sum of all five token columns,
+ * so a prompt counted in both `tokens_input` and `tokens_cache_read` is billed
+ * twice and reads back as half the cache hit rate it actually had.
+ */
+export function splitCacheTokens(promptTokens: number, profile: CacheProfile): CacheTokenSplit {
+  const cacheRead = Math.floor(promptTokens * profile.hitRate)
+  const cacheCreate = Math.floor(promptTokens * profile.writeShare)
+  return { input: Math.max(0, promptTokens - cacheRead - cacheCreate), cacheRead, cacheCreate }
+}
+
+/**
+ * Input-side dollars with cache reads and writes folded in — the shape
+ * provider-reported cost arrives in, where the cache portion cannot be recovered
+ * by subtraction. A model with no cache rate is charged at its input rate.
+ */
+export function inputSideCostMicrocents(split: CacheTokenSplit, modelConfig: ModelConfig): number {
+  return (
+    computeCost(split.input, modelConfig.costInPerMToken) +
+    computeCost(split.cacheRead, modelConfig.cacheReadPerMToken ?? modelConfig.costInPerMToken) +
+    computeCost(split.cacheCreate, modelConfig.cacheWritePerMToken ?? modelConfig.costInPerMToken)
+  )
+}
+
+const randomCacheProfile = (): CacheProfile => ({
+  hitRate: Math.random() > 0.6 ? randFloat(0.2, 0.6) : 0,
+  writeShare: 0,
+})
+
+// ---------------------------------------------------------------------------
 // Message builders (OTEL GenAI format)
 // ---------------------------------------------------------------------------
 
@@ -314,6 +362,8 @@ export function makeLlmSpan({
   toolDefinitions,
   finishReason,
   temperature,
+  promptTokens,
+  cacheProfile,
 }: {
   base: SpanBase
   modelConfig: ModelConfig
@@ -323,13 +373,16 @@ export function makeLlmSpan({
   toolDefinitions?: ToolConfig[]
   finishReason: string
   temperature?: number
+  /** Overrides the estimate from the message text, for fixtures that need a specific prompt size. */
+  promptTokens?: number
+  cacheProfile?: CacheProfile
 }): SpanRow {
   const span = makeBaseSpan(base)
-  const inputTokens = estimateTokens(JSON.stringify(inputMessages))
+  const inputTokens = promptTokens ?? estimateTokens(JSON.stringify(inputMessages))
   const outputTokens = estimateTokens(JSON.stringify(outputMessages))
-  const cacheRead = Math.random() > 0.6 ? Math.floor(inputTokens * randFloat(0.2, 0.6)) : 0
+  const cache = splitCacheTokens(inputTokens, cacheProfile ?? randomCacheProfile())
   const reasoningTokens = modelConfig.isReasoning ? Math.floor(outputTokens * randFloat(1.5, 4)) : 0
-  const costIn = computeCost(inputTokens, modelConfig.costInPerMToken)
+  const costIn = inputSideCostMicrocents(cache, modelConfig)
   const costOut = computeCost(outputTokens + reasoningTokens, modelConfig.costOutPerMToken)
 
   span.name = `chat ${modelConfig.model}`
@@ -337,9 +390,10 @@ export function makeLlmSpan({
   span.provider = modelConfig.provider
   span.model = modelConfig.model
   span.response_model = modelConfig.responseModel
-  span.tokens_input = inputTokens
+  span.tokens_input = cache.input
   span.tokens_output = outputTokens
-  span.tokens_cache_read = cacheRead
+  span.tokens_cache_read = cache.cacheRead
+  span.tokens_cache_create = cache.cacheCreate
   span.tokens_reasoning = reasoningTokens
   span.cost_input_microcents = costIn
   span.cost_output_microcents = costOut

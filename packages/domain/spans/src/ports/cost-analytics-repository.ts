@@ -45,6 +45,13 @@ export interface CostAnalyticsRepositoryShape {
   getModelUsageSeries(
     input: CostAnalyticsScope & { readonly bucketSeconds: number },
   ): Effect.Effect<ModelUsageSeries, RepositoryError, ChSqlClient>
+
+  /**
+   * Cache token flow per model, the measured half of cache economics. Rates are
+   * exact — every figure is a token count — while the break-even they are judged
+   * against comes from the pricing registry, not from here.
+   */
+  getCacheEconomics(input: CostAnalyticsScope): Effect.Effect<CacheEconomics, RepositoryError, ChSqlClient>
 }
 
 export interface CostAnalyticsScope {
@@ -185,6 +192,46 @@ export interface ModelUsageSeries {
   readonly models: readonly string[]
   /** Distinct models folded into every bucket's `other`, so the legend can name how many. */
   readonly otherModels: number
+}
+
+/**
+ * Models listed in the cache table. Beyond this the comparison stops being one,
+ * and `distinctModels` says how many were left off.
+ */
+export const CACHE_ECONOMICS_ROW_LIMIT = 25
+
+/**
+ * Token counts, never dollars: provider-reported cache spend is folded into
+ * `cost_input_microcents` and cannot be recovered by subtraction, so a cache
+ * dollar figure would have to be modeled. `costMicrocents` is the row's
+ * authoritative total spend, which is what makes a row worth reading at all.
+ */
+export interface CacheUsageMeasures {
+  readonly calls: number
+  /** Uncached input tokens only; the three input-side counts are additive. */
+  readonly inputTokens: number
+  readonly cacheReadTokens: number
+  readonly cacheCreateTokens: number
+  readonly costMicrocents: number
+  /** Usage ingestion could not price, so this row's spend is understated. */
+  readonly unpricedCalls: number
+  readonly unpricedTokens: number
+}
+
+export interface CacheModelUsage extends CacheUsageMeasures {
+  readonly model: string
+  readonly provider: string
+}
+
+export interface CacheEconomics {
+  /**
+   * One row per provider/model pair, highest spend first, capped at
+   * `CACHE_ECONOMICS_ROW_LIMIT`. Split by provider because break-even is a
+   * property of the price list, and the same model slug served by two providers
+   * is two different price lists.
+   */
+  readonly rows: readonly CacheModelUsage[]
+  readonly totals: CacheUsageMeasures & { readonly distinctModels: number }
 }
 
 export interface CostModelSpend {

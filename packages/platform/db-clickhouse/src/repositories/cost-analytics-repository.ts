@@ -1,6 +1,9 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { ChSqlClient, type ChSqlClientShape } from "@domain/shared"
 import type {
+  CacheEconomics,
+  CacheModelUsage,
+  CacheUsageMeasures,
   CostAnalyticsScope,
   CostBreakdown,
   CostBreakdownDimension,
@@ -16,6 +19,7 @@ import type {
   ModelUsageSlice,
 } from "@domain/spans"
 import {
+  CACHE_ECONOMICS_ROW_LIMIT,
   COST_BREAKDOWN_ROW_LIMIT,
   CostAnalyticsRepository,
   costSourceSchema,
@@ -92,6 +96,29 @@ const BREAKDOWN_MEASURES = `sum(cost_total_microcents) AS total_microcents,
         sumIf(tokens_total, cost_source = 'unknown') AS unknown_tokens,
         countIf(cost_source = 'unknown') AS unknown_calls`
 
+// Both zero-cost buckets fold into one `unpriced` pair here: the table shows a
+// single "this spend is understated" caveat, the same reading the breakdown
+// table composes at display time.
+const CACHE_MEASURES = `count() AS calls,
+        sum(tokens_input) AS input_tokens,
+        sum(tokens_cache_read) AS cache_read_tokens,
+        sum(tokens_cache_create) AS cache_create_tokens,
+        sum(cost_total_microcents) AS cost_microcents,
+        countIf(cost_source IN ('unpriced', 'unknown')) AS unpriced_calls,
+        sumIf(tokens_total, cost_source IN ('unpriced', 'unknown')) AS unpriced_tokens`
+
+const CACHE_SOURCE = `SELECT
+        model,
+        provider,
+        tokens_input,
+        tokens_cache_read,
+        tokens_cache_create,
+        tokens_total,
+        cost_total_microcents,
+        ${COST_SOURCE} AS cost_source
+      FROM spans
+      WHERE ${BILLABLE_FILTER}`
+
 const BUCKET_START = `toDateTime(
   intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
   'UTC'
@@ -167,6 +194,20 @@ type BreakdownRow = BreakdownMeasureRow & { key: string; traces_with_value: stri
 
 type BreakdownTotalsRow = BreakdownMeasureRow & { traces_with_usage: string; distinct_values: string }
 
+type CacheMeasureRow = {
+  calls: string
+  input_tokens: string
+  cache_read_tokens: string
+  cache_create_tokens: string
+  cost_microcents: string
+  unpriced_calls: string
+  unpriced_tokens: string
+}
+
+type CacheRow = CacheMeasureRow & { model: string; provider: string }
+
+type CacheTotalsRow = CacheMeasureRow & { distinct_models: string }
+
 type ModelUsageMeasuresDraft = { cost: number; tokens: number }
 
 type ModelUsageRow = {
@@ -227,6 +268,22 @@ const toBreakdownTotals = (row: BreakdownTotalsRow | undefined): CostBreakdownTo
     distinctValues: num(row?.distinct_values),
   }
 }
+
+const toCacheMeasures = (row: CacheMeasureRow | undefined): CacheUsageMeasures => ({
+  calls: num(row?.calls),
+  inputTokens: num(row?.input_tokens),
+  cacheReadTokens: num(row?.cache_read_tokens),
+  cacheCreateTokens: num(row?.cache_create_tokens),
+  costMicrocents: num(row?.cost_microcents),
+  unpricedCalls: num(row?.unpriced_calls),
+  unpricedTokens: num(row?.unpriced_tokens),
+})
+
+const toCacheRow = (row: CacheRow): CacheModelUsage => ({
+  ...toCacheMeasures(row),
+  model: normalizeCHString(row.model),
+  provider: normalizeCHString(row.provider),
+})
 
 const toZeroCostPair = (row: ZeroCostPairRow): CostZeroCostPair => ({
   provider: normalizeCHString(row.provider),
@@ -565,6 +622,47 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                   otherModels: Math.max(0, num(distinctRows[0]?.distinct_models) - models.length),
                 }
               }),
+            )
+        }),
+
+      getCacheEconomics: (input) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const params = scopeParams(input)
+              const [rowsResult, totalsResult] = await Promise.all([
+                client.query({
+                  query: `SELECT model, provider, ${CACHE_MEASURES}
+                      FROM (${CACHE_SOURCE})
+                      GROUP BY model, provider
+                      ORDER BY cost_microcents DESC, model ASC, provider ASC
+                      LIMIT {rowLimit:UInt16}`,
+                  query_params: { ...params, rowLimit: CACHE_ECONOMICS_ROW_LIMIT },
+                  format: "JSONEachRow",
+                }),
+                client.query({
+                  // Window-wide, so a truncated row list still says how much was left off.
+                  query: `SELECT ${CACHE_MEASURES}, uniqExact((model, provider)) AS distinct_models
+                      FROM (${CACHE_SOURCE})`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                }),
+              ])
+              const rows = await rowsResult.json<CacheRow>()
+              const totalsRows = await totalsResult.json<CacheTotalsRow>()
+              return { rows, totalsRows }
+            })
+            .pipe(
+              Effect.map(
+                ({ rows, totalsRows }): CacheEconomics => ({
+                  rows: rows.map(toCacheRow),
+                  totals: {
+                    ...toCacheMeasures(totalsRows[0]),
+                    distinctModels: num(totalsRows[0]?.distinct_models),
+                  },
+                }),
+              ),
             )
         }),
     }
