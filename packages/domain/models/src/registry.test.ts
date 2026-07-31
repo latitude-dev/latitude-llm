@@ -424,3 +424,42 @@ describe("formatModel", () => {
     expect(formatted).toContain("no-pricing")
   })
 })
+
+describe("getCostSpec bare model ids on namespaced providers", () => {
+  // OpenRouter's API takes `grok-4.5` while its catalog keys on `x-ai/grok-4.5`. The rate we
+  // resolve is OpenRouter's own, so this borrows nothing from another host.
+  it("prices a bare id against the reported provider's own namespaced entry", () => {
+    const result = getCostSpec("openrouter", "grok-4.5")
+
+    expect(result.costImplemented).toBe(true)
+    expect(result.pricedProvider).toBe("openrouter")
+    expect(result.pricedModel).toBe("x-ai/grok-4.5")
+  })
+
+  it("leaves a bare id unpriced when two vendors on that provider share the name", () => {
+    const models: Model[] = [
+      { id: "vendor-a/shared-model", provider: "acme", name: "A", pricing: { input: 1, output: 2 } } as Model,
+      { id: "vendor-b/shared-model", provider: "acme", name: "B", pricing: { input: 9, output: 9 } } as Model,
+    ]
+    // Two different models at two different rates: picking one would invent a number.
+    expect(findModel(models, "shared-model")).toBeUndefined()
+  })
+
+  it("does not reach into another provider's catalog for a model the reported one lacks", () => {
+    // Anthropic does not sell Qwen; a proxy reporting `anthropic` gets no price, by design.
+    expect(getCostSpec("anthropic", "qwen3.7-max").costImplemented).toBe(false)
+  })
+})
+
+describe("getCostSpec fireworks provider alias", () => {
+  it("resolves the bare `fireworks` provider id to models.dev's `fireworks-ai`", () => {
+    const result = getCostSpec("fireworks", "accounts/fireworks/models/qwen3p7-plus")
+
+    expect(result.costImplemented).toBe(true)
+    expect(result.pricedProvider).toBe("fireworks-ai")
+  })
+
+  it("resolves the Vercel-suffixed `fireworks.chat` too", () => {
+    expect(getCostSpec("fireworks.chat", "accounts/fireworks/models/qwen3p7-plus").costImplemented).toBe(true)
+  })
+})

@@ -48,6 +48,23 @@ function findBedrockModelByBareId(models: Model[], modelId: string): Model | und
 }
 
 /**
+ * A provider whose catalog ids are `<vendor>/<model>` slugs may still be called with the bare model
+ * id, because that is what its own API accepts (OpenRouter's `grok-4.5` for `x-ai/grok-4.5`). Match
+ * on the `/<modelId>` suffix within that provider's own list, so the rate is the reported provider's
+ * own — this borrows nothing from another host.
+ *
+ * A single match is the whole condition. Two vendors shipping the same bare name are two different
+ * models at two different rates, and picking one would invent a number; those stay unpriced.
+ */
+function findModelByBareId(models: Model[], modelId: string): Model | undefined {
+  if (modelId.includes("/")) return undefined
+
+  const suffix = `/${modelId.toLowerCase()}`
+  const matches = models.filter((m) => m.id.toLowerCase().endsWith(suffix))
+  return matches.length === 1 ? matches[0] : undefined
+}
+
+/**
  * Return the full list of bundled LLM models from models.dev.
  *
  * The result is cached after the first call.
@@ -169,6 +186,9 @@ export function getModelForProvider(provider: string, modelId: string): Model | 
     }
     return findBedrockModelByBareId(models, stripped)
   }
+
+  const bareIdMatch = findModelByBareId(models, modelId)
+  if (bareIdMatch) return bareIdMatch
 
   return findModelByVendorPrefix({
     modelId,
