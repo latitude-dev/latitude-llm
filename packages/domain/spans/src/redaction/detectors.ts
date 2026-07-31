@@ -1,5 +1,5 @@
 import type { RedactionEntity } from "@domain/shared"
-import { sha256Bytes } from "@repo/utils"
+import { sha256Bytes } from "./sha256.ts"
 
 export interface RedactionMatch {
   readonly start: number
