@@ -48,7 +48,7 @@ const githubConfigLayer = Layer.mergeAll(GithubIntegrationRepositoryLive, Github
 
 const REPO_CACHE_TTL_SECONDS = 5 * 60
 
-export interface GithubIntegrationRecord {
+interface GithubIntegrationRecord {
   readonly id: string
   readonly installationId: number
   readonly accountLogin: string
@@ -121,8 +121,12 @@ const disconnectGithubIntegrationEffect: Effect.Effect<
 })
 
 export interface GithubProjectConfigRecord {
-  /** Whether this project has its own override (vs inheriting the org default). */
+  /** Whether this project has its own config row, which is what binds a repo. */
   readonly hasOverride: boolean
+  /** Whether this project replaces the org default's monitoring behavior. */
+  readonly hasBehaviorOverride: boolean
+  /** How many projects in the org replace the behavior default — the "N override it" count. */
+  readonly overrideCount: number
   /** Effective repo/branch: the override's when present, else the org default's; null when neither is set. */
   readonly repoId: number | null
   readonly repoFullName: string | null
@@ -170,11 +174,22 @@ const effectiveSettings = (
   rules: override?.rules ?? orgDefault?.rules ?? DEFAULT_GITHUB_MONITOR_SETTINGS.rules,
 })
 
+/**
+ * Whether a row replaces the org default's behavior. Distinct from having a row at
+ * all: a project can bind its own repo while still inheriting every behavior field.
+ */
+const hasBehaviorOverride = (row: GithubSyncConfigRow | null): boolean =>
+  row !== null &&
+  (row.monitorPullRequests !== null || row.monitorCommits !== null || row.sources !== null || row.rules !== null)
+
 const toProjectConfigRecord = (
   override: GithubSyncConfigRow | null,
   orgDefault: GithubSyncConfigRow | null,
+  overrideCount = 0,
 ): GithubProjectConfigRecord => ({
   hasOverride: override !== null,
+  hasBehaviorOverride: hasBehaviorOverride(override),
+  overrideCount,
   repoId: override?.repoId ?? orgDefault?.repoId ?? null,
   repoFullName: override?.repoFullName ?? orgDefault?.repoFullName ?? null,
   branch: override?.branch ?? orgDefault?.branch ?? null,
@@ -286,7 +301,8 @@ export const getGithubProjectConfig = createServerFn({ method: "GET" })
         if (!integration) return null
         const orgDefault = yield* syncRepo.findDefaultByIntegration(integration.id)
         const override = yield* syncRepo.findByProject(integration.id, data.projectId)
-        return toProjectConfigRecord(override, orgDefault)
+        const projectConfigs = yield* syncRepo.listProjectConfigs(integration.id)
+        return toProjectConfigRecord(override, orgDefault, projectConfigs.filter(hasBehaviorOverride).length)
       }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
   })
