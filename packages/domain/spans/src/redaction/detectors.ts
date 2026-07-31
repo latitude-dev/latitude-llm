@@ -136,7 +136,7 @@ const NANP_PHONE_PATTERN =
  * group, overrun 19 digits, and fail the length gate with the card inside it.
  *
  * The trailing guard rejects a dot only when a digit follows. The shorter `(?![\d.])` looks
- * equivalent and is not: it drops every card written as `4111111111111111.`, and backtracking
+ * equivalent and is not: it drops every card written at the end of a sentence, and backtracking
  * cannot recover one because each shorter run of digits is then followed by a digit.
  */
 const CREDIT_CARD_COMPACT_PATTERN = /(?<![\d.])\d{13,19}(?!\d)(?!\.\d)/g
