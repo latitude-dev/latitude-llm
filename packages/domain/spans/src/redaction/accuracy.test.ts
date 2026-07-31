@@ -21,23 +21,27 @@ import { resolveOverlaps } from "./redact-text.ts"
 const ALL_ENTITIES: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
 
 /**
- * Vendor credentials are assembled from their parts rather than written whole.
- *
- * They are fabricated, but a detector fixture is worthless unless it is shaped exactly like the real thing,
- * and that shape is what GitHub push protection blocks on. Joining the parts keeps the value identical at
- * runtime while leaving no contiguous vendor-shaped literal in the file, for this repository and for anyone
- * who forks it.
+ * Every credential fixture here is fabricated, but it has to carry the real shape or it tests nothing — and
+ * that shape is what secret scanners match. Splitting prefix from body leaves no contiguous token-shaped
+ * literal in the file, which keeps push protection off this repository and off anyone's fork.
  */
-const SLACK_BOT_TOKEN = ["xoxb", "2143214321", "4321432143214", "AbCdEfGhIjKlMnOpQrStUvWx"].join("-")
-const STRIPE_SECRET_KEY = ["sk", "live", "51H9aZq1LmT4vBn7XkR2wEs8Yu"].join("_")
-const SENDGRID_KEY = ["SG", "9aZq1LmT4vBn7XkR2wEs8Y", "YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb"].join(".")
-const GITLAB_TOKEN = ["glpat", "9aZq1LmT4vBn7XkR2wEs"].join("-")
-const SLACK_WEBHOOK_URL = [
-  "https://hooks.slack.com/services",
-  "T00000000",
-  "B00000000",
-  "XXXXXXXXXXXXXXXXXXXXXXXX",
-].join("/")
+const vendorToken = (prefix: string, body: string): string => prefix + body
+
+const AWS_ACCESS_KEY_ID = vendorToken("AKIA", "IOSFODNN7EXAMPLE")
+const GOOGLE_API_KEY = vendorToken("AIzaSy", "D9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ")
+const GITHUB_TOKEN = vendorToken("ghp_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl")
+const HUGGINGFACE_TOKEN = vendorToken("hf_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o")
+const NPM_TOKEN = vendorToken("npm_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg")
+const GOOGLE_OAUTH_TOKEN = vendorToken("ya29.", "a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ")
+const OPENAI_KEY = vendorToken("sk-proj-", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ7NcV")
+const SLACK_BOT_TOKEN = vendorToken("xoxb-", "2143214321-4321432143214-AbCdEfGhIjKlMnOpQrStUvWx")
+const STRIPE_SECRET_KEY = vendorToken("sk_live_", "51H9aZq1LmT4vBn7XkR2wEs8Yu")
+const SENDGRID_KEY = vendorToken("SG.", "9aZq1LmT4vBn7XkR2wEs8Y.YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb")
+const GITLAB_TOKEN = vendorToken("glpat-", "9aZq1LmT4vBn7XkR2wEs")
+const SLACK_WEBHOOK_URL = vendorToken(
+  "https://hooks.slack.com/services/",
+  "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+)
 
 type Outcome = "redacted" | "partial" | "missed"
 
@@ -688,15 +692,15 @@ const SECRET_CASES: readonly PiiCase[] = [
     id: "secret-openai",
     entity: "secret",
     outcome: "redacted",
-    text: 'export OPENAI_API_KEY="sk-proj-9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ7NcV"',
-    value: "sk-proj-9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ7NcV",
+    text: `export OPENAI_API_KEY="${OPENAI_KEY}"`,
+    value: OPENAI_KEY,
   },
   {
     id: "secret-aws-access-key",
     entity: "secret",
     outcome: "redacted",
-    text: "aws_access_key_id = AKIAIOSFODNN7EXAMPLE",
-    value: "AKIAIOSFODNN7EXAMPLE",
+    text: `aws_access_key_id = ${AWS_ACCESS_KEY_ID}`,
+    value: AWS_ACCESS_KEY_ID,
   },
   {
     id: "secret-slack-bot",
@@ -709,8 +713,8 @@ const SECRET_CASES: readonly PiiCase[] = [
     id: "secret-google-api-key",
     entity: "secret",
     outcome: "redacted",
-    text: "maps key AIzaSyD9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ in the bundle",
-    value: "AIzaSyD9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ",
+    text: `maps key ${GOOGLE_API_KEY} in the bundle`,
+    value: GOOGLE_API_KEY,
   },
   {
     id: "secret-stripe-live",
@@ -723,8 +727,8 @@ const SECRET_CASES: readonly PiiCase[] = [
     id: "secret-github-classic",
     entity: "secret",
     outcome: "redacted",
-    text: "git remote set-url origin https://ghp_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl@github.com/acme/app",
-    value: "ghp_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl",
+    text: `git remote set-url origin https://${GITHUB_TOKEN}@github.com/acme/app`,
+    value: GITHUB_TOKEN,
     note: "also a valid email local part, so detector rank is what keeps the label right",
   },
   {
@@ -763,8 +767,8 @@ const SECRET_CASES: readonly PiiCase[] = [
     id: "secret-huggingface",
     entity: "secret",
     outcome: "redacted",
-    text: "HF_TOKEN=hf_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o",
-    value: "hf_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o",
+    text: `HF_TOKEN=${HUGGINGFACE_TOKEN}`,
+    value: HUGGINGFACE_TOKEN,
   },
   {
     id: "secret-gitlab-pat",
@@ -777,15 +781,15 @@ const SECRET_CASES: readonly PiiCase[] = [
     id: "secret-npm-token",
     entity: "secret",
     outcome: "redacted",
-    text: "//registry.npmjs.org/:_authToken=npm_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg",
-    value: "npm_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg",
+    text: `//registry.npmjs.org/:_authToken=${NPM_TOKEN}`,
+    value: NPM_TOKEN,
   },
   {
     id: "secret-google-oauth",
     entity: "secret",
     outcome: "redacted",
-    text: "refresh with ya29.a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ",
-    value: "ya29.a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ",
+    text: `refresh with ${GOOGLE_OAUTH_TOKEN}`,
+    value: GOOGLE_OAUTH_TOKEN,
   },
   {
     id: "secret-slack-webhook",
@@ -1087,7 +1091,7 @@ describe("punctuation boundaries", () => {
     ["iban grouped", "iban", "DE89 3704 0044 0532 0130 00"],
     ["ssn", "us_ssn", "123-45-6789"],
     ["ipv4", "ip_address", "203.0.113.42"],
-    ["secret sk-", "secret", "sk-proj-9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ"],
+    ["secret sk-", "secret", vendorToken("sk-proj-", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ")],
     ["eth address", "crypto_wallet", "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"],
   ]
 

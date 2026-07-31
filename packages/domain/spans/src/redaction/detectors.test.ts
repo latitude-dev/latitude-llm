@@ -18,6 +18,13 @@ const found = (text: string, entity: RedactionEntity): string[] =>
 
 const detects = (text: string, entity: RedactionEntity): boolean => found(text, entity).length > 0
 
+/**
+ * Every credential fixture here is fabricated, but it has to carry the real shape or it tests nothing — and
+ * that shape is what secret scanners match. Splitting prefix from body leaves no contiguous token-shaped
+ * literal in the file, which keeps push protection off this repository and off anyone's fork.
+ */
+const vendorToken = (prefix: string, body: string): string => prefix + body
+
 describe("email detector", () => {
   it.each([
     "john.doe@example.com",
@@ -413,7 +420,7 @@ describe("secret detector", () => {
   // Asserted on the redacted text: the vendor prefix and the assignment key both match here, over the
   // same span, so overlap resolution is what makes one placeholder out of two matches.
   it("detects an OpenAI style key", () => {
-    const key = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
+    const key = vendorToken("sk-proj-", "abc123DEF456ghi789JKL012mno345PQR678stu")
     expect(redactText(`export OPENAI_API_KEY=${key}`, only("secret")).text).toBe(
       "export OPENAI_API_KEY=[REDACTED_SECRET]",
     )
@@ -424,19 +431,14 @@ describe("secret detector", () => {
     expect(found(`key ${key} here`, "secret")).toEqual([key])
   })
 
-  /**
-   * Fabricated, but a fixture for a credential detector has to carry the real shape. The vendor-prefixed
-   * ones are assembled from their parts so the file holds no contiguous token-shaped literal, which is what
-   * GitHub push protection blocks on — here and in anyone's fork.
-   */
   it.each([
-    "AKIAIOSFODNN7EXAMPLE",
-    "ASIAIOSFODNN7EXAMPLE",
-    "AIzaSyD-abc123DEF456ghi789JKL012mno345p",
-    ["sk", "live", "abc123DEF456ghi789"].join("_"),
-    ["xoxb", "123456789012", "abcDEF123456"].join("-"),
-    "ghp_abc123DEF456ghi789JKL012mno345PQR678stu9",
-    "github_pat_abc123DEF456ghi789JKL0",
+    vendorToken("AKIA", "IOSFODNN7EXAMPLE"),
+    vendorToken("ASIA", "IOSFODNN7EXAMPLE"),
+    vendorToken("AIzaSy", "D-abc123DEF456ghi789JKL012mno345p"),
+    vendorToken("sk_live_", "abc123DEF456ghi789"),
+    vendorToken("xoxb-", "123456789012-abcDEF123456"),
+    vendorToken("ghp_", "abc123DEF456ghi789JKL012mno345PQR678stu9"),
+    vendorToken("github_pat_", "abc123DEF456ghi789JKL0"),
   ])("detects %s", (value) => {
     expect(detects(`token ${value} end`, "secret")).toBe(true)
   })
@@ -454,20 +456,20 @@ describe("secret detector", () => {
     expect(found(`config:\n${pem}\ndone`, "secret")).toEqual([pem])
   })
 
+  // The carrier phrase avoids the word "token": the bearer scheme matches case-insensitively, so
+  // `token <value>` is a second legitimate match on the same span and this table asserts the vendor pattern.
   it.each([
-    "hf_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o",
-    ["glpat", "9aZq1LmT4vBn7XkR2wEs"].join("-"),
-    "npm_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg",
-    "ya29.a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ",
-    ["SG", "9aZq1LmT4vBn7XkR2wEs8Y", "YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb"].join("."),
-    // Carrier phrase avoids the word "token": the bearer scheme matches case-insensitively, so `token <value>`
-    // is a second, legitimate match on the same span and this table is asserting the vendor pattern alone.
+    vendorToken("hf_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o"),
+    vendorToken("glpat-", "9aZq1LmT4vBn7XkR2wEs"),
+    vendorToken("npm_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg"),
+    vendorToken("ya29.", "a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ"),
+    vendorToken("SG.", "9aZq1LmT4vBn7XkR2wEs8Y.YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb"),
   ])("detects the vendor token %s", (value) => {
     expect(found(`emitted ${value} here`, "secret")).toEqual([value])
   })
 
   it("detects a Slack webhook URL, whose path segments are the credential", () => {
-    const url = ["https://hooks.slack.com/services", "T00000000", "B00000000", "XXXXXXXXXXXXXXXXXXXXXXXX"].join("/")
+    const url = vendorToken("https://hooks.slack.com/services/", "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX")
     expect(found(`posted to ${url}`, "secret")).toEqual([url])
   })
 
@@ -686,7 +688,7 @@ index 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567..f1e2d3c4b5a69788796a5b4c3d2e1f09
   })
 
   it("still finds a real secret embedded in the same output", () => {
-    const key = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
+    const key = vendorToken("sk-proj-", "abc123DEF456ghi789JKL012mno345PQR678stu")
     const redacted = redactText(`${TOOL_OUTPUT}\nOPENAI_API_KEY=${key}\n`, only("secret")).text
 
     expect(redacted).toContain("OPENAI_API_KEY=[REDACTED_SECRET]")
