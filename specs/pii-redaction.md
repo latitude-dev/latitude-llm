@@ -499,20 +499,26 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 ## 5. Detector specification
 
-`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label }` matches. Precision is the design goal, not recall: a false negative leaves content visible, which the customer can see and report, while a false positive is permanent silent data corruption with no delete path.
+`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label, rank }` matches.
 
-**The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, and file paths appearing in `tool_output`.
+**Recall was raised above precision in [Phase 7](#phase-7---detector-accuracy).** The original stance was the opposite, and the reasoning behind it still holds — a false negative leaves content visible and reportable, while a false positive is permanent silent corruption with no delete path ([T-4](#8-traps)). It was reversed anyway, on the evidence that the shipped detectors removed only 70% of the PII in a labelled corpus, which is not a compliance control. Ambiguous shapes now resolve toward redacting. What makes that affordable is that [P7-1](#phase-7---detector-accuracy) landed a corpus first, so every over-redaction is counted and reviewed before it ships rather than found by a customer.
+
+**The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, usage counters like `max_tokens`, opaque `*_key` identifiers, and file paths appearing in `tool_output`.
 
 | Entity | Default | Rule | Precision notes |
 | --- | --- | --- | --- |
-| `email` | **on** | Standard local-part + dotted domain + 2+ char TLD | Very high. `@types/node` and `foo@bar` correctly do not match |
-| `phone` | **on** | E.164 (`+` then 8-15 digits, word-boundaried) **and** NANP separated forms (`(NNN) NNN-NNNN`, `NNN-NNN-NNNN`, `NNN.NNN.NNNN`) | The likeliest FP source, hence individually disable-able. `2024-01-15` (4-2-2) and `192.168.1.100` do not match the 3-3-4 shape |
-| `credit_card` | **on** | 13-19 digits with optional space/dash separators, **and** Luhn valid, **and** a known IIN prefix (`4`, `51`-`55`, `2221`-`2720`, `34`, `37`, `6011`, `65`, `35`, `30`, `36`, `38`) | Luhn alone gives ~1-in-10 FP on random digit runs. The IIN requirement is what makes this safe |
-| `iban` | **on** | 2 letters + 2 digits + 11-30 alphanumerics, **and** mod-97 checksum == 1 | Checksum makes it very high precision |
-| `us_ssn` | **on** | `NNN-NN-NNNN` with `-` or space separators only, excluding area `000`/`666`/`900`-`999`, group `00`, serial `0000` | Bare 9-digit matching is explicitly **excluded**: it would eat ids everywhere |
-| `secret` | **on** | **Prefixed vendor forms only**: `sk-…`, `sk-ant-…`, `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`/`github_pat_`, `AKIA[0-9A-Z]{16}`, `xox[abposr]-…`, `AIza[0-9A-Za-z_-]{35}`, Stripe `(sk\|rk)_(live\|test)_…`, JWT `eyJ….….…`, and PEM `-----BEGIN … PRIVATE KEY-----` blocks | See the exclusion below |
-| `ip_address` | **off** | IPv4 dotted-quad with octet range validation; IPv6 standard forms | Default off: `1.2.3.4` is a valid semver and version strings are everywhere in coding-agent traces |
-| `crypto_wallet` | **off** | BTC (`bc1…`, base58 `[13]…`), ETH `0x[a-fA-F0-9]{40}` | Default off: collides with hex hashes, git SHAs, and content hashes |
+| `email` | **on** | Unicode local part (apostrophe included) + dotted domain + 2+ char TLD, plus the `%40` encoded form. Both halves bounded to RFC 5321 lengths | `@types/node` and `foo@bar` do not match. A two-label domain whose TLD is a file extension is rejected, which is what excludes `logo@2x.png`. The length bounds are load-bearing: unbounded, a long run of dashes backtracks quadratically |
+| `phone` | **on** | E.164 contiguous, **and** separated international forms (one pattern per separator, country code `[1-9]`, up to 4 groups, 8-20 digits), **and** NANP separated forms with an optional `1` trunk code and `[2-9]\d\d` area and exchange codes | Still the likeliest FP source, hence individually disable-able. NANP validity is what excludes `100 200 3000` and `123 456 7890`. The 20-digit ceiling deliberately exceeds E.164 so a greedy over-run over-redacts an adjacent number instead of discarding the match and storing the phone number |
+| `credit_card` | **on** | 13-19 digits, compact or grouped with space, dash or slash, **and** Luhn valid, **and** a known IIN prefix (`4`, `51`-`55`, `2221`-`2720`, `34`, `37`, `6011`, `65`, `35`, `30`, `36`, `38`, `50`, `56`-`58`, `6304`, `6759`-`6763`, `62`, `81`) | Luhn plus an IIN still accepts about 1 in 10 random 16-digit runs beginning with 4. That is inherent and documented publicly rather than fixed |
+| `iban` | **on** | 2 letters + 2 digits + 11-30 alphanumerics, any case, compact or grouped with spaces or dashes, **and** mod-97 checksum == 1 | The checksum is what makes case-insensitivity affordable: lowercase alphanumeric runs are far more common in tool output than uppercase ones |
+| `us_ssn` | **on** | `NNN-NN-NNNN` with `-`, `.` or space separators, excluding area `000`/`666`, group `00`, serial `0000`; a 9xx area is accepted only in the ITIN group ranges (70-88, 90-92, 94-99) | Bare 9-digit matching is still explicitly **excluded**: it would eat ids everywhere |
+| `secret` | **on** | Prefixed vendor forms (`sk-`, `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`/`github_pat_`, `AKIA`/`ASIA`, `xox[abposr]-`, `AIza`, Stripe, `hf_`, `glpat-`, `npm_`, `ya29.`, `SG.x.y`, Slack webhook URLs), JWTs, PEM blocks, `scheme://user:password@host` credentials, **and** values assigned to a credential-shaped key | See the exclusion below. The assignment form is the only detector whose extent is not fixed by shape, so it carries the most guards |
+| `ip_address` | **off** | IPv4 dotted-quad with octet range validation; IPv6 standard, compressed, and left-compressed (`::1`) forms | Default off: `1.2.3.4` is a valid semver and version strings are everywhere in coding-agent traces |
+| `crypto_wallet` | **off** | BTC bech32 (`bc1…`), BTC base58 `[13]…` **validated against the address checksum**, ETH `0x[a-fA-F0-9]{40}` | Default off because of Ethereum, not Bitcoin: base58 collisions went from 100% of a synthetic sample to 0 once the checksum was checked, but an all-lowercase 40-char hex string is both an address and a SHA-1 digest, and EIP-55 only checksums mixed-case addresses |
+
+**Credential detection reads the key, never the value's entropy.** Values with no distinctive shape — `POSTGRES_PASSWORD=…`, an opaque `Bearer` token, an AWS secret access key, a base64 value in a Kubernetes `Secret` — are recognised from the key they are assigned to. This is the principled version of what the exclusion below rules out: the evidence is the name the customer gave the field, not a guess about how random the bytes look. It is also why plural `tokens` and a bare `key` are excluded from the key list, since `max_tokens` and `cache_key` are in nearly every span we ingest.
+
+**Overlap resolution is leftmost, then most specific, then longest.** Rank exists because a DSN password is also a valid email local part, and the wider email match was labelling passwords `[REDACTED_EMAIL]`. Only detectors with a demonstrated collision carry a rank.
 
 **Explicitly excluded: any generic entropy or generic base64 "possible secret" heuristic.** On coding-agent traffic it fires on diffs, minified bundles, inline images, and hashes. It is the single most likely cause of catastrophic silent corruption, and no amount of tuning makes it safe on this traffic mix. If a customer needs it, that is what the Phase 4 remote tier is for.
 
@@ -818,6 +824,42 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 - **A negative assertion is only as good as the string it forbids.** The provenance-neutrality test forbade "this project's policy", so copy saying "this project" passed. Assert on the shortest offending substring, not the phrasing that happened to be wrong first.
 - **Intermediate commits can break `knip` even when the final tree is clean.** A server function with no caller yet is an unused export, and the pre-commit hook blocks on it. Sequencing the write path into the same commit as its first caller, rather than a commit earlier, keeps every commit independently green.
 
+
+### Phase 7 - Detector accuracy
+
+> Ran after Phase 3 shipped, on the finding that the detectors removed only 70% of the PII in a labelled
+> corpus. Independent of Phases 4-6, which remain unbuilt.
+
+Measured before: 117 labelled occurrences, 41 stored verbatim, 5 partially redacted, 4 mislabelled, 12
+accepted false positives. After: 9 stored verbatim, 2 partial, 2 mislabelled, 5 false positives.
+
+- [x] **P7-1**: `redaction/accuracy.test.ts`. A labelled corpus asserted case by case with pinned totals, not against a recall threshold, matching the one regression suite the repo already had. Closing a gap fails the suite until the row and the total are both edited, so an improvement is as visible in the diff as a regression. Ships with a punctuation sweep over 13 identifier shapes, seeded collision probes on synthetic identifiers, and a backtracking canary. Landed first, so every later commit's effect is measured rather than argued.
+- [x] **P7-2**: Trailing-guard fix on the five card patterns, NANP phone, and IPv4. `(?![\d.])` rejects a sentence-final period along with a decimal, and backtracking cannot recover the match. `"My card number is 4111111111111111."` was stored verbatim.
+- [x] **P7-3**: NANP area and exchange code validity (`[2-9]\d\d`), which removes three of the five measured phone false positives at no cost to recall.
+- [x] **P7-4**: Separated international phone forms, one pattern per separator. The 20-digit validator ceiling is deliberate: see the note in [§5](#5-detector-specification).
+- [x] **P7-5**: Detector rank in `resolveOverlaps`, plus a DSN credential detector. Fixes passwords labelled `[REDACTED_EMAIL]`, and passwords stored verbatim when the DSN host is an IP.
+- [x] **P7-6**: Credential detection from the assignment key, with a `group` field on `Detector` so a pattern can require context it must not redact. Forward-matching rather than a lookbehind, for a measurable reason: a lookbehind is evaluated at every position in the leaf.
+- [x] **P7-7**: The missing vendor token prefixes, in one alternation rather than one detector each.
+- [x] **P7-8**: Base58 address checksum, via a synchronous `sha256Bytes` in `@repo/utils`, since `crypto.subtle` is async and the walk is not.
+- [x] **P7-9**: Email domain gate (file-extension TLDs), Unicode and apostrophe local parts, `%40` form, and RFC length bounds.
+- [x] **P7-10**: IBAN case-insensitivity and dash grouping, Maestro and UnionPay prefixes, slash-grouped cards, dotted SSNs, ITIN ranges, left-compressed IPv6.
+- [x] **P7-11**: This section, the [§5](#5-detector-specification) rewrite, and a known-limits section in `docs/security/pii-redaction.mdx`.
+
+**Exit gate**:
+
+- [x] The corpus suite is green with pinned totals, and every entity in `REDACTION_ENTITIES` has positive and negative vectors.
+- [x] Scan cost inside the [§4.7](#47-size-and-time-budget) budget: 1.71 ms per 32 KB leaf with all eight entities enabled, 1.42 ms with the default six, against a 5 ms target. Up from 0.86 ms and 0.59 ms, for roughly 20 additional patterns.
+- [ ] A toggle set in the UI round-trips and takes effect on newly ingested spans, verified manually end to end. Shared with the Phase 3 exit gate.
+
+**Findings from Phase 7**:
+
+- **The corpus had to land before any detector change, and that ordering did most of the work.** Every commit after it names the gaps it closes and the false positives it accepts, because the suite would not go green otherwise. Two commits changed a false positive's *extent* rather than removing it, which no aggregate metric would have surfaced.
+- **A guard written for one hazard silently created another.** `(?![\d.])` was added to keep the card detector out of decimals and did that correctly, while also dropping every card at the end of a sentence. The punctuation sweep turned that from one anecdote into eighteen failing combinations across four detectors. Sweeping the axis is what found it; no amount of reading the pattern did.
+- **A validator cannot shorten a match.** Once a greedy pattern commits, rejecting it in `validate` discards the whole thing, so a too-strict bound turns an over-redaction into a leak. This is the same trap already documented for the card detector, met again from the other direction in phone.
+- **Prototyping the two hard detectors against negatives before writing them found four false positives that review would not have.** `max_tokens=1048576`, `cache_key=…`, `const apiKey = options.apiKey`, and `# TOKEN=  (unset)` all matched the first draft of the credential detector.
+- **The backtracking canary paid for itself immediately.** Widening the email local part to Unicode made an already-quadratic pattern slow enough to fail: 307 ms on a crafted leaf. Bounding both halves to their RFC lengths took the same input to 1.9 ms. The pre-existing quadratic had never been noticed.
+- **Two detectors matching the same span is normal, not a bug.** Three existing tests asserted the raw match list and broke once a vendor prefix and an assignment key both matched one token. Asserting the redacted text instead is both stabler and closer to what the feature promises.
+- **Test data can be the thing that is wrong.** The corpus GitHub token was 30 characters after its prefix where real ones carry 36, so it never reached the github detector and the case looked like a detector gap. Same for an ITIN written with an all-zero serial.
 
 ### Phase 4 - Optional ML tier
 
