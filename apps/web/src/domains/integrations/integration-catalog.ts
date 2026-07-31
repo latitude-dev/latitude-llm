@@ -5,29 +5,11 @@ import type { AgentDispatchKindKey } from "../agent-dispatch/agent-dispatch-kind
 
 export type IntegrationKey = "slack" | "github" | AgentDispatchKindKey
 
-/** Grouped by the job the user came to do, not by vendor — people arrive with a goal, not a brand. */
-export type IntegrationCapability = "notifications" | "code_agents" | "issue_tracking" | "custom"
-
-export const INTEGRATION_CAPABILITY_LABELS: Record<IntegrationCapability, string> = {
-  notifications: "Notifications",
-  code_agents: "Code and agents",
-  issue_tracking: "Issue tracking",
-  custom: "Custom",
-}
-
-export const INTEGRATION_CAPABILITY_ORDER: readonly IntegrationCapability[] = [
-  "notifications",
-  "code_agents",
-  "issue_tracking",
-  "custom",
-]
-
 export interface IntegrationCatalogEntry {
   readonly key: IntegrationKey
   readonly label: string
   readonly icon: ComponentType<LucideProps>
-  readonly capability: IntegrationCapability
-  /** One line of what it gets you, shown on the catalog tile. */
+  /** One line of what it gets you, shown on the tile of an unconnected integration. */
   readonly summary: string
 }
 
@@ -36,42 +18,36 @@ export const INTEGRATION_CATALOG: readonly IntegrationCatalogEntry[] = [
     key: "slack",
     label: "Slack",
     icon: SlackIcon,
-    capability: "notifications",
     summary: "Send Latitude notifications to your Slack workspace.",
   },
   {
     key: "github",
     label: "GitHub",
     icon: GithubIcon,
-    capability: "code_agents",
     summary: "Auto-resolve signals when a related PR or commit is merged.",
   },
   {
     key: "cursor",
     label: "Cursor",
     icon: CursorIcon,
-    capability: "code_agents",
     summary: "Cursor agents react to Latitude signals and monitors, then push fixes to your code.",
   },
   {
     key: "claude_code",
     label: "Claude Code",
     icon: ClaudeCodeIcon,
-    capability: "code_agents",
     summary: "Claude Code routines react to Latitude signals and monitors, then push fixes to your code.",
   },
   {
     key: "linear",
     label: "Linear",
     icon: LinearIcon,
-    capability: "issue_tracking",
     summary: "Create Linear issues for signals that need follow-up.",
   },
   {
     key: "webhook",
     label: "Webhook",
     icon: Webhook,
-    capability: "custom",
     summary: "Send integration events to your own endpoint.",
   },
 ]

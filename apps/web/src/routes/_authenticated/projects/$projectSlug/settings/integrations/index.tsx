@@ -1,9 +1,8 @@
-import { Button, Icon, Skeleton, Text, useMountEffect, useToast } from "@repo/ui"
+import { Skeleton, Text, useMountEffect, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { Plus } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import {
@@ -35,7 +34,7 @@ import {
   AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
   ConnectAgentDispatchModal,
 } from "../-components/agent-dispatch-section.tsx"
-import { IntegrationCatalog, IntegrationCatalogModal } from "../-components/integration-catalog.tsx"
+import { AvailableIntegrations } from "../-components/available-integrations.tsx"
 import { IntegrationRow } from "../-components/integration-row.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
 import { SLACK_INTEGRATION_QUERY_KEY } from "../-components/slack-route-row.tsx"
@@ -68,7 +67,6 @@ function IntegrationsSettingsPage() {
   )
   const currentProject = project ?? routeProject
 
-  const [catalogOpen, setCatalogOpen] = useState(false)
   const [connectingKind, setConnectingKind] = useState<AgentDispatchKindKey | null>(null)
 
   useMountEffect(() => {
@@ -139,7 +137,7 @@ function IntegrationsSettingsPage() {
     slackConfigured === undefined || githubConfigured === undefined || slackLoading || githubLoading || dispatchLoading
 
   // A deployment without the Slack or GitHub app configured can't connect them at all,
-  // so they never reach the catalog.
+  // so they are never offered.
   const available: IntegrationKey[] = [
     ...(slackConfigured === true ? (["slack"] as const) : []),
     ...(githubConfigured === true ? (["github"] as const) : []),
@@ -184,48 +182,38 @@ function IntegrationsSettingsPage() {
   const connectedKeys = new Set(connected.map((row) => row.entry.key))
   const openConnect = (key: IntegrationKey) => {
     if (!isAgentDispatchKind(key)) return
-    setCatalogOpen(false)
     setConnectingKind(key)
   }
 
   return (
-    <SettingsPage
-      title="Integrations"
-      description="Connect Latitude to the tools your team already uses."
-      actions={
-        connected.length > 0 ? (
-          <Button onClick={() => setCatalogOpen(true)}>
-            <Icon icon={Plus} size="sm" />
-            Add integration
-          </Button>
-        ) : null
-      }
-    >
-      <div className="flex w-full flex-col gap-6 @[900px]:w-2/3">
+    <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
+      <div className="flex w-full flex-col gap-8 @[900px]:w-2/3">
         {isLoading ? (
           <Skeleton className="h-32 w-full" />
-        ) : connected.length === 0 ? (
-          <div className="flex flex-col gap-4">
-            <Text.H6 color="foregroundMuted">No integrations connected yet. Pick one to get started.</Text.H6>
-            <IntegrationCatalog available={available} connected={connectedKeys} onConnectDispatchKind={openConnect} />
-          </div>
         ) : (
-          <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
-            {connected.map((integration) => (
-              <IntegrationRow key={integration.entry.key} integration={integration} projectSlug={projectSlug} />
-            ))}
-          </div>
+          <>
+            {connected.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <Text.H6M color="foregroundMuted">Connected</Text.H6M>
+                <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
+                  {connected.map((integration) => (
+                    <IntegrationRow key={integration.entry.key} integration={integration} projectSlug={projectSlug} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-3">
+              <Text.H6M color="foregroundMuted">{connected.length > 0 ? "Available" : "Get started"}</Text.H6M>
+              <AvailableIntegrations
+                available={available}
+                connected={connectedKeys}
+                onConnectDispatchKind={openConnect}
+              />
+            </div>
+          </>
         )}
       </div>
-
-      {catalogOpen ? (
-        <IntegrationCatalogModal
-          available={available}
-          connected={connectedKeys}
-          onConnectDispatchKind={openConnect}
-          onClose={() => setCatalogOpen(false)}
-        />
-      ) : null}
 
       {connectingKind ? (
         <ConnectAgentDispatchModal
