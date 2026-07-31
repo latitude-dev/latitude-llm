@@ -54,6 +54,41 @@ describe("email detector", () => {
     expect(detects("installed foo@1.2.beta", "email")).toBe(false)
   })
 
+  /**
+   * Asset naming conventions produce strings that satisfy every structural rule an address does. Only a
+   * two-label domain is rejected on its extension, because `mail@example.com.txt` above is a real address
+   * followed by one.
+   */
+  it.each([
+    "logo@2x.png",
+    "icon@3x.svg",
+    "bundle@main.tar",
+    "report@final.pdf",
+    "config@local.yaml",
+  ])("does not match the asset name %s", (value) => {
+    expect(detects(`open ${value} now`, "email")).toBe(false)
+  })
+
+  /**
+   * A local part the class cannot express is worse than a miss: the match starts partway in and stores the
+   * name it was meant to remove.
+   */
+  it.each([
+    ["Cliente María.García@empresa.es escribió", "María.García@empresa.es"],
+    ["Counsel O'Brien.Sean@law.example.com replied", "O'Brien.Sean@law.example.com"],
+    ["Müller.Hans@firma.de bestätigt", "Müller.Hans@firma.de"],
+  ])("matches the whole local part in %s", (text, expected) => {
+    expect(found(text, "email")).toEqual([expected])
+  })
+
+  it("does not take the opening quote of a single-quoted address", () => {
+    expect(found("email: 'user@example.com'", "email")).toEqual(["user@example.com"])
+  })
+
+  it("detects a percent-encoded address in a URL", () => {
+    expect(found("https://app.com/reset?email=sam%40corp.com&t=9", "email")).toEqual(["sam%40corp.com"])
+  })
+
   // Regression: an RFC-complete local-part class runs the match left through the whole URL or file path.
   it.each([
     ["https://api.example.com/v1/users/john@example.com", "john@example.com"],

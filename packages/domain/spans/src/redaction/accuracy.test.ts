@@ -182,18 +182,18 @@ const EMAIL_CASES: readonly PiiCase[] = [
   {
     id: "email-unicode-local",
     entity: "email",
-    outcome: "partial",
+    outcome: "redacted",
     text: "Cliente: María.García@empresa.es solicita la factura.",
     value: "María.García@empresa.es",
-    note: "the local-part class is ASCII only, so the match starts mid-name and stores María.Garcí",
+    note: "a non-ASCII local part must be matched whole, or the name it identifies is stored",
   },
   {
     id: "email-apostrophe-local",
     entity: "email",
-    outcome: "partial",
+    outcome: "redacted",
     text: "Counsel is O'Brien.Sean@law.firm on this matter.",
     value: "O'Brien.Sean@law.firm",
-    note: "the RFC-legal apostrophe is outside the local-part class, so O' survives",
+    note: "the apostrophe is RFC-legal and part of the local part",
   },
   {
     id: "email-ip-domain",
@@ -207,10 +207,10 @@ const EMAIL_CASES: readonly PiiCase[] = [
   {
     id: "email-percent-encoded",
     entity: "email",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Reset link: https://app.com/reset?email=sam%40corp.com&t=9",
     value: "sam%40corp.com",
-    note: "percent-encoded @, common in agent tool output",
+    note: "how a reset link carries an address, and how agent tool output usually holds one",
   },
   {
     id: "email-obfuscated-at",
@@ -979,13 +979,13 @@ const CLEAN_CASES: readonly CleanCase[] = [
   {
     id: "fp-retina-asset",
     text: "Use logo@2x.png for the header and icon@3x.svg for the tab.",
-    matched: ["logo@2x.png", "icon@3x.svg"],
-    note: "isEmail only requires a letter in the label before the TLD",
+    matched: [],
+    note: "rejected because a two-label domain whose TLD is a file extension is not a domain",
   },
   {
     id: "fp-build-tag",
     text: "Cache key resolved to v2@build.prod and artifact bundle@main.tar",
-    matched: ["v2@build.prod", "bundle@main.tar"],
+    matched: ["v2@build.prod"],
   },
   {
     id: "fp-metric-triplet",
@@ -1044,11 +1044,11 @@ describe("accuracy totals", () => {
   })
 
   it("pins how much PII is stored verbatim", () => {
-    expect(counted("missed")).toBe(18)
+    expect(counted("missed")).toBe(17)
   })
 
   it("pins how much PII is only partially removed", () => {
-    expect(counted("partial")).toBe(4)
+    expect(counted("partial")).toBe(2)
   })
 
   it("pins how many matches land under the wrong entity", () => {
@@ -1058,7 +1058,7 @@ describe("accuracy totals", () => {
   it("pins the accepted false positives", () => {
     const falsePositives = CLEAN_CASES.flatMap((entry) => entry.matched)
 
-    expect(falsePositives).toHaveLength(8)
+    expect(falsePositives).toHaveLength(5)
   })
 
   it("covers every entity in the enum", () => {

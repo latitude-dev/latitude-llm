@@ -34,23 +34,86 @@ interface Detector {
 // No nested quantifiers: span content is attacker controlled, so exponential backtracking here is a DoS vector.
 // Structural checks that would need nesting live in `validate` instead.
 
-// The local part excludes RFC-legal `/`, `=`, `?` and `&`: they precede addresses in URLs, so allowing them
-// runs the match left through the whole path.
-const EMAIL_PATTERN = /[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,24}/g
+/**
+ * The local part excludes RFC-legal `/`, `=`, `?` and `&`: they precede addresses in URLs, so allowing them
+ * runs the match left through the whole path.
+ *
+ * It does include non-ASCII letters and the apostrophe, without which the match starts mid-name and stores
+ * the name it was supposed to remove: `María.Garcí[REDACTED_EMAIL]`, `O'[REDACTED_SECRET]`.
+ *
+ * The first character may not be an apostrophe or a dot, so a single-quoted `'user@host.com'` in code or
+ * YAML is matched from the `u` rather than from the quote. It may still be `+`, which keeps
+ * `+14155552671@example.com` one email match rather than a phone match with a domain left beside it.
+ *
+ * Both halves are bounded to their RFC 5321 limits rather than left open. That is not cosmetic: `-` is in
+ * both classes, so an unbounded run over a long line of dashes backtracks one character at a time from
+ * every starting offset, which is quadratic in the length of the leaf. The backtracking canary caught it.
+ */
+const EMAIL_LOCAL_PART = String.raw`[\p{L}\p{N}_+-][\p{L}\p{N}._+'-]{0,63}`
+const EMAIL_DOMAIN = String.raw`[\p{L}\p{N}.-]{1,253}\.[A-Za-z]{2,24}`
+const EMAIL_PATTERN = new RegExp(String.raw`${EMAIL_LOCAL_PART}@${EMAIL_DOMAIN}`, "gu")
+
+/** A reset link carries the address percent-encoded, which is how agent tool output usually holds one. */
+const PERCENT_ENCODED_EMAIL_PATTERN = new RegExp(String.raw`${EMAIL_LOCAL_PART}%40${EMAIL_DOMAIN}`, "giu")
+
+/**
+ * File extensions that also parse as a TLD. `logo@2x.png` and `bundle@main.tar` satisfy every structural
+ * rule an address does, and asset naming conventions put them in real tool output.
+ *
+ * Only applied to a two-label domain: `/home/user/mail@example.com.txt` is a real address followed by an
+ * extension, and its domain has three labels.
+ */
+const FILE_EXTENSION_TLDS: ReadonlySet<string> = new Set([
+  "bak",
+  "csv",
+  "css",
+  "gif",
+  "gz",
+  "html",
+  "ini",
+  "jpeg",
+  "jpg",
+  "js",
+  "json",
+  "jsx",
+  "lock",
+  "log",
+  "md",
+  "pdf",
+  "png",
+  "py",
+  "sh",
+  "sql",
+  "svg",
+  "tar",
+  "toml",
+  "ts",
+  "tsx",
+  "txt",
+  "webp",
+  "xml",
+  "yaml",
+  "yml",
+  "zip",
+])
 
 // Requires a letter in the label before the TLD, which is what rejects the email-shaped `package@1.2.beta`.
 const isEmail = (value: string): boolean => {
-  const at = value.lastIndexOf("@")
-  const local = value.slice(0, at)
-  const domain = value.slice(at + 1)
+  const normalized = value.replace(/%40/gi, "@")
+  const at = normalized.lastIndexOf("@")
+  const local = normalized.slice(0, at)
+  const domain = normalized.slice(at + 1)
 
   if (local === "" || local.startsWith(".") || local.endsWith(".") || local.includes("..")) return false
   if (domain.startsWith(".") || domain.startsWith("-") || domain.includes("..")) return false
 
   const labels = domain.split(".")
   const labelBeforeTld = labels.at(-2)
+  if (labelBeforeTld === undefined || !/[A-Za-z]/.test(labelBeforeTld)) return false
 
-  return labelBeforeTld !== undefined && /[A-Za-z]/.test(labelBeforeTld)
+  const tld = labels.at(-1)?.toLowerCase()
+
+  return !(labels.length === 2 && tld !== undefined && FILE_EXTENSION_TLDS.has(tld))
 }
 
 const E164_PHONE_PATTERN = /(?<![\w+])\+[1-9]\d{7,14}(?!\d)/g
@@ -292,6 +355,7 @@ const ETHEREUM_PATTERN = /\b0x[a-fA-F0-9]{40}\b/g
 
 const DETECTORS: readonly Detector[] = [
   { entity: "email", pattern: EMAIL_PATTERN, validate: isEmail },
+  { entity: "email", pattern: PERCENT_ENCODED_EMAIL_PATTERN, validate: isEmail },
   { entity: "phone", pattern: E164_PHONE_PATTERN },
   { entity: "phone", pattern: INTL_PHONE_SPACED_PATTERN, validate: isSeparatedInternationalPhone },
   { entity: "phone", pattern: INTL_PHONE_DASHED_PATTERN, validate: isSeparatedInternationalPhone },
