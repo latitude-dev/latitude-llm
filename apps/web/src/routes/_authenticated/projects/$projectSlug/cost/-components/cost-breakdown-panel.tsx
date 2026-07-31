@@ -346,7 +346,7 @@ function BreakdownTable({
           </TableRow>
         </TableBody>
       </Table>
-      {hidden > 0 || showAll ? (
+      {breakdown.rows.length > BREAKDOWN_ROWS_SHOWN ? (
         <div className="flex flex-row items-center gap-2">
           <Button variant="link" size="sm" onClick={() => setShowAll(!showAll)}>
             {showAll ? `Show top ${BREAKDOWN_ROWS_SHOWN}` : `Show all ${formatCount(breakdown.rows.length)}`}

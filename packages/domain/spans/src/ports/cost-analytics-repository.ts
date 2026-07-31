@@ -132,10 +132,9 @@ export interface CostBreakdownRow extends CostBreakdownUsage {
 }
 
 /**
- * Calls a value needs before its cost per call may be shown as a multiple of the
+ * Minimum calls behind a cost-per-call figure before it may be compared to the
  * window average. Below this the ratio is a one-sample artefact: a single expensive
- * call reads as a `278x` finding, which is both the loudest figure on the panel and
- * the least true one.
+ * call reads as a `278x` finding, the loudest figure on the panel and the least true.
  */
 export const COST_PER_CALL_MIN_SAMPLE_CALLS = 20
 

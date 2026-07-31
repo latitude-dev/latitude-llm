@@ -68,7 +68,9 @@ export type {
   CostBreakdownTotals,
   CostBreakdownUsage,
   CostSeriesMetric,
+  ModelUsageBucket,
   ModelUsageMeasures,
+  ModelUsageSeries,
   ModelUsageSlice,
 } from "./ports/cost-analytics-repository.ts"
 export {
