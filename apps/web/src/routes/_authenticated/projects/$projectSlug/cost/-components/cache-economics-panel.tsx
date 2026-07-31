@@ -2,6 +2,7 @@ import { CACHE_ECONOMICS_MIN_CALLS, CACHE_MIN_CACHEABLE_INPUT_TOKENS, type Cache
 import type { BadgeProps } from "@repo/ui"
 import {
   Badge,
+  cn,
   DotIndicator,
   Table,
   TableBody,
@@ -71,6 +72,10 @@ function PositionBar({ row }: { readonly row: CacheModelRecord }) {
   const actual = row.actualRate
   const breakEven = row.breakEvenRate
   const clear = actual !== null && breakEven !== null && actual >= breakEven
+  // A rate we declined to judge must not be the loudest mark on its own row: a
+  // real quotient over three calls still reads as a finding when it is coloured
+  // like one.
+  const unjudged = row.state === "notEnoughData"
 
   return (
     <Tooltip
@@ -79,13 +84,13 @@ function PositionBar({ row }: { readonly row: CacheModelRecord }) {
         <div className="flex w-full cursor-default flex-row items-center gap-2">
           <div className="relative h-2.5 w-full overflow-hidden rounded-sm bg-muted">
             <div
-              className="h-full rounded-sm"
+              className={cn("h-full rounded-sm", { "bg-muted-foreground/40": unjudged })}
               style={{
                 width: `${Math.max(0, Math.min(100, (actual ?? 0) * 100))}%`,
-                backgroundColor: clear ? CALLS_SERIES_COLOR : TREND_COLOR,
+                ...(unjudged ? {} : { backgroundColor: clear ? CALLS_SERIES_COLOR : TREND_COLOR }),
               }}
             />
-            {breakEven === null ? null : (
+            {breakEven === null || unjudged ? null : (
               <div
                 className="absolute inset-y-0 w-0.5 bg-foreground"
                 style={{ left: `${Math.max(0, Math.min(100, breakEven * 100))}%` }}
