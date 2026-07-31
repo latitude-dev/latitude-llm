@@ -1,6 +1,6 @@
 import type { RedactionEntity } from "@domain/shared"
 
-const REDACTION_ENTITY_LABELS: Record<RedactionEntity, string> = {
+export const REDACTION_ENTITY_LABELS: Record<RedactionEntity, string> = {
   email: "EMAIL",
   phone: "PHONE",
   credit_card: "CREDIT_CARD",
@@ -11,7 +11,7 @@ const REDACTION_ENTITY_LABELS: Record<RedactionEntity, string> = {
 }
 
 /** Placeholders are visible in the UI on purpose: users must be able to see why content is missing. */
-export const redactionPlaceholder = (entity: RedactionEntity): string => `[REDACTED_${REDACTION_ENTITY_LABELS[entity]}]`
+export const redactionPlaceholder = (label: string): string => `[REDACTED_${label}]`
 
 export const OVERSIZED_FIELD_PLACEHOLDER = "[REDACTED_OVERSIZED_FIELD]"
 

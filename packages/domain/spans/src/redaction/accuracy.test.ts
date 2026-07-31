@@ -1,7 +1,8 @@
 import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { findRedactionMatches } from "./detectors.ts"
+import { REDACTION_ENTITY_LABELS } from "./labels.ts"
 import { resolveOverlaps } from "./redact-text.ts"
+import { compileRuleSet, findRedactionMatches } from "./rules.ts"
 
 /**
  * Measured accuracy of the deterministic detectors, asserted case by case.
@@ -18,7 +19,14 @@ import { resolveOverlaps } from "./redact-text.ts"
  * cardholder and exist to be used as fixtures.
  */
 
-const ALL_ENTITIES: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
+const ruleSetOf = (...entities: RedactionEntity[]) =>
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep" })
+
+const ALL_ENTITIES = ruleSetOf(...REDACTION_ENTITIES)
+
+/** The corpus labels cases by entity; the engine reports the placeholder label a match carries. */
+const entityOf = (label: string): RedactionEntity | undefined =>
+  REDACTION_ENTITIES.find((entity) => REDACTION_ENTITY_LABELS[entity] === label)
 
 /**
  * Every credential fixture here is fabricated, but it has to carry the real shape or it tests nothing — and
@@ -75,7 +83,9 @@ const observe = (text: string, value: string): Observation => {
   const hits = accepted.filter((match) => match.start < end && start < match.end)
   if (hits.length === 0) return { outcome: "missed", labels: [] }
 
-  const labels = [...new Set(hits.map((hit) => hit.entity))]
+  const labels = [...new Set(hits.map((hit) => entityOf(hit.label)))].filter(
+    (entity): entity is RedactionEntity => entity !== undefined,
+  )
   const fullyCovered = hits.some((hit) => hit.start <= start && hit.end >= end)
 
   return { outcome: fullyCovered ? "redacted" : "partial", labels }
@@ -1094,7 +1104,7 @@ describe("punctuation boundaries", () => {
       for (const [wrapper, wrap] of WRAPPERS) {
         const text = wrap(value)
         const start = text.indexOf(value)
-        const hits = findRedactionMatches(text, new Set([entity])).filter(
+        const hits = findRedactionMatches(text, ruleSetOf(entity)).filter(
           (match) => match.start <= start && match.end >= start + value.length,
         )
         if (hits.length === 0) out.push(`${subject} + ${wrapper}`)
@@ -1132,7 +1142,7 @@ describe("collision rates on synthetic identifiers", () => {
 
   const rate = (entity: RedactionEntity, seed: number, samples: number, generate: (random: () => number) => string) => {
     const random = mulberry32(seed)
-    const entities = new Set([entity])
+    const entities = ruleSetOf(entity)
     let hits = 0
     for (let index = 0; index < samples; index++) {
       if (findRedactionMatches(generate(random), entities).length > 0) hits += 1

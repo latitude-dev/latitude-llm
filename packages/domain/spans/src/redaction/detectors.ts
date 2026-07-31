@@ -1,12 +1,5 @@
 import type { RedactionEntity } from "@domain/shared"
 
-export interface RedactionMatch {
-  readonly start: number
-  readonly end: number
-  readonly entity: RedactionEntity
-  readonly rank: number
-}
-
 /** Breaks a tie at the same offset before extent does: a DSN password is also a valid email local part. */
 const SPECIFIC = 1
 
@@ -313,7 +306,7 @@ const isCredentialValue = (value: string): boolean => {
   return !(CODE_IDENTIFIER.test(value) && !/\d/.test(value))
 }
 
-const DETECTORS: readonly Detector[] = [
+export const BUILT_IN_DETECTORS: readonly Detector[] = [
   { entity: "email", pattern: EMAIL_PATTERN, validate: isEmail },
   { entity: "email", pattern: PERCENT_ENCODED_EMAIL_PATTERN, validate: isEmail },
   { entity: "phone", pattern: E164_PHONE_PATTERN },
@@ -351,45 +344,3 @@ const DETECTORS: readonly Detector[] = [
   { entity: "secret", pattern: CREDENTIAL_FLAG_PATTERN, validate: isCredentialValue, group: 1 },
   { entity: "secret", pattern: BEARER_TOKEN_PATTERN, validate: isCredentialValue, group: 1 },
 ]
-
-const spanOf = (
-  match: RegExpExecArray,
-  group: number | undefined,
-): { start: number; end: number; value: string } | undefined => {
-  if (group === undefined) {
-    const value = match[0]
-    if (match.index === undefined || value === "") return undefined
-
-    return { start: match.index, end: match.index + value.length, value }
-  }
-
-  const offsets = match.indices?.[group]
-  const value = match[group]
-  if (offsets === undefined || value === undefined || value === "") return undefined
-
-  return { start: offsets[0], end: offsets[1], value }
-}
-
-/** Unsorted and possibly overlapping; the caller resolves overlaps so counting and replacement share one accepted set. */
-export function findRedactionMatches(text: string, entities: ReadonlySet<RedactionEntity>): RedactionMatch[] {
-  const matches: RedactionMatch[] = []
-
-  for (const detector of DETECTORS) {
-    if (!entities.has(detector.entity)) continue
-
-    for (const match of text.matchAll(detector.pattern)) {
-      const span = spanOf(match, detector.group)
-      if (span === undefined) continue
-      if (detector.validate && !detector.validate(span.value)) continue
-
-      matches.push({
-        start: span.start,
-        end: span.end,
-        entity: detector.entity,
-        rank: detector.rank ?? 0,
-      })
-    }
-  }
-
-  return matches
-}

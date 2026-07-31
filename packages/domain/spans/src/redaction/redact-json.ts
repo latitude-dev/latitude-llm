@@ -1,6 +1,6 @@
-import type { RedactionEntity } from "@domain/shared"
 import { OVERSIZED_FIELD_PLACEHOLDER, REDACTION_MAX_DEPTH } from "./labels.ts"
 import { mergeRedactionCounts, type RedactionCounts, redactLeaf, redactWholeValue } from "./redact-text.ts"
+import type { CompiledRuleSet } from "./rules.ts"
 
 interface JsonRedactionResult<T> {
   readonly value: T
@@ -51,23 +51,23 @@ const isSkippedPart = (value: Record<string, unknown>): boolean =>
  * Array length and order, object keys, and non-string leaves are all preserved; only strings change.
  * Every string leaf is scanned whatever its key, since customer JSON stores content under names like `id`.
  */
-export function redactJsonValue<T>(value: T, entities: ReadonlySet<RedactionEntity>): JsonRedactionResult<T> {
+export function redactJsonValue<T>(value: T, ruleSet: CompiledRuleSet): JsonRedactionResult<T> {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
-  const walked = walk(value, entities, counts, scan, 0)
+  const walked = walk(value, ruleSet, counts, scan, 0)
 
   return { value: walked as T, counts, scan }
 }
 
 function walk(
   value: unknown,
-  entities: ReadonlySet<RedactionEntity>,
+  ruleSet: CompiledRuleSet,
   counts: RedactionCounts,
   scan: ScanTally,
   depth: number,
 ): unknown {
   if (typeof value === "string") {
-    const outcome = redactLeaf(value, entities)
+    const outcome = redactLeaf(value, ruleSet)
     mergeRedactionCounts(counts, outcome.counts)
     scan.leaves += 1
     scan.chars += outcome.scannedChars
@@ -90,7 +90,7 @@ function walk(
   if (Array.isArray(value)) {
     let changed = false
     const next = value.map((item) => {
-      const walkedItem = walk(item, entities, counts, scan, depth + 1)
+      const walkedItem = walk(item, ruleSet, counts, scan, depth + 1)
       if (walkedItem !== item) changed = true
       return walkedItem
     })
@@ -104,7 +104,7 @@ function walk(
     let changed = false
     const next: Record<string, unknown> = {}
     for (const [key, entry] of Object.entries(value)) {
-      const walkedEntry = walk(entry, entities, counts, scan, depth + 1)
+      const walkedEntry = walk(entry, ruleSet, counts, scan, depth + 1)
       if (walkedEntry !== entry) changed = true
       next[key] = walkedEntry
     }
@@ -116,12 +116,12 @@ function walk(
 }
 
 /** A bare scalar is treated as text rather than re-serialized, which would rewrite `"hi"` as `"\"hi\""`. */
-export function redactJsonString(value: string, entities: ReadonlySet<RedactionEntity>): JsonRedactionResult<string> {
-  if (value === "" || entities.size === 0) return { value, counts: {}, scan: emptyScanTally() }
+export function redactJsonString(value: string, ruleSet: CompiledRuleSet): JsonRedactionResult<string> {
+  if (value === "" || ruleSet.rules.length === 0) return { value, counts: {}, scan: emptyScanTally() }
 
   const parsed = tryParseJsonContainer(value)
   if (parsed === undefined) {
-    const outcome = redactLeaf(value, entities)
+    const outcome = redactLeaf(value, ruleSet)
 
     return {
       value: outcome.text,
@@ -130,7 +130,7 @@ export function redactJsonString(value: string, entities: ReadonlySet<RedactionE
     }
   }
 
-  const walked = redactJsonValue(parsed, entities)
+  const walked = redactJsonValue(parsed, ruleSet)
   // The walk returns the same reference when no leaf changed, so the original bytes survive an unmatched scan.
   if (walked.value === parsed) return { value, counts: walked.counts, scan: walked.scan }
 
@@ -152,14 +152,14 @@ const tryParseJsonContainer = (value: string): unknown => {
 // `redactJsonString`, not `redactLeaf`: these values duplicate the typed columns and must get the identical walk.
 export function redactStringMap(
   map: Readonly<Record<string, string>>,
-  entities: ReadonlySet<RedactionEntity>,
+  ruleSet: CompiledRuleSet,
 ): JsonRedactionResult<Record<string, string>> {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
   const next: Record<string, string> = {}
 
   for (const [key, value] of Object.entries(map)) {
-    const outcome = redactJsonString(value, entities)
+    const outcome = redactJsonString(value, ruleSet)
     mergeRedactionCounts(counts, outcome.counts)
     mergeScanTally(scan, outcome.scan)
     next[key] = outcome.value
@@ -179,7 +179,7 @@ export interface NumberMapRedactionResult<T> {
 // Only `credit_card` is reachable on a bare number; every other entity needs a separator, sigil, or letter.
 export function redactNumberMap<T extends number>(
   map: Readonly<Record<string, T>>,
-  entities: ReadonlySet<RedactionEntity>,
+  ruleSet: CompiledRuleSet,
 ): NumberMapRedactionResult<T> {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
@@ -191,7 +191,7 @@ export function redactNumberMap<T extends number>(
     scan.leaves += 1
     scan.chars += text.length
 
-    const outcome = redactWholeValue(text, entities)
+    const outcome = redactWholeValue(text, ruleSet)
     if (outcome === null) {
       kept[key] = value
       continue

@@ -282,7 +282,7 @@ describe("redactSpans", () => {
       pseudonymSecret: undefined,
     })
 
-    expect(result.summary.counts).toEqual({ email: 2, phone: 1 })
+    expect(result.summary.counts).toEqual({ EMAIL: 2, PHONE: 1 })
   })
 })
 
