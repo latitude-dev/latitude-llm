@@ -124,7 +124,10 @@ export function ModelUsagePanel({
   const buckets = series?.buckets ?? []
   const usageSeries = series ? buildUsageSeries({ series, measure }) : []
   const isEmpty = usageSeries.every((entry) => entry.values.every((value) => value === 0))
-  const visible = isolated === null ? usageSeries : usageSeries.filter((entry) => entry.name === isolated)
+  // Falls back rather than resetting state: a model isolated before a range change
+  // may not survive the re-ranking, and filtering to a name that is gone draws nothing.
+  const isolatedSeries = isolated === null ? [] : usageSeries.filter((entry) => entry.name === isolated)
+  const visible = isolatedSeries.length > 0 ? isolatedSeries : usageSeries
   const chartSeries: readonly ChartSeries[] = visible.map((entry) => ({
     kind: "line" as const,
     name: entry.name,
@@ -173,7 +176,11 @@ export function ModelUsagePanel({
         </div>
       ) : (
         <div className="flex flex-col gap-2 px-4 py-3">
-          <UsageLegend series={usageSeries} isolated={isolated} onIsolate={setIsolated} />
+          <UsageLegend
+            series={usageSeries}
+            isolated={isolatedSeries.length > 0 ? isolated : null}
+            onIsolate={setIsolated}
+          />
           <Chart
             categories={buckets.map((bucket) => formatUtcBucketLabel(bucket.bucketStartIso, bucketSeconds))}
             series={chartSeries}
