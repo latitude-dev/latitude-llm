@@ -11,8 +11,8 @@ interface TextRedactionResult {
 
 /**
  * Leftmost, then most specific, then longest. Detectors overlap (an Anthropic key matches the generic
- * `sk-` form too), so one winner per region. Rank comes before extent so a detector that identified what
- * it matched beats one that happened to cover more characters of it.
+ * `sk-` form too), so one winner per region. Rank precedes extent so a detector that identified what it
+ * matched beats one that merely covered more of it.
  */
 export function resolveOverlaps(matches: readonly RedactionMatch[]): RedactionMatch[] {
   const ordered = [...matches].sort((a, b) => a.start - b.start || b.rank - a.rank || b.end - a.end)

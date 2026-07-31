@@ -8,12 +8,7 @@ export interface RedactionMatch {
   readonly rank: number
 }
 
-/**
- * Rank breaks a tie at the same offset before extent does, so a detector that knows what it is looking at
- * wins over one that merely matched the same characters. The case that forced it: a DSN password is also
- * a valid email local part, so `postgres://user:pass@db.internal` matched the email detector over a wider
- * span and a password was stored as `[REDACTED_EMAIL]`.
- */
+/** Breaks a tie at the same offset before extent does: a DSN password is also a valid email local part. */
 const SPECIFIC = 1
 
 interface Detector {
@@ -21,14 +16,7 @@ interface Detector {
   readonly pattern: RegExp
   readonly validate?: (value: string) => boolean
   readonly rank?: number
-  /**
-   * Redact this capture group rather than the whole match, for a pattern that needs surrounding context to
-   * recognise a value but must not remove that context. Requires the `d` flag so group offsets are exposed.
-   *
-   * A lookbehind would express the same thing, but it is evaluated at every position in the leaf, whereas a
-   * pattern that opens with literal alternatives lets the engine skip ahead. On a 32 KB leaf that is the
-   * difference between a scan we can afford on the ingest path and one we cannot.
-   */
+  /** Redact this group, not the whole match, for a pattern needing context it must not remove. Needs the `d` flag. */
   readonly group?: number
 }
 
@@ -36,19 +24,12 @@ interface Detector {
 // Structural checks that would need nesting live in `validate` instead.
 
 /**
- * The local part excludes RFC-legal `/`, `=`, `?` and `&`: they precede addresses in URLs, so allowing them
- * runs the match left through the whole path.
+ * Excludes RFC-legal `/`, `=`, `?` and `&`: they precede addresses in URLs, so the match runs left
+ * through the whole path. The leading character may be `+` but not `'`, which keeps
+ * `+14155552671@example.com` one email match and starts `'user@host.com'` after the quote.
  *
- * It does include non-ASCII letters and the apostrophe, without which the match starts mid-name and stores
- * the name it was supposed to remove: `María.Garcí[REDACTED_EMAIL]`, `O'[REDACTED_SECRET]`.
- *
- * The first character may not be an apostrophe or a dot, so a single-quoted `'user@host.com'` in code or
- * YAML is matched from the `u` rather than from the quote. It may still be `+`, which keeps
- * `+14155552671@example.com` one email match rather than a phone match with a domain left beside it.
- *
- * Both halves are bounded to their RFC 5321 limits rather than left open. That is not cosmetic: `-` is in
- * both classes, so an unbounded run over a long line of dashes backtracks one character at a time from
- * every starting offset, which is quadratic in the length of the leaf. The backtracking canary caught it.
+ * The `{0,63}` and `{1,253}` bounds are load-bearing, not documentation: `-` is in both classes, so an
+ * unbounded run over a line of dashes backtracks a character at a time from every offset, quadratically.
  */
 const EMAIL_LOCAL_PART = String.raw`[\p{L}\p{N}_+-][\p{L}\p{N}._+'-]{0,63}`
 const EMAIL_DOMAIN = String.raw`[\p{L}\p{N}.-]{1,253}\.[A-Za-z]{2,24}`
@@ -57,13 +38,8 @@ const EMAIL_PATTERN = new RegExp(String.raw`${EMAIL_LOCAL_PART}@${EMAIL_DOMAIN}`
 /** A reset link carries the address percent-encoded, which is how agent tool output usually holds one. */
 const PERCENT_ENCODED_EMAIL_PATTERN = new RegExp(String.raw`${EMAIL_LOCAL_PART}%40${EMAIL_DOMAIN}`, "giu")
 
-/**
- * File extensions that also parse as a TLD. `logo@2x.png` and `bundle@main.tar` satisfy every structural
- * rule an address does, and asset naming conventions put them in real tool output.
- *
- * Only applied to a two-label domain: `/home/user/mail@example.com.txt` is a real address followed by an
- * extension, and its domain has three labels.
- */
+// Asset names satisfy every structural rule an address does. Two-label domains only: `mail@example.com.txt`
+// is a real address followed by an extension.
 const FILE_EXTENSION_TLDS: ReadonlySet<string> = new Set([
   "bak",
   "csv",
@@ -120,26 +96,18 @@ const isEmail = (value: string): boolean => {
 const E164_PHONE_PATTERN = /(?<![\w+])\+[1-9]\d{7,14}(?!\d)/g
 
 /**
- * International numbers written with separators, which is how people actually write them. One pattern per
- * separator so a match cannot bridge two numbers formatted differently, exactly as the card and IBAN
- * detectors do.
- *
- * `[1-9]` because no country calling code starts with zero, which is what stops `+0 123 4567` matching.
- *
- * Four groups, not three: `+46 70 123 45 67` has five in total, and capping at three matched only its
- * first four components and left the last two digits in the span.
+ * One pattern per separator so a match cannot bridge two numbers formatted differently, as with cards.
+ * No country calling code starts with zero. Four groups is the minimum that covers `+46 70 123 45 67`
+ * whole; fewer leaves its last group in the span.
  */
 const INTL_PHONE_SPACED_PATTERN = /(?<![\w+])\+[1-9]\d{0,2}(?: \d{1,5}){1,4}(?!\d)/g
 const INTL_PHONE_DASHED_PATTERN = /(?<![\w+])\+[1-9]\d{0,2}(?:-\d{1,5}){1,4}(?!\d)/g
 const INTL_PHONE_DOTTED_PATTERN = /(?<![\w+])\+[1-9]\d{0,2}(?:\.\d{1,5}){1,4}(?!\d)/g
 
 /**
- * E.164 allows 15 digits; this accepts 20 on purpose.
- *
- * The group repetition is greedy, so a number followed by a numeric list runs past its own end:
- * `+44 20 7183 8750 4471` matches 16 digits. Rejecting at 16 would discard the match and store the phone
- * number verbatim, because the regex has already committed and a validator cannot shorten it. Accepting
- * it over-redacts the adjacent number instead, which is the direction we want to fail in.
+ * 20, not E.164's 15, on purpose. The group repetition is greedy, so a number followed by a numeric list
+ * overruns its own end; a validator cannot shorten a committed match, so rejecting at 16 would discard the
+ * phone number entirely rather than over-redact the digits beside it.
  */
 const isSeparatedInternationalPhone = (value: string): boolean => {
   const digits = digitsOf(value).length
@@ -148,14 +116,9 @@ const isSeparatedInternationalPhone = (value: string): boolean => {
 }
 
 /**
- * Separated NANP forms only: a bare ten-digit run is indistinguishable from the numeric ids in tool output.
- *
- * Area and exchange codes are `[2-9]\d\d` in the NANP, which is the whole reason this shape is usable at
- * all. Without it the pattern is "three numbers of length 3, 3 and 4", and it matched row counts
- * (`100 200 3000`) and grid offsets (`123 456 7890`) in tool output.
- *
- * The optional leading `1` is the North American trunk code, so `1-415-555-2671` is matched whole rather
- * than from the area code onwards.
+ * Separated forms only: a bare ten-digit run is indistinguishable from the numeric ids in tool output.
+ * Area and exchange codes both being `[2-9]\d\d` is what separates this shape from three ordinary
+ * numbers. The optional leading `1` is the trunk code, so `1-415-555-2671` matches whole.
  */
 const NANP_PHONE_PATTERN =
   /(?<![\w.-])(?:1[-. ])?(?:\([2-9]\d{2}\) ?|[2-9]\d{2}[-. ])[2-9]\d{2}[-. ]\d{4}(?!\d)(?![.-]\d)/g
@@ -172,11 +135,9 @@ const NANP_PHONE_PATTERN =
  * an open-ended repetition reintroduces the same bridging: it would swallow a trailing
  * group, overrun 19 digits, and fail the length gate with the card inside it.
  *
- * The trailing guard rejects a dot only when a digit follows it, so it keeps the detector
- * out of `3.14159265358979` without also rejecting a card at the end of a sentence. The
- * shorter `(?![\d.])` looks equivalent and is not: it drops every card written as
- * `4111111111111111.`, and backtracking cannot recover one because each shorter run of
- * digits is then followed by a digit.
+ * The trailing guard rejects a dot only when a digit follows. The shorter `(?![\d.])` looks
+ * equivalent and is not: it drops every card written as `4111111111111111.`, and backtracking
+ * cannot recover one because each shorter run of digits is then followed by a digit.
  */
 const CREDIT_CARD_COMPACT_PATTERN = /(?<![\d.])\d{13,19}(?!\d)(?!\.\d)/g
 /** 4-4-4-N covers 13 to 16 digits: Visa, Mastercard, Discover, JCB. */
@@ -238,13 +199,9 @@ const isCreditCard = (value: string): boolean => {
 }
 
 /**
- * One pattern per separator, not one with optional spaces: a permissive pattern matches greedily past a
- * space and, because the checksum runs after matching, the failed long match discards the real IBAN
- * instead of backtracking.
- *
- * Case-insensitive because customers paste lowercase. The mod-97 checksum is what keeps that affordable:
- * it rejects 96 of every 97 candidates, and lowercase alphanumeric runs are far more common in tool output
- * than uppercase ones.
+ * One pattern per separator: a permissive one matches greedily past a space and, because the checksum runs
+ * after matching, the failed long match discards the real IBAN instead of backtracking. Case-insensitive is
+ * only affordable because mod-97 rejects 96 of every 97 candidates.
  */
 const IBAN_COMPACT_PATTERN = /(?<![A-Za-z0-9])[A-Z]{2}\d{2}[A-Z0-9]{11,30}(?![A-Za-z0-9])/gi
 const IBAN_GROUPED_PATTERN = /(?<![A-Za-z0-9])[A-Z]{2}\d{2}(?: [A-Z0-9]{4}){2,7}(?: [A-Z0-9]{1,4})?(?![A-Za-z0-9])/gi
@@ -271,20 +228,11 @@ const isIban = (value: string): boolean => {
   return remainder === 1
 }
 
-/**
- * Dots join the separators a form gets typed with. The 3-2-4 digit shape plus the reserved-range
- * exclusions are what keep that away from dotted quads and version strings.
- *
- * The boundary guards reject a digit, or a separator followed by a digit, so a trailing period or an
- * adjacent word survives while `1234-56-7890` and a longer dotted number still do not match.
- */
+// The 3-2-4 shape plus the reserved-range exclusions are what keep the dot separator away from dotted
+// quads. The boundary guards reject a digit, or a separator then a digit, so `1234-56-7890` still cannot match.
 const US_SSN_PATTERN = /(?<!\d)(?<![.-]\d)(?!000|666)\d{3}[-. ](?!00)\d{2}[-. ](?!0000)\d{4}(?!\d)(?![.-]\d)/g
 
-/**
- * No SSN has a 9xx area, but every ITIN does, and an ITIN identifies a taxpayer just as well. Excluding
- * the whole 9xx range dropped them all, so the group is checked against the ranges the IRS assigns
- * instead: 70-88, 90-92, 94-99.
- */
+// No SSN has a 9xx area but every ITIN does, so the group is checked against the IRS-assigned ranges.
 const isUsTaxId = (value: string): boolean => {
   const digits = digitsOf(value)
   if (digits[0] !== "9") return true
@@ -302,13 +250,12 @@ const IPV6_COMPRESSED_PATTERN =
 /** `::1` and `::ffff:…` compress from the left, so there is no group before the `::` to anchor on. */
 const IPV6_LEADING_COMPRESSED_PATTERN = /(?<![\w:.])::(?:[A-Fa-f0-9]{1,4}:){0,6}[A-Fa-f0-9]{1,4}(?![\w:.])/g
 
-// Variable-length token forms also require credential length and character mix, because `sk-` CSS class names are common.
+// Length and character mix, because `sk-` CSS class names and slugs are common.
 const looksLikeLongToken = (value: string): boolean => {
   const tail = value.slice(value.indexOf("-") + 1)
   if (tail.length < 32 || !/\d/.test(tail)) return false
 
-  // A hyphenated all-lowercase tail is a slug, not a key: `sk-learn-tutorial-notebook-v2-final` clears
-  // the length and digit gates on its own. Real keys are base62 and mix case, or carry no hyphens at all.
+  // A hyphenated all-lowercase tail is a slug: real keys are base62 and mix case, or carry no hyphens.
   return /[A-Z]/.test(tail) || !tail.includes("-")
 }
 
@@ -323,41 +270,24 @@ const GOOGLE_API_KEY_PATTERN = /\bAIza[0-9A-Za-z_-]{35}\b/g
 const STRIPE_KEY_PATTERN = /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g
 
-/**
- * The remaining vendor prefixes, in one alternation rather than one detector each: every detector is a
- * separate pass over every string leaf, and the ingest path scans on the hot path.
- */
+// One alternation rather than a detector each: every detector is another pass over every string leaf.
 const VENDOR_TOKEN_PATTERN =
   /\b(?:hf_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{24,}|ya29\.[A-Za-z0-9_-]{20,}|SG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,})/g
 
 // The path segments are the credential: anyone holding the URL can post to the channel.
 const SLACK_WEBHOOK_PATTERN = /https:\/\/hooks\.slack\.com\/services\/T[A-Za-z0-9]+\/B[A-Za-z0-9]+\/[A-Za-z0-9]+/g
 
-/**
- * The password in a `scheme://user:password@host` connection string, matched on its own so the host and
- * database name stay readable in a stack trace. A lookbehind rather than a full-URL match keeps the
- * placeholder over the credential and nothing else.
- *
- * A percent-encoded `@` is required in a well-formed URL, which is why the password may not contain one.
- */
+// Matched on its own so the host and database stay readable. A well-formed URL percent-encodes an `@` in
+// its password, which is why the value may not contain one.
 const DSN_CREDENTIAL_PATTERN = /(?<=[a-z][a-z0-9+.-]{1,20}:\/\/[^\s:@/]{1,64}:)[^\s@/]{3,128}(?=@)/g
 const PEM_PRIVATE_KEY_PATTERN =
   /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----/g
 
 /**
- * Credentials with no distinctive shape, recognised from the key they are assigned to. This is not the
- * generic-entropy heuristic the spec rules out: nothing here looks at how random a value is, only at what
- * it was named, which is why it can stay precise without guessing.
- *
- * Deliberate omissions, each an observed false positive:
- *
- * - A bare `key`. `idempotency_key`, `partition_key`, `cache_key` and `sort_key` are all over tool output,
- *   so only a qualified key (`api_key`, `private_key`, `access_key`, …) counts.
- * - Plural `tokens`. `max_tokens`, `prompt_tokens` and `total_tokens` appear in nearly every LLM span.
- *   Credential keys are singular; usage counters are plural.
- *
- * The separator is `[ \t]*` rather than `\s*` so a match cannot cross a newline and pick up the next line
- * of a YAML block as the value.
+ * Two omissions are deliberate and must stay out: a bare `key`, because `idempotency_key`, `cache_key` and
+ * `sort_key` fill tool output, and plural `tokens`, because `max_tokens` and `total_tokens` are in nearly
+ * every LLM span. The separator is `[ \t]*` rather than `\s*` so a match cannot cross a newline and take
+ * the next line of a YAML block as its value.
  */
 const CREDENTIAL_KEY =
   /(?:passwords?|passwd|pwd|secret[_-]?access[_-]?key|client[_-]?secret|secrets?|(?:api|private|access|auth|client|encryption|signing)[_-]?keys?|apikey|(?:access|auth|refresh|bearer|id)[_-]?token|token|credentials?)/
@@ -369,12 +299,7 @@ const CREDENTIAL_FLAG_PATTERN = /--(?:token|password|secret|api-?key)[= ]([^\s"'
 // Case-insensitive: RFC 7235 auth scheme names are, so `bearer` and `BEARER` are both valid on the wire.
 const BEARER_TOKEN_PATTERN = /\b(?:Bearer|Token) ([A-Za-z0-9._~+/=-]{16,})/dgi
 
-/**
- * A placeholder, a variable reference, or a name for the credential rather than the credential.
- *
- * `[` also covers our own output, which keeps redaction idempotent: `password=[REDACTED_SECRET]` must not
- * match again.
- */
+// A placeholder or a variable reference. `[` also covers our own output, keeping redaction idempotent.
 const CREDENTIAL_PLACEHOLDER =
   /^(?:[$<{%[(*]|null$|undefined$|none$|nil$|true$|false$|\*+$|x+$|changeme$|redacted$|required$)/i
 const CODE_IDENTIFIER = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/
@@ -421,11 +346,8 @@ const decodeBase58 = (value: string): Uint8Array | undefined => {
   return new Uint8Array(bytes.reverse())
 }
 
-/**
- * The last four bytes of a base58 Bitcoin address are the first four of the double SHA-256 of the rest.
- * Without checking them the detector is a pure shape match, and every base58-shaped opaque id starting with
- * `1` or `3` was redacted: measured at 100% of a synthetic sample.
- */
+// The last four bytes are the first four of the double SHA-256 of the rest. Without the check the detector
+// is a pure shape match and every base58-shaped opaque id starting with `1` or `3` matches.
 const isBitcoinBase58Address = (value: string): boolean => {
   const decoded = decodeBase58(value)
   if (decoded === undefined || decoded.length !== 25) return false
