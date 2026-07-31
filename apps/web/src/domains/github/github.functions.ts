@@ -74,6 +74,7 @@ const toRecord = (integration: GithubIntegration, baseUrl: string | null): Githu
 
 export const GITHUB_INTEGRATION_QUERY_KEY = ["github-integration"] as const
 export const GITHUB_REPOS_QUERY_KEY = ["github-integration", "repos"] as const
+export const GITHUB_ORG_DEFAULTS_QUERY_KEY = ["github-integration", "org-defaults"] as const
 
 export const isGithubIntegrationConfigured = createServerFn({ method: "GET" }).handler(async (): Promise<boolean> => {
   await requireSession()
@@ -144,6 +145,8 @@ export interface GithubDefaultRepoRecord {
 interface GithubOrgDefaultsRecord {
   readonly integrationId: string
   readonly settings: GithubMonitorSettings
+  /** How many projects replace this behavior default — the "N override it" count. */
+  readonly overrideCount: number
   /** Org-default repo/branch inherited by projects with no binding of their own (D16); null when unset. */
   readonly defaultRepo: GithubDefaultRepoRecord | null
 }
@@ -251,10 +254,12 @@ export const getGithubOrgDefaults = createServerFn({ method: "GET" }).handler(
         if (!integration) return null
         const orgDefault = yield* syncRepo.findDefaultByIntegration(integration.id)
         if (!orgDefault) return null
+        const projectConfigs = yield* syncRepo.listProjectConfigs(integration.id)
         return {
           integrationId: integration.id,
           settings: settingsFromRow(orgDefault),
           defaultRepo: toDefaultRepo(orgDefault),
+          overrideCount: projectConfigs.filter(hasBehaviorOverride).length,
         }
       }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
@@ -275,6 +280,7 @@ export const updateGithubOrgDefaults = createServerFn({ method: "POST" })
     return Effect.runPromise(
       Effect.gen(function* () {
         const integrationRepo = yield* GithubIntegrationRepository
+        const syncRepo = yield* GithubSyncConfigRepository
         const integration = yield* integrationRepo.findActiveByOrganizationId()
         if (!integration) return yield* Effect.fail(new GithubIntegrationNotFoundError({ reason: "not_connected" }))
         const row = yield* updateGithubOrgDefaultsUseCase({
@@ -284,7 +290,13 @@ export const updateGithubOrgDefaults = createServerFn({ method: "POST" })
           defaultRepo: defaultRepoId === null ? null : { repoId: defaultRepoId, branch: defaultBranch ?? "" },
           allowedRepos,
         })
-        return { integrationId: integration.id, settings: settingsFromRow(row), defaultRepo: toDefaultRepo(row) }
+        const projectConfigs = yield* syncRepo.listProjectConfigs(integration.id)
+        return {
+          integrationId: integration.id,
+          settings: settingsFromRow(row),
+          defaultRepo: toDefaultRepo(row),
+          overrideCount: projectConfigs.filter(hasBehaviorOverride).length,
+        }
       }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
   })

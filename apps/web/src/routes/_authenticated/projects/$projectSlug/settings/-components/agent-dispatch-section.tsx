@@ -493,7 +493,7 @@ function DispatchBehaviorSection({
 }
 
 /** Editing the organization default from a project page, so an org-wide write interrupts. */
-function OrganizationDispatchModal({
+export function OrganizationDispatchModal({
   kind,
   integrationId,
   vendorAccountId,

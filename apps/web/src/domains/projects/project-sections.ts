@@ -18,6 +18,7 @@ import {
   SettingsIcon,
   Share2Icon,
   ShieldAlertIcon,
+  SlidersHorizontalIcon,
   TagsIcon,
   UserRound,
   Users,
@@ -224,6 +225,12 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         label: "Billing",
         icon: CreditCard,
         path: (slug) => `/projects/${slug}/settings/billing`,
+      },
+      {
+        key: "defaults",
+        label: "Defaults",
+        icon: SlidersHorizontalIcon,
+        path: (slug) => `/projects/${slug}/settings/defaults`,
       },
       {
         key: "sso",

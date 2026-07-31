@@ -78,6 +78,7 @@ import { Route as AuthenticatedProjectsProjectSlugSettingsMembersRouteImport } f
 import { Route as AuthenticatedProjectsProjectSlugSettingsKeysRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/keys'
 import { Route as AuthenticatedProjectsProjectSlugSettingsGeneralRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/general'
 import { Route as AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/flaggers'
+import { Route as AuthenticatedProjectsProjectSlugSettingsDefaultsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/defaults'
 import { Route as AuthenticatedProjectsProjectSlugSettingsBillingRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/billing'
 import { Route as AuthenticatedProjectsProjectSlugSettingsAccountRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/account'
 import { Route as AuthenticatedProjectsProjectSlugMonitorsSignalsRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/signals'
@@ -491,6 +492,12 @@ const AuthenticatedProjectsProjectSlugSettingsFlaggersRoute =
     path: '/flaggers',
     getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugSettingsDefaultsRoute =
+  AuthenticatedProjectsProjectSlugSettingsDefaultsRouteImport.update({
+    id: '/defaults',
+    path: '/defaults',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSettingsBillingRoute =
   AuthenticatedProjectsProjectSlugSettingsBillingRouteImport.update({
     id: '/billing',
@@ -703,6 +710,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
   '/projects/$projectSlug/settings/account': typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   '/projects/$projectSlug/settings/billing': typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
+  '/projects/$projectSlug/settings/defaults': typeof AuthenticatedProjectsProjectSlugSettingsDefaultsRoute
   '/projects/$projectSlug/settings/flaggers': typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRoute
   '/projects/$projectSlug/settings/general': typeof AuthenticatedProjectsProjectSlugSettingsGeneralRoute
   '/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
@@ -792,6 +800,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
   '/projects/$projectSlug/settings/account': typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   '/projects/$projectSlug/settings/billing': typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
+  '/projects/$projectSlug/settings/defaults': typeof AuthenticatedProjectsProjectSlugSettingsDefaultsRoute
   '/projects/$projectSlug/settings/flaggers': typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRoute
   '/projects/$projectSlug/settings/general': typeof AuthenticatedProjectsProjectSlugSettingsGeneralRoute
   '/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
@@ -887,6 +896,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/monitors/signals': typeof AuthenticatedProjectsProjectSlugMonitorsSignalsRoute
   '/_authenticated/projects/$projectSlug/settings/account': typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   '/_authenticated/projects/$projectSlug/settings/billing': typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
+  '/_authenticated/projects/$projectSlug/settings/defaults': typeof AuthenticatedProjectsProjectSlugSettingsDefaultsRoute
   '/_authenticated/projects/$projectSlug/settings/flaggers': typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRoute
   '/_authenticated/projects/$projectSlug/settings/general': typeof AuthenticatedProjectsProjectSlugSettingsGeneralRoute
   '/_authenticated/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
@@ -982,6 +992,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/monitors/signals'
     | '/projects/$projectSlug/settings/account'
     | '/projects/$projectSlug/settings/billing'
+    | '/projects/$projectSlug/settings/defaults'
     | '/projects/$projectSlug/settings/flaggers'
     | '/projects/$projectSlug/settings/general'
     | '/projects/$projectSlug/settings/keys'
@@ -1071,6 +1082,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/monitors/signals'
     | '/projects/$projectSlug/settings/account'
     | '/projects/$projectSlug/settings/billing'
+    | '/projects/$projectSlug/settings/defaults'
     | '/projects/$projectSlug/settings/flaggers'
     | '/projects/$projectSlug/settings/general'
     | '/projects/$projectSlug/settings/keys'
@@ -1165,6 +1177,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/monitors/signals'
     | '/_authenticated/projects/$projectSlug/settings/account'
     | '/_authenticated/projects/$projectSlug/settings/billing'
+    | '/_authenticated/projects/$projectSlug/settings/defaults'
     | '/_authenticated/projects/$projectSlug/settings/flaggers'
     | '/_authenticated/projects/$projectSlug/settings/general'
     | '/_authenticated/projects/$projectSlug/settings/keys'
@@ -1718,6 +1731,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
+    '/_authenticated/projects/$projectSlug/settings/defaults': {
+      id: '/_authenticated/projects/$projectSlug/settings/defaults'
+      path: '/defaults'
+      fullPath: '/projects/$projectSlug/settings/defaults'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsDefaultsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
     '/_authenticated/projects/$projectSlug/settings/billing': {
       id: '/_authenticated/projects/$projectSlug/settings/billing'
       path: '/billing'
@@ -1914,6 +1934,7 @@ const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(
 interface AuthenticatedProjectsProjectSlugSettingsRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsAccountRoute: typeof AuthenticatedProjectsProjectSlugSettingsAccountRoute
   AuthenticatedProjectsProjectSlugSettingsBillingRoute: typeof AuthenticatedProjectsProjectSlugSettingsBillingRoute
+  AuthenticatedProjectsProjectSlugSettingsDefaultsRoute: typeof AuthenticatedProjectsProjectSlugSettingsDefaultsRoute
   AuthenticatedProjectsProjectSlugSettingsFlaggersRoute: typeof AuthenticatedProjectsProjectSlugSettingsFlaggersRoute
   AuthenticatedProjectsProjectSlugSettingsGeneralRoute: typeof AuthenticatedProjectsProjectSlugSettingsGeneralRoute
   AuthenticatedProjectsProjectSlugSettingsKeysRoute: typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
@@ -1937,6 +1958,8 @@ const AuthenticatedProjectsProjectSlugSettingsRouteChildren: AuthenticatedProjec
       AuthenticatedProjectsProjectSlugSettingsAccountRoute,
     AuthenticatedProjectsProjectSlugSettingsBillingRoute:
       AuthenticatedProjectsProjectSlugSettingsBillingRoute,
+    AuthenticatedProjectsProjectSlugSettingsDefaultsRoute:
+      AuthenticatedProjectsProjectSlugSettingsDefaultsRoute,
     AuthenticatedProjectsProjectSlugSettingsFlaggersRoute:
       AuthenticatedProjectsProjectSlugSettingsFlaggersRoute,
     AuthenticatedProjectsProjectSlugSettingsGeneralRoute:

@@ -23,6 +23,7 @@ import { useGithubDeliveries } from "../../../../../../domains/github/github.col
 import {
   disconnectGithubIntegration,
   GITHUB_INTEGRATION_QUERY_KEY,
+  GITHUB_ORG_DEFAULTS_QUERY_KEY,
   GITHUB_REPOS_QUERY_KEY,
   type GithubDefaultRepoRecord,
   type GithubDeliveryRecord,
@@ -39,7 +40,6 @@ import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { GithubMonitorSettingsForm } from "./github-monitor-settings-form.tsx"
 import { ScopedSetting, type SettingScope } from "./scoped-setting.tsx"
 
-const GITHUB_ORG_DEFAULTS_QUERY_KEY = ["github-integration", "org-defaults"] as const
 const githubProjectConfigQueryKey = (projectId: string) => ["github-integration", "project-config", projectId] as const
 
 export function GithubIntegrationManage({
@@ -447,7 +447,7 @@ function MonitoringSection({
 }
 
 /** Editing the organization default from a project page, so an org-wide write interrupts. */
-function OrganizationGithubModal({
+export function OrganizationGithubModal({
   projectCount,
   overrideCount,
   onClose,
