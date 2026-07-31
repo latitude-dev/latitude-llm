@@ -359,6 +359,21 @@ describe("CostAnalyticsRepositoryLive", () => {
       expect(totals.distinctValues).toBe(3)
     })
 
+    it("guards every divisor on a window with no billable usage", async () => {
+      // Nothing seeded in this project, so both averages divide by zero.
+      const empty = { ...breakdownScope, projectId: ProjectId("costbreakdownempty000000") }
+
+      const { rows, totals } = await runCh(repo.getCostBreakdown({ ...empty, dimension: "model" }))
+
+      expect(rows).toEqual([])
+      expect(totals.totalMicrocents).toBe(0)
+      expect(totals.calls).toBe(0)
+      expect(totals.distinctValues).toBe(0)
+      expect(totals.avgPerCallMicrocents).toBe(0)
+      expect(totals.tracesWithUsage).toBe(0)
+      expect(totals.cacheAndOtherMicrocents).toBe(0)
+    })
+
     it("groups by provider, operation, and service from the same measures", async () => {
       const [byProvider, byOperation, byService] = await Promise.all([
         runCh(repo.getCostBreakdown({ ...breakdownScope, dimension: "provider" })),
