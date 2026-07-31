@@ -5,6 +5,7 @@ import {
   getCacheEconomics,
   getCostBreakdown,
   getCostOverview,
+  getCostPerSessionDecomposition,
   getCostSeries,
   getModelUsageSeries,
 } from "./cost.functions.ts"
@@ -57,6 +58,26 @@ export function useCostBreakdown({
     queryKey: [...projectScopeKey(scope), "cost-breakdown", projectId, range, dimension],
     queryFn: () => getCostBreakdown({ data: { ...projectScopeData(scope), projectId, ...range, dimension } }),
     staleTime: COST_STALE_TIME_MS,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/** The comparison window is derived server-side from this one, so it is not a key. */
+export function useCostPerSessionDecomposition({
+  projectId,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: CostTimeRange
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "cost-per-session", projectId, range],
+    queryFn: () => getCostPerSessionDecomposition({ data: { ...projectScopeData(scope), projectId, ...range } }),
+    staleTime: COST_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
     enabled: enabled && projectId.length > 0,
   })
 }

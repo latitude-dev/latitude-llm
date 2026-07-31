@@ -18,6 +18,8 @@ import type {
   ModelUsageBucket,
   ModelUsageSeries,
   ModelUsageSlice,
+  SessionCostFactorsPair,
+  SessionCostPeriod,
 } from "@domain/spans"
 import {
   CACHE_CEILING_LIFETIME_SECONDS,
@@ -52,6 +54,12 @@ const SCOPE_FILTER = `organization_id = {organizationId:String}
 // dedup by span_id: same convention as the other span aggregates.
 const BILLABLE_FILTER = `${SCOPE_FILTER}
   AND operation IN ${USAGE_OPERATIONS_SQL}`
+
+// Same prefix, opened back to the comparison window so both periods come off one scan.
+const SCOPE_PREVIOUS_FILTER = `organization_id = {organizationId:String}
+  AND project_id = {projectId:String}
+  AND start_time >= {previousFrom:DateTime64(9, 'UTC')}
+  AND start_time < {to:DateTime64(9, 'UTC')}`
 
 const COST_SOURCE_VALUES_SQL = `(${costSourceSchema.options.map((value) => `'${value}'`).join(", ")})`
 
@@ -164,6 +172,27 @@ const CACHE_CADENCE_SOURCE = `SELECT
         WHERE ${BILLABLE_FILTER}
       )`
 
+// The session key the traces/sessions rollups aggregate on. Traffic that reported
+// no session id keys on its trace id instead, so it becomes a single-trace
+// pseudo-session rather than dropping out of every per-session figure.
+const SESSION_KEY = `coalesce(nullIf(session_id, ''), toString(trace_id))`
+
+// Splits one scan into the two adjacent windows. `is_current` is the bound the
+// spans filter already narrowed to, so both periods read identical filters.
+const SESSION_FACTORS_SOURCE = `SELECT
+        start_time >= {from:DateTime64(9, 'UTC')} AS is_current,
+        ${SESSION_KEY} AS session_key,
+        session_id,
+        trace_id,
+        provider,
+        model,
+        tokens_total,
+        cost_total_microcents,
+        ${COST_SOURCE} AS cost_source
+      FROM spans
+      WHERE ${SCOPE_PREVIOUS_FILTER}
+        AND operation IN ${USAGE_OPERATIONS_SQL}`
+
 const BUCKET_START = `toDateTime(
   intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
   'UTC'
@@ -271,6 +300,61 @@ const CACHE_CADENCE_BUCKETS = CACHE_CEILING_LIFETIME_SECONDS.map(
     `sumIf(call_tokens, gap_seconds <= ${lifetimeSeconds}) AS ${cadenceBucketAlias(lifetimeSeconds)},
         countIf(gap_seconds <= ${lifetimeSeconds}) AS ${cadenceCallsAlias(lifetimeSeconds)}`,
 ).join(",\n        ")
+
+type SessionFactorsRow = {
+  is_current: number
+  sessions: string
+  trace_keyed_sessions: string
+  turns: string
+  steps: string
+  tokens: string
+  cost_microcents: string
+  unpriced_calls: string
+}
+
+type SessionFactorsModelRow = {
+  is_current: number
+  provider: string
+  model: string
+  tokens: string
+  cost_microcents: string
+}
+
+const EMPTY_SESSION_PERIOD: SessionCostPeriod = {
+  sessions: 0,
+  traceKeyedSessions: 0,
+  turns: 0,
+  steps: 0,
+  tokens: 0,
+  costMicrocents: 0,
+  unpricedCalls: 0,
+  models: [],
+}
+
+const toSessionPeriod = ({
+  row,
+  models,
+}: {
+  row: SessionFactorsRow | undefined
+  models: readonly SessionFactorsModelRow[]
+}): SessionCostPeriod =>
+  row === undefined
+    ? EMPTY_SESSION_PERIOD
+    : {
+        sessions: num(row.sessions),
+        traceKeyedSessions: num(row.trace_keyed_sessions),
+        turns: num(row.turns),
+        steps: num(row.steps),
+        tokens: num(row.tokens),
+        costMicrocents: num(row.cost_microcents),
+        unpricedCalls: num(row.unpriced_calls),
+        models: models.map((slice) => ({
+          provider: normalizeCHString(slice.provider),
+          model: normalizeCHString(slice.model),
+          tokens: num(slice.tokens),
+          costMicrocents: num(slice.cost_microcents),
+        })),
+      }
 
 type ModelUsageMeasuresDraft = { cost: number; tokens: number }
 
@@ -761,6 +845,62 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                   },
                 }),
               ),
+            )
+        }),
+
+      getSessionCostFactors: (input) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const params = { ...scopeParams(input), previousFrom: formatCHDate(input.previousFrom) }
+              const [countsResult, modelsResult] = await Promise.all([
+                client.query({
+                  // A session straddling the boundary counts in both periods, the
+                  // same convention the per-trace series uses for bucket edges.
+                  query: `SELECT
+                        is_current,
+                        uniqExact(session_key) AS sessions,
+                        uniqExactIf(session_key, session_id = '') AS trace_keyed_sessions,
+                        uniqExact(trace_id) AS turns,
+                        count() AS steps,
+                        sum(tokens_total) AS tokens,
+                        sum(cost_total_microcents) AS cost_microcents,
+                        countIf(cost_source IN ('unpriced', 'unknown')) AS unpriced_calls
+                      FROM (${SESSION_FACTORS_SOURCE})
+                      GROUP BY is_current`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                }),
+                client.query({
+                  // Never truncated: the mix and rate effects are shares of the
+                  // whole, so a missing price list would silently land in the wrong row.
+                  query: `SELECT
+                        is_current,
+                        provider,
+                        model,
+                        sum(tokens_total) AS tokens,
+                        sum(cost_total_microcents) AS cost_microcents
+                      FROM (${SESSION_FACTORS_SOURCE})
+                      GROUP BY is_current, provider, model
+                      HAVING tokens > 0`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                }),
+              ])
+              const countRows = await countsResult.json<SessionFactorsRow>()
+              const modelRows = await modelsResult.json<SessionFactorsModelRow>()
+              return { countRows, modelRows }
+            })
+            .pipe(
+              Effect.map(({ countRows, modelRows }): SessionCostFactorsPair => {
+                const periodOf = (isCurrent: boolean) =>
+                  toSessionPeriod({
+                    row: countRows.find((row) => Boolean(row.is_current) === isCurrent),
+                    models: modelRows.filter((row) => Boolean(row.is_current) === isCurrent),
+                  })
+                return { previous: periodOf(false), current: periodOf(true) }
+              }),
             )
         }),
     }

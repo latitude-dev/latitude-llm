@@ -4,6 +4,7 @@ import type {
   ClassifiedUnpricedPair,
   CostAnalyticsScope,
   CostBreakdown,
+  CostPerSessionDecomposition,
   JudgedCacheModel,
   ModelUsageMeasures,
   ModelUsageSlice,
@@ -12,6 +13,7 @@ import {
   COST_BREAKDOWN_DIMENSIONS,
   COST_SERIES_METRICS,
   CostAnalyticsRepository,
+  decomposeCostPerSession,
   isUnpricedGap,
   judgeCacheEconomics,
   summarizeUnpricedUsage,
@@ -87,6 +89,22 @@ export interface CacheModelRecord extends JudgedCacheModel {}
 export interface CacheEconomicsRecord {
   readonly rows: readonly CacheModelRecord[]
   readonly totals: CacheUsageMeasures & { readonly distinctModels: number }
+}
+
+/**
+ * The decomposition as the card renders it: the arithmetic is done here, so the
+ * panel receives a headline, a total, and rows it only has to lay out.
+ */
+export interface CostPerSessionRecord extends CostPerSessionDecomposition {
+  /**
+   * Share of this window's sessions keyed on a trace id because the traffic
+   * reported no session id. Above a small share, "cost per session" is largely
+   * cost per trace wearing another name, which the card has to say out loud.
+   */
+  readonly traceKeyedSessionShare: number | null
+  /** Both feed the shared rollup cost display, so a zero headline never reads as free. */
+  readonly unpricedCalls: number
+  readonly tokens: number
 }
 
 // Well above what any window the picker offers can ask for at its bucket width.
@@ -211,6 +229,37 @@ export const getCacheEconomics = createServerFn({ method: "GET" })
         return {
           rows: judgeCacheEconomics({ economics, windowMs: scope.to.getTime() - scope.from.getTime() }),
           totals: economics.totals,
+        }
+      }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/**
+ * Why average cost per session moved against the window immediately before it.
+ *
+ * The comparison window is derived here rather than accepted from the client: it
+ * is the same length ending where the shown window starts, so the two halves of a
+ * period-over-period figure cannot drift apart.
+ */
+export const getCostPerSessionDecomposition = createServerFn({ method: "GET" })
+  .inputValidator(costScopeSchema)
+  .handler(async ({ data, context }): Promise<CostPerSessionRecord> => {
+    const orgId = await resolveOrgScope(context)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* CostAnalyticsRepository
+        const scope = toScope(orgId, data)
+        const { previous, current } = yield* repo.getSessionCostFactors({
+          ...scope,
+          previousFrom: new Date(scope.from.getTime() - (scope.to.getTime() - scope.from.getTime())),
+        })
+        // TODO(LAT-798): pass `cacheEfficiencyEffect` once the achievable ceiling
+        // lands, so cache efficiency splits out of the within-model rate row.
+        return {
+          ...decomposeCostPerSession({ previous, current }),
+          traceKeyedSessionShare: current.sessions > 0 ? current.traceKeyedSessions / current.sessions : null,
+          unpricedCalls: current.unpricedCalls,
+          tokens: current.tokens,
         }
       }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
