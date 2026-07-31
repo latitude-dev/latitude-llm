@@ -185,8 +185,11 @@ const IPV6_COMPRESSED_PATTERN =
 // Variable-length token forms also require credential length and character mix, because `sk-` CSS class names are common.
 const looksLikeLongToken = (value: string): boolean => {
   const tail = value.slice(value.indexOf("-") + 1)
+  if (tail.length < 32 || !/\d/.test(tail)) return false
 
-  return tail.length >= 32 && /\d/.test(tail)
+  // A hyphenated all-lowercase tail is a slug, not a key: `sk-learn-tutorial-notebook-v2-final` clears
+  // the length and digit gates on its own. Real keys are base62 and mix case, or carry no hyphens at all.
+  return /[A-Z]/.test(tail) || !tail.includes("-")
 }
 
 const hasDigit = (value: string): boolean => /\d/.test(value)
@@ -199,6 +202,16 @@ const SLACK_TOKEN_PATTERN = /\bxox[abposr]-[A-Za-z0-9-]{10,}/g
 const GOOGLE_API_KEY_PATTERN = /\bAIza[0-9A-Za-z_-]{35}\b/g
 const STRIPE_KEY_PATTERN = /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g
+
+/**
+ * The remaining vendor prefixes, in one alternation rather than one detector each: every detector is a
+ * separate pass over every string leaf, and the ingest path scans on the hot path.
+ */
+const VENDOR_TOKEN_PATTERN =
+  /\b(?:hf_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{24,}|ya29\.[A-Za-z0-9_-]{20,}|SG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,})/g
+
+// The path segments are the credential: anyone holding the URL can post to the channel.
+const SLACK_WEBHOOK_PATTERN = /https:\/\/hooks\.slack\.com\/services\/T[A-Za-z0-9]+\/B[A-Za-z0-9]+\/[A-Za-z0-9]+/g
 const PEM_PRIVATE_KEY_PATTERN =
   /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----/g
 
@@ -232,6 +245,8 @@ const DETECTORS: readonly Detector[] = [
   { entity: "secret", pattern: GOOGLE_API_KEY_PATTERN },
   { entity: "secret", pattern: STRIPE_KEY_PATTERN, validate: hasDigit },
   { entity: "secret", pattern: JWT_PATTERN },
+  { entity: "secret", pattern: VENDOR_TOKEN_PATTERN, validate: hasDigit },
+  { entity: "secret", pattern: SLACK_WEBHOOK_PATTERN },
   { entity: "secret", pattern: PEM_PRIVATE_KEY_PATTERN },
   { entity: "crypto_wallet", pattern: BITCOIN_BECH32_PATTERN },
   { entity: "crypto_wallet", pattern: BITCOIN_BASE58_PATTERN },

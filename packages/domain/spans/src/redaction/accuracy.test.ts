@@ -754,37 +754,44 @@ const SECRET_CASES: readonly PiiCase[] = [
     note: "the access key id is detected; the half that actually grants access is not",
   },
   {
+    id: "secret-sendgrid",
+    entity: "secret",
+    outcome: "redacted",
+    text: `SENDGRID_API_KEY=${SENDGRID_KEY}`,
+    value: SENDGRID_KEY,
+  },
+  {
     id: "secret-huggingface",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: "HF_TOKEN=hf_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o",
     value: "hf_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o",
   },
   {
     id: "secret-gitlab-pat",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: `CI_TOKEN=${GITLAB_TOKEN}`,
     value: GITLAB_TOKEN,
   },
   {
     id: "secret-npm-token",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: "//registry.npmjs.org/:_authToken=npm_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg",
     value: "npm_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg",
   },
   {
     id: "secret-google-oauth",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: "refresh with ya29.a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ",
     value: "ya29.a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ",
   },
   {
     id: "secret-slack-webhook",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: `posted to ${SLACK_WEBHOOK_URL}`,
     value: SLACK_WEBHOOK_URL,
   },
@@ -981,8 +988,8 @@ const CLEAN_CASES: readonly CleanCase[] = [
   {
     id: "fp-notebook-slug",
     text: "notebook name sk-learn-tutorial-notebook-v2-final was archived",
-    matched: ["sk-learn-tutorial-notebook-v2-final"],
-    note: "the tail is exactly 32 chars and contains a digit, so looksLikeLongToken accepts it",
+    matched: [],
+    note: "clears the length and digit gates; only the hyphenated-all-lowercase rule rejects it",
   },
 ]
 
@@ -1010,11 +1017,11 @@ describe("accuracy totals", () => {
 
   it("records every labelled occurrence exactly once", () => {
     expect(new Set(PII_CASES.map((entry) => entry.id)).size).toBe(PII_CASES.length)
-    expect(PII_CASES).toHaveLength(117)
+    expect(PII_CASES).toHaveLength(118)
   })
 
   it("pins how much PII is stored verbatim", () => {
-    expect(counted("missed")).toBe(29)
+    expect(counted("missed")).toBe(24)
   })
 
   it("pins how much PII is only partially removed", () => {
@@ -1028,7 +1035,7 @@ describe("accuracy totals", () => {
   it("pins the accepted false positives", () => {
     const falsePositives = CLEAN_CASES.flatMap((entry) => entry.matched)
 
-    expect(falsePositives).toHaveLength(9)
+    expect(falsePositives).toHaveLength(8)
   })
 
   it("covers every entity in the enum", () => {

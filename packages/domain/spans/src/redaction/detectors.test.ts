@@ -366,8 +366,28 @@ describe("secret detector", () => {
     expect(found(`config:\n${pem}\ndone`, "secret")).toEqual([pem])
   })
 
+  it.each([
+    "hf_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o",
+    ["glpat", "9aZq1LmT4vBn7XkR2wEs"].join("-"),
+    "npm_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg",
+    "ya29.a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ",
+    ["SG", "9aZq1LmT4vBn7XkR2wEs8Y", "YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb"].join("."),
+  ])("detects the vendor token %s", (value) => {
+    expect(found(`token ${value} end`, "secret")).toEqual([value])
+  })
+
+  it("detects a Slack webhook URL, whose path segments are the credential", () => {
+    const url = ["https://hooks.slack.com/services", "T00000000", "B00000000", "XXXXXXXXXXXXXXXXXXXXXXXX"].join("/")
+    expect(found(`posted to ${url}`, "secret")).toEqual([url])
+  })
+
   it("does not match sk- prefixed CSS class names", () => {
     expect(detects('<div class="sk-spinner-double-bounce-child">', "secret")).toBe(false)
+  })
+
+  // Clears the length and digit gates on its own, so only the hyphenated-all-lowercase rule rejects it.
+  it("does not match a long hyphenated sk- slug", () => {
+    expect(detects("notebook sk-learn-tutorial-notebook-v2-final archived", "secret")).toBe(false)
   })
 
   it.each([
