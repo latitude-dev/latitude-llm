@@ -184,6 +184,18 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         icon: EyeOffIcon,
         path: (slug) => `/projects/${slug}/settings/privacy`,
       },
+      {
+        key: "integrations",
+        label: "Integrations",
+        icon: Plug,
+        path: (slug) => `/projects/${slug}/settings/integrations`,
+      },
+      {
+        key: "data-destinations",
+        label: "Data destinations",
+        icon: Share2Icon,
+        path: (slug) => `/projects/${slug}/settings/data-destinations`,
+      },
     ],
   },
   {
@@ -212,18 +224,6 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         label: "Billing",
         icon: CreditCard,
         path: (slug) => `/projects/${slug}/settings/billing`,
-      },
-      {
-        key: "integrations",
-        label: "Integrations",
-        icon: Plug,
-        path: (slug) => `/projects/${slug}/settings/integrations`,
-      },
-      {
-        key: "data-destinations",
-        label: "Data destinations",
-        icon: Share2Icon,
-        path: (slug) => `/projects/${slug}/settings/data-destinations`,
       },
       {
         key: "sso",
