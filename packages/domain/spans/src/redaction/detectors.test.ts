@@ -424,6 +424,11 @@ describe("secret detector", () => {
     expect(found(`key ${key} here`, "secret")).toEqual([key])
   })
 
+  /**
+   * Fabricated, but a fixture for a credential detector has to carry the real shape. The vendor-prefixed
+   * ones are assembled from their parts so the file holds no contiguous token-shaped literal, which is what
+   * GitHub push protection blocks on — here and in anyone's fork.
+   */
   it.each([
     "AKIAIOSFODNN7EXAMPLE",
     "ASIAIOSFODNN7EXAMPLE",

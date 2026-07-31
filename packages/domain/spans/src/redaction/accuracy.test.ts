@@ -19,6 +19,7 @@ import { resolveOverlaps } from "./redact-text.ts"
  */
 
 const ALL_ENTITIES: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
+
 /**
  * Vendor credentials are assembled from their parts rather than written whole.
  *
