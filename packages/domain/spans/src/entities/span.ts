@@ -108,6 +108,25 @@ export function isMemoryOperation(operation: string): boolean {
 }
 
 /**
+ * Operations whose token/cost usage counts as spend. The rollups (`traces_mv`/`sessions_mv`) and
+ * every cost query gate on this list so wrapper spans never double-count; `USAGE_OPERATIONS_SQL`
+ * is generated from it, so the SQL and the TypeScript cannot drift.
+ */
+export const USAGE_OPERATIONS = [
+  "chat",
+  "text_completion",
+  "generate_content",
+  "embeddings",
+  "reranker",
+] as const satisfies readonly Operation[]
+
+const USAGE_OPERATIONS_SET: ReadonlySet<string> = new Set(USAGE_OPERATIONS)
+
+export function isUsageOperation(operation: string): boolean {
+  return USAGE_OPERATIONS_SET.has(operation)
+}
+
+/**
  * Span — the listing/query shape returned by list and trace queries.
  *
  * Excludes the large LLM content payloads (input_messages, output_messages,

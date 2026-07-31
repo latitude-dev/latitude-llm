@@ -39,7 +39,16 @@ function request(spans: ReturnType<typeof llmSpan>[]): OtlpExportTraceServiceReq
 }
 
 const unpricedAttrs = (model: string): OtlpKeyValue[] => [
+  str("gen_ai.operation.name", "chat"),
   str("gen_ai.provider.name", "@some-vendor/unmapped-sdk"),
+  str("gen_ai.request.model", model),
+  int("gen_ai.usage.input_tokens", 1_000),
+  int("gen_ai.usage.output_tokens", 500),
+]
+
+const usageAttrs = (provider: string, model: string, operation = "chat"): OtlpKeyValue[] => [
+  str("gen_ai.operation.name", operation),
+  str("gen_ai.provider.name", provider),
   str("gen_ai.request.model", model),
   int("gen_ai.usage.input_tokens", 1_000),
   int("gen_ai.usage.output_tokens", 500),
@@ -65,14 +74,7 @@ describe("transformOtlpToSpans unpriced cost reporting", () => {
 
   it("reports nothing for spans it can price", () => {
     const { spans, unpricedSpanGroups } = transformOtlpToSpans(
-      request([
-        llmSpan("s1", [
-          str("gen_ai.provider.name", "@anthropic-ai/claude-agent-sdk"),
-          str("gen_ai.request.model", "claude-opus-4-8"),
-          int("gen_ai.usage.input_tokens", 1_000),
-          int("gen_ai.usage.output_tokens", 500),
-        ]),
-      ]),
+      request([llmSpan("s1", usageAttrs("@anthropic-ai/claude-agent-sdk", "claude-opus-4-8"))]),
       baseContext,
     )
 
@@ -87,5 +89,52 @@ describe("transformOtlpToSpans unpriced cost reporting", () => {
     )
 
     expect(unpricedSpanGroups).toEqual([])
+  })
+})
+
+describe("transformOtlpToSpans unpriced reporting suppression", () => {
+  // Each case below is a zero that no catalog entry could fix, so alerting on it only teaches
+  // the reader to ignore the issue.
+  it.each([
+    [
+      "a non-billable operation, which no cost figure counts",
+      usageAttrs("some-proxy", "mystery-model", "invoke_agent"),
+    ],
+    ["a local runtime, which has no per-token rate to find", usageAttrs("lmstudio", "zai-org/glm-4.7-flash")],
+    ["the caller's own free-tier marker", usageAttrs("some-proxy", "stepfun/step-3.7-flash:free")],
+    ["a pair the catalog lists and deliberately leaves unpriced", usageAttrs("ollama-cloud", "qwen3.5:397b")],
+  ])("does not report %s", (_case, attributes) => {
+    const { spans, unpricedSpanGroups } = transformOtlpToSpans(request([llmSpan("s1", attributes)]), baseContext)
+
+    expect(unpricedSpanGroups).toEqual([])
+    // The span is still recorded as unpriced: only the alert is withheld, so the Cost page's
+    // coverage maths sees exactly what it saw before.
+    expect(spans[0]?.costSource).toBe("unpriced")
+    expect(spans[0]?.costTotalMicrocents).toBe(0)
+  })
+
+  it("does not report usage that arrives with no provider or model", () => {
+    const { unpricedSpanGroups } = transformOtlpToSpans(
+      request([
+        llmSpan("s1", [
+          str("gen_ai.operation.name", "chat"),
+          int("gen_ai.usage.input_tokens", 1_000),
+          int("gen_ai.usage.output_tokens", 500),
+        ]),
+      ]),
+      baseContext,
+    )
+
+    expect(unpricedSpanGroups).toEqual([])
+  })
+
+  it("still reports a real catalog gap on a billable operation", () => {
+    const { spans, unpricedSpanGroups } = transformOtlpToSpans(
+      request([llmSpan("s1", usageAttrs("anthropic", "qwen3.7-max"))]),
+      baseContext,
+    )
+
+    expect(spans[0]?.costSource).toBe("unpriced")
+    expect(unpricedSpanGroups).toEqual([{ projectId: "proj-1", provider: "anthropic", model: "qwen3.7-max", spans: 1 }])
   })
 })
