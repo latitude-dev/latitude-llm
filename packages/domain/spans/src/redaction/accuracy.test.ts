@@ -341,10 +341,10 @@ const PHONE_CASES: readonly PiiCase[] = [
   {
     id: "phone-sentence-final",
     entity: "phone",
-    outcome: "missed",
+    outcome: "redacted",
     text: "You can reach the customer at 415-555-2671.",
     value: "415-555-2671",
-    note: "the trailing guard rejects any following dot, including a sentence period",
+    note: "a sentence period must not disable the detector",
   },
 ]
 
@@ -450,7 +450,7 @@ const CARD_CASES: readonly PiiCase[] = [
   {
     id: "card-sentence-final",
     entity: "credit_card",
-    outcome: "missed",
+    outcome: "redacted",
     text: "My card number is 4111111111111111.",
     value: "4111111111111111",
     note: "the most natural way a person types a card into a chat",
@@ -458,7 +458,7 @@ const CARD_CASES: readonly PiiCase[] = [
   {
     id: "card-spaced-sentence-final",
     entity: "credit_card",
-    outcome: "missed",
+    outcome: "redacted",
     text: "The number on the card is 4111 1111 1111 1111.",
     value: "4111 1111 1111 1111",
   },
@@ -667,10 +667,10 @@ const IP_CASES: readonly PiiCase[] = [
   {
     id: "ip-v4-sentence-final",
     entity: "ip_address",
-    outcome: "missed",
+    outcome: "redacted",
     text: "The request originated from 203.0.113.42.",
     value: "203.0.113.42",
-    note: "same trailing-dot guard as the card detector",
+    note: "a sentence period must not disable the detector",
   },
   {
     id: "ip-v6-loopback",
@@ -1009,7 +1009,7 @@ describe("accuracy totals", () => {
   })
 
   it("pins how much PII is stored verbatim", () => {
-    expect(counted("missed")).toBe(41)
+    expect(counted("missed")).toBe(37)
   })
 
   it("pins how much PII is only partially removed", () => {
@@ -1092,24 +1092,10 @@ describe("punctuation boundaries", () => {
   // Every entry is a real leak: the identifier is present and stored verbatim because of the punctuation alone.
   it("records which identifier and punctuation combinations fail", () => {
     expect(failures()).toEqual([
-      "phone NANP dashed + period",
-      "phone NANP dashed + ellipsis",
       "phone NANP dashed + leading dash",
-      "phone NANP dashed + trailing dash",
-      "phone NANP spaced + period",
-      "phone NANP spaced + ellipsis",
       "phone NANP spaced + leading dash",
-      "phone NANP spaced + trailing dash",
-      "card compact + period",
-      "card compact + ellipsis",
-      "card grouped + period",
-      "card grouped + ellipsis",
-      "card amex + period",
-      "card amex + ellipsis",
       "ssn + leading dash",
       "ssn + trailing dash",
-      "ipv4 + period",
-      "ipv4 + ellipsis",
     ])
   })
 })

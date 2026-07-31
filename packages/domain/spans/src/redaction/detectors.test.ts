@@ -91,6 +91,14 @@ describe("phone detector", () => {
   it("does not match a bare ten-digit id because it is indistinguishable from a numeric key", () => {
     expect(detects('{"userId": 4155552671}', "phone")).toBe(false)
   })
+
+  it.each([
+    "Call 415-555-2671.",
+    "Call 415 555 2671.",
+    "Call 415-555-2671... later",
+  ])("detects the number in %s despite the trailing punctuation", (text) => {
+    expect(detects(text, "phone")).toBe(true)
+  })
 })
 
 describe("credit_card detector", () => {
@@ -205,6 +213,23 @@ describe("credit_card detector", () => {
   ])("does not match %s", (value) => {
     expect(detects(value, "credit_card")).toBe(false)
   })
+
+  /**
+   * A card at the end of a sentence is how a person writes one in a chat, and the trailing guard used to
+   * reject it along with the decimals above. Both directions have to hold at once.
+   */
+  it.each([
+    "My card is 4111111111111111.",
+    "My card is 4111 1111 1111 1111.",
+    "My Amex is 378282246310005.",
+    "My card is 4111111111111111... probably",
+  ])("detects the card in %s", (text) => {
+    expect(detects(text, "credit_card")).toBe(true)
+  })
+
+  it("still rejects a card-length run that is the fractional part of a decimal", () => {
+    expect(detects("ratio 0.4111111111111111", "credit_card")).toBe(false)
+  })
 })
 
 describe("iban detector", () => {
@@ -300,6 +325,10 @@ describe("entities disabled by default", () => {
   it("detects ipv4 only when ip_address is enabled", () => {
     expect(detects("host 192.168.1.100 up", "ip_address")).toBe(true)
     expect(findRedactionMatches("host 192.168.1.100 up", only("email", "secret"))).toEqual([])
+  })
+
+  it.each(["from 203.0.113.42.", "from 203.0.113.42... retrying"])("detects the address in %s", (text) => {
+    expect(detects(text, "ip_address")).toBe(true)
   })
 
   it("detects ipv6 in full and compressed forms", () => {
