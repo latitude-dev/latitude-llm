@@ -205,7 +205,7 @@ function IntegrationDocsButton({
   readonly variant?: "outline" | "ghost"
 }) {
   return (
-    <Button asChild variant={variant} size="sm" className={fullWidth ? "w-full" : "w-auto shrink-0"}>
+    <Button asChild variant={variant} size="sm" className={fullWidth ? "w-full" : "shrink-0"}>
       <a href={INTEGRATION_DOC_URLS[kind]} target="_blank" rel="noreferrer">
         <Icon icon={BookOpen} size="sm" />
         Setup guide
@@ -1130,13 +1130,13 @@ export function ConnectAgentDispatchModal({
               </Text.H6>
             </div>
             <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
-              <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
+              <Button asChild variant="outline" size="sm" className="shrink-0">
                 <a href="https://cursor.com/dashboard/api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Cursor
                 </a>
               </Button>
-              <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
+              <Button asChild variant="ghost" size="sm" className="shrink-0">
                 <a
                   href="https://cursor.com/docs/cli/reference/authentication#api-key-authentication"
                   target="_blank"
@@ -1265,13 +1265,13 @@ export function ConnectAgentDispatchModal({
                 Copy routine description
               </Button>
               <div className="flex flex-row flex-wrap items-center justify-center gap-2">
-                <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
+                <Button asChild variant="outline" size="sm" className="shrink-0">
                   <a href="https://claude.ai/code/routines" target="_blank" rel="noreferrer">
                     <Icon icon={ExternalLink} size="sm" />
                     Claude Code
                   </a>
                 </Button>
-                <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
+                <Button asChild variant="ghost" size="sm" className="shrink-0">
                   <a href="https://code.claude.com/docs/en/routines" target="_blank" rel="noreferrer">
                     <Icon icon={ExternalLink} size="sm" />
                     Claude Code docs
@@ -1323,13 +1323,13 @@ export function ConnectAgentDispatchModal({
               </Text.H6>
             </div>
             <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
-              <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
+              <Button asChild variant="outline" size="sm" className="shrink-0">
                 <a href="https://linear.app/settings/account/security" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API settings
                 </a>
               </Button>
-              <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
+              <Button asChild variant="ghost" size="sm" className="shrink-0">
                 <a href="https://linear.app/docs/graphql/working-with-the-graphql-api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API docs

@@ -198,6 +198,9 @@ function Button({
           degroupSelectors(cn(buttonContainerVariants({ variant }), buttonVariantsConfig({ variant, size }))),
           // Slot can't add the inner wrapper that normally spaces icon and label.
           "gap-x-1.5",
+          // That wrapper is also what the base `w-full` fills; merged onto one element it would
+          // stretch to the parent instead, so shrink back to content unless the size asks for full.
+          { "w-auto": size !== "full" },
           className,
           isLoading && "animate-pulse",
         )}
