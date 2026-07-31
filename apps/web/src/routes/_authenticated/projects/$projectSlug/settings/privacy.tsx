@@ -86,23 +86,38 @@ function ProjectPrivacySettingsPage() {
   const projectCount = projects.length
   const overrideCount = projects.filter((row) => hasRedactionField(row.settings?.redaction)).length
 
-  const scope: SettingScope = hasRedactionField(projectRedaction) ? "project" : "organization"
+  const storedScope: SettingScope = hasRedactionField(projectRedaction) ? "project" : "organization"
+  const [stagedScope, setStagedScope] = useState<SettingScope | null>(null)
+  const scope = stagedScope ?? storedScope
+
+  // What the fields show: the organization default when this project follows it, so flipping the
+  // selector previews the other layer instead of editing values that wouldn't be saved.
+  const orgPolicy = resolveRedactionPolicy({ organization: org?.settings ?? null, project: null })
+  const shown = scope === "organization" ? orgPolicy : effective
 
   const baseline: Draft = {
-    mode: effective.mode,
-    entities: encodeEntities(effective.entities),
-    metadata: effective.redactMetadata,
-    identities: effective.identities,
+    mode: shown.mode,
+    entities: encodeEntities(shown.entities),
+    metadata: shown.redactMetadata,
+    identities: shown.identities,
   }
 
   const [isApplying, setIsApplying] = useState(false)
   const { view, setField, dirtyCount, hasDirty, reset } = useDraftOverlay(baseline)
 
+  // Dropping the override is the only destructive direction, so it waits for an explicit apply.
+  const pendingRemoval = storedScope === "project" && scope === "organization"
+  // Taking ownership is applyable even with no edits: pinning a project to today's values so later
+  // organization changes don't reach it is a real intent.
+  const pendingOverride = storedScope === "organization" && scope === "project"
+  const valueDirty = scope === "project" && (hasDirty || pendingOverride)
+
   const apply = async () => {
-    if (!hasDirty || isApplying) return
+    if (!valueDirty || isApplying) return
     setIsApplying(true)
     try {
       await updateProjectRedactionMutation(currentProject.id, toSetting(view))
+      setStagedScope(null)
       reset()
       toast({ description: "Redaction settings updated" })
     } catch (error) {
@@ -112,17 +127,14 @@ function ProjectPrivacySettingsPage() {
     }
   }
 
-  const changeScope = async (next: SettingScope) => {
+  const applyRemoval = async () => {
+    if (isApplying) return
     setIsApplying(true)
     try {
-      // Seeding the override from the effective policy keeps the switch a no-op on behaviour:
-      // the project starts from exactly what it was already inheriting.
-      await updateProjectRedactionMutation(currentProject.id, next === "project" ? toSetting(view) : null)
+      await updateProjectRedactionMutation(currentProject.id, null)
+      setStagedScope(null)
       reset()
-      toast({
-        description:
-          next === "project" ? "This project now sets its own policy" : "This project now follows the organization",
-      })
+      toast({ description: "This project now follows the organization" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
@@ -130,12 +142,17 @@ function ProjectPrivacySettingsPage() {
     }
   }
 
+  const discard = () => {
+    setStagedScope(null)
+    reset()
+  }
+
   useDirtyGuard({
-    hasDirty,
+    hasDirty: valueDirty || pendingRemoval,
     isApplying,
     confirmMessage: "You have unsaved redaction changes. Leave anyway?",
-    onApply: apply,
-    onDiscard: reset,
+    onApply: pendingRemoval ? applyRemoval : apply,
+    onDiscard: discard,
   })
 
   return (
@@ -143,9 +160,14 @@ function ProjectPrivacySettingsPage() {
       title="Privacy"
       description="Strip personal data out of span content before it is stored"
       actions={
-        <DirtyActions dirtyCount={dirtyCount} isApplying={isApplying} onApply={() => void apply()} onDiscard={reset} />
+        <DirtyActions
+          dirtyCount={valueDirty ? Math.max(dirtyCount, 1) : 0}
+          isApplying={isApplying}
+          onApply={() => void apply()}
+          onDiscard={discard}
+        />
       }
-      headerSticky={hasDirty}
+      headerSticky={valueDirty}
     >
       <div className="flex w-full flex-col gap-8 @[900px]:w-2/3">
         <Text.H6 color="foregroundMuted">
@@ -159,15 +181,25 @@ function ProjectPrivacySettingsPage() {
           idPrefix="project-redaction"
           title="Redact PII in this project"
           description="Scans messages, tool calls, and span attributes as they are ingested."
-          isDirty={hasDirty}
+          isDirty={valueDirty}
           scope={{
             kind: "selectable",
             value: scope,
-            loading: isApplying,
             disabled: !canEditProject,
             locked: isLocked,
-            onChange: (next) => void changeScope(next),
+            onChange: (next) => setStagedScope(next === storedScope ? null : next),
           }}
+          pendingChange={
+            pendingRemoval
+              ? {
+                  description: `This project will follow the organization default${orgPolicy.mode === "off" ? ", which is off — it will stop redacting PII" : ""}. Its own policy is discarded. Existing spans are unaffected either way.`,
+                  applyLabel: "Follow organization",
+                  isApplying,
+                  onApply: () => void applyRemoval(),
+                  onDiscard: discard,
+                }
+              : undefined
+          }
           notice={
             isLocked ? (
               <Text.H6 color="foregroundMuted">
@@ -178,10 +210,29 @@ function ProjectPrivacySettingsPage() {
               <Text.H6 color="foregroundMuted">
                 Only organization owners and admins can change the redaction policy.
               </Text.H6>
-            ) : scope === "organization" ? (
+            ) : pendingOverride ? (
               <Text.H6 color="foregroundMuted">
-                Showing the organization default. Switch to “This project” to give this project its own policy.
+                This project has no policy of its own yet. Apply to copy these values into one, so later changes to the
+                organization default won’t reach this project.
               </Text.H6>
+            ) : scope === "organization" && !pendingRemoval ? (
+              <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+                <Text.H6 color="foregroundMuted">
+                  These values come from the organization default, so they can’t be edited here.
+                </Text.H6>
+                <div className="flex shrink-0 flex-row items-center gap-2">
+                  <Button variant="outline" onClick={() => setStagedScope("project")}>
+                    Override for this project
+                  </Button>
+                  {isOwner ? (
+                    <Button variant="outline" onClick={() => setEditingDefault(true)}>
+                      Edit organization default
+                    </Button>
+                  ) : (
+                    <Text.H6 color="foregroundMuted">Ask an owner to change the default.</Text.H6>
+                  )}
+                </div>
+              </div>
             ) : null
           }
           footer={
@@ -191,9 +242,9 @@ function ProjectPrivacySettingsPage() {
                   ? `Organization default in effect for ${projectCount - overrideCount} of ${projectCount} projects · ${overrideCount} override it`
                   : `Organization default in effect for all ${projectCount} projects`}
               </Text.H6>
-              {isOwner ? (
+              {isOwner && scope === "project" ? (
                 <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isApplying}>
-                  Edit default
+                  Edit organization default
                 </Button>
               ) : null}
             </div>

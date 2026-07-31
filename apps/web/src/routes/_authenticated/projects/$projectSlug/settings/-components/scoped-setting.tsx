@@ -1,4 +1,4 @@
-import { Badge, DotIndicator, Select, Text } from "@repo/ui"
+import { Badge, Button, DotIndicator, Select, Text } from "@repo/ui"
 import { LockIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
@@ -37,12 +37,25 @@ export type ScopeControl =
  * renders its own controls as `children` (read-only when the scope is
  * `organization`).
  */
+/**
+ * A scope change that would drop this project's override, held until applied so
+ * flipping the selector to compare layers costs nothing.
+ */
+export interface PendingScopeChange {
+  readonly description: ReactNode
+  readonly applyLabel: string
+  readonly isApplying: boolean
+  readonly onApply: () => void
+  readonly onDiscard: () => void
+}
+
 export function ScopedSetting({
   idPrefix,
   title,
   description,
   scope,
   isDirty = false,
+  pendingChange,
   notice,
   footer,
   children,
@@ -52,6 +65,7 @@ export function ScopedSetting({
   readonly description?: ReactNode
   readonly scope: ScopeControl
   readonly isDirty?: boolean
+  readonly pendingChange?: PendingScopeChange | undefined
   /** Rendered above the controls — the place to explain a read-only or locked card. */
   readonly notice?: ReactNode
   readonly footer?: ReactNode
@@ -90,6 +104,20 @@ export function ScopedSetting({
           )}
         </div>
       </div>
+
+      {pendingChange ? (
+        <div className="flex flex-row flex-wrap items-center justify-between gap-4 border-border border-t bg-warning-muted/40 p-5">
+          <Text.H6 color="foregroundMuted">{pendingChange.description}</Text.H6>
+          <div className="flex shrink-0 flex-row items-center gap-2">
+            <Button variant="outline" onClick={pendingChange.onDiscard} disabled={pendingChange.isApplying}>
+              Discard
+            </Button>
+            <Button onClick={pendingChange.onApply} isLoading={pendingChange.isApplying}>
+              {pendingChange.applyLabel}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {notice ? <div className="border-border border-t p-5">{notice}</div> : null}
 
