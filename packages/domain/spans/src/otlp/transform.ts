@@ -323,7 +323,7 @@ export function transformOtlpToSpans(
         // the Cost page's coverage stay exact; the filter just withholds the alert.
         if (transformed.costSource === "unpriced" && shouldReportUnpricedSpan(transformed)) {
           const { provider, model } = transformed
-          const key = `${projectId} ${provider} ${model}`
+          const key = `${projectId} ${provider} ${model}`
           const existing = unpricedByKey.get(key)
           if (existing) existing.spans++
           else unpricedByKey.set(key, { projectId, provider, model, spans: 1 })
