@@ -41,7 +41,64 @@ export interface UnpricedTriageWontFix {
 
 export type UnpricedTriageEntry = UnpricedTriageFixed | UnpricedTriageWontFix
 
+/**
+ * `findModelByBareId` taught the registry to price a bare model id against the reported provider's
+ * own namespaced catalog entry, which covers every pair below in one change. The tripwires stay
+ * per-pair because detection is per-pair: a spelling the rule still misses shows up as one row
+ * coming back, not as a broken mechanism.
+ *
+ * Recorded for the pairs where a silent relapse would cost real money. The long tail the same
+ * change also fixed (`openrouter/deepseek-v4-flash`, `llama-3.1-8b-instruct`, `gpt-4o-mini`,
+ * together under 60K tokens over 30 days) is left out: it would read as `active` if it came back,
+ * which is enough for usage that small.
+ */
+const BARE_ID_FIX_NOTE =
+  "Priced by findModelByBareId against OpenRouter's own `<vendor>/<model>` entry. A relapse means the bare id stopped resolving — check the catalog entry still carries the vendor prefix."
+const BARE_ID_FIXED_AT = "2026-07-31"
+
 export const UNPRICED_TRIAGE: readonly UnpricedTriageEntry[] = [
+  {
+    provider: "openrouter",
+    model: "grok-4.5",
+    decision: "fixed",
+    fixedAt: BARE_ID_FIXED_AT,
+    note: `${BARE_ID_FIX_NOTE} Largest single gap found: 30,068 calls and 2.07B tokens over 30 days.`,
+  },
+  {
+    provider: "openrouter",
+    model: "glm-5.2",
+    decision: "fixed",
+    fixedAt: BARE_ID_FIXED_AT,
+    note: `${BARE_ID_FIX_NOTE} 30,102 calls and 1.67B tokens over 30 days.`,
+  },
+  {
+    provider: "openrouter",
+    model: "gpt-5.5",
+    decision: "fixed",
+    fixedAt: BARE_ID_FIXED_AT,
+    note: `${BARE_ID_FIX_NOTE} 245M tokens over 30 days.`,
+  },
+  {
+    provider: "openrouter",
+    model: "kimi-k3",
+    decision: "fixed",
+    fixedAt: BARE_ID_FIXED_AT,
+    note: `${BARE_ID_FIX_NOTE} 144M tokens over 30 days.`,
+  },
+  {
+    provider: "openrouter",
+    model: "claude-sonnet-4",
+    decision: "fixed",
+    fixedAt: BARE_ID_FIXED_AT,
+    note: BARE_ID_FIX_NOTE,
+  },
+  {
+    provider: "openrouter",
+    model: "gemini-3-flash-preview",
+    decision: "fixed",
+    fixedAt: BARE_ID_FIXED_AT,
+    note: `${BARE_ID_FIX_NOTE} The only one of these still producing unpriced spans when the fix was written, so it is the first tripwire that will actually be exercised.`,
+  },
   {
     provider: "anthropic",
     model: "qwen3.7-max",

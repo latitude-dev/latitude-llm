@@ -151,10 +151,13 @@ export const listUnpricedSpansUseCase = (
     // Regressions first, then the queue by spend; a reader should never have to scroll to find work.
     pairs.sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state] || b.tokens - a.tokens)
 
+    // Only a `wontFix` can go stale. A `fixed` entry matching nothing is the fix holding — the
+    // outcome it was written for — so reporting it as clutter would train the reader to delete the
+    // tripwires that are working.
     const seen = new Set(pairs.map((pair) => pairKey(pair.provider, pair.model)))
-    const staleTriage = UNPRICED_TRIAGE.filter((entry) => !seen.has(pairKey(entry.provider, entry.model))).map(
-      (entry) => ({ entry }),
-    )
+    const staleTriage = UNPRICED_TRIAGE.filter(
+      (entry) => entry.decision === "wontFix" && !seen.has(pairKey(entry.provider, entry.model)),
+    ).map((entry) => ({ entry }))
 
     return { pairs, staleTriage, windowStart, windowEnd }
   })

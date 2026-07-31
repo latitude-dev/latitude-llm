@@ -130,6 +130,46 @@ describe("listUnpricedSpansUseCase", () => {
     ])
   })
 
+  it("resolves a recorded fix while nothing arrives after its date", async () => {
+    const result = await run(
+      [
+        slice({
+          provider: "openrouter",
+          model: "grok-4.5",
+          lastOccurrenceAt: new Date("2026-07-30T12:00:00.000Z"),
+        }),
+      ],
+      new Map(),
+    )
+
+    expect(result.pairs[0]?.state).toBe("resolved")
+    expect(result.pairs[0]?.triage).toMatchObject({ decision: "fixed", fixedAt: "2026-07-31" })
+  })
+
+  it("flags a recorded fix as regressed once spans arrive after its date", async () => {
+    const result = await run(
+      [
+        slice({
+          provider: "openrouter",
+          model: "grok-4.5",
+          // The tripwire compares against end-of-day, so this has to clear 2026-07-31 entirely.
+          lastOccurrenceAt: new Date("2026-08-01T06:00:00.000Z"),
+        }),
+      ],
+      new Map(),
+    )
+
+    expect(result.pairs[0]?.state).toBe("regressed")
+  })
+
+  it("does not treat a fix that stopped occurring as a stale decision", async () => {
+    const result = await run([slice({ provider: "some-proxy", model: "mystery-model" })], new Map())
+
+    // A `fixed` entry matching nothing is the fix holding, which is the outcome it was written for.
+    expect(result.staleTriage.every((s) => s.entry.decision === "wontFix")).toBe(true)
+    expect(result.staleTriage.some((s) => s.entry.model === "grok-4.5")).toBe(false)
+  })
+
   it("reports recorded decisions that no longer match anything in the window", async () => {
     const result = await run([slice({ provider: "some-proxy", model: "mystery-model" })], new Map())
 
