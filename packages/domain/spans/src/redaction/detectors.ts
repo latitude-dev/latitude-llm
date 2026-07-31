@@ -179,12 +179,12 @@ const NANP_PHONE_PATTERN =
  */
 const CREDIT_CARD_COMPACT_PATTERN = /(?<![\d.])\d{13,19}(?!\d)(?!\.\d)/g
 /** 4-4-4-N covers 13 to 16 digits: Visa, Mastercard, Discover, JCB. */
-const CREDIT_CARD_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{4}\1\d{4}\1\d{1,4}(?!\d)(?!\.\d)/g
+const CREDIT_CARD_GROUPED_PATTERN = /(?<![\d.])\d{4}([ \-/])\d{4}\1\d{4}\1\d{1,4}(?!\d)(?!\.\d)/g
 /** 4-4-4-4-3 is the 19-digit Visa and Discover form. */
-const CREDIT_CARD_GROUPED_19_PATTERN = /(?<![\d.])\d{4}([ -])\d{4}\1\d{4}\1\d{4}\1\d{3}(?!\d)(?!\.\d)/g
+const CREDIT_CARD_GROUPED_19_PATTERN = /(?<![\d.])\d{4}([ \-/])\d{4}\1\d{4}\1\d{4}\1\d{3}(?!\d)(?!\.\d)/g
 /** 4-6-5 is Amex, 4-6-4 is Diners Club. Disjoint by trailing length plus the lookahead. */
-const CREDIT_CARD_AMEX_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{6}\1\d{5}(?!\d)(?!\.\d)/g
-const CREDIT_CARD_DINERS_GROUPED_PATTERN = /(?<![\d.])\d{4}([ -])\d{6}\1\d{4}(?!\d)(?!\.\d)/g
+const CREDIT_CARD_AMEX_GROUPED_PATTERN = /(?<![\d.])\d{4}([ \-/])\d{6}\1\d{5}(?!\d)(?!\.\d)/g
+const CREDIT_CARD_DINERS_GROUPED_PATTERN = /(?<![\d.])\d{4}([ \-/])\d{6}\1\d{4}(?!\d)(?!\.\d)/g
 
 const digitsOf = (value: string): string => value.replace(/[^\d]/g, "")
 
@@ -221,6 +221,10 @@ const hasKnownIssuerPrefix = (digits: string): boolean => {
   if (prefix2 === 36 || prefix2 === 38 || prefix2 === 39 || (prefix3 >= 300 && prefix3 <= 305)) {
     return length >= 14 && length <= 19
   }
+  // Maestro. Its 12-digit form is shorter than the compact pattern accepts and stays out of reach.
+  if (prefix2 === 50 || (prefix2 >= 56 && prefix2 <= 58)) return length >= 13 && length <= 19
+  if (prefix4 === 6304 || (prefix4 >= 6759 && prefix4 <= 6763)) return length >= 13 && length <= 19
+  if (prefix2 === 62 || prefix2 === 81) return length >= 16 && length <= 19
 
   return false
 }
@@ -232,14 +236,24 @@ const isCreditCard = (value: string): boolean => {
   return hasKnownIssuerPrefix(digits) && passesLuhn(digits)
 }
 
-// Two patterns, not one with optional spaces: a permissive pattern matches greedily past a space and, because
-// the checksum runs after matching, the failed long match discards the real IBAN instead of backtracking.
-const IBAN_COMPACT_PATTERN = /(?<![A-Za-z0-9])[A-Z]{2}\d{2}[A-Z0-9]{11,30}(?![A-Za-z0-9])/g
-const IBAN_GROUPED_PATTERN = /(?<![A-Za-z0-9])[A-Z]{2}\d{2}(?: [A-Z0-9]{4}){2,7}(?: [A-Z0-9]{1,4})?(?![A-Za-z0-9])/g
+/**
+ * One pattern per separator, not one with optional spaces: a permissive pattern matches greedily past a
+ * space and, because the checksum runs after matching, the failed long match discards the real IBAN
+ * instead of backtracking.
+ *
+ * Case-insensitive because customers paste lowercase. The mod-97 checksum is what keeps that affordable:
+ * it rejects 96 of every 97 candidates, and lowercase alphanumeric runs are far more common in tool output
+ * than uppercase ones.
+ */
+const IBAN_COMPACT_PATTERN = /(?<![A-Za-z0-9])[A-Z]{2}\d{2}[A-Z0-9]{11,30}(?![A-Za-z0-9])/gi
+const IBAN_GROUPED_PATTERN = /(?<![A-Za-z0-9])[A-Z]{2}\d{2}(?: [A-Z0-9]{4}){2,7}(?: [A-Z0-9]{1,4})?(?![A-Za-z0-9])/gi
+/** Printed on invoices in the same grouping as the spaced form. */
+const IBAN_DASH_GROUPED_PATTERN =
+  /(?<![A-Za-z0-9])[A-Z]{2}\d{2}(?:-[A-Z0-9]{4}){2,7}(?:-[A-Z0-9]{1,4})?(?![A-Za-z0-9])/gi
 
 /** ISO 13616 mod-97, computed in chunks so it needs no big-integer arithmetic. */
 const isIban = (value: string): boolean => {
-  const compact = value.replace(/ /g, "")
+  const compact = value.replace(/[ -]/g, "").toUpperCase()
   if (compact.length < 15 || compact.length > 34) return false
 
   const rearranged = compact.slice(4) + compact.slice(0, 4)
@@ -256,13 +270,36 @@ const isIban = (value: string): boolean => {
   return remainder === 1
 }
 
-const US_SSN_PATTERN = /(?<![\d-])(?!000|666|9\d\d)\d{3}[- ](?!00)\d{2}[- ](?!0000)\d{4}(?![\d-])/g
+/**
+ * Dots join the separators a form gets typed with. The 3-2-4 digit shape plus the reserved-range
+ * exclusions are what keep that away from dotted quads and version strings.
+ *
+ * The boundary guards reject a digit, or a separator followed by a digit, so a trailing period or an
+ * adjacent word survives while `1234-56-7890` and a longer dotted number still do not match.
+ */
+const US_SSN_PATTERN = /(?<!\d)(?<![.-]\d)(?!000|666)\d{3}[-. ](?!00)\d{2}[-. ](?!0000)\d{4}(?!\d)(?![.-]\d)/g
+
+/**
+ * No SSN has a 9xx area, but every ITIN does, and an ITIN identifies a taxpayer just as well. Excluding
+ * the whole 9xx range dropped them all, so the group is checked against the ranges the IRS assigns
+ * instead: 70-88, 90-92, 94-99.
+ */
+const isUsTaxId = (value: string): boolean => {
+  const digits = digitsOf(value)
+  if (digits[0] !== "9") return true
+
+  const group = Number.parseInt(digits.slice(3, 5), 10)
+
+  return (group >= 70 && group <= 88) || (group >= 90 && group <= 92) || (group >= 94 && group <= 99)
+}
 
 const IPV4_PATTERN =
   /(?<![\w.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?!\w)(?!\.\d)/g
 const IPV6_PATTERN = /(?<![\w:.])(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}(?![\w:.])/g
 const IPV6_COMPRESSED_PATTERN =
   /(?<![\w:.])(?:[A-Fa-f0-9]{1,4}:){1,6}:(?:[A-Fa-f0-9]{1,4}:){0,5}[A-Fa-f0-9]{1,4}(?![\w:.])/g
+/** `::1` and `::ffff:…` compress from the left, so there is no group before the `::` to anchor on. */
+const IPV6_LEADING_COMPRESSED_PATTERN = /(?<![\w:.])::(?:[A-Fa-f0-9]{1,4}:){0,6}[A-Fa-f0-9]{1,4}(?![\w:.])/g
 
 // Variable-length token forms also require credential length and character mix, because `sk-` CSS class names are common.
 const looksLikeLongToken = (value: string): boolean => {
@@ -368,10 +405,12 @@ const DETECTORS: readonly Detector[] = [
   { entity: "credit_card", pattern: CREDIT_CARD_DINERS_GROUPED_PATTERN, validate: isCreditCard },
   { entity: "iban", pattern: IBAN_COMPACT_PATTERN, validate: isIban },
   { entity: "iban", pattern: IBAN_GROUPED_PATTERN, validate: isIban },
-  { entity: "us_ssn", pattern: US_SSN_PATTERN },
+  { entity: "iban", pattern: IBAN_DASH_GROUPED_PATTERN, validate: isIban },
+  { entity: "us_ssn", pattern: US_SSN_PATTERN, validate: isUsTaxId },
   { entity: "ip_address", pattern: IPV4_PATTERN },
   { entity: "ip_address", pattern: IPV6_PATTERN },
   { entity: "ip_address", pattern: IPV6_COMPRESSED_PATTERN },
+  { entity: "ip_address", pattern: IPV6_LEADING_COMPRESSED_PATTERN },
   { entity: "secret", pattern: OPENAI_KEY_PATTERN, validate: looksLikeLongToken },
   // Ranked: a token in a `https://token@github.com` remote is also a valid email local part.
   { entity: "secret", pattern: GITHUB_TOKEN_PATTERN, validate: hasDigit, rank: SPECIFIC },

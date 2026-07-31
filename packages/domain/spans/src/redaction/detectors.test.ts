@@ -291,6 +291,18 @@ describe("credit_card detector", () => {
     expect(detects("id 9999999999999995", "credit_card")).toBe(false)
   })
 
+  it.each([
+    ["Maestro", "6759649826438453"],
+    ["UnionPay", "6212345678901232"],
+  ])("detects a %s card, whose prefix range was missing", (_issuer, value) => {
+    expect(found(`card ${value} charged`, "credit_card")).toEqual([value])
+  })
+
+  // A card handwritten onto a form gets grouped with slashes as readily as with dashes.
+  it("detects a slash-grouped card", () => {
+    expect(found("card 4111/1111/1111/1111 charged", "credit_card")).toEqual(["4111/1111/1111/1111"])
+  })
+
   // Both vectors are Luhn-valid, so only the issuer length gate can reject them.
   it.each([
     "41111111111111113",
@@ -346,11 +358,41 @@ describe("iban detector", () => {
   it.each(["AWSACCESSKEYID123456", "CONSTANT_NAME_HERE", "ABCD1234EFGH5678IJKL"])("does not match %s", (value) => {
     expect(detects(value, "iban")).toBe(false)
   })
+
+  it.each([
+    "de89370400440532013000",
+    "De89370400440532013000",
+    "DE89-3704-0044-0532-0130-00",
+    "de89 3704 0044 0532 0130 00",
+  ])("detects %s, since customers paste it as they have it", (value) => {
+    expect(found(`iban ${value} ok`, "iban")).toEqual([value])
+  })
+
+  it("rejects a lowercase candidate whose checksum is wrong", () => {
+    expect(detects("iban de89370400440532013001 ok", "iban")).toBe(false)
+  })
 })
 
 describe("us_ssn detector", () => {
-  it.each(["123-45-6789", "123 45 6789"])("detects %s", (value) => {
+  it.each(["123-45-6789", "123 45 6789", "123.45.6789"])("detects %s", (value) => {
     expect(found(`ssn ${value} ok`, "us_ssn")).toEqual([value])
+  })
+
+  // No SSN has a 9xx area but every ITIN does, and an ITIN identifies a taxpayer just as well.
+  it.each(["900-70-1234", "911-88-4321", "999-99-1234"])("detects the ITIN %s", (value) => {
+    expect(found(`itin ${value} ok`, "us_ssn")).toEqual([value])
+  })
+
+  it.each([
+    "900-45-6789",
+    "900-69-1234",
+    "900-93-1234",
+  ])("does not match %s, a 9xx area outside the assigned ITIN groups", (value) => {
+    expect(detects(`id ${value} ok`, "us_ssn")).toBe(false)
+  })
+
+  it.each(["value -123-45-6789 ok", "value 123-45-6789-suffix ok"])("detects the number in %s", (text) => {
+    expect(detects(text, "us_ssn")).toBe(true)
   })
 
   it.each([
@@ -551,6 +593,17 @@ describe("entities disabled by default", () => {
   it("detects ipv6 in full and compressed forms", () => {
     expect(detects("addr 2001:0db8:85a3:0000:0000:8a2e:0370:7334 up", "ip_address")).toBe(true)
     expect(detects("addr 2001:db8::8a2e:370:7334 up", "ip_address")).toBe(true)
+  })
+
+  it.each([
+    "Listening on ::1 port 5432",
+    "bound to ::ffff:7f00:1 now",
+  ])("detects the left-compressed address in %s", (text) => {
+    expect(detects(text, "ip_address")).toBe(true)
+  })
+
+  it.each(["std::vector<int> v", "using Foo::Bar;", "call ::new here"])("does not match %s", (value) => {
+    expect(detects(value, "ip_address")).toBe(false)
   })
 
   it("detects an ethereum address only when crypto_wallet is enabled", () => {

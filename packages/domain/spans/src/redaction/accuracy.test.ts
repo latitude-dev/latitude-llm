@@ -465,22 +465,22 @@ const CARD_CASES: readonly PiiCase[] = [
   {
     id: "card-slash-separated",
     entity: "credit_card",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Handwritten as 4111/1111/1111/1111 on the form",
     value: "4111/1111/1111/1111",
   },
   {
     id: "card-maestro",
     entity: "credit_card",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Maestro 6759649826438453 used at the terminal",
     value: "6759649826438453",
-    note: "Luhn-valid but the issuer prefix is absent from the allowlist",
+    note: "Luhn-valid, and the Maestro prefix ranges are in the allowlist now",
   },
   {
     id: "card-unionpay",
     entity: "credit_card",
-    outcome: "missed",
+    outcome: "redacted",
     text: "UnionPay 6212345678901232 charged in CNY",
     value: "6212345678901232",
   },
@@ -553,15 +553,15 @@ const IBAN_CASES: readonly PiiCase[] = [
   {
     id: "iban-lowercase",
     entity: "iban",
-    outcome: "missed",
+    outcome: "redacted",
     text: "iban as typed by the user: de89370400440532013000",
     value: "de89370400440532013000",
-    note: "customers paste lowercase",
+    note: "customers paste lowercase; the mod-97 checksum is what makes that affordable",
   },
   {
     id: "iban-dash-grouped",
     entity: "iban",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Printed on the invoice as DE89-3704-0044-0532-0130-00",
     value: "DE89-3704-0044-0532-0130-00",
   },
@@ -600,17 +600,17 @@ const SSN_CASES: readonly PiiCase[] = [
   {
     id: "ssn-dotted",
     entity: "us_ssn",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Typed as 123.45.6789 on the intake form",
     value: "123.45.6789",
   },
   {
     id: "ssn-itin",
     entity: "us_ssn",
-    outcome: "missed",
-    text: "ITIN 900-70-0000 supplied instead of an SSN",
-    value: "900-70-0000",
-    note: "the 9xx area exclusion also excludes every ITIN",
+    outcome: "redacted",
+    text: "ITIN 900-70-1234 supplied instead of an SSN",
+    value: "900-70-1234",
+    note: "a 9xx area is never an SSN but is always an ITIN, checked against the assigned group ranges",
   },
 ]
 
@@ -675,10 +675,10 @@ const IP_CASES: readonly PiiCase[] = [
   {
     id: "ip-v6-loopback",
     entity: "ip_address",
-    outcome: "missed",
+    outcome: "redacted",
     text: "Listening on ::1 port 5432",
     value: "::1",
-    note: "the compressed pattern requires a group before the ::",
+    note: "compresses from the left, so there is no group before the :: to anchor on",
   },
 ]
 
@@ -1044,7 +1044,7 @@ describe("accuracy totals", () => {
   })
 
   it("pins how much PII is stored verbatim", () => {
-    expect(counted("missed")).toBe(17)
+    expect(counted("missed")).toBe(9)
   })
 
   it("pins how much PII is only partially removed", () => {
@@ -1126,12 +1126,7 @@ describe("punctuation boundaries", () => {
 
   // Every entry is a real leak: the identifier is present and stored verbatim because of the punctuation alone.
   it("records which identifier and punctuation combinations fail", () => {
-    expect(failures()).toEqual([
-      "phone NANP dashed + leading dash",
-      "phone NANP spaced + leading dash",
-      "ssn + leading dash",
-      "ssn + trailing dash",
-    ])
+    expect(failures()).toEqual(["phone NANP dashed + leading dash", "phone NANP spaced + leading dash"])
   })
 })
 
