@@ -1,5 +1,5 @@
 import type { ProjectId, RepositoryError } from "@domain/shared"
-import { classifyUnpricedPair, unpriceablePairReason } from "@domain/spans"
+import { classifyUnpricedPair, type UnpriceablePairReason, unpriceablePairReason } from "@domain/spans"
 import { Effect } from "effect"
 import { AdminProjectRepository } from "../projects/project-repository.ts"
 import type {
@@ -50,11 +50,16 @@ const pairKey = (provider: string, model: string): string => `${provider.toLower
 function resolveState(
   cause: ReturnType<typeof classifyUnpricedPair>["cause"],
   triage: UnpricedTriageEntry | null,
-  unpriceable: string | null,
+  unpriceable: UnpriceablePairReason | null,
   lastOccurrenceAt: Date,
 ): UnpricedPairState {
   if (triage?.decision === "fixed") {
-    return lastOccurrenceAt.getTime() > Date.parse(`${triage.fixedAt}T23:59:59.999Z`) ? "regressed" : "resolved"
+    // End-of-day so a fix dated today is not tripped by spans from earlier the same day.
+    const cutoff = Date.parse(`${triage.fixedAt}T23:59:59.999Z`)
+    // An unparsable date compares false and would silently report `resolved` — the one outcome the
+    // tripwire exists to prevent. A visible false alarm is the safe direction.
+    if (Number.isNaN(cutoff)) return "regressed"
+    return lastOccurrenceAt.getTime() > cutoff ? "regressed" : "resolved"
   }
   if (triage?.decision === "wontFix" || unpriceable !== null) return "wontFix"
   // `ingestGap` means the registry prices it today, so the rows are pre-fix leftovers; `freePricing`

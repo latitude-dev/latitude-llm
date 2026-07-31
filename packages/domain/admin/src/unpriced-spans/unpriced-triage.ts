@@ -17,12 +17,19 @@
  * Adding an entry is a code change on purpose: the decision lands in the same PR as the reasoning
  * that produced it, and review sees both.
  */
+/**
+ * `YYYY-MM-DD`. Loose enough to still admit an impossible date like `2026-13-40`, which is why
+ * `resolveState` also fails loud on an unparsable value — but it catches the likely slips
+ * (`31-07-2026`, `2026/07/31`, a prose date) at the point the entry is written.
+ */
+type IsoDate = `${number}-${number}-${number}`
+
 export interface UnpricedTriageFixed {
   readonly provider: string
   readonly model: string
   readonly decision: "fixed"
-  /** `YYYY-MM-DD` (UTC) the fix reached production. Occurrences after this are a regression. */
-  readonly fixedAt: string
+  /** UTC date the fix reached production. Occurrences after this are a regression. */
+  readonly fixedAt: IsoDate
   readonly note: string
 }
 

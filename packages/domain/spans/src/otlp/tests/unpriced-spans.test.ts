@@ -83,8 +83,17 @@ describe("transformOtlpToSpans unpriced cost reporting", () => {
   })
 
   it("ignores spans that carry no token usage", () => {
+    // Everything a reportable pair needs except the tokens, so the empty result can only be the
+    // no-usage path — the earlier fixture also lacked a model and an operation, which the
+    // suppression rules reject first, and would have passed however this branch behaved.
     const { unpricedSpanGroups } = transformOtlpToSpans(
-      request([llmSpan("s1", [str("gen_ai.provider.name", "@some-vendor/unmapped-sdk")])]),
+      request([
+        llmSpan("s1", [
+          str("gen_ai.operation.name", "chat"),
+          str("gen_ai.provider.name", "@some-vendor/unmapped-sdk"),
+          str("gen_ai.request.model", "mystery-model"),
+        ]),
+      ]),
       baseContext,
     )
 

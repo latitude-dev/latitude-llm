@@ -1,4 +1,4 @@
-import type { UnpricedCause } from "@domain/spans"
+import type { UnpriceablePairReason, UnpricedCause } from "@domain/spans"
 import { z } from "zod"
 import type { UnpricedTriageEntry } from "./unpriced-triage.ts"
 
@@ -45,7 +45,7 @@ export interface AdminUnpricedPair {
   /** The recorded decision, when one exists; `null` for derived states. */
   readonly triage: UnpricedTriageEntry | null
   /** Set when the derived rules — not a recorded decision — put this pair in `wontFix`. */
-  readonly unpriceableReason: string | null
+  readonly unpriceableReason: UnpriceablePairReason | null
   /** Largest token consumer first, so the affected-projects cell leads with the one that matters. */
   readonly projects: readonly AdminUnpricedProjectRef[]
 }

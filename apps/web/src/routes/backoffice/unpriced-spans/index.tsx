@@ -112,7 +112,7 @@ function PairRow({ pair }: { pair: AdminUnpricedPairDto }) {
 }
 
 function BackofficeUnpricedSpansPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["backoffice", "unpriced-spans"],
     queryFn: () => adminListUnpricedSpans({ data: {} }),
   })
@@ -136,7 +136,14 @@ function BackofficeUnpricedSpansPage() {
         <Alert variant="success" description="Nothing needs pricing right now — every pair is resolved or parked." />
       ) : null}
 
-      {isLoading ? (
+      {/* A failed load must not render the empty state: "nothing is unpriced" and "we could not
+          find out" are the same picture, and this page exists to stop a zero being read as a fact. */}
+      {isError ? (
+        <Alert
+          variant="destructive"
+          description="Could not load unpriced spans, so this is not a statement that there are none. Reload, and check the server logs if it persists."
+        />
+      ) : isLoading ? (
         <TableSkeleton rows={8} cols={6} />
       ) : pairs.length === 0 ? (
         <Alert

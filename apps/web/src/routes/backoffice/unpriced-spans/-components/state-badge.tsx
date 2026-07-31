@@ -1,3 +1,4 @@
+import type { UnpriceablePairReason } from "@domain/spans"
 import { Badge, Text, Tooltip } from "@repo/ui"
 import type { AdminUnpricedPairDto } from "../../../../domains/admin/unpriced-spans.functions.ts"
 
@@ -18,7 +19,11 @@ const STATE_VARIANT: Record<
   wontFix: "outlineMuted",
 }
 
-const UNPRICEABLE_LABEL: Record<string, string> = {
+/**
+ * Keyed on the reason union rather than `string`, so adding a rule in `unpriceablePairReason`
+ * without a label here is a typecheck failure instead of a tooltip reading "undefined".
+ */
+const UNPRICEABLE_LABEL: Record<UnpriceablePairReason, string> = {
   noPair: "no provider/model reported",
   localRuntime: "local runtime, no per-token rate exists",
   freeTier: "caller's own :free tier marker",

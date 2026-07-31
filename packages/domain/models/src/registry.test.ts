@@ -437,12 +437,10 @@ describe("getCostSpec bare model ids on namespaced providers", () => {
   })
 
   it("leaves a bare id unpriced when two vendors on that provider share the name", () => {
-    const models: Model[] = [
-      { id: "vendor-a/shared-model", provider: "acme", name: "A", pricing: { input: 1, output: 2 } } as Model,
-      { id: "vendor-b/shared-model", provider: "acme", name: "B", pricing: { input: 9, output: 9 } } as Model,
-    ]
-    // Two different models at two different rates: picking one would invent a number.
-    expect(findModel(models, "shared-model")).toBeUndefined()
+    // nano-gpt lists `TEE/glm-5` and `zai-org/glm-5`: two vendors, two rates, so picking one would
+    // invent a number. Driven through getCostSpec because the fallback lives in
+    // `getModelForProvider` — `findModel` never reaches it, so asserting there proves nothing.
+    expect(getCostSpec("nano-gpt", "glm-5").costImplemented).toBe(false)
   })
 
   it("does not reach into another provider's catalog for a model the reported one lacks", () => {

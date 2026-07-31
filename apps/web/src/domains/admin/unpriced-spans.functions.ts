@@ -5,6 +5,7 @@ import {
   UNPRICED_SPANS_WINDOW_DAYS,
   type UnpricedPairState,
 } from "@domain/admin"
+import type { UnpriceablePairReason } from "@domain/spans"
 import { AdminUnpricedSpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { AdminProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -40,7 +41,7 @@ export interface AdminUnpricedPairDto {
     | { decision: "fixed"; fixedAt: string; note: string }
     | { decision: "wontFix"; reason: string; note: string }
     | null
-  unpriceableReason: string | null
+  unpriceableReason: UnpriceablePairReason | null
   projects: AdminUnpricedProjectRefDto[]
 }
 
