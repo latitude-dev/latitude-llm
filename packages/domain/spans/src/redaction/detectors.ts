@@ -4,12 +4,22 @@ export interface RedactionMatch {
   readonly start: number
   readonly end: number
   readonly entity: RedactionEntity
+  readonly rank: number
 }
+
+/**
+ * Rank breaks a tie at the same offset before extent does, so a detector that knows what it is looking at
+ * wins over one that merely matched the same characters. The case that forced it: a DSN password is also
+ * a valid email local part, so `postgres://user:pass@db.internal` matched the email detector over a wider
+ * span and a password was stored as `[REDACTED_EMAIL]`.
+ */
+const SPECIFIC = 1
 
 interface Detector {
   readonly entity: RedactionEntity
   readonly pattern: RegExp
   readonly validate?: (value: string) => boolean
+  readonly rank?: number
 }
 
 // No nested quantifiers: span content is attacker controlled, so exponential backtracking here is a DoS vector.
@@ -212,6 +222,15 @@ const VENDOR_TOKEN_PATTERN =
 
 // The path segments are the credential: anyone holding the URL can post to the channel.
 const SLACK_WEBHOOK_PATTERN = /https:\/\/hooks\.slack\.com\/services\/T[A-Za-z0-9]+\/B[A-Za-z0-9]+\/[A-Za-z0-9]+/g
+
+/**
+ * The password in a `scheme://user:password@host` connection string, matched on its own so the host and
+ * database name stay readable in a stack trace. A lookbehind rather than a full-URL match keeps the
+ * placeholder over the credential and nothing else.
+ *
+ * A percent-encoded `@` is required in a well-formed URL, which is why the password may not contain one.
+ */
+const DSN_CREDENTIAL_PATTERN = /(?<=[a-z][a-z0-9+.-]{1,20}:\/\/[^\s:@/]{1,64}:)[^\s@/]{3,128}(?=@)/g
 const PEM_PRIVATE_KEY_PATTERN =
   /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----/g
 
@@ -238,7 +257,8 @@ const DETECTORS: readonly Detector[] = [
   { entity: "ip_address", pattern: IPV6_PATTERN },
   { entity: "ip_address", pattern: IPV6_COMPRESSED_PATTERN },
   { entity: "secret", pattern: OPENAI_KEY_PATTERN, validate: looksLikeLongToken },
-  { entity: "secret", pattern: GITHUB_TOKEN_PATTERN, validate: hasDigit },
+  // Ranked: a token in a `https://token@github.com` remote is also a valid email local part.
+  { entity: "secret", pattern: GITHUB_TOKEN_PATTERN, validate: hasDigit, rank: SPECIFIC },
   { entity: "secret", pattern: GITHUB_PAT_PATTERN, validate: hasDigit },
   { entity: "secret", pattern: AWS_ACCESS_KEY_PATTERN },
   { entity: "secret", pattern: SLACK_TOKEN_PATTERN, validate: hasDigit },
@@ -247,6 +267,7 @@ const DETECTORS: readonly Detector[] = [
   { entity: "secret", pattern: JWT_PATTERN },
   { entity: "secret", pattern: VENDOR_TOKEN_PATTERN, validate: hasDigit },
   { entity: "secret", pattern: SLACK_WEBHOOK_PATTERN },
+  { entity: "secret", pattern: DSN_CREDENTIAL_PATTERN, rank: SPECIFIC },
   { entity: "secret", pattern: PEM_PRIVATE_KEY_PATTERN },
   { entity: "crypto_wallet", pattern: BITCOIN_BECH32_PATTERN },
   { entity: "crypto_wallet", pattern: BITCOIN_BASE58_PATTERN },
@@ -265,7 +286,12 @@ export function findRedactionMatches(text: string, entities: ReadonlySet<Redacti
       if (match.index === undefined || value === "") continue
       if (detector.validate && !detector.validate(value)) continue
 
-      matches.push({ start: match.index, end: match.index + value.length, entity: detector.entity })
+      matches.push({
+        start: match.index,
+        end: match.index + value.length,
+        entity: detector.entity,
+        rank: detector.rank ?? 0,
+      })
     }
   }
 

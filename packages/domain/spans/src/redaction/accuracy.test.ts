@@ -722,10 +722,9 @@ const SECRET_CASES: readonly PiiCase[] = [
     id: "secret-github-classic",
     entity: "secret",
     outcome: "redacted",
-    text: "git remote set-url origin https://ghp_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6H@github.com/acme/app",
-    value: "ghp_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6H",
-    labelledAs: "email",
-    note: "the email detector matches token@github.com and wins on length",
+    text: "git remote set-url origin https://ghp_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl@github.com/acme/app",
+    value: "ghp_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl",
+    note: "also a valid email local part, so detector rank is what keeps the label right",
   },
   {
     id: "secret-postgres-dsn",
@@ -733,8 +732,7 @@ const SECRET_CASES: readonly PiiCase[] = [
     outcome: "redacted",
     text: "DATABASE_URL=postgres://app_user:Sup3rS3cretPass@db.internal:5432/prod",
     value: "Sup3rS3cretPass",
-    labelledAs: "email",
-    note: "redacted only by accident, because the host has a letter TLD",
+    note: "matched as the DSN credential, not as an email that happens to cover it",
   },
   {
     id: "secret-basic-auth",
@@ -883,10 +881,10 @@ const REALISTIC_CASES: readonly PiiCase[] = [
   {
     id: "stack-dsn-password",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: STACK_TRACE,
     value: "Sup3rS3cret",
-    note: "the host is an IP, so the email detector does not incidentally cover it",
+    note: "an IP host gives the email detector nothing to match, so only the DSN pattern covers it",
   },
   { id: "k8s-password", entity: "secret", outcome: "missed", text: K8S_SECRET, value: "aHVudGVyMkNvcnJlY3RIb3JzZQ==" },
   {
@@ -1021,7 +1019,7 @@ describe("accuracy totals", () => {
   })
 
   it("pins how much PII is stored verbatim", () => {
-    expect(counted("missed")).toBe(24)
+    expect(counted("missed")).toBe(23)
   })
 
   it("pins how much PII is only partially removed", () => {
@@ -1029,7 +1027,7 @@ describe("accuracy totals", () => {
   })
 
   it("pins how many matches land under the wrong entity", () => {
-    expect(PII_CASES.filter((entry) => entry.labelledAs !== undefined)).toHaveLength(4)
+    expect(PII_CASES.filter((entry) => entry.labelledAs !== undefined)).toHaveLength(2)
   })
 
   it("pins the accepted false positives", () => {

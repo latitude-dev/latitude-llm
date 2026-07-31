@@ -381,6 +381,30 @@ describe("secret detector", () => {
     expect(found(`posted to ${url}`, "secret")).toEqual([url])
   })
 
+  /**
+   * A DSN password is also a valid email local part, and the email match covers more characters, so
+   * without detector rank a password was stored as `[REDACTED_EMAIL]`. With an IP host the email detector
+   * has nothing to match at all and the password was stored verbatim.
+   */
+  it.each([
+    ["postgres://app_user:Sup3rS3cretPass@db.internal:5432/prod", "Sup3rS3cretPass"],
+    ["postgres://app:Sup3rS3cret@127.0.0.1:5432/app", "Sup3rS3cret"],
+    ["mongodb+srv://svc:9aZq1LmT4vBn@cluster0.abcde.mongodb.net/app", "9aZq1LmT4vBn"],
+    ["redis://default:h7Kq2LmZ9vBn@cache.internal:6379", "h7Kq2LmZ9vBn"],
+  ])("detects the credential in %s", (text, credential) => {
+    expect(found(text, "secret")).toEqual([credential])
+  })
+
+  it("leaves the host and database readable so a connection error stays diagnosable", () => {
+    expect(redactText("postgres://app:Sup3rS3cret@127.0.0.1:5432/app", only("secret")).text).toBe(
+      "postgres://app:[REDACTED_SECRET]@127.0.0.1:5432/app",
+    )
+  })
+
+  it("does not match a URL with no credential", () => {
+    expect(detects("fetched https://api.example.com/v1/users?page=2", "secret")).toBe(false)
+  })
+
   it("does not match sk- prefixed CSS class names", () => {
     expect(detects('<div class="sk-spinner-double-bounce-child">', "secret")).toBe(false)
   })
