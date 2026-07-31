@@ -45,8 +45,10 @@ export type SpanRow = {
    * Optional so hand-built test rows can omit it; ClickHouse defaults it to ''.
    * Set it wherever a row carries cost — the `unpriced_span_count` rollups read
    * this column raw, with none of `parseCostSource`'s fallback for empty values.
+   * `""` is what a row written before the column existed reads back as, which is
+   * the only way to seed the `unknown` bucket.
    */
-  cost_source?: CostSource
+  cost_source?: CostSource | ""
   time_to_first_token_ns: number
   is_streaming: number
   response_id: string
@@ -363,6 +365,7 @@ export function makeLlmSpan({
   finishReason,
   temperature,
   promptTokens,
+  completionTokens,
   cacheProfile,
 }: {
   base: SpanBase
@@ -375,11 +378,13 @@ export function makeLlmSpan({
   temperature?: number
   /** Overrides the estimate from the message text, for fixtures that need a specific prompt size. */
   promptTokens?: number
+  /** The output-side counterpart of `promptTokens`, so a fixture can pin its input/output cost split. */
+  completionTokens?: number
   cacheProfile?: CacheProfile
 }): SpanRow {
   const span = makeBaseSpan(base)
   const inputTokens = promptTokens ?? estimateTokens(JSON.stringify(inputMessages))
-  const outputTokens = estimateTokens(JSON.stringify(outputMessages))
+  const outputTokens = completionTokens ?? estimateTokens(JSON.stringify(outputMessages))
   const cache = splitCacheTokens(inputTokens, cacheProfile ?? randomCacheProfile())
   const reasoningTokens = modelConfig.isReasoning ? Math.floor(outputTokens * randFloat(1.5, 4)) : 0
   const costIn = inputSideCostMicrocents(cache, modelConfig)
