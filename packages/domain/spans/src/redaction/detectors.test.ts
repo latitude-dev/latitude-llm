@@ -460,8 +460,10 @@ describe("secret detector", () => {
     "npm_9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg",
     "ya29.a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ",
     ["SG", "9aZq1LmT4vBn7XkR2wEs8Y", "YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb"].join("."),
+    // Carrier phrase avoids the word "token": the bearer scheme matches case-insensitively, so `token <value>`
+    // is a second, legitimate match on the same span and this table is asserting the vendor pattern alone.
   ])("detects the vendor token %s", (value) => {
-    expect(found(`token ${value} end`, "secret")).toEqual([value])
+    expect(found(`emitted ${value} here`, "secret")).toEqual([value])
   })
 
   it("detects a Slack webhook URL, whose path segments are the credential", () => {
@@ -507,6 +509,15 @@ describe("secret detector", () => {
     ["Authorization: Bearer 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl"],
   ])("detects the credential assigned in %s", (text, credential) => {
     expect(found(text, "secret")).toContain(credential)
+  })
+
+  // Auth scheme names are case-insensitive on the wire, and a lowercase `bearer` header is common in logs.
+  it.each([
+    "Authorization: Bearer",
+    "authorization: bearer",
+    "AUTHORIZATION: BEARER",
+  ])("detects the token after %s", (header) => {
+    expect(detects(`${header} 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl`, "secret")).toBe(true)
   })
 
   it("redacts the value and leaves the key readable", () => {

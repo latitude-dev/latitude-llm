@@ -366,7 +366,8 @@ const CREDENTIAL_ASSIGNMENT_PATTERN = new RegExp(
   "gdi",
 )
 const CREDENTIAL_FLAG_PATTERN = /--(?:token|password|secret|api-?key)[= ]([^\s"']{6,200})/dgi
-const BEARER_TOKEN_PATTERN = /\b(?:Bearer|Token) ([A-Za-z0-9._~+/=-]{16,})/dg
+// Case-insensitive: RFC 7235 auth scheme names are, so `bearer` and `BEARER` are both valid on the wire.
+const BEARER_TOKEN_PATTERN = /\b(?:Bearer|Token) ([A-Za-z0-9._~+/=-]{16,})/dgi
 
 /**
  * A placeholder, a variable reference, or a name for the credential rather than the credential.
