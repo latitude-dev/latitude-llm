@@ -94,6 +94,7 @@ import { Route as AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport } 
 import { Route as AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/experiments/$experimentSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/slack'
 import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/github'
 import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind'
 import { Route as AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId'
@@ -594,6 +595,12 @@ const AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute =
       getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
     } as any,
   )
+const AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute =
+  AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRouteImport.update({
+    id: '/integrations/slack',
+    path: '/integrations/slack',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute =
   AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRouteImport.update({
     id: '/integrations/github',
@@ -719,6 +726,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
   '/projects/$projectSlug/settings/integrations/github': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
+  '/projects/$projectSlug/settings/integrations/slack': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute
   '/projects/$projectSlug/behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/custom-behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/experiments/$experimentSlug/': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
@@ -807,6 +815,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
   '/projects/$projectSlug/settings/integrations/github': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
+  '/projects/$projectSlug/settings/integrations/slack': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute
   '/projects/$projectSlug/behaviours/$behaviourSlug': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/custom-behaviours/$behaviourSlug': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/projects/$projectSlug/experiments/$experimentSlug': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
@@ -901,6 +910,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
   '/_authenticated/projects/$projectSlug/settings/integrations/github': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
+  '/_authenticated/projects/$projectSlug/settings/integrations/slack': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute
   '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRoute
   '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/': typeof AuthenticatedProjectsProjectSlugCustomBehavioursBehaviourSlugIndexRoute
   '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/': typeof AuthenticatedProjectsProjectSlugExperimentsExperimentSlugIndexRoute
@@ -995,6 +1005,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/projects/$projectSlug/settings/integrations/$integrationKind'
     | '/projects/$projectSlug/settings/integrations/github'
+    | '/projects/$projectSlug/settings/integrations/slack'
     | '/projects/$projectSlug/behaviours/$behaviourSlug/'
     | '/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
     | '/projects/$projectSlug/experiments/$experimentSlug/'
@@ -1083,6 +1094,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/projects/$projectSlug/settings/integrations/$integrationKind'
     | '/projects/$projectSlug/settings/integrations/github'
+    | '/projects/$projectSlug/settings/integrations/slack'
     | '/projects/$projectSlug/behaviours/$behaviourSlug'
     | '/projects/$projectSlug/custom-behaviours/$behaviourSlug'
     | '/projects/$projectSlug/experiments/$experimentSlug'
@@ -1176,6 +1188,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/settings/data-destinations/$destinationId'
     | '/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind'
     | '/_authenticated/projects/$projectSlug/settings/integrations/github'
+    | '/_authenticated/projects/$projectSlug/settings/integrations/slack'
     | '/_authenticated/projects/$projectSlug/behaviours/$behaviourSlug/'
     | '/_authenticated/projects/$projectSlug/custom-behaviours/$behaviourSlug/'
     | '/_authenticated/projects/$projectSlug/experiments/$experimentSlug/'
@@ -1817,6 +1830,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursBehaviourSlugIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/settings/integrations/slack': {
+      id: '/_authenticated/projects/$projectSlug/settings/integrations/slack'
+      path: '/integrations/slack'
+      fullPath: '/projects/$projectSlug/settings/integrations/slack'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
     '/_authenticated/projects/$projectSlug/settings/integrations/github': {
       id: '/_authenticated/projects/$projectSlug/settings/integrations/github'
       path: '/integrations/github'
@@ -1906,6 +1926,7 @@ interface AuthenticatedProjectsProjectSlugSettingsRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsDestinationIdRoute
   AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute
   AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
+  AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute
   AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute
   AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute
 }
@@ -1940,6 +1961,8 @@ const AuthenticatedProjectsProjectSlugSettingsRouteChildren: AuthenticatedProjec
       AuthenticatedProjectsProjectSlugSettingsIntegrationsIntegrationKindRoute,
     AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute:
       AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute,
+    AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute:
+      AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute,
     AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute:
       AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute,
     AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute:

@@ -25,7 +25,7 @@ import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { BookOpen, Copy, ExternalLink, FileText, Plus, Settings } from "lucide-react"
+import { BookOpen, Copy, ExternalLink, FileText, Plus } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import {
@@ -36,7 +36,6 @@ import {
   connectCursorIntegration,
   connectLinearIntegration,
   connectWebhookIntegration,
-  disconnectAgentDispatchIntegration,
   getOrgDefaultDispatchConfig,
   getWebhookSecret,
   listAgentDispatches,
@@ -222,116 +221,6 @@ function IntegrationDocsButton({
 
 function extractClaudeRoutineTriggerId(routineUrl: string) {
   return routineUrl.trim().match(/\/routines\/(trig_[^/?#]+)/)?.[1] ?? null
-}
-
-export function AgentDispatchSection({
-  projectId,
-  projectSlug,
-}: {
-  readonly projectId: string
-  readonly projectSlug: string
-}) {
-  const { data: integrations = [], isLoading } = useQuery({
-    queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
-    queryFn: () => listAgentDispatchIntegrations(),
-  })
-
-  if (isLoading) return null
-
-  return (
-    <>
-      {(Object.keys(KIND_LABELS) as AgentDispatchKindKey[]).map((kind) => (
-        <AgentDispatchKindCard
-          key={kind}
-          kind={kind}
-          integration={integrations.find((row: AgentDispatchIntegrationRecord) => row.kind === kind) ?? null}
-          projectId={projectId}
-          projectSlug={projectSlug}
-        />
-      ))}
-    </>
-  )
-}
-
-function AgentDispatchKindCard({
-  kind,
-  integration,
-  projectId,
-  projectSlug,
-}: {
-  readonly kind: AgentDispatchKindKey
-  readonly integration: AgentDispatchIntegrationRecord | null
-  readonly projectId: string
-  readonly projectSlug: string
-}) {
-  const [connectOpen, setConnectOpen] = useState(false)
-  const [, setWebhookSecret] = useState<string | null>(null)
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
-
-  const disconnectMutation = useMutation({
-    mutationFn: () => disconnectAgentDispatchIntegration({ data: { integrationId: integration!.id } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
-      await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
-      await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
-      toast({ description: `${KIND_LABELS[kind]} disconnected` })
-    },
-    onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
-  })
-
-  if (!integration) {
-    return (
-      <>
-        <IntegrationCard
-          icon={INTEGRATION_ICONS[kind]}
-          title={KIND_LABELS[kind]}
-          subtitle={INTEGRATION_SUBTITLES[kind]}
-          actions={
-            <Button onClick={() => setConnectOpen(true)}>
-              <Icon icon={Plus} size="sm" />
-              Connect
-            </Button>
-          }
-        />
-        <ConnectAgentDispatchModal
-          kind={kind}
-          projectId={projectId}
-          open={connectOpen}
-          onClose={() => setConnectOpen(false)}
-          onWebhookSecret={setWebhookSecret}
-        />
-      </>
-    )
-  }
-
-  return (
-    <IntegrationCard
-      icon={INTEGRATION_ICONS[kind]}
-      title={KIND_LABELS[kind]}
-      subtitle={`Connected ${relativeTime(new Date(integration.installedAt))}`}
-      actions={
-        <div className="flex flex-row flex-nowrap items-center gap-2">
-          <Button asChild variant="outline">
-            <Link
-              to="/projects/$projectSlug/settings/integrations/$integrationKind"
-              params={{ projectSlug, integrationKind: kind }}
-            >
-              <Icon icon={Settings} size="sm" />
-              Manage
-            </Link>
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => disconnectMutation.mutate()}
-            isLoading={disconnectMutation.isPending}
-          >
-            Disconnect
-          </Button>
-        </div>
-      }
-    />
-  )
 }
 
 export function AgentDispatchIntegrationDetails({
@@ -782,7 +671,7 @@ export function AgentDispatchConfigFormInner({
   )
 }
 
-function ConnectAgentDispatchModal({
+export function ConnectAgentDispatchModal({
   kind,
   projectId,
   open,

@@ -19,6 +19,8 @@ import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { useGithubDeliveries } from "../../../../../../domains/github/github.collection.ts"
 import {
+  GITHUB_INTEGRATION_QUERY_KEY,
+  GITHUB_REPOS_QUERY_KEY,
   type GithubDefaultRepoRecord,
   type GithubDeliveryRecord,
   getActiveGithubIntegration,
@@ -26,7 +28,6 @@ import {
   listGithubInstallationRepositories,
   updateGithubOrgDefaults,
 } from "../../../../../../domains/github/github.functions.ts"
-import { GITHUB_INTEGRATION_QUERY_KEY, GITHUB_REPOS_QUERY_KEY } from "./github-integration-section.tsx"
 import { GithubMonitorSettingsForm } from "./github-monitor-settings-form.tsx"
 
 const GITHUB_ORG_DEFAULTS_QUERY_KEY = ["github-integration", "org-defaults"] as const

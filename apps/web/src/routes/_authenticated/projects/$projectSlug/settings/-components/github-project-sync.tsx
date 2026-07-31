@@ -2,6 +2,8 @@ import { Button, Input, Select, Skeleton, Text, useToast } from "@repo/ui"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import {
+  GITHUB_INTEGRATION_QUERY_KEY,
+  GITHUB_REPOS_QUERY_KEY,
   type GithubProjectConfigRecord,
   getActiveGithubIntegration,
   getGithubProjectConfig,
@@ -10,7 +12,6 @@ import {
   upsertGithubProjectConfig,
 } from "../../../../../../domains/github/github.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
-import { GITHUB_INTEGRATION_QUERY_KEY, GITHUB_REPOS_QUERY_KEY } from "./github-integration-section.tsx"
 import { GithubMonitorSettingsForm } from "./github-monitor-settings-form.tsx"
 
 const githubProjectConfigQueryKey = (projectId: string) => ["github-integration", "project-config", projectId] as const

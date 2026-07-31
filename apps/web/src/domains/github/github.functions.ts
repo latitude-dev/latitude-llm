@@ -72,6 +72,9 @@ const toRecord = (integration: GithubIntegration, baseUrl: string | null): Githu
   installedAt: integration.installedAt.toISOString(),
 })
 
+export const GITHUB_INTEGRATION_QUERY_KEY = ["github-integration"] as const
+export const GITHUB_REPOS_QUERY_KEY = ["github-integration", "repos"] as const
+
 export const isGithubIntegrationConfigured = createServerFn({ method: "GET" }).handler(async (): Promise<boolean> => {
   await requireSession()
   const { loadGithubConfig } = await import("@platform/github")
