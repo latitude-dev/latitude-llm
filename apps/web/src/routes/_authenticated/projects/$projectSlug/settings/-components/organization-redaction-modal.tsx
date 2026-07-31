@@ -1,9 +1,10 @@
 import { DEFAULT_REDACTION_ENTITIES, type OrganizationRedactionSetting } from "@domain/shared"
-import { Alert, Button, Label, Modal, Switch, Text, useToast } from "@repo/ui"
+import { Button, Label, Modal, Switch, Text, useToast } from "@repo/ui"
 import { useState } from "react"
 import { updateOrganizationRedactionMutation } from "../../../../../../domains/organizations/organizations.collection.ts"
 import { decodeEntities, encodeEntities } from "../../../../../../domains/projects/redaction-entities.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { OrgDefaultBlastRadius, otherAffectedProjects, useOrgDefaultConfirm } from "./org-default-confirm.tsx"
 import { RedactionCard, type RedactionCardValue } from "./redaction-card.tsx"
 
 /**
@@ -14,11 +15,13 @@ export function OrganizationRedactionModal({
   current,
   projectCount,
   overrideCount,
+  currentProjectInherits = false,
   onClose,
 }: {
   readonly current: OrganizationRedactionSetting | undefined
   readonly projectCount: number
   readonly overrideCount: number
+  readonly currentProjectInherits?: boolean
   readonly onClose: () => void
 }) {
   const { toast } = useToast()
@@ -31,7 +34,11 @@ export function OrganizationRedactionModal({
   })
   const [locked, setLocked] = useState(current?.locked ?? false)
 
+  const otherAffected = otherAffectedProjects({ projectCount, overrideCount, currentProjectInherits })
+  const confirm = useOrgDefaultConfirm(otherAffected)
+
   const save = async () => {
+    if (!confirm.gate()) return
     setIsSaving(true)
     try {
       const setting: OrganizationRedactionSetting = {
@@ -50,8 +57,6 @@ export function OrganizationRedactionModal({
     }
   }
 
-  const inherited = projectCount - overrideCount
-
   return (
     <Modal
       open
@@ -67,21 +72,17 @@ export function OrganizationRedactionModal({
             Cancel
           </Button>
           <Button onClick={() => void save()} isLoading={isSaving} disabled={isSaving}>
-            Save default
+            {confirm.submitLabel}
           </Button>
         </div>
       }
     >
       <div className="flex flex-col gap-6">
-        <Alert
-          variant="default"
-          showIcon
-          title="This affects every project"
-          description={
-            overrideCount > 0
-              ? `${inherited} of ${projectCount} projects use this default. ${overrideCount} override it and won't change.`
-              : `All ${projectCount} projects use this default.`
-          }
+        <OrgDefaultBlastRadius
+          projectCount={projectCount}
+          overrideCount={overrideCount}
+          otherAffected={otherAffected}
+          awaitingConfirm={confirm.awaitingConfirm}
         />
 
         <RedactionCard

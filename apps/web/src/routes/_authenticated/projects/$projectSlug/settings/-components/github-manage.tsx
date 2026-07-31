@@ -38,6 +38,7 @@ import {
 } from "../../../../../../domains/github/github.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { GithubMonitorSettingsForm } from "./github-monitor-settings-form.tsx"
+import { OrgDefaultBlastRadius, otherAffectedProjects, useOrgDefaultConfirm } from "./org-default-confirm.tsx"
 import { ScopedSetting, type SettingScope } from "./scoped-setting.tsx"
 
 const githubProjectConfigQueryKey = (projectId: string) => ["github-integration", "project-config", projectId] as const
@@ -472,6 +473,7 @@ function MonitoringSection({
         <OrganizationGithubModal
           projectCount={projectCount}
           overrideCount={config.overrideCount}
+          currentProjectInherits={storedScope === "organization"}
           onClose={() => setEditingDefault(false)}
         />
       ) : null}
@@ -483,10 +485,12 @@ function MonitoringSection({
 export function OrganizationGithubModal({
   projectCount,
   overrideCount,
+  currentProjectInherits = false,
   onClose,
 }: {
   readonly projectCount: number
   readonly overrideCount: number
+  readonly currentProjectInherits?: boolean
   readonly onClose: () => void
 }) {
   const queryClient = useQueryClient()
@@ -494,6 +498,9 @@ export function OrganizationGithubModal({
     queryKey: GITHUB_ORG_DEFAULTS_QUERY_KEY,
     queryFn: () => getGithubOrgDefaults(),
   })
+
+  const otherAffected = otherAffectedProjects({ projectCount, overrideCount, currentProjectInherits })
+  const confirm = useOrgDefaultConfirm(otherAffected)
 
   return (
     <Modal
@@ -506,15 +513,11 @@ export function OrganizationGithubModal({
       description="The repository and monitoring behavior every project inherits unless it sets its own."
     >
       <div className="flex flex-col gap-6">
-        <Alert
-          variant="default"
-          showIcon
-          title="This affects every project"
-          description={
-            overrideCount > 0
-              ? `${projectCount - overrideCount} of ${projectCount} projects use this default. ${overrideCount} override it and won't change.`
-              : `All ${projectCount} projects use this default.`
-          }
+        <OrgDefaultBlastRadius
+          projectCount={projectCount}
+          overrideCount={overrideCount}
+          otherAffected={otherAffected}
+          awaitingConfirm={confirm.awaitingConfirm}
         />
 
         {isLoading || !data ? (
@@ -524,6 +527,8 @@ export function OrganizationGithubModal({
             key={dataUpdatedAt}
             initialSettings={data.settings}
             initialRepo={data.defaultRepo}
+            submitLabel={confirm.submitLabel}
+            beforeSubmit={confirm.gate}
             onSaved={async () => {
               await queryClient.invalidateQueries({ queryKey: GITHUB_ORG_DEFAULTS_QUERY_KEY })
               await queryClient.invalidateQueries({ queryKey: ["github-integration", "project-config"] })
@@ -539,10 +544,14 @@ export function OrganizationGithubModal({
 function GithubOrgDefaultsForm({
   initialSettings,
   initialRepo,
+  submitLabel,
+  beforeSubmit,
   onSaved,
 }: {
   readonly initialSettings: GithubMonitorSettings
   readonly initialRepo: GithubDefaultRepoRecord | null
+  readonly submitLabel: string
+  readonly beforeSubmit: () => boolean
   readonly onSaved: () => void
 }) {
   const { data: repos, isLoading: reposLoading } = useQuery({
@@ -566,7 +575,8 @@ function GithubOrgDefaultsForm({
   return (
     <GithubMonitorSettingsForm
       initial={initialSettings}
-      submitLabel="Save default"
+      submitLabel={submitLabel}
+      beforeSubmit={beforeSubmit}
       onSubmit={async (settings) => {
         await updateGithubOrgDefaults({
           data: { ...settings, defaultRepoId: repoId, defaultBranch: repoId === null ? null : branch.trim() },

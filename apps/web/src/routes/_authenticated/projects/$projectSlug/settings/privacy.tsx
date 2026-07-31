@@ -264,6 +264,7 @@ function ProjectPrivacySettingsPage() {
           current={orgRedaction}
           projectCount={projectCount}
           overrideCount={overrideCount}
+          currentProjectInherits={storedScope === "organization"}
           onClose={() => setEditingDefault(false)}
         />
       ) : null}

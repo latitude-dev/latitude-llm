@@ -28,6 +28,7 @@ export function GithubMonitorSettingsForm({
   extraFields,
   submitDisabled = false,
   readOnly = false,
+  beforeSubmit,
 }: {
   initial: GithubMonitorSettings
   submitLabel: string
@@ -38,6 +39,8 @@ export function GithubMonitorSettingsForm({
   submitDisabled?: boolean
   /** Inherited values shown without the ability to edit them. */
   readOnly?: boolean
+  /** Returning false aborts the save, for a caller that needs to confirm first. */
+  beforeSubmit?: () => boolean
 }) {
   const { toast } = useToast()
   const fieldId = useId()
@@ -64,6 +67,7 @@ export function GithubMonitorSettingsForm({
       return
     }
     setErrors({})
+    if (beforeSubmit?.() === false) return
     setSubmitting(true)
     try {
       await onSubmit(parsed.data)

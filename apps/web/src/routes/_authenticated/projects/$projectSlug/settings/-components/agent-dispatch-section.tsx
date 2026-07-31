@@ -61,6 +61,7 @@ import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
 import { useDebounce } from "../../../../../../lib/hooks/useDebounce.ts"
 import { maskSensitiveValue } from "../../../../../../lib/mask-sensitive-value.ts"
+import { OrgDefaultBlastRadius, otherAffectedProjects, useOrgDefaultConfirm } from "./org-default-confirm.tsx"
 import { ScopedSetting, type SettingScope } from "./scoped-setting.tsx"
 
 export const AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY = ["agent-dispatch-integrations"] as const
@@ -501,6 +502,7 @@ function DispatchBehaviorSection({
           vendorAccountId={integration.vendorAccountId}
           projectCount={projectCount}
           overrideCount={overrideCount}
+          currentProjectInherits={storedScope === "organization"}
           onClose={() => setEditingDefault(false)}
         />
       ) : null}
@@ -515,6 +517,7 @@ export function OrganizationDispatchModal({
   vendorAccountId,
   projectCount,
   overrideCount,
+  currentProjectInherits = false,
   onClose,
 }: {
   readonly kind: AgentDispatchKindKey
@@ -522,6 +525,7 @@ export function OrganizationDispatchModal({
   readonly vendorAccountId: string
   readonly projectCount: number
   readonly overrideCount: number
+  readonly currentProjectInherits?: boolean
   readonly onClose: () => void
 }) {
   const queryClient = useQueryClient()
@@ -530,6 +534,9 @@ export function OrganizationDispatchModal({
     queryKey: orgDefaultConfigQueryKey(kind),
     queryFn: () => getOrgDefaultDispatchConfig({ data: { kind } }),
   })
+
+  const otherAffected = otherAffectedProjects({ projectCount, overrideCount, currentProjectInherits })
+  const confirm = useOrgDefaultConfirm(otherAffected)
 
   return (
     <Modal
@@ -542,15 +549,11 @@ export function OrganizationDispatchModal({
       description="The dispatch behavior every project inherits unless it sets its own."
     >
       <div className="flex flex-col gap-6">
-        <Alert
-          variant="default"
-          showIcon
-          title="This affects every project"
-          description={
-            overrideCount > 0
-              ? `${projectCount - overrideCount} of ${projectCount} projects use this default. ${overrideCount} override it and won't change.`
-              : `All ${projectCount} projects use this default.`
-          }
+        <OrgDefaultBlastRadius
+          projectCount={projectCount}
+          overrideCount={overrideCount}
+          otherAffected={otherAffected}
+          awaitingConfirm={confirm.awaitingConfirm}
         />
 
         {isLoading ? (
@@ -563,7 +566,8 @@ export function OrganizationDispatchModal({
             vendorAccountId={vendorAccountId}
             initial={config ?? null}
             webhookSecret={null}
-            submitLabel="Save default"
+            submitLabel={confirm.submitLabel}
+            beforeSubmit={confirm.gate}
             onSubmit={async (values) => {
               await upsertOrgDefaultDispatchConfig({
                 data: {
@@ -597,6 +601,7 @@ export function AgentDispatchConfigFormInner({
   readOnly = false,
   submitLabel = "Save settings",
   extraActions,
+  beforeSubmit,
   onSubmit,
 }: {
   readonly kind: AgentDispatchKindKey
@@ -607,6 +612,8 @@ export function AgentDispatchConfigFormInner({
   readonly readOnly?: boolean
   readonly submitLabel?: string
   readonly extraActions?: ReactNode
+  /** Returning false aborts the save, for a caller that needs to confirm first. */
+  readonly beforeSubmit?: () => boolean
   readonly onSubmit: (values: DispatchConfigFormValues) => Promise<void>
 }) {
   const target = initial?.target
@@ -684,6 +691,7 @@ export function AgentDispatchConfigFormInner({
     },
     onSubmit: createFormSubmitHandler(
       async (values: Record<string, unknown>) => {
+        if (beforeSubmit?.() === false) return
         const common = z
           .object({
             triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
