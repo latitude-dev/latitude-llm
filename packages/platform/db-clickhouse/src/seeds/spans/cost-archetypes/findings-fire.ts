@@ -122,9 +122,10 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
 /**
  * The missing-cost cohorts, so coverage reads "at least N%" and the per-row warnings
  * appear. Both zero-cost buckets are needed and they arrive by different routes:
- * `unpriced` is a model the registry has no price for, `unknown` is a row written
- * before `cost_source` existed, whose zero cost cannot say whether the call was free
- * or simply never priced.
+ * `unpriced` is a model the registry has no price for — the span builder derives that
+ * from the failed lookup, so this cohort states no `costSource` at all — while
+ * `unknown` is a row written before `cost_source` existed, whose zero cost cannot say
+ * whether the call was free or simply never priced.
  */
 const MISSING_COST_COHORTS: readonly CostCohort[] = [
   {
@@ -136,7 +137,6 @@ const MISSING_COST_COHORTS: readonly CostCohort[] = [
     promptTokens: 11_000,
     completionTokens: 400,
     callsPerSession: 0,
-    costSource: "unpriced",
   },
   {
     key: "b-unknown",

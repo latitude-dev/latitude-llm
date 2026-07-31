@@ -6,7 +6,7 @@ import {
   SEED_ORG_ID,
   SEED_PROJECT_ID,
 } from "@domain/shared/seeding"
-import { type CacheState, classifyCacheState, modelCacheBreakEvenRate } from "@domain/spans"
+import { type CacheState, classifyCacheState, modelCacheBreakEvenRate, modelRegistryPricing } from "@domain/spans"
 import { cacheHitRate } from "@repo/utils"
 import { describe, expect, it } from "vitest"
 import type { SpanRow } from "../span-builders.ts"
@@ -127,20 +127,15 @@ describe("cost archetype fixtures", () => {
     }
   })
 
-  it("agrees with the registry wherever a cohort claims a cache-read price", () => {
-    // Break-even is derived from the registry, never from these prices — so a cohort
-    // whose own price list says "cacheable" and whose registry entry has no cache-read
-    // rate would render a position bar disagreeing with its own spend.
-    for (const { cohorts } of ARCHETYPES) {
-      for (const cohort of cohorts) {
-        const priced = modelCacheBreakEvenRate({
-          provider: cohort.modelConfig.provider,
-          model: cohort.modelConfig.model,
-        })
-        if (cohort.modelConfig.cacheReadPerMToken === undefined) expect(priced, cohort.key).toBeNull()
-        else expect(priced, cohort.key).not.toBeNull()
-      }
-    }
+  it("names only models the registry still prices, so no cohort is accidentally unpriced", () => {
+    // Costs come from the registry, so a stale or invented model id silently produces
+    // `unpriced` rows. Exactly one cohort is meant to — the gateway model archetype B
+    // uses to seed the missing-cost bucket.
+    const unpriced = ARCHETYPES.flatMap(({ cohorts }) => cohorts).filter(
+      (cohort) =>
+        modelRegistryPricing({ provider: cohort.modelConfig.provider, model: cohort.modelConfig.model }) === null,
+    )
+    expect(unpriced.map((cohort) => cohort.key)).toEqual(["b-unpriced"])
   })
 })
 
@@ -260,7 +255,7 @@ describe("archetype B — the project where findings fire", () => {
       "gpt-4o-mini",
       "o3-mini",
       "claude-sonnet-4-6",
-      "claude-3-5-haiku",
+      "claude-sonnet-5",
       "deepseek-chat",
       "gemini-2.0-flash",
       "gpt-4.1",
@@ -362,10 +357,15 @@ describe("archetype F — genuinely free", () => {
     expect(spans.every((span) => span.tokens_input + span.tokens_output > 0)).toBe(true)
   })
 
-  it("is free in the registry too, so the dashboard's own classification agrees", () => {
+  it("is free because the registry prices it at zero, not because the fixture zeroed it", () => {
     for (const cohort of FREE_COHORTS) {
-      expect(cohort.modelConfig.costInPerMToken).toBe(0)
-      expect(cohort.modelConfig.costOutPerMToken).toBe(0)
+      const pricing = modelRegistryPricing({
+        provider: cohort.modelConfig.provider,
+        model: cohort.modelConfig.model,
+      })
+      expect(pricing, cohort.key).not.toBeNull()
+      expect(pricing?.input).toBe(0)
+      expect(pricing?.output).toBe(0)
     }
   })
 })
