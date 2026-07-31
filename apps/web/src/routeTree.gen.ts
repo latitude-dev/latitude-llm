@@ -30,6 +30,7 @@ import { Route as Char91DotwellKnownChar93OpenidConfigurationRouteImport } from 
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
 import { Route as SandboxSandboxOrgIdRouteRouteImport } from './routes/sandbox/$sandboxOrgId/route'
 import { Route as SandboxSandboxOrgIdIndexRouteImport } from './routes/sandbox/$sandboxOrgId/index'
+import { Route as BackofficeUnpricedSpansIndexRouteImport } from './routes/backoffice/unpriced-spans/index'
 import { Route as BackofficeShowcaseIndexRouteImport } from './routes/backoffice/showcase/index'
 import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
 import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
@@ -208,6 +209,12 @@ const SandboxSandboxOrgIdIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
+  } as any)
+const BackofficeUnpricedSpansIndexRoute =
+  BackofficeUnpricedSpansIndexRouteImport.update({
+    id: '/unpriced-spans/',
+    path: '/unpriced-spans/',
+    getParentRoute: () => BackofficeRouteRoute,
   } as any)
 const BackofficeShowcaseIndexRoute = BackofficeShowcaseIndexRouteImport.update({
   id: '/showcase/',
@@ -677,6 +684,7 @@ export interface FileRoutesByFullPath {
   '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
   '/backoffice/showcase/': typeof BackofficeShowcaseIndexRoute
+  '/backoffice/unpriced-spans/': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
@@ -766,6 +774,7 @@ export interface FileRoutesByTo {
   '/backoffice/feature-flags': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations': typeof BackofficeOrganizationsIndexRoute
   '/backoffice/showcase': typeof BackofficeShowcaseIndexRoute
+  '/backoffice/unpriced-spans': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
@@ -859,6 +868,7 @@ export interface FileRoutesById {
   '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
   '/backoffice/showcase/': typeof BackofficeShowcaseIndexRoute
+  '/backoffice/unpriced-spans/': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
@@ -953,6 +963,7 @@ export interface FileRouteTypes {
     | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
     | '/backoffice/showcase/'
+    | '/backoffice/unpriced-spans/'
     | '/sandbox/$sandboxOrgId/'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
@@ -1042,6 +1053,7 @@ export interface FileRouteTypes {
     | '/backoffice/feature-flags'
     | '/backoffice/organizations'
     | '/backoffice/showcase'
+    | '/backoffice/unpriced-spans'
     | '/sandbox/$sandboxOrgId'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/traces'
@@ -1134,6 +1146,7 @@ export interface FileRouteTypes {
     | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
     | '/backoffice/showcase/'
+    | '/backoffice/unpriced-spans/'
     | '/sandbox/$sandboxOrgId/'
     | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
@@ -1368,6 +1381,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sandbox/$sandboxOrgId/'
       preLoaderRoute: typeof SandboxSandboxOrgIdIndexRouteImport
       parentRoute: typeof SandboxSandboxOrgIdRouteRoute
+    }
+    '/backoffice/unpriced-spans/': {
+      id: '/backoffice/unpriced-spans/'
+      path: '/unpriced-spans'
+      fullPath: '/backoffice/unpriced-spans/'
+      preLoaderRoute: typeof BackofficeUnpricedSpansIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
     }
     '/backoffice/showcase/': {
       id: '/backoffice/showcase/'
@@ -1872,6 +1892,7 @@ interface BackofficeRouteRouteChildren {
   BackofficeFeatureFlagsIndexRoute: typeof BackofficeFeatureFlagsIndexRoute
   BackofficeOrganizationsIndexRoute: typeof BackofficeOrganizationsIndexRoute
   BackofficeShowcaseIndexRoute: typeof BackofficeShowcaseIndexRoute
+  BackofficeUnpricedSpansIndexRoute: typeof BackofficeUnpricedSpansIndexRoute
 }
 
 const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
@@ -1885,6 +1906,7 @@ const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
   BackofficeFeatureFlagsIndexRoute: BackofficeFeatureFlagsIndexRoute,
   BackofficeOrganizationsIndexRoute: BackofficeOrganizationsIndexRoute,
   BackofficeShowcaseIndexRoute: BackofficeShowcaseIndexRoute,
+  BackofficeUnpricedSpansIndexRoute: BackofficeUnpricedSpansIndexRoute,
 }
 
 const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(
@@ -2179,11 +2201,15 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
+
 import type { startInstance } from './start.ts'
+
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
+
     router: Awaited<ReturnType<typeof getRouter>>
+
     config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
