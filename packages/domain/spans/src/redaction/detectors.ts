@@ -20,6 +20,15 @@ interface Detector {
   readonly pattern: RegExp
   readonly validate?: (value: string) => boolean
   readonly rank?: number
+  /**
+   * Redact this capture group rather than the whole match, for a pattern that needs surrounding context to
+   * recognise a value but must not remove that context. Requires the `d` flag so group offsets are exposed.
+   *
+   * A lookbehind would express the same thing, but it is evaluated at every position in the leaf, whereas a
+   * pattern that opens with literal alternatives lets the engine skip ahead. On a 32 KB leaf that is the
+   * difference between a scan we can afford on the ingest path and one we cannot.
+   */
+  readonly group?: number
 }
 
 // No nested quantifiers: span content is attacker controlled, so exponential backtracking here is a DoS vector.
@@ -234,6 +243,49 @@ const DSN_CREDENTIAL_PATTERN = /(?<=[a-z][a-z0-9+.-]{1,20}:\/\/[^\s:@/]{1,64}:)[
 const PEM_PRIVATE_KEY_PATTERN =
   /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----/g
 
+/**
+ * Credentials with no distinctive shape, recognised from the key they are assigned to. This is not the
+ * generic-entropy heuristic the spec rules out: nothing here looks at how random a value is, only at what
+ * it was named, which is why it can stay precise without guessing.
+ *
+ * Deliberate omissions, each an observed false positive:
+ *
+ * - A bare `key`. `idempotency_key`, `partition_key`, `cache_key` and `sort_key` are all over tool output,
+ *   so only a qualified key (`api_key`, `private_key`, `access_key`, …) counts.
+ * - Plural `tokens`. `max_tokens`, `prompt_tokens` and `total_tokens` appear in nearly every LLM span.
+ *   Credential keys are singular; usage counters are plural.
+ *
+ * The separator is `[ \t]*` rather than `\s*` so a match cannot cross a newline and pick up the next line
+ * of a YAML block as the value.
+ */
+const CREDENTIAL_KEY =
+  /(?:passwords?|passwd|pwd|secret[_-]?access[_-]?key|client[_-]?secret|secrets?|(?:api|private|access|auth|client|encryption|signing)[_-]?keys?|apikey|(?:access|auth|refresh|bearer|id)[_-]?token|token|credentials?)/
+const CREDENTIAL_ASSIGNMENT_PATTERN = new RegExp(
+  `${CREDENTIAL_KEY.source}["']?[ \\t]*[:=][ \\t]*["']?([^\\s"',;)}\\]([]{6,200})`,
+  "gdi",
+)
+const CREDENTIAL_FLAG_PATTERN = /--(?:token|password|secret|api-?key)[= ]([^\s"']{6,200})/dgi
+const BEARER_TOKEN_PATTERN = /\b(?:Bearer|Token) ([A-Za-z0-9._~+/=-]{16,})/dg
+
+/**
+ * A placeholder, a variable reference, or a name for the credential rather than the credential.
+ *
+ * `[` also covers our own output, which keeps redaction idempotent: `password=[REDACTED_SECRET]` must not
+ * match again.
+ */
+const CREDENTIAL_PLACEHOLDER =
+  /^(?:[$<{%[(*]|null$|undefined$|none$|nil$|true$|false$|\*+$|x+$|changeme$|redacted$|required$)/i
+const CODE_IDENTIFIER = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/
+
+const isCredentialValue = (value: string): boolean => {
+  if (CREDENTIAL_PLACEHOLDER.test(value)) return false
+  // `max_tokens=1048576` clears the length gate, and no credential is a bare number.
+  if (/^[\d.,_-]+$/.test(value)) return false
+
+  // `options.apiKey` and `process.env.OPENAI_API_KEY` are references; a real credential is not spellable.
+  return !(CODE_IDENTIFIER.test(value) && !/\d/.test(value))
+}
+
 const BITCOIN_BECH32_PATTERN = /\bbc1[a-z0-9]{25,62}\b/g
 const BITCOIN_BASE58_PATTERN = /(?<![A-Za-z0-9])[13][a-km-zA-HJ-NP-Z1-9]{25,34}(?![A-Za-z0-9])/g
 const ETHEREUM_PATTERN = /\b0x[a-fA-F0-9]{40}\b/g
@@ -269,10 +321,31 @@ const DETECTORS: readonly Detector[] = [
   { entity: "secret", pattern: SLACK_WEBHOOK_PATTERN },
   { entity: "secret", pattern: DSN_CREDENTIAL_PATTERN, rank: SPECIFIC },
   { entity: "secret", pattern: PEM_PRIVATE_KEY_PATTERN },
+  { entity: "secret", pattern: CREDENTIAL_ASSIGNMENT_PATTERN, validate: isCredentialValue, group: 1 },
+  { entity: "secret", pattern: CREDENTIAL_FLAG_PATTERN, validate: isCredentialValue, group: 1 },
+  { entity: "secret", pattern: BEARER_TOKEN_PATTERN, validate: isCredentialValue, group: 1 },
   { entity: "crypto_wallet", pattern: BITCOIN_BECH32_PATTERN },
   { entity: "crypto_wallet", pattern: BITCOIN_BASE58_PATTERN },
   { entity: "crypto_wallet", pattern: ETHEREUM_PATTERN },
 ]
+
+const spanOf = (
+  match: RegExpExecArray,
+  group: number | undefined,
+): { start: number; end: number; value: string } | undefined => {
+  if (group === undefined) {
+    const value = match[0]
+    if (match.index === undefined || value === "") return undefined
+
+    return { start: match.index, end: match.index + value.length, value }
+  }
+
+  const offsets = match.indices?.[group]
+  const value = match[group]
+  if (offsets === undefined || value === undefined || value === "") return undefined
+
+  return { start: offsets[0], end: offsets[1], value }
+}
 
 /** Unsorted and possibly overlapping; the caller resolves overlaps so counting and replacement share one accepted set. */
 export function findRedactionMatches(text: string, entities: ReadonlySet<RedactionEntity>): RedactionMatch[] {
@@ -282,13 +355,13 @@ export function findRedactionMatches(text: string, entities: ReadonlySet<Redacti
     if (!entities.has(detector.entity)) continue
 
     for (const match of text.matchAll(detector.pattern)) {
-      const value = match[0]
-      if (match.index === undefined || value === "") continue
-      if (detector.validate && !detector.validate(value)) continue
+      const span = spanOf(match, detector.group)
+      if (span === undefined) continue
+      if (detector.validate && !detector.validate(span.value)) continue
 
       matches.push({
-        start: match.index,
-        end: match.index + value.length,
+        start: span.start,
+        end: span.end,
         entity: detector.entity,
         rank: detector.rank ?? 0,
       })

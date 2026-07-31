@@ -333,9 +333,13 @@ describe("us_ssn detector", () => {
 })
 
 describe("secret detector", () => {
+  // Asserted on the redacted text: the vendor prefix and the assignment key both match here, over the
+  // same span, so overlap resolution is what makes one placeholder out of two matches.
   it("detects an OpenAI style key", () => {
     const key = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
-    expect(found(`export OPENAI_API_KEY=${key}`, "secret")).toEqual([key])
+    expect(redactText(`export OPENAI_API_KEY=${key}`, only("secret")).text).toBe(
+      "export OPENAI_API_KEY=[REDACTED_SECRET]",
+    )
   })
 
   it("detects an Anthropic style key", () => {
@@ -358,7 +362,9 @@ describe("secret detector", () => {
   it("detects a JWT", () => {
     const jwt =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
-    expect(found(`Authorization: Bearer ${jwt}`, "secret")).toEqual([jwt])
+    expect(redactText(`Authorization: Bearer ${jwt}`, only("secret")).text).toBe(
+      "Authorization: Bearer [REDACTED_SECRET]",
+    )
   })
 
   it("detects a PEM private key block including its body", () => {
@@ -403,6 +409,79 @@ describe("secret detector", () => {
 
   it("does not match a URL with no credential", () => {
     expect(detects("fetched https://api.example.com/v1/users?page=2", "secret")).toBe(false)
+  })
+
+  /**
+   * Credentials with no shape of their own, recognised from the key they are assigned to.
+   */
+  it.each([
+    ["POSTGRES_PASSWORD=hunter2Correct-Horse", "hunter2Correct-Horse"],
+    ["REDIS_PASSWORD=Tr0ub4dor&3", "Tr0ub4dor&3"],
+    ['{"api_key": "9aZq1LmT4vBn7XkR"}', "9aZq1LmT4vBn7XkR"],
+    ["  DATABASE_PASSWORD: aHVudGVyMkNvcnJlY3RIb3JzZQ==", "aHVudGVyMkNvcnJlY3RIb3JzZQ=="],
+    ["aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"],
+    ["client_secret=8fJ2kLmN9pQrStUvWxYz", "8fJ2kLmN9pQrStUvWxYz"],
+    ["--token 9aZq1LmT4vBn7XkR2wEs", "9aZq1LmT4vBn7XkR2wEs"],
+    ["Authorization: Bearer 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl"],
+  ])("detects the credential assigned in %s", (text, credential) => {
+    expect(found(text, "secret")).toContain(credential)
+  })
+
+  it("redacts the value and leaves the key readable", () => {
+    expect(redactText("POSTGRES_PASSWORD=hunter2Correct-Horse", only("secret")).text).toBe(
+      "POSTGRES_PASSWORD=[REDACTED_SECRET]",
+    )
+  })
+
+  /**
+   * The precision surface of the assignment detector, which is the one detector here whose extent is not
+   * fixed by the shape of what it matches. Every vector is something a coding agent emits.
+   */
+  it.each([
+    // Usage counters, in nearly every LLM span. Plural `tokens` is excluded from the key list outright.
+    '{"usage":{"prompt_tokens":1523,"completion_tokens":88,"total_tokens":1611}}',
+    "max_tokens=1048576",
+    "max_tokens: 4096",
+    // Opaque ids whose keys end in `key` but name no credential.
+    "idempotency_key=order-4471-retry",
+    "partition_key = user_events_2024",
+    "cache_key: build-artifacts-v3",
+    "sort_key=timestamp_desc",
+    // Placeholders and references.
+    "password: ****",
+    "token: null",
+    "token: undefined",
+    "api_key: <your key here>",
+    "PASSWORD=$DB_PASSWORD",
+    'password: "${{ secrets.FOO }}"',
+    "api_key: process.env.OPENAI_API_KEY",
+    "token: changeme",
+    "# TOKEN=  (unset)",
+    // Source code and documentation.
+    "const apiKey = options.apiKey",
+    "const token = parseToken(raw)",
+    "| api_key | string | required |",
+    "AUTHORIZATION_HEADER_NAME=Authorization",
+    "the password is wrong, try again",
+    "Set the api key in your environment before running",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "secret")).toBe(false)
+  })
+
+  it("does not run past the end of the value into the rest of the line", () => {
+    expect(redactText("password=hunter2Correct at 09:12 by admin", only("secret")).text).toBe(
+      "password=[REDACTED_SECRET] at 09:12 by admin",
+    )
+  })
+
+  it("cannot pick up the following line as the value", () => {
+    expect(detects("password:\n  type: string\n  required: true", "secret")).toBe(false)
+  })
+
+  it("is idempotent, so its own placeholder is not a credential", () => {
+    const once = redactText("POSTGRES_PASSWORD=hunter2Correct-Horse", only("secret")).text
+
+    expect(redactText(once, only("secret")).text).toBe(once)
   })
 
   it("does not match sk- prefixed CSS class names", () => {
@@ -484,7 +563,10 @@ index 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567..f1e2d3c4b5a69788796a5b4c3d2e1f09
 
   it("still finds a real secret embedded in the same output", () => {
     const key = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
-    expect(found(`${TOOL_OUTPUT}\nOPENAI_API_KEY=${key}\n`, "secret")).toEqual([key])
+    const redacted = redactText(`${TOOL_OUTPUT}\nOPENAI_API_KEY=${key}\n`, only("secret")).text
+
+    expect(redacted).toContain("OPENAI_API_KEY=[REDACTED_SECRET]")
+    expect(redacted).not.toContain(key)
   })
 })
 

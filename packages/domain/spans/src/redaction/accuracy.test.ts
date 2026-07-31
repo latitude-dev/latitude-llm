@@ -746,10 +746,10 @@ const SECRET_CASES: readonly PiiCase[] = [
   {
     id: "secret-aws-secret-key",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: "aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
     value: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-    note: "the access key id is detected; the half that actually grants access is not",
+    note: "no shape of its own, so only the assignment key identifies it",
   },
   {
     id: "secret-sendgrid",
@@ -796,25 +796,25 @@ const SECRET_CASES: readonly PiiCase[] = [
   {
     id: "secret-env-password",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: "POSTGRES_PASSWORD=hunter2Correct-Horse\nREDIS_PASSWORD=Tr0ub4dor&3",
     value: "hunter2Correct-Horse",
-    note: "only the key identifies this, and nothing reads the key today",
+    note: "a plain password in a .env dump, identified by its key",
   },
   {
     id: "secret-env-password-second",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: "POSTGRES_PASSWORD=hunter2Correct-Horse\nREDIS_PASSWORD=Tr0ub4dor&3",
     value: "Tr0ub4dor&3",
   },
   {
     id: "secret-bearer-opaque",
     entity: "secret",
-    outcome: "missed",
+    outcome: "redacted",
     text: "curl -H 'Authorization: Bearer 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl' https://api.acme.com/v1/me",
     value: "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl",
-    note: "no vendor prefix to anchor on",
+    note: "opaque, so the Bearer scheme is the only signal",
   },
   {
     id: "secret-azure-hex",
@@ -886,7 +886,13 @@ const REALISTIC_CASES: readonly PiiCase[] = [
     value: "Sup3rS3cret",
     note: "an IP host gives the email detector nothing to match, so only the DSN pattern covers it",
   },
-  { id: "k8s-password", entity: "secret", outcome: "missed", text: K8S_SECRET, value: "aHVudGVyMkNvcnJlY3RIb3JzZQ==" },
+  {
+    id: "k8s-password",
+    entity: "secret",
+    outcome: "redacted",
+    text: K8S_SECRET,
+    value: "aHVudGVyMkNvcnJlY3RIb3JzZQ==",
+  },
   {
     id: "k8s-stripe-key",
     entity: "secret",
@@ -947,6 +953,25 @@ const CLEAN_CASES: readonly CleanCase[] = [
   { id: "clean-uuid", text: "request_id 3f2a9c1e-7b4d-4e6f-8a0b-2c4d6e8f0a2b handled by worker 4", matched: [] },
   { id: "clean-base64-image", text: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ", matched: [] },
   { id: "clean-css-class", text: '<div class="sk-spinner sk-child sk-bounce">loading</div>', matched: [] },
+  {
+    id: "clean-usage-counters",
+    text: '{"usage":{"prompt_tokens":1523,"completion_tokens":88,"total_tokens":1611},"max_tokens":4096}',
+    matched: [],
+    note: "in nearly every LLM span, which is why plural `tokens` is not a credential key",
+  },
+  {
+    id: "clean-opaque-key-ids",
+    text: "idempotency_key=order-4471-retry partition_key=user_events_2024 cache_key=build-artifacts-v3",
+    matched: [],
+    note: "a bare `key` is not a credential key for exactly these",
+  },
+  {
+    id: "clean-credential-references",
+    text: "const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY\nif (!apiKey) throw new Error('missing api key')",
+    matched: [],
+    note: "a reference to a credential is not a credential",
+  },
+  { id: "clean-credential-placeholders", text: "password: ****\ntoken: null\napi_key: <your key here>", matched: [] },
   { id: "clean-secret-prose", text: "Rotate the AKIA prefixed keys and the ghp tokens this quarter.", matched: [] },
   { id: "clean-invalid-octet", text: "Bad config value 192.168.1.256 rejected by the parser", matched: [] },
   { id: "clean-decimal-list", text: "Weights 0.25 0.5 0.75 applied per shard", matched: [] },
@@ -1019,7 +1044,7 @@ describe("accuracy totals", () => {
   })
 
   it("pins how much PII is stored verbatim", () => {
-    expect(counted("missed")).toBe(23)
+    expect(counted("missed")).toBe(18)
   })
 
   it("pins how much PII is only partially removed", () => {
