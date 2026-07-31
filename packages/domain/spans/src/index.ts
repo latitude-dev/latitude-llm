@@ -55,6 +55,7 @@ export type {
 export {
   costSourceSchema,
   isMemoryOperation,
+  isUsageOperation,
   MEMORY_OPERATIONS,
   operationSchema,
   parseCostSource,
@@ -63,6 +64,7 @@ export {
   spanSchema,
   spanStatusCodeSchema,
   toolDefinitionSchema,
+  USAGE_OPERATIONS,
 } from "./entities/span.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
@@ -102,6 +104,12 @@ export {
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export {
+  shouldReportUnpricedSpan,
+  UNPRICEABLE_PAIR_REASONS,
+  type UnpriceablePairReason,
+  unpriceablePairReason,
+} from "./helpers/should-report-unpriced.ts"
 export { tokenizePhrase } from "./helpers/tokenize-phrase.ts"
 export {
   resolveTraceIdFromRef,

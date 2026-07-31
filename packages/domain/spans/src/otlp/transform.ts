@@ -10,6 +10,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
+import { shouldReportUnpricedSpan } from "../helpers/should-report-unpriced.ts"
 import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
@@ -318,9 +319,11 @@ export function transformOtlpToSpans(
         })
         spans.push(transformed)
 
-        if (transformed.costSource === "unpriced") {
+        // Reporting only. `costSource` keeps every unpriced span marked, so the stored record and
+        // the Cost page's coverage stay exact; the filter just withholds the alert.
+        if (transformed.costSource === "unpriced" && shouldReportUnpricedSpan(transformed)) {
           const { provider, model } = transformed
-          const key = `${projectId} ${provider} ${model}`
+          const key = `${projectId} ${provider} ${model}`
           const existing = unpricedByKey.get(key)
           if (existing) existing.spans++
           else unpricedByKey.set(key, { projectId, provider, model, spans: 1 })

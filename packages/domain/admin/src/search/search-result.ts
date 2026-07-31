@@ -1,6 +1,14 @@
 import { z } from "zod"
 
 /**
+ * Query-length bounds, shared by the use-case and the backoffice input that has to respect them.
+ * They live beside the DTOs rather than with the use-case so the browser entry can re-export them
+ * without pulling Effect and the repository ports into the client bundle.
+ */
+export const MIN_SEARCH_QUERY_LENGTH = 2
+export const MAX_SEARCH_QUERY_LENGTH = 100
+
+/**
  * Admin unified-search results. Intentionally flat DTOs — we ship only the
  * fields the backoffice UI needs, so domain entities never accidentally leak
  * out of the admin surface.
