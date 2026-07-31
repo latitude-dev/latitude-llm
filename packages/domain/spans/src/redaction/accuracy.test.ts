@@ -1170,8 +1170,8 @@ describe("collision rates on synthetic identifiers", () => {
     expect(rate("credit_card", 3, 5_000, (random) => `5${pick(random, DIGITS, 15)}`)).toBeGreaterThan(0.02)
   })
 
-  // No checksum is validated, so every base58-shaped opaque id starting with 1 or 3 is redacted.
-  it("collides with every base58-shaped opaque id", () => {
+  // The address checksum is what makes this zero rather than one: the shape alone matches every one of them.
+  it("does not collide with base58-shaped opaque ids", () => {
     const observed = rate(
       "crypto_wallet",
       5,
@@ -1179,7 +1179,7 @@ describe("collision rates on synthetic identifiers", () => {
       (random) => `${random() < 0.5 ? "1" : "3"}${pick(random, BASE58, 25 + Math.floor(random() * 10))}`,
     )
 
-    expect(observed).toBe(1)
+    expect(observed).toBe(0)
   })
 
   it("collides with every 40-character hex string", () => {
