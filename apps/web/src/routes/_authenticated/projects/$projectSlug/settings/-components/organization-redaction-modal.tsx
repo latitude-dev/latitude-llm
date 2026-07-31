@@ -3,6 +3,7 @@ import { Button, Label, Modal, Switch, Text, useToast } from "@repo/ui"
 import { useState } from "react"
 import { updateOrganizationRedactionMutation } from "../../../../../../domains/organizations/organizations.collection.ts"
 import { decodeEntities, encodeEntities } from "../../../../../../domains/projects/redaction-entities.ts"
+import { decodeRules, encodeRules } from "../../../../../../domains/projects/redaction-rule-drafts.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { OrgDefaultBlastRadius, otherAffectedProjects, useOrgDefaultConfirm } from "./org-default-confirm.tsx"
 import { RedactionCard, type RedactionCardValue } from "./redaction-card.tsx"
@@ -31,6 +32,7 @@ export function OrganizationRedactionModal({
     entities: encodeEntities(current?.entities ?? DEFAULT_REDACTION_ENTITIES),
     metadata: current?.scopes?.metadata ?? false,
     identities: current?.identities ?? "keep",
+    rules: encodeRules(current?.rules ?? []),
   })
   const [locked, setLocked] = useState(current?.locked ?? false)
 
@@ -46,6 +48,7 @@ export function OrganizationRedactionModal({
         entities: decodeEntities(value.entities),
         scopes: { metadata: value.metadata },
         identities: value.identities,
+        rules: decodeRules(value.rules),
         locked,
       }
       await updateOrganizationRedactionMutation(setting)

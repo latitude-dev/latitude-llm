@@ -6,6 +6,7 @@ import {
   REDACTION_ENTITY_META,
   REDACTION_ENTITY_ORDER,
 } from "../../../../../../domains/projects/redaction-entities.ts"
+import { RedactionRulesSection } from "./redaction-rules-section.tsx"
 
 const IDENTITY_OPTIONS: { label: string; value: RedactionIdentityHandling }[] = [
   { label: "Keep user identifiers", value: "keep" },
@@ -18,6 +19,8 @@ export interface RedactionCardValue {
   readonly entities: string
   readonly metadata: boolean
   readonly identities: RedactionIdentityHandling
+  /** Canonical JSON, for the same reason `entities` is a string. */
+  readonly rules: string
 }
 
 /** Redaction controls only. Card chrome, title, and scope live in `ScopedSetting`. */
@@ -109,6 +112,13 @@ export function RedactionCard({
               pseudonym secret configured remove the identifier entirely instead.
             </Text.H6>
           </div>
+
+          <RedactionRulesSection
+            idPrefix={idPrefix}
+            value={value.rules}
+            disabled={disabled}
+            onChange={(next) => onChange("rules", next)}
+          />
         </>
       ) : null}
     </div>

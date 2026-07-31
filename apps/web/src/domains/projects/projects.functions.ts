@@ -12,8 +12,10 @@ import {
   isValidId,
   ProjectId,
   projectSettingsSchema,
+  redactionRuleSchema,
   redactionSettingSchema,
 } from "@domain/shared"
+import { type RuleValidation, validateRedactionRule } from "@domain/spans"
 import {
   MembershipRepositoryLive,
   OutboxEventWriterLive,
@@ -229,6 +231,21 @@ export const updateProjectRedaction = createServerFn({ method: "POST" })
     )
 
     return toRecord(project)
+  })
+
+/**
+ * Score a draft redaction rule without saving it.
+ *
+ * Runs the same `validateRedactionRule` the write path uses, so the editor can never show a
+ * verdict the save disagrees with. It lives on the server because the corpus and the engine are
+ * in `@domain/spans`, which has no business in the browser bundle.
+ */
+export const validateRedactionRuleDraft = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ rule: redactionRuleSchema }))
+  .handler(async ({ data }): Promise<RuleValidation> => {
+    await requireSession()
+
+    return validateRedactionRule(data.rule)
   })
 
 export const completeProjectOnboarding = createServerFn({ method: "POST" })

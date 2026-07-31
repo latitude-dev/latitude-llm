@@ -16,6 +16,7 @@ import {
   useProjectsCollection,
 } from "../../../../../domains/projects/projects.collection.ts"
 import { decodeEntities, encodeEntities } from "../../../../../domains/projects/redaction-entities.ts"
+import { decodeRules, encodeRules } from "../../../../../domains/projects/redaction-rule-drafts.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useDirtyGuard } from "../../../../../lib/hooks/use-dirty-guard.ts"
 import { useDraftOverlay } from "../../../../../lib/hooks/use-draft-overlay.ts"
@@ -36,6 +37,8 @@ interface Draft {
   readonly entities: string
   readonly metadata: boolean
   readonly identities: RedactionIdentityHandling
+  /** Canonical JSON, for the same reason `entities` is a string: the overlay compares by value. */
+  readonly rules: string
 }
 
 const toSetting = (value: RedactionCardValue): RedactionSetting => ({
@@ -43,6 +46,7 @@ const toSetting = (value: RedactionCardValue): RedactionSetting => ({
   entities: decodeEntities(value.entities),
   scopes: { metadata: value.metadata },
   identities: value.identities,
+  rules: decodeRules(value.rules),
 })
 
 function ProjectPrivacySettingsPage() {
@@ -100,6 +104,7 @@ function ProjectPrivacySettingsPage() {
     entities: encodeEntities(shown.entities),
     metadata: shown.redactMetadata,
     identities: shown.identities,
+    rules: encodeRules(shown.rules),
   }
 
   const [isApplying, setIsApplying] = useState(false)
