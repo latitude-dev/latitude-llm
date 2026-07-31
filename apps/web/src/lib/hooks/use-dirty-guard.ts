@@ -29,6 +29,9 @@ export function useDirtyGuard(input: UseDirtyGuardInput): void {
         event.preventDefault()
         if (canApply ?? true) void onApply()
       } else if (event.key === "Escape" && !inField && !isApplying) {
+        // A dropdown or modal owns Escape while it is open, and this listener is on `window`,
+        // so discarding here would swallow the key the overlay needs to close itself.
+        if (document.querySelector("[data-radix-popper-content-wrapper], [role='dialog']")) return
         event.preventDefault()
         onDiscard()
       }
