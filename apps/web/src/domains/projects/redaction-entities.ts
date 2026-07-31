@@ -22,7 +22,7 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
     label: "Credit card numbers",
     description: "13 to 19 digit numbers that pass a checksum and start with a known issuer prefix.",
     caution:
-      "About one in ten 16-digit numeric ids beginning with 4 or 5 passes the checksum and may be falsely redacted.",
+      "About one in ten 16-digit numeric ids beginning with 4, and one in twenty beginning with 5, pass the checksum and may be falsely redacted.",
   },
   iban: {
     label: "IBANs",
@@ -44,7 +44,8 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
   },
   crypto_wallet: {
     label: "Crypto wallet addresses",
-    description: "Bitcoin addresses that pass the address checksum, plus Ethereum addresses.",
+    description:
+      "Legacy Bitcoin addresses that pass the address checksum, plus bech32 and Ethereum addresses matched on shape.",
     caution: "A 40-character hex string is both an Ethereum address and a commit hash, and may be falsely redacted.",
   },
 }

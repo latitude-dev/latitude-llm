@@ -501,7 +501,7 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 `packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label, rank }` matches.
 
-**Recall was raised above precision in [Phase 7](#phase-7---detector-accuracy).** The original stance was the opposite, and the reasoning behind it still holds — a false negative leaves content visible and reportable, while a false positive is permanent silent corruption with no delete path ([T-4](#8-traps)). It was reversed anyway, on the evidence that the shipped detectors removed only 70% of the PII in a labelled corpus, which is not a compliance control. Ambiguous shapes now resolve toward redacting. What makes that affordable is that [P7-1](#phase-7---detector-accuracy) landed a corpus first, so every over-redaction is counted and reviewed before it ships rather than found by a customer.
+**Recall was raised above precision in [Phase 7](#phase-7---detector-accuracy).** The original stance was the opposite, and the reasoning behind it still holds — a false negative leaves content visible and reportable, while a false positive is permanent silent corruption with no delete path ([T-4](#8-traps)). It was reversed anyway, on the evidence that the shipped detectors fully removed only 60% of the PII in a labelled corpus, which is not a compliance control. Ambiguous shapes now resolve toward redacting. What makes that affordable is that [P7-1](#phase-7---detector-accuracy) landed a corpus first, so every over-redaction is counted and reviewed before it ships rather than found by a customer.
 
 **The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, usage counters like `max_tokens`, opaque `*_key` identifiers, and file paths appearing in `tool_output`.
 
@@ -827,11 +827,13 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 
 ### Phase 7 - Detector accuracy
 
-> Ran after Phase 3 shipped, on the finding that the detectors removed only 70% of the PII in a labelled
+> Ran after Phase 3 shipped, on the finding that the detectors fully removed only 60% of the PII in a labelled
 > corpus. Independent of Phases 4-6, which remain unbuilt.
 
-Measured before: 117 labelled occurrences, 41 stored verbatim, 5 partially redacted, 4 mislabelled, 12
-accepted false positives. After: 9 stored verbatim, 2 partial, 2 mislabelled, 5 false positives.
+Measured before: 117 labelled occurrences, 71 fully redacted (60%), 41 stored verbatim, 5 partially
+redacted, 4 mislabelled, 12 accepted false positives. After, over 118 occurrences (a SendGrid case joined
+the corpus with [P7-7](#phase-7---detector-accuracy)): 107 fully redacted (91%), 9 stored verbatim, 2
+partial, 2 mislabelled, 5 false positives.
 
 - [x] **P7-1**: `redaction/accuracy.test.ts`. A labelled corpus asserted case by case with pinned totals, not against a recall threshold, matching the one regression suite the repo already had. Closing a gap fails the suite until the row and the total are both edited, so an improvement is as visible in the diff as a regression. Ships with a punctuation sweep over 13 identifier shapes, seeded collision probes on synthetic identifiers, and a backtracking canary. Landed first, so every later commit's effect is measured rather than argued.
 - [x] **P7-2**: Trailing-guard fix on the five card patterns, NANP phone, and IPv4. `(?![\d.])` rejects a sentence-final period along with a decimal, and backtracking cannot recover the match. `"My card number is 4111111111111111."` was stored verbatim.

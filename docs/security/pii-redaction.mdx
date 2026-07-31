@@ -32,7 +32,7 @@ Detection is pattern based. It reliably catches structured identifiers, and it d
 | US Social Security numbers | On | Separated `NNN-NN-NNNN` in a valid range, and ITINs |
 | API keys and secrets | On | Recognizable provider key formats, private key blocks, connection-string passwords, and values assigned to a credential-shaped key such as `DATABASE_PASSWORD` or `api_key` |
 | IP addresses | Off | IPv4 and IPv6 addresses |
-| Crypto wallet addresses | Off | Bitcoin addresses passing the address checksum, and Ethereum addresses |
+| Crypto wallet addresses | Off | Legacy Bitcoin addresses passing the address checksum; bech32 `bc1…` and Ethereum addresses matched on shape alone |
 
 The last two are off by default because they also match things that are not personal data: version strings such as `1.2.3.4` look like IPv4, and a 40-character hex string is both an Ethereum address and a commit hash. Every category can be toggled individually.
 
@@ -46,7 +46,7 @@ Deterministic detection has edges, and it is more useful to know where they are 
 - **National phone formats with no country code are not matched**, such as `07700 900123` or `06 12 34 56 78`, and neither is the parenthesised international form `+44 (20) 7183 8750`.
 - **A credential under a key named only `*_KEY`** is not matched unless the name also contains `api`, `secret`, `private`, `access`, `auth`, `client`, `encryption` or `signing`. Keys such as `idempotency_key`, `partition_key` and `cache_key` are far too common in tool output to treat as credentials.
 - **Credential detection reads the key next to the value**, so it works in a stringified payload or a log line. In already-parsed message content the key and value are separate fields, and only the value is scanned.
-- **A 16-digit numeric identifier beginning with 4 or 5 has roughly a one-in-ten chance** of passing the card checks and being redacted. That is inherent to Luhn plus an issuer prefix.
+- **A 16-digit numeric identifier beginning with 4 has roughly a one-in-ten chance** of passing the card checks and being redacted, and one beginning with 5 roughly one in twenty. That is inherent to Luhn plus an issuer prefix.
 - **Some numeric sequences read as phone numbers.** Three groups of 3, 3 and 4 digits, such as latency percentiles printed as `250 300 1000`, cannot be told apart from a phone number without reading the surrounding prose.
 
 When a value is redacted that should not have been, the fix is to turn off the category that matched it: the placeholder names the category, so it tells you which one.
