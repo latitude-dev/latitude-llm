@@ -963,10 +963,10 @@ const CLEAN_CASES: readonly CleanCase[] = [
     matched: ["250 300 1000"],
     note: "genuinely ambiguous without prose context",
   },
-  { id: "fp-row-counts", text: "Rows scanned per shard: 100 200 3000 (total 3300)", matched: ["100 200 3000"] },
+  { id: "fp-row-counts", text: "Rows scanned per shard: 100 200 3000 (total 3300)", matched: [] },
   { id: "fp-thousands-groups", text: "Revenue reached 1 234 567 8901 cents last quarter", matched: ["234 567 8901"] },
-  { id: "fp-part-number", text: "Replace part 100-200-3000 with the revised assembly", matched: ["100-200-3000"] },
-  { id: "fp-coordinates", text: "Grid offsets 123 456 7890 were emitted by the solver", matched: ["123 456 7890"] },
+  { id: "fp-part-number", text: "Replace part 100-200-3000 with the revised assembly", matched: [] },
+  { id: "fp-coordinates", text: "Grid offsets 123 456 7890 were emitted by the solver", matched: [] },
   {
     id: "fp-version-quad",
     text: "Upgraded the agent from version 1.2.3.4 to 1.2.10.0",
@@ -1023,7 +1023,7 @@ describe("accuracy totals", () => {
   it("pins the accepted false positives", () => {
     const falsePositives = CLEAN_CASES.flatMap((entry) => entry.matched)
 
-    expect(falsePositives).toHaveLength(12)
+    expect(falsePositives).toHaveLength(9)
   })
 
   it("covers every entity in the enum", () => {

@@ -36,8 +36,14 @@ const isEmail = (value: string): boolean => {
 
 const E164_PHONE_PATTERN = /(?<![\w+])\+[1-9]\d{7,14}(?!\d)/g
 
-// Separated NANP forms only: a bare ten-digit run is indistinguishable from the numeric ids in tool output.
-const NANP_PHONE_PATTERN = /(?<![\w.-])(?:\(\d{3}\) ?|\d{3}[-. ])\d{3}[-. ]\d{4}(?!\d)(?![.-]\d)/g
+/**
+ * Separated NANP forms only: a bare ten-digit run is indistinguishable from the numeric ids in tool output.
+ *
+ * Area and exchange codes are `[2-9]\d\d` in the NANP, which is the whole reason this shape is usable at
+ * all. Without it the pattern is "three numbers of length 3, 3 and 4", and it matched row counts
+ * (`100 200 3000`) and grid offsets (`123 456 7890`) in tool output.
+ */
+const NANP_PHONE_PATTERN = /(?<![\w.-])(?:\([2-9]\d{2}\) ?|[2-9]\d{2}[-. ])[2-9]\d{2}[-. ]\d{4}(?!\d)(?![.-]\d)/g
 
 /**
  * Compact and grouped forms are separate patterns, and each grouped one backreferences

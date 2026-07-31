@@ -88,6 +88,19 @@ describe("phone detector", () => {
     expect(detects(value, "phone")).toBe(false)
   })
 
+  /**
+   * NANP area and exchange codes start at 2, which is the only thing separating the 3-3-4 shape from
+   * three ordinary numbers. Every vector here was a false positive on real tool output.
+   */
+  it.each([
+    "Rows scanned per shard: 100 200 3000",
+    "Grid offsets 123 456 7890 emitted",
+    "Replace part 100-200-3000 with the revision",
+    "counters 415 100 2671",
+  ])("does not match %s because the area or exchange code is invalid", (value) => {
+    expect(detects(value, "phone")).toBe(false)
+  })
+
   it("does not match a bare ten-digit id because it is indistinguishable from a numeric key", () => {
     expect(detects('{"userId": 4155552671}', "phone")).toBe(false)
   })
