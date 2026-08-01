@@ -8,12 +8,13 @@ import type { AppEnv, ProtectedEnv } from "../types.ts"
 
 /**
  * Mounts the MCP transport endpoint on `routes` (which already lives behind
- * the unified auth + org-context middleware). Tool dispatch re-enters the
- * root Hono app via `app.fetch(internalRequest)` so every tool call runs
- * through the same middleware chain (validation, rate-limit, auth,
- * organization context). The outer `Authorization` and `X-Forwarded-For`
- * headers are forwarded so the inner request authenticates as the same
- * caller and counts against the same rate-limit bucket.
+ * OAuth-only auth + org-context middleware — API keys are rejected at the
+ * transport). Tool dispatch re-enters the root Hono app via
+ * `app.fetch(internalRequest)` so every tool call runs through the REST
+ * middleware chain (validation, rate-limit, auth, organization context). The
+ * outer `Authorization` and `X-Forwarded-For` headers are forwarded so the
+ * inner request authenticates as the same OAuth caller and counts against the
+ * same rate-limit bucket.
  *
  * The MCP mount path (`/mcp`) is internal to this function — when `routes`
  * is mounted at `/${API_VERSION}` on the root, the public URL becomes

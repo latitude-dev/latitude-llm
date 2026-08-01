@@ -18,9 +18,18 @@ const extractBearerToken = (c: Context): string | undefined => {
   return authHeader.slice(7)
 }
 
+type AuthMethod = AuthContext["method"]
+
 interface AuthMiddlewareOptions {
   adminClient: PostgresClient | undefined
   logTouchBuffer: boolean
+  /**
+   * Bearer validators to try, in registration order. Defaults to both
+   * (`api-key` then `oauth`). Pass `["oauth"]` for surfaces that must not
+   * accept organization API keys — notably the MCP transport, which is an
+   * OAuth protected resource.
+   */
+  allowedMethods?: ReadonlyArray<AuthMethod>
 }
 
 const apiKeyContext = (result: { keyId: string; organizationId: string }): AuthContext => ({
@@ -71,15 +80,17 @@ const authenticateWithOAuth = (
   }).pipe(Effect.orDie)
 }
 
+const DEFAULT_ALLOWED_METHODS: ReadonlyArray<AuthMethod> = ["api-key", "oauth"]
+
 /**
- * Authenticates a bearer token by trying both validators in sequence: API key
- * first, then OAuth, then 401. Both validators have a short negative-cache TTL,
- * so an unknown bearer hits each underlying DB at most once per cache window.
+ * Authenticates a bearer token by trying the allowed validators in sequence,
+ * then 401. Both validators have a short negative-cache TTL, so an unknown
+ * bearer hits each underlying DB at most once per cache window.
  *
  * No prefix-based dispatch — bearer tokens are opaque random strings, and
  * matching against the wrong validator just returns null cheaply. The trade-off
- * is one extra Redis + DB round-trip on the OAuth happy path; the user knows
- * their throughput envelope and the simplicity wins.
+ * is one extra Redis + DB round-trip on the OAuth happy path when both methods
+ * are allowed; the user knows their throughput envelope and the simplicity wins.
  */
 const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> =>
   Effect.gen(function* () {
@@ -89,12 +100,17 @@ const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect
     }
 
     const redis = c.get("redis")
+    const allowedMethods = options.allowedMethods ?? DEFAULT_ALLOWED_METHODS
 
-    const apiKeyCtx = yield* authenticateWithApiKey(redis, bearerToken, options)
-    if (apiKeyCtx) return apiKeyCtx
+    if (allowedMethods.includes("api-key")) {
+      const apiKeyCtx = yield* authenticateWithApiKey(redis, bearerToken, options)
+      if (apiKeyCtx) return apiKeyCtx
+    }
 
-    const oauthCtx = yield* authenticateWithOAuth(redis, bearerToken, options)
-    if (oauthCtx) return oauthCtx
+    if (allowedMethods.includes("oauth")) {
+      const oauthCtx = yield* authenticateWithOAuth(redis, bearerToken, options)
+      if (oauthCtx) return oauthCtx
+    }
 
     return yield* new UnauthorizedError({ message: "Invalid credentials" })
   })
@@ -102,9 +118,9 @@ const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect
 /**
  * Create authentication middleware.
  *
- * Validates `Authorization: Bearer …` tokens against both the API-key store
- * and the OAuth access-token store, in that order. Public routes should be
- * excluded from this middleware.
+ * Validates `Authorization: Bearer …` tokens against the configured stores
+ * (`allowedMethods`, defaulting to API-key then OAuth). Public routes should
+ * be excluded from this middleware.
  */
 export const createAuthMiddleware = (options: AuthMiddlewareOptions): MiddlewareHandler => {
   return async (c: Context, next: Next) => {

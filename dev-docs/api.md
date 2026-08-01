@@ -17,7 +17,7 @@ There is no second registration step for any of those surfaces. The `defineOpera
 
 ## Authentication
 
-Routes under `/v1` accept **either** an organization-scoped API key **or** an OAuth2 access token. Both are opaque random strings carried as `Authorization: Bearer …`. The auth middleware tries validators in order:
+REST routes under `/v1` accept **either** an organization-scoped API key **or** an OAuth2 access token. Both are opaque random strings carried as `Authorization: Bearer …`. The auth middleware tries validators in order:
 
 ```
 authenticate(c) → AuthContext | 401
@@ -28,6 +28,8 @@ authenticate(c) → AuthContext | 401
 ```
 
 Both validators have a short negative-cache TTL (~5s), so an unknown bearer hits each underlying datastore at most once per cache window.
+
+**Exception — `/v1/mcp`:** the MCP transport is an OAuth protected resource. Its middleware passes `allowedMethods: ["oauth"]`, so organization API keys receive `401` even when valid. Clients must complete the OAuth consent flow (see [`mcp.md`](./mcp.md)). Inner tool dispatch re-enters the REST ring with the same OAuth bearer.
 
 ### `AuthContext` shape
 
@@ -63,17 +65,23 @@ attachSharedContext(db, redis, clickhouse, queue)   ← all routes
     /health
     /.well-known/oauth-protected-resource    ← static JSON discovery doc
 
-  RING 2 — protected (unified auth):
+  RING 2 — protected REST (unified auth):
     validationErrorMiddleware
     createAuthRateLimiter()              ← global IP-based brute-force guard
     createAuthMiddleware()               ← API-key OR OAuth dispatch
     createOrganizationContextMiddleware()
 
       /v1/...   ← all REST routes, with per-endpoint tier limiters
+
+  RING 3 — protected MCP (OAuth only):
+    validationErrorMiddleware
+    createAuthMiddleware({ allowedMethods: ["oauth"] })
+    createOrganizationContextMiddleware()
+
       /v1/mcp   ← MCP transport, per-request McpServer
 ```
 
-Public routes are bodyless metadata documents — never product data. Everything that touches an organization runs under the protected ring.
+Public routes are bodyless metadata documents — never product data. Everything that touches an organization runs under a protected ring.
 
 ## Per-route rate limiting
 

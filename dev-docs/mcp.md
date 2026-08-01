@@ -2,6 +2,8 @@
 
 Latitude exposes an [MCP](https://modelcontextprotocol.io/) server so AI agents (Claude Code, Cursor, Codex, custom CLIs) can use Latitude's machine-facing capabilities as typed tools instead of curling raw HTTP. The server is mounted at `/v1/mcp` **inside the existing `apps/api` process** — there is no separate MCP service.
 
+**Auth is OAuth-only.** Organization API keys that work on REST `/v1/...` routes are rejected on `/v1/mcp` with `401`. MCP clients must complete the protected-resource OAuth flow below; that keeps consent, org binding, and token revocation on the transport itself rather than letting a long-lived API key skip them.
+
 ## Tools are derived from API routes
 
 Every operation declared via `defineOperation(...)` is registered as an MCP tool by default. Tool name = route `name` (camelCase), tool description = route `description`, tool input schema = the flattened union of `route.request.{params, query, body}`, tool output schema = the 2xx-JSON response schema.
@@ -46,7 +48,7 @@ The MCP server is the protected resource; the web app is the authorization serve
 │ (TanStack Start)                     │      │ (Hono / OpenAPIHono)               │
 │                                      │      │                                    │
 │  /login              sign-in UI      │      │  /v1/...   REST + ApiKey/OAuth     │
-│  /welcome            org-picker      │      │  /v1/mcp   MCP transport           │
+│  /welcome            org-picker      │      │  /v1/mcp   MCP transport (OAuth)   │
 │  /auth/consent       OAuth consent   │      │                                    │
 │  /api/auth/*         BA handler      │      │  /.well-known/oauth-protected-     │
 │    (incl. mcp/authorize, mcp/token,  │      │     resource                       │
@@ -59,6 +61,7 @@ The MCP server is the protected resource; the web app is the authorization serve
                                          │    │    ↓ Drizzle SELECT                │
                                          │    │  oauth_access_token JOIN           │
                                          │    │  oauth_application                 │
+                                         │    │  (API keys rejected on /v1/mcp)    │
                                          │    └────────────────────────┬───────────┘
                                          │                             │
                           ┌──────────────▼─────────────────────────────▼──────┐

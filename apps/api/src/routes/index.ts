@@ -37,14 +37,13 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   registerBootstrapRoute({ app: v1, adminDatabase: options.adminDatabase })
   registerGithubRoute({ app: v1 })
 
+  const authOptions = {
+    adminClient: options.adminDatabase,
+    logTouchBuffer: options.logTouchBuffer,
+  } as const
+
   routes.use("*", validationErrorMiddleware)
-  routes.use(
-    "*",
-    createAuthMiddleware({
-      adminClient: options.adminDatabase,
-      logTouchBuffer: options.logTouchBuffer,
-    }),
-  )
+  routes.use("*", createAuthMiddleware(authOptions))
   routes.use("*", createOrganizationContextMiddleware())
 
   mountOperationModules(routes, operationModules, { middlewareForTier: createTierRateLimiter })
@@ -66,9 +65,17 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
     return c.redirect(url.toString(), 307)
   })
 
-  registerMcpRoute({ app, routes })
+  // MCP is an OAuth protected resource — organization API keys must not
+  // authenticate the transport (they'd skip consent / discovery). Inner tool
+  // dispatch still re-enters `routes` with the same OAuth bearer.
+  const mcpRoutes = new OpenAPIHono<ProtectedEnv>()
+  mcpRoutes.use("*", validationErrorMiddleware)
+  mcpRoutes.use("*", createAuthMiddleware({ ...authOptions, allowedMethods: ["oauth"] }))
+  mcpRoutes.use("*", createOrganizationContextMiddleware())
+  registerMcpRoute({ app, routes: mcpRoutes })
 
   v1.route("/", routes)
+  v1.route("/", mcpRoutes)
 
   app.route(`/${API_VERSION}`, v1)
 }

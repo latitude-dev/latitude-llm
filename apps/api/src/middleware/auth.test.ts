@@ -98,6 +98,56 @@ describe("auth middleware dispatch", () => {
     expect(res.status).toBe(401)
   })
 
+  it<ApiTestContext>("rejects a valid API-key bearer on the MCP transport", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const token = generateApiKeyToken()
+    await insertApiKey(database, tenant.organizationId, token)
+
+    const res = await app.fetch(
+      new Request("http://localhost/v1/mcp", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      }),
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it<ApiTestContext>("authenticates a valid OAuth access-token bearer on the MCP transport", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const token = crypto.randomUUID()
+    await insertOAuthApplicationAndToken(database, tenant.organizationId, tenant.userId, token)
+
+    const res = await app.fetch(
+      new Request("http://localhost/v1/mcp", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-03-26",
+            capabilities: {},
+            clientInfo: { name: "t", version: "0" },
+          },
+        }),
+      }),
+    )
+    expect(res.status).toBe(200)
+  })
+
   it<ApiTestContext>("rejects an OAuth token whose application has no organization binding", async ({
     app,
     database,
