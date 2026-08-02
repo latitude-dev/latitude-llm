@@ -25,6 +25,7 @@ const FLAGGER_PROVENANCE_TAGS: readonly string[] = [
 // Tags whose user-role text embeds nested conversation samples (see `dev-docs/flaggers.md`).
 const NESTED_CONVERSATION_SAMPLE_TAGS: readonly string[] = [
   ...FLAGGER_PROVENANCE_TAGS,
+  ...AI_GENERATE_TELEMETRY_TAGS.signalDetails,
   ...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes,
   ...AI_GENERATE_TELEMETRY_TAGS.taxonomyNameCluster,
   ...AI_GENERATE_TELEMETRY_TAGS.facetExtract,
