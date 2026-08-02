@@ -170,6 +170,7 @@ const buildAnnotationReviewerSystemPrompt = (strategy: FlaggerStrategy): string 
     ...(classifiesAssistantResponseOnly(strategy) ? [ANNOTATION_REVIEWER_ASSISTANT_ONLY_CLAUSE] : []),
     ANNOTATION_REVIEWER_NESTED_CONTENT_CLAUSE,
     ANNOTATION_REVIEWER_REJECTION_CLAUSE,
+    ...(strategy.annotationReviewerGuidance ? [strategy.annotationReviewerGuidance] : []),
   ].join("\n\n")
 
 const annotationReviewOutputSchema = z.object({

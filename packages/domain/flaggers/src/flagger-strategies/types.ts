@@ -103,6 +103,14 @@ export interface FlaggerStrategy {
     conversation: FlaggerConversation,
     result: { readonly feedback?: string | undefined; readonly messageIndex?: number | undefined },
   ): boolean
+
+  /**
+   * Extra adversarial-reviewer guidance appended after the shared base clauses.
+   * Use for strategy-specific rejection rules the generic reviewer prompt
+   * cannot express (e.g. frustration must target the assistant, not a
+   * bug-status report or external product outcome).
+   */
+  readonly annotationReviewerGuidance?: string
 }
 
 export interface LlmCapableFlaggerStrategy extends FlaggerStrategy {
