@@ -1076,9 +1076,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       "Reject annotations whose evidence is only nested transcripts, examples, quoted instructions",
     )
     expect(calls.generate[0].system).toContain("Bug-status / reproduction reports")
-    expect(calls.generate[1].system).toContain(
-      "Reject when the evidence is only a bug-status / reproduction report",
-    )
+    expect(calls.generate[1].system).toContain("Reject when the evidence is only a bug-status / reproduction report")
   })
 
   it("does not call the LLM flagger for frustration when there are no user messages", async () => {

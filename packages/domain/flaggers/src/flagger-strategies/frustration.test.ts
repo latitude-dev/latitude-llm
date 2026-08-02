@@ -9,9 +9,7 @@ describe("frustrationStrategy", () => {
 
     expect(systemPrompt).toContain("target of the frustration must be the assistant")
     expect(systemPrompt).toContain("Bug-status / reproduction reports")
-    expect(systemPrompt).toContain(
-      "161 didn't fix my problem i think, it still happens when opening tool calls",
-    )
+    expect(systemPrompt).toContain("161 didn't fix my problem i think, it still happens when opening tool calls")
     expect(systemPrompt).toContain('Do not reframe them as "dissatisfaction with the assistant\'s proposed solution"')
     expect(systemPrompt).toContain("EXTERNAL factors")
     expect(systemPrompt).toContain("user's own code, product UI")
