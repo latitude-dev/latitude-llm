@@ -277,6 +277,46 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(scores.size).toBe(0)
   })
 
+  it("drops user-centric strategies on issue:details (occurrence feedback is nested evidence)", async () => {
+    const occurrenceFeedback = [
+      "Recent assigned issue occurrences (newest first):",
+      "1. [source=annotation] User explicitly expresses frustration: 'no me esta sirviendo de nada hablar contigo dado que ya tienes la infomación y me la pides cada dos por tres'.",
+      "",
+      "Return JSON with `name` and `description`.",
+    ].join("\n")
+    const session = makeSessionDetail(
+      [
+        user(occurrenceFeedback),
+        assistant(
+          '{"name":"Repeated requests for information already provided","description":"The assistant asks for information already provided."}',
+        ),
+      ],
+      { tags: [...AI_GENERATE_TELEMETRY_TAGS.signalDetails] },
+    )
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("frustration", 100), makeFlagger("laziness", 100)],
+      momentLabels: [makeMomentLabel("user_frustration"), makeMomentLabel("stalling")],
+      analyses: [analyzedAnalysis()],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "missing-context",
+    })
+    expect(decisionFor(result.decisions, "laziness")).toEqual({
+      slug: "laziness",
+      action: "classify",
+      reason: "hinted",
+      hintKinds: ["moment:stalling"],
+    })
+    expect(result.classifications.some((c) => c.flaggerSlug === "frustration")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "laziness")).toBe(true)
+    expect(scores.size).toBe(0)
+  })
+
   it("writes a session-anchored score with contentHash on a deterministic match", async () => {
     const session = makeSessionDetail([user("Please help me with this."), assistant("")])
     const { result, scores } = await runScreening({

@@ -100,6 +100,7 @@ describe("classifySessionFlaggerUseCase gating", () => {
   it.each([
     { tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify], label: "flagger.classify" },
     { tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes], label: "taxonomy:propose-themes" },
+    { tags: [...AI_GENERATE_TELEMETRY_TAGS.signalDetails], label: "issue:details" },
   ])("returns { matched: false } for frustration on a $label session without calling AI", async ({ tags }) => {
     const session = makeSessionDetail(
       [
