@@ -46,6 +46,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.use("*", createAuthMiddleware(authOptions))
   routes.use("*", createOrganizationContextMiddleware())
 
+  // Populate the operation/tool registry before snapshotting MCP descriptors.
   mountOperationModules(routes, operationModules, { middlewareForTier: createTierRateLimiter })
 
   // Back-compat: the Issues API moved to /signals. 307 preserves method + body so
@@ -65,17 +66,15 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
     return c.redirect(url.toString(), 307)
   })
 
-  // MCP is an OAuth protected resource — organization API keys must not
-  // authenticate the transport (they'd skip consent / discovery). Inner tool
-  // dispatch still re-enters `routes` with the same OAuth bearer.
+  // OAuth-only MCP ring, mounted at `/mcp` *before* the REST `*` ring so Hono
+  // never runs API-key auth (or the touch buffer) on the transport.
   const mcpRoutes = new OpenAPIHono<ProtectedEnv>()
   mcpRoutes.use("*", validationErrorMiddleware)
   mcpRoutes.use("*", createAuthMiddleware({ ...authOptions, allowedMethods: ["oauth"] }))
   mcpRoutes.use("*", createOrganizationContextMiddleware())
   registerMcpRoute({ app, routes: mcpRoutes })
-
+  v1.route("/mcp", mcpRoutes)
   v1.route("/", routes)
-  v1.route("/", mcpRoutes)
 
   app.route(`/${API_VERSION}`, v1)
 }

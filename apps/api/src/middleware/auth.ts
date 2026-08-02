@@ -23,12 +23,7 @@ type AuthMethod = AuthContext["method"]
 interface AuthMiddlewareOptions {
   adminClient: PostgresClient | undefined
   logTouchBuffer: boolean
-  /**
-   * Bearer validators to try, in registration order. Defaults to both
-   * (`api-key` then `oauth`). Pass `["oauth"]` for surfaces that must not
-   * accept organization API keys — notably the MCP transport, which is an
-   * OAuth protected resource.
-   */
+  /** Validators to try, in order. Defaults to `["api-key", "oauth"]`. */
   allowedMethods?: ReadonlyArray<AuthMethod>
 }
 
@@ -102,14 +97,12 @@ const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect
     const redis = c.get("redis")
     const allowedMethods = options.allowedMethods ?? DEFAULT_ALLOWED_METHODS
 
-    if (allowedMethods.includes("api-key")) {
-      const apiKeyCtx = yield* authenticateWithApiKey(redis, bearerToken, options)
-      if (apiKeyCtx) return apiKeyCtx
-    }
-
-    if (allowedMethods.includes("oauth")) {
-      const oauthCtx = yield* authenticateWithOAuth(redis, bearerToken, options)
-      if (oauthCtx) return oauthCtx
+    for (const method of allowedMethods) {
+      const authContext =
+        method === "api-key"
+          ? yield* authenticateWithApiKey(redis, bearerToken, options)
+          : yield* authenticateWithOAuth(redis, bearerToken, options)
+      if (authContext) return authContext
     }
 
     return yield* new UnauthorizedError({ message: "Invalid credentials" })

@@ -29,7 +29,7 @@ authenticate(c) → AuthContext | 401
 
 Both validators have a short negative-cache TTL (~5s), so an unknown bearer hits each underlying datastore at most once per cache window.
 
-**Exception — `/v1/mcp`:** the MCP transport is an OAuth protected resource. Its middleware passes `allowedMethods: ["oauth"]`, so organization API keys receive `401` even when valid. Clients must complete the OAuth consent flow (see [`mcp.md`](./mcp.md)). Inner tool dispatch re-enters the REST ring with the same OAuth bearer.
+**Exception — `/v1/mcp`:** the MCP transport is an OAuth-protected resource. Its middleware passes `allowedMethods: ["oauth"]`, so organization API keys receive `401` even when valid. Clients must complete the OAuth consent flow (see [`mcp.md`](./mcp.md)). Inner tool dispatch re-enters the REST ring with the same OAuth bearer.
 
 ### `AuthContext` shape
 
@@ -65,23 +65,22 @@ attachSharedContext(db, redis, clickhouse, queue)   ← all routes
     /health
     /.well-known/oauth-protected-resource    ← static JSON discovery doc
 
-  RING 2 — protected REST (unified auth):
-    validationErrorMiddleware
-    createAuthRateLimiter()              ← global IP-based brute-force guard
-    createAuthMiddleware()               ← API-key OR OAuth dispatch
-    createOrganizationContextMiddleware()
-
-      /v1/...   ← all REST routes, with per-endpoint tier limiters
-
-  RING 3 — protected MCP (OAuth only):
+  RING 2 — protected MCP (OAuth only; mounted first at /mcp):
     validationErrorMiddleware
     createAuthMiddleware({ allowedMethods: ["oauth"] })
     createOrganizationContextMiddleware()
 
       /v1/mcp   ← MCP transport, per-request McpServer
+
+  RING 3 — protected REST (unified auth; mounted after MCP):
+    validationErrorMiddleware
+    createAuthMiddleware()               ← API-key OR OAuth dispatch
+    createOrganizationContextMiddleware()
+
+      /v1/...   ← all REST routes, with per-endpoint tier limiters
 ```
 
-Public routes are bodyless metadata documents — never product data. Everything that touches an organization runs under a protected ring.
+Public routes are bodyless metadata documents — never product data. Everything that touches an organization runs under a protected ring. MCP is mounted before the REST `*` middleware so API-key validation never runs on the transport.
 
 ## Per-route rate limiting
 
