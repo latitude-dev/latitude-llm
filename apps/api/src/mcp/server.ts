@@ -16,11 +16,7 @@ import type { AppEnv, ProtectedEnv } from "../types.ts"
  * inner request authenticates as the same OAuth caller and counts against the
  * same rate-limit bucket.
  *
- * The handler is mounted at `/` on `routes`; callers mount that sub-app at
- * `/mcp` under `/${API_VERSION}` so the public URL is `/v1/mcp`. The
- * dispatcher prepends `/${API_VERSION}` to the descriptor's router prefix when
- * re-entering through `app.fetch()` — so a tool whose registry entry has
- * `routerPrefix: "/api-keys"` resolves to `/v1/api-keys`.
+ * MCP is mounted at `/v1/mcp`; internal dispatch prepends `/${API_VERSION}` to each tool router prefix.
  *
  * Each request gets its own `McpServer` + `WebStandardStreamableHTTPServerTransport`
  * + `connect()` + tool registration loop. This is an SDK invariant in stateless
