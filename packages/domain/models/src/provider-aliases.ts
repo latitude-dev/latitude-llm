@@ -21,6 +21,7 @@ export const PROVIDER_ALIASES: Record<string, string> = {
   mistral_ai: "mistral",
   together_ai: "togetherai",
   fireworks_ai: "fireworks-ai",
+  fireworks: "fireworks-ai",
   workersai: "cloudflare-workers-ai",
   "workersai.chat": "cloudflare-workers-ai",
   "internal-workers-ai": "cloudflare-workers-ai", // Cloudflare AI Gateway (Workers AI upstream)

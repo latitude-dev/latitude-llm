@@ -5,6 +5,12 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "browser": "./src/browser.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
@@ -16,6 +22,7 @@
     "@domain/feature-flags": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   }

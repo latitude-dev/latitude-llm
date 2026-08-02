@@ -1,4 +1,5 @@
 import type { BehaviorMetric, MomentMetric, MonitorMetric, ScoreMetric } from "@domain/shared"
+import { USAGE_OPERATIONS } from "@domain/spans"
 
 /** ClickHouse `DateTime64` params take a space-separated, zone-naive string (UTC). */
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
@@ -131,7 +132,7 @@ export const traceFamilyAggregate = (metric: MonitorMetric, c: TraceFamilyColumn
 
 // Operations whose token/cost usage should sum. Mirrors the rollup usage allowlist
 // (traces_mv / sessions_mv) so wrapper spans don't double-count cost/tokens.
-export const USAGE_OPERATIONS_SQL = "('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker')"
+export const USAGE_OPERATIONS_SQL = `(${USAGE_OPERATIONS.map((op) => `'${op}'`).join(", ")})`
 
 /** Gate a span column to billable operations (NULL otherwise) so sum/avg ignore wrapper + tool spans. */
 export const usageGated = (column: string): string => `if(operation IN ${USAGE_OPERATIONS_SQL}, ${column}, NULL)`

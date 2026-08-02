@@ -10,24 +10,9 @@ import {
   isCostSeriesMetric,
   microcentsToUsd,
 } from "./cost-formatters.ts"
+import { modelColorAt, TREND_COLOR } from "./cost-series-colors.ts"
 
 const CHART_HEIGHT = 220
-
-// Stack colours for the per-model breakdown, ordered so the biggest spender
-// (drawn first, at the baseline) gets the strongest hue.
-const MODEL_COLORS: readonly string[] = [
-  "hsl(217 91% 60%)",
-  "hsl(262 83% 63%)",
-  "hsl(291 64% 55%)",
-  "hsl(174 62% 42%)",
-  "hsl(35 90% 55%)",
-  "hsl(0 70% 55%)",
-  "hsl(199 89% 48%)",
-  "hsl(84 60% 45%)",
-  "hsl(211 11% 55%)",
-]
-
-const TREND_COLOR = "hsl(217 91% 60%)"
 
 const METRIC_OPTIONS: readonly { readonly id: CostSeriesMetric; readonly label: string; readonly tooltip: string }[] = [
   { id: "total", label: "Total", tooltip: "Spend per bucket, stacked by model." },
@@ -62,7 +47,7 @@ function buildStackedModelSeries({
     values: buckets.map((bucket) =>
       microcentsToUsd(bucket.byModel.find((slice) => slice.model === model)?.costMicrocents ?? 0),
     ),
-    color: MODEL_COLORS[index % MODEL_COLORS.length] ?? TREND_COLOR,
+    color: modelColorAt(index),
     stack: "cost",
     ...(provisionalIndex === undefined ? {} : { provisionalIndex }),
   }))
@@ -114,6 +99,8 @@ export function CostOverTimePanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
+        // The picker above states this window; only the All-time slice differs from it.
+        showWindow={isAllTime}
         actions={
           <Tabs
             variant="bordered"

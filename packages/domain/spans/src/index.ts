@@ -55,6 +55,7 @@ export type {
 export {
   costSourceSchema,
   isMemoryOperation,
+  isUsageOperation,
   MEMORY_OPERATIONS,
   operationSchema,
   parseCostSource,
@@ -63,10 +64,26 @@ export {
   spanSchema,
   spanStatusCodeSchema,
   toolDefinitionSchema,
+  USAGE_OPERATIONS,
 } from "./entities/span.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
+export type {
+  CacheClassification,
+  CacheClassificationInput,
+  CacheEconomicsPricing,
+  CacheState,
+  CacheUrgency,
+} from "./helpers/cache-economics.ts"
+export {
+  CACHE_ECONOMICS_MIN_CALLS,
+  CACHE_MIN_CACHEABLE_INPUT_TOKENS,
+  CACHE_STATES,
+  CACHE_URGENCIES,
+  cacheBreakEvenRate,
+  classifyCacheState,
+} from "./helpers/cache-economics.ts"
 export type { ClassifiedUnpricedPair, UnpricedCause, UnpricedUsageSummary } from "./helpers/classify-unpriced-cost.ts"
 export {
   classifyUnpricedPair,
@@ -80,12 +97,20 @@ export {
   type MessageEmbeddingInput,
   type MessageEmbeddingRole,
 } from "./helpers/message-embedding.ts"
+export { modelCacheBreakEvenRate } from "./helpers/model-cache-break-even.ts"
+export { type ModelRegistryPricing, modelRegistryPricing } from "./helpers/model-registry-pricing.ts"
 export { normalizeLiteralPhrase, stripLoneSurrogates } from "./helpers/normalize-literal-phrase.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export {
+  shouldReportUnpricedSpan,
+  UNPRICEABLE_PAIR_REASONS,
+  type UnpriceablePairReason,
+  unpriceablePairReason,
+} from "./helpers/should-report-unpriced.ts"
 export { tokenizePhrase } from "./helpers/tokenize-phrase.ts"
 export {
   resolveTraceIdFromRef,
@@ -107,8 +132,16 @@ export type { UnpricedSpanGroup } from "./otlp/transform.ts"
 export type { AnalyticsQueryInput, AnalyticsQueryReaderShape } from "./ports/analytics-query-reader.ts"
 export { AnalyticsQueryReader } from "./ports/analytics-query-reader.ts"
 export type {
+  CacheEconomics,
+  CacheModelUsage,
+  CacheUsageMeasures,
   CostAnalyticsRepositoryShape,
   CostAnalyticsScope,
+  CostBreakdown,
+  CostBreakdownDimension,
+  CostBreakdownRow,
+  CostBreakdownTotals,
+  CostBreakdownUsage,
   CostConfidence,
   CostModelSpend,
   CostOverview,
@@ -116,8 +149,20 @@ export type {
   CostSeriesMetric,
   CostSeriesModelSlice,
   CostZeroCostPair,
+  ModelUsageBucket,
+  ModelUsageMeasures,
+  ModelUsageSeries,
+  ModelUsageSlice,
 } from "./ports/cost-analytics-repository.ts"
-export { COST_SERIES_METRICS, CostAnalyticsRepository } from "./ports/cost-analytics-repository.ts"
+export {
+  CACHE_ECONOMICS_ROW_LIMIT,
+  COST_BREAKDOWN_DIMENSIONS,
+  COST_BREAKDOWN_ROW_LIMIT,
+  COST_PER_CALL_MIN_SAMPLE_CALLS,
+  COST_SERIES_METRICS,
+  CostAnalyticsRepository,
+  MODEL_USAGE_SERIES_LIMIT,
+} from "./ports/cost-analytics-repository.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
 export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
 export type {

@@ -2,17 +2,19 @@ import type { RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import { AdminOrganizationRepository } from "./organization-repository.ts"
 import { AdminOrganizationUsageRepository } from "./organization-usage-repository.ts"
-import type { AdminOrganizationUsageCursor, AdminOrganizationUsageSummary } from "./organization-usage-summary.ts"
+import {
+  type AdminOrganizationUsageCursor,
+  type AdminOrganizationUsageSummary,
+  ORGANIZATION_USAGE_DEFAULT_LIMIT,
+  ORGANIZATION_USAGE_MAX_LIMIT,
+  ORGANIZATION_USAGE_WINDOW_DAYS,
+} from "./organization-usage-summary.ts"
 
-/**
- * Rolling window for the traces column. Credit spend uses each org's
- * current billing period instead. 30d is short enough to track "current"
- * customers (a churned org drops out after a month) and long enough to
- * absorb weekend/holiday lulls without reshuffling the activity signal.
- */
-export const ORGANIZATION_USAGE_WINDOW_DAYS = 30
-export const ORGANIZATION_USAGE_DEFAULT_LIMIT = 50
-export const ORGANIZATION_USAGE_MAX_LIMIT = 100
+export {
+  ORGANIZATION_USAGE_DEFAULT_LIMIT,
+  ORGANIZATION_USAGE_MAX_LIMIT,
+  ORGANIZATION_USAGE_WINDOW_DAYS,
+} from "./organization-usage-summary.ts"
 
 export interface ListOrganizationsByUsageInput {
   readonly cursor?: AdminOrganizationUsageCursor

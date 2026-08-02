@@ -40,6 +40,21 @@ export {
 export type { Trace, TraceConversationChunk, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
+export type {
+  CacheClassification,
+  CacheClassificationInput,
+  CacheEconomicsPricing,
+  CacheState,
+  CacheUrgency,
+} from "./helpers/cache-economics.ts"
+export {
+  CACHE_ECONOMICS_MIN_CALLS,
+  CACHE_MIN_CACHEABLE_INPUT_TOKENS,
+  CACHE_STATES,
+  CACHE_URGENCIES,
+  cacheBreakEvenRate,
+  classifyCacheState,
+} from "./helpers/cache-economics.ts"
 export {
   canonicalizeMessageForEmbedding,
   hashMessageContent,
@@ -61,8 +76,27 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
-export type { CostSeriesMetric } from "./ports/cost-analytics-repository.ts"
-export { COST_SERIES_METRICS } from "./ports/cost-analytics-repository.ts"
+export type {
+  CacheEconomics,
+  CacheModelUsage,
+  CacheUsageMeasures,
+  CostBreakdown,
+  CostBreakdownDimension,
+  CostBreakdownRow,
+  CostBreakdownTotals,
+  CostBreakdownUsage,
+  CostSeriesMetric,
+  ModelUsageBucket,
+  ModelUsageMeasures,
+  ModelUsageSeries,
+  ModelUsageSlice,
+} from "./ports/cost-analytics-repository.ts"
+export {
+  CACHE_ECONOMICS_ROW_LIMIT,
+  COST_BREAKDOWN_DIMENSIONS,
+  COST_PER_CALL_MIN_SAMPLE_CALLS,
+  COST_SERIES_METRICS,
+} from "./ports/cost-analytics-repository.ts"
 export type {
   MessageEmbedding,
   MessageEmbeddingRepositoryShape,

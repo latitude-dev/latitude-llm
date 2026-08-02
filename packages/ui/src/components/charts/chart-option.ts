@@ -70,6 +70,8 @@ interface ChartOptionInput {
   readonly xAxisLabelFontSize?: number
   /** Enable drag-to-select on the X axis (the chart's `onSelect` is wired). */
   readonly enableBrush?: boolean
+  /** Suppress the built-in legend when the caller renders its own (echarts' only toggles visibility). */
+  readonly hideLegend?: boolean
 }
 
 export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
@@ -82,10 +84,11 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
     tooltipTitle,
     xAxisLabelFontSize = 11,
     enableBrush = false,
+    hideLegend = false,
   } = input
 
   const hasSecondaryAxis = series.some((s) => s.axis === "right")
-  const showLegend = series.length > 1
+  const showLegend = !hideLegend && series.length > 1
   const hasBarSeries = series.some((s) => s.kind === "bar")
 
   // Thinning is strided from the newest category, not the oldest, so the latest

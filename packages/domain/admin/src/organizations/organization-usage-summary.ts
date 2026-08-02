@@ -1,6 +1,19 @@
 import { z } from "zod"
 
 /**
+ * Rolling window for the traces column. Credit spend uses each org's current billing period
+ * instead. 30d is short enough to track "current" customers (a churned org drops out after a
+ * month) and long enough to absorb weekend/holiday lulls without reshuffling the activity signal.
+ *
+ * These live beside the DTOs rather than with the use-case so the browser entry can re-export the
+ * bounds the backoffice input has to respect, without pulling Effect and the repository ports into
+ * the client bundle.
+ */
+export const ORGANIZATION_USAGE_WINDOW_DAYS = 30
+export const ORGANIZATION_USAGE_DEFAULT_LIMIT = 50
+export const ORGANIZATION_USAGE_MAX_LIMIT = 100
+
+/**
  * One row of the backoffice "organisations by usage" table — surfaces the
  * compact identity / billing / membership signals next to the activity
  * metrics the page is sorted by.
