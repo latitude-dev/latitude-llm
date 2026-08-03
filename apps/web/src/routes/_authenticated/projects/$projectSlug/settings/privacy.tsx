@@ -50,6 +50,20 @@ const toSetting = (value: RedactionCardValue): RedactionSetting => ({
   rules: decodeRules(value.rules),
 })
 
+/**
+ * For the render path, where `toSetting` throwing would take the settings page down with it.
+ *
+ * `apply` wants the throw — a decode failure there must not be saved as an empty rule list — but
+ * the preview is optional, so losing only the preview is the right failure.
+ */
+const toSettingOrNull = (value: RedactionCardValue): RedactionSetting | null => {
+  try {
+    return toSetting(value)
+  } catch {
+    return null
+  }
+}
+
 function ProjectPrivacySettingsPage() {
   const { toast } = useToast()
   const routeProject = useRouteProject()
@@ -110,6 +124,10 @@ function ProjectPrivacySettingsPage() {
 
   const [isApplying, setIsApplying] = useState(false)
   const { view, setField, dirtyCount, hasDirty, reset } = useDraftOverlay(baseline)
+
+  // Every draft field is a primitive, by the overlay's own design, so this is a stable identity for one.
+  const previewKey = JSON.stringify(view)
+  const previewSetting = toSettingOrNull(view)
 
   // Dropping the override is the only destructive direction, so it waits for an explicit apply.
   const pendingRemoval = storedScope === "project" && scope === "organization"
@@ -255,8 +273,14 @@ function ProjectPrivacySettingsPage() {
           />
         </ScopedSetting>
 
-        {view.mode === "enforce" ? (
-          <RedactionPreview projectId={currentProject.id} disabled={!canEditProject} setting={toSetting(view)} />
+        {view.mode === "enforce" && previewSetting ? (
+          // Keyed on the draft: a result for a policy the user has since edited would be read as current.
+          <RedactionPreview
+            key={previewKey}
+            projectId={currentProject.id}
+            disabled={!canEditProject}
+            setting={previewSetting}
+          />
         ) : null}
       </div>
 

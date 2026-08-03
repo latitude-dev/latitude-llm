@@ -69,6 +69,21 @@ describe("RedactionRuleSheet", () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ validatorVersion: 7 }))
   })
 
+  /**
+   * A failed check is not the same state as an unfinished one, and reusing "no verdict" for both
+   * left the panel saying "Checking the rule…" with nothing in flight, so Save was refusing for a
+   * reason the user could not see.
+   */
+  it("says the check failed rather than claiming it is still running", async () => {
+    validateRedactionRuleDraft.mockRejectedValue(new Error("network"))
+    const { save } = setup()
+
+    await waitFor(() => expect(screen.getByText(/Could not check this rule/)).toBeDefined())
+
+    expect(screen.queryByText("Checking the rule…")).toBeNull()
+    expect(save().disabled).toBe(true)
+  })
+
   it("keeps Save disabled once the verdict rejects the rule", async () => {
     validateRedactionRuleDraft.mockResolvedValue(verdict(false))
     const { save } = setup()

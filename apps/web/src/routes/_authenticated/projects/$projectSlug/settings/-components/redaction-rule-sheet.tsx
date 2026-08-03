@@ -21,6 +21,20 @@ const KIND_OPTIONS = REDACTION_RULE_KIND_ORDER.map((kind) => ({
 /** Long enough that typing a pattern does not fire a request per keystroke. */
 const VALIDATE_DEBOUNCE_MS = 400
 
+/**
+ * One state rather than a nullable verdict beside an `isValidating` flag.
+ *
+ * With two, "no verdict" had to stand for both "still checking" and "the check itself failed", and
+ * the panel read them the same way: a network failure left it saying "Checking the rule…" with
+ * nothing in flight and no way to tell why Save was refusing.
+ */
+type Verdict =
+  | { readonly status: "checking" }
+  | { readonly status: "checked"; readonly validation: RuleValidation }
+  | { readonly status: "unavailable" }
+
+const CHECKING: Verdict = { status: "checking" }
+
 export function RedactionRuleSheet({
   open,
   rule,
@@ -34,45 +48,40 @@ export function RedactionRuleSheet({
   readonly onSave: (rule: RedactionRule) => void
 }) {
   const [draft, setDraft] = useState<RedactionRule>(rule ?? newRuleDraft("terms"))
-  const [validation, setValidation] = useState<RuleValidation | null>(null)
-  const [isValidating, setIsValidating] = useState(false)
+  const [verdict, setVerdict] = useState<Verdict>(CHECKING)
 
   // Re-seed whenever the sheet opens on a different rule; the row that opened it owns the choice.
   useEffect(() => {
     if (!open) return
     setDraft(rule ?? newRuleDraft("terms"))
-    setValidation(null)
+    setVerdict(CHECKING)
   }, [open, rule])
 
   const ready = isRuleDraftReady(draft)
 
   useEffect(() => {
     if (!open || !ready) {
-      setValidation(null)
+      setVerdict(CHECKING)
       return
     }
 
     let cancelled = false
-    // Drop the previous draft's verdict: it is not an answer about this one, and Save would stamp it.
-    setValidation(null)
-    setIsValidating(true)
+    // Back to "checking": the previous draft's verdict is not an answer about this one, and Save
+    // would otherwise stamp it onto a pattern nobody had checked.
+    setVerdict(CHECKING)
     const timer = setTimeout(() => {
       validateRedactionRuleDraft({ data: { rule: draft } })
-        .then((next) => {
-          if (!cancelled) setValidation(next)
+        .then((validation) => {
+          if (!cancelled) setVerdict({ status: "checked", validation })
         })
         .catch(() => {
-          if (!cancelled) setValidation(null)
-        })
-        .finally(() => {
-          if (!cancelled) setIsValidating(false)
+          if (!cancelled) setVerdict({ status: "unavailable" })
         })
     }, VALIDATE_DEBOUNCE_MS)
 
     return () => {
       cancelled = true
       clearTimeout(timer)
-      setIsValidating(false)
     }
   }, [open, ready, draft])
 
@@ -82,8 +91,7 @@ export function RedactionRuleSheet({
   }
 
   const labelError = labelIssue(draft.label)
-  // `isValidating` too: while a verdict is in flight the panel says so, and Save must not disagree.
-  const canSave = ready && !isValidating && labelError === undefined && validation?.ok === true
+  const canSave = ready && labelError === undefined && verdict.status === "checked" && verdict.validation.ok
 
   return (
     <Sheet open={open} onClose={onClose} closeAriaLabel="Close rule editor">
@@ -172,7 +180,7 @@ export function RedactionRuleSheet({
           </>
         ) : null}
 
-        <RuleVerdict isValidating={isValidating} ready={ready} validation={validation} />
+        <RuleVerdict ready={ready} verdict={verdict} />
 
         <div className="mt-auto flex flex-row justify-end gap-2 border-border border-t pt-4">
           <Button variant="outline" onClick={onClose}>
@@ -182,8 +190,8 @@ export function RedactionRuleSheet({
             disabled={!canSave}
             onClick={() =>
               onSave(
-                draft.kind === "pattern" && validation
-                  ? { ...draft, validatorVersion: validation.validatorVersion }
+                draft.kind === "pattern" && verdict.status === "checked"
+                  ? { ...draft, validatorVersion: verdict.validation.validatorVersion }
                   : draft,
               )
             }
@@ -201,19 +209,20 @@ export function RedactionRuleSheet({
  * things. It deliberately makes no judgement about over-breadth: only the customer's own data can
  * answer that, and the preview reads it.
  */
-function RuleVerdict({
-  isValidating,
-  ready,
-  validation,
-}: {
-  readonly isValidating: boolean
-  readonly ready: boolean
-  readonly validation: RuleValidation | null
-}) {
+function RuleVerdict({ ready, verdict }: { readonly ready: boolean; readonly verdict: Verdict }) {
   if (!ready) {
     return <Text.H6 color="foregroundMuted">Fill in a label and at least one value to check this rule.</Text.H6>
   }
-  if (isValidating || !validation) return <Text.H6 color="foregroundMuted">Checking the rule…</Text.H6>
+  if (verdict.status === "checking") return <Text.H6 color="foregroundMuted">Checking the rule…</Text.H6>
+  if (verdict.status === "unavailable") {
+    return (
+      <Text.H6 color="destructive">
+        Could not check this rule. Saving stays disabled until the check succeeds, so edit the rule to try again.
+      </Text.H6>
+    )
+  }
+
+  const { validation } = verdict
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border p-4">
