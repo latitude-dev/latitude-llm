@@ -143,7 +143,7 @@ function annotateRedaction(summary: SpanRedactionSummary): Effect.Effect<void> {
     yield* Effect.annotateCurrentSpan("redaction.leavesScanned", summary.leavesScanned)
     yield* Effect.annotateCurrentSpan("redaction.charsScanned", summary.charsScanned)
     yield* Effect.annotateCurrentSpan("redaction.matches", totalRedactionCount(summary.counts))
-    yield* Effect.annotateCurrentSpan("redaction.droppedAttributeKeys", summary.droppedAttributeKeys)
+    yield* Effect.annotateCurrentSpan("redaction.relocatedNumericAttributes", summary.relocatedNumericAttributes)
 
     for (const [entity, count] of Object.entries(summary.counts)) {
       yield* Effect.annotateCurrentSpan(`redaction.matches.${entity}`, count)

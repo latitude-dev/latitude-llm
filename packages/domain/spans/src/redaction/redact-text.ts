@@ -52,6 +52,24 @@ export function redactText(text: string, entities: ReadonlySet<RedactionEntity>)
   return { text: pieces.join(""), counts: countByEntity(accepted) }
 }
 
+/**
+ * Whole-value replacement for scalars that cannot hold a spliced placeholder — a numeric
+ * attribute that matches a detector *is* the sensitive value, so it is replaced entirely
+ * rather than having the match spliced out. `null` when nothing matched.
+ */
+export function redactWholeValue(
+  text: string,
+  entities: ReadonlySet<RedactionEntity>,
+): { placeholder: string; counts: RedactionCounts } | null {
+  if (text === "" || entities.size === 0) return null
+
+  const accepted = resolveOverlaps(findRedactionMatches(text, entities))
+  const entity = accepted[0]?.entity
+  if (entity === undefined) return null
+
+  return { placeholder: redactionPlaceholder(entity), counts: countByEntity(accepted) }
+}
+
 interface LeafRedactionOutcome {
   readonly text: string
   readonly counts: RedactionCounts

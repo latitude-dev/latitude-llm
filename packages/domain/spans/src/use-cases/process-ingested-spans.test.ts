@@ -189,14 +189,14 @@ describe("processIngestedSpansUseCase redaction", () => {
     expect(JSON.stringify(withoutField.inserted)).toContain(EMAIL)
   })
 
-  it("redacts content and drops the duplicated content attribute for an enforce project", async () => {
+  it("redacts both the content column and the raw attribute for an enforce project", async () => {
     const { effect, inserted } = runRedaction({ redaction: { [PROJECT_ID]: enforcePolicy } })
     await Effect.runPromise(effect)
 
     const span = inserted[0]?.[0]
     expect(JSON.stringify(inserted)).not.toContain(EMAIL)
     expect(JSON.stringify(span?.inputMessages)).toContain("[REDACTED_EMAIL]")
-    expect(span?.attrString).not.toHaveProperty("gen_ai.input.messages")
+    expect(span?.attrString["gen_ai.input.messages"]).toContain("[REDACTED_EMAIL]")
     expect(span?.attrString["gen_ai.system"]).toBe("openai")
   })
 
