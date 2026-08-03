@@ -149,7 +149,7 @@ describe("incompletionStrategy CES-Z2SW product-crash exclusions", () => {
 
     expect(systemPrompt).toContain("Product runtime / crash / defect reports")
     expect(systemPrompt).toContain("hm ios crashes?")
-    expect(systemPrompt).toContain('false claims of successful task completion')
+    expect(systemPrompt).toContain("false claims of successful task completion")
     expect(systemPrompt).toContain("you didn't reopen it")
     expect(systemPrompt).toContain(
       "Do NOT treat a later product defect report as contradicting a launch/build/open/relaunch claim",
