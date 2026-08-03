@@ -421,20 +421,6 @@ function MonitoringSection({
               This project has no monitoring settings of its own yet. Saving copies these values into one, and replaces
               the whole block, so later changes to the organization default won’t reach this project.
             </Text.H6>
-          ) : scope === "organization" && !pendingRemoval ? (
-            <div className="flex flex-row flex-wrap items-center justify-between gap-4">
-              <Text.H6 color="foregroundMuted">
-                These values come from the organization default, so they can’t be edited here.
-              </Text.H6>
-              <div className="flex shrink-0 flex-row items-center gap-2">
-                <Button variant="outline" onClick={() => setStagedScope("project")}>
-                  Override for this project
-                </Button>
-                <Button variant="outline" onClick={() => setEditingDefault(true)}>
-                  Edit organization default
-                </Button>
-              </div>
-            </div>
           ) : null
         }
         footer={
@@ -444,11 +430,9 @@ function MonitoringSection({
                 ? `Organization default in effect for ${projectCount - config.overrideCount} of ${projectCount} projects · ${config.overrideCount} override it`
                 : `Organization default in effect for all ${projectCount} projects`}
             </Text.H6>
-            {scope === "project" ? (
-              <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
-                Edit organization default
-              </Button>
-            ) : null}
+            <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
+              Edit organization default
+            </Button>
           </div>
         }
       >
