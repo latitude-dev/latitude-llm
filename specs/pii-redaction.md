@@ -230,7 +230,9 @@ Both columns are *resolved copies* of span attributes, so the substitution also 
 
 #### Never touched, with reasons
 
-`linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrInt`/`attrFloat`/`attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
+`linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
+
+`attrInt` and `attrFloat` were on this list until the key drop was reversed; they are now scanned as text and relocated on a match ([§4.2.2](#422-attribute-map-handling)). `attrBool` stays because no detector can match `"true"`.
 
 #### 4.2.1 GenAI part walk
 
