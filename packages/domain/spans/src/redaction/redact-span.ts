@@ -147,7 +147,6 @@ export function redactSpanDetail(
   }
 }
 
-
 /** Empty identities stay empty: pseudonymizing `""` would invent a user that never existed. */
 const replaceIdentity = (value: string, pseudonyms: PseudonymLookup): string => {
   if (value === "") return value

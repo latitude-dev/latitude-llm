@@ -84,7 +84,10 @@ export function RedactionRuleSheet({
 
   return (
     <Sheet open={open} onClose={onClose} closeAriaLabel="Close rule editor">
-      <div className="flex h-full w-full max-w-xl flex-col gap-6 overflow-y-auto p-6">
+      {/* `Sheet` paints only the backdrop and leaves its panel transparent and shrink-to-fit, so the
+          background, the border and an explicit width belong here — the same job `DetailDrawer` does
+          for every other consumer. Without the background the page shows straight through the panel. */}
+      <div className="flex h-full w-[34rem] max-w-[100vw] flex-col gap-6 overflow-y-auto border-border border-l bg-background p-6">
         <div className="flex flex-col gap-1">
           <Text.H4M>{rule ? "Edit rule" : "Add a rule"}</Text.H4M>
           <Text.H6 color="foregroundMuted">

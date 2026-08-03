@@ -19,13 +19,11 @@ import { RedactionRuleSheet } from "./redaction-rule-sheet.tsx"
  * also means the organization modal gets them from the same code path as the project page.
  */
 export function RedactionRulesSection({
-  idPrefix,
   /** Canonical JSON, so a flat draft overlay can compare it by value. */
   value,
   disabled = false,
   onChange,
 }: {
-  readonly idPrefix: string
   readonly value: string
   readonly disabled?: boolean
   readonly onChange: (next: string) => void

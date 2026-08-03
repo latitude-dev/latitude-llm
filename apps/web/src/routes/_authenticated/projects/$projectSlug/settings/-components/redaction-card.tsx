@@ -113,12 +113,7 @@ export function RedactionCard({
             </Text.H6>
           </div>
 
-          <RedactionRulesSection
-            idPrefix={idPrefix}
-            value={value.rules}
-            disabled={disabled}
-            onChange={(next) => onChange("rules", next)}
-          />
+          <RedactionRulesSection value={value.rules} disabled={disabled} onChange={(next) => onChange("rules", next)} />
         </>
       ) : null}
     </div>
