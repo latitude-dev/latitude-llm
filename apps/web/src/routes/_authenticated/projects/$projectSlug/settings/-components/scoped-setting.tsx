@@ -31,16 +31,7 @@ export type ScopeControl =
       readonly locked?: boolean
     }
 
-/**
- * Card chrome for one setting, carrying its scope attribution in the header.
- * Presentational: the page owns the value, the scope, and the mutations, and
- * renders its own controls as `children` (read-only when the scope is
- * `organization`).
- */
-/**
- * A scope change that would drop this project's override, held until applied so
- * flipping the selector to compare layers costs nothing.
- */
+/** Held until applied, so flipping the selector to compare layers costs nothing. */
 export interface PendingScopeChange {
   readonly description: ReactNode
   readonly applyLabel: string
@@ -83,6 +74,9 @@ export function ScopedSetting({
         </div>
         <div className="flex shrink-0 flex-row items-center gap-2">
           <Text.H6 color="foregroundMuted">Set by</Text.H6>
+          {scope.kind === "selectable" && scope.locked ? (
+            <LockIcon className="h-3 w-3 text-muted-foreground" aria-label="Locked by the organization" />
+          ) : null}
           {scope.kind === "fixed" ? (
             <Badge variant="outlineMuted" size="normal">
               {SCOPE_LABELS[scope.value]}
@@ -90,13 +84,13 @@ export function ScopedSetting({
           ) : (
             <Select
               name={`${idPrefix}-scope`}
+              aria-label="Set by"
               options={SCOPE_OPTIONS}
               value={scope.value}
               size="small"
               width="auto"
               loading={scope.loading ?? false}
               disabled={scope.disabled === true || scope.locked === true}
-              placeholderIcon={scope.locked ? <LockIcon className="h-3 w-3" /> : undefined}
               onChange={(next) => {
                 if (next !== scope.value) scope.onChange(next)
               }}

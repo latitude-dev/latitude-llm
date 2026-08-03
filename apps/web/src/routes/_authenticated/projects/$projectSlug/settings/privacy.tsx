@@ -9,7 +9,7 @@ import { Button, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
-import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
+import { useIsOrganizationOwner, useMembersCollection } from "../../../../../domains/members/members.collection.ts"
 import { useOrganizationsCollection } from "../../../../../domains/organizations/organizations.collection.ts"
 import {
   updateProjectRedactionMutation,
@@ -66,7 +66,7 @@ function ProjectPrivacySettingsPage() {
 
   const { data: memberData } = useMembersCollection()
   const myRole = (memberData ?? []).find((member) => member.userId === user.id)?.role
-  const isOwner = myRole === "owner"
+  const isOwner = useIsOrganizationOwner(user.id)
   const canEditProject = isOwner || myRole === "admin"
 
   const orgRedaction = org?.settings?.redaction

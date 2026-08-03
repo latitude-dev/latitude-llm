@@ -43,6 +43,7 @@ import {
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
   IncidentMonitorReaderLive,
+  MembershipRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
@@ -56,6 +57,7 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { requireOrganizationOwner } from "../../server/require-owner.ts"
 
 export interface AgentDispatchRecord {
   readonly id: string
@@ -949,20 +951,26 @@ export const sendSignalToIntegration = createServerFn({ method: "POST" })
 export const upsertOrgDefaultDispatchConfig = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => orgDefaultConfigSchema.parse(data))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     const config = await Effect.runPromise(
-      upsertOrgDefaultDispatchConfigUseCase({
-        organizationId: OrganizationId(organizationId),
-        integrationId: data.integrationId,
-        kind: data.kind,
-        enabled: data.enabled,
-        triggers: data.triggers,
-        target: data.target,
-        ...(data.promptTemplate !== undefined ? { promptTemplate: data.promptTemplate } : {}),
-        ...(data.guardrails !== undefined ? { guardrails: data.guardrails } : {}),
-      }).pipe(withPostgres(AgentDispatchConfigRepositoryLive, client, organizationId), withTracing),
+      Effect.gen(function* () {
+        yield* requireOrganizationOwner({ organizationId, userId, what: "an organization dispatch default" })
+        return yield* upsertOrgDefaultDispatchConfigUseCase({
+          organizationId: OrganizationId(organizationId),
+          integrationId: data.integrationId,
+          kind: data.kind,
+          enabled: data.enabled,
+          triggers: data.triggers,
+          target: data.target,
+          ...(data.promptTemplate !== undefined ? { promptTemplate: data.promptTemplate } : {}),
+          ...(data.guardrails !== undefined ? { guardrails: data.guardrails } : {}),
+        })
+      }).pipe(
+        withPostgres(Layer.merge(AgentDispatchConfigRepositoryLive, MembershipRepositoryLive), client, organizationId),
+        withTracing,
+      ),
     )
 
     return toConfigRecord(config)

@@ -36,7 +36,9 @@ import {
   updateGithubOrgDefaults,
   upsertGithubProjectConfig,
 } from "../../../../../../domains/github/github.functions.ts"
+import { useIsOrganizationOwner } from "../../../../../../domains/members/members.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { useAuthenticatedUser } from "../../../../-route-data.ts"
 import { GithubMonitorSettingsForm } from "./github-monitor-settings-form.tsx"
 import { OrgDefaultBlastRadius, otherAffectedProjects, useOrgDefaultConfirm } from "./org-default-confirm.tsx"
 import { ScopedSetting, type SettingScope } from "./scoped-setting.tsx"
@@ -359,6 +361,8 @@ function MonitoringSection({
   readonly onChanged: () => void
 }) {
   const { toast } = useToast()
+  const user = useAuthenticatedUser()
+  const isOwner = useIsOrganizationOwner(user.id)
   const [editingDefault, setEditingDefault] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
   const [stagedScope, setStagedScope] = useState<SettingScope | null>(null)
@@ -435,9 +439,13 @@ function MonitoringSection({
                 ? `Organization default in effect for ${projectCount - config.overrideCount} of ${projectCount} projects · ${config.overrideCount} override it`
                 : `Organization default in effect for all ${projectCount} projects`}
             </Text.H6>
-            <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
-              Edit organization default
-            </Button>
+            {isOwner ? (
+              <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
+                Edit organization default
+              </Button>
+            ) : scope === "organization" ? (
+              <Text.H6 color="foregroundMuted">Ask an owner to change the default.</Text.H6>
+            ) : null}
           </div>
         }
       >

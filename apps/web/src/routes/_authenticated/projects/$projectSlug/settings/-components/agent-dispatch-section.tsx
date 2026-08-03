@@ -57,10 +57,12 @@ import {
   AGENT_DISPATCH_KIND_LABELS,
   type AgentDispatchKindKey,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import { useIsOrganizationOwner } from "../../../../../../domains/members/members.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
 import { useDebounce } from "../../../../../../lib/hooks/useDebounce.ts"
 import { maskSensitiveValue } from "../../../../../../lib/mask-sensitive-value.ts"
+import { useAuthenticatedUser } from "../../../../-route-data.ts"
 import { OrgDefaultBlastRadius, otherAffectedProjects, useOrgDefaultConfirm } from "./org-default-confirm.tsx"
 import { ScopedSetting, type SettingScope } from "./scoped-setting.tsx"
 
@@ -288,6 +290,7 @@ function DispatchConnectionSection({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
       await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
+      await queryClient.invalidateQueries({ queryKey: projectDispatchSettingsQueryKey(projectId, kind) })
       await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
       toast({ description: `${KIND_LABELS[kind]} disconnected` })
       setConfirmOpen(false)
@@ -368,6 +371,8 @@ function DispatchBehaviorSection({
 }) {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const user = useAuthenticatedUser()
+  const isOwner = useIsOrganizationOwner(user.id)
   const [editingDefault, setEditingDefault] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
   const [stagedScope, setStagedScope] = useState<SettingScope | null>(null)
@@ -445,9 +450,13 @@ function DispatchBehaviorSection({
                 ? `Organization default in effect for ${projectCount - overrideCount} of ${projectCount} projects · ${overrideCount} override it`
                 : `Organization default in effect for all ${projectCount} projects`}
             </Text.H6>
-            <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
-              Edit organization default
-            </Button>
+            {isOwner ? (
+              <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
+                Edit organization default
+              </Button>
+            ) : scope === "organization" ? (
+              <Text.H6 color="foregroundMuted">Ask an owner to change the default.</Text.H6>
+            ) : null}
           </div>
         }
       >
