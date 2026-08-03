@@ -74,70 +74,89 @@ export function sortCacheRowsBySavings(rows: readonly CacheRowView[]): readonly 
 }
 
 /**
- * Every state present, as a group the table can put a heading on.
+ * The headings the table can carry, in the order they read before anyone sorts.
+ *
+ * `correctlyOff` and `notEnoughData` share one: both ask nothing of the reader and both
+ * render an empty bar, so two headings for them was two ways of saying nothing. Which of
+ * the two a row is stays in its own tooltip, where someone who cares can find it.
+ */
+const CACHE_GROUPS = [
+  { key: "cacheIt", states: ["cacheIt"] },
+  { key: "stopCaching", states: ["stopCaching"] },
+  { key: "investigate", states: ["investigate"] },
+  { key: "optimal", states: ["optimal"] },
+  { key: "nothingToDo", states: ["correctlyOff", "notEnoughData"] },
+] as const satisfies readonly { key: string; states: readonly CacheState[] }[]
+
+export type CacheGroupKey = (typeof CACHE_GROUPS)[number]["key"]
+
+/**
+ * Every group present, as the table renders it.
  *
  * One representation rather than two. A separate findings list beside a table meant the
  * same rows rendered twice with different encodings, which is what made a reader ask why
  * three particular models were called out.
  */
 export interface CacheStateGroup {
-  readonly state: CacheState
-  /** Every row in this state, highest savings first. */
+  readonly key: CacheGroupKey
+  /** Every row under this heading, highest savings first. */
   readonly rows: readonly CacheRowView[]
-  /** Whether the state asks for something. Settled states stay hidden until expanded. */
+  /** Whether the heading asks for something. The rest stay hidden until expanded. */
   readonly isActionable: boolean
-  /** Only what clears the floor, so a group of pennies does not inflate the headline. */
+  /**
+   * Every row's savings, floor or no floor, so the headline is the sum of the column a
+   * reader can add up themselves.
+   *
+   * Excluding the rows under the floor made the headline non-monotonic in the time window:
+   * the floor is a weekly *rate*, so the same dollars clear $1/week over two weeks and miss
+   * it over thirty days, and two weeks reported more recoverable money than the month
+   * containing it. The floor's job is deciding what to recommend, not what to add up.
+   */
   readonly savingsMicrocents: number
 }
 
-/** Settled states in the order they read once someone expands the table. */
-const CACHE_SETTLED_ORDER: readonly CacheState[] = ["optimal", "correctlyOff", "notEnoughData"]
-
 /**
- * Groups ordered so the money leads: states that ask for something first, by how much they
- * would save, then the states that ask for nothing.
+ * Groups ordered so the money leads: the headings that ask for something first, by how much
+ * they would save, then the ones that ask for nothing.
  */
 export function buildCacheStateGroups(
   rows: readonly CacheModelRecord[],
   selection: CacheLifetimeSelection,
 ): readonly CacheStateGroup[] {
   const resolved = rows.map((row) => resolveCacheRow(row, selection))
-  const byState = new Map<CacheState, CacheRowView[]>()
-  for (const row of resolved) {
-    byState.set(row.judgment.state, [...(byState.get(row.judgment.state) ?? []), row])
-  }
 
-  const group = (state: CacheState): CacheStateGroup | null => {
-    const stateRows = byState.get(state)
-    if (!stateRows || stateRows.length === 0) return null
+  const group = (entry: (typeof CACHE_GROUPS)[number]): CacheStateGroup | null => {
+    const groupRows = resolved.filter((row) => (entry.states as readonly CacheState[]).includes(row.judgment.state))
+    if (groupRows.length === 0) return null
     return {
-      state,
-      rows: sortCacheRowsBySavings(stateRows),
-      isActionable: cacheStateIsActionable(state),
-      savingsMicrocents: stateRows.reduce(
-        (sum, row) => sum + (row.judgment.savingsClearsFloor ? (row.judgment.modeledSavingsMicrocents ?? 0) : 0),
-        0,
-      ),
+      key: entry.key,
+      rows: sortCacheRowsBySavings(groupRows),
+      isActionable: cacheStateIsActionable(entry.states[0]),
+      savingsMicrocents: groupRows.reduce((sum, row) => sum + (row.judgment.modeledSavingsMicrocents ?? 0), 0),
     }
   }
 
-  const actionable = CACHE_RECOMMENDATION_STATES.map(group)
-    .filter((entry): entry is CacheStateGroup => entry !== null)
+  const groups = CACHE_GROUPS.map(group).filter((entry): entry is CacheStateGroup => entry !== null)
+  const actionable = groups
+    .filter((entry) => entry.isActionable)
     .sort((a, b) => b.savingsMicrocents - a.savingsMicrocents)
-  const settled = CACHE_SETTLED_ORDER.map(group).filter((entry): entry is CacheStateGroup => entry !== null)
 
-  return [...actionable, ...settled]
+  return [...actionable, ...groups.filter((entry) => !entry.isActionable)]
 }
 
-/** The models with nothing to do, counted so the panel can say so in one line. */
+/**
+ * The models asking nothing of the reader, counted so the collapsed panel can say so in one
+ * line. `optimal` is kept apart from the rest because it is the only one that is praise —
+ * a model with caching off is not "caching well", however right it is to leave it off.
+ */
 export function summariseSettledRows(
   rows: readonly CacheModelRecord[],
   selection: CacheLifetimeSelection,
-): { readonly fine: number; readonly needData: number } {
+): { readonly cachingWell: number; readonly nothingToDo: number } {
   const states = rows.map((row) => resolveCacheRow(row, selection).judgment.state)
   return {
-    fine: states.filter((state) => state === "optimal" || state === "correctlyOff").length,
-    needData: states.filter((state) => state === "notEnoughData").length,
+    cachingWell: states.filter((state) => state === "optimal").length,
+    nothingToDo: states.filter((state) => state === "correctlyOff" || state === "notEnoughData").length,
   }
 }
 

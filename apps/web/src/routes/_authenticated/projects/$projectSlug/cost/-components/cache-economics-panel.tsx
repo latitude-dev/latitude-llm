@@ -1,4 +1,4 @@
-import { CACHE_ECONOMICS_MIN_CALLS, CACHE_MIN_CACHEABLE_INPUT_TOKENS, type CacheState } from "@domain/spans"
+import { CACHE_ECONOMICS_MIN_CALLS, CACHE_MIN_CACHEABLE_INPUT_TOKENS } from "@domain/spans"
 import type { TextColor } from "@repo/ui"
 import {
   Button,
@@ -30,6 +30,7 @@ import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.
 import {
   buildCacheStateGroups,
   CACHE_LIFETIME_OPTIONS,
+  type CacheGroupKey,
   type CacheLifetimeSelection,
   type CacheRowView,
   type CacheStateGroup,
@@ -47,13 +48,12 @@ const DASH = "—"
 const ROWS_PER_GROUP_COLLAPSED = 1
 
 /**
- * What each state is called and what it asks for.
+ * What each heading is called and what it asks for.
  *
- * The group heading says the state once, which is what lets the rows underneath stay on a
- * single line.
+ * The heading says it once, which is what lets the rows underneath stay on a single line.
  */
 const STATE_META: Record<
-  CacheState,
+  CacheGroupKey,
   { readonly label: string; readonly body: string; readonly icon: typeof CircleIcon; readonly iconColor: TextColor }
 > = {
   cacheIt: {
@@ -82,15 +82,9 @@ const STATE_META: Record<
     icon: CircleCheckIcon,
     iconColor: "success",
   },
-  correctlyOff: {
-    label: "Right to skip the cache",
-    body: "These prompts are too short, or arrive too far apart, for a cache to pay off.",
-    icon: CircleIcon,
-    iconColor: "foregroundMuted",
-  },
-  notEnoughData: {
-    label: "Too little traffic to judge",
-    body: "Not enough calls yet to say anything useful.",
+  nothingToDo: {
+    label: "Nothing to do",
+    body: "A cache would not pay off on these, or there are too few calls to tell yet.",
     icon: CircleIcon,
     iconColor: "foregroundMuted",
   },
@@ -100,7 +94,7 @@ const LIFETIME_TOOLTIP =
   "Play with the cache time to see how our estimate changes. Every value here is a guess, including the default, which uses what each provider publishes for the model."
 
 const SAVINGS_TOOLTIP =
-  "An estimate, worked out from your token counts and each model's list prices. It will not match the spend figures elsewhere on this page exactly."
+  "An estimate for the time window you picked, worked out from your token counts and each model's list prices. It will not match the spend figures elsewhere on this page exactly."
 
 const POSITION_TOOLTIP =
   "The share of tokens served from cache. The pale part is what the timing of these calls would have allowed."
@@ -149,7 +143,7 @@ function rowExplanation(row: CacheRowView): string {
  * filling the rest of the width. Deliberately not a filled band, which reads as another row.
  */
 function StateGroupHeader({ group }: { readonly group: CacheStateGroup }) {
-  const meta = STATE_META[group.state]
+  const meta = STATE_META[group.key]
   return (
     <TableRow hoverable={false} className="border-0">
       <TableCell colSpan={4} className="max-w-none px-3 pt-8 pb-2.5 align-bottom">
@@ -396,7 +390,7 @@ export function CacheEconomicsPanel({
     )
 
   const built = economics ? buildCacheStateGroups(economics.rows, selection) : []
-  const settled = economics ? summariseSettledRows(economics.rows, selection) : { fine: 0, needData: 0 }
+  const settled = economics ? summariseSettledRows(economics.rows, selection) : { cachingWell: 0, nothingToDo: 0 }
   const totalSavings = built.reduce((sum, group) => sum + (group.isActionable ? group.savingsMicrocents : 0), 0)
 
   // A sort moves the groups as well as the rows, each group carried by its leading row on
@@ -417,8 +411,8 @@ export function CacheEconomicsPanel({
     isExpanded ? group.rows : group.rows.slice(0, ROWS_PER_GROUP_COLLAPSED)
 
   const settledSummary = [
-    settled.fine > 0 ? `${formatCount(settled.fine)} caching well` : null,
-    settled.needData > 0 ? `${formatCount(settled.needData)} with too little traffic to judge` : null,
+    settled.cachingWell > 0 ? `${formatCount(settled.cachingWell)} caching well` : null,
+    settled.nothingToDo > 0 ? `${formatCount(settled.nothingToDo)} with nothing to do` : null,
   ]
     .filter((part) => part !== null)
     .join(", ")
@@ -506,7 +500,7 @@ export function CacheEconomicsPanel({
               </TableHeader>
               <TableBody>
                 {visibleGroups.map((group) => (
-                  <Fragment key={group.state}>
+                  <Fragment key={group.key}>
                     <StateGroupHeader group={group} />
                     {rowsOf(group).map((row) => (
                       <CacheRow key={`${row.provider}/${row.model}`} row={row} />

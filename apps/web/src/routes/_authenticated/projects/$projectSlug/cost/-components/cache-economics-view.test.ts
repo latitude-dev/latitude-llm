@@ -138,12 +138,12 @@ describe("buildCacheStateGroups", () => {
       "documented",
     )
 
-    expect(groups.map((group) => group.state)).toEqual(["stopCaching", "investigate", "cacheIt"])
+    expect(groups.map((group) => group.key)).toEqual(["stopCaching", "investigate", "cacheIt"])
     expect(groups[1]?.savingsMicrocents).toBe(600)
     expect(groups[1]?.rows.map((entry) => entry.model)).toEqual(["broken-a", "broken-b"])
   })
 
-  it("keeps the settled states, in their own order, after everything actionable", () => {
+  it("puts one heading on everything settled, after everything actionable", () => {
     const groups = buildCacheStateGroups(
       [
         row({ model: "thin", documented: judgment({ state: "notEnoughData", modeledSavingsMicrocents: null }) }),
@@ -154,8 +154,11 @@ describe("buildCacheStateGroups", () => {
       "documented",
     )
 
-    expect(groups.map((group) => group.state)).toEqual(["cacheIt", "optimal", "correctlyOff", "notEnoughData"])
-    expect(groups.map((group) => group.isActionable)).toEqual([true, false, false, false])
+    expect(groups.map((group) => group.key)).toEqual(["cacheIt", "optimal", "nothingToDo"])
+    expect(groups.map((group) => group.isActionable)).toEqual([true, false, false])
+    // Two ways of saying nothing read as one: a cache that would not pay and a cache we
+    // cannot judge both leave the reader with nothing to do.
+    expect(groups[2]?.rows.map((entry) => entry.model).sort()).toEqual(["guardrail", "thin"])
   })
 
   it("raises no actionable group for a project where every model is already fine", () => {
@@ -170,20 +173,22 @@ describe("buildCacheStateGroups", () => {
     expect(groups.filter((group) => group.isActionable)).toEqual([])
   })
 
-  it("shows a finding under the floor but keeps its pennies out of the group total", () => {
-    // Hiding the row would leave the panel implying the model is fine when it is not.
+  it("counts a finding under the floor, because the headline has to match the column", () => {
+    // The floor is a weekly rate, so excluding these made a fortnight report more
+    // recoverable money than the month containing it.
     const groups = buildCacheStateGroups(
       [
         row({
           model: "pennies",
           documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 40, savingsClearsFloor: false }),
         }),
+        row({ model: "real", documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 900 }) }),
       ],
       "documented",
     )
 
-    expect(groups[0]?.rows.map((entry) => entry.model)).toEqual(["pennies"])
-    expect(groups[0]?.savingsMicrocents).toBe(0)
+    expect(groups[0]?.rows.map((entry) => entry.model)).toEqual(["real", "pennies"])
+    expect(groups[0]?.savingsMicrocents).toBe(940)
   })
 
   it("regroups when a different lifetime is picked, which is what the control is for", () => {
@@ -194,13 +199,13 @@ describe("buildCacheStateGroups", () => {
       ),
     ]
 
-    expect(buildCacheStateGroups(records, "documented").map((group) => group.state)).toEqual(["optimal"])
-    expect(buildCacheStateGroups(records, 3_600).map((group) => group.state)).toEqual(["investigate"])
+    expect(buildCacheStateGroups(records, "documented").map((group) => group.key)).toEqual(["optimal"])
+    expect(buildCacheStateGroups(records, 3_600).map((group) => group.key)).toEqual(["investigate"])
   })
 })
 
 describe("summariseSettledRows", () => {
-  it("counts the models with nothing to do, split by whether we could judge them", () => {
+  it("counts praise apart from the rest, since caching off is not caching well", () => {
     const settled = summariseSettledRows(
       [
         row({ model: "a", documented: judgment({ state: "optimal" }) }),
@@ -211,7 +216,7 @@ describe("summariseSettledRows", () => {
       "documented",
     )
 
-    expect(settled).toEqual({ fine: 2, needData: 1 })
+    expect(settled).toEqual({ cachingWell: 1, nothingToDo: 2 })
   })
 })
 
