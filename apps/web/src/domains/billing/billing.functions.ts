@@ -62,15 +62,11 @@ const loadBillingOverview = Effect.fn("web.billing.getOverview")(function* (orga
   const includedCredits = Number.isFinite(orgPlan.plan.includedCredits) ? orgPlan.plan.includedCredits : null
   const consumedCredits = period?.consumedCredits ?? 0
   const overageCredits = period?.overageCredits ?? 0
-  const includedUsedCredits =
-    includedCredits === null ? consumedCredits : Math.min(consumedCredits, includedCredits)
-  const remainingCredits =
-    includedCredits === null ? null : Math.max(includedCredits - consumedCredits, 0)
+  const includedUsedCredits = includedCredits === null ? consumedCredits : Math.min(consumedCredits, includedCredits)
+  const remainingCredits = includedCredits === null ? null : Math.max(includedCredits - consumedCredits, 0)
   const isAtIncludedLimit = includedCredits !== null && includedCredits > 0 && consumedCredits >= includedCredits
   const usageProgress =
-    includedCredits === null || includedCredits <= 0
-      ? 1
-      : Math.min(consumedCredits / includedCredits, 1)
+    includedCredits === null || includedCredits <= 0 ? 1 : Math.min(consumedCredits / includedCredits, 1)
 
   return {
     planSlug: orgPlan.plan.slug,

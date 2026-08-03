@@ -48,9 +48,7 @@ export function BillingCreditCounter({
     ? `${numberFormatter.format(overview.consumedCredits)} credits used: ${numberFormatter.format(overview.includedUsedCredits)} included credits plus ${numberFormatter.format(overview.overageCredits)} metered overage credits. Usage can exceed the included limit because this plan allows overage billing.`
     : `${numberFormatter.format(overview.consumedCredits)} of ${includedLabel} credits used this period`
   const showUpgradeCta =
-    overview.planSlug === "free" &&
-    hasIncludedCredits &&
-    overview.usageProgress >= FREE_PLAN_UPGRADE_USAGE_THRESHOLD
+    overview.planSlug === "free" && hasIncludedCredits && overview.usageProgress >= FREE_PLAN_UPGRADE_USAGE_THRESHOLD
 
   const openUpgrade = async () => {
     setIsUpgradePending(true)
