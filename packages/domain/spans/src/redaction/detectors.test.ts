@@ -20,10 +20,10 @@ const detects = (text: string, entity: RedactionEntity): boolean => found(text, 
 
 /**
  * Every credential fixture here is fabricated, but it has to carry the real shape or it tests nothing — and
- * that shape is what secret scanners match. Splitting prefix from body leaves no contiguous token-shaped
+ * that shape is what secret scanners match. Assembling from fragments leaves no contiguous credential-shaped
  * literal in the file, which keeps push protection off this repository and off anyone's fork.
  */
-const vendorToken = (prefix: string, body: string): string => prefix + body
+const credential = (...fragments: string[]): string => fragments.join("")
 
 describe("email detector", () => {
   it.each([
@@ -86,6 +86,19 @@ describe("email detector", () => {
     ["Müller.Hans@firma.de bestätigt", "Müller.Hans@firma.de"],
   ])("matches the whole local part in %s", (text, expected) => {
     expect(found(text, "email")).toEqual([expected])
+  })
+
+  /**
+   * The extension list must hold no live TLD. `md`, `py`, `sh` and `zip` were all in it, which cost Moldova,
+   * Paraguay, Saint Helena and every `.zip` domain their coverage.
+   */
+  it.each([
+    "cliente@empresa.py",
+    "user@example.md",
+    "admin@server.sh",
+    "files@backup.zip",
+  ])("detects %s, whose suffix is a real TLD as well as a file extension", (value) => {
+    expect(found(`contact ${value} today`, "email")).toEqual([value])
   })
 
   it("does not take the opening quote of a single-quoted address", () => {
@@ -420,7 +433,7 @@ describe("secret detector", () => {
   // Asserted on the redacted text: the vendor prefix and the assignment key both match here, over the
   // same span, so overlap resolution is what makes one placeholder out of two matches.
   it("detects an OpenAI style key", () => {
-    const key = vendorToken("sk-proj-", "abc123DEF456ghi789JKL012mno345PQR678stu")
+    const key = credential("sk-proj-", "abc123DEF456ghi789JKL012mno345PQR678stu")
     expect(redactText(`export OPENAI_API_KEY=${key}`, only("secret")).text).toBe(
       "export OPENAI_API_KEY=[REDACTED_SECRET]",
     )
@@ -432,13 +445,13 @@ describe("secret detector", () => {
   })
 
   it.each([
-    vendorToken("AKIA", "IOSFODNN7EXAMPLE"),
-    vendorToken("ASIA", "IOSFODNN7EXAMPLE"),
-    vendorToken("AIzaSy", "D-abc123DEF456ghi789JKL012mno345p"),
-    vendorToken("sk_live_", "abc123DEF456ghi789"),
-    vendorToken("xoxb-", "123456789012-abcDEF123456"),
-    vendorToken("ghp_", "abc123DEF456ghi789JKL012mno345PQR678stu9"),
-    vendorToken("github_pat_", "abc123DEF456ghi789JKL0"),
+    credential("AKIA", "IOSFODNN7EXAMPLE"),
+    credential("ASIA", "IOSFODNN7EXAMPLE"),
+    credential("AIzaSy", "D-abc123DEF456ghi789JKL012mno345p"),
+    credential("sk_live_", "abc123DEF456ghi789"),
+    credential("xoxb-", "123456789012-abcDEF123456"),
+    credential("ghp_", "abc123DEF456ghi789JKL012mno345PQR678stu9"),
+    credential("github_pat_", "abc123DEF456ghi789JKL0"),
   ])("detects %s", (value) => {
     expect(detects(`token ${value} end`, "secret")).toBe(true)
   })
@@ -459,17 +472,17 @@ describe("secret detector", () => {
   // The carrier phrase avoids the word "token": the bearer scheme matches case-insensitively, so
   // `token <value>` is a second legitimate match on the same span and this table asserts the vendor pattern.
   it.each([
-    vendorToken("hf_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o"),
-    vendorToken("glpat-", "9aZq1LmT4vBn7XkR2wEs"),
-    vendorToken("npm_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg"),
-    vendorToken("ya29.", "a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ"),
-    vendorToken("SG.", "9aZq1LmT4vBn7XkR2wEs8Y.YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb"),
+    credential("hf_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o"),
+    credential("glpat-", "9aZq1LmT4vBn7XkR2wEs"),
+    credential("npm_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg"),
+    credential("ya29.", "a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ"),
+    credential("SG.", "9aZq1LmT4vBn7XkR2wEs8Y.YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb"),
   ])("detects the vendor token %s", (value) => {
     expect(found(`emitted ${value} here`, "secret")).toEqual([value])
   })
 
   it("detects a Slack webhook URL, whose path segments are the credential", () => {
-    const url = vendorToken("https://hooks.slack.com/services/", "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX")
+    const url = credential("https://hooks.slack.com/services/", "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX")
     expect(found(`posted to ${url}`, "secret")).toEqual([url])
   })
 
@@ -500,17 +513,21 @@ describe("secret detector", () => {
   /**
    * Credentials with no shape of their own, recognised from the key they are assigned to.
    */
-  it.each([
-    ["POSTGRES_PASSWORD=hunter2Correct-Horse", "hunter2Correct-Horse"],
-    ["REDIS_PASSWORD=Tr0ub4dor&3", "Tr0ub4dor&3"],
-    ['{"api_key": "9aZq1LmT4vBn7XkR"}', "9aZq1LmT4vBn7XkR"],
-    ["  DATABASE_PASSWORD: aHVudGVyMkNvcnJlY3RIb3JzZQ==", "aHVudGVyMkNvcnJlY3RIb3JzZQ=="],
-    ["aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"],
-    ["client_secret=8fJ2kLmN9pQrStUvWxYz", "8fJ2kLmN9pQrStUvWxYz"],
-    ["--token 9aZq1LmT4vBn7XkR2wEs", "9aZq1LmT4vBn7XkR2wEs"],
-    ["Authorization: Bearer 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl"],
-  ])("detects the credential assigned in %s", (text, credential) => {
-    expect(found(text, "secret")).toContain(credential)
+  it.each(
+    (
+      [
+        ["POSTGRES_PASSWORD=", credential("hunter2", "Correct-Horse")],
+        ["REDIS_PASSWORD=", credential("Tr0ub4dor", "&3")],
+        ['{"api_key": "', credential("9aZq1LmT4vBn", "7XkR")],
+        ["  DATABASE_PASSWORD: ", btoa(credential("hunter2", "Correct-Horse"))],
+        ["aws_secret_access_key = ", credential("wJalrXUtnFEMI/K7MDENG/", "bPxRfiCYEXAMPLEKEY")],
+        ["client_secret=", credential("8fJ2kLmN", "9pQrStUvWxYz")],
+        ["--token ", credential("9aZq1LmT4vBn", "7XkR2wEs")],
+        ["Authorization: Bearer ", credential("9aZq1LmT4vBn7XkR", "2wEs8YuC3PdF6HgJ0oKl")],
+      ] as const
+    ).map(([prefix, secret]) => [`${prefix}${secret}`, secret] as const),
+  )("detects the credential assigned in %s", (text, secret) => {
+    expect(found(text, "secret")).toContain(secret)
   })
 
   // Auth scheme names are case-insensitive on the wire, and a lowercase `bearer` header is common in logs.
@@ -658,7 +675,7 @@ index 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567..f1e2d3c4b5a69788796a5b4c3d2e1f09
   })
 
   it("still finds a real secret embedded in the same output", () => {
-    const key = vendorToken("sk-proj-", "abc123DEF456ghi789JKL012mno345PQR678stu")
+    const key = credential("sk-proj-", "abc123DEF456ghi789JKL012mno345PQR678stu")
     const redacted = redactText(`${TOOL_OUTPUT}\nOPENAI_API_KEY=${key}\n`, only("secret")).text
 
     expect(redacted).toContain("OPENAI_API_KEY=[REDACTED_SECRET]")

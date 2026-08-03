@@ -37,8 +37,13 @@ const EMAIL_PATTERN = new RegExp(String.raw`${EMAIL_LOCAL_PART}@${EMAIL_DOMAIN}`
 /** A reset link carries the address percent-encoded, which is how agent tool output usually holds one. */
 const PERCENT_ENCODED_EMAIL_PATTERN = new RegExp(String.raw`${EMAIL_LOCAL_PART}%40${EMAIL_DOMAIN}`, "giu")
 
-// Asset names satisfy every structural rule an address does. Two-label domains only: `mail@example.com.txt`
-// is a real address followed by an extension.
+/**
+ * Asset names satisfy every structural rule an address does. Two-label domains only: `mail@example.com.txt`
+ * is a real address followed by an extension.
+ *
+ * Nothing in here may be a live TLD, or real addresses at it stop being redacted. `md`, `py`, `sh` and `zip`
+ * were all in this set and cost Moldova, Paraguay, Saint Helena and every `.zip` domain their coverage.
+ */
 const FILE_EXTENSION_TLDS: ReadonlySet<string> = new Set([
   "bak",
   "csv",
@@ -54,11 +59,8 @@ const FILE_EXTENSION_TLDS: ReadonlySet<string> = new Set([
   "jsx",
   "lock",
   "log",
-  "md",
   "pdf",
   "png",
-  "py",
-  "sh",
   "sql",
   "svg",
   "tar",
@@ -70,7 +72,6 @@ const FILE_EXTENSION_TLDS: ReadonlySet<string> = new Set([
   "xml",
   "yaml",
   "yml",
-  "zip",
 ])
 
 // Requires a letter in the label before the TLD, which is what rejects the email-shaped `package@1.2.beta`.
