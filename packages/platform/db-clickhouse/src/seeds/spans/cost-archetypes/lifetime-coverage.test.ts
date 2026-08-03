@@ -240,11 +240,13 @@ const judgeArchetypeB = () => {
       }
     }),
     totals: {
-      calls: 0,
-      inputTokens: 0,
-      cacheReadTokens: 0,
-      cacheCreateTokens: 0,
-      costMicrocents: 0,
+      calls: [...measures.values()].reduce((n, m) => n + m.calls, 0),
+      inputTokens: [...measures.values()].reduce((n, m) => n + m.input, 0),
+      cacheReadTokens: [...measures.values()].reduce((n, m) => n + m.read, 0),
+      cacheCreateTokens: [...measures.values()].reduce((n, m) => n + m.create, 0),
+      // Real window spend, because the card floor scales with it: zeroing this would
+      // silently drop the relative half of the gate and stop matching the page.
+      costMicrocents: [...measures.values()].reduce((n, m) => n + m.cost, 0),
       unpricedCalls: 0,
       unpricedTokens: 0,
       distinctModels: measures.size,

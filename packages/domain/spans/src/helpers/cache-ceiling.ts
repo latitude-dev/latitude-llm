@@ -18,13 +18,24 @@ const MICROCENTS_PER_USD = 100_000_000
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
- * Savings below this are noise: "save $0.12/week" is not worth a card, and a rate
- * gap on traffic this cheap is not worth anyone reading their prompt-construction
- * code over. Expressed weekly because the window is the reader's choice — a floor in
- * absolute dollars would suppress everything on a one-day window and nothing on a
- * ninety-day one.
+ * Savings below this are noise in absolute terms: "save $0.12/week" is not worth a
+ * card, and a rate gap on traffic this cheap is not worth anyone reading their
+ * prompt-construction code over. Expressed weekly because the window is the reader's
+ * choice — a floor in absolute dollars would suppress everything on a one-day window
+ * and nothing on a ninety-day one.
  */
 export const CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS = MICROCENTS_PER_USD
+
+/**
+ * Savings below this share of the window's spend are noise in relative terms. A dollar
+ * figure that is real money to one project is a rounding error to the next, so an
+ * absolute floor alone would fill a large customer's panel with cards worth a thousandth
+ * of their bill while a small one sees nothing.
+ *
+ * A pure window-over-window ratio, so unlike the weekly floor it needs no time
+ * normalisation: both sides are measured over the same window.
+ */
+export const CACHE_SAVINGS_MIN_SPEND_SHARE = 0.01
 
 /** Measured token flow for one model, the exact half of the calculation. */
 export interface CacheTokenFlow {
@@ -179,14 +190,31 @@ export function weeklyCacheSavingsMicrocents({
   return savingsMicrocents * (WEEK_MS / windowMs)
 }
 
-/** Whether a finding is worth surfacing as a card rather than left in the table. */
+/**
+ * Whether a finding is worth surfacing as a card rather than left in the table.
+ *
+ * Both floors have to clear, because they suppress different kinds of noise and each is
+ * useless alone: the absolute one would let a thousandth of a large bill through, and
+ * the relative one would promote half the spend of a model costing four cents. Taking
+ * them as alternatives rather than as a conjunction defeats the point — any finding that
+ * clears the absolute floor also clears an `or`, so the relative bar would never bind.
+ */
 export function clearsCacheSavingsFloor({
   savingsMicrocents,
   windowMs,
+  windowSpendMicrocents,
 }: {
   readonly savingsMicrocents: number | null
   readonly windowMs: number
+  /** Billable spend across the whole window, which is what makes the bar scale. */
+  readonly windowSpendMicrocents: number
 }): boolean {
-  if (savingsMicrocents === null) return false
-  return weeklyCacheSavingsMicrocents({ savingsMicrocents, windowMs }) >= CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS
+  if (savingsMicrocents === null || savingsMicrocents <= 0) return false
+  const clearsAbsolute =
+    weeklyCacheSavingsMicrocents({ savingsMicrocents, windowMs }) >= CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS
+  // No spend to be a share of leaves only the absolute bar, rather than dividing by zero
+  // and promoting everything.
+  const clearsRelative =
+    !(windowSpendMicrocents > 0) || savingsMicrocents / windowSpendMicrocents >= CACHE_SAVINGS_MIN_SPEND_SHARE
+  return clearsAbsolute && clearsRelative
 }

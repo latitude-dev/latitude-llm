@@ -202,7 +202,7 @@ function SavingsCell({ row }: { readonly row: CacheRowView }) {
         `Modeled from this window's token counts and the model's registry prices, not from recorded spend — so it will not tie to the breakdown table.`,
         row.judgment.savingsClearsFloor
           ? "Enough to be worth acting on, so it also appears as a recommendation above."
-          : "Below the weekly floor a recommendation has to clear, so no card is raised for it.",
+          : "Below the bar a recommendation has to clear — either too little money in absolute terms, or too small a share of this window's spend to be worth anyone's attention.",
       ].join("\n")}
     </Tooltip>
   )

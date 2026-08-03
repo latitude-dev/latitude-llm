@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  CACHE_SAVINGS_MIN_SPEND_SHARE,
   CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS,
   cacheCeilingRate,
   cacheCeilingSavingsMicrocents,
@@ -138,7 +139,11 @@ describe("cacheCeilingSavingsMicrocents", () => {
 })
 
 describe("the spend floor", () => {
-  it("restates a window's savings as the weekly rate the floor is defined at", () => {
+  // Spend high enough that the relative bar never binds, so these cases isolate the
+  // absolute one.
+  const NO_RELATIVE_BAR = { windowSpendMicrocents: 0 }
+
+  it("restates a window's savings as the weekly rate the absolute floor is defined at", () => {
     expect(weeklyCacheSavingsMicrocents({ savingsMicrocents: 100, windowMs: WEEK_MS })).toBe(100)
     expect(weeklyCacheSavingsMicrocents({ savingsMicrocents: 100, windowMs: WEEK_MS / 7 })).toBe(700)
     expect(weeklyCacheSavingsMicrocents({ savingsMicrocents: 700, windowMs: WEEK_MS * 4 })).toBe(175)
@@ -151,14 +156,57 @@ describe("the spend floor", () => {
   it("suppresses the same dollar figure on a long window and passes it on a short one", () => {
     // $0.50 over a week is noise; the same $0.50 in a single day is $3.50/week.
     const savingsMicrocents = MICROCENTS_PER_USD / 2
-    expect(clearsCacheSavingsFloor({ savingsMicrocents, windowMs: WEEK_MS })).toBe(false)
-    expect(clearsCacheSavingsFloor({ savingsMicrocents, windowMs: WEEK_MS / 7 })).toBe(true)
+    expect(clearsCacheSavingsFloor({ savingsMicrocents, windowMs: WEEK_MS, ...NO_RELATIVE_BAR })).toBe(false)
+    expect(clearsCacheSavingsFloor({ savingsMicrocents, windowMs: WEEK_MS / 7, ...NO_RELATIVE_BAR })).toBe(true)
   })
 
-  it("passes exactly at the floor and never passes a blank figure", () => {
-    expect(clearsCacheSavingsFloor({ savingsMicrocents: CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS, windowMs: WEEK_MS })).toBe(
-      true,
-    )
-    expect(clearsCacheSavingsFloor({ savingsMicrocents: null, windowMs: WEEK_MS })).toBe(false)
+  it("passes exactly at the absolute floor and never passes a blank or negative figure", () => {
+    expect(
+      clearsCacheSavingsFloor({
+        savingsMicrocents: CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS,
+        windowMs: WEEK_MS,
+        ...NO_RELATIVE_BAR,
+      }),
+    ).toBe(true)
+    expect(clearsCacheSavingsFloor({ savingsMicrocents: null, windowMs: WEEK_MS, ...NO_RELATIVE_BAR })).toBe(false)
+    expect(clearsCacheSavingsFloor({ savingsMicrocents: 0, windowMs: WEEK_MS, ...NO_RELATIVE_BAR })).toBe(false)
+  })
+
+  describe("scaling with spend", () => {
+    const weekly = (usd: number) => usd * MICROCENTS_PER_USD
+    const clears = (savingsUsd: number, spendUsd: number) =>
+      clearsCacheSavingsFloor({
+        savingsMicrocents: weekly(savingsUsd),
+        windowMs: WEEK_MS,
+        windowSpendMicrocents: weekly(spendUsd),
+      })
+
+    it("suppresses a thousandth of a large bill that the absolute floor would wave through", () => {
+      // $50/week is real money in isolation and a rounding error against $50k of spend.
+      expect(clears(50, 50_000)).toBe(false)
+      expect(clears(600, 50_000)).toBe(true)
+    })
+
+    it("still suppresses half the spend of a model too cheap to matter", () => {
+      // The relative bar alone would promote this; the absolute one is what stops it.
+      expect(clears(0.02, 0.04)).toBe(false)
+    })
+
+    it("keeps the absolute bar in charge for a small project, where a share is meaningless", () => {
+      // 1% of $5 is half a cent, so without the absolute floor everything would fire.
+      expect(clears(0.1, 5)).toBe(false)
+      expect(clears(2, 5)).toBe(true)
+    })
+
+    it("falls back to the absolute bar rather than dividing by no spend", () => {
+      expect(clears(2, 0)).toBe(true)
+      expect(clears(0.1, 0)).toBe(false)
+    })
+
+    it("passes exactly at the share, so the constant is the boundary it claims to be", () => {
+      const spendUsd = 1_000
+      expect(clears(spendUsd * CACHE_SAVINGS_MIN_SPEND_SHARE, spendUsd)).toBe(true)
+      expect(clears(spendUsd * CACHE_SAVINGS_MIN_SPEND_SHARE * 0.99, spendUsd)).toBe(false)
+    })
   })
 })

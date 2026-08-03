@@ -43,12 +43,14 @@ const judgeAtCeiling = ({
   ceilingRate,
   breakEvenRate,
   windowMs,
+  windowSpendMicrocents,
 }: {
   readonly usage: CacheModelUsage
   readonly pricing: ModelRegistryPricing | null
   readonly ceilingRate: number | null
   readonly breakEvenRate: number | null
   readonly windowMs: number
+  readonly windowSpendMicrocents: number
 }): CacheModelJudgment => {
   const cachingOn = usage.cacheReadTokens + usage.cacheCreateTokens > 0
   const actualRate = cacheHitRate({
@@ -78,7 +80,11 @@ const judgeAtCeiling = ({
     ceilingRate,
     breakEvenRate,
     modeledSavingsMicrocents,
-    savingsClearsFloor: clearsCacheSavingsFloor({ savingsMicrocents: modeledSavingsMicrocents, windowMs }),
+    savingsClearsFloor: clearsCacheSavingsFloor({
+      savingsMicrocents: modeledSavingsMicrocents,
+      windowMs,
+      windowSpendMicrocents,
+    }),
   }
 }
 
@@ -130,6 +136,8 @@ export function judgeCacheEconomics({
     ]),
   )
 
+  const windowSpendMicrocents = economics.totals.costMicrocents
+
   return economics.rows.map((usage): JudgedCacheModel => {
     const pricing = modelRegistryPricing({ provider: usage.provider, model: usage.model })
     const breakEvenRate = pricing ? cacheBreakEvenRate(pricing) : null
@@ -146,11 +154,13 @@ export function judgeCacheEconomics({
         ceilingRate: ceilingByLifetime[lifetimeSeconds] ?? null,
         breakEvenRate,
         windowMs,
+        windowSpendMicrocents,
       })
     }
 
     const documentedLifetimeSeconds = promptCacheTtlSeconds({ provider: usage.provider, model: usage.model })
-    const unknownCeiling = () => judgeAtCeiling({ usage, pricing, ceilingRate: null, breakEvenRate, windowMs })
+    const unknownCeiling = () =>
+      judgeAtCeiling({ usage, pricing, ceilingRate: null, breakEvenRate, windowMs, windowSpendMicrocents })
     // An undocumented lifetime is an unknown ceiling, never a borrowed one.
     const documented =
       documentedLifetimeSeconds === null
