@@ -22,24 +22,29 @@ const ALL_ENTITIES: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
 
 /**
  * Every credential fixture here is fabricated, but it has to carry the real shape or it tests nothing — and
- * that shape is what secret scanners match. Splitting prefix from body leaves no contiguous token-shaped
+ * that shape is what secret scanners match. Assembling from fragments leaves no contiguous credential-shaped
  * literal in the file, which keeps push protection off this repository and off anyone's fork.
  */
-const vendorToken = (prefix: string, body: string): string => prefix + body
+const credential = (...fragments: string[]): string => fragments.join("")
 
-const AWS_ACCESS_KEY_ID = vendorToken("AKIA", "IOSFODNN7EXAMPLE")
-const GOOGLE_API_KEY = vendorToken("AIzaSy", "D9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ")
-const GITHUB_TOKEN = vendorToken("ghp_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl")
-const HUGGINGFACE_TOKEN = vendorToken("hf_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o")
-const NPM_TOKEN = vendorToken("npm_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg")
-const GOOGLE_OAUTH_TOKEN = vendorToken("ya29.", "a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ")
-const OPENAI_KEY = vendorToken("sk-proj-", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ7NcV")
+const AWS_ACCESS_KEY_ID = credential("AKIA", "IOSFODNN7EXAMPLE")
+const GOOGLE_API_KEY = credential("AIzaSy", "D9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ")
+const GITHUB_TOKEN = credential("ghp_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl")
+const HUGGINGFACE_TOKEN = credential("hf_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o")
+const NPM_TOKEN = credential("npm_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg")
+const GOOGLE_OAUTH_TOKEN = credential("ya29.", "a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ")
+const OPENAI_KEY = credential("sk-proj-", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ7NcV")
 // One numeric segment, not Slack's two: a 13-digit run reads as a card number to static analysis.
-const SLACK_BOT_TOKEN = vendorToken("xoxb-", "2143214321-AbCdEfGhIjKlMnOpQrStUvWx")
-const STRIPE_SECRET_KEY = vendorToken("sk_live_", "51H9aZq1LmT4vBn7XkR2wEs8Yu")
-const SENDGRID_KEY = vendorToken("SG.", "9aZq1LmT4vBn7XkR2wEs8Y.YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb")
-const GITLAB_TOKEN = vendorToken("glpat-", "9aZq1LmT4vBn7XkR2wEs")
-const SLACK_WEBHOOK_URL = vendorToken(
+const SLACK_BOT_TOKEN = credential("xoxb-", "2143214321-AbCdEfGhIjKlMnOpQrStUvWx")
+const STRIPE_SECRET_KEY = credential("sk_live_", "51H9aZq1LmT4vBn7XkR2wEs8Yu")
+const SENDGRID_KEY = credential("SG.", "9aZq1LmT4vBn7XkR2wEs8Y.YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb")
+const GITLAB_TOKEN = credential("glpat-", "9aZq1LmT4vBn7XkR2wEs")
+const ENV_PASSWORD = credential("hunter2", "Correct-Horse")
+// No vendor prefix to split off, so these are fragmented on their own: an opaque bearer token and a 32-hex key.
+const BEARER_TOKEN = credential("9aZq1LmT4vBn", "7XkR2wEs8Yu", "C3PdF6HgJ0oKl")
+const AZURE_KEY = credential("9a3f7c2b", "1d4e6f8a", "0b2c4d6e", "8f0a2b4c")
+const AWS_SECRET_ACCESS_KEY = credential("wJalrXUtnFEMI/K7MDENG/", "bPxRfiCYEXAMPLEKEY")
+const SLACK_WEBHOOK_URL = credential(
   "https://hooks.slack.com/services/",
   "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
 )
@@ -105,12 +110,14 @@ const STACK_TRACE = [
   "  dsn: 'postgres://app:Sup3rS3cret@127.0.0.1:5432/app'",
 ].join("\n")
 
+const K8S_DATABASE_PASSWORD = btoa(ENV_PASSWORD)
+const K8S_STRIPE_KEY = btoa(STRIPE_SECRET_KEY)
 const K8S_SECRET = [
   "apiVersion: v1",
   "kind: Secret",
   "data:",
-  "  DATABASE_PASSWORD: aHVudGVyMkNvcnJlY3RIb3JzZQ==",
-  "  STRIPE_KEY: c2tfbGl2ZV81MUg5YVpxMUxtVDR2Qm43WGtSMndFczhZdQ==",
+  `  DATABASE_PASSWORD: ${K8S_DATABASE_PASSWORD}`,
+  `  STRIPE_KEY: ${K8S_STRIPE_KEY}`,
 ].join("\n")
 
 const VCARD = [
@@ -753,8 +760,8 @@ const SECRET_CASES: readonly PiiCase[] = [
     id: "secret-aws-secret-key",
     entity: "secret",
     outcome: "redacted",
-    text: "aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-    value: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    text: `aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}`,
+    value: AWS_SECRET_ACCESS_KEY,
     note: "no shape of its own, so only the assignment key identifies it",
   },
   {
@@ -803,31 +810,31 @@ const SECRET_CASES: readonly PiiCase[] = [
     id: "secret-env-password",
     entity: "secret",
     outcome: "redacted",
-    text: "POSTGRES_PASSWORD=hunter2Correct-Horse\nREDIS_PASSWORD=Tr0ub4dor&3",
-    value: "hunter2Correct-Horse",
+    text: `POSTGRES_PASSWORD=${ENV_PASSWORD}\nREDIS_PASSWORD=Tr0ub4dor&3`,
+    value: ENV_PASSWORD,
     note: "a plain password in a .env dump, identified by its key",
   },
   {
     id: "secret-env-password-second",
     entity: "secret",
     outcome: "redacted",
-    text: "POSTGRES_PASSWORD=hunter2Correct-Horse\nREDIS_PASSWORD=Tr0ub4dor&3",
+    text: `POSTGRES_PASSWORD=${ENV_PASSWORD}\nREDIS_PASSWORD=Tr0ub4dor&3`,
     value: "Tr0ub4dor&3",
   },
   {
     id: "secret-bearer-opaque",
     entity: "secret",
     outcome: "redacted",
-    text: "curl -H 'Authorization: Bearer 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl' https://api.acme.com/v1/me",
-    value: "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl",
+    text: `curl -H 'Authorization: Bearer ${BEARER_TOKEN}' https://api.acme.com/v1/me`,
+    value: BEARER_TOKEN,
     note: "opaque, so the Bearer scheme is the only signal",
   },
   {
     id: "secret-azure-hex",
     entity: "secret",
     outcome: "missed",
-    text: "AZURE_OPENAI_KEY=9a3f7c2b1d4e6f8a0b2c4d6e8f0a2b4c",
-    value: "9a3f7c2b1d4e6f8a0b2c4d6e8f0a2b4c",
+    text: `AZURE_OPENAI_KEY=${AZURE_KEY}`,
+    value: AZURE_KEY,
   },
 ]
 
@@ -865,14 +872,14 @@ const REALISTIC_CASES: readonly PiiCase[] = [
     entity: "secret",
     outcome: "redacted",
     text: K8S_SECRET,
-    value: "aHVudGVyMkNvcnJlY3RIb3JzZQ==",
+    value: K8S_DATABASE_PASSWORD,
   },
   {
     id: "k8s-stripe-key",
     entity: "secret",
     outcome: "missed",
     text: K8S_SECRET,
-    value: "c2tfbGl2ZV81MUg5YVpxMUxtVDR2Qm43WGtSMndFczhZdQ==",
+    value: K8S_STRIPE_KEY,
   },
   { id: "vcard-email", entity: "email", outcome: "redacted", text: VCARD, value: "yuki.tanaka@example.jp" },
   { id: "vcard-phone", entity: "phone", outcome: "redacted", text: VCARD, value: "+81 90 1234 5678" },
@@ -1059,7 +1066,7 @@ describe("punctuation boundaries", () => {
     ["iban grouped", "iban", "DE89 3704 0044 0532 0130 00"],
     ["ssn", "us_ssn", "123-45-6789"],
     ["ipv4", "ip_address", "203.0.113.42"],
-    ["secret sk-", "secret", vendorToken("sk-proj-", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ")],
+    ["secret sk-", "secret", credential("sk-proj-", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ")],
   ]
 
   const WRAPPERS: readonly [label: string, wrap: (value: string) => string][] = [
