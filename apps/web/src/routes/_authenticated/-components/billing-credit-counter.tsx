@@ -47,9 +47,7 @@ export function BillingCreditCounter({
   const consumedLabel = numberFormatter.format(totalUsedCredits)
   const includedLabel = includedCredits === null ? "custom" : numberFormatter.format(includedCredits)
   const usageLabel = includedCredits === null ? consumedLabel : `${consumedLabel}/${includedLabel}`
-  const includedUsedCredits = hasIncludedCredits
-    ? Math.min(totalUsedCredits, includedCredits)
-    : totalUsedCredits
+  const includedUsedCredits = hasIncludedCredits ? Math.min(totalUsedCredits, includedCredits) : totalUsedCredits
   const tooltip = isOverage
     ? `${numberFormatter.format(totalUsedCredits)} credits used: ${numberFormatter.format(includedUsedCredits)} included credits plus ${numberFormatter.format(overview.overageCredits)} metered overage credits. Usage can exceed the included limit because this plan allows overage billing.`
     : `${numberFormatter.format(overview.consumedCredits)} of ${includedLabel} credits used this period`
