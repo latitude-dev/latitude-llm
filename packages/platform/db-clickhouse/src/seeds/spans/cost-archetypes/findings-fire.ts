@@ -3,10 +3,12 @@ import {
   CLAUDE_HAIKU_4_5,
   CLAUDE_OPUS_4_1,
   CLAUDE_OPUS_4_5,
+  CLAUDE_OPUS_4_6,
   COST_LONG_TAIL_MODELS,
   GEMINI_2_5_FLASH_LITE,
   GPT_5_4_MINI,
   GPT_5_6,
+  GPT_5_6_LUNA,
   GPT_5_MINI,
   GPT_5_NANO,
   UNPRICED_GATEWAY_MODEL,
@@ -43,48 +45,48 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
     callsPerSession: 5,
   },
   {
-    // Caching on, reads nowhere near the writes that paid for them, and the cadence
-    // says they could have been. Actively costing more than not caching at all.
+    // Caching on, reads nowhere near the writes that paid for them, and the cadence says
+    // they could have been. Actively costing more than not caching at all, and sized so
+    // the finding is worth a card rather than a shrug.
     key: "b-investigate-overpaying",
     serviceName: "classifier",
     modelConfig: CLAUDE_HAIKU_4_5,
-    cadence: { endDaysAgo: 0, clusters: 20, clusterSpacingHours: 8, callsPerCluster: 7, gapWithinClusterSeconds: 45 },
+    cadence: { endDaysAgo: 0, clusters: 30, clusterSpacingHours: 6, callsPerCluster: 7, gapWithinClusterSeconds: 45 },
     cache: { kind: "flat", profile: { hitRate: 0.06, writeShare: 0.3 } },
-    promptTokens: 9_000,
+    promptTokens: 24_000,
     completionTokens: 120,
     callsPerSession: 7,
   },
   {
-    // Caching off on a 26k-token prompt with no write premium to pay: any read at all
-    // is pure upside, so this is `Cache it` whatever the ceiling turns out to be.
+    // Caching off on a large prompt with no write premium to pay, arriving in bursts
+    // that could serve 5/6 of it from cache: any read is pure upside and there are reads
+    // to be had, which is what separates `Cache it` from a cadence that cannot use a
+    // cache at all. Sized so the modeled saving clears the weekly floor and the card
+    // actually renders — a state with no card demonstrates only half the panel.
     key: "b-cache-it",
     serviceName: "doc-extractor",
     modelConfig: GPT_5_MINI,
-    cadence: { endDaysAgo: 0, clusters: 48, clusterSpacingHours: 3, callsPerCluster: 1, gapWithinClusterSeconds: 0 },
+    cadence: { endDaysAgo: 0, clusters: 40, clusterSpacingHours: 6, callsPerCluster: 6, gapWithinClusterSeconds: 40 },
     cache: { kind: "off" },
-    promptTokens: 26_000,
+    promptTokens: 60_000,
     completionTokens: 300,
-    callsPerSession: 4,
+    callsPerSession: 6,
   },
   {
-    // Every call isolated, so no write is ever read back before it expires, against a
-    // model that charges a write premium. `Stop caching` once 2b can say the ceiling
-    // sits below break-even.
     key: "b-stop-caching",
     serviceName: "planner",
     modelConfig: GPT_5_6,
-    cadence: { endDaysAgo: 0, clusters: 64, clusterSpacingHours: 2.25, callsPerCluster: 1, gapWithinClusterSeconds: 0 },
-    cache: { kind: "flat", profile: { hitRate: 0.05, writeShare: 0.28 } },
-    promptTokens: 15_000,
+    // Isolated calls 72 minutes apart: past GPT-5.6's documented 30-minute lifetime, so
+    // no write is ever read back and the ceiling is 0. Nearly half the prompt is being
+    // written to cache at a 1.25x premium for nothing, which is what makes stopping
+    // worth real money rather than rounding error.
+    cadence: { endDaysAgo: 0, clusters: 120, clusterSpacingHours: 1.2, callsPerCluster: 1, gapWithinClusterSeconds: 0 },
+    cache: { kind: "flat", profile: { hitRate: 0.04, writeShare: 0.45 } },
+    promptTokens: 56_000,
     completionTokens: 640,
     callsPerSession: 0,
   },
   {
-    // The same 6% rate as the cohort above, on a model with no write premium: it
-    // clears break-even, so nothing is being wasted today — but the cadence could
-    // support thirteen times it. `Investigate / underusing` once 2b lands, and until
-    // then the pair is the clearest demonstration that a rate means nothing without
-    // the model's own price list.
     key: "b-underusing",
     serviceName: "router",
     modelConfig: GPT_5_4_MINI,
@@ -92,6 +94,43 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
     cache: { kind: "flat", profile: { hitRate: 0.06, writeShare: 0.02 } },
     promptTokens: 7_000,
     completionTokens: 150,
+    callsPerSession: 5,
+  },
+  {
+    // Ten minutes between calls — the one cadence where the model's own documented
+    // lifetime decides the verdict rather than merely shading a number. GPT-5.6
+    // documents 30 minutes, so these gaps are warm and the shortfall is something in the
+    // prompt (`Investigate`). Read against the 5 minutes the older OpenAI models get,
+    // every gap is a miss, the ceiling collapses to 0, and the same rows say
+    // `Stop caching` — advice to abandon a cache that was working.
+    key: "b-ttl-sensitive",
+    serviceName: "briefing-writer",
+    modelConfig: GPT_5_6_LUNA,
+    cadence: { endDaysAgo: 0, clusters: 20, clusterSpacingHours: 12, callsPerCluster: 6, gapWithinClusterSeconds: 600 },
+    cache: { kind: "flat", profile: { hitRate: 0.08, writeShare: 0.24 } },
+    promptTokens: 30_000,
+    completionTokens: 300,
+    callsPerSession: 6,
+  },
+  {
+    // Forty minutes between calls, on a model whose documented lifetime is five: the
+    // shape of a customer who opted into Anthropic's 1-hour cache, which nothing an
+    // exporter sends tells us about. Documented reading says the cadence cannot cache;
+    // at an hour it can. The only cohort where the 1-hour option is the mover, and the
+    // reason the lifetime control exists at all.
+    key: "b-opted-into-hour",
+    serviceName: "digest-builder",
+    modelConfig: CLAUDE_OPUS_4_6,
+    cadence: {
+      endDaysAgo: 0,
+      clusters: 16,
+      clusterSpacingHours: 24,
+      callsPerCluster: 5,
+      gapWithinClusterSeconds: 2_400,
+    },
+    cache: { kind: "flat", profile: { hitRate: 0.1, writeShare: 0.3 } },
+    promptTokens: 30_000,
+    completionTokens: 260,
     callsPerSession: 5,
   },
   {

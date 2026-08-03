@@ -1,5 +1,6 @@
 import { type ChSqlClient, OrganizationId, ProjectId } from "@domain/shared"
-import { CostAnalyticsRepository, type CostAnalyticsRepositoryShape } from "@domain/spans"
+import type { CacheCadenceRow, CostAnalyticsRepositoryShape } from "@domain/spans"
+import { CACHE_CEILING_LIFETIME_SECONDS, CostAnalyticsRepository } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -16,6 +17,9 @@ const PROJECT_ID = ProjectId("costanalytics00000000000")
 const BREAKDOWN_PROJECT_ID = ProjectId("costbreakdown00000000000")
 const MODEL_USAGE_PROJECT_ID = ProjectId("costmodelusage0000000000")
 const CACHE_PROJECT_ID = ProjectId("costcache00000000000000a")
+// Cadence lives on its own project: the ceiling is read from inter-call gaps, so it
+// needs timestamps chosen for their spacing rather than for the token columns.
+const CADENCE_PROJECT_ID = ProjectId("costcadence000000000000a")
 
 const DAY1 = new Date("2026-06-01T10:00:00.000Z")
 const DAY2 = new Date("2026-06-02T10:00:00.000Z")
@@ -46,13 +50,15 @@ type SpanOpts = {
   tokensCacheRead?: number
   tokensCacheCreate?: number
   costSource?: string
+  session?: string
+  agentName?: string
 }
 
 const span = (n: number, startTime: Date, opts: SpanOpts = {}): CostSpanRow =>
   ({
     organization_id: ORG_ID,
     project_id: opts.project ?? PROJECT_ID,
-    session_id: "",
+    session_id: opts.session ?? "",
     user_id: "",
     trace_id: traceId(opts.trace ?? n),
     span_id: spanId(n),
@@ -72,7 +78,7 @@ const span = (n: number, startTime: Date, opts: SpanOpts = {}): CostSpanRow =>
     operation: opts.operation ?? "chat",
     provider: opts.provider ?? "openai",
     model: opts.model ?? "gpt-4o",
-    agent_name: "",
+    agent_name: opts.agentName ?? "",
     response_model: "",
     tokens_input: opts.tokensInput ?? 0,
     tokens_output: 0,
@@ -114,9 +120,26 @@ const scope = { organizationId: ORG_ID, projectId: PROJECT_ID, from: FROM, to: T
 const breakdownScope = { ...scope, projectId: BREAKDOWN_PROJECT_ID }
 const modelUsageScope = { ...scope, projectId: MODEL_USAGE_PROJECT_ID }
 const cacheScope = { ...scope, projectId: CACHE_PROJECT_ID }
+const cadenceScope = { ...scope, projectId: CADENCE_PROJECT_ID }
 
 const cacheSpan = (n: number, startTime: Date, opts: Omit<SpanOpts, "project">): CostSpanRow =>
   span(n, startTime, { ...opts, project: CACHE_PROJECT_ID })
+
+// Leaves room inside `TO` for the longest offset the cadence fixture uses.
+const CADENCE_BASE = new Date("2026-06-02T12:00:00.000Z")
+const at = (seconds: number): Date => new Date(CADENCE_BASE.getTime() + seconds * 1_000)
+
+const cadenceSpan = (n: number, seconds: number, opts: Omit<SpanOpts, "project">): CostSpanRow =>
+  span(n, at(seconds), { ...opts, project: CADENCE_PROJECT_ID, tokensInput: opts.tokensInput ?? 1_000 })
+
+const cadenceFor = (cadence: readonly CacheCadenceRow[], model: string) => cadence.find((row) => row.model === model)
+
+/** Warm volume at one lifetime, read out of the cumulative histogram. */
+const warmAt = (cadence: readonly CacheCadenceRow[], model: string, lifetimeSeconds: number) =>
+  cadenceFor(cadence, model)?.warmTokensByLifetime[lifetimeSeconds]
+
+const warmCallsAt = (cadence: readonly CacheCadenceRow[], model: string, lifetimeSeconds: number) =>
+  cadenceFor(cadence, model)?.warmCallsByLifetime[lifetimeSeconds]
 
 const breakdownSpan = (n: number, startTime: Date, opts: Omit<SpanOpts, "project">): CostSpanRow =>
   span(n, startTime, { ...opts, project: BREAKDOWN_PROJECT_ID })
@@ -269,6 +292,37 @@ describe("CostAnalyticsRepositoryLive", () => {
           tokensInput: 9_999,
           tokensCacheRead: 9_999,
         }),
+
+        // Cadence fixture. Every call carries 1,000 cacheable tokens, so a warm-token
+        // figure reads directly as a call count.
+
+        // Six calls one minute apart on one agent, each in a session of its own. The
+        // ceiling is defined over the agent's whole traffic, so five of the six arrive
+        // warm; an implementation measuring within-session gaps reads zero here, and
+        // this is the only row in the suite that can tell the two apart.
+        ...[0, 60, 120, 180, 240, 300].map((seconds, index) =>
+          cadenceSpan(40 + index, seconds, {
+            model: "single-turn",
+            serviceName: "solo-agent",
+            session: `solo-session-${index}`,
+          }),
+        ),
+        // Fiftieth minute: past the five-minute lifetime, inside the hour one. Breaks
+        // the chain for the shorter threshold and stays warm for the longer one.
+        cadenceSpan(46, 3_000, { model: "single-turn", serviceName: "solo-agent", session: "solo-session-6" }),
+
+        // Two agents alternating on one model, 300s apart when interleaved but 600s
+        // apart within either agent. Nothing is warm: an agent cannot read a prefix
+        // another agent wrote. Partitioning by model alone would report three warm calls.
+        cadenceSpan(50, 0, { model: "shared-model", serviceName: "agent-a" }),
+        cadenceSpan(51, 300, { model: "shared-model", serviceName: "agent-b" }),
+        cadenceSpan(52, 600, { model: "shared-model", serviceName: "agent-a" }),
+        cadenceSpan(53, 900, { model: "shared-model", serviceName: "agent-b" }),
+
+        // One service, two agent names a minute apart: `agent_name` is the prompt-owning
+        // unit when it is set, so neither call is warm.
+        cadenceSpan(54, 0, { model: "named-agents", serviceName: "shared-service", agentName: "billing" }),
+        cadenceSpan(55, 60, { model: "named-agents", serviceName: "shared-service", agentName: "support" }),
       ]),
     )
   })
@@ -520,6 +574,62 @@ describe("CostAnalyticsRepositoryLive", () => {
         costMicrocents: 0,
       })
       expect(economics.totals).toMatchObject({ distinctModels: 3, unpricedCalls: 1, costMicrocents: 1_500 })
+    })
+  })
+
+  describe("getCacheEconomics cadence", () => {
+    it("measures gaps across the agent's whole traffic, not within each session", async () => {
+      const { cadence } = await runCh(repo.getCacheEconomics(cadenceScope))
+
+      // Six single-turn calls in six distinct sessions, five of them warm.
+      expect(cadenceFor(cadence, "single-turn")).toMatchObject({ calls: 7, cacheableTokens: 7_000 })
+      expect(warmCallsAt(cadence, "single-turn", 300)).toBe(5)
+      expect(warmAt(cadence, "single-turn", 300)).toBe(5_000)
+    })
+
+    it("treats a gap longer than the lifetime as a fresh miss, per bucket", async () => {
+      const { cadence } = await runCh(repo.getCacheEconomics(cadenceScope))
+
+      // The 50-minute gap is a miss at five minutes and a hit at an hour.
+      expect(warmCallsAt(cadence, "single-turn", 300)).toBe(5)
+      expect(warmCallsAt(cadence, "single-turn", 3_600)).toBe(6)
+    })
+
+    it("returns cumulative buckets, so a longer lifetime never loses a shorter one's volume", async () => {
+      const { cadence } = await runCh(repo.getCacheEconomics(cadenceScope))
+      const row = cadenceFor(cadence, "single-turn")
+      const lifetimes = [...CACHE_CEILING_LIFETIME_SECONDS]
+
+      expect(
+        Object.keys(row?.warmTokensByLifetime ?? {})
+          .map(Number)
+          .sort((a, b) => a - b),
+      ).toEqual(lifetimes)
+      const warm = lifetimes.map((s) => row?.warmTokensByLifetime[s] ?? 0)
+      expect(warm).toEqual([...warm].sort((a, b) => a - b))
+      expect(Math.max(...warm)).toBeLessThanOrEqual(row?.cacheableTokens ?? 0)
+    })
+
+    it("never lets one agent warm another agent's prefix on a shared model", async () => {
+      const { cadence } = await runCh(repo.getCacheEconomics(cadenceScope))
+
+      expect(cadenceFor(cadence, "shared-model")).toMatchObject({ calls: 4 })
+      // Interleaved they are 300s apart; within either agent they are 600s apart.
+      expect(warmCallsAt(cadence, "shared-model", 300)).toBe(0)
+      expect(warmAt(cadence, "shared-model", 300)).toBe(0)
+    })
+
+    it("splits on agent_name when it is set, rather than on the service that hosts it", async () => {
+      const { cadence } = await runCh(repo.getCacheEconomics(cadenceScope))
+
+      expect(cadenceFor(cadence, "named-agents")).toMatchObject({ calls: 2 })
+      expect(warmCallsAt(cadence, "named-agents", 300)).toBe(0)
+    })
+
+    it("returns one row per pair rather than one per pair per lifetime", async () => {
+      const { cadence } = await runCh(repo.getCacheEconomics(cadenceScope))
+
+      expect(cadence.filter((row) => row.model === "single-turn")).toHaveLength(1)
     })
   })
 })

@@ -41,6 +41,23 @@ export type { Trace, TraceConversationChunk, TraceDetail } from "./entities/trac
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
 export type {
+  CacheCadence,
+  CacheCadenceHistogram,
+  CacheSavingsInput,
+  CacheTokenFlow,
+} from "./helpers/cache-ceiling.ts"
+export {
+  CACHE_CEILING_LIFETIME_SECONDS,
+  CACHE_CEILING_PLAUSIBLE_LIFETIME_SECONDS,
+  CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS,
+  cacheCeilingRate,
+  cacheCeilingRatesByLifetime,
+  cacheCeilingSavingsMicrocents,
+  clearsCacheSavingsFloor,
+  modeledInputCostMicrocents,
+  weeklyCacheSavingsMicrocents,
+} from "./helpers/cache-ceiling.ts"
+export type {
   CacheClassification,
   CacheClassificationInput,
   CacheEconomicsPricing,
@@ -48,6 +65,7 @@ export type {
   CacheUrgency,
 } from "./helpers/cache-economics.ts"
 export {
+  CACHE_CEILING_MIN_MATERIAL_GAP,
   CACHE_ECONOMICS_MIN_CALLS,
   CACHE_MIN_CACHEABLE_INPUT_TOKENS,
   CACHE_STATES,
@@ -77,6 +95,7 @@ export {
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
 export type {
+  CacheCadenceRow,
   CacheEconomics,
   CacheModelUsage,
   CacheUsageMeasures,

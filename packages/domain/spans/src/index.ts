@@ -70,6 +70,23 @@ export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } 
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
 export type {
+  CacheCadence,
+  CacheCadenceHistogram,
+  CacheSavingsInput,
+  CacheTokenFlow,
+} from "./helpers/cache-ceiling.ts"
+export {
+  CACHE_CEILING_LIFETIME_SECONDS,
+  CACHE_CEILING_PLAUSIBLE_LIFETIME_SECONDS,
+  CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS,
+  cacheCeilingRate,
+  cacheCeilingRatesByLifetime,
+  cacheCeilingSavingsMicrocents,
+  clearsCacheSavingsFloor,
+  modeledInputCostMicrocents,
+  weeklyCacheSavingsMicrocents,
+} from "./helpers/cache-ceiling.ts"
+export type {
   CacheClassification,
   CacheClassificationInput,
   CacheEconomicsPricing,
@@ -77,6 +94,7 @@ export type {
   CacheUrgency,
 } from "./helpers/cache-economics.ts"
 export {
+  CACHE_CEILING_MIN_MATERIAL_GAP,
   CACHE_ECONOMICS_MIN_CALLS,
   CACHE_MIN_CACHEABLE_INPUT_TOKENS,
   CACHE_STATES,
@@ -91,6 +109,8 @@ export {
   summarizeUnpricedUsage,
   UNPRICED_CAUSES,
 } from "./helpers/classify-unpriced-cost.ts"
+export type { CacheModelJudgment, JudgedCacheModel } from "./helpers/judge-cache-economics.ts"
+export { judgeCacheEconomics, promptCacheTtlSeconds } from "./helpers/judge-cache-economics.ts"
 export {
   canonicalizeMessageForEmbedding,
   hashMessageContent,
@@ -132,6 +152,7 @@ export type { UnpricedSpanGroup } from "./otlp/transform.ts"
 export type { AnalyticsQueryInput, AnalyticsQueryReaderShape } from "./ports/analytics-query-reader.ts"
 export { AnalyticsQueryReader } from "./ports/analytics-query-reader.ts"
 export type {
+  CacheCadenceRow,
   CacheEconomics,
   CacheModelUsage,
   CacheUsageMeasures,

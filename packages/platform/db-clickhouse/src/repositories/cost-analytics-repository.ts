@@ -1,6 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { ChSqlClient, type ChSqlClientShape } from "@domain/shared"
 import type {
+  CacheCadenceRow,
   CacheEconomics,
   CacheModelUsage,
   CacheUsageMeasures,
@@ -19,6 +20,7 @@ import type {
   ModelUsageSlice,
 } from "@domain/spans"
 import {
+  CACHE_CEILING_LIFETIME_SECONDS,
   CACHE_ECONOMICS_ROW_LIMIT,
   COST_BREAKDOWN_ROW_LIMIT,
   CostAnalyticsRepository,
@@ -119,6 +121,44 @@ const CACHE_SOURCE = `SELECT
       FROM spans
       WHERE ${BILLABLE_FILTER}`
 
+// The agent a cache entry belongs to. `agent_name` is only set by SDKs that stamp it,
+// so `service_name` carries the rest; both are the prompt-owning unit, which is what
+// decides whether two calls could have shared a cached prefix.
+const CACHE_AGENT = `if(agent_name != '', agent_name, service_name)`
+
+// Gap to the immediately preceding call to the same agent on the same model, over that
+// agent's entire traffic — never within a session, which would score every single-turn
+// workload as uncacheable. Refresh-on-hit TTL semantics need nothing extra: a chain of
+// calls each inside the window keeps the entry warm, and one long gap breaks the chain,
+// which is exactly what comparing each call's own gap to the TTL says.
+//
+// `lagInFrame` has no predecessor on a partition's first row and returns the epoch, so
+// that call's gap is astronomically larger than any TTL — the automatic miss the formula
+// calls for, without a special case.
+const CACHE_CADENCE_SOURCE = `SELECT
+        provider,
+        model,
+        call_tokens,
+        dateDiff(
+          'second',
+          lagInFrame(start_time) OVER (
+            PARTITION BY agent, provider, model
+            ORDER BY start_time ASC
+            ROWS BETWEEN 1 PRECEDING AND CURRENT ROW
+          ),
+          start_time
+        ) AS gap_seconds
+      FROM (
+        SELECT
+          provider,
+          model,
+          ${CACHE_AGENT} AS agent,
+          start_time,
+          tokens_input + tokens_cache_read + tokens_cache_create AS call_tokens
+        FROM spans
+        WHERE ${BILLABLE_FILTER}
+      )`
+
 const BUCKET_START = `toDateTime(
   intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
   'UTC'
@@ -208,6 +248,25 @@ type CacheRow = CacheMeasureRow & { model: string; provider: string }
 
 type CacheTotalsRow = CacheMeasureRow & { distinct_models: string }
 
+type CacheCadenceQueryRow = {
+  provider: string
+  model: string
+  cacheable_tokens: string
+  calls: string
+} & Record<string, string>
+
+// Cumulative buckets, one per offered lifetime, generated from the domain constant: a
+// lifetime the panel can offer is therefore always a bucket boundary, so its ceiling is
+// exact rather than interpolated. `<=` makes each bucket contain the shorter ones.
+const cadenceBucketAlias = (lifetimeSeconds: number) => `warm_${lifetimeSeconds}`
+const cadenceCallsAlias = (lifetimeSeconds: number) => `warm_calls_${lifetimeSeconds}`
+
+const CACHE_CADENCE_BUCKETS = CACHE_CEILING_LIFETIME_SECONDS.map(
+  (lifetimeSeconds) =>
+    `sumIf(call_tokens, gap_seconds <= ${lifetimeSeconds}) AS ${cadenceBucketAlias(lifetimeSeconds)},
+        countIf(gap_seconds <= ${lifetimeSeconds}) AS ${cadenceCallsAlias(lifetimeSeconds)}`,
+).join(",\n        ")
+
 type ModelUsageMeasuresDraft = { cost: number; tokens: number }
 
 type ModelUsageRow = {
@@ -284,6 +343,23 @@ const toCacheRow = (row: CacheRow): CacheModelUsage => ({
   model: normalizeCHString(row.model),
   provider: normalizeCHString(row.provider),
 })
+
+const toCacheCadenceRow = (row: CacheCadenceQueryRow): CacheCadenceRow => {
+  const warmTokensByLifetime: Record<number, number> = {}
+  const warmCallsByLifetime: Record<number, number> = {}
+  for (const lifetimeSeconds of CACHE_CEILING_LIFETIME_SECONDS) {
+    warmTokensByLifetime[lifetimeSeconds] = num(row[cadenceBucketAlias(lifetimeSeconds)])
+    warmCallsByLifetime[lifetimeSeconds] = num(row[cadenceCallsAlias(lifetimeSeconds)])
+  }
+  return {
+    provider: normalizeCHString(row.provider),
+    model: normalizeCHString(row.model),
+    cacheableTokens: num(row.cacheable_tokens),
+    calls: num(row.calls),
+    warmTokensByLifetime,
+    warmCallsByLifetime,
+  }
+}
 
 const toZeroCostPair = (row: ZeroCostPairRow): CostZeroCostPair => ({
   provider: normalizeCHString(row.provider),
@@ -631,7 +707,7 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const params = scopeParams(input)
-              const [rowsResult, totalsResult] = await Promise.all([
+              const [rowsResult, totalsResult, cadenceResult] = await Promise.all([
                 client.query({
                   query: `SELECT model, provider, ${CACHE_MEASURES}
                       FROM (${CACHE_SOURCE})
@@ -648,15 +724,32 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                   query_params: params,
                   format: "JSONEachRow",
                 }),
+                client.query({
+                  // One pass over the window, no fan-out: every offered lifetime is a
+                  // cumulative bucket, so the caller can price any of them from one row.
+                  query: `SELECT
+                        provider,
+                        model,
+                        sum(call_tokens) AS cacheable_tokens,
+                        count() AS calls,
+                        ${CACHE_CADENCE_BUCKETS}
+                      FROM (${CACHE_CADENCE_SOURCE})
+                      GROUP BY provider, model
+                      ORDER BY provider ASC, model ASC`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                }),
               ])
               const rows = await rowsResult.json<CacheRow>()
               const totalsRows = await totalsResult.json<CacheTotalsRow>()
-              return { rows, totalsRows }
+              const cadenceRows = await cadenceResult.json<CacheCadenceQueryRow>()
+              return { rows, totalsRows, cadenceRows }
             })
             .pipe(
               Effect.map(
-                ({ rows, totalsRows }): CacheEconomics => ({
+                ({ rows, totalsRows, cadenceRows }): CacheEconomics => ({
                   rows: rows.map(toCacheRow),
+                  cadence: cadenceRows.map(toCacheCadenceRow),
                   totals: {
                     ...toCacheMeasures(totalsRows[0]),
                     distinctModels: num(totalsRows[0]?.distinct_models),

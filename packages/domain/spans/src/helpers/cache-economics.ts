@@ -21,6 +21,21 @@ export const CACHE_ECONOMICS_MIN_CALLS = 20
 export const CACHE_MIN_CACHEABLE_INPUT_TOKENS = 1024
 
 /**
+ * How far under its ceiling a rate must sit before the shortfall is a finding.
+ *
+ * Ten points, calibrated against the healthy seed archetype: its three well-run
+ * agents sit 4.6, 6.1 and 7.2 points under their ceilings, which is the fresh suffix
+ * every real call carries and not something anyone can fix. Comparing against the
+ * ceiling strictly flags all three and makes `optimal` unreachable, which is the
+ * nagging failure mode the six states exist to prevent.
+ *
+ * The same band decides whether a caching-off model is worth turning on, because
+ * there its measured rate is zero and the gap *is* the ceiling: a cadence that could
+ * only ever serve a few percent from cache has nothing to act on either way.
+ */
+export const CACHE_CEILING_MIN_MATERIAL_GAP = 0.1
+
+/**
  * Three of these render a finding — `cacheIt`, `stopCaching`, `investigate` —
  * and three deliberately render nothing, which is what stops the panel nagging
  * people who are already fine.
@@ -96,6 +111,10 @@ const nothing = (state: CacheState): CacheClassification => ({ state, urgency: n
  * so a verdict is only returned when every ceiling in that interval agrees:
  * caching-off with a 0% break-even is `cacheIt` whatever the ceiling turns out
  * to be, while a model with a write premium cannot be judged without one.
+ *
+ * A known ceiling is compared with `CACHE_CEILING_MIN_MATERIAL_GAP` of slack rather
+ * than strictly, so the few points of fresh suffix a well-run agent always carries
+ * do not read as a finding.
  */
 export function classifyCacheState({
   cachingOn,
@@ -109,10 +128,14 @@ export function classifyCacheState({
     return nothing("notEnoughData")
   }
 
+  const materialHeadroom = ceilingRate !== null && ceilingRate - actualRate >= CACHE_CEILING_MIN_MATERIAL_GAP
+
   if (!cachingOn) {
     if (avgInputTokensPerCall < CACHE_MIN_CACHEABLE_INPUT_TOKENS) return nothing("correctlyOff")
     if (ceilingRate === null) return breakEvenRate <= 0 ? nothing("cacheIt") : nothing("notEnoughData")
-    return ceilingRate >= breakEvenRate ? nothing("cacheIt") : nothing("correctlyOff")
+    // Clearing break-even is not enough: an isolated-call cadence can reach 0% and
+    // still "clear" a 0% break-even, and turning caching on would then buy nothing.
+    return ceilingRate >= breakEvenRate && materialHeadroom ? nothing("cacheIt") : nothing("correctlyOff")
   }
 
   if (actualRate < breakEvenRate) {
@@ -120,6 +143,6 @@ export function classifyCacheState({
     return { state: hopeless ? "stopCaching" : "investigate", urgency: "overpaying" }
   }
 
-  if (ceilingRate !== null && actualRate < ceilingRate) return { state: "investigate", urgency: "underusing" }
+  if (materialHeadroom) return { state: "investigate", urgency: "underusing" }
   return nothing("optimal")
 }
