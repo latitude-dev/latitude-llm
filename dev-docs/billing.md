@@ -142,7 +142,9 @@ LLM calls and semantic queries are metered at the AI layer, not per feature. The
 - `generate` → one `llm-call` billed at estimated cost x 1.3 (flat 4-credit fallback
   when registry pricing or provider usage is unavailable), recorded on success and on
   `AIError` (the provider call was attempted, tokens may have been consumed — flat
-  price, no usage to bill) but not on `AICredentialError`
+  price, no usage to bill) but not on `AICredentialError`. Pricing uses the model
+  that actually served the call (`result.servedBy`) when a generate falls back to a
+  secondary provider, so credits match the registry entry for the model that ran.
 - `embed` with `inputType: "query"` → one `semantic-query` billed at estimated cost x 2
   (flat 1-credit fallback when the adapter reports no token usage); document embeds and
   rerank are never charged directly — `semanticSimilarity()` in evaluation scripts embeds

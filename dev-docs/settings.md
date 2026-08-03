@@ -238,12 +238,43 @@ Those payloads are read through the owner-row primary/unique lookup paths, so sp
 
 The later provider-settings design phase should justify any dedicated-table indexes explicitly instead of carrying forward speculative JSONB indexing.
 
+## Scoped settings and organization defaults
+
+Several product settings exist at both organization and project scope. Each uses the same resolution rule: a project override inherits per field (`NULL` → inherit from the organization default, non-null → **replace wholesale**, no deep merge). The organization default is always the row or JSON object stored with no project id (`project_id IS NULL` for table-backed configs, or fields on `organization.settings` for JSONB-backed ones).
+
+The settings UI surfaces this through `ScopedSetting` (`apps/web/src/routes/_authenticated/projects/$projectSlug/settings/-components/scoped-setting.tsx`). Every dual-scoped card shows a **Set by** control in the header:
+
+- **Organization** — the value comes from the org default; the project has no override stored.
+- **This project** — the project stores an override. Switching back to Organization clears the override (after confirmation when the change affects other projects).
+
+`fixed` scope chips are used when a setting only exists at one layer (for example billing spend caps are organization-only). `selectable` scope is the override/reset action: flipping the selector stages a pending change with an explicit Apply/Discard bar so comparing layers costs nothing until the user commits.
+
+Organization-wide edits that can affect every project use an interrupting confirmation (`org-default-confirm.tsx`) that states the blast radius — how many other projects currently override the field.
+
+### Organization defaults page
+
+`settings/defaults` is the fleet view: one page per organization (reachable from project settings) that lists every dual-scoped default, how many projects deviate, and entry points to edit the organization value. It is the only settings surface where scope is the page subject rather than a per-card property. Organization-default modals for redaction, agent dispatch, and GitHub live here; project settings pages reuse the same `ScopedSetting` cards for per-project overrides.
+
+### Dual-scoped settings today
+
+| Setting | Storage | Org default | Project override | Notes |
+| --- | --- | --- | --- | --- |
+| PII redaction | `organization.settings.redaction` / `projects.settings.redaction` | `organizationRedactionSettingSchema` with optional `locked` | `redactionSettingSchema` | `locked` makes the org policy authoritative — project redaction is ignored entirely, not merged. See [redaction resolution](#redaction). |
+| Agent dispatch | `agent_dispatch_configs` (`project_id IS NULL` vs per-project row) | One row per connected integration | Per-integration override row | Connecting an integration seeds the org default so every project inherits the target. See [`agent-dispatch.md`](./agent-dispatch.md). |
+| GitHub monitor | `github_sync_configs` | Same cascade as agent dispatch | Per-project repo/branch + monitor settings | See [`github-integration.md`](./github-integration.md). |
+| Slack notifications | Integration config tables | Org-level connection | Per-project channel overrides | Uses the same `ScopedSetting` pattern on the Slack integration settings page. |
+
+Redaction is the exception to plain cascade semantics: when `organization.redaction.locked === true`, the organization policy wins outright and project fields are not read.
+
+Override detection for redaction uses `hasRedactionField` from `@domain/shared` — a project counts as overriding when any redaction field is set, matching what `resolveRedactionPolicy` considers a project source.
+
 ## UI Placement
 
 MVP entry points:
 
 - organization settings are accessible from the home dashboard
 - project settings are accessible from the project dashboard
+- organization defaults (`settings/defaults`) list org-wide values and deviation counts for dual-scoped settings
 
 Post-MVP:
 

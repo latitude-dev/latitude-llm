@@ -40,9 +40,17 @@ Packages:
 
 Settings → Integrations:
 
-1. Connect a target (org-level credential)
-2. Per-project dispatch config: enable, triggers, target mapping, guardrails
+1. Connect a target (org-level credential in `integrations` + encrypted token in `agent_dispatch_credentials`)
+2. Configure dispatch: enable, triggers, target mapping, guardrails, optional prompt template
 3. Dispatch history audit log
+
+Dispatch config uses the same org-default + project-override cascade as GitHub sync (`dev-docs/github-integration.md`). The **organization default** is the `agent_dispatch_configs` row with `project_id IS NULL` (one per connected integration). A **project override** is a second row for the same `integration_id` with a concrete `project_id`; each nullable column means inherit from the default, and a non-null value replaces the default wholesale.
+
+Connecting an integration seeds the org-default row (not a project override), so every project inherits the target and "Send to agent" works org-wide without re-entering repository details. The Cursor repo picker on send updates the organization default rather than minting a per-project override. An empty-object target on an override is stored as `null` so it cannot shadow the default with nothing.
+
+Resolution is pure: `resolveEffectiveConfig` / `resolveEffectiveConfigsForProject` in `@domain/agent-dispatch` merge default + override per integration before runtime gates run. `checkTargetReadiness` validates the merged target against the kind's full Zod schema (partial stored targets are allowed on the default row for Cursor).
+
+The settings UI exposes scope through the shared `ScopedSetting` **Set by** control (`dev-docs/settings.md`); organization defaults are editable from `settings/defaults`.
 
 The settings UI exposes `signal.discovered` (new signal), `incident.opened` (escalating signal), `signal.regressed` (a resolved signal started occurring again), and `monitor.incident` (threshold or escalating monitor) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `signal.discovered` fires only for `origin = 'system'` signals (auto-discovered); hand-built `origin = 'user'` signals are skipped on creation — humans already chose to create them. Runtime conditions dispatch for any signal origin: `incident.opened` when the signal opens an incident, `signal.regressed` when a `SignalRegressed` claim reopens it. Muted, ignored, or resolved signals (and muted monitors) suppress dispatch (same as notifications) — resolved matters because a delayed request can land after the user archived the signal.
 
@@ -67,7 +75,7 @@ The dispatch prompt closes the loop with the GitHub integration (`dev-docs/githu
 
 - `integrations` — parent row per connected target (`kind ∈ {cursor, claude_code, linear, webhook}`)
 - `agent_dispatch_credentials` — encrypted vendor tokens (AES-256-GCM)
-- `agent_dispatch_configs` — per-project enabled config + target JSON + triggers + guardrails
+- `agent_dispatch_configs` — org-default row (`project_id IS NULL`) plus optional per-project override rows per integration; nullable fields inherit, non-null fields replace
 - `agent_dispatches` — idempotency ledger + audit (`UNIQUE (organization_id, idempotency_key)`)
 
 Idempotency key: `<vendor>:<configId>:<trigger>:<sourceId>:<window>` (automatic) or `<vendor>:<configId>:manual:<sourceId>:<sendId>` (manual sends).
