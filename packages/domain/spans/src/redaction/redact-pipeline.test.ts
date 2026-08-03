@@ -17,6 +17,8 @@ const PROJECT = "proj_test"
 const EMAIL = "victim@example.com"
 const PHONE = "+14155552671"
 const CARD = "4111111111111111"
+/** 19-digit Visa: Luhn-valid and past 2^53, so `Number` would round its last digits away. */
+const LONG_CARD = "4111111111111111110"
 const SECRET = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
 
 const str = (key: string, value: string): OtlpKeyValue => ({ key, value: { stringValue: value } })
@@ -220,6 +222,22 @@ describe("redaction over the real OTLP transform", () => {
     expect(redacted?.attrInt["gen_ai.usage.input_tokens"]).toBe(215813)
     expect(redacted?.attrInt["event.timestamp_ms"]).toBe(1785506507050)
     expect(result.summary.relocatedNumericAttributes).toBe(1)
+  })
+
+  // A 19-digit card exceeds 2^53, so `Number` would round its digits away before any detector saw them.
+  it("redacts an oversized card sent as an integer, which never reaches attrInt", async () => {
+    const attributes = [str("gen_ai.system", "openai"), int("billing.card", LONG_CARD)]
+    const { spans } = transformOtlpToSpans(buildRequest(attributes), CONTEXT)
+
+    expect(spans[0]?.attrString["billing.card"]).toBe(LONG_CARD)
+    expect(spans[0]?.attrInt).not.toHaveProperty("billing.card")
+
+    const result = await Effect.runPromise(
+      redactSpans({ spans, organizationId: ORG, policyByProjectId: ENFORCE, pseudonymSecret: undefined }),
+    )
+
+    expect(result.spans[0]?.attrString["billing.card"]).toBe("[REDACTED_CREDIT_CARD]")
+    expect(JSON.stringify(result.spans[0])).not.toContain(LONG_CARD)
   })
 
   it("redacts content carried only in span events, which no parser reads", async () => {
