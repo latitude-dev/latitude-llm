@@ -147,6 +147,13 @@ function ProjectPrivacySettingsPage() {
     reset()
   }
 
+  const changeScope = (next: SettingScope) => {
+    setStagedScope(next === storedScope ? null : next)
+    // The baseline swaps between this project's values and the organization default, so pending
+    // edits belonging to the other layer would otherwise be spread over it and shown as its own.
+    reset()
+  }
+
   useDirtyGuard({
     hasDirty: valueDirty || pendingRemoval,
     isApplying,
@@ -187,7 +194,7 @@ function ProjectPrivacySettingsPage() {
             value: scope,
             disabled: !canEditProject,
             locked: isLocked,
-            onChange: (next) => setStagedScope(next === storedScope ? null : next),
+            onChange: changeScope,
           }}
           pendingChange={
             pendingRemoval
