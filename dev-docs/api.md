@@ -31,6 +31,8 @@ Both validators have a short negative-cache TTL (~5s), so an unknown bearer hits
 
 The one exception is `/v1/mcp`, which admits OAuth bearers only — see [`mcp.md`](./mcp.md). It runs in the same protected ring; the transport handler rejects an `api-key` `AuthContext` with a 401 before it starts a session.
 
+Every 401 the error handler emits carries `WWW-Authenticate: Bearer resource_metadata="<LAT_API_URL>/.well-known/oauth-protected-resource"` (RFC 9728 §5.1), which is how a spec-following MCP client discovers the authorization server instead of guessing the well-known path. The GitHub webhook's signature 401 returns its response directly and is deliberately not a bearer challenge.
+
 ### `AuthContext` shape
 
 ```ts

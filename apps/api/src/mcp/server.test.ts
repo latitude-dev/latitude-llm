@@ -123,6 +123,11 @@ describe("/v1/mcp", () => {
       }),
     )
     expect(res.status).toBe(401)
+    // The client has to be told where to authorize, or it can't recover from
+    // having been pointed here with the wrong kind of credential.
+    expect(res.headers.get("WWW-Authenticate")).toBe(
+      `Bearer resource_metadata="${process.env.LAT_API_URL}/.well-known/oauth-protected-resource"`,
+    )
   })
 
   it<ApiTestContext>("still serves REST routes to an API key the transport rejects", async ({ app, database }) => {
