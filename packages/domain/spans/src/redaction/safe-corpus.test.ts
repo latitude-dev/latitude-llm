@@ -22,12 +22,12 @@ describe("safe corpus", () => {
     expect(matches).toEqual([])
   })
 
-  it("covers every entity that ships on by default", () => {
+  it("keeps a size floor, so a shrunken corpus cannot pass silently", () => {
     // Not a coverage metric, just a floor: a corpus that shrank to nothing would still pass above.
     expect(SAFE_CORPUS.length).toBeGreaterThan(150)
   })
 
-  it("holds no duplicates, which would double-count a rule's corpus hits", () => {
+  it("holds no duplicates, which would pad the floor without widening what it guards", () => {
     expect(new Set(SAFE_CORPUS).size).toBe(SAFE_CORPUS.length)
   })
 

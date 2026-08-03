@@ -213,10 +213,7 @@ export interface ScalarMaskResult<T> {
  * scanning cannot reach these maps the same way — a boolean matches no detector at all — so the key
  * is the only thing to go on, which is also why no scan is needed here.
  */
-export function maskKeyedScalars<T>(
-  map: Readonly<Record<string, T>>,
-  ruleSet: CompiledRuleSet,
-): ScalarMaskResult<T> {
+export function maskKeyedScalars<T>(map: Readonly<Record<string, T>>, ruleSet: CompiledRuleSet): ScalarMaskResult<T> {
   const counts: RedactionCounts = {}
   const kept: Record<string, T> = {}
   const relocated: Record<string, string> = {}
