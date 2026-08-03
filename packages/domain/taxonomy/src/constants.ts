@@ -455,6 +455,18 @@ export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN = 0.8
  * would re-search on every pass to reconfirm the leaf it already had.
  */
 export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
+/**
+ * How many K the root re-search sweeps, best-scoring-first from the first pass.
+ *
+ * A k-means run costs O(n·k·dimensions), so re-sweeping the whole 2..maxChildren
+ * at the escalated budget spends most of it re-confirming K values the first pass
+ * already ranked last. Measured on the real pilot corpus, the root's accepted
+ * split and its separation are IDENTICAL for every root sweep width from 3 to 10
+ * (k=2 wins throughout) while the build ranges 6.9s to 46.3s — a 6.7x spread that
+ * buys nothing. 3 keeps the winner plus two neighbours, which is what makes the
+ * re-search fit `TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS` without widening it.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH = 3
 
 // ---------------------------------------------------------------------------
 // Clustering worker resource bounds
@@ -465,17 +477,15 @@ export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
 // the measured build peaks well under it.
 //
 // The deadline is NOT a spare backstop — it is the binding constraint on the
-// search budget, and it has already been breached once. It was set against a
-// ~12s local build; the same build measures 61-65s on the production activity
-// worker, and host speed there swings ~4.4x run to run (the static build of a
-// comparable corpus ranges 19-93s), so a local number understates the worst case
-// by more than an order of magnitude. Sized so a near-gate root re-search
-// (~6.9x a plain build at TAXONOMY_KMEANS_ESCALATION_RESTARTS) still lands
-// inside it on the slowest observed host pass, and kept well under the
-// 30-minute Temporal start-to-close of the planning activity that awaits it.
-// Raising the re-search budget without re-deriving this number is what broke
-// the pilot.
+// search budget, and it has already been breached once. #4274 added a near-gate
+// root re-search costing ~10x a plain build without dividing that into this
+// number, and the pilot's enforced runs timed out here for six days. A local
+// measurement understates the risk badly: the build this was originally sized
+// against measures ~12s locally but 61-65s on the production activity worker, and
+// host speed there swings ~4.4x run to run (the static build of a comparable
+// corpus ranges 19-93s). So the re-search is bounded to fit THIS number
+// (see TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH) rather than the reverse.
 // ---------------------------------------------------------------------------
 
-export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 15 * 60_000
+export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 5 * 60_000
 export const TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB = 512

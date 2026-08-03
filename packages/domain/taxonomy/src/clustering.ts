@@ -144,6 +144,8 @@ export interface RelativeClusteringEscalation {
   readonly marginThreshold: number
   /** Below this the corpus has no structure to find and the re-search is skipped. */
   readonly marginFloor: number
+  /** How many K the re-search sweeps, best-scoring first. */
+  readonly searchWidth: number
 }
 
 export interface BuildStaticHierarchicalClustersInput {
@@ -460,6 +462,10 @@ interface ChooseBestRelativeKInput {
   readonly onReject: (reason: RelativeClusteringRejectionReason) => void
   /** Every candidate that reached the separation gate, accepted or not. */
   readonly onCandidateSeparation: (relativeSeparation: number) => void
+  /** Every candidate that got as far as being scored, accepted or not. */
+  readonly onCandidateScore?: (k: number, score: number) => void
+  /** When set, only these K are swept; absent sweeps 2..maxChildren. */
+  readonly restrictToK?: ReadonlySet<number>
 }
 
 const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate | null => {
@@ -474,6 +480,8 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
     rng,
     onReject,
     onCandidateSeparation,
+    onCandidateScore,
+    restrictToK,
   } = input
   const n = memberIndices.length
   const minByFraction = Math.ceil(n * schedule.minClusterFraction)
@@ -483,6 +491,7 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
   let best: RelativeCandidate | null = null
   const maxK = Math.min(schedule.maxChildren, Math.floor(n / minClusterSize))
   for (let k = 2; k <= maxK; k++) {
+    if (restrictToK && !restrictToK.has(k)) continue
     for (let restart = 0; restart < restarts; restart++) {
       const initial = kmeansPlusPlusInit(embeddings, memberIndices, k, rng)
       if (initial.length !== k) continue
@@ -521,6 +530,7 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
       }
 
       const score = calinskiHarabaszScore(embeddings, memberIndices, assignments, centroids)
+      onCandidateScore?.(k, score)
       if (score < schedule.minSplitScore) {
         onReject("lowScore")
         continue
@@ -589,10 +599,18 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
 // Divisive builder — node-relative separation.
 // ---------------------------------------------------------------------------
 
+interface RootReSearch {
+  /** Restart budget for the ROOT split only; every deeper node keeps `input.restarts`. */
+  readonly restarts: number
+  /** The only K the root sweeps. Absent sweeps the full 2..maxChildren. */
+  readonly restrictToK?: ReadonlySet<number>
+}
+
 const buildRelativeOnce = (
   input: BuildRelativeHierarchicalClustersInput,
-  /** Restart budget for the ROOT split only; every deeper node keeps `input.restarts`. */
-  rootRestarts?: number,
+  rootReSearch?: RootReSearch,
+  /** Best score each root K reached, so a re-search can spend its budget on the promising ones. */
+  onRootCandidateScore?: (k: number, score: number) => void,
 ): BuildRelativeHierarchicalClustersResult => {
   const { embeddings, depthSchedule, restarts, maxIter, tolerance, seed, globalAbsoluteThreshold } = input
   const dimensions = embeddings[0]?.length ?? 0
@@ -630,11 +648,12 @@ const buildRelativeOnce = (
       embeddings,
       memberIndices,
       schedule,
-      restarts: depth === 0 && rootRestarts !== undefined ? rootRestarts : restarts,
+      restarts: depth === 0 && rootReSearch ? rootReSearch.restarts : restarts,
       maxIter,
       tolerance,
       globalAbsoluteThreshold,
       rng,
+      ...(depth === 0 && rootReSearch?.restrictToK ? { restrictToK: rootReSearch.restrictToK } : {}),
       onReject: (reason) => {
         rejectedCandidates++
         rejectionReasonCounts[reason]++
@@ -642,6 +661,13 @@ const buildRelativeOnce = (
       onCandidateSeparation: (relativeSeparation) => {
         if (depth === 0 && relativeSeparation > bestRootSeparation) bestRootSeparation = relativeSeparation
       },
+      ...(onRootCandidateScore
+        ? {
+            onCandidateScore: (k: number, score: number) => {
+              if (depth === 0) onRootCandidateScore(k, score)
+            },
+          }
+        : {}),
     })
     if (!best) {
       leafCount++
@@ -701,14 +727,39 @@ const shouldEscalate = (
   return observed >= escalation.marginFloor && observed < escalation.marginThreshold
 }
 
+/**
+ * The K the re-search is worth spending the larger budget on: the `width` best by
+ * the score their first pass reached. A k-means run costs O(n·k·dimensions), so
+ * re-sweeping all of 2..maxChildren multiplies the budget by the whole sweep to
+ * re-confirm K values the first pass already ranked last. Ties break on the lower
+ * K, which is both cheaper and the more conservative split.
+ */
+const promisingRootK = (scoreByK: ReadonlyMap<number, number>, width: number): ReadonlySet<number> =>
+  new Set(
+    [...scoreByK.entries()]
+      .sort(([leftK, leftScore], [rightK, rightScore]) => rightScore - leftScore || leftK - rightK)
+      .slice(0, width)
+      .map(([k]) => k),
+  )
+
 export const buildRelativeHierarchicalClusters = (
   input: BuildRelativeHierarchicalClustersInput,
 ): BuildRelativeHierarchicalClustersResult => {
-  const first = buildRelativeOnce(input)
+  const rootScoreByK = new Map<number, number>()
+  const first = buildRelativeOnce(input, undefined, (k, score) => {
+    const previous = rootScoreByK.get(k)
+    if (previous === undefined || score > previous) rootScoreByK.set(k, score)
+  })
   const escalation = input.escalation
   if (!escalation || !shouldEscalate(first, escalation)) return first
 
-  const rescued = buildRelativeOnce(input, escalation.restarts)
+  // Escalating implies a candidate cleared the score gate, so the map is populated;
+  // an unrestricted sweep is the safe reading if it somehow is not.
+  const restrictToK = promisingRootK(rootScoreByK, escalation.searchWidth)
+  const rescued = buildRelativeOnce(input, {
+    restarts: escalation.restarts,
+    ...(restrictToK.size > 0 ? { restrictToK } : {}),
+  })
   return { root: rescued.root, diagnostics: { ...rescued.diagnostics, escalated: true } }
 }
 

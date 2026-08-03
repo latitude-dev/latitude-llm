@@ -23,6 +23,7 @@ import { buildRelativeHierarchicalClusters, quantile } from "./clustering.ts"
 import {
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+  TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_KMEANS_ESCALATION_RESTARTS,
   TAXONOMY_KMEANS_MAX_ITER,
@@ -170,6 +171,7 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
     marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
     marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+    searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
   }
   const buildWith = (corpus: LabeledCorpus, withEscalation: boolean) =>
     buildRelativeHierarchicalClusters({
@@ -295,6 +297,47 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     },
     RE_SEARCH_TIMEOUT_MS,
   )
+
+  // The other half of fitting the deadline: a k-means run costs O(n·k·dimensions),
+  // so re-sweeping all of 2..maxChildren spends most of the escalated budget
+  // re-confirming K the first pass already ranked last. On the real pilot corpus
+  // the root's chosen split is identical for every sweep width from 3 to 10 while
+  // the build ranges 6.9s to 46.3s.
+  it(
+    "the re-search sweeps only the best-scoring K, not the whole range",
+    () => {
+      const corpus = buildNarrowDomainCorpus()
+      const widthOf = (searchWidth: number) =>
+        buildRelativeHierarchicalClusters({
+          embeddings: corpus.embeddings,
+          depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+          restarts: TAXONOMY_KMEANS_RESTARTS,
+          maxIter: TAXONOMY_KMEANS_MAX_ITER,
+          tolerance: TAXONOMY_KMEANS_TOLERANCE,
+          seed: corpus.seed,
+          globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+          escalation: { ...escalation, searchWidth },
+        })
+
+      const narrow = widthOf(TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH)
+      const wide = widthOf(TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE[0]?.maxChildren ?? 10)
+      expect(narrow.diagnostics.escalated).toBe(true)
+      expect(wide.diagnostics.escalated).toBe(true)
+
+      // The narrowed sweep does strictly less work...
+      expect(narrow.diagnostics.rejectedCandidates).toBeLessThan(wide.diagnostics.rejectedCandidates)
+      // ...and still reaches the same root split, which is what makes it free.
+      expect(narrow.diagnostics.bestRootSeparation).toBeCloseTo(wide.diagnostics.bestRootSeparation, 10)
+      expect(narrow.root.children.length).toBe(wide.root.children.length)
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
+
+  it("the promising-K set is deterministic under score ties", () => {
+    const corpus = buildNarrowDomainCorpus()
+    const run = () => buildWith(corpus, true)
+    expect(partitionSignature(run().root)).toBe(partitionSignature(run().root))
+  })
 })
 
 describe("quantile — linear interpolation at (n-1)·q", () => {
