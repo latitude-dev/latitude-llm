@@ -23,6 +23,7 @@ import { buildRelativeHierarchicalClusters, quantile } from "./clustering.ts"
 import {
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+  TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
   TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_KMEANS_ESCALATION_RESTARTS,
@@ -172,6 +173,7 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
     marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
     searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
+    maxSearchWork: TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
   }
   const buildWith = (corpus: LabeledCorpus, withEscalation: boolean) =>
     buildRelativeHierarchicalClusters({
@@ -337,6 +339,92 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     const corpus = buildNarrowDomainCorpus()
     const run = () => buildWith(corpus, true)
     expect(partitionSignature(run().root)).toBe(partitionSignature(run().root))
+  })
+})
+
+// The guardrail #4274 lacked. Its re-search cost ~10x a plain build and nothing
+// compared that to the worker deadline, so the pilot burned the whole budget and
+// fell back to static ~8 times a day for six days. The budget is a projected
+// operation COUNT, never a clock reading: a wall-clock check would branch
+// differently on a slow host and break Temporal replay determinism.
+describe("buildRelativeHierarchicalClusters — the re-search work budget", () => {
+  const corpus = buildNarrowDomainCorpus()
+  const buildWithBudget = (maxSearchWork: number) =>
+    buildRelativeHierarchicalClusters({
+      embeddings: corpus.embeddings,
+      depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+      restarts: TAXONOMY_KMEANS_RESTARTS,
+      maxIter: TAXONOMY_KMEANS_MAX_ITER,
+      tolerance: TAXONOMY_KMEANS_TOLERANCE,
+      seed: corpus.seed,
+      globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+      escalation: {
+        restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
+        marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
+        marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+        searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
+        maxSearchWork,
+      },
+    })
+
+  it(
+    "an affordable re-search runs and reports what it projected",
+    () => {
+      const result = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
+      expect(result.diagnostics.escalated).toBe(true)
+      expect(result.diagnostics.escalationSkipped).toBe(false)
+      expect(result.diagnostics.projectedRootSearchWork).toBeGreaterThan(0)
+      expect(result.diagnostics.projectedRootSearchWork).toBeLessThanOrEqual(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
+
+  it("an unaffordable re-search is declined up front and says so", () => {
+    const declined = buildWithBudget(1)
+    expect(declined.diagnostics.escalated).toBe(false)
+    // Not silent: this is what separates a declined re-search from one never needed.
+    expect(declined.diagnostics.escalationSkipped).toBe(true)
+    expect(declined.diagnostics.projectedRootSearchWork).toBeGreaterThan(1)
+  })
+
+  it(
+    "declining returns exactly the first pass, not a degraded tree",
+    () => {
+      const declined = buildWithBudget(1)
+      const noEscalation = build(corpus)
+      expect(partitionSignature(declined.root)).toBe(partitionSignature(noEscalation.root))
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
+
+  it("a corpus that never escalates is never charged for the budget", () => {
+    const comfortable = buildRelativeHierarchicalClusters({
+      embeddings: buildRetailSupportCorpus().embeddings,
+      depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+      restarts: TAXONOMY_KMEANS_RESTARTS,
+      maxIter: TAXONOMY_KMEANS_MAX_ITER,
+      tolerance: TAXONOMY_KMEANS_TOLERANCE,
+      seed: buildRetailSupportCorpus().seed,
+      globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+      escalation: {
+        restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
+        marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
+        marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+        searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
+        maxSearchWork: 1,
+      },
+    })
+    expect(comfortable.diagnostics.escalated).toBe(false)
+    expect(comfortable.diagnostics.escalationSkipped).toBe(false)
+  })
+
+  it("the decision is a pure function of the inputs, not of elapsed time", () => {
+    // Same inputs twice must take the same branch. A clock-based budget could not
+    // promise this, which is why the ceiling is an operation count.
+    const a = buildWithBudget(1)
+    const b = buildWithBudget(1)
+    expect(b.diagnostics.projectedRootSearchWork).toBe(a.diagnostics.projectedRootSearchWork)
+    expect(b.diagnostics.escalationSkipped).toBe(a.diagnostics.escalationSkipped)
   })
 })
 

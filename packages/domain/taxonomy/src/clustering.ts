@@ -146,6 +146,14 @@ export interface RelativeClusteringEscalation {
   readonly marginFloor: number
   /** How many K the re-search sweeps, best-scoring first. */
   readonly searchWidth: number
+  /**
+   * Ceiling on the PROJECTED cost of the root sweeps, in dot-product element
+   * operations. A count rather than a duration on purpose: the builder must stay a
+   * pure function of its inputs, and a wall-clock check would take a different
+   * branch on a slower host and so break Temporal replay. Derived from the worker
+   * deadline and a measured throughput — see TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK.
+   */
+  readonly maxSearchWork: number
 }
 
 export interface BuildStaticHierarchicalClustersInput {
@@ -192,6 +200,18 @@ export interface RelativeClusteringDiagnostics {
   readonly bestRootSeparation: number
   /** True when the root landed near the separation gate and the build was re-searched. */
   readonly escalated: boolean
+  /**
+   * True when the band asked for a re-search and the projected work budget refused
+   * it. Distinguishes "no re-search was needed" from "one was needed and declined",
+   * which is otherwise invisible: both return the first pass.
+   */
+  readonly escalationSkipped: boolean
+  /**
+   * Upper bound on the dot-product element operations the root sweeps would cost,
+   * as the budget check saw it. Reported so the throughput constant behind
+   * `maxSearchWork` can be retuned against production rather than re-derived.
+   */
+  readonly projectedRootSearchWork: number
 }
 
 export interface BuildRelativeHierarchicalClustersResult {
@@ -704,6 +724,8 @@ const buildRelativeOnce = (
       fellBackToStatic,
       bestRootSeparation,
       escalated: false,
+      escalationSkipped: false,
+      projectedRootSearchWork: 0,
     },
   }
 }
@@ -742,6 +764,36 @@ const promisingRootK = (scoreByK: ReadonlyMap<number, number>, width: number): R
       .map(([k]) => k),
   )
 
+/**
+ * Upper bound on the dot-product element operations one root K sweep performs:
+ * every (k, restart) pair runs at most `maxIter` k-means iterations, and each
+ * iteration compares all members against k centroids across every dimension. An
+ * upper bound because k-means usually converges before `maxIter`, so the budget
+ * check errs toward declining a re-search rather than starting one that overruns.
+ */
+const projectedRootSweepWork = (input: {
+  readonly memberCount: number
+  readonly dimensions: number
+  readonly restarts: number
+  readonly maxIter: number
+  readonly kSum: number
+}): number => input.restarts * input.maxIter * input.memberCount * input.dimensions * input.kSum
+
+/** The K a root sweep visits when nothing restricts it, mirroring `chooseBestRelativeK`. */
+const rootKRange = (memberCount: number, schedule: RelativeDepthSchedule): number[] => {
+  const minClusterSize = Math.max(schedule.minClusterAbs, Math.ceil(memberCount * schedule.minClusterFraction))
+  const maxK = Math.min(schedule.maxChildren, Math.floor(memberCount / minClusterSize))
+  const ks: number[] = []
+  for (let k = 2; k <= maxK; k++) ks.push(k)
+  return ks
+}
+
+const sumOf = (values: Iterable<number>): number => {
+  let total = 0
+  for (const value of values) total += value
+  return total
+}
+
 export const buildRelativeHierarchicalClusters = (
   input: BuildRelativeHierarchicalClustersInput,
 ): BuildRelativeHierarchicalClustersResult => {
@@ -756,11 +808,45 @@ export const buildRelativeHierarchicalClusters = (
   // Escalating implies a candidate cleared the score gate, so the map is populated;
   // an unrestricted sweep is the safe reading if it somehow is not.
   const restrictToK = promisingRootK(rootScoreByK, escalation.searchWidth)
+
+  // Whether the re-search can afford to run, decided BEFORE any of it happens. The
+  // first pass is charged too: both root sweeps land inside one worker invocation,
+  // and it is their sum the deadline has to cover.
+  const dimensions = input.embeddings[0]?.length ?? 0
+  const memberCount = input.embeddings.reduce(
+    (count, vector) => (vector && vector.length === dimensions ? count + 1 : count),
+    0,
+  )
+  const rootSchedule = input.depthSchedule[0]
+  const shared = { memberCount, dimensions, maxIter: input.maxIter }
+  const projectedRootSearchWork = rootSchedule
+    ? projectedRootSweepWork({
+        ...shared,
+        restarts: input.restarts,
+        kSum: sumOf(rootKRange(memberCount, rootSchedule)),
+      }) +
+      projectedRootSweepWork({
+        ...shared,
+        restarts: escalation.restarts,
+        kSum: sumOf(restrictToK.size > 0 ? restrictToK : rootKRange(memberCount, rootSchedule)),
+      })
+    : 0
+
+  if (projectedRootSearchWork > escalation.maxSearchWork) {
+    return {
+      root: first.root,
+      diagnostics: { ...first.diagnostics, escalationSkipped: true, projectedRootSearchWork },
+    }
+  }
+
   const rescued = buildRelativeOnce(input, {
     restarts: escalation.restarts,
     ...(restrictToK.size > 0 ? { restrictToK } : {}),
   })
-  return { root: rescued.root, diagnostics: { ...rescued.diagnostics, escalated: true } }
+  return {
+    root: rescued.root,
+    diagnostics: { ...rescued.diagnostics, escalated: true, projectedRootSearchWork },
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -489,3 +489,39 @@ export const TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH = 3
 
 export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 5 * 60_000
 export const TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB = 512
+
+/**
+ * Dot-product element operations the clustering worker gets through per
+ * millisecond, used to project whether a re-search fits the worker deadline
+ * before starting it.
+ *
+ * Measured, not guessed: a plain adaptive build over 970 observations sweeps
+ * K=2..10 at 3 restarts and ≤25 iterations, so at most
+ * `3 × 25 × 970 × 2048 × 54 ≈ 8.0e9` element operations, and it takes 61-65s on
+ * the production activity worker — ~128 ops/µs. 80 leaves headroom for a slower
+ * host pass without being so pessimistic that it declines work that would have
+ * finished. Retune it from `taxonomy.adaptive.projectedRootSearchWork` against
+ * observed `durationMs` rather than re-deriving it by hand.
+ *
+ * Not exported: only the derived budget below is a contract.
+ */
+const CLUSTERING_WORKER_ELEMENT_OPS_PER_MS = 80_000
+
+/**
+ * Work ceiling for the near-gate re-search: what the worker can be expected to
+ * finish inside its own deadline. A projected operation COUNT rather than a
+ * duration, because the builder has to stay a pure function of its inputs — a
+ * wall-clock check would branch differently on a slow host and break Temporal
+ * replay determinism.
+ *
+ * This is the guardrail #4274 lacked. Its re-search cost ~10x a plain build and
+ * nothing compared that to the deadline, so the pilot's enforced runs burned the
+ * full budget and fell back to static ~8 times a day for six days. Now an
+ * unaffordable re-search is declined up front, deterministically, and says so via
+ * `escalationSkipped` — the same tree the timeout produced, minutes sooner and
+ * visibly. At the current settings the pilot's ~900-observation corpus projects to
+ * ~74% of this, while the `TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX` corpus does not
+ * fit and is declined.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK =
+  TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS * CLUSTERING_WORKER_ELEMENT_OPS_PER_MS

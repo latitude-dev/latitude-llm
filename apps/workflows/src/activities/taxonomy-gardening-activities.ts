@@ -674,6 +674,10 @@ const adaptiveSpanAttributes = (
     // they say nothing about a run whose root collapsed.
     attributes["taxonomy.adaptive.bestRootSeparation"] = diagnostics.bestRootSeparation
     attributes["taxonomy.adaptive.escalated"] = diagnostics.escalated ? 1 : 0
+    // A declined re-search reports the same tree as one that was never needed, so
+    // without these two the work budget could suppress adaptive silently.
+    attributes["taxonomy.adaptive.escalationSkipped"] = diagnostics.escalationSkipped ? 1 : 0
+    attributes["taxonomy.adaptive.projectedRootSearchWork"] = diagnostics.projectedRootSearchWork
   }
   const comparison = plan.comparison
   if (comparison) {
