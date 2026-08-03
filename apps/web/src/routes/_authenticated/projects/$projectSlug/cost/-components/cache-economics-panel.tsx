@@ -382,39 +382,61 @@ const CACHE_VIEW_OPTIONS = [
 ]
 
 /**
+ * The summary always shows these three, in this order, however the lifetime is set.
+ *
+ * A tile that vanishes when a state empties out reshuffles the grid on every switch of the
+ * cache time, and the reader loses the thing they were comparing. Ordering by money would do
+ * the same, so the order is fixed even though the table's is not: worst first — paying for
+ * nothing, then paying for less than you could, then not caching at all.
+ */
+const CACHE_FINDING_TILES: readonly CacheGroupKey[] = ["stopCaching", "investigate", "cacheIt"]
+
+/**
  * One finding as a number to act on. The bar is its share of the recoverable total, so the
  * tiles can be ranked at a glance without reading the figures.
  */
 function FindingTile({
+  tileKey,
   group,
   recoverableMicrocents,
 }: {
-  readonly group: CacheStateGroup
+  readonly tileKey: CacheGroupKey
+  /** Null when no model is in this state at the selected lifetime. */
+  readonly group: CacheStateGroup | null
   readonly recoverableMicrocents: number
 }) {
-  const meta = STATE_META[group.key]
-  const share = recoverableMicrocents > 0 ? group.savingsMicrocents / recoverableMicrocents : 0
+  const meta = STATE_META[tileKey]
+  const share = group && recoverableMicrocents > 0 ? group.savingsMicrocents / recoverableMicrocents : 0
 
   return (
     <div className="flex flex-col gap-2 rounded-lg bg-secondary/60 p-3">
       <div className="flex flex-row items-center gap-1.5">
-        <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
-        <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
+        <Icon icon={meta.icon} size="sm" color={group ? meta.iconColor : "foregroundMuted"} />
+        <Text.H6
+          weight="semibold"
+          color={group ? "foreground" : "foregroundMuted"}
+          noWrap
+          className="uppercase tracking-wide"
+        >
           {meta.label}
         </Text.H6>
       </div>
-      <Text.H4B color="foreground" noWrap className="tabular-nums">
-        {formatPrice(microcentsToUsd(group.savingsMicrocents))}
+      <Text.H4B color={group ? "foreground" : "foregroundMuted"} noWrap className="tabular-nums">
+        {group ? formatPrice(microcentsToUsd(group.savingsMicrocents)) : DASH}
       </Text.H4B>
       <div className="h-1.5 w-full overflow-hidden rounded-sm bg-muted">
-        <div
-          className="h-full"
-          style={{ width: `${Math.max(2, share * 100)}%`, backgroundColor: CALLS_SERIES_COLOR }}
-          aria-hidden="true"
-        />
+        {group ? (
+          <div
+            className="h-full"
+            style={{ width: `${Math.max(2, share * 100)}%`, backgroundColor: CALLS_SERIES_COLOR }}
+            aria-hidden="true"
+          />
+        ) : null}
       </div>
       <Text.H6 color="foregroundMuted">
-        {`${formatCount(group.rows.length)} ${group.rows.length === 1 ? "model" : "models"} · ${meta.short}`}
+        {group
+          ? `${formatCount(group.rows.length)} ${group.rows.length === 1 ? "model" : "models"} · ${meta.short}`
+          : "No models"}
       </Text.H6>
     </div>
   )
@@ -500,15 +522,14 @@ function CacheSummaryView({ summary }: { readonly summary: CacheSummary }) {
         </Text.H6>
       </div>
       <CacheUseTile summary={summary} />
-      {summary.findings.length === 0 ? (
-        <Text.H6 color="foregroundMuted" className="lg:col-span-3">
-          Nothing to change here. Every model with enough data is caching sensibly.
-        </Text.H6>
-      ) : (
-        summary.findings.map((group) => (
-          <FindingTile key={group.key} group={group} recoverableMicrocents={summary.recoverableMicrocents} />
-        ))
-      )}
+      {CACHE_FINDING_TILES.map((tileKey) => (
+        <FindingTile
+          key={tileKey}
+          tileKey={tileKey}
+          group={summary.findings.find((group) => group.key === tileKey) ?? null}
+          recoverableMicrocents={summary.recoverableMicrocents}
+        />
+      ))}
     </div>
   )
 }
