@@ -1,9 +1,10 @@
-import type { CacheModelJudgment, CacheState, CacheUrgency } from "@domain/spans"
+import type { CacheModelJudgment, CacheState, CacheUrgency, CacheUsageMeasures } from "@domain/spans"
 import { CACHE_CEILING_LIFETIME_SECONDS } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import type { CacheModelRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import {
   buildCacheStateGroups,
+  buildCacheSummary,
   cacheStateIsActionable,
   parseCacheLifetimeSelection,
   recoverableShare,
@@ -217,6 +218,66 @@ describe("summariseSettledRows", () => {
     )
 
     expect(settled).toEqual({ cachingWell: 1, nothingToDo: 2 })
+  })
+})
+
+describe("buildCacheSummary", () => {
+  const totals = (overrides: Partial<CacheUsageMeasures> = {}): CacheUsageMeasures => ({
+    calls: 200,
+    inputTokens: 900_000,
+    cacheReadTokens: 100_000,
+    cacheCreateTokens: 0,
+    costMicrocents: 10_000,
+    unpricedCalls: 0,
+    unpricedTokens: 0,
+    ...overrides,
+  })
+
+  it("adds up only the findings, and states the take as a share of recorded spend", () => {
+    const summary = buildCacheSummary({
+      rows: [
+        row({ model: "a", documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 2_000 }) }),
+        row({ model: "b", documented: judgment({ state: "stopCaching", modeledSavingsMicrocents: 500 }) }),
+        row({ model: "healthy", documented: judgment({ state: "optimal", modeledSavingsMicrocents: null }) }),
+      ],
+      totals: totals(),
+      selection: "documented",
+    })
+
+    expect(summary.recoverableMicrocents).toBe(2_500)
+    expect(summary.recoverableShareOfSpend).toBeCloseTo(0.25, 4)
+    expect(summary.findings.map((group) => group.key)).toEqual(["cacheIt", "stopCaching"])
+    expect(summary.cachingWell).toBe(1)
+  })
+
+  it("reads the project's own rate from the totals rather than averaging the rows", () => {
+    // Averaging per-model rates would weight a 12-call model like a million-token one.
+    const summary = buildCacheSummary({
+      rows: [row({ model: "a", documented: judgment({ actualRate: 0.9, ceilingRate: 0.5 }) })],
+      totals: totals(),
+      selection: "documented",
+    })
+
+    expect(summary.actualRate).toBeCloseTo(0.1, 4)
+  })
+
+  it("weights the ceiling by tokens and reports how much of the traffic it covers", () => {
+    const summary = buildCacheSummary({
+      rows: [
+        row({
+          model: "measured",
+          inputTokens: 800_000,
+          documented: judgment({ ceilingRate: 0.5 }),
+        }),
+        // No ceiling: left out of both sides rather than counted as nothing.
+        row({ model: "unmeasured", inputTokens: 200_000, documented: judgment({ ceilingRate: null }) }),
+      ],
+      totals: totals({ inputTokens: 1_000_000, cacheReadTokens: 0 }),
+      selection: "documented",
+    })
+
+    expect(summary.ceilingRate).toBeCloseTo(0.5, 4)
+    expect(summary.measuredTokenShare).toBeCloseTo(0.8, 4)
   })
 })
 

@@ -1,4 +1,4 @@
-import type { CacheModelJudgment, CacheState } from "@domain/spans"
+import type { CacheModelJudgment, CacheState, CacheUsageMeasures } from "@domain/spans"
 import { CACHE_CEILING_LIFETIME_SECONDS } from "@domain/spans"
 import type { CacheModelRecord } from "../../../../../../domains/cost/cost.functions.ts"
 
@@ -157,6 +157,64 @@ export function summariseSettledRows(
   return {
     cachingWell: states.filter((state) => state === "optimal").length,
     nothingToDo: states.filter((state) => state === "correctlyOff" || state === "notEnoughData").length,
+  }
+}
+
+/**
+ * The whole panel in the few numbers a reader can hold at once: what is on the table, where
+ * it is, and how the project is doing overall.
+ */
+export interface CacheSummary {
+  readonly recoverableMicrocents: number
+  /** Against recorded spend in the window, so it is comparable with the rest of the page. */
+  readonly recoverableShareOfSpend: number | null
+  readonly findings: readonly CacheStateGroup[]
+  /** Measured across the whole project: cache reads over every input-side token. */
+  readonly actualRate: number | null
+  /**
+   * The same ceiling the table draws, weighted by each model's tokens — and over only the
+   * models whose cadence we could measure, which `measuredTokenShare` reports. A model with
+   * no ceiling would otherwise have to count as either 0% or 100%, and both are inventions.
+   */
+  readonly ceilingRate: number | null
+  readonly measuredTokenShare: number
+  readonly cachingWell: number
+  readonly nothingToDo: number
+}
+
+export function buildCacheSummary({
+  rows,
+  totals,
+  selection,
+}: {
+  readonly rows: readonly CacheModelRecord[]
+  readonly totals: CacheUsageMeasures
+  readonly selection: CacheLifetimeSelection
+}): CacheSummary {
+  const groups = buildCacheStateGroups(rows, selection)
+  const findings = groups.filter((group) => group.isActionable)
+  const totalTokens = totals.inputTokens + totals.cacheReadTokens + totals.cacheCreateTokens
+
+  let measuredTokens = 0
+  let warmTokens = 0
+  for (const row of rows.map((entry) => resolveCacheRow(entry, selection))) {
+    if (row.judgment.ceilingRate === null) continue
+    const tokens = row.inputTokens + row.cacheReadTokens + row.cacheCreateTokens
+    measuredTokens += tokens
+    warmTokens += tokens * row.judgment.ceilingRate
+  }
+
+  const recoverableMicrocents = findings.reduce((sum, group) => sum + group.savingsMicrocents, 0)
+
+  return {
+    recoverableMicrocents,
+    recoverableShareOfSpend:
+      totals.costMicrocents > 0 ? Math.min(1, recoverableMicrocents / totals.costMicrocents) : null,
+    findings,
+    actualRate: totalTokens > 0 ? totals.cacheReadTokens / totalTokens : null,
+    ceilingRate: measuredTokens > 0 ? warmTokens / measuredTokens : null,
+    measuredTokenShare: totalTokens > 0 ? measuredTokens / totalTokens : 0,
+    ...summariseSettledRows(rows, selection),
   }
 }
 

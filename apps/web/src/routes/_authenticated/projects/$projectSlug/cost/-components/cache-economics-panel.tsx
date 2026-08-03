@@ -1,7 +1,6 @@
 import { CACHE_ECONOMICS_MIN_CALLS, CACHE_MIN_CACHEABLE_INPUT_TOKENS } from "@domain/spans"
 import type { TextColor } from "@repo/ui"
 import {
-  Button,
   cn,
   Icon,
   Table,
@@ -10,7 +9,7 @@ import {
   TableHeader,
   TableRow,
   TableSkeleton,
-  TabSelector,
+  Tabs,
   Text,
   Tooltip,
 } from "@repo/ui"
@@ -20,8 +19,10 @@ import {
   CircleIcon,
   CircleSlashIcon,
   ClockIcon,
+  GaugeIcon,
   InfoIcon,
   SearchIcon,
+  TableIcon,
   TriangleAlertIcon,
 } from "lucide-react"
 import { Fragment, useState } from "react"
@@ -29,23 +30,21 @@ import type { CacheEconomicsRecord } from "../../../../../../domains/cost/cost.f
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import {
   buildCacheStateGroups,
+  buildCacheSummary,
   CACHE_LIFETIME_OPTIONS,
   type CacheGroupKey,
   type CacheLifetimeSelection,
   type CacheRowView,
   type CacheStateGroup,
+  type CacheSummary,
   parseCacheLifetimeSelection,
   recoverableShare,
-  summariseSettledRows,
 } from "./cache-economics-view.ts"
 import { microcentsToUsd } from "./cost-formatters.ts"
 import { CALLS_SERIES_COLOR } from "./cost-series-colors.ts"
 import { CostTableHead } from "./cost-table-head.tsx"
 
 const DASH = "—"
-
-/** Collapsed, each group shows its leading row. The rest arrive when someone expands. */
-const ROWS_PER_GROUP_COLLAPSED = 1
 
 /**
  * What each heading is called and what it asks for.
@@ -54,17 +53,26 @@ const ROWS_PER_GROUP_COLLAPSED = 1
  */
 const STATE_META: Record<
   CacheGroupKey,
-  { readonly label: string; readonly body: string; readonly icon: typeof CircleIcon; readonly iconColor: TextColor }
+  {
+    readonly label: string
+    readonly body: string
+    /** The same thing in a tile's worth of words. */
+    readonly short: string
+    readonly icon: typeof CircleIcon
+    readonly iconColor: TextColor
+  }
 > = {
   cacheIt: {
     label: "Cache it",
     body: "Caching is off on calls where turning it on looks like it would pay for itself.",
+    short: "Caching is off where it would pay.",
     icon: TriangleAlertIcon,
     iconColor: "warningMutedForeground",
   },
   stopCaching: {
     label: "Stop caching",
     body: "These calls pay to write a cache that expires before anything reads it.",
+    short: "Paying to write caches that expire unread.",
     icon: CircleSlashIcon,
     iconColor: "destructive",
   },
@@ -73,18 +81,21 @@ const STATE_META: Record<
     // Timing is measured; the prompt is not. Naming the prompt as the cause is a deduction
     // from having ruled timing out, so the copy hands it over rather than asserting it.
     body: "These calls arrive close enough together to reuse a cached prompt, and miss anyway. Worth a look at what changes between them.",
+    short: "The timing allows it; something in the prompt does not.",
     icon: SearchIcon,
     iconColor: "warningMutedForeground",
   },
   optimal: {
     label: "Caching well",
     body: "Nothing to change on these.",
+    short: "Nothing to change.",
     icon: CircleCheckIcon,
     iconColor: "success",
   },
   nothingToDo: {
     label: "Nothing to do",
     body: "A cache would not pay off on these, or there are too few calls to tell yet.",
+    short: "No cache would pay, or too few calls to tell.",
     icon: CircleIcon,
     iconColor: "foregroundMuted",
   },
@@ -362,12 +373,153 @@ const compareRows =
     return compareNullsLast(a.judgment.modeledSavingsMicrocents, b.judgment.modeledSavingsMicrocents, factor)
   }
 
+/** The two views of one dataset: a few numbers, or every model. */
+type CacheView = "summary" | "models"
+
+const CACHE_VIEW_OPTIONS = [
+  { key: "summary" as CacheView, label: "Summary", icon: GaugeIcon },
+  { key: "models" as CacheView, label: "All models", icon: TableIcon },
+]
+
+/**
+ * One finding as a number to act on. The bar is its share of the recoverable total, so the
+ * tiles can be ranked at a glance without reading the figures.
+ */
+function FindingTile({
+  group,
+  recoverableMicrocents,
+}: {
+  readonly group: CacheStateGroup
+  readonly recoverableMicrocents: number
+}) {
+  const meta = STATE_META[group.key]
+  const share = recoverableMicrocents > 0 ? group.savingsMicrocents / recoverableMicrocents : 0
+
+  return (
+    <div className="flex min-w-[200px] flex-1 flex-col gap-2 rounded-lg bg-secondary/60 p-3">
+      <div className="flex flex-row items-center gap-1.5">
+        <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
+        <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
+          {meta.label}
+        </Text.H6>
+      </div>
+      <Text.H4B color="foreground" noWrap className="tabular-nums">
+        {formatPrice(microcentsToUsd(group.savingsMicrocents))}
+      </Text.H4B>
+      <div className="h-1.5 w-full overflow-hidden rounded-sm bg-muted">
+        <div
+          className="h-full"
+          style={{ width: `${Math.max(2, share * 100)}%`, backgroundColor: CALLS_SERIES_COLOR }}
+          aria-hidden="true"
+        />
+      </div>
+      <Text.H6 color="foregroundMuted">
+        {`${formatCount(group.rows.length)} ${group.rows.length === 1 ? "model" : "models"} · ${meta.short}`}
+      </Text.H6>
+    </div>
+  )
+}
+
+/** Where the project sits overall, on the track and colours the table rows already use. */
+function CacheUseTile({ summary }: { readonly summary: CacheSummary }) {
+  const pct = (value: number): number => Math.max(0, Math.min(100, value * 100))
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-secondary/60 p-3">
+      <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
+        Cached tokens
+      </Text.H6>
+      <div className="flex flex-row items-baseline gap-2">
+        <Text.H4B color="foreground" noWrap className="tabular-nums">
+          {summary.actualRate === null ? DASH : formatPercentage(summary.actualRate)}
+        </Text.H4B>
+        {summary.ceilingRate === null ? null : (
+          <Text.H6 color="foregroundMuted" noWrap>
+            {`of a possible ${formatPercentage(summary.ceilingRate)}`}
+          </Text.H6>
+        )}
+      </div>
+      <div className="relative h-1.5 w-full overflow-hidden rounded-sm bg-muted">
+        {summary.ceilingRate === null ? null : (
+          <div
+            className="absolute inset-y-0 left-0 opacity-25"
+            style={{ width: `${pct(summary.ceilingRate)}%`, backgroundColor: CALLS_SERIES_COLOR }}
+            aria-hidden="true"
+          />
+        )}
+        <div
+          className="absolute inset-y-0 left-0"
+          style={{ width: `${pct(summary.actualRate ?? 0)}%`, backgroundColor: CALLS_SERIES_COLOR }}
+          aria-hidden="true"
+        />
+      </div>
+      <Text.H6 color="foregroundMuted">
+        {summary.ceilingRate === null
+          ? "How much of your prompts came from cache."
+          : `The pale bar is what the timing of your calls would allow${
+              // Models with no measurable cadence are left out of the ceiling rather than
+              // counted as nothing, so say how much of the traffic it covers.
+              summary.measuredTokenShare < 0.99
+                ? `, measured on ${formatPercentage(summary.measuredTokenShare)} of your tokens`
+                : ""
+            }.`}
+      </Text.H6>
+    </div>
+  )
+}
+
+function CacheSummaryView({ summary }: { readonly summary: CacheSummary }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-row flex-wrap gap-3">
+        <div className="flex min-w-[260px] flex-1 flex-col gap-2 rounded-lg bg-secondary/60 p-3">
+          <Tooltip
+            asChild
+            trigger={
+              <div className="flex w-fit cursor-default flex-row items-center gap-1.5">
+                <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
+                  Looks recoverable
+                </Text.H6>
+                <Icon icon={InfoIcon} size="sm" color="foregroundMuted" />
+              </div>
+            }
+          >
+            {SAVINGS_TOOLTIP}
+          </Tooltip>
+          <Text.H3M color="foreground" noWrap className="tabular-nums">
+            {formatPrice(microcentsToUsd(summary.recoverableMicrocents))}
+          </Text.H3M>
+          <Text.H6 color="foregroundMuted">
+            {summary.recoverableShareOfSpend === null
+              ? "Modeled from your tokens and each model's list prices."
+              : `${formatPercentage(summary.recoverableShareOfSpend)} of what you spend here, modeled from your token counts.`}
+          </Text.H6>
+        </div>
+        <div className="min-w-[260px] flex-1">
+          <CacheUseTile summary={summary} />
+        </div>
+      </div>
+      {summary.findings.length === 0 ? (
+        <Text.H6 color="foregroundMuted">
+          Nothing to change here. Every model with enough data is caching sensibly.
+        </Text.H6>
+      ) : (
+        <div className="flex flex-row flex-wrap gap-3">
+          {summary.findings.map((group) => (
+            <FindingTile key={group.key} group={group} recoverableMicrocents={summary.recoverableMicrocents} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /**
  * Whether each model's caching is paying for itself, and what closing the gap is worth.
  *
- * One table, grouped by what to do about each model. Collapsed it shows the leading row of
- * every group that asks for something, which is the answer most readers came for; expanded
- * it becomes the full per-model comparison.
+ * Two views of one dataset: a handful of numbers, and every model grouped by what to do
+ * about it. Nobody lands on the table by accident, which is why it holds nothing back once
+ * opened — no second expand step inside it.
  */
 export function CacheEconomicsPanel({
   economics,
@@ -377,7 +529,7 @@ export function CacheEconomicsPanel({
   readonly isLoading: boolean
 }) {
   const [selection, setSelection] = useState<CacheLifetimeSelection>("documented")
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [view, setView] = useState<CacheView>("summary")
   const [sort, setSort] = useState<{ column: CacheSortColumn; direction: "asc" | "desc" }>({
     column: "savings",
     direction: "desc",
@@ -389,33 +541,19 @@ export function CacheEconomicsPanel({
         : { column, direction: column === "name" ? "asc" : "desc" },
     )
 
-  const built = economics ? buildCacheStateGroups(economics.rows, selection) : []
-  const settled = economics ? summariseSettledRows(economics.rows, selection) : { cachingWell: 0, nothingToDo: 0 }
-  const totalSavings = built.reduce((sum, group) => sum + (group.isActionable ? group.savingsMicrocents : 0), 0)
+  const summary = economics ? buildCacheSummary({ rows: economics.rows, totals: economics.totals, selection }) : null
 
   // A sort moves the groups as well as the rows, each group carried by its leading row on
-  // the sorted column — otherwise sorting by spend leaves the biggest spender three
-  // headings down, and collapsed it would not move the table at all. So sorting by rate
-  // does put `Caching well` on top, which is the point of asking for it.
+  // the sorted column — otherwise sorting by spend leaves the biggest spender three headings
+  // down. So sorting by rate does put `Caching well` on top, which is the point of asking.
   //
   // What keeps that honest is `compareNullsLast`: the groups with nothing to show on the
   // sorted column sink, so a rate we declined to judge can never outrank a real one, and
   // the default savings sort still leads with the money.
   const compare = compareRows(sort)
-  const groups = built
+  const groups = (economics ? buildCacheStateGroups(economics.rows, selection) : [])
     .map((group) => ({ ...group, rows: [...group.rows].sort(compare) }))
     .sort((a, b) => (a.rows[0] && b.rows[0] ? compare(a.rows[0], b.rows[0]) : 0))
-
-  const visibleGroups = isExpanded ? groups : groups.filter((group) => group.isActionable)
-  const rowsOf = (group: CacheStateGroup): readonly CacheRowView[] =>
-    isExpanded ? group.rows : group.rows.slice(0, ROWS_PER_GROUP_COLLAPSED)
-
-  const settledSummary = [
-    settled.cachingWell > 0 ? `${formatCount(settled.cachingWell)} caching well` : null,
-    settled.nothingToDo > 0 ? `${formatCount(settled.nothingToDo)} with nothing to do` : null,
-  ]
-    .filter((part) => part !== null)
-    .join(", ")
 
   const headProps = { sort, onSort }
 
@@ -423,37 +561,34 @@ export function CacheEconomicsPanel({
     // The table's row separators are painted in `--background`, so the card must carry it.
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        {totalSavings > 0 ? (
-          <Tooltip
-            asChild
-            trigger={
-              <div className="flex cursor-default flex-row items-center gap-1.5">
-                <Text.H4B color="foreground" noWrap className="tabular-nums">
-                  {formatPrice(microcentsToUsd(totalSavings))}
-                </Text.H4B>
-                <Text.H6 color="foregroundMuted" noWrap>
-                  looks recoverable
-                </Text.H6>
-                <Icon icon={InfoIcon} size="sm" color="foregroundMuted" />
-              </div>
-            }
-          >
-            {SAVINGS_TOOLTIP}
-          </Tooltip>
-        ) : (
-          <Text.H6 color="foregroundMuted">Nothing to recover in this window</Text.H6>
-        )}
+        <Tabs<CacheView>
+          variant="bordered"
+          size="sm"
+          className="border-none bg-muted"
+          indicatorClassName="border-none"
+          options={CACHE_VIEW_OPTIONS.map((option) => ({
+            id: option.key,
+            label: option.label,
+            icon: <Icon icon={option.icon} size="sm" color={view === option.key ? "foreground" : "foregroundMuted"} />,
+          }))}
+          active={view}
+          onSelect={setView}
+        />
         <div className="flex flex-row items-center gap-2">
           <Text.H6 color="foregroundMuted" noWrap>
             Cache lifetime
           </Text.H6>
-          <TabSelector<string>
-            selected={selection === "documented" ? "documented" : String(selection)}
-            onSelect={(value) => setSelection(parseCacheLifetimeSelection(value))}
+          <Tabs
+            variant="bordered"
+            size="sm"
+            className="border-none bg-muted"
+            indicatorClassName="border-none"
             options={CACHE_LIFETIME_OPTIONS.map((option) => ({
+              id: option === "documented" ? "documented" : String(option),
               label: lifetimeOptionLabel(option),
-              value: option === "documented" ? "documented" : String(option),
             }))}
+            active={selection === "documented" ? "documented" : String(selection)}
+            onSelect={(value) => setSelection(parseCacheLifetimeSelection(value))}
           />
           <Tooltip
             asChild
@@ -468,55 +603,43 @@ export function CacheEconomicsPanel({
         </div>
       </div>
 
-      {isLoading || !economics ? (
+      {isLoading || !economics || !summary ? (
         <TableSkeleton rows={4} cols={4} />
       ) : economics.rows.length === 0 ? (
         <div className="flex w-full min-h-[120px] items-center justify-center">
           <Text.H6 color="foregroundMuted">No billable model usage in this time window</Text.H6>
         </div>
+      ) : view === "summary" ? (
+        <CacheSummaryView summary={summary} />
       ) : (
-        <div className="flex flex-col gap-2">
-          {visibleGroups.length === 0 ? (
-            <Text.H6 color="foregroundMuted">
-              Nothing to change here. Every model with enough data is caching sensibly.
-            </Text.H6>
-          ) : (
-            <Table wrapperClassName="border-0 rounded-none">
-              <TableHeader className="[&_tr]:border-b-0">
-                <TableRow hoverable={false}>
-                  <CostTableHead column="name" label="Model" align="left" isFirst alphabetical {...headProps} />
-                  <CostTableHead
-                    column="position"
-                    label="Cached tokens"
-                    align="left"
-                    isFirst={false}
-                    tooltipMessage={POSITION_TOOLTIP}
-                    className="w-2/5"
-                    {...headProps}
-                  />
-                  <CostTableHead column="savings" label="Est. savings" align="right" isFirst={false} {...headProps} />
-                  <CostTableHead column="spend" label="Spend" align="right" isFirst={false} {...headProps} />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleGroups.map((group) => (
-                  <Fragment key={group.key}>
-                    <StateGroupHeader group={group} />
-                    {rowsOf(group).map((row) => (
-                      <CacheRow key={`${row.provider}/${row.model}`} row={row} />
-                    ))}
-                  </Fragment>
+        <Table wrapperClassName="border-0 rounded-none">
+          <TableHeader className="[&_tr]:border-b-0">
+            <TableRow hoverable={false}>
+              <CostTableHead column="name" label="Model" align="left" isFirst alphabetical {...headProps} />
+              <CostTableHead
+                column="position"
+                label="Cached tokens"
+                align="left"
+                isFirst={false}
+                tooltipMessage={POSITION_TOOLTIP}
+                className="w-2/5"
+                {...headProps}
+              />
+              <CostTableHead column="savings" label="Est. savings" align="right" isFirst={false} {...headProps} />
+              <CostTableHead column="spend" label="Spend" align="right" isFirst={false} {...headProps} />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {groups.map((group) => (
+              <Fragment key={group.key}>
+                <StateGroupHeader group={group} />
+                {group.rows.map((row) => (
+                  <CacheRow key={`${row.provider}/${row.model}`} row={row} />
                 ))}
-              </TableBody>
-            </Table>
-          )}
-          <div className="flex flex-row flex-wrap items-center gap-x-1.5 gap-y-1">
-            <Button variant="link" size="sm" className="h-auto px-0" onClick={() => setIsExpanded(!isExpanded)}>
-              {isExpanded ? "Show the highlights" : `Show all ${formatCount(economics.totals.distinctModels)} models`}
-            </Button>
-            {settledSummary ? <Text.H6 color="foregroundMuted">{`· ${settledSummary}`}</Text.H6> : null}
-          </div>
-        </div>
+              </Fragment>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   )
