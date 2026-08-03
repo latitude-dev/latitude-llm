@@ -396,7 +396,7 @@ function FindingTile({
   const share = recoverableMicrocents > 0 ? group.savingsMicrocents / recoverableMicrocents : 0
 
   return (
-    <div className="flex min-w-[200px] flex-1 flex-col gap-2 rounded-lg bg-secondary/60 p-3">
+    <div className="flex flex-col gap-2 rounded-lg bg-secondary/60 p-3">
       <div className="flex flex-row items-center gap-1.5">
         <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
         <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
@@ -468,47 +468,46 @@ function CacheUseTile({ summary }: { readonly summary: CacheSummary }) {
   )
 }
 
+/**
+ * Every tile in one grid rather than a row of two above a row of three: separate rows put
+ * the second tile's left edge in a different place on each line, which reads as a mistake.
+ * The headline takes two of the three columns, so every edge lands on the same grid.
+ */
 function CacheSummaryView({ summary }: { readonly summary: CacheSummary }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-row flex-wrap gap-3">
-        <div className="flex min-w-[260px] flex-1 flex-col gap-2 rounded-lg bg-secondary/60 p-3">
-          <Tooltip
-            asChild
-            trigger={
-              <div className="flex w-fit cursor-default flex-row items-center gap-1.5">
-                <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
-                  Looks recoverable
-                </Text.H6>
-                <Icon icon={InfoIcon} size="sm" color="foregroundMuted" />
-              </div>
-            }
-          >
-            {SAVINGS_TOOLTIP}
-          </Tooltip>
-          <Text.H3M color="foreground" noWrap className="tabular-nums">
-            {formatPrice(microcentsToUsd(summary.recoverableMicrocents))}
-          </Text.H3M>
-          <Text.H6 color="foregroundMuted">
-            {summary.recoverableShareOfSpend === null
-              ? "Modeled from your tokens and each model's list prices."
-              : `${formatPercentage(summary.recoverableShareOfSpend)} of what you spend here, modeled from your token counts.`}
-          </Text.H6>
-        </div>
-        <div className="min-w-[260px] flex-1">
-          <CacheUseTile summary={summary} />
-        </div>
-      </div>
-      {summary.findings.length === 0 ? (
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="flex flex-col gap-2 rounded-lg bg-secondary/60 p-3 lg:col-span-2">
+        <Tooltip
+          asChild
+          trigger={
+            <div className="flex w-fit cursor-default flex-row items-center gap-1.5">
+              <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
+                Looks recoverable
+              </Text.H6>
+              <Icon icon={InfoIcon} size="sm" color="foregroundMuted" />
+            </div>
+          }
+        >
+          {SAVINGS_TOOLTIP}
+        </Tooltip>
+        <Text.H3M color="foreground" noWrap className="tabular-nums">
+          {formatPrice(microcentsToUsd(summary.recoverableMicrocents))}
+        </Text.H3M>
         <Text.H6 color="foregroundMuted">
+          {summary.recoverableShareOfSpend === null
+            ? "Modeled from your tokens and each model's list prices."
+            : `${formatPercentage(summary.recoverableShareOfSpend)} of what you spend here, modeled from your token counts.`}
+        </Text.H6>
+      </div>
+      <CacheUseTile summary={summary} />
+      {summary.findings.length === 0 ? (
+        <Text.H6 color="foregroundMuted" className="lg:col-span-3">
           Nothing to change here. Every model with enough data is caching sensibly.
         </Text.H6>
       ) : (
-        <div className="flex flex-row flex-wrap gap-3">
-          {summary.findings.map((group) => (
-            <FindingTile key={group.key} group={group} recoverableMicrocents={summary.recoverableMicrocents} />
-          ))}
-        </div>
+        summary.findings.map((group) => (
+          <FindingTile key={group.key} group={group} recoverableMicrocents={summary.recoverableMicrocents} />
+        ))
       )}
     </div>
   )
