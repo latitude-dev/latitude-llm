@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSignalsMetricsAffectedUsers(UniversalBaseModel):
     """
-    Affected users — fraction (0–1); lower is better.
+    Fraction of users with at least one signal — fraction (0–1); lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

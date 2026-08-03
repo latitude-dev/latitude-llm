@@ -51,7 +51,7 @@ export function createEcs(
     settings: [
       {
         name: "containerInsights",
-        value: "enabled",
+        value: "disabled",
       },
     ],
     tags: {
@@ -362,6 +362,12 @@ function createTaskDefinition(
       secrets["google-oauth-client-secret"].arn,
       secrets["github-oauth-client-id"].arn,
       secrets["github-oauth-client-secret"].arn,
+      secrets["github-app-id"].arn,
+      secrets["github-app-slug"].arn,
+      secrets["github-app-private-key"].arn,
+      secrets["github-app-webhook-secret"].arn,
+      secrets["github-app-client-id"].arn,
+      secrets["github-app-client-secret"].arn,
       secrets["stripe-secret-key"].arn,
       secrets["stripe-webhook-secret"].arn,
       secrets["stripe-pro-price-id"].arn,
@@ -407,6 +413,12 @@ function createTaskDefinition(
         googleOauthClientSecretArn,
         githubOauthClientIdArn,
         githubOauthClientSecretArn,
+        githubAppIdArn,
+        githubAppSlugArn,
+        githubAppPrivateKeyArn,
+        githubAppWebhookSecretArn,
+        githubAppClientIdArn,
+        githubAppClientSecretArn,
         stripeSecretKeyArn,
         stripeWebhookSecretArn,
         stripeProPriceIdArn,
@@ -471,6 +483,7 @@ function createTaskDefinition(
           { name: "LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT", value: "http://localhost:4318/v1/traces" },
           { name: "LAT_OSS_TELEMETRY_ENABLED", value: "false" },
           { name: "LAT_POSTHOG_HOST", value: "https://eu.i.posthog.com" },
+          { name: "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE", value: config.name === "production" ? "shadow" : "off" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [
@@ -536,6 +549,15 @@ function createTaskDefinition(
           { name: "LAT_GITHUB_CLIENT_SECRET", valueFrom: githubOauthClientSecretArn },
         ]
 
+        const githubAppSecrets = [
+          { name: "LAT_GITHUB_APP_ID", valueFrom: githubAppIdArn },
+          { name: "LAT_GITHUB_APP_SLUG", valueFrom: githubAppSlugArn },
+          { name: "LAT_GITHUB_APP_PRIVATE_KEY", valueFrom: githubAppPrivateKeyArn },
+          { name: "LAT_GITHUB_WEBHOOK_SECRET", valueFrom: githubAppWebhookSecretArn },
+          { name: "LAT_GITHUB_APP_CLIENT_ID", valueFrom: githubAppClientIdArn },
+          { name: "LAT_GITHUB_APP_CLIENT_SECRET", valueFrom: githubAppClientSecretArn },
+        ]
+
         const temporalSecret = { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }
 
         const stripeSelfServeSecrets = [
@@ -561,10 +583,10 @@ function createTaskDefinition(
         ]
 
         const serviceSpecificSecrets: Record<string, { name: string; valueFrom: string }[]> = {
-          api: [temporalSecret],
-          web: [...oauthSecrets, ...stripeSelfServeSecrets, temporalSecret, ...supportSecrets],
+          api: [temporalSecret, ...githubAppSecrets],
+          web: [...oauthSecrets, ...stripeSelfServeSecrets, temporalSecret, ...supportSecrets, ...githubAppSecrets],
           workflows: [temporalSecret, ...stripeOverageSecrets],
-          workers: [temporalSecret, ...bullBoardSecrets],
+          workers: [temporalSecret, ...bullBoardSecrets, ...githubAppSecrets],
         }
 
         const secrets = [...baseSecrets, ...(serviceSpecificSecrets[serviceConfig.name] ?? [])]
@@ -649,7 +671,7 @@ function createTaskDefinition(
             { name: "DD_OTLP_CONFIG_TRACES_ENABLED", value: "true" },
             { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT", value: "0.0.0.0:4318" },
             { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT", value: "0.0.0.0:4317" },
-            { name: "DD_LOG_LEVEL", value: "debug" },
+            { name: "DD_LOG_LEVEL", value: "info" },
           ],
           secrets: [
             { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },

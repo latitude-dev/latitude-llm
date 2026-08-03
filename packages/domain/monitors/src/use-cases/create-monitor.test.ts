@@ -181,6 +181,48 @@ describe("createMonitorUseCase", () => {
     expect(error.message).toBe("Condition trigger must match monitor trigger")
   })
 
+  it("creates a threshold monitor with errorRate and expected baseline", async () => {
+    const { repo } = createFakeMonitorRepository()
+
+    const result = await run(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Tool is failing",
+        target: {
+          type: "tool",
+          id: null,
+          filterSet: {
+            operation: [{ op: "eq", value: "execute_tool" }],
+            toolName: [{ op: "eq", value: "searchWeb" }],
+          },
+        },
+        rule: {
+          trigger: "threshold",
+          severity: "high",
+          config: {
+            metric: { kind: "errorRate" },
+            condition: {
+              trigger: "threshold",
+              metric: { kind: "errorRate" },
+              threshold: { mode: "expected", sensitivity: 3 },
+              direction: "above",
+            },
+          },
+        },
+      }),
+      repo,
+    )
+
+    expect(result.rule.trigger).toBe("threshold")
+    expect(result.target.metric).toEqual({ kind: "errorRate" })
+    expect(result.rule.config.condition).toMatchObject({
+      trigger: "threshold",
+      metric: { kind: "errorRate" },
+      threshold: { mode: "expected", sensitivity: 3 },
+    })
+  })
+
   it("rejects unsupported escalating metric and threshold shapes", async () => {
     const { repo } = createFakeMonitorRepository()
 

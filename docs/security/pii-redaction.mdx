@@ -1,17 +1,87 @@
 ---
 title: PII redaction
-description: How Latitude reduces PII exposure with SDK redaction and internal data handling safeguards.
+description: How Latitude reduces PII exposure with ingest-side redaction, SDK attribute masking, and internal data handling safeguards.
 ---
 
 # PII redaction
 
-Latitude reduces exposure of personally identifiable information (PII) and other sensitive values in telemetry. Redaction starts in the SDKs before spans are exported to Latitude.
+Latitude reduces exposure of personally identifiable information (PII) and other sensitive values in telemetry. There are two independent controls: **ingest redaction**, which Latitude applies to span content before storing it, and **SDK attribute masking**, which your application applies before exporting.
 
 <Note>
   Redaction is best effort. Customers should avoid sending unnecessary regulated or highly sensitive data to Latitude and configure custom redaction patterns for application-specific identifiers.
 </Note>
 
-## SDK redaction by default
+## Ingest PII redaction
+
+Opt-in, per project. When enabled, Latitude scans span content for the categories you configure and replaces matches with a labeled placeholder before the span is persisted.
+
+<Warning>
+  Redaction applies only to spans ingested after you enable it, and redacted content cannot be recovered. Existing spans are never rewritten, and there is no way to restore a redacted value.
+</Warning>
+
+### What it does and does not catch
+
+Detection is pattern based. It reliably catches structured identifiers, and it does **not** catch names, addresses, or free-form personal detail — those need semantic understanding that a deterministic matcher cannot provide.
+
+| Category | Default | What it matches |
+| --- | --- | --- |
+| Email addresses | On | Addresses with a domain and a two-or-more character suffix |
+| Phone numbers | On | International `+NNNNNNNNN` numbers and separated North American forms |
+| Credit card numbers | On | 13–19 digits passing a checksum with a known issuer prefix |
+| IBANs | On | Bank account numbers passing the mod-97 checksum |
+| US Social Security numbers | On | Separated `NNN-NN-NNNN` in a valid range |
+| API keys and secrets | On | Recognizable provider key formats and private key blocks |
+| IP addresses | Off | IPv4 and IPv6 addresses |
+| Crypto wallet addresses | Off | Bitcoin and Ethereum address formats |
+
+The last two are off by default because they also match things that are not personal data: version strings such as `1.2.3.4` look like IPv4, and long hex strings such as commit hashes look like wallet addresses. Every category can be toggled individually.
+
+Precision is favored over recall throughout. A missed value stays visible and you can report it; a wrongly redacted value is permanently destroyed. So detectors that would need to guess do not run by default.
+
+### Enabling it
+
+**Dashboard** — **Settings → Privacy**, per project. Organization owners can also set an organization-wide policy that applies to every project, and lock it so projects cannot weaken it. Changing a project policy needs the owner or admin role; changing the organization policy needs owner.
+
+**API** — `settings.redaction` on `PATCH /v1/projects/{projectSlug}`, also available through the SDKs and the `latitude` CLI.
+
+```bash
+curl -X PATCH https://gateway.latitude.so/v1/projects/my-project \
+  -H "Authorization: Bearer $LATITUDE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"settings":{"redaction":{"mode":"enforce","entities":["email","credit_card"]}}}'
+```
+
+A change takes effect within a minute.
+
+### Scope
+
+Scanned: message content, tool call arguments and results, reasoning, span attributes carrying content, span events, and resource attributes.
+
+Not scanned by default: the metadata map and tags. These are usually operational, and redacting them removes values you filter and group by — enable the metadata scope if you put personal data there.
+
+Never scanned: span names, service names, model identifiers, and other enum or identifier columns, plus binary payloads in file and image parts.
+
+### User identifiers
+
+`userId` and `userEmail` can be kept as-is or replaced with a stable pseudonym. Pseudonyms are deterministic and scoped to your organization, so filtering, grouping, and per-user analytics keep working while the underlying identity is no longer stored. Self-hosted deployments with no pseudonym secret configured remove the identifier entirely rather than pseudonymizing it.
+
+The pseudonym replaces the identifier everywhere it appears on the span, not only in the user column: the attribute it was read from, resource attributes, metadata, and tags all get the same value. Metadata and tags are covered here even when the metadata scope is off.
+
+### What redacted content looks like
+
+Redacted values appear as a labeled marker in place of the original — the dashboard renders them as a small tag naming the category. This is intentional: you need to be able to tell the difference between content that was removed and content that was never sent.
+
+You may also see an oversized-field marker. Fields above 1 MB are removed whole rather than stored unscanned, so nothing in them was necessarily personal data.
+
+### Things to know before enabling
+
+- **The raw payload is buffered before redaction runs.** Latitude acknowledges your export first and redacts in a background worker, so the unredacted payload exists briefly in the ingestion queue and, for large batches, in object storage. Queue entries are bounded and object-storage buffers are deleted after processing, with a one-day lifecycle rule as a backstop. Redaction is a control over what Latitude *stores*, not a guarantee that unredacted content never reaches our infrastructure.
+- **Search matches redacted text.** Full-text search indexes are built from the stored content, so a redacted value is no longer findable.
+- **Deduplication does not span a policy change.** Identical messages hash differently before and after redaction, so cross-trace message deduplication treats them as distinct.
+
+## SDK attribute masking
+
+### Masked by default
 
 The TypeScript and Python SDKs mask common security-sensitive attributes before export.
 
@@ -24,28 +94,31 @@ Redacted by default:
 
 The default mask is `******`.
 
-## Custom redaction patterns
+### Custom patterns
 
 Add custom patterns when your app places PII or secrets in known attributes, metadata fields, headers, or prompt variables.
 
-### TypeScript
+#### TypeScript
 
 ```ts
 import { Latitude } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import OpenAI from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
   redact: {
     attributes: [/^password$/i, /email/i, /phone/i, /secret/i],
     mask: () => "[REDACTED]",
   },
 })
+
+await latitude.ready
 ```
 
-### Python
+#### Python
 
 ```python
 import re
@@ -81,8 +154,9 @@ Latitude's internal systems are designed to avoid unnecessary sensitive-data exp
 
 For strongest protection:
 
-1. Do not send fields your team does not need for debugging, search, scoring, or signal discovery.
-2. Add custom SDK redaction patterns for app-specific PII fields.
-3. Use project boundaries to avoid mixing traces from unrelated agents or products.
-4. Review metadata before adding it to spans, sessions, scores, or annotations.
-5. Keep API keys and secrets out of prompts, tool outputs, and trace metadata whenever possible.
+1. Do not send fields your team does not need for debugging, search, scoring, or signal discovery. Nothing beats not collecting it.
+2. Add custom SDK redaction patterns for app-specific PII fields, so those values never leave your infrastructure.
+3. Enable ingest redaction as a backstop for the structured identifiers that slip through anyway.
+4. Use project boundaries to avoid mixing traces from unrelated agents or products.
+5. Review metadata before adding it to spans, sessions, scores, or annotations.
+6. Keep API keys and secrets out of prompts, tool outputs, and trace metadata whenever possible.

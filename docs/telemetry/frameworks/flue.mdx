@@ -64,6 +64,8 @@ Flue exposes an OpenTelemetry observer through `@flue/opentelemetry`. The observ
       project: process.env.LATITUDE_PROJECT_SLUG!,
       serviceName: "flue-app",
     })
+
+    await latitude.ready
     ```
 
     <Note>

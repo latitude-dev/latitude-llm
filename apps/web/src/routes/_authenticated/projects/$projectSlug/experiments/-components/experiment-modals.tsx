@@ -1,7 +1,7 @@
 import { Button, CloseTrigger, cn, Icon, Input, Modal, Text, Textarea, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   type ExperimentRecord,
   useCreateExperiment,
@@ -49,6 +49,7 @@ export function ExperimentCreateModal({
           void navigate({
             to: "/projects/$projectSlug/experiments/$experimentSlug",
             params: { projectSlug, experimentSlug: experiment.slug },
+            search: { created: true },
           })
         },
         onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
@@ -56,13 +57,32 @@ export function ExperimentCreateModal({
     ),
   })
 
+  // A non-custom preset seeds the name/description as a starting point, but never clobbers text the
+  // user typed; the refs let a later preset pick still overwrite a value we filled ourselves.
+  const presetFilledName = useRef<string | null>(null)
+  const presetFilledDescription = useRef<string | null>(null)
+  const selectPreset = (option: (typeof EXPERIMENT_PRESET_OPTIONS)[number]) => {
+    setPreset(option.value)
+    if (option.value === "custom") return
+    const name = form.getFieldValue("name")
+    if (name.trim() === "" || name === presetFilledName.current) {
+      form.setFieldValue("name", option.label)
+      presetFilledName.current = option.label
+    }
+    const description = form.getFieldValue("description")
+    if (description.trim() === "" || description === presetFilledDescription.current) {
+      form.setFieldValue("description", option.description)
+      presetFilledDescription.current = option.description
+    }
+  }
+
   return (
     <Modal
       open
       dismissible
       onOpenChange={(next) => (!next ? onClose() : undefined)}
       title="New experiment"
-      description="Experiments compare sessions, users, tools, signals, and behaviours across variants of filters, search queries and time ranges."
+      description="Compare variants side by side, each with its own filters, search query, or time range. See how sessions, users, tools, signals, and behaviours differ across them."
       footer={
         <>
           <CloseTrigger />
@@ -118,7 +138,7 @@ export function ExperimentCreateModal({
                     "flex min-w-0 cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-left transition-colors",
                     active ? "border-primary bg-primary/5" : "hover:bg-muted",
                   )}
-                  onClick={() => setPreset(option.value)}
+                  onClick={() => selectPreset(option)}
                 >
                   <Icon
                     icon={option.icon}

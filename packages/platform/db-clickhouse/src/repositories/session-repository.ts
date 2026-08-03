@@ -82,6 +82,7 @@ export const LIST_SELECT = `
   sum(cost_input_microcents)   AS cost_input_microcents,
   sum(cost_output_microcents)  AS cost_output_microcents,
   sum(cost_total_microcents)   AS cost_total_microcents,
+  sum(unpriced_span_count)     AS unpriced_span_count,
   argMaxIfMerge(user_id)       AS user_id,
   argMaxIfMerge(user_email)    AS user_email,
   groupUniqArrayArray(tags)    AS tags,
@@ -126,6 +127,7 @@ type SessionListRow = {
   cost_input_microcents: string
   cost_output_microcents: string
   cost_total_microcents: string
+  unpriced_span_count: string
   user_id: string
   user_email: string
   tags: string[]
@@ -315,6 +317,7 @@ const toDomainSession = (row: SessionListRow): Session => ({
   costInputMicrocents: Number(row.cost_input_microcents),
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
+  unpricedSpanCount: Number(row.unpriced_span_count),
   userId: ExternalUserId(normalizeCHString(row.user_id)),
   userEmail: normalizeCHString(row.user_email),
   simulationId: SimulationId(normalizeCHString(row.simulation_id)),
@@ -324,6 +327,7 @@ const toDomainSession = (row: SessionListRow): Session => ({
   providers: row.providers.map(normalizeCHString),
   serviceNames: row.service_names.map(normalizeCHString),
   agentNames: row.agent_names.map(normalizeCHString),
+  definedTools: row.defined_tools.map(normalizeCHString),
   rootSpanId: SpanId(normalizeCHString(row.root_span_id)),
   rootSpanName: normalizeCHString(row.root_span_name),
 })

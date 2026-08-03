@@ -2,7 +2,17 @@ import { NotFoundError, RepositoryError, UnauthorizedError } from "@domain/share
 import type { Span } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { describe, expect, it, vi } from "vitest"
-import { recordRequestError, recordServerFnError } from "./server-fn-error.ts"
+import { STALE_SERVER_FN_ERROR_TAG, STALE_SERVER_FN_USER_MESSAGE } from "../lib/stale-server-fn.ts"
+import {
+  asStaleServerFnError,
+  recordRequestError,
+  recordServerFnError,
+  staleServerFnResponse,
+} from "./server-fn-error.ts"
+
+const MISSING_SERVER_FN = new Error(
+  "Server function info not found for 8ae8498b6e8c600abff6cc7c428fc166b1bb45613094b806f08105bfc6f1344d",
+)
 
 const fakeSpan = () => {
   const span = {
@@ -118,5 +128,66 @@ describe("recordRequestError", () => {
     recordRequestError(span, new Error("boom"))
 
     expect(span.recordException).toHaveBeenCalledTimes(1)
+  })
+
+  it("does NOT report a raw missing server-fn hash (deploy skew) to Datadog", () => {
+    const span = fakeSpan()
+    recordRequestError(span, MISSING_SERVER_FN)
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(span.setStatus).not.toHaveBeenCalled()
+  })
+
+  it("does NOT report the reshaped stale server-fn 404 to Datadog", () => {
+    const span = fakeSpan()
+    recordRequestError(span, asStaleServerFnError(MISSING_SERVER_FN))
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(span.setStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe("asStaleServerFnError", () => {
+  it("shapes a client-bound 404 payload and preserves HttpError classification", () => {
+    const shaped = asStaleServerFnError(MISSING_SERVER_FN)
+
+    expect(JSON.parse(shaped.message)).toEqual({
+      _tag: STALE_SERVER_FN_ERROR_TAG,
+      message: STALE_SERVER_FN_USER_MESSAGE,
+      status: 404,
+    })
+    expect(isHttpError(shaped)).toBe(true)
+    expect(shaped.stack).toBe(MISSING_SERVER_FN.stack)
+  })
+})
+
+describe("staleServerFnResponse", () => {
+  it("returns a non-serialized 404 body the client turns into Error(message)", async () => {
+    const response = staleServerFnResponse(asStaleServerFnError(MISSING_SERVER_FN))
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get("Content-Type")).toBe("text/plain;charset=UTF-8")
+    expect(JSON.parse(await response.text())).toEqual({
+      _tag: STALE_SERVER_FN_ERROR_TAG,
+      message: STALE_SERVER_FN_USER_MESSAGE,
+      status: 404,
+    })
+  })
+})
+
+describe("recordServerFnError stale server-fn", () => {
+  it("maps a missing server-fn hash to StaleServerFnError without recording", () => {
+    const span = fakeSpan()
+    const info = recordServerFnError(span, MISSING_SERVER_FN)
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(info.isClientError).toBe(true)
+    expect(info.status).toBe(404)
+    expect(info.tag).toBe(STALE_SERVER_FN_ERROR_TAG)
+    expect(JSON.parse(info.error.message)).toEqual({
+      _tag: STALE_SERVER_FN_ERROR_TAG,
+      message: STALE_SERVER_FN_USER_MESSAGE,
+      status: 404,
+    })
   })
 })

@@ -115,7 +115,11 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
 
   const projectId = project?.id ?? ""
   const hasActiveFilters = Object.keys(filters).length > 0
-  const { totalCount, isLoading: countLoading } = useTracesCount({
+  const {
+    totalCount,
+    isLoading: countLoading,
+    isError: countError,
+  } = useTracesCount({
     projectId,
     ...(hasActiveFilters ? { filters } : {}),
   })
@@ -230,7 +234,15 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
 
   // Never received a trace → reuse the production onboarding empty state (scoped
   // to the sandbox; it polls for and transitions on the sandbox's first trace).
-  if (project && project.firstTraceAt == null && totalCount === 0 && !hasActiveFilters && !countLoading) {
+  // Skip while the count is loading or errored — default `0` would otherwise flash false onboarding.
+  if (
+    project &&
+    project.firstTraceAt == null &&
+    totalCount === 0 &&
+    !hasActiveFilters &&
+    !countLoading &&
+    !countError
+  ) {
     return (
       <Layout>
         <TracesEmptyOnboarding

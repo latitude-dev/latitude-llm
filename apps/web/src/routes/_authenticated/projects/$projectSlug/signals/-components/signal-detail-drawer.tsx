@@ -350,6 +350,18 @@ export function SignalDetailBody({
                     )
                   }
                 />
+                {!isLoading && issue?.resolvedAt ? (
+                  <SummaryField
+                    label="Resolved at"
+                    value={<SignalLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
+                  />
+                ) : null}
+                {!isLoading && issue?.ignoredAt ? (
+                  <SummaryField
+                    label="Ignored at"
+                    value={<SignalLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
+                  />
+                ) : null}
                 {!isLoading && issue?.mutedAt ? (
                   <SummaryField
                     label="Muted at"
@@ -437,7 +449,7 @@ export function SignalDetailBody({
                 signalOrigin={issue?.origin ?? "system"}
                 evaluations={issue?.evaluations ?? []}
                 flaggerSlugs={issue?.flaggerSlugs ?? []}
-                canMonitorSignal={issue ? issue.mutedAt === null : false}
+                canMonitorSignal={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
                 isSignalLoading={isLoading}
               />
             </DetailSection>

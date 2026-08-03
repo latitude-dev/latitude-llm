@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentToolsMetricsSessionsWithToolsRate(UniversalBaseModel):
     """
-    Usage rate — fraction (0–1).
+    Fraction of sessions that call at least one tool — fraction (0–1).
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

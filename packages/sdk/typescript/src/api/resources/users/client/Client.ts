@@ -582,6 +582,90 @@ export class UsersClient {
     }
 
     /**
+     * Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} userId - End-user identifier. URL-encode values containing special characters.
+     * @param {Latitude.MemoryStoresUsersRequest} request
+     * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.users.memoryStores("projectSlug", "userId")
+     */
+    public memoryStores(
+        projectSlug: string,
+        userId: string,
+        request: Latitude.MemoryStoresUsersRequest = {},
+        requestOptions?: UsersClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.UserMemoryStores> {
+        return core.HttpResponsePromise.fromPromise(this.__memoryStores(projectSlug, userId, request, requestOptions));
+    }
+
+    private async __memoryStores(
+        projectSlug: string,
+        userId: string,
+        _request: Latitude.MemoryStoresUsersRequest = {},
+        requestOptions?: UsersClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.UserMemoryStores>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/users/${core.url.encodePathParam(userId)}/memory`,
+            ),
+            method: "GET",
+            headers: _headers,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.UserMemoryStores, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "GET",
+            "/v1/projects/{projectSlug}/users/{userId}/memory",
+        );
+    }
+
+    /**
      * Returns the lifetime profile of one end-user — trace, session, token, cost, and activity rollups across all of the user's traces (not range-bound).
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)

@@ -35,6 +35,7 @@
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
+    "@platform/github": "workspace:*",
     "@platform/oauth-token-auth": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
     "@platform/storage-object": "workspace:*",

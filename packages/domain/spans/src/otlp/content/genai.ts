@@ -2,6 +2,7 @@
  * Content parser for OTEL GenAI semconv v1.37+ (gen_ai.{input,output}.messages,
  * gen_ai.system_instructions, gen_ai.tool.definitions — structured or JSON string).
  */
+import { resolveContentModality } from "@repo/utils"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { Provider, safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
@@ -105,11 +106,79 @@ function hoistToolResults(messages: readonly GenAIMessage[]): GenAIMessage[] {
   return out
 }
 
+function normalizePartModality(part: unknown): unknown {
+  if (!part || typeof part !== "object") return part
+  const p = part as Record<string, unknown>
+  if (p.type !== "blob" && p.type !== "uri" && p.type !== "file") return part
+  if (typeof p.modality !== "string") return part
+  const mime = typeof p.mime_type === "string" ? p.mime_type : null
+  const modality = resolveContentModality(p.modality, mime)
+  if (modality === p.modality) return part
+  return { ...p, modality }
+}
+
+function normalizeMessagePartModalities(msg: unknown): unknown {
+  if (!msg || typeof msg !== "object") return msg
+  const m = msg as Record<string, unknown>
+  if (!Array.isArray(m.parts)) return msg
+  return { ...m, parts: m.parts.map(normalizePartModality) }
+}
+
+function normalizeMessagesModalities(messages: readonly GenAIMessage[]): GenAIMessage[] {
+  return messages.map((msg) => normalizeMessagePartModalities(msg) as GenAIMessage)
+}
+
 function parseMessages(attrs: readonly OtlpKeyValue[], key: string): GenAIMessage[] {
   const raw = extractJsonAttr(attrs, key)
   if (!Array.isArray(raw)) return []
   return hoistToolResults(raw.map(normalizeSemconvMessage) as GenAIMessage[])
 }
+
+// Cloudflare AI Gateway sends the raw request body under gen_ai.input.messages
+// (`{messages:[...], ...}`), or under gen_ai.prompt_json in its documented OTEL export; pull the
+// messages array and translate as OpenAI-compatible input.
+function parseCloudflareInput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
+  const raw = extractJsonAttr(attrs, "gen_ai.input.messages") ?? extractJsonAttr(attrs, "gen_ai.prompt_json")
+  const messages = Array.isArray(raw) ? raw : (raw as { messages?: unknown } | undefined)?.messages
+  if (!Array.isArray(messages)) return []
+  const result = safeTranslate(messages as object[], { from: Provider.OpenAICompletions, direction: "input" })
+  return result.error ? [] : (result.messages as GenAIMessage[])
+}
+
+// Cloudflare AI Gateway sends the upstream provider's native response under
+// gen_ai.output.messages (or gen_ai.completion_json in its documented OTEL export), optionally
+// wrapped in `{state, result}`. Dispatch on the response shape: `choices` → OpenAI-compatible,
+// `content[]`+role → Anthropic, embeddings/unknown → none.
+function parseCloudflareOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
+  const raw = extractJsonAttr(attrs, "gen_ai.output.messages") ?? extractJsonAttr(attrs, "gen_ai.completion_json")
+  if (!raw || typeof raw !== "object") return []
+  const body = raw as Record<string, unknown>
+  const obj = (body.result && typeof body.result === "object" ? body.result : body) as Record<string, unknown>
+
+  if (Array.isArray(obj.choices)) {
+    const messages = (obj.choices as Record<string, unknown>[]).map((c) => c?.message).filter(Boolean)
+    const result = safeTranslate(messages as object[], { from: Provider.OpenAICompletions, direction: "output" })
+    return result.error ? [] : (result.messages as GenAIMessage[])
+  }
+  if (Array.isArray(obj.content) && typeof obj.role === "string") {
+    const result = safeTranslate([obj] as object[], { from: Provider.Anthropic, direction: "output" })
+    return result.error ? [] : (result.messages as GenAIMessage[])
+  }
+  return []
+}
+
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
+export const GENAI_CONTENT_ATTRIBUTE_KEYS = {
+  exact: [
+    "gen_ai.input.messages",
+    "gen_ai.output.messages",
+    "gen_ai.system_instructions",
+    "gen_ai.tool.definitions",
+    "gen_ai.prompt_json",
+    "gen_ai.completion_json",
+  ],
+  prefixes: [],
+} as const
 
 export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent {
   let inputMessages = parseMessages(attrs, "gen_ai.input.messages")
@@ -149,6 +218,18 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
     if (vercelOutput.length > 0) outputMessages = [...vercelOutput]
   }
 
+  // Cloudflare AI Gateway reuses the standard keys but with non-standard values (request-body
+  // envelope for input, upstream provider response for output), so the array parser above
+  // yields nothing. Recover them by shape.
+  if (!messagesHaveContent(inputMessages)) {
+    const cf = parseCloudflareInput(attrs)
+    if (cf.length > 0) inputMessages = cf
+  }
+  if (!messagesHaveContent(outputMessages)) {
+    const cf = parseCloudflareOutput(attrs)
+    if (cf.length > 0) outputMessages = cf
+  }
+
   // Reconcile inline role:"system" turns with any separated gen_ai.system_instructions into
   // systemInstructions (rosetta keeps mid-conversation system inline).
   if (inputMessages.length > 0) {
@@ -167,5 +248,10 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
     if (!result.error) outputMessages = result.messages as GenAIMessage[]
   }
 
-  return { inputMessages, outputMessages, systemInstructions, toolDefinitions }
+  return {
+    inputMessages: normalizeMessagesModalities(inputMessages),
+    outputMessages: normalizeMessagesModalities(outputMessages),
+    systemInstructions,
+    toolDefinitions,
+  }
 }

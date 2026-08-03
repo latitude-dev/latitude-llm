@@ -37,6 +37,8 @@ export interface GetSignalAnalyticsResult {
   readonly ongoing: SignalAnalyticsCountMetric
   readonly new: SignalAnalyticsCountMetric
   readonly escalating: SignalAnalyticsCountMetric
+  readonly resolved: SignalAnalyticsCountMetric
+  readonly ignored: SignalAnalyticsCountMetric
   readonly occurrences: SignalAnalyticsOccurrencesMetric
 }
 
@@ -93,6 +95,8 @@ const emptyResult = (scaffold: readonly string[]): GetSignalAnalyticsResult => (
   ongoing: { total: 0 },
   new: { total: 0 },
   escalating: { total: 0 },
+  resolved: { total: 0 },
+  ignored: { total: 0 },
   occurrences: { total: 0, buckets: fillBuckets({ scaffold, buckets: [] }) },
 })
 
@@ -140,10 +144,12 @@ export const getSignalAnalyticsUseCase = (
       signalIds: candidateSignalIds,
     })
 
-    const counts: Record<"ongoing" | "new" | "escalating", number> = {
+    const counts: Record<"ongoing" | "new" | "escalating" | "resolved" | "ignored", number> = {
       ongoing: 0,
       new: 0,
       escalating: 0,
+      resolved: 0,
+      ignored: 0,
     }
     for (const issue of canonicalSignals) {
       const states = deriveSignalLifecycleStates({
@@ -154,6 +160,8 @@ export const getSignalAnalyticsUseCase = (
       if (states.includes(SignalState.New)) counts.new += 1
       if (states.includes(SignalState.Escalating)) counts.escalating += 1
       if (states.includes(SignalState.Ongoing)) counts.ongoing += 1
+      if (states.includes(SignalState.Resolved)) counts.resolved += 1
+      if (states.includes(SignalState.Ignored)) counts.ignored += 1
     }
 
     const rawBuckets = yield* scoreAnalyticsRepository.histogramBySignals({
@@ -170,6 +178,8 @@ export const getSignalAnalyticsUseCase = (
       ongoing: { total: counts.ongoing },
       new: { total: counts.new },
       escalating: { total: counts.escalating },
+      resolved: { total: counts.resolved },
+      ignored: { total: counts.ignored },
       occurrences: { total: occurrencesTotal, buckets },
     } satisfies GetSignalAnalyticsResult
   }).pipe(Effect.withSpan("issues.getSignalAnalytics"))

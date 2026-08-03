@@ -7,11 +7,9 @@ import {
   Badge,
   Button,
   Checkbox,
-  ClaudeCodeIcon,
   CloseTrigger,
   CopyableText,
   CopyButton,
-  CursorIcon,
   Icon,
   InfiniteTable,
   type InfiniteTableColumn,
@@ -27,7 +25,7 @@ import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { BookOpen, Copy, ExternalLink, FileText, type LucideProps, Plus, Webhook } from "lucide-react"
+import { BookOpen, Copy, ExternalLink, FileText, Plus, Settings } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import {
@@ -51,6 +49,11 @@ import {
   sendToDestinationsQueryKey,
   upsertOrgDefaultDispatchConfig,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
+import {
+  AGENT_DISPATCH_KIND_ICONS,
+  AGENT_DISPATCH_KIND_LABELS,
+  type AgentDispatchKindKey,
+} from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
 import { useDebounce } from "../../../../../../lib/hooks/useDebounce.ts"
@@ -70,15 +73,6 @@ export interface DispatchConfigFormValues {
   readonly guardrails: { readonly maxDispatchesPerDay: number; readonly cooldownMinutes: number }
 }
 
-export const AGENT_DISPATCH_KIND_LABELS = {
-  cursor: "Cursor",
-  claude_code: "Claude Code",
-  linear: "Linear",
-  webhook: "Webhook",
-} as const
-
-export type AgentDispatchKindKey = keyof typeof AGENT_DISPATCH_KIND_LABELS
-
 const KIND_LABELS = AGENT_DISPATCH_KIND_LABELS
 
 const DEEP_LINK_LABELS: Record<AgentDispatchKindKey, string> = {
@@ -88,7 +82,7 @@ const DEEP_LINK_LABELS: Record<AgentDispatchKindKey, string> = {
   webhook: "View delivery",
 }
 
-const DISPATCH_ERROR_TITLES: Record<string, string> = {
+export const DISPATCH_ERROR_TITLES: Record<string, string> = {
   auth: "Authentication error",
   config: "Dispatch request rejected",
   rate_limited: "Rate limited",
@@ -164,11 +158,17 @@ const INTEGRATION_DOC_URLS: Record<AgentDispatchKindKey, string> = {
   webhook: "https://docs.latitude.so/agent-dispatch/webhooks",
 }
 
-const ACTIVE_DISPATCH_TRIGGERS = ["signal.discovered", "incident.opened", "monitor.incident"] as const
+const ACTIVE_DISPATCH_TRIGGERS = [
+  "signal.discovered",
+  "incident.opened",
+  "signal.regressed",
+  "monitor.incident",
+] as const
 
-const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
+export const DISPATCH_TRIGGER_TITLES: Record<string, string> = {
   "signal.discovered": "New signal",
   "incident.opened": "Escalating signal",
+  "signal.regressed": "Regressed signal",
   "monitor.incident": "Monitor incident",
   manual: "Manual send",
 }
@@ -182,6 +182,10 @@ const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title:
     title: "Escalating signal",
     description: "Dispatch when a signal escalates into an incident.",
   },
+  "signal.regressed": {
+    title: "Regressed signal",
+    description: "Dispatch when a resolved signal starts occurring again.",
+  },
   "monitor.incident": {
     title: "Monitor incident",
     description: "Dispatch when a threshold or escalating monitor opens an incident.",
@@ -191,25 +195,6 @@ const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title:
 function isActiveDispatchTrigger(trigger: string): trigger is (typeof ACTIVE_DISPATCH_TRIGGERS)[number] {
   return ACTIVE_DISPATCH_TRIGGERS.some((activeTrigger) => activeTrigger === trigger)
 }
-
-function LinearIcon(props: LucideProps) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" {...props}>
-      <circle cx="12" cy="12" r="10" fill="currentColor" />
-      <path d="M5.8 14.6L14.6 5.8" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M8.8 17.2L17.2 8.8" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M5.6 10.8L10.8 5.6" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M13.2 18.4L18.4 13.2" stroke="white" strokeLinecap="round" strokeWidth="2" />
-    </svg>
-  )
-}
-
-export const AGENT_DISPATCH_KIND_ICONS = {
-  cursor: CursorIcon,
-  claude_code: ClaudeCodeIcon,
-  linear: LinearIcon,
-  webhook: Webhook,
-} as const
 
 const INTEGRATION_ICONS = AGENT_DISPATCH_KIND_ICONS
 
@@ -332,6 +317,7 @@ function AgentDispatchKindCard({
               to="/projects/$projectSlug/settings/integrations/$integrationKind"
               params={{ projectSlug, integrationKind: kind }}
             >
+              <Icon icon={Settings} size="sm" />
               Manage
             </Link>
           </Button>
@@ -890,12 +876,14 @@ function ConnectAgentDispatchModal({
           onWebhookSecret(result.webhookSecret)
           await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
           await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
+          await queryClient.invalidateQueries({ queryKey: projectDispatchSettingsQueryKey(projectId, kind) })
           await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
           toast({ description: `${KIND_LABELS[kind]} connected` })
           return
         }
         await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
         await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
+        await queryClient.invalidateQueries({ queryKey: projectDispatchSettingsQueryKey(projectId, kind) })
         await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
         toast({ description: `${KIND_LABELS[kind]} connected` })
         onClose()
@@ -1149,6 +1137,11 @@ function ConnectAgentDispatchModal({
               <Text.H6 display="block" color="foregroundMuted">
                 4. Paste both values here. Latitude will extract the routine ID from the page URL.
               </Text.H6>
+              <Text.H6 display="block" color="foregroundMuted">
+                Latitude's dispatch prompt asks the agent to brand its branch and PR with the signal reference (e.g.
+                "Resolves LAT-XY9Z"), so merging the PR resolves the signal automatically when the GitHub integration is
+                connected.
+              </Text.H6>
             </div>
             <div className="flex flex-col gap-2 pt-1">
               <Button
@@ -1223,7 +1216,7 @@ function ConnectAgentDispatchModal({
             </div>
             <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
               <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
-                <a href="https://linear.app/latitude/settings/account/security" target="_blank" rel="noreferrer">
+                <a href="https://linear.app/settings/account/security" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API settings
                 </a>
@@ -1357,14 +1350,14 @@ function AgentDispatchHistorySection({
       header: "Source",
       width: 260,
       render: (dispatch) =>
-        dispatch.sourceType === "signal" ? (
+        dispatch.sourceType === "signal" && dispatch.sourceSlug ? (
           <Link
-            to="/projects/$projectSlug/signals/$signalId"
-            params={{ projectSlug, signalId: dispatch.sourceId }}
-            aria-label={`Open signal ${dispatch.sourceName ?? dispatch.sourceId}`}
+            to="/projects/$projectSlug/signals/$signalSlug"
+            params={{ projectSlug, signalSlug: dispatch.sourceSlug }}
+            aria-label={`Open signal ${dispatch.sourceName ?? dispatch.sourceSlug}`}
             className="flex min-w-0 items-center gap-1 text-xs font-semibold text-foreground hover:underline"
           >
-            <span className="truncate">{dispatch.sourceName ?? "Deleted signal"}</span>
+            <span className="truncate">{dispatch.sourceName ?? dispatch.sourceSlug}</span>
             <Icon icon={ExternalLink} size="xs" />
           </Link>
         ) : dispatch.sourceType === "monitor" && dispatch.sourceSlug ? (

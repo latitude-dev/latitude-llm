@@ -48,6 +48,23 @@ function findBedrockModelByBareId(models: Model[], modelId: string): Model | und
 }
 
 /**
+ * A provider whose catalog ids are `<vendor>/<model>` slugs may still be called with the bare model
+ * id, because that is what its own API accepts (OpenRouter's `grok-4.5` for `x-ai/grok-4.5`). Match
+ * on the `/<modelId>` suffix within that provider's own list, so the rate is the reported provider's
+ * own — this borrows nothing from another host.
+ *
+ * A single match is the whole condition. Two vendors shipping the same bare name are two different
+ * models at two different rates, and picking one would invent a number; those stay unpriced.
+ */
+function findModelByBareId(models: Model[], modelId: string): Model | undefined {
+  if (modelId.includes("/")) return undefined
+
+  const suffix = `/${modelId.toLowerCase()}`
+  const matches = models.filter((m) => m.id.toLowerCase().endsWith(suffix))
+  return matches.length === 1 ? matches[0] : undefined
+}
+
+/**
  * Return the full list of bundled LLM models from models.dev.
  *
  * The result is cached after the first call.
@@ -65,6 +82,10 @@ export function getAllModels(): Model[] {
  * First tries an exact match; if none is found, falls back to the
  * model whose ID is the longest prefix of the requested `modelId`.
  * Useful for versioned model names like `gpt-4.1-2025-04-14` matching `gpt-4.1`.
+ *
+ * The fallback stops at a `:` modifier (`:free`, `:thinking`, a context size), which selects a
+ * variant the catalog lists and prices separately. Matching past one would answer with the
+ * unmodified model, and a free tier would come back at the paid rate.
  */
 export function findModel(models: Model[], modelId: string): Model | undefined {
   const needle = modelId.toLowerCase()
@@ -77,10 +98,11 @@ export function findModel(models: Model[], modelId: string): Model | undefined {
 
   for (const m of models) {
     const id = m.id.toLowerCase()
-    if (needle.startsWith(id) && id.length > bestLen) {
-      best = m
-      bestLen = id.length
-    }
+    if (!needle.startsWith(id) || id.length <= bestLen) continue
+    if (needle[id.length] === ":") continue
+
+    best = m
+    bestLen = id.length
   }
 
   return best
@@ -88,10 +110,12 @@ export function findModel(models: Model[], modelId: string): Model | undefined {
 
 /**
  * Get the pricing for a model, or null if unavailable.
+ *
+ * Presence is the only test: `hasValidCost` already requires both sides, and a rate of 0 is a real
+ * price. Rejecting a falsy one discarded every embedding model, which prices input and nothing else.
  */
 export function getModelPricing(model: Model): ModelPricing | null {
-  if (!model.pricing?.input || !model.pricing?.output) return null
-  return model.pricing
+  return model.pricing ?? null
 }
 
 /**
@@ -101,8 +125,44 @@ export function getModelPricing(model: Model): ModelPricing | null {
  * (e.g. `amazon_bedrock` -> `bedrock`) are resolved automatically.
  */
 export function getModelsForProvider(provider: string): Model[] {
-  const name = resolveProviderName(provider).toLowerCase()
+  const name = resolveProviderName(provider)
   return getAllModels().filter((m) => m.provider.toLowerCase() === name)
+}
+
+/**
+ * Price a `<vendor>/<model>` slug from the vendor named in it, for the two cases where the vendor is
+ * the better authority than the provider reported alongside it.
+ *
+ * The vendor may answer when it *is* the reported provider, which makes the prefix a duplicated
+ * namespace rather than routing information; or when the reported provider is a label the catalog has
+ * never heard of, leaving the slug as the only thing to go on. A provider the catalog *does* know,
+ * which simply does not list this model, is a different story: it is a real host serving something we
+ * have no price for, and its rate is its own, not the vendor's. That stays unpriced.
+ *
+ * The match is exact, deliberately not `findModel` — its prefix fallback absorbs a trailing qualifier
+ * and answers with a neighbour, pricing `gpt-5.3-instant` as `gpt-5` and `claude-sonnet-5-free` as
+ * the paid model. Naming a real vendor is not evidence that the vendor sells this model.
+ *
+ * Gateway markup is not captured, so a marked-up router reads a few percent low. `costSource` marks
+ * these `estimated`, and being slightly low beats recording zero.
+ */
+function findModelByVendorPrefix({
+  modelId,
+  reportedProvider,
+  reportedProviderIsKnown,
+}: {
+  modelId: string
+  reportedProvider: string
+  reportedProviderIsKnown: boolean
+}): Model | undefined {
+  const separator = modelId.indexOf("/")
+  if (separator <= 0) return undefined
+
+  const vendor = resolveProviderName(modelId.slice(0, separator))
+  if (reportedProviderIsKnown && vendor !== reportedProvider) return undefined
+
+  const bareId = modelId.slice(separator + 1).toLowerCase()
+  return getModelsForProvider(vendor).find((m) => m.id.toLowerCase() === bareId)
 }
 
 /**
@@ -117,7 +177,7 @@ export function getModelForProvider(provider: string, modelId: string): Model | 
   const match = findModel(models, modelId)
   if (match) return match
 
-  const resolvedProvider = resolveProviderName(provider).toLowerCase()
+  const resolvedProvider = resolveProviderName(provider)
   if (resolvedProvider === "amazon-bedrock") {
     const stripped = stripBedrockRegionPrefix(modelId)
     if (stripped !== modelId) {
@@ -127,7 +187,14 @@ export function getModelForProvider(provider: string, modelId: string): Model | 
     return findBedrockModelByBareId(models, stripped)
   }
 
-  return undefined
+  const bareIdMatch = findModelByBareId(models, modelId)
+  if (bareIdMatch) return bareIdMatch
+
+  return findModelByVendorPrefix({
+    modelId,
+    reportedProvider: resolvedProvider,
+    reportedProviderIsKnown: models.length > 0,
+  })
 }
 
 /**
@@ -140,6 +207,8 @@ export function getCostSpec(provider: string, modelId: string): CostLookupResult
   const NOT_IMPLEMENTED: CostLookupResult = {
     cost: { input: 0, output: 0 },
     costImplemented: false,
+    pricedProvider: "",
+    pricedModel: "",
   }
 
   try {
@@ -158,6 +227,8 @@ export function getCostSpec(provider: string, modelId: string): CostLookupResult
         cacheWrite: pricing.cacheWrite,
       },
       costImplemented: true,
+      pricedProvider: model.provider,
+      pricedModel: model.id,
     }
   } catch {
     return NOT_IMPLEMENTED

@@ -1,4 +1,4 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 import { isMessagePart, iterMessageParts } from "./shared.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
@@ -102,12 +102,14 @@ function previewArguments(value: unknown): string {
   }
 }
 
-function extractToolCallSequence(trace: Pick<TraceDetail, "allMessages">): readonly ToolCallEntry[] {
+export function extractToolCallSequence(
+  conversation: Pick<FlaggerConversation, "allMessages">,
+): readonly ToolCallEntry[] {
   const entries: ToolCallEntry[] = []
   let turn = 0
 
-  for (let messageIndex = 0; messageIndex < trace.allMessages.length; messageIndex++) {
-    const message = trace.allMessages[messageIndex]!
+  for (let messageIndex = 0; messageIndex < conversation.allMessages.length; messageIndex++) {
+    const message = conversation.allMessages[messageIndex]!
     if (message.role !== "assistant") continue
     turn++
 
@@ -167,27 +169,38 @@ function summarizeToolUsage(entries: readonly ToolCallEntry[]): string {
 const MATCHED_IDENTICAL_CALL_THRESHOLD = 3
 
 /**
- * Thresholds for the ambiguous branch. ≥5 total calls with one tool
- * dominating ≥60% of them is a plausible cycle worth LLM verification,
- * but isn't a hard match (could be legitimate narrowing-via-search etc.).
+ * Thresholds for the `tool:loop` hint. ≥5 total calls with one tool dominating
+ * ≥60% of them is a plausible cycle worth LLM verification, but isn't a hard
+ * match (could be legitimate narrowing-via-search etc.).
  */
-const AMBIGUOUS_TOTAL_CALLS_THRESHOLD = 5
-const AMBIGUOUS_DOMINANT_SHARE_THRESHOLD = 0.6
+const TOOL_LOOP_TOTAL_CALLS_THRESHOLD = 5
+const TOOL_LOOP_DOMINANT_SHARE_THRESHOLD = 0.6
 
-const countBy = <T, K>(items: readonly T[], key: (item: T) => K): Map<K, number> => {
-  const counts = new Map<K, number>()
-  for (const item of items) {
-    counts.set(key(item), (counts.get(key(item)) ?? 0) + 1)
-  }
-  return counts
+interface DominantToolUsage {
+  readonly name: string
+  readonly count: number
+  readonly total: number
+  readonly share: number
 }
 
-const maxCount = (counts: Map<unknown, number>): number => {
-  let max = 0
-  for (const count of counts.values()) {
-    if (count > max) max = count
+/** The dominant tool when the sequence clears the `tool:loop` thresholds, else null. */
+export function findDominantToolUsage(entries: readonly ToolCallEntry[]): DominantToolUsage | null {
+  if (entries.length < TOOL_LOOP_TOTAL_CALLS_THRESHOLD) return null
+
+  const counts = new Map<string, number>()
+  for (const entry of entries) {
+    counts.set(entry.name, (counts.get(entry.name) ?? 0) + 1)
   }
-  return max
+  let dominant: { name: string; count: number } | null = null
+  for (const [name, count] of counts) {
+    if (!dominant || count > dominant.count) dominant = { name, count }
+  }
+  if (!dominant) return null
+
+  const share = dominant.count / entries.length
+  if (share < TOOL_LOOP_DOMINANT_SHARE_THRESHOLD) return null
+
+  return { name: dominant.name, count: dominant.count, total: entries.length, share }
 }
 
 const toolCallSignature = (entry: ToolCallEntry): string => `${entry.name}\0${entry.argsPreview}`
@@ -232,14 +245,16 @@ export const trashingStrategy: FlaggerStrategy = {
       "Use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.",
   },
 
-  hasRequiredContext(trace: TraceDetail): boolean {
-    return extractToolCallSequence(trace).length >= MIN_TOOL_CALLS_FOR_DETECTION
+  hintKinds: ["tool:loop", "tool:error", "outlier:tokens", "outlier:duration", "outlier:cost", "moment:stalling"],
+
+  hasRequiredContext(conversation: FlaggerConversation): boolean {
+    return extractToolCallSequence(conversation).length >= MIN_TOOL_CALLS_FOR_DETECTION
   },
 
-  detectDeterministically(trace: TraceDetail): DetectionResult {
-    const entries = extractToolCallSequence(trace)
+  detectDeterministically(conversation: FlaggerConversation): DetectionResult {
+    const entries = extractToolCallSequence(conversation)
     if (entries.length < MIN_TOOL_CALLS_FOR_DETECTION) {
-      return { kind: "no-match" }
+      return { kind: "unmatched" }
     }
 
     const signatureRun = longestConsecutiveSignatureRun(entries)
@@ -252,23 +267,17 @@ export const trashingStrategy: FlaggerStrategy = {
       }
     }
 
-    if (entries.length >= AMBIGUOUS_TOTAL_CALLS_THRESHOLD) {
-      const toolNameCounts = countBy(entries, (entry) => entry.name)
-      const dominantShare = maxCount(toolNameCounts) / entries.length
-      if (dominantShare >= AMBIGUOUS_DOMINANT_SHARE_THRESHOLD) {
-        return { kind: "ambiguous" }
-      }
-    }
-
-    return { kind: "no-match" }
+    // Dominance-shaped suspicion (one tool ≥60% of ≥5 calls) is the
+    // `tool:loop` hint's job (findDominantToolUsage), not this detector's.
+    return { kind: "unmatched" }
   },
 
   buildSystemPrompt(): string {
     return TRASHING_SYSTEM_PROMPT
   },
 
-  buildPrompt(trace: TraceDetail): string {
-    const entries = extractToolCallSequence(trace)
+  buildPrompt(conversation: FlaggerConversation): string {
+    const entries = extractToolCallSequence(conversation)
 
     if (entries.length === 0) {
       return "No tool calls found in this trace."

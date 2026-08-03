@@ -1,8 +1,9 @@
-import type { TraceDetail } from "@domain/spans"
 import { cacheHitRate, formatCount, formatPercentage } from "@repo/utils"
+import type { FlaggerConversation } from "./conversation.ts"
 import { isRecord, iterMessageParts } from "./flagger-strategies/shared.ts"
 
-type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
+type ConversationMessagesOnly = Pick<FlaggerConversation, "allMessages">
+type ToolErrorConversation = Pick<FlaggerConversation, "allMessages" | "definedTools">
 
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 const EXPECTED_TOOL_HTTP_STATUS_MIN = 400
@@ -33,11 +34,37 @@ const match = (feedback: string, messageIndex?: number): DeterministicFlaggerMat
   ...(messageIndex !== undefined ? { messageIndex } : {}),
 })
 
-export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): DeterministicFlaggerMatch {
-  const callById = new Map<string, { name: string; messageIndex: number }>()
+export type ToolCallErrorFindingKind = "malformed" | "duplicate" | "undeclared" | "unknown-id" | "error"
 
-  for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
-    const message = trace.allMessages[msgIdx]!
+export interface ToolCallErrorFinding {
+  readonly kind: ToolCallErrorFindingKind
+  readonly feedback: string
+  readonly messageIndex: number
+  readonly toolName?: string | undefined
+  readonly toolCallId?: string | undefined
+}
+
+const conversationHasAnyToolCall = (conversation: ConversationMessagesOnly): boolean =>
+  conversation.allMessages.some((message) => {
+    if (message.role !== "assistant") return false
+    for (const rawPart of iterMessageParts(message.parts)) {
+      if (isRecord(rawPart) && rawPart.type === "tool_call") return true
+    }
+    return false
+  })
+
+// Every tool-call defect in encounter order; the deterministic flagger
+// annotates the first, the `tool:error` hint gatherer surfaces them all.
+export function collectToolCallErrorFindings(conversation: ToolErrorConversation): readonly ToolCallErrorFinding[] {
+  const findings: ToolCallErrorFinding[] = []
+  const callById = new Map<string, { name: string; messageIndex: number }>()
+  const successfulCallIds = new Set<string>()
+  const hasAnyToolCall = conversationHasAnyToolCall(conversation)
+  const definedTools =
+    conversation.definedTools && conversation.definedTools.length > 0 ? new Set(conversation.definedTools) : null
+
+  for (let msgIdx = 0; msgIdx < conversation.allMessages.length; msgIdx++) {
+    const message = conversation.allMessages[msgIdx]!
     if (message.role !== "assistant" && message.role !== "tool" && message.role !== "function") continue
 
     for (const rawPart of iterMessageParts(message.parts)) {
@@ -51,14 +78,37 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
 
         if (!toolCallId || !toolName) {
           const label = toolName ? `tool "${toolName}"` : "an unnamed tool"
-          return match(`Malformed tool call: ${label} with missing or empty tool_call id`, msgIdx)
+          findings.push({
+            kind: "malformed",
+            feedback: `Malformed tool call: ${label} with missing or empty tool_call id`,
+            messageIndex: msgIdx,
+            ...(toolName ? { toolName } : {}),
+          })
+          continue
         }
 
         if (callById.has(toolCallId)) {
-          return match(`Duplicate tool_call id emitted for tool "${toolName}"`, msgIdx)
+          findings.push({
+            kind: "duplicate",
+            feedback: `Duplicate tool_call id emitted for tool "${toolName}"`,
+            messageIndex: msgIdx,
+            toolName,
+            toolCallId,
+          })
+          continue
         }
 
         callById.set(toolCallId, { name: toolName, messageIndex: msgIdx })
+
+        if (definedTools && !definedTools.has(toolName)) {
+          findings.push({
+            kind: "undeclared",
+            feedback: `Assistant called tool "${toolName}" which is not in the declared toolset`,
+            messageIndex: msgIdx,
+            toolName,
+            toolCallId,
+          })
+        }
         continue
       }
 
@@ -67,20 +117,46 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
       const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
       const call = toolCallId ? callById.get(toolCallId) : undefined
       if (!call) {
-        return match(`Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`, msgIdx)
+        // Input truncation can strip the assistant turn that made the call,
+        // leaving orphan responses; only flag unknown ids when some tool call
+        // survived in the window.
+        if (!hasAnyToolCall) continue
+        findings.push({
+          kind: "unknown-id",
+          feedback: `Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`,
+          messageIndex: msgIdx,
+          ...(toolCallId ? { toolCallId } : {}),
+        })
+        continue
       }
 
-      if (responseIndicatesFailure(part.response)) {
-        const snippet = extractErrorSnippet(part.response)
-        return match(
-          snippet ? `Tool "${call.name}" returned error: ${snippet}` : `Tool "${call.name}" returned an error`,
-          call.messageIndex,
-        )
+      if (toolResponseIndicatesFailure(part.response)) {
+        const snippet = extractToolErrorSnippet(part.response)
+        findings.push({
+          kind: "error",
+          feedback: snippet
+            ? `Tool "${call.name}" returned error: ${snippet}`
+            : `Tool "${call.name}" returned an error`,
+          messageIndex: call.messageIndex,
+          toolName: call.name,
+          toolCallId,
+        })
+      } else if (toolCallId) {
+        // Successful execution proves availability; incomplete definedTools must not flag it.
+        successfulCallIds.add(toolCallId)
       }
     }
   }
 
-  return NO_MATCH
+  if (successfulCallIds.size === 0) return findings
+  return findings.filter(
+    (finding) => !(finding.kind === "undeclared" && finding.toolCallId && successfulCallIds.has(finding.toolCallId)),
+  )
+}
+
+export function detectToolCallErrorsFlagger(conversation: ToolErrorConversation): DeterministicFlaggerMatch {
+  const finding = collectToolCallErrorFindings(conversation)[0]
+  return finding ? match(finding.feedback, finding.messageIndex) : NO_MATCH
 }
 
 function toNonEmptyString(value: unknown): string | null {
@@ -139,11 +215,11 @@ function truncate(s: string | null): string | null {
   return s.length > ERROR_SNIPPET_MAX_LENGTH ? `${s.slice(0, ERROR_SNIPPET_MAX_LENGTH)}...` : s
 }
 
-function extractErrorSnippet(response: unknown): string | null {
+export function extractToolErrorSnippet(response: unknown): string | null {
   if (typeof response === "string") return truncate(response.trim() || null)
   if (Array.isArray(response)) {
     for (const item of response) {
-      const extracted = extractErrorSnippet(item)
+      const extracted = extractToolErrorSnippet(item)
       if (extracted) return extracted
     }
     return null
@@ -163,18 +239,18 @@ function extractErrorSnippet(response: unknown): string | null {
   return truncate(toNonEmptyString(response.message) ?? toNonEmptyString(response.status))
 }
 
-function responseIndicatesFailure(response: unknown): boolean {
+export function toolResponseIndicatesFailure(response: unknown): boolean {
   if (responseIndicatesExpectedToolError(response)) return false
   if (typeof response === "string") {
     const trimmed = response.trim()
     if (trimmed === "") return false
     try {
-      return responseIndicatesFailure(JSON.parse(trimmed))
+      return toolResponseIndicatesFailure(JSON.parse(trimmed))
     } catch {
       return false
     }
   }
-  if (Array.isArray(response)) return response.some(responseIndicatesFailure)
+  if (Array.isArray(response)) return response.some(toolResponseIndicatesFailure)
   if (!isRecord(response)) return false
   if (response.isError === true || response.ok === false || response.success === false) return true
 
@@ -203,9 +279,9 @@ function looksLikeStructuredJsonOutput(content: string): boolean {
   return afterBracket.startsWith("true") || afterBracket.startsWith("false") || afterBracket.startsWith("null")
 }
 
-export function detectOutputSchemaValidationFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
-  for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
-    const message = trace.allMessages[msgIdx]!
+export function detectOutputSchemaValidationFlagger(conversation: ConversationMessagesOnly): DeterministicFlaggerMatch {
+  for (let msgIdx = 0; msgIdx < conversation.allMessages.length; msgIdx++) {
+    const message = conversation.allMessages[msgIdx]!
     if (message.role !== "assistant") continue
     for (const rawPart of iterMessageParts(message.parts)) {
       if (!isRecord(rawPart) || rawPart.type !== "text") continue
@@ -243,21 +319,21 @@ export function detectOutputSchemaValidationFlagger(trace: TraceDetail): Determi
   return NO_MATCH
 }
 
-export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
+export function detectEmptyResponseFlagger(conversation: ConversationMessagesOnly): DeterministicFlaggerMatch {
   // Only the most recent assistant turn matters — earlier "empty-looking" entries
   // are intermediate agentic-loop steps in `lastInput` history, not the final response.
   // `reasoning` and `tool_call` parts both signal model activity, so a message containing
   // either is not empty regardless of whether a text part is present.
   let lastAssistantIdx = -1
-  for (let i = trace.allMessages.length - 1; i >= 0; i--) {
-    if (trace.allMessages[i]!.role === "assistant") {
+  for (let i = conversation.allMessages.length - 1; i >= 0; i--) {
+    if (conversation.allMessages[i]!.role === "assistant") {
       lastAssistantIdx = i
       break
     }
   }
   if (lastAssistantIdx === -1) return NO_MATCH
 
-  const message = trace.allMessages[lastAssistantIdx]!
+  const message = conversation.allMessages[lastAssistantIdx]!
   let hasNonTextProduction = false
   const textParts: string[] = []
 
@@ -288,7 +364,10 @@ export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFla
   return NO_MATCH
 }
 
-type CacheTrace = Pick<TraceDetail, "allMessages" | "tokensInput" | "tokensCacheRead" | "tokensCacheCreate">
+type CacheConversation = Pick<
+  FlaggerConversation,
+  "allMessages" | "tokensInput" | "tokensCacheRead" | "tokensCacheCreate"
+>
 
 /**
  * Flags large multi-turn traces where prompt caching is active but the hit rate
@@ -298,17 +377,17 @@ type CacheTrace = Pick<TraceDetail, "allMessages" | "tokensInput" | "tokensCache
  * single-turn or tiny-input traces, and traces where no cache was ever written,
  * never match. Never calls an LLM.
  */
-export function detectLowCacheHitRateFlagger(trace: CacheTrace): DeterministicFlaggerMatch {
-  if (trace.allMessages.length < MIN_CACHEABLE_MESSAGES) return NO_MATCH
-  if (trace.tokensCacheCreate <= 0) return NO_MATCH
+export function detectLowCacheHitRateFlagger(conversation: CacheConversation): DeterministicFlaggerMatch {
+  if (conversation.allMessages.length < MIN_CACHEABLE_MESSAGES) return NO_MATCH
+  if (conversation.tokensCacheCreate <= 0) return NO_MATCH
 
-  const totalInput = trace.tokensInput + trace.tokensCacheRead + trace.tokensCacheCreate
+  const totalInput = conversation.tokensInput + conversation.tokensCacheRead + conversation.tokensCacheCreate
   if (totalInput < MIN_TOTAL_INPUT_TOKENS) return NO_MATCH
 
   const rate = cacheHitRate({
-    input: trace.tokensInput,
-    cacheRead: trace.tokensCacheRead,
-    cacheCreate: trace.tokensCacheCreate,
+    input: conversation.tokensInput,
+    cacheRead: conversation.tokensCacheRead,
+    cacheCreate: conversation.tokensCacheCreate,
   })
   if (rate === null || rate >= LOW_CACHE_HIT_RATE_THRESHOLD) return NO_MATCH
 

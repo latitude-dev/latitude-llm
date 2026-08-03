@@ -54,9 +54,8 @@ export interface ExpandedRows<T> {
   /** Shown when expanded data finished loading and `data` is empty. */
   blankSlate?: ReactNode | string
   /**
-   * Rendered ABOVE the expanded `data` rows (when present and not loading).
-   * Spans the table width via `colSpan`. Useful for per-expansion affordances
-   * like "show hidden rows" toggles that don't fit cleanly as a data row.
+   * Rendered below the expanded `data` rows (when present and not loading).
+   * Spans the table width via `colSpan` for pagination and expansion controls.
    */
   header?: ReactNode
 }

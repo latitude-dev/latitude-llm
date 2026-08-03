@@ -41,13 +41,16 @@ If the service only runs one agent, set the project when initializing Latitude.
 
 ```ts
 import { Latitude } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import OpenAI from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: "support-agent",
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
+
+await latitude.ready
 ```
 
 ### TypeScript: multiple agents in one process
@@ -56,13 +59,15 @@ If one process runs multiple agents, set `project` on `capture()` so each trace 
 
 ```ts
 import { Latitude, capture } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import OpenAI from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
+await latitude.ready
 await capture(
   "support-agent-turn",
   async () => runSupportAgent(userMessage),

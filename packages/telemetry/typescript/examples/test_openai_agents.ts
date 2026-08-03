@@ -14,12 +14,13 @@ import * as OpenAIAgentsSDK from "@openai/agents"
 import { Agent, run, tool } from "@openai/agents"
 import { z } from "zod"
 import { capture, Latitude } from "../src"
+import { createOpenAIAgentsInstrumentation } from "../src/instrumentations/openai-agents.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { "openai-agents": OpenAIAgentsSDK },
+  instrumentations: [createOpenAIAgentsInstrumentation(OpenAIAgentsSDK)],
 })
 
 const PROVIDER = "openai-agents"

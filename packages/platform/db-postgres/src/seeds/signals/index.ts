@@ -1,9 +1,11 @@
 import { AIEmbed, type AIError, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
-import { SignalId, toSlug } from "@domain/shared"
+import { SignalId } from "@domain/shared"
 import { SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
-import { createSignalCentroid, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
+import { createSignalCentroid, generateSignalSlug, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
 import { AIEmbedLive } from "@platform/ai"
+import { eq } from "drizzle-orm"
 import { Effect } from "effect"
+import { projects } from "../../schema/projects.ts"
 import { signals } from "../../schema/signals.ts"
 import { buildSignalLinkedScoreSeedRows } from "../scores/index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
@@ -169,6 +171,9 @@ function signalFixtureDates(scope: SeedScope, issue: (typeof SEED_SIGNAL_FIXTURE
     escalatedAt: issue.escalatedDaysAgo === null ? null : scope.dateDaysAgo(issue.escalatedDaysAgo, 9, 0),
     resolvedAt: issue.resolvedDaysAgo === null ? null : scope.dateDaysAgo(issue.resolvedDaysAgo, 11, 30),
     ignoredAt: issue.ignoredDaysAgo === null ? null : scope.dateDaysAgo(issue.ignoredDaysAgo, 13, 10),
+    regressedAt: issue.regressedDaysAgo === null ? null : scope.dateDaysAgo(issue.regressedDaysAgo, 10, 20),
+    // Ignored fixtures share their ignored day, so the auto-mute lands on the same instant.
+    mutedAt: issue.mutedDaysAgo === null ? null : scope.dateDaysAgo(issue.mutedDaysAgo, 13, 10),
   }
 }
 
@@ -177,6 +182,7 @@ function buildSignalRow(input: {
   readonly issue: (typeof SEED_SIGNAL_FIXTURES)[number]
   readonly signalId: string
   readonly signalUuid: string
+  readonly slug: string
   readonly organizationId: string
   readonly projectId: string
   readonly signalScores: readonly SignalLinkedScoreSeedRow[]
@@ -200,6 +206,8 @@ function buildSignalRow(input: {
       fixtureDates.escalatedAt,
       fixtureDates.resolvedAt,
       fixtureDates.ignoredAt,
+      fixtureDates.regressedAt,
+      fixtureDates.mutedAt,
     ].filter((date): date is Date => date !== null),
   )
 
@@ -207,16 +215,18 @@ function buildSignalRow(input: {
     id: SignalId(input.signalId),
     organizationId: input.organizationId,
     projectId: input.projectId,
-    // Seeds run before the migration backfill is exercised; we provide a slug
-    // up-front from the issue's name. Seed names are unique within the demo
-    // project so a plain `toSlug(name)` is collision-free.
-    slug: toSlug(input.issue.name),
+    // JIRA-style slug from the same generator the app uses (project prefix +
+    // cuid suffix), so seeded signals are referenceable by the GitHub integration.
+    slug: input.slug,
     name: input.issue.name,
     description: input.issue.description,
     source: input.issue.source,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    mutedAt: fixtureDates.ignoredAt,
+    resolvedAt: fixtureDates.resolvedAt,
+    ignoredAt: fixtureDates.ignoredAt,
+    regressedAt: fixtureDates.regressedAt,
+    mutedAt: fixtureDates.mutedAt,
     createdAt,
     updatedAt,
   }
@@ -258,8 +268,32 @@ const seedSignals: Seeder = {
           ),
         )
         const embeddingsByScoreId = embedded?.embeddings ?? null
+
+        // Slugs use the app's own generator (project prefix + cuid suffix), assigned
+        // up-front and kept unique within this org-scoped run so they satisfy the
+        // organization-unique index and are matchable by the GitHub integration.
+        const [project] = await ctx.db
+          .select({ slug: projects.slug })
+          .from(projects)
+          .where(eq(projects.id, ctx.scope.projectId))
+        const projectSlug = project?.slug ?? "signals"
+        const usedSlugs = new Set<string>()
+        const slugByIndex: string[] = []
+        for (let i = 0; i < SEED_SIGNAL_FIXTURES.length; i++) {
+          const slug = await Effect.runPromise(
+            generateSignalSlug({
+              projectSlug,
+              count: (candidate) => Effect.sync(() => (usedSlugs.has(candidate) ? 1 : 0)),
+            }),
+          )
+          usedSlugs.add(slug)
+          slugByIndex.push(slug)
+        }
+
         const signalRows = SEED_SIGNAL_FIXTURES.map((issue, index) => {
           const signalId = fixtureScopedId(index, ctx.scope)
+          const slug = slugByIndex[index]
+          if (slug === undefined) throw new Error(`Missing generated slug for signal index ${index}`)
           const signalUuid = fixtureScopedUuid(index, ctx.scope)
           const signalScores = signalScoresBySignalId.get(signalId) ?? []
           const embeddedSignalScores =
@@ -282,6 +316,7 @@ const seedSignals: Seeder = {
             issue,
             signalId,
             signalUuid,
+            slug,
             organizationId: ctx.scope.organizationId,
             projectId: ctx.scope.projectId,
             signalScores,

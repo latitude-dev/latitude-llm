@@ -1,4 +1,4 @@
-import { cuidSchema, customBehaviorIdSchema, taxonomyClusterIdSchema } from "@domain/shared"
+import { cuidSchema, customBehaviorIdSchema, facetIdSchema, taxonomyClusterIdSchema } from "@domain/shared"
 import { z } from "zod"
 import {
   TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH,
@@ -18,6 +18,8 @@ export const TaxonomyClusterState = {
   Active: "active",
   Merged: "merged",
   Deprecated: "deprecated",
+  /** Built and assigned, hidden from active reads until the atomic publish swap. */
+  Staging: "staging",
 } as const satisfies Record<string, TaxonomyClusterState>
 
 // ---------------------------------------------------------------------------
@@ -46,8 +48,11 @@ export const taxonomyClusterSchema = z.object({
   id: taxonomyClusterIdSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
-  // NULL = global taxonomy; non-null scopes the row to a custom behavior's sub-tree.
+  // A view is (scope × facet). `customBehaviorId` names the scope (NULL =
+  // whole-project); `facetId` names the facet (NULL = topic). (NULL, NULL) is the
+  // one online-routed whole-project topic tree.
   customBehaviorId: customBehaviorIdSchema.nullable().default(null),
+  facetId: facetIdSchema.nullable().default(null),
   dimension: taxonomyDimensionSchema,
   /** Tree parent. Null = root node (the coarsest density level). */
   parentClusterId: taxonomyClusterIdSchema.nullable(),

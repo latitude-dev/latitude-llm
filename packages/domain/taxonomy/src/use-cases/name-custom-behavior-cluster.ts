@@ -5,14 +5,14 @@
  * with the global taxonomy via `nameClusterCore`; this wrapper only supplies
  * the behavior-scoped naming source: siblings/children from the
  * `customBehaviorId`-filtered cluster tree, and member summaries from the
- * ClickHouse `custom_behavior_assignments` slice joined back to global
+ * ClickHouse `taxonomy_view_assignments` slice joined back to global
  * `taxonomy_observations`. It never reads or writes the global tree.
  */
 
 import type { CustomBehaviorId, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
-import { CustomBehaviorAssignmentRepository } from "../ports/custom-behavior-assignment-repository.ts"
+import { TaxonomyViewAssignmentRepository } from "../ports/taxonomy-view-assignment-repository.ts"
 import { nameClusterCore } from "./name-taxonomy.ts"
 
 export interface NameCustomBehaviorClusterInput {
@@ -25,7 +25,7 @@ export interface NameCustomBehaviorClusterInput {
 
 export const nameCustomBehaviorClusterUseCase = (input: NameCustomBehaviorClusterInput) =>
   Effect.gen(function* () {
-    const assignments = yield* CustomBehaviorAssignmentRepository
+    const assignments = yield* TaxonomyViewAssignmentRepository
     return yield* nameClusterCore(input, {
       customBehaviorId: input.customBehaviorId,
       listMembers: (params) =>

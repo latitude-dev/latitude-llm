@@ -1,6 +1,6 @@
 import type { MomentKind } from "@domain/conversation-intelligence"
 import type { FilterSet } from "@domain/shared"
-import { Button, DetailDrawer, Icon, Skeleton, Tooltip } from "@repo/ui"
+import { Button, DetailDrawer, Icon, Skeleton, Tooltip, useMountEffect } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon } from "lucide-react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
@@ -8,6 +8,7 @@ import { useProjectScope } from "../../../../../domains/projects/project-scope.t
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { SignalLifecycleActions } from "../signals/-components/signal-lifecycle-actions.tsx"
+import { isLargeSession, MAX_SESSION_ANALYSIS_TRACE_COUNT } from "./session-detail-drawer/session-size.ts"
 import {
   isSessionTab,
   normalizeSessionTab,
@@ -35,6 +36,7 @@ export function SessionDetailDrawer({
   onFiltersChange,
   focusMomentKind,
   focusMomentId,
+  focusSpan,
   defaultTab,
 }: {
   readonly projectId: string
@@ -47,6 +49,8 @@ export function SessionDetailDrawer({
   readonly focusMomentKind?: MomentKind | undefined
   /** Scrolls the Conversation tab to this semantic moment (no label required). */
   readonly focusMomentId?: string | undefined
+  /** Lands on the Spans tab with this span selected. Remount (re-key) to focus a different span. */
+  readonly focusSpan?: { readonly spanId: string; readonly traceId: string } | undefined
   /** Overrides which tab the drawer lands on when no URL param is set. */
   readonly defaultTab?: SessionTabId | undefined
 }) {
@@ -55,13 +59,12 @@ export function SessionDetailDrawer({
   const [, setFocusAnnotationId] = useParamState("annotationId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
-  const [, setSelectedAgentSpanId] = useParamState("agentSpanId", "")
-  const [, setSelectedAgentTraceId] = useParamState("agentTraceId", "")
   const [q] = useParamState("q", "")
   // Land on the conversation tab when arriving from an active search, so the
   // conversation tab's search-match autoscroll/highlight has something to scroll to.
   const defaultSessionTab =
-    defaultTab ?? ((searchQuery?.length ?? q.length) > 0 || focusMomentKind ? "conversation" : "session")
+    defaultTab ??
+    (focusSpan ? "spans" : (searchQuery?.length ?? q.length) > 0 || focusMomentKind ? "conversation" : "session")
   const [rawActiveTab, setActiveTab] = useParamState("sessionTab", defaultSessionTab, {
     validate: isSessionTab,
   })
@@ -72,11 +75,29 @@ export function SessionDetailDrawer({
   // never collide.
   const [, setTraceTab] = useParamState<TraceDetailTabId>("traceTab", "trace", { validate: isTraceDetailTab })
 
+  // Seed the span selection when a caller opens the drawer focused on a span.
+  // Mount-only: the drawer unmounts on close and is re-keyed per span, so each
+  // open re-seeds.
+  useMountEffect(() => {
+    if (!focusSpan) return
+    setActiveTab("spans")
+    setSelectedSpanId(focusSpan.spanId)
+    setSelectedSpanTraceId(focusSpan.traceId)
+  })
+
   const { data: session, isLoading: sessionLoading } = useSessionDetail({
     projectId,
     sessionId,
   })
-  const { traces } = useSessionTraces({ projectId, sessionId, traceIds: session?.traceIds ?? [] })
+  const { traces } = useSessionTraces({
+    projectId,
+    sessionId,
+    traceIds: session?.traceIds ?? [],
+    enabled: session
+      ? !isLargeSession(session) ||
+        (activeTab === "scores" && session.traceIds.length <= MAX_SESSION_ANALYSIS_TRACE_COUNT)
+      : false,
+  })
 
   // The session search returns hits from the trace search index, which can
   // reference traces that have no row in the `sessions` table. Two cases
@@ -117,8 +138,6 @@ export function SessionDetailDrawer({
     const { focusAnnotationId, targetTab } = options
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setSelectedAgentSpanId("")
-    setSelectedAgentTraceId("")
     setFocusAnnotationId(focusAnnotationId ?? "")
     setTraceTab(targetTab ?? (focusAnnotationId ? "conversation" : "trace"))
     setTraceId(nextTraceId)
@@ -127,8 +146,6 @@ export function SessionDetailDrawer({
   const openSignal = (nextSignalId: string) => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setSelectedAgentSpanId("")
-    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId(nextSignalId)
@@ -142,8 +159,6 @@ export function SessionDetailDrawer({
   const backToSession = () => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setSelectedAgentSpanId("")
-    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId("")
@@ -152,8 +167,6 @@ export function SessionDetailDrawer({
   const handleClose = () => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setSelectedAgentSpanId("")
-    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId("")

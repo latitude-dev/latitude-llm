@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { computeTokenCost } from "./entities/cost.ts"
 import type { Model } from "./entities/model.ts"
 import {
   costBreakdownKey,
@@ -81,14 +82,14 @@ describe("getModelPricing", () => {
     expect(getModelPricing(noPricing)).toBeNull()
   })
 
-  it("returns null when input is zero (no meaningful pricing)", () => {
-    const model: Model = {
-      id: "test",
-      name: "Test",
-      provider: "test",
-      pricing: { input: 0, output: 10 },
-    }
-    expect(getModelPricing(model)).toBeNull()
+  // A zero on one side is a real rate, not absent pricing: embeddings charge for input only, and
+  // some models bill output only. Treating either as unpriced threw away the side we do know.
+  it.each([
+    ["input", { input: 0, output: 10 }],
+    ["output", { input: 0.02, output: 0 }],
+  ])("keeps pricing when the %s rate is zero", (_side, pricing) => {
+    const model: Model = { id: "test", name: "Test", provider: "test", pricing }
+    expect(getModelPricing(model)).toEqual(pricing)
   })
 })
 
@@ -154,6 +155,132 @@ describe("getModelForProvider", () => {
   it("does not strip regional prefix for non-Bedrock providers", () => {
     const model = getModelForProvider("openai", "eu.gpt-4o")
     expect(model).toBeUndefined()
+  })
+
+  it("prices the Vercel AI Gateway's own model ids under the gateway provider", () => {
+    expect(getModelForProvider("gateway", "xai/grok-4.5")?.id).toBe("xai/grok-4.5")
+    expect(getCostSpec("gateway", "xai/grok-4.5").costImplemented).toBe(true)
+  })
+
+  it("ignores a vendor prefix that names the provider it was reported under", () => {
+    expect(getModelForProvider("openai", "openai/gpt-5.4")?.id).toBe("gpt-5.4")
+    expect(getCostSpec("openai", "openai/gpt-5.4")).toEqual(getCostSpec("openai", "gpt-5.4"))
+  })
+
+  // A router or billing label prices nothing itself, so the vendor in the slug is asked instead.
+  it("prices a slug by its vendor when the reported provider is an unknown label", () => {
+    expect(getModelForProvider("stripe", "openai/gpt-5.4")?.id).toBe("gpt-5.4")
+    expect(getCostSpec("stripe", "openai/gpt-5.4")).toEqual(getCostSpec("openai", "gpt-5.4"))
+  })
+
+  // A provider the catalog knows is a real host. Missing the model means we have no price for what it
+  // serves, not that the slug's vendor served it — the same reason a proxied bare id stays unpriced.
+  it("does not let the slug vendor answer for a known provider that lacks the model", () => {
+    expect(getModelsForProvider("openai").length).toBeGreaterThan(0)
+    expect(getModelForProvider("openai", "deepseek/deepseek-v4-flash")).toBeUndefined()
+    expect(getCostSpec("openai", "deepseek/deepseek-v4-flash").costImplemented).toBe(false)
+
+    expect(getCostSpec("deepseek", "deepseek-v4-flash").costImplemented).toBe(true)
+  })
+
+  it("prefers the reported provider over the slug vendor when it lists the model", () => {
+    expect(getModelForProvider("gateway", "xai/grok-4.5")?.provider).toBe("vercel")
+  })
+
+  // Only a vendor that lists the model itself can price it. Anything else is open-weights territory,
+  // where hosts charge wildly different rates and the vendor cannot stand in for whoever served it.
+  it.each([
+    ["a vendor that does not list the model", "z-ai/glm-5.2"],
+    ["a vendor nobody knows", "nonsense/made-up-model"],
+  ])("leaves a slug unpriced when the prefix names %s", (_case, modelId) => {
+    expect(getModelForProvider("some-router", modelId)).toBeUndefined()
+    expect(getCostSpec("some-router", modelId).costImplemented).toBe(false)
+  })
+
+  // The vendor is asked for this model, not for its nearest relative. Each of these names a real
+  // vendor that sells a model whose id is a leading substring, at a rate that is not this model's.
+  it.each([
+    ["a newer generation the vendor does not list", "openai/gpt-5.3-instant"],
+    ["a distinct product tier", "openai/o3-deep-research"],
+    ["a free variant of a paid model", "anthropic/claude-sonnet-5-free"],
+  ])("does not price %s from a neighbouring model", (_case, modelId) => {
+    expect(getModelForProvider("some-router", modelId)).toBeUndefined()
+    expect(getCostSpec("some-router", modelId).costImplemented).toBe(false)
+  })
+
+  // The provider is ours, not the customer's: Claude Code spans carry no provider attribute, so
+  // ingestion assumes `anthropic`. A proxied bare model id must stay unpriced rather than take
+  // Anthropic's rates.
+  it("does not price a non-Anthropic bare model id assumed to be Anthropic", () => {
+    expect(getModelForProvider("anthropic", "qwen3.7-max")).toBeUndefined()
+    expect(getCostSpec("anthropic", "qwen3.7-max").costImplemented).toBe(false)
+  })
+})
+
+// Every provider/model pair observed recording no cost in production on 2026-07-29, with the reason
+// each one resolves the way it does. Pairs left unpriced are deliberate, not gaps waiting to close.
+describe("getCostSpec against production pairs that recorded no cost", () => {
+  it.each([
+    ["openai", "openai/gpt-5.4", "vendor prefix duplicates the provider"],
+    ["stripe", "openai/gpt-5.4", "billing label prices nothing; the slug vendor does"],
+    ["gateway", "xai/grok-4.5", "Vercel AI Gateway slug"],
+    ["gateway", "openai/gpt-5.4-mini", "Vercel AI Gateway slug"],
+    ["gateway", "openai/gpt-4.1-mini", "Vercel AI Gateway slug"],
+    ["xai-oauth", "grok-4.5", "provider naming variant"],
+    ["openai", "text-embedding-3-small", "embeddings price input only"],
+  ])("prices %s / %s (%s)", (provider, model) => {
+    expect(getCostSpec(provider, model).costImplemented).toBe(true)
+  })
+
+  it.each([
+    ["anthropic", "qwen3.7-max", "Claude Code assumes anthropic; a proxied model has no known rate"],
+    ["nous", "stepfun/step-3.7-flash:free", "the router listing this free tier is not the slug vendor"],
+    ["kimi-coding", "kimi-k3", "flat-rate coding plan, so a per-token rate is wrong in kind"],
+    ["custom", "groq-llama70b", "user-named provider and model"],
+    ["custom", "local-fast", "user-named provider and model"],
+  ])("leaves %s / %s unpriced (%s)", (provider, model) => {
+    expect(getCostSpec(provider, model).costImplemented).toBe(false)
+  })
+
+  // A free tier is priced only where the catalog lists it, which is the router serving it. The slug's
+  // vendor lists the paid model under the unmodified id, and must not answer for the free variant.
+  it("takes a free tier's price from the catalog rather than the naming convention", () => {
+    expect(getCostSpec("unorouter", "step-3.7-flash:free")).toEqual({
+      cost: { input: 0, output: 0 },
+      costImplemented: true,
+      pricedProvider: "unorouter",
+      pricedModel: "step-3.7-flash:free",
+    })
+
+    expect(computeTokenCost(getCostSpec("stepfun", "step-3.7-flash").cost, 1_000_000, "input")).toBeGreaterThan(0)
+    expect(getModelForProvider("stepfun", "step-3.7-flash:free")).toBeUndefined()
+  })
+
+  // What priced a span is not recoverable from the reported pair, so the lookup reports both sides
+  // separately: either can differ from what was reported, and a dated model id resolves to its base.
+  it.each([
+    ["stripe", "openai/gpt-5.4", "openai", "gpt-5.4"],
+    ["gateway", "xai/grok-4.5", "vercel", "xai/grok-4.5"],
+    ["nous", "x-ai/grok-4.5", "xai", "grok-4.5"],
+    ["xai-oauth", "grok-4.5", "xai", "grok-4.5"],
+    ["openai", "gpt-4.1-2025-04-14", "openai", "gpt-4.1"],
+  ])("reports the catalog entry that priced %s / %s", (provider, model, pricedProvider, pricedModel) => {
+    const spec = getCostSpec(provider, model)
+    expect(spec.pricedProvider).toBe(pricedProvider)
+    expect(spec.pricedModel).toBe(pricedModel)
+  })
+
+  it("reports no catalog entry when nothing priced the pair", () => {
+    const spec = getCostSpec("anthropic", "qwen3.7-max")
+    expect(spec.pricedProvider).toBe("")
+    expect(spec.pricedModel).toBe("")
+  })
+
+  it("keeps an embedding model's input price instead of discarding it", () => {
+    const { cost, costImplemented } = getCostSpec("openai", "text-embedding-3-small")
+    expect(costImplemented).toBe(true)
+    expect(computeTokenCost(cost, 1_000_000, "input")).toBeGreaterThan(0)
+    expect(computeTokenCost(cost, 1_000_000, "output")).toBe(0)
   })
 })
 
@@ -295,5 +422,42 @@ describe("formatModel", () => {
     const formatted = formatModel(noPricing)
     expect(formatted).toContain("No Pricing Model")
     expect(formatted).toContain("no-pricing")
+  })
+})
+
+describe("getCostSpec bare model ids on namespaced providers", () => {
+  // OpenRouter's API takes `grok-4.5` while its catalog keys on `x-ai/grok-4.5`. The rate we
+  // resolve is OpenRouter's own, so this borrows nothing from another host.
+  it("prices a bare id against the reported provider's own namespaced entry", () => {
+    const result = getCostSpec("openrouter", "grok-4.5")
+
+    expect(result.costImplemented).toBe(true)
+    expect(result.pricedProvider).toBe("openrouter")
+    expect(result.pricedModel).toBe("x-ai/grok-4.5")
+  })
+
+  it("leaves a bare id unpriced when two vendors on that provider share the name", () => {
+    // nano-gpt lists `TEE/glm-5` and `zai-org/glm-5`: two vendors, two rates, so picking one would
+    // invent a number. Driven through getCostSpec because the fallback lives in
+    // `getModelForProvider` — `findModel` never reaches it, so asserting there proves nothing.
+    expect(getCostSpec("nano-gpt", "glm-5").costImplemented).toBe(false)
+  })
+
+  it("does not reach into another provider's catalog for a model the reported one lacks", () => {
+    // Anthropic does not sell Qwen; a proxy reporting `anthropic` gets no price, by design.
+    expect(getCostSpec("anthropic", "qwen3.7-max").costImplemented).toBe(false)
+  })
+})
+
+describe("getCostSpec fireworks provider alias", () => {
+  it("resolves the bare `fireworks` provider id to models.dev's `fireworks-ai`", () => {
+    const result = getCostSpec("fireworks", "accounts/fireworks/models/qwen3p7-plus")
+
+    expect(result.costImplemented).toBe(true)
+    expect(result.pricedProvider).toBe("fireworks-ai")
+  })
+
+  it("resolves the Vercel-suffixed `fireworks.chat` too", () => {
+    expect(getCostSpec("fireworks.chat", "accounts/fireworks/models/qwen3p7-plus").costImplemented).toBe(true)
   })
 })

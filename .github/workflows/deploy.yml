@@ -160,7 +160,7 @@ jobs:
       contents: read
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6.2.1
+        uses: aws-actions/configure-aws-credentials@6.2.2
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
@@ -408,7 +408,16 @@ jobs:
                 --output json | jq \
                   --arg image "${IMAGE}" \
                   --arg name "${SERVICE}" '
-                  .containerDefinitions |= map(if .name == $name then .image = $image else . end) |
+                  .containerDefinitions |= map(
+                    if .name == $name then .image = $image
+                    elif .name == "datadog-agent" then
+                      .environment = (
+                        (.environment // []) |
+                        map(if .name == "DD_LOG_LEVEL" then .value = "info" else . end) |
+                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "info" }] end
+                      )
+                    else . end
+                  ) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
                 ')" > /dev/null
             local update_response
@@ -480,6 +489,7 @@ jobs:
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
           VITE_LAT_GTM_CONTAINER_ID: ${{ vars.VITE_LAT_GTM_CONTAINER_ID }}
+          VITE_LAT_CLARITY_PROJECT_ID: ${{ vars.VITE_LAT_CLARITY_PROJECT_ID }}
 
       - name: Upload sourcemaps to Datadog
         run: |
@@ -533,7 +543,7 @@ jobs:
       contents: read
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6.2.1
+        uses: aws-actions/configure-aws-credentials@6.2.2
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
@@ -781,7 +791,16 @@ jobs:
                 --output json | jq \
                   --arg image "${IMAGE}" \
                   --arg name "${SERVICE}" '
-                  .containerDefinitions |= map(if .name == $name then .image = $image else . end) |
+                  .containerDefinitions |= map(
+                    if .name == $name then .image = $image
+                    elif .name == "datadog-agent" then
+                      .environment = (
+                        (.environment // []) |
+                        map(if .name == "DD_LOG_LEVEL" then .value = "info" else . end) |
+                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "info" }] end
+                      )
+                    else . end
+                  ) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
                 ')" > /dev/null
             local update_response
@@ -853,6 +872,7 @@ jobs:
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
           VITE_LAT_GTM_CONTAINER_ID: ${{ vars.VITE_LAT_GTM_CONTAINER_ID }}
+          VITE_LAT_CLARITY_PROJECT_ID: ${{ vars.VITE_LAT_CLARITY_PROJECT_ID }}
 
       - name: Upload sourcemaps to Datadog
         run: |

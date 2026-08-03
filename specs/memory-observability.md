@@ -17,7 +17,7 @@
 9. [Feature 1 — memory spans on the Spans tab](#feature-1--memory-spans-on-the-spans-tab)
 10. [Feature 2 — session / trace memory summary](#feature-2--session--trace-memory-summary)
 11. [Feature 3 — the Memory page](#feature-3--the-memory-page)
-12. [Feature 4 — commit-style session diff view](#feature-4--commit-style-session-diff-view)
+12. [Feature 4 — commit-style diff view](#feature-4--commit-style-diff-view)
 13. [Metering, retention, tenancy, self-hosting](#metering-retention-tenancy-self-hosting)
 14. [Decisions](#decisions)
 15. [Tasks](#tasks)
@@ -39,7 +39,7 @@ The one-line model: **we treat every memory-mutating span as a commit, and deriv
 - Ingesting the OpenTelemetry GenAI **memory-operation** spans (`create_memory`, `update_memory`, `upsert_memory`, `delete_memory`, `search_memory`, `create_memory_store`, `delete_memory_store`) through the existing OTLP pipeline, classifying them, and rendering them on the Spans tab.
 - A content-addressed **memory ledger** (`memory_events` + `memory_blobs`) plus a hot current-state projection (`memory_current`) in ClickHouse.
 - A `@domain/memories` package that reconstructs a store's state at any point in time, diffs two points, and computes per-line blame.
-- Four product surfaces: memory spans on the Spans tab; a per-session/trace read/write summary; a Memory page (store list → filetree + content + blame + who accessed it); and a commit-style session diff view.
+- Four product surfaces: memory spans on the Spans tab; a per-session/trace read/write summary; a Memory page (store list → filetree + content + blame + who accessed it); and a commit-style diff view.
 
 **Non-goals (this spec)**
 
@@ -228,8 +228,8 @@ Latest mutating version per record, for fast "current snapshot" reads (T = now).
 Mirrors `@domain/scores` layout (`package.json` `@domain/memories`, `main`/`types` → `src/index.ts`, `./testing` export; deps `@domain/spans`, `@domain/shared`, `@domain/events`, `effect`, `zod`, plus `diff` and the tokenizer):
 
 - `src/entities/` — `memory-event.ts`, `memory-record.ts`, `memory-snapshot.ts` (`{ storeId, at, records: Manifest }`), `memory-diff.ts` (`{ added, updated, removed, tokensAdded, tokensRemoved, recordsChanged }`), `memory-blame.ts` (`Array<{ line, spanId, traceId, sessionId, at }>`).
-- `src/ports/memory-repository.ts` — write side + reconstruction reads (`insertEvents`, `upsertBlobs`, `upsertCurrent`, `readCurrentSnapshot(store)`, `readManifestAt(store, at)`, `readLatestStoreWipes(store, at)`; Phase 1); `readBlobs(hashes)`, `readSessionMemoryEvents(session, trace?)`, `readRecordVersions(records[], at?)` (Phase 2); `listStores`, store-users / user-stores, and blame reads (Phase 3).
-- `src/use-cases/` — `materialize-trace-memory.ts`, `reconstruct-snapshot.ts`, `compute-memory-diff.ts`, `compute-memory-blame.ts`, `compute-session-memory-summary.ts`, `list-memory-stores.ts`.
+- `src/ports/memory-repository.ts` — write side + reconstruction reads (`insertEvents`, `upsertBlobs`, `upsertCurrent`, `readCurrentSnapshot(store)`, `readManifestAt(store, at)`, `readLatestStoreWipes(store, at)`; Phase 1); `readBlobs(hashes)`, `readSessionMemoryEvents(session, trace?)`, `readRecordVersions(records[], at?)` (Phase 2); `listStores`, `listStoreUsers` / `listUserStores`, plus `readRecordReadEvents` + `listRecordUsers` for the record-detail activity panel (Phase 3, shipped in #4083); blame reads still pending (P3-3).
+- `src/use-cases/` — `materialize-trace-memory.ts`, `reconstruct-snapshot.ts`, `compute-memory-diff.ts`, `compute-memory-blame.ts`, `compute-session-memory-summary.ts`, `list-memory-stores.ts`, plus the record-detail reads `read-record-reads.ts` / `list-record-users.ts` / `list-store-users.ts` / `list-user-stores.ts` (Phase 3) and `compute-record-change-diff.ts` (one change's before/after bodies) / `compute-record-history.ts` (version list with per-change token deltas) for the Feature-4 diff (Phase 4, #4120).
 - `src/testing/` — fake repository (chdb testkit in integration tests).
 
 ---
@@ -312,22 +312,31 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 
 - **Nav + routes:** a "Memory" entry in `apps/web/src/domains/projects/project-sections.ts` (group `observe`, alongside Sessions / Users / Tools); routes:
   - `…/projects/$projectSlug/memory/index.tsx` — **store list**: one row per store (`store.id`, or `""` for the unattributed bucket), with record count, total tokens, last-updated, # sessions that wrote it, and the count of distinct users who accessed it. Backed by `list-memory-stores` over `memory_current` plus a `uniqExact(user_id)` roll-up over `memory_events`.
-  - `…/projects/$projectSlug/memory/$store/index.tsx` — **store detail**: left filetree (record ids split on `/`) for the latest snapshot; right pane shows the selected record's current body with a per-line **blame gutter** linking each line to the span/trace that last wrote it (`compute-memory-blame`); plus the list of users who accessed the store, each linking to that user's detail page.
+  - `…/projects/$projectSlug/memory/$store/index.tsx` — **store detail** (IDE-style): left filetree (record ids split on `/`) for the latest snapshot; center pane shows the selected record's current body (read-only, JSON-detected); a **Record Activity** panel (a resizable, collapsible VSCode-style bottom panel) with three tabs — **Changes** (write history: create/update/remove with per-version token deltas and the authoring user), **Reads** (retrieval events with the `search_memory` query, tokens returned, and the user), and **Users** (a per-record read/write roll-up linking to each user's page). Rows on Changes and Reads open the originating session in the session drawer. The store header lists the users who accessed the store, each linking to their detail page. The per-line **blame gutter** ([P3-3](#phase-3--the-memory-page-feature-3)) is deferred — the activity panel ships in its place ([D13](#decisions)).
 - **The end-user page gets a memory section.** The existing `…/users/$userId/` page gains a "memory stores accessed" section (a sibling of `user-behaviours-section` / `user-issues-section`), each store linking to `…/memory/$store`. `$userId` is the same `ExternalUserId` the ledger stores, so it filters `memory_events.user_id` directly — no id resolution.
+- **Availability.** Memory is generally available — the nav entry, end-user section, and both routes render for every org ([D14](#decisions)). Access stays organization-scoped via `resolveOrgScope`; org-scoping is the tenancy boundary.
 - **Store ↔ user access reads** are ledger set aggregations: `SELECT DISTINCT user_id … WHERE store_id = {store}` (users on a store) and `SELECT DISTINCT store_id … WHERE user_id = {user}` (stores for a user); reads (`search_memory`) count as access.
 - **Latest snapshot** uses `memory_current` (hot). The `""` store is listed explicitly.
 - Deleted records disappear from the tree; a "show deleted" toggle can surface tombstones (nice-to-have, not required for v1).
-- **URL:** `$store` is an encoded path segment (store ids are opaque and may contain `/`), with a sentinel for the `""` store.
+- **URL:** `$store` is an encoded path segment (store ids are opaque and may contain `/`) and the selected record rides a `?record=` param; both use `~`-prefixed sentinels for the `""` store / unnamed record, with real ids that start with `~` escaped so they never collide with a sentinel.
 
 ---
 
-## Feature 4 — commit-style session diff view
+## Feature 4 — commit-style diff view
+
+**Goal:** read a memory change like a GitHub commit — the content that changed against a baseline — and ultimately browse a whole store as of a session.
+
+### Shipped first — per-change diff on the record's Changes tab (#4120)
+
+The reusable core of Feature 4 (the diff calculation + a diff viewer) shipped ahead of the session route, wired into the Phase-3 Memory record page. On a store's record, selecting a change on the **Changes** tab swaps the content pane for a unified diff of that version against its **previous recorded snapshot** — the predecessor in the record's mutating chain. Backed by `compute-record-change-diff` (one change's before/after bodies) and `compute-record-history` (the version list carrying each version's `+added −removed` token delta vs. its predecessor); both reuse `readRecordVersions` + `readBlobs`, so no new port method and no migration. The viewer is `CodeDiff` (`@repo/ui`), a read-only GitHub-style unified diff ([D16](#decisions)). The diff is the primary change action and the selected change is shareable via `?change={spanId}` ([D17](#decisions)); the authoring session/span opens from the row and the diff header.
+
+### Remaining — the session commit view (P4-1/P4-2)
 
 **Goal:** from the session's memory summary, land on the store at that session and read it like a GitHub commit.
 
 - **Route:** `…/memory/$store/index.tsx?session={sessionId}` (or `…/memory/$store/sessions/$sessionId`). Header shows the session/trace link and the `+N −N tokens · +A ~U −R records` summary.
 - **Time-travel snapshot:** reconstruct the store's manifest **as of the session's end** (`reconstruct-snapshot(store, at=sessionEnd)`), so the tree reflects history, not "now".
-- **Changed files marked:** files the session added/updated/removed get badges in the tree; selecting one shows a unified (default) / split diff of `before → after` for that record (the session write diff). Unchanged files are browsable but unmarked.
+- **Changed files marked:** files the session added/updated/removed get badges in the tree; selecting one shows a `before → after` diff for that record (the session write diff), rendered with the same `CodeDiff`. Unchanged files are browsable but unmarked.
 - This is the surface that realizes LAT-729's "each change references the trace that caused it," at commit granularity.
 
 ---
@@ -355,6 +364,11 @@ Per record at T: load its mutating versions ordered by `end_time` (each carries 
 - **D10 — Provider adapters out of scope**, but `memory_events.source` reserved so Mem0/Supermemory/Zep can write the same tables later.
 - **D11 — No billing change**; memory ops ride span metering.
 - **D12 — Tenancy:** all tables org+project scoped; blob dedup per-org.
+- **D13 — The record detail is an activity panel, not a blame gutter (v1).** The store-detail record pane ships a **Record Activity** panel with **Changes / Reads / Users** tabs (write history + token deltas, retrieval queries, per-record read/write roll-up) and click-through to the session drawer. Per-line blame ([P3-3](#phase-3--the-memory-page-feature-3)) is deferred — the panel covers "who changed this and when" without the version-walk line attribution. *(User call, #4083.)*
+- **D14 — Memory shipped publicly; the `memoryObservability` flag is retired.** During rollout the page was gated by `memoryObservability` (a component-level `useHasFeatureFlag` fallback on both routes, following the `sso` convention). The flag was removed when the feature went GA — the nav entry, end-user section, and routes now render unconditionally. Server functions were always organization-scoped via `resolveOrgScope`; org-scoping (never the flag) is the tenancy boundary. *(Gate added in #4083 after reviewers flagged direct-URL reachability; removed at GA.)*
+- **D15 — Store-less reads bucket into the `""` (unattributed) store.** A `search_memory` span with no `gen_ai.memory.store.id` attributes its read to `store_id = ''`; since reads never materialize into `memory_current`, that store shows on user pages (reads count as access) but opens with no records. Expected behavior — the fix is emitter-side (set the store id on search spans). *(Observed during #4083 testing; keep as-is.)*
+- **D16 — `CodeDiff` is a hand-rolled unified diff, not `@codemirror/merge`.** An initial cut wrapped `@codemirror/merge`'s `unifiedMergeView`; it was replaced with a purpose-built React renderer in `@repo/ui` for accurate dual old/new gutters, symmetric add/remove fills, and per-word intra-line emphasis — and to drop the merge dependency. `diff-model.ts` builds the row model with jsdiff (`diffLines` + `diffWordsWithSpace`; the word-level diff is size-capped at `WORD_DIFF_MAX_LEN` so a full-body replacement can't block render, falling back to line-level), `highlight-lines.ts` runs the existing `lowlight` highlighter per line. *(#4120.)*
+- **D17 — A change's diff baseline is its prior recorded snapshot; the diff is the primary change action.** `compute-record-change-diff` diffs a version against its predecessor in the record's mutating chain (`null` before for the record's first version or after a `remove` = a re-create; `null` after for a `remove`; `degraded` when a side's blob is absent → the UI shows a fallback, not a misleading whole-body diff). Selecting a change opens its diff (not the session), and the selection is shareable via `?change={spanId}`; the authoring session/span stays one click away. *(#4120.)*
 
 ---
 
@@ -445,19 +459,37 @@ Before building the Memory page, `scope` was deleted from the engine so the page
 
 ### Phase 3 — The Memory page (Feature 3)
 
-- [ ] **P3-1**: Nav entry (`project-sections.ts`, group `observe`) + `/memory` store-list route (`list-memory-stores` over `memory_current` + a `uniqExact(user_id)` roll-up over `memory_events`): one row per store with record count, tokens, last-updated, # sessions, # users.
-- [ ] **P3-2**: `/memory/$store` store-detail: filetree (record ids split on `/`), content pane, per-line blame gutter linking to traces, and the list of users who accessed the store. New port read: users-per-store (`SELECT DISTINCT user_id … WHERE store_id`).
-- [ ] **P3-3**: `compute-memory-blame` (version-walk attribution to span/trace) — moved from Phase 2; built with its blame-gutter consumer. Reads via the existing `readRecordVersions` + `readBlobs`.
-- [ ] **P3-4**: A "memory stores accessed" section on the existing `…/users/$userId/` page (sibling of `user-behaviours-section`), each store linking to `/memory/$store`, backed by a stores-per-user read (`SELECT DISTINCT store_id … WHERE user_id`).
+**Status: merged in #4083.** Blame (P3-3) is the one deferred item; the record detail ships an activity panel in its place.
 
-**Exit gate:** a store with multiple records renders as a tree with correct current bodies and working per-line blame links; the store lists the users who accessed it, and a user lists the stores they accessed.
+- [x] **P3-1**: Nav entry (`project-sections.ts`, group `observe`) + `/memory` store-list route — one row per store (record count, tokens, last-updated, # sessions, # users, last read), server-sorted + offset-paginated. `listStores` is a single query: a `memory_current` per-store aggregate LEFT JOIN a `memory_events` per-store aggregate (`uniqExactIf` sessions/users, `maxIf` last-read).
+- [x] **P3-2**: `/memory/$store` store-detail — filetree (record ids split on `/`), read-only content pane (JSON-detected), and the store's accessor list (new port read `listStoreUsers`). **The per-line blame gutter was replaced by the Record Activity panel (P3-5); blame stays deferred to P3-3.**
+- [ ] **P3-3**: `compute-memory-blame` (version-walk attribution to span/trace) + per-line blame gutter. **Still deferred** — the Memory page shipped without it; the activity panel covers change history for now ([D13](#decisions)). Reads via the existing `readRecordVersions` + `readBlobs`.
+- [x] **P3-4**: "Memory stores accessed" section on `…/users/$userId/` (sibling of `user-behaviours-section`), each store linking to `/memory/$store`, backed by `listUserStores` (stores-per-user).
+- [x] **P3-5**: **Record Activity panel** — a resizable VSCode-style bottom panel with **Changes** / **Reads** / **Users** tabs and session-drawer click-through. New port reads `readRecordReadEvents` (per-record retrievals, deduped + capped at 200) and `listRecordUsers` (per-record read/write roll-up); `userId` added to `readRecordVersions` for the Changes tab.
+- [x] **P3-6**: Collision-free `~`-sentinel URL encoding for the `""` store and unnamed record. (The `memoryObservability` route gate added here was removed at GA — see [D14](#decisions).)
 
-### Phase 4 — Commit-style session diff view (Feature 4)
+**Exit gate (met, minus blame):** a store with multiple records renders as a tree with correct current bodies; the record detail shows its change/read history and who accessed it, with click-through to sessions; the store lists its users and a user lists their stores. Per-line blame links (P3-3) remain the one outstanding Phase-3 item.
 
-- [ ] **P4-1**: `/memory/$store?session=…` route: time-travel snapshot at session end, changed-file badges, per-file unified/split diff, header summary + trace link. Backed by `compute-memory-diff` (built in Phase 2).
+### Phase 4 — Commit-style diff view (Feature 4)
+
+- [x] **P4-0**: Record-level per-change diff on the Memory record page (PR #4120) — `compute-record-change-diff` + `compute-record-history` use-cases; `CodeDiff` (`@repo/ui`) hand-rolled unified diff ([D16](#decisions)); Changes-tab row → content-pane diff of a version vs. its prior recorded snapshot; primary change action, shareable via `?change={spanId}` ([D17](#decisions)). Reuses `readRecordVersions` + `readBlobs` — no new port method, no migration.
+- [ ] **P4-1**: `/memory/$store?session=…` route: time-travel snapshot at session end, changed-file badges, per-file diff (reusing `CodeDiff`), header summary + trace link. Backed by `compute-memory-diff` (built in Phase 2).
 - [ ] **P4-2**: Wire the Feature 2 summary's click-through (deferred from Phase 2) to this route — `MemorySummary` in the session/trace detail bodies links each store row to `/memory/{store}?session={id}`.
 
-**Exit gate:** clicking through from the session's memory summary lands on the store as-of that session, marks exactly the files it changed, and shows a correct per-file diff.
+**Exit gate (P4-1/P4-2):** clicking through from the session's memory summary lands on the store as-of that session, marks exactly the files it changed, and shows a correct per-file diff.
+
+**Phase 4 notes (deviations):** The first slice built the *record-level* per-change diff (P4-0), not the session route — it delivers the reusable diff calc + viewer that P4-1/P4-2 will consume, wired into the existing record page rather than a new route. `CodeDiff` replaced an initial `@codemirror/merge` cut ([D16](#decisions)). `getMemoryRecord` is now backed by `compute-record-history` (per-change token deltas). Per-line blame (P3-3) still deferred.
+
+### Phase 5 — Customer instrumentation & adoption (emit side)
+
+Phases 0–4 build the consume side (ingest, classify, ledger, four surfaces); the emit side had no first-party helper. OTEL's memory convention has no auto-instrumentation and is `Development`-stage, so emission was hand-rolled raw OTEL — docs and a skill alone would teach attribute-string soup. **P5-1 ships that helper** (a typed SDK emitter); docs, onboarding, and the skill (P5-2–P5-4) point at it. The emit-side correctness rules it enforces / teaches all live in [Store identity](#store-identity): `store.id` is load-bearing (absent ⇒ the `""` bucket, [D15](#decisions)); per-user isolation is a store-naming convention, not a separate axis; both `gen_ai.memory.records` content and `gen_ai.memory.query.text` are **opt-in** (diffs/blame/token-deltas degrade to counts without content, with a PII tradeoff, [D1](#decisions)); `record.id` splits on `/` for the Memory-page tree.
+
+- [x] **P5-1** (shipped, PR #4128, v3.7.0): SDK memory helper — a typed emitter in `@latitude-data/telemetry` (`createMemoryTelemetry`) and `latitude-telemetry` (`create_memory_telemetry`): `create/update/upsert/delete/search/createStore/deleteStore`. Models the manual-`gen_ai`-span helper `packages/telemetry/typescript/src/sdk/codemode.ts`; each op optionally wraps an `execute` callback (latency/errors/status) or emits a completed span, and `search` maps its result to the records it returned. Sets `gen_ai.operation.name` + the `gen_ai.memory.*` attributes; `store.id` defaults to the factory default or the `""` unattributed bucket ([D15](#decisions)) rather than being required; record bodies **and** the search query are gated behind the `captureContent` opt-in (with a `redact` hook); `delete` rejects an explicit empty `record.id` so a defaulted `""` can't trigger a whole-store wipe. Exports `GEN_AI_MEMORY_ATTRIBUTES`/`MEMORY_ATTRIBUTES` + `MEMORY_OPERATIONS` from `constants/attributes.ts` (both SDKs). Does **not** reintroduce a scope key (`latitude.memory.scope` was removed in `94f6efc42`; `store_id` is the sole key, [D4](#decisions)).
+- [ ] **P5-2**: Docs — a customer page under `docs/telemetry/` (memory operations: install → helper usage → seeing traces, following the framework-page template with `<Steps>` / `<Tabs>` / `<CodeGroup>`), registered in `docs/docs.json`, plus the durable internal `dev-docs/memory-observability.md` reserved in this spec's header. Lead with the [Store identity](#store-identity) correctness rules and the opt-in-content / PII tradeoff.
+- [ ] **P5-3**: Onboarding parity — a memory snippet + entry in `apps/web/.../onboarding-integration-snippets.ts` and `telemetry-instructions.tsx` so the in-app wizard and the Traces empty-state surface memory instrumentation, mirroring the docs (in-app / docs parity is the standing convention).
+- [ ] **P5-4**: Skill — teach the helper and the store-id / records best practices in the `latitude-telemetry` skill. **Out of this repo**: the skills live in `github.com/latitude-dev/skills`; the copy-paste onboarding prompt (`getCodingAgentTelemetryPrompt()`) already points agents at that skill, so no in-repo prompt change is required unless memory needs bespoke wording.
+
+**Exit gate:** a customer who installs the SDK helper (or follows the docs) emits memory spans that classify on the Spans tab, attribute to the right store, and populate the session/trace summary and the Memory page — with `store.id` set (or the `""` bucket) and content opt-in understood.
 
 ### Later (out of this spec)
 

@@ -98,11 +98,12 @@ export const createFakeSignalRepository = (
     searchOrgWide: ({ query, preferProjectId, limit }) =>
       Effect.sync(() => {
         // Default fake behavior: org-wide case-insensitive name match, embedding-agnostic, with the
-        // preferred project's issues first. Tests that need distinct lexical vs semantic tiers
-        // override this method.
+        // preferred project's issues first. Resolved/ignored signals are excluded like the real
+        // adapter. Tests that need distinct lexical vs semantic tiers override this method.
         const q = query.trim().toLowerCase()
         const prefer = (projectId: string) => (preferProjectId && projectId === preferProjectId ? 1 : 0)
         return [...issues.values()]
+          .filter((issue) => issue.resolvedAt === null && issue.ignoredAt === null)
           .filter((issue) => issue.name.toLowerCase().includes(q))
           .sort((a, b) => prefer(b.projectId) - prefer(a.projectId))
           .slice(0, limit)
@@ -129,20 +130,34 @@ export const createFakeSignalRepository = (
         issues.set(issue.id, issue)
       }),
 
+    claimReopenOnOccurrence: ({ signalId, occurredAt, now }) =>
+      Effect.sync(() => {
+        const issue = issues.get(signalId)
+        if (
+          !issue ||
+          issue.deletedAt != null ||
+          issue.resolvedAt === null ||
+          issue.ignoredAt !== null ||
+          issue.resolvedAt.getTime() >= occurredAt.getTime()
+        ) {
+          return false
+        }
+        issues.set(signalId, { ...issue, resolvedAt: null, regressedAt: now, updatedAt: now })
+        return true
+      }),
+
     softDelete: (id) =>
       Effect.sync(() => {
         const issue = issues.get(id)
         if (issue) issues.set(id, { ...issue, deletedAt: new Date(), updatedAt: new Date() })
       }),
 
-    countBySlug: ({ projectId, slug, excludeSignalId }) =>
+    countBySlug: ({ slug, excludeSignalId }) =>
       Effect.sync(
         () =>
           [...issues.values()].filter(
             (issue) =>
-              issue.projectId === projectId &&
-              issue.slug === slug &&
-              (!excludeSignalId || issue.id !== excludeSignalId),
+              issue.slug === slug && issue.deletedAt == null && (!excludeSignalId || issue.id !== excludeSignalId),
           ).length,
       ),
 
@@ -167,7 +182,7 @@ export const createFakeSignalRepository = (
           .filter((issue) => issue.projectId === projectId)
           .map(withLifecycle)
           .filter((issue) => {
-            const archived = issue.mutedAt !== null
+            const archived = issue.resolvedAt !== null || issue.ignoredAt !== null
             if (lifecycleGroup === "active" && archived) return false
             if (lifecycleGroup === "archived" && !archived) return false
             if (assigneeIds?.length && !assigneeIds.includes(issue.assigneeId ?? "unassigned")) return false

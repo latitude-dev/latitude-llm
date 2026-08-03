@@ -1,11 +1,17 @@
-import { type CustomBehaviorId, type OrganizationId, type ProjectId, RepositoryError } from "@domain/shared"
+import {
+  type CustomBehaviorId,
+  type FacetId,
+  type OrganizationId,
+  type ProjectId,
+  RepositoryError,
+} from "@domain/shared"
 import { Effect, Option } from "effect"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import { isDisplayableTaxonomyName } from "../helpers.ts"
-import { CustomBehaviorAssignmentRepository } from "../ports/custom-behavior-assignment-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
+import { TaxonomyViewAssignmentRepository } from "../ports/taxonomy-view-assignment-repository.ts"
 import { classifyClusterTrend, type TaxonomyClusterTrendSummary } from "./analytics.ts"
 
 export type BehaviourSegment = "all" | "new_this_week" | "spiking" | "high_escalation"
@@ -29,12 +35,17 @@ export interface ListProjectBehavioursInput {
   /**
    * Omit/null = global taxonomy tree. An id scopes the whole read to that
    * behavior's sub-tree: scoped clusters from Postgres and per-cluster counts +
-   * start_time-windowed trend from the ClickHouse `custom_behavior_assignments`
+   * start_time-windowed trend from the ClickHouse `taxonomy_view_assignments`
    * slice (never the global `taxonomy_observations.assigned_cluster_id`). Scoped
    * gardening runs on a schedule and accumulates assignments across runs with
    * stable cluster ids, so trend/novelty/spiking read the same as the global tree.
    */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /**
+   * The behavior's facet; omit/null = the topic slice (`facet_id = ''`), a facet
+   * id reads that facet's edges in the same `taxonomy_view_assignments` slice.
+   */
+  readonly facetId?: FacetId | null
 }
 
 /**
@@ -159,17 +170,17 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
     const clusterRepository = yield* TaxonomyClusterRepository
     const observationRepository = yield* TaxonomyObservationRepository
     const customBehaviorId = input.customBehaviorId ?? null
-    // Scoped counts live in the ClickHouse custom_behavior_assignments slice.
+    // Scoped counts live in the ClickHouse taxonomy_view_assignments slice.
     // Kept out of this use-case's required services (via serviceOption) so the
     // global Behaviours read contract is unchanged; scoped callers provide it.
-    const assignmentRepositoryOption = yield* Effect.serviceOption(CustomBehaviorAssignmentRepository)
+    const assignmentRepositoryOption = yield* Effect.serviceOption(TaxonomyViewAssignmentRepository)
     const scopedAssignmentRepository =
       customBehaviorId != null
         ? yield* Option.match(assignmentRepositoryOption, {
             onNone: () =>
               Effect.fail(
                 new RepositoryError({
-                  cause: new Error("CustomBehaviorAssignmentRepository is required to read a scoped behavior tree"),
+                  cause: new Error("TaxonomyViewAssignmentRepository is required to read a scoped behavior tree"),
                   operation: "listProjectBehaviours.scopedAssignmentRepository",
                 }),
               ),
@@ -181,6 +192,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
       projectId: input.projectId,
       dimension,
       customBehaviorId,
+      ...(input.facetId != null ? { facetId: input.facetId } : {}),
     })
     const displayable = allActiveClusters.filter((cluster) => isDisplayableTaxonomyName(cluster.name))
     const childrenByParentId = new Map<string, TaxonomyCluster[]>()
@@ -200,6 +212,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
             organizationId: input.organizationId,
             projectId: input.projectId,
             customBehaviorId,
+            ...(input.facetId != null ? { facetId: input.facetId } : {}),
             ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
             ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
           })
@@ -215,7 +228,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
     // Scoped gardening accumulates rows across runs (no truncate) and keeps
     // stable cluster ids via the Hungarian lineage matcher, so the same
     // start_time-windowed born/continue/die trend the global tree derives is
-    // computable over the custom_behavior_assignments slice.
+    // computable over the taxonomy_view_assignments slice.
     const currentSince = new Date(now.getTime() - TREND_CURRENT_DAYS * MS_PER_DAY)
     const baselineSince = new Date(now.getTime() - trendWindowDays * MS_PER_DAY)
     const baselineDays = Math.max(trendWindowDays - TREND_CURRENT_DAYS, 1)
@@ -225,6 +238,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
             organizationId: input.organizationId,
             projectId: input.projectId,
             customBehaviorId,
+            ...(input.facetId != null ? { facetId: input.facetId } : {}),
             clusterIds: displayable.map((cluster) => cluster.id),
             currentSince,
             baselineSince,

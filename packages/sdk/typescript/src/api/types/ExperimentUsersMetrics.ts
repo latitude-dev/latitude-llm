@@ -3,27 +3,27 @@
 import type * as Latitude from "../index.js";
 
 export interface ExperimentUsersMetrics {
-    /** Users — count. */
+    /** Distinct users in the variant's population — count. */
     distinct: ExperimentUsersMetrics.Distinct;
-    /** Avg sessions — count. */
+    /** Average sessions per user — count. */
     sessions_per_user: ExperimentUsersMetrics.SessionsPerUser;
-    /** Avg traces — count. */
+    /** Average traces per user — count. */
     traces_per_user: ExperimentUsersMetrics.TracesPerUser;
-    /** Avg cost — USD; lower is better. */
+    /** Average model cost per user — USD; lower is better. */
     cost_avg: ExperimentUsersMetrics.CostAvg;
-    /** Median duration — seconds; lower is better. */
+    /** Median total session time per user — seconds; lower is better. */
     duration_median: ExperimentUsersMetrics.DurationMedian;
-    /** p90 duration — seconds; lower is better. */
+    /** 90th-percentile total session time per user — seconds; lower is better. */
     duration_p90: ExperimentUsersMetrics.DurationP90;
-    /** p95 duration — seconds; lower is better. */
+    /** 95th-percentile total session time per user — seconds; lower is better. */
     duration_p95: ExperimentUsersMetrics.DurationP95;
-    /** Avg error rate — fraction (0–1); lower is better. */
+    /** Average fraction of a user's sessions that have an error — fraction (0–1); lower is better. */
     error_session_rate: ExperimentUsersMetrics.ErrorSessionRate;
 }
 
 export namespace ExperimentUsersMetrics {
     /**
-     * Users — count.
+     * Distinct users in the variant's population — count.
      */
     export interface Distinct {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -32,7 +32,7 @@ export namespace ExperimentUsersMetrics {
     }
 
     /**
-     * Avg sessions — count.
+     * Average sessions per user — count.
      */
     export interface SessionsPerUser {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -41,7 +41,7 @@ export namespace ExperimentUsersMetrics {
     }
 
     /**
-     * Avg traces — count.
+     * Average traces per user — count.
      */
     export interface TracesPerUser {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -50,7 +50,7 @@ export namespace ExperimentUsersMetrics {
     }
 
     /**
-     * Avg cost — USD; lower is better.
+     * Average model cost per user — USD; lower is better.
      */
     export interface CostAvg {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -59,7 +59,7 @@ export namespace ExperimentUsersMetrics {
     }
 
     /**
-     * Median duration — seconds; lower is better.
+     * Median total session time per user — seconds; lower is better.
      */
     export interface DurationMedian {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -68,7 +68,7 @@ export namespace ExperimentUsersMetrics {
     }
 
     /**
-     * p90 duration — seconds; lower is better.
+     * 90th-percentile total session time per user — seconds; lower is better.
      */
     export interface DurationP90 {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -77,7 +77,7 @@ export namespace ExperimentUsersMetrics {
     }
 
     /**
-     * p95 duration — seconds; lower is better.
+     * 95th-percentile total session time per user — seconds; lower is better.
      */
     export interface DurationP95 {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -86,7 +86,7 @@ export namespace ExperimentUsersMetrics {
     }
 
     /**
-     * Avg error rate — fraction (0–1); lower is better.
+     * Average fraction of a user's sessions that have an error — fraction (0–1); lower is better.
      */
     export interface ErrorSessionRate {
         /** Value in the metric's unit; `null` when empty or not computable. */

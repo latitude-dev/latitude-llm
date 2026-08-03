@@ -62,6 +62,7 @@ const makeSession = (sessionId: string, traceIds: readonly string[]): Session =>
   costInputMicrocents: 0,
   costOutputMicrocents: 0,
   costTotalMicrocents: 0,
+  unpricedSpanCount: 0,
   userId: ExternalUserId("user"),
   userEmail: "",
   simulationId: SimulationId(""),
@@ -71,6 +72,7 @@ const makeSession = (sessionId: string, traceIds: readonly string[]): Session =>
   providers: [],
   serviceNames: [],
   agentNames: [],
+  definedTools: [],
   rootSpanId: "",
   rootSpanName: "",
 })
@@ -94,6 +96,7 @@ const makeTraceDetail = (traceId: string, sessionId: string): TraceDetail => ({
   costInputMicrocents: 0,
   costOutputMicrocents: 0,
   costTotalMicrocents: 0,
+  unpricedSpanCount: 0,
   sessionId: SessionId(sessionId),
   userId: ExternalUserId("user"),
   userEmail: "",

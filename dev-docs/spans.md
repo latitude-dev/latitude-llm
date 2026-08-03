@@ -12,6 +12,35 @@ Today the repo already has:
 
 Reliability builds on top of that telemetry base rather than introducing a second trace store.
 
+## Ingest Admission And Memory Safety
+
+The ingest HTTP boundary protects each process before decoding OTLP payloads:
+
+- `Content-Length` is validated before authentication or body buffering; malformed values receive `400`, and declared payloads above `LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES` receive `413`
+- body streaming enforces the same payload cap for chunked requests and clients whose observed body does not match the declared length
+- a process-local admission controller limits both active payload count and reserved payload bytes; admission remains held through decoding, object-storage persistence, and queue publication because the raw payload stays live for that full path
+- admission exhaustion receives `503` with `Retry-After: 1`; this protects process memory and is independent from the authenticated organization/API-key rate limiter, which continues to return `429`
+
+The defaults are a 32 MiB request cap, a 64 MiB in-flight payload budget, and 16 concurrent payloads per ingest process. The in-flight budget must be at least twice the request cap because assembling a chunked body briefly retains its streamed chunks and exact-sized output buffer together. Operators can tune the limits with `LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES`, `LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES`, and `LAT_INGEST_TRACE_MAX_CONCURRENT_PAYLOADS`. The request span records observed and declared payload size, normalized content type, body-read duration, admission outcome, RSS, and ArrayBuffer memory before and after processing.
+
+## PII Redaction Stage
+
+Opt-in per project. Between `decodeAndTransform` and `repo.insert` in `processIngestedSpansUseCase`, span content is scanned and matches are replaced with `[REDACTED_<LABEL>]`. The engine is a pure function set in `packages/domain/spans/src/redaction/`; there is no port until a second implementation exists.
+
+**The policy is decided at the HTTP boundary and applied in the worker.** `ingestSpansUseCase` resolves the effective policy per project and stamps a `projectId → policy` map onto the queue job. Resolving in the worker instead would add an uncached settings read per project per batch at concurrency 50, and stamping also makes the decision immune to a toggle flipping between enqueue and processing. The worker must **not** grow a `SettingsReader` fallback: an absent field genuinely means "redact nothing" at every rollout ordering, and a fallback would be a second, differently-cached policy path that silently diverges.
+
+Projects resolving to `off` are absent from the map, and the field is omitted entirely when no project in the batch redacts. `redactSpans` returns the identical array before touching a span in that case, so redaction costs opted-out projects nothing.
+
+**Two things happen to attributes, and neither is redundant.** Content attribute keys are dropped outright, because `attr_string` duplicates all span content (`transform.ts`) — any scope that omits it ships a no-op. The remaining values are then scanned as a backstop for vendors not yet enumerated. Dropping is what removes names, addresses, and prose; value-scanning only removes what a pattern matches. `isContentAttributeKey` composes per-parser key matchers from `otlp/content/*`, so a new vendor parser gets coverage automatically.
+
+**It fails closed.** A throw or a deadline overrun fails the effect and nothing is inserted. `span-ingestion` runs on BullMQ's default single attempt, so the batch is then dropped rather than retried. This is a deliberate divergence from lmnr and langfuse, which fail open because their synchronous export path made dropping telemetry the only alternative. Ours is already acknowledged, and for the deterministic tier "failure" means a code bug, so failing open would reduce to silently writing plaintext PII for a customer who explicitly asked us not to — permanently, since redaction is not retroactive and there is no delete path. Whether ingest should retry before dropping is an open question, tracked in the spec.
+
+Budget: fields above `REDACTION_MAX_FIELD_CHARS` (1 M UTF-16 code units) are replaced wholesale rather than scanned or passed through; subtrees past `REDACTION_MAX_DEPTH` (256) are treated the same way, because `JSON.parse` accepts nesting deep enough to overflow a recursive walk. The 30 s batch budget is a deadline checked before each span, not an `Effect.timeout` — the walk is synchronous, so a fiber-level timeout could not fire until the work it was meant to bound had already finished.
+
+Measured cost is ~0.69 ms per span at p50 and ~1.22 ms at p99 over ~29 KB of scanned content, against a 5 ms target. The worker event loop is single threaded, so concurrency 50 interleaves rather than parallelises this; the number that matters is roughly 1,700 spans/sec per core of redaction capacity.
+
+Two consequences worth not mistaking for bugs later: `content_hash` differs between redacted and unredacted copies of the same message, so `message_embeddings` and `trace_message_occurrences` deduplication does not span a policy change; and `trace_search_documents.search_text` is built from redacted content, so search stops matching redacted values.
+
 ## Reliability Additions
 
 Reliability adds:
@@ -134,3 +163,16 @@ Span ingestion is the canonical trace-billing boundary.
 Span persistence also stamps `retention_days` onto each stored span using the effective organization billing plan at write time.
 
 The `traces` materialized view carries forward `max(retention_days)` from its source spans, and ClickHouse TTL applies a storage grace buffer of `30` additional days beyond the stamped retention value before physically deleting `spans` and `traces`. See `./billing.md` for the billing-period and downgrade semantics behind that rule.
+
+## OTLP Attribute Resolution
+
+Incoming OTLP spans are normalized into the canonical span model by the resolvers under `packages/domain/spans/src/otlp/`. Metadata (operation, provider, model, token usage, cost, identity) resolves from a prioritized list of attribute candidates spanning the conventions each supported source emits (OTEL GenAI semconv, OpenInference, OpenLLMetry/Traceloop, Vercel AI SDK, Claude Code, and others). Message content is parsed by a first-match chain of content parsers keyed on the attributes a source uses.
+
+### Cloudflare AI Gateway
+
+Cloudflare AI Gateway is ingested as a plain OTLP GenAI source; there is no SDK. Its spans carry standard `gen_ai.*` metadata (`gen_ai.provider.name` or `gen_ai.model.provider`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`/`output_tokens`, `gen_ai.usage.cost`, `gen_ai.operation.name`), so provider, model, tokens, and cost resolve through the normal candidate lists. Two source-specific behaviors are deliberate:
+
+- **Content lives in non-standard envelopes under the standard keys.** The gateway puts the raw request body in `gen_ai.input.messages` (`{messages:[…]}`, or `{text}` for embeddings) and the upstream provider's native response in `gen_ai.output.messages` (the OpenAI-compatible `{choices:[{message}]}`, the Anthropic `{state,result:{role,content[]}}` wrapper, or an embeddings `{data,shape}` body); its documented OTEL export names these `gen_ai.prompt_json` / `gen_ai.completion_json`, which resolve the same way. The standard array parser yields nothing for these, so `parseGenAICurrent` recovers them by **structural detection of the response shape** — not by trusting the provider name, whose value (for example `internal-workers-ai`) does not reliably identify the response schema. Unrecognized shapes resolve metadata only and leave messages empty rather than rendering non-conversational data such as embedding vectors.
+- **The gateway hardcodes `gen_ai.operation.name=chat` for every request, including embeddings.** Spans whose response is an embedding body (`{data,shape}` with no chat envelope) are reclassified from `chat` to `embeddings` so they are categorized and rolled up correctly.
+
+The `internal-workers-ai` provider name is aliased to `cloudflare-workers-ai`.

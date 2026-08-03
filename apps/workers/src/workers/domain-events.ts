@@ -226,6 +226,41 @@ export const createDomainEventsWorker = ({
         dedupeKey: `alert-incidents:signal.escalating:${event.payload.signalId}:${event.payload.escalatedAt}`,
       }),
 
+    SignalRegressed: (event) =>
+      Effect.all(
+        [
+          pub.publish(
+            "notifications",
+            "request-signal-regressed-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              regressedAt: event.payload.regressedAt,
+              triggerScoreId: event.payload.triggerScoreId,
+            },
+            {
+              dedupeKey: `notifications:request-signal-regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
+            },
+          ),
+          pub.publish(
+            "agent-dispatch",
+            "request",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              source: "signal",
+              trigger: "signal.regressed",
+            },
+            {
+              dedupeKey: `agent-dispatch:request-signal-regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
+            },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
+
     SignalEscalationEnded: (event) =>
       pub.publish("alert-incidents", "signal-escalation-ended", event.payload, {
         dedupeKey: `alert-incidents:signal.escalation-ended:${event.payload.signalId}:${event.payload.endedAt}`,
@@ -399,37 +434,63 @@ export const createDomainEventsWorker = ({
       ),
 
     BillingUsagePeriodUpdated: (event) => {
-      if (
-        event.payload.planSource !== "subscription" ||
-        !event.payload.overageAllowed ||
-        event.payload.overageCredits <= event.payload.reportedOverageCredits
-      ) {
-        return Effect.void
+      const effects: Effect.Effect<void, unknown>[] = []
+
+      for (const limitKind of event.payload.limitsCrossed ?? []) {
+        effects.push(
+          pub.publish(
+            "notifications",
+            "request-billing-limit-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              periodStart: event.payload.periodStart,
+              periodEnd: event.payload.periodEnd,
+              limitKind,
+              includedCredits: event.payload.includedCredits,
+              consumedCredits: event.payload.consumedCredits,
+              overageCredits: event.payload.overageCredits,
+            },
+            {
+              dedupeKey: `notifications:request-billing-limit:${event.payload.organizationId}:${event.payload.periodStart}:${limitKind}`,
+            },
+          ),
+        )
       }
 
-      const periodStart = new Date(event.payload.periodStart)
-      const periodEnd = new Date(event.payload.periodEnd)
+      if (
+        event.payload.planSource === "subscription" &&
+        event.payload.overageAllowed &&
+        event.payload.overageCredits > event.payload.reportedOverageCredits
+      ) {
+        const periodStart = new Date(event.payload.periodStart)
+        const periodEnd = new Date(event.payload.periodEnd)
 
-      return pub.publish(
-        "billing-overage",
-        "reportOverage",
-        {
-          organizationId: event.payload.organizationId,
-          periodStart: event.payload.periodStart,
-          periodEnd: event.payload.periodEnd,
-          snapshotOverageCredits: event.payload.overageCredits,
-        },
-        {
-          dedupeKey: buildBillingOverageDedupeKey({
-            organizationId: event.payload.organizationId,
-            periodStart,
-            periodEnd,
-          }),
-          latestThrottleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
-          attempts: 10,
-          backoff: { type: "exponential", delayMs: 1_000 },
-        },
-      )
+        effects.push(
+          pub.publish(
+            "billing-overage",
+            "reportOverage",
+            {
+              organizationId: event.payload.organizationId,
+              periodStart: event.payload.periodStart,
+              periodEnd: event.payload.periodEnd,
+              snapshotOverageCredits: event.payload.overageCredits,
+            },
+            {
+              dedupeKey: buildBillingOverageDedupeKey({
+                organizationId: event.payload.organizationId,
+                periodStart,
+                periodEnd,
+              }),
+              latestThrottleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
+              attempts: 10,
+              backoff: { type: "exponential", delayMs: 1_000 },
+            },
+          ),
+        )
+      }
+
+      if (effects.length === 0) return Effect.void
+      return Effect.all(effects, { concurrency: "unbounded" }).pipe(Effect.asVoid)
     },
 
     MemberJoined: () => Effect.void,
@@ -479,6 +540,17 @@ export const createDomainEventsWorker = ({
               dedupeKey: `destinations:delete-by-project:${event.payload.projectId}`,
             },
           ),
+          pub.publish(
+            "github-events",
+            "delete-by-project",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+            },
+            {
+              dedupeKey: `github-events:delete-by-project:${event.payload.projectId}`,
+            },
+          ),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
@@ -495,6 +567,9 @@ export const createDomainEventsWorker = ({
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
+    // Redaction policy changes are audit-only for the same reason.
+    ProjectRedactionPolicyChanged: () => Effect.void,
+    OrganizationRedactionPolicyChanged: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

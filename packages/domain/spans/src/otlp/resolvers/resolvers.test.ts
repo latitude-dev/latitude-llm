@@ -160,17 +160,14 @@ describe("resolveAttributes", () => {
       expect(result.provider).toBe("openai")
     })
 
-    it("case-folds non-canonical provider casing", () => {
-      const cases: [string, string, string][] = [
-        ["gen_ai.system", "Google", "google"],
-        ["llm.system", "OpenAI", "openai"],
-        ["llm.provider", "Anthropic", "anthropic"],
-      ]
-      for (const [key, input, expected] of cases) {
-        const attrs: OtlpKeyValue[] = [strAttr(key, input)]
-        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
-        expect(result.provider).toBe(expected)
-      }
+    it.each([
+      ["gen_ai.system", "Google", "google"],
+      ["llm.system", "OpenAI", "openai"],
+      ["llm.provider", "Anthropic", "anthropic"],
+    ])("case-folds non-canonical provider casing %s=%s", (key, input, expected) => {
+      const attrs: OtlpKeyValue[] = [strAttr(key, input)]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.provider).toBe(expected)
     })
 
     it("resolves from Vercel ai.model.provider and strips suffix", () => {
@@ -179,44 +176,250 @@ describe("resolveAttributes", () => {
       expect(result.provider).toBe("openai")
     })
 
-    it("normalizes provider aliases", () => {
-      const cases: [string, string, string][] = [
-        ["gen_ai.system", "bedrock", "amazon-bedrock"],
-        ["gen_ai.system", "gemini", "google"],
-        ["gen_ai.system", "vertexai", "google-vertex"],
-        ["gen_ai.system", "mistralai", "mistral"],
-        ["gen_ai.system", "mistral_ai", "mistral"],
-        ["gen_ai.system", "workersai.chat", "cloudflare-workers-ai"],
-        ["ai.model.provider", "google.vertex.chat", "google-vertex"],
-        ["ai.model.provider", "anthropic.messages", "anthropic"],
-        ["ai.model.provider", "google.generative-ai", "google"],
-        ["ai.model.provider", "workersai.chat", "cloudflare-workers-ai"],
-        // Vercel AI SDK v7 (@ai-sdk/otel) OTel GenAI well-known provider names
-        ["gen_ai.provider.name", "gcp.vertex_ai", "google-vertex"],
-        ["gen_ai.provider.name", "gcp.gemini", "google"],
-        ["gen_ai.provider.name", "aws.bedrock", "amazon-bedrock"],
-        ["gen_ai.provider.name", "azure.ai.openai", "azure"],
-        ["gen_ai.provider.name", "azure.ai.inference", "azure"],
-        ["gen_ai.provider.name", "mistral_ai", "mistral"],
-        ["gen_ai.provider.name", "x_ai", "xai"],
-        // Google ADK (OpenInference) reports the Vertex agent provider name
-        ["llm.provider", "gcp.vertex.agent", "google-vertex"],
-        // v7 also passes these through unchanged (already canonical)
-        ["gen_ai.provider.name", "openai", "openai"],
-        ["gen_ai.provider.name", "anthropic", "anthropic"],
+    it.each([
+      ["gen_ai.system", "bedrock", "amazon-bedrock"],
+      ["gen_ai.system", "gemini", "google"],
+      ["gen_ai.system", "vertexai", "google-vertex"],
+      ["gen_ai.system", "mistralai", "mistral"],
+      ["gen_ai.system", "mistral_ai", "mistral"],
+      ["gen_ai.system", "workersai.chat", "cloudflare-workers-ai"],
+      ["ai.model.provider", "google.vertex.chat", "google-vertex"],
+      ["ai.model.provider", "anthropic.messages", "anthropic"],
+      ["ai.model.provider", "google.generative-ai", "google"],
+      ["ai.model.provider", "workersai.chat", "cloudflare-workers-ai"],
+      // Vercel AI SDK v7 (@ai-sdk/otel) OTel GenAI well-known provider names
+      ["gen_ai.provider.name", "gcp.vertex_ai", "google-vertex"],
+      ["gen_ai.provider.name", "gcp.gemini", "google"],
+      ["gen_ai.provider.name", "aws.bedrock", "amazon-bedrock"],
+      ["gen_ai.provider.name", "azure.ai.openai", "azure"],
+      ["gen_ai.provider.name", "azure.ai.inference", "azure"],
+      ["gen_ai.provider.name", "mistral_ai", "mistral"],
+      ["gen_ai.provider.name", "x_ai", "xai"],
+      // Mastra's canonical key for the direct Gemini API
+      ["gen_ai.provider.name", "gcp.gen_ai", "google"],
+      // Google ADK (OpenInference) reports the Vertex agent provider name
+      ["llm.provider", "gcp.vertex.agent", "google-vertex"],
+      // v7 also passes these through unchanged (already canonical)
+      ["gen_ai.provider.name", "openai", "openai"],
+      ["gen_ai.provider.name", "anthropic", "anthropic"],
+    ])("normalizes provider alias %s=%s to %s", (key, input, expected) => {
+      const attrs: OtlpKeyValue[] = [strAttr(key, input)]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.provider).toBe(expected)
+    })
+
+    // Mastra reports the SDK's npm package name rather than an OTEL well-known value.
+    it.each([
+      ["@anthropic-ai/claude-agent-sdk", "anthropic"],
+      ["@anthropic-ai/claude-code", "anthropic"],
+      ["@anthropic-ai/sdk", "anthropic"],
+      ["@google-cloud/vertexai", "google-vertex"],
+      ["@google/genai", "google"],
+      ["@mistralai/mistralai", "mistral"],
+      ["@openai/agents", "openai"],
+      ["@ai-sdk/amazon-bedrock", "amazon-bedrock"],
+      ["@ai-sdk/anthropic", "anthropic"],
+      ["@ai-sdk/azure", "azure"],
+      ["@ai-sdk/google", "google"],
+      ["@ai-sdk/google-vertex", "google-vertex"],
+      ["@ai-sdk/mistral", "mistral"],
+      ["@ai-sdk/openai", "openai"],
+      ["@ai-sdk/xai", "xai"],
+      // models.dev calls this `fireworks-ai`, so the package suffix is not the provider id.
+      ["@ai-sdk/fireworks", "fireworks-ai"],
+    ])("maps SDK package %s to provider %s", (input, expected) => {
+      const attrs: OtlpKeyValue[] = [strAttr("gen_ai.provider.name", input)]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.provider).toBe(expected)
+    })
+
+    // Passing an unmapped package through unchanged is what makes it reportable: the real
+    // string reaches Datadog instead of a provider id guessed from its scope.
+    it.each([
+      ["@cursor/sdk"],
+      ["@acme/llm"],
+      ["@ai-sdk/openai-compatible"],
+      ["@ai-sdk/react"],
+    ])("leaves unmapped package %s untouched", (input) => {
+      const attrs: OtlpKeyValue[] = [strAttr("gen_ai.provider.name", input)]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+      expect(result.provider).toBe(input)
+    })
+
+    it("prices a Mastra-wrapped OpenAI Agents span instead of reporting $0", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.provider.name", "@openai/agents"),
+        strAttr("gen_ai.request.model", "gpt-4o"),
+        intAttr("gen_ai.usage.input_tokens", 1_000),
+        intAttr("gen_ai.usage.output_tokens", 500),
       ]
 
-      for (const [key, input, expected] of cases) {
-        const attrs: OtlpKeyValue[] = [strAttr(key, input)]
-        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
-        expect(result.provider).toBe(expected)
-      }
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+      expect(result.provider).toBe("openai")
+      expect(result.costTotalMicrocents).toBe(750_000)
+      expect(result.costIsEstimated).toBe(true)
+      expect(result.costSource).toBe("estimated")
+    })
+
+    it("prices a Mastra-wrapped Claude Agent SDK span instead of reporting $0", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.provider.name", "@anthropic-ai/claude-agent-sdk"),
+        strAttr("gen_ai.request.model", "claude-opus-4-8"),
+        intAttr("gen_ai.usage.cache_creation.input_tokens", 100_532),
+        intAttr("gen_ai.usage.cache_read.input_tokens", 922_723),
+        intAttr("gen_ai.usage.input_tokens", 1_023_279),
+        intAttr("gen_ai.usage.output_tokens", 13_299),
+      ]
+
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+      expect(result.provider).toBe("anthropic")
+      // `gen_ai.usage.input_tokens` is inclusive, leaving 24 genuinely uncached input tokens.
+      expect(result.tokensInput).toBe(24)
+      expect(result.costTotalMicrocents).toBe(142_228_150)
+      expect(result.costIsEstimated).toBe(true)
+      expect(result.costSource).toBe("estimated")
+    })
+
+    it("flags token usage that no pricing matched", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.provider.name", "@some-vendor/unmapped-sdk"),
+        strAttr("gen_ai.request.model", "mystery-model"),
+        intAttr("gen_ai.usage.input_tokens", 1_000),
+        intAttr("gen_ai.usage.output_tokens", 500),
+      ]
+
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+      expect(result.costTotalMicrocents).toBe(0)
+      expect(result.costIsEstimated).toBe(false)
+      expect(result.costSource).toBe("unpriced")
+    })
+
+    it("does not flag an unknown model that reported only an input cost", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.provider.name", "@some-vendor/unmapped-sdk"),
+        strAttr("gen_ai.request.model", "mystery-model"),
+        intAttr("gen_ai.usage.input_tokens", 1_000),
+        intAttr("gen_ai.usage.output_tokens", 500),
+        floatAttr("gen_ai.usage.input_cost", 0.25),
+      ]
+
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+      expect(result.costInputMicrocents).toBe(25_000_000)
+      expect(result.costSource).toBe("provider_reported")
+    })
+
+    // A zero side cost supplies no price, so it must not suppress the report.
+    it("still flags an unknown model whose only cost attribute is zero", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.provider.name", "@some-vendor/unmapped-sdk"),
+        strAttr("gen_ai.request.model", "mystery-model"),
+        intAttr("gen_ai.usage.input_tokens", 1_000),
+        intAttr("gen_ai.usage.output_tokens", 500),
+        floatAttr("gen_ai.usage.input_cost", 0),
+      ]
+
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+      expect(result.costTotalMicrocents).toBe(0)
+      expect(result.costSource).toBe("unpriced")
+    })
+
+    it("does not flag spans that carry no token usage", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("gen_ai.provider.name", "@some-vendor/unmapped-sdk")]
+
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+      expect(result.costSource).toBe("no_tokens")
     })
 
     it("returns empty string for missing provider", () => {
       const result = resolveAttributes({ spanAttrs: [], statusCode: "unset" })
       expect(result.provider).toBe("")
     })
+  })
+
+  // A `:free` variant the catalog does not list stays unpriced. Reporting no cost is recoverable;
+  // billing it at the unmodified model's rate would look like a real number and never be questioned.
+  it("leaves a free-tier variant unpriced rather than charging the paid model's rate", () => {
+    const attrs: OtlpKeyValue[] = [
+      strAttr("gen_ai.system", "nous"),
+      strAttr("gen_ai.request.model", "stepfun/step-3.7-flash:free"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+    ]
+
+    const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+    expect(result.costSource).toBe("unpriced")
+    expect(result.costTotalMicrocents).toBe(0)
+  })
+
+  // OpenClaw writes the provider id from the user's config into gen_ai.system, so the reported
+  // provider can be a billing label like `stripe`. The slug's vendor prices it; the span keeps the
+  // reported name, since what the customer called it and what priced it are different concerns.
+  describe("a reported provider that prices nothing", () => {
+    const openclawStripeSpan: OtlpKeyValue[] = [
+      strAttr("gen_ai.system", "stripe"),
+      strAttr("gen_ai.request.model", "openai/gpt-5.4"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+    ]
+
+    it("prices the span from the vendor named in the model slug", () => {
+      const result = resolveAttributes({ spanAttrs: openclawStripeSpan, statusCode: "unset" })
+
+      expect(result.costSource).toBe("estimated")
+      expect(result.costTotalMicrocents).toBeGreaterThan(0)
+    })
+
+    it("keeps the reported provider on the span rather than the one it priced against", () => {
+      const result = resolveAttributes({ spanAttrs: openclawStripeSpan, statusCode: "unset" })
+
+      expect(result.provider).toBe("stripe")
+      expect(result.model).toBe("openai/gpt-5.4")
+    })
+
+    // Neither reported field says what the number was computed from, so the pairing is recorded.
+    it("records the catalog entry it priced against", () => {
+      const result = resolveAttributes({ spanAttrs: openclawStripeSpan, statusCode: "unset" })
+
+      expect(result.costPricedProvider).toBe("openai")
+      expect(result.costPricedModel).toBe("gpt-5.4")
+    })
+  })
+
+  it("records no catalog entry when the cost came from the provider", () => {
+    const attrs: OtlpKeyValue[] = [
+      strAttr("gen_ai.system", "openai"),
+      strAttr("gen_ai.request.model", "gpt-4o"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      floatAttr("gen_ai.usage.input_cost", 0.5),
+    ]
+
+    const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+    expect(result.costSource).toBe("provider_reported")
+    expect(result.costPricedProvider).toBe("")
+    expect(result.costPricedModel).toBe("")
+  })
+
+  it("records no catalog entry when nothing priced the span", () => {
+    const attrs: OtlpKeyValue[] = [
+      strAttr("gen_ai.system", "anthropic"),
+      strAttr("gen_ai.request.model", "qwen3.7-max"),
+      intAttr("gen_ai.usage.input_tokens", 1_000),
+      intAttr("gen_ai.usage.output_tokens", 500),
+    ]
+
+    const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
+
+    expect(result.costSource).toBe("unpriced")
+    expect(result.costPricedProvider).toBe("")
+    expect(result.costPricedModel).toBe("")
   })
 
   describe("model resolution", () => {
@@ -413,15 +616,12 @@ describe("resolveAttributes", () => {
       }
     })
 
-    it("maps Vercel operation IDs (bare wrappers → invoke_agent, leaves → chat)", () => {
+    it("maps Vercel operation IDs (nested wrappers → agent_step, leaves → chat)", () => {
       const cases: [string, string][] = [
-        // Bare wrappers carry a lossy summary and end after their leaves —
-        // classified as inert wrappers so the rollup excludes them.
-        ["ai.generateText", "invoke_agent"],
-        ["ai.streamText", "invoke_agent"],
-        ["ai.generateObject", "invoke_agent"],
-        ["ai.streamObject", "invoke_agent"],
-        // Leaves hold the faithful per-call exchange.
+        ["ai.generateText", "agent_step"],
+        ["ai.streamText", "agent_step"],
+        ["ai.generateObject", "agent_step"],
+        ["ai.streamObject", "agent_step"],
         ["ai.generateText.doGenerate", "chat"],
         ["ai.streamText.doStream", "chat"],
         ["ai.generateObject.doGenerate", "chat"],
@@ -435,6 +635,15 @@ describe("resolveAttributes", () => {
         const attrs: OtlpKeyValue[] = [strAttr("ai.operationId", opId)]
         const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.operation).toBe(expected)
+      }
+    })
+
+    it("maps a trace-root Vercel wrapper (no parent) → invoke_agent", () => {
+      const wrappers = ["ai.generateText", "ai.streamText", "ai.generateObject", "ai.streamObject"]
+      for (const opId of wrappers) {
+        const attrs: OtlpKeyValue[] = [strAttr("ai.operationId", opId)]
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset", hasParent: false })
+        expect(result.operation).toBe("invoke_agent")
       }
     })
 

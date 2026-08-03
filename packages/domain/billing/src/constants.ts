@@ -10,22 +10,22 @@ export const BILLING_OVERAGE_SYNC_THROTTLE_MS = 5 * 60_000 // 5 minutes
 
 export const SELF_SERVE_PLAN_SLUGS: readonly PlanSlug[] = ["pro"] as const
 
-export const CHARGEABLE_ACTIONS = [
-  "trace",
-  "flagger-scan",
-  "deterministic-eval-scan",
-  "live-eval-scan",
-  "eval-generation",
-] as const
+export const CHARGEABLE_ACTIONS = ["trace", "eval-scan", "semantic-query", "llm-call"] as const
 
 export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 
+/**
+ * Flat credit prices at the Pro overage rate ($0.002/credit). `llm-call` and
+ * `semantic-query` are authorization estimates and fallbacks when cost cannot be
+ * determined — actual generations/embeds bill estimated provider cost through
+ * `creditsForLlmGenerationCost` / `creditsForSemanticQueryCost`. Derivation lives
+ * in dev-docs/billing.md.
+ */
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
-  "flagger-scan": 30,
-  "deterministic-eval-scan": 1,
-  "live-eval-scan": 30,
-  "eval-generation": 1000,
+  "eval-scan": 1,
+  "semantic-query": 1,
+  "llm-call": 4,
 } as const
 
 export const FREE_PLAN_CONFIG = {
@@ -97,6 +97,45 @@ export const SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME: Record<string, PlanSlug> 
 } as const
 
 export const OverageCreditUnit = PRO_PLAN_CONFIG.overageCreditsPerUnit
+
+/** Dollar value of one credit at the Pro overage rate, in mills ($20 per 10k credits = 2 mills). */
+export const CREDIT_VALUE_MILLS =
+  (PRO_PLAN_CONFIG.overagePriceCentsPerUnit * CENT_TO_MILLS) / PRO_PLAN_CONFIG.overageCreditsPerUnit
+
+export const LLM_GENERATION_BILLING_MARGIN = 1.3
+
+export const SEMANTIC_QUERY_BILLING_MARGIN = 2
+
+/**
+ * voyage-4-large embed rate. Voyage models are absent from the `@domain/models`
+ * registry, so query-embed cost is priced with this constant against the
+ * adapter-reported token count.
+ */
+export const SEMANTIC_QUERY_EMBED_USD_PER_MILLION_TOKENS = 0.12
+
+const USD_TO_MILLS = 1_000
+
+const creditsForCostWithMargin = (costUsd: number, margin: number): number =>
+  Math.max(1, Math.ceil((costUsd * USD_TO_MILLS * margin) / CREDIT_VALUE_MILLS))
+
+/**
+ * Credits billed for one LLM generation from its estimated provider cost: a 1.3x
+ * margin over cost, converted at the overage credit value, rounded up to an integer
+ * with a 1-credit floor.
+ */
+export const creditsForLlmGenerationCost = (costUsd: number): number =>
+  creditsForCostWithMargin(costUsd, LLM_GENERATION_BILLING_MARGIN)
+
+/**
+ * Credits billed for one semantic query from its estimated embed cost: same
+ * conversion as LLM generations but at a 2x margin.
+ */
+export const creditsForSemanticQueryCost = (costUsd: number): number =>
+  creditsForCostWithMargin(costUsd, SEMANTIC_QUERY_BILLING_MARGIN)
+
+/** Estimated provider cost of one query embed from the adapter-reported token count. */
+export const semanticQueryEmbedCostUsd = (tokens: number): number =>
+  (tokens * SEMANTIC_QUERY_EMBED_USD_PER_MILLION_TOKENS) / 1_000_000
 
 export const calculateOverageAmountMills = (planSlug: PlanSlug, overageCredits: number) => {
   if (planSlug !== "pro") return 0

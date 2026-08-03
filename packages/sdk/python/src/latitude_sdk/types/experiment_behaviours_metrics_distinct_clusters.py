@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentBehavioursMetricsDistinctClusters(UniversalBaseModel):
     """
-    Clusters — count.
+    Distinct behaviour clusters observed — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

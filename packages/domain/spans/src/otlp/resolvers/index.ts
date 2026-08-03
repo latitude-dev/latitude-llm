@@ -37,6 +37,7 @@ interface ResolveAttributesInput {
   readonly statusCode: string
   readonly spanName?: string
   readonly scopeName?: string
+  readonly hasParent?: boolean
 }
 
 export function resolveAttributes({
@@ -44,10 +45,11 @@ export function resolveAttributes({
   statusCode,
   spanName = "",
   scopeName = "",
+  hasParent = true,
 }: ResolveAttributesInput): ResolvedAttributes {
   const provider = resolveProvider(spanAttrs, spanName)
   const model = first(modelCandidates, spanAttrs) ?? ""
-  const operation = resolveOperation(spanAttrs, spanName, scopeName)
+  const operation = resolveOperation(spanAttrs, spanName, scopeName, hasParent)
 
   return {
     operation,

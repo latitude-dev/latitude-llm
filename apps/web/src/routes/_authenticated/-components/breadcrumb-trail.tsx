@@ -23,7 +23,7 @@ export function BreadcrumbTrail() {
     <>
       {crumbs.map(({ id, Breadcrumb }) => {
         return (
-          <span key={id} className="flex items-center gap-2 min-w-0">
+          <span key={id} className="flex items-center gap-1 min-w-0">
             <BreadcrumbSeparator />
             <Breadcrumb />
           </span>

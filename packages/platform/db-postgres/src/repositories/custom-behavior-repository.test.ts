@@ -31,6 +31,7 @@ const makeBehavior = (overrides: Partial<CustomBehavior> = {}): CustomBehavior =
     slug: "refunds",
     name: "Refunds",
     filterSet: { moments: [{ op: "in", value: ["escalation"] }] },
+    facetId: null,
     status: CustomBehaviorStatus.Pending,
     createdAt: now,
     updatedAt: now,

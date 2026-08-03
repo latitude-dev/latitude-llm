@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSessionsMetricsSpansAvg(UniversalBaseModel):
     """
-    Avg spans — count.
+    Average spans per session — count.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

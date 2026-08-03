@@ -279,7 +279,7 @@ function OidcRegisterForm({ onRegistered }: { onRegistered: (record: SsoDomainVe
           <Input
             type="text"
             name={field.name}
-            label="Signalr URL"
+            label="Issuer URL"
             description="OIDC discovery is fetched from <issuer>/.well-known/openid-configuration."
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}
@@ -361,7 +361,7 @@ function ProviderCard({
                 <Badge variant="warningMuted">Domain unverified</Badge>
               )}
             </div>
-            <Text.H6 color="foregroundMuted">Signalr: {provider.issuer}</Text.H6>
+            <Text.H6 color="foregroundMuted">Issuer: {provider.issuer}</Text.H6>
           </div>
         </div>
 
@@ -419,7 +419,7 @@ function DomainVerificationCard({
     try {
       const result = await verifySsoDomainMutation()
       if (result.verified) {
-        toast({ description: `${provider.domain} verified — SSO sign-in is now active` })
+        toast({ description: `${provider.domain} is verified. SSO sign-in is now active.` })
       } else {
         toast({ variant: "destructive", description: result.message ?? "Domain verification failed" })
       }

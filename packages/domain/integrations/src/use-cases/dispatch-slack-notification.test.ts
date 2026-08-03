@@ -68,9 +68,25 @@ const orgRepoLayer = (parentOrgId: OrganizationId | null) =>
               updatedAt: new Date(),
             } satisfies Organization)
           : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+      findByIdForUpdate: (id) =>
+        id === ORG
+          ? Effect.succeed({
+              id: ORG,
+              name: "Acme",
+              slug: "acme",
+              logo: null,
+              metadata: null,
+              settings: null,
+              parentOrgId,
+              expiresAt: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            } satisfies Organization)
+          : Effect.fail(new NotFoundError({ entity: "Organization", id })),
       listByUserId: () => Effect.die("not used"),
       save: () => Effect.die("not used"),
       delete: () => Effect.die("not used"),
+      deleteIfExpiredUnclaimed: () => Effect.die("not used"),
       countBySlug: () => Effect.die("not used"),
       listExpiredUnclaimed: () => Effect.die("not used"),
     }),
@@ -112,6 +128,9 @@ const makeSignal = (): Signal => {
       weights: { annotation: 1, custom: 0, evaluation: 0 },
     },
     clusteredAt: now,
+    resolvedAt: null,
+    ignoredAt: null,
+    regressedAt: null,
     mutedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -200,7 +219,7 @@ describe("dispatchSlackNotificationUseCase", () => {
       blocks: expect.arrayContaining([
         expect.objectContaining({
           text: expect.objectContaining({
-            text: "A new signal was discovered: *<https://app.example.com/projects/frontend/signals/ssssssssssssssssssssssss|Bad JSON output>*.",
+            text: "A new signal was discovered: *<https://app.example.com/projects/frontend/signals/bad-json-output|Bad JSON output>*.",
           }),
         }),
         expect.objectContaining({
@@ -212,7 +231,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         expect.objectContaining({
           elements: expect.arrayContaining([
             expect.objectContaining({
-              url: "https://app.example.com/projects/frontend/signals/ssssssssssssssssssssssss",
+              url: "https://app.example.com/projects/frontend/signals/bad-json-output",
             }),
           ]),
         }),

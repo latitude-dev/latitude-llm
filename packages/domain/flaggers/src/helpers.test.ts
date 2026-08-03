@@ -103,6 +103,43 @@ describe("detectToolCallErrorsFlagger", () => {
     expect(result).toEqual({ matched: false })
   })
 
+  it("matches a call to a tool missing from the declared toolset", () => {
+    const result = detectToolCallErrorsFlagger({
+      ...makeTrace([assistantToolCall("call-web", "WebSearch")]),
+      definedTools: ["Bash", "Read"],
+    })
+
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain('"WebSearch"')
+      expect(result.feedback).toContain("not in the declared toolset")
+    }
+  })
+
+  it("does not match an undeclared tool that executed successfully", () => {
+    const result = detectToolCallErrorsFlagger({
+      ...makeTrace([assistantToolCall("call-web", "WebSearch"), toolResponse("call-web", { results: ["ok"] })]),
+      definedTools: ["Bash", "Read"],
+    })
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("still matches when an undeclared tool returns an error", () => {
+    const result = detectToolCallErrorsFlagger({
+      ...makeTrace([
+        assistantToolCall("call-web", "WebSearch"),
+        toolResponse("call-web", { isError: true, error: "InputValidationError" }),
+      ]),
+      definedTools: ["Bash", "Read"],
+    })
+
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toMatch(/not in the declared toolset|returned error/)
+    }
+  })
+
   it("does not match expected tool 4xx responses", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([
@@ -146,13 +183,10 @@ describe("detectToolCallErrorsFlagger", () => {
     }
   })
 
-  it("matches tool responses that appear before any tool call", () => {
+  it("ignores tool responses with no tool calls anywhere (truncated telemetry)", () => {
     const result = detectToolCallErrorsFlagger(makeTrace([toolResponse("call-weather", { temp: 22 })]))
 
-    expect(result.matched).toBe(true)
-    if (result.matched) {
-      expect(result.feedback).toContain("unknown tool_call id")
-    }
+    expect(result).toEqual({ matched: false })
   })
 
   it("matches tool responses with unknown tool call ids", () => {

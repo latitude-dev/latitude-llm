@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentSessionsMetricsCacheHitRate(UniversalBaseModel):
     """
-    Cache hit rate — fraction (0–1); higher is better.
+    Fraction of input tokens served from cache — fraction (0–1); higher is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

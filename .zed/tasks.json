@@ -1,7 +1,7 @@
 [
   {
     "label": "Setup new worktree",
-    "command": "ln -sf $ZED_MAIN_GIT_WORKTREE/.env* $ZED_WORKTREE_ROOT/. && pnpm install && pnpm build",
+    "command": "for f in $ZED_MAIN_GIT_WORKTREE/.env*; do [ \"$(basename \"$f\")\" = \".env.example\" ] || ln -sf \"$f\" \"$ZED_WORKTREE_ROOT/\"; done && pnpm install && pnpm build",
     "hooks": ["create_worktree"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "reveal": "no_focus",

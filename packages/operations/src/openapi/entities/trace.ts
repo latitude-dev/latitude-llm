@@ -100,7 +100,7 @@ const TraceSchema = z.object(traceFields).openapi("Trace")
 
 export const PaginatedTracesSchema = Paginated(TraceSchema, "PaginatedTraces")
 
-const GenAIMessageSchema = z
+export const GenAIMessageSchema = z
   .record(z.string(), z.unknown())
   .openapi("GenAIMessage")
   .describe("Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls).")

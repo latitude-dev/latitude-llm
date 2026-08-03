@@ -1,4 +1,5 @@
 import { computeTokenCost, getCostSpec } from "@domain/models"
+import type { CostSource } from "../../entities/span.ts"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { resolveTokens } from "./usage/tokens.ts"
@@ -28,9 +29,25 @@ const costTotalCandidates = [
 
 // ─── Resolve ─────────────────────────────────────────────
 
-interface EstimatedCost {
-  readonly input: number
-  readonly output: number
+type CostEstimation =
+  | {
+      readonly kind: "estimated"
+      readonly input: number
+      readonly output: number
+      readonly pricedProvider: string
+      readonly pricedModel: string
+    }
+  | { readonly kind: "unpriced" }
+  | { readonly kind: "noTokens" }
+
+const COST_SOURCE_BY_ESTIMATION: Record<CostEstimation["kind"], CostSource> = {
+  estimated: "estimated",
+  unpriced: "unpriced",
+  noTokens: "no_tokens",
+}
+
+function costSourceOf(estimation: CostEstimation): CostSource {
+  return COST_SOURCE_BY_ESTIMATION[estimation.kind]
 }
 
 function estimateCostFromTokens({
@@ -49,11 +66,13 @@ function estimateCostFromTokens({
   tokensCacheRead: number
   tokensCacheCreate: number
   tokensReasoning: number
-}): EstimatedCost | undefined {
-  if (tokensInput + tokensOutput + tokensCacheRead + tokensCacheCreate + tokensReasoning === 0) return undefined
+}): CostEstimation {
+  if (tokensInput + tokensOutput + tokensCacheRead + tokensCacheCreate + tokensReasoning === 0) {
+    return { kind: "noTokens" }
+  }
 
-  const { cost, costImplemented } = getCostSpec(provider, model)
-  if (!costImplemented) return undefined
+  const { cost, costImplemented, pricedProvider, pricedModel } = getCostSpec(provider, model)
+  if (!costImplemented) return { kind: "unpriced" }
 
   const inputUsd =
     computeTokenCost(cost, tokensInput, "input") +
@@ -64,9 +83,17 @@ function estimateCostFromTokens({
     computeTokenCost(cost, tokensOutput, "output") + computeTokenCost(cost, tokensReasoning, "reasoning")
 
   return {
+    kind: "estimated",
     input: Math.round(inputUsd * MICROCENTS_PER_USD),
     output: Math.round(outputUsd * MICROCENTS_PER_USD),
+    pricedProvider,
+    pricedModel,
   }
+}
+
+function pricedPairOf(estimation: CostEstimation | undefined): { provider: string; model: string } {
+  if (estimation?.kind !== "estimated") return { provider: "", model: "" }
+  return { provider: estimation.pricedProvider, model: estimation.pricedModel }
 }
 
 export interface ResolvedUsage {
@@ -84,6 +111,11 @@ export interface ResolvedUsage {
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
   readonly costIsEstimated: boolean
+  readonly costSource: CostSource
+  /** Catalog provider the estimate came from. Empty unless we priced it ourselves. */
+  readonly costPricedProvider: string
+  /** Catalog model id the estimate came from, which may be a base entry of the reported model. */
+  readonly costPricedModel: string
 }
 
 // ─── OpenClaw embedded usage ──────────────────────────────
@@ -168,19 +200,25 @@ function resolveEmbeddedMessageUsage(
       costOutputMicrocents: usdToMicrocents(nonNegative(cost.output)),
       costTotalMicrocents: usdToMicrocents(nonNegative(cost.total)),
       costIsEstimated: false,
+      costSource: "provider_reported",
+      costPricedProvider: "",
+      costPricedModel: "",
     }
   }
 
   // No embedded cost — estimate from the tokens, same as flat-attr spans.
   const estimation = estimateCostFromTokens({ provider, model, ...tokens })
-  const costInputMicrocents = estimation?.input ?? 0
-  const costOutputMicrocents = estimation?.output ?? 0
+  const costInputMicrocents = estimation.kind === "estimated" ? estimation.input : 0
+  const costOutputMicrocents = estimation.kind === "estimated" ? estimation.output : 0
   return {
     ...tokens,
     costInputMicrocents,
     costOutputMicrocents,
     costTotalMicrocents: costInputMicrocents + costOutputMicrocents,
-    costIsEstimated: estimation !== undefined,
+    costIsEstimated: estimation.kind === "estimated",
+    costSource: costSourceOf(estimation),
+    costPricedProvider: pricedPairOf(estimation).provider,
+    costPricedModel: pricedPairOf(estimation).model,
   }
 }
 
@@ -210,6 +248,8 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
   const attrCostTotal = first(costTotalCandidates, attrs)
 
   const hasAttrCosts = attrCostInput !== undefined && attrCostOutput !== undefined
+  // Positive, not merely present: a zero side cost supplies no price, and the total candidates already drop zero.
+  const hasAnyAttrCost = (attrCostInput ?? 0) > 0 || (attrCostOutput ?? 0) > 0 || attrCostTotal !== undefined
 
   const costEstimation = hasAttrCosts
     ? undefined
@@ -223,10 +263,16 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
         tokensReasoning,
       })
 
-  const costIsEstimated = !hasAttrCosts && costEstimation !== undefined
-  const costInput = attrCostInput ?? costEstimation?.input ?? 0
-  const costOutput = attrCostOutput ?? costEstimation?.output ?? 0
+  const estimated = costEstimation?.kind === "estimated" ? costEstimation : undefined
+  const costIsEstimated = estimated !== undefined
+  const costInput = attrCostInput ?? estimated?.input ?? 0
+  const costOutput = attrCostOutput ?? estimated?.output ?? 0
   const costTotal = attrCostTotal ?? (costInput + costOutput > 0 ? costInput + costOutput : 0)
+
+  // Any provider-supplied cost counts as reported, even for a model models.dev does not know — and
+  // even at 0, which is a provider stating the call was free rather than us failing to price it.
+  const costSource: CostSource =
+    hasAttrCosts || hasAnyAttrCost ? "provider_reported" : costSourceOf(costEstimation ?? { kind: "noTokens" })
 
   return {
     tokensInput,
@@ -238,5 +284,10 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
     costOutputMicrocents: costOutput,
     costTotalMicrocents: costTotal,
     costIsEstimated,
+    costSource,
+    // Gated on the source, not on `estimated`: a span can carry both an attr cost and an estimate,
+    // and then the stored number is the provider's, so no catalog entry produced it.
+    costPricedProvider: costSource === "estimated" ? pricedPairOf(costEstimation).provider : "",
+    costPricedModel: costSource === "estimated" ? pricedPairOf(costEstimation).model : "",
   }
 }

@@ -15,6 +15,14 @@ export const userSchema = z.object({
   name: z.string().nullable(),
   jobTitle: z.string().nullable(),
   phoneNumber: z.string().nullable(),
+  /**
+   * How the user found Latitude, from the onboarding form: either one of the
+   * `HEARD_ABOUT_US_OPTIONS` channel slugs, or — when they picked "Other" — the
+   * source they typed verbatim. Deliberately not enum-constrained: the free-text
+   * case means anything can land here. `null` for users who onboarded before the
+   * question existed.
+   */
+  heardAboutUs: z.string().nullable(),
   emailVerified: z.boolean(),
   image: z.string().nullable(),
   role: userRoleSchema,

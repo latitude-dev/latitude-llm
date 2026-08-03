@@ -246,6 +246,46 @@ export const createFakeTaxonomyObservationRepository = (
           }))
       }),
 
+    // Facet-extraction sample: same day-stratified window as
+    // listForCustomBehaviorSample, projecting each row's ids/startTime and the
+    // stored transcript summary. The fake does not compile `filterSet`.
+    listForFacetSample: ({ organizationId, projectId, since, limit }) =>
+      Effect.sync(() => {
+        const eligible = [...rows.values()].filter(
+          (observation) =>
+            observation.organizationId === organizationId &&
+            observation.projectId === projectId &&
+            observation.embedding.length > 0 &&
+            observation.startTime >= since,
+        )
+        const dayBuckets = new Map<string, TaxonomyMomentObservation[]>()
+        for (const observation of eligible) {
+          const day = observation.startTime.toISOString().slice(0, 10)
+          const bucket = dayBuckets.get(day) ?? []
+          bucket.push(observation)
+          dayBuckets.set(day, bucket)
+        }
+        const ranked = [...dayBuckets.values()].flatMap((bucket) =>
+          [...bucket]
+            .sort((a, b) => deterministicHash(a.observationId) - deterministicHash(b.observationId))
+            .map((observation, rank) => ({ observation, rank })),
+        )
+        return ranked
+          .sort((a, b) => a.rank - b.rank || a.observation.observationId.localeCompare(b.observation.observationId))
+          .slice(0, limit)
+          .map((entry) => entry.observation)
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .map((observation) => ({
+            sessionObservationId: observation.observationId,
+            sessionId: observation.sessionId,
+            startTime: observation.startTime,
+            transcript:
+              typeof observation.projectionMetadata.summary === "string" ? observation.projectionMetadata.summary : "",
+          }))
+      }),
+
     // Like listForCustomBehaviorSample, the fake does not compile `filterSet`;
     // it returns the unsampled eligible totals over the window.
     countForCustomBehaviorSample: ({ organizationId, projectId, since }) =>
@@ -294,6 +334,24 @@ export const createFakeTaxonomyObservationRepository = (
           )
           .slice(0, limit),
       ),
+
+    // Matches the live lookup: bounded by the requested ids, NOT by the newest-N
+    // window, so a naming sample drawn from the wider lookback resolves in full.
+    listAllByObservationIds: ({ organizationId, projectId, observationIds, limit }) =>
+      Effect.sync(() => {
+        const requested = new Set(observationIds)
+        return [...rows.values()]
+          .filter(
+            (observation) =>
+              observation.organizationId === organizationId &&
+              observation.projectId === projectId &&
+              requested.has(observation.observationId),
+          )
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .slice(0, limit)
+      }),
 
     listBySession: ({ organizationId, projectId, sessionId, analysisHash }) =>
       Effect.sync(() =>
@@ -371,6 +429,40 @@ export const createFakeTaxonomyObservationRepository = (
           })
         }
         return [...counts.entries()].map(([clusterId, count]) => ({ clusterId: clusterId as never, ...count }))
+      }),
+
+    // The fake does not compile `filterSet` (session-filter compilation is
+    // ClickHouse-specific); it returns the full newest-N live window as slim
+    // reassignment rows carrying the current assignment. `excludeAssignedClusterIds`
+    // drops rows already pointing at one of those clusters (catch-up narrowing).
+    listWindowForReassignment: ({ organizationId, projectId, limit, excludeAssignedClusterIds }) =>
+      Effect.sync(() => {
+        const excluded = new Set((excludeAssignedClusterIds ?? []).map((id) => id as string))
+        return latestProjectWindow(organizationId, projectId)
+          .filter((observation) => observation.embedding.length > 0)
+          .filter(
+            (observation) => observation.assignedClusterId === null || !excluded.has(observation.assignedClusterId),
+          )
+          .slice(0, limit)
+          .map((observation) => ({
+            observationId: observation.observationId,
+            sessionId: observation.sessionId,
+            embedding: observation.embedding,
+            startTime: observation.startTime,
+            assignedClusterId: observation.assignedClusterId,
+          }))
+      }),
+
+    countWindowAssignedToClusters: ({ organizationId, projectId, limit, clusterIds }) =>
+      Effect.sync(() => {
+        const targets = new Set(clusterIds.map((id) => id as string))
+        const window = latestProjectWindow(organizationId, projectId)
+          .filter((observation) => observation.embedding.length > 0)
+          .slice(0, limit)
+        return {
+          total: window.length,
+          matching: window.filter((o) => o.assignedClusterId !== null && targets.has(o.assignedClusterId)).length,
+        }
       }),
 
     getClusterCountsByUser: () => Effect.succeed([]),

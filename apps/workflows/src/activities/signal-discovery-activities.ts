@@ -15,11 +15,12 @@ import {
   SignalDiscoveryLockUnavailableError,
 } from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
-import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
+import { RedisBillingSpendReservationLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   OutboxEventWriterLive,
+  ProjectRepositoryLive,
   ScoreRepositoryLive,
   SignalRepositoryLive,
   withPostgres,
@@ -27,6 +28,7 @@ import {
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-signal-discovery")
 
@@ -70,11 +72,24 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
 export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =>
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "signal-create",
+      }),
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          ScoreRepositoryLive,
+          SignalRepositoryLive,
+          OutboxEventWriterLive,
+          EvaluationRepositoryLive,
+          billingMeteringRepositoriesLive,
+        ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
     ),
@@ -83,11 +98,24 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
 export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
   Effect.runPromise(
     assignOrCreateSignalUseCase(input).pipe(
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "signal-assign",
+      }),
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive, EvaluationRepositoryLive),
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          ScoreRepositoryLive,
+          SignalRepositoryLive,
+          OutboxEventWriterLive,
+          EvaluationRepositoryLive,
+          billingMeteringRepositoriesLive,
+        ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       // TODO(signal-discovery-rerank): drop AIRerankLive when assignOrCreateSignal
       // relies on Postgres pgvector hybrid search directly.

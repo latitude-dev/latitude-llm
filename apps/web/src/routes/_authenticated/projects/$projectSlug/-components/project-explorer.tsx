@@ -290,7 +290,11 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const { totalCount: totalTraceCount, isLoading: isTracesCountLoading } = useTracesCount({
+  const {
+    totalCount: totalTraceCount,
+    isLoading: isTracesCountLoading,
+    isError: isTracesCountError,
+  } = useTracesCount({
     projectId: currentProject.id,
     filters: effectiveFilters,
     ...(hasSearchQuery ? { searchQuery: query } : {}),
@@ -454,8 +458,10 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   // Reads default to All time, so `totalTraceCount` is the unwindowed count — `=== 0` (once loaded)
   // means the project has no traces at all, a robust "empty project" signal. `firstTraceAt` is
   // best-effort (null on backfilled/old-data projects), so it must not gate the onboarding.
+  // Skip while the count is loading or errored — default `0` would otherwise flash false onboarding.
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
-  const showConnectEmptyState = !isTracesCountLoading && totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
+  const showConnectEmptyState =
+    !isTracesCountLoading && !isTracesCountError && totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
 
   if (showConnectEmptyState) {
     return (
@@ -550,7 +556,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                   asChild
                   trigger={
                     <span className="inline-flex">
-                      <Button variant="outline" size="sm" className="h-8 w-auto" disabled>
+                      <Button variant="outline" size="default" className="h-8 w-auto" disabled>
                         <Icon icon={BellPlusIcon} size="sm" />
                         Monitor sessions
                       </Button>
@@ -579,7 +585,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                 trigger={
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="h-8 w-auto"
                     onClick={() => void createCustomBehaviorFromFilters()}
                   >
@@ -594,6 +600,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <Tabs
               variant="bordered"
               size="sm"
+              className="border-none bg-muted"
+              indicatorClassName="border-none"
               options={[
                 {
                   id: "sessions",

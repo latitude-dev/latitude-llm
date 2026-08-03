@@ -23,6 +23,18 @@ export const FEATURE_FLAGS = {
     description:
       "Project-scoped, filter-defined behavior taxonomies with their own authoring UI. Hidden until the Generate flow ships.",
   },
+  costDashboard: {
+    emoji: "💰",
+    name: "Cost dashboard",
+    description:
+      "Project-scoped Cost section: spend over time, per-dimension cost breakdown, and the data-confidence figures (provider-verified share and unpriced usage).",
+  },
+  adaptiveTaxonomyClustering: {
+    emoji: "🌳",
+    name: "Adaptive taxonomy clustering",
+    description:
+      "Enforces node-relative adaptive taxonomy clustering for every project in the organization, raising the environment baseline (shadow/enforced) to enforced. The env kill switch still overrides it.",
+  },
 } as const satisfies Record<
   string,
   {

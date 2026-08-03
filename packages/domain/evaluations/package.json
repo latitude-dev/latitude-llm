@@ -31,6 +31,7 @@
     "@domain/spans": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
+    "js-tiktoken": "catalog:",
     "zod": "catalog:"
   }
 }

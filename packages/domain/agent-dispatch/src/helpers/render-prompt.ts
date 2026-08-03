@@ -3,7 +3,7 @@ import type { AgentDispatchContext } from "../entities/agent-dispatch-context.ts
 
 const DEFAULT_PROMPT_TEMPLATE = `A Latitude signal has escalated in project "{{projectName}}".
 
-Signal: {{signal.name}} ({{signal.source}})   ID: {{signal.id}}
+Signal: {{signal.name}} ({{signal.source}})   Ref: {{signal.slug}}   ID: {{signal.id}}
 Incident: {{incident.id}}   Severity: {{incident.severity}}
 Trend: {{metrics.occurrences}} occurrences in {{metrics.windowHours}}h (baseline ~{{metrics.baselinePerHour}}/h)
 Sample feedback: "{{sampleExcerpt}}"
@@ -15,7 +15,25 @@ signal and a few of its member traces ({{sampleTraceIds}}). Identify the most li
 root cause in this repository, implement the smallest correct fix, add a regression
 test if applicable, and open a PR describing the signal and the fix.
 
-Do not mute or resolve the signal — a human verifies after deploy.`
+Work on a branch named "fix/{{signal.slug}}-<short-description>" (lowercase the slug).
+Title the PR "Resolves {{signal.slug}}: <short fix summary>" and include the line "Resolves {{signal.slug}}"
+in the PR description. Latitude links the PR to the signal from these references and resolves the
+signal automatically when the PR merges into the monitored branch.
+
+Do not resolve the signal via Latitude tools — merging the PR resolves it automatically; a human verifies after deploy.`
+
+/**
+ * Teaches the agent the GitHub handshake (5.16): a slug-branded branch and PR
+ * title/description whose default-rule matcher intent is `resolve`, so the fix
+ * auto-links on open and auto-resolves on merge. Unconditional — useful to human
+ * reviewers whether or not GitHub is connected (D14).
+ */
+const conventionBlock = (slug: string): string[] => [
+  `Work on a branch named "fix/${slug.toLowerCase()}-<short-description>" (e.g. "fix/${slug.toLowerCase()}-timeout-handling").`,
+  `Title the PR "Resolves ${slug}: <short fix summary>" and include the line "Resolves ${slug}" in the PR`,
+  "description. Latitude links the PR to the signal from these references and resolves the signal",
+  "automatically when the PR merges into the monitored branch.",
+]
 
 const toMustacheView = (context: AgentDispatchContext): Record<string, unknown> => ({
   ...context,
@@ -56,10 +74,17 @@ const renderDefaultPrompt = (context: AgentDispatchContext): string => {
     return lines.join("\n")
   }
 
-  const lines: string[] = [`A Latitude signal needs investigation in project "${context.projectName}".`, ""]
+  const lines: string[] = [
+    context.trigger === "signal.regressed"
+      ? `A previously resolved Latitude signal has regressed in project "${context.projectName}".`
+      : `A Latitude signal needs investigation in project "${context.projectName}".`,
+    "",
+  ]
 
   if (context.signal) {
-    lines.push(`Signal: ${context.signal.name} (${context.signal.source})   ID: ${context.signal.id}`)
+    lines.push(
+      `Signal: ${context.signal.name} (${context.signal.source})   Ref: ${context.signal.slug}   ID: ${context.signal.id}`,
+    )
     if (context.signal.priority) lines.push(`Priority: ${context.signal.priority}`)
   }
 
@@ -98,8 +123,13 @@ const renderDefaultPrompt = (context: AgentDispatchContext): string => {
     "Identify the most likely root cause in this repository, implement the smallest correct fix, add a regression test if applicable, and open a PR describing the signal and the fix.",
     "",
     "If you cannot determine a concrete repo-level root cause, do not make speculative code changes and do not open a PR. Instead, return a concise investigation summary with the evidence reviewed, the best-supported explanation, remaining hypotheses, and the next data needed to confirm the cause.",
+  )
+
+  if (context.signal) lines.push("", ...conventionBlock(context.signal.slug))
+
+  lines.push(
     "",
-    "Do not mute or resolve the signal — a human verifies after deploy.",
+    "Do not resolve the signal via Latitude tools — merging the PR resolves it automatically; a human verifies after deploy.",
   )
 
   return lines.join("\n")

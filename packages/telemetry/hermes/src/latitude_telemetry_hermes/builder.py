@@ -223,26 +223,30 @@ class _Builder:
         task_id = kw.get("task_id") or ""
         trace_id = _trace_id()
         first_user = _last_user_text(messages) or _coerce_text(kw.get("user_message"))
+        root_attrs: Dict[str, Any] = {
+            "span.type": "interaction",
+            "interaction.kind": "user",
+            "session.id": session_id,
+            "gen_ai.session.id": session_id,
+            "hermes.task_id": task_id or None,
+            "hermes.turn_id": kw.get("turn_id") or None,
+            "latitude.tags": ["hermes"],
+            "latitude.metadata": {"hermes.session.id": session_id, "hermes.task_id": task_id}
+            if task_id
+            else {"hermes.session.id": session_id},
+        }
+        if isinstance(first_user, str) and first_user.strip():
+            root_attrs["user_prompt:gated"] = first_user
+            root_attrs["gen_ai.input.messages:gated"] = [
+                {"role": "user", "parts": [{"type": "text", "content": first_user}]}
+            ]
         root = _Span(
             trace_id=trace_id,
             span_id=_span_id(),
             parent_span_id="",
             name="interaction",
             start_ms=now,
-            attrs={
-                "span.type": "interaction",
-                "interaction.kind": "user",
-                "session.id": session_id,
-                "gen_ai.session.id": session_id,
-                "hermes.task_id": task_id or None,
-                "hermes.turn_id": kw.get("turn_id") or None,
-                "latitude.tags": ["hermes"],
-                "latitude.metadata": {"hermes.session.id": session_id, "hermes.task_id": task_id}
-                if task_id
-                else {"hermes.session.id": session_id},
-                "user_prompt:gated": first_user,
-                "gen_ai.input.messages:gated": [{"role": "user", "parts": [{"type": "text", "content": first_user}]}],
-            },
+            attrs=root_attrs,
         )
         self._evict_locked()
         return _Run(trace_key=key, trace_id=trace_id, root=root, session_id=session_id, task_id=task_id)
@@ -328,7 +332,8 @@ def _last_user_text(messages: Any) -> Optional[str]:
         return None
     for m in reversed(messages):
         if isinstance(m, dict) and m.get("role") == "user":
-            return _coerce_text(m.get("content"))
+            text = _coerce_text(m.get("content"))
+            return text if text.strip() else None
     return None
 
 

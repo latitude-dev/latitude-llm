@@ -32,6 +32,7 @@ import {
   DatasetId,
   DatasetRowId,
   DatasetVersionId,
+  FacetId,
   filterSetSchema,
   isValidId,
   type OrganizationId,
@@ -45,6 +46,7 @@ import {
 } from "@domain/shared"
 import { listClusterSessionTraceIdsUseCase } from "@domain/taxonomy"
 import { AIEmbedLive, withAi } from "@platform/ai"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import {
   DatasetRowRepositoryLive,
   ScoreAnalyticsRepositoryLive,
@@ -56,7 +58,6 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
 import {
@@ -792,6 +793,8 @@ const clusterSourceSchema = z.object({
   // Present → resolve sessions from the behavior's scoped assignment slice
   // instead of the global taxonomy subtree.
   customBehaviorId: z.string().optional(),
+  // The behavior's facet; present → resolve from that facet's edges, not the topic slice.
+  facetId: z.string().optional(),
 })
 
 export type ClusterSource = z.infer<typeof clusterSourceSchema>
@@ -819,6 +822,7 @@ function resolveClusterTraceIds(
       ...(cluster.timeFromIso ? { startTimeFrom: new Date(cluster.timeFromIso) } : {}),
       ...(cluster.timeToIso ? { startTimeTo: new Date(cluster.timeToIso) } : {}),
       ...(cluster.customBehaviorId ? { customBehaviorId: CustomBehaviorId(cluster.customBehaviorId) } : {}),
+      ...(cluster.facetId ? { facetId: FacetId(cluster.facetId) } : {}),
       limit: MAX_TRACES_PER_DATASET_IMPORT + 1,
     })
     if (selection.mode === "all") return all

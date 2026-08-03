@@ -1,4 +1,4 @@
-import type { IncidentSourceType } from "@domain/shared"
+import type { IncidentSourceType, OrganizationRedactionSetting, RedactionSetting } from "@domain/shared"
 
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
@@ -84,6 +84,21 @@ export interface EventPayloads {
     /** User who performed the triage edit (self-assignments never notify). */
     readonly actorUserId: string
     readonly assignedAt: string
+  }
+  /**
+   * Emitted when a new occurrence reopens a manually resolved signal: the
+   * reopen claim clears `resolved_at` and stamps `regressed_at`, and exactly
+   * one writer per regression cycle emits this (the conditional claim
+   * serializes concurrent occurrences). `triggerScoreId` identifies the
+   * occurrence that tripped the reopen and discriminates regression cycles
+   * for notification idempotency. Drives the `signal.regressed` notification.
+   */
+  SignalRegressed: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly signalId: string
+    readonly regressedAt: string
+    readonly triggerScoreId: string
   }
   /**
    * Emitted by `checkSignalEscalationUseCase` when a signal transitions into
@@ -261,6 +276,29 @@ export interface EventPayloads {
     readonly enabled: boolean
     readonly sampling: number
   }
+  /**
+   * Emitted when a project's PII redaction policy changes. Audit-only: nothing
+   * consumes it. Redaction is destructive, non-retroactive, and unrecoverable,
+   * so "who turned this off, and when" has to be answerable after the fact.
+   * Both snapshots live in the payload because `projects.settings` is mutable
+   * and a delta on it cannot be reconstructed later. Scoped to `redaction`
+   * rather than whole-settings blobs so the transition is the payload rather
+   * than something a query has to dig out of one.
+   */
+  ProjectRedactionPolicyChanged: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly fromRedaction: RedactionSetting | null
+    readonly toRedaction: RedactionSetting | null
+  }
+  /** Organization-level twin of `ProjectRedactionPolicyChanged`, including the `locked` flag. */
+  OrganizationRedactionPolicyChanged: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly fromRedaction: OrganizationRedactionSetting | null
+    readonly toRedaction: OrganizationRedactionSetting | null
+  }
   SavedSearchCreated: {
     readonly organizationId: string
     readonly actorUserId: string
@@ -331,6 +369,16 @@ export interface EventPayloads {
     readonly consumedCredits: number
     readonly overageCredits: number
     readonly reportedOverageCredits: number
+    /**
+     * Thresholds first crossed by this write (free included credits exhausted,
+     * Pro entering overage, and/or a configured Pro spend cap). Empty/omitted
+     * on ordinary increments so notification fan-out stays once-per-period
+     * per kind without re-deriving crossings from every subsequent usage
+     * event. Optional so in-flight outbox rows written before this field
+     * existed still parse. A single write may include both `overage-started`
+     * and `spend-cap` when the cap sits at the included-credit boundary.
+     */
+    readonly limitsCrossed?: readonly ("included-credits" | "overage-started" | "spend-cap")[]
   }
   /**
    * Emitted when a platform admin begins impersonating another user via

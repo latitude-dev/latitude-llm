@@ -1,9 +1,13 @@
 import { createProject } from "@domain/projects"
 import type { ProjectId } from "@domain/shared/seeding"
 import {
+  SEED_COST_ARCHETYPE_PROJECTS,
   SEED_LATITUDE_ANNOTATION_ENRICHMENT_PROJECT_ID,
   SEED_LATITUDE_ANNOTATION_ENRICHMENT_PROJECT_NAME,
   SEED_LATITUDE_ANNOTATION_ENRICHMENT_PROJECT_SLUG,
+  SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_ID,
+  SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_NAME,
+  SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_SLUG,
   SEED_LATITUDE_EVALUATIONS_PROJECT_ID,
   SEED_LATITUDE_EVALUATIONS_PROJECT_NAME,
   SEED_LATITUDE_EVALUATIONS_PROJECT_SLUG,
@@ -90,6 +94,11 @@ const DOGFOOD_PROJECTS: readonly { readonly id: ProjectId; readonly name: string
     name: SEED_LATITUDE_TAXONOMY_PROJECT_NAME,
     slug: SEED_LATITUDE_TAXONOMY_PROJECT_SLUG,
   },
+  {
+    id: SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_ID,
+    name: SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_NAME,
+    slug: SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_SLUG,
+  },
 ]
 
 const seedLatitudeDogfoodProjects: Seeder = {
@@ -128,4 +137,29 @@ const seedOldTracesQaProject: Seeder = {
     }),
 }
 
-export const projectSeeders: readonly Seeder[] = [seedProjects, seedLatitudeDogfoodProjects, seedOldTracesQaProject]
+// QA fixtures for the cost section: one project per archetype. The unhealthy
+// archetype is absent on purpose — it seeds onto the default project above.
+const seedCostArchetypeProjects: Seeder = {
+  name: "projects/cost-archetypes",
+  run: (ctx: SeedContext) =>
+    Effect.gen(function* () {
+      for (const definition of Object.values(SEED_COST_ARCHETYPE_PROJECTS)) {
+        const project = createProject({
+          id: definition.id,
+          organizationId: SEED_ORG_ID,
+          name: definition.name,
+          slug: definition.slug,
+          firstTraceAt: new Date(Date.now() - definition.firstTraceAtDaysAgo * 24 * 60 * 60 * 1000),
+        })
+        yield* ctx.repositories.project.save(project)
+        console.log(`  -> project: ${project.name} (${project.slug})`)
+      }
+    }),
+}
+
+export const projectSeeders: readonly Seeder[] = [
+  seedProjects,
+  seedLatitudeDogfoodProjects,
+  seedOldTracesQaProject,
+  seedCostArchetypeProjects,
+]

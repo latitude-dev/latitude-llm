@@ -21,7 +21,48 @@ export const TAXONOMY_PENDING_DISPLAY_NAME = "Pending"
  */
 export const TAXONOMY_DIMENSIONS = ["topic"] as const
 
-export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated"] as const
+/**
+ * `staging` clusters are the freshly built tree awaiting the atomic swap: they
+ * are fully written and assigned but MUST be ignored by every active read and by
+ * online routing until the publish transaction flips them to `active` (and the
+ * old tree to `deprecated`) in one step. The column is already `varchar(16)`, so
+ * widening the domain contract needs no Postgres migration.
+ */
+export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated", "staging"] as const
+
+// ---------------------------------------------------------------------------
+// Adaptive-clustering rollout gate (LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE)
+//
+// The environment baseline for the divisive-build rollout, resolved once in the
+// planning activity (never in workflow code — Temporal determinism). `off` is a
+// guaranteed byte-identical no-op: static builder, `computeSplitLinkThreshold`,
+// sample-only reassignment, centroid-similarity naming, original publish
+// sequence. `shadow`/`enforced` exercise the new machinery (adaptive builder,
+// member-confidence routing thresholds, shape-aware naming, staging + atomic
+// swap, full-window reassignment). The per-organization enforcement flag that
+// can raise the baseline to `enforced` lands in Phase 4 (LAT-773).
+// ---------------------------------------------------------------------------
+
+export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "shadow", "enforced"] as const
+export const TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV = "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE"
+
+/**
+ * Tag stamped on every shadow/enforced telemetry event so a dashboard can slice
+ * by the policy that produced a run. Bump it whenever the relative schedule or
+ * routing constants change so old and new calibrations are separable in Logs.
+ */
+export const TAXONOMY_ADAPTIVE_POLICY_VERSION = "relative-v1"
+
+/**
+ * Structural node-count ceiling used as a fallback guardrail: an adaptive tree
+ * with more nodes than this cannot be a legitimate output of the depth schedule
+ * (max children 10 × 8 × 6 over three depths) and signals a builder fault, so
+ * the planning activity falls back to static rather than persist it.
+ */
+export const TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES = 1_024
+
+/** Batch size for bounded ClickHouse assignment writes during full-window reassignment. */
+export const TAXONOMY_REASSIGNMENT_BATCH_SIZE = 1_000
 
 /**
  * The divisive build emits exactly these three transitions:
@@ -56,11 +97,95 @@ export const CUSTOM_BEHAVIOR_STATUSES = ["pending", "generating", "ready", "fail
 /**
  * Per-project cap on custom behaviors (LAT-746 Q1 = flat 10), enforced in the
  * create use-case. Each behavior spawns its own scoped clusters, a ClickHouse
- * `custom_behavior_assignments` slice, and a workflow run, so the cap bounds
+ * `taxonomy_view_assignments` slice, and a workflow run, so the cap bounds
  * CH storage + LLM naming cost. Deliberately a single constant: raising it is a
  * one-line change, no per-plan machinery.
  */
 export const MAX_CUSTOM_BEHAVIORS_PER_PROJECT = 10
+
+// ---------------------------------------------------------------------------
+// Facets
+//
+// A facet clusters sessions by an extracted answer to a question rather than by
+// the raw transcript. Projections are facet-global (extracted once per
+// `(facet, session)`, cached in `taxonomy_facet_projections`); clusters and
+// assignments are per-view. Editing the question bumps `version` = reset tree.
+// ---------------------------------------------------------------------------
+
+export const FACET_NAME_MAX_LENGTH = 80
+
+/** UI help text shown in the facet picker: why this facet is useful for your sessions. Required for every facet. */
+export const FACET_DESCRIPTION_MAX_LENGTH = 300
+
+/**
+ * Length ceiling on a facet's free-text extraction instructions. Presets fill it
+ * with curated guidance; custom facets are user-written. Generous on purpose —
+ * it is prompt guidance, not the transcript (that input is bounded separately by
+ * `FACET_EXTRACTION_INPUT_CHAR_CAP`). Instructions are write-once: to change what
+ * a facet means, create a new facet.
+ */
+export const FACET_INSTRUCTIONS_MAX_LENGTH = 4_000
+
+/**
+ * Reserved slug prefix for the code-defined preset catalog (`FACET_PRESETS`) and
+ * for route sentinels like `TOPICS_BEHAVIOR_SLUG`. Preset facets are
+ * find-or-created under these slugs; neither a user-authored facet nor a custom
+ * behavior may claim the prefix, so `createFacet` and `createCustomBehavior`
+ * reject a generated slug that starts with it.
+ */
+export const FACET_PRESET_SLUG_PREFIX = "lat-"
+
+/**
+ * Addresses the whole-project topic behavior in the web router. That behavior has
+ * no `custom_behaviors` row — the unfiltered topic tree is the online-routed
+ * `(NULL, NULL)` view — so the UI needs a stable slug to route it like any other
+ * behavior. It sits in the reserved `lat-` namespace, so no user-created behavior
+ * can shadow it.
+ */
+export const TOPICS_BEHAVIOR_SLUG = `${FACET_PRESET_SLUG_PREFIX}topics`
+
+/**
+ * Character ceiling on the conversation fed to a single facet extraction. Input
+ * tokens are the dominant cost lever after adoption and intent is usually
+ * apparent early, so the extractor (Phase 2) truncates its input to this bound.
+ */
+export const FACET_EXTRACTION_INPUT_CHAR_CAP = 12_000
+
+/** Max length of the one-sentence extracted answer stored + embedded per facet projection. */
+export const FACET_PROJECTION_TEXT_MAX_LENGTH = 500
+
+/**
+ * Extraction model for `FACET_EXTRACTION` (overridable via `LAT_AI_FACET_EXTRACTION_*`).
+ * Starts on the cheap Bedrock `minimax.minimax-m2.5` (already our naming model,
+ * ~$0.30/1M in · $1.20/1M out); if intent-extraction quality proves poor, point
+ * the override at Claude Haiku 4.5 (`amazon-bedrock` / `anthropic.claude-haiku-4-5`,
+ * ~$1/$5). Low temperature keeps a single session's answer stable across passes;
+ * `maxTokens` need only cover a one-sentence answer bounded to
+ * `FACET_PROJECTION_TEXT_MAX_LENGTH` plus a small JSON envelope.
+ *
+ * `temperature` is 0.1, NOT 0: the MiniMax family caps temperature to the open
+ * range (0, 1] (0 is rejected) and greedy decoding falls into repetition loops on
+ * these checkpoints. MiniMax's own recommendation is 1.0 (it is RL-trained there);
+ * 0.1 is the low-variance floor we accept for a stable extraction — if quality is
+ * poor, raising toward 1.0 is a lever alongside the Haiku fallback.
+ */
+export const TAXONOMY_DEFAULT_FACET_EXTRACTION_MODEL = {
+  provider: "amazon-bedrock",
+  model: "minimax.minimax-m2.5",
+  temperature: 0.1,
+  maxTokens: 400,
+} as const
+
+/** Bounded concurrency for the per-session extraction fan-out (misses only). */
+export const FACET_EXTRACTION_CONCURRENCY = 8
+
+/**
+ * Flush extracted projections to the cache every this many, instead of once at
+ * the end. Lets the cold-start progress UI show answers stream in, and lets a
+ * retry of the long garden activity resume from already-persisted work (cache
+ * hits) rather than re-extracting everything.
+ */
+export const FACET_EXTRACTION_PERSIST_BATCH_SIZE = 16
 
 // ---------------------------------------------------------------------------
 // Embedding + summary
@@ -189,24 +314,31 @@ export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
 
 // ---------------------------------------------------------------------------
-// Divisive builder — per-depth schedule
+// Divisive builder — per-depth schedules
 //
-// Each depth has its own (maxK, min-cluster-size, sibling-separation,
-// min-split-score) tuple. Broad-then-narrow: roots permit up to 10 children,
-// require larger absolute floors and a looser sibling separation (siblings
-// at the root are intentionally diverse topics); deeper levels accept smaller
-// fractions of the parent's mass and require tighter sibling separation.
+// Two schedules, one per builder gate. Neither is a "default"; the gardening
+// path picks explicitly (static today, relative once the rollout gate enables
+// it).
 //
-// Tuning the defaults: the seeded Acme corpus has ~1500 sessions across
-// ~8 hand-authored support topics + non-session agents. 1% root floor →
-// ~15 sessions absolute; combined with the abs floor (20) this keeps the
-// root tree at roughly 6-10 categories without admitting "user says hello"
-// style fragments. Depth-1 at 3% of parent allows real sub-topics to surface
-// on parents with ~150+ members; depth-2 at 5% of parent + an 8-row absolute
-// floor keeps the long tail honest.
+// Static (`TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE`) is the current production
+// tuning: broad-then-narrow child counts + size floors + an absolute
+// sibling-cosine ceiling per depth.
+//
+// Relative (`TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE`) carries the same
+// scale-free size/score/child-count limits but replaces the absolute ceiling
+// with the node-relative separation gate — absolute cosine similarity is not
+// comparable across projects, so acceptance is judged against each node's own
+// member spread. The four relative fields (dominance + relative separation +
+// within/routing quantiles) are calibrated in `src/calibration/` (see
+// BASELINES.md): the root separation 0.45 resolves the narrow-domain pilot's
+// single production cluster into four coherent intents, tightening with depth
+// so deeper splits must be more clearly separated; `withinDistanceQuantile`
+// reads the spread from the upper bulk of member distances (outliers can't wave
+// a weak split through); `routingSimilarityQuantile` admits ~85% of a child's
+// known members.
 // ---------------------------------------------------------------------------
 
-export interface TaxonomyTreeDepthSchedule {
+export interface TaxonomyTreeStaticDepthSchedule {
   readonly maxChildren: number
   readonly minClusterFraction: number
   readonly minClusterAbs: number
@@ -214,10 +346,54 @@ export interface TaxonomyTreeDepthSchedule {
   readonly minSplitScore: number
 }
 
-export const TAXONOMY_TREE_DEPTH_SCHEDULE: readonly TaxonomyTreeDepthSchedule[] = [
+export const TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE: readonly TaxonomyTreeStaticDepthSchedule[] = [
   { maxChildren: 10, minClusterFraction: 0.01, minClusterAbs: 20, maxSiblingCosine: 0.85, minSplitScore: 1.5 },
   { maxChildren: 8, minClusterFraction: 0.03, minClusterAbs: 10, maxSiblingCosine: 0.9, minSplitScore: 1.2 },
   { maxChildren: 6, minClusterFraction: 0.05, minClusterAbs: 8, maxSiblingCosine: 0.93, minSplitScore: 1.1 },
+]
+
+export interface TaxonomyTreeRelativeDepthSchedule {
+  readonly maxChildren: number
+  readonly minClusterFraction: number
+  readonly minClusterAbs: number
+  readonly minSplitScore: number
+  readonly maxDominantChildFraction: number
+  readonly minRelativeSeparation: number
+  readonly withinDistanceQuantile: number
+  readonly routingSimilarityQuantile: number
+}
+
+export const TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE: readonly TaxonomyTreeRelativeDepthSchedule[] = [
+  {
+    maxChildren: 10,
+    minClusterFraction: 0.01,
+    minClusterAbs: 20,
+    minSplitScore: 1.5,
+    maxDominantChildFraction: 0.9,
+    minRelativeSeparation: 0.45,
+    withinDistanceQuantile: 0.8,
+    routingSimilarityQuantile: 0.15,
+  },
+  {
+    maxChildren: 8,
+    minClusterFraction: 0.03,
+    minClusterAbs: 10,
+    minSplitScore: 1.2,
+    maxDominantChildFraction: 0.9,
+    minRelativeSeparation: 0.55,
+    withinDistanceQuantile: 0.8,
+    routingSimilarityQuantile: 0.15,
+  },
+  {
+    maxChildren: 6,
+    minClusterFraction: 0.05,
+    minClusterAbs: 8,
+    minSplitScore: 1.1,
+    maxDominantChildFraction: 0.9,
+    minRelativeSeparation: 0.65,
+    withinDistanceQuantile: 0.8,
+    routingSimilarityQuantile: 0.15,
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -244,3 +420,45 @@ export const TAXONOMY_KMEANS_RESTARTS = 3
 export const TAXONOMY_KMEANS_MAX_ITER = 25
 /** k-means convergence tolerance in (1 - cosine) centroid drift. */
 export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
+
+/**
+ * Restart budget for a re-search of the relative build when the root split lands
+ * near the separation gate. k-means only finds a local optimum, so the tree it
+ * returns depends on where k-means++ seeded — and because seeds are drawn as
+ * indices into the member list, a few percent of window turnover redraws them
+ * entirely. On corpora whose root split sits close to `minRelativeSeparation`,
+ * three restarts is too small a sample: some runs find a partition that clears
+ * the gate and some do not, so the tree alternates between a real split and a
+ * bare leaf. Re-searching with a larger budget finds the good optimum reliably.
+ */
+export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 25
+/**
+ * Root relative separation at or above which the first-pass build is kept as-is.
+ * Measured on real corpora across historical 7-day windows: an unstable project
+ * sits at 0.35–0.57 while a stable one sits at 1.06 and above, with no overlap.
+ * 0.8 centres the threshold in that gap. Builds above it are returned untouched,
+ * so projects that do not need the re-search are unaffected by it.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN = 0.8
+/**
+ * Lower edge of the re-search band. A corpus with no structure to find reaches
+ * only ~0.09 at its best root candidate, while a corpus whose real split merely
+ * fell short on this run reaches ~0.4. Without this floor every unimodal project
+ * would re-search on every pass to reconfirm the leaf it already had.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
+
+// ---------------------------------------------------------------------------
+// Clustering worker resource bounds
+//
+// The divisive build runs in a dedicated Node worker thread. These bound a
+// single worker invocation — one shared deadline and memory budget covering
+// the whole run (static plus, in shadow mode, adaptive). The measured
+// max-sample (1,500 × 2,048) build is ~6s and a real 2,048d pilot build ~12s;
+// the timeout is a generous backstop against a hung/looping worker, not a tuned
+// SLA. The old-generation budget is the calibrated worker heap ceiling: the
+// measured build peaks well under it.
+// ---------------------------------------------------------------------------
+
+export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 5 * 60_000
+export const TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB = 512

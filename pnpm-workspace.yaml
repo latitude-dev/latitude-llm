@@ -3,6 +3,7 @@ packages:
   - packages/**
   - "!packages/telemetry/python/**"
   - "!packages/telemetry/hermes/**"
+  - "!packages/telemetry/prime-intellect/**"
   - "!packages/platform/op-gepa/python/**"
   - "!packages/telemetry/typescript/examples/flue-app"
   - "!packages/telemetry/typescript/examples/flue-app/**"
@@ -49,10 +50,10 @@ catalog:
   "@types/react-dom": 19.2.3
   "@typescript/native-preview": 7.0.0-dev.20260705.1
   "@vitejs/plugin-react": 6.0.1
-  better-auth: 1.6.11
-  "@better-auth/core": 1.6.9
-  "@better-auth/sso": 1.6.9
-  "@better-auth/stripe": 1.6.10
+  better-auth: 1.6.13
+  "@better-auth/core": 1.6.13
+  "@better-auth/sso": 1.6.13
+  "@better-auth/stripe": 1.6.13
   "@bull-board/api": 6.12.1
   "@bull-board/hono": 6.12.1
   bullmq: 5.76.2
@@ -63,10 +64,12 @@ catalog:
   fast-json-stable-stringify: 2.1.0
   "@effect/opentelemetry": 4.0.0-beta.57
   effect: 4.0.0-beta.57
-  hono: 4.12.21
+  hono: 4.12.30
   ioredis: 5.10.1
+  jose: 6.2.3
   js-tiktoken: 1.0.21
   mustache: 4.2.0
+  pdfjs-dist: 6.1.200
   pg: 8.16.0
   quickjs-emscripten: 0.32.0
   react: 19.2.5
@@ -83,6 +86,11 @@ catalog:
   voyageai: 0.2.1
   "@modelcontextprotocol/sdk": 1.29.0
   "@modelcontextprotocol/inspector": 0.21.2
+
+# pdfjs-dist pulls @napi-rs/canvas for its Node rasterization path, which we never take. It
+# reaches it through a runtime `createRequire`, so no bundler ever resolves the specifier.
+ignoredOptionalDependencies:
+  - "@napi-rs/canvas"
 
 ignoredBuiltDependencies:
   - "@prisma/engines"

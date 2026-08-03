@@ -34,6 +34,7 @@ function setup(
     name: "Alice",
     jobTitle: null,
     phoneNumber: null,
+    heardAboutUs: null,
     emailVerified: true,
     image: null,
     role: "user",
@@ -79,15 +80,22 @@ function setup(
   const organizationRepo = OrganizationRepository.of({
     findById: (id) =>
       id === orgId ? Effect.succeed(organization) : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+    findByIdForUpdate: (id) =>
+      id === orgId ? Effect.succeed(organization) : Effect.fail(new NotFoundError({ entity: "Organization", id })),
     listByUserId: () => Effect.die("not used"),
     save: () => Effect.die("not used"),
     delete: () => Effect.die("not used"),
+    deleteIfExpiredUnclaimed: () => Effect.die("not used"),
     countBySlug: () => Effect.die("not used"),
     listExpiredUnclaimed: () => Effect.die("not used"),
   })
 
   const projectRepo = ProjectRepository.of({
     findById: (id) =>
+      project && project.id === id
+        ? Effect.succeed(project)
+        : Effect.fail(new NotFoundError({ entity: "Project", id })),
+    findByIdForUpdate: (id) =>
       project && project.id === id
         ? Effect.succeed(project)
         : Effect.fail(new NotFoundError({ entity: "Project", id })),

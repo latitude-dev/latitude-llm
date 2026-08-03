@@ -71,10 +71,16 @@ function dedupeMonitors(monitors: readonly MonitorRecord[]): readonly MonitorRec
 }
 
 function ActivityDot({ live }: { readonly live: boolean }) {
-  if (!live) return <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" />
+  if (!live) {
+    return (
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+        <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+      </span>
+    )
+  }
   return (
-    <span className="relative flex h-2 w-2 shrink-0">
-      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+    <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
+      <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-primary opacity-75" />
       <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
     </span>
   )
@@ -147,7 +153,7 @@ export function TargetMonitorsMenu({
   if (monitors.length === 0) {
     return (
       <>
-        <Button variant="outline" size="sm" className="h-8 w-auto" onClick={() => setCreateOpen(true)}>
+        <Button variant="outline" size="default" className="h-8 w-auto" onClick={() => setCreateOpen(true)}>
           <Icon icon={BellPlusIcon} size="sm" />
           {label}
         </Button>
@@ -164,7 +170,7 @@ export function TargetMonitorsMenu({
     <>
       <DropdownMenuRoot modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 w-auto max-w-56">
+          <Button variant="outline" size="default" className="h-8 w-auto max-w-56">
             {lead ? <ActivityDot live={lead.mutedAt === null} /> : <Icon icon={BellPlusIcon} size="sm" />}
             <Text.H5 ellipsis noWrap>
               {lead?.name ?? label}

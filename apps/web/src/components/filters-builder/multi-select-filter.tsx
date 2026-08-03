@@ -15,6 +15,7 @@ import { type RefObject, useMemo, useRef, useState } from "react"
 import { useSessionDistinctValues } from "../../domains/sessions/sessions.collection.ts"
 import { useTraceDistinctValues } from "../../domains/traces/traces.collection.ts"
 import { useDebounce } from "../../lib/hooks/useDebounce.ts"
+import { useFilterPortalContainer } from "./portal-container-context.tsx"
 import type { DistinctColumn } from "./types.ts"
 
 export type FilterMode = "traces" | "sessions"
@@ -61,6 +62,10 @@ export function MultiSelectFilter({
   staticItems,
 }: MultiSelectFilterProps) {
   const anchorRef = useRef<HTMLDivElement>(null)
+  // An explicit prop wins (signals filter builder); otherwise fall back to the
+  // context a modal provides so the popover mounts inside the dialog.
+  const contextContainer = useFilterPortalContainer()
+  const container = portalContainer?.current ?? contextContainer ?? undefined
   const [inputValue, setInputValue] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   // `hasOpened` latches once the popup has been opened so we keep the cached
@@ -133,7 +138,7 @@ export function MultiSelectFilter({
           )}
         </ComboboxValue>
       </ComboboxChips>
-      <ComboboxContent anchor={anchorRef} container={portalContainer?.current}>
+      <ComboboxContent anchor={anchorRef} container={container}>
         {isSearching ? (
           <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />

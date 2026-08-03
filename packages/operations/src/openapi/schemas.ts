@@ -1,12 +1,16 @@
 import {
   FILTER_OPERATORS,
+  isPercentileSessionFilterField,
+  isPercentileTraceFilterField,
   SCORE_FILTER_FIELDS,
   SESSION_ID_LENGTH,
+  SESSION_TELEMETRY_FILTER_FIELDS,
   SPAN_ID_LENGTH,
   SPAN_ROW_FILTER_GTE_PERCENTILE_MESSAGE,
   TRACE_ID_LENGTH,
   TRACE_TELEMETRY_FILTER_FIELDS,
-  TRACE_TIME_FILTER_FIELDS,
+  traceFilterGtePercentileMessage,
+  unknownSessionFilterFields,
   unknownTraceFilterFields,
 } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
@@ -82,11 +86,6 @@ export const SpanRowFilterSetSchema = FilterSetSchema.superRefine((filters, ctx)
 
 export const TRACE_FILTER_SET_DESCRIPTION = `Filter set keyed by trace field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: ${TRACE_TELEMETRY_FILTER_FIELDS.join(", ")}; score-derived keys (${SCORE_FILTER_FIELDS.join(", ")}); and arbitrary metadata via \`metadata.<key>\`. \`startTime\`/\`endTime\` take ISO-8601 values (a trace's first span start / last span end). \`gtePercentile\` is only supported on duration/ttft/cost — not on time fields. Unknown fields are rejected rather than ignored.`
 
-const TRACE_TIME_FILTER_FIELD_SET: ReadonlySet<string> = new Set(TRACE_TIME_FILTER_FIELDS)
-
-const TRACE_TIME_GTE_PERCENTILE_MESSAGE =
-  "`gtePercentile` is not supported on `startTime`/`endTime`; use absolute `gte`/`lte` with ISO-8601 timestamps."
-
 const traceFilterFieldIssue = (field: string): string =>
   `Unknown trace filter field "${field}". Valid fields: ${TRACE_TELEMETRY_FILTER_FIELDS.join(", ")}; score.* keys (e.g. ${SCORE_FILTER_FIELDS[0]}); or metadata.<key>.`
 
@@ -100,10 +99,9 @@ const addTraceFilterFieldIssues = (
     ctx.addIssue({ code: "custom", message: traceFilterFieldIssue(field), path: [...basePath, field] })
   }
 
-  // Percentile resolution only rewrites duration/ttft/cost. Leaving gtePercentile
-  // on a time field would reach buildClause and throw (500) for an unsupported op.
+  // Percentile resolution only rewrites duration/ttft/cost; other gtePercentile ops would 500 in the filter builder.
   for (const [field, conditions] of Object.entries(filters)) {
-    if (!TRACE_TIME_FILTER_FIELD_SET.has(field) || !Array.isArray(conditions)) continue
+    if (isPercentileTraceFilterField(field) || !Array.isArray(conditions)) continue
     conditions.forEach((cond, index) => {
       if (
         cond !== null &&
@@ -113,7 +111,7 @@ const addTraceFilterFieldIssues = (
       ) {
         ctx.addIssue({
           code: "custom",
-          message: TRACE_TIME_GTE_PERCENTILE_MESSAGE,
+          message: traceFilterGtePercentileMessage(field),
           path: [...basePath, field, index, "op"],
         })
       }
@@ -126,6 +124,49 @@ export const TraceFilterSetSchema = FilterSetSchema.superRefine((filters, ctx) =
 })
   .describe(TRACE_FILTER_SET_DESCRIPTION)
   .openapi("TraceFilterSet")
+
+// Session filters mirror the web session filter dropdown, which — unlike traces —
+// exposes the conversation-intelligence fields `moments` and `topics`.
+export const SESSION_FILTER_SET_DESCRIPTION = `Filter set keyed by session field. Each entry holds an array of conditions ANDed together for that field; field-level groups are ANDed across the set. Valid fields: ${SESSION_TELEMETRY_FILTER_FIELDS.join(", ")}; score-derived keys (${SCORE_FILTER_FIELDS.join(", ")}); and arbitrary metadata via \`metadata.<key>\`. \`moments\` filters by conversation moment kind and \`topics\` by behavior topic id (a topic matches its whole subtree). \`startTime\`/\`endTime\` take ISO-8601 values (a session's first span start / last span end). \`gtePercentile\` is only supported on duration/ttft/cost. Unknown fields are rejected rather than ignored.`
+
+const sessionFilterFieldIssue = (field: string): string =>
+  `Unknown session filter field "${field}". Valid fields: ${SESSION_TELEMETRY_FILTER_FIELDS.join(", ")}; score.* keys (e.g. ${SCORE_FILTER_FIELDS[0]}); or metadata.<key>.`
+
+/** Flags every filter-set key/operator the session query cannot apply, so callers get a 400 instead of silently unfiltered results or a 500. */
+const addSessionFilterFieldIssues = (
+  filters: Readonly<Record<string, unknown>>,
+  ctx: z.RefinementCtx,
+  basePath: readonly (string | number)[] = [],
+): void => {
+  for (const field of unknownSessionFilterFields(filters)) {
+    ctx.addIssue({ code: "custom", message: sessionFilterFieldIssue(field), path: [...basePath, field] })
+  }
+
+  // Percentile resolution only rewrites duration/ttft/cost; other gtePercentile ops would 500 in the filter builder.
+  for (const [field, conditions] of Object.entries(filters)) {
+    if (isPercentileSessionFilterField(field) || !Array.isArray(conditions)) continue
+    conditions.forEach((cond, index) => {
+      if (
+        cond !== null &&
+        typeof cond === "object" &&
+        "op" in cond &&
+        (cond as { op?: unknown }).op === "gtePercentile"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: `gtePercentile is only supported on duration/ttft/cost; not on '${field}'. Use absolute gte/lte thresholds instead.`,
+          path: [...basePath, field, index, "op"],
+        })
+      }
+    })
+  }
+}
+
+export const SessionFilterSetSchema = FilterSetSchema.superRefine((filters, ctx) => {
+  addSessionFilterFieldIssues(filters, ctx)
+})
+  .describe(SESSION_FILTER_SET_DESCRIPTION)
+  .openapi("SessionFilterSet")
 
 export const TraceRefSchema = z
   .discriminatedUnion("by", [

@@ -103,7 +103,13 @@ export function parseVercelOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[
     const toolCalls = parseJsonSafe(toolCallsJson)
     if (Array.isArray(toolCalls)) {
       for (const tc of toolCalls) {
-        contentParts.push({ type: "tool-call", toolCallId: tc.toolCallId, toolName: tc.toolName, args: tc.input })
+        contentParts.push({
+          type: "tool-call",
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          input: tc.input,
+          args: tc.input,
+        })
       }
     }
   }
@@ -128,6 +134,20 @@ function parseToolDefinitions(attrs: readonly OtlpKeyValue[]): ToolDefinition[] 
     })
     .filter(Boolean) as ToolDefinition[]
 }
+
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
+export const VERCEL_CONTENT_ATTRIBUTE_KEYS = {
+  exact: [
+    "ai.prompt",
+    "ai.prompt.messages",
+    "ai.prompt.tools",
+    "ai.prompt.toolDefinitions",
+    "ai.response.text",
+    "ai.response.object",
+    "ai.response.toolCalls",
+  ],
+  prefixes: ["ai.prompt.tools.", "ai.response.toolCalls."],
+} as const
 
 export function parseVercel(attrs: readonly OtlpKeyValue[]): ParsedContent {
   // Fall back to call-level for messages, but keep a top-level system prompt (call-level carries none).

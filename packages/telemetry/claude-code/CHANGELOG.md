@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.14] - 2026-07-22
+
+### Fixed
+
+- **Memory spans now emit from git worktrees.** The hook derived the auto-memory directory as the transcript's sibling (`dirname(transcript)/memory`), but Claude Code keeps one memory store per repository under the **main worktree**, while a linked worktree's session transcript lives under that worktree's own project directory. The two paths differ, so every memory operation from a worktree session was silently skipped. The classifier now recognizes any `~/.claude/projects/<store>/memory/<record>` path under the shared projects root, setting `gen_ai.memory.store.id` to the owning `<store>` slug — so a worktree session writing the repo's main-worktree store is captured. Sessions run directly in the repo root are unaffected.
+
+## [0.0.13] - 2026-07-21
+
+### Added
+
+- **Memory observability for Claude Code auto memory.** Claude Code writes its own persistent [auto memory](https://code.claude.com/docs/en/memory) (per-repository markdown under `~/.claude/projects/<project>/memory/`) through ordinary `Read`/`Write`/`Edit` tools. The hook now emits a child memory-operation span under the `tool_execution` span whenever such a tool targets a file inside that directory, using the OpenTelemetry `gen_ai.memory.*` conventions — so auto memory shows up on Latitude's Memory page with per-record change history and diffs. `Write` → `upsert_memory`, `Edit`/`MultiEdit` → `update_memory`, `Read` → `search_memory`; `gen_ai.memory.store.id` is the `<project>` slug and `gen_ai.memory.record.id` is the file path within the memory dir. Edit bodies are read from disk at hook time (the tool call carries only a diff); subagent auto memory is covered via the same path.
+- `LATITUDE_CLAUDE_CODE_MEMORY` (default `1`) emits memory-operation spans; set it to `0` to disable them. `LATITUDE_CLAUDE_CODE_MEMORY_CONTENT` (default `1`) includes record bodies; set it to `0` to emit structure and counts only. Bodies also honor `LATITUDE_REDACT_ATTRIBUTES` via the `gen_ai.memory.records` key.
+
+## [0.0.12] - 2026-07-21
+
+### Fixed
+
+- **Oversized tool-definition lists no longer drop tool names.** When an `llm_request` span exceeded the byte budget, tool schemas were capped by keeping only the leading full entries (often just `Agent` / `Artifact` on real Claude Code sessions). Session `definedTools` then missed names like `WebSearch`, and the undeclared-tool flagger false-positived on successful calls. Capping now keeps every tool name (full schema when it fits, name-only stub otherwise).
+
 ## [0.0.11] - 2026-07-16
 
 ### Changed

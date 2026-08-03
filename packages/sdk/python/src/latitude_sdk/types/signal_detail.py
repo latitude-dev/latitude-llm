@@ -51,14 +51,43 @@ class SignalDetail(UniversalBaseModel):
 
     states: typing.List[SignalDetailStatesItem] = pydantic.Field()
     """
-    Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`).
+    Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`).
     """
 
+    resolved_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="resolvedAt"),
+        pydantic.Field(
+            alias="resolvedAt",
+            default=None,
+            description="ISO-8601 timestamp at which the signal was resolved, or `null`.",
+        ),
+    ]
+    ignored_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="ignoredAt"),
+        pydantic.Field(
+            alias="ignoredAt",
+            default=None,
+            description="ISO-8601 timestamp at which the signal was ignored, or `null`.",
+        ),
+    ]
+    regressed_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="regressedAt"),
+        pydantic.Field(
+            alias="regressedAt",
+            default=None,
+            description="ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`.",
+        ),
+    ]
     muted_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="mutedAt"),
         pydantic.Field(
-            alias="mutedAt", default=None, description="ISO-8601 timestamp at which the signal was muted, or `null`."
+            alias="mutedAt",
+            default=None,
+            description="ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open.",
         ),
     ]
     created_at: typing_extensions.Annotated[

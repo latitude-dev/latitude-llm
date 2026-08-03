@@ -13,7 +13,9 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { isActiveEvaluation } from "../entities/evaluation.ts"
+import { SignalNotActiveForMonitoringError } from "../errors.ts"
 import { EvaluationRepository } from "../ports/evaluation-repository.ts"
+import { EvaluationSignalRepository } from "../ports/evaluation-signal-repository.ts"
 
 export interface MonitorSignalInput {
   readonly organizationId: OrganizationId
@@ -58,7 +60,7 @@ interface MonitorSignalResult {
   readonly evaluationId: EvaluationId | null
 }
 
-export type MonitorSignalError = BadRequestError | RepositoryError
+export type MonitorSignalError = BadRequestError | RepositoryError | SignalNotActiveForMonitoringError
 
 const buildGenerateWorkflowId = (signalId: string) => `evaluations:generate:${signalId}`
 const buildOptimizeWorkflowId = (evaluationId: string) => `evaluations:optimize:${evaluationId}`
@@ -76,9 +78,9 @@ const buildOptimizeWorkflowId = (evaluationId: string) => `evaluations:optimize:
  * Either way, when the corresponding workflow is already running the call
  * fails with a `BadRequestError` so the UI can surface a friendly message.
  *
- * The caller is responsible for validating that the issue belongs to the
- * requested project (this use-case doesn't load the issue to avoid a
- * circular dependency between `@domain/evaluations` and `@domain/signals`).
+ * The signal is loaded through the narrow `EvaluationSignalRepository` view
+ * (no `@domain/signals` dependency) to enforce project ownership and reject
+ * resolved/ignored signals server-side.
  */
 export const monitorSignalUseCase = Effect.fn("evaluations.monitorSignal")(function* (input: MonitorSignalInput) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
@@ -88,6 +90,22 @@ export const monitorSignalUseCase = Effect.fn("evaluations.monitorSignal")(funct
     return yield* new BadRequestError({
       message: "User-authored signals manage their own evaluation and cannot be monitored or realigned",
     })
+  }
+
+  // Resolved/ignored signals are archived; attaching or realigning a detector
+  // contradicts that state. Checked here (not just in the UI) so the API path
+  // enforces it too. A missing signal degrades to the same rejection.
+  const signalRepository = yield* EvaluationSignalRepository
+  const signal = yield* signalRepository
+    .findById(input.signalId)
+    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+  if (
+    signal === null ||
+    signal.projectId !== input.projectId ||
+    signal.resolvedAt !== null ||
+    signal.ignoredAt !== null
+  ) {
+    return yield* new SignalNotActiveForMonitoringError({ signalId: input.signalId })
   }
 
   const evaluationRepository = yield* EvaluationRepository

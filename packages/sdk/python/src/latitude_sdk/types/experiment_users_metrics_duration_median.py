@@ -9,7 +9,7 @@ from .metric_delta import MetricDelta
 
 class ExperimentUsersMetricsDurationMedian(UniversalBaseModel):
     """
-    Median duration — seconds; lower is better.
+    Median total session time per user — seconds; lower is better.
     """
 
     value: typing.Optional[float] = pydantic.Field(default=None)

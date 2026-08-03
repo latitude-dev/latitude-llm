@@ -638,6 +638,176 @@ export class TracesClient {
     }
 
     /**
+     * Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} traceId - 32-character trace identifier.
+     * @param {Latitude.GetMemoryTracesRequest} request
+     * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.traces.getMemory("projectSlug", "traceId")
+     */
+    public getMemory(
+        projectSlug: string,
+        traceId: string,
+        request: Latitude.GetMemoryTracesRequest = {},
+        requestOptions?: TracesClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.SessionMemorySummary> {
+        return core.HttpResponsePromise.fromPromise(this.__getMemory(projectSlug, traceId, request, requestOptions));
+    }
+
+    private async __getMemory(
+        projectSlug: string,
+        traceId: string,
+        _request: Latitude.GetMemoryTracesRequest = {},
+        requestOptions?: TracesClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.SessionMemorySummary>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/${core.url.encodePathParam(traceId)}/memory`,
+            ),
+            method: "GET",
+            headers: _headers,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.SessionMemorySummary, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "GET",
+            "/v1/projects/{projectSlug}/traces/{traceId}/memory",
+        );
+    }
+
+    /**
+     * Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} traceId - 32-character trace identifier.
+     * @param {Latitude.GetMemoryChangesTracesRequest} request
+     * @param {TracesClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.traces.getMemoryChanges("projectSlug", "traceId")
+     */
+    public getMemoryChanges(
+        projectSlug: string,
+        traceId: string,
+        request: Latitude.GetMemoryChangesTracesRequest = {},
+        requestOptions?: TracesClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.SessionMemoryChanges> {
+        return core.HttpResponsePromise.fromPromise(
+            this.__getMemoryChanges(projectSlug, traceId, request, requestOptions),
+        );
+    }
+
+    private async __getMemoryChanges(
+        projectSlug: string,
+        traceId: string,
+        _request: Latitude.GetMemoryChangesTracesRequest = {},
+        requestOptions?: TracesClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.SessionMemoryChanges>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/traces/${core.url.encodePathParam(traceId)}/memory/changes`,
+            ),
+            method: "GET",
+            headers: _headers,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.SessionMemoryChanges, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "GET",
+            "/v1/projects/{projectSlug}/traces/{traceId}/memory/changes",
+        );
+    }
+
+    /**
      * Enqueues a CSV export of the traces matched by `traces`. The export runs asynchronously; a download link is emailed to `recipient` when the file is ready. The response returns immediately with `status = "queued"`. The recipient must already be a member of the requesting organization.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)

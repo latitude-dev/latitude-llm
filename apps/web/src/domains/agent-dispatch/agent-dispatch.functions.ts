@@ -26,7 +26,7 @@ import {
   resolveEffectiveConfigsForProject,
   type StoredAgentDispatchTarget,
   sendAgentDispatchUseCase,
-  setProjectDispatchRepoUseCase,
+  setDispatchRepoUseCase,
   storedAgentDispatchTargetSchema,
   upsertOrgDefaultDispatchConfigUseCase,
   upsertProjectDispatchOverrideUseCase,
@@ -357,6 +357,7 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
           .map((dispatch) => SignalId(dispatch.sourceId))
         const signals = signalIds.length > 0 ? yield* signalRepository.findByIds({ projectId, signalIds }) : []
         const signalNameById = new Map<string, string>(signals.map((signal) => [signal.id, signal.name]))
+        const signalSlugById = new Map<string, string>(signals.map((signal) => [signal.id, signal.slug]))
         const monitorIds = [
           ...new Set(
             dispatches.filter((dispatch) => dispatch.sourceType === "monitor").map((dispatch) => dispatch.sourceId),
@@ -390,7 +391,12 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
                 : dispatch.sourceType === "monitor"
                   ? (monitor?.name ?? null)
                   : null,
-            sourceSlug: dispatch.sourceType === "monitor" ? (monitor?.slug ?? null) : null,
+            sourceSlug:
+              dispatch.sourceType === "signal"
+                ? (signalSlugById.get(dispatch.sourceId) ?? null)
+                : dispatch.sourceType === "monitor"
+                  ? (monitor?.slug ?? null)
+                  : null,
             routineUrl,
           }
         })
@@ -409,6 +415,45 @@ export const listAgentDispatches = createServerFn({ method: "GET" })
       ),
     )
     return rows
+  })
+
+export const signalAgentDispatchesQueryKey = (projectId: string, signalId: string) =>
+  ["signal-agent-dispatches", projectId, signalId] as const
+
+export const listSignalAgentDispatches = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), signalId: z.string() }))
+  .handler(async ({ data }): Promise<readonly AgentDispatchRecord[]> => {
+    const { organizationId } = await requireSession()
+    const projectId = ProjectId(data.projectId)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const dispatchRepo = yield* AgentDispatchRepository
+        const configRepo = yield* AgentDispatchConfigRepository
+        const dispatches = yield* dispatchRepo.listBySource({
+          projectId,
+          sourceType: "signal",
+          sourceId: data.signalId,
+        })
+        const configs = yield* configRepo.listByProjectIncludingDefaults(projectId)
+        const configById = new Map(configs.map((config) => [config.id, config]))
+
+        return dispatches.map((dispatch) => {
+          const config = configById.get(dispatch.configId)
+          const routineUrl =
+            config?.kind === "claude_code" && config.target && "routineTriggerId" in config.target
+              ? `https://claude.ai/code/routines/${config.target.routineTriggerId}`
+              : null
+          return { ...toDispatchRecord(dispatch), routineUrl }
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(AgentDispatchRepositoryLive, AgentDispatchConfigRepositoryLive),
+          getPostgresClient(),
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
   })
 
 export const listCursorRepositories = createServerFn({ method: "GET" })
@@ -562,19 +607,13 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           cursorApiKey: data.cursorApiKey,
-        })
-        const config = yield* upsertOrgDefaultDispatchConfigUseCase({
-          organizationId: OrganizationId(organizationId),
-          integrationId: integration.id,
-          kind: "cursor",
-          enabled: true,
           triggers: ["signal.discovered"],
           target: {
             ...(data.repoUrl ? { repoUrl: data.repoUrl } : {}),
             ...(data.startingRef ? { startingRef: data.startingRef } : {}),
           },
         })
-        return { integrationId: integration.id, config: toConfigRecord(config) }
+        return { integrationId: integration.id }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
@@ -599,12 +638,6 @@ export const connectClaudeIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           claudeRoutineToken: data.claudeRoutineToken,
-        })
-        yield* upsertOrgDefaultDispatchConfigUseCase({
-          organizationId: OrganizationId(organizationId),
-          integrationId: integration.id,
-          kind: "claude_code",
-          enabled: true,
           triggers: ["signal.discovered"],
           target: { routineTriggerId: data.routineTriggerId },
         })
@@ -633,12 +666,6 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           linearApiKey: data.linearApiKey,
-        })
-        yield* upsertOrgDefaultDispatchConfigUseCase({
-          organizationId: OrganizationId(organizationId),
-          integrationId: integration.id,
-          kind: "linear",
-          enabled: true,
           triggers: ["signal.discovered"],
           target: { teamId: data.teamId },
         })
@@ -667,12 +694,6 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           webhookSecret,
-        })
-        yield* upsertOrgDefaultDispatchConfigUseCase({
-          organizationId: OrganizationId(organizationId),
-          integrationId: integration.id,
-          kind: "webhook",
-          enabled: true,
           triggers: ["signal.discovered"],
           target: { webhookUrl: data.webhookUrl },
         })
@@ -981,8 +1002,8 @@ export const resetProjectDispatchOverride = createServerFn({ method: "POST" })
     return { reset: true }
   })
 
-export const setProjectDispatchRepo = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ projectId: z.string(), kind: z.literal("cursor"), repoUrl: z.string().url() }))
+export const setDispatchRepo = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ kind: z.literal("cursor"), repoUrl: z.string().url() }))
   .handler(async ({ data }) => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
@@ -992,13 +1013,12 @@ export const setProjectDispatchRepo = createServerFn({ method: "POST" })
         const integrationRepo = yield* AgentDispatchIntegrationRepository
         const integration = yield* integrationRepo.findActiveByKind(data.kind)
         if (!integration) return yield* Effect.fail(new Error("Cursor is not connected"))
-        const config = yield* setProjectDispatchRepoUseCase({
+        const config = yield* setDispatchRepoUseCase({
           organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(data.projectId),
           integrationId: integration.id,
           repoUrl: data.repoUrl,
         })
-        return toOverrideRecord(config)
+        return toConfigRecord(config)
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })

@@ -1,8 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { callOrder, childExecutions, mockActivities } = vi.hoisted(() => {
+const {
+  callOrder,
+  childErrors,
+  childExecutions,
+  childResults,
+  mockActivities,
+  mockWorkflowLog,
+  parentCancellationState,
+  patchedState,
+} = vi.hoisted(() => {
   const callOrder: string[] = []
+  const childErrors: Record<string, Error> = {}
+  const childResults: Record<string, unknown> = {}
   const childExecutions: Array<{ readonly args: unknown[]; readonly workflowId: string }> = []
+  const mockWorkflowLog = { warn: vi.fn() }
+  const parentCancellationState = { consideredCancelled: false }
+  const patchedState: { default: boolean; readonly byId: Record<string, boolean> } = { default: true, byId: {} }
   const mockActivities = {
     listRecentBackfillSessionsActivity: vi.fn(async () => {
       callOrder.push("list-sessions")
@@ -26,14 +40,32 @@ const { callOrder, childExecutions, mockActivities } = vi.hoisted(() => {
       callOrder.push("wait-observations")
     }),
   }
-  return { callOrder, childExecutions, mockActivities }
+  return {
+    callOrder,
+    childErrors,
+    childExecutions,
+    childResults,
+    mockActivities,
+    mockWorkflowLog,
+    parentCancellationState,
+    patchedState,
+  }
 })
 
 vi.mock("@temporalio/workflow", () => ({
+  CancellationScope: { current: () => parentCancellationState },
+  patched: (id: string) => patchedState.byId[id] ?? patchedState.default,
   proxyActivities: () => mockActivities,
+  isCancellation: (error: unknown) => error instanceof Error && error.name === "CancelledFailure",
+  log: mockWorkflowLog,
   executeChild: async (_workflow: unknown, options: { args: unknown[]; workflowId: string }) => {
     callOrder.push(options.workflowId.includes(":taxonomy:garden:") ? "garden" : "analyze")
     childExecutions.push({ args: options.args, workflowId: options.workflowId })
+    const sessionId = (options.args[0] as { readonly sessionId?: string }).sessionId
+    if (sessionId) {
+      if (childErrors[sessionId]) throw childErrors[sessionId]
+      return childResults[sessionId] ?? { action: "recorded", status: "analyzed", momentCount: 0 }
+    }
     return { status: "completed" }
   },
 }))
@@ -60,13 +92,25 @@ describe("backfillRecentSessionIntelligenceWorkflow", () => {
   beforeEach(() => {
     callOrder.length = 0
     childExecutions.length = 0
+    for (const sessionId of Object.keys(childErrors)) delete childErrors[sessionId]
+    for (const sessionId of Object.keys(childResults)) delete childResults[sessionId]
+    parentCancellationState.consideredCancelled = false
+    patchedState.default = true
+    for (const id of Object.keys(patchedState.byId)) delete patchedState.byId[id]
     vi.clearAllMocks()
   })
 
   it("resets only selected sessions before analyzing and gardening", async () => {
     const result = await backfillRecentSessionIntelligenceWorkflow(input)
 
-    expect(result).toEqual({ action: "completed", sessionsFound: 2 })
+    expect(result).toEqual({
+      action: "completed",
+      sessionsFound: 2,
+      sessionsCompleted: 2,
+      sessionsFailed: 0,
+      failedSessionIds: [],
+      failedSessionIdsTruncated: false,
+    })
     expect(mockActivities.listRecentBackfillSessionsActivity).toHaveBeenCalledWith(input)
     expect(mockActivities.resetSessionIntelligenceForSessionsActivity).toHaveBeenCalledWith({
       organizationId: "org-1",
@@ -106,5 +150,31 @@ describe("backfillRecentSessionIntelligenceWorkflow", () => {
         workflowId: "org:org-1:taxonomy:garden:project-1:recent-backfill",
       },
     ])
+  })
+
+  it("continues subsequent batches after a child failure and still gardens", async () => {
+    childErrors["session-1"] = new Error("analysis failed")
+
+    await expect(backfillRecentSessionIntelligenceWorkflow(input)).resolves.toEqual({
+      action: "completed",
+      sessionsFound: 2,
+      sessionsCompleted: 1,
+      sessionsFailed: 1,
+      failedSessionIds: ["session-1"],
+      failedSessionIdsTruncated: false,
+    })
+
+    expect(callOrder).toEqual(["list-sessions", "reset-sessions", "analyze", "analyze", "wait-observations", "garden"])
+  })
+
+  it("propagates workflow cancellation", async () => {
+    const cancellation = new Error("cancelled")
+    cancellation.name = "CancelledFailure"
+    childErrors["session-1"] = cancellation
+
+    parentCancellationState.consideredCancelled = true
+
+    await expect(backfillRecentSessionIntelligenceWorkflow(input)).rejects.toThrow("cancelled")
+    expect(callOrder).toEqual(["list-sessions", "reset-sessions", "analyze"])
   })
 })

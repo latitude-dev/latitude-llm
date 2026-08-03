@@ -14,12 +14,13 @@ import { randomUUID } from "node:crypto"
 import * as VertexAISDK from "@google-cloud/vertexai"
 import { VertexAI } from "@google-cloud/vertexai"
 import { capture, Latitude } from "../src"
+import { createVertexAIInstrumentation } from "../src/instrumentations/vertexai.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { vertexai: VertexAISDK },
+  instrumentations: [createVertexAIInstrumentation(VertexAISDK)],
 })
 
 const PROVIDER = "vertexai"

@@ -35,6 +35,7 @@ import {
 } from "../-components/user-formatters.ts"
 import { UserBehavioursSection } from "./-components/user-behaviours-section.tsx"
 import { UserSignalsSection } from "./-components/user-issues-section.tsx"
+import { UserMemoryStoresSection } from "./-components/user-memory-stores-section.tsx"
 import { UserNeighborNav } from "./-components/user-neighbor-nav.tsx"
 import { UserSessionsTable } from "./-components/user-sessions-table.tsx"
 import { UserStatStrip } from "./-components/user-stat-strip.tsx"
@@ -305,6 +306,11 @@ function UserDetailPage() {
               </div>
 
               <UserUsageSection projectId={project.id} userId={userId} errorsOnly={errorsOnly} />
+
+              <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+                <Text.H6 color="foregroundMuted">Memory stores</Text.H6>
+                <UserMemoryStoresSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
+              </div>
 
               <div className="flex min-w-0 flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">

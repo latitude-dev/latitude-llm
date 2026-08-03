@@ -3,19 +3,19 @@
 import type * as Latitude from "../index.js";
 
 export interface ExperimentToolsMetrics {
-    /** Tool calls — count. */
+    /** Total tool calls across the variant's sessions — count. */
     calls: ExperimentToolsMetrics.Calls;
-    /** Tools used — count. */
+    /** Distinct tools called — count. */
     distinct: ExperimentToolsMetrics.Distinct;
-    /** Usage rate — fraction (0–1). */
+    /** Fraction of sessions that call at least one tool — fraction (0–1). */
     sessions_with_tools_rate: ExperimentToolsMetrics.SessionsWithToolsRate;
-    /** Error rate — fraction (0–1); lower is better. */
+    /** Fraction of tool calls that error — fraction (0–1); lower is better. */
     error_rate: ExperimentToolsMetrics.ErrorRate;
-    /** Median duration — seconds; lower is better. */
+    /** Median tool-call duration — seconds; lower is better. */
     duration_p50: ExperimentToolsMetrics.DurationP50;
-    /** p90 duration — seconds; lower is better. */
+    /** 90th-percentile tool-call duration — seconds; lower is better. */
     duration_p90: ExperimentToolsMetrics.DurationP90;
-    /** p95 duration — seconds; lower is better. */
+    /** 95th-percentile tool-call duration — seconds; lower is better. */
     duration_p95: ExperimentToolsMetrics.DurationP95;
     /** Top tools by call count. */
     top: Latitude.ExperimentTopListItem[];
@@ -23,7 +23,7 @@ export interface ExperimentToolsMetrics {
 
 export namespace ExperimentToolsMetrics {
     /**
-     * Tool calls — count.
+     * Total tool calls across the variant's sessions — count.
      */
     export interface Calls {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -32,7 +32,7 @@ export namespace ExperimentToolsMetrics {
     }
 
     /**
-     * Tools used — count.
+     * Distinct tools called — count.
      */
     export interface Distinct {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -41,7 +41,7 @@ export namespace ExperimentToolsMetrics {
     }
 
     /**
-     * Usage rate — fraction (0–1).
+     * Fraction of sessions that call at least one tool — fraction (0–1).
      */
     export interface SessionsWithToolsRate {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -50,7 +50,7 @@ export namespace ExperimentToolsMetrics {
     }
 
     /**
-     * Error rate — fraction (0–1); lower is better.
+     * Fraction of tool calls that error — fraction (0–1); lower is better.
      */
     export interface ErrorRate {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -59,7 +59,7 @@ export namespace ExperimentToolsMetrics {
     }
 
     /**
-     * Median duration — seconds; lower is better.
+     * Median tool-call duration — seconds; lower is better.
      */
     export interface DurationP50 {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -68,7 +68,7 @@ export namespace ExperimentToolsMetrics {
     }
 
     /**
-     * p90 duration — seconds; lower is better.
+     * 90th-percentile tool-call duration — seconds; lower is better.
      */
     export interface DurationP90 {
         /** Value in the metric's unit; `null` when empty or not computable. */
@@ -77,7 +77,7 @@ export namespace ExperimentToolsMetrics {
     }
 
     /**
-     * p95 duration — seconds; lower is better.
+     * 95th-percentile tool-call duration — seconds; lower is better.
      */
     export interface DurationP95 {
         /** Value in the metric's unit; `null` when empty or not computable. */
