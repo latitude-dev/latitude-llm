@@ -391,13 +391,14 @@ describe("buildRelativeHierarchicalClusters — the re-search work budget", () =
   )
 
   it("a corpus that never escalates is never charged for the budget", () => {
-    const comfortable = buildRelativeHierarchicalClusters({
-      embeddings: buildRetailSupportCorpus().embeddings,
+    const comfortable = buildRetailSupportCorpus()
+    const result = buildRelativeHierarchicalClusters({
+      embeddings: comfortable.embeddings,
       depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
       maxIter: TAXONOMY_KMEANS_MAX_ITER,
       tolerance: TAXONOMY_KMEANS_TOLERANCE,
-      seed: buildRetailSupportCorpus().seed,
+      seed: comfortable.seed,
       globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
       escalation: {
         restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
@@ -407,18 +408,32 @@ describe("buildRelativeHierarchicalClusters — the re-search work budget", () =
         maxSearchWork: 1,
       },
     })
-    expect(comfortable.diagnostics.escalated).toBe(false)
-    expect(comfortable.diagnostics.escalationSkipped).toBe(false)
+    expect(result.diagnostics.escalated).toBe(false)
+    expect(result.diagnostics.escalationSkipped).toBe(false)
+    // The budget was never consulted: a comfortable root leaves the band before any
+    // projection happens, which is what "never charged" has to mean.
+    expect(result.diagnostics.projectedRootSearchWork).toBe(0)
   })
 
-  it("the decision is a pure function of the inputs, not of elapsed time", () => {
-    // Same inputs twice must take the same branch. A clock-based budget could not
-    // promise this, which is why the ceiling is an operation count.
-    const a = buildWithBudget(1)
-    const b = buildWithBudget(1)
-    expect(b.diagnostics.projectedRootSearchWork).toBe(a.diagnostics.projectedRootSearchWork)
-    expect(b.diagnostics.escalationSkipped).toBe(a.diagnostics.escalationSkipped)
-  })
+  it(
+    "the decision is a pure function of the inputs, not of elapsed time",
+    () => {
+      // Same inputs twice must take the same branch, on both sides of the budget. A
+      // clock-based ceiling could not promise this on a loaded machine, which is why
+      // it is an operation count.
+      const declinedFirst = buildWithBudget(1)
+      const declinedAgain = buildWithBudget(1)
+      expect(declinedAgain.diagnostics.projectedRootSearchWork).toBe(declinedFirst.diagnostics.projectedRootSearchWork)
+      expect(declinedAgain.diagnostics.escalationSkipped).toBe(declinedFirst.diagnostics.escalationSkipped)
+
+      const allowedFirst = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
+      const allowedAgain = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
+      expect(allowedAgain.diagnostics.projectedRootSearchWork).toBe(allowedFirst.diagnostics.projectedRootSearchWork)
+      expect(allowedAgain.diagnostics.escalated).toBe(allowedFirst.diagnostics.escalated)
+      expect(partitionSignature(allowedAgain.root)).toBe(partitionSignature(allowedFirst.root))
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
 })
 
 describe("quantile — linear interpolation at (n-1)·q", () => {

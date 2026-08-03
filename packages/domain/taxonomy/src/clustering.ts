@@ -488,6 +488,16 @@ interface ChooseBestRelativeKInput {
   readonly restrictToK?: ReadonlySet<number>
 }
 
+/**
+ * Size floor and K ceiling for one node's sweep. Shared by the sweep itself and by
+ * the budget projection: if these drift apart the projection mis-estimates the cost
+ * it is meant to bound.
+ */
+const sweepBounds = (memberCount: number, schedule: RelativeDepthSchedule) => {
+  const minClusterSize = Math.max(schedule.minClusterAbs, Math.ceil(memberCount * schedule.minClusterFraction))
+  return { minClusterSize, maxK: Math.min(schedule.maxChildren, Math.floor(memberCount / minClusterSize)) }
+}
+
 const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate | null => {
   const {
     embeddings,
@@ -504,12 +514,10 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
     restrictToK,
   } = input
   const n = memberIndices.length
-  const minByFraction = Math.ceil(n * schedule.minClusterFraction)
-  const minClusterSize = Math.max(schedule.minClusterAbs, minByFraction)
+  const { minClusterSize, maxK } = sweepBounds(n, schedule)
   if (n < minClusterSize * 2) return null
 
   let best: RelativeCandidate | null = null
-  const maxK = Math.min(schedule.maxChildren, Math.floor(n / minClusterSize))
   for (let k = 2; k <= maxK; k++) {
     if (restrictToK && !restrictToK.has(k)) continue
     for (let restart = 0; restart < restarts; restart++) {
@@ -779,10 +787,9 @@ const projectedRootSweepWork = (input: {
   readonly kSum: number
 }): number => input.restarts * input.maxIter * input.memberCount * input.dimensions * input.kSum
 
-/** The K a root sweep visits when nothing restricts it, mirroring `chooseBestRelativeK`. */
+/** The K a root sweep visits when nothing restricts it. */
 const rootKRange = (memberCount: number, schedule: RelativeDepthSchedule): number[] => {
-  const minClusterSize = Math.max(schedule.minClusterAbs, Math.ceil(memberCount * schedule.minClusterFraction))
-  const maxK = Math.min(schedule.maxChildren, Math.floor(memberCount / minClusterSize))
+  const { maxK } = sweepBounds(memberCount, schedule)
   const ks: number[] = []
   for (let k = 2; k <= maxK; k++) ks.push(k)
   return ks
