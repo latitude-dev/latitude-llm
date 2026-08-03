@@ -1,12 +1,10 @@
 import { COST_BREAKDOWN_DIMENSIONS, type CostBreakdown, type CostBreakdownDimension } from "@domain/spans"
 import {
   Button,
-  cn,
   Icon,
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
   TableSkeleton,
@@ -15,7 +13,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
-import { ArrowDown01, ArrowDownAZ, ArrowUp01, ArrowUpAZ, TriangleAlertIcon } from "lucide-react"
+import { TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import {
@@ -26,6 +24,7 @@ import {
   shareOf,
   splitBreakdownRows,
 } from "./cost-formatters.ts"
+import { CostTableHead } from "./cost-table-head.tsx"
 
 const DASH = "—"
 
@@ -53,65 +52,6 @@ function MutedCell({ children }: { readonly children: string }) {
     <Text.H5 color="foregroundMuted" noWrap className="tabular-nums">
       {children}
     </Text.H5>
-  )
-}
-
-/**
- * Sorting only reorders the rows already selected — the selection itself is always the
- * highest spenders, so sorting ascending cannot smuggle the uninformative tail into view.
- */
-function SortableHead({
-  column,
-  label,
-  align,
-  isFirst,
-  sort,
-  onSort,
-  tooltipMessage,
-}: {
-  readonly column: SortColumn
-  readonly label: string
-  readonly align: "left" | "right"
-  readonly isFirst: boolean
-  readonly sort: { readonly column: SortColumn; readonly direction: "asc" | "desc" }
-  readonly onSort: (column: SortColumn) => void
-  readonly tooltipMessage?: string
-}) {
-  const isActive = sort.column === column
-  const isAscending = isActive && sort.direction === "asc"
-  const alphabetical = column === "name"
-  const icon = alphabetical ? (isAscending ? ArrowUpAZ : ArrowDownAZ) : isAscending ? ArrowUp01 : ArrowDown01
-
-  const trigger = (
-    <button
-      type="button"
-      onClick={() => onSort(column)}
-      aria-label={`Sort by ${label}`}
-      className={cn("group flex cursor-pointer flex-row items-center gap-1.5", {
-        "flex-row-reverse": align === "left",
-      })}
-    >
-      <Icon icon={icon} size="sm" color={isActive ? "foreground" : "foregroundMuted"} />
-      <Text.H5M color={isActive ? "foreground" : "foregroundMuted"} noWrap>
-        {label}
-      </Text.H5M>
-    </button>
-  )
-
-  return (
-    <TableHead
-      align={align}
-      className={cn("bg-transparent", { "border-l border-border": !isFirst })}
-      aria-sort={isActive ? (isAscending ? "ascending" : "descending") : "none"}
-    >
-      {tooltipMessage ? (
-        <Tooltip asChild trigger={trigger}>
-          {tooltipMessage}
-        </Tooltip>
-      ) : (
-        trigger
-      )}
-    </TableHead>
   )
 }
 
@@ -223,12 +163,12 @@ function BreakdownTable({
       <Table wrapperClassName="border-0 rounded-none">
         <TableHeader className="[&_tr]:border-b-0">
           <TableRow hoverable={false}>
-            <SortableHead column="name" label={meta.label} align="left" isFirst {...headProps} />
-            <SortableHead column="total" label="Total cost" align="right" isFirst={false} {...headProps} />
-            <SortableHead column="input" label="Input" align="right" isFirst={false} {...headProps} />
-            <SortableHead column="output" label="Output" align="right" isFirst={false} {...headProps} />
+            <CostTableHead column="name" label={meta.label} align="left" isFirst alphabetical {...headProps} />
+            <CostTableHead column="total" label="Total cost" align="right" isFirst={false} {...headProps} />
+            <CostTableHead column="input" label="Input" align="right" isFirst={false} {...headProps} />
+            <CostTableHead column="output" label="Output" align="right" isFirst={false} {...headProps} />
             {showCacheColumn ? (
-              <SortableHead
+              <CostTableHead
                 column="cacheAndOther"
                 label="Cache & other"
                 align="right"
@@ -237,8 +177,8 @@ function BreakdownTable({
                 {...headProps}
               />
             ) : null}
-            <SortableHead column="share" label="% of total" align="right" isFirst={false} {...headProps} />
-            <SortableHead
+            <CostTableHead column="share" label="% of total" align="right" isFirst={false} {...headProps} />
+            <CostTableHead
               column="avgPerTrace"
               label="Avg per trace"
               align="right"
@@ -421,6 +361,10 @@ function RemainderRow({
 }
 
 /** The detail table: exact figures per value. Proportions live in the panels above it. */
+/**
+ * Sorting only reorders the rows already selected. The selection is always the highest
+ * spenders, so sorting ascending cannot smuggle the uninformative tail into view.
+ */
 export function CostBreakdownPanel({
   breakdown,
   dimension,

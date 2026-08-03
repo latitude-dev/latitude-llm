@@ -3,11 +3,13 @@ import { CACHE_CEILING_LIFETIME_SECONDS } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import type { CacheModelRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import {
+  buildCacheFindings,
   cacheStateIsActionable,
-  groupCacheRecommendations,
   parseCacheLifetimeSelection,
+  recoverableShare,
   resolveCacheRow,
   sortCacheRowsBySavings,
+  summariseSettledRows,
 } from "./cache-economics-view.ts"
 
 const judgment = (overrides: Partial<CacheModelJudgment> = {}): CacheModelJudgment => ({
@@ -118,67 +120,112 @@ describe("sortCacheRowsBySavings", () => {
   })
 })
 
-describe("groupCacheRecommendations", () => {
-  it("raises one card per actionable state, with each state's savings summed", () => {
-    const cards = groupCacheRecommendations([
-      row({ model: "off-model", documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 300 }) }),
-      row({ model: "wasteful", documented: judgment({ state: "stopCaching", modeledSavingsMicrocents: 200 }) }),
-      row({
-        model: "broken-a",
-        documented: judgment({ state: "investigate", urgency: "overpaying", modeledSavingsMicrocents: 100 }),
-      }),
-      row({
-        model: "broken-b",
-        documented: judgment({ state: "investigate", urgency: "underusing", modeledSavingsMicrocents: 50 }),
-      }),
-    ])
+describe("buildCacheFindings", () => {
+  it("groups findings by state and leads with the most money", () => {
+    const sections = buildCacheFindings(
+      [
+        row({ model: "off-model", documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 300 }) }),
+        row({ model: "wasteful", documented: judgment({ state: "stopCaching", modeledSavingsMicrocents: 900 }) }),
+        row({
+          model: "broken-a",
+          documented: judgment({ state: "investigate", urgency: "overpaying", modeledSavingsMicrocents: 400 }),
+        }),
+        row({
+          model: "broken-b",
+          documented: judgment({ state: "investigate", urgency: "underusing", modeledSavingsMicrocents: 200 }),
+        }),
+      ],
+      "documented",
+    )
 
-    expect(cards.map((card) => card.state)).toEqual(["cacheIt", "stopCaching", "investigate"])
-    expect(cards[2]?.savingsMicrocents).toBe(150)
-    expect(cards[2]?.rows.map((entry) => entry.model)).toEqual(["broken-a", "broken-b"])
+    expect(sections.map((section) => section.state)).toEqual(["stopCaching", "investigate", "cacheIt"])
+    expect(sections[1]?.savingsMicrocents).toBe(600)
+    expect(sections[1]?.rows.map((entry) => entry.model)).toEqual(["broken-a", "broken-b"])
   })
 
-  it("raises nothing for a project where every model is already fine", () => {
-    const cards = groupCacheRecommendations([
-      row({
-        model: "healthy",
-        documented: judgment({ state: "optimal", modeledSavingsMicrocents: null, savingsClearsFloor: false }),
-      }),
-      row({
-        model: "guardrail",
-        documented: judgment({ state: "correctlyOff", modeledSavingsMicrocents: null, savingsClearsFloor: false }),
-      }),
-    ])
+  it("raises no section for a project where every model is already fine", () => {
+    const sections = buildCacheFindings(
+      [
+        row({ model: "healthy", documented: judgment({ state: "optimal", modeledSavingsMicrocents: null }) }),
+        row({ model: "guardrail", documented: judgment({ state: "correctlyOff", modeledSavingsMicrocents: null }) }),
+      ],
+      "documented",
+    )
 
-    expect(cards).toEqual([])
+    expect(sections).toEqual([])
   })
 
-  it("leaves a finding in the table but off the cards when the money behind it is noise", () => {
+  it("counts a finding under the floor instead of dropping it", () => {
+    // Dropping it would leave the panel implying the model is fine when it is not.
+    const sections = buildCacheFindings(
+      [
+        row({
+          model: "pennies",
+          documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 40, savingsClearsFloor: false }),
+        }),
+      ],
+      "documented",
+    )
+
+    expect(sections).toHaveLength(1)
+    expect(sections[0]?.rows).toEqual([])
+    expect(sections[0]?.quietCount).toBe(1)
+    expect(sections[0]?.savingsMicrocents).toBe(0)
+  })
+
+  it("regroups when a different lifetime is picked, which is what the control is for", () => {
     const records = [
-      row({
-        model: "pennies",
-        documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 40, savingsClearsFloor: false }),
-      }),
-    ]
-
-    expect(groupCacheRecommendations(records)).toEqual([])
-    expect(sortCacheRowsBySavings(records.map(view))[0]?.judgment.modeledSavingsMicrocents).toBe(40)
-  })
-
-  it("ignores a chosen lifetime entirely, so an assumption cannot become a recommendation", () => {
-    // Documented says there is nothing to do; an hour would say otherwise. The cards
-    // must follow the documented verdict, because a signal will read the same source.
-    const cards = groupCacheRecommendations([
       row(
-        {
-          model: "quiet",
-          documented: judgment({ state: "optimal", modeledSavingsMicrocents: null, savingsClearsFloor: false }),
-        },
+        { model: "sensitive", documented: judgment({ state: "optimal", modeledSavingsMicrocents: null }) },
         { 3600: judgment({ state: "investigate", urgency: "underusing", modeledSavingsMicrocents: 9_000_000 }) },
       ),
-    ])
+    ]
 
-    expect(cards).toEqual([])
+    expect(buildCacheFindings(records, "documented")).toEqual([])
+    expect(buildCacheFindings(records, 3_600).map((section) => section.state)).toEqual(["investigate"])
+  })
+})
+
+describe("summariseSettledRows", () => {
+  it("counts the models with nothing to do, split by whether we could judge them", () => {
+    const settled = summariseSettledRows(
+      [
+        row({ model: "a", documented: judgment({ state: "optimal" }) }),
+        row({ model: "b", documented: judgment({ state: "correctlyOff" }) }),
+        row({ model: "c", documented: judgment({ state: "notEnoughData" }) }),
+        row({ model: "d", documented: judgment({ state: "cacheIt" }) }),
+      ],
+      "documented",
+    )
+
+    expect(settled).toEqual({ fine: 2, needData: 1 })
+  })
+})
+
+describe("recoverableShare", () => {
+  it("is the share of this model's own spend the finding would recover", () => {
+    const view = resolveCacheRow(
+      row({ model: "a", costMicrocents: 1_000, documented: judgment({ modeledSavingsMicrocents: 250 }) }),
+      "documented",
+    )
+    expect(recoverableShare(view)).toBeCloseTo(0.25, 4)
+  })
+
+  it("is blank without savings or without spend to be a share of", () => {
+    expect(
+      recoverableShare(
+        resolveCacheRow(row({ model: "a", documented: judgment({ modeledSavingsMicrocents: null }) }), "documented"),
+      ),
+    ).toBeNull()
+    expect(recoverableShare(resolveCacheRow(row({ model: "a", costMicrocents: 0 }), "documented"))).toBeNull()
+  })
+
+  it("clamps, because savings are modeled and spend is recorded", () => {
+    const view = resolveCacheRow(
+      row({ model: "a", costMicrocents: 100, documented: judgment({ modeledSavingsMicrocents: 900 }) }),
+      "documented",
+    )
+    expect(recoverableShare(view)).toBe(1)
   })
 })
 

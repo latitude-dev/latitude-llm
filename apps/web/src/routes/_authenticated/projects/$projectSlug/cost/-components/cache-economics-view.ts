@@ -73,45 +73,78 @@ export function sortCacheRowsBySavings(rows: readonly CacheRowView[]): readonly 
   })
 }
 
-export interface CacheRecommendation {
+export interface CacheFindingSection {
   readonly state: CacheRecommendationState
+  /** Worth acting on, highest savings first. */
   readonly rows: readonly CacheRowView[]
+  /** Real findings whose money is too small to lead with, counted rather than listed. */
+  readonly quietCount: number
   readonly savingsMicrocents: number
 }
 
 /**
- * The findings worth a card, which is a narrower set than the findings worth a table
- * row: a state is only promoted once its modeled savings clear the weekly spend floor.
- * A model can therefore legitimately show `Cache it` in the table and no card — its
- * cadence supports caching, but the money behind it is noise.
+ * The findings, grouped by the state that says what to do about them, and ordered so the
+ * most money comes first.
  *
- * Always built from each row's **documented** judgment, never from a chosen lifetime.
- * A recommendation drawn from a number the reader typed in would be their assumption
- * wearing our voice, and the signals pipeline that will consume these findings has to
- * agree with the panel about the same model.
+ * The spend floor decides emphasis here rather than admission: a finding under it is a
+ * real finding on cheap traffic, so it is counted rather than dropped. Dropping it would
+ * leave the panel claiming a model is fine when we know it is not.
  */
-export function groupCacheRecommendations(rows: readonly CacheModelRecord[]): readonly CacheRecommendation[] {
-  const documented = rows.map((row) => resolveCacheRow(row, "documented"))
+export function buildCacheFindings(
+  rows: readonly CacheModelRecord[],
+  selection: CacheLifetimeSelection,
+): readonly CacheFindingSection[] {
+  const resolved = rows.map((row) => resolveCacheRow(row, selection))
   return CACHE_RECOMMENDATION_STATES.flatMap((state) => {
-    const matching = sortCacheRowsBySavings(
-      documented.filter((row) => row.judgment.state === state && row.judgment.savingsClearsFloor),
-    )
+    const matching = resolved.filter((row) => row.judgment.state === state)
+    const worthLeadingWith = sortCacheRowsBySavings(matching.filter((row) => row.judgment.savingsClearsFloor))
     if (matching.length === 0) return []
     return [
       {
         state,
-        rows: matching,
-        savingsMicrocents: matching.reduce((sum, row) => sum + (row.judgment.modeledSavingsMicrocents ?? 0), 0),
+        rows: worthLeadingWith,
+        quietCount: matching.length - worthLeadingWith.length,
+        savingsMicrocents: worthLeadingWith.reduce((sum, row) => sum + (row.judgment.modeledSavingsMicrocents ?? 0), 0),
       },
     ]
-  })
+  }).sort((a, b) => b.savingsMicrocents - a.savingsMicrocents)
+}
+
+/** The models with nothing to do, counted so the panel can say so in one line. */
+export function summariseSettledRows(
+  rows: readonly CacheModelRecord[],
+  selection: CacheLifetimeSelection,
+): { readonly fine: number; readonly needData: number } {
+  const states = rows.map((row) => resolveCacheRow(row, selection).judgment.state)
+  return {
+    fine: states.filter((state) => state === "optimal" || state === "correctlyOff").length,
+    needData: states.filter((state) => state === "notEnoughData").length,
+  }
 }
 
 /**
- * What the card asks for. `Investigate` deliberately stops at naming the category
- * rather than prescribing a fix: every cache lever lives in the customer's own
- * prompt-construction code, and byte-level prefix comparison is something the
- * providers' own cache diagnostics do better and with access we do not have.
+ * The share of this model's recorded spend the finding could recover.
+ *
+ * One encoding for every state, which rate cannot manage: a bar of unused headroom means
+ * nothing for `Stop caching`, where the ceiling is zero and the money is a write premium
+ * being paid for nothing. Money is the same quantity in all three cases.
+ *
+ * Clamped because the two figures come from different places. Savings are modeled from
+ * tokens and registry prices; spend is what was recorded, output included. They can
+ * disagree on a row the provider priced oddly.
+ */
+export function recoverableShare(row: CacheRowView): number | null {
+  const savings = row.judgment.modeledSavingsMicrocents
+  if (savings === null || !(row.costMicrocents > 0)) return null
+  return Math.min(1, Math.max(0, savings / row.costMicrocents))
+}
+
+/**
+ * What each section asks for, in one line.
+ *
+ * `Investigate` names the category and stops there. Every cache lever lives in the
+ * customer's own prompt-construction code, and comparing prefixes byte by byte is
+ * something the providers' own cache diagnostics do better, with access we do not have.
  */
 export const CACHE_RECOMMENDATION_COPY: Record<
   CacheRecommendationState,
@@ -119,15 +152,15 @@ export const CACHE_RECOMMENDATION_COPY: Record<
 > = {
   cacheIt: {
     title: "Cache it",
-    body: "Caching is off on traffic whose cadence could serve most of its prompt from cache, on a model where a miss costs no more than plain input. Mark the stable prefix as cacheable.",
+    body: "Caching is off on prompts that repeat enough to pay for it.",
   },
   stopCaching: {
     title: "Stop caching",
-    body: "Every write is being paid for and the calls arrive too far apart for any of them to be read back before they expire. Turning caching off is the cheaper setup for this traffic.",
+    body: "These calls pay to write a cache that expires before anything reads it.",
   },
   investigate: {
     title: "Investigate",
-    body: "The cadence supports a much higher hit rate than these calls are getting, so something ahead of the cache breakpoint is changing between calls. Check for a timestamp or request id in the prefix, and for key-ordering determinism if the prompt is serialised from Swift or Go.",
+    body: "Something in these prompts changes between calls, so the cache is rarely hit.",
   },
 }
 
