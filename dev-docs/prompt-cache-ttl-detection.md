@@ -1,48 +1,134 @@
 # Prompt-cache TTL detection
 
-Whether span ingestion can observe the cache lifetime a provider actually used, rather than the one
-`packages/domain/models/src/prompt-cache-ttl.ts` assumes. The achievable ceiling in PR #4323 divides
-cache-eligible token volume by whether each call's gap to its predecessor fits inside that lifetime,
-so a customer opting into a longer TTL has a higher real ceiling than we report.
+Why the cache lifetime behind PR #4323's achievable ceiling is a hardcoded table in
+`packages/domain/models/src/prompt-cache-ttl.ts`, and why that is the correct answer rather than a
+placeholder for something better.
+
+The ceiling divides cache-eligible token volume by whether each call's gap to its predecessor fits
+inside the provider's cache lifetime. That lifetime is the one input the query cannot compute, and
+models.dev does not carry it.
 
 Investigated 2026-07-31 against V2 production (`latitude.spans`, ClickHouse service
-`Latitude V2 PRODUCTION`), 7-day window.
+`Latitude V2 PRODUCTION`), 7-day window. Every number below is reproducible with the queries given.
 
-## Verdict
+## Conclusion
 
-The Anthropic 5m/1h split **is** present in production, nested inside the JSON value of
-`ai.response.providerMetadata` on the Vercel AI SDK path. Where it appears, **40.9% of that path's
-cache-write volume is 1h**, across 3 organizations.
+There is **no single true TTL to discover** at any storage granularity. Provider and model determine
+which lifetimes are *available*; each individual cache breakpoint within a request determines which
+was *used*. The table answers the first question, which is the only one with a stable answer.
 
-But it covers **4.2% of the cache-writing spans the ceiling actually consumes**, and the parse fails
-silently in the wrong direction. So this finding is an **error bar on the static table** — it
-quantifies how wrong the table can be for real customers — and **not a candidate input to the
-ceiling**. The reliable fix is to let customers *declare* the lifetime, not to sniff vendor JSON.
+So the table is a deliberate simplification of something that has no single value, not debt. Its
+error is bounded, documented, conservative in direction, and absent from the path where it drives a
+recommendation.
 
-An earlier pass concluded no exporter sends per-TTL data. That pass searched attribute **key names**
-for `ttl` / `ephemeral` / `cache_control` / `expire`. That returns zero rows and is correct as far as
-it goes: no exporter promotes the split to a key. The field is carried in a **value**, under a key
-whose name contains none of those words, so a key-name census structurally cannot see it. That is the
-methodological point worth keeping, and it recurs below.
+## The six limitations
 
-## Unmatched attributes are retained
+**1. We do not control what exporters send.** Though less than this framing suggests: **83.6% of
+cache-writing billable spans (69.3% of cache-write tokens) come from our own `@latitude-data/*`
+packages**, overwhelmingly `@latitude-data/claude-code-telemetry`. Customer-side latitude-branded
+scopes add 10.0%, third-party exporters 6.4%. But controlling the emitter does not help here:
+`packages/telemetry/claude-code` reads `call.tokens.cache_creation_input_tokens`, the scalar Claude
+Code itself reports, so even our own package cannot forward a breakdown it never receives.
 
-`packages/domain/spans/src/otlp/transform.ts` (lines 186-208) loops over every span attribute and
-partitions it by value type into `attr_string` / `attr_int` / `attr_float` / `attr_bool`. Nothing is
-filtered on the way in. Production carries a full record of every attribute we do not otherwise
-resolve, so coverage questions like this one are answerable by query, and no sampled ingest probe is
-needed to answer them.
+**2. Cache reporting varies by provider × exporter, not just provider.** The same Anthropic call
+arrives as `gen_ai.usage.cache_creation.input_tokens`, `gen_ai.usage.cache_creation_input_tokens`,
+`cache_creation_tokens`, `llm.token_count.prompt_details.cache_write`,
+`ai.usage.inputTokenDetails.cacheWriteTokens`, or buried inside `ai.response.providerMetadata`.
+`cacheCreateCandidates` in `packages/domain/spans/src/otlp/resolvers/usage/tokens.ts` exists because
+of this.
 
-Two traps produced the opposite belief, both worth knowing:
+**3. We capture every attribute an exporter emits, which is not the same as capturing the settings
+sent to the provider.** `transform.ts` (lines 186-208) partitions every span attribute by value type
+into `attr_string` / `attr_int` / `attr_float` / `attr_bool`, unfiltered. But TTL is a **request**
+parameter, and **no exporter emits request-side cache settings, in any spelling, anywhere in
+production**. What the Vercel path carries is a *response echo* of Anthropic's `usage.cache_creation`
+— what the write was billed as, after the fact — not the configuration that produced it.
 
-- `grep` is a shadowed shell function in this environment, and `transform.ts` trips binary-file
-  detection because of lone surrogates, so matches are silently suppressed. Use `command grep -a`.
-- A key-name search is not an attribute search. Values hold structured JSON.
+The only production occurrences of `cache_control` in captured content are 27 spans of coincidence:
+AI SDK source code and an HTTP `Cache-Control` test that Claude Code sessions happened to be reading.
+(Search `ttl` as a bare substring and it appears to hit thousands of spans; that is "little",
+"settle", "bottle". As a quoted JSON key it is 48 spans, all incidental.)
 
-## Where the signal is
+**4. Nothing is mapped per provider/model, and mapping is not the blocker.** Fully mapped, the
+response echo covers **4.2%** of the cache-writing spans the ceiling consumes, via a JSON path into an
+unstandardised vendor passthrough that returns `0` rather than null when the shape changes.
 
-Key `ai.response.providerMetadata`, emitted by the Vercel AI SDK (`scope_name` of `ai`,
-`so.latitude.instrumentation.vercelai`, and `gen_ai`). Verbatim value from a production span:
+**5. TTL varies within a single request**, not merely between spans in a session. **2,005 spans bought
+both lifetimes in one request.** Anthropic permits this as long as longer TTLs appear first, so a
+per-span TTL column would already be a lossy summary of its own span.
+
+**6. Therefore no storage granularity holds the answer.** Not per project, not per agent, not per
+span. See rejected options below.
+
+## Why the table is the right response
+
+**The ceiling is counterfactual, and that is what protects the recommendation.** It answers "if
+caching were on, what could this arrival pattern reach", which is exactly what makes `Cache it`
+possible for traffic that has no cache today. Whether caching is actually on is measured separately
+and exactly, from `tokens_cache_read + tokens_cache_create > 0`, never assumed.
+
+So the table's weakness does not touch the `Cache it` path at all. A customer with caching off who
+turns it on gets the provider **default**, which is precisely what the table holds. The 1h
+uncertainty applies only to people already caching who deliberately opted in.
+
+**The table is therefore most reliable exactly where it drives a recommendation, and least reliable
+where it only suppresses one.**
+
+### The error's direction: a false negative
+
+For the cohorts that do opt into 1h, understating the lifetime lowers their ceiling. It does not
+produce a wrong destructive recommendation, because `stopCaching` is unreachable for them. Measured
+over 7 days on billable operations, agent `orchestrator`:
+
+| provider | model | calls | actual rate | avg prompt |
+| -- | -- | --: | --: | --: |
+| anthropic | claude-haiku-4-5-20251001 | 3,723 | **0.790** | 44,136 |
+| anthropic.messages | claude-haiku-4-5-20251001 | 1,631 | **0.797** | 47,525 |
+| anthropic | claude-sonnet-4-6 | 123 | **0.677** | 45,671 |
+| anthropic.messages | claude-sonnet-4-6 | 54 | **0.743** | 44,833 |
+
+They sit at 68-80% against Anthropic's 21.7% break-even, so `classifyCacheState` never reaches the
+`actual < breakEven` branch. Understating their lifetime **suppresses a possible `underusing`
+finding** and reads as `Optimal`. We say nothing where there may be reachable headroom.
+
+That direction is the whole reason the limitation is tolerable, and it needs no special-casing in the
+classifier: no 1h writer in production is below break-even.
+
+### The cost of the null fallback, stated honestly
+
+An unlisted (provider, model) pair resolves to `null` rather than a guessed default, so it gets no
+ceiling at all. A write-premium model on an unlisted provider therefore cannot reach `Cache it` and
+lands in `Not enough data`. That is the price of not guessing, and it is the right trade: #4323's
+`classifyCacheState` depends on only returning verdicts that hold for every possible ceiling when the
+ceiling is unknown.
+
+## Rejected options
+
+**Let the customer declare the lifetime** (per project or per agent, pre-filled with the documented
+default). Rejected: TTL is set per **cache breakpoint within a request**, so a project- or
+agent-level setting cannot express what varies below span level — the 2,005 mixed-lifetime spans are
+the proof. Its effective coverage would be worse than the 4.2% it replaces, and it goes stale
+silently the moment someone changes their code back.
+
+**Feed the response echo into the ceiling.** Rejected on four grounds:
+
+- **Silent-zero failure.** `JSONExtractUInt` returns 0 for a missing path, and
+  `ai.response.providerMetadata` is unstandardised vendor passthrough. Any AI SDK or Anthropic
+  reshape yields `t1h = 0`, which reads as "every write was 5m" — a confidently wrong ceiling rather
+  than a null.
+- **4.2% coverage means two mechanisms**, so the ceiling's provenance would vary per row with no way
+  for a reader to tell which they are looking at.
+- **Write-side only.** A pure cache hit carries no `cache_creation` at all, so there is no evidence
+  for the calls the ceiling cares about most.
+- **It breaks LAT-822**, which gates peer comparison on the ceiling and already warns that
+  "comparable" is doing enormous work. Comparing agent A's measured-1h ceiling against agent B's
+  table-5m ceiling confounds instrumentation with traffic, precisely the failure it names.
+
+## The evidence behind limitation 4
+
+The Anthropic 5m/1h split **is** in production, nested in the JSON value of
+`ai.response.providerMetadata` on the Vercel AI SDK path (`scope_name` of `ai`,
+`so.latitude.instrumentation.vercelai`, `gen_ai`). Verbatim from a production span:
 
 ```json
 {"anthropic":{"usage":{"input_tokens":2,"cache_creation_input_tokens":52089,
@@ -51,9 +137,12 @@ Key `ai.response.providerMetadata`, emitted by the Vercel AI SDK (`scope_name` o
 ```
 
 `cache_creation` is emitted unconditionally, zeroed when nothing was written. Our resolver reads only
-the scalar (`cacheCreateCandidates` in
-`packages/domain/spans/src/otlp/resolvers/usage/tokens.ts`), which per Anthropic equals `5m + 1h`, so
-the split is summed away at ingest.
+the scalar, which per Anthropic equals `5m + 1h`, so the split is summed away at ingest.
+
+An earlier pass concluded no exporter sends this. That pass searched attribute **key names** for
+`ttl` / `ephemeral` / `cache_control` / `expire`, which returns zero rows and is correct as far as it
+goes: no exporter promotes the split to a key. It rides in a **value**, under a key whose name
+contains none of those words, so a key-name census structurally cannot see it.
 
 ### Re-run query
 
@@ -72,29 +161,24 @@ WITH pm AS (
 )
 SELECT count() AS spans, uniqExact(organization_id) AS orgs,
        sum(t5m) AS tokens_5m, sum(t1h) AS tokens_1h,
-       countIf(t1h > 0) AS spans_writing_1h,
-       uniqExactIf(organization_id, t1h > 0) AS orgs_writing_1h,
        countIf(t1h > 0 AND t5m > 0) AS spans_mixing_both
 FROM x
 ```
 
-**40,155 spans** carry the breakdown across 5 orgs; 155,147,028 tokens at 5m against 107,300,620 at
-1h; 2,675 spans wrote 1h; 3 orgs wrote 1h; **2,005 spans mixed both lifetimes in one request**.
+**40,155 spans** across 5 orgs; 155,147,028 tokens at 5m against 107,300,620 at 1h (**40.9% of that
+path's cache-write volume is 1h**); 2,675 spans wrote 1h across 3 orgs; 2,005 mixed both.
 
-## Coverage: 4.2% of what the ceiling consumes
+### Coverage, restricted to what the ceiling consumes
 
 The 40,155 above counts every span carrying the breakdown, including zero-write ones. The subset the
-ceiling would actually read is billable operations (`USAGE_OPERATIONS`) with
-`tokens_cache_create > 0`. Both numbers are correct for their own question; this is the one that
-governs the recommendation.
+ceiling would read is billable operations (`USAGE_OPERATIONS`) with `tokens_cache_create > 0`. Both
+are correct for their own question; this is the one that governs the decision.
 
 ```sql
 SELECT count() AS cache_writing_spans,
        countIf(JSONHas(attr_string['ai.response.providerMetadata'],
                        'anthropic', 'usage', 'cache_creation')) AS with_ttl_evidence,
-       uniqExact(organization_id) AS orgs_total,
-       uniqExact(scope_name) AS exporters_total,
-       sum(tokens_cache_create) AS cache_write_tokens
+       uniqExact(organization_id) AS orgs_total, uniqExact(scope_name) AS exporters_total
 FROM latitude.spans
 WHERE start_time >= now() - INTERVAL 7 DAY
   AND operation IN ('chat','text_completion','generate_content','embeddings','reranker')
@@ -109,99 +193,51 @@ WHERE start_time >= now() - INTERVAL 7 DAY
 | orgs with evidence | **3 of 72** |
 | exporters with evidence | **3 of 12** |
 
-95.8% of cache-writing spans fall back to the table regardless.
+Thirteen `(agent, provider, model)` cohorts wrote at 1h; four wrote exclusively at 1h, all
+`orchestrator`. That cohort's provider spelling already splits it across `anthropic` and
+`anthropic.messages` for the same model, while #4323 partitions by `(agent, provider, model)` — a
+fragmentation that exists today, independent of TTL.
 
-## Why this must not feed the ceiling
+## Still undetectable, and not affected by any of the above
 
-- **Silent-zero failure.** `JSONExtractUInt` returns 0 for a missing path.
-  `ai.response.providerMetadata` is an unstandardised passthrough of provider response JSON, so any
-  AI SDK or Anthropic API reshape does not produce an absence — it produces `t1h = 0`, which reads as
-  "every write was 5m". A confidently wrong ceiling rather than a null. That is the same
-  presence-versus-value confusion that produced every wrong conclusion in this investigation.
-- **4.2% coverage means two mechanisms**, so the ceiling becomes a number whose provenance varies per
-  row, with no way for a reader to tell which they are looking at.
-- **Write-side only, and not even one value per agent.** A pure cache hit carries no `cache_creation`
-  at all, so there is no evidence for the calls the ceiling cares about most; and 2,005 spans bought
-  both lifetimes in a single request, so "this agent uses 1h" is not a fact that exists for all of
-  them.
-- **It breaks LAT-822.** That issue gates peer comparison on the ceiling and already warns that
-  "comparable" is doing enormous work. Comparing agent A's measured-1h ceiling against agent B's
-  table-5m ceiling confounds instrumentation with traffic, which is precisely the failure it names.
-
-## The reliable alternative: let the customer declare it
-
-A proposal, not built. Rather than inferring the lifetime from vendor JSON, let it be **declared**
-per project or per agent, pre-filled with the documented provider default from the existing table.
-Explicit, stable, and free of any dependency on exporter internals. The table already *is* a
-declaration on the customer's behalf; this only lets someone who knows better override it. Anyone
-paying 2x for 1h writes knows they are doing it.
-
-An unlisted pair with no declaration must still resolve to `null` rather than a guessed default, so
-#4323's `classifyCacheState` keeps only returning verdicts that hold for every possible ceiling when
-the ceiling is unknown.
-
-## Who the error bar covers
-
-Thirteen `(agent, provider, model)` cohorts wrote at 1h. Four wrote **exclusively** at 1h:
-
-| agent | provider | model | spans | tokens 5m | tokens 1h | share 1h |
-| -- | -- | -- | --: | --: | --: | --: |
-| `unknown_service:/usr/local/bin/node` | anthropic | claude-opus-4-8 | 14,764 | 123,630,786 | 73,454,882 | 0.373 |
-| `orchestrator` | anthropic.messages | claude-haiku-4-5-20251001 | 2,664 | 0 | 12,600,209 | **1.000** |
-| `orchestrator` | anthropic | claude-haiku-4-5-20251001 | 3,855 | 0 | 12,055,655 | **1.000** |
-| `unknown_service:/usr/local/bin/node` | anthropic | claude-sonnet-5 | 934 | 9,457,682 | 3,533,550 | 0.272 |
-| `unknown_service:node` | anthropic.messages | claude-opus-4-8 | 371 | 2,277,866 | 1,527,562 | 0.401 |
-| `orchestrator` | anthropic | claude-sonnet-4-6 | 132 | 0 | 735,750 | **1.000** |
-| `orchestrator` | anthropic.messages | claude-sonnet-4-6 | 77 | 0 | 654,000 | **1.000** |
-
-`orchestrator` writes nothing at 5m, so #4323 measures its ceiling against a 300 s window when the
-lifetime it actually bought is 3600 s — a 12x understatement of the reusable gap, on exactly the
-cohort shape most likely to be told its cache is unfixable. That is the size of the error bar, and
-the case a declared setting would fix.
-
-Note that provider spelling already splits this cohort across `anthropic` and `anthropic.messages`
-for the same model, while #4323 partitions by `(agent, provider, model)`. That fragmentation exists
-today and is independent of TTL.
-
-## Still undetectable
-
-- **OpenAI** `prompt_cache_options.ttl` — request-side only; no response field, and no request-side
-  cache attribute of any kind appears in production.
+- **OpenAI** `prompt_cache_options.ttl` — request-side only, and no request-side cache attribute of
+  any kind reaches production.
 - **Gemini** explicit caching — `ttl` is customer input per cache entry, never a provider constant.
-- **Bedrock** `cacheDetails` — zero occurrences in production, in keys or values.
+- **Bedrock** `cacheDetails` — zero occurrences, in keys or values.
 - **Every scalar-only exporter**: Claude Code telemetry, OpenLLMetry/Traceloop, OpenInference,
-  Mastra, Sentry, Codex. Our own `packages/telemetry/claude-code` reads
-  `call.tokens.cache_creation_input_tokens`, the scalar Claude Code itself reports, so even the
-  emitter we control cannot forward a breakdown it never receives.
+  Mastra, Sentry, Codex.
 
 ## Checked and dismissed: unmatched cache keys are not a cost bug
 
-Several cache-shaped attribute keys match no candidate list, which looks like silent token loss. It
-is not, and the check is worth recording so it is not re-raised.
-
-Every one is either **identically zero** or a **vendor-prefixed duplicate of a standard key we
-already resolve**, verified by comparing the attribute's own value against the resolved column:
+Several cache-shaped attribute keys match no candidate list, which looks like silent token loss. It is
+not, and the check is recorded so it is not re-raised. Every one is either **identically zero** or a
+**vendor-prefixed duplicate of a standard key we already resolve**, verified by comparing the
+attribute's own value against the resolved column:
 
 | key | billable spans (30d) | attribute tokens | verdict |
 | -- | --: | --: | -- |
 | `gen_ai.usage.input_tokens.cache_write` (`@sentry/node`) | 5,038 | **0** (max 0) | all zero, nothing to recover |
 | `gen_ai.usage.input_tokens.cached` (`@sentry/node`) | 5,038 | **0** (max 0) | all zero |
 | `teeming.cache_write_tokens` | 2,580 | **0** (max 0) | all zero |
-| `teeming.cache_read_tokens` | 2,580 | 5,391,098,752 | duplicate — the same exporter also sends `gen_ai.usage.cache_read.input_tokens` (5,083,001,472), which we resolve |
+| `teeming.cache_read_tokens` | 2,580 | 5,391,098,752 | duplicate — same exporter also sends `gen_ai.usage.cache_read.input_tokens` (5,083,001,472), which we resolve |
 | `teeming.uncached_input_tokens` | 2,251 | 216,590,890 | duplicate — equals resolved `tokens_input` exactly |
 | `driftless.usage.cache_miss_input_tokens` | 373 | 2,817,737 | duplicate — equals resolved `tokens_input`; exporter also sends matched `gen_ai.usage.cache_read_input_tokens` |
 | `gen_ai.usage.cache_write.input_tokens`, `codex.turn.*`, `flue.operation.*`, `gen_ai.usage.input_cached_tokens` | 0 | — | all on `unspecified`, excluded from every cost aggregate |
 
-So no cache-write cost is misattributed and no issue is warranted. The one genuinely unresolved key,
-`gen_ai.usage.cache_read_tokens`, appears on **9 spans** from `hermes.latitude.shell_hook` and a
-scope literally named `so.latitude.instrumentation.cache-attribute-probe`.
+No cache-write cost is misattributed, so no issue is warranted. The one genuinely unresolved key,
+`gen_ai.usage.cache_read_tokens`, is on **9 spans** from `hermes.latitude.shell_hook` and a scope
+literally named `so.latitude.instrumentation.cache-attribute-probe`. Likewise `hermes.latitude`'s
+string-typed token attributes are not lost tokens: the values are `****`, already masked, on 107
+spans.
 
-Likewise `hermes.latitude`'s string-typed token attributes are not lost tokens: the values are
-`****`, already masked, on 107 spans. There is nothing behind them to parse.
+## Traps worth keeping
 
-**The recurring lesson:** presence of a key says nothing about the value behind it. Inferring impact
-from a key census produced a wrong conclusion three times in this investigation — once by missing a
-payload held in a value, twice by assuming an unmatched key implied lost tokens. Check values, and
-check them against the resolved column, before claiming impact. (Span counts from
-`arrayJoin(mapKeys(...))` grouped **by key** are correct, since a map holds each key once; the
-inflation risk is counting the arrayJoin rows *without* grouping by key.)
+- **`grep` is a shadowed shell function here**, and `transform.ts` trips binary-file detection because
+  of lone surrogates, so matches are silently suppressed. Use `command grep -a`.
+- **A key-name search is not an attribute search.** Values hold structured JSON.
+- **Presence of a key says nothing about the value behind it.** This produced a wrong conclusion three
+  times in this investigation: once by missing a payload held in a value, twice by assuming an
+  unmatched key implied lost tokens. Check values, against the resolved column, before claiming
+  impact.
+- Span counts from `arrayJoin(mapKeys(...))` grouped **by key** are correct, since a map holds each
+  key once. The inflation risk is counting the arrayJoin rows *without* grouping by key.
