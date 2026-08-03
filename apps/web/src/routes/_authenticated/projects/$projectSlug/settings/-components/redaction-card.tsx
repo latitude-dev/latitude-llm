@@ -93,6 +93,7 @@ export function RedactionCard({
             })}
 
             <RedactionRulesSection
+              idPrefix={idPrefix}
               value={value.rules}
               disabled={disabled}
               onChange={(next) => onChange("rules", next)}

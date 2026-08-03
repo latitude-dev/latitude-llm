@@ -1,5 +1,5 @@
 import type { RedactionRule } from "@domain/shared"
-import { Badge, Button, Icon, Text } from "@repo/ui"
+import { Button, Checkbox, Icon, Label, Text } from "@repo/ui"
 import { Pencil, Plus, X } from "lucide-react"
 import { useState } from "react"
 import {
@@ -17,13 +17,19 @@ import { RedactionRuleSheet } from "./redaction-rule-sheet.tsx"
  * Rules are part of the scoped policy — they resolve project → organization like the categories
  * do — so they have to sit inside whatever the Set by selector governs. Living in `RedactionCard`
  * also means the organization modal gets them from the same code path as the project page.
+ *
+ * A rule row is deliberately the same row as a category above it: both answer "what to redact", so
+ * both are a checkbox, a label, and a line saying what it matches. The only real difference is that
+ * a rule can be edited and removed, which is the two trailing actions and nothing else.
  */
 export function RedactionRulesSection({
+  idPrefix,
   /** Canonical JSON, so a flat draft overlay can compare it by value. */
   value,
   disabled = false,
   onChange,
 }: {
+  readonly idPrefix: string
   readonly value: string
   readonly disabled?: boolean
   readonly onChange: (next: string) => void
@@ -60,38 +66,32 @@ export function RedactionRulesSection({
       {rules.length === 0 ? (
         <Text.H6 color="foregroundMuted">No custom rules yet.</Text.H6>
       ) : (
-        <div className="flex flex-col rounded-md border border-border">
-          {rules.map((rule) => (
-            <div key={rule.id} className="flex flex-row items-center gap-3 border-border border-b p-3 last:border-b-0">
+        rules.map((rule) => {
+          const id = `${idPrefix}-rule-${rule.id}`
+
+          return (
+            <div key={rule.id} className="flex flex-row items-start gap-3">
+              <Checkbox
+                id={id}
+                checked={rule.enabled !== false}
+                disabled={disabled}
+                onCheckedChange={(checked) => write(withRuleReplaced(rules, { ...rule, enabled: checked === true }))}
+                aria-label={rule.label}
+              />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <div className="flex flex-row items-center gap-2">
-                  <Text.H6M>{rule.label}</Text.H6M>
-                  <Badge variant="muted" size="normal">
-                    {REDACTION_RULE_KIND_META[rule.kind].label}
-                  </Badge>
-                  {rule.enabled === false ? (
-                    <Badge variant="outlineMuted" size="normal">
-                      Off
-                    </Badge>
-                  ) : null}
-                  {duplicateLabels.has(rule.label) ? (
-                    <Text.H6 color="warningMutedForeground">shares a label, so their counts merge</Text.H6>
-                  ) : null}
-                </div>
+                <Label htmlFor={id}>{rule.label}</Label>
                 <Text.H6 color="foregroundMuted" ellipsis noWrap>
-                  <span className="font-mono">{describeRule(rule)}</span>
+                  {REDACTION_RULE_KIND_META[rule.kind].label} · <span className="font-mono">{describeRule(rule)}</span>
                 </Text.H6>
+                {duplicateLabels.has(rule.label) ? (
+                  <Text.H6 color="warningMutedForeground">
+                    Another rule uses this label, so their match counts are reported together.
+                  </Text.H6>
+                ) : null}
               </div>
 
               {disabled ? null : (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => write(withRuleReplaced(rules, { ...rule, enabled: rule.enabled === false }))}
-                  >
-                    {rule.enabled === false ? "Turn on" : "Turn off"}
-                  </Button>
+                <div className="flex shrink-0 flex-row items-center">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -103,6 +103,7 @@ export function RedactionRulesSection({
                   >
                     <Icon icon={Pencil} size="sm" />
                   </Button>
+                  {/* No confirmation: the page holds this until Apply, so Discard already undoes it. */}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -111,11 +112,11 @@ export function RedactionRulesSection({
                   >
                     <Icon icon={X} size="sm" />
                   </Button>
-                </>
+                </div>
               )}
             </div>
-          ))}
-        </div>
+          )
+        })
       )}
 
       <RedactionRuleSheet
@@ -131,7 +132,7 @@ export function RedactionRulesSection({
   )
 }
 
-/** Two enabled rules sharing a label merge their match counts, which is legal but worth surfacing. */
+/** Two rules sharing a label merge their match counts, which is legal but worth surfacing. */
 function labelsUsedTwice(rules: readonly RedactionRule[]): Set<string> {
   const seen = new Set<string>()
   const twice = new Set<string>()
