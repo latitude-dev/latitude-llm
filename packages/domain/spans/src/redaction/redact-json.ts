@@ -198,6 +198,42 @@ export function redactStringMap(
   return { value: next, counts, scan }
 }
 
+export interface ScalarMaskResult<T> {
+  readonly kept: Record<string, T>
+  /** Matched keys, moved out because a typed map cannot hold a placeholder. */
+  readonly relocated: Record<string, string>
+  readonly counts: RedactionCounts
+}
+
+/**
+ * Applies key rules to a map that cannot hold a placeholder, relocating what they name.
+ *
+ * A key rule promises to replace the value of the attribute it names wherever it appears, and a
+ * customer naming `acme.customer.tax_id` does not know or care which OTLP type it arrived as. Value
+ * scanning cannot reach these maps the same way — a boolean matches no detector at all — so the key
+ * is the only thing to go on, which is also why no scan is needed here.
+ */
+export function maskKeyedScalars<T>(
+  map: Readonly<Record<string, T>>,
+  ruleSet: CompiledRuleSet,
+): ScalarMaskResult<T> {
+  const counts: RedactionCounts = {}
+  const kept: Record<string, T> = {}
+  const relocated: Record<string, string> = {}
+
+  for (const [key, value] of Object.entries(map) as [string, T][]) {
+    const label = ruleSet.maskedKeyLabel(key)
+    if (label === null) {
+      kept[key] = value
+      continue
+    }
+    relocated[key] = redactionPlaceholder(label)
+    counts[label] = (counts[label] ?? 0) + 1
+  }
+
+  return { kept, relocated, counts }
+}
+
 export interface NumberMapRedactionResult<T> {
   readonly kept: Record<string, T>
   /** Matched keys, moved out because a `Map(String, Int64)` cannot hold a placeholder. */

@@ -2,6 +2,7 @@ import type { SpanDetail } from "../entities/span.ts"
 import { REDACTED_IDENTITY_PLACEHOLDER } from "./labels.ts"
 import {
   emptyScanTally,
+  maskKeyedScalars,
   maskKeyedValues,
   mergeScanTally,
   type NumberMapRedactionResult,
@@ -9,6 +10,7 @@ import {
   redactJsonValue,
   redactNumberMap,
   redactStringMap,
+  type ScalarMaskResult,
   type ScanTally,
 } from "./redact-json.ts"
 import { mergeRedactionCounts, type RedactionCounts, redactLeaf } from "./redact-text.ts"
@@ -43,6 +45,15 @@ export function redactSpanDetail(
     mergeRedactionCounts(counts, result.counts)
     mergeScanTally(scan, result.scan)
     return result.value
+  }
+
+  const takeScalars = <T>(result: ScalarMaskResult<T>): Record<string, T> => {
+    mergeRedactionCounts(counts, result.counts)
+    for (const [key, placeholder] of Object.entries(result.relocated)) {
+      relocated[key] = placeholder
+      relocatedNumericAttributes += 1
+    }
+    return result.kept
   }
 
   const takeNumbers = <T extends number>(result: NumberMapRedactionResult<T>): Record<string, T> => {
@@ -85,9 +96,13 @@ export function redactSpanDetail(
   const redactedAttrString = take(redactStringMap(maskedAttrString, ruleSet))
   const resourceString = take(redactStringMap(maskedResourceString, ruleSet))
 
-  // `attrBool` is not scanned: no detector can match "true" or "false".
-  const attrInt = takeNumbers(redactNumberMap(span.attrInt, ruleSet))
-  const attrFloat = takeNumbers(redactNumberMap(span.attrFloat, ruleSet))
+  // A key rule reaches the typed maps too: the customer named an attribute, not a column type.
+  // Values are only scanned in the numeric ones — no detector can match "true" or "false".
+  const maskedInt = takeScalars(maskKeyedScalars(span.attrInt, ruleSet))
+  const maskedFloat = takeScalars(maskKeyedScalars(span.attrFloat, ruleSet))
+  const attrBool = takeScalars(maskKeyedScalars(span.attrBool, ruleSet))
+  const attrInt = takeNumbers(redactNumberMap(maskedInt, ruleSet))
+  const attrFloat = takeNumbers(redactNumberMap(maskedFloat, ruleSet))
   const attrString = { ...relocated, ...redactedAttrString }
 
   // Identity handling is its own control, so it applies to metadata and tags whether or not the metadata scope is on.
@@ -135,6 +150,7 @@ export function redactSpanDetail(
       attrString,
       attrInt,
       attrFloat,
+      attrBool,
       resourceString,
       inputMessages,
       outputMessages,

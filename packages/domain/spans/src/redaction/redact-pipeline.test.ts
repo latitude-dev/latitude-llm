@@ -502,6 +502,34 @@ describe("attribute_key rules over the real transform", () => {
     expect(after?.metadata["acme.staff.id"]).toBe("[REDACTED_STAFF_ID]")
   })
 
+  /**
+   * A customer naming `acme.customer.tax_id` does not know which OTLP type it arrived as, and the
+   * value passes cannot reach these maps: a boolean matches no detector at all. Key rules only
+   * touched the string maps, so the value survived under the very key the rule named.
+   */
+  it("masks a named key whatever OTLP type it arrived as", async () => {
+    const attributes = [
+      { key: "acme.staff.id", value: { intValue: "77" } },
+      { key: "acme.staff.score", value: { doubleValue: 4.5 } },
+      { key: "acme.staff.active", value: { boolValue: true } },
+    ]
+    const { before, after } = await redactWithRules(attributes, [
+      { id: "r1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.*"] },
+    ])
+
+    // Without these the assertions below would pass on maps that never held the keys.
+    expect(before?.attrInt).toHaveProperty("acme.staff.id")
+    expect(before?.attrFloat).toHaveProperty("acme.staff.score")
+    expect(before?.attrBool).toHaveProperty("acme.staff.active")
+
+    expect(after?.attrInt).not.toHaveProperty("acme.staff.id")
+    expect(after?.attrFloat).not.toHaveProperty("acme.staff.score")
+    expect(after?.attrBool).not.toHaveProperty("acme.staff.active")
+    expect(after?.attrString["acme.staff.id"]).toBe("[REDACTED_STAFF_ID]")
+    expect(after?.attrString["acme.staff.score"]).toBe("[REDACTED_STAFF_ID]")
+    expect(after?.attrString["acme.staff.active"]).toBe("[REDACTED_STAFF_ID]")
+  })
+
   // A masked key is a match like any other, so it needs no stat of its own.
   it("counts each masked key under the rule's label", async () => {
     const { summary } = await redactWithRules(
