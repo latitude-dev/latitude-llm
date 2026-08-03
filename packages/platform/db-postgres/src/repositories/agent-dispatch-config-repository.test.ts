@@ -4,6 +4,7 @@ import { Effect } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 import { agentDispatchConfigs } from "../schema/agent-dispatch-configs.ts"
 import { agentDispatches } from "../schema/agent-dispatches.ts"
+import { projects } from "../schema/projects.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { AgentDispatchConfigRepositoryLive } from "./agent-dispatch-config-repository.ts"
@@ -39,6 +40,7 @@ const row = (overrides: Partial<AgentDispatchConfigRow>): AgentDispatchConfigRow
 afterEach(async () => {
   await pg.db.delete(agentDispatches)
   await pg.db.delete(agentDispatchConfigs)
+  await pg.db.delete(projects)
 })
 
 describe("AgentDispatchConfigRepositoryLive", () => {
@@ -119,14 +121,21 @@ describe("AgentDispatchConfigRepositoryLive", () => {
     expect(projectIds).not.toContain(PROJECT_B)
   })
 
-  it("counts project overrides for an integration, excluding the org default row", async () => {
+  it("counts project overrides for an integration, excluding the org default and deleted projects", async () => {
     const otherIntegration = generateId()
+    const deletedProject = ProjectId("d".repeat(24))
+    await pg.db.insert(projects).values([
+      { id: PROJECT_A, organizationId: ORG, name: "A", slug: "a" },
+      { id: PROJECT_B, organizationId: ORG, name: "B", slug: "b" },
+      { id: deletedProject, organizationId: ORG, name: "D", slug: "d", deletedAt: now },
+    ])
     await run(
       Effect.gen(function* () {
         const repo = yield* AgentDispatchConfigRepository
         yield* repo.upsert(row({ id: generateId(), projectId: null }))
         yield* repo.upsert(row({ id: generateId(), projectId: PROJECT_A }))
         yield* repo.upsert(row({ id: generateId(), projectId: PROJECT_B }))
+        yield* repo.upsert(row({ id: generateId(), projectId: deletedProject }))
         yield* repo.upsert(row({ id: generateId(), projectId: PROJECT_A, integrationId: otherIntegration }))
       }),
     )
