@@ -141,6 +141,7 @@ describe("seed coverage for the recommendation cards", () => {
 })
 
 const ANCHOR = new Date("2026-08-03T12:00:00.000Z")
+const COST_PAGE_WINDOW_DAYS = 30
 const startMsOf = (span: SpanRow): number => Date.parse(`${span.start_time.replace(" ", "T")}Z`)
 
 /**
@@ -250,8 +251,11 @@ const judgeArchetypeB = () => {
     },
   }
 
-  const windowMs = Math.max(...spans.map(startMsOf)) - Math.min(...spans.map(startMsOf))
-  return judgeCacheEconomics({ economics, windowMs })
+  // The window the cost page actually judges against: on All time it uses the shared
+  // trend range, which is clamped to the project's default window rather than reaching
+  // back to the first trace. Sizing a card against the fixture's own span instead would
+  // pass here and still render nothing on the page, which is how this regressed once.
+  return judgeCacheEconomics({ economics, windowMs: COST_PAGE_WINDOW_DAYS * 86_400_000 })
 }
 
 describe("archetype B end to end", () => {

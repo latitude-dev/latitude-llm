@@ -246,7 +246,10 @@ function RecommendationCards({ recommendations }: { readonly recommendations: re
                   </Text.H6>
                   <Text.H6 color="foregroundMuted" noWrap className="tabular-nums">
                     {row.judgment.actualRate === null ? DASH : formatPercentage(row.judgment.actualRate)}
-                    {row.judgment.ceilingRate === null ? null : ` of ${formatPercentage(row.judgment.ceilingRate)}`}
+                    {/* Only a ceiling above the rate is a target; below it, it is the reason. */}
+                    {row.judgment.ceilingRate !== null && row.judgment.ceilingRate > (row.judgment.actualRate ?? 0)
+                      ? ` of ${formatPercentage(row.judgment.ceilingRate)}`
+                      : null}
                   </Text.H6>
                 </div>
               ))}

@@ -53,7 +53,7 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
     modelConfig: CLAUDE_HAIKU_4_5,
     cadence: { endDaysAgo: 0, clusters: 30, clusterSpacingHours: 6, callsPerCluster: 7, gapWithinClusterSeconds: 45 },
     cache: { kind: "flat", profile: { hitRate: 0.06, writeShare: 0.3 } },
-    promptTokens: 24_000,
+    promptTokens: 44_000,
     completionTokens: 120,
     callsPerSession: 7,
   },
@@ -66,9 +66,9 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
     key: "b-cache-it",
     serviceName: "doc-extractor",
     modelConfig: GPT_5_MINI,
-    cadence: { endDaysAgo: 0, clusters: 40, clusterSpacingHours: 6, callsPerCluster: 6, gapWithinClusterSeconds: 40 },
+    cadence: { endDaysAgo: 0, clusters: 56, clusterSpacingHours: 4, callsPerCluster: 6, gapWithinClusterSeconds: 40 },
     cache: { kind: "off" },
-    promptTokens: 60_000,
+    promptTokens: 95_000,
     completionTokens: 300,
     callsPerSession: 6,
   },
@@ -80,9 +80,9 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
     // no write is ever read back and the ceiling is 0. Nearly half the prompt is being
     // written to cache at a 1.25x premium for nothing, which is what makes stopping
     // worth real money rather than rounding error.
-    cadence: { endDaysAgo: 0, clusters: 120, clusterSpacingHours: 1.2, callsPerCluster: 1, gapWithinClusterSeconds: 0 },
-    cache: { kind: "flat", profile: { hitRate: 0.04, writeShare: 0.45 } },
-    promptTokens: 56_000,
+    cadence: { endDaysAgo: 0, clusters: 150, clusterSpacingHours: 1.2, callsPerCluster: 1, gapWithinClusterSeconds: 0 },
+    cache: { kind: "flat", profile: { hitRate: 0.04, writeShare: 0.75 } },
+    promptTokens: 64_000,
     completionTokens: 640,
     callsPerSession: 0,
   },
