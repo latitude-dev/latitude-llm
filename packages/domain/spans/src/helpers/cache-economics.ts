@@ -74,6 +74,12 @@ export interface CacheEconomicsPricing {
  * `input` and the rate collapses to 0% — any read at all is pure upside. Null
  * when the model has no cache-read price, which is not a 0% break-even but an
  * absence of cache economics to reason about.
+ *
+ * In practice this returns one of two numbers. Every provider that charges for
+ * writes copied Anthropic's multipliers — writes at 1.25x input, reads at 0.1x —
+ * and the level cancels out of the ratio, leaving 0.25/1.15 = 21.74% for all of
+ * them, Haiku and Opus alike. Which is why the ceiling is the interesting term:
+ * break-even barely moves, so it is the cadence that decides a verdict.
  */
 export function cacheBreakEvenRate({ input, cacheRead, cacheWrite }: CacheEconomicsPricing): number | null {
   if (!(input > 0) || cacheRead === undefined) return null

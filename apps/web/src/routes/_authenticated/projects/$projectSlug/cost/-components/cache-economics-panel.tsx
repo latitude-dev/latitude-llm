@@ -103,7 +103,7 @@ const SAVINGS_TOOLTIP =
   "An estimate, worked out from your token counts and each model's list prices. It will not match the spend figures elsewhere on this page exactly."
 
 const POSITION_TOOLTIP =
-  "The share of tokens served from cache, against the share that could have been. The mark is where caching starts paying for itself."
+  "The share of tokens served from cache. The pale part is what the timing of these calls would have allowed."
 
 const formatLifetime = (lifetimeSeconds: number | null): string | null =>
   lifetimeSeconds === null ? null : formatDuration(lifetimeSeconds * 1_000_000_000)
@@ -170,13 +170,41 @@ function StateGroupHeader({ group }: { readonly group: CacheStateGroup }) {
 }
 
 /**
- * Actual against break-even against the achievable ceiling on one shared 0-100% track.
- * The shared axis is the point of the table: it is the only place two models' rates can be
- * compared.
+ * Where caching starts paying for itself on this model, as a goalpost standing over the
+ * track.
+ *
+ * It overhangs the bar rather than sitting inside it: a mark flush with the fill reads as a
+ * segment boundary, and it carries its own tooltip because a threshold nobody can name is
+ * worse than no threshold at all. Hence a sibling of the bar's trigger, not a child — a
+ * nested trigger would open both tooltips at once.
+ *
+ * A break-even of zero draws nothing: there is no threshold to clear, and against the left
+ * edge it reads as an artefact.
+ */
+function BreakEvenMark({ breakEvenRate }: { readonly breakEvenRate: number }) {
+  return (
+    <Tooltip
+      asChild
+      trigger={
+        <span
+          className="absolute -top-1.5 flex h-5 w-3 -translate-x-1/2 cursor-default items-center justify-center"
+          style={{ left: `${Math.min(100, breakEvenRate * 100)}%` }}
+        >
+          <span className="h-4 w-[3px] rounded-full bg-foreground/70" />
+        </span>
+      }
+    >
+      {`Caching starts paying for itself on this model once ${formatPercentage(breakEvenRate)} of the tokens come from cache.`}
+    </Tooltip>
+  )
+}
+
+/**
+ * What came from cache, against what could have, on one shared 0-100% track. The shared
+ * axis is the point of the table: it is the only place two models' rates can be compared.
  *
  * Segments are square and clipped by the track, or a rounded corner cuts a notch into the
- * middle of the bar. A break-even of zero draws no mark: there is no threshold to show, and
- * against the left edge it reads as an artefact.
+ * middle of the bar.
  */
 function PositionBar({ row }: { readonly row: CacheRowView }) {
   const { actualRate: actual, breakEvenRate: breakEven, ceilingRate: ceiling } = row.judgment
@@ -187,41 +215,37 @@ function PositionBar({ row }: { readonly row: CacheRowView }) {
   const headroomPct = ceiling === null ? 0 : Math.max(0, pct(ceiling) - actualPct)
 
   return (
-    <Tooltip
-      asChild
-      trigger={
-        <div className="flex w-full cursor-default flex-row items-center gap-2">
-          <div className="relative h-2 w-full overflow-hidden rounded-sm bg-muted">
-            {unjudged || headroomPct <= 0 ? null : (
-              <div
-                className="absolute inset-y-0 opacity-25"
-                style={{ left: `${actualPct}%`, width: `${headroomPct}%`, backgroundColor: CALLS_SERIES_COLOR }}
-                aria-hidden="true"
-              />
-            )}
-            {actualPct <= 0 ? null : (
-              <div
-                className={cn("absolute inset-y-0 left-0", { "bg-muted-foreground/40": unjudged })}
-                style={{ width: `${actualPct}%`, ...(unjudged ? {} : { backgroundColor: CALLS_SERIES_COLOR }) }}
-                aria-hidden="true"
-              />
-            )}
-            {breakEven === null || breakEven <= 0 || unjudged ? null : (
-              <div
-                className="absolute inset-y-0 w-0.5 bg-foreground"
-                style={{ left: `${pct(breakEven)}%` }}
-                aria-hidden="true"
-              />
-            )}
-          </div>
-          <Text.H6 color="foregroundMuted" noWrap className="w-10 shrink-0 text-right tabular-nums">
-            {actual === null ? DASH : formatPercentage(actual)}
-          </Text.H6>
-        </div>
-      }
-    >
-      {rowExplanation(row)}
-    </Tooltip>
+    <div className="flex w-full flex-row items-center gap-2">
+      <div className="relative h-2 min-w-0 flex-1">
+        <Tooltip
+          asChild
+          trigger={
+            <div className="absolute inset-0 cursor-default overflow-hidden rounded-sm bg-muted">
+              {unjudged || headroomPct <= 0 ? null : (
+                <div
+                  className="absolute inset-y-0 opacity-25"
+                  style={{ left: `${actualPct}%`, width: `${headroomPct}%`, backgroundColor: CALLS_SERIES_COLOR }}
+                  aria-hidden="true"
+                />
+              )}
+              {actualPct <= 0 ? null : (
+                <div
+                  className={cn("absolute inset-y-0 left-0", { "bg-muted-foreground/40": unjudged })}
+                  style={{ width: `${actualPct}%`, ...(unjudged ? {} : { backgroundColor: CALLS_SERIES_COLOR }) }}
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+          }
+        >
+          {rowExplanation(row)}
+        </Tooltip>
+        {breakEven === null || breakEven <= 0 || unjudged ? null : <BreakEvenMark breakEvenRate={breakEven} />}
+      </div>
+      <Text.H6 color="foregroundMuted" noWrap className="w-10 shrink-0 text-right tabular-nums">
+        {actual === null ? DASH : formatPercentage(actual)}
+      </Text.H6>
+    </div>
   )
 }
 
@@ -321,14 +345,27 @@ function CacheRow({ row }: { readonly row: CacheRowView }) {
 
 type CacheSortColumn = "name" | "position" | "savings" | "spend"
 
+/** A rate we declined to judge is not a low rate, so it ranks with the other blanks. */
+const cachedShare = (row: CacheRowView): number | null =>
+  row.judgment.state === "notEnoughData" ? null : row.judgment.actualRate
+
+/**
+ * Blanks stay at the bottom whichever way the column points, rather than flipping to the
+ * top on ascending: a screen of dashes is never the answer to a sort.
+ */
+const compareNullsLast = (left: number | null, right: number | null, factor: number): number => {
+  if (left === null || right === null) return left === right ? 0 : left === null ? 1 : -1
+  return (right - left) * factor
+}
+
 const compareRows =
   (sort: { readonly column: CacheSortColumn; readonly direction: "asc" | "desc" }) =>
   (a: CacheRowView, b: CacheRowView): number => {
     const factor = sort.direction === "desc" ? 1 : -1
     if (sort.column === "name") return a.model.localeCompare(b.model) * -factor
-    if (sort.column === "position") return ((b.judgment.actualRate ?? 0) - (a.judgment.actualRate ?? 0)) * factor
+    if (sort.column === "position") return compareNullsLast(cachedShare(a), cachedShare(b), factor)
     if (sort.column === "spend") return (b.costMicrocents - a.costMicrocents) * factor
-    return ((b.judgment.modeledSavingsMicrocents ?? -1) - (a.judgment.modeledSavingsMicrocents ?? -1)) * factor
+    return compareNullsLast(a.judgment.modeledSavingsMicrocents, b.judgment.modeledSavingsMicrocents, factor)
   }
 
 /**
@@ -364,8 +401,12 @@ export function CacheEconomicsPanel({
 
   // A sort moves the groups as well as the rows, each group carried by its leading row on
   // the sorted column — otherwise sorting by spend leaves the biggest spender three
-  // headings down, and collapsed it would not move the table at all. Ties keep the built
-  // order, which is what leaves the default sort with the money-first grouping.
+  // headings down, and collapsed it would not move the table at all. So sorting by rate
+  // does put `Caching well` on top, which is the point of asking for it.
+  //
+  // What keeps that honest is `compareNullsLast`: the groups with nothing to show on the
+  // sorted column sink, so a rate we declined to judge can never outrank a real one, and
+  // the default savings sort still leads with the money.
   const compare = compareRows(sort)
   const groups = built
     .map((group) => ({ ...group, rows: [...group.rows].sort(compare) }))
