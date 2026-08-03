@@ -430,12 +430,16 @@ export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
  * restarts is too small a sample: some runs find a partition that clears the gate
  * and some do not, so the tree alternates between a real split and a bare leaf.
  *
- * 12 rather than 25 because the two are indistinguishable on quality — over the
- * pilot's real historical windows 12 gives meanARI 0.785 against 0.789, and one
- * collapse against none — while 25 costs twice as much, and the re-search cost is
- * what has to fit `TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS`.
+ * Do not lower this to buy headroom against
+ * `TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS` — it does not buy any. Replaying the
+ * pilot's 19 real historical 7-day windows, 12 restarts collapses three roots,
+ * exactly as many as not re-searching at all, and reaches a lower separation on
+ * five windows; 25 collapses two and dominates it everywhere. Yet the worst
+ * window costs 64s at 12 against 68s at 25, because the first pass and the
+ * subtrees dominate that total rather than the root sweep. Cheaper by 6%, worth
+ * appreciably less.
  */
-export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 12
+export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 25
 /**
  * Root relative separation at or above which the first-pass build is kept as-is.
  * Measured on real corpora across historical 7-day windows: an unstable project
@@ -466,10 +470,11 @@ export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
 // worker, and host speed there swings ~4.4x run to run (the static build of a
 // comparable corpus ranges 19-93s), so a local number understates the worst case
 // by more than an order of magnitude. Sized so a near-gate root re-search
-// (~5x a plain build at TAXONOMY_KMEANS_ESCALATION_RESTARTS) still lands inside
-// it on the slowest observed host pass, and kept well under the 30-minute
-// Temporal start-to-close of the planning activity that awaits it. Raising the
-// re-search budget without re-deriving this number is what broke the pilot.
+// (~6.9x a plain build at TAXONOMY_KMEANS_ESCALATION_RESTARTS) still lands
+// inside it on the slowest observed host pass, and kept well under the
+// 30-minute Temporal start-to-close of the planning activity that awaits it.
+// Raising the re-search budget without re-deriving this number is what broke
+// the pilot.
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 15 * 60_000
