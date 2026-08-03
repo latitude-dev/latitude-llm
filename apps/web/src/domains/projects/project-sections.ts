@@ -18,6 +18,7 @@ import {
   SettingsIcon,
   Share2Icon,
   ShieldAlertIcon,
+  SlidersHorizontalIcon,
   TagsIcon,
   UserRound,
   Users,
@@ -184,6 +185,18 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         icon: EyeOffIcon,
         path: (slug) => `/projects/${slug}/settings/privacy`,
       },
+      {
+        key: "integrations",
+        label: "Integrations",
+        icon: Plug,
+        path: (slug) => `/projects/${slug}/settings/integrations`,
+      },
+      {
+        key: "data-destinations",
+        label: "Data destinations",
+        icon: Share2Icon,
+        path: (slug) => `/projects/${slug}/settings/data-destinations`,
+      },
     ],
   },
   {
@@ -214,16 +227,10 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         path: (slug) => `/projects/${slug}/settings/billing`,
       },
       {
-        key: "integrations",
-        label: "Integrations",
-        icon: Plug,
-        path: (slug) => `/projects/${slug}/settings/integrations`,
-      },
-      {
-        key: "data-destinations",
-        label: "Data destinations",
-        icon: Share2Icon,
-        path: (slug) => `/projects/${slug}/settings/data-destinations`,
+        key: "defaults",
+        label: "Defaults",
+        icon: SlidersHorizontalIcon,
+        path: (slug) => `/projects/${slug}/settings/defaults`,
       },
       {
         key: "sso",

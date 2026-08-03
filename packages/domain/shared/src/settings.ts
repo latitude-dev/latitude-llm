@@ -226,7 +226,8 @@ const REDACTION_SYSTEM_DEFAULTS: {
   identities: "keep",
 }
 
-const hasRedactionField = (setting: RedactionSetting | undefined): boolean =>
+/** Whether a layer sets any redaction field — what makes a project an override rather than an inheritor. */
+export const hasRedactionField = (setting: RedactionSetting | undefined): boolean =>
   setting !== undefined &&
   (setting.mode !== undefined ||
     setting.entities !== undefined ||

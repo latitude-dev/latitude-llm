@@ -43,6 +43,7 @@ import {
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
   IncidentMonitorReaderLive,
+  MembershipRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
@@ -56,6 +57,7 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { requireOrganizationOwner } from "../../server/require-owner.ts"
 
 export interface AgentDispatchRecord {
   readonly id: string
@@ -553,6 +555,7 @@ interface ProjectDispatchSettingsRecord {
   readonly defaultConfig: AgentDispatchConfigRecord | null
   readonly override: AgentDispatchOverrideRecord | null
   readonly effective: AgentDispatchConfigRecord | null
+  readonly overrideCount: number
 }
 
 export const getProjectDispatchSettings = createServerFn({ method: "GET" })
@@ -567,10 +570,12 @@ export const getProjectDispatchSettings = createServerFn({ method: "GET" })
         const integrationRepo = yield* AgentDispatchIntegrationRepository
         const configRepo = yield* AgentDispatchConfigRepository
         const integration = yield* integrationRepo.findActiveByKind(data.kind)
-        if (!integration) return { integrationId: null, defaultConfig: null, override: null, effective: null }
-        const [defaultRow, overrideRow] = yield* Effect.all([
+        if (!integration)
+          return { integrationId: null, defaultConfig: null, override: null, effective: null, overrideCount: 0 }
+        const [defaultRow, overrideRow, overrideCount] = yield* Effect.all([
           configRepo.findDefaultByIntegration(integration.id),
           configRepo.findOverrideByProjectAndIntegration({ projectId, integrationId: integration.id }),
+          configRepo.countProjectOverrides(integration.id),
         ])
         const effective = resolveEffectiveConfig({ projectId, defaultConfig: defaultRow, override: overrideRow })
         const effectiveUpdatedAt = new Date(
@@ -581,6 +586,7 @@ export const getProjectDispatchSettings = createServerFn({ method: "GET" })
           defaultConfig: defaultRow ? toConfigRecord(defaultRow) : null,
           override: overrideRow ? toOverrideRecord(overrideRow) : null,
           effective: effective ? toEffectiveRecord(effective, effectiveUpdatedAt) : null,
+          overrideCount,
         }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
@@ -945,20 +951,26 @@ export const sendSignalToIntegration = createServerFn({ method: "POST" })
 export const upsertOrgDefaultDispatchConfig = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => orgDefaultConfigSchema.parse(data))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     const config = await Effect.runPromise(
-      upsertOrgDefaultDispatchConfigUseCase({
-        organizationId: OrganizationId(organizationId),
-        integrationId: data.integrationId,
-        kind: data.kind,
-        enabled: data.enabled,
-        triggers: data.triggers,
-        target: data.target,
-        ...(data.promptTemplate !== undefined ? { promptTemplate: data.promptTemplate } : {}),
-        ...(data.guardrails !== undefined ? { guardrails: data.guardrails } : {}),
-      }).pipe(withPostgres(AgentDispatchConfigRepositoryLive, client, organizationId), withTracing),
+      Effect.gen(function* () {
+        yield* requireOrganizationOwner({ organizationId, userId, what: "an organization dispatch default" })
+        return yield* upsertOrgDefaultDispatchConfigUseCase({
+          organizationId: OrganizationId(organizationId),
+          integrationId: data.integrationId,
+          kind: data.kind,
+          enabled: data.enabled,
+          triggers: data.triggers,
+          target: data.target,
+          ...(data.promptTemplate !== undefined ? { promptTemplate: data.promptTemplate } : {}),
+          ...(data.guardrails !== undefined ? { guardrails: data.guardrails } : {}),
+        })
+      }).pipe(
+        withPostgres(Layer.merge(AgentDispatchConfigRepositoryLive, MembershipRepositoryLive), client, organizationId),
+        withTracing,
+      ),
     )
 
     return toConfigRecord(config)
