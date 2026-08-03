@@ -3,10 +3,8 @@ import { Checkbox, Label, Switch, Text } from "@repo/ui"
 import {
   decodeEntities,
   encodeEntities,
-  REDACTION_ENTITY_GROUP_LABELS,
-  REDACTION_ENTITY_GROUPS,
   REDACTION_ENTITY_META,
-  redactionEntitiesInGroup,
+  REDACTION_ENTITY_ORDER,
 } from "../../../../../../domains/projects/redaction-entities.ts"
 import { RedactionIdentityChoice } from "./redaction-identity-choice.tsx"
 import { RedactionRulesSection } from "./redaction-rules-section.tsx"
@@ -73,36 +71,26 @@ export function RedactionCard({
               </Text.H6>
             </div>
 
-            {REDACTION_ENTITY_GROUPS.map((group) => (
-              <div key={group} className="flex flex-col gap-3">
-                <Text.H6 color="foregroundMuted">{REDACTION_ENTITY_GROUP_LABELS[group]}</Text.H6>
-                {redactionEntitiesInGroup(group).map((entity) => {
-                  const meta = REDACTION_ENTITY_META[entity]
-                  const id = `${idPrefix}-entity-${entity}`
-                  return (
-                    <div key={entity} className="flex flex-row items-start gap-3">
-                      <Checkbox
-                        id={id}
-                        checked={selected.has(entity)}
-                        disabled={disabled}
-                        onCheckedChange={(checked) => toggleEntity(entity, checked === true)}
-                        aria-label={meta.label}
-                      />
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <div className="flex flex-row flex-wrap items-baseline gap-x-2">
-                          <Label htmlFor={id}>{meta.label}</Label>
-                          <Text.H6 color="foregroundMuted">
-                            <span className="font-mono">{meta.example}</span>
-                          </Text.H6>
-                        </div>
-                        <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
-                        {meta.caution ? <Text.H6 color="warningMutedForeground">{meta.caution}</Text.H6> : null}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ))}
+            {REDACTION_ENTITY_ORDER.map((entity) => {
+              const meta = REDACTION_ENTITY_META[entity]
+              const id = `${idPrefix}-entity-${entity}`
+              return (
+                <div key={entity} className="flex flex-row items-start gap-3">
+                  <Checkbox
+                    id={id}
+                    checked={selected.has(entity)}
+                    disabled={disabled}
+                    onCheckedChange={(checked) => toggleEntity(entity, checked === true)}
+                    aria-label={meta.label}
+                  />
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Label htmlFor={id}>{meta.label}</Label>
+                    <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
+                    {meta.caution ? <Text.H6 color="warningMutedForeground">{meta.caution}</Text.H6> : null}
+                  </div>
+                </div>
+              )
+            })}
 
             <RedactionRulesSection
               value={value.rules}
