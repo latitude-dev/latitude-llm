@@ -73,12 +73,16 @@ export function sortCacheRowsBySavings(rows: readonly CacheRowView[]): readonly 
   })
 }
 
+/** Past this a section stops being a shortlist. The rest are counted, not listed. */
+const CACHE_FINDING_ROWS_SHOWN = 3
+
 export interface CacheFindingSection {
   readonly state: CacheRecommendationState
-  /** Worth acting on, highest savings first. */
+  /** Worth acting on, highest savings first, capped at `CACHE_FINDING_ROWS_SHOWN`. */
   readonly rows: readonly CacheRowView[]
-  /** Real findings whose money is too small to lead with, counted rather than listed. */
-  readonly quietCount: number
+  /** Models in this state that are not listed, either capped out or too cheap to lead with. */
+  readonly hiddenCount: number
+  /** Orders the sections. Not rendered: a total beside per-row totals reads as double counting. */
   readonly savingsMicrocents: number
 }
 
@@ -97,13 +101,14 @@ export function buildCacheFindings(
   const resolved = rows.map((row) => resolveCacheRow(row, selection))
   return CACHE_RECOMMENDATION_STATES.flatMap((state) => {
     const matching = resolved.filter((row) => row.judgment.state === state)
-    const worthLeadingWith = sortCacheRowsBySavings(matching.filter((row) => row.judgment.savingsClearsFloor))
     if (matching.length === 0) return []
+    const worthLeadingWith = sortCacheRowsBySavings(matching.filter((row) => row.judgment.savingsClearsFloor))
+    const shown = worthLeadingWith.slice(0, CACHE_FINDING_ROWS_SHOWN)
     return [
       {
         state,
-        rows: worthLeadingWith,
-        quietCount: matching.length - worthLeadingWith.length,
+        rows: shown,
+        hiddenCount: matching.length - shown.length,
         savingsMicrocents: worthLeadingWith.reduce((sum, row) => sum + (row.judgment.modeledSavingsMicrocents ?? 0), 0),
       },
     ]

@@ -155,6 +155,16 @@ describe("buildCacheFindings", () => {
     expect(sections).toEqual([])
   })
 
+  it("caps a section at three rows and counts the rest", () => {
+    const many = ["a", "b", "c", "d", "e"].map((model, index) =>
+      row({ model, documented: judgment({ state: "investigate", modeledSavingsMicrocents: 900 - index }) }),
+    )
+    const sections = buildCacheFindings(many, "documented")
+
+    expect(sections[0]?.rows.map((entry) => entry.model)).toEqual(["a", "b", "c"])
+    expect(sections[0]?.hiddenCount).toBe(2)
+  })
+
   it("counts a finding under the floor instead of dropping it", () => {
     // Dropping it would leave the panel implying the model is fine when it is not.
     const sections = buildCacheFindings(
@@ -169,7 +179,7 @@ describe("buildCacheFindings", () => {
 
     expect(sections).toHaveLength(1)
     expect(sections[0]?.rows).toEqual([])
-    expect(sections[0]?.quietCount).toBe(1)
+    expect(sections[0]?.hiddenCount).toBe(1)
     expect(sections[0]?.savingsMicrocents).toBe(0)
   })
 

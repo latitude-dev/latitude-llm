@@ -58,10 +58,10 @@ const SECTION_VARIANT: Record<CacheFindingSection["state"], BadgeProps["variant"
 }
 
 const LIFETIME_TOOLTIP =
-  "How long we assume a written cache entry survives, which decides whether the gap between two calls could have hit it. Every value here is an estimate, including the default, which uses the lifetime each provider documents."
+  "Play with the cache time to see how our estimate changes. Every value here is a guess, including the default, which uses what each provider publishes."
 
 const SAVINGS_TOOLTIP =
-  "Modeled from this window's token counts and the model's registry prices, so it will not match the recorded spend elsewhere on this page. Cache rates are measured exactly. Cache dollars are not."
+  "An estimate, worked out from your token counts and each model's list prices. It will not match the spend figures elsewhere on this page exactly."
 
 const formatLifetime = (lifetimeSeconds: number | null): string | null =>
   lifetimeSeconds === null ? null : formatDuration(lifetimeSeconds * 1_000_000_000)
@@ -122,10 +122,13 @@ function RecoverableBar({ row }: { readonly row: CacheRowView }) {
       trigger={
         <div className="flex w-full cursor-default flex-row items-center gap-2">
           <div className="relative h-2 w-full overflow-hidden rounded-sm bg-muted">
-            <div
-              className="h-full rounded-sm"
-              style={{ width: `${share * 100}%`, backgroundColor: CALLS_SERIES_COLOR }}
-            />
+            {share <= 0 ? null : (
+              <div
+                className="absolute inset-y-0 left-0"
+                style={{ width: `${share * 100}%`, backgroundColor: CALLS_SERIES_COLOR }}
+                aria-hidden="true"
+              />
+            )}
           </div>
           <Text.H6 color="foregroundMuted" noWrap className="w-9 shrink-0 text-right tabular-nums">
             {formatPercentage(share)}
@@ -143,28 +146,11 @@ function FindingSection({ section }: { readonly section: CacheFindingSection }) 
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-row flex-wrap items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-row items-baseline gap-2">
-          <Badge variant={SECTION_VARIANT[section.state]} size="small">
-            {copy.title}
-          </Badge>
-          <Text.H6 color="foregroundMuted">{copy.body}</Text.H6>
-        </div>
-        {section.savingsMicrocents > 0 ? (
-          <Tooltip
-            asChild
-            trigger={
-              <span className="inline-flex shrink-0 cursor-default flex-row items-center gap-1">
-                <Text.H5M color="foreground" noWrap className="tabular-nums">
-                  {formatPrice(microcentsToUsd(section.savingsMicrocents))}
-                </Text.H5M>
-                <Icon icon={InfoIcon} size="sm" color="foregroundMuted" />
-              </span>
-            }
-          >
-            {SAVINGS_TOOLTIP}
-          </Tooltip>
-        ) : null}
+      <div className="flex min-w-0 flex-row items-baseline gap-2">
+        <Badge variant={SECTION_VARIANT[section.state]} size="small">
+          {copy.title}
+        </Badge>
+        <Text.H6 color="foregroundMuted">{copy.body}</Text.H6>
       </div>
       <div className="flex flex-col gap-1">
         {section.rows.map((row) => (
@@ -185,7 +171,7 @@ function FindingSection({ section }: { readonly section: CacheFindingSection }) 
                     </span>
                   }
                 >
-                  This verdict changes with the assumed cache lifetime.
+                  Our estimate for this model changes if the cache time does. Try the control above.
                 </Tooltip>
               ) : null}
             </div>
@@ -200,8 +186,8 @@ function FindingSection({ section }: { readonly section: CacheFindingSection }) 
             </Text.H5>
           </div>
         ))}
-        {section.quietCount > 0 ? (
-          <Text.H6 color="foregroundMuted">{`${formatCount(section.quietCount)} more with smaller savings`}</Text.H6>
+        {section.hiddenCount > 0 ? (
+          <Text.H6 color="foregroundMuted">{`${formatCount(section.hiddenCount)} more, saving less`}</Text.H6>
         ) : null}
       </div>
     </div>
@@ -231,16 +217,19 @@ function PositionBar({ row }: { readonly row: CacheRowView }) {
           <div className="relative h-2 w-full overflow-hidden rounded-sm bg-muted">
             {unjudged || headroomPct <= 0 ? null : (
               <div
-                className="absolute inset-y-0 rounded-sm opacity-25"
+                className="absolute inset-y-0 opacity-25"
                 style={{ left: `${actualPct}%`, width: `${headroomPct}%`, backgroundColor: CALLS_SERIES_COLOR }}
                 aria-hidden="true"
               />
             )}
-            <div
-              className={cn("h-full rounded-sm", { "bg-muted-foreground/40": unjudged })}
-              style={{ width: `${actualPct}%`, ...(unjudged ? {} : { backgroundColor: CALLS_SERIES_COLOR }) }}
-            />
-            {breakEven === null || unjudged ? null : (
+            {actualPct <= 0 ? null : (
+              <div
+                className={cn("absolute inset-y-0 left-0", { "bg-muted-foreground/40": unjudged })}
+                style={{ width: `${actualPct}%`, ...(unjudged ? {} : { backgroundColor: CALLS_SERIES_COLOR }) }}
+                aria-hidden="true"
+              />
+            )}
+            {breakEven === null || breakEven <= 0 || unjudged ? null : (
               <div
                 className="absolute inset-y-0 w-0.5 bg-foreground"
                 style={{ left: `${pct(breakEven)}%` }}
@@ -255,11 +244,10 @@ function PositionBar({ row }: { readonly row: CacheRowView }) {
       }
     >
       {[
-        `${actual === null ? DASH : formatPercentage(actual)} cached. Breaks even at ${breakEven === null ? "an unknown rate" : formatPercentage(breakEven)}. ${ceiling === null ? "Ceiling unknown." : `Ceiling ${formatPercentage(ceiling)}.`}`,
-        `${formatCount(row.calls)} calls. ${formatCount(row.cacheReadTokens)} read, ${formatCount(row.cacheCreateTokens)} written, ${formatCount(row.inputTokens)} uncached.`,
-        formatLifetime(row.lifetimeSeconds) === null
-          ? "No cache lifetime is documented for this model, so it has no ceiling."
-          : `Measured against ${formatLifetime(row.lifetimeSeconds)} of cache lifetime.`,
+        `${actual === null ? DASH : formatPercentage(actual)} of these prompts came from cache.`,
+        ceiling === null
+          ? "We cannot tell how much could, because this model's provider does not publish a cache time."
+          : `The most this traffic could reach is ${formatPercentage(ceiling)}, because of how far apart the calls arrive.`,
       ].join("\n")}
     </Tooltip>
   )
@@ -306,7 +294,7 @@ function CacheTable({
               label="Position"
               align="left"
               isFirst={false}
-              tooltipMessage="Cached share of the input, against the rate this model needs to break even and the highest rate its call cadence allows."
+              tooltipMessage="How much of each prompt came from cache, and how much could have."
               {...headProps}
             />
             <CostTableHead column="savings" label="Est. savings" align="right" isFirst={false} {...headProps} />
@@ -324,21 +312,21 @@ function CacheTable({
             return (
               <TableRow key={`${row.provider}/${row.model}`} className="border-background bg-secondary/40">
                 <TableCell>
-                  <div className="flex flex-row items-center gap-2">
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <Badge variant={meta.variant} size="small">
-                          {meta.label}
-                        </Badge>
-                      }
-                    >
-                      {stateExplanation(row)}
-                    </Tooltip>
-                    <div className="flex min-w-0 flex-col">
-                      <Text.H5 color="foreground" ellipsis noWrap>
-                        {row.model || "unknown model"}
-                      </Text.H5>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Text.H5 color="foreground" ellipsis noWrap>
+                      {row.model || "unknown model"}
+                    </Text.H5>
+                    <div className="flex flex-row items-center gap-2">
+                      <Tooltip
+                        asChild
+                        trigger={
+                          <Badge variant={meta.variant} size="small">
+                            {meta.label}
+                          </Badge>
+                        }
+                      >
+                        {stateExplanation(row)}
+                      </Tooltip>
                       <Text.H6 color="foregroundMuted" ellipsis noWrap>
                         {row.provider || "unknown provider"}
                       </Text.H6>
@@ -433,29 +421,37 @@ export function CacheEconomicsPanel({
   const sections = economics ? buildCacheFindings(economics.rows, selection) : []
   const settled = economics ? summariseSettledRows(economics.rows, selection) : { fine: 0, needData: 0 }
   const totalSavings = sections.reduce((sum, section) => sum + section.savingsMicrocents, 0)
-  const sensitiveRows = economics?.rows.filter((row) => row.verdictDependsOnLifetime).length ?? 0
 
   const settledSummary = [
-    settled.fine > 0 ? `${formatCount(settled.fine)} caching well` : null,
-    settled.needData > 0 ? `${formatCount(settled.needData)} need more data` : null,
-    sensitiveRows > 0 ? `${formatCount(sensitiveRows)} depend on the assumed lifetime` : null,
+    settled.fine > 0
+      ? `${formatCount(settled.fine)} ${settled.fine === 1 ? "model is" : "models are"} caching well`
+      : null,
+    settled.needData > 0 ? `${formatCount(settled.needData)} have too little traffic to judge yet` : null,
   ]
     .filter((part) => part !== null)
-    .join(" · ")
+    .join(". ")
 
   return (
     // The table's row separators are painted in `--background`, so the card must carry it.
     <div className="flex flex-col gap-4 rounded-lg border border-border bg-background p-3">
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
         {totalSavings > 0 ? (
-          <div className="flex flex-row items-baseline gap-1.5">
-            <Text.H4B color="foreground" noWrap className="tabular-nums">
-              {formatPrice(microcentsToUsd(totalSavings))}
-            </Text.H4B>
-            <Text.H6 color="foregroundMuted" noWrap>
-              looks recoverable
-            </Text.H6>
-          </div>
+          <Tooltip
+            asChild
+            trigger={
+              <div className="flex cursor-default flex-row items-baseline gap-1.5">
+                <Text.H4B color="foreground" noWrap className="tabular-nums">
+                  {formatPrice(microcentsToUsd(totalSavings))}
+                </Text.H4B>
+                <Text.H6 color="foregroundMuted" noWrap>
+                  looks recoverable
+                </Text.H6>
+                <Icon icon={InfoIcon} size="sm" color="foregroundMuted" />
+              </div>
+            }
+          >
+            {SAVINGS_TOOLTIP}
+          </Tooltip>
         ) : (
           <Text.H6 color="foregroundMuted">Nothing to recover in this window</Text.H6>
         )}
