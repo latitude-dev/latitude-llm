@@ -350,6 +350,34 @@ describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive b
     expect(plan.leafClusters).toEqual([])
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
   })
+
+  // A `buildError` used to reach telemetry as nothing but its own name: the catch
+  // discarded the error and, because it wrapped the timing, reported 0 ms too. A
+  // build the worker deadline killed and one that threw on arrival were then
+  // indistinguishable on the span, which is why a six-day pilot outage needed a
+  // ClickHouse dig to diagnose.
+  it("enforced: a failed adaptive build reports why it failed and how long it ran", async () => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "enforced", clusterBuilder: rejectingAdaptiveBuilder },
+    )
+
+    expect(plan.fallbackReason).toBe("buildError")
+    expect(plan.adaptiveBuildError).toBe("adaptive worker crashed")
+    expect(plan.adaptiveDurationMs).toBeGreaterThanOrEqual(0)
+  })
+
+  it("a successful adaptive build records no build error", async () => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "enforced" },
+    )
+
+    expect(plan.fallbackReason).toBeNull()
+    expect(plan.adaptiveBuildError).toBeNull()
+  })
 })
 
 describe("shadow guardrails hold across contrasting corpora", () => {

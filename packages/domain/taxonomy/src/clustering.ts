@@ -133,7 +133,12 @@ export interface BuildRelativeHierarchicalClustersInput {
  * must reproduce the same tree.
  */
 export interface RelativeClusteringEscalation {
-  /** Restart budget for the re-search. */
+  /**
+   * Restart budget for the re-searched ROOT split. Deeper nodes keep the plain
+   * `restarts`: the band that triggers a re-search is measured on the root alone,
+   * so spending the larger budget at every depth buys nothing the gate asked for
+   * and multiplies the cost of the whole tree instead of one node's K sweep.
+   */
   readonly restarts: number
   /** Best observed root separation at or above which the first pass is kept. */
   readonly marginThreshold: number
@@ -584,7 +589,11 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
 // Divisive builder — node-relative separation.
 // ---------------------------------------------------------------------------
 
-const buildRelativeOnce = (input: BuildRelativeHierarchicalClustersInput): BuildRelativeHierarchicalClustersResult => {
+const buildRelativeOnce = (
+  input: BuildRelativeHierarchicalClustersInput,
+  /** Restart budget for the ROOT split only; every deeper node keeps `input.restarts`. */
+  rootRestarts?: number,
+): BuildRelativeHierarchicalClustersResult => {
   const { embeddings, depthSchedule, restarts, maxIter, tolerance, seed, globalAbsoluteThreshold } = input
   const dimensions = embeddings[0]?.length ?? 0
   const allIndices = embeddings
@@ -621,7 +630,7 @@ const buildRelativeOnce = (input: BuildRelativeHierarchicalClustersInput): Build
       embeddings,
       memberIndices,
       schedule,
-      restarts,
+      restarts: depth === 0 && rootRestarts !== undefined ? rootRestarts : restarts,
       maxIter,
       tolerance,
       globalAbsoluteThreshold,
@@ -679,6 +688,10 @@ const buildRelativeOnce = (input: BuildRelativeHierarchicalClustersInput): Build
  * the floor the corpus has no structure to find — a unimodal project's best root
  * candidate reaches ~0.09, and re-searching it burns the larger budget every run
  * to confirm the leaf it already had.
+ *
+ * The band is read off the ROOT, so the re-search spends its budget there and
+ * nowhere else. The cost of this whole path has to fit the clustering worker's
+ * deadline; see TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS.
  */
 const shouldEscalate = (
   result: BuildRelativeHierarchicalClustersResult,
@@ -695,7 +708,7 @@ export const buildRelativeHierarchicalClusters = (
   const escalation = input.escalation
   if (!escalation || !shouldEscalate(first, escalation)) return first
 
-  const rescued = buildRelativeOnce({ ...input, restarts: escalation.restarts })
+  const rescued = buildRelativeOnce(input, escalation.restarts)
   return { root: rescued.root, diagnostics: { ...rescued.diagnostics, escalated: true } }
 }
 

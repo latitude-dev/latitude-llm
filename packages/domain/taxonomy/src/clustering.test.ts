@@ -255,6 +255,46 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     },
     RE_SEARCH_TIMEOUT_MS,
   )
+
+  // Regression: the re-search used to pass its budget to `restarts`, which every
+  // depth reads, so a band decision made on the ROOT re-searched the entire tree.
+  // On the pilot that made the adaptive build ~10x a plain one — past the
+  // clustering worker's deadline on nearly every run, so enforced mode fell back
+  // to static with `buildError` and no diagnostics at all. `rejectedCandidates`
+  // counts evaluated (k, restart) candidates, so it is a direct, hardware-free
+  // measure of the search work a build did.
+  it(
+    "the re-search spends the escalated budget on the root only",
+    () => {
+      const corpus = buildNarrowDomainCorpus()
+      const atRestarts = (restarts: number) =>
+        buildRelativeHierarchicalClusters({
+          embeddings: corpus.embeddings,
+          depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+          restarts,
+          maxIter: TAXONOMY_KMEANS_MAX_ITER,
+          tolerance: TAXONOMY_KMEANS_TOLERANCE,
+          seed: corpus.seed,
+          globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+        }).diagnostics.rejectedCandidates
+
+      const rootOnly = buildWith(corpus, true)
+      expect(rootOnly.diagnostics.escalated).toBe(true)
+
+      const baseline = atRestarts(TAXONOMY_KMEANS_RESTARTS)
+      const everyDepth = atRestarts(TAXONOMY_KMEANS_ESCALATION_RESTARTS)
+      const searched = rootOnly.diagnostics.rejectedCandidates
+
+      // Strictly more search than baseline (the root did get the larger budget)
+      // and strictly less than re-searching every depth at that budget.
+      expect(searched).toBeGreaterThan(baseline)
+      expect(searched).toBeLessThan(everyDepth)
+      // Well under half, not merely under: the whole point is that the extra work
+      // is one node's K sweep rather than the tree's.
+      expect(searched).toBeLessThan(everyDepth / 2)
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
 })
 
 describe("quantile — linear interpolation at (n-1)·q", () => {

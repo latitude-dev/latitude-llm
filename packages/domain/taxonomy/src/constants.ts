@@ -422,16 +422,20 @@ export const TAXONOMY_KMEANS_MAX_ITER = 25
 export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
 
 /**
- * Restart budget for a re-search of the relative build when the root split lands
- * near the separation gate. k-means only finds a local optimum, so the tree it
- * returns depends on where k-means++ seeded — and because seeds are drawn as
- * indices into the member list, a few percent of window turnover redraws them
- * entirely. On corpora whose root split sits close to `minRelativeSeparation`,
- * three restarts is too small a sample: some runs find a partition that clears
- * the gate and some do not, so the tree alternates between a real split and a
- * bare leaf. Re-searching with a larger budget finds the good optimum reliably.
+ * Restart budget for re-searching the ROOT split when it lands near the
+ * separation gate. k-means only finds a local optimum, so the tree it returns
+ * depends on where k-means++ seeded — and because seeds are drawn as indices
+ * into the member list, a few percent of window turnover redraws them entirely.
+ * On corpora whose root split sits close to `minRelativeSeparation`, three
+ * restarts is too small a sample: some runs find a partition that clears the gate
+ * and some do not, so the tree alternates between a real split and a bare leaf.
+ *
+ * 12 rather than 25 because the two are indistinguishable on quality — over the
+ * pilot's real historical windows 12 gives meanARI 0.785 against 0.789, and one
+ * collapse against none — while 25 costs twice as much, and the re-search cost is
+ * what has to fit `TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS`.
  */
-export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 25
+export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 12
 /**
  * Root relative separation at or above which the first-pass build is kept as-is.
  * Measured on real corpora across historical 7-day windows: an unstable project
@@ -452,13 +456,21 @@ export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
 // Clustering worker resource bounds
 //
 // The divisive build runs in a dedicated Node worker thread. These bound a
-// single worker invocation — one shared deadline and memory budget covering
-// the whole run (static plus, in shadow mode, adaptive). The measured
-// max-sample (1,500 × 2,048) build is ~6s and a real 2,048d pilot build ~12s;
-// the timeout is a generous backstop against a hung/looping worker, not a tuned
-// SLA. The old-generation budget is the calibrated worker heap ceiling: the
-// measured build peaks well under it.
+// single worker invocation. The old-generation budget is the calibrated worker
+// heap ceiling: memory is a function of the sample, not of the search budget, and
+// the measured build peaks well under it.
+//
+// The deadline is NOT a spare backstop — it is the binding constraint on the
+// search budget, and it has already been breached once. It was set against a
+// ~12s local build; the same build measures 61-65s on the production activity
+// worker, and host speed there swings ~4.4x run to run (the static build of a
+// comparable corpus ranges 19-93s), so a local number understates the worst case
+// by more than an order of magnitude. Sized so a near-gate root re-search
+// (~5x a plain build at TAXONOMY_KMEANS_ESCALATION_RESTARTS) still lands inside
+// it on the slowest observed host pass, and kept well under the 30-minute
+// Temporal start-to-close of the planning activity that awaits it. Raising the
+// re-search budget without re-deriving this number is what broke the pilot.
 // ---------------------------------------------------------------------------
 
-export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 5 * 60_000
+export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 15 * 60_000
 export const TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB = 512

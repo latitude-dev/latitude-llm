@@ -590,6 +590,7 @@ const emitAdaptivePlanTelemetry = (input: GardenTaxonomyStepInput, plan: Hierarc
     observationsSampled: plan.observationsSampled,
     fallbackReason: plan.fallbackReason,
     adaptiveDurationMs: plan.adaptiveDurationMs,
+    adaptiveBuildError: plan.adaptiveBuildError,
     staticDurationMs: plan.staticDurationMs,
     // Best-effort resident memory at plan time; worker threads share this process,
     // so the build's footprint is reflected here (see the clustering worker).
@@ -641,7 +642,10 @@ const adaptiveSpanAttributes = (
     "taxonomy.customBehaviorId": input.customBehaviorId ?? "none",
     "taxonomy.adaptive.observationsSampled": plan.observationsSampled,
     "taxonomy.adaptive.fallbackReason": plan.fallbackReason ?? "none",
+    // Carries the time a FAILED build burned as well as a successful one, so a
+    // deadline breach is visible as a duration at the deadline rather than a 0.
     "taxonomy.adaptive.durationMs": plan.adaptiveDurationMs,
+    "taxonomy.adaptive.buildError": plan.adaptiveBuildError ?? "none",
     "taxonomy.adaptive.staticDurationMs": plan.staticDurationMs,
     "taxonomy.adaptive.peakRssBytes": process.memoryUsage().rss,
     "taxonomy.adaptive.clustersBorn": plan.clustersBorn,
