@@ -52,11 +52,7 @@ export function redactText(text: string, entities: ReadonlySet<RedactionEntity>)
   return { text: pieces.join(""), counts: countByEntity(accepted) }
 }
 
-/**
- * Whole-value replacement for scalars that cannot hold a spliced placeholder — a numeric
- * attribute that matches a detector *is* the sensitive value, so it is replaced entirely
- * rather than having the match spliced out. `null` when nothing matched.
- */
+/** Whole-value replacement for scalars that cannot hold a spliced placeholder; `null` when nothing matched. */
 export function redactWholeValue(
   text: string,
   entities: ReadonlySet<RedactionEntity>,

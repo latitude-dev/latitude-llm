@@ -149,11 +149,7 @@ const tryParseJsonContainer = (value: string): unknown => {
   }
 }
 
-/**
- * Values go through `redactJsonString`, not a flat scan: attributes carrying conversation
- * content hold the same JSON the typed columns were parsed from, and two copies of one
- * payload redacted by two different passes would be two things to defend, not one.
- */
+// `redactJsonString`, not `redactLeaf`: these values duplicate the typed columns and must get the identical walk.
 export function redactStringMap(
   map: Readonly<Record<string, string>>,
   entities: ReadonlySet<RedactionEntity>,
@@ -180,10 +176,7 @@ export interface NumberMapRedactionResult<T> {
   readonly scan: ScanTally
 }
 
-/**
- * A bare number can only reach the `credit_card` detector — every other entity needs a
- * separator, a sigil, or a letter — and that one is gated by issuer prefix and Luhn.
- */
+// Only `credit_card` is reachable on a bare number; every other entity needs a separator, sigil, or letter.
 export function redactNumberMap<T extends number>(
   map: Readonly<Record<string, T>>,
   entities: ReadonlySet<RedactionEntity>,
