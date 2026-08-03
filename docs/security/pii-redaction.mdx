@@ -104,7 +104,7 @@ The built-in categories cover structured identifiers that look the same for ever
 Each rule carries a label, which is what appears in stored content: a rule labelled `ACCOUNT_NUMBER` leaves `[REDACTED_ACCOUNT_NUMBER]` behind. Labels cannot reuse a built-in category name.
 
 <Note>
-  Custom rules are configured in the dashboard only. They are not yet part of `settings.redaction` on the API, so a `PATCH` that sets other redaction fields leaves your rules untouched rather than clearing them.
+  Custom rules are configured in the dashboard only. They are not part of `settings.redaction` on the API yet, so a `PATCH` that changes other redaction fields leaves your rules exactly as they were. Sending `rules: []` is the only way to clear them, and the API cannot express that.
 </Note>
 
 #### How a pattern is checked

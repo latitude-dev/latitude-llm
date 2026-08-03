@@ -19,6 +19,18 @@ export interface UpdateOrganizationRedactionInput {
 
 export type UpdateOrganizationRedactionError = RepositoryError | NotFoundError
 
+/** A write that never mentions `rules` leaves the stored ones alone, as on the project side. */
+const withPreservedRules = (
+  stored: OrganizationRedactionSetting | null,
+  next: OrganizationRedactionSetting | null,
+): OrganizationRedactionSetting | null => {
+  if (next === null || next.rules !== undefined) return next
+  const rules = stored?.rules
+  if (rules === undefined) return next
+
+  return { ...next, rules }
+}
+
 export const updateOrganizationRedactionUseCase = Effect.fn("organizations.updateOrganizationRedaction")(function* (
   input: UpdateOrganizationRedactionInput,
 ) {
@@ -33,7 +45,7 @@ export const updateOrganizationRedactionUseCase = Effect.fn("organizations.updat
       const existing = yield* repo.findByIdForUpdate(organizationId)
 
       const fromRedaction = existing.settings?.redaction ?? null
-      const toRedaction = input.redaction
+      const toRedaction = withPreservedRules(fromRedaction, input.redaction)
 
       if (isSameRedactionSetting(fromRedaction, toRedaction)) return existing
 
