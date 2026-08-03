@@ -74,6 +74,8 @@ import {
 import {
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+  TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
+  TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
   TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
@@ -173,6 +175,8 @@ export const runTaxonomyClusterBuild = (input: TaxonomyClusterBuildRequest): Tax
         restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
         marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
         marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+        searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
+        maxSearchWork: TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
       },
     })
     return { root, diagnostics }
@@ -313,9 +317,20 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
    * Populated whenever adaptive is computed (shadow/enforced); null on off.
    */
   readonly comparison: TaxonomyShadowComparison | null
-  /** Wall-clock of each build for the runtime telemetry panels; 0 when not built. */
+  /**
+   * Wall-clock of each build for the runtime telemetry panels; 0 when not built.
+   * A FAILED adaptive build still reports the time it burned before failing —
+   * distinguishing a builder that threw immediately from one the worker deadline
+   * killed is the whole diagnosis, and reporting 0 for both hides it.
+   */
   readonly adaptiveDurationMs: number
   readonly staticDurationMs: number
+  /**
+   * Message of the failure behind a `buildError`, for the span. The adaptive build
+   * is caught and degraded to a static fallback, so this is the only channel that
+   * carries WHY — `Effect.logError` does not reach Datadog from here.
+   */
+  readonly adaptiveBuildError: string | null
 }
 
 const lookbackStart = (now: Date): Date =>
@@ -657,6 +672,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         comparison: null,
         adaptiveDurationMs: 0,
         staticDurationMs: 0,
+        adaptiveBuildError: null,
       } satisfies HierarchicalTaxonomyPlan
     }
 
@@ -684,12 +700,19 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // garden, so shadow stays a discardable comparison and enforced can still
     // fall back to the static tree. A static build failure IS fatal (no tree to
     // persist), so only the adaptive call is caught.
+    // Catch INSIDE the timing so a failure keeps its elapsed time: a build the
+    // worker deadline killed and one that threw on arrival are the same
+    // `buildError` otherwise, and telling them apart is the whole diagnosis.
     const adaptiveTimed = computeAdaptive
-      ? yield* Effect.timed(clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed })).pipe(
-          Effect.orElseSucceed(() => null),
+      ? yield* Effect.timed(
+          clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed }).pipe(
+            Effect.map((build) => ({ build, error: null as string | null })),
+            Effect.catch((error) => Effect.succeed({ build: null, error: error.message })),
+          ),
         )
       : null
-    const adaptiveBuild = adaptiveTimed?.[1] ?? null
+    const adaptiveBuild = adaptiveTimed?.[1].build ?? null
+    const adaptiveBuildError = adaptiveTimed?.[1].error ?? null
     const adaptiveDurationMs = adaptiveTimed ? Duration.toMillis(adaptiveTimed[0]) : 0
 
     // Fallback selection, here in the planning use case BEFORE any staging/writes:
@@ -957,5 +980,6 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       comparison,
       adaptiveDurationMs,
       staticDurationMs,
+      adaptiveBuildError,
     } satisfies HierarchicalTaxonomyPlan
   }).pipe(Effect.withSpan("taxonomy.planHierarchicalTaxonomy"))

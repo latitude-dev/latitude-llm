@@ -590,6 +590,7 @@ const emitAdaptivePlanTelemetry = (input: GardenTaxonomyStepInput, plan: Hierarc
     observationsSampled: plan.observationsSampled,
     fallbackReason: plan.fallbackReason,
     adaptiveDurationMs: plan.adaptiveDurationMs,
+    adaptiveBuildError: plan.adaptiveBuildError,
     staticDurationMs: plan.staticDurationMs,
     // Best-effort resident memory at plan time; worker threads share this process,
     // so the build's footprint is reflected here (see the clustering worker).
@@ -641,7 +642,10 @@ const adaptiveSpanAttributes = (
     "taxonomy.customBehaviorId": input.customBehaviorId ?? "none",
     "taxonomy.adaptive.observationsSampled": plan.observationsSampled,
     "taxonomy.adaptive.fallbackReason": plan.fallbackReason ?? "none",
+    // Carries the time a FAILED build burned as well as a successful one, so a
+    // deadline breach is visible as a duration at the deadline rather than a 0.
     "taxonomy.adaptive.durationMs": plan.adaptiveDurationMs,
+    "taxonomy.adaptive.buildError": plan.adaptiveBuildError ?? "none",
     "taxonomy.adaptive.staticDurationMs": plan.staticDurationMs,
     "taxonomy.adaptive.peakRssBytes": process.memoryUsage().rss,
     "taxonomy.adaptive.clustersBorn": plan.clustersBorn,
@@ -670,6 +674,10 @@ const adaptiveSpanAttributes = (
     // they say nothing about a run whose root collapsed.
     attributes["taxonomy.adaptive.bestRootSeparation"] = diagnostics.bestRootSeparation
     attributes["taxonomy.adaptive.escalated"] = diagnostics.escalated ? 1 : 0
+    // A declined re-search reports the same tree as one that was never needed, so
+    // without these two the work budget could suppress adaptive silently.
+    attributes["taxonomy.adaptive.escalationSkipped"] = diagnostics.escalationSkipped ? 1 : 0
+    attributes["taxonomy.adaptive.projectedRootSearchWork"] = diagnostics.projectedRootSearchWork
   }
   const comparison = plan.comparison
   if (comparison) {
