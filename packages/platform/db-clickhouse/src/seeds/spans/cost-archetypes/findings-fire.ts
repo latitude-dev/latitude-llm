@@ -107,7 +107,10 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
     serviceName: "briefing-writer",
     modelConfig: GPT_5_6_LUNA,
     cadence: { endDaysAgo: 0, clusters: 20, clusterSpacingHours: 12, callsPerCluster: 6, gapWithinClusterSeconds: 600 },
-    cache: { kind: "flat", profile: { hitRate: 0.08, writeShare: 0.24 } },
+    // Write share above 3.6x the hit rate, which is where this model's prices make caching
+    // actually cost more than not caching. Below it the cache is cheaper despite sitting
+    // under break-even, and the cohort would demonstrate nothing.
+    cache: { kind: "flat", profile: { hitRate: 0.08, writeShare: 0.4 } },
     promptTokens: 30_000,
     completionTokens: 300,
     callsPerSession: 6,

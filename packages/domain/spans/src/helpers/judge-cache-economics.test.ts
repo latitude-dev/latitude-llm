@@ -118,9 +118,9 @@ describe("judgeCacheEconomics", () => {
         {
           model: "gpt-5.6-luna",
           provider: "openai",
-          inputTokens: 680_000,
+          inputTokens: 520_000,
           cacheReadTokens: 80_000,
-          cacheCreateTokens: 240_000,
+          cacheCreateTokens: 400_000,
         },
         histogram(1_000_000, 833_000, 1_800),
       )

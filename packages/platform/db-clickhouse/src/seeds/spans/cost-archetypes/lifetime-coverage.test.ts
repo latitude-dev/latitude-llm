@@ -3,9 +3,11 @@ import type { CacheEconomics } from "@domain/spans"
 import {
   CACHE_CEILING_LIFETIME_SECONDS,
   cacheCeilingRate,
+  cachingPremiumMicrocents,
   classifyCacheState,
   judgeCacheEconomics,
   modelCacheBreakEvenRate,
+  modelRegistryPricing,
 } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import type { SpanRow } from "../span-builders.ts"
@@ -43,10 +45,28 @@ const actualRate = (cohort: CostCohort): number => {
   return (cache.share * (cadence.callsPerCluster - 1)) / cadence.callsPerCluster
 }
 
+/** One call's token split at this cohort's profile, which is all the cost comparison needs. */
+const flowOf = (cohort: CostCohort) => {
+  const rate = actualRate(cohort)
+  const writeShare = cohort.cache.kind === "flat" ? cohort.cache.profile.writeShare : 0
+  return {
+    inputTokens: cohort.promptTokens * Math.max(0, 1 - rate - writeShare),
+    cacheReadTokens: cohort.promptTokens * rate,
+    cacheCreateTokens: cohort.promptTokens * writeShare,
+  }
+}
+
+const costsMoreThanUncached = (cohort: CostCohort): boolean | null => {
+  const pricing = modelRegistryPricing({ provider: cohort.modelConfig.provider, model: cohort.modelConfig.model })
+  if (!pricing) return null
+  return cachingPremiumMicrocents(flowOf(cohort), pricing) > 0
+}
+
 const stateAt = (cohort: CostCohort, lifetimeSeconds: number) =>
   classifyCacheState({
     cachingOn: cohort.cache.kind !== "off",
     actualRate: actualRate(cohort),
+    cachingCostsMore: costsMoreThanUncached(cohort),
     ceilingRate: ceilingAt(cohort, lifetimeSeconds),
     breakEvenRate: modelCacheBreakEvenRate({
       provider: cohort.modelConfig.provider,
@@ -86,7 +106,9 @@ describe("seed coverage for the lifetime control", () => {
 
     expect(ceilingAt(cohort, 1_800)).toBe(0)
     expect(ceilingAt(cohort, 3_600)).toBeCloseTo(4 / 5, 3)
-    expect(stateAt(cohort, 1_800)).toBe("stopCaching")
+    // Its cache is paying, so the lifetime moves it between "nothing to chase" and
+    // "material headroom" rather than between losing and fixable.
+    expect(stateAt(cohort, 1_800)).toBe("optimal")
     expect(stateAt(cohort, 3_600)).toBe("investigate")
   })
 

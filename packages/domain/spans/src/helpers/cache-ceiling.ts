@@ -135,6 +135,24 @@ export function modeledInputCostMicrocents(flow: CacheTokenFlow, pricing: CacheE
 const cacheableTokens = (flow: CacheTokenFlow): number =>
   flow.inputTokens + flow.cacheReadTokens + flow.cacheCreateTokens
 
+/**
+ * What caching is costing over not caching at all, from the measured token split.
+ * Positive means the writes are not being paid for by the reads.
+ *
+ * This is the exact answer to "is caching paying?", and it is not the same question as
+ * the break-even *rate*. Break-even is a property of the price list under a steady-state
+ * assumption — that every miss is billed as a write — which does not describe partial
+ * prefix caching, where the stable prefix is cached and the variable suffix stays plain
+ * uncached input. Whenever less than `1 - hitRate` of the volume is actually written,
+ * break-even overstates the rate a model needs, and a model can sit below it while
+ * caching is genuinely cheaper.
+ */
+export function cachingPremiumMicrocents(flow: CacheTokenFlow, pricing: CacheEconomicsPricing): number {
+  const volume = cacheableTokens(flow)
+  if (!(volume > 0)) return 0
+  return modeledInputCostMicrocents(flow, pricing) - perMillion(volume, pricing.input)
+}
+
 export interface CacheSavingsInput {
   readonly flow: CacheTokenFlow
   readonly pricing: CacheEconomicsPricing

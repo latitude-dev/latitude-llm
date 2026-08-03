@@ -91,6 +91,15 @@ export interface CacheClassificationInput {
   readonly cachingOn: boolean
   /** Measured `cacheRead / (input + cacheRead + cacheCreate)`; null when there is no input-side token. */
   readonly actualRate: number | null
+  /**
+   * Whether caching is measurably costing more than not caching, from this window's own
+   * token split and prices. Null when it cannot be priced.
+   *
+   * Deliberately not derived from `actualRate` against `breakEvenRate`: that comparison
+   * assumes every miss is billed as a write, which partial prefix caching does not do, so
+   * it reports models as overpaying while they are in fact cheaper than uncached.
+   */
+  readonly cachingCostsMore: boolean | null
   /** Highest rate this traffic's call cadence could reach. Null until it is computed. */
   readonly ceilingRate: number | null
   readonly breakEvenRate: number | null
@@ -115,10 +124,16 @@ const nothing = (state: CacheState): CacheClassification => ({ state, urgency: n
  * A known ceiling is compared with `CACHE_CEILING_MIN_MATERIAL_GAP` of slack rather
  * than strictly, so the few points of fresh suffix a well-run agent always carries
  * do not read as a finding.
+ *
+ * Whether caching is *currently* costing money is read from the measured token split via
+ * `cachingCostsMore`, not from the rate against break-even. The break-even rate stays the
+ * reference the position bar draws and the bar a caching-off model has to look able to
+ * clear, both of which are questions about prices rather than about a measured split.
  */
 export function classifyCacheState({
   cachingOn,
   actualRate,
+  cachingCostsMore,
   ceilingRate,
   breakEvenRate,
   calls,
@@ -138,7 +153,10 @@ export function classifyCacheState({
     return ceilingRate >= breakEvenRate && materialHeadroom ? nothing("cacheIt") : nothing("correctlyOff")
   }
 
-  if (actualRate < breakEvenRate) {
+  if (cachingCostsMore) {
+    // `hopeless` is a counterfactual about a rate not yet reached, so it is the one place
+    // the steady-state break-even is the right tool: there is no measured split to read
+    // for a hit rate this traffic has never had.
     const hopeless = ceilingRate !== null && ceilingRate < breakEvenRate
     return { state: hopeless ? "stopCaching" : "investigate", urgency: "overpaying" }
   }

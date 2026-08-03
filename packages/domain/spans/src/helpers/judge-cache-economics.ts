@@ -7,6 +7,7 @@ import {
   type CacheCadenceHistogram,
   cacheCeilingRatesByLifetime,
   cacheCeilingSavingsMicrocents,
+  cachingPremiumMicrocents,
   clearsCacheSavingsFloor,
 } from "./cache-ceiling.ts"
 import { type CacheClassification, cacheBreakEvenRate, classifyCacheState } from "./cache-economics.ts"
@@ -62,6 +63,10 @@ const judgeAtCeiling = ({
   const classification = classifyCacheState({
     cachingOn,
     actualRate,
+    // Measured, not inferred from the rate against break-even: partial prefix caching
+    // writes far less than every miss, so the rate comparison reports models as
+    // overpaying while they are cheaper than uncached.
+    cachingCostsMore: pricing ? cachingPremiumMicrocents(usage, pricing) > 0 : null,
     ceilingRate,
     breakEvenRate,
     calls: usage.calls,

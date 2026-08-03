@@ -83,6 +83,7 @@ export {
   cacheCeilingRate,
   cacheCeilingRatesByLifetime,
   cacheCeilingSavingsMicrocents,
+  cachingPremiumMicrocents,
   clearsCacheSavingsFloor,
   modeledInputCostMicrocents,
   weeklyCacheSavingsMicrocents,
