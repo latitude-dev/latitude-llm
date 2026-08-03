@@ -84,8 +84,8 @@ export function compileRuleSet(policy: RedactionPolicy, checkDeadline?: () => vo
 
   for (const rule of enabled) {
     if (rule.kind === "attribute_key") keyRules.push(rule)
-    if (rule.kind === "terms") rules.push({ label: rule.label, pattern: compileTerms(rule) })
-    if (rule.kind === "pattern") rules.push({ label: rule.label, pattern: compilePattern(rule) })
+    if (rule.kind === "terms") rules.push({ label: rule.label, pattern: compileTerms(rule), rank: 0 })
+    if (rule.kind === "pattern") rules.push({ label: rule.label, pattern: compilePattern(rule), rank: 0 })
   }
 
   return { rules, maskedKeyLabel: compileKeyMatcher(keyRules), ...(checkDeadline ? { checkDeadline } : {}) }

@@ -183,11 +183,11 @@ function ProjectPrivacySettingsPage() {
       headerSticky={valueDirty}
     >
       <div className="flex w-full flex-col gap-8 @[900px]:w-2/3">
+        {/* The irreversibility and shape-matching caveats live on the card itself now, next to the
+            controls they qualify and where the organization modal shows them too. */}
         <Text.H6 color="foregroundMuted">
-          Latitude scans span content for the categories you pick and replaces matches with a labelled placeholder
-          before storing the span. It applies only to spans ingested from now on, takes effect within a minute, and
-          redacted content cannot be recovered. Detection is pattern based: it reliably catches structured identifiers,
-          and does not catch names, addresses, or free-form personal detail.
+          Matching values are replaced with a labelled placeholder before the span is stored. A change takes effect
+          within a minute.
         </Text.H6>
 
         <ScopedSetting

@@ -37,7 +37,7 @@ export function RedactionRulesSection({
   const write = (next: readonly RedactionRule[]) => onChange(encodeRules(next))
 
   return (
-    <div className="flex flex-col gap-4 border-border border-t pt-6">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <Text.H6M>Custom rules</Text.H6M>
