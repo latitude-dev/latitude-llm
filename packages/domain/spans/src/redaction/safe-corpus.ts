@@ -1,22 +1,22 @@
 /**
- * Strings that redaction must never touch.
+ * Strings the built-in detectors must never match.
  *
- * Drawn from coding-agent telemetry, which is the traffic that decides detector precision:
- * tool output is full of SHAs, semver, ports, timestamps, UUIDs, base64 and file paths, and
- * every one of them is shaped enough to fool a careless pattern.
+ * Drawn from coding-agent telemetry, which is the traffic that decides detector precision: tool
+ * output is full of SHAs, semver, ports, timestamps, UUIDs, base64 and file paths, and every one of
+ * them is shaped enough to fool a careless pattern.
  *
- * Two consumers, and the second is why this is shipped code rather than a test fixture:
+ * A regression guard, and only that. The per-entity negative vectors are asserted against their own
+ * detector, so an edited detector can start eating another entity's negatives with nothing failing;
+ * asserting the whole corpus against the whole default set closes that.
  *
- * 1. A regression guard over the built-in detectors. Their negative vectors are asserted
- *    per entity, so an edited detector can start eating another entity's negatives with
- *    nothing failing. Asserting the whole corpus against the whole default set closes that.
- * 2. Scoring customer-authored rules. A rule that matches entries here is almost always an
- *    accident, and saying which entries it hit is the only concrete feedback available
- *    before the rule starts destroying data.
+ * It is deliberately not used to judge customer-defined rules. Scoring a rule against a fixed list
+ * rejected legitimate ones — a project whose identifiers really are long digit runs could not
+ * express them — and asked the customer to trust a verdict about data they had never seen. Whether
+ * a rule is too greedy is answered by the redaction preview, which reads their own spans.
  *
- * The corpus is asserted against `DEFAULT_REDACTION_ENTITIES`, not every entity. `ip_address`
- * matches version strings by design — that is precisely why it ships off — so asserting
- * immunity across all entities would be asserting something false.
+ * Asserted against `DEFAULT_REDACTION_ENTITIES`, not every entity. `ip_address` matches version
+ * strings by design, which is why it ships off, so asserting immunity across all entities would be
+ * asserting something false.
  */
 export const SAFE_CORPUS: readonly string[] = [
   // Package specifiers and module ids. The `@` plus dots reads as an address to a loose email pattern.

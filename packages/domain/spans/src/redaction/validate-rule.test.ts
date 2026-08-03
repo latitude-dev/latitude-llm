@@ -1,6 +1,5 @@
 import type { RedactionRule } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { SAFE_CORPUS } from "./safe-corpus.ts"
 import { REDACTION_VALIDATOR_VERSION, validateRedactionRule } from "./validate-rule.ts"
 
 const patternRule = (pattern: string, overrides: Record<string, unknown> = {}): RedactionRule =>
@@ -70,18 +69,13 @@ describe("validateRedactionRule on patterns", () => {
     expect(codes(patternRule("a{5000}"))).toContain("bound_too_large")
   })
 
-  // The over-broad shapes a customer reaches for first. Each eats most of a coding-agent trace.
-  it.each(["\\d{4,}", "[0-9]+", "\\w{3,}", "[A-Za-z]+"])("rejects the over-broad pattern %s", (pattern) => {
-    expect(codes(patternRule(pattern))).toContain("corpus_match")
-  })
-
-  it("reports which corpus entries an over-broad pattern would have eaten", () => {
-    const validation = validateRedactionRule(patternRule("\\d{4,}"))
-
-    expect(validation.ok).toBe(false)
-    expect(validation.corpusHits.length).toBeGreaterThan(5)
-    expect(validation.corpusSize).toBe(SAFE_CORPUS.length)
-    expect(validation.corpusHits[0]).toMatchObject({ entry: expect.any(String), matched: expect.any(String) })
+  /**
+   * Deliberately allowed. Only the customer's own data can say whether a pattern is too greedy, so
+   * over-breadth is the preview's question, not this one — blocking here rejected rules a project
+   * whose identifiers really are long digit runs legitimately needs.
+   */
+  it.each(["\\d{4,}", "[0-9]+", "\\w{3,}", "[A-Za-z]+"])("accepts the broad pattern %s as safe to run", (pattern) => {
+    expect(validateRedactionRule(patternRule(pattern))).toMatchObject({ ok: true, errors: [] })
   })
 
   it("stamps the validator version that admitted the rule", () => {
@@ -124,16 +118,8 @@ describe("validateRedactionRule on terms", () => {
     expect(validateRedactionRule(termsRule(["(a+)+$"]))).toMatchObject({ ok: true, errors: [] })
   })
 
-  /**
-   * Advisory rather than blocking: redacting the literal `localhost` is a deliberate choice, while
-   * a regex that happens to eat it is a mistake.
-   */
-  it("warns without blocking when a term collides with the safe corpus", () => {
-    const validation = validateRedactionRule(termsRule(["localhost:3000"]))
-
-    expect(validation.ok).toBe(true)
-    expect(validation.warnings.map((issue) => issue.code)).toContain("corpus_match")
-    expect(validation.corpusHits).toHaveLength(1)
+  it("accepts a term that happens to be an ordinary technical string", () => {
+    expect(validateRedactionRule(termsRule(["localhost:3000"]))).toMatchObject({ ok: true })
   })
 })
 
@@ -147,7 +133,8 @@ describe("validateRedactionRule on attribute keys", () => {
     expect(codes(keyRule(glob))).toContain("glob_too_broad")
   })
 
-  it("scores no corpus, since it matches keys rather than values", () => {
-    expect(validateRedactionRule(keyRule("acme.staff.id"))).toMatchObject({ corpusHits: [], corpusSize: 0 })
+  // Nothing is scanned for a key rule, so there is no pattern to time either.
+  it("runs no timing probe, since it matches keys rather than values", () => {
+    expect(validateRedactionRule(keyRule("acme.staff.id")).slowestProbeMs).toBe(0)
   })
 })

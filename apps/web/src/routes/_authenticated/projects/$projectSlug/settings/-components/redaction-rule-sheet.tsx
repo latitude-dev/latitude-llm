@@ -194,8 +194,9 @@ export function RedactionRuleSheet({
 }
 
 /**
- * The only feedback a customer gets before a rule starts removing data, so it names the strings
- * the rule would have eaten rather than only counting them.
+ * Says whether the rule is safe to run, and points at the preview for whether it removes the right
+ * things. It deliberately makes no judgement about over-breadth: only the customer's own data can
+ * answer that, and the preview reads it.
  */
 function RuleVerdict({
   isValidating,
@@ -218,25 +219,11 @@ function RuleVerdict({
           This rule {issue.message}.
         </Text.H6>
       ))}
-      {validation.warnings.map((issue) => (
-        <Text.H6 key={issue.code} color="warningMutedForeground">
-          This rule {issue.message}.
-        </Text.H6>
-      ))}
-      {validation.ok && validation.warnings.length === 0 ? (
+      {validation.ok ? (
         <Text.H6 color="foregroundMuted">
-          Checked against {validation.corpusSize} sample strings with no unintended matches.
+          This rule is valid. Save it, then use <span className="font-medium">Check against recent spans</span> to see
+          what it would remove from this project's data.
         </Text.H6>
-      ) : null}
-      {validation.corpusHits.length > 0 ? (
-        <div className="flex flex-col gap-1">
-          <Text.H6M>Would also remove</Text.H6M>
-          {validation.corpusHits.slice(0, 5).map((hit) => (
-            <Text.H6 key={hit.entry} color="foregroundMuted">
-              <span className="font-mono">{hit.matched}</span> in {hit.entry}
-            </Text.H6>
-          ))}
-        </div>
       ) : null}
     </div>
   )

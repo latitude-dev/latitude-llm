@@ -109,15 +109,13 @@ Each rule carries a label, which is what appears in stored content: a rule label
 
 #### How a pattern is checked
 
-Latitude refuses to save a pattern that would be unsafe or over-broad:
+Latitude refuses to save a pattern that would be unsafe to run: one that cannot compile, matches the empty string, uses a backreference, or backtracks catastrophically — the last checked both by inspecting the expression and by timing it against generated input.
 
-- Patterns that can backtrack catastrophically are rejected, both by inspecting the expression and by timing it against generated input. Backreferences are not supported.
-- Every rule is scored against a corpus of strings that commonly appear in agent telemetry — version numbers, git commit SHAs, timestamps, UUIDs, file paths, ports, base64 blobs. A pattern that matches any of them is rejected, and the editor names the ones it matched. This is what stops `\d{4,}` from quietly eating every long number in your tool output.
-- A term list that collides with the same corpus is flagged but allowed, since redacting a literal term is a deliberate choice in a way that a greedy regex is not.
+What it does **not** judge is whether a pattern is too broad. Only your data can answer that, so nothing stops you saving `\d{4,}`; the check below is what tells you it would eat every long number in your tool output.
 
 #### Check before you enable
 
-The rule editor tells you whether a rule is safe in principle. To see what it would do to your actual data, use **Check against recent spans** on the Privacy page: it runs the policy you have on screen against spans already stored and shows the match counts and before-and-after excerpts. Nothing is written, and no policy is saved.
+The editor tells you whether a rule is safe to run. To see whether it removes the right things, use **Check against recent spans** on the Privacy page: it runs the policy you have on screen against spans already stored and shows the match counts and before-and-after excerpts. Nothing is written, and no policy is saved.
 
 This is worth doing every time. Redaction is not retroactive and cannot be undone, so the first time you enable a rule for real is otherwise the first time you find out what it removes.
 

@@ -1,6 +1,4 @@
 import type { RedactionRule } from "@domain/shared"
-import { compileRuleSet, findRedactionMatches } from "./rules.ts"
-import { SAFE_CORPUS } from "./safe-corpus.ts"
 
 /**
  * Bumped whenever a gate below gets stricter.
@@ -16,19 +14,20 @@ export interface RuleValidationIssue {
   readonly message: string
 }
 
-export interface RuleCorpusHit {
-  readonly entry: string
-  readonly matched: string
-}
-
+/**
+ * Whether a rule is *safe to run*, not whether it matches the right things.
+ *
+ * Over-breadth is deliberately not judged here. Only the customer's own data can say whether a
+ * pattern is too greedy, so that question belongs to the redaction preview, which runs the real
+ * policy over their stored spans. An earlier version scored rules against a fixed corpus of
+ * strings and blocked on a hit, which rejected legitimate rules — a project whose account numbers
+ * are long digit runs could not express them — and asked the customer to trust a judgement about
+ * data they had never seen.
+ */
 export interface RuleValidation {
   readonly ok: boolean
   /** Blocking. The rule must not be saved. */
   readonly errors: readonly RuleValidationIssue[]
-  /** Non-blocking, but worth showing before someone destroys data with it. */
-  readonly warnings: readonly RuleValidationIssue[]
-  readonly corpusHits: readonly RuleCorpusHit[]
-  readonly corpusSize: number
   readonly slowestProbeMs: number
   readonly validatorVersion: number
 }
@@ -51,30 +50,18 @@ const MIN_KEY_GLOB_PREFIX_CHARS = 3
 
 export function validateRedactionRule(rule: RedactionRule): RuleValidation {
   const errors: RuleValidationIssue[] = []
-  const warnings: RuleValidationIssue[] = []
 
   if (rule.kind === "attribute_key") {
     validateKeys(rule.keys, errors)
 
-    return result(rule, errors, warnings, [], 0)
+    return result(errors, 0)
   }
 
-  if (rule.kind === "terms") {
-    // Advisory rather than blocking: a customer redacting the literal term `localhost` has made a
-    // deliberate choice, whereas a regex that eats it has almost always made a mistake.
-    const hits = corpusHits(rule)
-    if (hits.length > 0) {
-      warnings.push({
-        code: "corpus_match",
-        message: `matches ${hits.length} of ${SAFE_CORPUS.length} sample strings that are normally safe`,
-      })
-    }
-
-    return result(rule, errors, warnings, hits, 0)
-  }
+  // Literal terms never reach regex syntax, so there is nothing here that can backtrack.
+  if (rule.kind === "terms") return result(errors, 0)
 
   const compiled = compilePatternForValidation(rule.pattern, rule.ignoreCase === true, rule.dotAll === true, errors)
-  if (compiled === null) return result(rule, errors, warnings, [], 0)
+  if (compiled === null) return result(errors, 0)
 
   validatePatternSource(rule.pattern, errors)
   if (compiled.test("")) {
@@ -84,34 +71,14 @@ export function validateRedactionRule(rule: RedactionRule): RuleValidation {
     })
   }
 
-  if (errors.length > 0) return result(rule, errors, warnings, [], 0)
+  if (errors.length > 0) return result(errors, 0)
 
-  const probe = probePattern(compiled, errors)
-  if (errors.length > 0) return result(rule, errors, warnings, [], probe)
-
-  const hits = corpusHits(rule)
-  if (hits.length > 0) {
-    errors.push({
-      code: "corpus_match",
-      message: `matches ${hits.length} of ${SAFE_CORPUS.length} sample strings that must never be redacted`,
-    })
-  }
-
-  return result(rule, errors, warnings, hits, probe)
+  return result(errors, probePattern(compiled, errors))
 }
 
-const result = (
-  rule: RedactionRule,
-  errors: RuleValidationIssue[],
-  warnings: RuleValidationIssue[],
-  corpusHits: RuleCorpusHit[],
-  slowestProbeMs: number,
-): RuleValidation => ({
+const result = (errors: RuleValidationIssue[], slowestProbeMs: number): RuleValidation => ({
   ok: errors.length === 0,
   errors,
-  warnings,
-  corpusHits,
-  corpusSize: rule.kind === "attribute_key" ? 0 : SAFE_CORPUS.length,
   slowestProbeMs,
   validatorVersion: REDACTION_VALIDATOR_VERSION,
 })
@@ -330,17 +297,4 @@ function timeAgainst(pattern: RegExp, run: string): number {
   probe.test(input)
 
   return performance.now() - started
-}
-
-/** The rule alone, with no built-in entities, so every hit is attributable to it. */
-function corpusHits(rule: RedactionRule): RuleCorpusHit[] {
-  const ruleSet = compileRuleSet({ entities: new Set(), redactMetadata: false, identities: "keep", rules: [rule] })
-  const hits: RuleCorpusHit[] = []
-
-  for (const entry of SAFE_CORPUS) {
-    const match = findRedactionMatches(entry, ruleSet)[0]
-    if (match) hits.push({ entry, matched: entry.slice(match.start, match.end) })
-  }
-
-  return hits
 }

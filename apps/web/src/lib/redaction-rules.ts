@@ -37,15 +37,4 @@ export function rejectInvalidRedactionRules(
   return null
 }
 
-const describe = (validation: RuleValidation): string => {
-  const reasons = validation.errors.map((issue) => issue.message).join("; ")
-  if (validation.corpusHits.length === 0) return reasons
-
-  // Name the strings it would have eaten: "matches 41 of 173" is a number, an example is evidence.
-  const examples = validation.corpusHits
-    .slice(0, 3)
-    .map((hit) => hit.entry)
-    .join(", ")
-
-  return `${reasons} (for example: ${examples})`
-}
+const describe = (validation: RuleValidation): string => validation.errors.map((issue) => issue.message).join("; ")
