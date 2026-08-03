@@ -1,3 +1,4 @@
+import { WorkflowTerminator } from "@domain/queue"
 import { type CustomBehaviorId, type FilterSet, generateSlug, toSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { CUSTOM_BEHAVIOR_NAME_MAX_LENGTH } from "../constants.ts"
@@ -14,6 +15,7 @@ import { CustomBehaviorFilterInvalidError, CustomBehaviorNameInvalidError } from
 import { CustomBehaviorRepository } from "../ports/custom-behavior-repository.ts"
 import { TaxonomyViewAssignmentRepository } from "../ports/taxonomy-view-assignment-repository.ts"
 import { generateCustomBehavior } from "./generate-custom-behavior.ts"
+import { taxonomyGardenCustomBehaviorDedupeKey } from "./trigger-project-gardening.ts"
 
 export interface UpdateCustomBehaviorInput {
   readonly id: CustomBehaviorId
@@ -93,6 +95,15 @@ export const updateCustomBehavior = Effect.fn("taxonomy.updateCustomBehavior")(f
     input.filterSet !== undefined && !customBehaviorFilterSetEquals(current.filterSet, nextFilterSet)
 
   if (cohortChanged) {
+    // Stop the in-flight run first. It holds the old FilterSet for its whole duration, so
+    // left alive it would both refill the slice this purge is about to empty and hold the
+    // workflow id, dropping the replacement enqueue below as WorkflowAlreadyStartedError.
+    const terminator = yield* WorkflowTerminator
+    yield* terminator.terminate(
+      taxonomyGardenCustomBehaviorDedupeKey({ organizationId: current.organizationId, customBehaviorId: current.id }),
+      "behavior cohort filter changed",
+    )
+
     // Purge BEFORE the save. Failing between the two then leaves an empty slice under
     // the old filter, which the next garden run rebuilds; the other order would leave
     // the new filter serving the old cohort's edges, and a retry would see the filter
