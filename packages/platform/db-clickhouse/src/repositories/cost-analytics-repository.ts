@@ -124,6 +124,11 @@ const CACHE_SOURCE = `SELECT
 // The agent a cache entry belongs to. `agent_name` is only set by SDKs that stamp it,
 // so `service_name` carries the rest; both are the prompt-owning unit, which is what
 // decides whether two calls could have shared a cached prefix.
+//
+// The fallback is the common path, not the edge case, and several unlabelled agents
+// sharing one service look identical to one real agent. That collapse only ever shrinks
+// gaps, so it overstates the ceiling — which can invent a "cache more" finding but never
+// a `stopCaching`, since that needs the ceiling *below* break-even.
 const CACHE_AGENT = `if(agent_name != '', agent_name, service_name)`
 
 // Gap to the immediately preceding call to the same agent on the same model, over that
