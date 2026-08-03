@@ -42,6 +42,19 @@ describe("Button asChild width", () => {
     expect(widthClasses(markup)).toEqual(["w-full"])
   })
 
+  it("keeps the fixed square width of an icon size", () => {
+    for (const size of ["icon", "icon-xs"] as const) {
+      const markup = renderToStaticMarkup(
+        <Button asChild size={size}>
+          <a href="/somewhere">x</a>
+        </Button>,
+      )
+
+      expect(widthClasses(markup)).toEqual([])
+      expect(markup).toMatch(size === "icon" ? /\bw-8\b/ : /\bw-5\b/)
+    }
+  })
+
   it("lets a caller override the width", () => {
     const markup = renderToStaticMarkup(
       <Button asChild className="w-full">
