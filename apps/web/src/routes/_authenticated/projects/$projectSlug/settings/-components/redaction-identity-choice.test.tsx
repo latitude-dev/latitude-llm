@@ -68,6 +68,13 @@ describe("RedactionIdentityChoice", () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  // Lucide renders an svg per icon; a renamed or dropped export would leave the cards wordy and flat.
+  it("gives each option an icon", () => {
+    const { container } = render(<RedactionIdentityChoice idPrefix="icons" value="keep" onChange={vi.fn()} />)
+
+    expect(container.querySelectorAll("svg")).toHaveLength(2)
+  })
+
   // The browser cannot know whether a deployment configured one, so the caveat is always stated.
   it("warns that a missing pseudonym secret removes the identifier instead", () => {
     setup("pseudonymize")

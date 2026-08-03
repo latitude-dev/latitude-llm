@@ -1,5 +1,6 @@
 import type { RedactionIdentityHandling } from "@domain/shared"
-import { cn, Text } from "@repo/ui"
+import { cn, Icon, Text } from "@repo/ui"
+import { type LucideIcon, UserRoundIcon, VenetianMaskIcon } from "lucide-react"
 
 /** One address, shown becoming what each option actually stores. */
 const SAMPLE_IDENTITY = "ada@acme.com"
@@ -8,6 +9,7 @@ const SAMPLE_PSEUDONYM = "anon_3f9a2b7c1d4e5f60"
 interface IdentityOption {
   readonly value: RedactionIdentityHandling
   readonly label: string
+  readonly icon: LucideIcon
   readonly stored: string
   readonly consequence: string
 }
@@ -20,12 +22,15 @@ const OPTIONS: readonly IdentityOption[] = [
   {
     value: "keep",
     label: "Keep",
+    icon: UserRoundIcon,
     stored: SAMPLE_IDENTITY,
     consequence: "Stored as sent. Searching and grouping by user work.",
   },
   {
     value: "pseudonymize",
     label: "Replace with a pseudonym",
+    // Lucide's disguise icon, and the closest it has to a hat-and-glasses.
+    icon: VenetianMaskIcon,
     stored: SAMPLE_PSEUDONYM,
     consequence: "Not stored. Grouping and per-user counts still work.",
   },
@@ -82,7 +87,10 @@ export function RedactionIdentityChoice({
                 onChange={() => onChange(option.value)}
               />
 
-              <Text.H6M color={selected ? "primary" : "foreground"}>{option.label}</Text.H6M>
+              <div className="flex flex-row items-center gap-2">
+                <Icon icon={option.icon} size="sm" color={selected ? "primary" : "foregroundMuted"} />
+                <Text.H6M color={selected ? "primary" : "foreground"}>{option.label}</Text.H6M>
+              </div>
 
               <div className="flex flex-col gap-0.5">
                 <Text.H6 color="foregroundMuted">
