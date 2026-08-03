@@ -47,7 +47,6 @@ import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import { requireOrganizationOwner } from "../../server/require-owner.ts"
 
 const githubConfigLayer = Layer.mergeAll(GithubIntegrationRepositoryLive, GithubSyncConfigRepositoryLive)
-const githubOwnerGatedLayer = Layer.merge(githubConfigLayer, MembershipRepositoryLive)
 
 const REPO_CACHE_TTL_SECONDS = 5 * 60
 
@@ -279,10 +278,18 @@ export const updateGithubOrgDefaults = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GithubOrgDefaultsRecord> => {
     const { organizationId, userId } = await requireSession()
     const { defaultRepoId, defaultBranch, ...settings } = data
+
+    // Ahead of loadInstallationRepos, so a rejected caller never reaches the GitHub API.
+    await Effect.runPromise(
+      requireOrganizationOwner({ organizationId, userId, what: "the organization GitHub defaults" }).pipe(
+        withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId),
+        withTracing,
+      ),
+    )
+
     const allowedRepos = defaultRepoId === null ? [] : await loadInstallationRepos(organizationId)
     return Effect.runPromise(
       Effect.gen(function* () {
-        yield* requireOrganizationOwner({ organizationId, userId, what: "the organization GitHub defaults" })
         const integrationRepo = yield* GithubIntegrationRepository
         const syncRepo = yield* GithubSyncConfigRepository
         const integration = yield* integrationRepo.findActiveByOrganizationId()
@@ -301,7 +308,7 @@ export const updateGithubOrgDefaults = createServerFn({ method: "POST" })
           defaultRepo: toDefaultRepo(row),
           overrideCount: projectConfigs.filter(hasBehaviorOverride).length,
         }
-      }).pipe(withPostgres(githubOwnerGatedLayer, getPostgresClient(), organizationId), withTracing),
+      }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
   })
 
