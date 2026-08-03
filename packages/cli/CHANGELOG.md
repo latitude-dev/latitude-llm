@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.7.1] - 2026-08-03
+
+### Changed
+
+- `latitude traces export` now surfaces the server's HTTP 429 rate-limit response instead of a generic error. The endpoint is now throttled to match `latitude datasets export-rows` and `latitude signals export`.
+
 ## [7.7.0] - 2026-07-28
 
 ### Added
