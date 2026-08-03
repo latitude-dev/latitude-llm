@@ -25,8 +25,7 @@ import { extractSamplingKey } from "../sampling/extract-sampling-key.ts"
 
 const INLINE_PAYLOAD_MAX_BYTES = 50_000 // 50 KB
 
-// BullMQ defaults to one attempt. Redaction fails closed so transient CH/object-store
-// blips and redaction timeouts can retry instead of dropping accepted OTLP batches.
+// BullMQ defaults to one attempt; retry to ride out transient redaction/ClickHouse/object-store failures.
 const SPAN_INGESTION_JOB_ATTEMPTS = 10
 const SPAN_INGESTION_JOB_BACKOFF = { type: "exponential" as const, delayMs: 1_000 }
 
