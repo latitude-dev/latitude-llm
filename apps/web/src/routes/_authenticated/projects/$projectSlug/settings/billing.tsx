@@ -64,7 +64,7 @@ const formatPeriodDate = (value: string) =>
 
 function BillingOverviewCards() {
   const overview = Route.useLoaderData({ select: (data) => data.overview })
-  const totalUsedCredits = overview.consumedCredits + overview.overageCredits
+  const totalUsedCredits = overview.consumedCredits
   const hasOverageCredits = overview.overageCredits > 0
   const remainingCredits = Number.isFinite(overview.includedCredits)
     ? Math.max(overview.includedCredits - totalUsedCredits, 0)
