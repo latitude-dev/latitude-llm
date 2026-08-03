@@ -35,6 +35,7 @@ export {
   safeStringifyJson,
   stableStringify,
 } from "./format.ts"
+export { getAnchorPartText, joinAnchorPartText } from "./genai-anchor-text.ts"
 export * from "./http-errors.ts"
 export {
   detectPartTextFormat,
@@ -44,6 +45,7 @@ export {
   prettifyCompactJson,
 } from "./json-format.ts"
 export { mapByEntityId } from "./map-by-entity-id.ts"
+export { inferModalityFromMime, resolveContentModality } from "./mime-modality.ts"
 export { LatitudeObservabilityTestError } from "./observability-test.ts"
 export { relativeTime } from "./relativeTime.ts"
 export { hammingDistance64, simhash64 } from "./simhash.ts"

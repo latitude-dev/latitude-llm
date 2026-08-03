@@ -15,7 +15,7 @@ export interface PlanFacetGardenInput {
   readonly projectId: ProjectId
   readonly runId: TaxonomyRunId
   readonly dimension?: TaxonomyDimension
-  /** The lens to garden. */
+  /** The facet to garden. */
   readonly facetId: FacetId
   /** Present ⇒ a cohort×facet view: sample only the cohort's sessions. Absent ⇒ whole-project facet. */
   readonly customBehaviorId?: CustomBehaviorId
@@ -62,7 +62,7 @@ export const planFacetGardenUseCase = (input: PlanFacetGardenInput) =>
     const extraction = yield* extractFacetProjectionsUseCase({ facet, samples: extractionSamples, now })
     // Unclear projections carry an empty extractedText + no embedding; exclude
     // them from clustering (the noise path).
-    const lensObservations: readonly TaxonomyScopedClusteringObservation[] = extraction.projections
+    const facetObservations: readonly TaxonomyScopedClusteringObservation[] = extraction.projections
       .filter((projection) => projection.extractedText.length > 0 && projection.embedding.length > 0)
       .map((projection) => ({
         observationId: projection.sessionObservationId,
@@ -82,6 +82,6 @@ export const planFacetGardenUseCase = (input: PlanFacetGardenInput) =>
       ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
       ...(input.filterSet ? { filterSet: input.filterSet } : {}),
       ...(input.clusterBuilder ? { clusterBuilder: input.clusterBuilder } : {}),
-      lensObservations,
+      facetObservations,
     })
   }).pipe(Effect.withSpan("taxonomy.planFacetGarden"))

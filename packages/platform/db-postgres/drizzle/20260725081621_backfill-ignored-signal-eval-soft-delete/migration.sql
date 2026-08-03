@@ -1,5 +1,4 @@
--- The muted→ignored backfill (20260720152609) stamped ignored_at but did not archive linked
--- evaluations the way applySignalLifecycleCommand("ignore") does via softDeleteBySignalId.
+-- Soft-delete evaluations linked to ignored signals to match applySignalLifecycleCommand("ignore").
 UPDATE "latitude"."evaluations"
 SET "deleted_at" = NOW(), "updated_at" = NOW()
 WHERE "deleted_at" IS NULL

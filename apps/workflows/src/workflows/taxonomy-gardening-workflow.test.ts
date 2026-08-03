@@ -37,6 +37,7 @@ const { mockActivities } = vi.hoisted(() => {
         { depth: 0, clusterIds: ["c".repeat(24)] },
       ],
       clustersScanned: 2,
+      memberObservationIdsByClusterId: { ["d".repeat(24)]: ["obs-1", "obs-2"] },
     })),
     assertGardenTaxonomyQualityActivity: vi.fn(async () => ({ clustersScanned: 2, findings: [] })),
     nameTaxonomyClusterActivity: vi.fn(async () => ({ name: "Named cluster", description: "A named test cluster." })),
@@ -163,6 +164,49 @@ describe("taxonomy gardening workflow (divisive build)", () => {
     expect(mockActivities.completeGardenTaxonomyRunActivity).not.toHaveBeenCalled()
   })
 
+  it("names the staged tree BEFORE it is published, from the plan's own member ids", async () => {
+    await gardenTaxonomyWorkflow(globalInput)
+
+    expect(patched).toHaveBeenCalledWith("taxonomy-gardening-name-before-publish-v1")
+    const namedAt = mockActivities.nameTaxonomyClusterActivity.mock.invocationCallOrder
+    const reassignedAt = mockActivities.reassignGardenTaxonomyObservationsActivity.mock.invocationCallOrder[0] ?? 0
+    // Every name lands before the reassignment moves the counts the Behaviours
+    // read drives visibility from, so the swap publishes a tree that is both named
+    // and populated — never a "Pending"-named active tree that reads as empty.
+    expect(namedAt.every((order) => order < reassignedAt)).toBe(true)
+    expect(mockActivities.planGardenTaxonomyNamingActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ planKey: "org:oooooooooooooooooooooooo:taxonomy:gardenPlan:rrrrrrrrrrrrrrrrrrrrrrrr" }),
+    )
+    const nameCalls = mockActivities.nameTaxonomyClusterActivity.mock.calls as unknown as Array<
+      [{ readonly clusterId: string; readonly memberObservationIds?: readonly string[] }]
+    >
+    expect(nameCalls[0]?.[0]?.memberObservationIds).toEqual(["obs-1", "obs-2"])
+  })
+
+  it("a global naming failure cleans up staging, leaving the previous tree serving reads", async () => {
+    mockActivities.nameTaxonomyClusterActivity.mockRejectedValueOnce(new Error("naming exploded"))
+
+    await expect(gardenTaxonomyWorkflow(globalInput)).rejects.toThrow("naming exploded")
+
+    // Naming now runs before the reassignment, so a naming failure is a failure
+    // BEFORE publication: the staged tree is discarded and the old tree keeps
+    // serving, instead of stranding an unnamed active tree that reads as empty.
+    expect(mockActivities.reassignGardenTaxonomyObservationsActivity).not.toHaveBeenCalled()
+    expect(mockActivities.deprecateGardenTaxonomyClustersActivity).not.toHaveBeenCalled()
+    expect(mockActivities.cleanupGardenTaxonomyStagingActivity).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps naming a view's tree after publication (its slice only exists once reassigned)", async () => {
+    await gardenTaxonomyWorkflow(scopedInput)
+
+    const namedAt = mockActivities.nameTaxonomyClusterActivity.mock.invocationCallOrder
+    const reassignedAt = mockActivities.reassignGardenTaxonomyObservationsActivity.mock.invocationCallOrder[0] ?? 0
+    expect(namedAt.every((order) => order > reassignedAt)).toBe(true)
+    expect(mockActivities.planGardenTaxonomyNamingActivity).toHaveBeenCalledWith(
+      expect.not.objectContaining({ planKey: expect.anything() }),
+    )
+  })
+
   it("marks the run failed when the build pass errors", async () => {
     mockActivities.planHierarchicalGardenTaxonomyActivity.mockRejectedValueOnce(new Error("garden failed"))
 
@@ -250,11 +294,11 @@ describe("taxonomy gardening workflow (divisive build)", () => {
       "startGardenTaxonomyRunActivity",
       "planHierarchicalGardenTaxonomyActivity",
       "saveGardenTaxonomyClustersActivity",
-      "reassignGardenTaxonomyObservationsActivity",
-      "deprecateGardenTaxonomyClustersActivity",
       "planGardenTaxonomyNamingActivity",
       "nameTaxonomyClusterActivity",
       "nameTaxonomyClusterActivity",
+      "reassignGardenTaxonomyObservationsActivity",
+      "deprecateGardenTaxonomyClustersActivity",
       "assertGardenTaxonomyQualityActivity",
       "emitGardenTaxonomyLineageActivity",
       "completeGardenTaxonomyRunActivity",

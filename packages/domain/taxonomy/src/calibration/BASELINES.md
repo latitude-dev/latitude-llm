@@ -1,30 +1,45 @@
 # Adaptive taxonomy clustering — Phase 1 recorded baselines (LAT-770)
 
-Offline calibration for `specs/taxonomy-adaptive-clustering.md`.
-Everything here is produced by the harness in this folder. The committed
-`calibration.test.ts` re-verifies the numbers against **synthetic** fixtures; the
-schedule values themselves were **calibrated on the real narrow-domain pilot
-corpus** (see "Validation on the real pilot corpus" below). No production code
-path changed in Phase 1 — the static column is today's
-`buildHierarchicalClusters`; the adaptive column is the Phase-2 candidate
-implemented as a calibration fork in `adaptive-clustering.ts`.
+> **This is a historical record, not a CI gate.** The `calibration.test.ts` gate,
+> the `adaptive-clustering.ts` builder fork, and the `schedule.ts` value record
+> were removed once Phase 2 promoted the relative builder into `clustering.ts`:
+> the fork had become a second copy of a shipped algorithm that could drift, and
+> the gate cost ~45 s of every taxonomy test run (80% of the suite) to re-verify
+> synthetic numbers. The calibrated values now live in `constants.ts` as
+> `TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE`.
+>
+> **The one load-bearing assertion survives**, moved to `src/clustering.test.ts`
+> and now run against the shipped builder: the narrow-domain and pilot fixtures
+> must resolve at the calibrated root separation of **0.45** and **collapse at
+> 0.60**, so a future retune cannot quietly restore the synthetic-only ~0.60 that
+> the real pilot corpus disproved.
+>
+> Memory and runtime are better observed in production than approximated in CI —
+> the retired resource test asserted the build's own RSS *growth* against a 512 MB
+> budget and measured tens of MB, while the shadow span reports process peaks of
+> ~1.7 GiB. Watch `taxonomy.adaptive.peakRssBytes` and `durationMs` on the shadow
+> dashboard instead.
+>
+> Everything below is kept because it is the only written account of how these
+> values were derived and what was measured on real data. Treat the numbers as
+> dated evidence, not as invariants.
 
-Run it:
+Offline calibration for `specs/taxonomy-adaptive-clustering.md`. The schedule
+values were **calibrated on the real narrow-domain pilot corpus** (see
+"Validation on the real pilot corpus" below); the synthetic fixtures reproduce
+that geometry so the numbers are reproducible without the uncommitted dump.
 
-```
-pnpm exec vitest run packages/domain/taxonomy/src/calibration/calibration.test.ts
-```
+The harness is still here as a tool. To try a schedule value offline, drive
+`compareOnCorpus` / `crossSampleAri` from `harness.ts` — both now run the
+**shipped** builders, so a result reflects production rather than a fork.
 
 ## What's here
 
 | File | Role |
 | --- | --- |
 | `fixtures.ts` | Deterministic, seeded **synthetic** corpora (broad support, narrow-domain, pilot stand-in, shape stressors). No `Math.random`, no external data. |
-| `adaptive-clustering.ts` | Candidate adaptive builder: node-relative separation gate + dominant-child protection + member-confidence routing thresholds. Verbatim k-means fork of `clustering.ts` so static vs adaptive is a clean A/B on the gate. |
 | `metrics.ts` | Purity, per-group recall, ARI, tree shape, partition signature. |
-| `harness.ts` | `compareOnCorpus` / `crossSampleAri` — runs both builders with identical seed + k-means constants. |
-| `schedule.ts` | **The Phase-1 deliverable**: calibrated adaptive depth schedule, rollout limits, and calibration thresholds. |
-| `calibration.test.ts` | Synthetic exit-criteria gate that keeps these numbers true. |
+| `harness.ts` | `compareOnCorpus` / `crossSampleAri` — runs the shipped static and relative builders with identical seed + k-means constants. Offline tool; no test imports it. |
 
 ## Selected adaptive depth schedule
 
@@ -150,8 +165,8 @@ agreement, `xSample` = cross-sample stability.
 
 > `xSample` is now the **averaged** cross-sample ARI (mean over all 45
 > leave-one-tenth-out fold pairs). The shape/purity columns predate the LAT-771
-> rewrite and stay range-enforced by `calibration.test.ts` (which runs the
-> **synthetic** pilot, since the real dump is uncommitted).
+> rewrite. They were range-enforced by the retired `calibration.test.ts`; nothing
+> asserts them now, so read them as dated measurements.
 
 | Fixture | members | groups | static rc/lf/d/pur | adaptive rc/lf/d/pur/minRec | ARI | xSample |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -173,8 +188,8 @@ The **narrow-domain** and **pilot** rows are tuned to the real pilot geometry:
 accepted-split relative separations are **0.57** and **0.52** (not ≥ 1.2), the
 pilot carries the dominant-blob + tail imbalance and lands at purity 0.92 (not
 1.00), and both **collapse to a single leaf at `minRelativeSeparation` 0.60** —
-which is what makes the calibrated 0.45 a CI-enforced value rather than a
-documented one. The broad support corpora keep their clean geometry (that is what
+which is what keeps the calibrated 0.45 a CI-enforced value rather than a merely
+documented one — that pinning assertion now lives in `src/clustering.test.ts`. The broad support corpora keep their clean geometry (that is what
 broad well-separated topics look like).
 
 Closest sibling centroid cosines (what trips the fixed 0.85 gate — the closest
@@ -204,7 +219,7 @@ static share that cost identically, so the ratio is unaffected.)
 | Criterion | Status | Evidence |
 | --- | --- | --- |
 | Narrow-domain root has 3–5 children | ✅ | real pilot 4 (after de-dup) at root 0.45; synthetic narrow 4, pilot 4 |
-| Calibrated `minRelativeSeparation` is CI-enforced | ✅ | narrow + pilot fixtures resolve at 0.45 and collapse at 0.60 (pinning test) |
+| Calibrated `minRelativeSeparation` is CI-enforced | ✅ | narrow + pilot fixtures resolve at 0.45 and collapse at 0.60 — pinning test, now in `src/clustering.test.ts` |
 | Mean labeled purity ≥ 0.85 | ⚠️ synthetic only | 1.00 narrow / 0.92 pilot synthetic; no human labels on the real pilot yet — real check is human-eyeballed coherence (four clean intents) |
 | Each intended group ≥ 0.85 recall in one child | ⚠️ synthetic only | 1.00 synthetic; pending human labels on the real pilot |
 | Unimodal fixture stays a leaf | ✅ | 0 accepted splits |

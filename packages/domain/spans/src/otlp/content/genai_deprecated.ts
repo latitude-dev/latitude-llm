@@ -226,6 +226,12 @@ function resolveMessages(attrs: readonly OtlpKeyValue[], prefix: string): Record
   return messages
 }
 
+/** Keys this parser reads, composed into `isContentAttributeKey`. */
+export const GENAI_DEPRECATED_CONTENT_ATTRIBUTE_KEYS = {
+  exact: ["gen_ai.prompt", "gen_ai.completion", "llm.request.functions"],
+  prefixes: ["gen_ai.prompt.", "gen_ai.completion.", "llm.request.functions."],
+} as const
+
 export function parseGenAIDeprecated(attrs: readonly OtlpKeyValue[]): ParsedContent {
   const promptRaw = resolveMessages(attrs, "gen_ai.prompt")
   const completionRaw = resolveMessages(attrs, "gen_ai.completion")

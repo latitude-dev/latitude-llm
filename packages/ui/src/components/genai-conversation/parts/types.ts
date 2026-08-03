@@ -57,6 +57,6 @@ export interface SubagentToolCallInfo {
   readonly taskPreview?: string | undefined
   /** The subagent conversation's last message, as readable text (output peek). */
   readonly resultPreview?: string | undefined
-  /** Opens the subagent's conversation in place. Absent renders no button. */
+  /** Opens the subagent's conversation in place. Absent renders no navigation affordance. */
   readonly onOpenConversation?: (() => void) | undefined
 }

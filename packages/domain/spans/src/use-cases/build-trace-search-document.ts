@@ -1,4 +1,4 @@
-import { type CryptoError, hash, safeStringifyJson } from "@repo/utils"
+import { type CryptoError, hash, resolveContentModality, safeStringifyJson } from "@repo/utils"
 import { Effect } from "effect"
 import type { GenAIMessage, GenAIPart } from "rosetta-ai"
 import { TRACE_SEARCH_DOCUMENT_MAX_LENGTH } from "../constants.ts"
@@ -26,10 +26,12 @@ function formatCommonPart(part: GenAIPart): string {
     case "text":
       return typeof part.content === "string" ? part.content : ""
     case "blob": {
-      if (part.modality === "image") return "[IMAGE]"
-      if (part.modality === "video") return "[VIDEO]"
-      if (part.modality === "audio") return "[AUDIO]"
-      return `[BLOB:${String(part.modality)}]`
+      const mimeType = typeof part.mime_type === "string" ? part.mime_type : null
+      const modality = resolveContentModality(String(part.modality), mimeType)
+      if (modality === "image") return "[IMAGE]"
+      if (modality === "video") return "[VIDEO]"
+      if (modality === "audio") return "[AUDIO]"
+      return `[BLOB:${modality}]`
     }
     case "file":
       return `[FILE:${part.file_id}]`

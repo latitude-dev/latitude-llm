@@ -7,11 +7,9 @@ import {
   Badge,
   Button,
   Checkbox,
-  ClaudeCodeIcon,
   CloseTrigger,
   CopyableText,
   CopyButton,
-  CursorIcon,
   Icon,
   InfiniteTable,
   type InfiniteTableColumn,
@@ -27,7 +25,7 @@ import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { BookOpen, Copy, ExternalLink, FileText, type LucideProps, Plus, Settings, Webhook } from "lucide-react"
+import { BookOpen, Copy, ExternalLink, FileText, Plus, Settings } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import {
@@ -51,6 +49,11 @@ import {
   sendToDestinationsQueryKey,
   upsertOrgDefaultDispatchConfig,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
+import {
+  AGENT_DISPATCH_KIND_ICONS,
+  AGENT_DISPATCH_KIND_LABELS,
+  type AgentDispatchKindKey,
+} from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
 import { useDebounce } from "../../../../../../lib/hooks/useDebounce.ts"
@@ -69,15 +72,6 @@ export interface DispatchConfigFormValues {
   readonly target: StoredAgentDispatchTarget
   readonly guardrails: { readonly maxDispatchesPerDay: number; readonly cooldownMinutes: number }
 }
-
-export const AGENT_DISPATCH_KIND_LABELS = {
-  cursor: "Cursor",
-  claude_code: "Claude Code",
-  linear: "Linear",
-  webhook: "Webhook",
-} as const
-
-export type AgentDispatchKindKey = keyof typeof AGENT_DISPATCH_KIND_LABELS
 
 const KIND_LABELS = AGENT_DISPATCH_KIND_LABELS
 
@@ -201,25 +195,6 @@ const TRIGGER_LABELS: Record<(typeof ACTIVE_DISPATCH_TRIGGERS)[number], { title:
 function isActiveDispatchTrigger(trigger: string): trigger is (typeof ACTIVE_DISPATCH_TRIGGERS)[number] {
   return ACTIVE_DISPATCH_TRIGGERS.some((activeTrigger) => activeTrigger === trigger)
 }
-
-function LinearIcon(props: LucideProps) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" {...props}>
-      <circle cx="12" cy="12" r="10" fill="currentColor" />
-      <path d="M5.8 14.6L14.6 5.8" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M8.8 17.2L17.2 8.8" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M5.6 10.8L10.8 5.6" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M13.2 18.4L18.4 13.2" stroke="white" strokeLinecap="round" strokeWidth="2" />
-    </svg>
-  )
-}
-
-export const AGENT_DISPATCH_KIND_ICONS = {
-  cursor: CursorIcon,
-  claude_code: ClaudeCodeIcon,
-  linear: LinearIcon,
-  webhook: Webhook,
-} as const
 
 const INTEGRATION_ICONS = AGENT_DISPATCH_KIND_ICONS
 
@@ -862,7 +837,6 @@ function ConnectAgentDispatchModal({
           await connectCursorIntegration({
             data: {
               kind: "cursor",
-              projectId,
               cursorApiKey: parsed.cursorApiKey,
               ...(parsed.repoUrl ? { repoUrl: parsed.repoUrl } : {}),
               ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
@@ -884,7 +858,6 @@ function ConnectAgentDispatchModal({
           await connectClaudeIntegration({
             data: {
               kind: "claude_code",
-              projectId,
               claudeRoutineToken: parsed.claudeRoutineToken,
               routineTriggerId: extractClaudeRoutineTriggerId(parsed.routineUrl)!,
             },
@@ -892,12 +865,12 @@ function ConnectAgentDispatchModal({
         } else if (kind === "linear") {
           const parsed = z.object({ linearApiKey: z.string().min(1), teamId: z.string().uuid() }).parse(values)
           await connectLinearIntegration({
-            data: { kind: "linear", projectId, linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
+            data: { kind: "linear", linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
           })
         } else {
           const parsed = z.object({ webhookUrl: z.string().url() }).parse(values)
           const result = await connectWebhookIntegration({
-            data: { kind: "webhook", projectId, webhookUrl: parsed.webhookUrl },
+            data: { kind: "webhook", webhookUrl: parsed.webhookUrl },
           })
           setWebhookSecret(result.webhookSecret)
           onWebhookSecret(result.webhookSecret)
@@ -1243,7 +1216,7 @@ function ConnectAgentDispatchModal({
             </div>
             <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
               <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
-                <a href="https://linear.app/latitude/settings/account/security" target="_blank" rel="noreferrer">
+                <a href="https://linear.app/settings/account/security" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API settings
                 </a>

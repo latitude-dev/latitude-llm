@@ -243,6 +243,7 @@ function buildOrphanFragmentTraceSpans({ scope, spec }: BuildSpansArgs): SpanRow
     cost_output_microcents: costOutputMicrocents,
     cost_total_microcents: costInputMicrocents + costOutputMicrocents,
     cost_is_estimated: 0,
+    cost_source: "provider_reported",
     time_to_first_token_ns: 250_000_000,
     is_streaming: 1,
     response_id: `resp_${spec.traceKey}`,

@@ -104,7 +104,7 @@ export const CUSTOM_BEHAVIOR_STATUSES = ["pending", "generating", "ready", "fail
 export const MAX_CUSTOM_BEHAVIORS_PER_PROJECT = 10
 
 // ---------------------------------------------------------------------------
-// Facets (custom lenses)
+// Facets
 //
 // A facet clusters sessions by an extracted answer to a question rather than by
 // the raw transcript. Projections are facet-global (extracted once per
@@ -114,7 +114,7 @@ export const MAX_CUSTOM_BEHAVIORS_PER_PROJECT = 10
 
 export const FACET_NAME_MAX_LENGTH = 80
 
-/** UI help text shown in the lens picker — why this lens is useful for your sessions. Required for every facet. */
+/** UI help text shown in the facet picker: why this facet is useful for your sessions. Required for every facet. */
 export const FACET_DESCRIPTION_MAX_LENGTH = 300
 
 /**
@@ -122,18 +122,27 @@ export const FACET_DESCRIPTION_MAX_LENGTH = 300
  * with curated guidance; custom facets are user-written. Generous on purpose —
  * it is prompt guidance, not the transcript (that input is bounded separately by
  * `FACET_EXTRACTION_INPUT_CHAR_CAP`). Instructions are write-once: to change what
- * a lens means, create a new facet.
+ * a facet means, create a new facet.
  */
 export const FACET_INSTRUCTIONS_MAX_LENGTH = 4_000
 
 /**
- * Per-project cap on facets, enforced in the create use-case. Each facet spawns
- * its own `taxonomy_facet_projections` slice (one extraction + embedding per
- * sampled session, cached) plus per-view clusters and edges, so the cap bounds
- * extraction cost and CH storage. A single flat constant like
- * `MAX_CUSTOM_BEHAVIORS_PER_PROJECT`; raising it is a one-line change.
+ * Reserved slug prefix for the code-defined preset catalog (`FACET_PRESETS`) and
+ * for route sentinels like `TOPICS_BEHAVIOR_SLUG`. Preset facets are
+ * find-or-created under these slugs; neither a user-authored facet nor a custom
+ * behavior may claim the prefix, so `createFacet` and `createCustomBehavior`
+ * reject a generated slug that starts with it.
  */
-export const MAX_FACETS_PER_PROJECT = 10
+export const FACET_PRESET_SLUG_PREFIX = "lat-"
+
+/**
+ * Addresses the whole-project topic behavior in the web router. That behavior has
+ * no `custom_behaviors` row — the unfiltered topic tree is the online-routed
+ * `(NULL, NULL)` view — so the UI needs a stable slug to route it like any other
+ * behavior. It sits in the reserved `lat-` namespace, so no user-created behavior
+ * can shadow it.
+ */
+export const TOPICS_BEHAVIOR_SLUG = `${FACET_PRESET_SLUG_PREFIX}topics`
 
 /**
  * Character ceiling on the conversation fed to a single facet extraction. Input
@@ -169,6 +178,14 @@ export const TAXONOMY_DEFAULT_FACET_EXTRACTION_MODEL = {
 
 /** Bounded concurrency for the per-session extraction fan-out (misses only). */
 export const FACET_EXTRACTION_CONCURRENCY = 8
+
+/**
+ * Flush extracted projections to the cache every this many, instead of once at
+ * the end. Lets the cold-start progress UI show answers stream in, and lets a
+ * retry of the long garden activity resume from already-persisted work (cache
+ * hits) rather than re-extracting everything.
+ */
+export const FACET_EXTRACTION_PERSIST_BATCH_SIZE = 16
 
 // ---------------------------------------------------------------------------
 // Embedding + summary
@@ -403,6 +420,33 @@ export const TAXONOMY_KMEANS_RESTARTS = 3
 export const TAXONOMY_KMEANS_MAX_ITER = 25
 /** k-means convergence tolerance in (1 - cosine) centroid drift. */
 export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
+
+/**
+ * Restart budget for a re-search of the relative build when the root split lands
+ * near the separation gate. k-means only finds a local optimum, so the tree it
+ * returns depends on where k-means++ seeded — and because seeds are drawn as
+ * indices into the member list, a few percent of window turnover redraws them
+ * entirely. On corpora whose root split sits close to `minRelativeSeparation`,
+ * three restarts is too small a sample: some runs find a partition that clears
+ * the gate and some do not, so the tree alternates between a real split and a
+ * bare leaf. Re-searching with a larger budget finds the good optimum reliably.
+ */
+export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 25
+/**
+ * Root relative separation at or above which the first-pass build is kept as-is.
+ * Measured on real corpora across historical 7-day windows: an unstable project
+ * sits at 0.35–0.57 while a stable one sits at 1.06 and above, with no overlap.
+ * 0.8 centres the threshold in that gap. Builds above it are returned untouched,
+ * so projects that do not need the re-search are unaffected by it.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN = 0.8
+/**
+ * Lower edge of the re-search band. A corpus with no structure to find reaches
+ * only ~0.09 at its best root candidate, while a corpus whose real split merely
+ * fell short on this run reaches ~0.4. Without this floor every unimodal project
+ * would re-search on every pass to reconfirm the leaf it already had.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
 
 // ---------------------------------------------------------------------------
 // Clustering worker resource bounds

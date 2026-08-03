@@ -1,4 +1,5 @@
 import type { DomainEvent } from "@domain/events"
+import type { SerializedRedactionPolicy } from "@domain/shared"
 
 /**
  * Phantom type helper: returns an empty object at runtime but carries type T
@@ -87,6 +88,14 @@ const _registry = {
       readonly defaultProjectId: string | null
       readonly projectIdBySlug: Readonly<Record<string, string>>
       readonly isSandbox?: boolean
+      /**
+       * Redaction policy per project id, resolved at the ingest boundary where each
+       * project's settings are already loaded for sampling. Projects resolving to
+       * `off` are absent and the field is omitted when no project opted in, so a
+       * missing field means "redact nothing" — which is what makes this field safe
+       * to deploy in either order and is why the worker needs no legacy fallback.
+       */
+      readonly redaction?: Readonly<Record<string, SerializedRedactionPolicy>>
     }
   }>(),
 

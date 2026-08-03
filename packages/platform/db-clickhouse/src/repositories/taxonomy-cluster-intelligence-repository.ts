@@ -1,5 +1,12 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { ChSqlClient, type ChSqlClientShape, type CustomBehaviorId, TraceId, toRepositoryError } from "@domain/shared"
+import {
+  ChSqlClient,
+  type ChSqlClientShape,
+  type CustomBehaviorId,
+  type FacetId,
+  TraceId,
+  toRepositoryError,
+} from "@domain/shared"
 import {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
@@ -9,9 +16,12 @@ import { formatCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 // Which observations belong to the requested clusters. Global reads match the
-// observation's own `assigned_cluster_id`; a scoped custom-behavior read never
-// touches that column and instead intersects with the behavior's topic edges in
-// the `taxonomy_view_assignments` slice (keyed by custom_behavior_id, facet_id='').
+// observation's own `assigned_cluster_id`; a scoped view (custom behavior) never
+// touches that column and instead intersects with that view's edges in the
+// `taxonomy_view_assignments` slice, keyed by (custom_behavior_id, facet_id).
+// `facet_id` is `''` for a topic cohort and the facet id for a facet-scoped view;
+// the facet-projection edges resolve back to the same session `observation_id` in
+// `taxonomy_observations`, so moment-label / score rollups read identically.
 const GLOBAL_CLUSTER_MEMBERSHIP = "o.assigned_cluster_id IN {clusterIds:Array(String)}"
 const SCOPED_CLUSTER_MEMBERSHIP = `o.observation_id IN (
     SELECT observation_id
@@ -19,13 +29,13 @@ const SCOPED_CLUSTER_MEMBERSHIP = `o.observation_id IN (
     WHERE organization_id = {organizationId:String}
       AND project_id = {projectId:String}
       AND custom_behavior_id = {customBehaviorId:String}
-      AND facet_id = ''
+      AND facet_id = {facetId:String}
       AND assigned_cluster_id IN {clusterIds:Array(String)}
   )`
 const clusterMembership = (customBehaviorId: CustomBehaviorId | null | undefined) =>
   customBehaviorId == null ? GLOBAL_CLUSTER_MEMBERSHIP : SCOPED_CLUSTER_MEMBERSHIP
-const scopeParams = (customBehaviorId: CustomBehaviorId | null | undefined) =>
-  customBehaviorId == null ? {} : { customBehaviorId: customBehaviorId as string }
+const scopeParams = (customBehaviorId: CustomBehaviorId | null | undefined, facetId: FacetId | null | undefined) =>
+  customBehaviorId == null ? {} : { customBehaviorId: customBehaviorId as string, facetId: (facetId ?? "") as string }
 
 const behaviourSessionFilterSql = `
   ({filter:String} = 'all'
@@ -180,6 +190,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
         sourceWindowStart,
         sourceWindowEnd,
         customBehaviorId,
+        facetId,
       }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -192,7 +203,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                 clusterIds: clusterIds as readonly string[],
                 sourceWindowStart: formatCHDate(sourceWindowStart),
                 sourceWindowEnd: formatCHDate(sourceWindowEnd),
-                ...scopeParams(customBehaviorId),
+                ...scopeParams(customBehaviorId, facetId),
               }
               const aggregateResult = await client.query({
                 // Superseded analysis generations are never deleted; pinning
@@ -278,6 +289,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
         sourceWindowEnd,
         limit,
         customBehaviorId,
+        facetId,
       }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -302,7 +314,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                   sourceWindowStart: formatCHDate(sourceWindowStart),
                   sourceWindowEnd: formatCHDate(sourceWindowEnd),
                   limit,
-                  ...scopeParams(customBehaviorId),
+                  ...scopeParams(customBehaviorId, facetId),
                 },
                 format: "JSONEachRow",
               })
@@ -329,6 +341,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
         startTimeTo,
         limit,
         customBehaviorId,
+        facetId,
       }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -358,7 +371,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                   ...(momentRange
                     ? { momentMetric: momentRange.metric, turnFrom: momentRange.fromTurn, turnTo: momentRange.toTurn }
                     : {}),
-                  ...scopeParams(customBehaviorId),
+                  ...scopeParams(customBehaviorId, facetId),
                 },
                 format: "JSONEachRow",
               })
@@ -381,6 +394,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
         offset,
         limit,
         customBehaviorId,
+        facetId,
       }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -404,7 +418,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
             ...(momentRange
               ? { momentMetric: momentRange.metric, turnFrom: momentRange.fromTurn, turnTo: momentRange.toTurn }
               : {}),
-            ...scopeParams(customBehaviorId),
+            ...scopeParams(customBehaviorId, facetId),
           }
           // Short windows (≤2 days) bucket hourly; longer windows daily.
           const histogramInterval =
@@ -473,6 +487,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
         startTimeFrom,
         startTimeTo,
         customBehaviorId,
+        facetId,
       }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -536,7 +551,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                   clusterIds: clusterIds as readonly string[],
                   ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
                   ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
-                  ...scopeParams(customBehaviorId),
+                  ...scopeParams(customBehaviorId, facetId),
                 },
                 format: "JSONEachRow",
               })

@@ -97,13 +97,16 @@ describe("classifySessionFlaggerUseCase gating", () => {
     expect(result).toEqual({ matched: false })
   })
 
-  it("returns { matched: false } for frustration on a flagger.classify session without calling AI", async () => {
+  it.each([
+    { tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify], label: "flagger.classify" },
+    { tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes], label: "taxonomy:propose-themes" },
+  ])("returns { matched: false } for frustration on a $label session without calling AI", async ({ tags }) => {
     const session = makeSessionDetail(
       [
-        user("no but read the memory first — nested correction inside classify evidence"),
+        user("I just honestly don't understand why you couldn't get this done for me — nested sample wording"),
         assistant('{"matched":true,"feedback":"task not completed","messageIndex":"2"}'),
       ],
-      { tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify] },
+      { tags },
     )
     const { repository: sessionRepo } = createFakeSessionRepository({
       findBySessionId: () => Effect.succeed(session),
@@ -125,7 +128,7 @@ describe("classifySessionFlaggerUseCase gating", () => {
         } as Flagger),
     })
     const { layer: aiLayer } = createFakeAI({
-      generate: () => Effect.die("AI must not be called for user-centric reflag"),
+      generate: () => Effect.die("AI must not be called for user-centric nested-sample traces"),
     })
 
     const result = await Effect.runPromise(

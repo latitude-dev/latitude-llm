@@ -1,4 +1,4 @@
-import { detectPartTextFormat, formatPartText } from "@repo/utils"
+import { detectPartTextFormat, formatPartText, getAnchorPartText } from "@repo/utils"
 import type { GenAIMessage } from "rosetta-ai"
 
 export interface TextSelectionAnchor {
@@ -15,26 +15,7 @@ export function getPartText(
   messageIndex: number,
   partIndex: number,
 ): string | null {
-  const msg = messages[messageIndex]
-  if (!msg) return null
-
-  let parts = msg.parts
-  if (!parts || parts.length === 0) {
-    const content = (msg as { content?: string }).content
-    if (typeof content === "string") {
-      parts = [{ type: "text" as const, content }]
-    } else {
-      return null
-    }
-  }
-
-  const part = parts[partIndex]
-  if (!part) return null
-
-  if (part.type === "text" || part.type === "reasoning") {
-    return (part as { content: string }).content ?? null
-  }
-  return null
+  return getAnchorPartText(messages[messageIndex], partIndex)
 }
 
 export function findIndices(node: Node) {

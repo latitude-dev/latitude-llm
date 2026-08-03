@@ -1,18 +1,29 @@
 /**
- * Static-vs-adaptive comparison harness. Runs both builders over one shared
- * fixture with identical k-means constants and seed, then scores each tree with
- * the same metric set. This is the calibration surface: pick schedule values,
- * run `compareOnCorpus` across the fixtures, and read the numbers back.
+ * Static-vs-relative comparison harness — an offline tool, not a CI gate.
+ *
+ * Runs both SHIPPED builders over one shared fixture with identical k-means
+ * constants and seed, then scores each tree with the same metric set. Use it to
+ * try a schedule value: pass a schedule to `compareOnCorpus` / `crossSampleAri`
+ * across the fixtures and read the numbers back. Nothing imports this from a
+ * test — the assertions that matter live in `src/clustering.test.ts`.
  */
 
-import { buildStaticHierarchicalClusters, type ClusteringTreeNode, type StaticDepthSchedule } from "../clustering.ts"
 import {
+  buildRelativeHierarchicalClusters,
+  buildStaticHierarchicalClusters,
+  type ClusteringTreeNode,
+  type RelativeClusteringDiagnostics,
+  type RelativeDepthSchedule,
+  type StaticDepthSchedule,
+} from "../clustering.ts"
+import {
+  TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
+  TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
   TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
 } from "../constants.ts"
-import { type AdaptiveDepthSchedule, type AdaptiveDiagnostics, buildAdaptiveClusters } from "./adaptive-clustering.ts"
 import type { LabeledCorpus } from "./fixtures.ts"
 import {
   adjustedRandIndex,
@@ -24,7 +35,6 @@ import {
   type TreeShape,
   treeShape,
 } from "./metrics.ts"
-import { ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD, ADAPTIVE_TREE_DEPTH_SCHEDULE } from "./schedule.ts"
 
 const STATIC_SCHEDULE: readonly StaticDepthSchedule[] = TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE
 
@@ -45,7 +55,7 @@ export interface CorpusComparison {
   readonly memberCount: number
   readonly groupCount: number
   readonly static: QualityScores
-  readonly adaptive: QualityScores & { readonly diagnostics: AdaptiveDiagnostics }
+  readonly adaptive: QualityScores & { readonly diagnostics: RelativeClusteringDiagnostics }
   /** ARI between the static and adaptive leaf partitions on the shared members. */
   readonly staticVsAdaptiveAri: number
 }
@@ -62,16 +72,16 @@ const staticBuild = (corpus: LabeledCorpus): ClusteringTreeNode =>
 
 export const adaptiveBuild = (
   corpus: LabeledCorpus,
-  schedule: readonly AdaptiveDepthSchedule[] = ADAPTIVE_TREE_DEPTH_SCHEDULE,
+  schedule: readonly RelativeDepthSchedule[] = TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
 ) =>
-  buildAdaptiveClusters({
+  buildRelativeHierarchicalClusters({
     embeddings: corpus.embeddings,
     depthSchedule: schedule,
     restarts: TAXONOMY_KMEANS_RESTARTS,
     maxIter: TAXONOMY_KMEANS_MAX_ITER,
     tolerance: TAXONOMY_KMEANS_TOLERANCE,
     seed: corpus.seed,
-    globalAbsoluteThreshold: ADAPTIVE_GLOBAL_ABSOLUTE_THRESHOLD,
+    globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   })
 
 const scoreTree = (root: ClusterNodeLike, labels: readonly string[]): QualityScores => {
@@ -98,7 +108,7 @@ const scoreTree = (root: ClusterNodeLike, labels: readonly string[]): QualitySco
 
 export const compareOnCorpus = (
   corpus: LabeledCorpus,
-  schedule: readonly AdaptiveDepthSchedule[] = ADAPTIVE_TREE_DEPTH_SCHEDULE,
+  schedule: readonly RelativeDepthSchedule[] = TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
 ): CorpusComparison => {
   const staticTree = staticBuild(corpus)
   const { root: adaptiveTree, diagnostics } = adaptiveBuild(corpus, schedule)
@@ -123,7 +133,7 @@ export const compareOnCorpus = (
  */
 export const crossSampleAri = (
   corpus: LabeledCorpus,
-  schedule: readonly AdaptiveDepthSchedule[] = ADAPTIVE_TREE_DEPTH_SCHEDULE,
+  schedule: readonly RelativeDepthSchedule[] = TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
 ): number => {
   const subsample = (indices: readonly number[]): LabeledCorpus => ({
     ...corpus,

@@ -1,7 +1,19 @@
+import { MembershipRepository } from "@domain/organizations"
 import type { Project } from "@domain/projects"
-import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
-import { isValidId, ProjectId, projectSettingsSchema } from "@domain/shared"
-import { OutboxEventWriterLive, ProjectRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
+import {
+  createProjectUseCase,
+  ProjectRepository,
+  updateProjectRedactionUseCase,
+  updateProjectUseCase,
+} from "@domain/projects"
+import { ForbiddenError, isValidId, ProjectId, projectSettingsSchema, redactionSettingSchema } from "@domain/shared"
+import {
+  MembershipRepositoryLive,
+  OutboxEventWriterLive,
+  ProjectRepositoryLive,
+  SqlClientLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getCookies, setCookie } from "@tanstack/react-start/server"
@@ -68,6 +80,7 @@ export const toRecord = (project: Project) => ({
     onboardingCompleted: project.settings?.onboardingCompleted,
     isSample: project.settings?.isSample,
     sampling: project.settings?.sampling,
+    redaction: project.settings?.redaction,
   },
   firstTraceAt: project.firstTraceAt ? project.firstTraceAt.toISOString() : null,
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
@@ -142,7 +155,9 @@ export const updateProject = createServerFn({ method: "POST" })
         id: ProjectId(data.id),
         name: data.name,
         slug: data.slug,
-        settings: data.settings,
+        // Patch, not replace: `toRecord` narrows `settings` to what the client needs,
+        // so a replace here would drop every key it omits.
+        settingsPatch: data.settings,
       }).pipe(
         Effect.catchTag("InvalidProjectSlugError", (e) =>
           Effect.fail(new Error(JSON.stringify([{ path: ["slug"], message: e.reason ?? "Invalid project slug" }]))),
@@ -157,6 +172,52 @@ export const updateProject = createServerFn({ method: "POST" })
     return toRecord(project)
   })
 
+/**
+ * Change a project's PII redaction policy. Separate from `updateProject` because it
+ * is the only project setting that needs a role gate, and gating `updateProject`
+ * itself would take renames and the sampling slider away from members who have them
+ * today. Owners and admins only; `null` clears the override so the organization
+ * policy applies.
+ */
+export const updateProjectRedaction = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      redaction: redactionSettingSchema.nullable(),
+    }),
+  )
+  .handler(async ({ data }): Promise<ProjectRecord> => {
+    const { organizationId, userId } = await requireSession()
+    const client = getPostgresClient()
+
+    const project = await Effect.runPromise(
+      Effect.gen(function* () {
+        const memberships = yield* MembershipRepository
+        const isAdmin = yield* memberships.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({
+            message: "Only organization owners and admins can change the redaction policy",
+          })
+        }
+
+        return yield* updateProjectRedactionUseCase({
+          projectId: ProjectId(data.projectId),
+          actorUserId: userId,
+          redaction: data.redaction,
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
+          client,
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+
+    return toRecord(project)
+  })
+
 export const completeProjectOnboarding = createServerFn({ method: "POST" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<ProjectRecord> => {
@@ -164,13 +225,9 @@ export const completeProjectOnboarding = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        const current = yield* repo.findById(ProjectId(data.projectId))
-        return yield* updateProjectUseCase({
-          id: current.id,
-          settings: { ...(current.settings ?? {}), onboardingCompleted: true },
-        })
+      updateProjectUseCase({
+        id: ProjectId(data.projectId),
+        settingsPatch: { onboardingCompleted: true },
       }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId), withTracing),
     )
 

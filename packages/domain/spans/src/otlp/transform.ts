@@ -10,6 +10,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
+import { shouldReportUnpricedSpan } from "../helpers/should-report-unpriced.ts"
 import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
@@ -93,10 +94,19 @@ export interface TransformContext {
   readonly projectIdBySlug: ReadonlyMap<string, string>
 }
 
+/** Spans carrying token usage that no models.dev pricing matched, grouped for reporting. */
+export interface UnpricedSpanGroup {
+  readonly projectId: string
+  readonly provider: string
+  readonly model: string
+  readonly spans: number
+}
+
 interface TransformResult {
   readonly spans: readonly SpanDetail[]
   /** Spans skipped for lacking a resolvable `projectId` or a valid `traceId`. */
   readonly rejectedSpans: number
+  readonly unpricedSpanGroups: readonly UnpricedSpanGroup[]
 }
 
 /** Reads `latitude.project` from span attrs first, falling back to resource attrs. */
@@ -197,7 +207,7 @@ function transformSpan({
     }
   }
 
-  return {
+  const detail: SpanDetail = {
     organizationId: OrganizationId(context.organizationId),
     projectId: ProjectId(projectId),
     sessionId: SessionId(resolved.sessionId),
@@ -236,6 +246,9 @@ function transformSpan({
     costOutputMicrocents: resolved.costOutputMicrocents,
     costTotalMicrocents: resolved.costTotalMicrocents,
     costIsEstimated: resolved.costIsEstimated,
+    costSource: resolved.costSource,
+    costPricedProvider: resolved.costPricedProvider,
+    costPricedModel: resolved.costPricedModel,
     timeToFirstTokenNs: performance.timeToFirstTokenNs,
     isStreaming: performance.isStreaming,
     responseId: resolved.responseId,
@@ -258,6 +271,8 @@ function transformSpan({
     toolOutput: toolExecution.toolOutput,
     ingestedAt,
   }
+
+  return detail
 }
 
 export function transformOtlpToSpans(
@@ -266,6 +281,7 @@ export function transformOtlpToSpans(
 ): TransformResult {
   const spans: SpanDetail[] = []
   let rejectedSpans = 0
+  const unpricedByKey = new Map<string, { projectId: string; provider: string; model: string; spans: number }>()
   const { ingestedAt } = context
 
   for (const resourceSpans of request.resourceSpans ?? []) {
@@ -291,10 +307,30 @@ export function transformOtlpToSpans(
           rejectedSpans++
           continue
         }
-        spans.push(transformSpan({ span, traceId, resource, scopeName, scopeVersion, context, projectId, ingestedAt }))
+        const transformed = transformSpan({
+          span,
+          traceId,
+          resource,
+          scopeName,
+          scopeVersion,
+          context,
+          projectId,
+          ingestedAt,
+        })
+        spans.push(transformed)
+
+        // Reporting only. `costSource` keeps every unpriced span marked, so the stored record and
+        // the Cost page's coverage stay exact; the filter just withholds the alert.
+        if (transformed.costSource === "unpriced" && shouldReportUnpricedSpan(transformed)) {
+          const { provider, model } = transformed
+          const key = `${projectId} ${provider} ${model}`
+          const existing = unpricedByKey.get(key)
+          if (existing) existing.spans++
+          else unpricedByKey.set(key, { projectId, provider, model, spans: 1 })
+        }
       }
     }
   }
 
-  return { spans, rejectedSpans }
+  return { spans, rejectedSpans, unpricedSpanGroups: [...unpricedByKey.values()] }
 }

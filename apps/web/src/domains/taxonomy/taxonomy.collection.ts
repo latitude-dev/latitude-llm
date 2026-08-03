@@ -83,6 +83,7 @@ export function useClusterProfile(
   clusterId: string | undefined,
   timeRange: BehaviourTimeRangeRecord | undefined,
   customBehaviorId?: string,
+  facetId?: string,
 ) {
   return useQuery({
     queryKey: clusterProfileQueryKey(projectId, clusterId ?? "", timeRange, customBehaviorId),
@@ -93,6 +94,7 @@ export function useClusterProfile(
           clusterId: clusterId ?? "",
           ...(timeRange ? { timeRange } : {}),
           ...(customBehaviorId ? { customBehaviorId } : {}),
+          ...(facetId ? { facetId } : {}),
         },
       }),
     staleTime: 30_000,
@@ -107,6 +109,7 @@ export function useBehaviourSessions(
   timeRange: BehaviourTimeRangeRecord | undefined,
   momentRange: BehaviourMomentRangeRecord | undefined,
   customBehaviorId?: string,
+  facetId?: string,
 ) {
   return useInfiniteQuery({
     queryKey: behaviourSessionsQueryKey(projectId, clusterId ?? "", filter, timeRange, momentRange, customBehaviorId),
@@ -121,6 +124,7 @@ export function useBehaviourSessions(
           ...(timeRange ? { timeRange } : {}),
           ...(momentRange ? { momentRange } : {}),
           ...(customBehaviorId ? { customBehaviorId } : {}),
+          ...(facetId ? { facetId } : {}),
         },
       }),
     initialPageParam: 0,
@@ -136,6 +140,7 @@ export function useBehaviourTrajectory(
   axis: BehaviourTrajectoryAxis,
   timeRange: BehaviourTimeRangeRecord | undefined,
   customBehaviorId?: string,
+  facetId?: string,
 ) {
   return useQuery({
     queryKey: behaviourTrajectoryQueryKey(projectId, categoryClusterIds, axis, timeRange, customBehaviorId),
@@ -147,6 +152,7 @@ export function useBehaviourTrajectory(
           axis,
           ...(timeRange ? { timeRange } : {}),
           ...(customBehaviorId ? { customBehaviorId } : {}),
+          ...(facetId ? { facetId } : {}),
         },
       }),
     staleTime: 30_000,
@@ -163,6 +169,7 @@ export function useProjectBehaviours({
   pollUntilTopics,
   poll,
   customBehaviorId,
+  facetId,
 }: {
   readonly projectId: string
   readonly dimension: BehaviourDimension
@@ -174,6 +181,7 @@ export function useProjectBehaviours({
    * behavior is generating so the tree appears as soon as the run writes it. */
   readonly poll?: boolean
   readonly customBehaviorId?: string
+  readonly facetId?: string
 }) {
   return useQuery({
     queryKey: projectBehavioursQueryKey({ projectId, dimension, segment, sortBy, timeRange, customBehaviorId }),
@@ -186,6 +194,7 @@ export function useProjectBehaviours({
           sortBy,
           ...(timeRange ? { timeRange } : {}),
           ...(customBehaviorId ? { customBehaviorId } : {}),
+          ...(facetId ? { facetId } : {}),
         },
       }),
     staleTime: 30_000,

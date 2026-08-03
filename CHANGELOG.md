@@ -2,6 +2,137 @@
 
 ## Unreleased
 
+## v0.3.76 - 2026-07-30
+
+### Sessions
+
+- Made the statistics panel actually follow the sessions/traces toggle. The histogram was pinned to sessions, four of the seven cards are sums that read identically either way, and the Sessions card ignored the mode. The panel now resolves its metric per mode, shows the per-trace average under each sum card, and drops the Sessions card in traces mode (ref: #4312).
+
+### Backoffice
+
+- Ranked the Organizations table by credit spend for the current billing period and surfaced it as a column, still enriched with 30-day trace activity. Listing is pinned to an `asOf` cursor so a period boundary crossed mid-scroll cannot reshuffle pages (ref: #4306).
+
+## v0.3.75 - 2026-07-30
+
+### Cost
+
+- Added a project-scoped Cost section behind the `costDashboard` organization flag: a KPI row, a cost-over-time chart with Total/Average/p95, and the data-confidence strip later cost panels build on. Every figure is gated to billable operations so wrapper and tool spans cannot double-count spend, per-trace denominators count only traces with at least one billable span, buckets and labels are UTC, and the still-filling bucket is drawn hatched or dashed so the last point is not read as spend falling (ref: #4290).
+
+### Behaviors
+
+- Fixed Behaviours going blank on every rebuild. Publication activated the new tree while its clusters were still named "Pending", so the read filtered out every node for the whole naming phase, and until the next garden run if naming failed. A fresh tree is now saved as staging, named, then reassigned and swapped in one step, so the previous tree keeps serving until the new one is displayable (ref: #4305).
+
+### Annotations
+
+- Fixed annotating reasoning blocks. The anchor resolver accepted only text parts, and in a coding-agent trace every turn before the final answer is reasoning plus tool calls, so annotating anything but the last message failed (ref: #4304).
+- Fixed annotating user messages written with soft line breaks or raw HTML. Those text runs lost their source offsets, so the selection popover opened and then closed without resolving an anchor (ref: #4302).
+
+### Integrations
+
+- Fixed integration dispatch targets being stored per project. Connecting an integration wrote a project override only, so "Send to agent" reported "Finish setting up <kind>" from signals in every other project and auto-dispatch never fired there. Connect now seeds the organization default and the repo picker updates it; existing override targets are backfilled to the default with triggers left off, so the current auto-dispatch scope is unchanged (ref: #4308).
+
+### Email
+
+- Restored the logo image in notification email headers, which broke when the app switched to an inline SVG wordmark and the PNG was removed (ref: #4309).
+
+### Models
+
+- Updated the bundled models.dev catalog data (ref: #4287).
+
+## v0.3.74 - 2026-07-30
+
+### Traces
+
+- Recorded why a span's cost is zero. A stored 0 could mean a provider reporting a free call, a model we could not price, or a span with no tokens, and all three read identically. Spans now carry `cost_source` (`provider_reported`, `estimated`, `unpriced`, `no_tokens`, `unknown`), and traces and sessions carry an unpriced span count so a rollup total can say when it is a floor rather than an answer. Spans stored before this keep their cost and read back as `unknown` where a zero is genuinely ambiguous (ref: #4293).
+- Priced gateway-routed models. A gateway names itself as the provider and carries the real vendor in the model slug, so those spans matched no pricing entry and priced at zero. Spans now also record which catalog entry an estimate came from, in `cost_priced_provider` and `cost_priced_model`, which makes a partial model match a plain query (ref: #4293).
+
+### Behaviors
+
+- Stopped coding-agent harness context from firing jailbreak flags. Claude Code `<system-reminder>` blocks and Conductor `<system_instruction>` blocks are product-injected session context rather than user prompt injection, so they no longer count as jailbreak evidence and harness-only turns are skipped (ref: #4286).
+- Fixed deleting a behavior or filtered view while it was still generating. The in-flight garden workflow was not terminated first, so it kept writing clusters and assignments for a deleted view. Deleting a whole-project behavior now cascades to its filtered views, and the UI blocks delete while the target view is generating (ref: #4252).
+
+### Onboarding
+
+- Added a required "How did you hear about us?" question, with optional free text when "Other" is picked so it never blocks completing onboarding. Answers are stored as stable slugs, so the options can be re-worded without breaking historical segments, and they sync to Loops alongside job title and phone number (ref: #4282).
+- Added country-code selection to the onboarding phone field, including the invite-claim flow, which had its own copy of the form (ref: #4294).
+
+### Web
+
+- Added command palette entries for MCP setup and for each integration (Slack, GitHub, Cursor, Claude Code, Linear, Webhook). None of them previously answered a Cmd+K search for the tool's own name, and the MCP guide was reachable only from the signal detail page (ref: #4296).
+- Fixed the organization switcher hiding every other organization after a switch, caused by a stale internal filter query persisting between opens (ref: #4295).
+- Fixed the Store Home dashboard failing for projects older than about 30 days, where the all-time range produced trend buckets larger than the one-day cap the server functions accept (ref: #4252).
+
+### Analytics
+
+- Added Microsoft Clarity session recording across the app, gated on `VITE_LAT_CLARITY_PROJECT_ID`. It is absent when the variable is unset, so local development and the public self-host images load no third-party recorder, and it is kept out of staff and impersonated sessions (ref: #4279).
+
+## v0.3.73 - 2026-07-29
+
+### Privacy
+
+- Added a Privacy page under Project settings that turns PII redaction on. It holds both layers of the cascade: the organization policy (owner only, with a lock that stops admins from weakening it) and the project policy, which shows the effective values the ingest pipeline resolves. Redaction was already wired end to end but had no control surface, so every project resolved to `off`. Enabling it invalidates the ingest cache so it applies immediately, and policy changes emit audit events with before/after snapshots (ref: #4257).
+- Exposed the redaction policy on the public projects API: `settings.redaction` (mode, entity categories, metadata scope, identity handling) is now readable and patchable (ref: #4257).
+- Rendered redaction placeholders such as `[REDACTED_EMAIL]` as inline chips in conversation content, so a placeholder reads as something the platform did rather than as model output or corrupted text (ref: #4257).
+- Fixed settings writes clobbering each other. Every writer sent the whole settings object to a use case that replaced it, so renaming an organization wiped the spending limit and the showcase flag, and the project Signals toggle and sampling slider each dropped the keys they do not render. Writers now patch only the keys they own, merged inside the same transaction (ref: #4257).
+
+### Traces
+
+- Fixed $0 cost on Claude Agent SDK spans. Mastra reports the SDK's npm package name in `gen_ai.provider.name`, which never matched a pricing entry, so spans carrying millions of tokens priced at zero. Added aliases for the agent SDK package names and corrected the `anthropic_vertex` alias, which pointed at a provider id that does not exist and silently zeroed Vertex Anthropic span cost and credit metering. Cost is computed at ingest, so existing spans keep their stored value (ref: #4278, #4284).
+- Reported spans that cannot be priced instead of failing silently. Ingest aggregates them per project, provider and model and reports them on a dedicated error span, throttled to one report per hour per combination. The batch still succeeds, since the spans themselves are valid (ref: #4278, #4284).
+
+### Web
+
+- Redesigned the subagent chat view: tool calls render as labeled Input/Output disclosures, subagent cards collapse to a single-line preview, and nested subagent conversations are navigable through a breadcrumb trail that collapses past four levels (ref: #4281).
+
+## v0.3.72 - 2026-07-28
+
+### Conversation intelligence
+
+- Stabilized adaptive taxonomy root splits. When the best root candidate lands just below the separation gate, the build now re-searches with a larger restart budget instead of collapsing, so top-level topic counts stop swinging run to run as the window turns over. Corpora comfortably above or below the gate behave exactly as before (ref: #4274).
+
+### Web
+
+- Fixed the "Linear API settings" link in the agent dispatch setup modal, which pointed at a hardcoded Linear workspace instead of the reader's own (ref: #4256).
+
+## v0.3.71 - 2026-07-28
+
+### Traces
+
+- Added inline PDF previews to conversation attachments: a first-page thumbnail inside the file card that expands into a scrollable viewer with zoom, page navigation, and keyboard control. Cross-origin PDFs keep the open-in-new-tab card. Assets are self-hosted so air-gapped deployments render correctly (ref: #4246).
+
+### Behaviors
+
+- Reshaped Behaviours into a catalog: `/behaviours` lists behavior cards (Topics plus curated presets or a custom one), each behavior has its own page with a tree and its saved views under `/behaviours/:slug/views/:view`, old flat view links redirect, and creating a behavior streams a cold-start analysis with a health read and refine/stop. Behind the `customBehaviors` flag; orgs without it keep the current page (ref: #4204).
+- Documented behaviors, views, and facets in the public docs and moved the page under Understand, with a redirect from `/search/behaviours` to `/behaviours/overview` (ref: #4247).
+
+### Web
+
+- Fixed PostHog session stitching so anonymous latitude.so visitors merge into the signed-up user, and the first authenticated pageview carries its organization group (ref: #4205).
+
+### Conversation intelligence
+
+- Prevented lone UTF-16 surrogates from truncated transcripts and moment evidence, which broke ClickHouse writes and Bedrock prompts (ref: #4225).
+- Skipped user-centric flaggers on taxonomy nested samples so wording quoted inside cluster samples no longer triggers frustration flags (ref: #4226).
+
+### Models
+
+- Refreshed the bundled model catalog with updated providers, capabilities, limits, and pricing (ref: #4227, #4232, #4251).
+
+### Internal
+
+- Landed the span ingestion PII redaction core (detectors, JSON and text redaction, policy cascade) plus its spec. Not wired into ingestion yet, so behavior is unchanged (ref: #4245).
+- Wired PII redaction into the ingest pipeline. The organization/project policy cascade resolves at ingest time and redaction runs before spans are written, failing the batch rather than writing plaintext if a policy is malformed. There is no configuration surface yet, so organizations that have not opted in are unaffected. New optional `LAT_REDACTION_PSEUDONYM_SECRET` keys identity pseudonymization (ref: #4248).
+
+## v0.3.70 - 2026-07-26
+
+### Traces
+
+- Fixed PDF conversation attachments mislabeled as images so they render as document cards, with previews for linked files and downloads for inline files (ref: #4231).
+
+### Models
+
+- Refreshed the bundled model catalog with new providers and models, including Claude Opus 5 availability, plus updated capabilities, limits, and pricing (ref: #4223).
+
 ## v0.3.69 - 2026-07-24
 
 ### Memory

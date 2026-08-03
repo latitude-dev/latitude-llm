@@ -289,6 +289,31 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
+    const signalRepository = yield* EvaluationSignalRepository
+    const issue = yield* signalRepository
+      .findById(SignalId(evaluation.signalId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+    if (issue === null || issue.projectId !== input.projectId) {
+      return {
+        action: "skipped",
+        reason: "issue-not-found",
+        evaluationId: input.evaluationId,
+        traceId: input.traceId,
+      } satisfies RunLiveEvaluationResult
+    }
+
+    // An ignored signal short-circuits ahead of the embedding-readiness gate, so it
+    // returns signal-ignored at once instead of being requeued to wait for embeddings.
+    if (issue.ignoredAt !== null) {
+      return {
+        action: "skipped",
+        reason: "signal-ignored",
+        evaluationId: input.evaluationId,
+        traceId: input.traceId,
+      } satisfies RunLiveEvaluationResult
+    }
+
     // Readiness gate — only for scripts that call semanticSimilarity(), before any billing or execution
     // work. We check the triggering trace: it's the one whose embeddings race this run, and older traces
     // in the session were embedded on their own ingest cycles.
@@ -336,29 +361,6 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
           traceId: input.traceId,
         } satisfies RunLiveEvaluationResult
       }
-    }
-
-    const signalRepository = yield* EvaluationSignalRepository
-    const issue = yield* signalRepository
-      .findById(SignalId(evaluation.signalId))
-      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-
-    if (issue === null || issue.projectId !== input.projectId) {
-      return {
-        action: "skipped",
-        reason: "issue-not-found",
-        evaluationId: input.evaluationId,
-        traceId: input.traceId,
-      } satisfies RunLiveEvaluationResult
-    }
-
-    if (issue.ignoredAt !== null) {
-      return {
-        action: "skipped",
-        reason: "signal-ignored",
-        evaluationId: input.evaluationId,
-        traceId: input.traceId,
-      } satisfies RunLiveEvaluationResult
     }
 
     const signalContext = {
