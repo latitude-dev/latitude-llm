@@ -84,10 +84,7 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
             .from(agentDispatchConfigs)
             // Joined to live projects because nothing cleans these rows up on ProjectDeleted, and
             // the caller's total comes from live projects, so orphans would overshoot it.
-            .innerJoin(
-              projects,
-              and(eq(projects.id, agentDispatchConfigs.projectId), isNull(projects.deletedAt)),
-            )
+            .innerJoin(projects, and(eq(projects.id, agentDispatchConfigs.projectId), isNull(projects.deletedAt)))
             .where(
               and(
                 sql`${agentDispatchConfigs.projectId} is not null`,
