@@ -422,22 +422,18 @@ export const TAXONOMY_KMEANS_MAX_ITER = 25
 export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
 
 /**
- * Restart budget for re-searching the ROOT split when it lands near the
- * separation gate. k-means only finds a local optimum, so the tree it returns
- * depends on where k-means++ seeded — and because seeds are drawn as indices
- * into the member list, a few percent of window turnover redraws them entirely.
- * On corpora whose root split sits close to `minRelativeSeparation`, three
- * restarts is too small a sample: some runs find a partition that clears the gate
- * and some do not, so the tree alternates between a real split and a bare leaf.
+ * Restart budget for re-searching the ROOT split when it lands near the separation
+ * gate. k-means finds a local optimum, so the tree depends on where k-means++
+ * seeded, and seeds are drawn as indices into a member list that window turnover
+ * re-addresses (LAT-825). Three restarts is too small a sample on a corpus whose
+ * root sits near `minRelativeSeparation`: the tree alternates between a real split
+ * and a bare leaf.
  *
- * Do not lower this to buy headroom against
- * `TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS` — it does not buy any. Replaying the
- * pilot's 19 real historical 7-day windows, 12 restarts collapses three roots,
- * exactly as many as not re-searching at all, and reaches a lower separation on
- * five windows; 25 collapses two and dominates it everywhere. Yet the worst
- * window costs 64s at 12 against 68s at 25, because the first pass and the
- * subtrees dominate that total rather than the root sweep. Cheaper by 6%, worth
- * appreciably less.
+ * Do not lower this to buy headroom against the worker deadline — it buys almost
+ * none. Over the pilot's real historical windows 12 restarts collapses as many
+ * roots as not re-searching at all, while costing only 6% less than 25, because the
+ * first pass and the subtrees dominate that total rather than the root sweep.
+ * Narrow the swept K instead (TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH).
  */
 export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 25
 /**
@@ -458,70 +454,53 @@ export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
 /**
  * How many K the root re-search sweeps, best-scoring-first from the first pass.
  *
- * A k-means run costs O(n·k·dimensions), so re-sweeping the whole 2..maxChildren
- * at the escalated budget spends most of it re-confirming K values the first pass
- * already ranked last. Measured on the real pilot corpus, the root's accepted
- * split and its separation are IDENTICAL for every root sweep width from 3 to 10
- * (k=2 wins throughout) while the build ranges 6.9s to 46.3s — a 6.7x spread that
- * buys nothing. 3 keeps the winner plus two neighbours, which is what makes the
- * re-search fit `TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS` without widening it.
+ * A k-means run costs O(n·k·dimensions), so sweeping all of 2..maxChildren spends
+ * most of the escalated budget re-confirming K the first pass already ranked last.
+ * On the real pilot corpus the root's accepted split is identical at every sweep
+ * width from 3 to 10 while the build ranges 6.9s to 46.3s. 3 rather than 2 for a
+ * spare candidate if the best-scoring K fails the gates at the higher restart count.
  */
 export const TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH = 3
 
 // ---------------------------------------------------------------------------
 // Clustering worker resource bounds
 //
-// The divisive build runs in a dedicated Node worker thread. These bound a
-// single worker invocation. The old-generation budget is the calibrated worker
-// heap ceiling: memory is a function of the sample, not of the search budget, and
-// the measured build peaks well under it.
+// The divisive build runs in a dedicated Node worker thread. The old-generation
+// budget is the worker heap ceiling: memory is a function of the sample, not of the
+// search budget.
 //
-// The deadline is NOT a spare backstop — it is the binding constraint on the
-// search budget, and it has already been breached once. #4274 added a near-gate
-// root re-search costing ~10x a plain build without dividing that into this
-// number, and the pilot's enforced runs timed out here for six days. A local
-// measurement understates the risk badly: the build this was originally sized
-// against measures ~12s locally but 61-65s on the production activity worker, and
-// host speed there swings ~4.4x run to run (the static build of a comparable
-// corpus ranges 19-93s). So the re-search is bounded to fit THIS number
-// (see TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH) rather than the reverse.
+// The deadline is the binding constraint on the search budget, not a spare backstop:
+// the re-search is bounded to fit it (TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK), so
+// raising the search budget without re-deriving that is a deadline breach. Sizing
+// it needs production numbers, not local ones — the build this was set against runs
+// ~12s locally but 61-65s on the activity worker, whose speed varies ~4.4x pass to
+// pass. Kept well under the 30-minute Temporal start-to-close of the planning
+// activity that awaits it.
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 5 * 60_000
 export const TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB = 512
 
 /**
- * Dot-product element operations the clustering worker gets through per
- * millisecond, used to project whether a re-search fits the worker deadline
- * before starting it.
- *
- * Measured, not guessed: a plain adaptive build over 970 observations sweeps
- * K=2..10 at 3 restarts and ≤25 iterations, so at most
- * `3 × 25 × 970 × 2048 × 54 ≈ 8.0e9` element operations, and it takes 61-65s on
- * the production activity worker — ~128 ops/µs. 80 leaves headroom for a slower
- * host pass without being so pessimistic that it declines work that would have
- * finished. Retune it from `taxonomy.adaptive.projectedRootSearchWork` against
- * observed `durationMs` rather than re-deriving it by hand.
+ * Dot-product element operations the clustering worker gets through per millisecond.
+ * Measured, not assumed: a plain build over 970 observations sweeps K=2..10 at 3
+ * restarts and <=25 iterations, so at most `3 * 25 * 970 * 2048 * 54` ~ 8.0e9
+ * element operations, and takes 61-65s on the production activity worker — ~128 per
+ * microsecond. 80 leaves headroom for a slow host pass. Retune from
+ * `taxonomy.adaptive.projectedRootSearchWork` against observed `durationMs`.
  *
  * Not exported: only the derived budget below is a contract.
  */
 const CLUSTERING_WORKER_ELEMENT_OPS_PER_MS = 80_000
 
 /**
- * Work ceiling for the near-gate re-search: what the worker can be expected to
- * finish inside its own deadline. A projected operation COUNT rather than a
- * duration, because the builder has to stay a pure function of its inputs — a
+ * Work ceiling for the near-gate re-search, as a projected operation COUNT rather
+ * than a duration: the builder must stay a pure function of its inputs, and a
  * wall-clock check would branch differently on a slow host and break Temporal
- * replay determinism.
- *
- * This is the guardrail #4274 lacked. Its re-search cost ~10x a plain build and
- * nothing compared that to the deadline, so the pilot's enforced runs burned the
- * full budget and fell back to static ~8 times a day for six days. Now an
- * unaffordable re-search is declined up front, deterministically, and says so via
- * `escalationSkipped` — the same tree the timeout produced, minutes sooner and
- * visibly. At the current settings the pilot's ~900-observation corpus projects to
- * ~74% of this, while the `TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX` corpus does not
- * fit and is declined.
+ * replay. An unaffordable re-search is declined up front and reports
+ * `escalationSkipped`, which is what stops a too-tight budget from suppressing
+ * adaptive silently. At current settings a ~900-observation corpus projects to ~74%
+ * of this and a TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX corpus is declined.
  */
 export const TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK =
   TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS * CLUSTERING_WORKER_ELEMENT_OPS_PER_MS

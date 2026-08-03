@@ -10,7 +10,7 @@ import {
   TaxonomyRunId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
-import { Effect, Layer } from "effect"
+import { Duration, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { isAdaptiveModeActive } from "../adaptive-mode.ts"
 import type { ClusteringTreeNode } from "../clustering.ts"
@@ -351,21 +351,25 @@ describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive b
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
   })
 
-  // A `buildError` used to reach telemetry as nothing but its own name: the catch
-  // discarded the error and, because it wrapped the timing, reported 0 ms too. A
-  // build the worker deadline killed and one that threw on arrival were then
-  // indistinguishable on the span, which is why a six-day pilot outage needed a
-  // ClickHouse dig to diagnose.
+  // Catching outside `Effect.timed` reported 0 ms for every failure, so a build the
+  // worker deadline killed looked identical to one that threw on arrival. The builder
+  // here burns measurable time before failing, which is what makes the assertion
+  // below fail under that shape rather than pass vacuously.
   it("enforced: a failed adaptive build reports why it failed and how long it ran", async () => {
+    const slowRejectingBuilder: TaxonomyClusterBuilder = (request) =>
+      isAdaptiveModeActive(request.mode)
+        ? Effect.sleep(Duration.millis(20)).pipe(Effect.andThen(Effect.fail(new Error("adaptive worker crashed"))))
+        : Effect.sync(() => runTaxonomyClusterBuild(request))
+
     const plan = await runPlan(
       createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
       createFakeTaxonomyClusterRepository([]),
-      { now, mode: "enforced", clusterBuilder: rejectingAdaptiveBuilder },
+      { now, mode: "enforced", clusterBuilder: slowRejectingBuilder },
     )
 
     expect(plan.fallbackReason).toBe("buildError")
     expect(plan.adaptiveBuildError).toBe("adaptive worker crashed")
-    expect(plan.adaptiveDurationMs).toBeGreaterThanOrEqual(0)
+    expect(plan.adaptiveDurationMs).toBeGreaterThan(0)
   })
 
   it("a successful adaptive build records no build error", async () => {

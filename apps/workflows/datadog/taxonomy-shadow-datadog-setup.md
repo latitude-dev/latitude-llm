@@ -64,7 +64,10 @@ to ~1 root child, and node-relative adaptive should recover the real intents.
 | `diff.partitionAri` | Adjusted Rand Index of the two leaf partitions on the shared sample: **1 = identical**, ~0 = unrelated | **< 1** on projects static gets wrong (adaptive reorganized them); **near 1** where static was already good (no needless churn); **stable** per project | ≈ 1 on the pilot (collapse *not* fixed); ≈ 0 everywhere (adaptive reshuffles even good taxonomies); jumps between runs |
 | `relativeSeparation.p50` (+ p10/p90) | How far accepted splits clear the node-relative gate (threshold 0.45 at root → 0.65 deep) | Comfortably **above** the depth threshold — accepted splits are genuinely separated | Hugging the threshold → marginal, fragile splits a small schedule change would flip |
 | `rejectionReason.*` counts (undersizedChild / dominantChild / lowScore / lowRelativeSeparation) | Why candidate splits were rejected — the "explain every collapse" layer | Mixed/low; a collapse is explainable by the reason that dominates | `lowRelativeSeparation` dominating a project you *expect* to split → the separation gate is the binding constraint (possibly too strict); `dominantChild` → one child hogging the parent |
-| `adaptiveDurationMs` vs `staticDurationMs` | Per-build wall-clock | Adaptive within **~25%** of static (the calibrated ceiling) | Adaptive ≳ 2× static → perf regression / calibration issue |
+| `adaptiveDurationMs` vs `staticDurationMs` | Per-build wall-clock. **Read it against `escalated`**, not on its own: a near-gate root re-search deliberately costs ~2.4× a plain adaptive build, so an escalated run legitimately lands well above static | `escalated:0` runs within **~25%** of static; `escalated:1` runs up to ~**3–4×** static and comfortably under `TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS` (300s) | An `escalated:0` run ≳ 2× static → perf regression. Any run at ~300s → it is being killed by the worker deadline and will show `fallbackReason:buildError` with `durationMs:0` |
+| `escalated` / `escalationSkipped` | Whether the root landed in the re-search band, and whether the projected work budget declined it | `escalated:1` on narrow projects that need it; `escalationSkipped:0` | `escalationSkipped:1` recurring → `TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK` is too tight for that corpus and adaptive is being silently suppressed. Compare `projectedRootSearchWork` against the budget |
+| `bestRootSeparation` | Best separation any ROOT candidate reached, accepted or not | Above the 0.45 root gate, or well below 0.25 on genuinely unimodal projects | Sitting inside the [0.25, 0.8) band every run → that project re-searches on every pass and pays for it |
+| `buildError` | Message behind a `fallbackReason:buildError` | `none` | A timeout message → the build is exceeding the worker deadline; anything else is a builder fault |
 | `peakRssBytes` (max) | Process RSS around the build | Comfortably **under** the worker limit (512 MB old-gen heap) | Approaching it → OOM risk, which itself trips a `buildError` fallback |
 | `fallbacks` (`fallbackReason:*` count) | Runs that fell back to static: `nonFinite` / `structuralLimit` / `buildError` | **0** | Any. `nonFinite`/`structuralLimit` = a builder correctness bug; frequent `buildError` = worker instability. This is the primary "is adaptive safe to enforce" gate |
 | `observationsSampled` | Sample size feeding the build (min 15, cap 1,500) | Context only | Near 15 → thin sample; treat that project's row with lower confidence |
@@ -73,8 +76,10 @@ to ~1 root child, and node-relative adaptive should recover the real intents.
 **The pilot verdict** (Phase-5 go/no-go) reads as: the pilot project's row shows
 `static.rootChildCount` ≈ 1 and `adaptive.rootChildCount` **3–5**, `diff.partitionAri`
 sits below 1 and is **stable** across ≥2 turnovers, `fallbacks` is **0**,
-`adaptiveDurationMs` is within ~25% of static, and `peakRssBytes` stays under the
-worker limit — with every collapsed node on any project explainable from its
+`adaptiveDurationMs` is within ~25% of static on `escalated:0` runs (an
+`escalated:1` run is expected to be several times static — judge it against the
+worker deadline instead), `escalationSkipped` is **0**, and `peakRssBytes` stays
+under the worker limit — with every collapsed node on any project explainable from its
 `rejectionReason` mix. If all hold, adaptive is safe to enforce for that org.
 
 ## Why the read needs ~2 weeks

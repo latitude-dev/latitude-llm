@@ -260,13 +260,11 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     RE_SEARCH_TIMEOUT_MS,
   )
 
-  // Regression: the re-search used to pass its budget to `restarts`, which every
-  // depth reads, so a band decision made on the ROOT re-searched the entire tree.
-  // On the pilot that made the adaptive build ~10x a plain one — past the
-  // clustering worker's deadline on nearly every run, so enforced mode fell back
-  // to static with `buildError` and no diagnostics at all. `rejectedCandidates`
-  // counts evaluated (k, restart) candidates, so it is a direct, hardware-free
-  // measure of the search work a build did.
+  // Regression: the budget used to reach `restarts`, which every depth reads, so a
+  // band decision made on the ROOT re-searched the entire tree at ~10x the cost.
+  // `rejectedCandidates` is a hardware-free proxy for search work — it undercounts
+  // (accepted candidates and failed inits do not increment it) but is monotone in
+  // work across two builds over the same corpus, which is all this compares.
   it(
     "the re-search spends the escalated budget on the root only",
     () => {
@@ -300,11 +298,9 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     RE_SEARCH_TIMEOUT_MS,
   )
 
-  // The other half of fitting the deadline: a k-means run costs O(n·k·dimensions),
-  // so re-sweeping all of 2..maxChildren spends most of the escalated budget
-  // re-confirming K the first pass already ranked last. On the real pilot corpus
-  // the root's chosen split is identical for every sweep width from 3 to 10 while
-  // the build ranges 6.9s to 46.3s.
+  // A k-means run costs O(n·k·dimensions), so re-sweeping all of 2..maxChildren
+  // spends most of the escalated budget re-confirming K the first pass already
+  // ranked last, for the same root split.
   it(
     "the re-search sweeps only the best-scoring K, not the whole range",
     () => {
@@ -335,18 +331,15 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     RE_SEARCH_TIMEOUT_MS,
   )
 
-  it("the promising-K set is deterministic under score ties", () => {
+  it("repeated escalated builds select the same promising K", () => {
     const corpus = buildNarrowDomainCorpus()
     const run = () => buildWith(corpus, true)
     expect(partitionSignature(run().root)).toBe(partitionSignature(run().root))
   })
 })
 
-// The guardrail #4274 lacked. Its re-search cost ~10x a plain build and nothing
-// compared that to the worker deadline, so the pilot burned the whole budget and
-// fell back to static ~8 times a day for six days. The budget is a projected
-// operation COUNT, never a clock reading: a wall-clock check would branch
-// differently on a slow host and break Temporal replay determinism.
+// The budget is a projected operation COUNT, never a clock reading: a wall-clock
+// check would branch differently on a slow host and break Temporal replay.
 describe("buildRelativeHierarchicalClusters — the re-search work budget", () => {
   const corpus = buildNarrowDomainCorpus()
   const buildWithBudget = (maxSearchWork: number) =>
