@@ -136,12 +136,6 @@ function parseOutput(attrs: readonly OtlpKeyValue[]): GenAIMessage[] {
   return message ? [message] : []
 }
 
-/** Keys this parser reads, composed into `isContentAttributeKey`. */
-export const FLUE_CONTENT_ATTRIBUTE_KEYS = {
-  exact: ["flue.turn.input", "flue.turn.output"],
-  prefixes: [],
-} as const
-
 export function parseFlue(attrs: readonly OtlpKeyValue[]): ParsedContent {
   const { inputMessages, systemInstructions, toolDefinitions } = parseInput(attrs)
 

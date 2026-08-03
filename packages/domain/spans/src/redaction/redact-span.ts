@@ -1,12 +1,13 @@
 import type { RedactionPolicy } from "@domain/shared"
 import type { SpanDetail } from "../entities/span.ts"
-import { isContentAttributeKey } from "../otlp/content/index.ts"
 import { REDACTED_IDENTITY_PLACEHOLDER } from "./labels.ts"
 import {
   emptyScanTally,
   mergeScanTally,
+  type NumberMapRedactionResult,
   redactJsonString,
   redactJsonValue,
+  redactNumberMap,
   redactStringMap,
   type ScanTally,
 } from "./redact-json.ts"
@@ -15,7 +16,7 @@ import { mergeRedactionCounts, type RedactionCounts, redactLeaf } from "./redact
 interface SpanRedactionStats {
   readonly counts: RedactionCounts
   readonly scan: ScanTally
-  readonly droppedAttributeKeys: number
+  readonly relocatedNumericAttributes: number
   readonly pseudonymizedIdentities: number
 }
 
@@ -30,13 +31,24 @@ export function redactSpanDetail(
   const entities = policy.entities
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
-  let droppedAttributeKeys = 0
+  const relocated: Record<string, string> = {}
+  let relocatedNumericAttributes = 0
   let pseudonymizedIdentities = 0
 
   const take = <T>(result: { value: T; counts: RedactionCounts; scan: ScanTally }): T => {
     mergeRedactionCounts(counts, result.counts)
     mergeScanTally(scan, result.scan)
     return result.value
+  }
+
+  const takeNumbers = <T extends number>(result: NumberMapRedactionResult<T>): Record<string, T> => {
+    mergeRedactionCounts(counts, result.counts)
+    mergeScanTally(scan, result.scan)
+    for (const [key, placeholder] of Object.entries(result.relocated)) {
+      relocated[key] = placeholder
+      relocatedNumericAttributes += 1
+    }
+    return result.kept
   }
 
   const inputMessages = take(redactJsonValue(span.inputMessages, entities))
@@ -53,13 +65,6 @@ export function redactSpanDetail(
   scan.chars += statusMessageOutcome.scannedChars
   if (statusMessageOutcome.oversized) scan.oversized += 1
 
-  // Dropping is not redundant with the value pass behind it: it also removes the prose no detector matches.
-  const contentKeys = Object.keys(span.attrString).filter(isContentAttributeKey)
-  droppedAttributeKeys = contentKeys.length
-  const attrStringSource =
-    contentKeys.length > 0
-      ? Object.fromEntries(Object.entries(span.attrString).filter(([key]) => !isContentAttributeKey(key)))
-      : span.attrString
   // Not redundant with the identity columns below: those are resolved copies, and these maps hold the originals.
   const identities = identityReplacements(span, policy, pseudonyms)
   const substitute = (map: Readonly<Record<string, string>>): Readonly<Record<string, string>> => {
@@ -68,8 +73,13 @@ export function redactSpanDetail(
     return outcome.value
   }
 
-  const attrString = take(redactStringMap(substitute(attrStringSource), entities))
+  const redactedAttrString = take(redactStringMap(substitute(span.attrString), entities))
   const resourceString = take(redactStringMap(substitute(span.resourceString), entities))
+
+  // `attrBool` is not scanned: no detector can match "true" or "false".
+  const attrInt = takeNumbers(redactNumberMap(span.attrInt, entities))
+  const attrFloat = takeNumbers(redactNumberMap(span.attrFloat, entities))
+  const attrString = { ...relocated, ...redactedAttrString }
 
   // Identity handling is its own control, so it applies to metadata and tags whether or not the metadata scope is on.
   const metadataSource = substitute(span.metadata)
@@ -114,6 +124,8 @@ export function redactSpanDetail(
       metadata,
       eventsJson,
       attrString,
+      attrInt,
+      attrFloat,
       resourceString,
       inputMessages,
       outputMessages,
@@ -122,7 +134,7 @@ export function redactSpanDetail(
       toolInput,
       toolOutput,
     },
-    stats: { counts, scan, droppedAttributeKeys, pseudonymizedIdentities },
+    stats: { counts, scan, relocatedNumericAttributes, pseudonymizedIdentities },
   }
 }
 

@@ -209,7 +209,8 @@ Similarly, `events_json = JSON.stringify(span.events)` (`transform.ts:223`) is s
 | `toolInput`, `toolOutput` | If the string parses as JSON, walk and re-serialize; otherwise treat as plain text |
 | `statusMessage` | Plain text |
 | `eventsJson` | Parse JSON, walk all string leaves, re-serialize; on parse failure treat as plain text |
-| `attrString` | **Drop known content keys entirely**, then value-redact the remaining values ([§4.2.2](#422-attribute-map-handling)) |
+| `attrString` | Value-redact every value, JSON-aware; keys are never removed ([§4.2.2](#422-attribute-map-handling)) |
+| `attrInt`, `attrFloat` | Scan as text; a match relocates the key into `attrString` as a placeholder ([§4.2.2](#422-attribute-map-handling)) |
 | `resourceString` | Value-redact all values (small map, keys preserved) |
 
 #### Metadata scope — opt-in, `scopes.metadata`, default off
@@ -229,7 +230,9 @@ Both columns are *resolved copies* of span attributes, so the substitution also 
 
 #### Never touched, with reasons
 
-`linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrInt`/`attrFloat`/`attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
+`linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
+
+`attrInt` and `attrFloat` were on this list until the key drop was reversed; they are now scanned as text and relocated on a match ([§4.2.2](#422-attribute-map-handling)). `attrBool` stays because no detector can match `"true"`.
 
 #### 4.2.1 GenAI part walk
 
@@ -258,12 +261,19 @@ The risk this trades into is redacting a tool-call id and breaking the tool-call
 
 #### 4.2.2 Attribute map handling
 
-`attr_string` gets two passes, in order:
+> **Amended.** This section originally specified dropping known content keys from `attr_string` before value-redacting the rest, on the grounds that the parsed columns already carry that content. That is reversed: **redaction replaces values and never deletes a key.** The three reasons are below; the original text is in git history.
 
-1. **Drop content keys.** When `mode == "enforce"`, delete every key for which `isContentAttributeKey(key)` is true. Zero false positives (exact/prefix key matching, no value scanning), zero CPU, and nothing is lost from the product surface because the UI reads the parsed columns.
-2. **Value-redact the remainder.** Backstop for vendors we have not enumerated: run the detectors over the remaining values. Attribute values are small, so this is cheap.
+1. **The drop set and the parse set were never the same set.** `parseContent` returns at the first matching parser, but `isContentAttributeKey` was the union of all eight. An OpenInference span lost `input.value` / `output.value` although the json-value parser never ran and nothing promoted them to a column — content deleted that no code had read.
+2. **"Nothing is lost from the product surface" was false.** The Attributes panel renders `attr_string` directly, so the drop made it display a span the exporter never sent, with no way to distinguish a missing attribute from one we removed. Content under keys no parser claims (`agent_end.messages`) survived regardless, so the effective rule was "deleted if we recognise the key" — not a guarantee, and not explainable to a customer.
+3. **It was a storage decision inside a privacy feature.** The duplicate copy in `attr_string` is a real cost ([T-1](#8-traps)), but it is every project's cost. Deleting it only for projects that enabled a compliance control made redaction a storage optimisation and left redacting projects storing less than everyone else. If the duplication is worth removing, it gets its own setting applying to all projects.
 
-`isContentAttributeKey` must **not** be a hand-maintained list in the redaction module. Each parser in `packages/domain/spans/src/otlp/content/` already knows its own keys; have each module export a key matcher and compose them in `content/index.ts` next to the existing vendor dispatch table (`content/index.ts:41-87`). A new vendor parser then gets redaction coverage automatically. Known families to cover: `genai`, `genai_deprecated`, `openinference`, `vercel`, `livekit`, `flue`, `claude-code`, `json-value`.
+The current behaviour:
+
+- `attr_string` and `resource_string` are value-redacted through `redactJsonString`, not a flat leaf scan, so an attribute holding the same JSON as a parsed column gets the same structural walk — depth cap, `blob`/`file` part skipping, raw-number preservation. One payload redacted by two different passes would be two behaviours to defend rather than one.
+- `attr_int` and `attr_float` are scanned as text, and a match **relocates** the key into `attr_string` as a whole-value placeholder, since `Map(String, Int64)` cannot hold `[REDACTED_*]`. Only `credit_card` is reachable on a bare number — every other entity needs a separator, a sigil, or a letter — and it is gated by length, issuer prefix, and Luhn, so a token count or millisecond timestamp does not match.
+- `attr_bool` is not scanned: no detector matches `"true"` or `"false"`.
+
+The per-parser key matchers this section previously required are deleted along with the drop; the content parsers no longer export their key lists.
 
 ### 4.3 Policy model
 
@@ -434,7 +444,7 @@ Without these, nobody can answer "is it working" or "why did my content disappea
 | `redaction.bytes` | bytes scanned |
 | `redaction.matches` | total accepted matches |
 | `redaction.matches.<entity>` | per-entity counts, one annotation per enabled entity with a nonzero count |
-| `redaction.droppedAttributeKeys` | content attribute keys removed from `attr_string` |
+| `redaction.relocatedNumericAttributes` | numeric attributes moved into `attr_string` as a placeholder |
 | `redaction.oversizedFields` | leaves dropped for exceeding `REDACTION_MAX_FIELD_CHARS` or `REDACTION_MAX_DEPTH` |
 | `redaction.pseudonymizedIdentities` | identity values replaced |
 | `redaction.durationMs` | pass duration |
@@ -529,7 +539,7 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 | File | Change |
 | --- | --- |
 | `packages/domain/shared/src/settings.ts` | `redactionSettingSchema`, `organizationRedactionSettingSchema`, both parent schemas, `resolveRedactionPolicy`, `ResolvedRedactionPolicy` |
-| `packages/domain/spans/src/otlp/content/*.ts` + `index.ts` | Per-parser content-key matchers, composed into `isContentAttributeKey` |
+| `packages/domain/spans/src/otlp/content/*.ts` + `index.ts` | Content parsers only; the per-parser key matchers were removed with the drop ([§4.2.2](#422-attribute-map-handling)) |
 | `packages/domain/spans/src/use-cases/ingest-spans.ts` | Resolve policy from `projectBySlug` + cached org settings, build the `redaction` map, pass it to `publisher.publish` |
 | `packages/domain/spans/src/use-cases/process-ingested-spans.ts` | Accept `redaction` in the input, apply between `:133` and `:147`, annotate stats |
 | `packages/domain/queue/src/topic-registry.ts` | `redaction?` on `span-ingestion:ingest` |
@@ -596,7 +606,7 @@ A `rehype` plugin in the `MarkdownContent` pipeline (`packages/ui/src/components
 
 Numbered so PR review can reference them.
 
-**T-1. `attr_string` duplicates all content.** Verified at `transform.ts:181-198` and `span-repository.ts:393`. Any scope that omits it ships a no-op. See [§4.2.2](#422-attribute-map-handling). **This is the single highest-risk item in the project.**
+**T-1. `attr_string` duplicates all content.** Verified at `transform.ts:181-198` and `span-repository.ts:393`. Any scope that omits it ships a no-op, so the map must be in scope. It is value-redacted rather than stripped ([§4.2.2](#422-attribute-map-handling)) — the duplication is a storage cost every project already pays, not something for a privacy control to solve for the subset who enabled one.
 
 **T-2. `events_json` is an unscoped content channel.** Verified at `transform.ts:223`; no content parser reads events. Customers on the older OTel gen_ai convention have all content there.
 
@@ -654,7 +664,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 **Integration, `packages/domain/spans/src/use-cases/process-ingested-spans.test.ts` (extend the existing file):**
 
-- `enforce` project: content redacted, **`attr_string` content keys dropped**, `events_json` redacted, `resource_string` values redacted.
+- `enforce` project: content redacted, **`attr_string` values redacted with every key preserved**, `events_json` redacted, `resource_string` values redacted.
 - Project absent from the policy map: byte-identical to today's output. Add this as a regression guard against accidental unconditional redaction.
 - Mixed batch: one `enforce` project and one absent project in the same OTLP batch, each handled correctly.
 - `metadata` scope off by default and applied when on.
@@ -696,7 +706,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - [x] **P1-2**: `redaction/labels.ts` and `redaction/detectors.ts` per [§5](#5-detector-specification), including Luhn and IBAN mod-97 helpers. No generic entropy detector.
 - [x] **P1-3**: `redaction/redact-text.ts` with overlap resolution per [§4.3](#43-policy-model).
 - [x] **P1-4**: `redaction/redact-json.ts` structure-aware walk with skip-keys, `blob`/`file` skipping, and stringified-JSON handling.
-- [x] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families.
+- [x] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families. — **Superseded:** shipped, then removed with the key drop ([§4.2.2](#422-attribute-map-handling)).
 - [x] **P1-6**: `redaction/redact-span.ts` implementing the full field surface in [§4.2](#42-the-complete-field-surface), and `redaction/redact-spans.ts` batch entry point with pseudonym memoization, stat aggregation, and the size cap.
 - [x] **P1-7**: `RedactionError` in `packages/domain/spans/src/errors.ts`.
 - [x] **P1-8**: Unit tests per [§9](#9-testing-plan), including the coding-agent negative vector corpus.
@@ -705,14 +715,14 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 - [x] `pnpm --filter @domain/spans test` (1208 tests) and `pnpm --filter @domain/shared test` (168) pass. `pnpm typecheck` clean across all 90 packages. `pnpm knip` and `pnpm format` clean.
 - [x] Every entity in `REDACTION_ENTITIES` has positive vectors and, where immunity is achievable, negative vectors. `ip_address` is the exception and is pinned as such: a test asserts it *does* match version strings, which is the reason it is off by default. Asserting immunity there would have been false.
-- [x] `isContentAttributeKey` covered for all eight vendor parsers, with vectors derived from the parsers' own declarations rather than restated in the test.
+- [x] `isContentAttributeKey` covered for all eight vendor parsers, with vectors derived from the parsers' own declarations rather than restated in the test. — **Superseded** along with the matcher itself; the pipeline tests now assert that a key belonging to a parser that never ran survives redacted.
 - [x] Diff is inert: no non-test file outside `src/redaction/` imports the module, verified by grep.
-- [x] Validators, overlap resolution, and `attr_string` key-dropping each mutation-tested — disabling them fails 9, 2, and 2 tests respectively, so none are decorative.
+- [x] Validators and overlap resolution each mutation-tested — disabling them fails 9 and 2 tests respectively, so neither is decorative.
 
 **Findings from Phase 1** (fold into the relevant sections when promoting to `dev-docs/`):
 
 - The email local-part class must exclude `/`, `=`, `?` and `&`. They are RFC-legal and effectively never issued, but they precede addresses constantly in URLs, paths, and query strings, and including them ran the match left through the whole path: `https://api.example.com/v1/users/john@example.com` collapsed to `https:[REDACTED_EMAIL]`.
-- Dropping content attribute keys is **not** redundant with the `attr_string` value pass, which was the original justification. The value pass only removes what a pattern matches; the duplicate copy also holds names, addresses, and ordinary prose. Dropping is the only thing that removes those.
+- Content attribute keys are value-redacted, not dropped ([§4.2.2](#422-attribute-map-handling)). Prose no detector matches survives in `attr_string` exactly as it already survives in `input_messages` — redaction removes matches, not payloads.
 - `REDACTION_MAX_FIELD_BYTES` became `REDACTION_MAX_FIELD_CHARS`. A byte count would mean encoding every leaf just to size it; UTF-16 code units are exact and allocation-free.
 - Effect in this repo is `4.0.0-beta.57`, which has no `Effect.timeoutFail`. Use `Effect.timeoutOrElse`, as `semantic-similarity.ts` and `name-taxonomy.ts` already do.
 
@@ -732,7 +742,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 **Exit gate** — met:
 
 - [x] With every project `off`, inserted rows are byte-identical to pre-change output, asserted two ways: no `redaction` field, and an empty `redaction` map.
-- [x] An `enforce` project's inserted row has redacted content **and** no content keys left in `attr_string`, while its operational attributes survive.
+- [x] An `enforce` project's inserted row has redacted content **and** keeps every `attr_string` key, content and operational alike, with matches replaced.
 - [x] A malformed policy produces zero inserts and fails the job. Verified by mutation: skipping malformed policies instead of failing breaks two tests.
 - [x] The `tmp-ingest` object is gone after a successful large-payload ingest, and a failed delete does not fail the ingest. Verified by mutation: removing the delete breaks one test.
 - [x] Benchmark run and recorded below; the target is met with headroom rather than missed.

@@ -165,7 +165,7 @@ describe("redactSpans", () => {
     expect(redacted?.resourceString["host.name"]).toBe("[REDACTED_EMAIL]")
   })
 
-  it("drops content attribute keys from attr_string so no plaintext copy survives", async () => {
+  it("redacts content attribute values in place so no plaintext copy survives", async () => {
     const span = makeSpan({
       attrString: {
         "gen_ai.input.messages": '[{"role":"user","parts":[{"type":"text","content":"john@example.com"}]}]',
@@ -177,11 +177,16 @@ describe("redactSpans", () => {
       await run({ spans: [span], organizationId: ORG, policyByProjectId: enforceFor(), pseudonymSecret: undefined })
     ).spans
 
-    expect(Object.keys(redacted?.attrString ?? {})).toEqual(["gen_ai.request.model"])
+    expect(Object.keys(redacted?.attrString ?? {}).sort()).toEqual([
+      "gen_ai.input.messages",
+      "gen_ai.prompt.0.content",
+      "gen_ai.request.model",
+    ])
+    expect(redacted?.attrString["gen_ai.prompt.0.content"]).toBe("[REDACTED_EMAIL]")
     expect(JSON.stringify(redacted?.attrString)).not.toContain("john@example.com")
   })
 
-  it("value-redacts attributes whose keys are not known content keys", async () => {
+  it("value-redacts attributes from a vendor with no parser", async () => {
     const span = makeSpan({ attrString: { "vendor.unknown.payload": "mail john@example.com" } })
     const [redacted] = (
       await run({ spans: [span], organizationId: ORG, policyByProjectId: enforceFor(), pseudonymSecret: undefined })
@@ -190,7 +195,7 @@ describe("redactSpans", () => {
     expect(redacted?.attrString["vendor.unknown.payload"]).toBe("mail [REDACTED_EMAIL]")
   })
 
-  it("counts dropped attribute keys", async () => {
+  it("keeps every attribute key it was given", async () => {
     const span = makeSpan({
       attrString: { "gen_ai.input.messages": "x", "gen_ai.output.messages": "y", "gen_ai.request.model": "gpt-4" },
     })
@@ -201,7 +206,43 @@ describe("redactSpans", () => {
       pseudonymSecret: undefined,
     })
 
-    expect(result.summary.droppedAttributeKeys).toBe(2)
+    expect(Object.keys(result.spans[0]?.attrString ?? {}).sort()).toEqual([
+      "gen_ai.input.messages",
+      "gen_ai.output.messages",
+      "gen_ai.request.model",
+    ])
+    expect(result.summary.relocatedNumericAttributes).toBe(0)
+  })
+
+  it("redacts inside a JSON-valued attribute rather than flattening it", async () => {
+    const span = makeSpan({
+      attrString: {
+        "gen_ai.input.messages": JSON.stringify([
+          { role: "user", parts: [{ type: "text", content: "mail john@example.com" }] },
+        ]),
+      },
+    })
+    const [redacted] = (
+      await run({ spans: [span], organizationId: ORG, policyByProjectId: enforceFor(), pseudonymSecret: undefined })
+    ).spans
+    const parsed = JSON.parse(redacted?.attrString["gen_ai.input.messages"] ?? "[]")
+
+    expect(parsed[0].parts[0].content).toBe("mail [REDACTED_EMAIL]")
+    expect(parsed[0].role).toBe("user")
+  })
+
+  it("leaves booleans and unmatched numbers in their own maps", async () => {
+    const span = makeSpan({
+      attrInt: { "gen_ai.usage.input_tokens": 215813 },
+      attrBool: { "gen_ai.request.stream": true },
+    })
+    const [redacted] = (
+      await run({ spans: [span], organizationId: ORG, policyByProjectId: enforceFor(), pseudonymSecret: undefined })
+    ).spans
+
+    expect(redacted?.attrInt).toEqual({ "gen_ai.usage.input_tokens": 215813 })
+    expect(redacted?.attrBool).toEqual({ "gen_ai.request.stream": true })
+    expect(redacted?.attrString).toEqual({})
   })
 
   it("leaves metadata and tags alone by default", async () => {

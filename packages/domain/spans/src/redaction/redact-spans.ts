@@ -13,7 +13,8 @@ export interface SpanRedactionSummary {
   readonly redactedSpans: number
   readonly leavesScanned: number
   readonly charsScanned: number
-  readonly droppedAttributeKeys: number
+  /** Numeric attributes moved into `attrString` as a placeholder because a detector matched. */
+  readonly relocatedNumericAttributes: number
   readonly oversizedFields: number
   readonly pseudonymizedIdentities: number
   /** A project asked for pseudonyms but no secret was configured, so identities were redacted instead. */
@@ -25,7 +26,7 @@ const EMPTY_SUMMARY: SpanRedactionSummary = {
   redactedSpans: 0,
   leavesScanned: 0,
   charsScanned: 0,
-  droppedAttributeKeys: 0,
+  relocatedNumericAttributes: 0,
   oversizedFields: 0,
   pseudonymizedIdentities: 0,
   identityFallback: false,
@@ -85,7 +86,7 @@ function applyRedaction(
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
   let redactedSpans = 0
-  let droppedAttributeKeys = 0
+  let relocatedNumericAttributes = 0
   let pseudonymizedIdentities = 0
 
   const redacted = spans.map((span) => {
@@ -100,7 +101,7 @@ function applyRedaction(
     const result = redactSpanDetail(span, policy, pseudonyms)
     mergeRedactionCounts(counts, result.stats.counts)
     mergeScanTally(scan, result.stats.scan)
-    droppedAttributeKeys += result.stats.droppedAttributeKeys
+    relocatedNumericAttributes += result.stats.relocatedNumericAttributes
     pseudonymizedIdentities += result.stats.pseudonymizedIdentities
     redactedSpans += 1
 
@@ -114,7 +115,7 @@ function applyRedaction(
       redactedSpans,
       leavesScanned: scan.leaves,
       charsScanned: scan.chars,
-      droppedAttributeKeys,
+      relocatedNumericAttributes,
       oversizedFields: scan.oversized,
       pseudonymizedIdentities,
       identityFallback,

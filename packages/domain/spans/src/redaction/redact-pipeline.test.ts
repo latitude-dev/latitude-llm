@@ -17,9 +17,12 @@ const PROJECT = "proj_test"
 const EMAIL = "victim@example.com"
 const PHONE = "+14155552671"
 const CARD = "4111111111111111"
+/** 19-digit Visa: Luhn-valid and past 2^53, so `Number` would round its last digits away. */
+const LONG_CARD = "4111111111111111110"
 const SECRET = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
 
 const str = (key: string, value: string): OtlpKeyValue => ({ key, value: { stringValue: value } })
+const int = (key: string, value: string): OtlpKeyValue => ({ key, value: { intValue: value } })
 
 const CONTEXT: TransformContext = {
   organizationId: ORG,
@@ -139,7 +142,7 @@ describe("redaction over the real OTLP transform", () => {
     expect(after).not.toContain(SECRET)
   })
 
-  it("proves the raw attribute copy is the thing being removed, not just the parsed column", async () => {
+  it("redacts the raw attribute copy in place instead of deleting the key", async () => {
     const attributes = [
       str("gen_ai.system", "openai"),
       str(
@@ -152,13 +155,17 @@ describe("redaction over the real OTLP transform", () => {
     expect(spans[0]?.attrString["gen_ai.input.messages"]).toContain(EMAIL)
     expect(JSON.stringify(spans[0]?.inputMessages)).toContain(EMAIL)
 
-    const { after, summary } = await transformAndRedact(buildRequest(attributes))
+    const result = await Effect.runPromise(
+      redactSpans({ spans, organizationId: ORG, policyByProjectId: ENFORCE, pseudonymSecret: undefined }),
+    )
+    const attrString = result.spans[0]?.attrString
 
-    expect(after).not.toContain(EMAIL)
-    expect(summary.droppedAttributeKeys).toBeGreaterThan(0)
+    expect(attrString).toHaveProperty("gen_ai.input.messages")
+    expect(attrString?.["gen_ai.input.messages"]).toContain("[REDACTED_EMAIL]")
+    expect(JSON.stringify(result.spans[0])).not.toContain(EMAIL)
   })
 
-  it("removes duplicated conversation text that no detector would have matched", async () => {
+  it("keeps conversation prose no detector matches, exactly as the parsed column does", async () => {
     const prose = "Margaret Hale lives on Crampton Terrace and prefers afternoon appointments"
     const attributes = [
       str("gen_ai.system", "openai"),
@@ -166,15 +173,71 @@ describe("redaction over the real OTLP transform", () => {
     ]
     const { spans } = transformOtlpToSpans(buildRequest(attributes), CONTEXT)
 
-    expect(spans[0]?.attrString["gen_ai.input.messages"]).toContain(prose)
+    const result = await Effect.runPromise(
+      redactSpans({ spans, organizationId: ORG, policyByProjectId: ENFORCE, pseudonymSecret: undefined }),
+    )
+
+    // Redaction removes what a detector matches, not the payload; both copies keep the prose.
+    expect(JSON.stringify(result.spans[0]?.attrString)).toContain(prose)
+    expect(JSON.stringify(result.spans[0]?.inputMessages)).toContain(prose)
+  })
+
+  it("keeps content attributes belonging to a parser that never ran", async () => {
+    const attributes = [
+      str("gen_ai.system", "openai"),
+      str("llm.input_messages.0.message.role", "user"),
+      str("llm.input_messages.0.message.content", `contact ${EMAIL}`),
+      // Read by the json-value parser, which openinference outranks — so nothing promotes it to a column.
+      str("output.value", JSON.stringify({ note: `reach me on ${PHONE}` })),
+    ]
+    const { spans } = transformOtlpToSpans(buildRequest(attributes), CONTEXT)
+
+    const result = await Effect.runPromise(
+      redactSpans({ spans, organizationId: ORG, policyByProjectId: ENFORCE, pseudonymSecret: undefined }),
+    )
+    const attrString = result.spans[0]?.attrString
+
+    expect(attrString).toHaveProperty("output.value")
+    expect(attrString?.["output.value"]).toContain("[REDACTED_PHONE]")
+    expect(JSON.stringify(result.spans[0])).not.toContain(PHONE)
+  })
+
+  it("moves a numeric attribute a detector matched into attrString as a placeholder", async () => {
+    const attributes = [
+      str("gen_ai.system", "openai"),
+      int("billing.card", CARD),
+      int("gen_ai.usage.input_tokens", "215813"),
+      int("event.timestamp_ms", "1785506507050"),
+    ]
+    const { spans } = transformOtlpToSpans(buildRequest(attributes), CONTEXT)
+
+    const result = await Effect.runPromise(
+      redactSpans({ spans, organizationId: ORG, policyByProjectId: ENFORCE, pseudonymSecret: undefined }),
+    )
+    const redacted = result.spans[0]
+
+    expect(redacted?.attrInt).not.toHaveProperty("billing.card")
+    expect(redacted?.attrString["billing.card"]).toBe("[REDACTED_CREDIT_CARD]")
+    // Neither a token count nor a millisecond timestamp carries a card issuer prefix.
+    expect(redacted?.attrInt["gen_ai.usage.input_tokens"]).toBe(215813)
+    expect(redacted?.attrInt["event.timestamp_ms"]).toBe(1785506507050)
+    expect(result.summary.relocatedNumericAttributes).toBe(1)
+  })
+
+  // A 19-digit card exceeds 2^53, so `Number` would round its digits away before any detector saw them.
+  it("redacts an oversized card sent as an integer, which never reaches attrInt", async () => {
+    const attributes = [str("gen_ai.system", "openai"), int("billing.card", LONG_CARD)]
+    const { spans } = transformOtlpToSpans(buildRequest(attributes), CONTEXT)
+
+    expect(spans[0]?.attrString["billing.card"]).toBe(LONG_CARD)
+    expect(spans[0]?.attrInt).not.toHaveProperty("billing.card")
 
     const result = await Effect.runPromise(
       redactSpans({ spans, organizationId: ORG, policyByProjectId: ENFORCE, pseudonymSecret: undefined }),
     )
 
-    expect(JSON.stringify(result.spans[0]?.attrString)).not.toContain(prose)
-    // Pattern detectors do not catch names, so the parsed column still carries it.
-    expect(JSON.stringify(result.spans[0]?.inputMessages)).toContain(prose)
+    expect(result.spans[0]?.attrString["billing.card"]).toBe("[REDACTED_CREDIT_CARD]")
+    expect(JSON.stringify(result.spans[0])).not.toContain(LONG_CARD)
   })
 
   it("redacts content carried only in span events, which no parser reads", async () => {

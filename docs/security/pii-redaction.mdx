@@ -55,7 +55,9 @@ A change takes effect within a minute.
 
 ### Scope
 
-Scanned: message content, tool call arguments and results, reasoning, span attributes carrying content, span events, and resource attributes.
+Scanned: message content, tool call arguments and results, reasoning, span attributes holding text or numbers, span events, and resource attributes. Boolean attributes are not scanned — no detector can match `true` or `false`.
+
+Redaction replaces values; it never removes an attribute. Every attribute your exporter sends is stored, so the attribute view stays a faithful record of the span with sensitive values marked.
 
 Not scanned by default: the metadata map and tags. These are usually operational, and redacting them removes values you filter and group by — enable the metadata scope if you put personal data there.
 
@@ -72,6 +74,8 @@ The pseudonym replaces the identifier everywhere it appears on the span, not onl
 Redacted values appear as a labeled marker in place of the original — the dashboard renders them as a small tag naming the category. This is intentional: you need to be able to tell the difference between content that was removed and content that was never sent.
 
 You may also see an oversized-field marker. Fields above 1 MB are removed whole rather than stored unscanned, so nothing in them was necessarily personal data.
+
+A numeric attribute that matches — a card number sent as an integer, for example — moves to the span's text attributes as a single marker, because a numeric field cannot hold one. Its key does not change, so you can still find it where you expect.
 
 ### Things to know before enabling
 

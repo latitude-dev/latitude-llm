@@ -1,6 +1,6 @@
 import type { RedactionEntity } from "@domain/shared"
 import { OVERSIZED_FIELD_PLACEHOLDER, REDACTION_MAX_DEPTH } from "./labels.ts"
-import { mergeRedactionCounts, type RedactionCounts, redactLeaf } from "./redact-text.ts"
+import { mergeRedactionCounts, type RedactionCounts, redactLeaf, redactWholeValue } from "./redact-text.ts"
 
 interface JsonRedactionResult<T> {
   readonly value: T
@@ -149,6 +149,7 @@ const tryParseJsonContainer = (value: string): unknown => {
   }
 }
 
+// `redactJsonString`, not `redactLeaf`: these values duplicate the typed columns and must get the identical walk.
 export function redactStringMap(
   map: Readonly<Record<string, string>>,
   entities: ReadonlySet<RedactionEntity>,
@@ -158,13 +159,46 @@ export function redactStringMap(
   const next: Record<string, string> = {}
 
   for (const [key, value] of Object.entries(map)) {
-    const outcome = redactLeaf(value, entities)
+    const outcome = redactJsonString(value, entities)
     mergeRedactionCounts(counts, outcome.counts)
-    scan.leaves += 1
-    scan.chars += outcome.scannedChars
-    if (outcome.oversized) scan.oversized += 1
-    next[key] = outcome.text
+    mergeScanTally(scan, outcome.scan)
+    next[key] = outcome.value
   }
 
   return { value: next, counts, scan }
+}
+
+export interface NumberMapRedactionResult<T> {
+  readonly kept: Record<string, T>
+  /** Matched keys, moved out because a `Map(String, Int64)` cannot hold a placeholder. */
+  readonly relocated: Record<string, string>
+  readonly counts: RedactionCounts
+  readonly scan: ScanTally
+}
+
+// Only `credit_card` is reachable on a bare number; every other entity needs a separator, sigil, or letter.
+export function redactNumberMap<T extends number>(
+  map: Readonly<Record<string, T>>,
+  entities: ReadonlySet<RedactionEntity>,
+): NumberMapRedactionResult<T> {
+  const counts: RedactionCounts = {}
+  const scan = emptyScanTally()
+  const kept: Record<string, T> = {}
+  const relocated: Record<string, string> = {}
+
+  for (const [key, value] of Object.entries(map) as [string, T][]) {
+    const text = String(value)
+    scan.leaves += 1
+    scan.chars += text.length
+
+    const outcome = redactWholeValue(text, entities)
+    if (outcome === null) {
+      kept[key] = value
+      continue
+    }
+    mergeRedactionCounts(counts, outcome.counts)
+    relocated[key] = outcome.placeholder
+  }
+
+  return { kept, relocated, counts, scan }
 }
