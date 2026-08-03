@@ -30,6 +30,10 @@ description: Installing dependencies, running dev/build/test/lint, filtering pac
 - `pnpm test` — run all workspace tests
 - `pnpm hooks` — configure local git hooks for this clone
 
+## Searching the repo
+
+`grep` is a shadowed shell function here, and some sources (e.g. `packages/domain/spans/src/otlp/transform.ts`) trip binary-file detection because of lone surrogates, which silently suppresses matches. Use `command grep -a`, or the dedicated search tools, before concluding a string is absent.
+
 ## Git hooks (pre-commit)
 
 - Pre-commit hook lives at `.husky/pre-commit`
