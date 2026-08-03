@@ -141,3 +141,24 @@ describe("incompletionStrategy.buildPrompt", () => {
     expect(prompt).toContain("You did not do task 7, try again")
   })
 })
+
+describe("incompletionStrategy CES-Z2SW product-crash exclusions", () => {
+  it("rejects product crash reports after relaunch as non-delivery evidence", () => {
+    const systemPrompt = incompletionStrategy.buildSystemPrompt?.(makeTrace([user("hello")]))
+    expect(systemPrompt).toBeTruthy()
+
+    expect(systemPrompt).toContain("Product runtime / crash / defect reports")
+    expect(systemPrompt).toContain("hm ios crashes?")
+    expect(systemPrompt).toContain('false claims of successful task completion')
+    expect(systemPrompt).toContain("you didn't reopen it")
+    expect(systemPrompt).toContain(
+      "Do NOT treat a later product defect report as contradicting a launch/build/open/relaunch claim",
+    )
+  })
+
+  it("documents the exclusion in annotator instructions", () => {
+    expect(incompletionStrategy.annotator?.instructions).toContain("product crash/bug reports")
+    expect(incompletionStrategy.annotator?.instructions).toContain("launch/build/open/relaunch")
+    expect(incompletionStrategy.annotator?.instructions).toContain("does not deny that the action itself was performed")
+  })
+})

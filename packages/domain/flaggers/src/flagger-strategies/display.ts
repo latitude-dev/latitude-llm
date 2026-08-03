@@ -95,7 +95,7 @@ export const FLAGGER_DISPLAY: Record<FlaggerSlug, FlaggerDisplay> = {
     name: "Incompletion",
     description: "The assistant did not complete the assigned task, forcing the user to follow up",
     instructions:
-      "Use this flagger when a task assigned by the user or the system prompt was not completed by the assistant's response and the user's following messages show it — demanding a retry, repeating the request, or pointing at the missing deliverable. Do not use it for refusals, for shallow-but-delivered answers, for the user adding new work, or for responses the user never reacted to.",
+      "Use this flagger when a task assigned by the user or the system prompt was not completed by the assistant's response and the user's following messages show it — demanding a retry, repeating the request, or pointing at the missing deliverable. Do not use it for refusals, for shallow-but-delivered answers, for the user adding new work, for responses the user never reacted to, or for product crash/bug reports after a launch/build/open/relaunch when the user does not deny that the action itself was performed.",
     mode: "llm",
     suppressedBy: [],
   },

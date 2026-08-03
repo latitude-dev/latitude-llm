@@ -24,8 +24,10 @@ INCOMPLETION EVIDENCE (flag when the user's reaction shows the task was not deli
    • "You didn't change X" after the task was to change X
 
 3. CONTRADICTED COMPLETION CLAIM
-   The response claimed the task was done and the user's reaction shows it was not.
+   The response claimed the task was done and the user's reaction shows that claimed action/deliverable was not performed.
    • "I've updated it" followed by "nothing changed"
+   • "Deployed successfully" followed by "nothing is running, you did not deploy it"
+   Do NOT treat a later product defect report as contradicting a launch/build/open/relaunch claim (see DO NOT FLAG).
 
 Later recovery does NOT erase the incident: if the assistant fulfilled the task only after the user demanded a retry, flag the original failing response — needing to ask twice is the issue.
 
@@ -39,6 +41,11 @@ DO NOT FLAG
 - Minor refinement requests on a substantially delivered result (style tweaks, small detail corrections during normal iteration)
 - Legitimate clarifying questions on a genuinely ambiguous ask, answered by the user — the task was still being specified
 - Reactions that are follow-up questions about the delivered result rather than complaints about non-delivery
+- Product runtime / crash / defect reports about the user's own app or environment after the assistant performed an action on it (launch, relaunch, build, open, install, point at an env), when the reaction does not say that action itself was skipped or not performed. Examples:
+  • After "Both apps relaunched and are running": "hm ios crashes?"
+  • After "I rebuilt and opened the simulator": "it crashes when I open the share sheet"
+  • After "Catalyst is up on prod": "still seeing the old crash on the Done button"
+  These are collaborative debugging observations about the product under test, not evidence the reopen/build/launch was not done. Do not reframe them as "false claims of successful task completion" unless the user also denies the action ("you didn't reopen it", "nothing launched", "still the old build", "still pointing at staging").
 - Progress-narration or tool-only turns during multi-step work — judge the response that presented itself as the outcome
 
 ================================================================================
@@ -48,12 +55,13 @@ ANALYSIS APPROACH
 1. For each episode, identify the concrete deliverable the task requires (user messages plus the evaluated agent's context).
 2. Check what the assistant response actually delivered or claimed.
 3. Read the user's reaction: does it objectively show the task was not fulfilled? You must be able to point to the phrase. If you cannot, do not flag.
+4. If the reaction only reports a crash, bug, or bad behavior in the user's product after an action task, and does not deny that the action was performed, return matched=false.
 
 ================================================================================
 DECISION RULE
 ================================================================================
 
-Flag only when the user's follow-up clearly shows the assigned task was not completed by that response. messageIndex is REQUIRED and must be the transcript index of the failing assistant response as shown in the episode header — never any other index. When uncertain, return matched=false.
+Flag only when the user's follow-up clearly shows the assigned task was not completed by that response. If the quoted evidence is only a product crash/bug report after a launch/build/open/relaunch (e.g. "hm ios crashes?") without denying that action, return matched=false. messageIndex is REQUIRED and must be the transcript index of the failing assistant response as shown in the episode header — never any other index. When uncertain, return matched=false.
 
 Return no explanation outside the structured output.
 `.trim()
@@ -182,7 +190,7 @@ export const incompletionStrategy: FlaggerStrategy = {
     name: "Incompletion",
     description: "The assistant did not complete the assigned task, forcing the user to follow up",
     instructions:
-      "Use this flagger when a task assigned by the user or the system prompt was not completed by the assistant's response and the user's following messages show it — demanding a retry, repeating the request, or pointing at the missing deliverable. Do not use it for refusals, for shallow-but-delivered answers, for the user adding new work, or for responses the user never reacted to.",
+      "Use this flagger when a task assigned by the user or the system prompt was not completed by the assistant's response and the user's following messages show it — demanding a retry, repeating the request, or pointing at the missing deliverable. Do not use it for refusals, for shallow-but-delivered answers, for the user adding new work, for responses the user never reacted to, or for product crash/bug reports after a launch/build/open/relaunch when the user does not deny that the action itself was performed.",
   },
 
   // pattern:frustration covers the objective re-assertion regexes ("I already
