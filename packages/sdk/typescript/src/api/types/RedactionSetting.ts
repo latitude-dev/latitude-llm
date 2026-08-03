@@ -6,7 +6,7 @@
 export interface RedactionSetting {
     /** `enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered. */
     mode?: RedactionSetting.Mode | undefined;
-    /** Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail. */
+    /** Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail. */
     entities?: RedactionSetting.Entities.Item[] | undefined;
     /** Which span fields to scan beyond message and tool content. */
     scopes?: RedactionSetting.Scopes | undefined;
@@ -32,7 +32,6 @@ export namespace RedactionSetting {
             UsSsn: "us_ssn",
             IpAddress: "ip_address",
             Secret: "secret",
-            CryptoWallet: "crypto_wallet",
         } as const;
         export type Item = (typeof Item)[keyof typeof Item];
     }

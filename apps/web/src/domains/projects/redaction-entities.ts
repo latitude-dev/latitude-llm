@@ -1,4 +1,4 @@
-import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
+import { isRedactionEntity, REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
 
 interface RedactionEntityMeta {
   readonly label: string
@@ -42,12 +42,6 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
     description:
       "Recognizable key formats from common providers, private key blocks, connection-string passwords, and values assigned to a credential-shaped key such as DATABASE_PASSWORD.",
   },
-  crypto_wallet: {
-    label: "Crypto wallet addresses",
-    description:
-      "Legacy Bitcoin addresses that pass the address checksum, plus bech32 and Ethereum addresses matched on shape.",
-    caution: "A 40-character hex string is both an Ethereum address and a commit hash, and may be falsely redacted.",
-  },
 }
 
 /** Stable display order: defaults first, then the opt-in detectors. */
@@ -55,5 +49,10 @@ export const REDACTION_ENTITY_ORDER: readonly RedactionEntity[] = REDACTION_ENTI
 
 export const encodeEntities = (entities: Iterable<RedactionEntity>): string => [...new Set(entities)].sort().join(",")
 
+/**
+ * Filters to entities the enum still has. A project that enabled one since retired has it in stored
+ * settings, and the form round-trips what it read back into a write that validates strictly, so passing it
+ * through would leave that project unable to save its policy at all.
+ */
 export const decodeEntities = (encoded: string): RedactionEntity[] =>
-  encoded === "" ? [] : (encoded.split(",") as RedactionEntity[])
+  encoded === "" ? [] : encoded.split(",").filter((entity): entity is RedactionEntity => isRedactionEntity(entity))

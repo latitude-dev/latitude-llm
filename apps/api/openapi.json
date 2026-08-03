@@ -239,12 +239,11 @@
                 "iban",
                 "us_ssn",
                 "ip_address",
-                "secret",
-                "crypto_wallet"
+                "secret"
               ]
             },
-            "maxItems": 8,
-            "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail."
+            "maxItems": 7,
+            "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail."
           },
           "scopes": {
             "type": "object",

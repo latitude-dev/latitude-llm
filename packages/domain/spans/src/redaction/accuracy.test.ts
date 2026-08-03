@@ -831,38 +831,6 @@ const SECRET_CASES: readonly PiiCase[] = [
   },
 ]
 
-const CRYPTO_CASES: readonly PiiCase[] = [
-  {
-    id: "crypto-btc-bech32",
-    entity: "crypto_wallet",
-    outcome: "redacted",
-    text: "Send to bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4 within an hour",
-    value: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
-  },
-  {
-    id: "crypto-btc-p2pkh",
-    entity: "crypto_wallet",
-    outcome: "redacted",
-    text: "Legacy address 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa received it",
-    value: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-  },
-  {
-    id: "crypto-eth",
-    entity: "crypto_wallet",
-    outcome: "redacted",
-    text: "Wallet 0x742d35Cc6634C0532925a3b844Bc454e4438f44e signed the tx",
-    value: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-  },
-  {
-    id: "crypto-solana",
-    entity: "crypto_wallet",
-    outcome: "missed",
-    text: "Solana wallet 7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV is funded",
-    value: "7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV",
-    note: "base58 with no 1/3 anchor and no checksum to validate against",
-  },
-]
-
 const REALISTIC_CASES: readonly PiiCase[] = [
   { id: "chat-email", entity: "email", outcome: "redacted", text: CHAT, value: "maria.gonzalez@gmail.com" },
   { id: "chat-card", entity: "credit_card", outcome: "redacted", text: CHAT, value: "4111 1111 1111 1111" },
@@ -918,7 +886,6 @@ const PII_CASES: readonly PiiCase[] = [
   ...SSN_CASES,
   ...IP_CASES,
   ...SECRET_CASES,
-  ...CRYPTO_CASES,
   ...REALISTIC_CASES,
 ]
 
@@ -1046,11 +1013,11 @@ describe("accuracy totals", () => {
 
   it("records every labelled occurrence exactly once", () => {
     expect(new Set(PII_CASES.map((entry) => entry.id)).size).toBe(PII_CASES.length)
-    expect(PII_CASES).toHaveLength(118)
+    expect(PII_CASES).toHaveLength(114)
   })
 
   it("pins how much PII is stored verbatim", () => {
-    expect(counted("missed")).toBe(9)
+    expect(counted("missed")).toBe(8)
   })
 
   it("pins how much PII is only partially removed", () => {
@@ -1093,7 +1060,6 @@ describe("punctuation boundaries", () => {
     ["ssn", "us_ssn", "123-45-6789"],
     ["ipv4", "ip_address", "203.0.113.42"],
     ["secret sk-", "secret", vendorToken("sk-proj-", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ")],
-    ["eth address", "crypto_wallet", "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"],
   ]
 
   const WRAPPERS: readonly [label: string, wrap: (value: string) => string][] = [
@@ -1156,7 +1122,6 @@ describe("collision rates on synthetic identifiers", () => {
   }
 
   const DIGITS = "0123456789"
-  const BASE58 = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 
   const rate = (entity: RedactionEntity, seed: number, samples: number, generate: (random: () => number) => string) => {
     const random = mulberry32(seed)
@@ -1177,20 +1142,6 @@ describe("collision rates on synthetic identifiers", () => {
   })
 
   // The address checksum is what makes this zero rather than one: the shape alone matches every one of them.
-  it("does not collide with base58-shaped opaque ids", () => {
-    const observed = rate(
-      "crypto_wallet",
-      5,
-      2_000,
-      (random) => `${random() < 0.5 ? "1" : "3"}${pick(random, BASE58, 25 + Math.floor(random() * 10))}`,
-    )
-
-    expect(observed).toBe(0)
-  })
-
-  it("collides with every 40-character hex string", () => {
-    expect(rate("crypto_wallet", 6, 2_000, (random) => `0x${pick(random, "0123456789abcdef", 40)}`)).toBe(1)
-  })
 })
 
 /**

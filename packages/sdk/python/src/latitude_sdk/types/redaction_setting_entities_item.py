@@ -3,6 +3,5 @@
 import typing
 
 RedactionSettingEntitiesItem = typing.Union[
-    typing.Literal["email", "phone", "credit_card", "iban", "us_ssn", "ip_address", "secret", "crypto_wallet"],
-    typing.Any,
+    typing.Literal["email", "phone", "credit_card", "iban", "us_ssn", "ip_address", "secret"], typing.Any
 ]

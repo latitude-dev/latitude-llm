@@ -1,5 +1,4 @@
 import type { RedactionEntity } from "@domain/shared"
-import { sha256Bytes } from "./sha256.ts"
 
 export interface RedactionMatch {
   readonly start: number
@@ -313,56 +312,6 @@ const isCredentialValue = (value: string): boolean => {
   return !(CODE_IDENTIFIER.test(value) && !/\d/.test(value))
 }
 
-const BITCOIN_BECH32_PATTERN = /\bbc1[a-z0-9]{25,62}\b/g
-const BITCOIN_BASE58_PATTERN = /(?<![A-Za-z0-9])[13][a-km-zA-HJ-NP-Z1-9]{25,34}(?![A-Za-z0-9])/g
-const ETHEREUM_PATTERN = /\b0x[a-fA-F0-9]{40}\b/g
-
-const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-
-const decodeBase58 = (value: string): Uint8Array | undefined => {
-  const bytes: number[] = [0]
-
-  for (const character of value) {
-    let carry = BASE58_ALPHABET.indexOf(character)
-    if (carry < 0) return undefined
-
-    for (let index = 0; index < bytes.length; index++) {
-      carry += (bytes[index] as number) * 58
-      bytes[index] = carry & 0xff
-      carry >>= 8
-    }
-    while (carry > 0) {
-      bytes.push(carry & 0xff)
-      carry >>= 8
-    }
-  }
-
-  // A leading `1` encodes a zero byte, which the arithmetic above cannot produce.
-  for (const character of value) {
-    if (character !== "1") break
-    bytes.push(0)
-  }
-
-  return new Uint8Array(bytes.reverse())
-}
-
-// The last four bytes are the first four of the double SHA-256 of the rest. Without the check the detector
-// is a pure shape match and every base58-shaped opaque id starting with `1` or `3` matches.
-const isBitcoinBase58Address = (value: string): boolean => {
-  const decoded = decodeBase58(value)
-  if (decoded === undefined || decoded.length !== 25) return false
-
-  const payload = decoded.subarray(0, 21)
-  const checksum = sha256Bytes(sha256Bytes(payload))
-
-  return (
-    decoded[21] === checksum[0] &&
-    decoded[22] === checksum[1] &&
-    decoded[23] === checksum[2] &&
-    decoded[24] === checksum[3]
-  )
-}
-
 const DETECTORS: readonly Detector[] = [
   { entity: "email", pattern: EMAIL_PATTERN, validate: isEmail },
   { entity: "email", pattern: PERCENT_ENCODED_EMAIL_PATTERN, validate: isEmail },
@@ -400,9 +349,6 @@ const DETECTORS: readonly Detector[] = [
   { entity: "secret", pattern: CREDENTIAL_ASSIGNMENT_PATTERN, validate: isCredentialValue, group: 1 },
   { entity: "secret", pattern: CREDENTIAL_FLAG_PATTERN, validate: isCredentialValue, group: 1 },
   { entity: "secret", pattern: BEARER_TOKEN_PATTERN, validate: isCredentialValue, group: 1 },
-  { entity: "crypto_wallet", pattern: BITCOIN_BECH32_PATTERN },
-  { entity: "crypto_wallet", pattern: BITCOIN_BASE58_PATTERN, validate: isBitcoinBase58Address },
-  { entity: "crypto_wallet", pattern: ETHEREUM_PATTERN },
 ]
 
 const spanOf = (

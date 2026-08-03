@@ -624,36 +624,6 @@ describe("entities disabled by default", () => {
     expect(detects(value, "ip_address")).toBe(false)
   })
 
-  it("detects an ethereum address only when crypto_wallet is enabled", () => {
-    const address = "0x52908400098527886E0F7030069857D2E4169EE7"
-    expect(detects(`to ${address}`, "crypto_wallet")).toBe(true)
-    expect(findRedactionMatches(`to ${address}`, only("secret"))).toEqual([])
-  })
-
-  it.each([
-    "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-    "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",
-    "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
-  ])("detects the Bitcoin address %s", (value) => {
-    expect(detects(`to ${value}`, "crypto_wallet")).toBe(true)
-  })
-
-  /**
-   * Every vector satisfies the base58 shape, so only the address checksum rejects them. Without it a
-   * synthetic sample of base58-shaped ids was redacted at a measured 100%.
-   */
-  it.each([
-    "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb",
-    "1AbCdEfGhIjKlMnOpQrStUvWxYz23456",
-    "3FooBarBazQuxQuuxCorgeGraultGarply",
-  ])("does not match the base58-shaped id %s", (value) => {
-    expect(detects(`record ${value} upserted`, "crypto_wallet")).toBe(false)
-  })
-
-  it("does not treat a git sha as a wallet when crypto_wallet is off", () => {
-    expect(findRedactionMatches("commit 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567", ALL_ENTITIES)).toEqual([])
-  })
-
   // A dotted quad and a four-part version string are the same string, so immunity is impossible, not missing.
   it.each([
     "upgraded to 1.2.3.4",

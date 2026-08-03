@@ -32,9 +32,8 @@ Detection is pattern based. It reliably catches structured identifiers, and it d
 | US Social Security numbers | On | Separated `NNN-NN-NNNN` in a valid range, and ITINs |
 | API keys and secrets | On | Recognizable provider key formats, private key blocks, connection-string passwords, and values assigned to a credential-shaped key such as `DATABASE_PASSWORD` or `api_key` |
 | IP addresses | Off | IPv4 and IPv6 addresses |
-| Crypto wallet addresses | Off | Legacy Bitcoin addresses passing the address checksum; bech32 `bc1…` and Ethereum addresses matched on shape alone |
 
-The last two are off by default because they also match things that are not personal data: version strings such as `1.2.3.4` look like IPv4, and a 40-character hex string is both an Ethereum address and a commit hash. Every category can be toggled individually.
+IP addresses are off by default because a version string such as `1.2.3.4` and a dotted quad are the same string. Every category can be toggled individually.
 
 ### Known limits
 
