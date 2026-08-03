@@ -8,7 +8,6 @@ const REDACTION_ENTITY_LABELS: Record<RedactionEntity, string> = {
   us_ssn: "US_SSN",
   ip_address: "IP_ADDRESS",
   secret: "SECRET",
-  crypto_wallet: "CRYPTO_WALLET",
 }
 
 /** Placeholders are visible in the UI on purpose: users must be able to see why content is missing. */

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { OrganizationId, type ProjectId } from "./id.ts"
 import {
   DEFAULT_REDACTION_ENTITIES,
+  deserializeRedactionPolicy,
   type OrganizationSettings,
   organizationSettingsSchema,
   type ProjectSettings,
@@ -140,11 +141,10 @@ describe("resolveRedactionPolicy", () => {
     expect(policy.source).toBe("default")
   })
 
-  it("excludes ip_address and crypto_wallet from the defaults", () => {
+  it("excludes ip_address from the defaults", () => {
     const policy = resolveRedactionPolicy({ organization: null, project: null })
 
     expect(policy.entities.has("ip_address")).toBe(false)
-    expect(policy.entities.has("crypto_wallet")).toBe(false)
   })
 
   it("uses the project policy when only the project configures redaction", () => {
@@ -285,5 +285,44 @@ describe("redaction settings schemas", () => {
     expect(parsed.billing?.spendingLimitCents).toBe(5000)
     expect(parsed.wantsShowcase).toBe(true)
     expect(parsed.redaction?.mode).toBe("enforce")
+  })
+})
+
+describe("deserializeRedactionPolicy", () => {
+  const wire = { entities: ["email"], redactMetadata: false, identities: "keep" as const }
+
+  it("reads a well-formed policy", () => {
+    expect(deserializeRedactionPolicy(wire)?.entities.has("email")).toBe(true)
+  })
+
+  /**
+   * A retired entity and one that never existed look the same on the wire and must not be treated alike.
+   * `crypto_wallet` was removed, so a policy naming it was written before the removal and dropping it is the
+   * whole of the correct behaviour — failing would make the worker fail closed and drop the batch.
+   */
+  it("drops a retired entity and keeps the rest of the policy", () => {
+    const policy = deserializeRedactionPolicy({ ...wire, entities: ["email", "crypto_wallet"] })
+
+    expect(policy?.entities.has("email")).toBe(true)
+    expect(policy?.entities.size).toBe(1)
+  })
+
+  it("still returns a policy when every entity it names is retired", () => {
+    const policy = deserializeRedactionPolicy({ ...wire, entities: ["crypto_wallet"] })
+
+    expect(policy).not.toBeNull()
+    expect(policy?.entities.size).toBe(0)
+  })
+
+  /**
+   * An entity that is neither current nor retired means the policy came from a newer deploy than this code,
+   * where it may name a detector we do not have. Ignoring it would under-redact, so this stays fail-closed.
+   */
+  it("rejects an entity that was never in the enum", () => {
+    expect(deserializeRedactionPolicy({ ...wire, entities: ["passport"] })).toBeNull()
+  })
+
+  it("rejects a malformed policy", () => {
+    expect(deserializeRedactionPolicy({ ...wire, entities: "not-an-array" })).toBeNull()
   })
 })

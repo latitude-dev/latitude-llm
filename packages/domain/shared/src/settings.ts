@@ -9,20 +9,23 @@ export const REDACTION_MODES = ["off", "enforce"] as const
 export const redactionModeSchema = z.enum(REDACTION_MODES)
 export type RedactionMode = z.infer<typeof redactionModeSchema>
 
-export const REDACTION_ENTITIES = [
-  "email",
-  "phone",
-  "credit_card",
-  "iban",
-  "us_ssn",
-  "ip_address",
-  "secret",
-  "crypto_wallet",
-] as const
+export const REDACTION_ENTITIES = ["email", "phone", "credit_card", "iban", "us_ssn", "ip_address", "secret"] as const
 export const redactionEntitySchema = z.enum(REDACTION_ENTITIES)
 export type RedactionEntity = z.infer<typeof redactionEntitySchema>
 
-// `ip_address` and `crypto_wallet` are omitted: they collide with version strings and hex hashes.
+const KNOWN_REDACTION_ENTITIES: ReadonlySet<string> = new Set(REDACTION_ENTITIES)
+
+/** Retiring an entity leaves it behind in stored settings and in queue payloads, so both have to filter. */
+export const isRedactionEntity = (value: string): value is RedactionEntity => KNOWN_REDACTION_ENTITIES.has(value)
+
+/**
+ * Entities this enum used to have. Kept rather than forgotten so a policy naming one can be told apart from
+ * a policy naming an entity that never existed — see `wireRedactionEntitiesSchema`. Safe to prune once no
+ * stored settings mention it, which needs a data migration rather than a code change.
+ */
+const RETIRED_REDACTION_ENTITIES: ReadonlySet<string> = new Set(["crypto_wallet"])
+
+// `ip_address` is omitted: a dotted quad and a four-part version string are the same string.
 export const DEFAULT_REDACTION_ENTITIES: readonly RedactionEntity[] = [
   "email",
   "phone",
@@ -185,9 +188,24 @@ export interface ResolvedRedactionPolicy extends RedactionPolicy {
   readonly source: "organization" | "project" | "default"
 }
 
+/**
+ * Drops retired entities, then validates the rest strictly.
+ *
+ * The two cases look identical on the wire and must not be treated alike. A **retired** entity was removed
+ * deliberately, so a policy naming it was written before the removal and no detector will ever claim it
+ * again: dropping it is the whole of the correct behaviour, and rejecting the policy would make the worker
+ * fail closed and drop the batch. An entity that is neither current nor retired means the policy came from a
+ * newer deploy than this worker, where it may name a detector this code does not have — silently ignoring
+ * that under-redacts, so it still fails closed.
+ */
+const wireRedactionEntitiesSchema = z
+  .array(z.string())
+  .transform((entities) => entities.filter((entity) => !RETIRED_REDACTION_ENTITIES.has(entity)))
+  .pipe(z.array(redactionEntitySchema))
+
 /** Wire form for the queue payload: `entities` becomes an array because a `Set` does not survive JSON. */
 export const serializedRedactionPolicySchema = z.object({
-  entities: z.array(redactionEntitySchema),
+  entities: wireRedactionEntitiesSchema,
   redactMetadata: z.boolean(),
   identities: redactionIdentityHandlingSchema,
 })
