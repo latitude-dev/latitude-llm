@@ -2,9 +2,9 @@ import type { CacheModelJudgment, CacheState } from "@domain/spans"
 import { CACHE_CEILING_LIFETIME_SECONDS } from "@domain/spans"
 import type { CacheModelRecord } from "../../../../../../domains/cost/cost.functions.ts"
 
-/** The three states that render a recommendation, in the order the cards read best. */
+/** The three states that ask the reader for something, in the order they read best. */
 const CACHE_RECOMMENDATION_STATES = ["cacheIt", "stopCaching", "investigate"] as const
-export type CacheRecommendationState = (typeof CACHE_RECOMMENDATION_STATES)[number]
+type CacheRecommendationState = (typeof CACHE_RECOMMENDATION_STATES)[number]
 
 /**
  * Which cache lifetime the panel is reading against. `documented` is each row's own
@@ -73,46 +73,60 @@ export function sortCacheRowsBySavings(rows: readonly CacheRowView[]): readonly 
   })
 }
 
-/** Past this a section stops being a shortlist. The rest are counted, not listed. */
-const CACHE_FINDING_ROWS_SHOWN = 3
-
-export interface CacheFindingSection {
-  readonly state: CacheRecommendationState
-  /** Worth acting on, highest savings first, capped at `CACHE_FINDING_ROWS_SHOWN`. */
+/**
+ * Every state present, as a group the table can put a heading on.
+ *
+ * One representation rather than two. A separate findings list beside a table meant the
+ * same rows rendered twice with different encodings, which is what made a reader ask why
+ * three particular models were called out.
+ */
+export interface CacheStateGroup {
+  readonly state: CacheState
+  /** Every row in this state, highest savings first. */
   readonly rows: readonly CacheRowView[]
-  /** Models in this state that are not listed, either capped out or too cheap to lead with. */
-  readonly hiddenCount: number
-  /** Orders the sections. Not rendered: a total beside per-row totals reads as double counting. */
+  /** Whether the state asks for something. Settled states stay hidden until expanded. */
+  readonly isActionable: boolean
+  /** Only what clears the floor, so a group of pennies does not inflate the headline. */
   readonly savingsMicrocents: number
 }
 
+/** Settled states in the order they read once someone expands the table. */
+const CACHE_SETTLED_ORDER: readonly CacheState[] = ["optimal", "correctlyOff", "notEnoughData"]
+
 /**
- * The findings, grouped by the state that says what to do about them, and ordered so the
- * most money comes first.
- *
- * The spend floor decides emphasis here rather than admission: a finding under it is a
- * real finding on cheap traffic, so it is counted rather than dropped. Dropping it would
- * leave the panel claiming a model is fine when we know it is not.
+ * Groups ordered so the money leads: states that ask for something first, by how much they
+ * would save, then the states that ask for nothing.
  */
-export function buildCacheFindings(
+export function buildCacheStateGroups(
   rows: readonly CacheModelRecord[],
   selection: CacheLifetimeSelection,
-): readonly CacheFindingSection[] {
+): readonly CacheStateGroup[] {
   const resolved = rows.map((row) => resolveCacheRow(row, selection))
-  return CACHE_RECOMMENDATION_STATES.flatMap((state) => {
-    const matching = resolved.filter((row) => row.judgment.state === state)
-    if (matching.length === 0) return []
-    const worthLeadingWith = sortCacheRowsBySavings(matching.filter((row) => row.judgment.savingsClearsFloor))
-    const shown = worthLeadingWith.slice(0, CACHE_FINDING_ROWS_SHOWN)
-    return [
-      {
-        state,
-        rows: shown,
-        hiddenCount: matching.length - shown.length,
-        savingsMicrocents: worthLeadingWith.reduce((sum, row) => sum + (row.judgment.modeledSavingsMicrocents ?? 0), 0),
-      },
-    ]
-  }).sort((a, b) => b.savingsMicrocents - a.savingsMicrocents)
+  const byState = new Map<CacheState, CacheRowView[]>()
+  for (const row of resolved) {
+    byState.set(row.judgment.state, [...(byState.get(row.judgment.state) ?? []), row])
+  }
+
+  const group = (state: CacheState): CacheStateGroup | null => {
+    const stateRows = byState.get(state)
+    if (!stateRows || stateRows.length === 0) return null
+    return {
+      state,
+      rows: sortCacheRowsBySavings(stateRows),
+      isActionable: cacheStateIsActionable(state),
+      savingsMicrocents: stateRows.reduce(
+        (sum, row) => sum + (row.judgment.savingsClearsFloor ? (row.judgment.modeledSavingsMicrocents ?? 0) : 0),
+        0,
+      ),
+    }
+  }
+
+  const actionable = CACHE_RECOMMENDATION_STATES.map(group)
+    .filter((entry): entry is CacheStateGroup => entry !== null)
+    .sort((a, b) => b.savingsMicrocents - a.savingsMicrocents)
+  const settled = CACHE_SETTLED_ORDER.map(group).filter((entry): entry is CacheStateGroup => entry !== null)
+
+  return [...actionable, ...settled]
 }
 
 /** The models with nothing to do, counted so the panel can say so in one line. */
@@ -130,10 +144,6 @@ export function summariseSettledRows(
 /**
  * The share of this model's recorded spend the finding could recover.
  *
- * One encoding for every state, which rate cannot manage: a bar of unused headroom means
- * nothing for `Stop caching`, where the ceiling is zero and the money is a write premium
- * being paid for nothing. Money is the same quantity in all three cases.
- *
  * Clamped because the two figures come from different places. Savings are modeled from
  * tokens and registry prices; spend is what was recorded, output included. They can
  * disagree on a row the provider priced oddly.
@@ -145,30 +155,12 @@ export function recoverableShare(row: CacheRowView): number | null {
 }
 
 /**
- * What each section asks for, in one line.
+ * Whether a state asks for something, which is what decides whether its group is on screen
+ * before the reader expands the table.
  *
  * `Investigate` names the category and stops there. Every cache lever lives in the
- * customer's own prompt-construction code, and comparing prefixes byte by byte is
- * something the providers' own cache diagnostics do better, with access we do not have.
+ * customer's own prompt-construction code, and comparing prefixes byte by byte is something
+ * the providers' own cache diagnostics do better, with access we do not have.
  */
-export const CACHE_RECOMMENDATION_COPY: Record<
-  CacheRecommendationState,
-  { readonly title: string; readonly body: string }
-> = {
-  cacheIt: {
-    title: "Cache it",
-    body: "Caching is off on prompts that repeat enough to pay for it.",
-  },
-  stopCaching: {
-    title: "Stop caching",
-    body: "These calls pay to write a cache that expires before anything reads it.",
-  },
-  investigate: {
-    title: "Investigate",
-    body: "Something in these prompts changes between calls, so the cache is rarely hit.",
-  },
-}
-
-/** Whether a state carries a savings figure at all, which is what the blank cell means. */
 export const cacheStateIsActionable = (state: CacheState): state is CacheRecommendationState =>
   CACHE_RECOMMENDATION_STATES.some((actionable) => actionable === state)

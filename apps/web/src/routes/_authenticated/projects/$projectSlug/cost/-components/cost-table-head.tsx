@@ -17,11 +17,14 @@ export function CostTableHead<TColumn extends string>({
   sort,
   onSort,
   tooltipMessage,
+  className,
 }: {
   readonly column: TColumn
   readonly label: string
   readonly align: "left" | "right"
   readonly isFirst: boolean
+  /** For a column whose width auto-layout gets wrong, such as one holding a bar. */
+  readonly className?: string
   /** Ranks A-Z rather than 0-9, which is only right for a name column. */
   readonly alphabetical?: boolean
   readonly sort: { readonly column: TColumn; readonly direction: "asc" | "desc" }
@@ -51,7 +54,7 @@ export function CostTableHead<TColumn extends string>({
   return (
     <TableHead
       align={align}
-      className={cn("bg-transparent", { "border-l border-border": !isFirst })}
+      className={cn("bg-transparent", { "border-l border-border": !isFirst }, className)}
       aria-sort={isActive ? (isAscending ? "ascending" : "descending") : "none"}
     >
       {tooltipMessage ? (

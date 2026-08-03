@@ -3,7 +3,7 @@ import { CACHE_CEILING_LIFETIME_SECONDS } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import type { CacheModelRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import {
-  buildCacheFindings,
+  buildCacheStateGroups,
   cacheStateIsActionable,
   parseCacheLifetimeSelection,
   recoverableShare,
@@ -120,9 +120,9 @@ describe("sortCacheRowsBySavings", () => {
   })
 })
 
-describe("buildCacheFindings", () => {
-  it("groups findings by state and leads with the most money", () => {
-    const sections = buildCacheFindings(
+describe("buildCacheStateGroups", () => {
+  it("leads with the states that ask for something, by how much they would save", () => {
+    const groups = buildCacheStateGroups(
       [
         row({ model: "off-model", documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 300 }) }),
         row({ model: "wasteful", documented: judgment({ state: "stopCaching", modeledSavingsMicrocents: 900 }) }),
@@ -138,13 +138,28 @@ describe("buildCacheFindings", () => {
       "documented",
     )
 
-    expect(sections.map((section) => section.state)).toEqual(["stopCaching", "investigate", "cacheIt"])
-    expect(sections[1]?.savingsMicrocents).toBe(600)
-    expect(sections[1]?.rows.map((entry) => entry.model)).toEqual(["broken-a", "broken-b"])
+    expect(groups.map((group) => group.state)).toEqual(["stopCaching", "investigate", "cacheIt"])
+    expect(groups[1]?.savingsMicrocents).toBe(600)
+    expect(groups[1]?.rows.map((entry) => entry.model)).toEqual(["broken-a", "broken-b"])
   })
 
-  it("raises no section for a project where every model is already fine", () => {
-    const sections = buildCacheFindings(
+  it("keeps the settled states, in their own order, after everything actionable", () => {
+    const groups = buildCacheStateGroups(
+      [
+        row({ model: "thin", documented: judgment({ state: "notEnoughData", modeledSavingsMicrocents: null }) }),
+        row({ model: "guardrail", documented: judgment({ state: "correctlyOff", modeledSavingsMicrocents: null }) }),
+        row({ model: "healthy", documented: judgment({ state: "optimal", modeledSavingsMicrocents: null }) }),
+        row({ model: "off-model", documented: judgment({ state: "cacheIt", modeledSavingsMicrocents: 300 }) }),
+      ],
+      "documented",
+    )
+
+    expect(groups.map((group) => group.state)).toEqual(["cacheIt", "optimal", "correctlyOff", "notEnoughData"])
+    expect(groups.map((group) => group.isActionable)).toEqual([true, false, false, false])
+  })
+
+  it("raises no actionable group for a project where every model is already fine", () => {
+    const groups = buildCacheStateGroups(
       [
         row({ model: "healthy", documented: judgment({ state: "optimal", modeledSavingsMicrocents: null }) }),
         row({ model: "guardrail", documented: judgment({ state: "correctlyOff", modeledSavingsMicrocents: null }) }),
@@ -152,22 +167,12 @@ describe("buildCacheFindings", () => {
       "documented",
     )
 
-    expect(sections).toEqual([])
+    expect(groups.filter((group) => group.isActionable)).toEqual([])
   })
 
-  it("caps a section at three rows and counts the rest", () => {
-    const many = ["a", "b", "c", "d", "e"].map((model, index) =>
-      row({ model, documented: judgment({ state: "investigate", modeledSavingsMicrocents: 900 - index }) }),
-    )
-    const sections = buildCacheFindings(many, "documented")
-
-    expect(sections[0]?.rows.map((entry) => entry.model)).toEqual(["a", "b", "c"])
-    expect(sections[0]?.hiddenCount).toBe(2)
-  })
-
-  it("counts a finding under the floor instead of dropping it", () => {
-    // Dropping it would leave the panel implying the model is fine when it is not.
-    const sections = buildCacheFindings(
+  it("shows a finding under the floor but keeps its pennies out of the group total", () => {
+    // Hiding the row would leave the panel implying the model is fine when it is not.
+    const groups = buildCacheStateGroups(
       [
         row({
           model: "pennies",
@@ -177,10 +182,8 @@ describe("buildCacheFindings", () => {
       "documented",
     )
 
-    expect(sections).toHaveLength(1)
-    expect(sections[0]?.rows).toEqual([])
-    expect(sections[0]?.hiddenCount).toBe(1)
-    expect(sections[0]?.savingsMicrocents).toBe(0)
+    expect(groups[0]?.rows.map((entry) => entry.model)).toEqual(["pennies"])
+    expect(groups[0]?.savingsMicrocents).toBe(0)
   })
 
   it("regroups when a different lifetime is picked, which is what the control is for", () => {
@@ -191,8 +194,8 @@ describe("buildCacheFindings", () => {
       ),
     ]
 
-    expect(buildCacheFindings(records, "documented")).toEqual([])
-    expect(buildCacheFindings(records, 3_600).map((section) => section.state)).toEqual(["investigate"])
+    expect(buildCacheStateGroups(records, "documented").map((group) => group.state)).toEqual(["optimal"])
+    expect(buildCacheStateGroups(records, 3_600).map((group) => group.state)).toEqual(["investigate"])
   })
 })
 

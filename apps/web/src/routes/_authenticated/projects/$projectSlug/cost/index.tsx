@@ -41,7 +41,9 @@ function CostBreadcrumb() {
 /** Groups the panels below it. Sits outside the cards, above their own titles. */
 function SectionHeading({ children }: { readonly children: string }) {
   return (
-    <div className="flex flex-col pt-2">
+    // Pulled toward the panel it introduces, so the stack's own gap reads as the break
+    // between sections rather than splitting the heading off from its own content.
+    <div className="-mb-2 flex flex-col pt-2">
       <Text.H5M color="foreground">{children}</Text.H5M>
     </div>
   )
@@ -182,7 +184,7 @@ function CostPageContent() {
           />
         }
       />
-      <div className="flex flex-col gap-4 px-6 pb-6">
+      <div className="flex flex-col gap-6 px-6 pb-6">
         <CostKpiRow
           overview={overview}
           dailyAverageMicrocents={dailyAverageMicrocents}
@@ -202,7 +204,7 @@ function CostPageContent() {
         />
         <SectionHeading>Model</SectionHeading>
         {/* The two model questions side by side: how spend moves, and who it goes to. */}
-        <div className="flex flex-col gap-4 xl:flex-row">
+        <div className="flex flex-col gap-6 xl:flex-row">
           <div className="flex min-w-0 flex-1 flex-col">
             <ModelUsagePanel
               series={denseModelUsage}
