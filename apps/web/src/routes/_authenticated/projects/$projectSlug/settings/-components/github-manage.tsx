@@ -218,7 +218,12 @@ function ProjectGithubSections({
 
   return (
     <>
-      <RepositorySection projectId={projectId} config={config} onChanged={invalidate} />
+      <RepositorySection
+        key={`repo:${config.repoId ?? "none"}:${config.branch ?? ""}`}
+        projectId={projectId}
+        config={config}
+        onChanged={invalidate}
+      />
       <MonitoringSection projectId={projectId} config={config} projectCount={projectCount} onChanged={invalidate} />
     </>
   )
@@ -436,8 +441,10 @@ function MonitoringSection({
           </div>
         }
       >
+        {/* Keyed on the seeded values, not the query's dataUpdatedAt: an inherited card must
+            follow a changed organization default, while an identical refetch must not wipe edits. */}
         <GithubMonitorSettingsForm
-          key={`${scope}:${config.repoId ?? "none"}`}
+          key={`${scope}:${config.repoId ?? "none"}:${JSON.stringify(shown)}`}
           initial={shown}
           readOnly={scope === "organization"}
           submitLabel="Save for this project"
@@ -478,7 +485,7 @@ export function OrganizationGithubModal({
   readonly onClose: () => void
 }) {
   const queryClient = useQueryClient()
-  const { data, isLoading, dataUpdatedAt } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: GITHUB_ORG_DEFAULTS_QUERY_KEY,
     queryFn: () => getGithubOrgDefaults(),
   })
@@ -508,7 +515,7 @@ export function OrganizationGithubModal({
           <Skeleton className="h-32 w-full" />
         ) : (
           <GithubOrgDefaultsForm
-            key={dataUpdatedAt}
+            key={data.integrationId}
             initialSettings={data.settings}
             initialRepo={data.defaultRepo}
             submitLabel={confirm.submitLabel}
