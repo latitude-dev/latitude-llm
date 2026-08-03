@@ -224,6 +224,52 @@ describe("AIGenerateLive", () => {
     expect(generateTextMock.mock.calls[1]?.[0].model).toEqual({ modelId: "openai.gpt-oss-120b-1:0" })
   })
 
+  it("reports the fallback as the model that served a fallen-back call", async () => {
+    generateTextMock
+      .mockRejectedValueOnce(new Error("Bedrock is unable to process your request."))
+      .mockResolvedValueOnce({ output: { ok: true }, usage: { totalTokens: 3, inputTokens: 2, outputTokens: 1 } })
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const ai = yield* AIGenerate
+
+        return yield* ai.generate({
+          provider: "amazon-bedrock",
+          model: "minimax.minimax-m2.5",
+          system: "Return JSON.",
+          prompt: "Say ok.",
+          schema: { parse: (value: unknown) => value } as never,
+        })
+      }).pipe(Effect.provide(AIGenerateLive)),
+    )
+
+    expect(result.servedBy).toEqual({ provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" })
+  })
+
+  it("reports the requested model as the model that served a normal call", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      output: { ok: true },
+      usage: { totalTokens: 3, inputTokens: 2, outputTokens: 1 },
+    })
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const ai = yield* AIGenerate
+
+        return yield* ai.generate({
+          provider: "amazon-bedrock",
+          model: "minimax.minimax-m2.5",
+          system: "Return JSON.",
+          prompt: "Say ok.",
+          schema: { parse: (value: unknown) => value } as never,
+        })
+      }).pipe(Effect.provide(AIGenerateLive)),
+    )
+
+    expect(result.servedBy).toEqual({ provider: "amazon-bedrock", model: "minimax.minimax-m2.5" })
+    expect(generateTextMock).toHaveBeenCalledTimes(1)
+  })
+
   it("reports the failed primary attempt in the duration and records why it fell back", async () => {
     let clockMs = 0
     const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => clockMs)

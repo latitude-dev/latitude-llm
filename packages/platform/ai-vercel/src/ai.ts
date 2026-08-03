@@ -369,12 +369,14 @@ export const AIGenerateLive = Layer.effect(
       const fallback = resolveGenerateFallback(input)
       const fallbackProviderModel = fallback ? yield* createProviderModel(fallback.provider, fallback.model) : undefined
 
-      // Started before the primary attempt so a fallback-served call reports the
-      // latency the caller actually waited, not just the winning attempt's.
+      // Started before the primary attempt so a fallback-served call reports the caller's total wait.
       const startTime = performance.now()
       const outcome = yield* Effect.tryPromise({
         try: async () => {
-          const generateWithModel = async (model: ProviderModel) => {
+          const generateWithModel = async (
+            model: ProviderModel,
+            servedBy: { readonly provider: string; readonly model: string },
+          ) => {
             const providerOptions = normalizeProviderOptions(input.providerOptions)
 
             const call: GenerateTextCall = {
@@ -404,6 +406,7 @@ export const AIGenerateLive = Layer.effect(
             return {
               object: result.output,
               tokens: usage?.totalTokens ?? 0,
+              servedBy,
               tokenUsage: {
                 input: usage?.inputTokens ?? 0,
                 output: usage?.outputTokens ?? 0,
@@ -416,7 +419,10 @@ export const AIGenerateLive = Layer.effect(
 
           const execute = async () => {
             try {
-              return { result: await generateWithModel(providerModel), fallback: null }
+              return {
+                result: await generateWithModel(providerModel, { provider: input.provider, model: input.model }),
+                fallback: null,
+              }
             } catch (primaryError) {
               if (!fallback || fallbackProviderModel === undefined) {
                 throw primaryError
@@ -424,7 +430,7 @@ export const AIGenerateLive = Layer.effect(
 
               try {
                 return {
-                  result: await generateWithModel(fallbackProviderModel),
+                  result: await generateWithModel(fallbackProviderModel, fallback),
                   fallback: {
                     model: `${fallback.provider}/${fallback.model}`,
                     primaryError: formatGenerateError(primaryError),
