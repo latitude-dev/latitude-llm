@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.7.1] - 2026-08-03
+
+### Changed
+
+- `client.traces.export` now throws `TooManyRequestsError` when the export is rate-limited (HTTP 429), instead of a generic error. The endpoint is now throttled to match `client.datasets.exportRows` and `client.signals.export`.
+
 ## [9.7.0] - 2026-07-28
 
 ### Added
