@@ -482,25 +482,43 @@ export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 5 * 60_000
 export const TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB = 512
 
 /**
- * Dot-product element operations the clustering worker gets through per millisecond.
- * Measured, not assumed: a plain build over 970 observations sweeps K=2..10 at 3
- * restarts and <=25 iterations, so at most `3 * 25 * 970 * 2048 * 54` ~ 8.0e9
- * element operations, and takes 61-65s on the production activity worker — ~128 per
- * microsecond. 80 leaves headroom for a slow host pass. Retune from
- * `taxonomy.adaptive.projectedRootSearchWork` against observed `durationMs`.
+ * ROOT-SWEEP dot-product element operations per millisecond of TOTAL build time.
+ *
+ * Deliberately not raw throughput. The budget check can only charge the root K
+ * sweeps, because the work below the root depends on a partition that does not exist
+ * until the split is chosen — and a rigorous whole-tree upper bound (every depth
+ * sweeping its full K range over all members, no early convergence) overstates a
+ * real build by ~2x and would decline corpora that finish comfortably. So the
+ * subtree cost is folded into this ratio instead: the numerator counts only the root
+ * sweep, the denominator is the whole build's wall time.
+ *
+ * Calibrated that way from production: a plain build over 970 observations sweeps
+ * K=2..10 at 3 restarts and <=25 iterations, so at most `3 * 25 * 970 * 2048 * 54`
+ * ~ 8.0e9 root-sweep operations, against 61-65s of total build time — ~128_000 per
+ * millisecond. 80_000 leaves headroom for a slow host pass. Retune from
+ * `taxonomy.adaptive.projectedRootSearchWork` against observed `durationMs`, which
+ * keeps both sides of the ratio measured rather than derived.
  *
  * Not exported: only the derived budget below is a contract.
  */
-const CLUSTERING_WORKER_ELEMENT_OPS_PER_MS = 80_000
+const CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS = 80_000
 
 /**
- * Work ceiling for the near-gate re-search, as a projected operation COUNT rather
- * than a duration: the builder must stay a pure function of its inputs, and a
- * wall-clock check would branch differently on a slow host and break Temporal
- * replay. An unaffordable re-search is declined up front and reports
- * `escalationSkipped`, which is what stops a too-tight budget from suppressing
- * adaptive silently. At current settings a ~900-observation corpus projects to ~74%
- * of this and a TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX corpus is declined.
+ * Ceiling on the projected ROOT-SWEEP work of an escalated build, in the units of
+ * CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS (which is what makes charging the root
+ * sweeps alone dimensionally sound — see there).
+ *
+ * A projected operation COUNT rather than a duration: the builder must stay a pure
+ * function of its inputs, and a wall-clock check would branch differently on a slow
+ * host and break Temporal replay.
+ *
+ * Exceeding it declines the RE-SEARCH, not the adaptive build: the first pass still
+ * stands, so the run publishes an un-escalated adaptive tree — which on a near-gate
+ * corpus is exactly the collapse-prone one the re-search exists to avoid. That is
+ * why declining reports `escalationSkipped` and `projectedRootSearchWork`; a
+ * too-tight budget degrades tree quality quietly otherwise. At current settings a
+ * ~900-observation corpus projects to ~74% of this and a
+ * TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX corpus is declined.
  */
 export const TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK =
-  TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS * CLUSTERING_WORKER_ELEMENT_OPS_PER_MS
+  TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS * CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS
