@@ -64,11 +64,7 @@ const formatPeriodDate = (value: string) =>
 
 function BillingOverviewCards() {
   const overview = Route.useLoaderData({ select: (data) => data.overview })
-  const totalUsedCredits = overview.consumedCredits
   const hasOverageCredits = overview.overageCredits > 0
-  const remainingCredits = Number.isFinite(overview.includedCredits)
-    ? Math.max(overview.includedCredits - totalUsedCredits, 0)
-    : Number.POSITIVE_INFINITY
 
   const cards = [
     {
@@ -85,7 +81,7 @@ function BillingOverviewCards() {
       label: "Credits used this period",
       value: (
         <div className="flex items-baseline gap-2">
-          <Text.H3 weight="bold">{numberFormatter.format(totalUsedCredits)}</Text.H3>
+          <Text.H3 weight="bold">{numberFormatter.format(overview.consumedCredits)}</Text.H3>
           <Text.H3 weight="medium" color="foregroundMuted">
             / {formatCredits(overview.includedCredits)} credits
           </Text.H3>
@@ -93,8 +89,8 @@ function BillingOverviewCards() {
       ),
       detail: hasOverageCredits
         ? `${compactNumberFormatter.format(overview.overageCredits)} overage credits this period`
-        : Number.isFinite(remainingCredits)
-          ? `${numberFormatter.format(remainingCredits)} credits remaining`
+        : overview.remainingCredits !== null
+          ? `${numberFormatter.format(overview.remainingCredits)} credits remaining`
           : "Unlimited / custom allowance",
     },
     {
