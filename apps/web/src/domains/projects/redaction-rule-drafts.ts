@@ -72,10 +72,21 @@ const encodedRulesSchema = z.array(redactionRuleSchema)
  * configuration; failing the apply surfaces it instead.
  */
 export const decodeRules = (encoded: string): RedactionRule[] => {
-  const parsed = encodedRulesSchema.safeParse(JSON.parse(encoded))
-  if (!parsed.success) throw new Error("Could not read the redaction rules on this page. Reload and try again.")
+  const parsed = encodedRulesSchema.safeParse(parseJson(encoded))
+  if (!parsed.success) throw new Error(DECODE_FAILURE_MESSAGE)
 
   return parsed.data
+}
+
+const DECODE_FAILURE_MESSAGE = "Could not read the redaction rules on this page. Reload and try again."
+
+// Unparseable and well-formed-but-wrong are the same failure to the user, so they read the same message.
+const parseJson = (encoded: string): unknown => {
+  try {
+    return JSON.parse(encoded)
+  } catch {
+    throw new Error(DECODE_FAILURE_MESSAGE)
+  }
 }
 
 export const newRuleDraft = (kind: RedactionRuleKind): RedactionRule => {

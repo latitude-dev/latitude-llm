@@ -58,10 +58,18 @@ describe("encodeRules", () => {
     expect(encodeRules([first, second])).not.toBe(encodeRules([second, first]))
   })
 
-  // Falling back to `[]` would silently delete every rule the customer had.
-  it("throws rather than decoding unreadable input to an empty policy", () => {
-    expect(() => decodeRules('[{"kind":"terms"}]')).toThrow()
-    expect(() => decodeRules("not json")).toThrow()
+  /**
+   * Falling back to `[]` would silently delete every rule the customer had. Both shapes of bad
+   * input are asserted on the message, not merely on throwing: a raw `SyntaxError` escaping from
+   * `JSON.parse` also throws, and it is not something a user can act on.
+   */
+  it.each([
+    '[{"kind":"terms"}]',
+    "not json",
+    "",
+    "null",
+  ])("refuses to decode %o to an empty policy, with a message a user can act on", (encoded) => {
+    expect(() => decodeRules(encoded)).toThrow("Could not read the redaction rules on this page")
   })
 })
 

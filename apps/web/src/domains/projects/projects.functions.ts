@@ -35,7 +35,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { getCookies, setCookie } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { rejectInvalidRedactionRules } from "../../lib/redaction-rules.ts"
+import { rejectInvalidRedactionRules, rejectionMessage } from "../../lib/redaction-rules.ts"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
@@ -221,7 +221,7 @@ export const updateProjectRedaction = createServerFn({ method: "POST" })
 
         const rejected = rejectInvalidRedactionRules(data.redaction)
         if (rejected) {
-          return yield* new BadRequestError({ message: `Rule ${rejected.rule.label} ${rejected.reason}` })
+          return yield* new BadRequestError({ message: rejectionMessage(rejected) })
         }
 
         return yield* updateProjectRedactionUseCase({
@@ -246,15 +246,30 @@ export const updateProjectRedaction = createServerFn({ method: "POST" })
  * Score a draft redaction rule without saving it.
  *
  * Runs the same `validateRedactionRule` the write path uses, so the editor can never show a
- * verdict the save disagrees with. It lives on the server because the corpus and the engine are
- * in `@domain/spans`, which has no business in the browser bundle.
+ * verdict the save disagrees with. It lives on the server because the engine is in
+ * `@domain/spans`, which has no business in the browser bundle.
+ *
+ * Gated like the write it previews, even though it reads nothing: it runs a caller's pattern, and
+ * only the people who can save a rule have any reason to ask what a rule would do.
  */
 export const validateRedactionRuleDraft = createServerFn({ method: "POST" })
   .inputValidator(z.object({ rule: redactionRuleSchema }))
   .handler(async ({ data }): Promise<RuleValidation> => {
-    await requireSession()
+    const { organizationId, userId } = await requireSession()
 
-    return validateRedactionRule(data.rule)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const memberships = yield* MembershipRepository
+        const isAdmin = yield* memberships.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({
+            message: "Only organization owners and admins can check redaction rules",
+          })
+        }
+
+        return validateRedactionRule(data.rule)
+      }).pipe(withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
   })
 
 /** Kept modest: a preview that scans a thousand spans buys no more confidence than one that scans fifty. */
@@ -266,6 +281,10 @@ const PREVIEW_SAMPLE_SIZE = 50
  * The only honest answer to "will this eat my tool outputs" before the first enforce, because
  * redaction is destructive and not retroactive. Gated like the policy write itself: this reads
  * customer content, so a member who cannot change the policy cannot preview against it either.
+ *
+ * The rules are validated here too, and for a sharper reason than the write path's. This runs the
+ * caller's pattern over stored tool outputs, which are far longer than anything the validator's own
+ * probe uses, so a pattern the save would reject must not reach the engine by way of the preview.
  */
 export const previewRedaction = createServerFn({ method: "POST" })
   .inputValidator(z.object({ projectId: z.string(), redaction: redactionSettingSchema }))
@@ -278,6 +297,11 @@ export const previewRedaction = createServerFn({ method: "POST" })
         const isAdmin = yield* memberships.isAdmin(organizationId, userId)
         if (!isAdmin) {
           return yield* new ForbiddenError({ message: "Only organization owners and admins can preview redaction" })
+        }
+
+        const rejected = rejectInvalidRedactionRules(data.redaction)
+        if (rejected) {
+          return yield* new BadRequestError({ message: rejectionMessage(rejected) })
         }
       }).pipe(withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId), withTracing),
     )

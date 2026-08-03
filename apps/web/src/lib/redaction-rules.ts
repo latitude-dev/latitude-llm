@@ -15,7 +15,7 @@ interface RejectedRedactionRule {
  * verdict the write disagrees with.
  *
  * Write-time is the only time this runs. The ingest path compiles rules without revalidating
- * them, since a corpus scan and a timing probe per batch would cost more than the redaction.
+ * them, since a source scan and a timing probe per batch would cost more than the redaction.
  */
 export function rejectInvalidRedactionRules(
   setting: OrganizationRedactionSetting | null,
@@ -38,3 +38,7 @@ export function rejectInvalidRedactionRules(
 }
 
 const describe = (validation: RuleValidation): string => validation.errors.map((issue) => issue.message).join("; ")
+
+/** The label is punctuated off the reason, which otherwise runs into it as one unreadable sentence. */
+export const rejectionMessage = (rejected: RejectedRedactionRule): string =>
+  `Rule "${rejected.rule.label}": ${rejected.reason}`

@@ -53,6 +53,8 @@ export function RedactionRuleSheet({
     }
 
     let cancelled = false
+    // Drop the previous draft's verdict: it is not an answer about this one, and Save would stamp it.
+    setValidation(null)
     setIsValidating(true)
     const timer = setTimeout(() => {
       validateRedactionRuleDraft({ data: { rule: draft } })
@@ -80,7 +82,8 @@ export function RedactionRuleSheet({
   }
 
   const labelError = labelIssue(draft.label)
-  const canSave = ready && labelError === undefined && validation?.ok === true
+  // `isValidating` too: while a verdict is in flight the panel says so, and Save must not disagree.
+  const canSave = ready && !isValidating && labelError === undefined && validation?.ok === true
 
   return (
     <Sheet open={open} onClose={onClose} closeAriaLabel="Close rule editor">
