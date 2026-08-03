@@ -341,10 +341,11 @@ export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
 export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type {
   PreviewRedactionInput,
+  RedactionPreviewChange,
+  RedactionPreviewLabelCount,
   RedactionPreviewResult,
-  RedactionPreviewSample,
 } from "./use-cases/preview-redaction.ts"
-export { previewRedactionUseCase } from "./use-cases/preview-redaction.ts"
+export { IDENTITY_PREVIEW_LABEL, previewRedactionUseCase } from "./use-cases/preview-redaction.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
 export type { QueryAnalyticsInput } from "./use-cases/query-analytics.ts"
