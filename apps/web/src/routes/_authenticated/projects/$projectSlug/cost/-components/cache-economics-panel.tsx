@@ -1,11 +1,13 @@
 import { CACHE_ECONOMICS_MIN_CALLS, CACHE_MIN_CACHEABLE_INPUT_TOKENS } from "@domain/spans"
-import type { TextColor } from "@repo/ui"
+import type { BadgeProps, TextColor } from "@repo/ui"
 import {
+  Badge,
   cn,
   Icon,
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
   TableSkeleton,
@@ -25,11 +27,10 @@ import {
   TableIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { Fragment, useState } from "react"
+import { useState } from "react"
 import type { CacheEconomicsRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import {
-  buildCacheStateGroups,
   buildCacheSummary,
   CACHE_LIFETIME_OPTIONS,
   type CacheGroupKey,
@@ -37,11 +38,13 @@ import {
   type CacheRowView,
   type CacheStateGroup,
   type CacheSummary,
+  cacheGroupKeyForState,
   parseCacheLifetimeSelection,
   recoverableShare,
+  resolveCacheRow,
 } from "./cache-economics-view.ts"
 import { microcentsToUsd } from "./cost-formatters.ts"
-import { CALLS_SERIES_COLOR } from "./cost-series-colors.ts"
+import { CALLS_SERIES_COLOR, TREND_COLOR } from "./cost-series-colors.ts"
 import { CostTableHead } from "./cost-table-head.tsx"
 
 const DASH = "—"
@@ -60,6 +63,8 @@ const STATE_META: Record<
     readonly short: string
     readonly icon: typeof CircleIcon
     readonly iconColor: TextColor
+    /** Keeps every recommendation visually distinct in the flat "All models" table. */
+    readonly badgeVariant: NonNullable<BadgeProps["variant"]>
   }
 > = {
   cacheIt: {
@@ -68,6 +73,7 @@ const STATE_META: Record<
     short: "Caching is off where it would pay.",
     icon: TriangleAlertIcon,
     iconColor: "warningMutedForeground",
+    badgeVariant: "warningMuted",
   },
   stopCaching: {
     label: "Stop caching",
@@ -75,6 +81,7 @@ const STATE_META: Record<
     short: "Paying to write caches that expire unread.",
     icon: CircleSlashIcon,
     iconColor: "destructive",
+    badgeVariant: "destructiveMuted",
   },
   investigate: {
     label: "Investigate",
@@ -84,6 +91,7 @@ const STATE_META: Record<
     short: "The timing allows it; something in the prompt does not.",
     icon: SearchIcon,
     iconColor: "warningMutedForeground",
+    badgeVariant: "purple",
   },
   optimal: {
     label: "Caching well",
@@ -91,6 +99,7 @@ const STATE_META: Record<
     short: "Nothing to change.",
     icon: CircleCheckIcon,
     iconColor: "success",
+    badgeVariant: "successMuted",
   },
   nothingToDo: {
     label: "Nothing to do",
@@ -98,6 +107,7 @@ const STATE_META: Record<
     short: "No cache would pay, or too few calls to tell.",
     icon: CircleIcon,
     iconColor: "foregroundMuted",
+    badgeVariant: "muted",
   },
 }
 
@@ -147,31 +157,6 @@ function rowExplanation(row: CacheRowView): string {
         return `${formatCount(row.calls)} calls is too few to read anything into the rate.`
       return "Caching is off, and we cannot tell how much of this traffic could use one."
   }
-}
-
-/**
- * An eyebrow heading, matching the signals inbox: icon, label, count, and a hairline
- * filling the rest of the width. Deliberately not a filled band, which reads as another row.
- */
-function StateGroupHeader({ group }: { readonly group: CacheStateGroup }) {
-  const meta = STATE_META[group.key]
-  return (
-    <TableRow hoverable={false} className="border-0">
-      <TableCell colSpan={4} className="max-w-none px-3 pt-8 pb-2.5 align-bottom">
-        <div className="flex w-full flex-col gap-1">
-          <div className="flex flex-row items-center gap-2">
-            <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
-            <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
-              {meta.label}
-            </Text.H6>
-            <Text.H6 color="foregroundMuted">{formatCount(group.rows.length)}</Text.H6>
-            <div className="h-px min-w-4 flex-1 bg-border" />
-          </div>
-          <Text.H6 color="foregroundMuted">{meta.body}</Text.H6>
-        </div>
-      </TableCell>
-    </TableRow>
-  )
 }
 
 /**
@@ -296,6 +281,25 @@ function SavingsCell({ row }: { readonly row: CacheRowView }) {
   )
 }
 
+/** What to do about this row, standing on its own now that rows no longer sit under a heading. */
+function RecommendationCell({ row }: { readonly row: CacheRowView }) {
+  const meta = STATE_META[cacheGroupKeyForState(row.judgment.state)]
+  return (
+    <Tooltip
+      asChild
+      trigger={
+        <span className="inline-flex cursor-default">
+          <Badge variant={meta.badgeVariant} iconProps={{ icon: meta.icon, placement: "start" }}>
+            {meta.label}
+          </Badge>
+        </span>
+      }
+    >
+      {meta.body}
+    </Tooltip>
+  )
+}
+
 function CacheRow({ row }: { readonly row: CacheRowView }) {
   const spend = rollupCostDisplay({
     costTotalMicrocents: row.costMicrocents,
@@ -329,6 +333,9 @@ function CacheRow({ row }: { readonly row: CacheRowView }) {
       </TableCell>
       <TableCell>
         <PositionBar row={row} />
+      </TableCell>
+      <TableCell>
+        <RecommendationCell row={row} />
       </TableCell>
       <TableCell align="right">
         <SavingsCell row={row} />
@@ -393,117 +400,191 @@ const CACHE_VIEW_OPTIONS = [
 /**
  * The summary always shows these three, in this order, however the lifetime is set.
  *
- * A tile that vanishes when a state empties out reshuffles the grid on every switch of the
+ * A tile that vanishes when a state empties out reshuffles the row on every switch of the
  * cache time, and the reader loses the thing they were comparing. Ordering by money would do
  * the same, so the order is fixed even though the table's is not: worst first — paying for
  * nothing, then paying for less than you could, then not caching at all.
  */
-const CACHE_FINDING_TILES: readonly CacheGroupKey[] = ["stopCaching", "investigate", "cacheIt"]
+const CACHE_FINDING_TILES = ["stopCaching", "investigate", "cacheIt"] as const
+type CacheFindingKey = (typeof CACHE_FINDING_TILES)[number]
 
 /**
- * One finding as a number to act on. The bar is its share of the recoverable total, so the
- * tiles can be ranked at a glance without reading the figures.
+ * Bar-only colours for the three findings sharing one track. `investigate` and `cacheIt`
+ * carry the same (amber) icon colour in `STATE_META`, which would make two of three
+ * segments indistinguishable here — so the bar gets its own palette instead.
  */
-function FindingTile({
+const RECOMMENDATION_BAR_COLOR: Record<CacheFindingKey, string> = {
+  stopCaching: "hsl(0 72% 51%)",
+  cacheIt: "hsl(26 90% 37%)",
+  investigate: TREND_COLOR,
+}
+
+/** One finding's number and model count, sized to sit beside its siblings. */
+function RecommendationLine({
   tileKey,
   group,
-  recoverableMicrocents,
 }: {
-  readonly tileKey: CacheGroupKey
+  readonly tileKey: CacheFindingKey
   /** Null when no model is in this state at the selected lifetime. */
   readonly group: CacheStateGroup | null
-  readonly recoverableMicrocents: number
 }) {
   const meta = STATE_META[tileKey]
-  const share = group && recoverableMicrocents > 0 ? group.savingsMicrocents / recoverableMicrocents : 0
-
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-secondary/60 p-3">
+    <div className="flex w-[156px] flex-col gap-1">
       <div className="flex flex-row items-center gap-1.5">
         <Icon icon={meta.icon} size="sm" color={group ? meta.iconColor : "foregroundMuted"} />
-        <Text.H6
-          weight="semibold"
-          color={group ? "foreground" : "foregroundMuted"}
-          noWrap
-          className="uppercase tracking-wide"
-        >
+        <Text.H6M color="foregroundMuted" noWrap>
           {meta.label}
+        </Text.H6M>
+      </div>
+      <div className="flex flex-col">
+        <Text.H3M color={group ? "foreground" : "foregroundMuted"} noWrap className="tabular-nums">
+          {group ? formatPrice(microcentsToUsd(group.savingsMicrocents)) : DASH}
+        </Text.H3M>
+        <Text.H6 color="foregroundMuted" noWrap>
+          {group ? `${formatCount(group.rows.length)} ${group.rows.length === 1 ? "model" : "models"}` : "No models"}
         </Text.H6>
       </div>
-      <Text.H4B color={group ? "foreground" : "foregroundMuted"} noWrap className="tabular-nums">
-        {group ? formatPrice(microcentsToUsd(group.savingsMicrocents)) : DASH}
-      </Text.H4B>
-      <div className="h-1.5 w-full overflow-hidden rounded-sm bg-muted">
-        {group ? (
-          <div
-            className="h-full"
-            style={{ width: `${Math.max(2, share * 100)}%`, backgroundColor: CALLS_SERIES_COLOR }}
-            aria-hidden="true"
-          />
-        ) : null}
-      </div>
-      <Text.H6 color="foregroundMuted">
-        {group
-          ? `${formatCount(group.rows.length)} ${group.rows.length === 1 ? "model" : "models"} · ${meta.short}`
-          : "No models"}
-      </Text.H6>
     </div>
   )
 }
 
-/** Where the project sits overall, on the track and colours the table rows already use. */
-function CacheUseTile({ summary }: { readonly summary: CacheSummary }) {
+/** The three findings' savings on one shared track, so their relative size reads at a glance. */
+function RecommendationsBar({
+  groups,
+  recoverableMicrocents,
+}: {
+  readonly groups: ReadonlyMap<CacheFindingKey, CacheStateGroup | null>
+  readonly recoverableMicrocents: number
+}) {
+  return (
+    <div className="flex h-1 w-full overflow-hidden rounded-sm bg-muted">
+      {CACHE_FINDING_TILES.map((key) => {
+        const group = groups.get(key)
+        if (!group || recoverableMicrocents <= 0) return null
+        const share = group.savingsMicrocents / recoverableMicrocents
+        return (
+          <div
+            key={key}
+            className="h-full"
+            style={{ width: `${Math.max(0, share * 100)}%`, backgroundColor: RECOMMENDATION_BAR_COLOR[key] }}
+            aria-hidden="true"
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+/** What to change, and what closing the gap on cache is worth. */
+function RecommendationsCard({ summary }: { readonly summary: CacheSummary }) {
+  const groups = new Map(CACHE_FINDING_TILES.map((key) => [key, summary.findings.find((g) => g.key === key) ?? null]))
+
+  return (
+    <div className="flex flex-1 flex-col rounded-lg bg-secondary">
+      <div className="p-5 pb-0">
+        <Text.H6M color="foregroundMuted">Recommendations</Text.H6M>
+      </div>
+      <div className="flex flex-1 flex-col justify-between gap-5 p-5 pt-4">
+        <div className="flex flex-row gap-5">
+          {CACHE_FINDING_TILES.map((key) => (
+            <RecommendationLine key={key} tileKey={key} group={groups.get(key) ?? null} />
+          ))}
+        </div>
+        <div className="flex flex-col gap-3">
+          <Text.H6M color="foregroundMuted">Bars show the impact of caching or not caching on average.</Text.H6M>
+          <RecommendationsBar groups={groups} recoverableMicrocents={summary.recoverableMicrocents} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Cache hit rate against what the traffic's timing would allow, and the money on the table.
+ * `Potential savings` absorbs the standalone "Looks recoverable" headline this replaces —
+ * its explanatory tooltip moves onto the label here rather than being dropped.
+ */
+function CacheHitRateCard({ summary }: { readonly summary: CacheSummary }) {
   const pct = (value: number): number => Math.max(0, Math.min(100, value * 100))
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-secondary/60 p-3">
-      <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
-        Cached tokens
-      </Text.H6>
-      <div className="flex flex-row items-baseline gap-2">
-        <Text.H4B color="foreground" noWrap className="tabular-nums">
-          {summary.actualRate === null ? DASH : formatPercentage(summary.actualRate)}
-        </Text.H4B>
-        {summary.ceilingRate === null ? null : (
-          <Text.H6 color="foregroundMuted" noWrap>
-            {`of a possible ${formatPercentage(summary.ceilingRate)}`}
-          </Text.H6>
-        )}
+    <div className="flex flex-1 flex-col rounded-lg bg-secondary">
+      <div className="p-5 pb-0">
+        <Text.H6M color="foregroundMuted">Cache hit rate</Text.H6M>
       </div>
-      <div className="relative h-1.5 w-full overflow-hidden rounded-sm bg-muted">
-        {summary.ceilingRate === null ? null : (
-          <div
-            className="absolute inset-y-0 left-0 opacity-25"
-            style={{ width: `${pct(summary.ceilingRate)}%`, backgroundColor: CALLS_SERIES_COLOR }}
-            aria-hidden="true"
-          />
-        )}
-        <div
-          className="absolute inset-y-0 left-0"
-          style={{ width: `${pct(summary.actualRate ?? 0)}%`, backgroundColor: CALLS_SERIES_COLOR }}
-          aria-hidden="true"
-        />
+      <div className="flex flex-1 flex-col justify-between gap-5 p-5 pt-4">
+        <div className="flex flex-row gap-5">
+          <div className="flex w-[156px] flex-col gap-1">
+            <Text.H6M color="foregroundMuted" noWrap>
+              Cached tokens
+            </Text.H6M>
+            <div className="flex flex-col">
+              <Text.H3M color="foreground" noWrap className="tabular-nums">
+                {summary.actualRate === null ? DASH : formatPercentage(summary.actualRate)}
+              </Text.H3M>
+              <Text.H6 color="foregroundMuted" noWrap>
+                {summary.ceilingRate === null ? "" : `of possible ${formatPercentage(summary.ceilingRate)}`}
+              </Text.H6>
+            </div>
+          </div>
+          <div className="flex w-[156px] flex-col gap-1">
+            <Tooltip
+              asChild
+              trigger={
+                <span className="inline-flex w-fit cursor-default">
+                  <Text.H6M color="foregroundMuted" noWrap>
+                    Potential savings
+                  </Text.H6M>
+                </span>
+              }
+            >
+              {SAVINGS_TOOLTIP}
+            </Tooltip>
+            <div className="flex flex-col">
+              <Text.H3M color="foreground" noWrap className="tabular-nums">
+                {formatPrice(microcentsToUsd(summary.recoverableMicrocents))}
+              </Text.H3M>
+              <Text.H6 color="foregroundMuted" noWrap>
+                {summary.recoverableShareOfSpend === null
+                  ? ""
+                  : `${formatPercentage(summary.recoverableShareOfSpend)} of total spend`}
+              </Text.H6>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3">
+          <Text.H6M color="foregroundMuted">
+            {summary.ceilingRate === null
+              ? "How much of your prompts came from cache."
+              : `The pale bar is what the timing of your calls would allow${
+                  // Models with no measurable cadence are left out of the ceiling rather than
+                  // counted as nothing, so say how much of the traffic it covers.
+                  summary.measuredTokenShare < 0.99
+                    ? `, measured on ${formatPercentage(summary.measuredTokenShare)} of your tokens`
+                    : ""
+                }.`}
+          </Text.H6M>
+          <div className="relative h-1 w-full overflow-hidden rounded-sm bg-muted">
+            {summary.ceilingRate === null ? null : (
+              <div
+                className="absolute inset-y-0 left-0 opacity-25"
+                style={{ width: `${pct(summary.ceilingRate)}%`, backgroundColor: CALLS_SERIES_COLOR }}
+                aria-hidden="true"
+              />
+            )}
+            <div
+              className="absolute inset-y-0 left-0"
+              style={{ width: `${pct(summary.actualRate ?? 0)}%`, backgroundColor: CALLS_SERIES_COLOR }}
+              aria-hidden="true"
+            />
+          </div>
+        </div>
       </div>
-      <Text.H6 color="foregroundMuted">
-        {summary.ceilingRate === null
-          ? "How much of your prompts came from cache."
-          : `The pale bar is what the timing of your calls would allow${
-              // Models with no measurable cadence are left out of the ceiling rather than
-              // counted as nothing, so say how much of the traffic it covers.
-              summary.measuredTokenShare < 0.99
-                ? `, measured on ${formatPercentage(summary.measuredTokenShare)} of your tokens`
-                : ""
-            }.`}
-      </Text.H6>
     </div>
   )
 }
 
-/**
- * Every tile in one grid rather than a row of two above a row of three: separate rows put
- * the second tile's left edge in a different place on each line, which reads as a mistake.
- * The headline takes two of the three columns, so every edge lands on the same grid.
- */
 /**
  * What a chosen lifetime does not account for.
  *
@@ -529,49 +610,11 @@ function CacheSummaryView({
   readonly selection: CacheLifetimeSelection
 }) {
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-      <div className="flex flex-col gap-2 rounded-lg bg-secondary/60 p-3 lg:col-span-2">
-        <Tooltip
-          asChild
-          trigger={
-            <div className="flex w-fit cursor-default flex-row items-center gap-1.5">
-              <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
-                Looks recoverable
-              </Text.H6>
-              <Icon icon={InfoIcon} size="sm" color="foregroundMuted" />
-            </div>
-          }
-        >
-          {SAVINGS_TOOLTIP}
-        </Tooltip>
-        <Text.H3M color="foreground" noWrap className="tabular-nums">
-          {formatPrice(microcentsToUsd(summary.recoverableMicrocents))}
-        </Text.H3M>
-        <Text.H6 color="foregroundMuted">
-          {summary.recoverableShareOfSpend === null
-            ? "Modeled from your tokens and each model's list prices."
-            : `${formatPercentage(summary.recoverableShareOfSpend)} of what you spend here, modeled from your token counts.`}
-        </Text.H6>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <CacheHitRateCard summary={summary} />
+        <RecommendationsCard summary={summary} />
       </div>
-      <CacheUseTile summary={summary} />
-      {/* The tiles read as three more statistics without it, and they are the actions. */}
-      <div className="mt-1 flex flex-row items-center gap-2 lg:col-span-3">
-        <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
-          Recommendations
-        </Text.H6>
-        <Text.H6 color="foregroundMuted" noWrap>
-          what to change, worst first
-        </Text.H6>
-        <div className="h-px min-w-4 flex-1 bg-border" />
-      </div>
-      {CACHE_FINDING_TILES.map((tileKey) => (
-        <FindingTile
-          key={tileKey}
-          tileKey={tileKey}
-          group={summary.findings.find((group) => group.key === tileKey) ?? null}
-          recoverableMicrocents={summary.recoverableMicrocents}
-        />
-      ))}
       <ChosenLifetimeNote selection={selection} />
     </div>
   )
@@ -606,17 +649,11 @@ export function CacheEconomicsPanel({
 
   const summary = economics ? buildCacheSummary({ rows: economics.rows, totals: economics.totals, selection }) : null
 
-  // A sort moves the groups as well as the rows, each group carried by its leading row on
-  // the sorted column — otherwise sorting by spend leaves the biggest spender three headings
-  // down. So sorting by rate does put `Caching well` on top, which is the point of asking.
-  //
-  // What keeps that honest is `compareNullsLast`: the groups with nothing to show on the
-  // sorted column sink, so a rate we declined to judge can never outrank a real one, and
-  // the default savings sort still leads with the money.
+  // One flat list, ranked by impact rather than grouped by the action it needs — a row with
+  // nothing to show on the sorted column sinks via `compareNullsLast` instead of hiding under
+  // its own heading, so the default savings sort still leads with the money.
   const compare = compareRows(sort)
-  const groups = (economics ? buildCacheStateGroups(economics.rows, selection) : [])
-    .map((group) => ({ ...group, rows: [...group.rows].sort(compare) }))
-    .sort((a, b) => (a.rows[0] && b.rows[0] ? compare(a.rows[0], b.rows[0]) : 0))
+  const rows = (economics ? economics.rows.map((row) => resolveCacheRow(row, selection)) : []).sort(compare)
 
   const headProps = { sort, onSort }
 
@@ -688,18 +725,18 @@ export function CacheEconomicsPanel({
                 className="w-2/5"
                 {...headProps}
               />
+              <TableHead align="left" className="border-l border-border bg-transparent">
+                <Text.H5M color="foregroundMuted" noWrap>
+                  Recommendation
+                </Text.H5M>
+              </TableHead>
               <CostTableHead column="savings" label="Est. savings" align="right" isFirst={false} {...headProps} />
               <CostTableHead column="spend" label="Spend" align="right" isFirst={false} {...headProps} />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {groups.map((group) => (
-              <Fragment key={group.key}>
-                <StateGroupHeader group={group} />
-                {group.rows.map((row) => (
-                  <CacheRow key={`${row.provider}/${row.model}`} row={row} />
-                ))}
-              </Fragment>
+            {rows.map((row) => (
+              <CacheRow key={`${row.provider}/${row.model}`} row={row} />
             ))}
           </TableBody>
         </Table>

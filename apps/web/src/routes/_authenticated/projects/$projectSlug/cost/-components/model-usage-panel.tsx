@@ -12,6 +12,7 @@ import {
   microcentsToUsd,
 } from "./cost-formatters.ts"
 import { modelColorAt, OTHER_SERIES_COLOR } from "./cost-series-colors.ts"
+import { ExpandableLegend } from "./expandable-legend.tsx"
 
 const CHART_HEIGHT = 260
 
@@ -73,12 +74,12 @@ function UsageLegend({
   readonly onIsolate: (name: string | null) => void
 }) {
   return (
-    <div className="flex flex-row flex-wrap items-center gap-1">
-      {series.map((entry) => {
+    <ExpandableLegend
+      entries={series.map((entry) => ({ ...entry, key: entry.name }))}
+      renderEntry={(entry) => {
         const isMuted = isolated !== null && isolated !== entry.name
         return (
           <Button
-            key={entry.name}
             variant="ghost"
             size="sm"
             onClick={() => onIsolate(isolated === entry.name ? null : entry.name)}
@@ -89,8 +90,8 @@ function UsageLegend({
             {entry.name}
           </Button>
         )
-      })}
-    </div>
+      }}
+    />
   )
 }
 
@@ -142,8 +143,9 @@ export function ModelUsagePanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
-        // The picker above states this window; only the All-time slice differs from it.
-        showWindow={isAllTime}
+        // The picker above states this window already, and the recent-activity
+        // distinction that other dashboards flag isn't relevant to this panel.
+        showWindow={false}
         actions={
           <Tabs
             variant="bordered"
@@ -163,11 +165,11 @@ export function ModelUsagePanel({
         }
       />
       {isLoading ? (
-        <div className="p-3">
+        <div className="px-4 py-3">
           <HistogramSkeleton height={CHART_HEIGHT} />
         </div>
       ) : isEmpty ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center p-3">
+        <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
           <Text.H6 color="foregroundMuted">
             {measure === "cost"
               ? "No spend recorded in this time window"
@@ -175,7 +177,7 @@ export function ModelUsagePanel({
           </Text.H6>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 p-3">
+        <div className="flex flex-col gap-2 px-4 py-3">
           <UsageLegend
             series={usageSeries}
             isolated={isolatedSeries.length > 0 ? isolated : null}

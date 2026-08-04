@@ -90,6 +90,23 @@ const CACHE_GROUPS = [
 
 export type CacheGroupKey = (typeof CACHE_GROUPS)[number]["key"]
 
+/** Which heading a row's raw state falls under, for a table that lists rows flat. */
+export function cacheGroupKeyForState(state: CacheState): CacheGroupKey {
+  switch (state) {
+    case "cacheIt":
+      return "cacheIt"
+    case "stopCaching":
+      return "stopCaching"
+    case "investigate":
+      return "investigate"
+    case "optimal":
+      return "optimal"
+    case "correctlyOff":
+    case "notEnoughData":
+      return "nothingToDo"
+  }
+}
+
 /**
  * Every group present, as the table renders it.
  *

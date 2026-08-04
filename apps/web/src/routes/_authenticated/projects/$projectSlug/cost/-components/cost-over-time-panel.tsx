@@ -99,8 +99,9 @@ export function CostOverTimePanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
-        // The picker above states this window; only the All-time slice differs from it.
-        showWindow={isAllTime}
+        // The picker above states this window already, and the recent-activity
+        // distinction that other dashboards flag isn't relevant to this panel.
+        showWindow={false}
         actions={
           <Tabs
             variant="bordered"
@@ -120,15 +121,15 @@ export function CostOverTimePanel({
         }
       />
       {isLoading ? (
-        <div className="p-3">
+        <div className="px-4 py-3">
           <HistogramSkeleton height={CHART_HEIGHT} />
         </div>
       ) : isEmpty ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center p-3">
+        <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
           <Text.H6 color="foregroundMuted">No spend recorded in this time window</Text.H6>
         </div>
       ) : (
-        <div className="flex flex-col gap-1 p-3">
+        <div className="flex flex-col gap-1 px-4 py-3">
           <Chart
             categories={categories}
             series={series}
