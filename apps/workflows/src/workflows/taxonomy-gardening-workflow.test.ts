@@ -12,6 +12,7 @@ const { mockActivities } = vi.hoisted(() => {
     clustersDeprecated: 2,
     leavesAssigned: 7,
     maxDepthReached: 2,
+    topLevelClustersBuilt: 2,
     lineage: ["birth"],
     planKey: "org:oooooooooooooooooooooooo:taxonomy:gardenPlan:rrrrrrrrrrrrrrrrrrrrrrrr",
   }
@@ -76,6 +77,9 @@ const scopedInput = { ...globalInput, customBehaviorId: "b".repeat(24) }
 describe("taxonomy gardening workflow (divisive build)", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // `clearAllMocks` keeps implementations, so restore the all-markers-on default
+    // the mock factory sets — a test that flips one marker off must not leak.
+    vi.mocked(patched).mockImplementation(() => true)
   })
 
   it("builds the tree once, names clusters deepest-first, and completes the run", async () => {
@@ -146,6 +150,61 @@ describe("taxonomy gardening workflow (divisive build)", () => {
       expect.objectContaining({ clustersBorn: 0, clustersDeprecated: 0 }),
     )
     expect(result).toEqual(expect.objectContaining({ status: "completed" }))
+  })
+
+  // Above the gardening minimum (so not a cold start) but split into nothing: the
+  // build produced a bare root. Publishing it retires the tree that is serving and
+  // activates an empty one, which is how a low-traffic project lost all 18 of its
+  // behaviours after a week of thin data (project w7hv60cisk5n2r96c5ix5y1w).
+  const degenerateBuildResult = {
+    observationsScanned: 69,
+    observationsAvailable: 69,
+    observationsSampled: 69,
+    sampleStrategy: "day_stratified_hash_round_robin",
+    sampleCap: 1500,
+    clustersBorn: 1,
+    clustersContinued: 0,
+    clustersDeprecated: 18,
+    leavesAssigned: 69,
+    maxDepthReached: 0,
+    topLevelClustersBuilt: 0,
+    lineage: ["death"],
+    planKey: "org:oooooooooooooooooooooooo:taxonomy:gardenPlan:rrrrrrrrrrrrrrrrrrrrrrrr",
+  }
+
+  it.each([
+    ["global", globalInput],
+    ["scoped", scopedInput],
+  ] as const)("keeps the prior tree serving when a %s rebuild collapses to a bare root", async (_label, input) => {
+    mockActivities.planHierarchicalGardenTaxonomyActivity.mockResolvedValueOnce(degenerateBuildResult as never)
+
+    const result = await gardenTaxonomyWorkflow(input)
+
+    expect(patched).toHaveBeenCalledWith("taxonomy-gardening-keep-tree-on-degenerate-rebuild-v1")
+    // The guard reads the plan before any persist branch, so nothing is saved,
+    // reassigned, named or deprecated — whichever tree this mode would publish.
+    expect(mockActivities.saveGardenTaxonomyClustersActivity).not.toHaveBeenCalled()
+    expect(mockActivities.reassignGardenTaxonomyObservationsActivity).not.toHaveBeenCalled()
+    expect(mockActivities.deprecateGardenTaxonomyClustersActivity).not.toHaveBeenCalled()
+    expect(mockActivities.planGardenTaxonomyNamingActivity).not.toHaveBeenCalled()
+    expect(mockActivities.cleanupGardenTaxonomyStagingActivity).not.toHaveBeenCalled()
+    // The run completes (it is not a failure), recording that it retired nothing.
+    expect(mockActivities.completeGardenTaxonomyRunActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ clustersBorn: 0, clustersDeprecated: 0, observationsSampled: 69 }),
+    )
+    expect(result).toEqual(expect.objectContaining({ status: "completed" }))
+  })
+
+  it("still publishes a degenerate rebuild when replaying a pre-change history (marker off)", async () => {
+    vi.mocked(patched).mockImplementation((id) => id !== "taxonomy-gardening-keep-tree-on-degenerate-rebuild-v1")
+    mockActivities.planHierarchicalGardenTaxonomyActivity.mockResolvedValueOnce(degenerateBuildResult as never)
+
+    await gardenTaxonomyWorkflow(globalInput)
+
+    // An in-flight history recorded the full publish sequence, so replay must keep
+    // issuing it; the guard only applies to executions that started with it.
+    expect(mockActivities.saveGardenTaxonomyClustersActivity).toHaveBeenCalledTimes(1)
+    expect(mockActivities.deprecateGardenTaxonomyClustersActivity).toHaveBeenCalledTimes(1)
   })
 
   it("a post-build (naming) failure leaves the prior clusters active — no whole-tree wipe (#4036)", async () => {

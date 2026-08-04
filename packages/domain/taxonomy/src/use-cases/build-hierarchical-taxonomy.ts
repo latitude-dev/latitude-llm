@@ -135,6 +135,12 @@ export interface BuildHierarchicalTaxonomyResult {
   readonly clustersDeprecated: number
   readonly leavesAssigned: number
   readonly maxDepthReached: number
+  /**
+   * Children of the single depth-0 root — the rows the Behaviours read hoists as
+   * its top-level list. Zero means this build produced a bare root: a tree with
+   * no behaviour in it, whatever else the counters say.
+   */
+  readonly topLevelClustersBuilt: number
   readonly lineage: readonly TaxonomyClusterLineage[]
 }
 
@@ -654,6 +660,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         clustersDeprecated: 0,
         leavesAssigned: 0,
         maxDepthReached: 0,
+        topLevelClustersBuilt: 0,
         lineage: [],
         clusters: [],
         observationAssignments: [],
@@ -941,6 +948,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       clustersDeprecated: deprecatedClusterIds.length,
       leavesAssigned: bornLeaves.reduce((sum, leaf) => sum + leaf.observationIndices.length, 0),
       maxDepthReached: maxDepth,
+      topLevelClustersBuilt: tree.children.length,
       lineage,
       clusters: bornClusters,
       observationAssignments,
