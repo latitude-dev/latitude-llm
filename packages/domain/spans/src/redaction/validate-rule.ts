@@ -83,7 +83,7 @@ export function validateRedactionRule(rule: RedactionRule): RuleValidation {
   const compiled = compilePatternForValidation(rule.pattern, rule.ignoreCase === true, rule.dotAll === true, errors)
   if (compiled === null) return result(errors, 0)
 
-  validatePatternSource(rule.pattern, errors)
+  validatePatternSource(rule.pattern, rule.ignoreCase === true, errors)
   if (compiled.test("")) {
     errors.push({
       code: "matches_empty",
@@ -177,7 +177,7 @@ const newFrame = (): GroupFrame => ({
  * Backreferences are refused outright — no PII shape needs one, and they rule out ever moving to a
  * linear-time engine.
  */
-function validatePatternSource(source: string, errors: RuleValidationIssue[]): void {
+function validatePatternSource(source: string, ignoreCase: boolean, errors: RuleValidationIssue[]): void {
   const groups: GroupFrame[] = [newFrame()]
   let index = 0
 
@@ -198,7 +198,7 @@ function validatePatternSource(source: string, errors: RuleValidationIssue[]): v
     }
 
     if (quantifier.unbounded) {
-      if (frame.pendingAtom !== null && atomsOverlap(frame.pendingAtom, atom) && !reportedAdjacent) {
+      if (frame.pendingAtom !== null && atomsOverlap(frame.pendingAtom, atom, ignoreCase) && !reportedAdjacent) {
         reportedAdjacent = true
         errors.push({
           code: "adjacent_quantifier",
@@ -253,7 +253,7 @@ function validatePatternSource(source: string, errors: RuleValidationIssue[]): v
           message: "nests one unbounded repetition inside another, which can backtrack exponentially",
         })
       }
-      if (quantifier.unbounded && !reportedAmbiguous && hasOverlappingBranches(closed.firstAtoms)) {
+      if (quantifier.unbounded && !reportedAmbiguous && hasOverlappingBranches(closed.firstAtoms, ignoreCase)) {
         reportedAmbiguous = true
         errors.push({
           code: "ambiguous_alternation",
@@ -327,9 +327,11 @@ function endOfCharacterClass(source: string, open: number): number {
 }
 
 /** Two branches that can begin with the same character leave the engine a choice to backtrack over. */
-const hasOverlappingBranches = (firstAtoms: readonly string[]): boolean =>
+const hasOverlappingBranches = (firstAtoms: readonly string[], ignoreCase: boolean): boolean =>
   firstAtoms.length > 1 &&
-  firstAtoms.some((atom, position) => firstAtoms.slice(position + 1).some((other) => atomsOverlap(atom, other)))
+  firstAtoms.some((atom, position) =>
+    firstAtoms.slice(position + 1).some((other) => atomsOverlap(atom, other, ignoreCase)),
+  )
 
 const ANY_ATOM = "."
 
@@ -339,12 +341,16 @@ const ANY_ATOM = "."
  * Decided by asking the engine rather than by parsing classes and escapes, so `\d`, `\w`, `[A-Z]`,
  * `[^0-9]`, `\p{L}` and a bare literal are all handled by the same three lines. The alphabet only
  * has to be broad enough to find an overlap that exists, not to enumerate Unicode.
+ *
+ * `ignoreCase` has to be honoured here or the answer is wrong in the unsafe direction: under `i` the
+ * engine reads `a` and `A`, or `[a-z]` and `[A-Z]`, as competing for the same character, and judging
+ * them disjoint would let `(a|A)+` through as unambiguous when it backtracks exponentially.
  */
-function atomsOverlap(left: string, right: string): boolean {
+function atomsOverlap(left: string, right: string, ignoreCase: boolean): boolean {
   if (left === ANY_ATOM || right === ANY_ATOM) return true
 
-  const matchesLeft = atomMatcher(left)
-  const matchesRight = atomMatcher(right)
+  const matchesLeft = atomMatcher(left, ignoreCase)
+  const matchesRight = atomMatcher(right, ignoreCase)
   if (matchesLeft === null || matchesRight === null) return true
 
   return OVERLAP_ALPHABET.some((character) => matchesLeft.test(character) && matchesRight.test(character))
@@ -359,9 +365,9 @@ const OVERLAP_ALPHABET = [
   "é",
 ]
 
-const atomMatcher = (atom: string): RegExp | null => {
+const atomMatcher = (atom: string, ignoreCase: boolean): RegExp | null => {
   try {
-    return new RegExp(`^(?:${atom})$`, "u")
+    return new RegExp(`^(?:${atom})$`, ignoreCase ? "ui" : "u")
   } catch {
     return null
   }

@@ -102,6 +102,30 @@ describe("validateRedactionRule on patterns", () => {
     expect(codes(patternRule("(?<acct>ACCT-\\d{9})"))).toEqual([])
   })
 
+  /**
+   * Overlap has to be judged under the rule's own flags. Under `i` the engine reads `a` and `A`, or
+   * `[a-z]` and `[A-Z]`, as competing for the same character, so testing them case-sensitively
+   * answers in the unsafe direction: `(a|A)+$` with `ignoreCase` never finished a 256-character
+   * input at all, and the probe would have been the one to hang on it.
+   */
+  it.each([
+    ["(a|A)+$", "ambiguous_alternation"],
+    ["[a-z]+[A-Z]+x", "adjacent_quantifier"],
+    ["(?:x|X)+y", "ambiguous_alternation"],
+  ])("rejects %s once ignoreCase makes its parts overlap", (pattern, code) => {
+    const started = performance.now()
+    const validation = validateRedactionRule(patternRule(pattern, { ignoreCase: true }))
+
+    expect(validation.errors.map((issue) => issue.code)).toContain(code)
+    // Refused from the source: reaching the probe with one of these would hang the process.
+    expect(performance.now() - started).toBeLessThan(100)
+  })
+
+  // The same patterns are genuinely unambiguous without `i`, so the flag decides and not the shape.
+  it.each(["(a|A)+$", "[a-z]+[A-Z]+x", "(?:x|X)+y"])("accepts %s when case is significant", (pattern) => {
+    expect(validateRedactionRule(patternRule(pattern))).toMatchObject({ ok: true })
+  })
+
   it("rejects a backreference, which also rules out a linear-time engine later", () => {
     expect(codes(patternRule("(\\d{4})-\\1"))).toContain("backreference")
   })
