@@ -20,11 +20,11 @@ function int(key: string, value: number): OtlpKeyValue {
 //   grand total  = 10,200 tokens
 
 const EXPECTED = {
-  input: 500,
-  cacheRead: 8_000,
-  cacheCreate: 1_500,
-  output: 140,
-  reasoning: 60,
+  tokensInput: 500,
+  tokensCacheRead: 8_000,
+  tokensCacheCreate: 1_500,
+  tokensOutput: 140,
+  tokensReasoning: 60,
   totalInput: 10_000,
   totalOutput: 200,
   grandTotal: 10_200,
@@ -50,9 +50,9 @@ describe("resolveTokens", () => {
         ]
         // Provider says additive, but total proves inclusive → total wins
         const r = resolveTokens(attrs, "anthropic")
-        expect(r.input).toBe(EXPECTED.input)
-        expect(r.cacheRead).toBe(EXPECTED.cacheRead)
-        expect(r.cacheCreate).toBe(EXPECTED.cacheCreate)
+        expect(r.tokensInput).toBe(EXPECTED.tokensInput)
+        expect(r.tokensCacheRead).toBe(EXPECTED.tokensCacheRead)
+        expect(r.tokensCacheCreate).toBe(EXPECTED.tokensCacheCreate)
       })
 
       it("overrides provider heuristic when total disagrees", () => {
@@ -65,7 +65,7 @@ describe("resolveTokens", () => {
           int("gen_ai.usage.total_tokens", 10_200), // proves inclusive
         ]
         const r = resolveTokens(attrs, "anthropic")
-        expect(r.input).toBe(2_000) // 10000 - 8000
+        expect(r.tokensInput).toBe(2_000) // 10000 - 8000
       })
     })
 
@@ -80,7 +80,7 @@ describe("resolveTokens", () => {
         ]
         // Provider says inclusive, but total proves additive → total wins
         const r = resolveTokens(attrs, "openai")
-        expect(r.input).toBe(EXPECTED.input)
+        expect(r.tokensInput).toBe(EXPECTED.tokensInput)
       })
     })
 
@@ -93,8 +93,8 @@ describe("resolveTokens", () => {
           int("gen_ai.usage.total_tokens", 300), // 100 + 200 → proves both inclusive
         ]
         const r = resolveTokens(attrs, "gcp.vertex_ai") // provider says additive output
-        expect(r.output).toBe(140) // total overrides provider
-        expect(r.reasoning).toBe(60)
+        expect(r.tokensOutput).toBe(140) // total overrides provider
+        expect(r.tokensReasoning).toBe(60)
       })
     })
 
@@ -107,8 +107,8 @@ describe("resolveTokens", () => {
           int("gen_ai.usage.total_tokens", 300), // 100 + 140 + 60 → proves output additive
         ]
         const r = resolveTokens(attrs, "openai") // provider says inclusive output
-        expect(r.output).toBe(140) // total overrides provider
-        expect(r.reasoning).toBe(60)
+        expect(r.tokensOutput).toBe(140) // total overrides provider
+        expect(r.tokensReasoning).toBe(60)
       })
     })
 
@@ -123,8 +123,8 @@ describe("resolveTokens", () => {
           int("llm.token_count.total", 10_200), // 500 + 9500 + 140 + 60 → both additive
         ]
         const r = resolveTokens(attrs, "unknown-provider")
-        expect(r.input).toBe(500)
-        expect(r.output).toBe(140)
+        expect(r.tokensInput).toBe(500)
+        expect(r.tokensOutput).toBe(140)
       })
 
       it("inclusive input + inclusive output", () => {
@@ -137,8 +137,8 @@ describe("resolveTokens", () => {
           int("llm.token_count.total", 10_200), // 10000 + 200 → both inclusive
         ]
         const r = resolveTokens(attrs, "unknown-provider")
-        expect(r.input).toBe(500)
-        expect(r.output).toBe(140)
+        expect(r.tokensInput).toBe(500)
+        expect(r.tokensOutput).toBe(140)
       })
     })
 
@@ -151,8 +151,8 @@ describe("resolveTokens", () => {
           int("gen_ai.usage.total_tokens", 8_700), // 500 + 8000 + 200 → input additive
         ]
         const r = resolveTokens(attrs, "openai") // provider says inclusive, total says additive
-        expect(r.input).toBe(500) // total wins
-        expect(r.output).toBe(200) // no reasoning → unchanged
+        expect(r.tokensInput).toBe(500) // total wins
+        expect(r.tokensOutput).toBe(200) // no reasoning → unchanged
       })
 
       it("determines output model when only reasoning exists (cache=0)", () => {
@@ -163,8 +163,8 @@ describe("resolveTokens", () => {
           int("gen_ai.usage.total_tokens", 300), // 100 + 140 + 60 → output additive
         ]
         const r = resolveTokens(attrs, "openai") // provider says inclusive output, total says additive
-        expect(r.output).toBe(140) // total wins
-        expect(r.input).toBe(100) // no cache → unchanged, falls back to convention/provider
+        expect(r.tokensOutput).toBe(140) // total wins
+        expect(r.tokensInput).toBe(100) // no cache → unchanged, falls back to convention/provider
       })
     })
 
@@ -176,11 +176,11 @@ describe("resolveTokens", () => {
           int("llm.token_count.prompt_details.cache_read", 8_000),
         ]
         // No total → falls back to provider (anthropic = additive)
-        expect(resolveTokens(attrs, "anthropic").input).toBe(500)
+        expect(resolveTokens(attrs, "anthropic").tokensInput).toBe(500)
         // No total → falls back to provider (openai = inclusive)
         expect(
           resolveTokens([...attrs.map((a) => (a.key === "llm.token_count.prompt" ? int(a.key, 8_500) : a))], "openai")
-            .input,
+            .tokensInput,
         ).toBe(500)
       })
     })
@@ -195,7 +195,7 @@ describe("resolveTokens", () => {
         ]
         // Falls back to provider
         const r = resolveTokens(attrs, "anthropic")
-        expect(r.input).toBe(500) // provider-based: anthropic = additive
+        expect(r.tokensInput).toBe(500) // provider-based: anthropic = additive
       })
     })
   })
@@ -218,15 +218,15 @@ describe("resolveTokens", () => {
       ]
 
       it("subtracts cache for openai", () => {
-        expect(resolveTokens(attrs, "openai").input).toBe(EXPECTED.input)
+        expect(resolveTokens(attrs, "openai").tokensInput).toBe(EXPECTED.tokensInput)
       })
 
       it("subtracts cache for anthropic (convention overrides provider)", () => {
-        expect(resolveTokens(attrs, "anthropic").input).toBe(EXPECTED.input)
+        expect(resolveTokens(attrs, "anthropic").tokensInput).toBe(EXPECTED.tokensInput)
       })
 
       it("subtracts cache for bedrock (convention overrides provider)", () => {
-        expect(resolveTokens(attrs, "aws.bedrock").input).toBe(EXPECTED.input)
+        expect(resolveTokens(attrs, "aws.bedrock").tokensInput).toBe(EXPECTED.tokensInput)
       })
     })
 
@@ -246,8 +246,8 @@ describe("resolveTokens", () => {
 
       it("resolves cache_create from the underscore-spelling key", () => {
         const r = resolveTokens(attrs, "anthropic")
-        expect(r.cacheCreate).toBe(EXPECTED.cacheCreate)
-        expect(r.cacheRead).toBe(EXPECTED.cacheRead)
+        expect(r.tokensCacheCreate).toBe(EXPECTED.tokensCacheCreate)
+        expect(r.tokensCacheRead).toBe(EXPECTED.tokensCacheRead)
       })
     })
 
@@ -260,8 +260,8 @@ describe("resolveTokens", () => {
       ]
 
       it("subtracts cache regardless of provider", () => {
-        expect(resolveTokens(attrs, "openai").input).toBe(EXPECTED.input)
-        expect(resolveTokens(attrs, "anthropic").input).toBe(EXPECTED.input)
+        expect(resolveTokens(attrs, "openai").tokensInput).toBe(EXPECTED.tokensInput)
+        expect(resolveTokens(attrs, "anthropic").tokensInput).toBe(EXPECTED.tokensInput)
       })
     })
 
@@ -274,8 +274,8 @@ describe("resolveTokens", () => {
       ]
 
       it("subtracts cache regardless of provider", () => {
-        expect(resolveTokens(attrs, "openai").input).toBe(EXPECTED.input)
-        expect(resolveTokens(attrs, "anthropic").input).toBe(EXPECTED.input)
+        expect(resolveTokens(attrs, "openai").tokensInput).toBe(EXPECTED.tokensInput)
+        expect(resolveTokens(attrs, "anthropic").tokensInput).toBe(EXPECTED.tokensInput)
       })
     })
   })
@@ -298,13 +298,13 @@ describe("resolveTokens", () => {
 
       describe("inclusive providers → subtract cache", () => {
         it.each(["openai", "google", "mistral_ai", "cohere", "groq", "deepseek"])("%s", (provider) => {
-          expect(resolveTokens(attrs(10_000), provider).input).toBe(EXPECTED.input)
+          expect(resolveTokens(attrs(10_000), provider).tokensInput).toBe(EXPECTED.tokensInput)
         })
       })
 
       describe("additive providers → pass through", () => {
         it.each(["anthropic", "aws.bedrock", "aws_bedrock", "bedrock", "amazon-bedrock"])("%s", (provider) => {
-          expect(resolveTokens(attrs(500), provider).input).toBe(EXPECTED.input)
+          expect(resolveTokens(attrs(500), provider).tokensInput).toBe(EXPECTED.tokensInput)
         })
       })
     })
@@ -318,12 +318,12 @@ describe("resolveTokens", () => {
 
       it("subtracts cache for openai (inclusive)", () => {
         const attrs = [int("gen_ai.usage.prompt_tokens", 10_000), ...cache]
-        expect(resolveTokens(attrs, "openai").input).toBe(EXPECTED.input)
+        expect(resolveTokens(attrs, "openai").tokensInput).toBe(EXPECTED.tokensInput)
       })
 
       it("passes through for anthropic (additive)", () => {
         const attrs = [int("gen_ai.usage.prompt_tokens", 500), ...cache]
-        expect(resolveTokens(attrs, "anthropic").input).toBe(EXPECTED.input)
+        expect(resolveTokens(attrs, "anthropic").tokensInput).toBe(EXPECTED.tokensInput)
       })
     })
 
@@ -335,8 +335,8 @@ describe("resolveTokens", () => {
           int("gen_ai.usage.reasoning_tokens", 60),
         ]
         const r = resolveTokens(attrs, provider)
-        expect(r.output).toBe(EXPECTED.output)
-        expect(r.reasoning).toBe(EXPECTED.reasoning)
+        expect(r.tokensOutput).toBe(EXPECTED.tokensOutput)
+        expect(r.tokensReasoning).toBe(EXPECTED.tokensReasoning)
       })
     })
 
@@ -348,8 +348,8 @@ describe("resolveTokens", () => {
           int("gen_ai.usage.reasoning_tokens", 60),
         ]
         const r = resolveTokens(attrs, provider)
-        expect(r.output).toBe(140)
-        expect(r.reasoning).toBe(60)
+        expect(r.tokensOutput).toBe(140)
+        expect(r.tokensReasoning).toBe(60)
       })
     })
   })
@@ -378,11 +378,11 @@ describe("resolveTokens", () => {
       const rOpenai = resolveTokens(openaiAttrs, "openai")
       const rAnthropic = resolveTokens(anthropicAttrs, "anthropic")
 
-      expect(rOpenai.input).toBe(rAnthropic.input)
-      expect(rOpenai.cacheRead).toBe(rAnthropic.cacheRead)
-      expect(rOpenai.cacheCreate).toBe(rAnthropic.cacheCreate)
+      expect(rOpenai.tokensInput).toBe(rAnthropic.tokensInput)
+      expect(rOpenai.tokensCacheRead).toBe(rAnthropic.tokensCacheRead)
+      expect(rOpenai.tokensCacheCreate).toBe(rAnthropic.tokensCacheCreate)
 
-      const total = (r: typeof rOpenai) => r.input + r.cacheRead + r.cacheCreate
+      const total = (r: typeof rOpenai) => r.tokensInput + r.tokensCacheRead + r.tokensCacheCreate
       expect(total(rOpenai)).toBe(EXPECTED.totalInput)
       expect(total(rAnthropic)).toBe(EXPECTED.totalInput)
     })
@@ -397,19 +397,19 @@ describe("resolveTokens", () => {
     it("no cache attrs → input unchanged", () => {
       const attrs = [int("gen_ai.usage.input_tokens", 1_000), int("gen_ai.usage.output_tokens", 50)]
       const r = resolveTokens(attrs, "openai")
-      expect(r.input).toBe(1_000)
-      expect(r.cacheRead).toBe(0)
-      expect(r.cacheCreate).toBe(0)
+      expect(r.tokensInput).toBe(1_000)
+      expect(r.tokensCacheRead).toBe(0)
+      expect(r.tokensCacheCreate).toBe(0)
     })
 
     it("no reasoning → output unchanged", () => {
       const attrs = [int("gen_ai.usage.output_tokens", 200)]
-      expect(resolveTokens(attrs, "openai").output).toBe(200)
+      expect(resolveTokens(attrs, "openai").tokensOutput).toBe(200)
     })
 
     it("reasoning zero → output unchanged", () => {
       const attrs = [int("gen_ai.usage.output_tokens", 200), int("gen_ai.usage.reasoning_tokens", 0)]
-      expect(resolveTokens(attrs, "openai").output).toBe(200)
+      expect(resolveTokens(attrs, "openai").tokensOutput).toBe(200)
     })
   })
 
@@ -434,10 +434,10 @@ describe("resolveTokens", () => {
         int("cache_creation_tokens", 1_050),
       ]
       const r = resolveTokens(attrs, "anthropic")
-      expect(r.input).toBe(2)
-      expect(r.cacheRead).toBe(127_967)
-      expect(r.cacheCreate).toBe(1_050)
-      expect(r.input + r.cacheRead + r.cacheCreate).toBe(129_019)
+      expect(r.tokensInput).toBe(2)
+      expect(r.tokensCacheRead).toBe(127_967)
+      expect(r.tokensCacheCreate).toBe(1_050)
+      expect(r.tokensInput + r.tokensCacheRead + r.tokensCacheCreate).toBe(129_019)
     })
 
     it("applies regardless of provider", () => {
@@ -448,7 +448,7 @@ describe("resolveTokens", () => {
         int("gen_ai.usage.cache_creation.input_tokens", 1_500),
       ]
       for (const provider of ["openai", "anthropic", "aws.bedrock", "google"]) {
-        expect(resolveTokens(attrs, provider).input).toBe(500)
+        expect(resolveTokens(attrs, provider).tokensInput).toBe(500)
       }
     })
 
@@ -459,7 +459,7 @@ describe("resolveTokens", () => {
         int("gen_ai.usage.cache_read.input_tokens", 8_000),
         int("gen_ai.usage.cache_creation.input_tokens", 1_500),
       ]
-      expect(resolveTokens(attrs, "openai").input).toBe(0)
+      expect(resolveTokens(attrs, "openai").tokensInput).toBe(0)
     })
 
     it("leaves the inclusive reading intact when rawInput exceeds cache", () => {
@@ -469,7 +469,7 @@ describe("resolveTokens", () => {
         int("gen_ai.usage.cache_read.input_tokens", 8_000),
         int("gen_ai.usage.cache_creation.input_tokens", 1_500),
       ]
-      expect(resolveTokens(attrs, "anthropic").input).toBe(EXPECTED.input)
+      expect(resolveTokens(attrs, "anthropic").tokensInput).toBe(EXPECTED.tokensInput)
     })
 
     it("does not touch the output side", () => {
@@ -480,9 +480,9 @@ describe("resolveTokens", () => {
         int("gen_ai.usage.reasoning_tokens", 60),
       ]
       const r = resolveTokens(attrs, "openai")
-      expect(r.input).toBe(2)
-      expect(r.output).toBe(EXPECTED.output)
-      expect(r.reasoning).toBe(EXPECTED.reasoning)
+      expect(r.tokensInput).toBe(2)
+      expect(r.tokensOutput).toBe(EXPECTED.tokensOutput)
+      expect(r.tokensReasoning).toBe(EXPECTED.tokensReasoning)
     })
   })
 
@@ -493,12 +493,12 @@ describe("resolveTokens", () => {
   describe("candidate precedence", () => {
     it("prefers gen_ai.usage.input_tokens over gen_ai.usage.prompt_tokens", () => {
       const attrs = [int("gen_ai.usage.input_tokens", 100), int("gen_ai.usage.prompt_tokens", 999)]
-      expect(resolveTokens(attrs, "openai").input).toBe(100)
+      expect(resolveTokens(attrs, "openai").tokensInput).toBe(100)
     })
 
     it("prefers gen_ai.usage.output_tokens over gen_ai.usage.completion_tokens", () => {
       const attrs = [int("gen_ai.usage.output_tokens", 200), int("gen_ai.usage.completion_tokens", 999)]
-      expect(resolveTokens(attrs, "openai").output).toBe(200)
+      expect(resolveTokens(attrs, "openai").tokensOutput).toBe(200)
     })
 
     it("prefers ai.usage.cachedInputTokens over ai.usage.inputTokenDetails.cacheReadTokens", () => {
@@ -510,8 +510,8 @@ describe("resolveTokens", () => {
         int("ai.usage.outputTokens", 10),
       ]
       const r = resolveTokens(attrs, "openai")
-      expect(r.cacheRead).toBe(100)
-      expect(r.input).toBe(350) // 500 - 100 - 50
+      expect(r.tokensCacheRead).toBe(100)
+      expect(r.tokensInput).toBe(350) // 500 - 100 - 50
     })
   })
 
@@ -586,10 +586,10 @@ describe("resolveTokens", () => {
     it.each(scenarios)("$name", ({ provider, attrs }) => {
       const r = resolveTokens(attrs, provider)
 
-      expect(r.input + r.cacheRead + r.cacheCreate).toBe(EXPECTED.totalInput)
-      expect(r.output + r.reasoning).toBe(EXPECTED.totalOutput)
-      expect(r.input).toBeGreaterThanOrEqual(0)
-      expect(r.output).toBeGreaterThanOrEqual(0)
+      expect(r.tokensInput + r.tokensCacheRead + r.tokensCacheCreate).toBe(EXPECTED.totalInput)
+      expect(r.tokensOutput + r.tokensReasoning).toBe(EXPECTED.totalOutput)
+      expect(r.tokensInput).toBeGreaterThanOrEqual(0)
+      expect(r.tokensOutput).toBeGreaterThanOrEqual(0)
     })
   })
 
@@ -600,23 +600,23 @@ describe("resolveTokens", () => {
   describe("edge cases", () => {
     it("returns all zeros for empty attributes", () => {
       const r = resolveTokens([], "openai")
-      expect(r.input).toBe(0)
-      expect(r.output).toBe(0)
-      expect(r.cacheRead).toBe(0)
-      expect(r.cacheCreate).toBe(0)
-      expect(r.reasoning).toBe(0)
+      expect(r.tokensInput).toBe(0)
+      expect(r.tokensOutput).toBe(0)
+      expect(r.tokensCacheRead).toBe(0)
+      expect(r.tokensCacheCreate).toBe(0)
+      expect(r.tokensReasoning).toBe(0)
     })
 
     it("reads input as additive rather than clamping when cache exceeds raw", () => {
       const attrs = [int("gen_ai.usage.input_tokens", 50), int("gen_ai.usage.cache_read.input_tokens", 1_000)]
-      expect(resolveTokens(attrs, "openai").input).toBe(50)
+      expect(resolveTokens(attrs, "openai").tokensInput).toBe(50)
     })
 
     it("clamps output at zero when reasoning exceeds raw (buggy instrumentation)", () => {
       const attrs = [int("gen_ai.usage.output_tokens", 50), int("gen_ai.usage.reasoning_tokens", 200)]
       const r = resolveTokens(attrs, "openai")
-      expect(r.output).toBe(0)
-      expect(r.reasoning).toBe(200)
+      expect(r.tokensOutput).toBe(0)
+      expect(r.tokensReasoning).toBe(200)
     })
 
     it("handles case-insensitive provider matching", () => {
@@ -625,8 +625,8 @@ describe("resolveTokens", () => {
         int("llm.token_count.prompt_details.cache_read", 8_000),
         int("llm.token_count.completion", 10),
       ]
-      expect(resolveTokens(attrs, "ANTHROPIC").input).toBe(500)
-      expect(resolveTokens(attrs, "Anthropic").input).toBe(500)
+      expect(resolveTokens(attrs, "ANTHROPIC").tokensInput).toBe(500)
+      expect(resolveTokens(attrs, "Anthropic").tokensInput).toBe(500)
     })
 
     it("handles Vercel suffixed provider forms", () => {
@@ -635,7 +635,7 @@ describe("resolveTokens", () => {
         int("llm.token_count.prompt_details.cache_read", 8_000),
         int("llm.token_count.completion", 10),
       ]
-      expect(resolveTokens(attrs, "anthropic.messages").input).toBe(500)
+      expect(resolveTokens(attrs, "anthropic.messages").tokensInput).toBe(500)
     })
   })
 
@@ -656,23 +656,23 @@ describe("resolveTokens", () => {
       ]
       const r = resolveTokens(attrs, "openai")
 
-      expect(r.input).toBe(1)
-      expect(r.cacheRead).toBe(4429)
-      expect(r.cacheCreate).toBe(4761)
-      expect(r.output).toBe(93)
-      expect(r.input + r.cacheRead + r.cacheCreate).toBe(9191)
-      expect(r.input + r.cacheRead + r.cacheCreate + r.output).toBe(9284)
+      expect(r.tokensInput).toBe(1)
+      expect(r.tokensCacheRead).toBe(4429)
+      expect(r.tokensCacheCreate).toBe(4761)
+      expect(r.tokensOutput).toBe(93)
+      expect(r.tokensInput + r.tokensCacheRead + r.tokensCacheCreate).toBe(9191)
+      expect(r.tokensInput + r.tokensCacheRead + r.tokensCacheCreate + r.tokensOutput).toBe(9284)
     })
 
     it("OTEL v1.37+ OpenAI, no cache, no reasoning", () => {
       const attrs = [int("gen_ai.usage.input_tokens", 350), int("gen_ai.usage.output_tokens", 120)]
       const r = resolveTokens(attrs, "openai")
 
-      expect(r.input).toBe(350)
-      expect(r.output).toBe(120)
-      expect(r.cacheRead).toBe(0)
-      expect(r.cacheCreate).toBe(0)
-      expect(r.reasoning).toBe(0)
+      expect(r.tokensInput).toBe(350)
+      expect(r.tokensOutput).toBe(120)
+      expect(r.tokensCacheRead).toBe(0)
+      expect(r.tokensCacheCreate).toBe(0)
+      expect(r.tokensReasoning).toBe(0)
     })
 
     it("OpenInference Anthropic with large cache read", () => {
@@ -684,9 +684,9 @@ describe("resolveTokens", () => {
       ]
       const r = resolveTokens(attrs, "anthropic")
 
-      expect(r.input).toBe(50)
-      expect(r.cacheRead).toBe(100_000)
-      expect(r.input + r.cacheRead + r.cacheCreate).toBe(100_050)
+      expect(r.tokensInput).toBe(50)
+      expect(r.tokensCacheRead).toBe(100_000)
+      expect(r.tokensInput + r.tokensCacheRead + r.tokensCacheCreate).toBe(100_050)
     })
   })
 })

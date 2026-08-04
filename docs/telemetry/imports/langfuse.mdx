@@ -1,0 +1,94 @@
+---
+title: Langfuse
+description: Import historical traces and observations from Langfuse Cloud.
+---
+
+## Overview
+
+Latitude imports **observations** from a Langfuse project and maps them to Latitude spans.
+Langfuse Cloud is supported; you pick the region your account is in.
+
+<Note>
+  New to importing? Start with the [import overview](/telemetry/imports/overview) for how
+  the flow works, what is imported, and the limits that apply to every source.
+</Note>
+
+---
+
+## Requirements
+
+- A **Langfuse project** with the history you want to import
+- A Langfuse **public key** and **secret key** for that project
+- Your Langfuse **region** — EU, US, Japan or HIPAA US
+
+<Note>
+  Langfuse Cloud regions are fully separate deployments: accounts, data and keys do not
+  cross between them. Pick the one you signed up in — keys from another region will fail
+  the connection test. Latitude resolves the region to an API origin internally, so there
+  is no URL to enter. Self-hosted Langfuse is not supported yet.
+</Note>
+
+---
+
+## Steps
+
+<Steps>
+  <Step title="Create an API key pair in Langfuse">
+    In Langfuse, open **Settings → API keys** for the project you are importing from and
+    create a key pair. Copy both the public key (`pk-lf-…`) and the secret key (`sk-lf-…`).
+  </Step>
+  <Step title="Start the import in Latitude">
+    Go to **Project settings → Imports** and choose **Langfuse**. Pick your region, enter the
+    public key and secret key, then press **Test connection**.
+  </Step>
+  <Step title="Pick the Langfuse project">
+    Latitude lists the projects your keys can read. Choose the one that maps to this
+    Latitude project.
+  </Step>
+  <Step title="Preview and confirm">
+    Set your range and trace limit, preview the sample, then start the import.
+  </Step>
+</Steps>
+
+---
+
+## How Langfuse fields map
+
+| Langfuse | Latitude | Notes |
+| --- | --- | --- |
+| `traceId` | `trace_id` | Kept as-is when it is already an OTEL-shaped id, so imported spans stitch to any live spans of the same trace |
+| `id` (observation) | `span_id` | Same |
+| `parentObservationId` | `parent_span_id` | Empty for a root observation |
+| `type` | `operation` | `GENERATION` becomes a chat operation |
+| `sessionId` | `session_id` | Direct |
+| `userId` | `user_id` | Direct |
+| `tags` | `tags` | Direct |
+| `metadata` | `metadata` | Nested values are stringified |
+| `input` / `output` | Messages | Parsed into GenAI messages where possible |
+| `usageDetails` | Token counts | Direct |
+| `providedModelName` | `model` | Raw model name preserved |
+| `promptName`, `promptVersion` | `metadata.import.prompt_*` | Latitude has no prompt registry, so these stay as metadata |
+| `input` / `output` (raw strings in v2) | Messages | Parsed on Latitude's side |
+
+Observations missing either `traceId` or `id` are skipped, since neither a trace nor a span
+can be identified without them.
+
+---
+
+## Langfuse specifics
+
+Latitude reads the **v2 observations API** (`/api/public/v2/observations`), which is
+cursor-paginated and returns fields by group. Latitude requests every group it maps, so
+message content, metadata, model, token usage, prompt references and trace tags all come
+through. Nothing needs configuring on your side.
+
+**Exact trace count.** The trace list reports `meta.totalItems` for a range, which is the
+number of traces an import would read, so the preview shows the real figure rather than a
+page size.
+
+**No sort order.** Langfuse's observations endpoint takes no sort parameter, so Latitude
+reads your range in day-wide windows working backwards from the end. Newest-first is
+therefore guaranteed to the day: if an import stops early, you keep whole recent days.
+Within the final day, the order Langfuse returns decides which of that day's traces made it.
+
+Latitude paces requests at **60 per minute** against Langfuse.

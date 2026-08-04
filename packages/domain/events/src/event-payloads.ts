@@ -1,4 +1,4 @@
-import type { IncidentSourceType, OrganizationRedactionSetting, RedactionSetting } from "@domain/shared"
+import type { OrganizationRedactionSetting, RedactionSetting } from "@domain/shared"
 
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
@@ -165,7 +165,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
-    readonly sourceType: IncidentSourceType
+    readonly sourceType: "monitor" | "signal"
     readonly sourceId: string
   }
   /**
@@ -184,7 +184,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
-    readonly sourceType: IncidentSourceType
+    readonly sourceType: "monitor" | "signal"
     readonly sourceId: string
     readonly reason?: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
   }
@@ -305,6 +305,64 @@ export interface EventPayloads {
     readonly projectId: string
     readonly searchId: string
     readonly name: string
+  }
+  /** Fired when a user confirms a brand-new historical trace import in project settings. */
+  ImportStarted: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly importJobId: string
+    readonly source: "langfuse" | "langsmith" | "braintrust"
+    /** Trace ceiling the user accepted, already clamped to what their plan affords. */
+    readonly maxTraces: number
+    /** Width of the selected range in days, which is not the age of the data it holds. */
+    readonly rangeDays: number
+  }
+  /**
+   * Fired when a user retries a failed or cancelled import. A retry is a new job resuming
+   * the old one's cursor and counts, so this is that job's start event rather than a second
+   * event about the original — "imports begun" is `ImportStarted` plus `ImportRetried`, and
+   * the `ImportFinished` that closes this one carries `importJobId`.
+   *
+   * The `from*` fields are what make the retry worth its own event: they say whether users
+   * are recovering from our failures or restarting their own cancellations, which errors are
+   * worth retrying at all, and how much progress a resume actually saves. The config is not
+   * repeated — a retry cannot change it, so the original's `ImportStarted` still describes it.
+   */
+  ImportRetried: {
+    readonly organizationId: string
+    readonly projectId: string
+    /** The new job the retry created, not the one being retried. */
+    readonly importJobId: string
+    readonly fromJobId: string
+    /**
+     * `capped` is the interesting one to watch: it separates users continuing an import that
+     * ran out of budget from those recovering from a failure.
+     */
+    readonly fromStatus: "failed" | "cancelled" | "capped"
+    /** Why the original stopped; `null` when the user cancelled it cleanly. */
+    readonly fromError: string | null
+    /** Traces the original run imported and this one resumes on top of. */
+    readonly fromTraces: number
+  }
+  /**
+   * Fired once an import reaches a terminal state. `status` carries which one, so a funnel
+   * can separate a clean finish from a capped, cancelled or failed run, and `error` says
+   * why it did not finish cleanly — a failure reason, or which ceiling stopped a `capped`
+   * run (running out of plan usage is an upgrade signal; the user's own limit is not).
+   */
+  ImportFinished: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly importJobId: string
+    readonly source: "langfuse" | "langsmith" | "braintrust"
+    readonly status: "succeeded" | "capped" | "cancelled" | "failed"
+    readonly error: string | null
+    readonly recordsFetched: number
+    readonly tracesImported: number
+    readonly spansImported: number
+    readonly spansSkipped: number
+    readonly durationMs: number
   }
   /**
    * Fired when a saved search is (soft-)deleted. Drives the monitors source

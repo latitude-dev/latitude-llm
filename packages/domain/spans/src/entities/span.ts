@@ -52,6 +52,27 @@ export function parseCostSource(value: string, stored: StoredCostSignals): CostS
   return stored.hasTokens ? "unknown" : "no_tokens"
 }
 
+/**
+ * A span's token counts, in the additive form the columns store.
+ *
+ * Additive means each total excludes its sub-categories, so the parts sum rather than nest:
+ * `total input = tokensInput + tokensCacheRead + tokensCacheCreate` and
+ * `total output = tokensOutput + tokensReasoning`. Providers report both conventions, and turning an
+ * inclusive count into this one is what `resolveTokens` exists for.
+ */
+export interface SpanTokenCounts {
+  /** Non-cached input tokens */
+  readonly tokensInput: number
+  /** Non-reasoning output tokens */
+  readonly tokensOutput: number
+  /** Tokens served from provider cache (subset of total input) */
+  readonly tokensCacheRead: number
+  /** Tokens written to provider cache (subset of total input) */
+  readonly tokensCacheCreate: number
+  /** Reasoning/thinking tokens (subset of total output) */
+  readonly tokensReasoning: number
+}
+
 export const toolDefinitionSchema = z.object({
   name: z.string(),
   description: z.string(),

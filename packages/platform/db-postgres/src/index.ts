@@ -62,6 +62,10 @@ export {
 } from "./repositories/github-integration-repository.ts"
 export { GithubSignalReferenceRepositoryLive } from "./repositories/github-signal-reference-repository.ts"
 export { GithubSyncConfigRepositoryLive } from "./repositories/github-sync-config-repository.ts"
+export {
+  ImportJobRepositoryLive,
+  redactedImportJob,
+} from "./repositories/import-job-repository.ts"
 export { IncidentMonitorReaderLive } from "./repositories/incident-monitor-reader.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"

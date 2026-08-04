@@ -6,6 +6,7 @@ import {
   CircleDollarSignIcon,
   CreditCard,
   DatabaseIcon,
+  Download,
   EyeOffIcon,
   Fingerprint,
   FlaskConical,
@@ -190,6 +191,12 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         label: "Integrations",
         icon: Plug,
         path: (slug) => `/projects/${slug}/settings/integrations`,
+      },
+      {
+        key: "imports",
+        label: "Imports",
+        icon: Download,
+        path: (slug) => `/projects/${slug}/settings/imports`,
       },
       {
         key: "data-destinations",

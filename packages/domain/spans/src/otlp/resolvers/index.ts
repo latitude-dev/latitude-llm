@@ -1,6 +1,6 @@
-import { stringAttr } from "../attributes.ts"
-import type { OtlpKeyValue } from "../types.ts"
+import type { OtlpEvent, OtlpKeyValue } from "../types.ts"
 import { resolveMetadata, tagsCandidates } from "./enrichment.ts"
+import { resolveErrorType } from "./error.ts"
 import {
   agentNameCandidates,
   modelCandidates,
@@ -35,6 +35,7 @@ interface ResolvedAttributes extends ResolvedUsage {
 interface ResolveAttributesInput {
   readonly spanAttrs: readonly OtlpKeyValue[]
   readonly statusCode: string
+  readonly events?: readonly OtlpEvent[]
   readonly spanName?: string
   readonly scopeName?: string
   readonly hasParent?: boolean
@@ -43,6 +44,7 @@ interface ResolveAttributesInput {
 export function resolveAttributes({
   spanAttrs,
   statusCode,
+  events = [],
   spanName = "",
   scopeName = "",
   hasParent = true,
@@ -65,6 +67,6 @@ export function resolveAttributes({
     userEmail: first(userEmailCandidates, spanAttrs) ?? "",
     tags: first(tagsCandidates, spanAttrs) ?? [],
     metadata: resolveMetadata(spanAttrs),
-    errorType: statusCode === "error" ? (stringAttr(spanAttrs, "error.type") ?? "") : "",
+    errorType: statusCode === "error" ? resolveErrorType(spanAttrs, events) : "",
   }
 }

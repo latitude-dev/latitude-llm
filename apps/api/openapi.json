@@ -557,7 +557,7 @@
           "cost": {
             "type": "integer",
             "minimum": 0,
-            "description": "Score cost in microcents (1/1,000,000 of a USD)."
+            "description": "Score cost in microcents (100,000,000 per USD)."
           },
           "draftedAt": {
             "type": [
@@ -735,7 +735,7 @@
           "cost": {
             "type": "integer",
             "minimum": 0,
-            "description": "Score cost in microcents (1/1,000,000 of a USD)."
+            "description": "Score cost in microcents (100,000,000 per USD)."
           },
           "draftedAt": {
             "type": [
@@ -882,7 +882,7 @@
             "type": "integer",
             "minimum": 0,
             "default": 0,
-            "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores."
+            "description": "Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores."
           },
           "trace": {
             "$ref": "#/components/schemas/TraceRef"
@@ -1077,7 +1077,7 @@
             "type": "integer",
             "minimum": 0,
             "default": 0,
-            "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores."
+            "description": "Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores."
           },
           "trace": {
             "$ref": "#/components/schemas/TraceRef"
@@ -1214,7 +1214,7 @@
           "cost": {
             "type": "integer",
             "minimum": 0,
-            "description": "Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."
+            "description": "Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."
           },
           "draftedAt": {
             "type": [
@@ -1518,15 +1518,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "sessionId": {
             "type": [
@@ -1925,15 +1925,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "sessionId": {
             "type": [
@@ -2241,15 +2241,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "costIsEstimated": {
             "type": "boolean",
@@ -2502,15 +2502,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "costIsEstimated": {
             "type": "boolean",
@@ -11958,15 +11958,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "userId": {
             "type": [
@@ -12421,15 +12421,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "userId": {
             "type": [

@@ -1,0 +1,173 @@
+---
+title: Import historical traces
+description: Backfill traces and spans from Langfuse, LangSmith, or Braintrust into a Latitude project.
+---
+
+## Overview
+
+Latitude can import the traces you already have in another observability platform, so you
+do not start from an empty project when you switch. Imports run from **Project settings →
+Imports**, are bounded, and run in the background — you can close the tab.
+
+<Note>
+  Importing is for **history**. Data produced from now on should arrive through
+  [live tracing](/telemetry/start-tracing), which is what powers evaluations, monitors and
+  signals in real time.
+</Note>
+
+Every source is imported from its **cloud** offering. Each one runs in more than one region,
+so the wizard asks which one your account is in — you pick a region, never a URL.
+
+Pick your source to get started:
+
+<CardGroup cols={3}>
+  <Card title="Langfuse" href="/telemetry/imports/langfuse">
+    Langfuse Cloud, using your public and secret keys.
+  </Card>
+  <Card title="LangSmith" href="/telemetry/imports/langsmith">
+    Runs from a LangSmith project, with configurable session grouping.
+  </Card>
+  <Card title="Braintrust" href="/telemetry/imports/braintrust">
+    Project logs queried through BTQL.
+  </Card>
+</CardGroup>
+
+---
+
+## How an import runs
+
+<Steps>
+  <Step title="Connect your source">
+    Enter the credentials for the platform you are importing from. Latitude tests them
+    before continuing and never stores them until you confirm the import.
+  </Step>
+  <Step title="Pick the source project">
+    Choose which project on that platform maps to this Latitude project. One import writes
+    into one Latitude project.
+  </Step>
+  <Step title="Set the range and size">
+    Latitude fills in the last 90 days and as many traces as your plan's remaining usage
+    allows, and shows you both before you continue. You can narrow either one.
+  </Step>
+  <Step title="Preview">
+    Latitude fetches a small sample and shows you normalized spans before anything is
+    written, along with any warnings specific to your source. Nothing is imported yet.
+  </Step>
+  <Step title="Confirm">
+    The import starts in the background. Progress, the pages processed and any errors
+    appear on the import card, which refreshes while the import is running.
+  </Step>
+</Steps>
+
+---
+
+## What gets imported
+
+| Imported | Not imported |
+| --- | --- |
+| Traces and spans | Scores and annotations |
+| Session and user identity | Datasets and evaluations |
+| Tags and metadata | Prompt registries (references land in span metadata) |
+| Messages, tool calls, token usage and cost | Anything your source dropped on its own way in |
+| Images and files, where your source still has the bytes | |
+
+Imported spans are marked with `import.*` metadata (source, source project, and the
+original trace and span ids), so you can always tell imported history from live telemetry.
+
+An import can only carry over what your source kept. Each platform reshapes a span as it
+stores it, and some discard parts of a message doing so — the per-source pages say where.
+
+<Warning>
+  If your organization or project has a **PII redaction policy**, it applies to imported
+  traces exactly as it does to live ones — redaction runs before anything is written, so
+  nothing your policy strips is ever stored.
+</Warning>
+
+---
+
+## Imported traces are processed like live ones
+
+An imported trace goes through the same pipeline as one that arrives over OTLP: it is
+grouped into conversations, embedded for semantic search, indexed, and evaluated by
+flaggers. That is the point of importing — history you cannot search or analyse is not
+much use.
+
+Because that processing costs the same as it does for live traffic, **imported traces are
+billed the same way: one credit each**, exactly like an ingested trace. Re-importing the
+same trace does not charge twice.
+
+<Note>
+  Traces are imported **newest first**. If an import stops before the end of your range,
+  what you keep is the most recent history rather than an arbitrary slice.
+</Note>
+
+---
+
+## Limits
+
+Your ceilings depend on your plan, and the wizard shows the real numbers before you
+confirm.
+
+| Limit | How it is set |
+| --- | --- |
+| Traces per import | Defaults to your plan's remaining usage for the period; you can lower it. Hard ceiling 1,000,000. |
+| Time range | Defaults to the last 90 days, and can never reach further back than your plan's span retention. |
+| Imports running at once | One per organization. |
+
+An import stops and is marked **capped** when it reaches either ceiling, and the import
+card says which one:
+
+- **the trace limit you set** — raise it and run another import for the rest of the range;
+- **this period's usage** — the remaining range needs usage you do not have yet, so wait
+  for the period to reset or move to a larger plan.
+
+Neither is a failure, and everything imported before the stop stays.
+
+<Warning>
+  Latitude keeps spans for as long as your plan's retention allows, measured from each
+  span's own timestamp. That is why the range cannot reach past it — importing older
+  history would bill you for traces that are then deleted.
+</Warning>
+
+Latitude paces its requests to stay within each platform's rate limits, and honours a
+`Retry-After` response exactly. A large import is therefore steady rather than fast.
+
+---
+
+## Re-running an import
+
+Imports are **idempotent**. Every imported span gets a deterministic id derived from its
+source ids, so importing the same range twice updates the same spans instead of duplicating
+them. If an import fails partway, **Retry** resumes from where it stopped rather than
+re-reading everything — you will be asked for credentials again, because Latitude discards
+them once an import finishes.
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="An import is already running">
+    Only one import runs per organization at a time, so they stay predictable and do not
+    overwhelm the source API. Wait for the current one to finish, or cancel it.
+  </Accordion>
+  <Accordion title="Cancelling takes a moment">
+    Cancellation is cooperative: the page in flight finishes first, then the import stops.
+    Spans already imported stay.
+  </Accordion>
+  <Accordion title="The preview does not say how big my range is">
+    Each source is counted through a different endpoint, and any of them can decline to
+    answer — a count is skipped rather than guessed, so the preview then shows only a sample
+    and the caveats for your source.
+  </Accordion>
+  <Accordion title="This organization has no usage left">
+    Imported traces are billed like ingested ones, so an import needs usage available to
+    run at all. Latitude refuses up front rather than starting an import that would stop on
+    its first page.
+  </Accordion>
+  <Accordion title="Spans were skipped">
+    A span is skipped when it has no usable trace or span id. The page history on the
+    import card shows which pages skipped rows, so you can see whether it is isolated or
+    systematic.
+  </Accordion>
+</AccordionGroup>

@@ -175,6 +175,7 @@ function transformSpan({
   const resolved = resolveAttributes({
     spanAttrs,
     statusCode,
+    events: spanEvents,
     spanName: span.name ?? "",
     scopeName,
     hasParent: hasParentSpan(span.parentSpanId),
@@ -185,6 +186,7 @@ function transformSpan({
     spanAttrs,
     events: spanEvents,
     startTimeUnixNano: span.startTimeUnixNano,
+    endTimeUnixNano: span.endTimeUnixNano,
   })
   const toolExecution = resolveToolExecution(spanAttrs, resolved.operation)
 
