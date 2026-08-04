@@ -66,7 +66,12 @@ const FACTOR_META: Record<SessionCostFactor, FactorMeta> = {
 
 const formatMultiplier = (multiplier: number): string => `×${multiplier.toFixed(2)}`
 
-const signedPercent = (pct: number): string => `${pct > 0 ? "▲" : pct < 0 ? "▼" : ""} ${Math.abs(Math.round(pct))}%`
+// The arrow reads off the rounded figure, not the raw one: at +0.4 the two disagree
+// and the caret points up beside a `0%`.
+const signedPercent = (pct: number): string => {
+  const rounded = Math.round(pct)
+  return `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`
+}
 
 const isStill = (multiplier: number): boolean => Math.abs(multiplier - 1) < SESSION_COST_QUIET_BAND
 
