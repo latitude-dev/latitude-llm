@@ -379,6 +379,31 @@ export const hasRedactionField = (setting: OrganizationRedactionSetting | undefi
   setting !== undefined &&
   Object.entries(setting).some(([key, value]) => !REDACTION_NON_POLICY_KEYS.has(key) && hasPresentValue(value))
 
+/**
+ * Carries stored rules across a write that cannot express them.
+ *
+ * Both redaction use cases replace the whole setting, and `PATCH /v1/projects/{slug}` does not
+ * expose `rules`, so changing `mode` through the API would otherwise delete every rule the dashboard
+ * created and the next spans would keep the identifiers those rules existed to remove.
+ *
+ * An explicit empty array still clears them: the dashboard always sends the full list, so omission
+ * and emptiness are different intents and only omission means "not mine to touch".
+ *
+ * Generic over the setting, and shared, because it is one compliance rule. Two copies differing only
+ * in a type name could drift into one layer deleting customer rules while the other preserved them.
+ */
+// `| undefined` on the constraint is required: `exactOptionalPropertyTypes` makes it distinct from `?`.
+export const withPreservedRedactionRules = <T extends { readonly rules?: readonly RedactionRule[] | undefined }>(
+  stored: T | null | undefined,
+  next: T | null,
+): T | null => {
+  if (next === null || next.rules !== undefined) return next
+  const rules = stored?.rules
+  if (rules === undefined) return next
+
+  return { ...next, rules }
+}
+
 export function resolveRedactionPolicy(input: {
   organization: OrganizationSettings | null | undefined
   project: ProjectSettings | null | undefined

@@ -7,6 +7,7 @@ import {
   type RepositoryError,
   SqlClient,
   toRepositoryError,
+  withPreservedRedactionRules,
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Project } from "../entities/project.ts"
@@ -21,28 +22,6 @@ export interface UpdateProjectRedactionInput {
 }
 
 export type UpdateProjectRedactionError = RepositoryError | NotFoundError | ProjectNotFoundError
-
-/**
- * A write that never mentions `rules` leaves the stored ones alone.
- *
- * This use case replaces the whole `redaction` object, and it is the only writer of it — the pin in
- * `updateProjectUseCase` sends every caller here. `PATCH /v1/projects/{slug}` does not expose
- * `rules`, so changing `mode` through the API would otherwise delete every rule the dashboard
- * created, and the next spans would keep the identifiers those rules existed to remove.
- *
- * An explicit empty array still clears them: the dashboard always sends the full list, so omission
- * and emptiness are different intents and only omission means "not mine to touch".
- */
-const withPreservedRules = (
-  stored: RedactionSetting | null,
-  next: RedactionSetting | null,
-): RedactionSetting | null => {
-  if (next === null || next.rules !== undefined) return next
-  const rules = stored?.rules
-  if (rules === undefined) return next
-
-  return { ...next, rules }
-}
 
 export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRedaction")(function* (
   input: UpdateProjectRedactionInput,
@@ -65,7 +44,7 @@ export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRe
         )
 
       const fromRedaction = existing.settings?.redaction ?? null
-      const toRedaction = withPreservedRules(fromRedaction, input.redaction)
+      const toRedaction = withPreservedRedactionRules(fromRedaction, input.redaction)
 
       if (isSameRedactionSetting(fromRedaction, toRedaction)) return existing
 
