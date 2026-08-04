@@ -160,7 +160,7 @@ export interface GardenTaxonomyBuildPlanResult extends GardenTaxonomyLineageResu
   readonly clustersDeprecated: number
   readonly leavesAssigned: number
   readonly maxDepthReached: number
-  /** Zero ⇒ the build collapsed to a bare root; the workflow keeps the prior tree serving. */
+  /** Root child count; zero ⇒ the build collapsed to a bare root. */
   readonly topLevelClustersBuilt: number
   readonly planKey: string
 }
@@ -719,14 +719,13 @@ const annotateAdaptiveTelemetrySpan = (input: GardenTaxonomyStepInput, plan: Hie
         }
       }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.shadow"))
 
-// A rebuild that produced no top-level behaviour while a tree was serving reads.
-// Emitted for every mode (the adaptive telemetry above is silent on `off`, which
-// is what most projects run) because it is the fleet-wide signal for a project
-// whose corpus thinned below the density any split needs.
+// Emitted for every mode: the adaptive telemetry above returns early on `off`, which is what most projects run.
+// Detection only — whether the run then keeps the prior tree is the workflow's call, not this activity's.
 const emitDegenerateRebuildTelemetry = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan): void => {
-  const priorTreeSize = plan.deprecatedClusterIds.length + plan.supersededClusterIds.length
-  if (plan.topLevelClustersBuilt > 0 || priorTreeSize === 0) return
-  logger.info("Taxonomy degenerate rebuild kept the prior tree", {
+  // The two sets overlap on the adaptive path, where superseded is the whole prior tree.
+  const priorClustersAtRisk = new Set([...plan.deprecatedClusterIds, ...plan.supersededClusterIds]).size
+  if (plan.topLevelClustersBuilt > 0 || priorClustersAtRisk === 0) return
+  logger.info("Taxonomy degenerate rebuild detected", {
     metric: "taxonomy.gardenTaxonomyWorkflow.degenerateRebuild",
     mode: plan.mode,
     organizationId: input.organizationId,
@@ -735,7 +734,7 @@ const emitDegenerateRebuildTelemetry = (input: GardenTaxonomyStepInput, plan: Hi
     facetId: input.facetId,
     observationsAvailable: plan.observationsAvailable,
     observationsSampled: plan.observationsSampled,
-    priorTreeSize,
+    priorClustersAtRisk,
   })
 }
 
