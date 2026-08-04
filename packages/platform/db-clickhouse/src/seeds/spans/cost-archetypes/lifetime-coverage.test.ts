@@ -123,9 +123,7 @@ describe("seed coverage for the lifetime control", () => {
   })
 
   it("raises no cache finding anywhere in the regression archetype", () => {
-    // Archetype D exists to be read as a spend regression with a decomposable cause. A
-    // cache recommendation on any of its cohorts is noise competing with that story, so
-    // every cohort has to sit inside the material-gap band at every plausible lifetime.
+    // A cache finding here would compete with the spend-regression story D exists to tell.
     for (const cohort of REGRESSION_COHORTS) {
       for (const lifetimeSeconds of [300, 1_800, 3_600]) {
         expect(stateAt(cohort, lifetimeSeconds), `${cohort.key} @ ${lifetimeSeconds}s`).toBe("optimal")

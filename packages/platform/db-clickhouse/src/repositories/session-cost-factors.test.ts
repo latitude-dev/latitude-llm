@@ -243,6 +243,9 @@ describe("session denominator parity with the sessions rollup", () => {
   })
 
   it("counts exactly the sessions the rollup keys on, pseudo-sessions included", async () => {
+    // Parity of the *key*, which is what a restated view body can silently break. The
+    // populations differ by design: this repository gates to billable operations, so a
+    // session of nothing but tool spans has a rollup row and no place in a cost average.
     const { current } = await runCh(repo.getSessionCostFactors(scopeOf(PARITY_PROJECT_ID)))
     const rollupIds = await rollupSessionIds()
 

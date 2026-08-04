@@ -325,11 +325,8 @@ describe("archetype D — spend regression", () => {
   })
 
   it("holds each router model's own price per token exactly flat across the shift", () => {
-    // The whole point of the variant: under `prefixReuse` a model's price per token is
-    // fixed by its calls per cluster, so resizing clusters to move traffic would change
-    // each model's write-to-read ratio too and the decomposition would — correctly —
-    // report a large within-model rate effect next to the mix one. The fixture could
-    // then no longer tell "mix carried it" from "mix and rate both moved".
+    // Guards the equal calls-per-cluster: without it, resizing clusters to move traffic
+    // moves each model's own price per token too and the mix effect stops being isolable.
     const { before, after } = forAgent("router")
     const pricePerToken = (rows: readonly SpanRow[], model: string) => {
       const forModel = rows.filter((span) => span.model === model)
