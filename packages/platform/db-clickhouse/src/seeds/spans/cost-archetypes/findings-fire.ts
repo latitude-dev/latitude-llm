@@ -4,10 +4,10 @@ import {
   CLAUDE_OPUS_4_1,
   CLAUDE_OPUS_4_5,
   CLAUDE_OPUS_4_6,
+  CLAUDE_OPUS_4_7,
   COST_LONG_TAIL_MODELS,
   GEMINI_2_5_FLASH_LITE,
   GPT_5_4_MINI,
-  GPT_5_6,
   GPT_5_6_LUNA,
   GPT_5_MINI,
   GPT_5_NANO,
@@ -24,11 +24,9 @@ import {
  * the ambient generator emits, for the same reason.
  *
  * `callsPerCluster: 1` is a cohort whose calls are all isolated, so its achievable
- * ceiling is zero — that is how `Stop caching` gets its data shape. Until LAT-798
- * computes ceilings the classifier only returns verdicts that hold for every
- * possible ceiling, so `b-stop-caching` reads `Investigate` today and `b-underusing`
- * reads `Optimal`. Both are correct; the shapes are here so 2b lights them up
- * without needing new fixtures.
+ * ceiling is zero — that is how `Stop caching` gets its data shape. Which provider a
+ * cohort runs on therefore matters as much as its cadence: the same hourly calls are
+ * cold on Anthropic's five minutes and warm under OpenAI's day of extended retention.
  */
 
 const CACHE_STATE_COHORTS: readonly CostCohort[] = [
@@ -75,11 +73,12 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
   {
     key: "b-stop-caching",
     serviceName: "planner",
-    modelConfig: GPT_5_6,
-    // Isolated calls 72 minutes apart: past GPT-5.6's documented 30-minute lifetime, so
-    // no write is ever read back and the ceiling is 0. Nearly half the prompt is being
-    // written to cache at a 1.25x premium for nothing, which is what makes stopping
-    // worth real money rather than rounding error.
+    modelConfig: CLAUDE_OPUS_4_7,
+    // Isolated calls 72 minutes apart, on the one provider still holding entries for five
+    // minutes: no write is ever read back, so the ceiling is 0. Nearly half the prompt is
+    // written to cache at a 1.25x premium for nothing, which is what makes stopping worth
+    // real money rather than rounding error. On an OpenAI model this same cadence is warm
+    // — extended retention keeps its listed families for a day.
     cadence: { endDaysAgo: 0, clusters: 150, clusterSpacingHours: 1.2, callsPerCluster: 1, gapWithinClusterSeconds: 0 },
     cache: { kind: "flat", profile: { hitRate: 0.04, writeShare: 0.75 } },
     promptTokens: 64_000,
@@ -97,11 +96,11 @@ const CACHE_STATE_COHORTS: readonly CostCohort[] = [
     callsPerSession: 5,
   },
   {
-    // Ten minutes between calls — the one cadence where the model's own documented
-    // lifetime decides the verdict rather than merely shading a number. GPT-5.6
-    // documents 30 minutes, so these gaps are warm and the shortfall is something in the
-    // prompt (`Investigate`). Read against the 5 minutes the older OpenAI models get,
-    // every gap is a miss, the ceiling collapses to 0, and the same rows say
+    // Ten minutes between calls — the one cadence where the assumed lifetime decides the
+    // verdict rather than merely shading a number. OpenAI holds this family for a day, so
+    // these gaps are warm and the shortfall is something in the prompt (`Investigate`).
+    // Drop the control to five minutes, which is what a Zero Data Retention org actually
+    // gets, and every gap is a miss: the ceiling collapses and the same rows say
     // `Stop caching` — advice to abandon a cache that was working.
     key: "b-ttl-sensitive",
     serviceName: "briefing-writer",

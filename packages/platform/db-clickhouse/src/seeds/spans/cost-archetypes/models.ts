@@ -24,6 +24,12 @@ export const CLAUDE_OPUS_4_5 = model({ provider: "anthropic", model: "claude-opu
 export const CLAUDE_HAIKU_4_5 = model({ provider: "anthropic", model: "claude-haiku-4-5" })
 export const CLAUDE_OPUS_4_1 = model({ provider: "anthropic", model: "claude-opus-4-1" })
 export const CLAUDE_OPUS_4_6 = model({ provider: "anthropic", model: "claude-opus-4-6" })
+/**
+ * The only family still on a five-minute cache by default, which is what a `Stop caching`
+ * cohort needs: OpenAI keeps its listed models for a full day at no extra cost, so calls
+ * spaced an hour apart are warm there and there is nothing to stop.
+ */
+export const CLAUDE_OPUS_4_7 = model({ provider: "anthropic", model: "claude-opus-4-7" })
 
 /** No cache-write price at all, so break-even collapses to 0%. */
 export const GPT_5_MINI = model({ provider: "openai", model: "gpt-5-mini" })
@@ -31,11 +37,11 @@ export const GPT_5_NANO = model({ provider: "openai", model: "gpt-5-nano" })
 export const GPT_5_4_MINI = model({ provider: "openai", model: "gpt-5.4-mini" })
 export const GPT_5_4 = model({ provider: "openai", model: "gpt-5.4" })
 
-/** OpenAI *with* a write premium: same provider as `gpt-5.4-mini`, break-even 21.7%. */
-export const GPT_5_6 = model({ provider: "openai", model: "gpt-5.6" })
 /**
- * GPT-5.6 documents a 30-minute cache lifetime where the older OpenAI models get 5,
- * which is what lets a cohort on it show the lifetime actually deciding a verdict.
+ * OpenAI *with* a write premium, so break-even is 21.7% where `gpt-5.4-mini` on the same
+ * provider is 0%. Also the family OpenAI holds for a day under extended retention, where
+ * the mini and nano variants keep the five-to-ten-minute in-memory policy — which is what
+ * lets a cohort on it show the assumed lifetime deciding a verdict.
  */
 export const GPT_5_6_LUNA = model({ provider: "openai", model: "gpt-5.6-luna" })
 

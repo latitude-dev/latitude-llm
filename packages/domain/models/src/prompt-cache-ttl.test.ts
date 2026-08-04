@@ -9,17 +9,25 @@ describe("promptCacheTtlSeconds", () => {
     expect(ttl("anthropic", "claude-haiku-4-5")).toBe(300)
   })
 
-  it("gives OpenAI's newer models the documented thirty minutes, not the older five", () => {
-    // GPT-5.6 moved to a 30-minute minimum lifetime; earlier models evict on 5-10
-    // minutes of inactivity. A single per-provider value is wrong for one of them.
-    expect(ttl("openai", "gpt-5.6")).toBe(1_800)
-    expect(ttl("openai", "gpt-5.6-luna")).toBe(1_800)
-    expect(ttl("openai", "gpt-5-mini")).toBe(300)
+  it("gives OpenAI's extended-retention families a full day, and the rest five minutes", () => {
+    // Extended retention is the default for the listed families and the only mode from
+    // 5.5 on, at the same price. The list leaves out the mini/nano/pro variants, which
+    // keep the in-memory policy — so a prefix match on `gpt-5.4` must not catch
+    // `gpt-5.4-mini`.
+    expect(ttl("openai", "gpt-5.6")).toBe(86_400)
+    expect(ttl("openai", "gpt-5.6-luna")).toBe(86_400)
+    expect(ttl("openai", "gpt-4.1")).toBe(86_400)
+    expect(ttl("openai", "gpt-5.1-codex-max")).toBe(86_400)
     expect(ttl("openai", "gpt-5.4-mini")).toBe(300)
+    expect(ttl("openai", "gpt-5-mini")).toBe(300)
+    expect(ttl("openai", "gpt-5-nano")).toBe(300)
+    expect(ttl("openai", "gpt-5-pro")).toBe(300)
   })
 
   it("splits Bedrock by hosted family, the way Bedrock's own table does", () => {
     expect(ttl("amazon-bedrock", "anthropic.claude-opus-4-5-20251101-v1:0")).toBe(300)
+    // Bedrock states its own numbers, and hosts GPT-5.6 at thirty minutes rather than
+    // OpenAI's day.
     expect(ttl("amazon-bedrock", "openai.gpt-5.6-sol")).toBe(1_800)
   })
 
@@ -38,7 +46,7 @@ describe("promptCacheTtlSeconds", () => {
 
   it("matches a family prefix, so dated and regional variants inherit their family", () => {
     expect(ttl("anthropic", "claude-sonnet-4-5-20250929")).toBe(300)
-    expect(ttl("openai", "GPT-5.6-Sol")).toBe(1_800)
+    expect(ttl("openai", "GPT-5.6-Sol")).toBe(86_400)
   })
 
   it("returns null rather than guessing for a pair no documentation covers", () => {
@@ -49,7 +57,7 @@ describe("promptCacheTtlSeconds", () => {
     // DeepSeek documents cleanup "within a few hours to a few days" — a
     // garbage-collection policy, not a window a gap can be compared against.
     expect(ttl("deepseek", "deepseek-chat")).toBeNull()
-    // A future OpenAI family falls through rather than inheriting gpt-5's five minutes.
+    // A future OpenAI family falls through rather than inheriting a listed one.
     expect(ttl("openai", "gpt-7")).toBeNull()
     expect(ttl("google", "gemini-2.0-flash")).toBeNull()
   })

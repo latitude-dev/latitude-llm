@@ -23,6 +23,7 @@
 import { resolveProviderName } from "./provider-aliases.ts"
 
 const MINUTE = 60
+const HOUR = 60 * MINUTE
 
 /**
  * One documented lifetime. `modelPrefix` matches the start of the model id, so a
@@ -37,15 +38,60 @@ interface PromptCacheTtlRule {
   readonly source: string
 }
 
+const OPENAI_PROMPT_CACHING_DOCS = "https://developers.openai.com/api/docs/guides/prompt-caching"
+
+/**
+ * The families OpenAI lists under extended prompt cache retention: "Extended prompt cache
+ * retention keeps cached prefixes active for longer, up to a maximum of 24 hours", at the
+ * same price, and since 29 May 2026 it is the *default* rather than an opt-in.
+ *
+ * `gpt-5.6` is here even though the guide's list stops at `gpt-5.5-pro`: for 5.5 and later
+ * there is no `in_memory` option to fall back to, so the list only enumerates the models
+ * where the choice still exists.
+ *
+ * The one case this overstates is an organization with Zero Data Retention, which "default
+ * to `in_memory` when `prompt_cache_retention` is not specified" — nothing in a span says
+ * whether ZDR is on, and erring the other way would hand a `stopCaching` to everyone else.
+ */
+const OPENAI_EXTENDED_RETENTION_PREFIXES = [
+  "gpt-5.6",
+  "gpt-5.5",
+  "gpt-5.4",
+  "gpt-5.2",
+  "gpt-5.1",
+  "gpt-5-codex",
+  "gpt-5",
+  "gpt-4.1",
+] as const
+
+/**
+ * OpenAI models the extended-retention list leaves out, which keeps the in-memory policy:
+ * "cached prefixes generally remain active for 5 to 10 minutes of inactivity, up to a
+ * maximum of one hour" — the low end of that range.
+ *
+ * These must be evaluated before the list above, or `gpt-5.4-mini` inherits `gpt-5.4`.
+ */
+const OPENAI_IN_MEMORY_PREFIXES = ["gpt-5.4-mini", "gpt-5.4-nano", "gpt-5-mini", "gpt-5-nano", "gpt-5-pro"] as const
+
 /**
  * Only what the provider states in writing. Where a provider documents a range, the
  * conservative end is used: understating a lifetime understates the ceiling, which
  * costs a finding, while overstating it invents headroom nobody can reach.
  *
+ * Conservative on the lifetime is not the same as conservative on the advice, and the
+ * difference is why `stopCaching` is gated on a measured cost comparison rather than on
+ * the ceiling alone. A lifetime read too short produces a low ceiling, and a low ceiling
+ * is what turns "you are overpaying" into "stop caching" — the one recommendation here
+ * that costs money if it is wrong.
+ *
  * Opt-in longer lifetimes are the known limitation of the whole approach: Anthropic's
- * `ttl: "1h"`, OpenAI's `prompt_cache_options.ttl` and Gemini's explicit-cache `ttl`
- * all raise a customer's real ceiling above what this table reports, and a table
- * cannot see any of them.
+ * `ttl: "1h"` and Gemini's explicit-cache `ttl` both raise a customer's real ceiling
+ * above what this table reports, and a table cannot see either. Both also charge for the
+ * privilege — Anthropic writes at 2x base for an hour against 1.25x for five minutes,
+ * Gemini bills explicit cache storage by the hour — and neither premium is in the
+ * registry, so a longer lifetime makes the modeled savings optimistic as well as the
+ * ceiling. OpenAI's extended retention is the exception: same price, so its 24 hours are
+ * free to assume.
  *
  * Anthropic's is in fact observable — the Vercel AI SDK forwards Anthropic's
  * `cache_creation` 5m/1h split inside the JSON value of `ai.response.providerMetadata`
@@ -80,23 +126,18 @@ const PROMPT_CACHE_TTL_RULES: readonly PromptCacheTtlRule[] = [
     ttlSeconds: 5 * MINUTE,
     source: "https://platform.claude.com/docs/en/docs/build-with-claude/prompt-caching",
   },
-  {
-    // "A cached prefix remains eligible for reuse for at least 30 minutes"; the
-    // `prompt_cache_options.ttl` default is `30m`. Only the families that document
-    // this — a newer OpenAI model falls through to unknown rather than inheriting.
+  ...OPENAI_IN_MEMORY_PREFIXES.map((modelPrefix) => ({
     provider: "openai",
-    modelPrefix: "gpt-5.6",
-    ttlSeconds: 30 * MINUTE,
-    source: "https://developers.openai.com/api/docs/guides/prompt-caching",
-  },
-  {
-    // "cached prefixes generally remain active for 5 to 10 minutes of inactivity, up
-    // to a maximum of one hour" — the low end of the documented range.
-    provider: "openai",
-    modelPrefix: "gpt-5",
+    modelPrefix,
     ttlSeconds: 5 * MINUTE,
-    source: "https://developers.openai.com/api/docs/guides/prompt-caching",
-  },
+    source: OPENAI_PROMPT_CACHING_DOCS,
+  })),
+  ...OPENAI_EXTENDED_RETENTION_PREFIXES.map((modelPrefix) => ({
+    provider: "openai",
+    modelPrefix,
+    ttlSeconds: 24 * HOUR,
+    source: OPENAI_PROMPT_CACHING_DOCS,
+  })),
   {
     // Bedrock hosts both families and documents them apart: the model table lists
     // Claude at "5 minutes" and GPT-5.6 Sol/Terra/Luna at "30 minutes". Same TTL

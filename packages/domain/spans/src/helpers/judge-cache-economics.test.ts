@@ -94,7 +94,7 @@ describe("judgeCacheEconomics", () => {
 
   it("resolves the documented lifetime per model, so one provider's families do not share one", () => {
     const cadence = histogram(1_000_000, 830_000, 60)
-    expect(judge({ provider: "openai", model: "gpt-5.6-luna" }, cadence).documentedLifetimeSeconds).toBe(1_800)
+    expect(judge({ provider: "openai", model: "gpt-5.6-luna" }, cadence).documentedLifetimeSeconds).toBe(86_400)
     expect(judge({ provider: "openai", model: "gpt-5-mini" }, cadence).documentedLifetimeSeconds).toBe(300)
   })
 

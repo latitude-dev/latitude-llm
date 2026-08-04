@@ -291,7 +291,7 @@ describe("archetype B end to end", () => {
     // and on the earlier fixture sizes none of the three did.
     for (const [model, state] of [
       ["gpt-5-mini", "cacheIt"],
-      ["gpt-5.6", "stopCaching"],
+      ["claude-opus-4-7", "stopCaching"],
       ["claude-haiku-4-5", "investigate"],
     ] as const) {
       const row = byModel(model)

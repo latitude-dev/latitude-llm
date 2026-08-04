@@ -175,7 +175,7 @@ describe("archetype B — the project where findings fire", () => {
     expect(stateFor(findingsSpans, "claude-opus-4-5").breakEven).toBeCloseTo(0.2174, 4)
     expect(stateFor(findingsSpans, "gpt-5-mini").breakEven).toBe(0)
     // Same provider, different price list: break-even is a per-model property.
-    expect(stateFor(findingsSpans, "gpt-5.6").breakEven).toBeCloseTo(0.2174, 4)
+    expect(stateFor(findingsSpans, "gpt-5.6-luna").breakEven).toBeCloseTo(0.2174, 4)
   })
 
   it("gives every cache state a cohort to land on, and the pricing shape it needs", () => {

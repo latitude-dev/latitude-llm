@@ -102,7 +102,7 @@ const STATE_META: Record<
 }
 
 const LIFETIME_TOOLTIP =
-  "Play with the cache time to see how our estimate changes. Every value here is a guess, including the default, which uses what each provider publishes for the model."
+  "Play with the cache time to see how our estimate changes. By model uses what each provider publishes: a day for most OpenAI models, which keep entries that long at no extra cost, and five minutes for Claude. The other values are what-ifs — a day is longer than Anthropic offers at all."
 
 const SAVINGS_TOOLTIP =
   "An estimate for the time window you picked, worked out from your token counts and each model's list prices. It will not match the spend figures elsewhere on this page exactly."
@@ -247,9 +247,18 @@ function PositionBar({ row }: { readonly row: CacheRowView }) {
         </Tooltip>
         {breakEven === null || breakEven <= 0 || unjudged ? null : <BreakEvenMark breakEvenRate={breakEven} />}
       </div>
-      <Text.H6 color="foregroundMuted" noWrap className="w-10 shrink-0 text-right tabular-nums">
-        {actual === null ? DASH : formatPercentage(actual)}
-      </Text.H6>
+      {/* Both numbers, so the pale half of the bar needs no legend to be readable. */}
+      <div className="flex w-24 shrink-0 flex-row items-baseline justify-end gap-1">
+        <Text.H6 color="foregroundMuted" noWrap className="tabular-nums">
+          {actual === null ? DASH : formatPercentage(actual)}
+        </Text.H6>
+        {/* Only where there is headroom to name: "4% of 0%" is not a sentence. */}
+        {ceiling === null || unjudged || ceiling <= (actual ?? 0) ? null : (
+          <Text.H6 color="foregroundMuted" noWrap className="opacity-60">
+            {`of ${formatPercentage(ceiling)}`}
+          </Text.H6>
+        )}
+      </div>
     </div>
   )
 }
@@ -495,7 +504,30 @@ function CacheUseTile({ summary }: { readonly summary: CacheSummary }) {
  * the second tile's left edge in a different place on each line, which reads as a mistake.
  * The headline takes two of the three columns, so every edge lands on the same grid.
  */
-function CacheSummaryView({ summary }: { readonly summary: CacheSummary }) {
+/**
+ * What a chosen lifetime does not account for.
+ *
+ * Only on a chosen one, never on `By model`: the providers that offer a longer lifetime
+ * charge for it — Anthropic doubles the write price for an hour, Gemini bills explicit
+ * cache storage — and the registry carries only the short-lifetime write price, so the
+ * savings above are optimistic in exactly the direction the reader just leaned.
+ */
+function ChosenLifetimeNote({ selection }: { readonly selection: CacheLifetimeSelection }) {
+  if (selection === "documented") return null
+  return (
+    <Text.H6 color="foregroundMuted" className="lg:col-span-3">
+      {`Assuming every model holds a cached prompt for ${formatLifetime(selection) ?? selection}. Providers that charge more to hold one that long, like Anthropic's hourly cache at double the write price, are not priced in here.`}
+    </Text.H6>
+  )
+}
+
+function CacheSummaryView({
+  summary,
+  selection,
+}: {
+  readonly summary: CacheSummary
+  readonly selection: CacheLifetimeSelection
+}) {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
       <div className="flex flex-col gap-2 rounded-lg bg-secondary/60 p-3 lg:col-span-2">
@@ -530,6 +562,7 @@ function CacheSummaryView({ summary }: { readonly summary: CacheSummary }) {
           recoverableMicrocents={summary.recoverableMicrocents}
         />
       ))}
+      <ChosenLifetimeNote selection={selection} />
     </div>
   )
 }
@@ -630,7 +663,7 @@ export function CacheEconomicsPanel({
           <Text.H6 color="foregroundMuted">No billable model usage in this time window</Text.H6>
         </div>
       ) : view === "summary" ? (
-        <CacheSummaryView summary={summary} />
+        <CacheSummaryView summary={summary} selection={selection} />
       ) : (
         <Table wrapperClassName="border-0 rounded-none">
           <TableHeader className="[&_tr]:border-b-0">
