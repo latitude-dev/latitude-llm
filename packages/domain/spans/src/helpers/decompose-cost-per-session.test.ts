@@ -2,161 +2,105 @@ import { describe, expect, it } from "vitest"
 import {
   decomposeCostPerSession,
   SESSION_COST_MIN_SESSIONS,
+  type SessionCostCell,
   type SessionCostFactor,
-  type SessionCostModelSlice,
   type SessionCostPeriod,
 } from "./decompose-cost-per-session.ts"
 
-const model = (
-  name: string,
-  { tokens, pricePerToken }: { tokens: number; pricePerToken: number },
-): SessionCostModelSlice => ({
-  provider: "openai",
-  model: name,
-  tokens,
-  costMicrocents: tokens * pricePerToken,
-})
+interface ModelSpec {
+  readonly name: string
+  /** Share of the period's tokens this model takes. */
+  readonly share: number
+  /** Share of *this model's* tokens that are prompt tokens. */
+  readonly promptShare: number
+  readonly promptPrice: number
+  readonly outputPrice: number
+}
 
 /** A period built from the factors themselves, so a test can move exactly one of them. */
 const period = ({
   sessions,
-  turnsPerSession,
-  stepsPerTurn,
-  tokensPerStep,
+  tracesPerSession,
+  callsPerTrace,
+  tokensPerCall,
   models,
   traceKeyedSessions = 0,
 }: {
   sessions: number
-  turnsPerSession: number
-  stepsPerTurn: number
-  tokensPerStep: number
-  models: readonly { name: string; share: number; pricePerToken: number }[]
+  tracesPerSession: number
+  callsPerTrace: number
+  tokensPerCall: number
+  models: readonly ModelSpec[]
   traceKeyedSessions?: number
 }): SessionCostPeriod => {
-  const turns = sessions * turnsPerSession
-  const steps = turns * stepsPerTurn
-  const tokens = steps * tokensPerStep
-  const slices = models.map((entry) =>
-    model(entry.name, { tokens: tokens * entry.share, pricePerToken: entry.pricePerToken }),
-  )
-  return {
-    sessions,
-    traceKeyedSessions,
-    turns,
-    steps,
-    tokens,
-    costMicrocents: slices.reduce((sum, slice) => sum + slice.costMicrocents, 0),
-    unpricedCalls: 0,
-    models: slices,
-  }
+  const traces = sessions * tracesPerSession
+  const calls = traces * callsPerTrace
+  const tokens = calls * tokensPerCall
+  const cells: SessionCostCell[] = models.flatMap((model) => {
+    const own = tokens * model.share
+    const prompt = own * model.promptShare
+    const output = own - prompt
+    return [
+      {
+        provider: "acme",
+        model: model.name,
+        side: "prompt",
+        tokens: prompt,
+        costMicrocents: prompt * model.promptPrice,
+      },
+      {
+        provider: "acme",
+        model: model.name,
+        side: "output",
+        tokens: output,
+        costMicrocents: output * model.outputPrice,
+      },
+    ].filter((cell): cell is SessionCostCell => cell.tokens > 0)
+  })
+  return { sessions, traceKeyedSessions, traces, calls, unpricedCalls: 0, cells }
 }
 
-const CHEAP = { name: "gpt-5-mini", share: 1, pricePerToken: 10 }
+const CHEAP: ModelSpec = { name: "mini", share: 1, promptShare: 0.9, promptPrice: 10, outputPrice: 100 }
+const DEAR = { name: "opus", promptShare: 0.9, promptPrice: 100, outputPrice: 1_000 }
 
 const BASELINE = {
   sessions: 400,
-  turnsPerSession: 3,
-  stepsPerTurn: 2,
-  tokensPerStep: 1_000,
+  tracesPerSession: 3,
+  callsPerTrace: 2,
+  tokensPerCall: 1_000,
   models: [CHEAP],
 } as const
 
-const pointsFor = (rows: readonly { factor: SessionCostFactor; points: number }[], factor: SessionCostFactor): number =>
-  rows.find((row) => row.factor === factor)?.points ?? 0
+const multiplierFor = (
+  rows: readonly { factor: SessionCostFactor | null; multiplier: number }[],
+  factor: SessionCostFactor,
+): number | undefined => rows.find((row) => row.factor === factor)?.multiplier
 
-const factors = (rows: readonly { factor: SessionCostFactor }[]): readonly SessionCostFactor[] =>
+const factors = (rows: readonly { factor: SessionCostFactor | null }[]): readonly (SessionCostFactor | null)[] =>
   rows.map((row) => row.factor)
 
+const product = (rows: readonly { multiplier: number }[]): number =>
+  rows.reduce((total, row) => total * row.multiplier, 1)
+
 describe("decomposeCostPerSession", () => {
-  it("attributes a pure turn-count rise entirely to turns per session", () => {
+  it("gives every factor its own before/after ratio as a multiplier", () => {
     const result = decomposeCostPerSession({
       previous: period(BASELINE),
-      current: period({ ...BASELINE, turnsPerSession: 6 }),
+      current: period({ ...BASELINE, tracesPerSession: 6 }),
     })
 
     expect(result.status).toBe("ok")
-    expect(result.totalPoints).toBe(100)
-    expect(pointsFor(result.rows, "turnsPerSession")).toBe(100)
-    expect(pointsFor(result.rows, "tokensPerStep")).toBe(0)
-    expect(pointsFor(result.rows, "stepsPerTurn")).toBe(0)
-    expect(pointsFor(result.rows, "modelMix")).toBe(0)
-    expect(pointsFor(result.rows, "pricePerToken")).toBe(0)
+    expect(result.totalMultiplier).toBeCloseTo(2, 10)
+    expect(multiplierFor(result.rows, "tracesPerSession")).toBeCloseTo(2, 2)
+    expect(result.changePct).toBeCloseTo(100, 10)
   })
 
-  it("attributes prompt growth to tokens per step, not to the price rows", () => {
-    const result = decomposeCostPerSession({
-      previous: period(BASELINE),
-      current: period({ ...BASELINE, tokensPerStep: 4_000 }),
-    })
-
-    expect(pointsFor(result.rows, "tokensPerStep")).toBe(result.totalPoints)
-    expect(pointsFor(result.rows, "modelMix")).toBe(0)
-    expect(pointsFor(result.rows, "pricePerToken")).toBe(0)
-  })
-
-  it("puts a migration to a cheaper model on the model mix row, not on price per token", () => {
-    const previous = period({
-      ...BASELINE,
-      models: [
-        { name: "claude-opus", share: 0.8, pricePerToken: 100 },
-        { name: "claude-haiku", share: 0.2, pricePerToken: 10 },
-      ],
-    })
-    const current = period({
-      ...BASELINE,
-      models: [
-        { name: "claude-opus", share: 0.2, pricePerToken: 100 },
-        { name: "claude-haiku", share: 0.8, pricePerToken: 10 },
-      ],
-    })
-    const result = decomposeCostPerSession({ previous, current })
-
-    expect(result.totalPoints).toBeLessThan(0)
-    expect(pointsFor(result.rows, "modelMix")).toBe(result.totalPoints)
-    // Nothing repriced, so the within-model rate row has nothing to carry.
-    expect(pointsFor(result.rows, "pricePerToken")).toBe(0)
-  })
-
-  it("puts a list-price rise on price per token, not on model mix", () => {
-    const result = decomposeCostPerSession({
-      previous: period(BASELINE),
-      current: period({ ...BASELINE, models: [{ ...CHEAP, pricePerToken: 20 }] }),
-    })
-
-    expect(pointsFor(result.rows, "pricePerToken")).toBe(result.totalPoints)
-    expect(pointsFor(result.rows, "modelMix")).toBe(0)
-  })
-
-  it("separates a mix shift from a simultaneous prompt-growth rise", () => {
-    const previous = period({
-      ...BASELINE,
-      models: [
-        { name: "cheap", share: 0.9, pricePerToken: 10 },
-        { name: "premium", share: 0.1, pricePerToken: 100 },
-      ],
-    })
-    const current = period({
-      ...BASELINE,
-      tokensPerStep: 2_000,
-      models: [
-        { name: "cheap", share: 0.5, pricePerToken: 10 },
-        { name: "premium", share: 0.5, pricePerToken: 100 },
-      ],
-    })
-    const result = decomposeCostPerSession({ previous, current })
-
-    expect(pointsFor(result.rows, "modelMix")).toBeGreaterThan(0)
-    expect(pointsFor(result.rows, "tokensPerStep")).toBeGreaterThan(0)
-    expect(pointsFor(result.rows, "turnsPerSession")).toBe(0)
-    expect(pointsFor(result.rows, "stepsPerTurn")).toBe(0)
-  })
-
-  it("sums every row to the headline total, for any combination of moves", () => {
+  it("multiplies the displayed rows to the displayed total", () => {
     const cases = [
-      { turnsPerSession: 3.7, stepsPerTurn: 2.3, tokensPerStep: 1_311, price: 13 },
-      { turnsPerSession: 2.9, stepsPerTurn: 1.1, tokensPerStep: 907, price: 7 },
-      { turnsPerSession: 3.01, stepsPerTurn: 2.02, tokensPerStep: 1_003, price: 10.1 },
-      { turnsPerSession: 11, stepsPerTurn: 5, tokensPerStep: 40_000, price: 91 },
+      { tracesPerSession: 3.7, callsPerTrace: 2.3, tokensPerCall: 1_311, promptPrice: 13 },
+      { tracesPerSession: 2.9, callsPerTrace: 1.1, tokensPerCall: 907, promptPrice: 7 },
+      { tracesPerSession: 3.01, callsPerTrace: 2.02, tokensPerCall: 1_003, promptPrice: 10.1 },
+      { tracesPerSession: 11, callsPerTrace: 5, tokensPerCall: 40_000, promptPrice: 91 },
     ]
 
     for (const shape of cases) {
@@ -164,68 +108,187 @@ describe("decomposeCostPerSession", () => {
         previous: period(BASELINE),
         current: period({
           sessions: 517,
-          turnsPerSession: shape.turnsPerSession,
-          stepsPerTurn: shape.stepsPerTurn,
-          tokensPerStep: shape.tokensPerStep,
-          models: [{ ...CHEAP, pricePerToken: shape.price }],
+          tracesPerSession: shape.tracesPerSession,
+          callsPerTrace: shape.callsPerTrace,
+          tokensPerCall: shape.tokensPerCall,
+          models: [{ ...CHEAP, promptPrice: shape.promptPrice }],
         }),
       })
 
-      const summed = result.rows.reduce((sum, row) => sum + row.points, 0)
-      expect(summed, JSON.stringify(shape)).toBe(result.totalPoints)
-      expect(result.totalPoints).toBe(Math.round(result.changePct ?? 0))
+      // The rows multiply to the figure printed under them, exactly.
+      expect(product(result.rows), JSON.stringify(shape)).toBeCloseTo(result.rowsMultiplyTo ?? 0, 2)
+      // And that figure sits within a rounding step of the true change. Relative,
+      // because a rounding step is worth far less on a x1000 multiplier than on x2.
+      const drift = Math.abs((result.rowsMultiplyTo ?? 0) / (result.totalMultiplier ?? 1) - 1)
+      expect(drift, JSON.stringify(shape)).toBeLessThan(0.01)
     }
   })
 
-  it("absorbs the rounding residual into the largest contribution", () => {
-    // Three factors each land on a .5-ish share of a total that does not divide evenly.
+  it("attributes prompt growth to tokens per call, with the price rows quiet", () => {
     const result = decomposeCostPerSession({
       previous: period(BASELINE),
-      current: period({ ...BASELINE, turnsPerSession: 3.31, stepsPerTurn: 2.07, tokensPerStep: 1_013 }),
+      current: period({ ...BASELINE, tokensPerCall: 4_000 }),
     })
 
-    expect(result.rows.reduce((sum, row) => sum + row.points, 0)).toBe(result.totalPoints)
-    const largest = result.rows[0]
-    expect(largest?.factor).toBe("turnsPerSession")
+    expect(multiplierFor(result.rows, "tokensPerCall")).toBeCloseTo(4, 2)
+    expect(factors(result.rows)).not.toContain("modelMix")
+    expect(factors(result.rows)).not.toContain("promptRate")
   })
 
-  it("orders rows by absolute contribution so the cause reads first", () => {
+  it("puts a migration to a cheaper model on model mix, not on either rate", () => {
+    const cheap = { name: "haiku", promptShare: 0.9, promptPrice: 10, outputPrice: 100 }
     const result = decomposeCostPerSession({
-      previous: period(BASELINE),
-      current: period({ ...BASELINE, turnsPerSession: 3.3, tokensPerStep: 3_000 }),
+      previous: period({
+        ...BASELINE,
+        models: [
+          { ...DEAR, share: 0.8 },
+          { ...cheap, share: 0.2 },
+        ],
+      }),
+      current: period({
+        ...BASELINE,
+        models: [
+          { ...DEAR, share: 0.2 },
+          { ...cheap, share: 0.8 },
+        ],
+      }),
     })
 
-    const magnitudes = result.rows.map((row) => Math.abs(row.points))
-    expect(magnitudes).toEqual([...magnitudes].sort((a, b) => b - a))
-    expect(result.rows[0]?.factor).toBe("tokensPerStep")
+    expect(result.totalMultiplier).toBeLessThan(1)
+    expect(multiplierFor(result.rows, "modelMix")).toBeLessThan(1)
+    // No price list changed, so neither rate row may claim credit.
+    expect(factors(result.rows)).not.toContain("promptRate")
+    expect(factors(result.rows)).not.toContain("outputRate")
+  })
+
+  it("puts a real price rise on the rate rows, not on either mix row", () => {
+    const result = decomposeCostPerSession({
+      previous: period(BASELINE),
+      current: period({ ...BASELINE, models: [{ ...CHEAP, promptPrice: 20, outputPrice: 200 }] }),
+    })
+
+    expect(multiplierFor(result.rows, "promptRate")).toBeGreaterThan(1)
+    expect(factors(result.rows)).not.toContain("modelMix")
+    expect(factors(result.rows)).not.toContain("tokenMix")
+  })
+
+  /**
+   * The defect the four-way price split exists to fix: prompt tokens are cheaper
+   * than output ones, so growing the prompt alone drags the blended per-token price
+   * down. That has to read as a mix shift, never as a rate cut.
+   */
+  it("charges a prompt/output shift to token mix and leaves both rates quiet", () => {
+    const result = decomposeCostPerSession({
+      previous: period({ ...BASELINE, models: [{ ...CHEAP, promptShare: 0.5 }] }),
+      current: period({ ...BASELINE, models: [{ ...CHEAP, promptShare: 0.95 }] }),
+    })
+
+    expect(multiplierFor(result.rows, "tokenMix")).toBeLessThan(1)
+    expect(factors(result.rows)).not.toContain("promptRate")
+    expect(factors(result.rows)).not.toContain("outputRate")
+    expect(factors(result.rows)).not.toContain("modelMix")
+  })
+
+  it("keeps a model-share shift out of the token mix row when each model's split holds", () => {
+    const result = decomposeCostPerSession({
+      previous: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.9 },
+          { ...DEAR, share: 0.1 },
+        ],
+      }),
+      current: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.1 },
+          { ...DEAR, share: 0.9 },
+        ],
+      }),
+    })
+
+    expect(multiplierFor(result.rows, "modelMix")).toBeGreaterThan(1)
+    expect(factors(result.rows)).not.toContain("tokenMix")
+  })
+
+  it("names the model whose share moved most on the mix row", () => {
+    const result = decomposeCostPerSession({
+      previous: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.9 },
+          { ...DEAR, share: 0.1 },
+        ],
+      }),
+      current: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.1 },
+          { ...DEAR, share: 0.9 },
+        ],
+      }),
+    })
+
+    const shift = result.rows.find((row) => row.factor === "modelMix")?.shareShift
+    expect(shift?.label).toBe("acme/opus")
+    expect(shift?.previousShare).toBeCloseTo(0.1, 6)
+    expect(shift?.currentShare).toBeCloseTo(0.9, 6)
+  })
+
+  it("folds the factors that did not move into one row that keeps the product intact", () => {
+    const result = decomposeCostPerSession({
+      previous: period(BASELINE),
+      current: period({ ...BASELINE, tokensPerCall: 4_000 }),
+    })
+
+    const folded = result.rows.find((row) => row.foldedFactors > 0)
+    expect(folded?.foldedFactors).toBeGreaterThan(0)
+    expect(folded?.values).toBeNull()
+    expect(product(result.rows)).toBeCloseTo(result.rowsMultiplyTo ?? 0, 2)
+  })
+
+  it("orders rows by how far each moved so the cause reads first", () => {
+    const result = decomposeCostPerSession({
+      previous: period(BASELINE),
+      current: period({ ...BASELINE, tracesPerSession: 3.3, tokensPerCall: 3_000 }),
+    })
+
+    expect(result.rows[0]?.factor).toBe("tokensPerCall")
+  })
+
+  it("carries before and after values for the volume factors only", () => {
+    const result = decomposeCostPerSession({
+      previous: period(BASELINE),
+      current: period({ ...BASELINE, tracesPerSession: 6, models: [{ ...CHEAP, promptPrice: 20 }] }),
+    })
+
+    expect(result.rows.find((row) => row.factor === "tracesPerSession")?.values).toEqual({ previous: 3, current: 6 })
+    expect(result.rows.find((row) => row.factor === "promptRate")?.values).toBeNull()
   })
 
   it("reports flat rather than dividing by a near-zero log", () => {
-    const previous = period(BASELINE)
-    const result = decomposeCostPerSession({ previous, current: { ...previous, sessions: previous.sessions } })
+    const result = decomposeCostPerSession({ previous: period(BASELINE), current: period(BASELINE) })
 
     expect(result.status).toBe("flat")
     expect(result.rows).toEqual([])
     expect(result.changePct).toBe(0)
-    expect(result.totalPoints).toBe(0)
   })
 
   it("refuses to compare when either period is under the session floor", () => {
     const small = period({ ...BASELINE, sessions: SESSION_COST_MIN_SESSIONS - 1 })
-    const big = period({ ...BASELINE, turnsPerSession: 6 })
+    const big = period({ ...BASELINE, tracesPerSession: 6 })
 
     expect(decomposeCostPerSession({ previous: small, current: big }).status).toBe("notEnoughData")
     expect(decomposeCostPerSession({ previous: big, current: small }).status).toBe("notEnoughData")
     expect(decomposeCostPerSession({ previous: small, current: big }).changePct).toBeNull()
+    expect(decomposeCostPerSession({ previous: small, current: big }).totalMultiplier).toBeNull()
   })
 
   it("refuses to compare when the previous period recorded no spend", () => {
-    const free = period({ ...BASELINE, models: [{ ...CHEAP, pricePerToken: 0 }] })
-    const paid = period(BASELINE)
+    const free = period({ ...BASELINE, models: [{ ...CHEAP, promptPrice: 0, outputPrice: 0 }] })
+    const result = decomposeCostPerSession({ previous: free, current: period(BASELINE) })
 
-    const result = decomposeCostPerSession({ previous: free, current: paid })
     expect(result.status).toBe("notEnoughData")
-    expect(result.rows).toEqual([])
     // The headline still renders — only the comparison is withheld.
     expect(result.currentCostPerSessionMicrocents).toBeGreaterThan(0)
   })
@@ -241,41 +304,18 @@ describe("decomposeCostPerSession", () => {
   })
 
   it("baselines a model with no previous tokens at the previous blended price", () => {
-    const previous = period({ ...BASELINE, models: [{ name: "cheap", share: 1, pricePerToken: 10 }] })
-    const current = period({
-      ...BASELINE,
-      models: [
-        { name: "cheap", share: 0.5, pricePerToken: 10 },
-        { name: "brand-new", share: 0.5, pricePerToken: 10 },
-      ],
-    })
-    const result = decomposeCostPerSession({ previous, current })
-
-    // Routing half the traffic somewhere priced identically is not a mix effect.
-    expect(result.status).toBe("flat")
-  })
-
-  it("only emits a cache efficiency row once an effect is supplied", () => {
-    const previous = period(BASELINE)
-    const current = period({ ...BASELINE, models: [{ ...CHEAP, pricePerToken: 20 }] })
-
-    expect(factors(decomposeCostPerSession({ previous, current }).rows)).not.toContain("cacheEfficiency")
-
-    const withCache = decomposeCostPerSession({ previous, current, cacheEfficiencyEffect: 5 })
-    expect(factors(withCache.rows)).toContain("cacheEfficiency")
-    expect(withCache.rows.reduce((sum, row) => sum + row.points, 0)).toBe(withCache.totalPoints)
-    // Half the 10-microcent price rise was handed to caching, so it takes half the points.
-    expect(pointsFor(withCache.rows, "cacheEfficiency")).toBe(pointsFor(withCache.rows, "pricePerToken"))
-  })
-
-  it("carries the before and after values for the volume factors only", () => {
     const result = decomposeCostPerSession({
-      previous: period(BASELINE),
-      current: period({ ...BASELINE, turnsPerSession: 6, models: [{ ...CHEAP, pricePerToken: 20 }] }),
+      previous: period({ ...BASELINE, models: [{ ...CHEAP, share: 1 }] }),
+      current: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.5 },
+          { ...CHEAP, name: "brand-new", share: 0.5 },
+        ],
+      }),
     })
 
-    expect(result.rows.find((row) => row.factor === "turnsPerSession")?.values).toEqual({ previous: 3, current: 6 })
-    expect(result.rows.find((row) => row.factor === "modelMix")?.values).toBeNull()
-    expect(result.rows.find((row) => row.factor === "pricePerToken")?.values).toBeNull()
+    // Routing half the traffic to an identically-priced model changes nothing.
+    expect(result.status).toBe("flat")
   })
 })

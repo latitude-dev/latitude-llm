@@ -5,6 +5,8 @@ import {
   type CostAnalyticsRepositoryShape,
   decomposeCostPerSession,
   type SessionCostFactor,
+  sessionCostMicrocents,
+  sessionCostTokens,
 } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
@@ -85,10 +87,16 @@ const scopeOf = (projectId: ProjectId) => ({
   from: FROM,
   to: TO,
   previousFrom: PREVIOUS_FROM,
+  bucketSeconds: DAY_MS / 1000,
 })
 
-const pointsFor = (rows: readonly { factor: SessionCostFactor; points: number }[], factor: SessionCostFactor): number =>
-  rows.find((row) => row.factor === factor)?.points ?? 0
+const multiplierFor = (
+  rows: readonly { factor: SessionCostFactor | null; multiplier: number }[],
+  factor: SessionCostFactor,
+): number | undefined => rows.find((row) => row.factor === factor)?.multiplier
+
+const factorsOf = (rows: readonly { factor: SessionCostFactor | null }[]): readonly (SessionCostFactor | null)[] =>
+  rows.map((row) => row.factor)
 
 const decompositionFor = async (projectId: ProjectId) =>
   decomposeCostPerSession(await runCh(repo.getSessionCostFactors(scopeOf(projectId))))
@@ -121,55 +129,87 @@ describe("getSessionCostFactors", () => {
 
     // Archetype D's router holds volume flat across the shift and moves only which
     // model serves it, so every count except spend matches period to period.
-    expect(current.steps).toBe(previous.steps)
-    expect(current.turns).toBe(previous.turns)
+    expect(current.calls).toBe(previous.calls)
+    expect(current.traces).toBe(previous.traces)
     expect(current.sessions).toBe(previous.sessions)
-    expect(current.tokens).toBe(previous.tokens)
-    expect(current.costMicrocents).toBeGreaterThan(previous.costMicrocents)
-    expect(current.models.length).toBe(2)
+    expect(sessionCostTokens(current)).toBe(sessionCostTokens(previous))
+    expect(sessionCostMicrocents(current)).toBeGreaterThan(sessionCostMicrocents(previous))
+    // Two models, each split prompt and output.
+    expect(current.cells.length).toBe(4)
   })
 
-  it("puts archetype D's traffic shift entirely on the model mix row", async () => {
+  it("returns sparkline buckets spanning both windows off the same scan", async () => {
+    const { buckets } = await runCh(repo.getSessionCostFactors(scopeOf(MIX_PROJECT_ID)))
+
+    expect(buckets.length).toBeGreaterThan(1)
+    const starts = buckets.map((bucket) => bucket.bucketStart.getTime())
+    expect(starts).toEqual([...starts].sort((a, b) => a - b))
+    expect(Math.min(...starts)).toBeGreaterThanOrEqual(PREVIOUS_FROM.getTime())
+    expect(Math.max(...starts)).toBeLessThan(TO.getTime())
+    expect(buckets.every((bucket) => bucket.sessions > 0)).toBe(true)
+  })
+
+  it("puts archetype D's traffic shift on model mix and nothing else", async () => {
     const result = await decompositionFor(MIX_PROJECT_ID)
 
     expect(result.status).toBe("ok")
-    expect(result.totalPoints).toBeGreaterThan(0)
-    expect(pointsFor(result.rows, "modelMix")).toBe(result.totalPoints)
-    expect(pointsFor(result.rows, "tokensPerStep")).toBe(0)
-    expect(pointsFor(result.rows, "turnsPerSession")).toBe(0)
-    expect(pointsFor(result.rows, "stepsPerTurn")).toBe(0)
+    expect(result.totalMultiplier).toBeGreaterThan(1)
+    expect(multiplierFor(result.rows, "modelMix")).toBeGreaterThan(1)
     // The fixture holds each model's own calls per cluster — and so its write-to-read
-    // ratio, and so its price per token — fixed across the shift, which is what leaves
-    // nothing for the within-model rate row to carry.
-    expect(pointsFor(result.rows, "pricePerToken")).toBe(0)
+    // ratio, and so each side's price per token — fixed across the shift. Nothing is
+    // left for the rate rows, and volume never moved, so all of it folds away.
+    expect(factorsOf(result.rows)).not.toContain("promptRate")
+    expect(factorsOf(result.rows)).not.toContain("outputRate")
+    expect(factorsOf(result.rows)).not.toContain("tokensPerCall")
+    expect(factorsOf(result.rows)).not.toContain("tracesPerSession")
   })
 
-  it("puts archetype D's prompt growth on the tokens per step row and not on model mix", async () => {
+  it("puts archetype D's prompt growth on tokens per call and not on model mix", async () => {
     const result = await decompositionFor(PROMPT_PROJECT_ID)
 
     expect(result.status).toBe("ok")
-    expect(result.rows[0]?.factor).toBe("tokensPerStep")
-    expect(pointsFor(result.rows, "tokensPerStep")).toBeGreaterThan(0)
-    // One model throughout, so no share can have moved.
-    expect(pointsFor(result.rows, "modelMix")).toBe(0)
-    expect(pointsFor(result.rows, "turnsPerSession")).toBe(0)
+    expect(result.rows[0]?.factor).toBe("tokensPerCall")
+    expect(multiplierFor(result.rows, "tokensPerCall")).toBeGreaterThan(1)
+    // One model throughout, so no share between price lists can have moved.
+    expect(factorsOf(result.rows)).not.toContain("modelMix")
+    expect(factorsOf(result.rows)).not.toContain("tracesPerSession")
   })
 
-  it("keeps both causes visible, and summing, on the project that carries them together", async () => {
+  /**
+   * The grader's output holds at 120 tokens while its prompt grows fourfold, so the
+   * cheap prompt side takes a larger share and the blended per-token price falls with
+   * no price changing. That belongs to token mix; a rate row claiming it would read as
+   * "we got a better deal".
+   */
+  it("charges the grader's blended price fall to token mix, not to a rate row", async () => {
+    const result = await decompositionFor(PROMPT_PROJECT_ID)
+
+    expect(multiplierFor(result.rows, "tokenMix")).toBeLessThan(1)
+    expect(factorsOf(result.rows)).not.toContain("promptRate")
+    expect(factorsOf(result.rows)).not.toContain("outputRate")
+  })
+
+  it("keeps both causes visible, and reconciling, on the project that carries them together", async () => {
     const result = await decompositionFor(BLENDED_PROJECT_ID)
 
-    expect(pointsFor(result.rows, "modelMix")).toBeGreaterThan(0)
-    expect(pointsFor(result.rows, "tokensPerStep")).toBeGreaterThan(0)
-    expect(result.rows.reduce((sum, row) => sum + row.points, 0)).toBe(result.totalPoints)
+    expect(multiplierFor(result.rows, "modelMix")).toBeGreaterThan(1)
+    expect(multiplierFor(result.rows, "tokensPerCall")).toBeGreaterThan(1)
+    expect(result.rows.reduce((product, row) => product * row.multiplier, 1)).toBeCloseTo(result.rowsMultiplyTo ?? 0, 2)
   })
 
-  it("prices each model against its own tokens, so the mix effect has real prices to use", async () => {
+  it("prices each side of each model separately, so the mix effects have real prices", async () => {
     const { previous } = await runCh(repo.getSessionCostFactors(scopeOf(MIX_PROJECT_ID)))
-    const prices = previous.models.map((slice) => slice.costMicrocents / slice.tokens)
+    const models = [...new Set(previous.cells.map((cell) => cell.model))].sort()
+    const priceOf = (model: string, side: string) => {
+      const cell = previous.cells.find((candidate) => candidate.model === model && candidate.side === side)
+      return cell ? cell.costMicrocents / cell.tokens : 0
+    }
 
-    expect(previous.models.map((slice) => slice.model).sort()).toEqual(["claude-opus-4-5", "gpt-5-mini"])
-    expect(Math.max(...prices)).toBeGreaterThan(Math.min(...prices))
-    expect(previous.models.reduce((sum, slice) => sum + slice.tokens, 0)).toBe(previous.tokens)
+    expect(models).toEqual(["claude-opus-4-5", "gpt-5-mini"])
+    // Output costs strictly more per token than prompt on both, which is the whole
+    // reason a prompt/output shift must not be read as a rate change.
+    for (const model of models) expect(priceOf(model, "output")).toBeGreaterThan(priceOf(model, "prompt"))
+    expect(priceOf("claude-opus-4-5", "prompt")).toBeGreaterThan(priceOf("gpt-5-mini", "prompt"))
   })
 })
 

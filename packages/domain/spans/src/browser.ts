@@ -78,13 +78,22 @@ export {
 export type {
   CostPerSessionDecomposition,
   DecomposeCostPerSessionInput,
+  SessionCostCell,
   SessionCostContribution,
   SessionCostDecompositionStatus,
   SessionCostFactor,
-  SessionCostModelSlice,
   SessionCostPeriod,
+  SessionCostShareShift,
+  TokenSide,
 } from "./helpers/decompose-cost-per-session.ts"
-export { decomposeCostPerSession, SESSION_COST_MIN_SESSIONS } from "./helpers/decompose-cost-per-session.ts"
+export {
+  decomposeCostPerSession,
+  SESSION_COST_MIN_SESSIONS,
+  SESSION_COST_QUIET_BAND,
+  sessionCostMicrocents,
+  sessionCostTokens,
+  TOKEN_SIDES,
+} from "./helpers/decompose-cost-per-session.ts"
 export {
   canonicalizeMessageForEmbedding,
   hashMessageContent,
@@ -121,6 +130,7 @@ export type {
   ModelUsageMeasures,
   ModelUsageSeries,
   ModelUsageSlice,
+  SessionCostBucket,
   SessionCostFactorsPair,
   SessionCostFactorsScope,
 } from "./ports/cost-analytics-repository.ts"

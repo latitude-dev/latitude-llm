@@ -291,11 +291,26 @@ export interface CacheEconomics {
  */
 export interface SessionCostFactorsScope extends CostAnalyticsScope {
   readonly previousFrom: Date
+  /** Bucket width for the headline sparklines, which span both windows. */
+  readonly bucketSeconds: number
+}
+
+/**
+ * One sparkline point. Only the two headline measures: a session count is a clean
+ * series, whereas a per-bucket ratio of two small counts swings on volume alone and
+ * would read as an event rather than as noise.
+ */
+export interface SessionCostBucket {
+  readonly bucketStart: Date
+  readonly sessions: number
+  readonly costMicrocents: number
 }
 
 export interface SessionCostFactorsPair {
   readonly previous: SessionCostPeriod
   readonly current: SessionCostPeriod
+  /** Both windows, oldest first. */
+  readonly buckets: readonly SessionCostBucket[]
 }
 
 export interface CostModelSpend {

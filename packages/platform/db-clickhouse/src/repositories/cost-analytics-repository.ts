@@ -18,8 +18,10 @@ import type {
   ModelUsageBucket,
   ModelUsageSeries,
   ModelUsageSlice,
+  SessionCostCell,
   SessionCostFactorsPair,
   SessionCostPeriod,
+  TokenSide,
 } from "@domain/spans"
 import {
   CACHE_CEILING_LIFETIME_SECONDS,
@@ -179,14 +181,24 @@ const SESSION_KEY = `coalesce(nullIf(session_id, ''), toString(trace_id))`
 
 // Splits one scan into the two adjacent windows. `is_current` is the bound the
 // spans filter already narrowed to, so both periods read identical filters.
+//
+// The prompt side carries cache reads and writes because providers charge them on
+// the input side, and `tokens_input` is the uncached remainder — the three are
+// additive. Prompt cost is `total - output` rather than `cost_input` so the two
+// sides always close on the total: a provider-reported total need not equal the
+// sum of the sides it reports, and the price decomposition cannot absorb a gap.
 const SESSION_FACTORS_SOURCE = `SELECT
+        start_time,
         start_time >= {from:DateTime64(9, 'UTC')} AS is_current,
         ${SESSION_KEY} AS session_key,
         session_id,
         trace_id,
         provider,
         model,
-        tokens_total,
+        tokens_input + tokens_cache_read + tokens_cache_create AS prompt_tokens,
+        tokens_output + tokens_reasoning AS output_tokens,
+        cost_total_microcents - cost_output_microcents AS prompt_cost,
+        cost_output_microcents AS output_cost,
         cost_total_microcents,
         ${COST_SOURCE} AS cost_source
       FROM spans
@@ -301,59 +313,71 @@ const CACHE_CADENCE_BUCKETS = CACHE_CEILING_LIFETIME_SECONDS.map(
         countIf(gap_seconds <= ${lifetimeSeconds}) AS ${cadenceCallsAlias(lifetimeSeconds)}`,
 ).join(",\n        ")
 
+// `is_period` marks the WITH ROLLUP subtotal, which carries the window's own
+// `uniqExact` rather than a sum of the buckets' — a session straddling a bucket
+// edge belongs to one window but to two buckets, so the counts do not add up.
 type SessionFactorsRow = {
+  is_period: number
+  is_everything: number
   is_current: number
+  bucket_start: string
   sessions: string
   trace_keyed_sessions: string
-  turns: string
-  steps: string
-  tokens: string
-  cost_microcents: string
+  traces: string
+  calls: string
   unpriced_calls: string
+  cost_microcents: string
 }
 
-type SessionFactorsModelRow = {
+type SessionFactorsCellRow = {
   is_current: number
   provider: string
   model: string
-  tokens: string
-  cost_microcents: string
+  prompt_tokens: string
+  prompt_cost: string
+  output_tokens: string
+  output_cost: string
 }
 
 const EMPTY_SESSION_PERIOD: SessionCostPeriod = {
   sessions: 0,
   traceKeyedSessions: 0,
-  turns: 0,
-  steps: 0,
-  tokens: 0,
-  costMicrocents: 0,
+  traces: 0,
+  calls: 0,
   unpricedCalls: 0,
-  models: [],
+  cells: [],
 }
+
+const toSessionCells = (rows: readonly SessionFactorsCellRow[]): SessionCostCell[] =>
+  rows.flatMap((row) => {
+    const provider = normalizeCHString(row.provider)
+    const model = normalizeCHString(row.model)
+    return (
+      [
+        { side: "prompt" as const, tokens: num(row.prompt_tokens), costMicrocents: num(row.prompt_cost) },
+        { side: "output" as const, tokens: num(row.output_tokens), costMicrocents: num(row.output_cost) },
+      ] satisfies { side: TokenSide; tokens: number; costMicrocents: number }[]
+    )
+      .filter((cell) => cell.tokens > 0)
+      .map((cell) => ({ provider, model, ...cell }))
+  })
 
 const toSessionPeriod = ({
   row,
-  models,
+  cells,
 }: {
   row: SessionFactorsRow | undefined
-  models: readonly SessionFactorsModelRow[]
+  cells: readonly SessionFactorsCellRow[]
 }): SessionCostPeriod =>
   row === undefined
     ? EMPTY_SESSION_PERIOD
     : {
         sessions: num(row.sessions),
         traceKeyedSessions: num(row.trace_keyed_sessions),
-        turns: num(row.turns),
-        steps: num(row.steps),
-        tokens: num(row.tokens),
-        costMicrocents: num(row.cost_microcents),
+        traces: num(row.traces),
+        calls: num(row.calls),
         unpricedCalls: num(row.unpriced_calls),
-        models: models.map((slice) => ({
-          provider: normalizeCHString(slice.provider),
-          model: normalizeCHString(slice.model),
-          tokens: num(slice.tokens),
-          costMicrocents: num(slice.cost_microcents),
-        })),
+        cells: toSessionCells(cells),
       }
 
 type ModelUsageMeasuresDraft = { cost: number; tokens: number }
@@ -853,22 +877,32 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
             .query(async (client) => {
-              const params = { ...scopeParams(input), previousFrom: formatCHDate(input.previousFrom) }
-              const [countsResult, modelsResult] = await Promise.all([
+              const params = {
+                ...scopeParams(input),
+                previousFrom: formatCHDate(input.previousFrom),
+                bucketSeconds: input.bucketSeconds,
+              }
+              const [countsResult, cellsResult] = await Promise.all([
                 client.query({
-                  // A session straddling the boundary counts in both periods, the
-                  // same convention the per-trace series uses for bucket edges.
+                  // One pass yields the sparkline buckets and the two window
+                  // subtotals: `WITH ROLLUP` merges the `uniqExact` states at both
+                  // levels, which summing bucket counts could not do. A session
+                  // straddling the window boundary counts in both, the same
+                  // convention the per-trace series uses for bucket edges.
                   query: `SELECT
+                        GROUPING(bucket_start) AS is_period,
+                        GROUPING(is_current) AS is_everything,
                         is_current,
+                        bucket_start,
                         uniqExact(session_key) AS sessions,
                         uniqExactIf(session_key, session_id = '') AS trace_keyed_sessions,
-                        uniqExact(trace_id) AS turns,
-                        count() AS steps,
-                        sum(tokens_total) AS tokens,
-                        sum(cost_total_microcents) AS cost_microcents,
-                        countIf(cost_source IN ('unpriced', 'unknown')) AS unpriced_calls
-                      FROM (${SESSION_FACTORS_SOURCE})
-                      GROUP BY is_current`,
+                        uniqExact(trace_id) AS traces,
+                        count() AS calls,
+                        countIf(cost_source IN ('unpriced', 'unknown')) AS unpriced_calls,
+                        sum(cost_total_microcents) AS cost_microcents
+                      FROM (SELECT ${BUCKET_START} AS bucket_start, * FROM (${SESSION_FACTORS_SOURCE}))
+                      GROUP BY is_current, bucket_start WITH ROLLUP
+                      ORDER BY bucket_start ASC`,
                   query_params: params,
                   format: "JSONEachRow",
                 }),
@@ -879,27 +913,42 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                         is_current,
                         provider,
                         model,
-                        sum(tokens_total) AS tokens,
-                        sum(cost_total_microcents) AS cost_microcents
+                        sum(prompt_tokens) AS prompt_tokens,
+                        sum(prompt_cost) AS prompt_cost,
+                        sum(output_tokens) AS output_tokens,
+                        sum(output_cost) AS output_cost
                       FROM (${SESSION_FACTORS_SOURCE})
                       GROUP BY is_current, provider, model
-                      HAVING tokens > 0`,
+                      HAVING prompt_tokens + output_tokens > 0`,
                   query_params: params,
                   format: "JSONEachRow",
                 }),
               ])
               const countRows = await countsResult.json<SessionFactorsRow>()
-              const modelRows = await modelsResult.json<SessionFactorsModelRow>()
-              return { countRows, modelRows }
+              const cellRows = await cellsResult.json<SessionFactorsCellRow>()
+              return { countRows, cellRows }
             })
             .pipe(
-              Effect.map(({ countRows, modelRows }): SessionCostFactorsPair => {
+              Effect.map(({ countRows, cellRows }): SessionCostFactorsPair => {
+                // The grand-total row rolls `is_current` up to a default 0, which
+                // collides with the previous window's own subtotal; drop it.
+                const scoped = countRows.filter((row) => !Number(row.is_everything))
                 const periodOf = (isCurrent: boolean) =>
                   toSessionPeriod({
-                    row: countRows.find((row) => Boolean(row.is_current) === isCurrent),
-                    models: modelRows.filter((row) => Boolean(row.is_current) === isCurrent),
+                    row: scoped.find((row) => Number(row.is_period) === 1 && Boolean(row.is_current) === isCurrent),
+                    cells: cellRows.filter((row) => Boolean(row.is_current) === isCurrent),
                   })
-                return { previous: periodOf(false), current: periodOf(true) }
+                return {
+                  previous: periodOf(false),
+                  current: periodOf(true),
+                  buckets: scoped
+                    .filter((row) => Number(row.is_period) === 0)
+                    .map((row) => ({
+                      bucketStart: parseCHDate(row.bucket_start),
+                      sessions: num(row.sessions),
+                      costMicrocents: num(row.cost_microcents),
+                    })),
+                }
               }),
             )
         }),

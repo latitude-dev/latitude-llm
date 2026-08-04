@@ -16,6 +16,7 @@ import {
   decomposeCostPerSession,
   isUnpricedGap,
   judgeCacheEconomics,
+  sessionCostTokens,
   summarizeUnpricedUsage,
 } from "@domain/spans"
 import { CostAnalyticsRepositoryLive } from "@platform/db-clickhouse"
@@ -105,6 +106,16 @@ export interface CostPerSessionRecord extends CostPerSessionDecomposition {
   /** Both feed the shared rollup cost display, so a zero headline never reads as free. */
   readonly unpricedCalls: number
   readonly tokens: number
+  /** Sparkline points for the two headline blocks, spanning both windows, oldest first. */
+  readonly buckets: readonly SessionCostSparkPoint[]
+}
+
+/** Cost per session is derived here rather than in the panel: an empty bucket has none. */
+export interface SessionCostSparkPoint {
+  readonly bucketStartIso: string
+  readonly sessions: number
+  readonly costMicrocents: number
+  readonly costPerSessionMicrocents: number | null
 }
 
 // Well above what any window the picker offers can ask for at its bucket width.
@@ -242,24 +253,31 @@ export const getCacheEconomics = createServerFn({ method: "GET" })
  * period-over-period figure cannot drift apart.
  */
 export const getCostPerSessionDecomposition = createServerFn({ method: "GET" })
-  .inputValidator(costScopeSchema)
+  .inputValidator(
+    costScopeSchema.extend({ bucketSeconds: bucketSecondsSchema }).refine(withinBucketBudget, bucketBudgetIssue),
+  )
   .handler(async ({ data, context }): Promise<CostPerSessionRecord> => {
     const orgId = await resolveOrgScope(context)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* CostAnalyticsRepository
         const scope = toScope(orgId, data)
-        const { previous, current } = yield* repo.getSessionCostFactors({
+        const { previous, current, buckets } = yield* repo.getSessionCostFactors({
           ...scope,
           previousFrom: new Date(scope.from.getTime() - (scope.to.getTime() - scope.from.getTime())),
+          bucketSeconds: data.bucketSeconds,
         })
-        // TODO(LAT-798): pass `cacheEfficiencyEffect` once the achievable ceiling
-        // lands, so cache efficiency splits out of the within-model rate row.
         return {
           ...decomposeCostPerSession({ previous, current }),
           traceKeyedSessionShare: current.sessions > 0 ? current.traceKeyedSessions / current.sessions : null,
           unpricedCalls: current.unpricedCalls,
-          tokens: current.tokens,
+          tokens: sessionCostTokens(current),
+          buckets: buckets.map((bucket) => ({
+            bucketStartIso: bucket.bucketStart.toISOString(),
+            sessions: bucket.sessions,
+            costMicrocents: bucket.costMicrocents,
+            costPerSessionMicrocents: bucket.sessions > 0 ? bucket.costMicrocents / bucket.sessions : null,
+          })),
         }
       }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )

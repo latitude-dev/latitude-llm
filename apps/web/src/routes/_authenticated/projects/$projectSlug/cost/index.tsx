@@ -114,6 +114,7 @@ function CostPageContent() {
   const { data: perSession, isLoading: perSessionLoading } = useCostPerSessionDecomposition({
     projectId: project.id,
     range,
+    bucketSeconds,
     enabled,
   })
   const { data: cacheEconomics, isLoading: cacheEconomicsLoading } = useCacheEconomics({

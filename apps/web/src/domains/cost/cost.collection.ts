@@ -66,16 +66,19 @@ export function useCostBreakdown({
 export function useCostPerSessionDecomposition({
   projectId,
   range,
+  bucketSeconds,
   enabled = true,
 }: {
   readonly projectId: string
   readonly range: CostTimeRange
+  readonly bucketSeconds: number
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   return useQuery({
-    queryKey: [...projectScopeKey(scope), "cost-per-session", projectId, range],
-    queryFn: () => getCostPerSessionDecomposition({ data: { ...projectScopeData(scope), projectId, ...range } }),
+    queryKey: [...projectScopeKey(scope), "cost-per-session", projectId, range, bucketSeconds],
+    queryFn: () =>
+      getCostPerSessionDecomposition({ data: { ...projectScopeData(scope), projectId, ...range, bucketSeconds } }),
     staleTime: COST_STALE_TIME_MS,
     placeholderData: keepPreviousData,
     enabled: enabled && projectId.length > 0,
