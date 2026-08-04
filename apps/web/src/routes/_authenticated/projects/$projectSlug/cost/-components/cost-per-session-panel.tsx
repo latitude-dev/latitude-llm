@@ -26,6 +26,13 @@ interface FactorMeta {
   readonly hint: string
   /** Formats the factor's standing value, which is in that factor's own unit. */
   readonly format: (value: number) => string
+  /**
+   * What the value covers, for a factor whose row carries no subject of its own. The
+   * two rate tiles need it: their figure is blended over every model while their
+   * marker holds the mix fixed, and a tile reading `Prompt price $0.72/1M` invites
+   * "whose price?" unless it answers on its face.
+   */
+  readonly covers?: string
 }
 
 const ratio = (value: number): string => value.toFixed(2)
@@ -66,12 +73,14 @@ const FACTOR_META: Record<SessionCostFactor, FactorMeta> = {
   promptRate: {
     label: "Prompt price",
     format: perMillionTokens,
-    hint: "What a prompt token actually costs, holding the model and the prompt/output split fixed. Only a real price change lands here.",
+    covers: "averaged over all models",
+    hint: "What you actually paid per prompt token, averaged over every model — so it matches no single price list. The marker beside it holds the model mix fixed, and moves only when a price list itself changes: routing tokens to a dearer model shows up under Which models, not here.",
   },
   outputRate: {
     label: "Output price",
     format: perMillionTokens,
-    hint: "What an output token actually costs, holding the model and the prompt/output split fixed. Only a real price change lands here.",
+    covers: "averaged over all models",
+    hint: "What you actually paid per output token, averaged over every model — so it matches no single price list. The marker beside it holds the model mix fixed, and moves only when a price list itself changes: routing tokens to a dearer model shows up under Which models, not here.",
   },
 }
 
@@ -98,7 +107,7 @@ const directionArrow = (multiplier: number) =>
  * What the standing value is a share of, where the number alone would be ambiguous.
  */
 function rowSubject(row: SessionCostContribution): string | null {
-  if (!row.subject) return null
+  if (!row.subject) return FACTOR_META[row.factor].covers ?? null
   return row.alsoMoved > 0 ? `${row.subject} +${row.alsoMoved} more` : row.subject
 }
 
