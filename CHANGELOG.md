@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+## v0.3.77 - 2026-08-04
+
+### Cost
+
+- Added the cost breakdown table and model usage over time, below the spend trend. One ClickHouse projection is read twice in parallel — grouped for the rows and ungrouped for the window totals — so a row is never divided by a differently-filtered denominator, and each row reports its unpriced usage so an understated total says so. The model series is ranked by spend with everything past the top six collapsed into one "Other" group (ref: #4313).
+- Added cache economics: exact hit rates per model and a break-even derived from each model's own registry prices, `(input - cacheWrite) / (cacheRead - cacheWrite)`, rather than a threshold we pick. A pure classifier turns the two into one of six states, shown as a comparison table with actual and break-even on one shared track (ref: #4317).
+- Recovered 4.15B unpriced tokens by aliasing the `fireworks` provider to its catalog id and matching bare model ids within their own provider's list, so an OpenRouter call for `grok-4.5` prices against `x-ai/grok-4.5`. A single match is the whole condition, so two vendors sharing a bare name stay unpriced rather than borrowing a rate. The unpriced-span alert now fires only on zeros a catalog entry could fix, and backoffice gained a triage view (ref: #4321).
+
+### Privacy
+
+- Raised deterministic PII detector accuracy from 60% to 91% against a labelled corpus of 118 occurrences, pinned case by case so an improvement shows in the diff as clearly as a regression. Headline fixes: a trailing period no longer disables card, phone and IP detection; internationally formatted phone numbers are matched; DSN and assignment-key credentials (`POSTGRES_PASSWORD=`, `Authorization: Bearer`) are detected; missing vendor token prefixes and Slack webhook URLs are covered; and false positives on `max_tokens`, `cache_key`, `logo@2x.png` and NANP-shaped metrics are gone. Known limits are now published on the PII redaction docs page (ref: #4318).
+- Retired the `crypto_wallet` redaction entity. An all-lowercase 40-character hex string is both an Ethereum address and a SHA-1 digest, so that half was never safe to enable. Stored policies and in-flight queue jobs naming it are dropped rather than failed, while an unknown entity still fails closed. **Breaking for API clients** that send `crypto_wallet` in `settings.redaction.entities`; both SDKs and the CLI are regenerated (ref: #4318).
+- Fixed ingest redaction deleting content-carrying span attributes instead of redacting them, which showed an `enforce` project a span the exporter never sent. Every key is kept with its value replaced: string maps get the same structural JSON walk as parsed columns, and a match on a numeric attribute relocates the key into `attr_string` as a whole-value placeholder (ref: #4333).
+
+### Settings
+
+- Unified organization defaults and project overrides behind one "Set by" control. Privacy, agent dispatch and GitHub monitoring each now show which scope owns the setting, how many projects inherit versus override it, and the selector itself is the override/reset action. Scope switches are staged with an explicit Apply, so flipping the dropdown no longer deletes a project's policy on click. Added an Organization Defaults page for setting a default before any project cares, moved Integrations and Data destinations under Project, split connected integrations from the catalog with per-integration status, and put Disconnect behind a confirmation (ref: #4331).
+
+### Behaviors
+
+- Restored adaptive taxonomy clustering on the pilot project, which had fallen back to static on every run since Jul 28. The near-gate re-search was exceeding the clustering worker's deadline and being terminated: it now spends its budget on the root only, over just the best-scoring K values from the first pass, and an unaffordable re-search is declined up front from a projected operation count rather than started and killed. Failed builds now report their elapsed time and reason instead of `0ms` with no message (ref: #4334).
+- Fixed changing a view's cohort filter while its scoped garden was running. The replacement run was dropped as already-started, so the in-flight run wrote clusters for the old cohort against the new filter. The run is now terminated before the purge and re-garden (ref: #4332).
+
+### API and MCP
+
+- Restricted `/v1/mcp` to OAuth bearers. As a route inside the protected ring it also accepted an organization API key, which let a client skip consent, org binding and per-client revocation by pasting a long-lived key into its MCP config. Rejecting with 401 makes such a client fall back to discovery and complete the OAuth flow (ref: #4335).
+- Send `WWW-Authenticate` on bearer-auth 401s so MCP clients can discover the authorization server per RFC 9728, instead of relying on guessing the conventional metadata path (ref: #4336).
+- Throttled the public `exportTraces` endpoint, the only export operation that enqueued export jobs and emails without a rate limit. It now shares the 10/hour cap its siblings use, with the 429 documented in the OpenAPI contract and regenerated into both SDKs and the CLI (ref: #4228).
+
+### AI
+
+- Fixed a Bedrock generate that falls back from MiniMax M2.5 being priced at the requested model's rates, which cost and billed every fallback-served call at exactly 2x. Results now carry the model that actually served them, round-tripped through the AI cache, and both the evaluation-cost and credit-metering paths read it (ref: #4340).
+- Fixed a fallback generate reporting only the fallback's latency under the primary model's name with no record that it degraded. The clock starts before the primary attempt and the primary failure is recorded on the `ai.generate` span (ref: #4339).
+
 ## v0.3.76 - 2026-07-30
 
 ### Sessions
