@@ -160,6 +160,7 @@ function HeadlineBlock({
   changePct,
   detail,
   points,
+  boundaryIndex,
   hint,
 }: {
   readonly label: string
@@ -167,6 +168,7 @@ function HeadlineBlock({
   readonly changePct: number | null
   readonly detail?: string
   readonly points: readonly (number | null)[]
+  readonly boundaryIndex: number | undefined
   readonly hint: string
 }) {
   const neutral = changePct === null || Math.abs(Math.round(changePct)) < NEUTRAL_PERCENT
@@ -209,7 +211,7 @@ function HeadlineBlock({
           </Text.H6>
         ) : null}
       </div>
-      <SessionSparkline points={points} label={`${label} over both periods`} />
+      <SessionSparkline points={points} boundaryIndex={boundaryIndex} label={`${label} over both periods`} />
     </div>
   )
 }
@@ -273,6 +275,12 @@ export function CostPerSessionPanel({
       ? (record.volume.currentSessions / record.volume.previousSessions - 1) * 100
       : null
   const traceKeyed = record?.traceKeyedSessionShare ?? null
+  // Where the comparison window ends and the shown one begins, so the sparklines can
+  // mark it. Both blocks plot the same buckets, so one index serves both.
+  const currentWindowStart = record?.buckets.findIndex(
+    (bucket) => Date.parse(bucket.bucketStartIso) >= Date.parse(rangeFromIso),
+  )
+  const boundaryIndex = currentWindowStart !== undefined && currentWindowStart > 0 ? currentWindowStart : undefined
 
   return (
     <div className="flex flex-col rounded-lg bg-secondary">
@@ -296,6 +304,7 @@ export function CostPerSessionPanel({
                   ? { detail: `from ${formatCount(record.volume.previousSessions)}` }
                   : {})}
                 points={record.buckets.map((bucket) => bucket.sessions)}
+                boundaryIndex={boundaryIndex}
                 hint="Sessions with billable spend. Traffic that reported no session id keys on its trace id instead, so it counts as a single-trace session rather than dropping out of the denominator. More sessions does not move what each one costs — that is the figure below."
               />
               <HeadlineBlock
@@ -306,6 +315,7 @@ export function CostPerSessionPanel({
                 points={record.buckets.map((bucket) =>
                   bucket.costPerSessionMicrocents === null ? null : microcentsToUsd(bucket.costPerSessionMicrocents),
                 )}
+                boundaryIndex={boundaryIndex}
                 hint="Spend divided by sessions, for this window against the equal-length window before it. The factors beside it are its multiplicative parts, so their multipliers multiply to this change."
               />
             </div>
