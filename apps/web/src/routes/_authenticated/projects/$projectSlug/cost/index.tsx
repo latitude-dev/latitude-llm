@@ -189,6 +189,9 @@ function CostPageContent() {
             {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
             {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
             onChange={tw.onTimeChange}
+            // Unlike the other sections, every figure here is clamped to the recent
+            // slice, so an unset range is not all time.
+            placeholder="Recent activity"
           />
         }
       />

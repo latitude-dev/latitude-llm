@@ -5,7 +5,7 @@ import {
   type SessionCostFactor,
 } from "@domain/spans"
 import { Icon, Skeleton, Text, Tooltip } from "@repo/ui"
-import { formatCount, formatPercentage } from "@repo/utils"
+import { formatChartWindowCaption, formatCount, formatPercentage, formatPrice } from "@repo/utils"
 import { ArrowDownIcon, ArrowUpIcon, InfoIcon, MinusIcon } from "lucide-react"
 import type { CostPerSessionRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
@@ -24,42 +24,53 @@ const NEUTRAL_PERCENT = 1
 interface FactorMeta {
   readonly label: string
   readonly hint: string
-  readonly formatValue?: (value: number) => string
+  /** Formats the factor's standing value, which is in that factor's own unit. */
+  readonly format: (value: number) => string
 }
 
 const ratio = (value: number): string => value.toFixed(2)
 const whole = (value: number): string => formatCount(Math.round(value))
+const share = (value: number): string => formatPercentage(value)
+
+// Microcents per token reads as nothing; per million tokens is how price lists are quoted.
+const MICROCENTS_PER_USD = 100_000_000
+const perMillionTokens = (microcentsPerToken: number): string =>
+  `${formatPrice((microcentsPerToken * 1_000_000) / MICROCENTS_PER_USD)} /1M`
 
 const FACTOR_META: Record<SessionCostFactor, FactorMeta> = {
   tracesPerSession: {
     label: "Traces per session",
     hint: "Traces with a billable call, per session. One trace is one request to an agent, not one conversational turn.",
-    formatValue: ratio,
+    format: ratio,
   },
   callsPerTrace: {
     label: "LLM calls per trace",
     hint: "Billable model calls a single trace spent to answer. Retry loops and extra tool round trips land here.",
-    formatValue: ratio,
+    format: ratio,
   },
   tokensPerCall: {
     label: "Tokens per call",
     hint: "Prompt plus output tokens per call — prompt growth, larger retrieved context, longer answers.",
-    formatValue: whole,
+    format: whole,
   },
   modelMix: {
     label: "Which models",
+    format: share,
     hint: "The share of tokens each model took, with every price list's own prices held fixed — moving traffic to a dearer model raises what an average token costs without anything being repriced. The model named is where most of the effect went; `+N more` means other models gained share too, so the shift is broader than one name. A share can move because someone changed a model or because a busier agent happens to use a dearer one, and this row cannot tell those apart.",
   },
   tokenMix: {
     label: "Prompt vs output split",
+    format: share,
     hint: "How the tokens divided between the cheap prompt side and the dearer output side — output runs 10-25x prompt. Growing the prompt while the answer stays the same length makes the average token cheaper with no price changing, which is why it is not one of the price rows.",
   },
   promptRate: {
     label: "Prompt price",
+    format: perMillionTokens,
     hint: "What a prompt token actually costs, holding the model and the prompt/output split fixed. Only a real price change lands here.",
   },
   outputRate: {
     label: "Output price",
+    format: perMillionTokens,
     hint: "What an output token actually costs, holding the model and the prompt/output split fixed. Only a real price change lands here.",
   },
 }
@@ -84,35 +95,28 @@ const directionArrow = (multiplier: number) =>
   isStill(multiplier) ? MinusIcon : multiplier > 1 ? ArrowUpIcon : ArrowDownIcon
 
 /**
- * The evidence under a tile's multiplier, in that factor's own units.
- *
- * Null for the two rate factors, and deliberately: the number a reader would expect
- * there is the blended price per side, and that moves with model mix, so a tile
- * could show a doubled prompt price beside a x1.00 saying nothing repriced. There
- * is no honest single figure for those two, only the multiplier.
+ * What the standing value is a share of, where the number alone would be ambiguous.
  */
-function rowDetail(row: SessionCostContribution): string | null {
-  if (row.values) {
-    const format = FACTOR_META[row.factor].formatValue ?? ratio
-    return `${format(row.values.previous)} → ${format(row.values.current)}`
-  }
-  if (!row.shareShift) return null
-  const { label, previousShare, currentShare, alsoMoved } = row.shareShift
-  const move = `${label} ${formatPercentage(previousShare)} → ${formatPercentage(currentShare)}`
-  return alsoMoved > 0 ? `${move} +${alsoMoved} more` : move
+function rowSubject(row: SessionCostContribution): string | null {
+  if (!row.subject) return null
+  return row.alsoMoved > 0 ? `${row.subject} +${row.alsoMoved} more` : row.subject
 }
 
 /**
- * One factor. The multiplier leads and always means the same thing — effect on cost
- * per session — with the factor's own before and after underneath as evidence.
+ * One factor: where it stands now, and which way it pushed the cost of a session.
+ *
+ * The standing value leads; the arrow and its figure say the direction and size of the
+ * push. Never a before-and-after pair — for the two rate factors the pair would be a
+ * blended per-side price, which moves with model mix, so it would contradict a marker
+ * that holds the mix fixed.
  *
  * A still factor keeps its tile rather than disappearing: which seven things the
  * decomposition accounts for is part of what the card says, and it cannot be read
  * off a list whose shape changes every period.
  */
 function FactorTile({ row }: { readonly row: SessionCostContribution }) {
-  const detail = rowDetail(row)
-  const still = isStill(row.multiplier)
+  const meta = FACTOR_META[row.factor]
+  const subject = rowSubject(row)
   const color = directionColor(row.multiplier)
 
   return (
@@ -121,21 +125,26 @@ function FactorTile({ row }: { readonly row: SessionCostContribution }) {
       trigger={
         <div className="flex min-w-0 cursor-default flex-col gap-0.5 rounded-md bg-background/40 p-2">
           <Text.H6 color="foregroundMuted" ellipsis noWrap>
-            {FACTOR_META[row.factor].label}
+            {meta.label}
           </Text.H6>
-          <div className="flex flex-row items-center gap-1">
-            <Icon icon={directionArrow(row.multiplier)} size="sm" color={color} />
-            <Text.H5M color={color} noWrap className="tabular-nums">
-              {formatMultiplier(row.multiplier)}
-            </Text.H5M>
+          <div className="flex flex-row flex-wrap items-baseline gap-x-2">
+            <Text.H4M color="foreground" noWrap className="tabular-nums">
+              {meta.format(row.current)}
+            </Text.H4M>
+            <div className="flex flex-row items-center gap-0.5">
+              <Icon icon={directionArrow(row.multiplier)} size="sm" color={color} />
+              <Text.H6 color={color} noWrap className="tabular-nums">
+                {formatMultiplier(row.multiplier)}
+              </Text.H6>
+            </div>
           </div>
-          <Text.H6 color="foregroundMuted" ellipsis noWrap className="tabular-nums">
-            {still && !detail ? "unchanged" : (detail ?? "")}
+          <Text.H6 color="foregroundMuted" ellipsis noWrap>
+            {subject ?? ""}
           </Text.H6>
         </div>
       }
     >
-      {FACTOR_META[row.factor].hint}
+      {meta.hint}
     </Tooltip>
   )
 }
@@ -151,9 +160,7 @@ function TotalTile() {
   return (
     <div className="col-span-2 flex min-w-0 flex-col justify-center gap-1 p-2">
       <Text.H4M color="foreground">What changed</Text.H4M>
-      <Text.H6 color="foregroundMuted">
-        Cost per session is these seven multiplied together, so each one is a multiplier on it.
-      </Text.H6>
+      <Text.H6 color="foregroundMuted">Each of these pushed the cost of a session up or down.</Text.H6>
     </div>
   )
 }
@@ -316,12 +323,11 @@ export function CostPerSessionPanel({
                 label="Cost per session"
                 value={cost.label}
                 changePct={record.changePct}
-                {...(record.totalMultiplier === null ? {} : { detail: formatMultiplier(record.totalMultiplier) })}
                 points={record.buckets.map((bucket) =>
                   bucket.costPerSessionMicrocents === null ? null : microcentsToUsd(bucket.costPerSessionMicrocents),
                 )}
                 boundaryIndex={boundaryIndex}
-                hint="Spend divided by sessions, for this window against the equal-length window before it. The factors beside it are its multiplicative parts, so their multipliers multiply to this change."
+                hint={`Spend divided by sessions, against the equal-length window before it (${formatChartWindowCaption(record.comparedFromIso, record.comparedToIso)}). Each factor beside it shows where it stands now and which way it pushed this figure.`}
               />
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-2 lg:border-border lg:border-l lg:pl-6">

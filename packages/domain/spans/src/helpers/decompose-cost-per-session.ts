@@ -106,15 +106,14 @@ export const sessionCostMicrocents = (period: SessionCostPeriod): number =>
   period.cells.reduce((sum, cell) => sum + cell.costMicrocents, 0)
 
 /**
- * A share move behind a mix row, so an abstract factor still names something concrete.
+ * Where a mix row's tokens went, and how many other places also gained.
  *
- * `alsoMoved` counts the other price lists that gained share too. One named model
- * reads as *the* cause, and on a broad shift — three models each taking ten points
- * off a fourth — that is the wrong story, so the count has to be sayable.
+ * One named model reads as *the* cause, and on a broad shift — three models each
+ * taking ten points off a fourth — that is the wrong story, so the count has to be
+ * sayable.
  */
 export interface SessionCostShareShift {
   readonly label: string
-  readonly previousShare: number
   readonly currentShare: number
   readonly alsoMoved: number
 }
@@ -126,10 +125,20 @@ export interface SessionCostContribution {
    * `totalMultiplier`; rounding for display is the caller's business.
    */
   readonly multiplier: number
-  /** Before and after in the factor's own unit. Null for the price sub-factors, which are not ratios. */
-  readonly values: { readonly previous: number; readonly current: number } | null
-  /** What moved, for a mix row that has no before/after value of its own. */
-  readonly shareShift: SessionCostShareShift | null
+  /**
+   * Where the factor stands now, in its own unit: a ratio for the volume factors, a
+   * token share for the two mix factors, microcents per token for the two rates.
+   *
+   * Only the current value, never the pair. A blended per-side price moves with model
+   * mix, so printing its before and after next to a multiplier that holds the mix
+   * fixed reads as a contradiction — the pair is what made those two factors
+   * unshowable, and one value is not.
+   */
+  readonly current: number
+  /** What `current` is a share of, where the number alone would be ambiguous. */
+  readonly subject: string | null
+  /** Other price lists that also gained share, for a mix row. Zero elsewhere. */
+  readonly alsoMoved: number
 }
 
 /**
@@ -367,7 +376,7 @@ function destinationShareShift({
     const effect = Math.abs(gain * (price - previousBlendedPrice))
     if (effect < widestEffect) continue
     widestEffect = effect
-    shift = { label: key, previousShare, currentShare }
+    shift = { label: key, currentShare }
   }
   return shift === null ? null : { ...shift, alsoMoved: Math.max(0, gainers - 1) }
 }
@@ -386,7 +395,25 @@ function promptShareShift({
     return period.cells.reduce((sum, cell) => (cell.side === "prompt" ? sum + cell.tokens : sum), 0) / tokens
   }
   // Only two sides exist, so there is never another mover to count.
-  return { label: "prompt tokens", previousShare: shareOf(previous), currentShare: shareOf(current), alsoMoved: 0 }
+  return { label: "prompt tokens", currentShare: shareOf(current), alsoMoved: 0 }
+}
+
+/**
+ * What a token on one side costs across the whole period, in microcents.
+ *
+ * Blended over models, so it moves with model mix as well as with prices — fine as a
+ * standing figure, which is why only the current one is reported. Its *change* is not
+ * this factor's multiplier, and the two must never be shown as a pair.
+ */
+function sidePrice(period: SessionCostPeriod, side: TokenSide): number {
+  let tokens = 0
+  let cost = 0
+  for (const cell of period.cells) {
+    if (cell.side !== side) continue
+    tokens += cell.tokens
+    cost += cell.costMicrocents
+  }
+  return tokens > 0 ? cost / tokens : 0
 }
 
 const emptyResult = ({
@@ -445,29 +472,46 @@ export function decomposeCostPerSession(input: DecomposeCostPerSessionInput): Co
     (factor): SessionCostContribution => ({
       factor,
       multiplier: currentFactors[factor] / previousFactors[factor],
-      values: { previous: previousFactors[factor], current: currentFactors[factor] },
-      shareShift: null,
+      current: currentFactors[factor],
+      subject: null,
+      alsoMoved: 0,
     }),
   )
+  const destination = destinationShareShift({
+    previous: previousPositions,
+    current: currentPositions,
+    previousBlendedPrice: previousFactors.costPerToken,
+  })
+  const promptSide = promptShareShift({ previous, current })
   const priceRows: readonly SessionCostContribution[] = [
     {
       factor: "modelMix",
       multiplier: Math.exp(modelMixLog),
-      values: null,
-      shareShift: destinationShareShift({
-        previous: previousPositions,
-        current: currentPositions,
-        previousBlendedPrice: previousFactors.costPerToken,
-      }),
+      current: destination?.currentShare ?? 0,
+      subject: destination?.label ?? null,
+      alsoMoved: destination?.alsoMoved ?? 0,
     },
     {
       factor: "tokenMix",
       multiplier: Math.exp(tokenMixLog),
-      values: null,
-      shareShift: promptShareShift({ previous, current }),
+      current: promptSide.currentShare,
+      subject: promptSide.label,
+      alsoMoved: 0,
     },
-    { factor: "promptRate", multiplier: Math.exp(promptRateLog), values: null, shareShift: null },
-    { factor: "outputRate", multiplier: Math.exp(outputRateLog), values: null, shareShift: null },
+    {
+      factor: "promptRate",
+      multiplier: Math.exp(promptRateLog),
+      current: sidePrice(current, "prompt"),
+      subject: null,
+      alsoMoved: 0,
+    },
+    {
+      factor: "outputRate",
+      multiplier: Math.exp(outputRateLog),
+      current: sidePrice(current, "output"),
+      subject: null,
+      alsoMoved: 0,
+    },
   ]
 
   const ordered = [...volumeRows, ...priceRows].sort(

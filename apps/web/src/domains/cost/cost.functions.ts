@@ -106,6 +106,14 @@ export interface CostPerSessionRecord extends CostPerSessionDecomposition {
   /** Both feed the shared rollup cost display, so a zero headline never reads as free. */
   readonly unpricedCalls: number
   readonly tokens: number
+  /**
+   * The window this one is compared against. Named on the card because the picker's
+   * label does not describe it: under All time the shown window is a bounded recent
+   * slice, so the comparison is that slice against the slice before it, and "All time"
+   * reads as if there were nothing to compare against.
+   */
+  readonly comparedFromIso: string
+  readonly comparedToIso: string
   /** Sparkline points for the two headline blocks, spanning both windows, oldest first. */
   readonly buckets: readonly SessionCostSparkPoint[]
 }
@@ -272,13 +280,16 @@ export const getCostPerSessionDecomposition = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* CostAnalyticsRepository
         const scope = toScope(orgId, data)
+        const previousFrom = new Date(scope.from.getTime() - (scope.to.getTime() - scope.from.getTime()))
         const { previous, current, buckets } = yield* repo.getSessionCostFactors({
           ...scope,
-          previousFrom: new Date(scope.from.getTime() - (scope.to.getTime() - scope.from.getTime())),
+          previousFrom,
           bucketSeconds: data.bucketSeconds,
         })
         return {
           ...decomposeCostPerSession({ previous, current }),
+          comparedFromIso: previousFrom.toISOString(),
+          comparedToIso: scope.from.toISOString(),
           traceKeyedSessionShare: current.sessions > 0 ? current.traceKeyedSessions / current.sessions : null,
           unpricedCalls: current.unpricedCalls,
           tokens: sessionCostTokens(current),

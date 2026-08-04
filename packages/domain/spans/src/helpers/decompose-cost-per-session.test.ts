@@ -232,10 +232,9 @@ describe("decomposeCostPerSession", () => {
       }),
     })
 
-    const shift = result.rows.find((row) => row.factor === "modelMix")?.shareShift
-    expect(shift?.label).toBe("acme/opus")
-    expect(shift?.previousShare).toBeCloseTo(0.1, 6)
-    expect(shift?.currentShare).toBeCloseTo(0.45, 6)
+    const row = result.rows.find((candidate) => candidate.factor === "modelMix")
+    expect(row?.subject).toBe("acme/opus")
+    expect(row?.current).toBeCloseTo(0.45, 6)
   })
 
   it("counts the other models that also gained, so one name cannot pass for the whole shift", () => {
@@ -260,7 +259,7 @@ describe("decomposeCostPerSession", () => {
     })
 
     // Two models gained 30 points each: the tile names one and says so.
-    expect(result.rows.find((row) => row.factor === "modelMix")?.shareShift?.alsoMoved).toBe(1)
+    expect(result.rows.find((row) => row.factor === "modelMix")?.alsoMoved).toBe(1)
   })
 
   it("counts no other movers when a single model took all the traffic", () => {
@@ -281,7 +280,7 @@ describe("decomposeCostPerSession", () => {
       }),
     })
 
-    expect(result.rows.find((row) => row.factor === "modelMix")?.shareShift?.alsoMoved).toBe(0)
+    expect(result.rows.find((row) => row.factor === "modelMix")?.alsoMoved).toBe(0)
   })
 
   it("names the cheaper destination when traffic migrates down", () => {
@@ -304,7 +303,7 @@ describe("decomposeCostPerSession", () => {
     })
 
     const row = result.rows.find((candidate) => candidate.factor === "modelMix")
-    expect(row?.shareShift?.label).toBe("acme/haiku")
+    expect(row?.subject).toBe("acme/haiku")
     expect(row?.multiplier).toBeLessThan(1)
   })
 
@@ -328,14 +327,21 @@ describe("decomposeCostPerSession", () => {
     expect(result.rows[0]?.factor).toBe("tokensPerCall")
   })
 
-  it("carries before and after values for the volume factors only", () => {
+  it("reports where every factor stands now, in that factor's own unit", () => {
     const result = decomposeCostPerSession({
       previous: period(BASELINE),
       current: period({ ...BASELINE, tracesPerSession: 6, models: [{ ...CHEAP, promptPrice: 20 }] }),
     })
+    const currentOf = (factor: SessionCostFactor) => result.rows.find((row) => row.factor === factor)?.current
 
-    expect(result.rows.find((row) => row.factor === "tracesPerSession")?.values).toEqual({ previous: 3, current: 6 })
-    expect(result.rows.find((row) => row.factor === "promptRate")?.values).toBeNull()
+    expect(currentOf("tracesPerSession")).toBeCloseTo(6, 6)
+    expect(currentOf("callsPerTrace")).toBeCloseTo(2, 6)
+    expect(currentOf("tokensPerCall")).toBeCloseTo(1_000, 6)
+    // Microcents per token on each side, blended over models.
+    expect(currentOf("promptRate")).toBeCloseTo(20, 6)
+    expect(currentOf("outputRate")).toBeCloseTo(100, 6)
+    // Shares, so the mix tiles have a figure of their own to stand on.
+    expect(currentOf("tokenMix")).toBeCloseTo(0.9, 6)
   })
 
   it("reports flat rather than dividing by a near-zero log", () => {
