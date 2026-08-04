@@ -359,6 +359,7 @@ export interface EventPayloads {
     readonly status: "succeeded" | "capped" | "cancelled" | "failed"
     readonly error: string | null
     readonly recordsFetched: number
+    readonly sessionsImported: number
     readonly tracesImported: number
     readonly spansImported: number
     readonly spansSkipped: number

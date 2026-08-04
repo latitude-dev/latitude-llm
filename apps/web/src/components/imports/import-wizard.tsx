@@ -189,26 +189,6 @@ const PREVIEW_COLUMNS: InfiniteTableColumn<PreviewRow>[] = [
   },
 ]
 
-/** The original job's settings, shown read-only because a retry cannot change them. */
-function RetrySummary({ job }: { readonly job: ImportRecord }) {
-  const range = `${new Date(job.config.rangeFrom).toLocaleDateString()} – ${new Date(job.config.rangeTo).toLocaleDateString()}`
-
-  return (
-    <div className="flex flex-col gap-1">
-      <Text.H6M color="foregroundMuted">
-        Retrying the {SOURCE_LABELS[job.source]} import of {job.config.sourceProjectName} ({range}), up to{" "}
-        {numberFormatter.format(job.config.maxTraces)} traces.
-      </Text.H6M>
-      <Text.H6M color="foregroundMuted">
-        {job.stats.tracesImported > 0
-          ? `It resumes where it stopped, keeping the ${numberFormatter.format(job.stats.tracesImported)} traces already imported.`
-          : "It starts from the top of the range, since the original run imported nothing."}{" "}
-        The configuration is reused as-is — start a new import to change it.
-      </Text.H6M>
-    </div>
-  )
-}
-
 /**
  * Where the wizard is mounted, which only the footer needs to know: `Modal.Footer` is a full-bleed
  * bar that assumes the rounded bottom of a dialog, so an inline host gets a plain divider instead.
@@ -501,9 +481,7 @@ function ImportWizardForm({
       <WizardBody chrome={chrome}>
         {step === "platform" ? (
           <div className="flex flex-col gap-3">
-            {retryJob ? (
-              <RetrySummary job={retryJob} />
-            ) : (
+            {!retryJob && (
               <div className="flex flex-col gap-3">
                 <Text.H5M>Platform</Text.H5M>
                 <div className="flex flex-row flex-wrap gap-1">

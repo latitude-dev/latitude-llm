@@ -227,21 +227,6 @@ export const listImports = createServerFn({ method: "GET" })
     )
   })
 
-export const getImport = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ importJobId: z.string() }))
-  .handler(async ({ data }): Promise<ImportRecord> => {
-    const { organizationId } = await requireSession()
-
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const jobs = yield* ImportJobRepository
-        const job = yield* jobs.findById(ImportJobId(data.importJobId))
-        if (!job) throw new Error("Import job not found")
-        return toRecord(redactedImportJob(job))
-      }).pipe(withPostgres(postgresLayers, getPostgresClient(), organizationId), withTracing),
-    )
-  })
-
 export const testImportConnection = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({

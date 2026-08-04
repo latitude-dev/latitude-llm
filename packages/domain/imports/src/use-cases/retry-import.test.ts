@@ -23,7 +23,13 @@ const PARTWAY_CURSOR = {
   source: { page: 7 },
 }
 
-const CARRIED_STATS = { recordsFetched: 70, tracesImported: 14, spansImported: 68, spansSkipped: 2 }
+const CARRIED_STATS = {
+  recordsFetched: 70,
+  sessionsImported: 9,
+  tracesImported: 14,
+  spansImported: 68,
+  spansSkipped: 2,
+}
 
 /** How a failed job is left: credentials scrubbed, cursor and counts kept for the resume. */
 const failedJob = (overrides: Partial<ImportJob> = {}) =>

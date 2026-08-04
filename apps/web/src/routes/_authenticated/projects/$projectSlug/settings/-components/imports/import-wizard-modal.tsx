@@ -15,7 +15,7 @@ export function ImportWizardModal({
   return (
     <Modal.Root open onOpenChange={(open) => !open && onClose()}>
       <Modal.Content dismissible size="medium">
-        <Modal.Header title={retryJob ? "Retry trace import" : "Import traces"} />
+        <Modal.Header title={retryJob ? "Retry trace import" : "Import traces"} description={retryJob ? "In order to retry the import we need the platform's credentials again" : "Import your existing sessions, traces and spans from other observability platforms"} />
         <ImportWizard
           projectId={projectId}
           chrome="modal"

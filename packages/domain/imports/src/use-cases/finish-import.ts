@@ -40,6 +40,7 @@ export const finishImport = (job: ImportJob, status: TerminalImportStatus, patch
             status,
             error: finished.error,
             recordsFetched: finished.stats.recordsFetched,
+            sessionsImported: finished.stats.sessionsImported,
             tracesImported: finished.stats.tracesImported,
             spansImported: finished.stats.spansImported,
             spansSkipped: finished.stats.spansSkipped,

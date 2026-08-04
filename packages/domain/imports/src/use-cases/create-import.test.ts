@@ -71,7 +71,13 @@ describe("createImportUseCase", () => {
     expect(job.config.maxTraces).toBe(STUB_IMPORT_MAX_TRACES)
     expect(job.config.sourcePageSize).toBe(IMPORT_SOURCE_PAGE_SIZE)
     expect(job.runs).toEqual([])
-    expect(job.stats).toEqual({ recordsFetched: 0, tracesImported: 0, spansImported: 0, spansSkipped: 0 })
+    expect(job.stats).toEqual({
+      recordsFetched: 0,
+      sessionsImported: 0,
+      tracesImported: 0,
+      spansImported: 0,
+      spansSkipped: 0,
+    })
   })
 
   it("persists the job it returns", async () => {

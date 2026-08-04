@@ -17,7 +17,7 @@ const STARTED_AT = new Date("2026-04-01T00:00:00Z")
 const runningJob = (overrides: Partial<ImportJob> = {}) =>
   stubImportJob({ status: "running", startedAt: STARTED_AT, ...overrides })
 
-const FINAL_STATS = { recordsFetched: 90, tracesImported: 30, spansImported: 88, spansSkipped: 2 }
+const FINAL_STATS = { recordsFetched: 90, sessionsImported: 12, tracesImported: 30, spansImported: 88, spansSkipped: 2 }
 
 describe("finishImport", () => {
   it.each(TERMINAL_STATUSES)("moves a running job to %s and stamps finishedAt", async (status) => {
@@ -107,6 +107,7 @@ describe("finishImport", () => {
           source: "langfuse",
           status: "succeeded",
           recordsFetched: 90,
+          sessionsImported: 12,
           tracesImported: 30,
           spansImported: 88,
           spansSkipped: 2,

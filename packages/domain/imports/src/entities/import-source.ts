@@ -123,9 +123,14 @@ export type ImportPreviewConfig = z.infer<typeof importPreviewConfigSchema>
  * Counters for one page, and — summed — for the whole job. `tracesImported` counts root
  * spans, which is what makes it agree with billing: billing charges one credit per distinct
  * trace, and a trace has exactly one root however its spans are spread across pages.
+ *
+ * `sessionsImported` counts each page's distinct sessions, so summing is a slight overcount:
+ * a session whose traces land in several pages counts once per page. Exact counting would
+ * need every session id ever seen carried on the job.
  */
 export const importStatsSchema = z.object({
   recordsFetched: z.number().int().min(0),
+  sessionsImported: z.number().int().min(0),
   tracesImported: z.number().int().min(0),
   spansImported: z.number().int().min(0),
   spansSkipped: z.number().int().min(0),
@@ -134,6 +139,7 @@ export type ImportStats = z.infer<typeof importStatsSchema>
 
 export const defaultImportStats = (): ImportStats => ({
   recordsFetched: 0,
+  sessionsImported: 0,
   tracesImported: 0,
   spansImported: 0,
   spansSkipped: 0,

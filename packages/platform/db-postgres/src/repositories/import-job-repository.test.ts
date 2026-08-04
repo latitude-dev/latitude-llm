@@ -39,7 +39,7 @@ const makeJob = (overrides: Partial<ImportJob> = {}): ImportJob => ({
       sourceBaseUrl: "https://cloud.langfuse.com",
       rangeFrom: new Date("2026-01-01T00:00:00.000Z"),
       rangeTo: new Date("2026-04-01T00:00:00.000Z"),
-      maxTraces: 250_000,
+      maxTraces: 50_000,
       sourcePageSize: 1_000,
     },
     credentials: {
@@ -167,14 +167,14 @@ describe("ImportJobRepositoryLive", () => {
       const run = {
         status: "succeeded" as const,
         cursor: { start: { ...cursor, source: { page: 3 } }, end: cursor },
-        stats: { recordsFetched: 10, tracesImported: 2, spansImported: 9, spansSkipped: 1 },
+        stats: { recordsFetched: 10, sessionsImported: 1, tracesImported: 2, spansImported: 9, spansSkipped: 1 },
         error: null,
         startedAt: new Date("2026-03-01T00:00:00.000Z"),
         finishedAt: new Date("2026-03-01T00:00:04.000Z"),
       }
       const job = makeJob({
         cursor,
-        stats: { recordsFetched: 40, tracesImported: 8, spansImported: 38, spansSkipped: 2 },
+        stats: { recordsFetched: 40, sessionsImported: 5, tracesImported: 8, spansImported: 38, spansSkipped: 2 },
         runs: [run],
       })
 
@@ -183,7 +183,7 @@ describe("ImportJobRepositoryLive", () => {
 
       expect(fetched?.config.rangeFrom).toEqual(job.config.rangeFrom)
       expect(fetched?.config.rangeTo).toEqual(job.config.rangeTo)
-      expect(fetched?.config.maxTraces).toBe(250_000)
+      expect(fetched?.config.maxTraces).toBe(50_000)
       expect(fetched?.config.sourcePageSize).toBe(1_000)
       // The cursor carries a Date through jsonb, which hands it back as an ISO string.
       expect(fetched?.cursor).toEqual(cursor)

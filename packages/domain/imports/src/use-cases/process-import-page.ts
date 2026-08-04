@@ -139,6 +139,12 @@ interface AdmittedSpans {
   readonly spans: readonly SpanDetail[]
   /** Roots admitted, which is the number of traces this page contributes to the budget. */
   readonly traces: number
+  /**
+   * Distinct sessions among the admitted roots, counting a sessionless root as its own session
+   * — the same identity the session rollup uses. Per-page distinct, so the job-level sum counts
+   * a session once per page its traces land in.
+   */
+  readonly sessions: number
   readonly truncated: boolean
 }
 
@@ -180,6 +186,7 @@ const admitNewestTraces = (spans: readonly SpanDetail[], remainingTraces: number
   rooted.sort((left, right) => right.root.startTime.getTime() - left.root.startTime.getTime())
 
   const admitted: SpanDetail[] = [...orphans]
+  const sessionKeys = new Set<string>()
   let traces = 0
   let truncated = false
   for (const group of rooted) {
@@ -189,9 +196,11 @@ const admitNewestTraces = (spans: readonly SpanDetail[], remainingTraces: number
     }
     admitted.push(...group.spans)
     traces++
+    const sessionId = group.root.sessionId as string
+    sessionKeys.add(sessionId === "" ? `trace:${group.root.traceId}` : sessionId)
   }
 
-  return { spans: admitted, traces, truncated }
+  return { spans: admitted, traces, sessions: sessionKeys.size, truncated }
 }
 
 export const recordImportFinalFailureUseCase = (input: RecordImportFinalFailureInput) =>
@@ -309,7 +318,7 @@ export const processImportPageUseCase =
           status: "failed",
           // The page never advanced, so both ends are the cursor it was attempting.
           cursor: { start: cursor, end: cursor },
-          stats: { recordsFetched: 0, tracesImported: 0, spansImported: 0, spansSkipped: 0 },
+          stats: { recordsFetched: 0, sessionsImported: 0, tracesImported: 0, spansImported: 0, spansSkipped: 0 },
           error: sanitizedImportError(importError),
           startedAt: pageStartedAt,
           finishedAt: new Date(),
@@ -410,6 +419,7 @@ export const processImportPageUseCase =
 
       const traceIds = new Set(importedSpans.map((span) => span.traceId as string))
 
+      stats.sessionsImported += admitted.sessions
       stats.tracesImported += rootsInPage
       stats.spansImported += importedSpans.length
       stats.spansSkipped += skipped
@@ -451,6 +461,7 @@ export const processImportPageUseCase =
         cursor: { start: cursor, end: nextCursor },
         stats: {
           recordsFetched: page.rows.length,
+          sessionsImported: admitted.sessions,
           tracesImported: rootsInPage,
           spansImported: importedSpans.length,
           spansSkipped: skipped,

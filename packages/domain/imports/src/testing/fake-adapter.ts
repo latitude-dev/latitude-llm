@@ -1,4 +1,4 @@
-import { SpanId } from "@domain/shared"
+import { SessionId, SpanId } from "@domain/shared"
 import { Effect } from "effect"
 import type { ImportConfig } from "../entities/import-source.ts"
 import type { ImportSourceError } from "../errors.ts"
@@ -20,6 +20,8 @@ export interface FakeImportRow {
   readonly startTime: Date
   /** One per trace, so the engine's root-span trace counter has something to count. */
   readonly isRoot: boolean
+  /** Session the trace belongs to; absent means a standalone trace, like a real source's empty id. */
+  readonly sessionId?: string
 }
 
 export interface FakeCursor {
@@ -125,6 +127,7 @@ export const createFakeImportAdapter = (options: FakeAdapterOptions = {}) => {
           traceId: fakeHexId(row.sourceTraceId, 32),
           spanId: fakeHexId(row.sourceSpanId, 16),
           parentSpanId: row.isRoot ? SpanId("") : fakeHexId(`${row.sourceTraceId}-root`, 16),
+          sessionId: SessionId(row.sessionId ?? ""),
           name: row.name,
           startTime: row.startTime,
           ingestedAt: context.ingestedAt,

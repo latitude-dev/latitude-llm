@@ -32,6 +32,7 @@ import {
   createFakeImportAdapterRegistry,
   FAKE_ROWS_LATEST,
   type FakeAdapterOptions,
+  type FakeImportRow,
   fakeImportRows,
 } from "../testing/fake-adapter.ts"
 import { createFakeImportJobRepository, stubImportPlan } from "../testing/fakes.ts"
@@ -211,6 +212,24 @@ describe("processImportPageUseCase", () => {
     expect(h.stored()?.cursor).toEqual(insideFirstWindow({ page: 1 }))
     expect(h.stored()?.status).toBe("running")
     expect(h.stored()?.stats).toMatchObject({ recordsFetched: 10, spansImported: 10, spansSkipped: 0 })
+  })
+
+  it("counts distinct sessions, a sessionless trace as its own", async () => {
+    const row = (i: number, sessionId?: string): FakeImportRow => ({
+      sourceTraceId: `trace-${i}`,
+      sourceSpanId: `span-${i}`,
+      name: `fake-span-${i}`,
+      startTime: new Date(FAKE_ROWS_LATEST.getTime() - i * 60_000),
+      isRoot: true,
+      ...(sessionId !== undefined ? { sessionId } : {}),
+    })
+    // Two traces share a session, one names its own, one has none: three sessions.
+    const job = makeJob()
+    const h = harness(job, { rows: [row(0, "sess-a"), row(1, "sess-a"), row(2, "sess-b"), row(3)] })
+
+    await h.drain()
+
+    expect(h.stored()?.stats).toMatchObject({ sessionsImported: 3, tracesImported: 4 })
   })
 
   it("chains pages until the range is exhausted and ends succeeded", async () => {
@@ -665,7 +684,7 @@ describe("processImportPageUseCase", () => {
     it("short-circuits to succeeded when a resumed job is already at its ceiling", async () => {
       const job = makeJob({
         config: withMaxTraces(2),
-        stats: { recordsFetched: 10, tracesImported: 2, spansImported: 10, spansSkipped: 0 },
+        stats: { recordsFetched: 10, sessionsImported: 2, tracesImported: 2, spansImported: 10, spansSkipped: 0 },
       })
       const h = harness(job, { rows: fakeImportRows(25) })
 
