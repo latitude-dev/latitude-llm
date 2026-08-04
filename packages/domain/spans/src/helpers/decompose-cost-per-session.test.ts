@@ -211,12 +211,17 @@ describe("decomposeCostPerSession", () => {
     expect(factors(result.rows)).not.toContain("tokenMix")
   })
 
-  it("names the model whose share moved most on the mix row", () => {
+  it("names where the tokens went, not the model they drained out of", () => {
+    // Two traps at once: mini loses the most share, and sonnet gains more of it than
+    // opus does. Neither should be named — mini's share is falling while the row
+    // rises, and sonnet's cheaper gain moves the blend less than opus's dearer one.
+    const mid = { name: "sonnet", promptShare: 0.9, promptPrice: 50, outputPrice: 500 }
     const result = decomposeCostPerSession({
       previous: period({
         ...BASELINE,
         models: [
-          { ...CHEAP, share: 0.9 },
+          { ...CHEAP, share: 0.7 },
+          { ...mid, share: 0.2 },
           { ...DEAR, share: 0.1 },
         ],
       }),
@@ -224,7 +229,8 @@ describe("decomposeCostPerSession", () => {
         ...BASELINE,
         models: [
           { ...CHEAP, share: 0.1 },
-          { ...DEAR, share: 0.9 },
+          { ...mid, share: 0.45 },
+          { ...DEAR, share: 0.45 },
         ],
       }),
     })
@@ -232,7 +238,31 @@ describe("decomposeCostPerSession", () => {
     const shift = result.rows.find((row) => row.factor === "modelMix")?.shareShift
     expect(shift?.label).toBe("acme/opus")
     expect(shift?.previousShare).toBeCloseTo(0.1, 6)
-    expect(shift?.currentShare).toBeCloseTo(0.9, 6)
+    expect(shift?.currentShare).toBeCloseTo(0.45, 6)
+  })
+
+  it("names the cheaper destination when traffic migrates down", () => {
+    const cheap = { name: "haiku", promptShare: 0.9, promptPrice: 1, outputPrice: 10 }
+    const result = decomposeCostPerSession({
+      previous: period({
+        ...BASELINE,
+        models: [
+          { ...DEAR, share: 0.9 },
+          { ...cheap, share: 0.1 },
+        ],
+      }),
+      current: period({
+        ...BASELINE,
+        models: [
+          { ...DEAR, share: 0.1 },
+          { ...cheap, share: 0.9 },
+        ],
+      }),
+    })
+
+    const row = result.rows.find((candidate) => candidate.factor === "modelMix")
+    expect(row?.shareShift?.label).toBe("acme/haiku")
+    expect(row?.multiplier).toBeLessThan(1)
   })
 
   it("folds the factors that did not move into one row that keeps the product intact", () => {

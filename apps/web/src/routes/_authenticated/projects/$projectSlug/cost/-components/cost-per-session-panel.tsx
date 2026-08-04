@@ -42,20 +42,20 @@ const FACTOR_META: Record<SessionCostFactor, FactorMeta> = {
     formatValue: whole,
   },
   modelMix: {
-    label: "Model mix",
-    hint: "Tokens moving between price lists while each list's own prices hold. A migration to a cheaper model shows up here rather than as a rate cut.",
+    label: "Model choice",
+    hint: "Which models the tokens went to, with every price list's own prices held fixed. Moving traffic to a dearer model raises the blended cost of a token without anything being repriced. The model named is where the tokens went.",
   },
   tokenMix: {
-    label: "Prompt / output mix",
-    hint: "How the tokens divided between the cheap prompt side and the dearer output side. Growing the prompt while the answer stays the same length lowers the blended rate with no price changing, which is why it is not in the rate rows.",
+    label: "Prompt vs output split",
+    hint: "How the tokens divided between the cheap prompt side and the dearer output side — output runs 10-25x prompt. Growing the prompt while the answer stays the same length makes the average token cheaper with no price changing, which is why it is not one of the price rows.",
   },
   promptRate: {
-    label: "Prompt rate",
-    hint: "What a prompt token actually costs, holding model and prompt/output mix fixed.",
+    label: "Prompt price",
+    hint: "What a prompt token actually costs, holding the model and the prompt/output split fixed. Only a real price change lands here.",
   },
   outputRate: {
-    label: "Output rate",
-    hint: "What an output token actually costs, holding model and prompt/output mix fixed.",
+    label: "Output price",
+    hint: "What an output token actually costs, holding the model and the prompt/output split fixed. Only a real price change lands here.",
   },
 }
 

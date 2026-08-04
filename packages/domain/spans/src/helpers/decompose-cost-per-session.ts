@@ -367,24 +367,43 @@ function reconcile({
   return { rows: settled, rowsMultiplyTo: round(settled.reduce((product, row) => product * row.multiplier, 1)) }
 }
 
-/** The model whose token share moved most, so the mix row names a cause. */
-function dominantShareShift({
+/**
+ * Where the tokens went: among the price lists that gained share, the one whose
+ * gain moved the blended price most.
+ *
+ * Two decisions, both about how the row reads. Only gainers are eligible, because
+ * naming whichever model moved furthest tends to name the one traffic drained *out*
+ * of — a falling share printed beside a rising multiplier, which the reader has to
+ * mentally invert. And gainers are ranked by `share moved x how far the price sits
+ * from the blend`, not by share alone: taking a tenth of the traffic to a model at
+ * triple the average price outweighs taking a third of it to one at average, and it
+ * is the former that explains the row.
+ *
+ * A model absent from the previous period has no price of its own to judge, so it
+ * is treated as having sat at the blend — mix-neutral, matching `priceEffects`.
+ *
+ * Null when nothing gained, which means no share moved and the row is quiet anyway.
+ */
+function destinationShareShift({
   previous,
   current,
+  previousBlendedPrice,
 }: {
   readonly previous: Positions
   readonly current: Positions
+  readonly previousBlendedPrice: number
 }): SessionCostShareShift | null {
   let shift: SessionCostShareShift | null = null
-  let widest = 0
+  let widestEffect = 0
   for (const key of new Set([...previous.models.keys(), ...current.models.keys()])) {
     const previousShare = previous.models.get(key)?.share ?? 0
     const currentShare = current.models.get(key)?.share ?? 0
-    const move = Math.abs(currentShare - previousShare)
-    // A swap moves both models equally; the one that gained share names the cause.
-    const incumbentLost = shift !== null && shift.currentShare < shift.previousShare
-    if (move < widest || (move === widest && !(currentShare > previousShare && incumbentLost))) continue
-    widest = move
+    const gain = currentShare - previousShare
+    if (gain <= 0) continue
+    const price = previous.models.get(key)?.averagePrice ?? previousBlendedPrice
+    const effect = Math.abs(gain * (price - previousBlendedPrice))
+    if (effect < widestEffect) continue
+    widestEffect = effect
     shift = { label: key, previousShare, currentShare }
   }
   return shift
@@ -486,7 +505,11 @@ export function decomposeCostPerSession(input: DecomposeCostPerSessionInput): Co
       factor: "modelMix",
       multiplier: Math.exp(modelMixLog),
       values: null,
-      shareShift: dominantShareShift({ previous: previousPositions, current: currentPositions }),
+      shareShift: destinationShareShift({
+        previous: previousPositions,
+        current: currentPositions,
+        previousBlendedPrice: previousFactors.costPerToken,
+      }),
       foldedFactors: 0,
     },
     {
