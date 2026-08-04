@@ -16,6 +16,7 @@ import {
   useProjectsCollection,
 } from "../../../../../domains/projects/projects.collection.ts"
 import { decodeEntities, encodeEntities } from "../../../../../domains/projects/redaction-entities.ts"
+import { decodeRules, encodeRules } from "../../../../../domains/projects/redaction-rule-drafts.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useDirtyGuard } from "../../../../../lib/hooks/use-dirty-guard.ts"
 import { useDraftOverlay } from "../../../../../lib/hooks/use-draft-overlay.ts"
@@ -24,6 +25,7 @@ import { useRouteProject } from "../-route-data.ts"
 import { DirtyActions } from "./-components/dirty-actions.tsx"
 import { OrganizationRedactionModal } from "./-components/organization-redaction-modal.tsx"
 import { RedactionCard, type RedactionCardValue } from "./-components/redaction-card.tsx"
+import { RedactionPreview } from "./-components/redaction-preview.tsx"
 import { ScopedSetting, type SettingScope } from "./-components/scoped-setting.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
@@ -36,6 +38,8 @@ interface Draft {
   readonly entities: string
   readonly metadata: boolean
   readonly identities: RedactionIdentityHandling
+  /** Canonical JSON, for the same reason `entities` is a string: the overlay compares by value. */
+  readonly rules: string
 }
 
 const toSetting = (value: RedactionCardValue): RedactionSetting => ({
@@ -43,7 +47,17 @@ const toSetting = (value: RedactionCardValue): RedactionSetting => ({
   entities: decodeEntities(value.entities),
   scopes: { metadata: value.metadata },
   identities: value.identities,
+  rules: decodeRules(value.rules),
 })
+
+// For the render path only: `apply` wants the throw, but a bad decode must not take the page down.
+const toSettingOrNull = (value: RedactionCardValue): RedactionSetting | null => {
+  try {
+    return toSetting(value)
+  } catch {
+    return null
+  }
+}
 
 function ProjectPrivacySettingsPage() {
   const { toast } = useToast()
@@ -100,10 +114,15 @@ function ProjectPrivacySettingsPage() {
     entities: encodeEntities(shown.entities),
     metadata: shown.redactMetadata,
     identities: shown.identities,
+    rules: encodeRules(shown.rules),
   }
 
   const [isApplying, setIsApplying] = useState(false)
   const { view, setField, dirtyCount, hasDirty, reset } = useDraftOverlay(baseline)
+
+  // Every draft field is a primitive, by the overlay's own design, so this is a stable identity for one.
+  const previewKey = JSON.stringify(view)
+  const previewSetting = toSettingOrNull(view)
 
   // Dropping the override is the only destructive direction, so it waits for an explicit apply.
   const pendingRemoval = storedScope === "project" && scope === "organization"
@@ -177,11 +196,10 @@ function ProjectPrivacySettingsPage() {
       headerSticky={valueDirty}
     >
       <div className="flex w-full flex-col gap-8 @[900px]:w-2/3">
+        {/* The irreversibility and shape-matching caveats live on the card, next to the controls they qualify. */}
         <Text.H6 color="foregroundMuted">
-          Latitude scans span content for the categories you pick and replaces matches with a labelled placeholder
-          before storing the span. It applies only to spans ingested from now on, takes effect within a minute, and
-          redacted content cannot be recovered. Detection is pattern based: it reliably catches structured identifiers,
-          and does not catch names, addresses, or free-form personal detail.
+          Matching values are replaced with a labelled placeholder before the span is stored. A change takes effect
+          within a minute.
         </Text.H6>
 
         <ScopedSetting
@@ -248,6 +266,16 @@ function ProjectPrivacySettingsPage() {
             onChange={(key, next) => setField(key, next)}
           />
         </ScopedSetting>
+
+        {view.mode === "enforce" && previewSetting ? (
+          // Keyed on the draft: a result for a policy the user has since edited would be read as current.
+          <RedactionPreview
+            key={previewKey}
+            projectId={currentProject.id}
+            disabled={!canEditProject}
+            setting={previewSetting}
+          />
+        ) : null}
       </div>
 
       {editingDefault ? (

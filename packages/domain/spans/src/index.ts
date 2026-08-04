@@ -267,6 +267,8 @@ export type {
   UserUsageSlice,
 } from "./ports/user-analytics-repository.ts"
 export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./ports/user-analytics-repository.ts"
+export type { RuleValidation, RuleValidationIssue } from "./redaction/validate-rule.ts"
+export { REDACTION_VALIDATOR_VERSION, validateRedactionRule } from "./redaction/validate-rule.ts"
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {
@@ -337,6 +339,13 @@ export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-en
 export { buildConversationSpanMaps, type ConversationSpanRef } from "./use-cases/map-conversation-to-spans.ts"
 export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
 export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
+export type {
+  PreviewRedactionInput,
+  RedactionPreviewChange,
+  RedactionPreviewLabelCount,
+  RedactionPreviewResult,
+} from "./use-cases/preview-redaction.ts"
+export { IDENTITY_PREVIEW_LABEL, previewRedactionUseCase } from "./use-cases/preview-redaction.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
 export type { QueryAnalyticsInput } from "./use-cases/query-analytics.ts"

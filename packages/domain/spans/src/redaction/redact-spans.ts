@@ -7,6 +7,7 @@ import { REDACTION_BATCH_TIMEOUT_MS } from "./labels.ts"
 import { emptyScanTally, mergeScanTally } from "./redact-json.ts"
 import { collectIdentityValues, type PseudonymLookup, redactSpanDetail } from "./redact-span.ts"
 import { mergeRedactionCounts, type RedactionCounts } from "./redact-text.ts"
+import { type CompiledPolicy, compilePolicy } from "./rules.ts"
 
 export interface SpanRedactionSummary {
   readonly counts: RedactionCounts
@@ -53,9 +54,33 @@ export const redactSpans = (
     const budgetMs = input.timeoutMs ?? REDACTION_BATCH_TIMEOUT_MS
     const deadline = performance.now() + budgetMs
 
+    // The walk is synchronous, so an Effect timeout around it could not fire until it had already
+    // finished. Checked before each span and, through the compiled rule set, before each leaf.
+    const checkDeadline = () => {
+      if (performance.now() >= deadline) {
+        throw new RedactionError({ reason: "redaction pass exceeded its deadline" })
+      }
+    }
+
     // A policy exists only for a project that redacts, so presence is the decision.
     const policyFor = (span: SpanDetail): RedactionPolicy | undefined =>
       input.policyByProjectId.get(span.projectId as string)
+
+    // Compiled once per distinct policy rather than per span: building the pattern list is the
+    // only part of the pass that does not depend on the span in front of it.
+    const compiled = new Map<RedactionPolicy, CompiledPolicy>()
+    const compiledPolicyFor = (span: SpanDetail): CompiledPolicy | undefined => {
+      const policy = policyFor(span)
+      if (!policy) return undefined
+
+      const existing = compiled.get(policy)
+      if (existing) return existing
+
+      const next = compilePolicy(policy, checkDeadline)
+      compiled.set(policy, next)
+
+      return next
+    }
 
     const identityValues = collectIdentityValues(input.spans, policyFor)
     const { pseudonyms, identityFallback } = yield* buildPseudonyms({
@@ -70,7 +95,7 @@ export const redactSpans = (
     )
 
     return yield* Effect.try({
-      try: () => applyRedaction(input.spans, policyFor, pseudonyms, identityFallback, deadline),
+      try: () => applyRedaction(input.spans, compiledPolicyFor, pseudonyms, identityFallback, checkDeadline),
       catch: (cause) =>
         cause instanceof RedactionError ? cause : new RedactionError({ reason: "redaction pass failed", cause }),
     })
@@ -78,10 +103,10 @@ export const redactSpans = (
 
 function applyRedaction(
   spans: readonly SpanDetail[],
-  policyFor: (span: SpanDetail) => RedactionPolicy | undefined,
+  policyFor: (span: SpanDetail) => CompiledPolicy | undefined,
   pseudonyms: PseudonymLookup,
   identityFallback: boolean,
-  deadline: number,
+  checkDeadline: () => void,
 ): { spans: readonly SpanDetail[]; summary: SpanRedactionSummary } {
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
@@ -93,10 +118,7 @@ function applyRedaction(
     const policy = policyFor(span)
     if (!policy) return span
 
-    // The walk is synchronous, so an Effect timeout around it could not fire until it already finished.
-    if (performance.now() >= deadline) {
-      throw new RedactionError({ reason: "redaction pass exceeded its deadline" })
-    }
+    checkDeadline()
 
     const result = redactSpanDetail(span, policy, pseudonyms)
     mergeRedactionCounts(counts, result.stats.counts)

@@ -1,9 +1,13 @@
 import { DEFAULT_REDACTION_ENTITIES, REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { mergeRedactionCounts, type RedactionCounts, redactText, totalRedactionCount } from "./redact-text.ts"
+import { type CompiledRuleSet, compileRuleSet } from "./rules.ts"
 
-const DEFAULTS: ReadonlySet<RedactionEntity> = new Set(DEFAULT_REDACTION_ENTITIES)
-const ALL: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
+const ruleSetOf = (...entities: RedactionEntity[]): CompiledRuleSet =>
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep", rules: [] })
+
+const DEFAULTS = ruleSetOf(...DEFAULT_REDACTION_ENTITIES)
+const ALL = ruleSetOf(...REDACTION_ENTITIES)
 
 describe("redactText", () => {
   it("replaces a match with its entity placeholder", () => {
@@ -18,7 +22,7 @@ describe("redactText", () => {
     const result = redactText("mail john@example.com or call +14155552671", DEFAULTS)
 
     expect(result.text).toBe("mail [REDACTED_EMAIL] or call [REDACTED_PHONE]")
-    expect(result.counts).toEqual({ email: 1, phone: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1, PHONE: 1 })
   })
 
   it("returns the input unchanged when nothing matches", () => {
@@ -30,7 +34,7 @@ describe("redactText", () => {
   it("returns the input unchanged when no entity is enabled", () => {
     const text = "john@example.com"
 
-    expect(redactText(text, new Set())).toEqual({ text, counts: {} })
+    expect(redactText(text, ruleSetOf())).toEqual({ text, counts: {} })
   })
 
   it("handles an empty string", () => {
@@ -53,7 +57,7 @@ describe("redactText", () => {
     const result = redactText("+14155552671 +442071838750", DEFAULTS)
 
     expect(result.text).toBe("[REDACTED_PHONE] [REDACTED_PHONE]")
-    expect(result.counts).toEqual({ phone: 2 })
+    expect(result.counts).toEqual({ PHONE: 2 })
   })
 
   it("preserves surrounding text exactly, including newlines", () => {
@@ -88,14 +92,14 @@ describe("overlap resolution", () => {
     const result = redactText(PHONE_IN_EMAIL, ALL)
 
     expect(result.text).toBe("[REDACTED_EMAIL]")
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("prefers the longer email over the API key contained in its local part", () => {
     const result = redactText(GOOGLE_KEY_IN_EMAIL, ALL)
 
     expect(result.text).toBe("[REDACTED_EMAIL]")
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("emits exactly one placeholder per overlapping region, never a nested one", () => {
@@ -111,14 +115,14 @@ describe("overlap resolution", () => {
     const result = redactText(`Bearer ${jwt}`, ALL)
 
     expect(result.text).toBe("Bearer [REDACTED_SECRET]")
-    expect(result.counts).toEqual({ secret: 1 })
+    expect(result.counts).toEqual({ SECRET: 1 })
   })
 
   it("keeps both matches when regions only touch and do not overlap", () => {
     const result = redactText("a@b.co,c@d.co", DEFAULTS)
 
     expect(result.text).toBe("[REDACTED_EMAIL],[REDACTED_EMAIL]")
-    expect(result.counts).toEqual({ email: 2 })
+    expect(result.counts).toEqual({ EMAIL: 2 })
   })
 })
 
@@ -127,11 +131,11 @@ describe("redactText counts", () => {
     const text = "john@example.com +14155552671 4111111111111111 123-45-6789 GB82WEST12345698765432"
 
     expect(redactText(text, DEFAULTS).counts).toEqual({
-      email: 1,
-      phone: 1,
-      credit_card: 1,
-      us_ssn: 1,
-      iban: 1,
+      EMAIL: 1,
+      PHONE: 1,
+      CREDIT_CARD: 1,
+      US_SSN: 1,
+      IBAN: 1,
     })
   })
 
@@ -141,7 +145,7 @@ describe("redactText counts", () => {
   })
 
   it("omits entities with no matches rather than reporting zero", () => {
-    expect(redactText("a@b.co", DEFAULTS).counts).toEqual({ email: 1 })
+    expect(redactText("a@b.co", DEFAULTS).counts).toEqual({ EMAIL: 1 })
   })
 })
 
@@ -173,7 +177,7 @@ describe("redactText on match-dense text", () => {
     const addresses = Array.from({ length: 2_000 }, (_, index) => `user${index}@example.com`)
     const result = redactText(addresses.join(" "), DEFAULTS)
 
-    expect(result.counts).toEqual({ email: 2_000 })
+    expect(result.counts).toEqual({ EMAIL: 2_000 })
     expect(result.text).toBe(Array.from({ length: 2_000 }, () => "[REDACTED_EMAIL]").join(" "))
   })
 

@@ -1,18 +1,21 @@
-import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
+import { REDACTION_ENTITIES, REDACTION_ENTITY_LABELS, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { findRedactionMatches, type RedactionMatch } from "./detectors.ts"
 import { redactText } from "./redact-text.ts"
+import { type CompiledRuleSet, compileRuleSet, findRedactionMatches, type RedactionMatch } from "./rules.ts"
 
-const ALL_ENTITIES: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
+const ruleSetOf = (...entities: RedactionEntity[]): CompiledRuleSet =>
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep", rules: [] })
 
-const only = (...entities: RedactionEntity[]): ReadonlySet<RedactionEntity> => new Set(entities)
+const ALL_ENTITIES = ruleSetOf(...REDACTION_ENTITIES)
+
+const only = (...entities: RedactionEntity[]): CompiledRuleSet => ruleSetOf(...entities)
 
 const byPosition = (a: RedactionMatch, b: RedactionMatch): number => a.start - b.start || b.end - a.end
 
 /** Matched substrings for one entity, in document order. */
 const found = (text: string, entity: RedactionEntity): string[] =>
   findRedactionMatches(text, only(entity))
-    .filter((match) => match.entity === entity)
+    .filter((match) => match.label === REDACTION_ENTITY_LABELS[entity])
     .sort(byPosition)
     .map((match) => text.slice(match.start, match.end))
 
@@ -684,16 +687,16 @@ index 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567..f1e2d3c4b5a69788796a5b4c3d2e1f09
 })
 
 describe("findRedactionMatches", () => {
-  it("returns nothing when no entity is enabled", () => {
-    expect(findRedactionMatches("john@example.com +14155552671", new Set())).toEqual([])
+  it("returns nothing when no rule is enabled", () => {
+    expect(findRedactionMatches("john@example.com +14155552671", ruleSetOf())).toEqual([])
   })
 
   it("returns matches from several entities in one pass", () => {
     const matches = findRedactionMatches("john@example.com and +14155552671", ALL_ENTITIES)
-    const entities = new Set(matches.map((match) => match.entity))
+    const labels = new Set(matches.map((match) => match.label))
 
-    expect(entities.has("email")).toBe(true)
-    expect(entities.has("phone")).toBe(true)
+    expect(labels.has("EMAIL")).toBe(true)
+    expect(labels.has("PHONE")).toBe(true)
   })
 
   it("reports offsets that slice back to the matched text", () => {

@@ -30,6 +30,8 @@ import {
   type OrganizationRedactionSetting,
   ProjectId,
   type ProjectSettings,
+  type RedactionRule,
+  type SerializedRedactionPolicy,
   SettingsReader,
   SqlClient,
   StorageDisk,
@@ -863,7 +865,7 @@ describe("ingestSpansUseCase redaction policy stamping", () => {
     )
 
   const publishedRedaction = (published: { payload: unknown }[]) =>
-    (published[0]?.payload as { redaction?: Record<string, unknown> } | undefined)?.redaction
+    (published[0]?.payload as { redaction?: Record<string, SerializedRedactionPolicy> } | undefined)?.redaction
 
   const stamp = async (
     opts: {
@@ -1013,6 +1015,79 @@ describe("ingestSpansUseCase redaction policy stamping", () => {
 
     const redaction = publishedRedaction(published)
     expect(Object.keys(redaction ?? {})).toEqual([PRIMARY_PROJECT_ID])
+  })
+
+  it("stamps custom rules alongside the entity set", async () => {
+    const rules: RedactionRule[] = [
+      { id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] },
+      { id: "rule-2", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.*"] },
+    ]
+    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "enforce", rules } } } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(rules)
+  })
+
+  it("omits the rules field for a project with none, keeping the payload as it was", async () => {
+    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "enforce" } } } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]).not.toHaveProperty("rules")
+  })
+
+  it("carries disabled rules through, since the engine decides what to compile", async () => {
+    const rules: RedactionRule[] = [
+      { id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"], enabled: false },
+    ]
+    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "enforce", rules } } } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(rules)
+  })
+
+  /**
+   * A project whose whole policy is one key-drop rule has nothing to scan for, but it still has
+   * work to do. Treating an empty entity set as "nothing to redact" would silently ignore it.
+   */
+  it("stamps a policy whose only instruction is a key rule and no entities", async () => {
+    const rules: RedactionRule[] = [{ id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] }]
+    const { redaction } = await stamp({
+      settingsBySlug: { primary: { redaction: { mode: "enforce", entities: [], rules } } },
+    })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]).toEqual({
+      entities: [],
+      redactMetadata: false,
+      identities: "keep",
+      rules,
+    })
+  })
+
+  it("inherits organization rules when the project sets none", async () => {
+    const rules: RedactionRule[] = [{ id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] }]
+    const { redaction } = await stamp({ organizationRedaction: { mode: "enforce", rules } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(rules)
+  })
+
+  it("lets a project replace the organization rule list rather than adding to it", async () => {
+    const orgRules: RedactionRule[] = [{ id: "org", label: "ORG_RULE", kind: "terms", terms: ["ORG-1"] }]
+    const projectRules: RedactionRule[] = [{ id: "proj", label: "PROJECT_RULE", kind: "terms", terms: ["PROJ-1"] }]
+    const { redaction } = await stamp({
+      organizationRedaction: { mode: "enforce", rules: orgRules },
+      settingsBySlug: { primary: { redaction: { rules: projectRules } } },
+    })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(projectRules)
+  })
+
+  it("keeps the locked organization rules when the project has its own", async () => {
+    const orgRules: RedactionRule[] = [{ id: "org", label: "ORG_RULE", kind: "terms", terms: ["ORG-1"] }]
+    const { redaction } = await stamp({
+      organizationRedaction: { mode: "enforce", locked: true, rules: orgRules },
+      settingsBySlug: {
+        primary: { redaction: { rules: [{ id: "proj", label: "PROJECT_RULE", kind: "terms", terms: ["PROJ-1"] }] } },
+      },
+    })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(orgRules)
   })
 
   it("does not enqueue anything, and so stamps nothing, when the batch is sampled out", async () => {

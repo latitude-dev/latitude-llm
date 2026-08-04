@@ -1,4 +1,9 @@
-import { OrganizationId, type ResolvedRedactionPolicy, resolveRedactionPolicy } from "@domain/shared"
+import {
+  OrganizationId,
+  type RedactionRule,
+  type ResolvedRedactionPolicy,
+  resolveRedactionPolicy,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { TransformContext } from "../otlp/transform.ts"
@@ -326,5 +331,212 @@ describe("redaction over the real OTLP transform", () => {
     )
 
     expect(JSON.stringify(result.spans[0])).toBe(JSON.stringify(spans[0]))
+  })
+})
+
+const ACCOUNT = "ACME-1234"
+
+const enforceWith = (rules: RedactionRule[]): ReadonlyMap<string, ResolvedRedactionPolicy> =>
+  new Map([
+    [PROJECT, resolveRedactionPolicy({ organization: null, project: { redaction: { mode: "enforce", rules } } })],
+  ])
+
+const redactWithRules = async (attributes: OtlpKeyValue[], rules: RedactionRule[], events?: OtlpSpan["events"]) => {
+  const { spans } = transformOtlpToSpans(buildRequest(attributes, events), CONTEXT)
+  const result = await Effect.runPromise(
+    redactSpans({ spans, organizationId: ORG, policyByProjectId: enforceWith(rules), pseudonymSecret: undefined }),
+  )
+
+  return { before: spans[0], after: result.spans[0], summary: result.summary }
+}
+
+const TERMS_RULE: RedactionRule = { id: "r1", label: "ACCOUNT_NUMBER", kind: "terms", terms: [ACCOUNT] }
+
+describe("custom rules over the real transform", () => {
+  /**
+   * `transformSpan` copies every string attribute verbatim into `attr_string` beside the parsed
+   * columns, so a rule that only reached the parsed columns would leave a full plaintext copy in
+   * the same row. This is the highest-risk property in the whole feature.
+   */
+  it("redacts a custom term in the parsed columns and in attr_string alike", async () => {
+    const { after } = await redactWithRules(
+      [
+        str("gen_ai.system", "openai"),
+        str(
+          "gen_ai.input.messages",
+          JSON.stringify([{ role: "user", parts: [{ type: "text", content: `account ${ACCOUNT}` }] }]),
+        ),
+      ],
+      [TERMS_RULE],
+    )
+
+    expect(JSON.stringify(after?.inputMessages)).toContain("[REDACTED_ACCOUNT_NUMBER]")
+    expect(JSON.stringify(after)).not.toContain(ACCOUNT)
+  })
+
+  it("redacts a custom term in tool output", async () => {
+    const { after } = await redactWithRules(
+      [
+        str("gen_ai.operation.name", "execute_tool"),
+        str("gen_ai.tool.name", "lookup"),
+        str("gen_ai.tool.call.result", JSON.stringify({ account: ACCOUNT })),
+      ],
+      [TERMS_RULE],
+    )
+
+    expect(after?.toolOutput).toContain("[REDACTED_ACCOUNT_NUMBER]")
+    expect(after?.toolOutput).not.toContain(ACCOUNT)
+  })
+
+  // Instrumentations on the older gen_ai convention put content only in span events, where no
+  // content parser reads it: `events_json` is the sole copy.
+  it("redacts a custom term in events_json", async () => {
+    const { after } = await redactWithRules(
+      [str("gen_ai.system", "openai")],
+      [TERMS_RULE],
+      [{ name: "gen_ai.user.message", attributes: [str("content", `account ${ACCOUNT}`)] }],
+    )
+
+    expect(after?.eventsJson).toContain("[REDACTED_ACCOUNT_NUMBER]")
+    expect(after?.eventsJson).not.toContain(ACCOUNT)
+  })
+
+  it("redacts a custom pattern", async () => {
+    const rule: RedactionRule = { id: "r1", label: "ACCOUNT_NUMBER", kind: "pattern", pattern: "ACCT-\\d{9}" }
+    const { after } = await redactWithRules([str("acme.note", "ref ACCT-123456789")], [rule])
+
+    expect(after?.attrString["acme.note"]).toBe("ref [REDACTED_ACCOUNT_NUMBER]")
+  })
+
+  it("counts custom matches under the rule's own label", async () => {
+    const { summary } = await redactWithRules([str("acme.note", `a ${ACCOUNT} b ${ACCOUNT}`)], [TERMS_RULE])
+
+    expect(summary.counts.ACCOUNT_NUMBER).toBe(2)
+  })
+
+  it("applies no custom rule to a project absent from the policy map", async () => {
+    const { spans } = transformOtlpToSpans(buildRequest([str("acme.note", ACCOUNT)]), CONTEXT)
+    const result = await Effect.runPromise(
+      redactSpans({ spans, organizationId: ORG, policyByProjectId: new Map(), pseudonymSecret: undefined }),
+    )
+
+    expect(JSON.stringify(result.spans[0])).toBe(JSON.stringify(spans[0]))
+  })
+})
+
+describe("attribute_key rules over the real transform", () => {
+  const KEY_RULE: RedactionRule = {
+    id: "r1",
+    label: "STAFF_ID",
+    kind: "attribute_key",
+    keys: ["acme.staff.id", "acme.customer.*"],
+  }
+
+  /**
+   * Masks rather than deletes, so a redacting project's attribute panel still shows every key the
+   * exporter sent. A missing key would be indistinguishable from one that was never sent.
+   */
+  it("masks a named key in attr_string while leaving its siblings", async () => {
+    const { after } = await redactWithRules(
+      [str("acme.staff.id", "staff-77"), str("acme.customer.tax_id", "T-1"), str("gen_ai.request.model", "gpt-4")],
+      [KEY_RULE],
+    )
+
+    expect(after?.attrString["acme.staff.id"]).toBe("[REDACTED_STAFF_ID]")
+    expect(after?.attrString["acme.customer.tax_id"]).toBe("[REDACTED_STAFF_ID]")
+    expect(after?.attrString["gen_ai.request.model"]).toBe("gpt-4")
+  })
+
+  /**
+   * Wider than the built-in content-key drop, which only touches `attr_string`. A key named
+   * explicitly is meant wherever it appears, and dropping one cannot produce a false positive.
+   */
+  it("masks a named key in resource_string too", async () => {
+    const request: OtlpExportTraceServiceRequest = {
+      resourceSpans: [
+        {
+          resource: { attributes: [str("service.name", "my-app"), str("acme.staff.id", "staff-77")] },
+          scopeSpans: [
+            {
+              scope: { name: "test.instrumentation", version: "1.0.0" },
+              spans: [
+                {
+                  traceId: "0af7651916cd43dd8448eb211c80319c",
+                  spanId: "a1b2c3d4e5f60002",
+                  name: "chat",
+                  kind: 3,
+                  startTimeUnixNano: "1710590400000000000",
+                  endTimeUnixNano: "1710590401000000000",
+                  attributes: [str("gen_ai.system", "openai")],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const { spans } = transformOtlpToSpans(request, CONTEXT)
+    const result = await Effect.runPromise(
+      redactSpans({
+        spans,
+        organizationId: ORG,
+        policyByProjectId: enforceWith([KEY_RULE]),
+        pseudonymSecret: undefined,
+      }),
+    )
+
+    expect(spans[0]?.resourceString["acme.staff.id"]).toBe("staff-77")
+    expect(result.spans[0]?.resourceString["acme.staff.id"]).toBe("[REDACTED_STAFF_ID]")
+    expect(result.spans[0]?.resourceString["service.name"]).toBe("my-app")
+  })
+
+  // Unlike value scanning, an explicit key rule is not gated on the metadata scope.
+  it("masks a named key in metadata even with the metadata scope off", async () => {
+    const { before, after } = await redactWithRules(
+      [str("gen_ai.system", "openai"), str("traceloop.association.properties.acme.staff.id", "staff-77")],
+      [{ id: "r1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] }],
+    )
+
+    // Without this the assertion below would pass on a map that never held the key.
+    expect(before?.metadata["acme.staff.id"]).toBe("staff-77")
+    expect(after?.metadata["acme.staff.id"]).toBe("[REDACTED_STAFF_ID]")
+  })
+
+  /**
+   * A customer naming `acme.customer.tax_id` does not know which OTLP type it arrived as, and the
+   * value passes cannot reach these maps: a boolean matches no detector at all. Key rules only
+   * touched the string maps, so the value survived under the very key the rule named.
+   */
+  it("masks a named key whatever OTLP type it arrived as", async () => {
+    const attributes = [
+      { key: "acme.staff.id", value: { intValue: "77" } },
+      { key: "acme.staff.score", value: { doubleValue: 4.5 } },
+      { key: "acme.staff.active", value: { boolValue: true } },
+    ]
+    const { before, after } = await redactWithRules(attributes, [
+      { id: "r1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.*"] },
+    ])
+
+    // Without these the assertions below would pass on maps that never held the keys.
+    expect(before?.attrInt).toHaveProperty("acme.staff.id")
+    expect(before?.attrFloat).toHaveProperty("acme.staff.score")
+    expect(before?.attrBool).toHaveProperty("acme.staff.active")
+
+    expect(after?.attrInt).not.toHaveProperty("acme.staff.id")
+    expect(after?.attrFloat).not.toHaveProperty("acme.staff.score")
+    expect(after?.attrBool).not.toHaveProperty("acme.staff.active")
+    expect(after?.attrString["acme.staff.id"]).toBe("[REDACTED_STAFF_ID]")
+    expect(after?.attrString["acme.staff.score"]).toBe("[REDACTED_STAFF_ID]")
+    expect(after?.attrString["acme.staff.active"]).toBe("[REDACTED_STAFF_ID]")
+  })
+
+  // A masked key is a match like any other, so it needs no stat of its own.
+  it("counts each masked key under the rule's label", async () => {
+    const { summary } = await redactWithRules(
+      [str("acme.staff.id", "staff-77"), str("acme.customer.tax_id", "T-1")],
+      [KEY_RULE],
+    )
+
+    expect(summary.counts.STAFF_ID).toBe(2)
   })
 })

@@ -35,9 +35,109 @@ export const DEFAULT_REDACTION_ENTITIES: readonly RedactionEntity[] = [
   "secret",
 ]
 
+/**
+ * Placeholder label per entity. Lives here rather than in the engine because it is part of the
+ * stored data contract: it appears inside persisted content as `[REDACTED_<LABEL>]`, the web
+ * chip renders it, and custom rules must not be allowed to claim one.
+ */
+export const REDACTION_ENTITY_LABELS: Record<RedactionEntity, string> = {
+  email: "EMAIL",
+  phone: "PHONE",
+  credit_card: "CREDIT_CARD",
+  iban: "IBAN",
+  us_ssn: "US_SSN",
+  ip_address: "IP_ADDRESS",
+  secret: "SECRET",
+}
+
+/** Labels the engine already emits. A custom rule reusing one would make the UI's explanation of it false. */
+export const RESERVED_REDACTION_LABELS: ReadonlySet<string> = new Set([
+  ...Object.values(REDACTION_ENTITY_LABELS),
+  "OVERSIZED_FIELD",
+  "USER",
+  // Retired entities keep their labels reserved: stored content still carries their placeholders.
+  ...[...RETIRED_REDACTION_ENTITIES].map((entity) => entity.toUpperCase()),
+])
+
 export const REDACTION_IDENTITY_HANDLINGS = ["keep", "pseudonymize"] as const
 export const redactionIdentityHandlingSchema = z.enum(REDACTION_IDENTITY_HANDLINGS)
 export type RedactionIdentityHandling = z.infer<typeof redactionIdentityHandlingSchema>
+
+export const REDACTION_RULE_KINDS = ["attribute_key", "terms", "pattern"] as const
+export const redactionRuleKindSchema = z.enum(REDACTION_RULE_KINDS)
+export type RedactionRuleKind = z.infer<typeof redactionRuleKindSchema>
+
+/**
+ * Caps on customer-defined rules. Every rule travels in the ingest queue job for each project
+ * in a batch, so these bound Redis job size as much as they bound scan cost.
+ */
+export const REDACTION_MAX_RULES = 25
+export const REDACTION_RULE_MAX_KEYS = 100
+export const REDACTION_RULE_MAX_TERMS = 200
+export const REDACTION_RULE_MAX_TERM_CHARS = 4_000
+export const REDACTION_RULE_MAX_PATTERN_CHARS = 200
+
+/** Below three characters a term shreds ordinary prose, and no identifier is that short. */
+export const REDACTION_RULE_MIN_TERM_CHARS = 3
+
+/** Matches the placeholder grammar the web chip looks for, so a custom label renders like a built-in one. */
+export const REDACTION_RULE_LABEL_PATTERN = /^[A-Z][A-Z0-9_]{2,31}$/
+
+const redactionRuleLabelSchema = z
+  .string()
+  .regex(REDACTION_RULE_LABEL_PATTERN)
+  .refine((label) => !RESERVED_REDACTION_LABELS.has(label), { error: "label is reserved by a built-in category" })
+
+const redactionRuleBaseShape = {
+  id: z.string().min(1).max(64),
+  label: redactionRuleLabelSchema,
+  enabled: z.boolean().optional(),
+}
+
+const redactionTermsSchema = z
+  .array(z.string().min(REDACTION_RULE_MIN_TERM_CHARS).max(256))
+  .min(1)
+  .max(REDACTION_RULE_MAX_TERMS)
+  .refine((terms) => terms.reduce((total, term) => total + term.length, 0) <= REDACTION_RULE_MAX_TERM_CHARS, {
+    error: `terms exceed ${REDACTION_RULE_MAX_TERM_CHARS} characters in total`,
+  })
+
+/**
+ * Three kinds in increasing order of risk. `attribute_key` drops a named attribute and cannot
+ * produce a false positive; `terms` never reaches regex syntax, so it has no backtracking
+ * surface; `pattern` is the only one that needs the validator gates.
+ */
+export const redactionRuleSchema = z.discriminatedUnion("kind", [
+  z.object({
+    ...redactionRuleBaseShape,
+    kind: z.literal("attribute_key"),
+    /** Exact key, or a `prefix.*` glob. Not regex: keys are short and structured, and this keeps the kind risk-free. */
+    keys: z.array(z.string().min(1).max(256)).min(1).max(REDACTION_RULE_MAX_KEYS),
+  }),
+  z.object({
+    ...redactionRuleBaseShape,
+    kind: z.literal("terms"),
+    terms: redactionTermsSchema,
+    wholeWord: z.boolean().optional(),
+    caseSensitive: z.boolean().optional(),
+  }),
+  z.object({
+    ...redactionRuleBaseShape,
+    kind: z.literal("pattern"),
+    pattern: z.string().min(1).max(REDACTION_RULE_MAX_PATTERN_CHARS),
+    ignoreCase: z.boolean().optional(),
+    dotAll: z.boolean().optional(),
+    /**
+     * Which validator admitted this pattern. Validation is write-time only, so a rule accepted by
+     * an older, weaker validator keeps running; recording the version is what lets a tightened
+     * validator flag it later instead of trusting it silently.
+     */
+    validatorVersion: z.number().int().nonnegative().optional(),
+  }),
+])
+export type RedactionRule = z.infer<typeof redactionRuleSchema>
+
+export const isRuleEnabled = (rule: RedactionRule): boolean => rule.enabled !== false
 
 /** `metadata` covers both the `metadata` map and `tags`. */
 export const redactionScopesSettingSchema = z.object({
@@ -50,6 +150,7 @@ export const redactionSettingSchema = z.object({
   entities: z.array(redactionEntitySchema).optional(),
   scopes: redactionScopesSettingSchema.optional(),
   identities: redactionIdentityHandlingSchema.optional(),
+  rules: z.array(redactionRuleSchema).max(REDACTION_MAX_RULES).optional(),
 })
 export type RedactionSetting = z.infer<typeof redactionSettingSchema>
 
@@ -180,6 +281,8 @@ export interface RedactionPolicy {
   readonly entities: ReadonlySet<RedactionEntity>
   readonly redactMetadata: boolean
   readonly identities: RedactionIdentityHandling
+  /** Customer-defined rules, including disabled ones: the engine filters those when it compiles. */
+  readonly rules: readonly RedactionRule[]
 }
 
 /** The settings view: `mode` is the user-facing toggle and `source` says which layer set it. */
@@ -208,10 +311,16 @@ export const serializedRedactionPolicySchema = z.object({
   entities: wireRedactionEntitiesSchema,
   redactMetadata: z.boolean(),
   identities: redactionIdentityHandlingSchema,
+  rules: z.array(redactionRuleSchema).max(REDACTION_MAX_RULES).optional(),
 })
 export type SerializedRedactionPolicy = z.infer<typeof serializedRedactionPolicySchema>
 
-/** `null` for an `off` policy, so callers omit it from the map rather than encoding a no-op. */
+/**
+ * `null` for an `off` policy, so callers omit it from the map rather than encoding a no-op.
+ *
+ * `rules` is omitted when empty rather than sent as `[]`, which keeps the payload for a project
+ * with no custom rules byte-identical to what shipped before they existed.
+ */
 export const serializeRedactionPolicy = (policy: ResolvedRedactionPolicy): SerializedRedactionPolicy | null =>
   policy.mode === "off"
     ? null
@@ -219,6 +328,7 @@ export const serializeRedactionPolicy = (policy: ResolvedRedactionPolicy): Seria
         entities: [...policy.entities],
         redactMetadata: policy.redactMetadata,
         identities: policy.identities,
+        ...(policy.rules.length > 0 ? { rules: [...policy.rules] } : {}),
       }
 
 /**
@@ -229,7 +339,9 @@ export const serializeRedactionPolicy = (policy: ResolvedRedactionPolicy): Seria
 export const deserializeRedactionPolicy = (wire: unknown): RedactionPolicy | null => {
   const parsed = serializedRedactionPolicySchema.safeParse(wire)
 
-  return parsed.success ? { ...parsed.data, entities: new Set(parsed.data.entities) } : null
+  return parsed.success
+    ? { ...parsed.data, entities: new Set(parsed.data.entities), rules: parsed.data.rules ?? [] }
+    : null
 }
 
 const REDACTION_SYSTEM_DEFAULTS: {
@@ -237,20 +349,60 @@ const REDACTION_SYSTEM_DEFAULTS: {
   readonly entities: readonly RedactionEntity[]
   readonly redactMetadata: boolean
   readonly identities: RedactionIdentityHandling
+  readonly rules: readonly RedactionRule[]
 } = {
   mode: "off",
   entities: DEFAULT_REDACTION_ENTITIES,
   redactMetadata: false,
   identities: "keep",
+  rules: [],
 }
 
-/** Whether a layer sets any redaction field — what makes a project an override rather than an inheritor. */
-export const hasRedactionField = (setting: RedactionSetting | undefined): boolean =>
+/** `locked` gates who may change the policy rather than forming part of it, so it does not make one exist. */
+const REDACTION_NON_POLICY_KEYS: ReadonlySet<string> = new Set(["locked"])
+
+const hasPresentValue = (value: unknown): boolean => {
+  if (value === undefined) return false
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return true
+
+  return Object.values(value).some(hasPresentValue)
+}
+
+/**
+ * Whether a layer sets any redaction field — what makes a project an override rather than an
+ * inheritor, which is what `source` reports and what the settings UI counts.
+ *
+ * Structural rather than a list of field names. The named-field version silently excluded every
+ * field added after it was written, so a layer that set only a new field reported as unset.
+ */
+export const hasRedactionField = (setting: OrganizationRedactionSetting | undefined): boolean =>
   setting !== undefined &&
-  (setting.mode !== undefined ||
-    setting.entities !== undefined ||
-    setting.scopes?.metadata !== undefined ||
-    setting.identities !== undefined)
+  Object.entries(setting).some(([key, value]) => !REDACTION_NON_POLICY_KEYS.has(key) && hasPresentValue(value))
+
+/**
+ * Carries stored rules across a write that cannot express them.
+ *
+ * Both redaction use cases replace the whole setting, and `PATCH /v1/projects/{slug}` does not
+ * expose `rules`, so changing `mode` through the API would otherwise delete every rule the dashboard
+ * created and the next spans would keep the identifiers those rules existed to remove.
+ *
+ * An explicit empty array still clears them: the dashboard always sends the full list, so omission
+ * and emptiness are different intents and only omission means "not mine to touch".
+ *
+ * Generic over the setting, and shared, because it is one compliance rule. Two copies differing only
+ * in a type name could drift into one layer deleting customer rules while the other preserved them.
+ */
+// `| undefined` on the constraint is required: `exactOptionalPropertyTypes` makes it distinct from `?`.
+export const withPreservedRedactionRules = <T extends { readonly rules?: readonly RedactionRule[] | undefined }>(
+  stored: T | null | undefined,
+  next: T | null,
+): T | null => {
+  if (next === null || next.rules !== undefined) return next
+  const rules = stored?.rules
+  if (rules === undefined) return next
+
+  return { ...next, rules }
+}
 
 export function resolveRedactionPolicy(input: {
   organization: OrganizationSettings | null | undefined
@@ -265,6 +417,7 @@ export function resolveRedactionPolicy(input: {
       entities: new Set(org.entities ?? REDACTION_SYSTEM_DEFAULTS.entities),
       redactMetadata: org.scopes?.metadata ?? REDACTION_SYSTEM_DEFAULTS.redactMetadata,
       identities: org.identities ?? REDACTION_SYSTEM_DEFAULTS.identities,
+      rules: org.rules ?? REDACTION_SYSTEM_DEFAULTS.rules,
       source: "organization",
     }
   }
@@ -274,8 +427,47 @@ export function resolveRedactionPolicy(input: {
     entities: new Set(project?.entities ?? org?.entities ?? REDACTION_SYSTEM_DEFAULTS.entities),
     redactMetadata: project?.scopes?.metadata ?? org?.scopes?.metadata ?? REDACTION_SYSTEM_DEFAULTS.redactMetadata,
     identities: project?.identities ?? org?.identities ?? REDACTION_SYSTEM_DEFAULTS.identities,
+    // Replace, not union, exactly like `entities`. An unlocked organization policy is a default
+    // that a project may weaken; `locked` is what makes it a floor. Unioning rules alone would
+    // mean a project could drop an organization entity but not an organization rule.
+    rules: project?.rules ?? org?.rules ?? REDACTION_SYSTEM_DEFAULTS.rules,
     source: hasRedactionField(project) ? "project" : hasRedactionField(org) ? "organization" : "default",
   }
+}
+
+/**
+ * Whether two policies differ, for deciding whether a write is a no-op.
+ *
+ * Structural for the same reason `hasRedactionField` is, and this one is load-bearing: the
+ * named-field version it replaced compared four fields, so a change touching only a field
+ * added later compared equal, and the write returned early with nothing saved and no audit
+ * event emitted while the caller reported success.
+ */
+export const isSameRedactionSetting = (
+  a: OrganizationRedactionSetting | null | undefined,
+  b: OrganizationRedactionSetting | null | undefined,
+): boolean => JSON.stringify(canonicalizeRedaction(a)) === JSON.stringify(canonicalizeRedaction(b))
+
+/** Entity order is a UI artifact. Rule order is not: it breaks overlap ties, so a reorder is a change. */
+const UNORDERED_REDACTION_KEYS: ReadonlySet<string> = new Set(["entities"])
+
+const canonicalizeRedaction = (value: unknown, key?: string): unknown => {
+  if (value === undefined || value === null) return null
+
+  if (Array.isArray(value)) {
+    const items = value.map((item) => canonicalizeRedaction(item))
+
+    return key !== undefined && UNORDERED_REDACTION_KEYS.has(key) ? [...items].sort() : items
+  }
+
+  if (typeof value !== "object") return value
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([entryKey, entry]) => [entryKey, canonicalizeRedaction(entry, entryKey)]),
+  )
 }
 
 // Future: evaluationId can be added here

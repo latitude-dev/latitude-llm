@@ -245,6 +245,71 @@ describe("processIngestedSpansUseCase redaction", () => {
     expect(inserted).toHaveLength(0)
   })
 
+  it("applies a custom terms rule carried on the wire policy", async () => {
+    const attributes = [
+      { key: "gen_ai.system", value: { stringValue: "openai" } },
+      { key: "acme.note", value: { stringValue: "account ACME-1234" } },
+    ]
+    const { effect, inserted } = runRedaction({
+      payload: payloadFor([spanWith(attributes, "b7ad6b7169203331")]),
+      redaction: {
+        [PROJECT_ID]: {
+          ...enforcePolicy,
+          rules: [{ id: "r1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] }],
+        },
+      },
+    })
+    await Effect.runPromise(effect)
+
+    expect(inserted[0]?.[0]?.attrString["acme.note"]).toBe("account [REDACTED_ACCOUNT_NUMBER]")
+  })
+
+  it("masks the attribute a custom key rule names, carried on the wire policy", async () => {
+    const attributes = [
+      { key: "gen_ai.system", value: { stringValue: "openai" } },
+      { key: "acme.staff.id", value: { stringValue: "staff-77" } },
+    ]
+    const { effect, inserted } = runRedaction({
+      payload: payloadFor([spanWith(attributes, "b7ad6b7169203331")]),
+      redaction: {
+        [PROJECT_ID]: {
+          ...enforcePolicy,
+          rules: [{ id: "r1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.*"] }],
+        },
+      },
+    })
+    await Effect.runPromise(effect)
+
+    expect(inserted[0]?.[0]?.attrString["acme.staff.id"]).toBe("[REDACTED_STAFF_ID]")
+  })
+
+  // Same reasoning as a malformed policy: a corrupt rule on a project that opted in must never
+  // resolve to a plaintext write.
+  it("fails without inserting when a rule on the wire is malformed", async () => {
+    const { effect, inserted } = runRedaction({
+      redaction: { [PROJECT_ID]: { ...enforcePolicy, rules: [{ kind: "terms" }] } },
+    })
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Failure")
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("fails without inserting when a rule's pattern cannot compile", async () => {
+    const { effect, inserted } = runRedaction({
+      redaction: {
+        [PROJECT_ID]: {
+          ...enforcePolicy,
+          rules: [{ id: "r1", label: "BROKEN", kind: "pattern", pattern: "ACCT-(\\d{9}" }],
+        },
+      },
+    })
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Failure")
+    expect(inserted).toHaveLength(0)
+  })
+
   it("deletes the buffered payload once the spans are durable", async () => {
     const { effect, storage, inserted } = runRedaction({
       fileKey: "tmp-ingest/org/proj/abc.json",

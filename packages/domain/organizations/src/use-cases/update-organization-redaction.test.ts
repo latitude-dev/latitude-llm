@@ -105,4 +105,48 @@ describe("updateOrganizationRedactionUseCase", () => {
 
     expect(organizations.get(ORG_ID)?.settings).toEqual({ redaction: LOCKED })
   })
+
+  // Change detection compared a hand-listed set of fields, so a rules-only edit looked identical
+  // to the stored policy and was discarded with no save and no audit event.
+  it("saves and audits a change that touches only the rules", async () => {
+    const rules: OrganizationRedactionSetting["rules"] = [
+      { id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] },
+    ]
+    const { organizations, written } = await run(seedOrg({ redaction: LOCKED }), { ...LOCKED, rules })
+
+    expect(organizations.get(ORG_ID)?.settings?.redaction?.rules).toEqual(rules)
+    expect(written).toHaveLength(1)
+  })
+
+  /**
+   * This use case replaces the whole `redaction` object, so a write that cannot express `rules` must
+   * not be read as an instruction to delete them. Pinned on this side too: the rule is shared with
+   * the project use case, and only the project side had a test, so the organization path could have
+   * lost it silently.
+   */
+  it("keeps stored rules through a write that never mentions them", async () => {
+    const rules: OrganizationRedactionSetting["rules"] = [
+      { id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] },
+    ]
+    const { organizations } = await run(seedOrg({ redaction: { ...LOCKED, rules } }), {
+      mode: "off",
+      entities: ["email"],
+      locked: false,
+    })
+
+    expect(organizations.get(ORG_ID)?.settings?.redaction).toMatchObject({ mode: "off", rules })
+  })
+
+  // An empty array is the dashboard saying "no rules", which is different from not mentioning them.
+  it("clears stored rules when the write says so explicitly", async () => {
+    const stored: OrganizationRedactionSetting["rules"] = [
+      { id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] },
+    ]
+    const { organizations } = await run(seedOrg({ redaction: { ...LOCKED, rules: stored } }), {
+      ...LOCKED,
+      rules: [],
+    })
+
+    expect(organizations.get(ORG_ID)?.settings?.redaction?.rules).toEqual([])
+  })
 })
