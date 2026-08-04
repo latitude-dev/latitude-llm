@@ -1,7 +1,12 @@
-import { SESSION_COST_MIN_SESSIONS, type SessionCostContribution, type SessionCostFactor } from "@domain/spans"
+import {
+  SESSION_COST_MIN_SESSIONS,
+  SESSION_COST_QUIET_BAND,
+  type SessionCostContribution,
+  type SessionCostFactor,
+} from "@domain/spans"
 import { Icon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
-import { InfoIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, InfoIcon, MinusIcon } from "lucide-react"
 import type { CostPerSessionRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { ChartHeader } from "../../-components/chart-header.tsx"
@@ -43,7 +48,7 @@ const FACTOR_META: Record<SessionCostFactor, FactorMeta> = {
   },
   modelMix: {
     label: "Which models",
-    hint: "The share of tokens each model took, with every price list's own prices held fixed — moving traffic to a dearer model raises what an average token costs without anything being repriced. The model named is where the tokens went. A share can move because someone changed a model or because a busier agent happens to use a dearer one, and this row cannot tell those apart.",
+    hint: "The share of tokens each model took, with every price list's own prices held fixed — moving traffic to a dearer model raises what an average token costs without anything being repriced. The model named is where most of the effect went; `+N more` means other models gained share too, so the shift is broader than one name. A share can move because someone changed a model or because a busier agent happens to use a dearer one, and this row cannot tell those apart.",
   },
   tokenMix: {
     label: "Prompt vs output split",
@@ -63,64 +68,88 @@ const formatMultiplier = (multiplier: number): string => `×${multiplier.toFixed
 
 const signedPercent = (pct: number): string => `${pct > 0 ? "▲" : pct < 0 ? "▼" : ""} ${Math.abs(Math.round(pct))}%`
 
+const isStill = (multiplier: number): boolean => Math.abs(multiplier - 1) < SESSION_COST_QUIET_BAND
+
 const directionColor = (multiplier: number): "destructive" | "success" | "foregroundMuted" => {
-  if (multiplier > 1) return "destructive"
-  if (multiplier < 1) return "success"
-  return "foregroundMuted"
+  if (isStill(multiplier)) return "foregroundMuted"
+  return multiplier > 1 ? "destructive" : "success"
 }
 
-const rowLabel = (row: SessionCostContribution): string =>
-  row.factor === null
-    ? `${row.foldedFactors} ${row.foldedFactors === 1 ? "factor" : "factors"} unchanged`
-    : FACTOR_META[row.factor].label
+const directionArrow = (multiplier: number) =>
+  isStill(multiplier) ? MinusIcon : multiplier > 1 ? ArrowUpIcon : ArrowDownIcon
 
-/** The concrete move behind a row: its own before/after, or the share shift driving a mix row. */
+/**
+ * The evidence under a tile's multiplier, in that factor's own units.
+ *
+ * Null for the two rate factors, and deliberately: the number a reader would expect
+ * there is the blended price per side, and that moves with model mix, so a tile
+ * could show a doubled prompt price beside a x1.00 saying nothing repriced. There
+ * is no honest single figure for those two, only the multiplier.
+ */
 function rowDetail(row: SessionCostContribution): string | null {
-  if (row.factor === null) return null
   if (row.values) {
     const format = FACTOR_META[row.factor].formatValue ?? ratio
     return `${format(row.values.previous)} → ${format(row.values.current)}`
   }
   if (!row.shareShift) return null
-  const { label, previousShare, currentShare } = row.shareShift
-  return `${label} ${formatPercentage(previousShare)} → ${formatPercentage(currentShare)}`
+  const { label, previousShare, currentShare, alsoMoved } = row.shareShift
+  const move = `${label} ${formatPercentage(previousShare)} → ${formatPercentage(currentShare)}`
+  return alsoMoved > 0 ? `${move} +${alsoMoved} more` : move
 }
 
-function ContributionRow({ row }: { readonly row: SessionCostContribution }) {
+/**
+ * One factor. The multiplier leads and always means the same thing — effect on cost
+ * per session — with the factor's own before and after underneath as evidence.
+ *
+ * A still factor keeps its tile rather than disappearing: which seven things the
+ * decomposition accounts for is part of what the card says, and it cannot be read
+ * off a list whose shape changes every period.
+ */
+function FactorTile({ row }: { readonly row: SessionCostContribution }) {
   const detail = rowDetail(row)
-  const muted = row.factor === null
+  const still = isStill(row.multiplier)
+  const color = directionColor(row.multiplier)
 
   return (
     <Tooltip
       asChild
       trigger={
-        // The multiplier sits against its own label rather than across the card: at
-        // full width the eye had to travel the whole panel to pair the two up.
-        <div className="flex w-full cursor-default flex-col gap-0.5">
-          <div className="flex flex-row items-baseline justify-between gap-2">
-            <Text.H6 color={muted ? "foregroundMuted" : "foreground"} ellipsis noWrap>
-              {rowLabel(row)}
-            </Text.H6>
-            <Text.H6
-              color={muted ? "foregroundMuted" : directionColor(row.multiplier)}
-              noWrap
-              className="shrink-0 tabular-nums"
-            >
+        <div className="flex min-w-0 cursor-default flex-col gap-0.5 rounded-md bg-background/40 p-2">
+          <Text.H6 color="foregroundMuted" ellipsis noWrap>
+            {FACTOR_META[row.factor].label}
+          </Text.H6>
+          <div className="flex flex-row items-center gap-1">
+            <Icon icon={directionArrow(row.multiplier)} size="sm" color={color} />
+            <Text.H5M color={color} noWrap className="tabular-nums">
               {formatMultiplier(row.multiplier)}
-            </Text.H6>
+            </Text.H5M>
           </div>
-          {detail ? (
-            <Text.H6 color="foregroundMuted" ellipsis noWrap className="tabular-nums">
-              {detail}
-            </Text.H6>
-          ) : null}
+          <Text.H6 color="foregroundMuted" ellipsis noWrap className="tabular-nums">
+            {still && !detail ? "unchanged" : (detail ?? "")}
+          </Text.H6>
         </div>
       }
     >
-      {row.factor === null
-        ? "Factors that did not move. Folded into one row so the visible ones still multiply to the total."
-        : FACTOR_META[row.factor].hint}
+      {FACTOR_META[row.factor].hint}
     </Tooltip>
+  )
+}
+
+/**
+ * Heading for the grid, spanning the cells the seven factors leave over.
+ *
+ * Carries no figure of its own. The total belongs to the Cost per session block, and
+ * printing it twice invited the two copies to disagree in their last digit — which is
+ * unavoidable once each tile is rounded for display.
+ */
+function TotalTile() {
+  return (
+    <div className="col-span-2 flex min-w-0 flex-col justify-center gap-1 p-2">
+      <Text.H4M color="foreground">What changed</Text.H4M>
+      <Text.H6 color="foregroundMuted">
+        Cost per session is these seven multiplied together, so each one is a multiplier on it.
+      </Text.H6>
+    </div>
   )
 }
 
@@ -257,27 +286,29 @@ export function CostPerSessionPanel({
       ) : (
         <div className="flex flex-col gap-4 px-4 py-3">
           <div className="flex flex-col gap-6 lg:flex-row">
-            <HeadlineBlock
-              label="Sessions"
-              value={formatCount(record.volume.currentSessions)}
-              changePct={sessionsChangePct}
-              {...(record.volume.previousSessions > 0
-                ? { detail: `from ${formatCount(record.volume.previousSessions)}` }
-                : {})}
-              points={record.buckets.map((bucket) => bucket.sessions)}
-              hint="Sessions with billable spend. Traffic that reported no session id keys on its trace id instead, so it counts as a single-trace session rather than dropping out of the denominator. More sessions does not move what each one costs — that is the figure beside this."
-            />
-            <HeadlineBlock
-              label="Cost per session"
-              value={cost.label}
-              changePct={record.changePct}
-              {...(record.totalMultiplier === null ? {} : { detail: formatMultiplier(record.totalMultiplier) })}
-              points={record.buckets.map((bucket) =>
-                bucket.costPerSessionMicrocents === null ? null : microcentsToUsd(bucket.costPerSessionMicrocents),
-              )}
-              hint="Spend divided by sessions, for this window against the equal-length window before it. The factors beside it are its multiplicative parts, so their multipliers multiply to this change."
-            />
-            {/* Third column, so each row's multiplier reads next to its own label. */}
+            {/* The two measures on the left, the factors of the second one on the right. */}
+            <div className="flex min-w-0 flex-col gap-4 lg:w-1/3 lg:shrink-0">
+              <HeadlineBlock
+                label="Sessions"
+                value={formatCount(record.volume.currentSessions)}
+                changePct={sessionsChangePct}
+                {...(record.volume.previousSessions > 0
+                  ? { detail: `from ${formatCount(record.volume.previousSessions)}` }
+                  : {})}
+                points={record.buckets.map((bucket) => bucket.sessions)}
+                hint="Sessions with billable spend. Traffic that reported no session id keys on its trace id instead, so it counts as a single-trace session rather than dropping out of the denominator. More sessions does not move what each one costs — that is the figure below."
+              />
+              <HeadlineBlock
+                label="Cost per session"
+                value={cost.label}
+                changePct={record.changePct}
+                {...(record.totalMultiplier === null ? {} : { detail: formatMultiplier(record.totalMultiplier) })}
+                points={record.buckets.map((bucket) =>
+                  bucket.costPerSessionMicrocents === null ? null : microcentsToUsd(bucket.costPerSessionMicrocents),
+                )}
+                hint="Spend divided by sessions, for this window against the equal-length window before it. The factors beside it are its multiplicative parts, so their multipliers multiply to this change."
+              />
+            </div>
             <div className="flex min-w-0 flex-1 flex-col gap-2 lg:border-border lg:border-l lg:pl-6">
               {record.status === "notEnoughData" ? (
                 <Text.H6 color="foregroundMuted">{notEnoughDataReason(record)}</Text.H6>
@@ -287,26 +318,11 @@ export function CostPerSessionPanel({
                 </Text.H6>
               ) : (
                 <>
-                  <Text.H6 color="foregroundMuted">What changed it</Text.H6>
-                  <div className="flex flex-col gap-1.5">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <TotalTile />
                     {record.rows.map((row) => (
-                      <ContributionRow key={row.factor ?? "unchanged"} row={row} />
+                      <FactorTile key={row.factor} row={row} />
                     ))}
-                    <div className="flex flex-row items-baseline justify-between gap-2 border-border border-t pt-1.5">
-                      <Text.H6 color="foreground" ellipsis noWrap>
-                        Cost per session
-                      </Text.H6>
-                      {/* `rowsMultiplyTo`, not the exact total: this is what the rows above multiply to. */}
-                      <Text.H6
-                        color={
-                          record.rowsMultiplyTo === null ? "foregroundMuted" : directionColor(record.rowsMultiplyTo)
-                        }
-                        noWrap
-                        className="shrink-0 tabular-nums"
-                      >
-                        {record.rowsMultiplyTo === null ? "" : formatMultiplier(record.rowsMultiplyTo)}
-                      </Text.H6>
-                    </div>
                   </div>
                 </>
               )}

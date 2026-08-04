@@ -72,12 +72,11 @@ const BASELINE = {
 } as const
 
 const multiplierFor = (
-  rows: readonly { factor: SessionCostFactor | null; multiplier: number }[],
+  rows: readonly { factor: SessionCostFactor; multiplier: number }[],
   factor: SessionCostFactor,
 ): number | undefined => rows.find((row) => row.factor === factor)?.multiplier
 
-const factors = (rows: readonly { factor: SessionCostFactor | null }[]): readonly (SessionCostFactor | null)[] =>
-  rows.map((row) => row.factor)
+const factors = (rows: readonly { factor: SessionCostFactor }[]): SessionCostFactor[] => rows.map((row) => row.factor)
 
 const product = (rows: readonly { multiplier: number }[]): number =>
   rows.reduce((total, row) => total * row.multiplier, 1)
@@ -115,12 +114,10 @@ describe("decomposeCostPerSession", () => {
         }),
       })
 
-      // The rows multiply to the figure printed under them, exactly.
-      expect(product(result.rows), JSON.stringify(shape)).toBeCloseTo(result.rowsMultiplyTo ?? 0, 2)
-      // And that figure sits within a rounding step of the true change. Relative,
-      // because a rounding step is worth far less on a x1000 multiplier than on x2.
-      const drift = Math.abs((result.rowsMultiplyTo ?? 0) / (result.totalMultiplier ?? 1) - 1)
-      expect(drift, JSON.stringify(shape)).toBeLessThan(0.01)
+      // Exactly, not to display precision: each multiplier is exp of a log share and
+      // the shares sum to the total's log, so the product is the total by construction.
+      const drift = Math.abs(product(result.rows) / (result.totalMultiplier ?? 1) - 1)
+      expect(drift, JSON.stringify(shape)).toBeLessThan(1e-9)
     }
   })
 
@@ -131,8 +128,8 @@ describe("decomposeCostPerSession", () => {
     })
 
     expect(multiplierFor(result.rows, "tokensPerCall")).toBeCloseTo(4, 2)
-    expect(factors(result.rows)).not.toContain("modelMix")
-    expect(factors(result.rows)).not.toContain("promptRate")
+    expect(multiplierFor(result.rows, "modelMix")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "promptRate")).toBeCloseTo(1, 2)
   })
 
   it("puts a migration to a cheaper model on model mix, not on either rate", () => {
@@ -157,8 +154,8 @@ describe("decomposeCostPerSession", () => {
     expect(result.totalMultiplier).toBeLessThan(1)
     expect(multiplierFor(result.rows, "modelMix")).toBeLessThan(1)
     // No price list changed, so neither rate row may claim credit.
-    expect(factors(result.rows)).not.toContain("promptRate")
-    expect(factors(result.rows)).not.toContain("outputRate")
+    expect(multiplierFor(result.rows, "promptRate")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "outputRate")).toBeCloseTo(1, 2)
   })
 
   it("puts a real price rise on the rate rows, not on either mix row", () => {
@@ -168,8 +165,8 @@ describe("decomposeCostPerSession", () => {
     })
 
     expect(multiplierFor(result.rows, "promptRate")).toBeGreaterThan(1)
-    expect(factors(result.rows)).not.toContain("modelMix")
-    expect(factors(result.rows)).not.toContain("tokenMix")
+    expect(multiplierFor(result.rows, "modelMix")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "tokenMix")).toBeCloseTo(1, 2)
   })
 
   /**
@@ -184,9 +181,9 @@ describe("decomposeCostPerSession", () => {
     })
 
     expect(multiplierFor(result.rows, "tokenMix")).toBeLessThan(1)
-    expect(factors(result.rows)).not.toContain("promptRate")
-    expect(factors(result.rows)).not.toContain("outputRate")
-    expect(factors(result.rows)).not.toContain("modelMix")
+    expect(multiplierFor(result.rows, "promptRate")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "outputRate")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "modelMix")).toBeCloseTo(1, 2)
   })
 
   it("keeps a model-share shift out of the token mix row when each model's split holds", () => {
@@ -208,7 +205,7 @@ describe("decomposeCostPerSession", () => {
     })
 
     expect(multiplierFor(result.rows, "modelMix")).toBeGreaterThan(1)
-    expect(factors(result.rows)).not.toContain("tokenMix")
+    expect(multiplierFor(result.rows, "tokenMix")).toBeCloseTo(1, 2)
   })
 
   it("names where the tokens went, not the model they drained out of", () => {
@@ -241,6 +238,52 @@ describe("decomposeCostPerSession", () => {
     expect(shift?.currentShare).toBeCloseTo(0.45, 6)
   })
 
+  it("counts the other models that also gained, so one name cannot pass for the whole shift", () => {
+    const mid = { name: "sonnet", promptShare: 0.9, promptPrice: 50, outputPrice: 500 }
+    const result = decomposeCostPerSession({
+      previous: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.8 },
+          { ...mid, share: 0.1 },
+          { ...DEAR, share: 0.1 },
+        ],
+      }),
+      current: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.2 },
+          { ...mid, share: 0.4 },
+          { ...DEAR, share: 0.4 },
+        ],
+      }),
+    })
+
+    // Two models gained 30 points each: the tile names one and says so.
+    expect(result.rows.find((row) => row.factor === "modelMix")?.shareShift?.alsoMoved).toBe(1)
+  })
+
+  it("counts no other movers when a single model took all the traffic", () => {
+    const result = decomposeCostPerSession({
+      previous: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.9 },
+          { ...DEAR, share: 0.1 },
+        ],
+      }),
+      current: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.1 },
+          { ...DEAR, share: 0.9 },
+        ],
+      }),
+    })
+
+    expect(result.rows.find((row) => row.factor === "modelMix")?.shareShift?.alsoMoved).toBe(0)
+  })
+
   it("names the cheaper destination when traffic migrates down", () => {
     const cheap = { name: "haiku", promptShare: 0.9, promptPrice: 1, outputPrice: 10 }
     const result = decomposeCostPerSession({
@@ -265,16 +308,15 @@ describe("decomposeCostPerSession", () => {
     expect(row?.multiplier).toBeLessThan(1)
   })
 
-  it("folds the factors that did not move into one row that keeps the product intact", () => {
+  it("always reports all seven factors, so the card's shape never moves", () => {
     const result = decomposeCostPerSession({
       previous: period(BASELINE),
       current: period({ ...BASELINE, tokensPerCall: 4_000 }),
     })
 
-    const folded = result.rows.find((row) => row.foldedFactors > 0)
-    expect(folded?.foldedFactors).toBeGreaterThan(0)
-    expect(folded?.values).toBeNull()
-    expect(product(result.rows)).toBeCloseTo(result.rowsMultiplyTo ?? 0, 2)
+    expect(factors(result.rows).sort()).toEqual(
+      ["callsPerTrace", "modelMix", "outputRate", "promptRate", "tokenMix", "tokensPerCall", "tracesPerSession"].sort(),
+    )
   })
 
   it("orders rows by how far each moved so the cause reads first", () => {

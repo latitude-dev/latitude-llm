@@ -91,12 +91,11 @@ const scopeOf = (projectId: ProjectId) => ({
 })
 
 const multiplierFor = (
-  rows: readonly { factor: SessionCostFactor | null; multiplier: number }[],
+  rows: readonly { factor: SessionCostFactor; multiplier: number }[],
   factor: SessionCostFactor,
 ): number | undefined => rows.find((row) => row.factor === factor)?.multiplier
 
-const factorsOf = (rows: readonly { factor: SessionCostFactor | null }[]): readonly (SessionCostFactor | null)[] =>
-  rows.map((row) => row.factor)
+const factorsOf = (rows: readonly { factor: SessionCostFactor }[]): SessionCostFactor[] => rows.map((row) => row.factor)
 
 const decompositionFor = async (projectId: ProjectId) =>
   decomposeCostPerSession(await runCh(repo.getSessionCostFactors(scopeOf(projectId))))
@@ -153,15 +152,16 @@ describe("getSessionCostFactors", () => {
     const result = await decompositionFor(MIX_PROJECT_ID)
 
     expect(result.status).toBe("ok")
+    expect(factorsOf(result.rows).length).toBe(7)
     expect(result.totalMultiplier).toBeGreaterThan(1)
     expect(multiplierFor(result.rows, "modelMix")).toBeGreaterThan(1)
     // The fixture holds each model's own calls per cluster — and so its write-to-read
     // ratio, and so each side's price per token — fixed across the shift. Nothing is
     // left for the rate rows, and volume never moved, so all of it folds away.
-    expect(factorsOf(result.rows)).not.toContain("promptRate")
-    expect(factorsOf(result.rows)).not.toContain("outputRate")
-    expect(factorsOf(result.rows)).not.toContain("tokensPerCall")
-    expect(factorsOf(result.rows)).not.toContain("tracesPerSession")
+    expect(multiplierFor(result.rows, "promptRate")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "outputRate")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "tokensPerCall")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "tracesPerSession")).toBeCloseTo(1, 2)
   })
 
   it("puts archetype D's prompt growth on tokens per call and not on model mix", async () => {
@@ -171,8 +171,8 @@ describe("getSessionCostFactors", () => {
     expect(result.rows[0]?.factor).toBe("tokensPerCall")
     expect(multiplierFor(result.rows, "tokensPerCall")).toBeGreaterThan(1)
     // One model throughout, so no share between price lists can have moved.
-    expect(factorsOf(result.rows)).not.toContain("modelMix")
-    expect(factorsOf(result.rows)).not.toContain("tracesPerSession")
+    expect(multiplierFor(result.rows, "modelMix")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "tracesPerSession")).toBeCloseTo(1, 2)
   })
 
   /**
@@ -185,8 +185,8 @@ describe("getSessionCostFactors", () => {
     const result = await decompositionFor(PROMPT_PROJECT_ID)
 
     expect(multiplierFor(result.rows, "tokenMix")).toBeLessThan(1)
-    expect(factorsOf(result.rows)).not.toContain("promptRate")
-    expect(factorsOf(result.rows)).not.toContain("outputRate")
+    expect(multiplierFor(result.rows, "promptRate")).toBeCloseTo(1, 2)
+    expect(multiplierFor(result.rows, "outputRate")).toBeCloseTo(1, 2)
   })
 
   it("keeps both causes visible, and reconciling, on the project that carries them together", async () => {
@@ -194,7 +194,8 @@ describe("getSessionCostFactors", () => {
 
     expect(multiplierFor(result.rows, "modelMix")).toBeGreaterThan(1)
     expect(multiplierFor(result.rows, "tokensPerCall")).toBeGreaterThan(1)
-    expect(result.rows.reduce((product, row) => product * row.multiplier, 1)).toBeCloseTo(result.rowsMultiplyTo ?? 0, 2)
+    const closes = result.rows.reduce((product, row) => product * row.multiplier, 1) / (result.totalMultiplier ?? 1)
+    expect(closes).toBeCloseTo(1, 9)
   })
 
   it("prices each side of each model separately, so the mix effects have real prices", async () => {

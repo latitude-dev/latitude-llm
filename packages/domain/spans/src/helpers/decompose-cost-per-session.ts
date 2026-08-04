@@ -47,20 +47,22 @@ export type TokenSide = (typeof TOKEN_SIDES)[number]
 export const SESSION_COST_MIN_SESSIONS = 20
 
 /**
- * A factor whose multiplier is this close to 1 did not move. Matches the display
- * precision, so a row is folded away exactly when it would have read `x1.0`.
+ * A factor whose multiplier is this close to 1 did not move, so it renders as
+ * unchanged rather than as a movement. Matches the display precision: a factor is
+ * called still exactly when its multiplier would have read `x1.00`.
  */
 export const SESSION_COST_QUIET_BAND = 0.05
 
 /** Below this the cost is flat and the weights would divide by ~0, so nothing moved. */
 const FLAT_LOG_EPSILON = 1e-6
 
+// Share gain worth counting as a second mover. Under a point it is drift, and
+// counting it would report a broad shift where there was one.
+const SHARE_MOVE_FLOOR = 0.01
+
 // Sub-effects this close to cancelling each other out leave the factor they split
 // with no change to divide by, whatever their individual sizes.
 const NEGLIGIBLE_EFFECT_SHARE = 1e-9
-
-/** Displayed multipliers carry two decimals, and must still multiply to the total. */
-const DISPLAY_DECIMALS = 2
 
 /**
  * One (price list x token side) bucket. Splitting by provider as well as model
@@ -103,24 +105,31 @@ export const sessionCostTokens = (period: SessionCostPeriod): number =>
 export const sessionCostMicrocents = (period: SessionCostPeriod): number =>
   period.cells.reduce((sum, cell) => sum + cell.costMicrocents, 0)
 
-/** The share move behind a mix row, so an abstract factor still names something concrete. */
+/**
+ * A share move behind a mix row, so an abstract factor still names something concrete.
+ *
+ * `alsoMoved` counts the other price lists that gained share too. One named model
+ * reads as *the* cause, and on a broad shift — three models each taking ten points
+ * off a fourth — that is the wrong story, so the count has to be sayable.
+ */
 export interface SessionCostShareShift {
   readonly label: string
   readonly previousShare: number
   readonly currentShare: number
+  readonly alsoMoved: number
 }
 
 export interface SessionCostContribution {
-  /** Null on the folded row, which stands for several factors and so names none. */
-  readonly factor: SessionCostFactor | null
-  /** Multiplier on cost per session. Every row's multiplier multiplies to `totalMultiplier`. */
+  readonly factor: SessionCostFactor
+  /**
+   * Multiplier on cost per session, exact. Every row's multiplier multiplies to
+   * `totalMultiplier`; rounding for display is the caller's business.
+   */
   readonly multiplier: number
   /** Before and after in the factor's own unit. Null for the price sub-factors, which are not ratios. */
   readonly values: { readonly previous: number; readonly current: number } | null
   /** What moved, for a mix row that has no before/after value of its own. */
   readonly shareShift: SessionCostShareShift | null
-  /** How many quiet factors this row stands in for; 0 on a real factor. */
-  readonly foldedFactors: number
 }
 
 /**
@@ -139,11 +148,10 @@ export interface CostPerSessionDecomposition {
   /** `current / previous`, exact. The headline change is this figure. */
   readonly totalMultiplier: number | null
   /**
-   * What the rows' displayed multipliers multiply to, which is the total to print
-   * beneath them. A rounding step from `totalMultiplier` and never further.
+   * Every factor, always, largest move first. A factor that did not move still gets
+   * a row: the set of things the decomposition accounts for is part of what the card
+   * says, and a list that changes shape between periods hides it.
    */
-  readonly rowsMultiplyTo: number | null
-  /** Largest move first. Quiet factors are folded into one trailing row. */
   readonly rows: readonly SessionCostContribution[]
   /**
    * Session-count change, deliberately not a row: sessions are the denominator,
@@ -320,53 +328,6 @@ function allocate({
   return effects.map((effect) => (contribution * effect) / total)
 }
 
-const round = (value: number): number => {
-  const factor = 10 ** DISPLAY_DECIMALS
-  return Math.round(value * factor) / factor
-}
-
-/**
- * Rounds every multiplier to display precision and nudges the largest row toward
- * the true total, so the rows a reader multiplies land on the figure printed under
- * them. A decomposition whose rows do not reconcile reads as decoration.
- *
- * The product of the rounded rows is what that figure has to be: absorbing the
- * whole residual into one row cannot close the gap, because that row's own
- * rounding error is then multiplied by everything else on the card. So the
- * displayed total follows the rows rather than the rows chasing the total — which
- * leaves it a rounding step away from `totalMultiplier`, and the headline change
- * beside it carries the exact figure.
- */
-function reconcile({
-  rows,
-  totalMultiplier,
-}: {
-  readonly rows: readonly SessionCostContribution[]
-  readonly totalMultiplier: number
-}): { readonly rows: readonly SessionCostContribution[]; readonly rowsMultiplyTo: number } {
-  if (rows.length === 0) return { rows, rowsMultiplyTo: round(totalMultiplier) }
-  const rounded = rows.map((row) => ({ ...row, multiplier: round(row.multiplier) }))
-
-  let largest = 0
-  for (let index = 1; index < rounded.length; index++) {
-    const candidate = rounded[index]
-    const incumbent = rounded[largest]
-    if (candidate && incumbent && Math.abs(Math.log(candidate.multiplier)) > Math.abs(Math.log(incumbent.multiplier))) {
-      largest = index
-    }
-  }
-
-  const others = rounded.reduce((product, row, index) => (index === largest ? product : product * row.multiplier), 1)
-  const settled =
-    others === 0
-      ? rounded
-      : rounded.map((row, index) =>
-          index === largest ? { ...row, multiplier: round(round(totalMultiplier) / others) } : row,
-        )
-
-  return { rows: settled, rowsMultiplyTo: round(settled.reduce((product, row) => product * row.multiplier, 1)) }
-}
-
 /**
  * Where the tokens went: among the price lists that gained share, the one whose
  * gain moved the blended price most.
@@ -393,20 +354,22 @@ function destinationShareShift({
   readonly current: Positions
   readonly previousBlendedPrice: number
 }): SessionCostShareShift | null {
-  let shift: SessionCostShareShift | null = null
+  let shift: Omit<SessionCostShareShift, "alsoMoved"> | null = null
   let widestEffect = 0
+  let gainers = 0
   for (const key of new Set([...previous.models.keys(), ...current.models.keys()])) {
     const previousShare = previous.models.get(key)?.share ?? 0
     const currentShare = current.models.get(key)?.share ?? 0
     const gain = currentShare - previousShare
     if (gain <= 0) continue
+    if (gain >= SHARE_MOVE_FLOOR) gainers++
     const price = previous.models.get(key)?.averagePrice ?? previousBlendedPrice
     const effect = Math.abs(gain * (price - previousBlendedPrice))
     if (effect < widestEffect) continue
     widestEffect = effect
     shift = { label: key, previousShare, currentShare }
   }
-  return shift
+  return shift === null ? null : { ...shift, alsoMoved: Math.max(0, gainers - 1) }
 }
 
 /** Prompt is the readable half of the split: the cheap side's share of the tokens. */
@@ -422,7 +385,8 @@ function promptShareShift({
     if (tokens <= 0) return 0
     return period.cells.reduce((sum, cell) => (cell.side === "prompt" ? sum + cell.tokens : sum), 0) / tokens
   }
-  return { label: "prompt tokens", previousShare: shareOf(previous), currentShare: shareOf(current) }
+  // Only two sides exist, so there is never another mover to count.
+  return { label: "prompt tokens", previousShare: shareOf(previous), currentShare: shareOf(current), alsoMoved: 0 }
 }
 
 const emptyResult = ({
@@ -439,23 +403,9 @@ const emptyResult = ({
   currentCostPerSessionMicrocents: costPerSession(input.current),
   changePct,
   totalMultiplier: changePct === null ? null : changePct / 100 + 1,
-  rowsMultiplyTo: null,
   rows: [],
   volume: { previousSessions: input.previous.sessions, currentSessions: input.current.sessions },
 })
-
-/**
- * Folds the factors that did not move into one trailing row carrying their
- * combined multiplier, so the visible rows still multiply to the headline while
- * the card shows only what changed.
- */
-function foldQuietFactors(rows: readonly SessionCostContribution[]): readonly SessionCostContribution[] {
-  const moved = rows.filter((row) => Math.abs(row.multiplier - 1) >= SESSION_COST_QUIET_BAND)
-  const quiet = rows.filter((row) => Math.abs(row.multiplier - 1) < SESSION_COST_QUIET_BAND)
-  if (quiet.length === 0) return moved
-  const combined = quiet.reduce((product, row) => product * row.multiplier, 1)
-  return [...moved, { factor: null, multiplier: combined, values: null, shareShift: null, foldedFactors: quiet.length }]
-}
 
 export function decomposeCostPerSession(input: DecomposeCostPerSessionInput): CostPerSessionDecomposition {
   const { previous, current } = input
@@ -497,7 +447,6 @@ export function decomposeCostPerSession(input: DecomposeCostPerSessionInput): Co
       multiplier: currentFactors[factor] / previousFactors[factor],
       values: { previous: previousFactors[factor], current: currentFactors[factor] },
       shareShift: null,
-      foldedFactors: 0,
     }),
   )
   const priceRows: readonly SessionCostContribution[] = [
@@ -510,17 +459,15 @@ export function decomposeCostPerSession(input: DecomposeCostPerSessionInput): Co
         current: currentPositions,
         previousBlendedPrice: previousFactors.costPerToken,
       }),
-      foldedFactors: 0,
     },
     {
       factor: "tokenMix",
       multiplier: Math.exp(tokenMixLog),
       values: null,
       shareShift: promptShareShift({ previous, current }),
-      foldedFactors: 0,
     },
-    { factor: "promptRate", multiplier: Math.exp(promptRateLog), values: null, shareShift: null, foldedFactors: 0 },
-    { factor: "outputRate", multiplier: Math.exp(outputRateLog), values: null, shareShift: null, foldedFactors: 0 },
+    { factor: "promptRate", multiplier: Math.exp(promptRateLog), values: null, shareShift: null },
+    { factor: "outputRate", multiplier: Math.exp(outputRateLog), values: null, shareShift: null },
   ]
 
   const ordered = [...volumeRows, ...priceRows].sort(
@@ -533,7 +480,7 @@ export function decomposeCostPerSession(input: DecomposeCostPerSessionInput): Co
     currentCostPerSessionMicrocents: currentCost,
     changePct,
     totalMultiplier,
-    ...reconcile({ rows: foldQuietFactors(ordered), totalMultiplier }),
+    rows: ordered,
     volume: { previousSessions: previous.sessions, currentSessions: current.sessions },
   }
 }
