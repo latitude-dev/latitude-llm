@@ -42,8 +42,8 @@ const FACTOR_META: Record<SessionCostFactor, FactorMeta> = {
     formatValue: whole,
   },
   modelMix: {
-    label: "Model choice",
-    hint: "Which models the tokens went to, with every price list's own prices held fixed. Moving traffic to a dearer model raises the blended cost of a token without anything being repriced. The model named is where the tokens went.",
+    label: "Which models",
+    hint: "The share of tokens each model took, with every price list's own prices held fixed — moving traffic to a dearer model raises what an average token costs without anything being repriced. The model named is where the tokens went. A share can move because someone changed a model or because a busier agent happens to use a dearer one, and this row cannot tell those apart.",
   },
   tokenMix: {
     label: "Prompt vs output split",
@@ -94,20 +94,26 @@ function ContributionRow({ row }: { readonly row: SessionCostContribution }) {
     <Tooltip
       asChild
       trigger={
-        <div className="flex w-full cursor-default flex-row items-baseline gap-3">
-          <Text.H6 color={muted ? "foregroundMuted" : "foreground"} noWrap className="w-40 shrink-0">
-            {rowLabel(row)}
-          </Text.H6>
-          <Text.H6 color="foregroundMuted" ellipsis noWrap className="flex-1 tabular-nums">
-            {detail ?? ""}
-          </Text.H6>
-          <Text.H6
-            color={muted ? "foregroundMuted" : directionColor(row.multiplier)}
-            noWrap
-            className="w-14 shrink-0 text-right tabular-nums"
-          >
-            {formatMultiplier(row.multiplier)}
-          </Text.H6>
+        // The multiplier sits against its own label rather than across the card: at
+        // full width the eye had to travel the whole panel to pair the two up.
+        <div className="flex w-full cursor-default flex-col gap-0.5">
+          <div className="flex flex-row items-baseline justify-between gap-2">
+            <Text.H6 color={muted ? "foregroundMuted" : "foreground"} ellipsis noWrap>
+              {rowLabel(row)}
+            </Text.H6>
+            <Text.H6
+              color={muted ? "foregroundMuted" : directionColor(row.multiplier)}
+              noWrap
+              className="shrink-0 tabular-nums"
+            >
+              {formatMultiplier(row.multiplier)}
+            </Text.H6>
+          </div>
+          {detail ? (
+            <Text.H6 color="foregroundMuted" ellipsis noWrap className="tabular-nums">
+              {detail}
+            </Text.H6>
+          ) : null}
         </div>
       }
     >
@@ -243,18 +249,14 @@ export function CostPerSessionPanel({
     <div className="flex flex-col rounded-lg bg-secondary">
       <ChartHeader title="Cost per session" fromIso={rangeFromIso} toIso={rangeToIso} isAllTime={isAllTime} />
       {isLoading || !record || !cost ? (
-        <div className="flex flex-col gap-4 px-4 py-3">
-          <div className="flex flex-row gap-6">
-            <Skeleton className="h-24 flex-1" />
-            <Skeleton className="h-24 flex-1" />
-          </div>
-          {[0, 1, 2].map((row) => (
-            <Skeleton key={row} className="h-4 w-full" />
+        <div className="flex flex-col gap-6 px-4 py-3 lg:flex-row">
+          {[0, 1, 2].map((column) => (
+            <Skeleton key={column} className="h-24 flex-1" />
           ))}
         </div>
       ) : (
         <div className="flex flex-col gap-4 px-4 py-3">
-          <div className="flex flex-col gap-6 sm:flex-row">
+          <div className="flex flex-col gap-6 lg:flex-row">
             <HeadlineBlock
               label="Sessions"
               value={formatCount(record.volume.currentSessions)}
@@ -273,40 +275,43 @@ export function CostPerSessionPanel({
               points={record.buckets.map((bucket) =>
                 bucket.costPerSessionMicrocents === null ? null : microcentsToUsd(bucket.costPerSessionMicrocents),
               )}
-              hint="Spend divided by sessions, for this window against the equal-length window before it. The factors below are its multiplicative parts, so their multipliers multiply to this change."
+              hint="Spend divided by sessions, for this window against the equal-length window before it. The factors beside it are its multiplicative parts, so their multipliers multiply to this change."
             />
-          </div>
-
-          {record.status === "notEnoughData" ? (
-            <Text.H6 color="foregroundMuted">{notEnoughDataReason(record)}</Text.H6>
-          ) : record.status === "flat" ? (
-            <Text.H6 color="foregroundMuted">
-              Cost per session held flat against the previous period, so no factor moved it.
-            </Text.H6>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <Text.H6 color="foregroundMuted">What changed it</Text.H6>
-              <div className="flex flex-col gap-1.5">
-                {record.rows.map((row) => (
-                  <ContributionRow key={row.factor ?? "unchanged"} row={row} />
-                ))}
-                <div className="flex w-full flex-row items-baseline gap-3 border-border border-t pt-1.5">
-                  <Text.H6 color="foreground" noWrap className="w-40 shrink-0">
-                    Cost per session
-                  </Text.H6>
-                  <div className="flex-1" />
-                  {/* `rowsMultiplyTo`, not the exact total: this is the figure the rows above multiply to. */}
-                  <Text.H6
-                    color={record.rowsMultiplyTo === null ? "foregroundMuted" : directionColor(record.rowsMultiplyTo)}
-                    noWrap
-                    className="w-14 shrink-0 text-right tabular-nums"
-                  >
-                    {record.rowsMultiplyTo === null ? "" : formatMultiplier(record.rowsMultiplyTo)}
-                  </Text.H6>
-                </div>
-              </div>
+            {/* Third column, so each row's multiplier reads next to its own label. */}
+            <div className="flex min-w-0 flex-1 flex-col gap-2 lg:border-border lg:border-l lg:pl-6">
+              {record.status === "notEnoughData" ? (
+                <Text.H6 color="foregroundMuted">{notEnoughDataReason(record)}</Text.H6>
+              ) : record.status === "flat" ? (
+                <Text.H6 color="foregroundMuted">
+                  Cost per session held flat against the previous period, so no factor moved it.
+                </Text.H6>
+              ) : (
+                <>
+                  <Text.H6 color="foregroundMuted">What changed it</Text.H6>
+                  <div className="flex flex-col gap-1.5">
+                    {record.rows.map((row) => (
+                      <ContributionRow key={row.factor ?? "unchanged"} row={row} />
+                    ))}
+                    <div className="flex flex-row items-baseline justify-between gap-2 border-border border-t pt-1.5">
+                      <Text.H6 color="foreground" ellipsis noWrap>
+                        Cost per session
+                      </Text.H6>
+                      {/* `rowsMultiplyTo`, not the exact total: this is what the rows above multiply to. */}
+                      <Text.H6
+                        color={
+                          record.rowsMultiplyTo === null ? "foregroundMuted" : directionColor(record.rowsMultiplyTo)
+                        }
+                        noWrap
+                        className="shrink-0 tabular-nums"
+                      >
+                        {record.rowsMultiplyTo === null ? "" : formatMultiplier(record.rowsMultiplyTo)}
+                      </Text.H6>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-          )}
+          </div>
 
           {traceKeyed !== null && traceKeyed >= TRACE_KEYED_DISCLOSURE_SHARE ? (
             <Text.H6 color="foregroundMuted">
