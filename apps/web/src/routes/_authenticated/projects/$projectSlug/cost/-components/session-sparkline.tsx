@@ -111,18 +111,20 @@ export function SessionSparkline({
   const y = (value: number) =>
     VIEWBOX_HEIGHT - STROKE_WIDTH - (Math.max(0, value) / max) * (VIEWBOX_HEIGHT - STROKE_WIDTH * 2)
 
-  // One path per run of known values, so a gap renders as a gap.
+  // One run per stretch of known values, so a gap renders as a gap. A run of one has
+  // no line to draw and becomes a dot: dropping it renders a blank chart for a series
+  // whose known values are all isolated, such as `[1, null, 2]`.
   const runs: SparklinePoint[][] = []
   let current: SparklinePoint[] = []
   points.forEach((point, index) => {
     if (point === null) {
-      if (current.length > 1) runs.push(current)
+      if (current.length > 0) runs.push(current)
       current = []
       return
     }
     current.push({ x: x(index), y: y(point) })
   })
-  if (current.length > 1) runs.push(current)
+  if (current.length > 0) runs.push(current)
 
   const boundary =
     boundaryIndex !== undefined && boundaryIndex > 0 && boundaryIndex < points.length ? x(boundaryIndex) : null
@@ -149,6 +151,10 @@ export function SessionSparkline({
         />
       )}
       {runs.map((run) => {
+        const only = run.length === 1 ? run[0] : undefined
+        if (only) {
+          return <circle key={`${only.x},${only.y}`} cx={only.x} cy={only.y} r={STROKE_WIDTH} fill="currentColor" />
+        }
         const path = smoothPath(run)
         return (
           <path

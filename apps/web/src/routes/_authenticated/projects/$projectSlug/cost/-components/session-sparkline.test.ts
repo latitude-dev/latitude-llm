@@ -77,6 +77,12 @@ describe("smoothPath", () => {
     expect(summit[1]?.c1).toBeCloseTo(9, 6)
   })
 
+  it("keeps an isolated point rather than dropping the run it is alone in", () => {
+    // `[1, null, 2]` has two known values but no two adjacent, so every run holds one
+    // point. Discarding short runs rendered a blank chart for a series that has data.
+    expect(smoothPath(at([5]))).toBe("M0.00,5.00")
+  })
+
   it("degrades safely on a single point or none", () => {
     expect(smoothPath([])).toBe("")
     expect(smoothPath(at([3]))).toBe("M0.00,3.00")
