@@ -554,6 +554,16 @@ function CacheSummaryView({
         </Text.H6>
       </div>
       <CacheUseTile summary={summary} />
+      {/* The tiles read as three more statistics without it, and they are the actions. */}
+      <div className="mt-1 flex flex-row items-center gap-2 lg:col-span-3">
+        <Text.H6 weight="semibold" color="foreground" noWrap className="uppercase tracking-wide">
+          Recommendations
+        </Text.H6>
+        <Text.H6 color="foregroundMuted" noWrap>
+          what to change, worst first
+        </Text.H6>
+        <div className="h-px min-w-4 flex-1 bg-border" />
+      </div>
       {CACHE_FINDING_TILES.map((tileKey) => (
         <FindingTile
           key={tileKey}
