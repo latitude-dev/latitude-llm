@@ -5,122 +5,62 @@ description: Import historical project logs from Braintrust into a Latitude proj
 
 ## Overview
 
-Latitude imports **project logs** from Braintrust, queried through BTQL, and maps each span
-to a Latitude span.
+This guide shows you how to import your **Braintrust** history into Latitude. Latitude
+reads the logs in a Braintrust project and maps each span to a Latitude span.
 
-<Note>
-  New to importing? Start with the [import overview](/telemetry/imports/overview) for how
-  the flow works, what is imported, and the limits that apply to every source.
-</Note>
+<Check>
+  Importing only reads from Braintrust. Nothing is changed or deleted at the source.
+</Check>
 
 ---
 
 ## Requirements
 
 - A **Braintrust project** with the logs you want to import
-- A Braintrust **API key**
-- Your Braintrust **data plane** — US or EU
-
-<Note>
-  Find yours in Braintrust under **Settings → Data plane**. An organization lives on exactly
-  one data plane, and a key only works against that one.
-</Note> with read access to that project
+- A Braintrust **API key** (`sk-…`) with read access to that project
+- Your Braintrust **data plane** — EU or US, found under **Settings → Data plane**
 
 ---
 
 ## Steps
 
 <Steps>
+
   <Step title="Create an API key in Braintrust">
     In Braintrust, open **Settings → API keys** and create a key.
   </Step>
-  <Step title="Start the import in Latitude">
-    Go to **Project settings → Imports** and choose **Braintrust**. Enter your API key and
-    press **Test connection**.
+
+  <Step title="Connect">
+    In Latitude, go to **Project settings → Imports**, choose **Braintrust** and your data
+    plane, enter the API key, then press **Test connection**.
   </Step>
-  <Step title="Pick the Braintrust project">
-    Latitude lists the projects your key can read.
+
+  <Step title="Preview and start">
+    Pick the Braintrust project, set the time range and trace limit, check the preview,
+    then press **Start import**.
   </Step>
-  <Step title="Preview and confirm">
-    Set your range and trace limit, preview the sample, then start the import.
-  </Step>
+
 </Steps>
-
----
-
-## How Braintrust fields map
-
-| Braintrust | Latitude | Notes |
-| --- | --- | --- |
-| `root_span_id` | `trace_id` | Falls back to `span_id` for a span with no root |
-| `span_id` | `span_id` | Kept as-is when already an OTEL-shaped id |
-| `span_parents[0]` | `parent_span_id` | Braintrust allows several parents; the first is used |
-| `span_attributes.type` | `operation` | `llm` becomes a chat operation, `tool` an execute-tool one |
-| `span_attributes.name` | `name` | Falls back to the type |
-| `metadata.session_id` | `session_id` | Left empty when absent, which groups the trace by itself |
-| `metadata.user_id` | `user_id` | Direct |
-| `metadata.model` | `model` | Direct |
-| `tags` | `tags` | Direct |
-| `metadata` | `metadata` | Nested values are stringified |
-| `input` / `output` | Messages | Mapped to GenAI messages; see below |
-| `metrics` | Token counts | Cache and reasoning counts are subtracted out, so the columns stay additive |
-| `metrics.estimated_cost` | `cost` | Braintrust's own figure is kept rather than re-estimated |
-| `metrics.start` / `metrics.end` | `start_time` / `end_time` | `created` is the log write time, so it is only a fallback |
-| `error` | Status | Anything non-empty marks the span failed |
-
-Spans with no `span_id` are skipped.
 
 ---
 
 ## Braintrust specifics
 
-**Project ids must be plain identifiers.** BTQL has no parameter binding, so Latitude
-composes the project id into the query text and only accepts letters, digits, dashes and
-underscores. A project id outside that set is rejected before any request is made, rather
-than being escaped and hoped for.
-
-**Descending pagination.** Braintrust's paginated fetch only runs in descending time
-order and is followed with the continuation cursor it returns, so a capped import keeps the
-most recent traces in your range.
-
-**Exact trace count.** BTQL has no count endpoint but it does aggregate, so the preview
-counts distinct root spans in your range and reports the real number of traces rather than a
-page size.
-
-**Reasoning content may be missing.** Braintrust maps `gen_ai.output.messages` into its own
-`output` field and flattens each message to a role and a string of text, which drops any part
-it does not model — a **reasoning** or thinking block above all. When that happens the
-rationale is not stored anywhere in the Braintrust log, so an import cannot recover it, and
-the message arrives with its text but not its reasoning.
-
-Latitude reads the original attribute instead whenever Braintrust still has it. Braintrust
-keeps it if the span carries `braintrust.otel.preserve_attributes: true`, and self-hosted
-Braintrust keeps it by default unless `STRIP_OTEL_ATTRIBUTES_FROM_METADATA` is set on
-`api-ts`. Set that span attribute in your instrumentation before logging to Braintrust and
-reasoning content imports intact.
+- Session and user identity are read from `metadata.session_id` and `metadata.user_id`;
+  token usage and Braintrust's own cost estimate come through directly.
+- Images and files are fetched from Braintrust while the import runs and stored with the
+  message (up to 2 MB each), so imported conversations do not depend on your Braintrust
+  account afterwards.
 
 <Note>
-  This affects data logged to Braintrust over OpenTelemetry. Logs written with Braintrust's
-  own SDK keep whatever the provider returned, so reasoning in an Anthropic or OpenAI
-  response survives and imports normally.
+  Braintrust flattens messages logged over **OpenTelemetry** and can drop reasoning blocks
+  doing so. Set `braintrust.otel.preserve_attributes: true` in your instrumentation and
+  reasoning imports intact. Logs written with Braintrust's own SDK are unaffected.
 </Note>
 
-**Attachments are fetched and inlined.** Braintrust moves an image or a file out of the span
-on ingestion and leaves a reference to its own storage in place — and for that side of the
-span it drops the source attribute too, so the bytes exist nowhere an import can read without
-asking for them. Latitude asks: it resolves each attachment with your API key while the
-import runs and stores the bytes with the message, so an imported conversation shows its
-images without depending on your Braintrust account afterwards.
+---
 
-Two limits apply, and past either one the message keeps a reference that records the
-attachment existed but cannot be opened:
+## Seeing your traces
 
-- Attachments over **2 MB** are left alone. Braintrust reports the size up front, so an
-  oversized one is declined rather than transferred.
-- At most **50 distinct attachments per page** are fetched. Repeats cost nothing — an image
-  replayed through every turn of a conversation is fetched once.
-
-An attachment that fails to resolve never fails the import; it degrades to a reference.
-
-Latitude paces requests at **60 per minute** against Braintrust, which is conservative
-because BTQL query cost varies a lot with the shape of your logs.
+Once imported, traces appear in your project's **Traces** view like any live trace, marked
+with `import.*` metadata naming Braintrust and their original ids.

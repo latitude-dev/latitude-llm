@@ -42,6 +42,7 @@ export function ImportsPage({
             icon: Plus,
             onClick: () => setCreating(true),
           }}
+          docsHref="https://docs.latitude.so/telemetry/imports/overview"
         />
       ) : (
         <>

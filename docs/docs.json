@@ -109,15 +109,6 @@
             ]
           },
           {
-            "group": "Import",
-            "pages": [
-              "telemetry/imports/overview",
-              "telemetry/imports/langfuse",
-              "telemetry/imports/langsmith",
-              "telemetry/imports/braintrust"
-            ]
-          },
-          {
             "group": "Providers",
             "pages": [
               "telemetry/providers/openai",
@@ -171,6 +162,15 @@
               "telemetry/openclaw",
               "telemetry/pi-coding-agent",
               "telemetry/prime-intellect"
+            ]
+          },
+          {
+            "group": "Platforms",
+            "pages": [
+              "telemetry/imports/overview",
+              "telemetry/imports/langfuse",
+              "telemetry/imports/langsmith",
+              "telemetry/imports/braintrust"
             ]
           }
         ]
