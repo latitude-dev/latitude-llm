@@ -129,21 +129,19 @@ describe("getSessionCostFactors", () => {
     expect(current.models.length).toBe(2)
   })
 
-  it("puts archetype D's traffic shift on the model mix row, with no volume row moving", async () => {
+  it("puts archetype D's traffic shift entirely on the model mix row", async () => {
     const result = await decompositionFor(MIX_PROJECT_ID)
 
     expect(result.status).toBe("ok")
     expect(result.totalPoints).toBeGreaterThan(0)
-    expect(result.rows[0]?.factor).toBe("modelMix")
-    expect(pointsFor(result.rows, "modelMix")).toBeGreaterThan(0)
+    expect(pointsFor(result.rows, "modelMix")).toBe(result.totalPoints)
     expect(pointsFor(result.rows, "tokensPerStep")).toBe(0)
     expect(pointsFor(result.rows, "turnsPerSession")).toBe(0)
     expect(pointsFor(result.rows, "stepsPerTurn")).toBe(0)
-    // Rerouting also changed how many calls per cluster each model gets, so its
-    // write-to-read ratio moved too: a real within-model rate effect, opposite in
-    // sign to the mix one. The two still close on the headline.
-    expect(pointsFor(result.rows, "pricePerToken")).toBeLessThan(0)
-    expect(result.rows.reduce((sum, row) => sum + row.points, 0)).toBe(result.totalPoints)
+    // The fixture holds each model's own calls per cluster — and so its write-to-read
+    // ratio, and so its price per token — fixed across the shift, which is what leaves
+    // nothing for the within-model rate row to carry.
+    expect(pointsFor(result.rows, "pricePerToken")).toBe(0)
   })
 
   it("puts archetype D's prompt growth on the tokens per step row and not on model mix", async () => {

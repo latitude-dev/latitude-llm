@@ -312,6 +312,36 @@ describe("archetype D — spend regression", () => {
     expect(new Set(before.map(promptOf))).toEqual(new Set(after.map(promptOf)))
   })
 
+  it("leaves the router's every volume factor identical, so only the mix moved", () => {
+    const { before, after } = forAgent("router")
+    const shape = (rows: readonly SpanRow[]) => ({
+      calls: rows.length,
+      turns: new Set(rows.map((span) => span.trace_id)).size,
+      sessions: new Set(rows.map((span) => span.session_id || span.trace_id)).size,
+      tokens: rows.reduce((sum, span) => sum + promptOf(span) + span.tokens_output, 0),
+    })
+
+    expect(shape(after)).toEqual(shape(before))
+  })
+
+  it("holds each router model's own price per token exactly flat across the shift", () => {
+    // The whole point of the variant: under `prefixReuse` a model's price per token is
+    // fixed by its calls per cluster, so resizing clusters to move traffic would change
+    // each model's write-to-read ratio too and the decomposition would — correctly —
+    // report a large within-model rate effect next to the mix one. The fixture could
+    // then no longer tell "mix carried it" from "mix and rate both moved".
+    const { before, after } = forAgent("router")
+    const pricePerToken = (rows: readonly SpanRow[], model: string) => {
+      const forModel = rows.filter((span) => span.model === model)
+      const tokens = forModel.reduce((sum, span) => sum + promptOf(span) + span.tokens_output, 0)
+      return forModel.reduce((sum, span) => sum + span.cost_total_microcents, 0) / tokens
+    }
+
+    for (const model of new Set(before.map((span) => span.model))) {
+      expect(pricePerToken(after, model), model).toBe(pricePerToken(before, model))
+    }
+  })
+
   it("attributes the grader's rise to prompt growth, with model and turns held flat", () => {
     const { before, after } = forAgent("context-grader")
     expect(spendOf(after)).toBeGreaterThan(spendOf(before) * 2)
