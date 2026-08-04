@@ -72,7 +72,11 @@ const totalCandidates = [
 //   Input:  sub-categories are cache_read + cache_create
 //   Output: sub-category is reasoning tokens
 //
-// Detection uses three strategies, in priority order:
+// Detection uses four strategies, in priority order:
+//
+// 0. IMPOSSIBILITY CHECK (input only) — an inclusive count cannot
+//    be smaller than the sub-categories it supposedly contains,
+//    so rawInput < cache rules inclusive out outright.
 //
 // 1. TOTAL-BASED INFERENCE — when a rawTotal attribute exists,
 //    we check which (inputModel × outputModel) arithmetic
@@ -83,6 +87,24 @@ const totalCandidates = [
 //
 // 3. PROVIDER-LEVEL — for passthrough conventions (OpenInference,
 //    OpenLLMetry), the raw API model determines it.
+
+// ── Strategy 0: inclusive is arithmetically impossible ────
+//
+// Inclusive semantics mean rawInput contains the cache
+// sub-categories, which forces rawInput >= cache. When an
+// emitter reports less input than cache, no arithmetic makes
+// the inclusive reading valid, so subtracting would clamp real
+// uncached input to zero. Emitters that re-spell Anthropic's
+// additive `input_tokens` under a normalized key (our own
+// Claude Code telemetry among them) land here and would
+// otherwise be misread as inclusive by strategy 2.
+//
+// This assumes rawInput covers both cache_read and
+// cache_create or neither; an emitter that folds only
+// cache_read into input is not representable either way.
+function isInclusiveInputPossible(rawInput: number, cache: number): boolean {
+  return rawInput >= cache
+}
 
 // ── Strategy 1: total-based arithmetic inference ──────────
 //
@@ -219,7 +241,10 @@ export function resolveTokens(attrs: readonly OtlpKeyValue[], provider: string):
   const inferred = rawTotal ? inferFromTotal(rawInput, rawOutput, cache, reasoning, rawTotal) : null
 
   // Strategy 2+3: convention/provider fallback for anything strategy 1 couldn't determine
-  const inputInclusive = inferred?.input ?? isInputInclusiveFallback(rawInputMatch?.key, provider)
+  const inputInclusive =
+    cache > 0 && !isInclusiveInputPossible(rawInput, cache)
+      ? false
+      : (inferred?.input ?? isInputInclusiveFallback(rawInputMatch?.key, provider))
   const outputInclusive = inferred?.output ?? isOutputInclusiveFallback(provider)
 
   return {
