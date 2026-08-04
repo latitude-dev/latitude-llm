@@ -47,9 +47,15 @@ export interface CostAnalyticsRepositoryShape {
   ): Effect.Effect<ModelUsageSeries, RepositoryError, ChSqlClient>
 
   /**
-   * Cache token flow per model, the measured half of cache economics. Rates are
-   * exact — every figure is a token count — while the break-even they are judged
-   * against comes from the pricing registry, not from here.
+   * Cache token flow per model, the measured half of cache economics, plus the
+   * arrival cadence the achievable ceiling is read from. Rates are exact — every
+   * figure is a token count — while the break-even and the lifetime they are judged
+   * against come from the pricing registry, not from here.
+   *
+   * Cadence comes back as a cumulative histogram over `CACHE_CEILING_LIFETIME_SECONDS`
+   * rather than one row per lifetime: the query cannot reach the registry to learn
+   * which lifetime a row should use, and a caller that can explore several must not
+   * pay a round trip per lifetime.
    */
   getCacheEconomics(input: CostAnalyticsScope): Effect.Effect<CacheEconomics, RepositoryError, ChSqlClient>
 }
@@ -223,6 +229,35 @@ export interface CacheModelUsage extends CacheUsageMeasures {
   readonly provider: string
 }
 
+/**
+ * How much of a model's cache-eligible volume arrived close enough behind another
+ * call to have found a warm entry, measured against one candidate cache lifetime.
+ *
+ * The gap is taken between consecutive calls to the same *agent* on the same model,
+ * across that agent's whole traffic and never within a session: a cache read does not
+ * care which conversation wrote the entry, so two unrelated users hitting an agent ten
+ * seconds apart are exactly as reusable as two turns of one conversation. Measuring
+ * within-session gaps would score a high-volume single-turn workload — a classification
+ * pipeline, a RAG endpoint, a one-exchange support bot on a shared system prompt — as
+ * unfixable when it is the ideal caching case.
+ *
+ * Volume is the whole prompt per call. The 1,024-token floor below which providers
+ * decline to cache at all is not applied here: it is a property of the model's
+ * configuration rather than of its cadence, and the classifier already holds it.
+ */
+export interface CacheCadenceRow {
+  readonly provider: string
+  readonly model: string
+  readonly cacheableTokens: number
+  readonly calls: number
+  /**
+   * Cumulative warm volume keyed by lifetime in seconds: the entry for 300 contains
+   * everything already warm at 60. One entry per `CACHE_CEILING_LIFETIME_SECONDS`.
+   */
+  readonly warmTokensByLifetime: Readonly<Record<number, number>>
+  readonly warmCallsByLifetime: Readonly<Record<number, number>>
+}
+
 export interface CacheEconomics {
   /**
    * One row per provider/model pair, highest spend first, capped at
@@ -231,6 +266,11 @@ export interface CacheEconomics {
    * is two different price lists.
    */
   readonly rows: readonly CacheModelUsage[]
+  /**
+   * One row per provider/model pair. Not capped alongside `rows`: a pair present here
+   * but not there simply has no ceiling to show.
+   */
+  readonly cadence: readonly CacheCadenceRow[]
   readonly totals: CacheUsageMeasures & { readonly distinctModels: number }
 }
 

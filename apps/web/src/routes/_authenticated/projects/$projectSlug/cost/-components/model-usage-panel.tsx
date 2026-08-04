@@ -136,7 +136,7 @@ export function ModelUsagePanel({
   }))
 
   return (
-    <div className="flex flex-1 flex-col rounded-lg bg-secondary">
+    <div className="flex flex-1 flex-col rounded-lg border border-border bg-background">
       <ChartHeader
         title="Model usage over time"
         fromIso={rangeFromIso}
@@ -163,11 +163,11 @@ export function ModelUsagePanel({
         }
       />
       {isLoading ? (
-        <div className="px-4 py-3">
+        <div className="p-3">
           <HistogramSkeleton height={CHART_HEIGHT} />
         </div>
       ) : isEmpty ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
+        <div className="flex w-full min-h-[120px] items-center justify-center p-3">
           <Text.H6 color="foregroundMuted">
             {measure === "cost"
               ? "No spend recorded in this time window"
@@ -175,7 +175,7 @@ export function ModelUsagePanel({
           </Text.H6>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 px-4 py-3">
+        <div className="flex flex-col gap-2 p-3">
           <UsageLegend
             series={usageSeries}
             isolated={isolatedSeries.length > 0 ? isolated : null}

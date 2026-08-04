@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  CACHE_CEILING_MIN_MATERIAL_GAP,
   CACHE_ECONOMICS_MIN_CALLS,
   CACHE_MIN_CACHEABLE_INPUT_TOKENS,
   type CacheClassificationInput,
@@ -51,6 +52,7 @@ const classify = (overrides: Partial<CacheClassificationInput>) =>
   classifyCacheState({
     cachingOn: true,
     actualRate: 0.5,
+    cachingCostsMore: false,
     ceilingRate: null,
     breakEvenRate: 0.2174,
     calls: 100,
@@ -73,23 +75,35 @@ describe("classifyCacheState", () => {
   })
 
   describe("caching on", () => {
-    it("is optimal once the rate clears break-even", () => {
+    it("is optimal once caching is paying and there is no headroom to chase", () => {
       expect(classify({ actualRate: 0.2174 })).toEqual({ state: "optimal", urgency: null })
     })
 
-    it("flags a rate below break-even without prescribing a fix", () => {
-      expect(classify({ actualRate: 0.05 })).toEqual({ state: "investigate", urgency: "overpaying" })
+    it("flags caching that is costing money without prescribing a fix", () => {
+      expect(classify({ actualRate: 0.05, cachingCostsMore: true })).toEqual({
+        state: "investigate",
+        urgency: "overpaying",
+      })
+    })
+
+    it("reads whether caching is paying from the measured split, not the rate", () => {
+      // The claude-opus-4-6 shape: 10% read, 30% written, 60% plain uncached input. Well
+      // under the 21.7% break-even, and cheaper than not caching, because break-even
+      // assumes every miss is written and partial prefix caching does not.
+      expect(classify({ actualRate: 0.1, cachingCostsMore: false }).urgency).toBeNull()
+      // Same rate, a write share that really is not paying for itself.
+      expect(classify({ actualRate: 0.1, cachingCostsMore: true }).urgency).toBe("overpaying")
     })
 
     it("says stop caching only once the ceiling proves break-even is unreachable", () => {
-      expect(classify({ actualRate: 0.05, ceilingRate: 0.1 })).toEqual({
+      expect(classify({ actualRate: 0.05, cachingCostsMore: true, ceilingRate: 0.1 })).toEqual({
         state: "stopCaching",
         urgency: "overpaying",
       })
     })
 
-    it("stays investigate when the ceiling clears break-even but the rate does not", () => {
-      expect(classify({ actualRate: 0.05, ceilingRate: 0.8 })).toEqual({
+    it("stays investigate when the ceiling clears break-even but caching is losing money", () => {
+      expect(classify({ actualRate: 0.05, cachingCostsMore: true, ceilingRate: 0.8 })).toEqual({
         state: "investigate",
         urgency: "overpaying",
       })
@@ -106,8 +120,35 @@ describe("classifyCacheState", () => {
       expect(classify({ actualRate: 0.9, ceilingRate: 0.9 })).toEqual({ state: "optimal", urgency: null })
     })
 
+    it("absorbs the few points of fresh suffix a well-run agent always carries", () => {
+      // The healthy seed archetype's three agents, whose gaps are the calibration
+      // this band exists for. Flagging any of them would make `optimal` unreachable.
+      expect(classify({ actualRate: 0.8708, ceilingRate: 0.9167 }).state).toBe("optimal")
+      expect(classify({ actualRate: 0.828, ceilingRate: 0.9 }).state).toBe("optimal")
+      expect(classify({ actualRate: 0.8138, ceilingRate: 0.875 }).state).toBe("optimal")
+    })
+
+    it("flags a gap past the band and stays quiet just inside it", () => {
+      const ceilingRate = 0.9
+      expect(classify({ actualRate: 0.79, ceilingRate }).state).toBe("investigate")
+      expect(classify({ actualRate: 0.81, ceilingRate }).state).toBe("optimal")
+      expect(CACHE_CEILING_MIN_MATERIAL_GAP).toBeGreaterThan(0.9 - 0.81)
+      expect(CACHE_CEILING_MIN_MATERIAL_GAP).toBeLessThan(0.9 - 0.79)
+    })
+
     it("is optimal on a zero break-even model at any rate above zero", () => {
       expect(classify({ actualRate: 0.03, breakEvenRate: 0 })).toEqual({ state: "optimal", urgency: null })
+    })
+
+    it("keeps break-even as the reference for the unreachable test, which has no split to read", () => {
+      // A hit rate this traffic has never had has no measured split, so the steady-state
+      // break-even is the only thing that can answer "would the ceiling even pay?".
+      expect(
+        classify({ actualRate: 0.05, cachingCostsMore: true, ceilingRate: 0.1, breakEvenRate: 0.2174 }).state,
+      ).toBe("stopCaching")
+      expect(
+        classify({ actualRate: 0.05, cachingCostsMore: true, ceilingRate: 0.3, breakEvenRate: 0.2174 }).state,
+      ).toBe("investigate")
     })
   })
 
@@ -116,6 +157,19 @@ describe("classifyCacheState", () => {
 
     it("recommends caching when the ceiling clears break-even", () => {
       expect(classify({ ...off, ceilingRate: 0.6 })).toEqual({ state: "cacheIt", urgency: null })
+    })
+
+    it("stays quiet when the cadence leaves nothing worth caching, whatever break-even says", () => {
+      // Isolated calls reach 0%, which technically "clears" a 0% break-even. Turning
+      // caching on would buy nothing, so recommending it would be noise.
+      expect(classify({ ...off, breakEvenRate: 0, ceilingRate: 0 })).toEqual({
+        state: "correctlyOff",
+        urgency: null,
+      })
+      expect(classify({ ...off, breakEvenRate: 0, ceilingRate: CACHE_CEILING_MIN_MATERIAL_GAP })).toEqual({
+        state: "cacheIt",
+        urgency: null,
+      })
     })
 
     it("stays quiet when the ceiling cannot clear break-even", () => {

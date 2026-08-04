@@ -93,7 +93,7 @@ export function CostOverTimePanel({
   const isEmpty = buckets.length === 0 || buckets.every((bucket) => bucket.valueMicrocents === 0)
 
   return (
-    <div className="flex flex-col rounded-lg bg-secondary">
+    <div className="flex flex-col rounded-lg border border-border bg-background">
       <ChartHeader
         title="Cost over time"
         fromIso={rangeFromIso}
@@ -120,15 +120,15 @@ export function CostOverTimePanel({
         }
       />
       {isLoading ? (
-        <div className="px-4 py-3">
+        <div className="p-3">
           <HistogramSkeleton height={CHART_HEIGHT} />
         </div>
       ) : isEmpty ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
+        <div className="flex w-full min-h-[120px] items-center justify-center p-3">
           <Text.H6 color="foregroundMuted">No spend recorded in this time window</Text.H6>
         </div>
       ) : (
-        <div className="flex flex-col gap-1 px-4 py-3">
+        <div className="flex flex-col gap-1 p-3">
           <Chart
             categories={categories}
             series={series}

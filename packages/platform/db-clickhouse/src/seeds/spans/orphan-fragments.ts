@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import { isSentinelPresent } from "../idempotency.ts"
 import type { Seeder, TraceSlot } from "../types.ts"
-import type { SpanRow } from "./span-builders.ts"
+import { type SpanRow, seedLlmCostMicrocents } from "./span-builders.ts"
 
 function formatClickHouseTimestamp(date: Date): string {
   return date.toISOString().replace("T", " ").replace("Z", "000")
@@ -132,8 +132,12 @@ function buildOrphanFragmentTraceSpans({ scope, spec }: BuildSpansArgs): SpanRow
 
   const inputTokens = estimateTokens(spec.userPrompt + spec.systemInstruction)
   const outputTokens = estimateTokens(spec.assistantResponse)
-  const costInputMicrocents = inputTokens * 25
-  const costOutputMicrocents = outputTokens * 100
+  const cost = seedLlmCostMicrocents({
+    provider: spec.provider,
+    model: spec.model,
+    inputTokens,
+    outputTokens,
+  })
 
   const httpWrapper: SpanRow = {
     organization_id: scope.organizationId,
@@ -239,9 +243,9 @@ function buildOrphanFragmentTraceSpans({ scope, spec }: BuildSpansArgs): SpanRow
     tokens_cache_read: 0,
     tokens_cache_create: 0,
     tokens_reasoning: 0,
-    cost_input_microcents: costInputMicrocents,
-    cost_output_microcents: costOutputMicrocents,
-    cost_total_microcents: costInputMicrocents + costOutputMicrocents,
+    cost_input_microcents: cost.input,
+    cost_output_microcents: cost.output,
+    cost_total_microcents: cost.input + cost.output,
     cost_is_estimated: 0,
     cost_source: "provider_reported",
     time_to_first_token_ns: 250_000_000,

@@ -172,7 +172,7 @@ export function ModelImpactPanel({
   const hasSpend = (breakdown?.totals.totalMicrocents ?? 0) > 0
 
   return (
-    <div className="flex flex-1 flex-col rounded-lg bg-secondary">
+    <div className="flex flex-1 flex-col rounded-lg border border-border bg-background">
       <ChartHeader
         title="Spend against usage"
         fromIso={rangeFromIso}
@@ -201,17 +201,17 @@ export function ModelImpactPanel({
         }
       />
       {isLoading || !breakdown ? (
-        <div className="flex flex-col gap-3 px-4 py-3">
+        <div className="flex flex-col gap-3">
           {[0, 1, 2].map((row) => (
             <Skeleton key={row} className="h-8 w-full" />
           ))}
         </div>
       ) : !hasSpend || rows.length === 0 ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
+        <div className="flex w-full min-h-[120px] items-center justify-center p-3">
           <Text.H6 color="foregroundMuted">No spend recorded in this time window</Text.H6>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 px-4 py-3">
+        <div className="flex flex-col gap-2 p-3">
           <div className="flex flex-col gap-2.5">
             {rows.map((row) => (
               <div key={row.key} className="flex flex-row items-center gap-3">
