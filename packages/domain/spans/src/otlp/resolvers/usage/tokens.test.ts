@@ -414,6 +414,79 @@ describe("resolveTokens", () => {
   })
 
   // ═══════════════════════════════════════════════════════
+  // STRATEGY 0: INCLUSIVE ARITHMETICALLY IMPOSSIBLE
+  //
+  // rawInput < cache cannot be an inclusive count, so the
+  // convention-level "always inclusive" keys must not clamp
+  // real uncached input to zero.
+  // ═══════════════════════════════════════════════════════
+
+  describe("strategy 0: inclusive impossible when rawInput < cache", () => {
+    it("keeps uncached input for an emitter that re-spells additive input under the normalized key", () => {
+      // Shape observed in production from @latitude-data/claude-code-telemetry:
+      // the additive (uncached-only) count emitted under both the native and
+      // the OTEL-normalized key, with no total to arbitrate.
+      const attrs = [
+        int("gen_ai.usage.input_tokens", 2),
+        int("input_tokens", 2),
+        int("gen_ai.usage.output_tokens", 3_202),
+        int("gen_ai.usage.cache_read.input_tokens", 127_967),
+        int("cache_creation_tokens", 1_050),
+      ]
+      const r = resolveTokens(attrs, "anthropic")
+      expect(r.input).toBe(2)
+      expect(r.cacheRead).toBe(127_967)
+      expect(r.cacheCreate).toBe(1_050)
+      expect(r.input + r.cacheRead + r.cacheCreate).toBe(129_019)
+    })
+
+    it("applies regardless of provider", () => {
+      const attrs = [
+        int("gen_ai.usage.input_tokens", 500),
+        int("gen_ai.usage.output_tokens", 200),
+        int("gen_ai.usage.cache_read.input_tokens", 8_000),
+        int("gen_ai.usage.cache_creation.input_tokens", 1_500),
+      ]
+      for (const provider of ["openai", "anthropic", "aws.bedrock", "google"]) {
+        expect(resolveTokens(attrs, provider).input).toBe(500)
+      }
+    })
+
+    it("does not fire when rawInput exactly equals cache", () => {
+      const attrs = [
+        int("gen_ai.usage.input_tokens", 9_500),
+        int("gen_ai.usage.output_tokens", 200),
+        int("gen_ai.usage.cache_read.input_tokens", 8_000),
+        int("gen_ai.usage.cache_creation.input_tokens", 1_500),
+      ]
+      expect(resolveTokens(attrs, "openai").input).toBe(0)
+    })
+
+    it("leaves the inclusive reading intact when rawInput exceeds cache", () => {
+      const attrs = [
+        int("gen_ai.usage.input_tokens", 10_000),
+        int("gen_ai.usage.output_tokens", 200),
+        int("gen_ai.usage.cache_read.input_tokens", 8_000),
+        int("gen_ai.usage.cache_creation.input_tokens", 1_500),
+      ]
+      expect(resolveTokens(attrs, "anthropic").input).toBe(EXPECTED.input)
+    })
+
+    it("does not touch the output side", () => {
+      const attrs = [
+        int("gen_ai.usage.input_tokens", 2),
+        int("gen_ai.usage.cache_read.input_tokens", 8_000),
+        int("gen_ai.usage.output_tokens", 200),
+        int("gen_ai.usage.reasoning_tokens", 60),
+      ]
+      const r = resolveTokens(attrs, "openai")
+      expect(r.input).toBe(2)
+      expect(r.output).toBe(EXPECTED.output)
+      expect(r.reasoning).toBe(EXPECTED.reasoning)
+    })
+  })
+
+  // ═══════════════════════════════════════════════════════
   // CANDIDATE PRECEDENCE
   // ═══════════════════════════════════════════════════════
 
@@ -534,9 +607,9 @@ describe("resolveTokens", () => {
       expect(r.reasoning).toBe(0)
     })
 
-    it("clamps input at zero when cache exceeds raw (buggy instrumentation)", () => {
+    it("reads input as additive rather than clamping when cache exceeds raw", () => {
       const attrs = [int("gen_ai.usage.input_tokens", 50), int("gen_ai.usage.cache_read.input_tokens", 1_000)]
-      expect(resolveTokens(attrs, "openai").input).toBe(0)
+      expect(resolveTokens(attrs, "openai").input).toBe(50)
     })
 
     it("clamps output at zero when reasoning exceeds raw (buggy instrumentation)", () => {
