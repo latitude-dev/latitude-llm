@@ -35,7 +35,8 @@ const SERVICE_TIER_ATTR = "latitude.usage.service_tier"
 /** Where inference ran (Anthropic `usage.inference_geo`). */
 const INFERENCE_GEO_ATTR = "latitude.usage.inference_geo"
 
-const CACHE_CREATION_TTL_ATTR_RE = new RegExp(`^${CACHE_CREATION_TTL_ATTR_PREFIX.replace(/\./g, "\\.")}(\\d+)$`)
+/** Spelled out rather than built from the prefix; `cacheCreationTtlAttrKey` is what pins the two together. */
+const CACHE_CREATION_TTL_ATTR_RE = /^latitude\.usage\.cache_creation\.ttl\.(\d+)$/
 
 const serviceTierCandidates = [
   fromString(SERVICE_TIER_ATTR),
