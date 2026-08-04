@@ -2,6 +2,25 @@
 // This prevents server-only code from being bundled into the client
 
 export type {
+  InferenceGeo,
+  ModifiedCostEstimate,
+  ModifiedCostTokens,
+  ServiceTier,
+  UsageModifiers,
+} from "./cost-multipliers.ts"
+export {
+  cacheWriteTtlMultiplier,
+  cacheWriteTtlSource,
+  estimateModifiedCost,
+  INFERENCE_GEOS,
+  inferenceGeoMultiplier,
+  parseInferenceGeo,
+  parseServiceTier,
+  purchasablePromptCacheTtlSeconds,
+  SERVICE_TIERS,
+  serviceTierMultiplier,
+} from "./cost-multipliers.ts"
+export type {
   CostBreakdown,
   CostLookupResult,
   ModelCostSpec,

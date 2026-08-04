@@ -170,6 +170,25 @@ export const spanSchema = z.object({
   tokensCacheRead: z.number(),
   tokensCacheCreate: z.number(),
   tokensReasoning: z.number(),
+  /**
+   * Cache-write tokens split by the lifetime they were bought at, keyed by seconds — a *subset* of
+   * `tokensCacheCreate`, never a sibling. The summed scalar stays the authoritative total because
+   * `tokens_total` is materialized from it; a column that also summed into the total would
+   * double-count.
+   *
+   * Keyed by duration rather than by tier name so a provider with 24-hour retention or an
+   * arbitrary TTL needs no schema change. Empty when the exporter reports no split, which is every
+   * span stored before this existed.
+   */
+  tokensCacheCreateByTtlSeconds: z.record(z.coerce.number(), z.number()).readonly(),
+  /**
+   * Normalized service tier the request was served at (`fast`, `priority`, `batch`, …), or empty
+   * when unreported. Normalized across providers, so Anthropic's `usage.speed` and OpenAI's
+   * `service_tier` share the field; the raw provider value stays in the attribute maps.
+   */
+  serviceTier: z.string(),
+  /** Region inference ran in (`us` | `global`), or empty when unreported. */
+  inferenceGeo: z.string(),
   costInputMicrocents: z.number(),
   costOutputMicrocents: z.number(),
   costTotalMicrocents: z.number(),

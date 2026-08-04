@@ -156,6 +156,70 @@ describe("SpanRepository", () => {
       expect(chatSpan?.toolName).toBe("")
       expect(chatSpan?.toolNames).toEqual(["defined_only_tool"])
     })
+
+    it("round-trips the cache-write TTL split without disturbing tokens_total", async () => {
+      const traceId = TraceId("dddddddddddddddddddddddddddddddd")
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: traceId,
+            span_id: "d1d1d1d1d1d1d1d1",
+            tokens_input: 10,
+            tokens_output: 20,
+            tokens_cache_read: 30,
+            tokens_cache_create: 248,
+            tokens_reasoning: 40,
+            tokens_cache_create_by_ttl: { 300: 148, 3600: 100 },
+            service_tier: "fast",
+            inference_geo: "us",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId,
+          startTimeFrom: new Date("2026-01-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-01-01T00:00:01.000Z"),
+        }),
+      )
+
+      expect(spans[0]?.tokensCacheCreate).toBe(248)
+      expect(spans[0]?.tokensCacheCreateByTtlSeconds).toEqual({ 300: 148, 3600: 100 })
+      expect(spans[0]?.serviceTier).toBe("fast")
+      expect(spans[0]?.inferenceGeo).toBe("us")
+
+      // The split is a subset of tokens_cache_create, so the materialized total must not see it.
+      const total = await ch.client.query({
+        query: `SELECT tokens_total FROM spans WHERE span_id = 'd1d1d1d1d1d1d1d1' FORMAT JSONEachRow`,
+      })
+      expect(await total.json<{ tokens_total: number }>()).toEqual([{ tokens_total: 348 }])
+    })
+
+    it("reads the modifier columns as empty on a row that never set them", async () => {
+      const traceId = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ trace_id: traceId, span_id: "e1e1e1e1e1e1e1e1", tokens_cache_create: 100 }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId,
+          startTimeFrom: new Date("2026-01-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-01-01T00:00:01.000Z"),
+        }),
+      )
+
+      expect(spans[0]?.tokensCacheCreateByTtlSeconds).toEqual({})
+      expect(spans[0]?.serviceTier).toBe("")
+      expect(spans[0]?.inferenceGeo).toBe("")
+    })
   })
 
   describe("listByTraceIds", () => {

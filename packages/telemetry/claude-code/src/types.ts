@@ -44,11 +44,27 @@ export type ContentBlock =
   | ThinkingBlock
   | { type: string; [key: string]: unknown }
 
+/**
+ * Cache writes split by the lifetime they were bought at. These sum to
+ * `cache_creation_input_tokens`, and a single request may carry both — 1h breakpoints must precede
+ * 5m ones — so the split is the only shape that can price a mixed request. A 1h write bills at 2x
+ * base input against 1.25x for 5m, which the summed scalar cannot express.
+ */
+export interface CacheCreation {
+  ephemeral_5m_input_tokens?: number
+  ephemeral_1h_input_tokens?: number
+}
+
 export interface Usage {
   input_tokens?: number
   output_tokens?: number
   cache_read_input_tokens?: number
   cache_creation_input_tokens?: number
+  cache_creation?: CacheCreation
+  /** Which speed tier served the request (`fast` | `standard`). Fast mode bills at 2x both sides. */
+  speed?: string
+  /** Where inference ran (`us` | `global`). `us` is 1.1x on every token category. */
+  inference_geo?: string
 }
 
 export interface InnerMessage {

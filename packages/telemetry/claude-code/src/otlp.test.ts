@@ -150,6 +150,74 @@ describe("buildOtlpRequest", () => {
     expect(getAttr(llm.attributes, "cache_creation_tokens")).toBe("20")
   })
 
+  it("emits the cache-write TTL split keyed by seconds, alongside the unchanged scalar total", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          tokens: {
+            input_tokens: 100,
+            cache_creation_input_tokens: 248,
+            cache_creation: { ephemeral_5m_input_tokens: 148, ephemeral_1h_input_tokens: 100 },
+          },
+        }),
+      ],
+    })
+
+    const llm = unwrap(otlpSpans(req)[1])
+
+    expect(getAttr(llm.attributes, "cache_creation_tokens")).toBe("248")
+    expect(getAttr(llm.attributes, "latitude.usage.cache_creation.ttl.300")).toBe("148")
+    expect(getAttr(llm.attributes, "latitude.usage.cache_creation.ttl.3600")).toBe("100")
+  })
+
+  it("omits a TTL bucket the request did not use", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          tokens: {
+            cache_creation_input_tokens: 148,
+            cache_creation: { ephemeral_5m_input_tokens: 148, ephemeral_1h_input_tokens: 0 },
+          },
+        }),
+      ],
+    })
+
+    const llm = unwrap(otlpSpans(req)[1])
+
+    expect(getAttr(llm.attributes, "latitude.usage.cache_creation.ttl.300")).toBe("148")
+    expect(getAttr(llm.attributes, "latitude.usage.cache_creation.ttl.3600")).toBeUndefined()
+  })
+
+  it("emits speed as a normalized service tier, and the inference region", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [baseTurn({ tokens: { input_tokens: 100, speed: "fast", inference_geo: "us" } })],
+    })
+
+    const llm = unwrap(otlpSpans(req)[1])
+
+    expect(getAttr(llm.attributes, "latitude.usage.service_tier")).toBe("fast")
+    expect(getAttr(llm.attributes, "latitude.usage.inference_geo")).toBe("us")
+  })
+
+  it("emits no modifier attributes when the provider reported none", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [baseTurn()],
+    })
+
+    const llm = unwrap(otlpSpans(req)[1])
+    const keys = llm.attributes.map((a) => a.key)
+
+    expect(keys.filter((k) => k.startsWith("latitude.usage."))).toEqual([])
+  })
+
   it("emits tool_execution spans parented to the llm_request span", () => {
     const req = buildOtlpRequest({
       sessionId: "sess-1",

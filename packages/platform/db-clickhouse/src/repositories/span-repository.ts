@@ -74,10 +74,11 @@ const LIST_COLUMNS_LEAN = `
   operation, provider, model, agent_name, response_model,
   tool_name, tool_names, tool_call_id,
   tokens_input, tokens_output, tokens_cache_read,
-  tokens_cache_create, tokens_reasoning,
+  tokens_cache_create, tokens_reasoning, tokens_cache_create_by_ttl,
   cost_input_microcents, cost_output_microcents,
   cost_total_microcents, cost_is_estimated, cost_source,
   cost_priced_provider, cost_priced_model,
+  service_tier, inference_geo,
   time_to_first_token_ns, is_streaming,
   response_id, finish_reasons,
   scope_name, scope_version,
@@ -162,6 +163,9 @@ type SpanListRow = {
   tokens_cache_read: number
   tokens_cache_create: number
   tokens_reasoning: number
+  tokens_cache_create_by_ttl: Record<string, number>
+  service_tier: string
+  inference_geo: string
   cost_input_microcents: string
   cost_output_microcents: string
   cost_total_microcents: string
@@ -250,6 +254,10 @@ const toBaseFields = (row: SpanListRow) => ({
   tokensCacheRead: row.tokens_cache_read,
   tokensCacheCreate: row.tokens_cache_create,
   tokensReasoning: row.tokens_reasoning,
+  // ClickHouse returns Map keys as strings in JSON; the schema coerces them back to seconds.
+  tokensCacheCreateByTtlSeconds: row.tokens_cache_create_by_ttl ?? {},
+  serviceTier: normalizeCHString(row.service_tier),
+  inferenceGeo: normalizeCHString(row.inference_geo),
   costInputMicrocents: Number(row.cost_input_microcents),
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
@@ -394,6 +402,9 @@ const toInsertRow = (span: SpanDetail) => ({
   tokens_cache_read: span.tokensCacheRead,
   tokens_cache_create: span.tokensCacheCreate,
   tokens_reasoning: span.tokensReasoning,
+  tokens_cache_create_by_ttl: span.tokensCacheCreateByTtlSeconds,
+  service_tier: span.serviceTier,
+  inference_geo: span.inferenceGeo,
   cost_input_microcents: span.costInputMicrocents,
   cost_output_microcents: span.costOutputMicrocents,
   cost_total_microcents: span.costTotalMicrocents,

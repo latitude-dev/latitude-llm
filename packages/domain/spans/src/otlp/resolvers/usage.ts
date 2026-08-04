@@ -1,7 +1,14 @@
-import { computeTokenCost, getCostSpec } from "@domain/models"
+import {
+  estimateModifiedCost,
+  getCostSpec,
+  parseInferenceGeo,
+  parseServiceTier,
+  type UsageModifiers,
+} from "@domain/models"
 import type { CostSource } from "../../entities/span.ts"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
+import { type ResolvedUsageModifiers, resolveUsageModifiers } from "./usage/modifiers.ts"
 import { resolveTokens } from "./usage/tokens.ts"
 import { first, fromFloat } from "./utils.ts"
 
@@ -58,6 +65,7 @@ function estimateCostFromTokens({
   tokensCacheRead,
   tokensCacheCreate,
   tokensReasoning,
+  modifiers,
 }: {
   provider: string
   model: string
@@ -66,6 +74,7 @@ function estimateCostFromTokens({
   tokensCacheRead: number
   tokensCacheCreate: number
   tokensReasoning: number
+  modifiers?: UsageModifiers | undefined
 }): CostEstimation {
   if (tokensInput + tokensOutput + tokensCacheRead + tokensCacheCreate + tokensReasoning === 0) {
     return { kind: "noTokens" }
@@ -74,13 +83,22 @@ function estimateCostFromTokens({
   const { cost, costImplemented, pricedProvider, pricedModel } = getCostSpec(provider, model)
   if (!costImplemented) return { kind: "unpriced" }
 
-  const inputUsd =
-    computeTokenCost(cost, tokensInput, "input") +
-    computeTokenCost(cost, tokensCacheRead, "cacheRead") +
-    computeTokenCost(cost, tokensCacheCreate, "cacheWrite")
-
-  const outputUsd =
-    computeTokenCost(cost, tokensOutput, "output") + computeTokenCost(cost, tokensReasoning, "reasoning")
+  // Priced through the modifier chain: every factor is 1.0 when its modifier is absent, so a span
+  // carrying none of them prices exactly as it did before the chain existed. Keyed on the catalog
+  // pair rather than the reported one, so a multiplier always matches the rate it scales.
+  const { inputUsd, outputUsd } = estimateModifiedCost({
+    cost,
+    provider: pricedProvider,
+    model: pricedModel,
+    tokens: {
+      input: tokensInput,
+      output: tokensOutput,
+      cacheRead: tokensCacheRead,
+      cacheWrite: tokensCacheCreate,
+      reasoning: tokensReasoning,
+    },
+    modifiers,
+  })
 
   return {
     kind: "estimated",
@@ -107,6 +125,16 @@ export interface ResolvedUsage {
   readonly tokensCacheCreate: number
   /** Reasoning/thinking tokens (subset of total output) */
   readonly tokensReasoning: number
+  /**
+   * Cache-write tokens split by the lifetime they were bought at, keyed by seconds. A *subset* of
+   * `tokensCacheCreate`, never a sibling of it: the summed scalar stays the authoritative total,
+   * because `tokens_total` is materialized from it and every existing query reads it.
+   */
+  readonly tokensCacheCreateByTtlSeconds: Readonly<Record<number, number>>
+  /** Normalized service tier the request was served at; empty when unreported. */
+  readonly serviceTier: string
+  /** Region inference ran in; empty when unreported. */
+  readonly inferenceGeo: string
   readonly costInputMicrocents: number
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
@@ -169,10 +197,35 @@ function extractEmbeddedUsage(outputMessagesJson: string): OpenclawUsage | undef
   }
 }
 
+type StoredModifiers = Pick<ResolvedUsage, "tokensCacheCreateByTtlSeconds" | "serviceTier" | "inferenceGeo">
+
+/**
+ * The modifier fields as they are stored on the span, normalized rather than raw: the column is a
+ * cross-provider tier, and an unrecognized spelling is dropped instead of stored as noise. The raw
+ * value survives in the attribute maps either way, so nothing is lost.
+ */
+function storedModifiers(modifiers: ResolvedUsageModifiers): StoredModifiers {
+  return {
+    tokensCacheCreateByTtlSeconds: modifiers.cacheCreateTokensByTtlSeconds,
+    serviceTier: parseServiceTier(modifiers.serviceTier) ?? "",
+    inferenceGeo: parseInferenceGeo(modifiers.inferenceGeo) ?? "",
+  }
+}
+
+/** Cost prices from what is stored, so the number and the column it is explained by cannot drift. */
+function pricingModifiers(stored: StoredModifiers): UsageModifiers {
+  return {
+    serviceTier: stored.serviceTier,
+    inferenceGeo: stored.inferenceGeo,
+    cacheCreateTokensByTtlSeconds: stored.tokensCacheCreateByTtlSeconds,
+  }
+}
+
 function resolveEmbeddedMessageUsage(
   attrs: readonly OtlpKeyValue[],
   provider: string,
   model: string,
+  stored: StoredModifiers,
 ): ResolvedUsage | null {
   const raw = stringAttr(attrs, "openclaw.content.output_messages")
   if (!raw) return null
@@ -194,6 +247,7 @@ function resolveEmbeddedMessageUsage(
     // input + output == total, keeping the provider's authoritative total.
     return {
       ...tokens,
+      ...stored,
       costInputMicrocents: usdToMicrocents(
         nonNegative(cost.input) + nonNegative(cost.cacheRead) + nonNegative(cost.cacheWrite),
       ),
@@ -207,11 +261,12 @@ function resolveEmbeddedMessageUsage(
   }
 
   // No embedded cost — estimate from the tokens, same as flat-attr spans.
-  const estimation = estimateCostFromTokens({ provider, model, ...tokens })
+  const estimation = estimateCostFromTokens({ provider, model, ...tokens, modifiers: pricingModifiers(stored) })
   const costInputMicrocents = estimation.kind === "estimated" ? estimation.input : 0
   const costOutputMicrocents = estimation.kind === "estimated" ? estimation.output : 0
   return {
     ...tokens,
+    ...stored,
     costInputMicrocents,
     costOutputMicrocents,
     costTotalMicrocents: costInputMicrocents + costOutputMicrocents,
@@ -229,9 +284,11 @@ interface ResolveUsageInput {
 }
 
 export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): ResolvedUsage {
+  const stored = storedModifiers(resolveUsageModifiers(attrs))
+
   // Some instrumentations carry usage in the message payload rather than as flat
   // gen_ai.usage.* attrs (OpenClaw) — prefer that when present.
-  const embedded = resolveEmbeddedMessageUsage(attrs, provider, model)
+  const embedded = resolveEmbeddedMessageUsage(attrs, provider, model, stored)
   if (embedded) return embedded
 
   const {
@@ -261,6 +318,7 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
         tokensCacheRead,
         tokensCacheCreate,
         tokensReasoning,
+        modifiers: pricingModifiers(stored),
       })
 
   const estimated = costEstimation?.kind === "estimated" ? costEstimation : undefined
@@ -280,6 +338,7 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
     tokensCacheRead,
     tokensCacheCreate,
     tokensReasoning,
+    ...stored,
     costInputMicrocents: costInput,
     costOutputMicrocents: costOutput,
     costTotalMicrocents: costTotal,

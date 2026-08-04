@@ -6,6 +6,7 @@ import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRe
 import type {
   AgentSpanLink,
   AssistantCall,
+  CacheCreation,
   MemoryEmitOptions,
   MemoryOp,
   OtlpExportRequest,
@@ -16,6 +17,7 @@ import type {
   ToolCall,
   TraceContext,
   Turn,
+  Usage,
 } from "./types.ts"
 
 const SCOPE_NAME = "@latitude-data/claude-code-telemetry"
@@ -279,6 +281,8 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
       call.tokens.cache_creation_input_tokens !== undefined
         ? int("cache_creation_tokens", call.tokens.cache_creation_input_tokens)
         : undefined,
+      ...cacheCreationTtlAttrs(call.tokens.cache_creation),
+      ...usageModifierAttrs(call.tokens),
       str("success", "true"),
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
       isSubagent && subagentName ? str("subagent.name", subagentName) : undefined,
@@ -911,6 +915,40 @@ function bool(key: string, value: boolean): OtlpKeyValue {
 
 function stripUndef(items: Array<OtlpKeyValue | undefined>): OtlpKeyValue[] {
   return items.filter((x): x is OtlpKeyValue => x !== undefined)
+}
+
+/**
+ * The cache-write split, one flat int per lifetime keyed by its duration in seconds.
+ *
+ * Flat rather than nested so the values land in ClickHouse's `attr_int` map and are queryable
+ * before any schema change reaches production, and keyed by seconds rather than by Anthropic's tier
+ * name so another provider's retention window needs no new spelling. `cache_creation_tokens` beside
+ * it stays the authoritative total; these decompose it and never add to it.
+ */
+const CACHE_CREATION_TTL_SECONDS = {
+  ephemeral_5m_input_tokens: 300,
+  ephemeral_1h_input_tokens: 3600,
+} as const
+
+function cacheCreationTtlAttrs(cacheCreation: CacheCreation | undefined): OtlpKeyValue[] {
+  if (!cacheCreation) return []
+  return Object.entries(CACHE_CREATION_TTL_SECONDS).flatMap(([field, ttlSeconds]) => {
+    const tokens = cacheCreation[field as keyof CacheCreation]
+    if (tokens === undefined || tokens <= 0) return []
+    return [int(`latitude.usage.cache_creation.ttl.${ttlSeconds}`, tokens)]
+  })
+}
+
+/**
+ * `speed` is emitted as a service tier, the axis that generalizes: Anthropic reports
+ * `fast` | `standard`, OpenAI reports `service_tier`, and one normalized field fits both where a
+ * `fast_mode` boolean would not.
+ */
+function usageModifierAttrs(usage: Usage): OtlpKeyValue[] {
+  return stripUndef([
+    usage.speed ? str("latitude.usage.service_tier", usage.speed) : undefined,
+    usage.inference_geo ? str("latitude.usage.inference_geo", usage.inference_geo) : undefined,
+  ])
 }
 
 function hashHex(input: string, length: number): string {
