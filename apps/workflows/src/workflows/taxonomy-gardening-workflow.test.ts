@@ -77,8 +77,7 @@ const scopedInput = { ...globalInput, customBehaviorId: "b".repeat(24) }
 describe("taxonomy gardening workflow (divisive build)", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // `clearAllMocks` keeps implementations, so restore the all-markers-on default
-    // the mock factory sets — a test that flips one marker off must not leak.
+    // `clearAllMocks` keeps implementations, so a test that flips one marker off must not leak.
     vi.mocked(patched).mockImplementation(() => true)
   })
 
@@ -152,10 +151,7 @@ describe("taxonomy gardening workflow (divisive build)", () => {
     expect(result).toEqual(expect.objectContaining({ status: "completed" }))
   })
 
-  // Above the gardening minimum (so not a cold start) but split into nothing: the
-  // build produced a bare root. Publishing it retires the tree that is serving and
-  // activates an empty one, which is how a low-traffic project lost all 18 of its
-  // behaviours after a week of thin data (project w7hv60cisk5n2r96c5ix5y1w).
+  // Above the gardening minimum but split into nothing: a bare root, with 18 prior clusters to retire.
   const degenerateBuildResult = {
     observationsScanned: 69,
     observationsAvailable: 69,
@@ -181,14 +177,12 @@ describe("taxonomy gardening workflow (divisive build)", () => {
     const result = await gardenTaxonomyWorkflow(input)
 
     expect(patched).toHaveBeenCalledWith("taxonomy-gardening-keep-tree-on-degenerate-rebuild-v1")
-    // The guard reads the plan before any persist branch, so nothing is saved,
-    // reassigned, named or deprecated — whichever tree this mode would publish.
+    // Gated before any persist branch, so nothing is saved, reassigned, named or deprecated.
     expect(mockActivities.saveGardenTaxonomyClustersActivity).not.toHaveBeenCalled()
     expect(mockActivities.reassignGardenTaxonomyObservationsActivity).not.toHaveBeenCalled()
     expect(mockActivities.deprecateGardenTaxonomyClustersActivity).not.toHaveBeenCalled()
     expect(mockActivities.planGardenTaxonomyNamingActivity).not.toHaveBeenCalled()
     expect(mockActivities.cleanupGardenTaxonomyStagingActivity).not.toHaveBeenCalled()
-    // The run completes (it is not a failure), recording that it retired nothing.
     expect(mockActivities.completeGardenTaxonomyRunActivity).toHaveBeenCalledWith(
       expect.objectContaining({ clustersBorn: 0, clustersDeprecated: 0, observationsSampled: 69 }),
     )
@@ -201,8 +195,7 @@ describe("taxonomy gardening workflow (divisive build)", () => {
 
     await gardenTaxonomyWorkflow(globalInput)
 
-    // An in-flight history recorded the full publish sequence, so replay must keep
-    // issuing it; the guard only applies to executions that started with it.
+    // An in-flight history recorded the full publish sequence, so replay must keep issuing it.
     expect(mockActivities.saveGardenTaxonomyClustersActivity).toHaveBeenCalledTimes(1)
     expect(mockActivities.deprecateGardenTaxonomyClustersActivity).toHaveBeenCalledTimes(1)
   })

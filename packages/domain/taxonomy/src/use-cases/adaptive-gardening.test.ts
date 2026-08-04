@@ -407,10 +407,7 @@ describe("shadow guardrails hold across contrasting corpora", () => {
   })
 })
 
-// One vector repeated: every candidate split has identical sibling centroids, so
-// neither builder can accept a split and both collapse to a bare root. This is the
-// shape a project whose traffic thinned to a handful of near-identical sessions
-// produces (project w7hv60cisk5n2r96c5ix5y1w, 2026-08-04).
+// One vector repeated: identical sibling centroids, so no candidate split is accepted and both builders bare-root.
 const unsplittableCorpus = (at: Date): TaxonomyMomentObservation[] =>
   Array.from({ length: 40 }, (_, index) => ({ ...makeObservation(index, 0, at), embedding: groupVector(0, 0) }))
 
@@ -455,14 +452,12 @@ describe("a degenerate rebuild is detectable before any publish branch runs", ()
       { now, mode },
     )
 
-    // Above the gardening minimum, so this is NOT a cold start: the build ran and
-    // produced a tree — a bare root with no behaviour under it.
+    // Above the gardening minimum, so not a cold start: the build ran and produced a bare root.
     expect(plan.observationsSampled).toBe(40)
     expect(plan.topLevelClustersBuilt).toBe(0)
     expect(plan.clusters).toHaveLength(1)
     expect(plan.maxDepthReached).toBe(0)
-    // And this is what publishing it would cost, on whichever branch this mode
-    // takes: the two behaviours the customer could see are retired either way.
+    // What publishing would retire, on whichever branch this mode takes.
     const retired = [...plan.deprecatedClusterIds, ...plan.supersededClusterIds]
     expect(retired).toContain("2".repeat(24))
     expect(retired).toContain("3".repeat(24))

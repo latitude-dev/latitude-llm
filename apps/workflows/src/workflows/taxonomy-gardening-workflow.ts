@@ -104,8 +104,7 @@ export const gardenTaxonomyWorkflow = async (
     useStagingSwap = patched("taxonomy-gardening-staging-swap-v1")
     // Fixed position, like the marker above: reads hide "Pending" names, so name before publishing.
     const nameBeforePublish = patched("taxonomy-gardening-name-before-publish-v1")
-    // Same fixed position: the degenerate-rebuild guard below skips the whole
-    // publish sequence, so an in-flight pre-change history must not take it.
+    // Same fixed position: the guard below skips the publish sequence, so a pre-change history must not take it.
     const keepTreeOnDegenerateRebuild = patched("taxonomy-gardening-keep-tree-on-degenerate-rebuild-v1")
     const built = await planHierarchicalGardenTaxonomyActivity(started)
     // Scoped cold-start: the plan sampled below the gardening minimum and built
@@ -114,15 +113,10 @@ export const gardenTaxonomyWorkflow = async (
     // sweep gates it on the same minimum before it ever starts.
     const scopedColdStart =
       started.customBehaviorId !== undefined && built.clustersBorn === 0 && built.clustersContinued === 0
-    // Degenerate rebuild: the build cleared the minimum but split into nothing, so
-    // its tree is a bare root with no behaviour under it. Publishing it retires the
-    // tree that is serving reads and activates an empty one, which is how a project
-    // whose traffic thins for a week loses every behaviour it had. Complete the run
-    // empty instead, like the cold start. Gated here — before any persist branch —
-    // so it protects the static tree (off/shadow) and the adaptive one (enforced)
-    // alike, and on a plan field a pre-change result does not carry.
-    const degenerateRebuild = keepTreeOnDegenerateRebuild && built.topLevelClustersBuilt === 0
-    if (scopedColdStart || degenerateRebuild) {
+    // A bare root has no behaviour to publish, and publishing it retires the tree that is serving.
+    // Gated before the persist branches, so it covers static (off/shadow) and adaptive (enforced) alike.
+    const builtNoBehaviours = keepTreeOnDegenerateRebuild && built.topLevelClustersBuilt === 0
+    if (scopedColdStart || builtNoBehaviours) {
       return await completeGardenTaxonomyRunActivity({
         ...started,
         observationsScanned: built.observationsScanned,

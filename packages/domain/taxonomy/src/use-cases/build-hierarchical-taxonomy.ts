@@ -135,11 +135,7 @@ export interface BuildHierarchicalTaxonomyResult {
   readonly clustersDeprecated: number
   readonly leavesAssigned: number
   readonly maxDepthReached: number
-  /**
-   * Children of the single depth-0 root — the rows the Behaviours read hoists as
-   * its top-level list. Zero means this build produced a bare root: a tree with
-   * no behaviour in it, whatever else the counters say.
-   */
+  /** Children of the single depth-0 root — the rows the Behaviours read hoists as its top-level list. */
   readonly topLevelClustersBuilt: number
   readonly lineage: readonly TaxonomyClusterLineage[]
 }
