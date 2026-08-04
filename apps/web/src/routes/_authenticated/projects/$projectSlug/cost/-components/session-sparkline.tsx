@@ -6,6 +6,76 @@ const STROKE_WIDTH = 1.6
 // line at an arbitrary height.
 const EMPTY_RANGE_EPSILON = 1e-9
 
+export interface SparklinePoint {
+  readonly x: number
+  readonly y: number
+}
+
+/**
+ * Tangents for a monotone cubic through the points (Fritsch–Carlson).
+ *
+ * Monotone rather than a cardinal spline or Catmull-Rom, because those overshoot:
+ * a run at 10 with a single 16 in it would bulge above 16 on the way in and dip
+ * below 10 on the way out, drawing values the data never held. On a zero-baselined
+ * chart the dips can also cross the floor. The constraint step here bounds every
+ * segment by its own two endpoints, so the curve can only smooth the corners.
+ */
+function monotoneTangents(points: readonly SparklinePoint[]): number[] {
+  const secants: number[] = []
+  for (let index = 0; index < points.length - 1; index++) {
+    const from = points[index]
+    const to = points[index + 1]
+    if (!from || !to) continue
+    secants.push((to.y - from.y) / (to.x - from.x))
+  }
+
+  const tangents = points.map((_, index) => {
+    if (index === 0) return secants[0] ?? 0
+    if (index === points.length - 1) return secants[secants.length - 1] ?? 0
+    const before = secants[index - 1] ?? 0
+    const after = secants[index] ?? 0
+    // A local extreme has to flatten, or the curve rounds straight past it.
+    return before * after <= 0 ? 0 : (before + after) / 2
+  })
+
+  for (let index = 0; index < secants.length; index++) {
+    const secant = secants[index] ?? 0
+    if (secant === 0) {
+      tangents[index] = 0
+      tangents[index + 1] = 0
+      continue
+    }
+    const alpha = (tangents[index] ?? 0) / secant
+    const beta = (tangents[index + 1] ?? 0) / secant
+    const magnitude = alpha * alpha + beta * beta
+    if (magnitude <= 9) continue
+    const scale = 3 / Math.sqrt(magnitude)
+    tangents[index] = scale * alpha * secant
+    tangents[index + 1] = scale * beta * secant
+  }
+
+  return tangents
+}
+
+export const smoothPath = (points: readonly SparklinePoint[]): string => {
+  const first = points[0]
+  if (!first) return ""
+  if (points.length === 1) return `M${first.x.toFixed(2)},${first.y.toFixed(2)}`
+
+  const tangents = monotoneTangents(points)
+  let path = `M${first.x.toFixed(2)},${first.y.toFixed(2)}`
+  for (let index = 0; index < points.length - 1; index++) {
+    const from = points[index]
+    const to = points[index + 1]
+    if (!from || !to) continue
+    const run = (to.x - from.x) / 3
+    const c1y = from.y + (tangents[index] ?? 0) * run
+    const c2y = to.y - (tangents[index + 1] ?? 0) * run
+    path += ` C${(from.x + run).toFixed(2)},${c1y.toFixed(2)} ${(to.x - run).toFixed(2)},${c2y.toFixed(2)} ${to.x.toFixed(2)},${to.y.toFixed(2)}`
+  }
+  return path
+}
+
 /**
  * Shape of a headline measure over the two compared windows, drawn from the same
  * buckets the decomposition was computed on.
@@ -41,18 +111,18 @@ export function SessionSparkline({
   const y = (value: number) =>
     VIEWBOX_HEIGHT - STROKE_WIDTH - (Math.max(0, value) / max) * (VIEWBOX_HEIGHT - STROKE_WIDTH * 2)
 
-  // One `path` per run of known values, so a gap renders as a gap.
-  const segments: string[] = []
-  let current: string[] = []
+  // One path per run of known values, so a gap renders as a gap.
+  const runs: SparklinePoint[][] = []
+  let current: SparklinePoint[] = []
   points.forEach((point, index) => {
     if (point === null) {
-      if (current.length > 1) segments.push(current.join(" "))
+      if (current.length > 1) runs.push(current)
       current = []
       return
     }
-    current.push(`${current.length === 0 ? "M" : "L"}${x(index).toFixed(2)},${y(point).toFixed(2)}`)
+    current.push({ x: x(index), y: y(point) })
   })
-  if (current.length > 1) segments.push(current.join(" "))
+  if (current.length > 1) runs.push(current)
 
   const boundary =
     boundaryIndex !== undefined && boundaryIndex > 0 && boundaryIndex < points.length ? x(boundaryIndex) : null
@@ -78,18 +148,21 @@ export function SessionSparkline({
           vectorEffect="non-scaling-stroke"
         />
       )}
-      {segments.map((segment) => (
-        <path
-          key={segment}
-          d={segment}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={STROKE_WIDTH}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      ))}
+      {runs.map((run) => {
+        const path = smoothPath(run)
+        return (
+          <path
+            key={path}
+            d={path}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={STROKE_WIDTH}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        )
+      })}
     </svg>
   )
 }
