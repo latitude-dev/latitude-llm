@@ -16,7 +16,7 @@ const response = (status: number, headers: Record<string, string> = {}, body = "
 
 describe("requireOk", () => {
   it.each([200, 201, 204, 299])("passes a %d response through", async (status) => {
-    const ok = await Effect.runPromise(requireOk(response(status), "ctx"))
+    const ok = await Effect.runPromise(requireOk(response(status)))
 
     expect(ok.status).toBe(status)
   })
@@ -30,23 +30,25 @@ describe("requireOk", () => {
     [400, "config", false],
     [404, "config", false],
   ] as const)("maps %d to a %s error", async (status, category, retryable) => {
-    await expect(Effect.runPromise(requireOk(response(status), "ctx"))).rejects.toMatchObject({
+    await expect(Effect.runPromise(requireOk(response(status)))).rejects.toMatchObject({
       category,
       retryable,
       upstreamStatus: status,
     })
   })
 
-  it("prefixes the failure with the caller's context", async () => {
-    await expect(Effect.runPromise(requireOk(response(500), "Langfuse fetch page"))).rejects.toMatchObject({
-      message: "Langfuse fetch page: upstream server error",
+  // The message reaches users as written (connection-test toasts, stored job errors), so it
+  // carries only the failure — no caller context prefix.
+  it("states the failure alone, ready to show a user", async () => {
+    await expect(Effect.runPromise(requireOk(response(500)))).rejects.toMatchObject({
+      message: "Upstream server error",
     })
   })
 
   it("never echoes the upstream body", async () => {
     const secretBody = JSON.stringify({ error: "token sk-live-123 is invalid" })
 
-    await expect(Effect.runPromise(requireOk(response(400, {}, secretBody), "ctx"))).rejects.not.toMatchObject({
+    await expect(Effect.runPromise(requireOk(response(400, {}, secretBody)))).rejects.not.toMatchObject({
       message: expect.stringContaining("sk-live-123"),
     })
   })
@@ -54,7 +56,7 @@ describe("requireOk", () => {
 
 describe("Retry-After parsing", () => {
   it("reads a delay expressed in seconds", async () => {
-    await expect(Effect.runPromise(requireOk(response(429, { "retry-after": "30" }), "ctx"))).rejects.toMatchObject({
+    await expect(Effect.runPromise(requireOk(response(429, { "retry-after": "30" })))).rejects.toMatchObject({
       retryAfterMs: 30_000,
     })
   })
@@ -62,7 +64,7 @@ describe("Retry-After parsing", () => {
   it("reads a delay expressed as an HTTP date", async () => {
     const future = new Date(Date.now() + 45_000).toUTCString()
 
-    const error = await Effect.runPromise(requireOk(response(429, { "retry-after": future }), "ctx").pipe(Effect.flip))
+    const error = await Effect.runPromise(requireOk(response(429, { "retry-after": future })).pipe(Effect.flip))
 
     expect(error.retryAfterMs).toBeGreaterThan(40_000)
     expect(error.retryAfterMs).toBeLessThanOrEqual(45_000)
@@ -71,31 +73,31 @@ describe("Retry-After parsing", () => {
   it("clamps a past HTTP date to zero rather than going negative", async () => {
     const past = new Date(Date.now() - 60_000).toUTCString()
 
-    await expect(Effect.runPromise(requireOk(response(429, { "retry-after": past }), "ctx"))).rejects.toMatchObject({
+    await expect(Effect.runPromise(requireOk(response(429, { "retry-after": past })))).rejects.toMatchObject({
       retryAfterMs: 0,
     })
   })
 
   it("clamps a negative seconds value to zero, so no backoff inherits a negative delay", async () => {
-    await expect(Effect.runPromise(requireOk(response(429, { "retry-after": "-5" }), "ctx"))).rejects.toMatchObject({
+    await expect(Effect.runPromise(requireOk(response(429, { "retry-after": "-5" })))).rejects.toMatchObject({
       retryAfterMs: 0,
     })
   })
 
   it("omits the hint when the header is absent", async () => {
-    const error = await Effect.runPromise(requireOk(response(429), "ctx").pipe(Effect.flip))
+    const error = await Effect.runPromise(requireOk(response(429)).pipe(Effect.flip))
 
     expect(error.retryAfterMs).toBeUndefined()
   })
 
   it("omits the hint when the header is unparseable", async () => {
-    const error = await Effect.runPromise(requireOk(response(429, { "retry-after": "soon" }), "ctx").pipe(Effect.flip))
+    const error = await Effect.runPromise(requireOk(response(429, { "retry-after": "soon" })).pipe(Effect.flip))
 
     expect(error.retryAfterMs).toBeUndefined()
   })
 
   it("only attaches the hint to rate-limit errors", async () => {
-    const error = await Effect.runPromise(requireOk(response(500, { "retry-after": "30" }), "ctx").pipe(Effect.flip))
+    const error = await Effect.runPromise(requireOk(response(500, { "retry-after": "30" })).pipe(Effect.flip))
 
     expect(error.category).toBe("server_error")
     expect(error.retryAfterMs).toBeUndefined()

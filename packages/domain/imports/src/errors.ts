@@ -18,8 +18,15 @@ export class ImportSourceError extends Data.TaggedError("ImportSourceError")<{
   readonly upstreamStatus?: number
 }> {}
 
+/**
+ * Carries where the blocking import lives, because the limit is org-wide while the imports UI is
+ * project-scoped: a conflict raised by a job in another project has to name it, or the user is told
+ * an import is running on a page that lists none.
+ */
 export class ActiveImportConflictError extends Data.TaggedError("ActiveImportConflictError")<{
   readonly activeJobId: string
+  readonly activeProjectId: string
+  readonly activeSourceProjectName: string
 }> {}
 
 export class ImportRangeInvalidError extends Data.TaggedError("ImportRangeInvalidError")<{

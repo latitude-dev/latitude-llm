@@ -82,14 +82,10 @@ export const createFakeImportAdapter = (options: FakeAdapterOptions = {}) => {
         estimatedTraces: new Set(rows.map((row) => row.sourceTraceId)).size,
         sample: rows.slice(0, 3).map((row) => ({
           traceId: row.sourceTraceId,
-          spanId: row.sourceSpanId,
           name: row.name,
-          sessionId: "",
-          userId: "",
-          operation: "chat",
-          model: "",
-          tags: [],
+          models: [],
           startTime: row.startTime.toISOString(),
+          durationNs: 0,
         })),
         warnings: rows.length > config.maxTraces ? ["Preview exceeds the trace ceiling"] : [],
       }

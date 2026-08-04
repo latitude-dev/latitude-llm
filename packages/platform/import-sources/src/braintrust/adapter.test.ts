@@ -417,7 +417,7 @@ describe("Braintrust adapter", () => {
       expect(preview.warnings).toEqual([])
     })
 
-    it("samples one span per trace rather than several of the first", async () => {
+    it("folds spans into one row per trace rather than several of the first", async () => {
       // Every source returns spans, so an unfiltered head shows one trace several times.
       const { adapter } = stubTransport({
         data: [
@@ -437,7 +437,7 @@ describe("Braintrust adapter", () => {
         }),
       )
 
-      expect(preview.sample.map((row) => row.traceId)).toEqual(["t1", "t2", "t1"])
+      expect(preview.sample.map((row) => row.traceId)).toEqual(["t1", "t2"])
     })
   })
 

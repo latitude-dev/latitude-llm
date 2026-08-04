@@ -1,4 +1,5 @@
 import { FREE_PLAN_CONFIG, PRO_PLAN_CONFIG } from "@domain/billing"
+import { ProjectId } from "@domain/shared"
 import { Effect, Exit } from "effect"
 import { describe, expect, it } from "vitest"
 import {
@@ -247,6 +248,23 @@ describe("createImportUseCase", () => {
       expect(causeOf(exit)).toContain("ActiveImportConflictError")
       expect(causeOf(exit)).toContain(active.id)
       expect(h.stored.size).toBe(1)
+    })
+
+    // The limit is org-wide but the imports page is project-scoped, so the conflict has to say which
+    // project holds the blocking job: the page the user is looking at may list no import at all.
+    it("names the project and source project the blocking import belongs to", async () => {
+      const otherProject = ProjectId("q".repeat(24))
+      const active = stubImportJob({
+        status: "running",
+        projectId: otherProject,
+        config: stubImportConfig({ sourceProjectName: "Checkout Agent" }),
+      })
+      const h = importHarness({ seed: [active] })
+
+      const exit = await Effect.runPromiseExit(createImportUseCase(input()).pipe(Effect.provide(h.layer)))
+
+      expect(causeOf(exit)).toContain(otherProject)
+      expect(causeOf(exit)).toContain("Checkout Agent")
     })
 
     it.each([

@@ -446,13 +446,27 @@ describe("Langfuse adapter", () => {
       expect(preview.warnings[0]).toContain("will not be imported")
     })
 
-    it("samples the trace context from the trace list, not the observation projection", async () => {
-      // The observation carries no sessionId/tags: v2's `trace_context` field group only
-      // populates them sporadically, which is exactly the case this guards.
+    it("folds a trace's observations into one row with its models and duration", async () => {
       const { adapter } = stubTransport([
-        { data: [{ id: "o1", traceId: "t1", startTime: "2026-01-05T10:00:00.000Z" }] },
+        {
+          data: [
+            {
+              id: "o1",
+              traceId: "t1",
+              name: "agent-run",
+              startTime: "2026-01-05T10:00:00.000Z",
+              endTime: "2026-01-05T10:00:01.000Z",
+            },
+            {
+              id: "o2",
+              traceId: "t1",
+              model: "gpt-4o-mini",
+              startTime: "2026-01-05T10:00:01.000Z",
+              endTime: "2026-01-05T10:00:03.000Z",
+            },
+          ],
+        },
         { data: [], meta: { totalItems: 1 } },
-        { data: [{ id: "t1", sessionId: "sess-a", userId: "user-a", tags: ["prod"] }] },
       ])
 
       const preview = await Effect.runPromise(
@@ -465,13 +479,15 @@ describe("Langfuse adapter", () => {
         }),
       )
 
-      expect(preview.sample[0]).toMatchObject({
-        traceId: "t1",
-        sessionId: "sess-a",
-        userId: "user-a",
-        tags: ["prod"],
-        startTime: "2026-01-05T10:00:00.000Z",
-      })
+      expect(preview.sample).toEqual([
+        {
+          traceId: "t1",
+          name: "agent-run",
+          models: ["gpt-4o-mini"],
+          startTime: "2026-01-05T10:00:00.000Z",
+          durationNs: 3_000_000_000,
+        },
+      ])
     })
 
     it("caps the sampled request at the preview sample limit", async () => {

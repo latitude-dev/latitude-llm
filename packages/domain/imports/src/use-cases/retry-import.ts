@@ -61,7 +61,13 @@ export const retryImportUseCase = (input: RetryImportInput) =>
 
     const active = yield* jobs.findActive()
     if (active) {
-      return yield* Effect.fail(new ActiveImportConflictError({ activeJobId: active.id }))
+      return yield* Effect.fail(
+        new ActiveImportConflictError({
+          activeJobId: active.id,
+          activeProjectId: active.projectId,
+          activeSourceProjectName: active.config.sourceProjectName,
+        }),
+      )
     }
 
     // A `capped` job stopped because the plan had no usage left, and the engine re-checks that

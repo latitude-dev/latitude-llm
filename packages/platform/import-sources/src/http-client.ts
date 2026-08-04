@@ -99,13 +99,17 @@ const parseRetryAfterMs = (headers: { get(name: string): string | null }): numbe
   return undefined
 }
 
-const mapHttpError = (response: HttpResponse, context: string): ImportSourceError => {
+/**
+ * Messages are user-facing as written: the wizard toasts them and failed jobs store them, so they
+ * carry only the failure — which call failed is what tracing spans are for.
+ */
+const mapHttpError = (response: HttpResponse): ImportSourceError => {
   const retryAfterMs = parseRetryAfterMs(response.headers)
 
   if (response.status === 401 || response.status === 403) {
     return new ImportSourceError({
       category: "auth",
-      message: `${context}: authentication failed`,
+      message: "Authentication failed",
       retryable: false,
       upstreamStatus: response.status,
     })
@@ -114,7 +118,7 @@ const mapHttpError = (response: HttpResponse, context: string): ImportSourceErro
   if (response.status === 429) {
     return new ImportSourceError({
       category: "rate_limited",
-      message: `${context}: rate limited`,
+      message: "Rate limited",
       retryable: true,
       ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
       upstreamStatus: response.status,
@@ -124,7 +128,7 @@ const mapHttpError = (response: HttpResponse, context: string): ImportSourceErro
   if (response.status >= 500) {
     return new ImportSourceError({
       category: "server_error",
-      message: `${context}: upstream server error`,
+      message: "Upstream server error",
       retryable: true,
       upstreamStatus: response.status,
     })
@@ -132,15 +136,15 @@ const mapHttpError = (response: HttpResponse, context: string): ImportSourceErro
 
   return new ImportSourceError({
     category: "config",
-    message: `${context}: request failed (${response.status})`,
+    message: `Request failed (${response.status})`,
     retryable: false,
     upstreamStatus: response.status,
   })
 }
 
-export const requireOk = (response: HttpResponse, context: string): Effect.Effect<HttpResponse, ImportSourceError> => {
+export const requireOk = (response: HttpResponse): Effect.Effect<HttpResponse, ImportSourceError> => {
   if (response.status >= 200 && response.status < 300) return Effect.succeed(response)
-  return Effect.fail(mapHttpError(response, context))
+  return Effect.fail(mapHttpError(response))
 }
 
 export const parseJson = <T>(response: HttpResponse): Effect.Effect<T, ImportSourceError> =>

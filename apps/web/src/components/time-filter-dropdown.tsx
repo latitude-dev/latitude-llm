@@ -11,10 +11,19 @@ export const TIME_PRESETS = [
   { id: "last-month", label: "Last month", seconds: 30 * 24 * 60 * 60 },
 ] as const
 
+export interface TimeFilterPreset {
+  readonly id: string
+  readonly label: string
+  readonly seconds: number
+}
+
 interface TimeFilterDropdownProps {
   readonly startTimeFrom?: string | undefined
   readonly startTimeTo?: string | undefined
   readonly onChange: (from?: string, to?: string) => void
+  /** Overrides the trace-filtering presets for surfaces with a coarser natural cadence. */
+  readonly presets?: readonly TimeFilterPreset[]
+  readonly placeholder?: string
 }
 
 function buildPresetRange(seconds: number): DateRange {
@@ -48,12 +57,16 @@ function endOfLocalDay(date: Date): Date {
   return next
 }
 
-function getActivePresetId(startTimeFrom?: string, startTimeTo?: string): string | undefined {
+function getActivePresetId(
+  presets: readonly TimeFilterPreset[],
+  startTimeFrom?: string,
+  startTimeTo?: string,
+): string | undefined {
   if (!startTimeFrom || startTimeTo) return undefined
 
   const diffSeconds = Math.round((Date.now() - new Date(startTimeFrom).getTime()) / 1000)
 
-  for (const preset of TIME_PRESETS) {
+  for (const preset of presets) {
     const toleranceSeconds = Math.max(2, Math.round(preset.seconds * 0.1))
     if (Math.abs(diffSeconds - preset.seconds) <= toleranceSeconds) {
       return preset.id
@@ -63,21 +76,27 @@ function getActivePresetId(startTimeFrom?: string, startTimeTo?: string): string
   return undefined
 }
 
-export function TimeFilterDropdown({ startTimeFrom, startTimeTo, onChange }: TimeFilterDropdownProps) {
-  const presets: readonly DateRangePickerPreset[] = TIME_PRESETS.map((preset) => ({
+export function TimeFilterDropdown({
+  startTimeFrom,
+  startTimeTo,
+  onChange,
+  presets = TIME_PRESETS,
+  placeholder = "All time",
+}: TimeFilterDropdownProps) {
+  const pickerPresets: readonly DateRangePickerPreset[] = presets.map((preset) => ({
     id: preset.id,
     label: preset.label,
     range: buildPresetRange(preset.seconds),
   }))
   const pickerRange = buildPickerRange(startTimeFrom, startTimeTo)
-  const selectedPresetId = getActivePresetId(startTimeFrom, startTimeTo)
+  const selectedPresetId = getActivePresetId(presets, startTimeFrom, startTimeTo)
 
   return (
     <DateRangePicker
       value={pickerRange}
-      presets={presets}
+      presets={pickerPresets}
       selectedPresetId={selectedPresetId}
-      placeholder="All time"
+      placeholder={placeholder}
       onChange={({ range, source }) => {
         if (source === "clear" || !range) {
           onChange(undefined, undefined)

@@ -15,11 +15,11 @@ const LANGFUSE_REGIONS = ["eu", "us", "jp", "hipaa-us"] as const
 export const langfuseRegionSchema = z.enum(LANGFUSE_REGIONS)
 type LangfuseRegion = z.infer<typeof langfuseRegionSchema>
 
-const LANGSMITH_REGIONS = ["gcp-us", "gcp-eu", "gcp-apac", "aws-us"] as const
+const LANGSMITH_REGIONS = ["gcp-eu", "gcp-us", "gcp-apac", "aws-us"] as const
 export const langsmithRegionSchema = z.enum(LANGSMITH_REGIONS)
 type LangsmithRegion = z.infer<typeof langsmithRegionSchema>
 
-const BRAINTRUST_REGIONS = ["us", "eu"] as const
+const BRAINTRUST_REGIONS = ["eu", "us"] as const
 export const braintrustRegionSchema = z.enum(BRAINTRUST_REGIONS)
 type BraintrustRegion = z.infer<typeof braintrustRegionSchema>
 
@@ -39,16 +39,16 @@ export const LANGFUSE_REGION_DEFINITIONS: Record<LangfuseRegion, RegionDefinitio
 
 /** The `LANGSMITH_ENDPOINT` values; note the region prefix sits before `api`. */
 export const LANGSMITH_REGION_DEFINITIONS: Record<LangsmithRegion, RegionDefinition> = {
-  "gcp-us": { label: "GCP US", baseUrl: "https://api.smith.langchain.com" },
   "gcp-eu": { label: "GCP EU", baseUrl: "https://eu.api.smith.langchain.com" },
+  "gcp-us": { label: "GCP US", baseUrl: "https://api.smith.langchain.com" },
   "gcp-apac": { label: "GCP APAC", baseUrl: "https://apac.api.smith.langchain.com" },
   "aws-us": { label: "AWS US", baseUrl: "https://aws.api.smith.langchain.com" },
 }
 
 /** Braintrust calls these data planes; a user finds theirs under Settings → Data plane. */
 export const BRAINTRUST_REGION_DEFINITIONS: Record<BraintrustRegion, RegionDefinition> = {
-  us: { label: "US", baseUrl: "https://api.braintrust.dev" },
   eu: { label: "EU", baseUrl: "https://api-eu.braintrust.dev" },
+  us: { label: "US", baseUrl: "https://api.braintrust.dev" },
 }
 
 export interface ImportRegionOption<R extends string = string> {

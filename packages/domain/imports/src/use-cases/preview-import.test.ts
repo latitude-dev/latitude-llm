@@ -16,14 +16,10 @@ const PREVIEW: ImportPreview = {
   sample: [
     {
       traceId: "trace-1",
-      spanId: "span-1",
       name: "chat completion",
-      sessionId: "session-1",
-      userId: "user-1",
-      operation: "chat",
-      model: "claude",
-      tags: ["prod"],
+      models: ["claude"],
       startTime: "2026-01-05T10:00:00.000Z",
+      durationNs: 1_500_000_000,
     },
   ],
   warnings: ["No total row count is available for this source."],

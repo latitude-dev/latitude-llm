@@ -61,7 +61,13 @@ export const createImportUseCase = (input: CreateImportInput) =>
     const jobs = yield* ImportJobRepository
     const active = yield* jobs.findActive()
     if (active) {
-      return yield* Effect.fail(new ActiveImportConflictError({ activeJobId: active.id }))
+      return yield* Effect.fail(
+        new ActiveImportConflictError({
+          activeJobId: active.id,
+          activeProjectId: active.projectId,
+          activeSourceProjectName: active.config.sourceProjectName,
+        }),
+      )
     }
 
     const job = createImportJob({

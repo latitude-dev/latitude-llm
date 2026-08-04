@@ -88,6 +88,7 @@ export type {
   ImportPreview,
   ImportSourceAdapter,
   ImportSourceAdapterRegistry,
+  ImportTracePreview,
   NormalizeContext,
   NormalizedSpanPreview,
   NormalizeResult,

@@ -8,8 +8,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 })
 
 const PAGE_TITLE = "Imports"
-const PAGE_DESCRIPTION =
-  "Import historical traces and spans from Langfuse, LangSmith, or Braintrust. Imports are bounded, asynchronous, and idempotent."
+const PAGE_DESCRIPTION = "Import your existing sessions, traces and spans from other observability platforms."
 
 function ImportsSettingsPage() {
   const project = useRouteProject()

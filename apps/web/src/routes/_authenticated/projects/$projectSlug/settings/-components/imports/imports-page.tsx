@@ -1,12 +1,13 @@
 import { Badge, Button, Card, Icon, Text } from "@repo/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Download, Plus } from "lucide-react"
+import { ImportIcon, Plus } from "lucide-react"
 import { useState } from "react"
 import { BlankSlate } from "../../../../../../../components/blank-slate.tsx"
 import {
   cancelImport,
   getImport,
   type ImportRecord,
+  importsQueryKey,
   listImports,
 } from "../../../../../../../domains/imports/imports.functions.ts"
 import { ImportRunsTable } from "./import-runs-table.tsx"
@@ -14,8 +15,6 @@ import { ImportWizardModal } from "./import-wizard-modal.tsx"
 
 /** Kept in step with `RESUMABLE_STATUSES` in retryImportUseCase, which is what enforces it. */
 const RESUMABLE_STATUSES: readonly ImportRecord["status"][] = ["failed", "cancelled", "capped"]
-
-export const importsQueryKey = (projectId: string) => ["imports", projectId] as const
 
 const statusVariant = (status: ImportRecord["status"]) => {
   switch (status) {
@@ -153,9 +152,9 @@ export function ImportsPage({
     <div className="flex flex-1 flex-col gap-4">
       {isLoading ? null : imports.length === 0 ? (
         <BlankSlate
-          icon={Download}
+          icon={ImportIcon}
           title="No imports yet"
-          description="Bring historical traces from Langfuse, LangSmith, or Braintrust into this project."
+          description="Import your existing sessions, traces and spans from other observability platforms into this project."
           action={{
             label: "Import traces",
             icon: Plus,

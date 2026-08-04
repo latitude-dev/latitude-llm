@@ -145,7 +145,7 @@ const countTraces = (input: {
         is_root: true,
       }),
     })
-    const ok = yield* requireOk(response, "LangSmith count traces")
+    const ok = yield* requireOk(response)
     const data = yield* parseJson<{ run_count?: number }>(ok)
     return typeof data.run_count === "number" ? data.run_count : null
   })
@@ -307,7 +307,7 @@ export const createLangsmithAdapter = (): ImportSourceAdapter<LangsmithRun, Lang
         url: `${importSourceBaseUrl(credentials)}/sessions?limit=1`,
         headers: authHeaders(credentials),
       })
-      yield* requireOk(response, "LangSmith connection test")
+      yield* requireOk(response)
     }),
 
   listProjects: ({ credentials, limit }) =>
@@ -321,7 +321,7 @@ export const createLangsmithAdapter = (): ImportSourceAdapter<LangsmithRun, Lang
         url: `${importSourceBaseUrl(credentials)}/sessions?limit=${limit}`,
         headers: authHeaders(credentials),
       })
-      const ok = yield* requireOk(response, "LangSmith list projects")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<unknown>(ok)
       if (!Array.isArray(data)) {
         return yield* Effect.fail(
@@ -352,7 +352,7 @@ export const createLangsmithAdapter = (): ImportSourceAdapter<LangsmithRun, Lang
         method: "POST",
         body: runsQueryBody({ sourceProjectId, range, limit: previewLimit }),
       })
-      const ok = yield* requireOk(response, "LangSmith preview")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ runs?: LangsmithRun[] }>(ok)
       // Only rows the import would actually keep belong in the sample.
       const rows = (data.runs ?? []).filter((row): row is LangsmithRun & { id: string } => Boolean(row.id))
@@ -369,17 +369,12 @@ export const createLangsmithAdapter = (): ImportSourceAdapter<LangsmithRun, Lang
         estimatedTraces,
         sample: sampleDistinctTraces(rows, (row) => ({
           traceId: row.trace_id ?? row.id,
-          spanId: row.id,
           name: row.name ?? row.run_type ?? "run",
-          sessionId: resolveSessionId(row, config),
-          userId: typeof row.extra?.metadata?.user_id === "string" ? row.extra.metadata.user_id : "",
-          operation: resolveOperationFromSourceKind(row.run_type, RUN_TYPE_OPERATION),
           model: resolveModelFromMetadata(row.extra?.metadata, ["ls_model_name"]),
-          tags: row.tags ?? [],
           startTime: row.start_time ? parseUtc(row.start_time).toISOString() : "",
+          endTime: row.end_time ? parseUtc(row.end_time).toISOString() : "",
         })),
         warnings: [
-          `LangSmith \`session_id\` is the project id, not a conversation id, so sessions come from \`extra.metadata.${sessionKey}\`.`,
           ...(rows.length > 0 && resolvedSessions === 0
             ? [
                 `No run in this sample carries \`extra.metadata.${sessionKey}\`, so each trace will import as its own session.`,
@@ -410,7 +405,7 @@ export const createLangsmithAdapter = (): ImportSourceAdapter<LangsmithRun, Lang
           ...(cursor ? { cursor: cursor.cursor } : {}),
         }),
       })
-      const ok = yield* requireOk(response, "LangSmith fetch page")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ runs?: LangsmithRun[]; cursors?: { next?: string | null } }>(ok)
       const rows = data.runs ?? []
       const nextCursor = data.cursors?.next ?? null

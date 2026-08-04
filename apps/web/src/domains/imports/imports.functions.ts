@@ -4,7 +4,11 @@ import {
   createImportUseCase,
   enqueueImportUseCase,
   type ImportJob,
+  ImportJobNotEnqueueableError,
+  ImportJobNotFoundError,
+  ImportJobNotRetryableError,
   ImportJobRepository,
+  ImportRegionMismatchError,
   type ImportRun,
   ImportSourceAdapters,
   ImportUsageExhaustedError,
@@ -58,6 +62,38 @@ const adaptersLayer = Layer.succeed(ImportSourceAdapters, createImportAdapterReg
 
 const enqueueImportWith = (publisher: QueuePublisherShape) =>
   enqueueImportUseCase({ publish: (payload) => publisher.publish("imports", "start", payload) })
+
+const activeImportMessage = (error: ActiveImportConflictError, projectId?: string): string => {
+  const where = projectId !== undefined && error.activeProjectId !== projectId ? " in another project" : ""
+  return `An import of ${error.activeSourceProjectName} is already running${where}. Only one import can run at a time in an organization.`
+}
+
+/**
+ * Tagged errors keep their data in fields and leave `message` empty, and `message` is the only field
+ * that survives the server-function boundary, so an unmapped one reaches the client as a blank string
+ * and renders as an empty error. Every failure the write paths raise is given a sentence here.
+ */
+const toUserFacingError = (error: unknown, projectId?: string): unknown => {
+  if (error instanceof ActiveImportConflictError) return new Error(activeImportMessage(error, projectId))
+  if (error instanceof ImportUsageExhaustedError) {
+    return new Error(
+      `This organization has no usage left this billing period, so there is nothing to import into. Usage resets on ${error.periodEnd.toISOString().slice(0, 10)}.`,
+    )
+  }
+  if (error instanceof ImportRegionMismatchError) {
+    return new Error(
+      `These keys are for the ${error.received} region, but this import ran against ${error.expected}. Retrying reuses the original region, so use keys from ${error.expected} or start a new import.`,
+    )
+  }
+  if (error instanceof ImportJobNotRetryableError) {
+    return new Error(`This import is ${error.status}, so there is nothing to resume.`)
+  }
+  if (error instanceof ImportJobNotFoundError) return new Error("This import no longer exists.")
+  if (error instanceof ImportJobNotEnqueueableError) {
+    return new Error("This import could not be queued because its status changed. Reload the page and try again.")
+  }
+  return error
+}
 
 export interface ImportRecord {
   readonly id: string
@@ -174,6 +210,8 @@ export const getImportLimits = createServerFn({ method: "GET" }).handler(async (
     ),
   )
 })
+
+export const importsQueryKey = (projectId: string) => ["imports", projectId] as const
 
 export const listImports = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
@@ -338,15 +376,7 @@ export const createImport = createServerFn({ method: "POST" })
 
       return toRecord(redactedImportJob(job))
     } catch (error) {
-      if (error instanceof ActiveImportConflictError) {
-        throw new Error(`An import is already running (job ${error.activeJobId})`)
-      }
-      if (error instanceof ImportUsageExhaustedError) {
-        throw new Error(
-          `This organization has no usage left this billing period, so there is nothing to import into. Usage resets on ${error.periodEnd.toISOString().slice(0, 10)}.`,
-        )
-      }
-      throw error
+      throw toUserFacingError(error, data.projectId)
     }
   })
 
@@ -376,23 +406,27 @@ export const retryImport = createServerFn({ method: "POST" })
     const { organizationId } = await requireSession()
     const enqueueImport = enqueueImportWith(await getQueuePublisher())
 
-    const job = await Effect.runPromise(
-      Effect.gen(function* () {
-        const plan = yield* resolveEffectivePlanCached(OrganizationId(organizationId))
-        const retried = yield* retryImportUseCase({
-          importJobId: ImportJobId(data.importJobId),
-          credentials: data.credentials,
-          plan,
-        })
+    try {
+      const job = await Effect.runPromise(
+        Effect.gen(function* () {
+          const plan = yield* resolveEffectivePlanCached(OrganizationId(organizationId))
+          const retried = yield* retryImportUseCase({
+            importJobId: ImportJobId(data.importJobId),
+            credentials: data.credentials,
+            plan,
+          })
 
-        // Same ordering as `createImport`: the retry row commits, then it is published.
-        return yield* enqueueImport({ importJobId: retried.id })
-      }).pipe(
-        withPostgres(Layer.mergeAll(postgresLayers, planLayers), getPostgresClient(), organizationId),
-        Effect.provide(RedisCacheStoreLive(getRedisClient())),
-        withTracing,
-      ),
-    )
+          // Same ordering as `createImport`: the retry row commits, then it is published.
+          return yield* enqueueImport({ importJobId: retried.id })
+        }).pipe(
+          withPostgres(Layer.mergeAll(postgresLayers, planLayers), getPostgresClient(), organizationId),
+          Effect.provide(RedisCacheStoreLive(getRedisClient())),
+          withTracing,
+        ),
+      )
 
-    return toRecord(redactedImportJob(job))
+      return toRecord(redactedImportJob(job))
+    } catch (error) {
+      throw toUserFacingError(error)
+    }
   })

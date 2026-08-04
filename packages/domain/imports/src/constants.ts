@@ -11,7 +11,7 @@ export const IMPORT_MIN_LOOKBACK_DAYS = 1
  * binds long before this — an imported trace bills exactly like an ingested one — so
  * this exists to stop a single job from running for weeks, not to price it.
  */
-export const IMPORT_HARD_MAX_TRACES = 1_000_000
+export const IMPORT_HARD_MAX_TRACES = 100_000
 
 export const IMPORT_WORKER_CONCURRENCY = 8
 
@@ -34,8 +34,8 @@ export const IMPORT_DRY_RUN_MAX_RECORDS = 5_000
 export const IMPORT_DRY_RUN_TIMEOUT_MS = 30_000
 /** Rows a single preview request pulls from a source, independent of the dry-run scan budget. */
 export const IMPORT_PREVIEW_SAMPLE_LIMIT = 100
-/** Normalized rows shown back to the user in the wizard's preview step. */
-export const IMPORT_PREVIEW_SAMPLE_ROWS = 5
+/** Normalized rows shown back to the user in the wizard's preview table. */
+export const IMPORT_PREVIEW_SAMPLE_ROWS = 10
 
 export const IMPORT_PAGE_TIMEOUT_MS = 120_000
 export const IMPORT_MAX_ATTEMPTS = 5

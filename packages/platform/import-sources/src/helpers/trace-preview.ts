@@ -1,34 +1,60 @@
-import { IMPORT_PREVIEW_SAMPLE_ROWS, type NormalizedSpanPreview } from "@domain/imports"
+import { IMPORT_PREVIEW_SAMPLE_ROWS, type ImportTracePreview, type NormalizedSpanPreview } from "@domain/imports"
+
+const parseMs = (time: string): number | null => {
+  if (time === "") return null
+  const ms = Date.parse(time)
+  return Number.isNaN(ms) ? null : ms
+}
+
+const aggregateTrace = (traceId: string, spans: readonly NormalizedSpanPreview[]): ImportTracePreview => {
+  const startTimes = spans.map((span) => parseMs(span.startTime)).filter((ms): ms is number => ms !== null)
+  const endTimes = spans.map((span) => parseMs(span.endTime)).filter((ms): ms is number => ms !== null)
+  const startMs = startTimes.length > 0 ? Math.min(...startTimes) : null
+  const endMs = endTimes.length > 0 ? Math.max(...endTimes) : null
+
+  // The earliest span names the trace: roots start first, so this is the root whenever the
+  // page caught it.
+  const first = spans.reduce((earliest, span) => {
+    const ms = parseMs(span.startTime)
+    const earliestMs = parseMs(earliest.startTime)
+    if (ms === null) return earliest
+    if (earliestMs === null || ms < earliestMs) return span
+    return earliest
+  }, spans[0]!)
+
+  return {
+    traceId,
+    name: first.name,
+    models: [...new Set(spans.map((span) => span.model).filter((model) => model !== ""))],
+    startTime: startMs !== null ? new Date(startMs).toISOString() : "",
+    durationNs: startMs !== null && endMs !== null && endMs > startMs ? (endMs - startMs) * 1_000_000 : 0,
+  }
+}
 
 /**
- * One sampled span per trace, up to the sample limit.
+ * The sample folded into traces, which is what the preview table shows.
  *
- * Sources return spans, and a trace has several, so taking the first N rows shows N spans of
- * a single trace — which tells the user nothing about the breadth of what they are about to
- * import. Distinct traces answer the question they are actually asking. Falls back to filling
- * the remaining slots from the leftovers when the range holds fewer traces than the limit.
+ * Sources return spans, and a trace has several, so rows sharing a trace id collapse into one
+ * entry: the earliest span names it, and its models and duration aggregate over the spans the
+ * preview page happened to catch — a trace whose spans continue past the page reports what was
+ * seen, not its true extent.
  */
 export const sampleDistinctTraces = <TRow>(
   rows: readonly TRow[],
   toPreview: (row: TRow) => NormalizedSpanPreview,
-): readonly NormalizedSpanPreview[] => {
-  const previews = rows.map(toPreview)
-  const seen = new Set<string>()
-  const sample: NormalizedSpanPreview[] = []
+): readonly ImportTracePreview[] => {
+  const byTrace = new Map<string, NormalizedSpanPreview[]>()
 
-  for (const preview of previews) {
-    if (sample.length >= IMPORT_PREVIEW_SAMPLE_ROWS) break
-    if (seen.has(preview.traceId)) continue
-    seen.add(preview.traceId)
-    sample.push(preview)
+  for (const preview of rows.map(toPreview)) {
+    const spans = byTrace.get(preview.traceId)
+    if (spans) {
+      spans.push(preview)
+    } else if (byTrace.size < IMPORT_PREVIEW_SAMPLE_ROWS) {
+      byTrace.set(preview.traceId, [preview])
+    }
   }
 
-  for (const preview of previews) {
-    if (sample.length >= IMPORT_PREVIEW_SAMPLE_ROWS) break
-    if (!sample.includes(preview)) sample.push(preview)
-  }
-
-  return sample
+  return [...byTrace.entries()].map(([traceId, spans]) => aggregateTrace(traceId, spans))
 }
 
 /**

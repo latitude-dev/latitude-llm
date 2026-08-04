@@ -202,7 +202,7 @@ const traceContextFor = (input: {
         ),
         headers: input.headers,
       })
-      const ok = yield* requireOk(response, "Langfuse fetch trace context")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ data?: LangfuseTrace[]; meta?: { totalPages?: number } }>(ok)
 
       for (const trace of data.data ?? []) {
@@ -242,7 +242,7 @@ const countTraces = (input: {
       url: langfuseApiUrl(input.baseUrl, TRACES_PATH, traceParams({ range: input.range, limit: 1 })),
       headers: input.headers,
     })
-    const ok = yield* requireOk(response, "Langfuse count traces")
+    const ok = yield* requireOk(response)
     const data = yield* parseJson<{ meta?: { totalItems?: number } }>(ok)
     const total = data.meta?.totalItems
     return typeof total === "number" ? total : null
@@ -338,7 +338,7 @@ export const createLangfuseAdapter = (): ImportSourceAdapter<LangfuseObservation
         url: langfuseApiUrl(importSourceBaseUrl(credentials), PROJECTS_PATH),
         headers: authHeaders(credentials),
       })
-      yield* requireOk(response, "Langfuse connection test")
+      yield* requireOk(response)
     }),
 
   listProjects: ({ credentials, limit }) =>
@@ -352,7 +352,7 @@ export const createLangfuseAdapter = (): ImportSourceAdapter<LangfuseObservation
         url: langfuseApiUrl(importSourceBaseUrl(credentials), PROJECTS_PATH),
         headers: authHeaders(credentials),
       })
-      const ok = yield* requireOk(response, "Langfuse list projects")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ data?: Array<{ id: string; name: string }> }>(ok)
       const projects = (data.data ?? []).slice(0, limit).map((p) => ({ id: p.id, name: p.name }))
       return { projects, nextCursor: null }
@@ -375,7 +375,7 @@ export const createLangfuseAdapter = (): ImportSourceAdapter<LangfuseObservation
         ),
         headers: authHeaders(credentials),
       })
-      const ok = yield* requireOk(response, "Langfuse preview")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ data?: LangfuseObservation[] }>(ok)
       // Only rows the import would actually keep belong in the sample.
       const rows = (data.data ?? []).filter((row): row is LangfuseObservation & { id: string; traceId: string } =>
@@ -384,25 +384,15 @@ export const createLangfuseAdapter = (): ImportSourceAdapter<LangfuseObservation
       const baseUrl = importSourceBaseUrl(credentials)
       const headers = authHeaders(credentials)
       const estimatedTraces = yield* countTraces({ baseUrl, headers, range })
-      const contexts = yield* traceContextFor({
-        baseUrl,
-        headers,
-        range,
-        wanted: new Set(rows.map((row) => row.traceId)),
-      })
 
       return {
         estimatedTraces,
         sample: sampleDistinctTraces(rows, (row) => ({
           traceId: row.traceId,
-          spanId: row.id,
           name: row.name ?? row.type ?? "observation",
-          sessionId: contexts.get(row.traceId)?.sessionId ?? "",
-          userId: contexts.get(row.traceId)?.userId ?? "",
-          operation: resolveOperationFromSourceKind(row.type, OBSERVATION_OPERATION),
           model: row.model ?? "",
-          tags: contexts.get(row.traceId)?.tags ?? [],
           startTime: row.startTime ?? "",
+          endTime: row.endTime ?? "",
         })),
         warnings: cappedWarning(estimatedTraces, config.maxTraces),
       }
@@ -425,7 +415,7 @@ export const createLangfuseAdapter = (): ImportSourceAdapter<LangfuseObservation
         ),
         headers: authHeaders(credentials),
       })
-      const ok = yield* requireOk(response, "Langfuse fetch page")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ data?: LangfuseObservation[]; meta?: { cursor?: string | null } }>(ok)
       const rows = data.data ?? []
       const nextCursor = data.meta?.cursor ?? null

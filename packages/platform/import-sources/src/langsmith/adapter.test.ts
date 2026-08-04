@@ -246,23 +246,6 @@ describe("LangSmith adapter", () => {
       })
     })
 
-    it("always explains that session_id is the project id", async () => {
-      const { adapter } = run([{ id: "r1", extra: { metadata: { thread_id: "th-1" } } }])
-
-      const preview = await Effect.runPromise(
-        adapter.preview({
-          credentials: CREDENTIALS,
-          sourceProjectId: "ls-session-id",
-          config: CONFIG,
-          range: RANGE,
-          maxRecords: 100,
-        }),
-      )
-
-      expect(preview.warnings[0]).toContain("session_id` is the project id")
-      expect(preview.warnings[0]).toContain("extra.metadata.thread_id")
-    })
-
     it("warns when no sampled run carries the session metadata key", async () => {
       const { adapter } = run([
         { id: "r1", trace_id: "t1" },

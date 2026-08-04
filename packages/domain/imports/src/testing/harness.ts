@@ -34,7 +34,7 @@ export const stubImportDays = (n: number) => n * DAY_MS
 
 export const STUB_IMPORT_RANGE_TO = new Date("2026-04-01T00:00:00Z")
 const STUB_IMPORT_RANGE_DAYS = 90
-export const STUB_IMPORT_MAX_TRACES = 250_000
+export const STUB_IMPORT_MAX_TRACES = 50_000
 
 export const stubImportConfig = (overrides: Partial<ImportConfig> = {}): ImportConfig => ({
   sourceProjectId: "lf-project",

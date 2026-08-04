@@ -10,17 +10,22 @@ export interface SourceProject {
   readonly metadata?: Record<string, string>
 }
 
+/** One sampled span, before the spans of a trace fold into an {@link ImportTracePreview}. */
 export interface NormalizedSpanPreview {
   readonly traceId: string
-  readonly spanId: string
   readonly name: string
-  readonly sessionId: string
-  readonly userId: string
-  readonly operation: string
   readonly model: string
-  readonly tags: readonly string[]
-  /** Start of the sampled span, so the user can see the range caught what they meant. */
   readonly startTime: string
+  readonly endTime: string
+}
+
+/** One trace of the sample, aggregated from the spans the preview page caught of it. */
+export interface ImportTracePreview {
+  readonly traceId: string
+  readonly name: string
+  readonly models: readonly string[]
+  readonly startTime: string
+  readonly durationNs: number
 }
 
 /** What a dry run can say about a range: how big it is, a sample of it, and any caveats. */
@@ -33,7 +38,7 @@ export interface ImportPreview {
    * source cannot count.
    */
   readonly estimatedTraces: number | null
-  readonly sample: readonly NormalizedSpanPreview[]
+  readonly sample: readonly ImportTracePreview[]
   readonly warnings: readonly string[]
 }
 

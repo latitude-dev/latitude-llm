@@ -180,7 +180,7 @@ const countTraces = (input: {
           `where created >= '${input.range.from.toISOString()}' and created <= '${input.range.to.toISOString()}'`,
       }),
     })
-    const ok = yield* requireOk(response, "Braintrust count traces")
+    const ok = yield* requireOk(response)
     const data = yield* parseJson<{ data?: Array<{ traces?: number }> }>(ok)
     const total = data.data?.[0]?.traces
     return typeof total === "number" ? total : null
@@ -289,7 +289,7 @@ const attachmentContent = (input: {
       org_id: input.orgId,
     })
     const response = yield* httpRequest({ url: `${input.baseUrl}/attachment?${query}`, headers: input.headers })
-    const ok = yield* requireOk(response, "Braintrust attachment")
+    const ok = yield* requireOk(response)
     const meta = yield* parseJson<{
       downloadUrl?: string
       contentLength?: number
@@ -510,7 +510,7 @@ export const createBraintrustAdapter = (): ImportSourceAdapter<BraintrustSpan, B
         url: `${importSourceBaseUrl(credentials)}/v1/project?limit=1`,
         headers: authHeaders(credentials),
       })
-      yield* requireOk(response, "Braintrust connection test")
+      yield* requireOk(response)
     }),
 
   listProjects: ({ credentials, limit }) =>
@@ -524,7 +524,7 @@ export const createBraintrustAdapter = (): ImportSourceAdapter<BraintrustSpan, B
         url: `${importSourceBaseUrl(credentials)}/v1/project?limit=${limit}`,
         headers: authHeaders(credentials),
       })
-      const ok = yield* requireOk(response, "Braintrust list projects")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ objects?: Array<{ id: string; name: string }> }>(ok)
       const projects = (data.objects ?? []).slice(0, limit).map((p) => ({ id: p.id, name: p.name }))
       return { projects, nextCursor: null }
@@ -547,7 +547,7 @@ export const createBraintrustAdapter = (): ImportSourceAdapter<BraintrustSpan, B
           query: `select * from ${from} ${btqlWindow(range)} limit ${previewLimit}`,
         }),
       })
-      const ok = yield* requireOk(response, "Braintrust preview")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ data?: BraintrustSpan[] }>(ok)
       // Only rows the import would actually keep belong in the sample.
       const rows = (data.data ?? []).filter((row): row is BraintrustSpan & { span_id: string } => Boolean(row.span_id))
@@ -562,15 +562,11 @@ export const createBraintrustAdapter = (): ImportSourceAdapter<BraintrustSpan, B
         estimatedTraces,
         sample: sampleDistinctTraces(rows, (row) => ({
           traceId: row.root_span_id ?? row.span_id,
-          spanId: row.span_id,
           name: row.span_attributes?.name ?? "span",
-          sessionId: typeof row.metadata?.session_id === "string" ? row.metadata.session_id : "",
-          userId: typeof row.metadata?.user_id === "string" ? row.metadata.user_id : "",
-          operation: resolveOperationFromSourceKind(row.span_attributes?.type, SPAN_TYPE_OPERATION),
           model: resolveModelFromMetadata(row.metadata),
-          tags: row.tags ?? [],
           startTime:
             (metricTime(row.metrics?.start) ?? (row.created ? new Date(row.created) : undefined))?.toISOString() ?? "",
+          endTime: metricTime(row.metrics?.end)?.toISOString() ?? "",
         })),
         warnings: cappedWarning(estimatedTraces, config.maxTraces),
       }
@@ -596,7 +592,7 @@ export const createBraintrustAdapter = (): ImportSourceAdapter<BraintrustSpan, B
           query: `select * from ${from} ${btqlWindow(range)} limit ${pageSize}${offset}`,
         }),
       })
-      const ok = yield* requireOk(response, "Braintrust fetch page")
+      const ok = yield* requireOk(response)
       const data = yield* parseJson<{ data?: BraintrustSpan[]; cursor?: string | null }>(ok)
       const rows = yield* withPageAttachments({
         rows: data.data ?? [],
