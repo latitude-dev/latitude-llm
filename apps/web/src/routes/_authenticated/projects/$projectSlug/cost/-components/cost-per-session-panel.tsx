@@ -114,11 +114,18 @@ function ContributionRow({
 
 /**
  * Names the side that is short and by how much, rather than restating the rule.
- * Which window is thin decides what to do about it — widen the range, or accept
- * that the project is too new to compare — and the counts are already to hand.
+ *
+ * An empty comparison window is a different answer from a thin one and gets its
+ * own sentence: no traffic precedes the window at all, so widening the range
+ * cannot help and only more history will. Reporting that as "0 against the 20 a
+ * comparison needs" points at a threshold when the problem is the project's age.
  */
 function notEnoughDataReason(record: CostPerSessionRecord): string {
   const { previousSessions, currentSessions } = record.volume
+  if (previousSessions === 0 && currentSessions > 0) {
+    return "No sessions recorded before this window, so there is nothing to compare it against yet."
+  }
+
   const short = [
     currentSessions < SESSION_COST_MIN_SESSIONS ? `${formatCount(currentSessions)} in this window` : null,
     previousSessions < SESSION_COST_MIN_SESSIONS ? `${formatCount(previousSessions)} in the one before it` : null,
