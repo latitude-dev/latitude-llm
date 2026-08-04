@@ -179,11 +179,21 @@ const bucketSecondsSchema = z
   .max(90 * 24 * 60 * 60)
 
 // Counts the aligned positions the client will densify to, not the raw duration: the start floors to a boundary.
-const withinBucketBudget = (input: { fromIso: string; toIso: string; bucketSeconds: number }) => {
-  const stepMs = input.bucketSeconds * 1000
-  return (
-    Math.ceil(Date.parse(input.toIso) / stepMs) - Math.floor(Date.parse(input.fromIso) / stepMs) <= MAX_SERIES_BUCKETS
-  )
+const bucketsBetween = ({ fromMs, toIso, bucketSeconds }: { fromMs: number; toIso: string; bucketSeconds: number }) => {
+  const stepMs = bucketSeconds * 1000
+  return Math.ceil(Date.parse(toIso) / stepMs) - Math.floor(fromMs / stepMs)
+}
+
+const withinBucketBudget = (input: { fromIso: string; toIso: string; bucketSeconds: number }) =>
+  bucketsBetween({ fromMs: Date.parse(input.fromIso), ...input }) <= MAX_SERIES_BUCKETS
+
+/**
+ * The decomposition scans the comparison window as well, so its budget covers both.
+ * Checking only the shown window would let a request through at twice the cap.
+ */
+const withinPairedBucketBudget = (input: { fromIso: string; toIso: string; bucketSeconds: number }) => {
+  const fromMs = Date.parse(input.fromIso)
+  return bucketsBetween({ fromMs: fromMs - (Date.parse(input.toIso) - fromMs), ...input }) <= MAX_SERIES_BUCKETS
 }
 
 const bucketBudgetIssue = {
@@ -254,7 +264,7 @@ export const getCacheEconomics = createServerFn({ method: "GET" })
  */
 export const getCostPerSessionDecomposition = createServerFn({ method: "GET" })
   .inputValidator(
-    costScopeSchema.extend({ bucketSeconds: bucketSecondsSchema }).refine(withinBucketBudget, bucketBudgetIssue),
+    costScopeSchema.extend({ bucketSeconds: bucketSecondsSchema }).refine(withinPairedBucketBudget, bucketBudgetIssue),
   )
   .handler(async ({ data, context }): Promise<CostPerSessionRecord> => {
     const orgId = await resolveOrgScope(context)
