@@ -50,12 +50,7 @@ const toSetting = (value: RedactionCardValue): RedactionSetting => ({
   rules: decodeRules(value.rules),
 })
 
-/**
- * For the render path, where `toSetting` throwing would take the settings page down with it.
- *
- * `apply` wants the throw — a decode failure there must not be saved as an empty rule list — but
- * the preview is optional, so losing only the preview is the right failure.
- */
+// For the render path only: `apply` wants the throw, but a bad decode must not take the page down.
 const toSettingOrNull = (value: RedactionCardValue): RedactionSetting | null => {
   try {
     return toSetting(value)
@@ -201,8 +196,7 @@ function ProjectPrivacySettingsPage() {
       headerSticky={valueDirty}
     >
       <div className="flex w-full flex-col gap-8 @[900px]:w-2/3">
-        {/* The irreversibility and shape-matching caveats live on the card itself now, next to the
-            controls they qualify and where the organization modal shows them too. */}
+        {/* The irreversibility and shape-matching caveats live on the card, next to the controls they qualify. */}
         <Text.H6 color="foregroundMuted">
           Matching values are replaced with a labelled placeholder before the span is stored. A change takes effect
           within a minute.

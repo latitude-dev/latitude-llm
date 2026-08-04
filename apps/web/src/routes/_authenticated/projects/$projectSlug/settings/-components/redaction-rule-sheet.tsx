@@ -21,13 +21,7 @@ const KIND_OPTIONS = REDACTION_RULE_KIND_ORDER.map((kind) => ({
 /** Long enough that typing a pattern does not fire a request per keystroke. */
 const VALIDATE_DEBOUNCE_MS = 400
 
-/**
- * One state rather than a nullable verdict beside an `isValidating` flag.
- *
- * With two, "no verdict" had to stand for both "still checking" and "the check itself failed", and
- * the panel read them the same way: a network failure left it saying "Checking the rule…" with
- * nothing in flight and no way to tell why Save was refusing.
- */
+// One state, not a nullable verdict plus a flag: "no verdict" cannot mean both checking and failed.
 type Verdict =
   | { readonly status: "checking" }
   | { readonly status: "checked"; readonly validation: RuleValidation }
@@ -66,8 +60,7 @@ export function RedactionRuleSheet({
     }
 
     let cancelled = false
-    // Back to "checking": the previous draft's verdict is not an answer about this one, and Save
-    // would otherwise stamp it onto a pattern nobody had checked.
+    // The previous draft's verdict is not an answer about this one, and Save would stamp it.
     setVerdict(CHECKING)
     const timer = setTimeout(() => {
       validateRedactionRuleDraft({ data: { rule: draft } })
@@ -95,9 +88,7 @@ export function RedactionRuleSheet({
 
   return (
     <Sheet open={open} onClose={onClose} closeAriaLabel="Close rule editor">
-      {/* `Sheet` paints only the backdrop and leaves its panel transparent and shrink-to-fit, so the
-          background, the border and an explicit width belong here — the same job `DetailDrawer` does
-          for every other consumer. Without the background the page shows straight through the panel. */}
+      {/* `Sheet` paints only the backdrop, so the panel's own background, border and width belong here. */}
       <div className="flex h-full w-[34rem] max-w-[100vw] flex-col gap-6 overflow-y-auto border-border border-l bg-background p-6">
         <div className="flex flex-col gap-1">
           <Text.H4M>{rule ? "Edit rule" : "Add a rule"}</Text.H4M>
@@ -204,11 +195,7 @@ export function RedactionRuleSheet({
   )
 }
 
-/**
- * Says whether the rule is safe to run, and points at the preview for whether it removes the right
- * things. It deliberately makes no judgement about over-breadth: only the customer's own data can
- * answer that, and the preview reads it.
- */
+// Says whether the rule is safe to run; over-breadth is the preview's question, not this one's.
 function RuleVerdict({ ready, verdict }: { readonly ready: boolean; readonly verdict: Verdict }) {
   if (!ready) {
     return <Text.H6 color="foregroundMuted">Fill in a label and at least one value to check this rule.</Text.H6>
