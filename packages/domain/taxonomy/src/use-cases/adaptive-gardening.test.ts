@@ -407,6 +407,74 @@ describe("shadow guardrails hold across contrasting corpora", () => {
   })
 })
 
+// One vector repeated: identical sibling centroids, so no candidate split is accepted and both builders bare-root.
+const unsplittableCorpus = (at: Date): TaxonomyMomentObservation[] =>
+  Array.from({ length: 40 }, (_, index) => ({ ...makeObservation(index, 0, at), embedding: groupVector(0, 0) }))
+
+const priorTree = (): TaxonomyCluster[] => {
+  const root = "1".repeat(24)
+  return [
+    { id: root, parentClusterId: null, depth: 0, path: "" },
+    { id: "2".repeat(24), parentClusterId: root, depth: 1, path: `${root}/` },
+    { id: "3".repeat(24), parentClusterId: root, depth: 1, path: `${root}/` },
+  ].map((node) =>
+    taxonomyClusterSchema.parse({
+      ...node,
+      organizationId,
+      projectId,
+      customBehaviorId: null,
+      dimension: "topic",
+      splitLinkThreshold: null,
+      name: `Prior ${node.depth}`,
+      description: "A prior behaviour.",
+      centroid: { base: groupVector(0, 0), mass: 1, model: "m", decay: 1, weights: { default: 1 } },
+      observationCount: 10,
+      state: "active",
+      mergedIntoClusterId: null,
+      firstObservedAt: now,
+      lastObservedAt: now,
+      clusteredAt: now,
+      createdAt: now,
+      updatedAt: now,
+    }),
+  )
+}
+
+describe("a degenerate rebuild is detectable before any publish branch runs", () => {
+  it.each([
+    "off",
+    "shadow",
+    "enforced",
+  ] as const)("reports topLevelClustersBuilt 0 and would retire the whole prior tree (%s)", async (mode) => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(unsplittableCorpus(now)),
+      createFakeTaxonomyClusterRepository(priorTree()),
+      { now, mode },
+    )
+
+    // Above the gardening minimum, so not a cold start: the build ran and produced a bare root.
+    expect(plan.observationsSampled).toBe(40)
+    expect(plan.topLevelClustersBuilt).toBe(0)
+    expect(plan.clusters).toHaveLength(1)
+    expect(plan.maxDepthReached).toBe(0)
+    // What publishing would retire, on whichever branch this mode takes.
+    const retired = [...plan.deprecatedClusterIds, ...plan.supersededClusterIds]
+    expect(retired).toContain("2".repeat(24))
+    expect(retired).toContain("3".repeat(24))
+  })
+
+  it("a healthy rebuild reports its top-level count, so the guard stays out of the way", async () => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository(priorTree()),
+      { now, mode: "shadow" },
+    )
+
+    expect(plan.topLevelClustersBuilt).toBeGreaterThanOrEqual(2)
+    expect(plan.topLevelClustersBuilt).toBe(plan.comparison?.static.rootChildCount)
+  })
+})
+
 describe("taxonomy cluster entity accepts the widened staging state", () => {
   it("round-trips a staging row through the Zod schema", () => {
     const staging: TaxonomyCluster = taxonomyClusterSchema.parse({

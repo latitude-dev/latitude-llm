@@ -160,6 +160,8 @@ export interface GardenTaxonomyBuildPlanResult extends GardenTaxonomyLineageResu
   readonly clustersDeprecated: number
   readonly leavesAssigned: number
   readonly maxDepthReached: number
+  /** Root child count; zero ⇒ the build collapsed to a bare root. */
+  readonly topLevelClustersBuilt: number
   readonly planKey: string
 }
 
@@ -717,12 +719,32 @@ const annotateAdaptiveTelemetrySpan = (input: GardenTaxonomyStepInput, plan: Hie
         }
       }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.shadow"))
 
+// Emitted for every mode: the adaptive telemetry above returns early on `off`, which is what most projects run.
+// Detection only — whether the run then keeps the prior tree is the workflow's call, not this activity's.
+const emitDegenerateRebuildTelemetry = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan): void => {
+  // The two sets overlap on the adaptive path, where superseded is the whole prior tree.
+  const priorClustersAtRisk = new Set([...plan.deprecatedClusterIds, ...plan.supersededClusterIds]).size
+  if (plan.topLevelClustersBuilt > 0 || priorClustersAtRisk === 0) return
+  logger.info("Taxonomy degenerate rebuild detected", {
+    metric: "taxonomy.gardenTaxonomyWorkflow.degenerateRebuild",
+    mode: plan.mode,
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    customBehaviorId: input.customBehaviorId,
+    facetId: input.facetId,
+    observationsAvailable: plan.observationsAvailable,
+    observationsSampled: plan.observationsSampled,
+    priorClustersAtRisk,
+  })
+}
+
 // Telemetry + persist the staged plan artifact + shape the activity result. No
 // repository requirements (Redis + sync only), so both the topic and facet
 // planning paths reuse it after computing the plan under their own layers.
 const finalizeGardenPlan = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan) =>
   Effect.gen(function* () {
     yield* Effect.sync(() => emitAdaptivePlanTelemetry(input, plan))
+    yield* Effect.sync(() => emitDegenerateRebuildTelemetry(input, plan))
     yield* annotateAdaptiveTelemetrySpan(input, plan)
     const planKey = yield* storeGardenTaxonomyPlan(input, {
       clusters: plan.clusters,
@@ -757,6 +779,7 @@ const finalizeGardenPlan = (input: GardenTaxonomyStepInput, plan: HierarchicalTa
       clustersDeprecated: plan.clustersDeprecated,
       leavesAssigned: plan.leavesAssigned,
       maxDepthReached: plan.maxDepthReached,
+      topLevelClustersBuilt: plan.topLevelClustersBuilt,
       lineage: plan.lineage,
       planKey,
     } satisfies GardenTaxonomyBuildPlanResult
