@@ -112,6 +112,24 @@ function ContributionRow({
   )
 }
 
+/**
+ * Names the side that is short and by how much, rather than restating the rule.
+ * Which window is thin decides what to do about it — widen the range, or accept
+ * that the project is too new to compare — and the counts are already to hand.
+ */
+function notEnoughDataReason(record: CostPerSessionRecord): string {
+  const { previousSessions, currentSessions } = record.volume
+  const short = [
+    currentSessions < SESSION_COST_MIN_SESSIONS ? `${formatCount(currentSessions)} in this window` : null,
+    previousSessions < SESSION_COST_MIN_SESSIONS ? `${formatCount(previousSessions)} in the one before it` : null,
+  ].filter((part) => part !== null)
+
+  if (short.length === 0) {
+    return "Not enough data to compare periods: one of the two windows recorded no billable spend."
+  }
+  return `Not enough data to compare periods: ${short.join(" and ")}, against the ${SESSION_COST_MIN_SESSIONS} sessions a comparison needs on both sides.`
+}
+
 function Headline({ record }: { readonly record: CostPerSessionRecord }) {
   // The same rollup vocabulary the KPI row uses, so an average of zero reads as
   // "not known" rather than as free.
@@ -126,21 +144,25 @@ function Headline({ record }: { readonly record: CostPerSessionRecord }) {
     tokensTotal: record.tokens,
   })
   const changePct = record.changePct
-  const neutral = changePct === null || Math.abs(Math.round(changePct)) < NEUTRAL_POINTS
+  const neutral = Math.abs(Math.round(changePct ?? 0)) < NEUTRAL_POINTS
 
   return (
     <div className="flex flex-row flex-wrap items-baseline gap-3">
       <Text.H3 color="foreground" className="tabular-nums">
         {current.label}
       </Text.H3>
+      {/* Both halves are withheld together: printing the previous period's figure while
+          declining to quantify the move states a comparison the card just refused. */}
       {changePct === null ? null : (
-        <Text.H5 color={neutral ? "foregroundMuted" : changePct > 0 ? "destructive" : "success"} noWrap>
-          {signedPercent(changePct)}
-        </Text.H5>
+        <>
+          <Text.H5 color={neutral ? "foregroundMuted" : changePct > 0 ? "destructive" : "success"} noWrap>
+            {signedPercent(changePct)}
+          </Text.H5>
+          <Text.H6 color="foregroundMuted" noWrap>
+            {`from ${previous.label} in the previous period of equal length`}
+          </Text.H6>
+        </>
       )}
-      <Text.H6 color="foregroundMuted" noWrap>
-        {`from ${previous.label} in the previous period of equal length`}
-      </Text.H6>
     </div>
   )
 }
@@ -179,7 +201,10 @@ function Disclosures({ record }: { readonly record: CostPerSessionRecord }) {
     traceKeyed !== null && traceKeyed >= TRACE_KEYED_DISCLOSURE_SHARE
       ? `${Math.round(traceKeyed * 100)}% of these sessions are single traces that reported no session id, so this figure is close to average cost per trace.`
       : null,
-    "Traffic shifting toward an inherently longer use case raises this with nothing wrong — the rise lands on turns per session. Compare per agent before acting on it.",
+    // Describes how to read the rows, so it has nothing to qualify without them.
+    record.rows.length > 0
+      ? "Traffic shifting toward an inherently longer use case raises this with nothing wrong — the rise lands on turns per session. Compare per agent before acting on it."
+      : null,
   ].filter((line) => line !== null)
 
   return (
@@ -249,9 +274,7 @@ export function CostPerSessionPanel({
         <div className="flex flex-col gap-3 px-4 py-3">
           <Headline record={record} />
           {record.status === "notEnoughData" ? (
-            <Text.H6 color="foregroundMuted">
-              {`Not enough data to compare periods. Both this window and the one before it need at least ${SESSION_COST_MIN_SESSIONS} sessions with recorded spend.`}
-            </Text.H6>
+            <Text.H6 color="foregroundMuted">{notEnoughDataReason(record)}</Text.H6>
           ) : record.status === "flat" ? (
             <Text.H6 color="foregroundMuted">
               Cost per session held flat against the previous period, so no factor moved it.
