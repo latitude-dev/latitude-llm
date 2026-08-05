@@ -191,8 +191,9 @@ describe("buildRelativeHierarchicalClusters — deep root search", () => {
     "omitting the root-search config leaves the build byte-identical",
     () => {
       const corpus = buildNarrowDomainCorpus()
-      expect(partitionSignature(buildWith(corpus, false).root)).toBe(partitionSignature(build(corpus).root))
-      expect(buildWith(corpus, false).diagnostics.rootSearchKs).toBe(0)
+      // The whole result, not just the partition: opting out has to leave every
+      // diagnostic where a plain build left it too.
+      expect(buildWith(corpus, false)).toEqual(build(corpus))
     },
     RE_SEARCH_TIMEOUT_MS,
   )
@@ -317,8 +318,9 @@ describe("buildRelativeHierarchicalClusters — deep root search", () => {
 
       // The narrowed sweep does strictly less work...
       expect(narrow.diagnostics.rejectedCandidates).toBeLessThan(wide.diagnostics.rejectedCandidates)
-      // ...and still reaches the same root split, which is what makes it free.
-      expect(narrow.root.children.length).toBe(wide.root.children.length)
+      // ...and still reaches the same root split, which is what makes it free. The
+      // selected K rather than the child count: different K can agree on a count.
+      expect(narrow.diagnostics.selectedKByDepth[0]).toEqual(wide.diagnostics.selectedKByDepth[0])
     },
     RE_SEARCH_TIMEOUT_MS,
   )
