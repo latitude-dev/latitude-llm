@@ -56,7 +56,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   source: "annotation",
   origin: "system",
   assigneeId: null,
-  priority: null,
+  priority: "high",
   centroid: {
     base: [1, 0],
     mass: 1,
@@ -185,6 +185,22 @@ const makeLayer = (opts: {
 }
 
 describe("requestIncidentNotificationsUseCase", () => {
+  // An escalation is only as urgent as the signal escalating. With no level, nobody
+  // has judged it, so it pages no one — the incident itself still opened.
+  it("skips the fan-out when the escalating signal has no level", async () => {
+    const incident = makeIncident()
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: incident.id,
+        transition: "created",
+      }).pipe(Effect.provide(makeLayer({ incident, signal: makeSignal({ priority: null }) }))),
+    )
+
+    expect(result.status).toBe("skipped")
+    if (result.status !== "skipped") throw new Error("expected skipped")
+    expect(result.reason).toBe("signal-no-severity")
+  })
+
   it("fans out signal escalation incidents when the signal is not muted", async () => {
     const incident = makeIncident()
     const result = await Effect.runPromise(

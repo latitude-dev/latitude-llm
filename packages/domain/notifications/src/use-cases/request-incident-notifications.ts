@@ -74,7 +74,14 @@ export interface IncidentNotificationRequest {
 export type RequestIncidentNotificationsResult =
   | {
       readonly status: "skipped"
-      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted" | "signal-ignored"
+      readonly reason:
+        | "kind-disabled"
+        | "no-recipients"
+        | "monitor-muted"
+        | "signal-muted"
+        | "signal-ignored"
+        | "signal-resolved"
+        | "signal-no-severity"
     }
   | { readonly status: "ok"; readonly requests: readonly IncidentNotificationRequest[] }
 
@@ -519,6 +526,14 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) {
       yield* Effect.annotateCurrentSpan("skipped", "signal-resolved")
       return { status: "skipped", reason: "signal-resolved" } as const
+    }
+    // An escalation is only as urgent as the signal escalating. With no level —
+    // never triaged, or deliberately cleared — nobody has judged it, so it does
+    // not page anyone. The incident itself still opens and closes; only its
+    // delivery is suppressed. Monitor-sourced incidents always carry a severity.
+    if (signal !== null && signal.priority === null) {
+      yield* Effect.annotateCurrentSpan("skipped", "signal-no-severity")
+      return { status: "skipped", reason: "signal-no-severity" } as const
     }
 
     const notificationKind = resolveKind(incident, input.transition)

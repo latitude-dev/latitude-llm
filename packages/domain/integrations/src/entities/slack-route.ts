@@ -16,13 +16,23 @@ export const slackRouteSchema = z.object({
 export type SlackRoute = z.infer<typeof slackRouteSchema>
 
 /**
- * Whether a route accepts a notification payload. Incident payloads carry
- * `severity`; a route with `minSeverity` drops incidents below it. Payloads
- * without a severity (wrapped reports, announcements) always pass.
+ * Whether a route accepts a notification payload. A route with `minSeverity`
+ * drops payloads below it.
+ *
+ * `requiresSeverity` splits the two meanings of a missing severity. For kinds
+ * that should carry one (incidents, signals), missing means nobody has judged
+ * the source yet and it is not delivered. For kinds with no severity concept
+ * (wrapped reports, announcements, destination and billing alerts) it always
+ * passes. The caller supplies the fact from `NOTIFICATION_KIND_META` rather
+ * than this predicate inferring intent from an absent field.
  */
-export const routeAdmitsPayload = (route: SlackRoute, payload: Record<string, unknown>): boolean => {
+export const routeAdmitsPayload = (
+  route: SlackRoute,
+  payload: Record<string, unknown>,
+  options: { readonly requiresSeverity?: boolean } = {},
+): boolean => {
   const severity = alertSeveritySchema.safeParse(payload.severity)
-  if (!severity.success) return true
+  if (!severity.success) return options.requiresSeverity !== true
   return meetsMinSeverity(severity.data, route.minSeverity ?? "low")
 }
 

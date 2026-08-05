@@ -1,5 +1,5 @@
 import { type AlertSeverity, alertSeveritySchema, meetsMinSeverity, type NotificationPreferences } from "@domain/shared"
-import { groupOf, type NotificationKind } from "./notification.ts"
+import { groupOf, kindRequiresSeverity, type NotificationKind } from "./notification.ts"
 
 /**
  * Resolves whether to send an email for a given notification kind, taking
@@ -19,8 +19,11 @@ export const shouldSendEmail = (
 ): boolean => {
   const channel = prefs?.[groupOf(kind)]
   if (!(channel?.email ?? true)) return false
+  // A kind that should carry a severity but has none is unjudged — an untriaged
+  // signal, or one whose level was cleared — and is not emailed at all.
+  if (severity === undefined) return !kindRequiresSeverity(kind)
   const minimum = channel?.emailMinSeverity
-  if (!minimum || severity === undefined) return true
+  if (!minimum) return true
   return meetsMinSeverity(severity, minimum)
 }
 

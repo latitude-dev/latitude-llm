@@ -30,9 +30,19 @@ describe("routeAdmitsPayload", () => {
     expect(routeAdmitsPayload(route("urgent"), { severity: "urgent" })).toBe(true)
   })
 
-  it("admits payloads without a severity (wrapped reports, announcements)", () => {
+  it("admits payloads from kinds with no severity concept (wrapped reports, announcements)", () => {
     expect(routeAdmitsPayload(route("high"), { wrappedReportId: "wr1" })).toBe(true)
     expect(routeAdmitsPayload(route("high"), { severity: 42 })).toBe(true)
+  })
+
+  // A kind that should carry a severity but doesn't means nobody judged the
+  // source — an untriaged signal. Not delivered, threshold or no threshold.
+  it("drops a severity-bearing kind whose severity is missing or unparseable", () => {
+    const opts = { requiresSeverity: true }
+    expect(routeAdmitsPayload(route("high"), { signalId: "i" }, opts)).toBe(false)
+    expect(routeAdmitsPayload(route(), { signalId: "i" }, opts)).toBe(false)
+    expect(routeAdmitsPayload(route(), { signalId: "i", severity: 42 }, opts)).toBe(false)
+    expect(routeAdmitsPayload(route(), { signalId: "i", severity: "low" }, opts)).toBe(true)
   })
 
   // The whole point of putting `severity` on the signal payloads: a discovered
@@ -44,9 +54,10 @@ describe("routeAdmitsPayload", () => {
       discoveredAt: "2026-08-05T10:00:00.000Z",
       ...(severity ? { severity } : {}),
     })
+    const opts = { requiresSeverity: true }
 
-    expect(routeAdmitsPayload(route("high"), discovered("low"))).toBe(false)
-    expect(routeAdmitsPayload(route("high"), discovered("urgent"))).toBe(true)
-    expect(routeAdmitsPayload(route("high"), discovered())).toBe(true)
+    expect(routeAdmitsPayload(route("high"), discovered("low"), opts)).toBe(false)
+    expect(routeAdmitsPayload(route("high"), discovered("urgent"), opts)).toBe(true)
+    expect(routeAdmitsPayload(route("high"), discovered(), opts)).toBe(false)
   })
 })
