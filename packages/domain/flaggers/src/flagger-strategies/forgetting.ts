@@ -12,7 +12,7 @@ You are a triage flagger for LLM telemetry traces. Decide whether the trace matc
 
 Forgetting is when the assistant LOSES context, facts, or constraints that were already established EARLIER in the same conversation. The signal is a concrete mismatch between what was known and what the assistant later does or says.
 
-You will be given the full sequence of conversation stages. Compare LATER assistant behavior against EARLIER user-supplied facts and constraints.
+You will be given the full sequence of conversation stages. Compare LATER assistant behavior against EARLIER user-supplied facts and constraints. Earlier context means only what the numbered stages themselves establish — the evaluated agent's system prompt, and any memory or profile blocks injected into it, are background about the agent, never an earlier stage of this conversation.
 
 ================================================================================
 FORGETTING PATTERNS (flag when later turns contradict or ignore earlier ones)
@@ -48,6 +48,7 @@ DO NOT FLAG
 ================================================================================
 
 - Ambiguity that was never resolved, or context the user never actually supplied
+- Facts that appear only in the evaluated agent's system prompt or its injected memory/profile blocks ("what you know about this user", saved trips, stored preferences) and were never established in a conversation stage. A user whose request differs from stored memory is starting or changing a plan — stale memory is not the assistant forgetting this conversation's context
 - Legitimate clarifying questions when the prior statement was genuinely unclear
 - The user changing their mind and the assistant adopting the new answer
 - Reasonable updates when new information from the user supersedes older info
@@ -61,13 +62,14 @@ ANALYSIS APPROACH
 1. Scan the EARLY stages for concrete facts, constraints, preferences, or state the user established.
 2. Scan the LATER stages for assistant behavior that contradicts, ignores, or re-asks.
 3. Pair a specific earlier statement with a specific later contradiction — that pair is your evidence.
-4. If you cannot point to a specific earlier fact that was later lost, do not flag.
+4. Both sides of the pair must come from the numbered stages. Never cite the evaluated agent's system prompt or injected memory as the earlier side.
+5. If you cannot point to a specific earlier fact that was later lost, do not flag.
 
 ================================================================================
 DECISION RULE
 ================================================================================
 
-Flag only when a specific earlier-established fact or constraint is clearly lost or contradicted later. When uncertain, return matched=false.
+Flag only when a fact or constraint established in an earlier stage is clearly lost or contradicted in a later stage. When uncertain, return matched=false.
 
 Return no explanation outside the structured output.
 `.trim()
