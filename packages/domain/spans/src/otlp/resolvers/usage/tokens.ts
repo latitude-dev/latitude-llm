@@ -1,3 +1,4 @@
+import type { SpanTokenCounts } from "../../../entities/span.ts"
 import type { OtlpKeyValue } from "../../types.ts"
 import { first, firstKeyed, fromInt, keyedFromInt } from "../utils.ts"
 
@@ -213,20 +214,7 @@ function toAdditive(raw: number, subCategories: number, inclusive: boolean): num
 
 // ─── Resolve ─────────────────────────────────────────────
 
-interface ResolvedTokens {
-  /** Non-cached input tokens (additive: total_input = input + cacheRead + cacheCreate) */
-  readonly input: number
-  /** Non-reasoning output tokens (additive: total_output = output + reasoning) */
-  readonly output: number
-  /** Tokens served from provider cache */
-  readonly cacheRead: number
-  /** Tokens written to provider cache */
-  readonly cacheCreate: number
-  /** Reasoning/thinking tokens */
-  readonly reasoning: number
-}
-
-export function resolveTokens(attrs: readonly OtlpKeyValue[], provider: string): ResolvedTokens {
+export function resolveTokens(attrs: readonly OtlpKeyValue[], provider: string): SpanTokenCounts {
   const rawInputMatch = firstKeyed(inputKeyedCandidates, attrs)
   const rawInput = rawInputMatch?.value ?? 0
   const rawOutput = first(outputCandidates, attrs) ?? 0
@@ -248,10 +236,10 @@ export function resolveTokens(attrs: readonly OtlpKeyValue[], provider: string):
   const outputInclusive = inferred?.output ?? isOutputInclusiveFallback(provider)
 
   return {
-    input: toAdditive(rawInput, cache, inputInclusive),
-    output: toAdditive(rawOutput, reasoning, outputInclusive),
-    cacheRead,
-    cacheCreate,
-    reasoning,
+    tokensInput: toAdditive(rawInput, cache, inputInclusive),
+    tokensOutput: toAdditive(rawOutput, reasoning, outputInclusive),
+    tokensCacheRead: cacheRead,
+    tokensCacheCreate: cacheCreate,
+    tokensReasoning: reasoning,
   }
 }

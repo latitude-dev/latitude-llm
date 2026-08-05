@@ -2,7 +2,7 @@ import { resolveProviderName } from "@domain/models"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import type { Candidate } from "./utils.ts"
-import { first, fromString } from "./utils.ts"
+import { attrsFromMetadata, first, fromString } from "./utils.ts"
 
 // Claude Code embeds ANSI color codes in the `model` attribute (e.g.
 // `"\x1b[32mclaude-opus-4-5\x1b[0m"`); strip them. No other source does this.
@@ -39,6 +39,23 @@ const providerCandidates: Candidate<string>[] = [
     resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined),
   }, // Claude Code
 ]
+
+/**
+ * The provider named somewhere in a source's own metadata map, resolved by the same candidates as a
+ * live span's attributes.
+ */
+export function resolveProviderFromMetadata(metadata: Record<string, unknown> | null | undefined): string {
+  const attrs = attrsFromMetadata(metadata)
+
+  const fromAttributes = first(providerCandidates, attrs)
+  if (fromAttributes) return fromAttributes
+
+  // Two names that are not OTEL attributes, so they are not candidates above. `ls_provider` is
+  // LangChain's own run metadata, which reaches here as a flat key because the adapters flatten a
+  // vendor's metadata map; `provider` is whatever a source chose to call it.
+  const fromMetadataNames = stringAttr(attrs, "ls_provider") || stringAttr(attrs, "provider")
+  return fromMetadataNames ? resolveProviderName(fromMetadataNames) : ""
+}
 
 function anthropicProviderFromClaudeCodeSpanName(spanName: string): string | undefined {
   if (!spanName.startsWith("claude_code.llm_request")) return undefined
@@ -119,3 +136,43 @@ export const userEmailCandidates = [
   fromString("enduser.email"), // OTEL enduser semconv
   fromString("langfuse.user.email"), // Langfuse
 ]
+
+/**
+ * The model named somewhere in a source's own metadata map.
+ *
+ * The candidates run first, which is also what strips the ANSI escape codes Claude Code wraps a model
+ * name in. `sourceKeys` carries the names only that source uses — LangChain's `ls_model_name`, say —
+ * and are read after, since they are not OTEL attributes.
+ */
+export function resolveModelFromMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+  sourceKeys: readonly string[] = [],
+): string {
+  const attrs = attrsFromMetadata(metadata)
+  const fromCandidates = first(modelCandidates, attrs)
+  if (fromCandidates) return fromCandidates
+
+  for (const key of sourceKeys) {
+    const value = stringAttr(attrs, key)
+    if (value) return value
+  }
+  return ""
+}
+
+/**
+ * The end user's email named somewhere in a source's own metadata map.
+ *
+ * The candidates run first — `langfuse.user.email` above all, since a Langfuse import is exactly where
+ * that key turns up — then the three plain names a caller writes by hand, which are not OTEL attributes
+ * and so are not candidates.
+ */
+export function resolveUserEmailFromMetadata(metadata: Record<string, unknown> | null | undefined): string {
+  const attrs = attrsFromMetadata(metadata)
+  return (
+    first(userEmailCandidates, attrs) ??
+    stringAttr(attrs, "user_email") ??
+    stringAttr(attrs, "userEmail") ??
+    stringAttr(attrs, "email") ??
+    ""
+  )
+}

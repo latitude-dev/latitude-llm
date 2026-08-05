@@ -213,6 +213,17 @@ describe("/v1/mcp", () => {
     )
   })
 
+  it<ApiTestContext>("tools/list includes the import tools", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const res = await sendMcpRequest(app, tenant.oauthAccessToken, { jsonrpc: "2.0", id: 27, method: "tools/list" })
+    expect(res.status).toBe(200)
+    const payload = (await readSseJsonRpc(res)) as { result?: { tools?: ReadonlyArray<{ name: string }> } }
+    const toolNames = payload.result?.tools?.map((t) => t.name) ?? []
+    expect(toolNames).toEqual(
+      expect.arrayContaining(["listImports", "createImport", "getImport", "cancelImport", "retryImport"]),
+    )
+  })
+
   it<ApiTestContext>("tools/list includes the user-analytics tools", async ({ app, database }) => {
     const tenant = await createOAuthTenantSetup(database)
     const res = await sendMcpRequest(app, tenant.oauthAccessToken, { jsonrpc: "2.0", id: 22, method: "tools/list" })

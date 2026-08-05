@@ -102,7 +102,7 @@ function MemoryPreviewBackdrop() {
         </div>
         <div className="flex min-h-0 flex-1 flex-row">
           <div className="flex w-[280px] min-w-[280px] shrink-0 flex-col border-r">
-            <div className="flex h-9 shrink-0 items-center border-b px-3">
+            <div className="flex h-11 shrink-0 items-center border-b px-3">
               <Shape className="h-3 w-20" />
             </div>
             <div className="flex flex-col gap-1 p-2">

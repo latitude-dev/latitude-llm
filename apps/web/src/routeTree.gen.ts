@@ -90,6 +90,7 @@ import { Route as AuthenticatedProjectsProjectSlugUsersUserIdIndexRouteImport } 
 import { Route as AuthenticatedProjectsProjectSlugToolsToolNameIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/$toolName/index'
 import { Route as AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/signals/$signalSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/integrations/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/imports/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/data-destinations/index'
 import { Route as AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/$monitorSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugMemoryStoreIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/memory/$store/index'
@@ -565,6 +566,12 @@ const AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute =
     path: '/integrations/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute =
+  AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport.update({
+    id: '/imports/',
+    path: '/imports/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute =
   AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRouteImport.update(
     {
@@ -749,6 +756,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/memory/$store/': typeof AuthenticatedProjectsProjectSlugMemoryStoreIndexRoute
   '/projects/$projectSlug/monitors/$monitorSlug/': typeof AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRoute
   '/projects/$projectSlug/settings/data-destinations/': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute
+  '/projects/$projectSlug/settings/imports/': typeof AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute
   '/projects/$projectSlug/settings/integrations/': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute
   '/projects/$projectSlug/signals/$signalSlug/': typeof AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRoute
   '/projects/$projectSlug/tools/$toolName/': typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute
@@ -840,6 +848,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/memory/$store': typeof AuthenticatedProjectsProjectSlugMemoryStoreIndexRoute
   '/projects/$projectSlug/monitors/$monitorSlug': typeof AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRoute
   '/projects/$projectSlug/settings/data-destinations': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute
+  '/projects/$projectSlug/settings/imports': typeof AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute
   '/projects/$projectSlug/settings/integrations': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute
   '/projects/$projectSlug/signals/$signalSlug': typeof AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRoute
   '/projects/$projectSlug/tools/$toolName': typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute
@@ -937,6 +946,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/memory/$store/': typeof AuthenticatedProjectsProjectSlugMemoryStoreIndexRoute
   '/_authenticated/projects/$projectSlug/monitors/$monitorSlug/': typeof AuthenticatedProjectsProjectSlugMonitorsMonitorSlugIndexRoute
   '/_authenticated/projects/$projectSlug/settings/data-destinations/': typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute
+  '/_authenticated/projects/$projectSlug/settings/imports/': typeof AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute
   '/_authenticated/projects/$projectSlug/settings/integrations/': typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute
   '/_authenticated/projects/$projectSlug/signals/$signalSlug/': typeof AuthenticatedProjectsProjectSlugSignalsSignalSlugIndexRoute
   '/_authenticated/projects/$projectSlug/tools/$toolName/': typeof AuthenticatedProjectsProjectSlugToolsToolNameIndexRoute
@@ -1034,6 +1044,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/memory/$store/'
     | '/projects/$projectSlug/monitors/$monitorSlug/'
     | '/projects/$projectSlug/settings/data-destinations/'
+    | '/projects/$projectSlug/settings/imports/'
     | '/projects/$projectSlug/settings/integrations/'
     | '/projects/$projectSlug/signals/$signalSlug/'
     | '/projects/$projectSlug/tools/$toolName/'
@@ -1125,6 +1136,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/memory/$store'
     | '/projects/$projectSlug/monitors/$monitorSlug'
     | '/projects/$projectSlug/settings/data-destinations'
+    | '/projects/$projectSlug/settings/imports'
     | '/projects/$projectSlug/settings/integrations'
     | '/projects/$projectSlug/signals/$signalSlug'
     | '/projects/$projectSlug/tools/$toolName'
@@ -1221,6 +1233,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/memory/$store/'
     | '/_authenticated/projects/$projectSlug/monitors/$monitorSlug/'
     | '/_authenticated/projects/$projectSlug/settings/data-destinations/'
+    | '/_authenticated/projects/$projectSlug/settings/imports/'
     | '/_authenticated/projects/$projectSlug/settings/integrations/'
     | '/_authenticated/projects/$projectSlug/signals/$signalSlug/'
     | '/_authenticated/projects/$projectSlug/tools/$toolName/'
@@ -1828,6 +1841,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
+    '/_authenticated/projects/$projectSlug/settings/imports/': {
+      id: '/_authenticated/projects/$projectSlug/settings/imports/'
+      path: '/imports'
+      fullPath: '/projects/$projectSlug/settings/imports/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsImportsIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
     '/_authenticated/projects/$projectSlug/settings/data-destinations/': {
       id: '/_authenticated/projects/$projectSlug/settings/data-destinations/'
       path: '/data-destinations'
@@ -1971,6 +1991,7 @@ interface AuthenticatedProjectsProjectSlugSettingsRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsGithubRoute
   AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute
   AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute
+  AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute
   AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute
 }
 
@@ -2010,6 +2031,8 @@ const AuthenticatedProjectsProjectSlugSettingsRouteChildren: AuthenticatedProjec
       AuthenticatedProjectsProjectSlugSettingsIntegrationsSlackRoute,
     AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute:
       AuthenticatedProjectsProjectSlugSettingsDataDestinationsIndexRoute,
+    AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute:
+      AuthenticatedProjectsProjectSlugSettingsImportsIndexRoute,
     AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute:
       AuthenticatedProjectsProjectSlugSettingsIntegrationsIndexRoute,
   }

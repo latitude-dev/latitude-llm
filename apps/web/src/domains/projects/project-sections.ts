@@ -9,6 +9,7 @@ import {
   EyeOffIcon,
   Fingerprint,
   FlaskConical,
+  ImportIcon,
   Key,
   type LucideIcon,
   MessagesSquareIcon,
@@ -192,8 +193,14 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         path: (slug) => `/projects/${slug}/settings/integrations`,
       },
       {
+        key: "imports",
+        label: "Imports",
+        icon: ImportIcon,
+        path: (slug) => `/projects/${slug}/settings/imports`,
+      },
+      {
         key: "data-destinations",
-        label: "Data destinations",
+        label: "Destinations",
         icon: Share2Icon,
         path: (slug) => `/projects/${slug}/settings/data-destinations`,
       },

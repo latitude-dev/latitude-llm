@@ -31,6 +31,7 @@ import { MEMORY_OPERATIONS, parseCostSource, SpanRepository, type SpanRepository
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
+import { sessionMembershipClause } from "../registries/helpers.ts"
 import { buildSpanFilterClauses } from "../registries/span-fields.ts"
 
 const SPAN_KIND_TO_INT: Record<SpanKind, number> = {
@@ -424,25 +425,10 @@ const toInsertRow = (span: SpanDetail) => ({
   ingested_at: formatCHDate(span.ingestedAt),
 })
 
-// Session membership mirrors the sessions_mv grouping key
-// (`coalesce(nullIf(session_id, ''), toString(trace_id))`): conversation-id
-// sessions match on session_id, orphan single-trace sessions (empty
-// session_id) match on their trace_id. Split into bare column equalities —
-// the coalesce form wraps both columns in functions, defeating the
-// idx_session_id / idx_trace_id bloom-filter skip indexes, so it scanned
-// every granule of the org/project. Orphan session ids are 32-hex trace ids;
-// any other length cannot match a FixedString(32) trace_id, so the trace arm
-// is dropped (toFixedString on a longer value would throw).
-const sessionMembership = (sessionId: string): { clause: string; params: Record<string, string> } => {
-  if (sessionId.length === 0) return { clause: "1 = 0", params: {} }
-  if (sessionId.length === 32) {
-    return {
-      clause: "(session_id = {sessionId:String} OR (session_id = '' AND trace_id = {sessionTraceId:FixedString(32)}))",
-      params: { sessionId, sessionTraceId: sessionId },
-    }
-  }
-  return { clause: "session_id = {sessionId:String}", params: { sessionId } }
-}
+// See `sessionMembershipClause`, which the trace filter registry shares. Every caller spreads the
+// returned params, so the prefix only has to avoid colliding with a name the query binds itself.
+const sessionMembership = (sessionId: string): { clause: string; params: Record<string, string> } =>
+  sessionMembershipClause(sessionId, "membership")
 
 // Defense-in-depth for multi-span reads: single-threaded formatting, a per-query
 // memory cap, and an execution-time cap so a pathological query fails its own

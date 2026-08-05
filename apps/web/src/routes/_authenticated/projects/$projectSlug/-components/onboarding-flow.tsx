@@ -306,6 +306,7 @@ export function OnboardingFlow({
         ) : (
           <TelemetryStep.Left
             traceReceived={traceReceived}
+            projectId={projectId}
             projectSlug={projectSlug}
             sampleProjectSlug={sampleProject?.slug}
             onBack={() => goToStep(telemetryBackStep)}

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.8.0] - 2026-08-05
+
+### Added
+
+- `latitude imports` — import historical traces from Langfuse, LangSmith, or Braintrust into a project: `list`, `create`, `get`, `cancel`, and `retry`. An import runs in the background, newest traces first; `retry` resumes a failed, cancelled, or capped import from where it stopped.
+
 ## [7.7.1] - 2026-08-03
 
 ### Changed

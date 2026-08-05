@@ -17,6 +17,7 @@ if typing.TYPE_CHECKING:
     from .api_keys.client import ApiKeysClient, AsyncApiKeysClient
     from .datasets.client import AsyncDatasetsClient, DatasetsClient
     from .experiments.client import AsyncExperimentsClient, ExperimentsClient
+    from .imports.client import AsyncImportsClient, ImportsClient
     from .incidents.client import AsyncIncidentsClient, IncidentsClient
     from .members.client import AsyncMembersClient, MembersClient
     from .memory.client import AsyncMemoryClient, MemoryClient
@@ -139,6 +140,7 @@ class LatitudeClient:
         self._experiments: typing.Optional[ExperimentsClient] = None
         self._sessions: typing.Optional[SessionsClient] = None
         self._memory: typing.Optional[MemoryClient] = None
+        self._imports: typing.Optional[ImportsClient] = None
 
     @property
     def account(self):
@@ -300,6 +302,14 @@ class LatitudeClient:
             self._memory = MemoryClient(client_wrapper=self._client_wrapper)
         return self._memory
 
+    @property
+    def imports(self):
+        if self._imports is None:
+            from .imports.client import ImportsClient  # noqa: E402
+
+            self._imports = ImportsClient(client_wrapper=self._client_wrapper)
+        return self._imports
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -428,6 +438,7 @@ class AsyncLatitudeClient:
         self._experiments: typing.Optional[AsyncExperimentsClient] = None
         self._sessions: typing.Optional[AsyncSessionsClient] = None
         self._memory: typing.Optional[AsyncMemoryClient] = None
+        self._imports: typing.Optional[AsyncImportsClient] = None
 
     @property
     def account(self):
@@ -588,6 +599,14 @@ class AsyncLatitudeClient:
 
             self._memory = AsyncMemoryClient(client_wrapper=self._client_wrapper)
         return self._memory
+
+    @property
+    def imports(self):
+        if self._imports is None:
+            from .imports.client import AsyncImportsClient  # noqa: E402
+
+            self._imports = AsyncImportsClient(client_wrapper=self._client_wrapper)
+        return self._imports
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

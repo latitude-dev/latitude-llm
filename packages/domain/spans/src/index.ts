@@ -50,6 +50,7 @@ export type {
   SpanDetail,
   SpanKind,
   SpanStatusCode,
+  SpanTokenCounts,
   ToolDefinition,
 } from "./entities/span.ts"
 export {
@@ -68,7 +69,7 @@ export {
 } from "./entities/span.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
-export { SpanDecodingError } from "./errors.ts"
+export { RedactionError, SpanDecodingError } from "./errors.ts"
 export type {
   CacheCadence,
   CacheCadenceHistogram,
@@ -111,6 +112,7 @@ export {
   summarizeUnpricedUsage,
   UNPRICED_CAUSES,
 } from "./helpers/classify-unpriced-cost.ts"
+export { resolveSpanCost, usdToMicrocents } from "./helpers/estimate-span-cost.ts"
 export type { CacheModelJudgment, JudgedCacheModel } from "./helpers/judge-cache-economics.ts"
 export { judgeCacheEconomics, promptCacheTtlSeconds } from "./helpers/judge-cache-economics.ts"
 export {
@@ -119,6 +121,7 @@ export {
   type MessageEmbeddingInput,
   type MessageEmbeddingRole,
 } from "./helpers/message-embedding.ts"
+export { parseMessagePayload, stringifyPayload } from "./helpers/message-payload.ts"
 export { modelCacheBreakEvenRate } from "./helpers/model-cache-break-even.ts"
 export { type ModelRegistryPricing, modelRegistryPricing } from "./helpers/model-registry-pricing.ts"
 export { normalizeLiteralPhrase, stripLoneSurrogates } from "./helpers/normalize-literal-phrase.ts"
@@ -127,6 +130,7 @@ export {
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export { toolDefinitionsFrom } from "./helpers/resolve-tool-definitions.ts"
 export {
   shouldReportUnpricedSpan,
   UNPRICEABLE_PAIR_REASONS,
@@ -150,6 +154,17 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
+export { resolveErrorTypeFromMetadata } from "./otlp/resolvers/error.ts"
+export {
+  resolveModelFromMetadata,
+  resolveProviderFromMetadata,
+  resolveUserEmailFromMetadata,
+} from "./otlp/resolvers/identity.ts"
+export { resolveOperationFromSourceKind } from "./otlp/resolvers/operation.ts"
+export { resolveReportedPerformance } from "./otlp/resolvers/performance.ts"
+export { resolveResponseIdFromMetadata } from "./otlp/resolvers/response.ts"
+export { resolveToolDefinitionsFromMetadata } from "./otlp/resolvers/tool-definitions.ts"
+export { resolveToolExecutionFromMetadata } from "./otlp/resolvers/tool-execution.ts"
 export type { UnpricedSpanGroup } from "./otlp/transform.ts"
 export type { AnalyticsQueryInput, AnalyticsQueryReaderShape } from "./ports/analytics-query-reader.ts"
 export { AnalyticsQueryReader } from "./ports/analytics-query-reader.ts"
@@ -290,6 +305,7 @@ export type {
   UserUsageSlice,
 } from "./ports/user-analytics-repository.ts"
 export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./ports/user-analytics-repository.ts"
+export { redactSpans, type SpanRedactionSummary } from "./redaction/redact-spans.ts"
 export type { RuleValidation, RuleValidationIssue } from "./redaction/validate-rule.ts"
 export { REDACTION_VALIDATOR_VERSION, validateRedactionRule } from "./redaction/validate-rule.ts"
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"

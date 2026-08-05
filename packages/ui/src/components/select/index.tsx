@@ -169,6 +169,11 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
     selectedValue === undefined || selectedValue === null || selectedValue === ("" as V) ? "" : String(selectedValue)
 
   const _onChange = (newValue: string) => {
+    // Radix rejects an item whose value is empty, so an empty change is never a real selection.
+    // It emits one anyway when a controlled value is set in the same commit that first renders
+    // its matching item, which reads as the caller clearing the field it just set. Clearing is
+    // `_onRemove`'s job.
+    if (newValue === "") return
     if (!isControlled) {
       setInternalSelected(newValue as V)
     }
