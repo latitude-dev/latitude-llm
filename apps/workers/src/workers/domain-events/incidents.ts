@@ -4,8 +4,14 @@ import {
   type EntrySignalsSnapshot,
 } from "@domain/incidents"
 import type { QueueConsumer } from "@domain/queue"
-import { OrganizationId } from "@domain/shared"
-import { IncidentRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { OrganizationId, SignalId } from "@domain/shared"
+import { SignalRepository } from "@domain/signals"
+import {
+  IncidentRepositoryLive,
+  OutboxEventWriterLive,
+  SignalRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../../clients.ts"
@@ -16,7 +22,7 @@ interface AlertIncidentsDeps {
   consumer: QueueConsumer
 }
 
-const repoLayer = Layer.mergeAll(IncidentRepositoryLive, OutboxEventWriterLive)
+const repoLayer = Layer.mergeAll(IncidentRepositoryLive, OutboxEventWriterLive, SignalRepositoryLive)
 
 const createIncidentForSignalEscalation = (payload: {
   readonly organizationId: string
@@ -25,12 +31,23 @@ const createIncidentForSignalEscalation = (payload: {
   readonly occurredAt: Date
   readonly entrySignals?: EntrySignalsSnapshot | null
 }) =>
-  createIncidentFromSignalEventUseCase({
-    organizationId: payload.organizationId,
-    projectId: payload.projectId,
-    signalId: payload.signalId,
-    occurredAt: payload.occurredAt,
-    entrySignals: payload.entrySignals ?? null,
+  Effect.gen(function* () {
+    // One level per signal: its escalation opens at the signal's own severity.
+    // Unset (every signal until `derivedSignalSeverity` is on) keeps the "high"
+    // every escalation used to open at.
+    const signals = yield* SignalRepository
+    const signal = yield* signals
+      .findById(SignalId(payload.signalId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+    return yield* createIncidentFromSignalEventUseCase({
+      organizationId: payload.organizationId,
+      projectId: payload.projectId,
+      signalId: payload.signalId,
+      occurredAt: payload.occurredAt,
+      entrySignals: payload.entrySignals ?? null,
+      ...(signal?.priority ? { severity: signal.priority } : {}),
+    })
   }).pipe(
     withPostgres(repoLayer, getPostgresClient(), OrganizationId(payload.organizationId)),
     Effect.tap((incident) =>

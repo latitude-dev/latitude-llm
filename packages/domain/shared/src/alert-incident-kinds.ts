@@ -12,7 +12,13 @@ export const INCIDENT_SOURCE_TYPES = ["monitor", "signal"] as const
 export const incidentSourceTypeSchema = z.enum(INCIDENT_SOURCE_TYPES)
 export type IncidentSourceType = z.infer<typeof incidentSourceTypeSchema>
 
-export const ALERT_SEVERITIES = ["low", "medium", "high"] as const
+/**
+ * The one severity scale, ascending. Shared with signals, whose `priority`
+ * column holds the same values under a different field name (kept because
+ * `priority` is public API and `severity` is the key inside every stored
+ * notification payload — see `@domain/signals` `SIGNAL_PRIORITIES`).
+ */
+export const ALERT_SEVERITIES = ["low", "medium", "high", "urgent"] as const
 export const alertSeveritySchema = z.enum(ALERT_SEVERITIES)
 export type AlertSeverity = z.infer<typeof alertSeveritySchema>
 
@@ -39,7 +45,7 @@ export const DEFAULT_SEVERITY_FOR_INCIDENT_NOTIFICATION_KEY: Record<IncidentNoti
   "monitor.escalating": "high",
 }
 
-const SEVERITY_RANK: Record<AlertSeverity, number> = { low: 0, medium: 1, high: 2 }
+const SEVERITY_RANK: Record<AlertSeverity, number> = { low: 0, medium: 1, high: 2, urgent: 3 }
 
 export const meetsMinSeverity = (severity: AlertSeverity, minimum: AlertSeverity): boolean =>
   SEVERITY_RANK[severity] >= SEVERITY_RANK[minimum]
@@ -48,6 +54,7 @@ export const SEVERITY_COLOR: Record<AlertSeverity, string> = {
   low: "#3b82f6",
   medium: "#f59e0b",
   high: "#ef4444",
+  urgent: "#b91c1c",
 }
 
 export const SEVERITY_BADGE_COLOR: Record<AlertSeverity, { readonly background: string; readonly foreground: string }> =
@@ -55,4 +62,5 @@ export const SEVERITY_BADGE_COLOR: Record<AlertSeverity, { readonly background: 
     low: { background: "#dbeafe", foreground: "#1e40af" },
     medium: { background: "#fef3c7", foreground: "#92400e" },
     high: { background: "#fee2e2", foreground: "#991b1b" },
+    urgent: { background: "#fecaca", foreground: "#7f1d1d" },
   }

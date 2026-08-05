@@ -4,7 +4,7 @@ import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { generateId, type NotFoundError, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import type { Signal, SignalSource } from "../entities/signal.ts"
+import type { Signal, SignalPriority, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
 import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
@@ -19,6 +19,13 @@ export interface CreateSignalFromScoreInput {
   readonly projectId: string
   readonly scoreId: string
   readonly normalizedEmbedding: readonly number[]
+  /**
+   * Derive the signal's initial severity from the details generation. Resolved
+   * from the `derivedSignalSeverity` flag by the calling activity, never by
+   * workflow code (Temporal determinism). Absent ⇒ the signal lands with no
+   * level, exactly as before.
+   */
+  readonly deriveSeverity?: boolean
 }
 
 export type CreateSignalFromScoreResult = {
@@ -77,6 +84,7 @@ const buildNewSignalFromScore = ({
   assignedAt,
   name,
   description,
+  priority,
   slug,
 }: {
   readonly score: Score
@@ -85,6 +93,7 @@ const buildNewSignalFromScore = ({
   readonly assignedAt: Date
   readonly name: string
   readonly description: string
+  readonly priority: SignalPriority | null
   readonly slug: string
 }): Signal => {
   const centroid = updateSignalCentroid({
@@ -114,7 +123,7 @@ const buildNewSignalFromScore = ({
     source,
     origin: "system",
     assigneeId: null,
-    priority: null,
+    priority,
     centroid,
     clusteredAt: centroid.clusteredAt,
     resolvedAt: null,
@@ -148,6 +157,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           feedback: initialScoreResult.score.feedback,
         },
       ],
+      withSeverity: input.deriveSeverity === true,
     })
 
     const sqlClient = yield* SqlClient
@@ -185,6 +195,9 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           assignedAt,
           name: signalDetails.name,
           description: signalDetails.description,
+          // `priority` is the column and the public API field; `severity` is the
+          // scale's name everywhere else. Same values, one list.
+          priority: signalDetails.severity ?? null,
           slug,
         })
 

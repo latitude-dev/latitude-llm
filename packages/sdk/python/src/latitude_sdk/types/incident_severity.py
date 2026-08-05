@@ -2,4 +2,4 @@
 
 import typing
 
-IncidentSeverity = typing.Union[typing.Literal["low", "medium", "high"], typing.Any]
+IncidentSeverity = typing.Union[typing.Literal["low", "medium", "high", "urgent"], typing.Any]

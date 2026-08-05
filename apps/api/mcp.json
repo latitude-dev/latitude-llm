@@ -11121,7 +11121,8 @@
               "enum": [
                 "low",
                 "medium",
-                "high"
+                "high",
+                "urgent"
               ]
             }
           }
@@ -11177,9 +11178,10 @@
                   "enum": [
                     "low",
                     "medium",
-                    "high"
+                    "high",
+                    "urgent"
                   ],
-                  "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+                  "description": "Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."
                 },
                 "startedAt": {
                   "type": "string",
@@ -12010,9 +12012,10 @@
             "enum": [
               "low",
               "medium",
-              "high"
+              "high",
+              "urgent"
             ],
-            "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+            "description": "Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."
           },
           "startedAt": {
             "type": "string",
@@ -17909,9 +17912,10 @@
                       "enum": [
                         "low",
                         "medium",
-                        "high"
+                        "high",
+                        "urgent"
                       ],
-                      "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                      "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
                     }
                   },
                   "required": [
@@ -21593,9 +21597,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -23081,9 +23086,10 @@
                       "enum": [
                         "low",
                         "medium",
-                        "high"
+                        "high",
+                        "urgent"
                       ],
-                      "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                      "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
                     }
                   },
                   "required": [
@@ -24501,9 +24507,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -25933,9 +25940,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -26108,9 +26116,10 @@
                   "enum": [
                     "low",
                     "medium",
-                    "high"
+                    "high",
+                    "urgent"
                   ],
-                  "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+                  "description": "Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."
                 },
                 "startedAt": {
                   "type": "string",
@@ -28243,9 +28252,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -29655,9 +29665,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [

@@ -1,5 +1,5 @@
 import type { ScoreSourceType } from "@domain/scores"
-import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
+import { ALERT_SEVERITIES, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 
 export const SIGNAL_NAME_MAX_LENGTH = 128
 
@@ -7,8 +7,14 @@ export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regre
 
 export const SIGNAL_SOURCES = ["annotation", "flagger", "custom"] as const
 
-/** Manual triage priority levels, ascending in urgency. Null means "unset". */
-export const SIGNAL_PRIORITIES = ["low", "medium", "high", "urgent"] as const
+/**
+ * A signal's level, ascending. The same scale monitors and incidents call
+ * severity — one list, two field names: `signals.priority` is public API
+ * (`operations/signals.ts`) and `severity` is the key inside stored
+ * notification payloads, so neither can be renamed for free. Null means
+ * "unset", which only signals have (a monitor's level is required).
+ */
+export const SIGNAL_PRIORITIES = ALERT_SEVERITIES
 
 /**
  * Priority groups in display order for the always-grouped issues list.

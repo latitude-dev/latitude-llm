@@ -241,9 +241,18 @@ export const signalAssignedPayloadSchema = z.object({
 })
 export type SignalAssignedPayload = z.infer<typeof signalAssignedPayloadSchema>
 
+/**
+ * The signal's level at producer time, under the same `severity` key incident
+ * payloads use — that is what `routeAdmitsPayload` and `severityFromPayload`
+ * filter on, so a Slack route's `minSeverity` and a user's `emailMinSeverity`
+ * apply to discovered signals with no further wiring. Optional: rows written
+ * before this field, and signals with no level yet, carry none and are always
+ * admitted.
+ */
 export const signalDiscoveredPayloadSchema = z.object({
   signalId: cuidSchema,
   discoveredAt: z.iso.datetime(),
+  severity: alertSeveritySchema.optional(),
 })
 export type SignalDiscoveredPayload = z.infer<typeof signalDiscoveredPayloadSchema>
 
@@ -252,6 +261,7 @@ export const signalRegressedPayloadSchema = z.object({
   regressedAt: z.iso.datetime(),
   /** Occurrence that reopened the resolved signal; discriminates regression cycles. */
   triggerScoreId: cuidSchema,
+  severity: alertSeveritySchema.optional(),
 })
 export type SignalRegressedPayload = z.infer<typeof signalRegressedPayloadSchema>
 

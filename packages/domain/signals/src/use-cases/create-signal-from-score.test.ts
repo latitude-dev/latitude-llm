@@ -97,7 +97,79 @@ const createGenerateSignalDetails =
       duration: 5,
     })
 
+const createGenerateSignalDetailsWithSeverity =
+  (name: string, description: string, severity: string): AIGenerate =>
+  <T>(input: GenerateInput<T>) =>
+    Effect.succeed({
+      object: input.schema.parse({ name, description, severity }),
+      tokens: 10,
+      duration: 5,
+    })
+
 describe("createSignalFromScoreUseCase", () => {
+  it("leaves the new signal with no level and never asks for a severity by default", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: createGenerateSignalDetails("Token leakage", "Secrets appear in replies."),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    const score = makeScore()
+    scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
+
+    const result = await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+      ),
+    )
+
+    expect(issues.get(result.signalId)?.priority).toBeNull()
+    expect(calls.generate[0]?.prompt).not.toContain("severity")
+  })
+
+  it("writes the derived severity into the priority field at creation when the flag is on", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: createGenerateSignalDetailsWithSeverity("Token leakage", "Secrets appear in replies.", "urgent"),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    const score = makeScore()
+    scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
+
+    const result = await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+        deriveSeverity: true,
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+      ),
+    )
+
+    // Committed with the signal, so the SignalCreated consumers (notifications,
+    // dispatch) read a level rather than a null.
+    expect(issues.get(result.signalId)?.priority).toBe("urgent")
+    expect(calls.generate[0]?.prompt).toContain("`severity`")
+  })
+
   it("generates details, creates a new issue, and claims score ownership", async () => {
     const { layer: aiLayer, calls } = createFakeAI({
       generate: createGenerateSignalDetails(

@@ -2,6 +2,7 @@ import { OutboxEventWriter } from "@domain/events"
 import {
   type AlertIncidentCondition,
   AlertIncidentId,
+  type AlertSeverity,
   generateId,
   OrganizationId,
   ProjectId,
@@ -26,6 +27,11 @@ export interface CreateIncidentFromSignalEventInput {
    */
   readonly entrySignals?: EntrySignalsSnapshot | null
   readonly condition?: AlertIncidentCondition | null
+  /**
+   * The escalating signal's own level, resolved by the caller. Absent ⇒ `"high"`,
+   * which is what every signal escalation used to open at unconditionally.
+   */
+  readonly severity?: AlertSeverity
 }
 
 export type CreateIncidentFromSignalEventError = RepositoryError
@@ -50,7 +56,7 @@ export const createIncidentFromSignalEventUseCase = (input: CreateIncidentFromSi
           projectId: ProjectId(input.projectId),
           sourceType: "signal",
           sourceId: input.signalId,
-          severity: "high",
+          severity: input.severity ?? "high",
           startedAt: input.occurredAt,
           endedAt: null,
           createdAt: now,

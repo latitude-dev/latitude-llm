@@ -41,9 +41,12 @@ export const NOTIFICATION_GROUP_META: Record<
     description: "Notifications addressed directly to you, like being assigned to an issue.",
     slackRoutable: false,
   },
+  // Named `incidents` for the persisted key, but it covers every alert: monitors
+  // firing, signals escalating, and newly discovered or regressed signals. The
+  // severity threshold below applies to all of them.
   incidents: {
-    label: "Monitors",
-    description: "Get notified when one of your monitors fires.",
+    label: "Alerts",
+    description: "Get notified when a monitor fires or a signal needs attention.",
     slackRoutable: true,
   },
   wrapped_reports: {

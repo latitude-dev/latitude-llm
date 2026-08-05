@@ -19,13 +19,34 @@ describe("routeAdmitsPayload", () => {
     expect(routeAdmitsPayload(route("medium"), { severity: "high" })).toBe(true)
   })
 
-  it("high admits only high", () => {
+  it("high admits high and urgent", () => {
     expect(routeAdmitsPayload(route("high"), { severity: "medium" })).toBe(false)
     expect(routeAdmitsPayload(route("high"), { severity: "high" })).toBe(true)
+    expect(routeAdmitsPayload(route("high"), { severity: "urgent" })).toBe(true)
+  })
+
+  it("urgent admits only urgent", () => {
+    expect(routeAdmitsPayload(route("urgent"), { severity: "high" })).toBe(false)
+    expect(routeAdmitsPayload(route("urgent"), { severity: "urgent" })).toBe(true)
   })
 
   it("admits payloads without a severity (wrapped reports, announcements)", () => {
     expect(routeAdmitsPayload(route("high"), { wrappedReportId: "wr1" })).toBe(true)
     expect(routeAdmitsPayload(route("high"), { severity: 42 })).toBe(true)
+  })
+
+  // The whole point of putting `severity` on the signal payloads: a discovered
+  // signal is filtered by the same route threshold as an incident, and one with
+  // no level yet still gets through.
+  it("filters discovered signals by the same threshold", () => {
+    const discovered = (severity?: string) => ({
+      signalId: "i".repeat(24),
+      discoveredAt: "2026-08-05T10:00:00.000Z",
+      ...(severity ? { severity } : {}),
+    })
+
+    expect(routeAdmitsPayload(route("high"), discovered("low"))).toBe(false)
+    expect(routeAdmitsPayload(route("high"), discovered("urgent"))).toBe(true)
+    expect(routeAdmitsPayload(route("high"), discovered())).toBe(true)
   })
 })

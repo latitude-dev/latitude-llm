@@ -16,6 +16,7 @@ import {
   SIGNAL_DETAILS_MAX_OCCURRENCES,
   SIGNAL_NAME_MAX_LENGTH,
 } from "../constants.ts"
+import { type SignalPriority, signalPrioritySchema } from "../entities/signal.ts"
 import {
   MissingSignalOccurrencesForDetailsGenerationError,
   SignalNotFoundForDetailsGenerationError,
@@ -33,7 +34,7 @@ const truncateSignalName = (name: string) => {
   return `${collapsed.slice(0, 125).trimEnd()}...`
 }
 
-const signalDetailsSchema = z.object({
+const signalDetailsShape = {
   name: z
     .string()
     .min(1)
@@ -45,6 +46,13 @@ const signalDetailsSchema = z.object({
     .string()
     .min(1)
     .describe("One concise paragraph describing the shared underlying problem across the occurrences"),
+}
+
+const signalDetailsSchema = z.object(signalDetailsShape)
+
+const signalDetailsWithSeveritySchema = z.object({
+  ...signalDetailsShape,
+  severity: signalPrioritySchema.describe("How much attention this pattern deserves, per the severity rubric"),
 })
 
 export interface SignalOccurrenceInput {
@@ -55,6 +63,8 @@ export interface SignalOccurrenceInput {
 export interface GeneratedSignalDetails {
   readonly name: string
   readonly description: string
+  /** Only present when `withSeverity` was requested and the model answered. */
+  readonly severity?: SignalPriority
 }
 
 export interface GenerateSignalDetailsInput {
@@ -62,6 +72,12 @@ export interface GenerateSignalDetailsInput {
   readonly projectId: string
   readonly signalId?: string | null
   readonly occurrences?: readonly SignalOccurrenceInput[]
+  /**
+   * Ask for a severity alongside the name and description. Creation-only: a
+   * refresh must not re-derive it, or it would overwrite manual triage —
+   * including a level a human deliberately cleared back to unset.
+   */
+  readonly withSeverity?: boolean
 }
 
 export type GenerateSignalDetailsError =
@@ -79,10 +95,27 @@ const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
     )
     .join("\n")
 
+/**
+ * A signal is usually one occurrence old when it is created, so there is no
+ * impact to measure yet: this rates how bad the failure mechanism is, not how
+ * widespread it turned out to be. Ties resolve downward because the same value
+ * gates Slack delivery and (later) automated PR creation, where a false "urgent"
+ * costs more than a missed one.
+ */
+const SEVERITY_RUBRIC = [
+  "Also return `severity`, rating how much attention this pattern deserves:",
+  '- "urgent": data loss, a safety or compliance breach, leaked credentials or personal data, or a hard failure that leaves the task impossible to finish.',
+  '- "high": the task fails or the answer is wrong in a way the user would act on, but nothing is breached and the work can be redone.',
+  '- "medium": the outcome is degraded — partial, inefficient, or needing rework — while the user can still get what they came for.',
+  '- "low": cosmetic or stylistic only (tone, formatting, verbosity), or the pattern describes desirable behavior rather than a failure.',
+  "Rate the mechanism itself, not how often it appears: a new pattern is typically a single occurrence, so frequency is not evidence yet. When the occurrences do not say enough to separate two levels, choose the lower one.",
+].join("\n")
+
 const buildPrompt = (input: {
   readonly previousName: string | null
   readonly previousDescription: string | null
   readonly occurrences: readonly SignalOccurrenceInput[]
+  readonly withSeverity: boolean
 }) => {
   const parts = ["Recent assigned issue occurrences (newest first):", buildOccurrenceBlock(input.occurrences)]
 
@@ -95,7 +128,9 @@ const buildPrompt = (input: {
   }
 
   parts.push(
-    "Return JSON with `name` and `description`.",
+    input.withSeverity
+      ? "Return JSON with `name`, `description` and `severity`."
+      : "Return JSON with `name` and `description`.",
     "Rules:",
     "- If occurrences describe incompatible tools, transports, or error categories, use a title that preserves those distinctions; avoid vague umbrella labels that merge unrelated mechanisms.",
     "- Do not overfit to one conversation, one user, one date, or one exact example.",
@@ -104,6 +139,10 @@ const buildPrompt = (input: {
     "- Keep `description` concise and focused on the shared underlying problem.",
     '- Frame `name` around the problem itself, not around the AI as the actor. Do not start it with "Agent", "The Agent", "Model", "The Model", "AI", "The AI", "Assistant", "The Assistant", "Bot", "The Bot", or any equivalent generic reference to the system being evaluated. Concrete subjects (specific tools, behaviors, outputs, or failure modes) are fine. Good examples: "Recommendation of dangerous product combinations", "Read tool fails accessing dataset rows", "Tool call failures due to missing dependencies, malformed input, or environment misconfiguration", "Unnecessary conversational filler undermines formal tone". Bad example: "Agent recommends dangerous product combinations".',
   )
+
+  if (input.withSeverity) {
+    parts.push(SEVERITY_RUBRIC)
+  }
 
   return parts.join("\n\n")
 }
@@ -130,6 +169,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
       yield* Effect.annotateCurrentSpan("signalId", input.signalId)
     }
     const ai = yield* AI
+    const withSeverity = input.withSeverity === true
 
     let previousName: string | null = null
     let previousDescription: string | null = null
@@ -209,13 +249,17 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
         previousName,
         previousDescription,
         occurrences,
+        withSeverity,
       }),
-      schema: signalDetailsSchema,
+      schema: withSeverity ? signalDetailsWithSeveritySchema : signalDetailsSchema,
     })
+
+    const severity = signalPrioritySchema.safeParse((result.object as { severity?: unknown }).severity)
 
     return {
       name: truncateSignalName(result.object.name),
       description: collapseWhitespace(result.object.description),
+      ...(severity.success ? { severity: severity.data } : {}),
     } satisfies GeneratedSignalDetails
   }).pipe(Effect.withSpan("issues.generateSignalDetails")) as Effect.Effect<
     GeneratedSignalDetails,

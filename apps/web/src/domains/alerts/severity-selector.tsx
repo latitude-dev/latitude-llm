@@ -19,6 +19,7 @@ const SEVERITY_STATUS_VARIANT: Record<AlertSeverity, StatusProps["variant"]> = {
   low: "info",
   medium: "warning",
   high: "destructive",
+  urgent: "destructive",
 }
 
 /**

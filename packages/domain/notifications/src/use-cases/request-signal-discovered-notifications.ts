@@ -74,6 +74,7 @@ export const requestSignalDiscoveredNotificationsUseCase = (input: RequestSignal
     const payload: SignalDiscoveredPayload = {
       signalId: input.signalId,
       discoveredAt: input.discoveredAt,
+      ...(signal.priority === null ? {} : { severity: signal.priority }),
     }
     const idempotencyKey = buildIdempotencyKey({ kind: "signal.discovered", payload })
     const requests = recipients.map(
