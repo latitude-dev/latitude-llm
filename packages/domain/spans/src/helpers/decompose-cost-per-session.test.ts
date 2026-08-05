@@ -381,6 +381,24 @@ describe("decomposeCostPerSession", () => {
     expect(result.status).toBe("flat")
   })
 
+  it("charges a new model's price gap against the old blend to the rate factors", () => {
+    // Its share arriving is mix-neutral, because the baseline is the old blended price.
+    // Whatever it costs beyond that blend is a price difference, so it lands on a rate.
+    const result = decomposeCostPerSession({
+      previous: period({ ...BASELINE, models: [{ ...CHEAP, share: 1 }] }),
+      current: period({
+        ...BASELINE,
+        models: [
+          { ...CHEAP, share: 0.5 },
+          { ...DEAR, name: "brand-new", share: 0.5 },
+        ],
+      }),
+    })
+
+    expect(multiplierFor(result.rows, "promptRate")).toBeGreaterThan(1)
+    expect(multiplierFor(result.rows, "tokenMix")).toBeCloseTo(1, 6)
+  })
+
   it("baselines a model with no previous tokens at the previous blended price", () => {
     const result = decomposeCostPerSession({
       previous: period({ ...BASELINE, models: [{ ...CHEAP, share: 1 }] }),

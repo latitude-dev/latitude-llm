@@ -270,9 +270,11 @@ interface PriceEffects {
  * per-side prices, so growing the prompt while output holds shows up here rather
  * than as a rate cut. What is left is the two sides' prices actually changing.
  *
- * A price list with no previous tokens is baselined at the previous blended price,
- * and its side split at its current one, so a brand-new model contributes to mix
- * and not to either rate.
+ * A price list with no previous tokens is baselined at the previous blended price, and
+ * its side split at its current one. So taking share is mix-neutral for it and it adds
+ * nothing to `tokenMix`, while however far its own prices sit from that old blend lands
+ * on the rate factors — a new model is only a "price change" to the extent it costs
+ * something other than what the traffic used to average.
  */
 function priceEffects({
   previous,
