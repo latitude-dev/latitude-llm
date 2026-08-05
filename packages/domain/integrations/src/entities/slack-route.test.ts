@@ -11,6 +11,15 @@ describe("routeAdmitsPayload", () => {
   it("admits everything when the route has no minimum severity", () => {
     expect(routeAdmitsPayload(route(), { severity: "low" })).toBe(true)
     expect(routeAdmitsPayload(route(), { severity: "high" })).toBe(true)
+    expect(routeAdmitsPayload(route(), { severity: "urgent" })).toBe(true)
+  })
+
+  // An unset threshold and an explicit `low` are the same decision today, but
+  // for different reasons — the first is "unconfigured", the second is "the
+  // bottom of the scale". Pinned so a future tier below `low` breaks here.
+  it("treats an unset threshold as no filter, not as low", () => {
+    expect(routeAdmitsPayload(route(), { severity: "low" })).toBe(true)
+    expect(routeAdmitsPayload(route("low"), { severity: "low" })).toBe(true)
   })
 
   it("applies the minimum progressively — medium admits medium and high", () => {

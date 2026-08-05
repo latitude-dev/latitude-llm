@@ -16,15 +16,22 @@ export const slackRouteSchema = z.object({
 export type SlackRoute = z.infer<typeof slackRouteSchema>
 
 /**
- * Whether a route accepts a notification payload. A route with `minSeverity`
- * drops payloads below it.
+ * Whether a route accepts a notification payload. Two different things can be
+ * missing here, and they answer oppositely — both are spelled out rather than
+ * encoded in a sentinel value.
  *
- * `requiresSeverity` splits the two meanings of a missing severity. For kinds
- * that should carry one (incidents, signals), missing means nobody has judged
- * the source yet and it is not delivered. For kinds with no severity concept
- * (wrapped reports, announcements, destination and billing alerts) it always
- * passes. The caller supplies the fact from `NOTIFICATION_KIND_META` rather
- * than this predicate inferring intent from an absent field.
+ * A missing payload severity: for kinds that should carry one (incidents,
+ * signals) it means nobody has judged the source yet, and it is not delivered.
+ * For kinds with no severity concept (wrapped reports, announcements,
+ * destination and billing alerts) it always passes. The caller supplies which
+ * case applies from `NOTIFICATION_KIND_META`, so this predicate never infers
+ * intent from an absent field.
+ *
+ * A missing route threshold: nothing was configured, so everything passes.
+ * Writing that as `minSeverity ?? "low"` would work only for as long as `low`
+ * stays the bottom of the scale — add a tier below it and the sentinel silently
+ * starts filtering. It also conflates "unset" with "explicitly Low", which the
+ * settings UI already does and which has misled a production audit.
  */
 export const routeAdmitsPayload = (
   route: SlackRoute,
@@ -33,7 +40,8 @@ export const routeAdmitsPayload = (
 ): boolean => {
   const severity = alertSeveritySchema.safeParse(payload.severity)
   if (!severity.success) return options.requiresSeverity !== true
-  return meetsMinSeverity(severity.data, route.minSeverity ?? "low")
+  if (route.minSeverity === undefined) return true
+  return meetsMinSeverity(severity.data, route.minSeverity)
 }
 
 /**
