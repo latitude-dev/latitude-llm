@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+## v0.3.78 - 2026-08-05
+
+### Imports
+
+- Added historical trace imports from Langfuse, LangSmith and Braintrust, so a team evaluating Latitude backfills its own history instead of starting from an empty project. Each source sits behind one adapter port and walks time windows newest-first, so a capped run keeps the most recent traces and can resume from its cursor; credentials live on the job row and are cleared when it finishes. Imports meter through the existing credit gate at a trace apiece, with plan-aware limits shown before the run starts, and a `ProjectDeleted` consumer cleans up job state. An imported span resolves through the same resolvers as a live one, which fixed four things on the live path too: a span carrying only `exception.type` now records an error type, a `gen_ai.tool.definitions` value wrapped in a `{tools: […]}` object yields its tools, an Anthropic-dialect tool definition keeps its `input_schema` parameters, and a TTFT longer than the span that measured it reads as unknown rather than as fact. Docs in `dev-docs/imports.md` (ref: #3849).
+- Reworked the import wizard into Platform → Preview, gated on a live connection test, with a searchable source-project selector, a 10-trace sample and a size slider capped at the 100k hard maximum that warns when the range holds more. The wizard is shared between the imports settings modal and a new Import tab in the telemetry instructions, so onboarding and the traces empty state offer imports too. The settings list became a jobs table with status, progress, duration and counts, plus per-row cancel, retry and continue (ref: #3849).
+- Fixed a succeeded import reading 1% forever when it drained a source smaller than the requested cap, so the cap is no longer used as the denominator once a run completes. Also fixed the wizard's date-range picker being unclickable inside the modal: its popover portaled to `document.body`, where an open dialog leaves `pointer-events: none`, and two bundled copies of `@radix-ui/react-dismissable-layer` meant the popover never learned to re-enable them (ref: #4350).
+
+### Cost
+
+- Added the reference the cache panel was missing: an achievable ceiling per model, the share of cache-eligible volume whose gap to the preceding call falls inside the provider's documented cache lifetime. It is measured across an agent's whole traffic and never within a session, because a cache read does not care which conversation wrote the entry; measuring within-session gaps would score a high-volume single-turn workload at 0% and call the ideal caching case unfixable. Lifetimes enter the registry keyed by provider and model prefix with every entry citing its doc page, and an unlisted pair returns null rather than guessing. Cadence comes back as one cumulative gap histogram over the offered lifetimes, so the lifetime selector is a lookup rather than a refetch and no pricing crosses into the browser (ref: #4323).
+- Added estimated savings and the recommendation cards on top of that judgment, modelled from tokens times registry prices and labelled as estimates. The counterfactual follows the recommendation, so "stop caching" is priced against caching switched off rather than against the ceiling it was told to abandon. Cards are gated on a weekly spend floor and always read documented lifetimes, so a lifetime the reader is exploring never becomes our recommendation (ref: #4323).
+
+### Privacy
+
+- Added custom redaction rules for project-specific identifiers, in three kinds: drop a named span attribute, match a literal term list, or match a regular expression. Detection no longer keys off the closed entity enum, so a pattern can ship without widening it, and rules cascade by replacement like entities. An omitted `rules` field preserves stored rules while an explicit empty array clears them, and the rule editor now waits for a verdict on the current draft before Save goes live, with a failed check distinguished from an unfinished one (ref: #4341).
+- Hardened the pattern scanner: overlap is judged under the rule's own `ignoreCase` flag, so `[a-z]+[A-Z]+x` compiled with `i` is refused at the source instead of passing every gate, which is precisely the polynomial shape the scanner exists to catch. Rule-draft validation is now gated on organization admin, and a corpus of roughly 175 coding-agent strings (package specifiers, semver, git SHAs, UUIDs, paths, diff hunks, SQL, stack traces, plus redaction's own output) is asserted against the whole default entity set, so a detector that broadens and starts eating another entity's negatives fails loudly (ref: #4341).
+
+### Behaviors
+
+- Kept the last good taxonomy when a rebuild collapses to a bare root. A garden run whose sample clears the gardening minimum but cannot split produced a root-only tree, and publishing then retired every active cluster and activated a tree with no behaviour under it, so a project whose traffic thinned for a week lost all its behaviours even though a healthy tree existed the day before. The publish sequence is now gated on the built tree's top-level count for the static and adaptive paths alike: a degenerate rebuild completes the run empty and leaves the prior tree serving (ref: #4347).
+
+### Billing
+
+- Fixed the usage counter double-counting overage in the sidebar and on the billing settings page. `consumedCredits` already includes overage, so 133k plus 33k displayed as 166k. Remaining, included-used, progress and limit state are now derived server-side in the billing overview DTO, leaving the UI to format and render (ref: #4345).
+
+### Spans
+
+- Stopped clamping uncached input tokens to zero when reported cache exceeds reported input. An inclusive input count contains its cache sub-categories by definition, so it can never be smaller than them, but the resolver had no such check and the "always inclusive" convention still fired, subtracting real input down to zero. Our own Claude Code telemetry hits this on every span, which zeroed `tokens_input` on 100% of priced Claude Code spans in production. Genuinely inclusive emitters keep subtracting as before (ref: #4346).
+
 ## v0.3.77 - 2026-08-04
 
 ### Cost
