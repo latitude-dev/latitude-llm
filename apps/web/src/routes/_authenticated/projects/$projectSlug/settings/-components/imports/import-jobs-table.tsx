@@ -53,7 +53,9 @@ const isActiveStatus = (status: ImportRecord["status"]) =>
 /** Kept in step with `RESUMABLE_STATUSES` in retryImportUseCase, which is what enforces it. */
 const RESUMABLE_STATUSES: readonly ImportRecord["status"][] = ["failed", "cancelled", "capped"]
 
+/** A succeeded job drained the source, so it is complete even when that was fewer traces than the cap. */
 const progressPercent = (job: ImportRecord): number => {
+  if (job.status === "succeeded") return 100
   if (job.config.maxTraces <= 0) return 0
   return Math.min(100, Math.round((job.stats.tracesImported / job.config.maxTraces) * 100))
 }

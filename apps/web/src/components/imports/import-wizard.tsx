@@ -699,7 +699,7 @@ function ImportWizardForm({
                   />
                 </div>
                 {/* The picker trigger is a `min-h-8` Button; pinned to the Select's `h-9` so the row lines up. */}
-                <div className="shrink-0 [&>button]:h-9">
+                <div className="shrink-0 [&>div>button]:h-9">
                   <TimeFilterDropdown
                     startTimeFrom={range.from}
                     startTimeTo={range.to}
