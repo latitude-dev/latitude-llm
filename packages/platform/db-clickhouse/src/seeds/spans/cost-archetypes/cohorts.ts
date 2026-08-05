@@ -44,6 +44,22 @@ export type CohortCache =
   | { readonly kind: "flat"; readonly profile: CacheProfile }
   | { readonly kind: "prefixReuse"; readonly share: number }
 
+/**
+ * A share of the cohort's traces whose last call fails.
+ *
+ * Stated as "one trace in every N" rather than a percentage so the wasted-spend figure
+ * stays computable by hand, the same reason the cadence is a cluster layout.
+ *
+ * `billed` is the interesting axis: a rejected call records no usage at all, which is the
+ * only fixture where the whole-trace and per-span readings of wasted spend disagree —
+ * per-span would report $0 on a trace that really did throw away paid work.
+ */
+export interface CohortFailure {
+  readonly everyNthTrace: number
+  readonly errorType: string
+  readonly billed: boolean
+}
+
 export interface CostCohort {
   readonly key: string
   readonly serviceName: string
@@ -54,6 +70,9 @@ export interface CostCohort {
   readonly completionTokens: number
   /** `1` is a single-turn workload; `0` writes no session id at all. */
   readonly callsPerSession: number
+  /** Calls sharing one trace id. Defaults to one, which is a trace per call. */
+  readonly callsPerTrace?: number
+  readonly failure?: CohortFailure
   /**
    * Overrides the builder's `estimated`. `""` is a row written before the column
    * existed, which reads back as `unknown` — the one bucket nothing else produces.
@@ -96,8 +115,27 @@ const applyCostSource = (span: SpanRow, source: CostSource | ""): void => {
   span.cost_is_estimated = 0
 }
 
+/** The trace failed and this is its last call, so the failure lands where a real one would. */
+const applyFailure = (span: SpanRow, failure: CohortFailure): void => {
+  span.status_code = 2
+  span.error_type = failure.errorType
+  span.status_message = `${failure.errorType} on ${span.model}`
+  if (failure.billed) return
+  span.tokens_input = 0
+  span.tokens_output = 0
+  span.tokens_cache_read = 0
+  span.tokens_cache_create = 0
+  span.tokens_reasoning = 0
+  span.cost_input_microcents = 0
+  span.cost_output_microcents = 0
+  span.cost_total_microcents = 0
+  span.cost_is_estimated = 0
+  span.cost_source = "no_tokens"
+}
+
 const buildCohortSpans = (cohort: CostCohort, scope: SeedScope, anchorMs: number): SpanRow[] => {
   const { cadence } = cohort
+  const callsPerTrace = cohort.callsPerTrace ?? 1
   const spans: SpanRow[] = []
   const newestCallMs = anchorMs - cadence.endDaysAgo * DAY_MS
   let index = 0
@@ -127,8 +165,9 @@ const buildCohortSpans = (cohort: CostCohort, scope: SeedScope, anchorMs: number
         metadata: {},
       }
 
+      const traceIndex = Math.floor(index / callsPerTrace)
       const span = makeLlmSpan({
-        base: toBase(ctx, scope.traceHex(cohort.key, index), "", start, 1_800),
+        base: toBase(ctx, scope.traceHex(cohort.key, traceIndex), "", start, 1_800),
         modelConfig: cohort.modelConfig,
         inputMessages: [userMessage(`${cohort.key} request ${index}`)],
         outputMessages: [assistantTextMessage(`${cohort.key} response ${index}`)],
@@ -142,6 +181,13 @@ const buildCohortSpans = (cohort: CostCohort, scope: SeedScope, anchorMs: number
       span.span_id = scope.spanHex(cohort.key, index)
       span.agent_name = cohort.serviceName
       if (cohort.costSource !== undefined) applyCostSource(span, cohort.costSource)
+      if (
+        cohort.failure &&
+        traceIndex % cohort.failure.everyNthTrace === 0 &&
+        index % callsPerTrace === callsPerTrace - 1
+      ) {
+        applyFailure(span, cohort.failure)
+      }
 
       spans.push(span)
       index++

@@ -49,6 +49,13 @@ export const GEMINI_2_5_FLASH = model({ provider: "google", model: "gemini-2.5-f
 export const GEMINI_2_5_FLASH_LITE = model({ provider: "google", model: "gemini-2.5-flash-lite" })
 
 /**
+ * The failing cohorts' models. Priced like any other, because wasted spend is about real
+ * dollars on traces that errored — a model with a pricing quirk would confound the two.
+ */
+export const CLAUDE_OPUS_4_8 = model({ provider: "anthropic", model: "claude-opus-4-8" })
+export const GPT_5_6 = model({ provider: "openai", model: "gpt-5.6" })
+
+/**
  * One-off models for the unhealthy archetype's long tail: enough distinct rows that
  * top-N + `Other models` has something to collapse, and thin enough that the
  * breakdown table's per-row averages are samples nobody should trust. All priced, so

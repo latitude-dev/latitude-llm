@@ -5,9 +5,11 @@ import {
   CLAUDE_OPUS_4_5,
   CLAUDE_OPUS_4_6,
   CLAUDE_OPUS_4_7,
+  CLAUDE_OPUS_4_8,
   COST_LONG_TAIL_MODELS,
   GEMINI_2_5_FLASH_LITE,
   GPT_5_4_MINI,
+  GPT_5_6,
   GPT_5_6_LUNA,
   GPT_5_MINI,
   GPT_5_NANO,
@@ -192,6 +194,50 @@ const MISSING_COST_COHORTS: readonly CostCohort[] = [
   },
 ]
 
+/**
+ * The wasted-spend cohorts: traces that spent real money and then failed.
+ *
+ * Both are multi-call traces, which is what makes them worth seeding at all — a
+ * one-call-per-trace cohort cannot tell the whole-trace reading apart from the per-span
+ * one. `b-errors-rejected` is the case the decision turns on: the failing call records no
+ * usage, so per-span sees $0 while the two calls before it were paid for and discarded.
+ *
+ * Two error types plus the unlabelled cohort give the reason list something to rank and a
+ * remainder to fold, and the failure rates are one-in-N so the resulting figure is
+ * checkable by hand rather than by rerunning the query.
+ */
+const WASTED_SPEND_COHORTS: readonly CostCohort[] = [
+  {
+    key: "b-errors-rejected",
+    serviceName: "invoice-parser",
+    modelConfig: CLAUDE_OPUS_4_8,
+    cadence: { endDaysAgo: 0, clusters: 40, clusterSpacingHours: 6, callsPerCluster: 9, gapWithinClusterSeconds: 40 },
+    // Same margin against its ceiling as `b-optimal`: these cohorts exist to move the
+    // wasted-spend panel, and a cache finding on them would add a state to a table that
+    // deliberately carries one model per state.
+    cache: { kind: "prefixReuse", share: 0.93 },
+    promptTokens: 18_000,
+    completionTokens: 300,
+    callsPerSession: 3,
+    callsPerTrace: 3,
+    failure: { everyNthTrace: 4, errorType: "rate_limit_exceeded", billed: false },
+  },
+  {
+    // The failing call did consume tokens — a timeout mid-stream — so both readings
+    // charge something and only the amount differs.
+    key: "b-errors-timeout",
+    serviceName: "report-writer",
+    modelConfig: GPT_5_6,
+    cadence: { endDaysAgo: 0, clusters: 30, clusterSpacingHours: 8, callsPerCluster: 8, gapWithinClusterSeconds: 50 },
+    cache: { kind: "prefixReuse", share: 0.93 },
+    promptTokens: 22_000,
+    completionTokens: 450,
+    callsPerSession: 4,
+    callsPerTrace: 2,
+    failure: { everyNthTrace: 5, errorType: "deadline_exceeded", billed: true },
+  },
+]
+
 const LONG_TAIL_COHORTS: readonly CostCohort[] = COST_LONG_TAIL_MODELS.map((modelConfig, index) => ({
   key: `b-long-tail-${index}`,
   serviceName: "experiments",
@@ -213,5 +259,6 @@ const LONG_TAIL_COHORTS: readonly CostCohort[] = COST_LONG_TAIL_MODELS.map((mode
 export const FINDINGS_FIRE_COHORTS: readonly CostCohort[] = [
   ...CACHE_STATE_COHORTS,
   ...MISSING_COST_COHORTS,
+  ...WASTED_SPEND_COHORTS,
   ...LONG_TAIL_COHORTS,
 ]

@@ -165,6 +165,7 @@ export {
   traceRefSchema,
   tracesRefSchema,
 } from "./helpers/trace-ref.ts"
+export { wastedSpendShare } from "./helpers/wasted-spend.ts"
 export {
   alignUnixSecondsToHistogramBucket,
   denseTraceTimeHistogramBuckets,
@@ -213,6 +214,8 @@ export type {
   SessionCostBucket,
   SessionCostFactorsPair,
   SessionCostFactorsScope,
+  WastedSpend,
+  WastedSpendReason,
 } from "./ports/cost-analytics-repository.ts"
 export {
   CACHE_ECONOMICS_ROW_LIMIT,
@@ -222,6 +225,8 @@ export {
   COST_SERIES_METRICS,
   CostAnalyticsRepository,
   MODEL_USAGE_SERIES_LIMIT,
+  WASTED_SPEND_MIN_SAMPLE_TRACES,
+  WASTED_SPEND_REASON_LIMIT,
 } from "./ports/cost-analytics-repository.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
 export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"

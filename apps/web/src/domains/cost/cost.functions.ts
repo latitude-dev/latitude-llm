@@ -8,6 +8,7 @@ import type {
   JudgedCacheModel,
   ModelUsageMeasures,
   ModelUsageSlice,
+  WastedSpend,
 } from "@domain/spans"
 import {
   COST_BREAKDOWN_DIMENSIONS,
@@ -18,6 +19,7 @@ import {
   judgeCacheEconomics,
   sessionCostTokens,
   summarizeUnpricedUsage,
+  wastedSpendShare,
 } from "@domain/spans"
 import { CostAnalyticsRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
@@ -116,6 +118,19 @@ export interface CostPerSessionRecord extends CostPerSessionDecomposition {
   readonly comparedToIso: string
   /** Sparkline points for the two headline blocks, spanning both windows, oldest first. */
   readonly buckets: readonly SessionCostSparkPoint[]
+}
+
+/** Every listed reason's spend, and the one row that holds whatever the list left off. */
+export interface WastedSpendOtherReasons {
+  readonly typeCount: number
+  readonly traces: number
+  readonly costMicrocents: number
+}
+
+export interface WastedSpendRecord extends WastedSpend {
+  /** Null where the window cannot support a share — the dollar figure is shown regardless. */
+  readonly wastedShare: number | null
+  readonly otherReasons: WastedSpendOtherReasons | null
 }
 
 /** Cost per session is derived here rather than in the panel: an empty bucket has none. */
@@ -299,6 +314,45 @@ export const getCostPerSessionDecomposition = createServerFn({ method: "GET" })
             costMicrocents: bucket.costMicrocents,
             costPerSessionMicrocents: bucket.sessions > 0 ? bucket.costMicrocents / bucket.sessions : null,
           })),
+        }
+      }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/**
+ * Spend on traces that errored, plus the remainder of the reasons it truncated.
+ *
+ * The remainder is exact rather than decorative: reasons partition the errored traces, so
+ * whatever the listed ones do not account for is one honest "other reasons" row and the
+ * rows still sum to the headline.
+ */
+export const getWastedSpend = createServerFn({ method: "GET" })
+  .inputValidator(costScopeSchema)
+  .handler(async ({ data, context }): Promise<WastedSpendRecord> => {
+    const orgId = await resolveOrgScope(context)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* CostAnalyticsRepository
+        const wasted = yield* repo.getWastedSpend(toScope(orgId, data))
+        const listed = wasted.reasons.reduce(
+          (sum, reason) => ({
+            costMicrocents: sum.costMicrocents + reason.costMicrocents,
+            traces: sum.traces + reason.traces,
+          }),
+          { costMicrocents: 0, traces: 0 },
+        )
+        const hiddenTypes = wasted.distinctErrorTypes - wasted.reasons.length
+        return {
+          ...wasted,
+          wastedShare: wastedSpendShare(wasted),
+          otherReasons:
+            hiddenTypes > 0
+              ? {
+                  typeCount: hiddenTypes,
+                  traces: wasted.erroredTraces - listed.traces,
+                  costMicrocents: wasted.erroredCostMicrocents - listed.costMicrocents,
+                }
+              : null,
         }
       }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )

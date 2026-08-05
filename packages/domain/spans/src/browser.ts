@@ -107,6 +107,7 @@ export {
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
 export { resolveTraceIdFromRef, type TraceRef, traceRefSchema } from "./helpers/trace-ref.ts"
+export { wastedSpendShare } from "./helpers/wasted-spend.ts"
 export {
   alignUnixSecondsToHistogramBucket,
   denseTraceTimeHistogramBuckets,
@@ -133,12 +134,16 @@ export type {
   SessionCostBucket,
   SessionCostFactorsPair,
   SessionCostFactorsScope,
+  WastedSpend,
+  WastedSpendReason,
 } from "./ports/cost-analytics-repository.ts"
 export {
   CACHE_ECONOMICS_ROW_LIMIT,
   COST_BREAKDOWN_DIMENSIONS,
   COST_PER_CALL_MIN_SAMPLE_CALLS,
   COST_SERIES_METRICS,
+  WASTED_SPEND_MIN_SAMPLE_TRACES,
+  WASTED_SPEND_REASON_LIMIT,
 } from "./ports/cost-analytics-repository.ts"
 export type {
   MessageEmbedding,

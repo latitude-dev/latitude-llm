@@ -10,6 +10,7 @@ import {
   useCostPerSessionDecomposition,
   useCostSeries,
   useModelUsageSeries,
+  useWastedSpend,
 } from "../../../../../domains/cost/cost.collection.ts"
 import { useFeatureFlagGate } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
@@ -36,6 +37,7 @@ import { CostPerSessionPanel } from "./-components/cost-per-session-panel.tsx"
 import { ModelImpactPanel } from "./-components/model-impact-panel.tsx"
 import { ModelUsagePanel } from "./-components/model-usage-panel.tsx"
 import { PricingCoverageBadge } from "./-components/pricing-coverage-badge.tsx"
+import { WastedSpendPanel } from "./-components/wasted-spend-panel.tsx"
 
 function CostBreadcrumb() {
   return <BreadcrumbText variant="current">Cost</BreadcrumbText>
@@ -126,6 +128,11 @@ function CostPageContent() {
     projectId: project.id,
     range,
     bucketSeconds,
+    enabled,
+  })
+  const { data: wastedSpend, isLoading: wastedSpendLoading } = useWastedSpend({
+    projectId: project.id,
+    range,
     enabled,
   })
   const { data: cacheEconomics, isLoading: cacheEconomicsLoading } = useCacheEconomics({
@@ -226,6 +233,16 @@ function CostPageContent() {
             rangeToIso={range.toIso}
             isAllTime={tw.isAllTime}
             isLoading={seriesLoading}
+          />
+        </Section>
+        <Section heading="Waste">
+          <WastedSpendPanel
+            record={wastedSpend}
+            projectSlug={projectSlug}
+            rangeFromIso={range.fromIso}
+            rangeToIso={range.toIso}
+            isAllTime={tw.isAllTime}
+            isLoading={wastedSpendLoading}
           />
         </Section>
         <Section heading="Session">

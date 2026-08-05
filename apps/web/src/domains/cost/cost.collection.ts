@@ -8,6 +8,7 @@ import {
   getCostPerSessionDecomposition,
   getCostSeries,
   getModelUsageSeries,
+  getWastedSpend,
 } from "./cost.functions.ts"
 
 /** Time window shared by every cost query — lower bound inclusive, upper bound exclusive. */
@@ -98,6 +99,25 @@ export function useCacheEconomics({
   return useQuery({
     queryKey: [...projectScopeKey(scope), "cache-economics", projectId, range],
     queryFn: () => getCacheEconomics({ data: { ...projectScopeData(scope), projectId, ...range } }),
+    staleTime: COST_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+export function useWastedSpend({
+  projectId,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly range: CostTimeRange
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "wasted-spend", projectId, range],
+    queryFn: () => getWastedSpend({ data: { ...projectScopeData(scope), projectId, ...range } }),
     staleTime: COST_STALE_TIME_MS,
     placeholderData: keepPreviousData,
     enabled: enabled && projectId.length > 0,

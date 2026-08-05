@@ -22,6 +22,7 @@ import type {
   SessionCostFactorsPair,
   SessionCostPeriod,
   TokenSide,
+  WastedSpend,
 } from "@domain/spans"
 import {
   CACHE_CEILING_LIFETIME_SECONDS,
@@ -30,6 +31,7 @@ import {
   CostAnalyticsRepository,
   costSourceSchema,
   MODEL_USAGE_SERIES_LIMIT,
+  WASTED_SPEND_REASON_LIMIT,
 } from "@domain/spans"
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -205,6 +207,26 @@ const SESSION_FACTORS_SOURCE = `SELECT
       WHERE ${SCOPE_PREVIOUS_FILTER}
         AND operation IN ${USAGE_OPERATIONS_SQL}`
 
+// One row per trace, carrying its failure state alongside its billable spend.
+//
+// Deliberately *not* gated to billable operations: a trace fails on whichever span
+// errored, and that is usually a tool or wrapper span carrying no usage. Cost and tokens
+// are gated inside the aggregate instead, so the two questions read the same trace set
+// without one narrowing the other. `billable_calls` lets the caller keep the same
+// with-usage denominator every other per-trace figure on the page uses.
+const WASTED_TRACE_SOURCE = `SELECT
+        trace_id,
+        max(status_code) = 2 AS has_error,
+        argMinIf(error_type, start_time, status_code = 2) AS first_error_type,
+        countIf(operation IN ${USAGE_OPERATIONS_SQL}) AS billable_calls,
+        sumIf(cost_total_microcents, operation IN ${USAGE_OPERATIONS_SQL}) AS cost_microcents,
+        sumIf(tokens_total, operation IN ${USAGE_OPERATIONS_SQL}) AS tokens,
+        countIf(operation IN ${USAGE_OPERATIONS_SQL} AND ${COST_SOURCE} IN ('unpriced', 'unknown')) AS unpriced_calls
+      FROM spans
+      WHERE ${SCOPE_FILTER}
+      GROUP BY trace_id
+      HAVING billable_calls > 0`
+
 const BUCKET_START = `toDateTime(
   intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
   'UTC'
@@ -379,6 +401,22 @@ const toSessionPeriod = ({
         unpricedCalls: num(row.unpriced_calls),
         cells: toSessionCells(cells),
       }
+
+type WastedTotalsRow = {
+  traces_with_usage: string
+  total_microcents: string
+  errored_traces: string
+  errored_cost_microcents: string
+  errored_unpriced_calls: string
+  errored_tokens: string
+  distinct_error_types: string
+}
+
+type WastedReasonRow = {
+  error_type: string
+  traces: string
+  cost_microcents: string
+}
 
 type ModelUsageMeasuresDraft = { cost: number; tokens: number }
 
@@ -948,6 +986,66 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                       sessions: num(row.sessions),
                       costMicrocents: num(row.cost_microcents),
                     })),
+                }
+              }),
+            )
+        }),
+
+      getWastedSpend: (input) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const params = scopeParams(input)
+              const [totalsResult, reasonsResult] = await Promise.all([
+                client.query({
+                  query: `SELECT
+                        count() AS traces_with_usage,
+                        sum(cost_microcents) AS total_microcents,
+                        countIf(has_error) AS errored_traces,
+                        sumIf(cost_microcents, has_error) AS errored_cost_microcents,
+                        sumIf(unpriced_calls, has_error) AS errored_unpriced_calls,
+                        sumIf(tokens, has_error) AS errored_tokens,
+                        uniqExactIf(first_error_type, has_error) AS distinct_error_types
+                      FROM (${WASTED_TRACE_SOURCE})`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                }),
+                client.query({
+                  // Ranked by spend, not by trace count: the panel's claim is about money.
+                  query: `SELECT
+                        first_error_type AS error_type,
+                        count() AS traces,
+                        sum(cost_microcents) AS cost_microcents
+                      FROM (${WASTED_TRACE_SOURCE})
+                      WHERE has_error
+                      GROUP BY error_type
+                      ORDER BY cost_microcents DESC, traces DESC, error_type ASC
+                      LIMIT {reasonLimit:UInt16}`,
+                  query_params: { ...params, reasonLimit: WASTED_SPEND_REASON_LIMIT },
+                  format: "JSONEachRow",
+                }),
+              ])
+              const totalsRows = await totalsResult.json<WastedTotalsRow>()
+              const reasonRows = await reasonsResult.json<WastedReasonRow>()
+              return { totalsRows, reasonRows }
+            })
+            .pipe(
+              Effect.map(({ totalsRows, reasonRows }): WastedSpend => {
+                const row = totalsRows[0]
+                return {
+                  erroredTraces: num(row?.errored_traces),
+                  erroredCostMicrocents: num(row?.errored_cost_microcents),
+                  tracesWithUsage: num(row?.traces_with_usage),
+                  totalMicrocents: num(row?.total_microcents),
+                  erroredUnpricedCalls: num(row?.errored_unpriced_calls),
+                  erroredTokens: num(row?.errored_tokens),
+                  reasons: reasonRows.map((reason) => ({
+                    errorType: normalizeCHString(reason.error_type),
+                    traces: num(reason.traces),
+                    costMicrocents: num(reason.cost_microcents),
+                  })),
+                  distinctErrorTypes: num(row?.distinct_error_types),
                 }
               }),
             )

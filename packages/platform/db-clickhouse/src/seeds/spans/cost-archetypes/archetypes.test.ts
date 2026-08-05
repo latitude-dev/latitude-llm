@@ -6,7 +6,13 @@ import {
   SEED_ORG_ID,
   SEED_PROJECT_ID,
 } from "@domain/shared/seeding"
-import { type CacheState, classifyCacheState, modelCacheBreakEvenRate, modelRegistryPricing } from "@domain/spans"
+import {
+  type CacheState,
+  classifyCacheState,
+  modelCacheBreakEvenRate,
+  modelRegistryPricing,
+  WASTED_SPEND_MIN_SAMPLE_TRACES,
+} from "@domain/spans"
 import { cacheHitRate } from "@repo/utils"
 import { describe, expect, it } from "vitest"
 import type { SpanRow } from "../span-builders.ts"
@@ -109,7 +115,10 @@ describe("cost archetype fixtures", () => {
     let index = 0
     for (const cohort of cohorts) {
       for (let call = 0; call < cohortCalls(cohort); call++) {
-        expect(promptOf(spans[index++])).toBe(cohort.promptTokens)
+        const span = spans[index++]
+        // A call the provider rejected reported no usage at all, which is the one row
+        // where the three input columns sum to zero rather than to the declared prompt.
+        expect(promptOf(span)).toBe(span?.cost_source === "no_tokens" ? 0 : cohort.promptTokens)
       }
     }
   })
@@ -167,6 +176,11 @@ describe("archetype A — healthy at scale", () => {
 
   it("is multi-turn throughout", () => {
     for (const cohort of HEALTHY_COHORTS) expect(cohort.callsPerSession).toBeGreaterThan(1)
+  })
+
+  it("wastes nothing on errors, which is what a well-run project has to show", () => {
+    // A wasted-spend figure here would mean the definition, not the project, is wrong.
+    expect(spans.some((span) => span.status_code === 2)).toBe(false)
   })
 })
 
@@ -248,6 +262,70 @@ describe("archetype B — the project where findings fire", () => {
       "gpt-4.1",
     ])
     for (const cohort of FINDINGS_FIRE_COHORTS) expect(ambient.has(cohort.modelConfig.model)).toBe(false)
+  })
+})
+
+/**
+ * Archetype B read the way the wasted-spend panel reads it: roll spans up per trace, then
+ * split by whether the trace failed. Attribution is to the *first* failed span's error
+ * type, so the reasons partition the errored traces.
+ */
+const wastedOf = (spans: readonly SpanRow[]) => {
+  const traces = new Map<string, { failed: boolean; cost: number; failedSpanCost: number; errorType: string }>()
+  for (const span of [...spans].sort((a, b) => startMsOf(a) - startMsOf(b))) {
+    const trace = traces.get(span.trace_id) ?? { failed: false, cost: 0, failedSpanCost: 0, errorType: "" }
+    trace.cost += span.cost_total_microcents
+    if (span.status_code === 2) {
+      if (!trace.failed) trace.errorType = span.error_type
+      trace.failed = true
+      trace.failedSpanCost += span.cost_total_microcents
+    }
+    traces.set(span.trace_id, trace)
+  }
+  const failed = [...traces.values()].filter((trace) => trace.failed)
+  const byReason = new Map<string, number>()
+  for (const trace of failed) byReason.set(trace.errorType, (byReason.get(trace.errorType) ?? 0) + trace.cost)
+  return {
+    traces: traces.size,
+    erroredTraces: failed.length,
+    wholeTraceCost: failed.reduce((sum, trace) => sum + trace.cost, 0),
+    failedSpanCost: failed.reduce((sum, trace) => sum + trace.failedSpanCost, 0),
+    totalCost: [...traces.values()].reduce((sum, trace) => sum + trace.cost, 0),
+    byReason,
+  }
+}
+
+describe("archetype B — wasted spend", () => {
+  const wasted = wastedOf(findingsSpans)
+
+  it("spends real money on traces that errored, enough to be worth a headline", () => {
+    expect(wasted.erroredTraces).toBeGreaterThan(0)
+    expect(wasted.wholeTraceCost).toBeGreaterThan(0)
+    const share = wasted.wholeTraceCost / wasted.totalCost
+    expect(share).toBeGreaterThan(0.02)
+    expect(share).toBeLessThan(0.5)
+  })
+
+  it("makes the whole-trace and per-span readings visibly disagree, which is why the choice is stated", () => {
+    // The rejected cohort's failing call reported no usage, so a per-span figure charges
+    // it nothing while the paid steps before it were thrown away.
+    expect(wasted.failedSpanCost).toBeLessThan(wasted.wholeTraceCost / 2)
+  })
+
+  it("carries more than one failure reason, so the panel has something to rank", () => {
+    expect([...wasted.byReason.keys()].sort()).toEqual(["deadline_exceeded", "rate_limit_exceeded"])
+  })
+
+  it("attributes each errored trace to exactly one reason, so the rows sum to the headline", () => {
+    const summed = [...wasted.byReason.values()].reduce((sum, cost) => sum + cost, 0)
+    expect(summed).toBe(wasted.wholeTraceCost)
+  })
+
+  it("fails only whole traces that also did paid work, never a trace made only of failures", () => {
+    for (const cohort of FINDINGS_FIRE_COHORTS) {
+      if (!cohort.failure) continue
+      expect(cohort.callsPerTrace ?? 1).toBeGreaterThan(1)
+    }
   })
 })
 
@@ -353,6 +431,7 @@ describe("archetype E — tiny and new", () => {
 
   it("stays under every sample floor", () => {
     expect(spans.length).toBeLessThan(20)
+    expect(spans.length).toBeLessThan(WASTED_SPEND_MIN_SAMPLE_TRACES)
     expect(stateFor(spans, "gemini-2.5-flash-lite").state).toBe("notEnoughData")
   })
 

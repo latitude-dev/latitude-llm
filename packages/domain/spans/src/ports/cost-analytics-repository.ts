@@ -68,6 +68,14 @@ export interface CostAnalyticsRepositoryShape {
   getSessionCostFactors(
     input: SessionCostFactorsScope,
   ): Effect.Effect<SessionCostFactorsPair, RepositoryError, ChSqlClient>
+
+  /**
+   * Spend on traces that failed, and what they failed on.
+   *
+   * The only figure in this port that names money which bought *nothing*, so it is
+   * whole-trace by construction: see `WastedSpend`.
+   */
+  getWastedSpend(input: CostAnalyticsScope): Effect.Effect<WastedSpend, RepositoryError, ChSqlClient>
 }
 
 export interface CostAnalyticsScope {
@@ -311,6 +319,60 @@ export interface SessionCostFactorsPair {
   readonly current: SessionCostPeriod
   /** Both windows, oldest first. */
   readonly buckets: readonly SessionCostBucket[]
+}
+
+/**
+ * Failure reasons listed on the wasted-spend panel. Beyond this the list stops being a
+ * ranking, and the remainder is exact because every errored trace lands in exactly one
+ * reason — see `WastedSpendReason`.
+ */
+export const WASTED_SPEND_REASON_LIMIT = 6
+
+/**
+ * Minimum traces with billable usage before wasted spend may be shown as a *share* of
+ * the window. The dollar figure needs no floor — it is a sum, true at any volume — but a
+ * percentage over a handful of traces swings between 0% and 100% on one failure.
+ */
+export const WASTED_SPEND_MIN_SAMPLE_TRACES = 20
+
+/**
+ * One failure reason and the spend behind it.
+ *
+ * A trace is attributed to the `error_type` of its *first* failed span, so the reasons
+ * partition the errored traces: their costs sum to `erroredCostMicrocents` exactly, which
+ * a trace counted under every error type it hit could not do.
+ */
+export interface WastedSpendReason {
+  /** Empty when the failing span recorded no `error.type` attribute. */
+  readonly errorType: string
+  readonly traces: number
+  readonly costMicrocents: number
+}
+
+/**
+ * Spend on traces that errored, against the window they sit in.
+ *
+ * **Whole-trace, deliberately.** A failed call usually records no usage at all — the
+ * provider rejected it — so the money in a failed trace was spent on the steps that
+ * *succeeded* and whose output was then thrown away. Charging only the failed span would
+ * report ~$0 for exactly the traces that wasted the most.
+ *
+ * Errored means at least one span with `status_code = 2`, the same definition the traces
+ * list's Status filter uses, so the panel's drill-down returns the traces it counted.
+ */
+export interface WastedSpend {
+  readonly erroredTraces: number
+  readonly erroredCostMicrocents: number
+  /** Denominator for the share: traces with at least one billable span, errored or not. */
+  readonly tracesWithUsage: number
+  readonly totalMicrocents: number
+  /** On errored traces only. Both feed the shared rollup cost display. */
+  readonly erroredUnpricedCalls: number
+  readonly erroredTokens: number
+  /** Highest spend first, capped at `WASTED_SPEND_REASON_LIMIT`. */
+  readonly reasons: readonly WastedSpendReason[]
+  /** Distinct reasons in the window, so a caller can tell whether `reasons` was truncated. */
+  readonly distinctErrorTypes: number
 }
 
 export interface CostModelSpend {

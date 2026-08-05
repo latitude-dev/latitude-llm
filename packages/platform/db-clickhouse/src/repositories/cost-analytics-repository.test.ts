@@ -20,6 +20,9 @@ const CACHE_PROJECT_ID = ProjectId("costcache00000000000000a")
 // Cadence lives on its own project: the ceiling is read from inter-call gaps, so it
 // needs timestamps chosen for their spacing rather than for the token columns.
 const CADENCE_PROJECT_ID = ProjectId("costcadence000000000000a")
+// Own project too: wasted spend rolls up per trace over *all* spans, so it needs traces
+// whose failure sits on a span the other fixtures deliberately keep out of the aggregates.
+const WASTED_PROJECT_ID = ProjectId("costwasted00000000000000")
 
 const DAY1 = new Date("2026-06-01T10:00:00.000Z")
 const DAY2 = new Date("2026-06-02T10:00:00.000Z")
@@ -52,6 +55,8 @@ type SpanOpts = {
   costSource?: string
   session?: string
   agentName?: string
+  statusCode?: number
+  errorType?: string
 }
 
 const span = (n: number, startTime: Date, opts: SpanOpts = {}): CostSpanRow =>
@@ -70,9 +75,9 @@ const span = (n: number, startTime: Date, opts: SpanOpts = {}): CostSpanRow =>
     name: "ca-span",
     service_name: opts.serviceName ?? "ca-service",
     kind: 0,
-    status_code: 0,
+    status_code: opts.statusCode ?? 0,
     status_message: "",
-    error_type: "",
+    error_type: opts.errorType ?? "",
     tags: [],
     metadata: {},
     operation: opts.operation ?? "chat",
@@ -121,6 +126,13 @@ const breakdownScope = { ...scope, projectId: BREAKDOWN_PROJECT_ID }
 const modelUsageScope = { ...scope, projectId: MODEL_USAGE_PROJECT_ID }
 const cacheScope = { ...scope, projectId: CACHE_PROJECT_ID }
 const cadenceScope = { ...scope, projectId: CADENCE_PROJECT_ID }
+const wastedScope = { ...scope, projectId: WASTED_PROJECT_ID }
+
+// Seconds after DAY1, so a trace's spans have a defined order for "first failure".
+const afterDay1 = (seconds: number): Date => new Date(DAY1.getTime() + seconds * 1_000)
+
+const wastedSpan = (n: number, startTime: Date, opts: Omit<SpanOpts, "project">): CostSpanRow =>
+  span(n, startTime, { ...opts, project: WASTED_PROJECT_ID })
 
 const cacheSpan = (n: number, startTime: Date, opts: Omit<SpanOpts, "project">): CostSpanRow =>
   span(n, startTime, { ...opts, project: CACHE_PROJECT_ID })
@@ -323,6 +335,66 @@ describe("CostAnalyticsRepositoryLive", () => {
         // unit when it is set, so neither call is warm.
         cadenceSpan(54, 0, { model: "named-agents", serviceName: "shared-service", agentName: "billing" }),
         cadenceSpan(55, 60, { model: "named-agents", serviceName: "shared-service", agentName: "support" }),
+
+        // Wasted-spend fixture. Every errored trace also did paid work, which is the case
+        // the whole-trace reading exists for.
+
+        // Trace 101: the provider rejected the second call, so it reports no usage at all
+        // — a per-span figure charges this trace nothing.
+        wastedSpan(101, DAY1, { trace: 101, costTotal: 500, costSource: "estimated", tokensInput: 1_000 }),
+        wastedSpan(102, afterDay1(1), {
+          trace: 101,
+          costSource: "no_tokens",
+          statusCode: 2,
+          errorType: "rate_limit_exceeded",
+        }),
+        // Trace 102: the failure is on a tool span. It decides the trace failed, and its
+        // own cost still stays out of every dollar figure.
+        wastedSpan(103, DAY1, { trace: 102, costTotal: 300, costSource: "estimated" }),
+        wastedSpan(104, afterDay1(1), {
+          trace: 102,
+          operation: "execute_tool",
+          costTotal: 9_999,
+          statusCode: 2,
+          errorType: "tool_failure",
+        }),
+        // Trace 103: two failures. Only the earlier one may name the trace, or a trace
+        // would be counted under every type it hit and the reasons would stop summing.
+        wastedSpan(105, DAY1, { trace: 103, costTotal: 200, costSource: "estimated" }),
+        wastedSpan(106, afterDay1(1), {
+          trace: 103,
+          costSource: "no_tokens",
+          statusCode: 2,
+          errorType: "deadline_exceeded",
+        }),
+        wastedSpan(107, afterDay1(2), {
+          trace: 103,
+          costSource: "no_tokens",
+          statusCode: 2,
+          errorType: "rate_limit_exceeded",
+        }),
+        // Trace 104: succeeded, and the largest spend in the window.
+        wastedSpan(108, DAY2, { trace: 104, costTotal: 1_000, costSource: "estimated" }),
+        // Trace 105: a failure with no billable span anywhere — out of both the numerator
+        // and the denominator, the same as any other usage-free trace.
+        wastedSpan(109, DAY2, {
+          trace: 105,
+          operation: "execute_tool",
+          costTotal: 7_777,
+          statusCode: 2,
+          errorType: "tool_failure",
+        }),
+        // Trace 106: errored, and its spend is understated because ingestion could not
+        // price the model — a wasted trace that contributes no dollars.
+        wastedSpan(110, DAY2, {
+          trace: 106,
+          costSource: "unpriced",
+          tokensInput: 700,
+          model: "mystery-1",
+          provider: "acme",
+          statusCode: 2,
+          errorType: "rate_limit_exceeded",
+        }),
       ]),
     )
   })
@@ -630,6 +702,77 @@ describe("CostAnalyticsRepositoryLive", () => {
       const { cadence } = await runCh(repo.getCacheEconomics(cadenceScope))
 
       expect(cadence.filter((row) => row.model === "single-turn")).toHaveLength(1)
+    })
+  })
+
+  describe("getWastedSpend", () => {
+    it("charges an errored trace everything it spent, not only its failed spans", async () => {
+      const wasted = await runCh(repo.getWastedSpend(wastedScope))
+
+      // Traces 101, 102, 103 and 106: 500 + 300 + 200 + 0. Every failing span in the
+      // fixture reported no priced usage of its own, so a per-span figure would read 0.
+      expect(wasted.erroredTraces).toBe(4)
+      expect(wasted.erroredCostMicrocents).toBe(1_000)
+    })
+
+    it("counts a trace as errored on a failure anywhere in it, including a tool span", async () => {
+      const { reasons } = await runCh(repo.getWastedSpend(wastedScope))
+
+      expect(reasons.find((reason) => reason.errorType === "tool_failure")).toEqual({
+        errorType: "tool_failure",
+        traces: 1,
+        costMicrocents: 300,
+      })
+    })
+
+    it("keeps the tool span's own cost out of the dollars, the same as every other figure", async () => {
+      const wasted = await runCh(repo.getWastedSpend(wastedScope))
+
+      // 9,999 on trace 102's tool span and 7,777 on trace 105's would both dwarf the panel.
+      expect(wasted.totalMicrocents).toBe(2_000)
+    })
+
+    it("shares the with-usage denominator with every other per-trace figure", async () => {
+      const wasted = await runCh(repo.getWastedSpend(wastedScope))
+
+      // Trace 105 failed but carries no billable span, so it reaches neither side.
+      expect(wasted.tracesWithUsage).toBe(5)
+    })
+
+    it("names a trace by its first failure, so the reasons partition the errored traces", async () => {
+      const { reasons } = await runCh(repo.getWastedSpend(wastedScope))
+
+      // Trace 103 failed twice; only `deadline_exceeded` came first.
+      expect(reasons).toEqual([
+        { errorType: "rate_limit_exceeded", traces: 2, costMicrocents: 500 },
+        { errorType: "tool_failure", traces: 1, costMicrocents: 300 },
+        { errorType: "deadline_exceeded", traces: 1, costMicrocents: 200 },
+      ])
+    })
+
+    it("sums its reasons to the headline exactly, which is what one-reason-per-trace buys", async () => {
+      const wasted = await runCh(repo.getWastedSpend(wastedScope))
+
+      const summed = wasted.reasons.reduce((total, reason) => total + reason.costMicrocents, 0)
+      expect(summed).toBe(wasted.erroredCostMicrocents)
+      expect(wasted.reasons.reduce((total, reason) => total + reason.traces, 0)).toBe(wasted.erroredTraces)
+    })
+
+    it("reports the errored traces' unpriced usage, so an understated total can say so", async () => {
+      const wasted = await runCh(repo.getWastedSpend(wastedScope))
+
+      expect(wasted.erroredUnpricedCalls).toBe(1)
+      expect(wasted.erroredTokens).toBe(1_700)
+      expect(wasted.distinctErrorTypes).toBe(3)
+    })
+
+    it("reads zero on a project with no failures at all", async () => {
+      const wasted = await runCh(repo.getWastedSpend(scope))
+
+      expect(wasted.erroredTraces).toBe(0)
+      expect(wasted.erroredCostMicrocents).toBe(0)
+      expect(wasted.reasons).toEqual([])
+      expect(wasted.tracesWithUsage).toBe(5)
     })
   })
 })
