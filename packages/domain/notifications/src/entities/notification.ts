@@ -319,8 +319,8 @@ export const NOTIFICATION_KIND_META = {
     payload: customMessagePayloadSchema,
   },
   "issue.assigned": { group: "personal", payload: signalAssignedPayloadSchema },
-  "signal.discovered": { group: "incidents", payload: signalDiscoveredPayloadSchema },
-  "signal.regressed": { group: "incidents", payload: signalRegressedPayloadSchema },
+  "signal.discovered": { group: "signals", payload: signalDiscoveredPayloadSchema },
+  "signal.regressed": { group: "signals", payload: signalRegressedPayloadSchema },
   "destination.quarantined": {
     group: "destinations",
     payload: destinationQuarantinedPayloadSchema,

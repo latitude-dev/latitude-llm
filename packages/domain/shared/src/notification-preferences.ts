@@ -11,6 +11,7 @@ import { alertSeveritySchema } from "./alert-incident-kinds.ts"
  * package dep with `@domain/notifications`.
  */
 export const NOTIFICATION_GROUPS = [
+  "signals",
   "incidents",
   "wrapped_reports",
   "custom_messages",
@@ -40,6 +41,11 @@ export const NOTIFICATION_GROUP_META: Record<
     label: "Assigned to you",
     description: "Notifications addressed directly to you, like being assigned to an issue.",
     slackRoutable: false,
+  },
+  signals: {
+    label: "Signals",
+    description: "Get notified when Latitude discovers a new signal, or when a resolved one starts happening again.",
+    slackRoutable: true,
   },
   incidents: {
     label: "Monitors",

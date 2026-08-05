@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util"
+import { NOTIFICATION_KIND_META, type NotificationKind } from "@domain/notifications"
 import { generateId, OrganizationId } from "@domain/shared"
 import { SEED_ORG_ID } from "@domain/shared/seeding"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
@@ -23,8 +24,9 @@ Options:
   --channel-id <id>       Override channel (skips org routes, useful when
                           no routes are configured yet)
   --kind <k>              Only send one kind: incident.event | incident.opened |
-                          incident.closed | wrapped.report | custom.message
-                          (default: all five in sequence)
+                          incident.closed | signal.discovered | signal.regressed |
+                          wrapped.report | custom.message
+                          (default: all of them in sequence)
   --help                  Show this help
 `.trim()
 
@@ -40,8 +42,24 @@ const makeIncidentBase = (alertIncidentId: string) => ({
   severity: "high" as const,
 })
 
+const TEST_KINDS = [
+  "incident.event",
+  "incident.opened",
+  "incident.closed",
+  "signal.discovered",
+  "signal.regressed",
+  "wrapped.report",
+  "custom.message",
+] as const satisfies readonly NotificationKind[]
+
+/** A real signal to reference, since signal payloads carry an id the renderer resolves. */
+interface SignalRef {
+  readonly signalId: string
+  readonly projectId: string
+}
+
 // Built inside main() so IDs are fresh on every invocation.
-const buildSyntheticPayloads = (): Record<string, unknown> => {
+const buildSyntheticPayloads = (signal: SignalRef | null): Record<string, unknown> => {
   // incident.opened and incident.closed share an alertIncidentId so
   // the threading lookup finds the opened message when posting closed.
   const sharedAlertIncidentId = generateId()
@@ -87,6 +105,15 @@ const buildSyntheticPayloads = (): Record<string, unknown> => {
       },
       recovery: { durationMs: 38 * 60_000 },
     },
+    "signal.discovered": {
+      signalId: signal?.signalId ?? generateId(),
+      discoveredAt: new Date().toISOString(),
+    },
+    "signal.regressed": {
+      signalId: signal?.signalId ?? generateId(),
+      regressedAt: new Date().toISOString(),
+      triggerScoreId: generateId(),
+    },
     "wrapped.report": {
       wrappedReportId: generateId(),
       link: "https://localhost:3000/wrapped/demo",
@@ -120,13 +147,11 @@ async function main(): Promise<void> {
   const overrideChannelId = parsed.values["channel-id"]
   const kindFilter = parsed.values.kind
 
-  const SYNTHETIC_PAYLOADS = buildSyntheticPayloads()
-  const allKinds = Object.keys(SYNTHETIC_PAYLOADS)
-  const kinds = kindFilter ? [kindFilter] : allKinds
+  const kinds: readonly string[] = kindFilter ? [kindFilter] : TEST_KINDS
 
   for (const k of kinds) {
-    if (!SYNTHETIC_PAYLOADS[k]) {
-      console.error(`Unknown kind: ${k}. Valid: ${allKinds.join(", ")}`)
+    if (!TEST_KINDS.includes(k as (typeof TEST_KINDS)[number])) {
+      console.error(`Unknown kind: ${k}. Valid: ${TEST_KINDS.join(", ")}`)
       process.exit(1)
     }
   }
@@ -156,18 +181,33 @@ async function main(): Promise<void> {
   const integration = integrationRow.rows[0]!
   const routes = (integration.routes as Record<string, Array<{ channelId: string; channelName: string }>> | null) ?? {}
 
+  // Signal payloads carry only an id; the renderer resolves name/slug/project from it, so
+  // an existing signal produces a realistic message instead of the "A new signal" fallback.
+  const signalRow = await pool.query<{ id: string; project_id: string }>(
+    `SELECT id, project_id
+       FROM latitude.signals
+      WHERE organization_id = $1 AND deleted_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [orgId],
+  )
+  const signalRef = signalRow.rows[0]
+    ? { signalId: signalRow.rows[0].id, projectId: signalRow.rows[0].project_id }
+    : null
+  if (!signalRef) {
+    console.log("No signal found for this org — signal kinds will render their unresolved-signal fallback.")
+  }
+
+  const SYNTHETIC_PAYLOADS = buildSyntheticPayloads(signalRef)
+
   const bullMqConfig = Effect.runSync(loadBullMqConfig())
   const publisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
 
   let published = 0
 
   for (const kind of kinds) {
-    // Resolve which channels to post to for this kind.
-    const group = kind.startsWith("incident")
-      ? "incidents"
-      : kind === "wrapped.report"
-        ? "wrapped_reports"
-        : "custom_messages"
+    // Same mapping the producer uses, so a mis-grouped kind shows up here too.
+    const group = NOTIFICATION_KIND_META[kind as NotificationKind].group
     const routeChannels = routes[group] ?? []
 
     const channels: Array<{ channelId: string; channelName: string }> = overrideChannelId
@@ -193,7 +233,7 @@ async function main(): Promise<void> {
             kind,
             payload: SYNTHETIC_PAYLOADS[kind] as Record<string, unknown>,
             idempotencyKey,
-            projectId: generateId(),
+            projectId: group === "signals" && signalRef ? signalRef.projectId : generateId(),
             notificationId: null,
           },
           { dedupeKey: idempotencyKey },

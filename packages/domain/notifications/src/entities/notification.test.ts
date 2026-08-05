@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest"
-import { payloadSchemaFor } from "./notification.ts"
+import { groupOf, payloadSchemaFor } from "./notification.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
+
+describe("notification groups", () => {
+  it("keeps signal kinds out of the monitors group", () => {
+    expect(groupOf("signal.discovered")).toBe("signals")
+    expect(groupOf("signal.regressed")).toBe("signals")
+    expect(groupOf("incident.opened")).toBe("incidents")
+  })
+})
 
 /**
  * Stored payloads are re-parsed with `payloadSchemaFor(kind)` at every read

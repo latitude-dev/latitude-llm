@@ -188,6 +188,25 @@ describe("createNotificationUseCase", () => {
     expect(result.emailEligible).toBe(true)
   })
 
+  it("turning monitors email off leaves new-signal email eligible", async () => {
+    const prefs: NotificationPreferences = { incidents: { email: false } }
+    const { orgId, projectId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
+
+    const result = await Effect.runPromise(
+      createNotificationUseCase({
+        organizationId: orgId,
+        userId,
+        notificationId: NotificationId(generateId()),
+        kind: "signal.discovered",
+        idempotencyKey: `signal.discovered:${cuid("i")}`,
+        projectId,
+        payload: { signalId: cuid("i"), discoveredAt: new Date().toISOString() },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.emailEligible).toBe(true)
+  })
+
   it("dedupes a redelivered issue.assigned but inserts a fresh row for a new assignedAt", async () => {
     const { orgId, userId, layer, rows } = setup()
     const signalAssigned = (assignedAt: string) => ({
