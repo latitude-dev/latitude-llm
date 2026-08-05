@@ -9,6 +9,7 @@ import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
 import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
+import { applySeverityFloor, flaggerSeverityFloor } from "../severity-floor.ts"
 import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import type { GenerateSignalDetailsError } from "./generate-signal-details.ts"
@@ -69,6 +70,13 @@ const loadEligibleScoreOrCurrentOwner = (input: {
       }),
     ),
   )
+
+/** Only flagger-authored annotation scores carry a detector slug. */
+const flaggerSlugOf = (score: Score): string | undefined => {
+  if (score.sourceType !== "annotation") return undefined
+  const slug = (score.metadata as { flaggerSlug?: unknown } | null)?.flaggerSlug
+  return typeof slug === "string" && slug.length > 0 ? slug : undefined
+}
 
 const buildNewSignalFromScore = ({
   score,
@@ -141,6 +149,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
       } satisfies CreateSignalFromScoreResult
     }
 
+    const flaggerSlug = flaggerSlugOf(initialScoreResult.score)
     const signalDetails = yield* generateSignalDetailsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -148,10 +157,14 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
         {
           sourceType: initialScoreResult.score.sourceType,
           feedback: initialScoreResult.score.feedback,
+          value: initialScoreResult.score.value,
+          ...(flaggerSlug === undefined ? {} : { flaggerSlug }),
         },
       ],
       withSeverity: true,
     })
+    // The model may rate higher than a detector's floor, never lower.
+    const severity = applySeverityFloor(signalDetails.severity ?? null, flaggerSeverityFloor(flaggerSlug))
 
     const sqlClient = yield* SqlClient
 
@@ -190,7 +203,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           description: signalDetails.description,
           // `priority` is the column and the public API field; `severity` is the
           // scale's name everywhere else. Same values, one list.
-          priority: signalDetails.severity ?? null,
+          priority: severity,
           slug,
         })
 

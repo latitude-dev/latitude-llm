@@ -170,6 +170,42 @@ describe("createSignalFromScoreUseCase", () => {
     expect(calls.generate[0]?.prompt).toContain("`severity`")
   })
 
+  // A detector that names the failure class outright beats the model's reading of
+  // the prose — the floor raises the rating, and the tags reach the prompt.
+  it("floors the level at urgent for a pii-leakage detector, whatever the model says", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: createGenerateSignalDetailsWithSeverity("Email addresses in replies", "Contact details echoed.", "low"),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    const score = makeScore({
+      sourceId: "SYSTEM",
+      metadata: { rawFeedback: "Assistant echoed a customer email address.", flaggerSlug: "pii-leakage" },
+    })
+    scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
+
+    const result = await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+      ),
+    )
+
+    expect(issues.get(result.signalId)?.priority).toBe("urgent")
+    expect(calls.generate[0]?.prompt).toContain("detector=pii-leakage")
+    expect(calls.generate[0]?.prompt).toContain("score=0.20")
+  })
+
   it("generates details, creates a new issue, and claims score ownership", async () => {
     const { layer: aiLayer, calls } = createFakeAI({
       generate: createGenerateSignalDetails(

@@ -66,6 +66,10 @@ const signalDetailsWithSeveritySchema = z.object({
 export interface SignalOccurrenceInput {
   readonly sourceType: ScoreSourceType
   readonly feedback: string
+  /** The score's own verdict, 0..1. Evidence the prose may not state. */
+  readonly value?: number
+  /** Slug of the flagger that authored this score, from `metadata.flaggerSlug`. */
+  readonly flaggerSlug?: string
 }
 
 export interface GeneratedSignalDetails {
@@ -95,11 +99,23 @@ export type GenerateSignalDetailsError =
   | SignalNotFoundForDetailsGenerationError
   | MissingSignalOccurrencesForDetailsGenerationError
 
+/**
+ * Facts the feedback prose may not state: the numeric verdict and, for
+ * flagger-authored scores, which detector matched. A detector slug says what
+ * class of failure this is far more reliably than re-inferring it from a
+ * sentence.
+ */
+const occurrenceTags = (occurrence: SignalOccurrenceInput): string => {
+  const tags = [`source=${occurrence.sourceType}`]
+  if (occurrence.flaggerSlug !== undefined) tags.push(`detector=${occurrence.flaggerSlug}`)
+  if (occurrence.value !== undefined) tags.push(`score=${occurrence.value.toFixed(2)}`)
+  return tags.join(" ")
+}
+
 const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
   occurrences
     .map(
-      (occurrence, index) =>
-        `${index + 1}. [source=${occurrence.sourceType}] ${collapseWhitespace(occurrence.feedback)}`,
+      (occurrence, index) => `${index + 1}. [${occurrenceTags(occurrence)}] ${collapseWhitespace(occurrence.feedback)}`,
     )
     .join("\n")
 
@@ -119,6 +135,7 @@ const SEVERITY_RUBRIC = [
   '- "medium": the outcome is degraded — partial, inefficient, or needing rework — while the user can still get what they came for.',
   '- "low": cosmetic or stylistic only (tone, formatting, verbosity), or the pattern describes desirable behavior rather than a failure.',
   "Rate the mechanism itself, not how often it appears: a new pattern is typically a single occurrence, so frequency is not evidence yet. When the occurrences do not say enough to separate two levels, choose the higher one.",
+  "Weigh the tags on each occurrence as evidence: a low `score` means the evaluation judged the output badly, a `detector=` slug names the failure class a deterministic check matched, and `source=annotation` means a person wrote the feedback by hand rather than a check firing.",
 ].join("\n")
 
 const buildPrompt = (input: {
@@ -222,10 +239,9 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
       }
     } else {
       occurrences = occurrences
-        .map((occurrence) => ({
-          sourceType: occurrence.sourceType,
-          feedback: collapseWhitespace(occurrence.feedback),
-        }))
+        // Spread, don't rebuild: the evidence tags (`value`, `flaggerSlug`) have to
+        // survive normalization to reach the prompt.
+        .map((occurrence) => ({ ...occurrence, feedback: collapseWhitespace(occurrence.feedback) }))
         .filter((occurrence) => occurrence.feedback.length > 0)
         .slice(0, SIGNAL_DETAILS_MAX_OCCURRENCES)
 
