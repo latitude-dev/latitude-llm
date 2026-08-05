@@ -112,6 +112,25 @@ export {
   summarizeUnpricedUsage,
   UNPRICED_CAUSES,
 } from "./helpers/classify-unpriced-cost.ts"
+export type {
+  CostPerSessionDecomposition,
+  DecomposeCostPerSessionInput,
+  SessionCostCell,
+  SessionCostContribution,
+  SessionCostDecompositionStatus,
+  SessionCostFactor,
+  SessionCostPeriod,
+  SessionCostShareShift,
+  TokenSide,
+} from "./helpers/decompose-cost-per-session.ts"
+export {
+  decomposeCostPerSession,
+  SESSION_COST_MIN_SESSIONS,
+  SESSION_COST_QUIET_BAND,
+  sessionCostMicrocents,
+  sessionCostTokens,
+  TOKEN_SIDES,
+} from "./helpers/decompose-cost-per-session.ts"
 export { resolveSpanCost, usdToMicrocents } from "./helpers/estimate-span-cost.ts"
 export type { CacheModelJudgment, JudgedCacheModel } from "./helpers/judge-cache-economics.ts"
 export { judgeCacheEconomics, promptCacheTtlSeconds } from "./helpers/judge-cache-economics.ts"
@@ -191,6 +210,9 @@ export type {
   ModelUsageMeasures,
   ModelUsageSeries,
   ModelUsageSlice,
+  SessionCostBucket,
+  SessionCostFactorsPair,
+  SessionCostFactorsScope,
 } from "./ports/cost-analytics-repository.ts"
 export {
   CACHE_ECONOMICS_ROW_LIMIT,

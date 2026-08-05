@@ -1,6 +1,7 @@
 import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { CostSource } from "../entities/span.ts"
+import type { SessionCostPeriod } from "../helpers/decompose-cost-per-session.ts"
 
 /**
  * Repository port for cost analytics (ClickHouse spans table).
@@ -58,6 +59,15 @@ export interface CostAnalyticsRepositoryShape {
    * pay a round trip per lifetime.
    */
   getCacheEconomics(input: CostAnalyticsScope): Effect.Effect<CacheEconomics, RepositoryError, ChSqlClient>
+
+  /**
+   * The counts behind cost per session for two adjacent windows, so the log-space
+   * decomposition can be computed from one scan rather than from two round trips
+   * that could disagree about their filters.
+   */
+  getSessionCostFactors(
+    input: SessionCostFactorsScope,
+  ): Effect.Effect<SessionCostFactorsPair, RepositoryError, ChSqlClient>
 }
 
 export interface CostAnalyticsScope {
@@ -272,6 +282,35 @@ export interface CacheEconomics {
    */
   readonly cadence: readonly CacheCadenceRow[]
   readonly totals: CacheUsageMeasures & { readonly distinctModels: number }
+}
+
+/**
+ * `from`/`to` bound the current window; `previousFrom` opens the comparison window
+ * that runs up to `from`. The caller sets the two lengths equal — the repository
+ * only reads the bounds it is given.
+ */
+export interface SessionCostFactorsScope extends CostAnalyticsScope {
+  readonly previousFrom: Date
+  /** Bucket width for the headline sparklines, which span both windows. */
+  readonly bucketSeconds: number
+}
+
+/**
+ * One sparkline point. Only the two headline measures: a session count is a clean
+ * series, whereas a per-bucket ratio of two small counts swings on volume alone and
+ * would read as an event rather than as noise.
+ */
+export interface SessionCostBucket {
+  readonly bucketStart: Date
+  readonly sessions: number
+  readonly costMicrocents: number
+}
+
+export interface SessionCostFactorsPair {
+  readonly previous: SessionCostPeriod
+  readonly current: SessionCostPeriod
+  /** Both windows, oldest first. */
+  readonly buckets: readonly SessionCostBucket[]
 }
 
 export interface CostModelSpend {

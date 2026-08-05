@@ -18,6 +18,10 @@ import type {
   ModelUsageBucket,
   ModelUsageSeries,
   ModelUsageSlice,
+  SessionCostCell,
+  SessionCostFactorsPair,
+  SessionCostPeriod,
+  TokenSide,
 } from "@domain/spans"
 import {
   CACHE_CEILING_LIFETIME_SECONDS,
@@ -52,6 +56,12 @@ const SCOPE_FILTER = `organization_id = {organizationId:String}
 // dedup by span_id: same convention as the other span aggregates.
 const BILLABLE_FILTER = `${SCOPE_FILTER}
   AND operation IN ${USAGE_OPERATIONS_SQL}`
+
+// Same prefix, opened back to the comparison window so both periods come off one scan.
+const SCOPE_PREVIOUS_FILTER = `organization_id = {organizationId:String}
+  AND project_id = {projectId:String}
+  AND start_time >= {previousFrom:DateTime64(9, 'UTC')}
+  AND start_time < {to:DateTime64(9, 'UTC')}`
 
 const COST_SOURCE_VALUES_SQL = `(${costSourceSchema.options.map((value) => `'${value}'`).join(", ")})`
 
@@ -164,6 +174,37 @@ const CACHE_CADENCE_SOURCE = `SELECT
         WHERE ${BILLABLE_FILTER}
       )`
 
+// The session key the traces/sessions rollups aggregate on. Traffic that reported
+// no session id keys on its trace id instead, so it becomes a single-trace
+// pseudo-session rather than dropping out of every per-session figure.
+const SESSION_KEY = `coalesce(nullIf(session_id, ''), toString(trace_id))`
+
+// Splits one scan into the two adjacent windows. `is_current` is the bound the
+// spans filter already narrowed to, so both periods read identical filters.
+//
+// The prompt side carries cache reads and writes because providers charge them on
+// the input side, and `tokens_input` is the uncached remainder — the three are
+// additive. Prompt cost is `total - output` rather than `cost_input` so the two
+// sides always close on the total: a provider-reported total need not equal the
+// sum of the sides it reports, and the price decomposition cannot absorb a gap.
+const SESSION_FACTORS_SOURCE = `SELECT
+        start_time,
+        start_time >= {from:DateTime64(9, 'UTC')} AS is_current,
+        ${SESSION_KEY} AS session_key,
+        session_id,
+        trace_id,
+        provider,
+        model,
+        tokens_input + tokens_cache_read + tokens_cache_create AS prompt_tokens,
+        tokens_output + tokens_reasoning AS output_tokens,
+        cost_total_microcents - cost_output_microcents AS prompt_cost,
+        cost_output_microcents AS output_cost,
+        cost_total_microcents,
+        ${COST_SOURCE} AS cost_source
+      FROM spans
+      WHERE ${SCOPE_PREVIOUS_FILTER}
+        AND operation IN ${USAGE_OPERATIONS_SQL}`
+
 const BUCKET_START = `toDateTime(
   intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
   'UTC'
@@ -271,6 +312,73 @@ const CACHE_CADENCE_BUCKETS = CACHE_CEILING_LIFETIME_SECONDS.map(
     `sumIf(call_tokens, gap_seconds <= ${lifetimeSeconds}) AS ${cadenceBucketAlias(lifetimeSeconds)},
         countIf(gap_seconds <= ${lifetimeSeconds}) AS ${cadenceCallsAlias(lifetimeSeconds)}`,
 ).join(",\n        ")
+
+// `is_period` marks the WITH ROLLUP subtotal, which carries the window's own
+// `uniqExact` rather than a sum of the buckets' — a session straddling a bucket
+// edge belongs to one window but to two buckets, so the counts do not add up.
+type SessionFactorsRow = {
+  is_period: number
+  is_everything: number
+  is_current: number
+  bucket_start: string
+  sessions: string
+  trace_keyed_sessions: string
+  traces: string
+  calls: string
+  unpriced_calls: string
+  cost_microcents: string
+}
+
+type SessionFactorsCellRow = {
+  is_current: number
+  provider: string
+  model: string
+  prompt_tokens: string
+  prompt_cost: string
+  output_tokens: string
+  output_cost: string
+}
+
+const EMPTY_SESSION_PERIOD: SessionCostPeriod = {
+  sessions: 0,
+  traceKeyedSessions: 0,
+  traces: 0,
+  calls: 0,
+  unpricedCalls: 0,
+  cells: [],
+}
+
+const toSessionCells = (rows: readonly SessionFactorsCellRow[]): SessionCostCell[] =>
+  rows.flatMap((row) => {
+    const provider = normalizeCHString(row.provider)
+    const model = normalizeCHString(row.model)
+    return (
+      [
+        { side: "prompt" as const, tokens: num(row.prompt_tokens), costMicrocents: num(row.prompt_cost) },
+        { side: "output" as const, tokens: num(row.output_tokens), costMicrocents: num(row.output_cost) },
+      ] satisfies { side: TokenSide; tokens: number; costMicrocents: number }[]
+    )
+      .filter((cell) => cell.tokens > 0)
+      .map((cell) => ({ provider, model, ...cell }))
+  })
+
+const toSessionPeriod = ({
+  row,
+  cells,
+}: {
+  row: SessionFactorsRow | undefined
+  cells: readonly SessionFactorsCellRow[]
+}): SessionCostPeriod =>
+  row === undefined
+    ? EMPTY_SESSION_PERIOD
+    : {
+        sessions: num(row.sessions),
+        traceKeyedSessions: num(row.trace_keyed_sessions),
+        traces: num(row.traces),
+        calls: num(row.calls),
+        unpricedCalls: num(row.unpriced_calls),
+        cells: toSessionCells(cells),
+      }
 
 type ModelUsageMeasuresDraft = { cost: number; tokens: number }
 
@@ -761,6 +869,87 @@ export const CostAnalyticsRepositoryLive = Layer.effect(
                   },
                 }),
               ),
+            )
+        }),
+
+      getSessionCostFactors: (input) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const params = {
+                ...scopeParams(input),
+                previousFrom: formatCHDate(input.previousFrom),
+                bucketSeconds: input.bucketSeconds,
+              }
+              const [countsResult, cellsResult] = await Promise.all([
+                client.query({
+                  // One pass yields the sparkline buckets and the two window
+                  // subtotals: `WITH ROLLUP` merges the `uniqExact` states at both
+                  // levels, which summing bucket counts could not do. A session
+                  // straddling the window boundary counts in both, the same
+                  // convention the per-trace series uses for bucket edges.
+                  query: `SELECT
+                        GROUPING(bucket_start) AS is_period,
+                        GROUPING(is_current) AS is_everything,
+                        is_current,
+                        bucket_start,
+                        uniqExact(session_key) AS sessions,
+                        uniqExactIf(session_key, session_id = '') AS trace_keyed_sessions,
+                        uniqExact(trace_id) AS traces,
+                        count() AS calls,
+                        countIf(cost_source IN ('unpriced', 'unknown')) AS unpriced_calls,
+                        sum(cost_total_microcents) AS cost_microcents
+                      FROM (SELECT ${BUCKET_START} AS bucket_start, * FROM (${SESSION_FACTORS_SOURCE}))
+                      GROUP BY is_current, bucket_start WITH ROLLUP
+                      ORDER BY bucket_start ASC`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                }),
+                client.query({
+                  // Never truncated: the mix and rate effects are shares of the
+                  // whole, so a missing price list would silently land in the wrong row.
+                  query: `SELECT
+                        is_current,
+                        provider,
+                        model,
+                        sum(prompt_tokens) AS prompt_tokens,
+                        sum(prompt_cost) AS prompt_cost,
+                        sum(output_tokens) AS output_tokens,
+                        sum(output_cost) AS output_cost
+                      FROM (${SESSION_FACTORS_SOURCE})
+                      GROUP BY is_current, provider, model
+                      HAVING prompt_tokens + output_tokens > 0`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                }),
+              ])
+              const countRows = await countsResult.json<SessionFactorsRow>()
+              const cellRows = await cellsResult.json<SessionFactorsCellRow>()
+              return { countRows, cellRows }
+            })
+            .pipe(
+              Effect.map(({ countRows, cellRows }): SessionCostFactorsPair => {
+                // The grand-total row rolls `is_current` up to a default 0, which
+                // collides with the previous window's own subtotal; drop it.
+                const scoped = countRows.filter((row) => !Number(row.is_everything))
+                const periodOf = (isCurrent: boolean) =>
+                  toSessionPeriod({
+                    row: scoped.find((row) => Number(row.is_period) === 1 && Boolean(row.is_current) === isCurrent),
+                    cells: cellRows.filter((row) => Boolean(row.is_current) === isCurrent),
+                  })
+                return {
+                  previous: periodOf(false),
+                  current: periodOf(true),
+                  buckets: scoped
+                    .filter((row) => Number(row.is_period) === 0)
+                    .map((row) => ({
+                      bucketStart: parseCHDate(row.bucket_start),
+                      sessions: num(row.sessions),
+                      costMicrocents: num(row.cost_microcents),
+                    })),
+                }
+              }),
             )
         }),
     }

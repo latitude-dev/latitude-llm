@@ -6,6 +6,7 @@ import {
   useCacheEconomics,
   useCostBreakdown,
   useCostOverview,
+  useCostPerSessionDecomposition,
   useCostSeries,
   useModelUsageSeries,
 } from "../../../../../domains/cost/cost.collection.ts"
@@ -31,6 +32,7 @@ import {
 } from "./-components/cost-formatters.ts"
 import { CostKpiRow } from "./-components/cost-kpi-row.tsx"
 import { CostOverTimePanel } from "./-components/cost-over-time-panel.tsx"
+import { CostPerSessionPanel } from "./-components/cost-per-session-panel.tsx"
 import { ModelImpactPanel } from "./-components/model-impact-panel.tsx"
 import { ModelUsagePanel } from "./-components/model-usage-panel.tsx"
 
@@ -109,6 +111,12 @@ function CostPageContent() {
     bucketSeconds,
     enabled,
   })
+  const { data: perSession, isLoading: perSessionLoading } = useCostPerSessionDecomposition({
+    projectId: project.id,
+    range,
+    bucketSeconds,
+    enabled,
+  })
   const { data: cacheEconomics, isLoading: cacheEconomicsLoading } = useCacheEconomics({
     projectId: project.id,
     range,
@@ -181,6 +189,9 @@ function CostPageContent() {
             {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
             {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
             onChange={tw.onTimeChange}
+            // Unlike the other sections, every figure here is clamped to the recent
+            // slice, so an unset range is not all time.
+            placeholder="Recent activity"
           />
         }
       />
@@ -201,6 +212,14 @@ function CostPageContent() {
           rangeToIso={range.toIso}
           isAllTime={tw.isAllTime}
           isLoading={seriesLoading}
+        />
+        <SectionHeading>Session</SectionHeading>
+        <CostPerSessionPanel
+          record={perSession}
+          rangeFromIso={range.fromIso}
+          rangeToIso={range.toIso}
+          isAllTime={tw.isAllTime}
+          isLoading={perSessionLoading}
         />
         <SectionHeading>Model</SectionHeading>
         {/* The two model questions side by side: how spend moves, and who it goes to. */}

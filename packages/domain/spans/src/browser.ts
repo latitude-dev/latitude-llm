@@ -75,6 +75,25 @@ export {
   cacheBreakEvenRate,
   classifyCacheState,
 } from "./helpers/cache-economics.ts"
+export type {
+  CostPerSessionDecomposition,
+  DecomposeCostPerSessionInput,
+  SessionCostCell,
+  SessionCostContribution,
+  SessionCostDecompositionStatus,
+  SessionCostFactor,
+  SessionCostPeriod,
+  SessionCostShareShift,
+  TokenSide,
+} from "./helpers/decompose-cost-per-session.ts"
+export {
+  decomposeCostPerSession,
+  SESSION_COST_MIN_SESSIONS,
+  SESSION_COST_QUIET_BAND,
+  sessionCostMicrocents,
+  sessionCostTokens,
+  TOKEN_SIDES,
+} from "./helpers/decompose-cost-per-session.ts"
 export {
   canonicalizeMessageForEmbedding,
   hashMessageContent,
@@ -111,6 +130,9 @@ export type {
   ModelUsageMeasures,
   ModelUsageSeries,
   ModelUsageSlice,
+  SessionCostBucket,
+  SessionCostFactorsPair,
+  SessionCostFactorsScope,
 } from "./ports/cost-analytics-repository.ts"
 export {
   CACHE_ECONOMICS_ROW_LIMIT,

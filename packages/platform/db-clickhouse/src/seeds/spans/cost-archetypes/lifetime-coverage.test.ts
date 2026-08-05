@@ -15,6 +15,7 @@ import type { CostCohort } from "./cohorts.ts"
 import { buildCohortsSpans, cohortCalls } from "./cohorts.ts"
 import { FINDINGS_FIRE_COHORTS } from "./findings-fire.ts"
 import { HEALTHY_COHORTS } from "./healthy.ts"
+import { REGRESSION_COHORTS } from "./regression.ts"
 import { SINGLE_TURN_COHORTS } from "./single-turn.ts"
 
 /**
@@ -118,6 +119,15 @@ describe("seed coverage for the lifetime control", () => {
     for (const cohort of [...HEALTHY_COHORTS, ...SINGLE_TURN_COHORTS]) {
       const realistic = new Set([300, 1_800, 3_600].map((lifetimeSeconds) => stateAt(cohort, lifetimeSeconds)))
       expect(realistic.size).toBe(1)
+    }
+  })
+
+  it("raises no cache finding anywhere in the regression archetype", () => {
+    // A cache finding here would compete with the spend-regression story D exists to tell.
+    for (const cohort of REGRESSION_COHORTS) {
+      for (const lifetimeSeconds of [300, 1_800, 3_600]) {
+        expect(stateAt(cohort, lifetimeSeconds), `${cohort.key} @ ${lifetimeSeconds}s`).toBe("optimal")
+      }
     }
   })
 })

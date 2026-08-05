@@ -4,6 +4,7 @@ import type {
   ClassifiedUnpricedPair,
   CostAnalyticsScope,
   CostBreakdown,
+  CostPerSessionDecomposition,
   JudgedCacheModel,
   ModelUsageMeasures,
   ModelUsageSlice,
@@ -12,8 +13,10 @@ import {
   COST_BREAKDOWN_DIMENSIONS,
   COST_SERIES_METRICS,
   CostAnalyticsRepository,
+  decomposeCostPerSession,
   isUnpricedGap,
   judgeCacheEconomics,
+  sessionCostTokens,
   summarizeUnpricedUsage,
 } from "@domain/spans"
 import { CostAnalyticsRepositoryLive } from "@platform/db-clickhouse"
@@ -89,6 +92,40 @@ export interface CacheEconomicsRecord {
   readonly totals: CacheUsageMeasures & { readonly distinctModels: number }
 }
 
+/**
+ * The decomposition as the card renders it: the arithmetic is done here, so the
+ * panel receives a headline, a total, and rows it only has to lay out.
+ */
+export interface CostPerSessionRecord extends CostPerSessionDecomposition {
+  /**
+   * Share of this window's sessions keyed on a trace id because the traffic
+   * reported no session id. Above a small share, "cost per session" is largely
+   * cost per trace wearing another name, which the card has to say out loud.
+   */
+  readonly traceKeyedSessionShare: number | null
+  /** Both feed the shared rollup cost display, so a zero headline never reads as free. */
+  readonly unpricedCalls: number
+  readonly tokens: number
+  /**
+   * The window this one is compared against. Named on the card because the picker's
+   * label does not describe it: under All time the shown window is a bounded recent
+   * slice, so the comparison is that slice against the slice before it, and "All time"
+   * reads as if there were nothing to compare against.
+   */
+  readonly comparedFromIso: string
+  readonly comparedToIso: string
+  /** Sparkline points for the two headline blocks, spanning both windows, oldest first. */
+  readonly buckets: readonly SessionCostSparkPoint[]
+}
+
+/** Cost per session is derived here rather than in the panel: an empty bucket has none. */
+export interface SessionCostSparkPoint {
+  readonly bucketStartIso: string
+  readonly sessions: number
+  readonly costMicrocents: number
+  readonly costPerSessionMicrocents: number | null
+}
+
 // Well above what any window the picker offers can ask for at its bucket width.
 const MAX_SERIES_BUCKETS = 1_000
 
@@ -150,11 +187,21 @@ const bucketSecondsSchema = z
   .max(90 * 24 * 60 * 60)
 
 // Counts the aligned positions the client will densify to, not the raw duration: the start floors to a boundary.
-const withinBucketBudget = (input: { fromIso: string; toIso: string; bucketSeconds: number }) => {
-  const stepMs = input.bucketSeconds * 1000
-  return (
-    Math.ceil(Date.parse(input.toIso) / stepMs) - Math.floor(Date.parse(input.fromIso) / stepMs) <= MAX_SERIES_BUCKETS
-  )
+const bucketsBetween = ({ fromMs, toIso, bucketSeconds }: { fromMs: number; toIso: string; bucketSeconds: number }) => {
+  const stepMs = bucketSeconds * 1000
+  return Math.ceil(Date.parse(toIso) / stepMs) - Math.floor(fromMs / stepMs)
+}
+
+const withinBucketBudget = (input: { fromIso: string; toIso: string; bucketSeconds: number }) =>
+  bucketsBetween({ fromMs: Date.parse(input.fromIso), ...input }) <= MAX_SERIES_BUCKETS
+
+/**
+ * The decomposition scans the comparison window as well, so its budget covers both.
+ * Checking only the shown window would let a request through at twice the cap.
+ */
+const withinPairedBucketBudget = (input: { fromIso: string; toIso: string; bucketSeconds: number }) => {
+  const fromMs = Date.parse(input.fromIso)
+  return bucketsBetween({ fromMs: fromMs - (Date.parse(input.toIso) - fromMs), ...input }) <= MAX_SERIES_BUCKETS
 }
 
 const bucketBudgetIssue = {
@@ -211,6 +258,47 @@ export const getCacheEconomics = createServerFn({ method: "GET" })
         return {
           rows: judgeCacheEconomics({ economics, windowMs: scope.to.getTime() - scope.from.getTime() }),
           totals: economics.totals,
+        }
+      }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/**
+ * Why average cost per session moved against the window immediately before it.
+ *
+ * The comparison window is derived here rather than accepted from the client: it
+ * is the same length ending where the shown window starts, so the two halves of a
+ * period-over-period figure cannot drift apart.
+ */
+export const getCostPerSessionDecomposition = createServerFn({ method: "GET" })
+  .inputValidator(
+    costScopeSchema.extend({ bucketSeconds: bucketSecondsSchema }).refine(withinPairedBucketBudget, bucketBudgetIssue),
+  )
+  .handler(async ({ data, context }): Promise<CostPerSessionRecord> => {
+    const orgId = await resolveOrgScope(context)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* CostAnalyticsRepository
+        const scope = toScope(orgId, data)
+        const previousFrom = new Date(scope.from.getTime() - (scope.to.getTime() - scope.from.getTime()))
+        const { previous, current, buckets } = yield* repo.getSessionCostFactors({
+          ...scope,
+          previousFrom,
+          bucketSeconds: data.bucketSeconds,
+        })
+        return {
+          ...decomposeCostPerSession({ previous, current }),
+          comparedFromIso: previousFrom.toISOString(),
+          comparedToIso: scope.from.toISOString(),
+          traceKeyedSessionShare: current.sessions > 0 ? current.traceKeyedSessions / current.sessions : null,
+          unpricedCalls: current.unpricedCalls,
+          tokens: sessionCostTokens(current),
+          buckets: buckets.map((bucket) => ({
+            bucketStartIso: bucket.bucketStart.toISOString(),
+            sessions: bucket.sessions,
+            costMicrocents: bucket.costMicrocents,
+            costPerSessionMicrocents: bucket.sessions > 0 ? bucket.costMicrocents / bucket.sessions : null,
+          })),
         }
       }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
