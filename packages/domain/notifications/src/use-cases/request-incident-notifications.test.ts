@@ -185,9 +185,9 @@ const makeLayer = (opts: {
 }
 
 describe("requestIncidentNotificationsUseCase", () => {
-  // An escalation is only as urgent as the signal escalating. With no level, nobody
-  // has judged it, so it pages no one — the incident itself still opened.
-  it("skips the fan-out when the escalating signal has no level", async () => {
+  // 97% of production escalations come from signals nobody triaged; the rate
+  // breaking its band is the judgment, so they still page.
+  it("still fans out when the escalating signal has no level", async () => {
     const incident = makeIncident()
     const result = await Effect.runPromise(
       requestIncidentNotificationsUseCase({
@@ -196,9 +196,7 @@ describe("requestIncidentNotificationsUseCase", () => {
       }).pipe(Effect.provide(makeLayer({ incident, signal: makeSignal({ priority: null }) }))),
     )
 
-    expect(result.status).toBe("skipped")
-    if (result.status !== "skipped") throw new Error("expected skipped")
-    expect(result.reason).toBe("signal-no-severity")
+    expect(result.status).toBe("ok")
   })
 
   it("fans out signal escalation incidents when the signal is not muted", async () => {

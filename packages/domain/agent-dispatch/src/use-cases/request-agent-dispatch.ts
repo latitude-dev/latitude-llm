@@ -204,10 +204,9 @@ export const requestAgentDispatchUseCase = (input: {
       if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) {
         return { status: "skipped", reason: "signal-resolved" } as const
       }
-      // Same rule on the escalation path: an unjudged signal dispatches nothing.
-      if (signal !== null && signal.priority === null) {
-        return { status: "skipped", reason: "signal-no-severity" } as const
-      }
+      // No level gate on the escalation path: the incident's own severity is the
+      // judgment here (the rate broke its band), and gating on the signal's level
+      // would drop the ~97% of escalations that come from untriaged signals.
     }
 
     const context = yield* buildDispatchContextFromIncident({ incident, trigger, webAppUrl: input.webAppUrl })
