@@ -3,6 +3,7 @@ export {
   IMPORT_DEFAULT_LOOKBACK_DAYS,
   IMPORT_DRY_RUN_MAX_RECORDS,
   IMPORT_DRY_RUN_TIMEOUT_MS,
+  IMPORT_HARD_MAX_TRACES,
   IMPORT_ID_NAMESPACE,
   IMPORT_MAX_ATTEMPTS,
   IMPORT_MAX_LOOKBACK_DAYS,
@@ -34,7 +35,13 @@ export {
   importStatusSchema,
 } from "./entities/import-job.ts"
 export type { ImportRegionOption } from "./entities/import-region.ts"
-export { IMPORT_SOURCE_REGION_OPTIONS, isKnownImportBaseUrl } from "./entities/import-region.ts"
+export {
+  braintrustRegionSchema,
+  IMPORT_SOURCE_REGION_OPTIONS,
+  isKnownImportBaseUrl,
+  langfuseRegionSchema,
+  langsmithRegionSchema,
+} from "./entities/import-region.ts"
 export type {
   ImportRun,
   ImportRunStatus,

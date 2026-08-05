@@ -11288,3 +11288,472 @@ client.memory.list_record_users(
 </dl>
 </details>
 
+## Imports
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">list</a>(...) -> ListImportsResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the project's imports from other observability platforms, newest first, without their per-page run history — fetch a single import for that.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.list(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">create</a>(...) -> Import</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Creates an import that copies historical traces from Langfuse, LangSmith, or Braintrust into the project, and starts it. Traces are imported newest first in the background; only one import runs at a time per organization.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient, ImportCredentials_Langfuse
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.create(
+    project_slug="projectSlug",
+    credentials=ImportCredentials_Langfuse(
+        region="eu",
+        public_key="publicKey",
+        secret_key="secretKey",
+    ),
+    source_project_id="sourceProjectId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**credentials:** `ImportCredentials` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**source_project_id:** `str` — Id of the project on the platform to read from.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**source_project_name:** `typing.Optional[str]` — Name of the platform project, shown in Latitude. Defaults to `sourceProjectId`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**range_from:** `typing.Optional[datetime.datetime]` — ISO-8601 start of the range to import. Defaults to the plan's default lookback (90 days where retention allows) before `rangeTo`. Cannot reach past the plan's span retention.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**range_to:** `typing.Optional[datetime.datetime]` — ISO-8601 end of the range to import. Defaults to now.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**max_traces:** `typing.Optional[int]` — Most traces to import, newest first. One imported trace bills one credit, like an ingested trace. Defaults to the maximum, 100,000.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**session_metadata_key:** `typing.Optional[str]` — LangSmith only: run metadata key that groups traces into sessions. Defaults to `thread_id`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">get</a>(...) -> ImportDetail</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns a single import, including the recent pages it processed.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.get(
+    project_slug="projectSlug",
+    import_id="importId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**import_id:** `str` — Import id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">cancel</a>(...) -> Import</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Cancels an import that has not finished. Traces already imported stay, and the import can be retried later to carry on. Cancellation is cooperative, so a running import stops after the page in flight.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.cancel(
+    project_slug="projectSlug",
+    import_id="importId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**import_id:** `str` — Import id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">retry</a>(...) -> Import</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Resumes a failed, cancelled, or capped import from where it stopped. Returns a new import carrying the original's counts forward; the original is kept as a record.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+from latitude_sdk.imports import RetryImportBodyCredentials_Langfuse
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.retry(
+    project_slug="projectSlug",
+    import_id="importId",
+    credentials=RetryImportBodyCredentials_Langfuse(
+        region="eu",
+        public_key="publicKey",
+        secret_key="secretKey",
+    ),
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**import_id:** `str` — Import id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**credentials:** `RetryImportBodyCredentials` — Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+

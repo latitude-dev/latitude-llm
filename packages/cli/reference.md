@@ -10,6 +10,7 @@ Full command reference for `latitude`.
 - [`latitude api-keys`](#latitude-api-keys)
 - [`latitude datasets`](#latitude-datasets)
 - [`latitude experiments`](#latitude-experiments)
+- [`latitude imports`](#latitude-imports)
 - [`latitude incidents`](#latitude-incidents)
 - [`latitude members`](#latitude-members)
 - [`latitude memory`](#latitude-memory)
@@ -402,6 +403,65 @@ Replaces an experiment's mutable fields. `variants`, when supplied, fully replac
 |------|------|----------|-------------|
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--experiment-slug` | `string` | Yes | Experiment slug (human-readable identifier within the project). |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+---
+
+### `latitude imports`
+
+#### `latitude imports cancel`
+
+Cancels an import that has not finished. Traces already imported stay, and the import can be retried later to carry on. Cancellation is cooperative, so a running import stops after the page in flight.
+
+`POST /v1/projects/{projectSlug}/imports/{importId}/cancel`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
+
+#### `latitude imports create`
+
+Creates an import that copies historical traces from Langfuse, LangSmith, or Braintrust into the project, and starts it. Traces are imported newest first in the background; only one import runs at a time per organization.
+
+`POST /v1/projects/{projectSlug}/imports`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude imports get`
+
+Returns a single import, including the recent pages it processed.
+
+`GET /v1/projects/{projectSlug}/imports/{importId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
+
+#### `latitude imports list`
+
+Returns the project's imports from other observability platforms, newest first, without their per-page run history — fetch a single import for that.
+
+`GET /v1/projects/{projectSlug}/imports`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
+#### `latitude imports retry`
+
+Resumes a failed, cancelled, or capped import from where it stopped. Returns a new import carrying the original's counts forward; the original is kept as a record.
+
+`POST /v1/projects/{projectSlug}/imports/{importId}/retry`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
 ---
