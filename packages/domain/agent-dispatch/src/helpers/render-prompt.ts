@@ -35,6 +35,70 @@ const conventionBlock = (slug: string): string[] => [
   "automatically when the PR merges into the monitored branch.",
 ]
 
+type CacheFindingContext = NonNullable<AgentDispatchContext["cacheFinding"]>
+
+const percent = (rate: number): string => `${Math.round(rate * 1000) / 10}%`
+
+const lifetimeLabel = (seconds: number): string =>
+  seconds >= 3600 ? `${seconds / 3600}-hour` : `${seconds / 60}-minute`
+
+const CACHE_FINDING_TASK: Readonly<Record<CacheFindingContext["state"], readonly string[]>> = {
+  cacheIt: [
+    "Find where this model's requests are constructed and turn prompt caching on: mark the stable",
+    "prefix (system instructions and tool definitions) as cacheable, and make sure nothing variable",
+    "sits ahead of the breakpoint.",
+  ],
+  stopCaching: [
+    "Find where this model's requests are constructed and remove the cache breakpoints. This",
+    "traffic's cadence cannot reach the rate the write premium needs, so every write is a cost with",
+    "no matching discount arriving.",
+  ],
+  investigate: [
+    "Caching is on and the cadence supports a much higher hit rate, so something in prompt",
+    "construction is breaking the prefix. Check, in this order: a timestamp, request id, or",
+    "session id ahead of the cache breakpoint; non-deterministic key ordering when the prompt is",
+    "serialized; tool definitions that change between calls; a breakpoint placed after the variable",
+    "part of the prompt rather than before it.",
+  ],
+}
+
+/**
+ * A cost signal is not a trace-shaped bug: there are no member traces to read and no
+ * failure to reproduce, and the whole fix lives in the caller's own prompt-construction
+ * code. So this brief hands over the measured numbers and the lever list, and explicitly
+ * tells the agent to stop rather than guess — a speculative change to prompt assembly is
+ * how a cache recommendation turns into a regression.
+ */
+const renderCacheFindingPrompt = (context: AgentDispatchContext, finding: CacheFindingContext): string => {
+  const lines: string[] = [
+    `Latitude measured a prompt-caching problem in project "${context.projectName}".`,
+    "",
+    `Model: ${finding.model} (${finding.provider})`,
+    `Measured cache hit rate: ${percent(finding.actualRate)} over ${finding.calls} calls in the last ${finding.windowDays} days`,
+    `Break-even hit rate for this model's prices: ${percent(finding.breakEvenRate)}`,
+    `Achievable ceiling from this traffic's own call cadence: ${percent(finding.ceilingRate)} at this model's documented ${lifetimeLabel(finding.cacheLifetimeSeconds)} cache lifetime`,
+    `Estimated saving if acted on: $${finding.estimatedSavingsUsd.toFixed(2)} per ${finding.windowDays} days (modeled from token counts and list prices, so it will not tie exactly to the invoice)`,
+  ]
+  if (context.signal) {
+    lines.push(`Signal: ${context.signal.name}   Ref: ${context.signal.slug}   ID: ${context.signal.id}`)
+  }
+  lines.push(`Latitude: ${context.deepLinkUrl}`)
+  lines.push("", ...CACHE_FINDING_TASK[finding.state])
+  lines.push(
+    "",
+    "Latitude observes calls after they happen and cannot see message content, so it can name the",
+    "category but not the line. Confirm the cause in this repository before changing anything.",
+    "",
+    "If you find a concrete cause, make the smallest correct change and open a PR that states the",
+    "measured rate, the ceiling, and what you changed. If you cannot find one — the prompt is built",
+    "outside this repository, or the caching setup already looks correct — do not change prompt",
+    "assembly speculatively and do not open a PR. Return what you checked and what you would need",
+    "to see next.",
+  )
+  if (context.signal) lines.push("", ...conventionBlock(context.signal.slug))
+  return lines.join("\n")
+}
+
 const toMustacheView = (context: AgentDispatchContext): Record<string, unknown> => ({
   ...context,
   tags: context.tags?.join(", ") ?? "",
@@ -73,6 +137,8 @@ const renderDefaultPrompt = (context: AgentDispatchContext): string => {
     )
     return lines.join("\n")
   }
+
+  if (context.cacheFinding) return renderCacheFindingPrompt(context, context.cacheFinding)
 
   const lines: string[] = [
     context.trigger === "signal.regressed"

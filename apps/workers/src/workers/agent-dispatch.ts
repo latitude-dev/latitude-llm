@@ -20,6 +20,7 @@ import {
   AgentDispatchConfigRepositoryLive,
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchRepositoryLive,
+  CacheFindingRepositoryLive,
   IncidentMonitorReaderLive,
   IncidentRepositoryLive,
   OrganizationRepositoryLive,
@@ -51,6 +52,7 @@ const resolveWebAppUrl = (): string => {
 
 const requestLayer = Layer.mergeAll(
   AgentDispatchConfigRepositoryLive,
+  CacheFindingRepositoryLive,
   IncidentMonitorReaderLive,
   IncidentRepositoryLive,
   OrganizationRepositoryLive,

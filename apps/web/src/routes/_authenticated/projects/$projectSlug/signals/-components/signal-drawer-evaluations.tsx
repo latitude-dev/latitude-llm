@@ -1,4 +1,5 @@
 import { DEFAULT_EVALUATION_SAMPLING } from "@domain/evaluations"
+import type { SignalSource } from "@domain/signals"
 import {
   Button,
   CloseTrigger,
@@ -256,7 +257,7 @@ export function SignalDrawerEvaluations({
 }: {
   readonly projectId: string
   readonly signalId: string
-  readonly signalSource: "annotation" | "custom" | "flagger"
+  readonly signalSource: SignalSource
   readonly signalOrigin: "user" | "system"
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly flaggerSlugs?: readonly string[]

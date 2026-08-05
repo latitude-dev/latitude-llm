@@ -10,7 +10,12 @@ import {
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
 import { SHOWCASE_CLEANUP_CRON_KEY, SHOWCASE_CLEANUP_CRON_PATTERN } from "@domain/showcase"
-import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
+import {
+  CACHE_FINDING_SWEEP_KEY,
+  CACHE_FINDING_SWEEP_PATTERN,
+  ESCALATION_SWEEPER_KEY,
+  ESCALATION_SWEEPER_PATTERN,
+} from "@domain/signals"
 import {
   CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
   CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN,
@@ -55,6 +60,7 @@ import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
+import { createCacheFindingsWorker } from "./workers/cache-findings.ts"
 import { createDestinationsWorker } from "./workers/destinations.ts"
 import { createIncidentsWorker } from "./workers/domain-events/incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
@@ -257,6 +263,13 @@ const bootstrap = async () => {
       postgresClient: ctx.postgresClient,
       redisClient: ctx.redisClient,
     })
+    createCacheFindingsWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      postgresClient: ctx.postgresClient,
+      adminPostgresClient: getAdminPostgresClient(),
+      clickhouseClient: ctx.clickhouseClient,
+    })
     createTaxonomyWorker({
       consumer: ctx.consumer,
       publisher: ctx.publisher,
@@ -344,6 +357,21 @@ const bootstrap = async () => {
           "sweepEscalating",
           {},
           { key: ESCALATION_SWEEPER_KEY, pattern: ESCALATION_SWEEPER_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Daily cache-finding sweep. Re-judges every live project's cache economics over
+    // the stability windows, then opens, refreshes, or resolves its cost signals. Daily
+    // because a finding has to hold across three weekly windows before it fires, so a
+    // tighter cadence would buy ClickHouse scans and move nothing.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "cost-findings",
+          "sweep",
+          {},
+          { key: CACHE_FINDING_SWEEP_KEY, pattern: CACHE_FINDING_SWEEP_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

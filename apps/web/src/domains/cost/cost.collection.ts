@@ -8,6 +8,7 @@ import {
   getCostPerSessionDecomposition,
   getCostSeries,
   getModelUsageSeries,
+  listCacheFindingSignals,
 } from "./cost.functions.ts"
 
 /** Time window shared by every cost query — lower bound inclusive, upper bound exclusive. */
@@ -98,6 +99,27 @@ export function useCacheEconomics({
   return useQuery({
     queryKey: [...projectScopeKey(scope), "cache-economics", projectId, range],
     queryFn: () => getCacheEconomics({ data: { ...projectScopeData(scope), projectId, ...range } }),
+    staleTime: COST_STALE_TIME_MS,
+    placeholderData: keepPreviousData,
+    enabled: enabled && projectId.length > 0,
+  })
+}
+
+/**
+ * The cost signals already open for this project. No time range: a signal is opened on the
+ * producer's own stability windows, so narrowing the page's picker must not hide it.
+ */
+export function useCacheFindingSignals({
+  projectId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly enabled?: boolean
+}) {
+  const scope = useProjectScope()
+  return useQuery({
+    queryKey: [...projectScopeKey(scope), "cache-finding-signals", projectId],
+    queryFn: () => listCacheFindingSignals({ data: { projectId } }),
     staleTime: COST_STALE_TIME_MS,
     placeholderData: keepPreviousData,
     enabled: enabled && projectId.length > 0,

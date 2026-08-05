@@ -21,6 +21,7 @@
     "ch:schema:dump": "bash clickhouse/scripts/dump-schema.sh",
     "ch:seed": "node --import tsx src/seeds/run.ts",
     "ch:seed:reset": "node --import tsx src/seeds/run.ts --reset",
+    "ch:cache-signals:report": "node --import tsx src/seeds/spans/cost-archetypes/cache-signal-report.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",

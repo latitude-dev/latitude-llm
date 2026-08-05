@@ -33,6 +33,12 @@ export {
   deleteSignalUseCase,
 } from "./use-cases/delete-signal.ts"
 export {
+  type SyncCacheFindingSignalsError,
+  type SyncCacheFindingSignalsInput,
+  type SyncCacheFindingSignalsResult,
+  syncCacheFindingSignalsUseCase,
+} from "./use-cases/sync-cache-finding-signals.ts"
+export {
   type UpdateSignalError,
   type UpdateSignalInput,
   type UpdateSignalResult,

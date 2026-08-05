@@ -460,6 +460,20 @@ const _registry = {
     }
   }>(),
 
+  "cost-findings": payloads<{
+    /** Fired by the daily cron — fans out one `sync` per live project. */
+    sweep: Record<string, never>
+    /**
+     * Re-judge one project's cache economics over the stability windows and open,
+     * refresh, or resolve its cost signals. Throttled per project: the finding it
+     * produces has to hold for weeks, so a second run the same day cannot move it.
+     */
+    sync: {
+      readonly organizationId: string
+      readonly projectId: string
+    }
+  }>(),
+
   monitors: payloads<{
     /**
      * Run the monitor firing pipeline for one project. Published throttled

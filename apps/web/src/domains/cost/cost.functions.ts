@@ -1,4 +1,5 @@
 import { type OrganizationId, ProjectId } from "@domain/shared"
+import { CacheFindingRepository } from "@domain/signals"
 import type {
   CacheUsageMeasures,
   ClassifiedUnpricedPair,
@@ -20,13 +21,15 @@ import {
   summarizeUnpricedUsage,
 } from "@domain/spans"
 import { CostAnalyticsRepositoryLive } from "@platform/db-clickhouse"
+import { CacheFindingRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
-import { getClickhouseClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
+import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 // Wire records: Dates serialized to ISO strings, costs left in microcents.
 
@@ -90,6 +93,20 @@ export interface CacheModelRecord extends JudgedCacheModel {}
 export interface CacheEconomicsRecord {
   readonly rows: readonly CacheModelRecord[]
   readonly totals: CacheUsageMeasures & { readonly distinctModels: number }
+}
+
+/**
+ * An open cost signal for one (provider, model, state), keyed by the same fingerprint the
+ * producer writes.
+ *
+ * The panel matches its rows against these rather than deciding for itself which verdicts
+ * are worth escalating: the fingerprint is computed by the shared `cacheFindingFingerprint`
+ * on both sides, so a row showing "signal open" and the inbox holding it are the same fact.
+ */
+export interface CacheFindingSignalRecord {
+  readonly fingerprint: string
+  readonly signalSlug: string
+  readonly firstObservedAtIso: string
 }
 
 /**
@@ -260,6 +277,30 @@ export const getCacheEconomics = createServerFn({ method: "GET" })
           totals: economics.totals,
         }
       }).pipe(withScopedClickHouse(CostAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+/**
+ * Which cache findings already have an open signal in this project.
+ *
+ * Deliberately not scoped to the page's time window: a signal is opened on the stability
+ * windows the producer judged, and hiding it because the reader narrowed the picker to
+ * yesterday would make the panel and the inbox disagree about the same model.
+ */
+export const listCacheFindingSignals = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data, context }): Promise<readonly CacheFindingSignalRecord[]> => {
+    const orgId = await resolveOrgScope(context)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const findings = yield* CacheFindingRepository
+        const open = yield* findings.listOpenByProject({ projectId: ProjectId(data.projectId) })
+        return open.map((finding) => ({
+          fingerprint: finding.fingerprint,
+          signalSlug: finding.signalSlug,
+          firstObservedAtIso: finding.firstObservedAt.toISOString(),
+        }))
+      }).pipe(withScopedPostgres(CacheFindingRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
   })
 
