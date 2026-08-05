@@ -211,8 +211,8 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
       ? {
           top: 0,
           textStyle: { color: colors.mutedForeground, fontSize: 11 },
-          itemWidth: 12,
-          itemHeight: 8,
+          itemWidth: 10,
+          itemHeight: 10,
           itemGap: 14,
         }
       : { show: false },

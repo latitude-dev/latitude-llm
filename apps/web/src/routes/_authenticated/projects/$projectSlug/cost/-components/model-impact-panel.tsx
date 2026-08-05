@@ -1,5 +1,5 @@
 import { COST_PER_CALL_MIN_SAMPLE_CALLS, type CostBreakdown } from "@domain/spans"
-import { Badge, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Badge, Skeleton, Text, Tooltip, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
 import { ChartHeader } from "../../-components/chart-header.tsx"
 import {
@@ -10,7 +10,7 @@ import {
   shareOf,
   splitBreakdownRows,
 } from "./cost-formatters.ts"
-import { CALLS_SERIES_COLOR, OTHER_SERIES_COLOR, TREND_COLOR } from "./cost-series-colors.ts"
+import { callsSeriesColor, otherSeriesColor, trendColor } from "./cost-series-colors.ts"
 
 // Models charted individually. Past this the paired bars stop being scannable, and
 // the remainder row keeps the shares adding to 100% anyway.
@@ -44,10 +44,14 @@ function Gridlines() {
 }
 
 /** Length on a shared 0-100% scale for both measures, so the two are directly comparable. */
-function SharePair({ row }: { readonly row: ImpactRow }) {
+function SharePair({ row, isDark }: { readonly row: ImpactRow; readonly isDark: boolean }) {
   const bars = [
-    { label: "spend", share: row.spendShare, color: row.isRemainder ? OTHER_SERIES_COLOR : TREND_COLOR },
-    { label: "calls", share: row.callsShare, color: row.isRemainder ? OTHER_SERIES_COLOR : CALLS_SERIES_COLOR },
+    { label: "spend", share: row.spendShare, color: row.isRemainder ? otherSeriesColor(isDark) : trendColor(isDark) },
+    {
+      label: "calls",
+      share: row.callsShare,
+      color: row.isRemainder ? otherSeriesColor(isDark) : callsSeriesColor(isDark),
+    },
   ]
 
   return (
@@ -55,18 +59,26 @@ function SharePair({ row }: { readonly row: ImpactRow }) {
       {/* Gridlines are scoped to the track so a tick and a bar of the same share line up. */}
       <div className="relative flex w-full flex-col gap-1 py-0.5">
         <Gridlines />
-        {bars.map((bar) => (
-          <div key={bar.label} className="relative flex h-2.5 w-full overflow-hidden rounded-sm bg-muted">
-            <div
-              className="h-full min-w-[2px] rounded-sm"
-              style={{ width: `${Math.max(0, Math.min(100, bar.share * 100))}%`, backgroundColor: bar.color }}
-            />
+        {bars.map((bar, index) => (
+          <div
+            key={bar.label}
+            // The two bars hug the seam between their slots — bottom-aligned then top-aligned —
+            // instead of each centering in its own slot, which halved this gap by centering it
+            // in the space around the pair rather than around each bar individually.
+            className={`relative flex h-4 w-full ${index === 0 ? "items-end" : "items-start"}`}
+          >
+            <div className="relative h-1 w-full overflow-hidden rounded-sm bg-muted">
+              <div
+                className="h-full min-w-[2px] rounded-sm"
+                style={{ width: `${Math.max(0, Math.min(100, bar.share * 100))}%`, backgroundColor: bar.color }}
+              />
+            </div>
           </div>
         ))}
       </div>
       <div className="flex w-12 shrink-0 flex-col gap-1">
         {bars.map((bar) => (
-          <div key={bar.label} className="flex h-2.5 items-center justify-end">
+          <div key={bar.label} className="flex h-4 items-center justify-end">
             <Text.H6 color="foregroundMuted" noWrap className="tabular-nums">
               {formatPercentage(bar.share)}
             </Text.H6>
@@ -168,6 +180,7 @@ export function ModelImpactPanel({
   readonly isAllTime: boolean
   readonly isLoading: boolean
 }) {
+  const { isDark } = useChartCssTheme()
   const rows = breakdown ? buildImpactRows(breakdown) : []
   const hasSpend = (breakdown?.totals.totalMicrocents ?? 0) > 0
 
@@ -181,15 +194,16 @@ export function ModelImpactPanel({
         // The picker above states this window already, and the recent-activity
         // distinction that other dashboards flag isn't relevant to this panel.
         showWindow={false}
+        titleColor="foregroundMuted"
         actions={
           <div className="flex flex-row items-center gap-3">
             {[
-              { label: "Share of spend", color: TREND_COLOR },
-              { label: "Share of calls", color: CALLS_SERIES_COLOR },
+              { label: "Share of spend", color: trendColor(isDark) },
+              { label: "Share of calls", color: callsSeriesColor(isDark) },
             ].map((entry) => (
               <div key={entry.label} className="flex flex-row items-center gap-1.5">
                 <span
-                  className="h-2 w-3 shrink-0 rounded-sm"
+                  className="h-2 w-2 shrink-0 rounded-sm"
                   style={{ backgroundColor: entry.color }}
                   aria-hidden="true"
                 />
@@ -221,7 +235,7 @@ export function ModelImpactPanel({
                     {row.label}
                   </Text.H6>
                 </div>
-                <SharePair row={row} />
+                <SharePair row={row} isDark={isDark} />
                 <div className="flex w-16 shrink-0 justify-end">
                   <MultipleChip row={row} />
                 </div>

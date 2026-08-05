@@ -381,8 +381,8 @@ export function CostBreakdownPanel({
   return (
     // The row separators are painted in `--background`, so the card must actually carry it.
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <Text.H6 color="foreground">Cost breakdown</Text.H6>
+      <div className="flex min-h-8 flex-row flex-wrap items-center justify-between gap-2">
+        <Text.H6 color="foregroundMuted">Cost breakdown</Text.H6>
         <Tabs
           variant="bordered"
           size="sm"

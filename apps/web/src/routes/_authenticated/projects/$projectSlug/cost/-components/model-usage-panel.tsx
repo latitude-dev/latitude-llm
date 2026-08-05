@@ -1,4 +1,4 @@
-import { Button, Chart, type ChartSeries, cn, HistogramSkeleton, Tabs, Text } from "@repo/ui"
+import { Button, Chart, type ChartSeries, cn, HistogramSkeleton, Tabs, Text, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
 import { useState } from "react"
 import type { ModelUsageSeriesRecord } from "../../../../../../domains/cost/cost.functions.ts"
@@ -11,7 +11,7 @@ import {
   type ModelUsageMeasure,
   microcentsToUsd,
 } from "./cost-formatters.ts"
-import { modelColorAt, OTHER_SERIES_COLOR } from "./cost-series-colors.ts"
+import { modelColorAt, otherSeriesColor } from "./cost-series-colors.ts"
 import { ExpandableLegend } from "./expandable-legend.tsx"
 
 const CHART_HEIGHT = 260
@@ -36,16 +36,18 @@ interface UsageSeries {
 function buildUsageSeries({
   series,
   measure,
+  isDark,
 }: {
   readonly series: ModelUsageSeriesRecord
   readonly measure: ModelUsageMeasure
+  readonly isDark: boolean
 }): readonly UsageSeries[] {
   const measureOf = (slice: { readonly costMicrocents: number; readonly tokens: number }): number =>
     measure === "cost" ? microcentsToUsd(slice.costMicrocents) : slice.tokens
 
   const modelSeries = series.models.map((model, index) => ({
     name: modelLabel(model),
-    color: modelColorAt(index),
+    color: modelColorAt(index, isDark),
     values: series.buckets.map((bucket) => {
       const slice = bucket.byModel.find((entry) => entry.model === model)
       return slice ? measureOf(slice) : 0
@@ -57,7 +59,7 @@ function buildUsageSeries({
     ...modelSeries,
     {
       name: otherLabel(series.otherModels),
-      color: OTHER_SERIES_COLOR,
+      color: otherSeriesColor(isDark),
       values: series.buckets.map((bucket) => measureOf(bucket.other)),
     },
   ]
@@ -86,7 +88,7 @@ function UsageLegend({
             aria-pressed={isolated === entry.name}
             className={cn({ "opacity-50": isMuted })}
           >
-            <span className="h-2 w-3 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }} aria-hidden="true" />
+            <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }} aria-hidden="true" />
             {entry.name}
           </Button>
         )
@@ -121,9 +123,10 @@ export function ModelUsagePanel({
   readonly isLoading: boolean
 }) {
   const [isolated, setIsolated] = useState<string | null>(null)
+  const { isDark } = useChartCssTheme()
   const unit = bucketUnitLabel(bucketSeconds)
   const buckets = series?.buckets ?? []
-  const usageSeries = series ? buildUsageSeries({ series, measure }) : []
+  const usageSeries = series ? buildUsageSeries({ series, measure, isDark }) : []
   const isEmpty = usageSeries.every((entry) => entry.values.every((value) => value === 0))
   // Falls back rather than resetting state: a model isolated before a range change
   // may not survive the re-ranking, and filtering to a name that is gone draws nothing.
@@ -146,6 +149,7 @@ export function ModelUsagePanel({
         // The picker above states this window already, and the recent-activity
         // distinction that other dashboards flag isn't relevant to this panel.
         showWindow={false}
+        titleColor="foregroundMuted"
         actions={
           <Tabs
             variant="bordered"

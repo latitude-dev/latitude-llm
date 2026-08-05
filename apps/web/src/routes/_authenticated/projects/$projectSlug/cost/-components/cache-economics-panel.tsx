@@ -14,6 +14,7 @@ import {
   Tabs,
   Text,
   Tooltip,
+  useChartCssTheme,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPercentage, formatPrice } from "@repo/utils"
 import {
@@ -44,8 +45,9 @@ import {
   resolveCacheRow,
 } from "./cache-economics-view.ts"
 import { microcentsToUsd } from "./cost-formatters.ts"
-import { CALLS_SERIES_COLOR, TREND_COLOR } from "./cost-series-colors.ts"
+import { callsSeriesColor, trendColor } from "./cost-series-colors.ts"
 import { CostTableHead } from "./cost-table-head.tsx"
+import { SplitValue } from "./split-value.tsx"
 
 const DASH = "—"
 
@@ -196,17 +198,18 @@ function BreakEvenMark({ breakEvenRate }: { readonly breakEvenRate: number }) {
  * Segments are square and clipped by the track, or a rounded corner cuts a notch into the
  * middle of the bar.
  */
-function PositionBar({ row }: { readonly row: CacheRowView }) {
+function PositionBar({ row, isDark }: { readonly row: CacheRowView; readonly isDark: boolean }) {
   const { actualRate: actual, breakEvenRate: breakEven, ceilingRate: ceiling } = row.judgment
   // A rate we declined to judge must not be the loudest mark on its own row.
   const unjudged = row.judgment.state === "notEnoughData"
   const pct = (value: number): number => Math.max(0, Math.min(100, value * 100))
   const actualPct = pct(actual ?? 0)
   const headroomPct = ceiling === null ? 0 : Math.max(0, pct(ceiling) - actualPct)
+  const barColor = callsSeriesColor(isDark)
 
   return (
     <div className="flex w-full flex-row items-center gap-2">
-      <div className="relative h-2 min-w-0 flex-1">
+      <div className="relative h-1 min-w-0 max-w-[150px] flex-1">
         <Tooltip
           asChild
           trigger={
@@ -214,14 +217,14 @@ function PositionBar({ row }: { readonly row: CacheRowView }) {
               {unjudged || headroomPct <= 0 ? null : (
                 <div
                   className="absolute inset-y-0 opacity-25"
-                  style={{ left: `${actualPct}%`, width: `${headroomPct}%`, backgroundColor: CALLS_SERIES_COLOR }}
+                  style={{ left: `${actualPct}%`, width: `${headroomPct}%`, backgroundColor: barColor }}
                   aria-hidden="true"
                 />
               )}
               {actualPct <= 0 ? null : (
                 <div
                   className={cn("absolute inset-y-0 left-0", { "bg-muted-foreground/40": unjudged })}
-                  style={{ width: `${actualPct}%`, ...(unjudged ? {} : { backgroundColor: CALLS_SERIES_COLOR }) }}
+                  style={{ width: `${actualPct}%`, ...(unjudged ? {} : { backgroundColor: barColor }) }}
                   aria-hidden="true"
                 />
               )}
@@ -300,7 +303,7 @@ function RecommendationCell({ row }: { readonly row: CacheRowView }) {
   )
 }
 
-function CacheRow({ row }: { readonly row: CacheRowView }) {
+function CacheRow({ row, isDark }: { readonly row: CacheRowView; readonly isDark: boolean }) {
   const spend = rollupCostDisplay({
     costTotalMicrocents: row.costMicrocents,
     unpricedSpanCount: row.unpricedCalls,
@@ -311,12 +314,9 @@ function CacheRow({ row }: { readonly row: CacheRowView }) {
     <TableRow className="border-background bg-secondary/40 [&>td]:py-2.5">
       <TableCell>
         <div className="flex min-w-0 flex-row items-center gap-2">
-          <Text.H5 color="foreground" ellipsis noWrap>
+          <Text.H5 color="foregroundMuted" ellipsis noWrap>
             {row.model || "unknown model"}
           </Text.H5>
-          <Text.H6 color="foregroundMuted" ellipsis noWrap>
-            {row.provider || "unknown provider"}
-          </Text.H6>
           {row.verdictDependsOnLifetime ? (
             <Tooltip
               asChild
@@ -332,7 +332,7 @@ function CacheRow({ row }: { readonly row: CacheRowView }) {
         </div>
       </TableCell>
       <TableCell>
-        <PositionBar row={row} />
+        <PositionBar row={row} isDark={isDark} />
       </TableCell>
       <TableCell>
         <RecommendationCell row={row} />
@@ -413,10 +413,10 @@ type CacheFindingKey = (typeof CACHE_FINDING_TILES)[number]
  * carry the same (amber) icon colour in `STATE_META`, which would make two of three
  * segments indistinguishable here — so the bar gets its own palette instead.
  */
-const RECOMMENDATION_BAR_COLOR: Record<CacheFindingKey, string> = {
-  stopCaching: "hsl(0 72% 51%)",
-  cacheIt: "hsl(26 90% 37%)",
-  investigate: TREND_COLOR,
+const recommendationBarColor = (key: CacheFindingKey, isDark: boolean): string => {
+  if (key === "investigate") return trendColor(isDark)
+  if (key === "stopCaching") return isDark ? "oklch(57.7% 0.245 27.325)" : "oklch(70.4% 0.191 22.216)" // red-600 / red-400
+  return isDark ? "oklch(64.6% 0.222 41.116)" : "oklch(75% 0.183 55.934)" // orange-600 / orange-400
 }
 
 /** One finding's number and model count, sized to sit beside its siblings. */
@@ -439,7 +439,7 @@ function RecommendationLine({
       </div>
       <div className="flex flex-col">
         <Text.H3M color={group ? "foreground" : "foregroundMuted"} noWrap className="tabular-nums">
-          {group ? formatPrice(microcentsToUsd(group.savingsMicrocents)) : DASH}
+          {group ? <SplitValue formatted={formatPrice(microcentsToUsd(group.savingsMicrocents))} /> : DASH}
         </Text.H3M>
         <Text.H6 color="foregroundMuted" noWrap>
           {group ? `${formatCount(group.rows.length)} ${group.rows.length === 1 ? "model" : "models"}` : "No models"}
@@ -453,9 +453,11 @@ function RecommendationLine({
 function RecommendationsBar({
   groups,
   recoverableMicrocents,
+  isDark,
 }: {
   readonly groups: ReadonlyMap<CacheFindingKey, CacheStateGroup | null>
   readonly recoverableMicrocents: number
+  readonly isDark: boolean
 }) {
   return (
     <div className="flex h-1 w-full overflow-hidden rounded-sm bg-muted">
@@ -467,7 +469,7 @@ function RecommendationsBar({
           <div
             key={key}
             className="h-full"
-            style={{ width: `${Math.max(0, share * 100)}%`, backgroundColor: RECOMMENDATION_BAR_COLOR[key] }}
+            style={{ width: `${Math.max(0, share * 100)}%`, backgroundColor: recommendationBarColor(key, isDark) }}
             aria-hidden="true"
           />
         )
@@ -477,7 +479,7 @@ function RecommendationsBar({
 }
 
 /** What to change, and what closing the gap on cache is worth. */
-function RecommendationsCard({ summary }: { readonly summary: CacheSummary }) {
+function RecommendationsCard({ summary, isDark }: { readonly summary: CacheSummary; readonly isDark: boolean }) {
   const groups = new Map(CACHE_FINDING_TILES.map((key) => [key, summary.findings.find((g) => g.key === key) ?? null]))
 
   return (
@@ -493,7 +495,7 @@ function RecommendationsCard({ summary }: { readonly summary: CacheSummary }) {
         </div>
         <div className="flex flex-col gap-3">
           <Text.H6M color="foregroundMuted">Bars show the impact of caching or not caching on average.</Text.H6M>
-          <RecommendationsBar groups={groups} recoverableMicrocents={summary.recoverableMicrocents} />
+          <RecommendationsBar groups={groups} recoverableMicrocents={summary.recoverableMicrocents} isDark={isDark} />
         </div>
       </div>
     </div>
@@ -505,8 +507,9 @@ function RecommendationsCard({ summary }: { readonly summary: CacheSummary }) {
  * `Potential savings` absorbs the standalone "Looks recoverable" headline this replaces —
  * its explanatory tooltip moves onto the label here rather than being dropped.
  */
-function CacheHitRateCard({ summary }: { readonly summary: CacheSummary }) {
+function CacheHitRateCard({ summary, isDark }: { readonly summary: CacheSummary; readonly isDark: boolean }) {
   const pct = (value: number): number => Math.max(0, Math.min(100, value * 100))
+  const barColor = callsSeriesColor(isDark)
 
   return (
     <div className="flex flex-1 flex-col rounded-lg bg-secondary">
@@ -521,7 +524,7 @@ function CacheHitRateCard({ summary }: { readonly summary: CacheSummary }) {
             </Text.H6M>
             <div className="flex flex-col">
               <Text.H3M color="foreground" noWrap className="tabular-nums">
-                {summary.actualRate === null ? DASH : formatPercentage(summary.actualRate)}
+                {summary.actualRate === null ? DASH : <SplitValue formatted={formatPercentage(summary.actualRate)} />}
               </Text.H3M>
               <Text.H6 color="foregroundMuted" noWrap>
                 {summary.ceilingRate === null ? "" : `of possible ${formatPercentage(summary.ceilingRate)}`}
@@ -543,7 +546,7 @@ function CacheHitRateCard({ summary }: { readonly summary: CacheSummary }) {
             </Tooltip>
             <div className="flex flex-col">
               <Text.H3M color="foreground" noWrap className="tabular-nums">
-                {formatPrice(microcentsToUsd(summary.recoverableMicrocents))}
+                <SplitValue formatted={formatPrice(microcentsToUsd(summary.recoverableMicrocents))} />
               </Text.H3M>
               <Text.H6 color="foregroundMuted" noWrap>
                 {summary.recoverableShareOfSpend === null
@@ -569,13 +572,13 @@ function CacheHitRateCard({ summary }: { readonly summary: CacheSummary }) {
             {summary.ceilingRate === null ? null : (
               <div
                 className="absolute inset-y-0 left-0 opacity-25"
-                style={{ width: `${pct(summary.ceilingRate)}%`, backgroundColor: CALLS_SERIES_COLOR }}
+                style={{ width: `${pct(summary.ceilingRate)}%`, backgroundColor: barColor }}
                 aria-hidden="true"
               />
             )}
             <div
               className="absolute inset-y-0 left-0"
-              style={{ width: `${pct(summary.actualRate ?? 0)}%`, backgroundColor: CALLS_SERIES_COLOR }}
+              style={{ width: `${pct(summary.actualRate ?? 0)}%`, backgroundColor: barColor }}
               aria-hidden="true"
             />
           </div>
@@ -605,15 +608,17 @@ function ChosenLifetimeNote({ selection }: { readonly selection: CacheLifetimeSe
 function CacheSummaryView({
   summary,
   selection,
+  isDark,
 }: {
   readonly summary: CacheSummary
   readonly selection: CacheLifetimeSelection
+  readonly isDark: boolean
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 lg:flex-row">
-        <CacheHitRateCard summary={summary} />
-        <RecommendationsCard summary={summary} />
+      <div className="flex flex-col gap-2 lg:flex-row">
+        <CacheHitRateCard summary={summary} isDark={isDark} />
+        <RecommendationsCard summary={summary} isDark={isDark} />
       </div>
       <ChosenLifetimeNote selection={selection} />
     </div>
@@ -634,6 +639,7 @@ export function CacheEconomicsPanel({
   readonly economics: CacheEconomicsRecord | undefined
   readonly isLoading: boolean
 }) {
+  const { isDark } = useChartCssTheme()
   const [selection, setSelection] = useState<CacheLifetimeSelection>("documented")
   const [view, setView] = useState<CacheView>("summary")
   const [sort, setSort] = useState<{ column: CacheSortColumn; direction: "asc" | "desc" }>({
@@ -659,7 +665,7 @@ export function CacheEconomicsPanel({
 
   return (
     // The table's row separators are painted in `--background`, so the card must carry it.
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
+    <div className="flex flex-col gap-3 bg-background">
       <div className="flex flex-row flex-wrap items-center justify-between gap-2">
         <Tabs<CacheView>
           variant="bordered"
@@ -710,7 +716,7 @@ export function CacheEconomicsPanel({
           <Text.H6 color="foregroundMuted">No billable model usage in this time window</Text.H6>
         </div>
       ) : view === "summary" ? (
-        <CacheSummaryView summary={summary} selection={selection} />
+        <CacheSummaryView summary={summary} selection={selection} isDark={isDark} />
       ) : (
         <Table wrapperClassName="border-0 rounded-none">
           <TableHeader className="[&_tr]:border-b-0">
@@ -736,7 +742,7 @@ export function CacheEconomicsPanel({
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <CacheRow key={`${row.provider}/${row.model}`} row={row} />
+              <CacheRow key={`${row.provider}/${row.model}`} row={row} isDark={isDark} />
             ))}
           </TableBody>
         </Table>

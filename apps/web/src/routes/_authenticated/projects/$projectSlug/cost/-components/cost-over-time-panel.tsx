@@ -1,5 +1,5 @@
 import type { CostSeriesMetric } from "@domain/spans"
-import { Chart, type ChartSeries, HistogramSkeleton, Tabs, Text } from "@repo/ui"
+import { Chart, type ChartSeries, HistogramSkeleton, Tabs, Text, useChartCssTheme } from "@repo/ui"
 import { formatPrice } from "@repo/utils"
 import type { CostSeriesBucketRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { ChartHeader } from "../../-components/chart-header.tsx"
@@ -10,7 +10,7 @@ import {
   isCostSeriesMetric,
   microcentsToUsd,
 } from "./cost-formatters.ts"
-import { modelColorAt, TREND_COLOR } from "./cost-series-colors.ts"
+import { modelColorAt, trendColor } from "./cost-series-colors.ts"
 
 const CHART_HEIGHT = 220
 
@@ -29,9 +29,11 @@ const modelLabel = (model: string): string => model || "unknown model"
 function buildStackedModelSeries({
   buckets,
   provisionalIndex,
+  isDark,
 }: {
   readonly buckets: readonly CostSeriesBucketRecord[]
   readonly provisionalIndex: number | undefined
+  readonly isDark: boolean
 }): readonly ChartSeries[] {
   const spendByModel = new Map<string, number>()
   for (const bucket of buckets) {
@@ -47,7 +49,7 @@ function buildStackedModelSeries({
     values: buckets.map((bucket) =>
       microcentsToUsd(bucket.byModel.find((slice) => slice.model === model)?.costMicrocents ?? 0),
     ),
-    color: modelColorAt(index),
+    color: modelColorAt(index, isDark),
     stack: "cost",
     ...(provisionalIndex === undefined ? {} : { provisionalIndex }),
   }))
@@ -74,19 +76,20 @@ export function CostOverTimePanel({
   readonly isAllTime: boolean
   readonly isLoading: boolean
 }) {
+  const { isDark } = useChartCssTheme()
   const unit = bucketUnitLabel(bucketSeconds)
   const categories = buckets.map((bucket) => formatUtcBucketLabel(bucket.bucketStartIso, bucketSeconds))
   // Total is additive, so bars stack by model and their area means something.
   // Average and p95 summarise a distribution that does not accumulate — a line.
   const series: readonly ChartSeries[] =
     metric === "total"
-      ? buildStackedModelSeries({ buckets, provisionalIndex })
+      ? buildStackedModelSeries({ buckets, provisionalIndex, isDark })
       : [
           {
             kind: "line",
             name: metric === "p95" ? "p95 cost per trace" : "Avg cost per trace",
             values: buckets.map((bucket) => microcentsToUsd(bucket.valueMicrocents)),
-            color: TREND_COLOR,
+            color: trendColor(isDark),
           },
         ]
   // Reads as spend, not usage: an all-free-priced window also sums to zero.
@@ -102,6 +105,7 @@ export function CostOverTimePanel({
         // The picker above states this window already, and the recent-activity
         // distinction that other dashboards flag isn't relevant to this panel.
         showWindow={false}
+        titleColor="foregroundMuted"
         actions={
           <Tabs
             variant="bordered"

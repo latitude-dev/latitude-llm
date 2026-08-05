@@ -214,16 +214,10 @@ function CostPageContent() {
           isLoading={seriesLoading}
         />
         <SectionHeading>Session</SectionHeading>
-        <CostPerSessionPanel
-          record={perSession}
-          rangeFromIso={range.fromIso}
-          rangeToIso={range.toIso}
-          isAllTime={tw.isAllTime}
-          isLoading={perSessionLoading}
-        />
+        <CostPerSessionPanel record={perSession} rangeFromIso={range.fromIso} isLoading={perSessionLoading} />
         <SectionHeading>Model</SectionHeading>
         {/* The two model questions side by side: how spend moves, and who it goes to. */}
-        <div className="flex flex-col gap-6 xl:flex-row">
+        <div className="flex flex-col gap-2 xl:flex-row">
           <div className="flex min-w-0 flex-1 flex-col">
             <ModelUsagePanel
               series={denseModelUsage}

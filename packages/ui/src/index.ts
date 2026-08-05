@@ -79,6 +79,7 @@ export {
 } from "./components/charts/histogram-skeleton.tsx"
 export { LazyBarChart as BarChart } from "./components/charts/lazy-bar-chart.tsx"
 export { LazyChart as Chart } from "./components/charts/lazy-chart.tsx"
+export { useChartCssTheme } from "./components/charts/use-chart-css-theme.ts"
 export {
   Checkbox,
   type CheckedState,
@@ -350,6 +351,8 @@ export {
   TooltipProvider,
   TooltipRoot,
   TooltipTrigger,
+  type TooltipVariant,
+  useTooltipTextContentColor,
 } from "./components/tooltip/tooltip.tsx"
 export { hashToHue, useHashColor } from "./hooks/use-hash-color.ts"
 export { useHover } from "./hooks/use-hover.ts"

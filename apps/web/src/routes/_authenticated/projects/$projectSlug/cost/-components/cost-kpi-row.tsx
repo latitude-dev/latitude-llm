@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import type { CostOverviewRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { bucketUnitLabel, microcentsToUsd } from "./cost-formatters.ts"
+import { SplitValue } from "./split-value.tsx"
 
 const DASH = "—"
 
@@ -16,7 +17,7 @@ function KpiTile({
   isLoading,
 }: {
   readonly label: string
-  readonly value: string
+  readonly value: ReactNode
   readonly detail?: string
   readonly hint: string
   readonly isLoading: boolean
@@ -80,20 +81,26 @@ export function CostKpiRow({
     <div className="flex flex-row flex-wrap gap-3 rounded-lg bg-secondary p-4">
       <KpiTile
         label="Total spend"
-        value={total.label}
+        value={<SplitValue formatted={total.label} />}
         hint={`Cost recorded on billable LLM calls in this window. Excludes tool and wrapper spans, which carry no usage.${total.note ? ` ${total.note}` : ""}`}
         isLoading={isLoading}
       />
       <KpiTile
         label="Avg per day"
-        value={dailyAverageMicrocents === null ? DASH : formatPrice(microcentsToUsd(dailyAverageMicrocents))}
+        value={
+          dailyAverageMicrocents === null ? (
+            DASH
+          ) : (
+            <SplitValue formatted={formatPrice(microcentsToUsd(dailyAverageMicrocents))} />
+          )
+        }
         {...(dailyAverageMicrocents === null ? {} : { detail: `over completed ${unit}s` })}
         hint={`Spend divided by the ${unit}s that have fully elapsed. The current ${unit} is still filling, so counting it would drag the figure down all day.`}
         isLoading={isLoading}
       />
       <KpiTile
         label="Avg per trace"
-        value={formatPrice(microcentsToUsd(perTrace))}
+        value={<SplitValue formatted={formatPrice(microcentsToUsd(perTrace))} />}
         detail={`${formatCount(overview?.tracesWithUsage ?? 0)} traces with usage`}
         hint="Total spend divided by traces containing at least one billable LLM call. Traces made up only of tool or wrapper spans are excluded — they would dilute the average."
         isLoading={isLoading}
