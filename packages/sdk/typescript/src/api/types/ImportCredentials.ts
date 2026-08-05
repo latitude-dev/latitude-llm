@@ -3,7 +3,7 @@
 import type * as Latitude from "../index.js";
 
 /**
- * Credentials for the platform to import from; `kind` names the platform. Discarded once the import ends.
+ * Credentials for the platform to import from; `kind` names the platform. Not stored after the import ends.
  */
 export type ImportCredentials =
     | Latitude.ImportCredentials.Langfuse

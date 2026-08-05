@@ -15,7 +15,7 @@ from ...types.langsmith_import_credentials_region import LangsmithImportCredenti
 
 class RetryImportBodyCredentials_Langfuse(UniversalBaseModel):
     """
-    Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.
+    Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
     """
 
     kind: typing.Literal["langfuse"] = "langfuse"
@@ -28,7 +28,7 @@ class RetryImportBodyCredentials_Langfuse(UniversalBaseModel):
 
 class RetryImportBodyCredentials_Langsmith(UniversalBaseModel):
     """
-    Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.
+    Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
     """
 
     kind: typing.Literal["langsmith"] = "langsmith"
@@ -43,7 +43,7 @@ class RetryImportBodyCredentials_Langsmith(UniversalBaseModel):
 
 class RetryImportBodyCredentials_Braintrust(UniversalBaseModel):
     """
-    Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.
+    Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
     """
 
     kind: typing.Literal["braintrust"] = "braintrust"

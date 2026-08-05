@@ -15,7 +15,7 @@ from .langsmith_import_credentials_region import LangsmithImportCredentialsRegio
 
 class ImportCredentials_Langfuse(UniversalBaseModel):
     """
-    Credentials for the platform to import from; `kind` names the platform. Discarded once the import ends.
+    Credentials for the platform to import from; `kind` names the platform. Not stored after the import ends.
     """
 
     kind: typing.Literal["langfuse"] = "langfuse"
@@ -28,7 +28,7 @@ class ImportCredentials_Langfuse(UniversalBaseModel):
 
 class ImportCredentials_Langsmith(UniversalBaseModel):
     """
-    Credentials for the platform to import from; `kind` names the platform. Discarded once the import ends.
+    Credentials for the platform to import from; `kind` names the platform. Not stored after the import ends.
     """
 
     kind: typing.Literal["langsmith"] = "langsmith"
@@ -43,7 +43,7 @@ class ImportCredentials_Langsmith(UniversalBaseModel):
 
 class ImportCredentials_Braintrust(UniversalBaseModel):
     """
-    Credentials for the platform to import from; `kind` names the platform. Discarded once the import ends.
+    Credentials for the platform to import from; `kind` names the platform. Not stored after the import ends.
     """
 
     kind: typing.Literal["braintrust"] = "braintrust"

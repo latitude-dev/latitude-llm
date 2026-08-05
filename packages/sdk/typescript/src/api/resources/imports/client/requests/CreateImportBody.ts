@@ -20,11 +20,11 @@ export interface CreateImportBody {
     sourceProjectId: string;
     /** Name of the platform project, shown in Latitude. Defaults to `sourceProjectId`. */
     sourceProjectName?: string;
-    /** ISO-8601 start of the range to import. Defaults to the plan's default lookback (90 days where retention allows) before `rangeTo`. Cannot reach past the plan's span retention. */
+    /** ISO-8601 start of the range to import. Defaults to 90 days before `rangeTo`, bounded by the plan's retention. */
     rangeFrom?: string;
     /** ISO-8601 end of the range to import. Defaults to now. */
     rangeTo?: string;
-    /** Most traces to import, newest first. One imported trace bills one credit, like an ingested trace. Defaults to the maximum, 100,000. */
+    /** Most traces to import, newest first. Each imported trace bills one credit. Defaults to the maximum, 100,000. */
     maxTraces?: number;
     /** LangSmith only: run metadata key that groups traces into sessions. Defaults to `thread_id`. */
     sessionMetadataKey?: string;

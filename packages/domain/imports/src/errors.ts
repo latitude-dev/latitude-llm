@@ -16,7 +16,24 @@ export class ImportSourceError extends Data.TaggedError("ImportSourceError")<{
   readonly retryable: boolean
   readonly retryAfterMs?: number
   readonly upstreamStatus?: number
-}> {}
+}> {
+  // Never 401/403: those describe the caller's Latitude auth, and 401 triggers the bearer challenge.
+  get httpStatus() {
+    switch (this.category) {
+      case "auth":
+      case "config":
+      case "mapping":
+        return 400
+      case "rate_limited":
+        return 429
+      default:
+        return 502
+    }
+  }
+  get httpMessage() {
+    return `The platform connection test failed: ${this.message}`
+  }
+}
 
 /**
  * Carries where the blocking import lives, because the limit is org-wide while the imports UI is

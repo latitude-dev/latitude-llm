@@ -3,7 +3,7 @@
 import type * as Latitude from "../../../index.js";
 
 /**
- * Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.
+ * Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
  */
 export type RetryImportBodyCredentials =
     | Latitude.RetryImportBodyCredentials.Langfuse

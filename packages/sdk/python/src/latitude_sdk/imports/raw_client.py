@@ -35,7 +35,7 @@ class RawImportsClient:
         self, project_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[ListImportsResponse]:
         """
-        Returns the project's imports from other observability platforms, newest first, without their per-page run history — fetch a single import for that.
+        Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.
 
         Parameters
         ----------
@@ -121,7 +121,7 @@ class RawImportsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Import]:
         """
-        Creates an import that copies historical traces from Langfuse, LangSmith, or Braintrust into the project, and starts it. Traces are imported newest first in the background; only one import runs at a time per organization.
+        Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.
 
         Parameters
         ----------
@@ -137,13 +137,13 @@ class RawImportsClient:
             Name of the platform project, shown in Latitude. Defaults to `sourceProjectId`.
 
         range_from : typing.Optional[dt.datetime]
-            ISO-8601 start of the range to import. Defaults to the plan's default lookback (90 days where retention allows) before `rangeTo`. Cannot reach past the plan's span retention.
+            ISO-8601 start of the range to import. Defaults to 90 days before `rangeTo`, bounded by the plan's retention.
 
         range_to : typing.Optional[dt.datetime]
             ISO-8601 end of the range to import. Defaults to now.
 
         max_traces : typing.Optional[int]
-            Most traces to import, newest first. One imported trace bills one credit, like an ingested trace. Defaults to the maximum, 100,000.
+            Most traces to import, newest first. Each imported trace bills one credit. Defaults to the maximum, 100,000.
 
         session_metadata_key : typing.Optional[str]
             LangSmith only: run metadata key that groups traces into sessions. Defaults to `thread_id`.
@@ -232,7 +232,7 @@ class RawImportsClient:
         self, project_slug: str, import_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[ImportDetail]:
         """
-        Returns a single import, including the recent pages it processed.
+        Returns a single import, including its recent run history.
 
         Parameters
         ----------
@@ -311,7 +311,7 @@ class RawImportsClient:
         self, project_slug: str, import_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[Import]:
         """
-        Cancels an import that has not finished. Traces already imported stay, and the import can be retried later to carry on. Cancellation is cooperative, so a running import stops after the page in flight.
+        Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.
 
         Parameters
         ----------
@@ -395,7 +395,7 @@ class RawImportsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Import]:
         """
-        Resumes a failed, cancelled, or capped import from where it stopped. Returns a new import carrying the original's counts forward; the original is kept as a record.
+        Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.
 
         Parameters
         ----------
@@ -406,7 +406,7 @@ class RawImportsClient:
             Import id.
 
         credentials : RetryImportBodyCredentials
-            Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.
+            Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -491,7 +491,7 @@ class AsyncRawImportsClient:
         self, project_slug: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[ListImportsResponse]:
         """
-        Returns the project's imports from other observability platforms, newest first, without their per-page run history — fetch a single import for that.
+        Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.
 
         Parameters
         ----------
@@ -577,7 +577,7 @@ class AsyncRawImportsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Import]:
         """
-        Creates an import that copies historical traces from Langfuse, LangSmith, or Braintrust into the project, and starts it. Traces are imported newest first in the background; only one import runs at a time per organization.
+        Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.
 
         Parameters
         ----------
@@ -593,13 +593,13 @@ class AsyncRawImportsClient:
             Name of the platform project, shown in Latitude. Defaults to `sourceProjectId`.
 
         range_from : typing.Optional[dt.datetime]
-            ISO-8601 start of the range to import. Defaults to the plan's default lookback (90 days where retention allows) before `rangeTo`. Cannot reach past the plan's span retention.
+            ISO-8601 start of the range to import. Defaults to 90 days before `rangeTo`, bounded by the plan's retention.
 
         range_to : typing.Optional[dt.datetime]
             ISO-8601 end of the range to import. Defaults to now.
 
         max_traces : typing.Optional[int]
-            Most traces to import, newest first. One imported trace bills one credit, like an ingested trace. Defaults to the maximum, 100,000.
+            Most traces to import, newest first. Each imported trace bills one credit. Defaults to the maximum, 100,000.
 
         session_metadata_key : typing.Optional[str]
             LangSmith only: run metadata key that groups traces into sessions. Defaults to `thread_id`.
@@ -688,7 +688,7 @@ class AsyncRawImportsClient:
         self, project_slug: str, import_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[ImportDetail]:
         """
-        Returns a single import, including the recent pages it processed.
+        Returns a single import, including its recent run history.
 
         Parameters
         ----------
@@ -767,7 +767,7 @@ class AsyncRawImportsClient:
         self, project_slug: str, import_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[Import]:
         """
-        Cancels an import that has not finished. Traces already imported stay, and the import can be retried later to carry on. Cancellation is cooperative, so a running import stops after the page in flight.
+        Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.
 
         Parameters
         ----------
@@ -851,7 +851,7 @@ class AsyncRawImportsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Import]:
         """
-        Resumes a failed, cancelled, or capped import from where it stopped. Returns a new import carrying the original's counts forward; the original is kept as a record.
+        Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.
 
         Parameters
         ----------
@@ -862,7 +862,7 @@ class AsyncRawImportsClient:
             Import id.
 
         credentials : RetryImportBodyCredentials
-            Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.
+            Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.

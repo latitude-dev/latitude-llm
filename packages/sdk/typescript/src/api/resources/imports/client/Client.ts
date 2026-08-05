@@ -23,7 +23,7 @@ export class ImportsClient {
     }
 
     /**
-     * Returns the project's imports from other observability platforms, newest first, without their per-page run history — fetch a single import for that.
+     * Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {Latitude.ListImportsRequest} request
@@ -104,7 +104,7 @@ export class ImportsClient {
     }
 
     /**
-     * Creates an import that copies historical traces from Langfuse, LangSmith, or Braintrust into the project, and starts it. Traces are imported newest first in the background; only one import runs at a time per organization.
+     * Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {Latitude.CreateImportBody} request
@@ -196,7 +196,7 @@ export class ImportsClient {
     }
 
     /**
-     * Returns a single import, including the recent pages it processed.
+     * Returns a single import, including its recent run history.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} importId - Import id.
@@ -280,7 +280,7 @@ export class ImportsClient {
     }
 
     /**
-     * Cancels an import that has not finished. Traces already imported stay, and the import can be retried later to carry on. Cancellation is cooperative, so a running import stops after the page in flight.
+     * Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} importId - Import id.
@@ -364,7 +364,7 @@ export class ImportsClient {
     }
 
     /**
-     * Resumes a failed, cancelled, or capped import from where it stopped. Returns a new import carrying the original's counts forward; the original is kept as a record.
+     * Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} importId - Import id.

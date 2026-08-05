@@ -3,7 +3,12 @@ import { importJobs } from "@platform/db-postgres/schema/import-jobs"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
-import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-utils/create-test-app.ts"
+import {
+  type ApiTestContext,
+  createTenantSetup,
+  REJECTED_CREDENTIAL_MARKER,
+  setupTestApi,
+} from "../test-utils/create-test-app.ts"
 
 const createProjectRecord = async (
   database: InMemoryPostgres,
@@ -124,6 +129,18 @@ describe("Imports Routes Integration", () => {
       .set({ status: "failed", credentials: null, error: "upstream broke", finishedAt: new Date() })
       .where(eq(importJobs.id, created.id))
 
+    // Retry with credentials the platform rejects → fails fast, no retry recorded.
+    const badRetryRes = await app.fetch(
+      new Request(`${base}/${created.id}/retry`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          credentials: { ...LANGFUSE_CREDENTIALS, secretKey: `sk-lf-${REJECTED_CREDENTIAL_MARKER}` },
+        }),
+      }),
+    )
+    expect(badRetryRes.status).toBe(400)
+
     // Retry with credentials from another region → refused before anything is created.
     const mismatchRes = await app.fetch(
       new Request(`${base}/${created.id}/retry`, {
@@ -155,6 +172,24 @@ describe("Imports Routes Integration", () => {
     const otherSlug = await createProjectRecord(database, tenant.organizationId, "eeeeeeeeeeeeeeeeeeeeeeee")
     const headers = { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "content-type": "application/json" }
     const base = `http://localhost/v1/projects/${slug}/imports`
+
+    // Credentials the platform rejects fail the request; nothing is created.
+    const badCredentialsRes = await app.fetch(
+      new Request(base, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          credentials: { ...LANGFUSE_CREDENTIALS, secretKey: `sk-lf-${REJECTED_CREDENTIAL_MARKER}` },
+          sourceProjectId: "lf-project-3",
+        }),
+      }),
+    )
+    expect(badCredentialsRes.status).toBe(400)
+    const badCredentialsBody = (await badCredentialsRes.json()) as { error: string }
+    expect(badCredentialsBody.error).toContain("connection test failed")
+
+    const emptyListRes = await app.fetch(new Request(base, { headers }))
+    expect(((await emptyListRes.json()) as { imports: unknown[] }).imports).toHaveLength(0)
 
     const reversedRes = await app.fetch(
       new Request(base, {

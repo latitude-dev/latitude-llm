@@ -411,7 +411,7 @@ Replaces an experiment's mutable fields. `variants`, when supplied, fully replac
 
 #### `latitude imports cancel`
 
-Cancels an import that has not finished. Traces already imported stay, and the import can be retried later to carry on. Cancellation is cooperative, so a running import stops after the page in flight.
+Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.
 
 `POST /v1/projects/{projectSlug}/imports/{importId}/cancel`
 
@@ -422,7 +422,7 @@ Cancels an import that has not finished. Traces already imported stay, and the i
 
 #### `latitude imports create`
 
-Creates an import that copies historical traces from Langfuse, LangSmith, or Braintrust into the project, and starts it. Traces are imported newest first in the background; only one import runs at a time per organization.
+Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.
 
 `POST /v1/projects/{projectSlug}/imports`
 
@@ -433,7 +433,7 @@ Creates an import that copies historical traces from Langfuse, LangSmith, or Bra
 
 #### `latitude imports get`
 
-Returns a single import, including the recent pages it processed.
+Returns a single import, including its recent run history.
 
 `GET /v1/projects/{projectSlug}/imports/{importId}`
 
@@ -444,7 +444,7 @@ Returns a single import, including the recent pages it processed.
 
 #### `latitude imports list`
 
-Returns the project's imports from other observability platforms, newest first, without their per-page run history — fetch a single import for that.
+Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.
 
 `GET /v1/projects/{projectSlug}/imports`
 
@@ -454,7 +454,7 @@ Returns the project's imports from other observability platforms, newest first, 
 
 #### `latitude imports retry`
 
-Resumes a failed, cancelled, or capped import from where it stopped. Returns a new import carrying the original's counts forward; the original is kept as a record.
+Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.
 
 `POST /v1/projects/{projectSlug}/imports/{importId}/retry`
 

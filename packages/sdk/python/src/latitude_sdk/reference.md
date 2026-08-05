@@ -11301,7 +11301,7 @@ client.memory.list_record_users(
 <dl>
 <dd>
 
-Returns the project's imports from other observability platforms, newest first, without their per-page run history — fetch a single import for that.
+Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.
 </dd>
 </dl>
 </dd>
@@ -11374,7 +11374,7 @@ client.imports.list(
 <dl>
 <dd>
 
-Creates an import that copies historical traces from Langfuse, LangSmith, or Braintrust into the project, and starts it. Traces are imported newest first in the background; only one import runs at a time per organization.
+Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.
 </dd>
 </dl>
 </dd>
@@ -11453,7 +11453,7 @@ client.imports.create(
 <dl>
 <dd>
 
-**range_from:** `typing.Optional[datetime.datetime]` — ISO-8601 start of the range to import. Defaults to the plan's default lookback (90 days where retention allows) before `rangeTo`. Cannot reach past the plan's span retention.
+**range_from:** `typing.Optional[datetime.datetime]` — ISO-8601 start of the range to import. Defaults to 90 days before `rangeTo`, bounded by the plan's retention.
     
 </dd>
 </dl>
@@ -11469,7 +11469,7 @@ client.imports.create(
 <dl>
 <dd>
 
-**max_traces:** `typing.Optional[int]` — Most traces to import, newest first. One imported trace bills one credit, like an ingested trace. Defaults to the maximum, 100,000.
+**max_traces:** `typing.Optional[int]` — Most traces to import, newest first. Each imported trace bills one credit. Defaults to the maximum, 100,000.
     
 </dd>
 </dl>
@@ -11509,7 +11509,7 @@ client.imports.create(
 <dl>
 <dd>
 
-Returns a single import, including the recent pages it processed.
+Returns a single import, including its recent run history.
 </dd>
 </dl>
 </dd>
@@ -11591,7 +11591,7 @@ client.imports.get(
 <dl>
 <dd>
 
-Cancels an import that has not finished. Traces already imported stay, and the import can be retried later to carry on. Cancellation is cooperative, so a running import stops after the page in flight.
+Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.
 </dd>
 </dl>
 </dd>
@@ -11673,7 +11673,7 @@ client.imports.cancel(
 <dl>
 <dd>
 
-Resumes a failed, cancelled, or capped import from where it stopped. Returns a new import carrying the original's counts forward; the original is kept as a record.
+Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.
 </dd>
 </dl>
 </dd>
@@ -11737,7 +11737,7 @@ client.imports.retry(
 <dl>
 <dd>
 
-**credentials:** `RetryImportBodyCredentials` — Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.
+**credentials:** `RetryImportBodyCredentials` — Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
     
 </dd>
 </dl>

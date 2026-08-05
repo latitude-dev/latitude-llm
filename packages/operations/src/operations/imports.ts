@@ -4,11 +4,14 @@ import {
   enqueueImportUseCase,
   IMPORT_HARD_MAX_TRACES,
   IMPORT_SOURCE_PAGE_SIZE,
+  type ImportCredentials,
   ImportJobNotFoundError,
   ImportJobRepository,
+  ImportSourceAdapters,
   importLimitsForPlan,
   importSourceBaseUrl,
   retryImportUseCase,
+  testImportConnectionUseCase,
 } from "@domain/imports"
 import { ProjectRepository } from "@domain/projects"
 import { ImportJobId, OrganizationId } from "@domain/shared"
@@ -54,7 +57,7 @@ const ImportIdParamsSchema = ProjectParamsSchema.extend({
 const CreateImportBodySchema = z
   .object({
     credentials: ImportCredentialsSchema.describe(
-      "Credentials for the platform to import from; `kind` names the platform. Discarded once the import ends.",
+      "Credentials for the platform to import from; `kind` names the platform. Not stored after the import ends.",
     ),
     sourceProjectId: z.string().min(1).describe("Id of the project on the platform to read from."),
     sourceProjectName: z
@@ -66,7 +69,7 @@ const CreateImportBodySchema = z
       .datetime()
       .optional()
       .describe(
-        "ISO-8601 start of the range to import. Defaults to the plan's default lookback (90 days where retention allows) before `rangeTo`. Cannot reach past the plan's span retention.",
+        "ISO-8601 start of the range to import. Defaults to 90 days before `rangeTo`, bounded by the plan's retention.",
       ),
     rangeTo: z.iso.datetime().optional().describe("ISO-8601 end of the range to import. Defaults to now."),
     maxTraces: z
@@ -76,7 +79,7 @@ const CreateImportBodySchema = z
       .max(IMPORT_HARD_MAX_TRACES)
       .optional()
       .describe(
-        `Most traces to import, newest first. One imported trace bills one credit, like an ingested trace. Defaults to the maximum, ${IMPORT_HARD_MAX_TRACES.toLocaleString("en-US")}.`,
+        `Most traces to import, newest first. Each imported trace bills one credit. Defaults to the maximum, ${IMPORT_HARD_MAX_TRACES.toLocaleString("en-US")}.`,
       ),
     sessionMetadataKey: z
       .string()
@@ -88,7 +91,7 @@ const CreateImportBodySchema = z
 const RetryImportBodySchema = z
   .object({
     credentials: ImportCredentialsSchema.describe(
-      "Platform credentials, provided again because Latitude discards them when an import ends. Must name the same region the import was created against.",
+      "Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.",
     ),
   })
   .openapi("RetryImportBody")
@@ -101,6 +104,12 @@ const ListImportsResponseSchema = z
 
 const enqueueImportWith = (ctx: OperationContext) =>
   enqueueImportUseCase({ publish: (payload) => ctx.queuePublisher.publish("imports", "start", payload) })
+
+/** Fails fast on bad credentials, so no import is recorded that could only start failed. */
+const testConnectionWith = (ctx: OperationContext, credentials: ImportCredentials) =>
+  testImportConnectionUseCase({ source: credentials.kind, credentials }).pipe(
+    Effect.provide(Layer.succeed(ImportSourceAdapters, ctx.importSourceAdapters)),
+  )
 
 const importLayers = Layer.mergeAll(ProjectRepositoryLive, ImportJobRepositoryLive, OutboxEventWriterLive)
 
@@ -136,7 +145,7 @@ const listImports = importEndpoint({
     sdkMethod: "list",
     summary: "List imports",
     description:
-      "Returns the project's imports from other observability platforms, newest first, without their per-page run history — fetch a single import for that.",
+      "Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema },
     responses: typedResponses({ status: 200, schema: ListImportsResponseSchema, description: "List of imports" }),
@@ -163,7 +172,7 @@ const createImport = importEndpoint({
     sdkMethod: "create",
     summary: "Create import",
     description:
-      "Creates an import that copies historical traces from Langfuse, LangSmith, or Braintrust into the project, and starts it. Traces are imported newest first in the background; only one import runs at a time per organization.",
+      "Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateImportBodySchema) },
     responses: typedResponses({ status: 201, schema: ImportSchema, description: "Import created and started" }),
@@ -182,6 +191,8 @@ const createImport = importEndpoint({
       const rangeFrom = body.rangeFrom
         ? new Date(body.rangeFrom)
         : new Date(rangeTo.getTime() - limits.defaultLookbackDays * DAY_MS)
+
+      yield* testConnectionWith(ctx, body.credentials)
 
       const created = yield* createImportUseCase({
         organizationId: OrganizationId(ctx.organization.id as string),
@@ -223,7 +234,7 @@ const getImport = importEndpoint({
     group: "imports",
     sdkMethod: "get",
     summary: "Get import",
-    description: "Returns a single import, including the recent pages it processed.",
+    description: "Returns a single import, including its recent run history.",
     security: PROTECTED_SECURITY,
     request: { params: ImportIdParamsSchema },
     responses: typedResponses({ status: 200, schema: ImportDetailSchema, description: "Import" }),
@@ -247,7 +258,7 @@ const cancelImport = importEndpoint({
     sdkMethod: "cancel",
     summary: "Cancel import",
     description:
-      "Cancels an import that has not finished. Traces already imported stay, and the import can be retried later to carry on. Cancellation is cooperative, so a running import stops after the page in flight.",
+      "Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.",
     security: PROTECTED_SECURITY,
     request: { params: ImportIdParamsSchema },
     responses: typedResponses({ status: 200, schema: ImportSchema, description: "Import cancelled" }),
@@ -272,7 +283,7 @@ const retryImport = importEndpoint({
     sdkMethod: "retry",
     summary: "Retry import",
     description:
-      "Resumes a failed, cancelled, or capped import from where it stopped. Returns a new import carrying the original's counts forward; the original is kept as a record.",
+      "Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.",
     security: PROTECTED_SECURITY,
     request: { params: ImportIdParamsSchema, body: jsonBody(RetryImportBodySchema) },
     responses: typedResponses({ status: 201, schema: ImportSchema, description: "Retry created and started" }),
@@ -283,6 +294,9 @@ const retryImport = importEndpoint({
     Effect.gen(function* () {
       const job = yield* findProjectImport(input.params.projectSlug, input.params.importId)
       const plan = yield* resolveEffectivePlanCached(OrganizationId(ctx.organization.id as string))
+
+      yield* testConnectionWith(ctx, input.body.credentials)
+
       const retried = yield* retryImportUseCase({
         importJobId: job.id,
         credentials: input.body.credentials,
