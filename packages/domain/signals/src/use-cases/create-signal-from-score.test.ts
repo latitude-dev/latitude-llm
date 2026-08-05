@@ -107,8 +107,8 @@ const createGenerateSignalDetailsWithSeverity =
     })
 
 describe("createSignalFromScoreUseCase", () => {
-  it("leaves the new signal with no level and never asks for a severity by default", async () => {
-    const { layer: aiLayer, calls } = createFakeAI({
+  it("leaves the level unset when the model answers with no usable severity", async () => {
+    const { layer: aiLayer } = createFakeAI({
       generate: createGenerateSignalDetails("Token leakage", "Secrets appear in replies."),
     })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
@@ -133,11 +133,12 @@ describe("createSignalFromScoreUseCase", () => {
       ),
     )
 
+    // No severity is survivable: the payload simply carries none, and a payload
+    // without a severity is always admitted by the notification threshold.
     expect(issues.get(result.signalId)?.priority).toBeNull()
-    expect(calls.generate[0]?.prompt).not.toContain("severity")
   })
 
-  it("writes the derived severity into the priority field at creation when the flag is on", async () => {
+  it("writes the derived severity into the priority field at creation", async () => {
     const { layer: aiLayer, calls } = createFakeAI({
       generate: createGenerateSignalDetailsWithSeverity("Token leakage", "Secrets appear in replies.", "urgent"),
     })
@@ -153,7 +154,6 @@ describe("createSignalFromScoreUseCase", () => {
         projectId,
         scoreId: score.id,
         normalizedEmbedding: makeEmbedding(),
-        deriveSeverity: true,
       }).pipe(
         Effect.provide(aiLayer),
         Effect.provideService(ScoreRepository, scoreRepository),

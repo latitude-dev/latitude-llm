@@ -29,12 +29,6 @@ export const FEATURE_FLAGS = {
     description:
       "Project-scoped Cost section: spend over time, per-dimension cost breakdown, and the data-confidence figures (provider-verified share and unpriced usage).",
   },
-  derivedSignalSeverity: {
-    emoji: "🎚️",
-    name: "Derived signal severity",
-    description:
-      "Gives newly discovered signals a severity from the same generation call that writes their name and description, so the notification severity filters apply to them instead of every new signal arriving. Stored in the signal's `priority` field (same scale, older name), only fills an unset value, and only at creation.",
-  },
   adaptiveTaxonomyClustering: {
     emoji: "🌳",
     name: "Adaptive taxonomy clustering",

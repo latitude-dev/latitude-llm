@@ -1,4 +1,3 @@
-import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import { type SyncScoreAnalyticsInput, syncScoreAnalyticsUseCase } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import {
@@ -20,7 +19,6 @@ import { RedisBillingSpendReservationLive, RedisDistributedLockRepositoryLive } 
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
-  FeatureFlagRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
@@ -33,17 +31,6 @@ import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clien
 import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-signal-discovery")
-
-/**
- * Resolve the per-organization `derivedSignalSeverity` flag. Read in the activity
- * ONLY (never workflow code — Temporal determinism), and passed down rather than
- * read inside the use case so the domain layer keeps no flag dependency. Flag off
- * ⇒ the signal lands untriaged, as it always has.
- */
-const resolveDeriveSeverity = (organizationId: string) =>
-  hasFeatureFlagUseCase({ identifier: "derivedSignalSeverity" }).pipe(
-    withPostgres(FeatureFlagRepositoryLive, getPostgresClient(), OrganizationId(organizationId)),
-  )
 
 export const checkEligibility = async (input: CheckEligibilityInput) => {
   try {
@@ -84,10 +71,7 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
 
 export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =>
   Effect.runPromise(
-    Effect.gen(function* () {
-      const deriveSeverity = yield* resolveDeriveSeverity(input.organizationId)
-      return yield* createSignalFromScoreUseCase({ ...input, deriveSeverity })
-    }).pipe(
+    createSignalFromScoreUseCase(input).pipe(
       withActivityAIMetering({
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -113,10 +97,7 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
 
 export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
   Effect.runPromise(
-    Effect.gen(function* () {
-      const deriveSeverity = yield* resolveDeriveSeverity(input.organizationId)
-      return yield* assignOrCreateSignalUseCase({ ...input, deriveSeverity })
-    }).pipe(
+    assignOrCreateSignalUseCase(input).pipe(
       withActivityAIMetering({
         organizationId: input.organizationId,
         projectId: input.projectId,

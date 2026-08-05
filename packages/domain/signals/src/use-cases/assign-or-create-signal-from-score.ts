@@ -28,8 +28,6 @@ export interface AssignOrCreateSignalInput {
   readonly normalizedEmbedding: readonly number[]
   readonly rawFeedback?: string
   readonly rawNormalizedEmbedding?: readonly number[]
-  /** Forwarded to `createSignalFromScoreUseCase` when this score opens a new signal. */
-  readonly deriveSeverity?: boolean
 }
 
 export type AssignOrCreateSignalResult =
@@ -113,7 +111,6 @@ const createSignal = (input: AssignOrCreateSignalInput) =>
     projectId: input.projectId,
     scoreId: input.scoreId,
     normalizedEmbedding: input.normalizedEmbedding,
-    ...(input.deriveSeverity === undefined ? {} : { deriveSeverity: input.deriveSeverity }),
   })
 
 export const assignOrCreateSignalUseCase = (input: AssignOrCreateSignalInput) =>

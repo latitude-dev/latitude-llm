@@ -50,9 +50,17 @@ const signalDetailsShape = {
 
 const signalDetailsSchema = z.object(signalDetailsShape)
 
+/**
+ * `severity` is nullish on purpose: this same call produces the name and
+ * description a signal cannot be created without, so a model that omits or
+ * garbles the level must not fail signal creation. A missing level leaves the
+ * signal unset, which the notification threshold always admits.
+ */
 const signalDetailsWithSeveritySchema = z.object({
   ...signalDetailsShape,
-  severity: signalPrioritySchema.describe("How much attention this pattern deserves, per the severity rubric"),
+  severity: signalPrioritySchema
+    .nullish()
+    .describe("How much attention this pattern deserves, per the severity rubric"),
 })
 
 export interface SignalOccurrenceInput {
@@ -98,9 +106,11 @@ const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
 /**
  * A signal is usually one occurrence old when it is created, so there is no
  * impact to measure yet: this rates how bad the failure mechanism is, not how
- * widespread it turned out to be. Ties resolve downward because the same value
- * gates Slack delivery and (later) automated PR creation, where a false "urgent"
- * costs more than a missed one.
+ * widespread it turned out to be. Ties resolve upward because this value gates
+ * notification delivery against a minimum-severity threshold — an over-rated
+ * signal is noise, an under-rated one is never delivered and leaves no trace.
+ * A dispatch gate wanting the opposite bias should narrow its own configured
+ * tiers rather than push the rating down for every consumer.
  */
 const SEVERITY_RUBRIC = [
   "Also return `severity`, rating how much attention this pattern deserves:",
@@ -108,7 +118,7 @@ const SEVERITY_RUBRIC = [
   '- "high": the task fails or the answer is wrong in a way the user would act on, but nothing is breached and the work can be redone.',
   '- "medium": the outcome is degraded — partial, inefficient, or needing rework — while the user can still get what they came for.',
   '- "low": cosmetic or stylistic only (tone, formatting, verbosity), or the pattern describes desirable behavior rather than a failure.',
-  "Rate the mechanism itself, not how often it appears: a new pattern is typically a single occurrence, so frequency is not evidence yet. When the occurrences do not say enough to separate two levels, choose the lower one.",
+  "Rate the mechanism itself, not how often it appears: a new pattern is typically a single occurrence, so frequency is not evidence yet. When the occurrences do not say enough to separate two levels, choose the higher one.",
 ].join("\n")
 
 const buildPrompt = (input: {

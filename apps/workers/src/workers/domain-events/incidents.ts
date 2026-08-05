@@ -33,8 +33,8 @@ const createIncidentForSignalEscalation = (payload: {
 }) =>
   Effect.gen(function* () {
     // One level per signal: its escalation opens at the signal's own severity.
-    // Unset (every signal until `derivedSignalSeverity` is on) keeps the "high"
-    // every escalation used to open at.
+    // Unset — signals created before severity derivation, or cleared by hand —
+    // keeps the "high" every escalation used to open at.
     const signals = yield* SignalRepository
     const signal = yield* signals
       .findById(SignalId(payload.signalId))

@@ -19,13 +19,6 @@ export interface CreateSignalFromScoreInput {
   readonly projectId: string
   readonly scoreId: string
   readonly normalizedEmbedding: readonly number[]
-  /**
-   * Derive the signal's initial severity from the details generation. Resolved
-   * from the `derivedSignalSeverity` flag by the calling activity, never by
-   * workflow code (Temporal determinism). Absent ⇒ the signal lands with no
-   * level, exactly as before.
-   */
-  readonly deriveSeverity?: boolean
 }
 
 export type CreateSignalFromScoreResult = {
@@ -157,7 +150,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           feedback: initialScoreResult.score.feedback,
         },
       ],
-      withSeverity: input.deriveSeverity === true,
+      withSeverity: true,
     })
 
     const sqlClient = yield* SqlClient
