@@ -671,15 +671,12 @@ const adaptiveSpanAttributes = (
     attributes["taxonomy.adaptive.rejection.lowScore"] = diagnostics.rejectionReasonCounts.lowScore
     attributes["taxonomy.adaptive.rejection.lowRelativeSeparation"] =
       diagnostics.rejectionReasonCounts.lowRelativeSeparation
-    // The quantity the root gate actually decides on, and whether it forced a
-    // re-search. The relSep percentiles above cover accepted splits tree-wide, so
-    // they say nothing about a run whose root collapsed.
+    // The quantity the root gate decides on. The relSep percentiles above cover
+    // accepted splits tree-wide, so they say nothing about a run whose root collapsed.
     attributes["taxonomy.adaptive.bestRootSeparation"] = diagnostics.bestRootSeparation
-    attributes["taxonomy.adaptive.escalated"] = diagnostics.escalated ? 1 : 0
-    // A declined re-search reports the same tree as one that was never needed, so
-    // without these two the work budget could suppress adaptive silently.
-    attributes["taxonomy.adaptive.escalationSkipped"] = diagnostics.escalationSkipped ? 1 : 0
-    attributes["taxonomy.adaptive.projectedRootSearchWork"] = diagnostics.projectedRootSearchWork
+    // How wide the root re-search went. Zero means it was skipped, which on a project
+    // whose rootChildCount moves run to run is the thing to look at first.
+    attributes["taxonomy.adaptive.rootSearchKs"] = diagnostics.rootSearchKs
   }
   const comparison = plan.comparison
   if (comparison) {

@@ -28,6 +28,12 @@
  *     stays a leaf.
  *   - We then recurse into each child cluster with depth+1 and the next entry
  *     in the depth schedule.
+ *   - The ROOT split is then re-searched at a much deeper restart budget over the
+ *     best-scoring K. With only `restarts` restarts each K's score is a max over a
+ *     few noisy draws, so which K wins the sweep — and whether a K clears the size
+ *     gates at all — follows sample turnover even when the split itself is obvious.
+ *     `rootChildCount` is the shape the product reads, so the root gets the deep
+ *     budget and deeper nodes keep the plain one.
  *
  * Why bisecting K-means with auto-K instead of HDBSCAN / single-linkage:
  *   - We rebuild the whole tree per gardening pass over a bounded sample
@@ -121,39 +127,39 @@ export interface BuildRelativeHierarchicalClustersInput {
   /** Global absolute floor on the per-split routing threshold (mirrors TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD). */
   readonly globalAbsoluteThreshold: number
   /**
-   * Re-search budget for a root split that lands near the separation gate. Omit
-   * to disable, which makes the build byte-identical to a plain `restarts` run.
+   * Deep restart budget for the ROOT split. Omit to disable, which makes the build
+   * byte-identical to a plain `restarts` run.
    */
-  readonly escalation?: RelativeClusteringEscalation
+  readonly rootSearch?: RelativeRootSearch
 }
 
 /**
- * Both fields are explicit inputs rather than module constants so the builder
+ * Every field is an explicit input rather than a module constant so the builder
  * stays a pure function of its arguments — a Temporal replay of the same request
  * must reproduce the same tree.
  */
-export interface RelativeClusteringEscalation {
+export interface RelativeRootSearch {
   /**
    * Restart budget for the re-searched ROOT split. Deeper nodes keep the plain
-   * `restarts`: the band that triggers a re-search is measured on the root alone,
-   * so spending the larger budget at every depth buys nothing the gate asked for
-   * and multiplies the cost of the whole tree instead of one node's K sweep.
+   * `restarts`: `rootChildCount` is the shape the tree is read by, and paying the
+   * deep budget at every depth multiplies the cost of the whole tree instead of one
+   * node's K sweep.
    */
   readonly restarts: number
-  /** Best observed root separation at or above which the first pass is kept. */
-  readonly marginThreshold: number
-  /** Below this the corpus has no structure to find and the re-search is skipped. */
-  readonly marginFloor: number
-  /** How many K the re-search sweeps, best-scoring first. */
+  /**
+   * How many K the re-search sweeps, best-scoring first. With `restarts` and this
+   * both fixed, the re-search costs a bounded MULTIPLE of the first pass at every
+   * sample size — which is what makes it affordable at the sample cap without a
+   * work budget that has to decline it there.
+   */
   readonly searchWidth: number
   /**
-   * Ceiling on the PROJECTED cost of the root sweeps, in dot-product element
-   * operations. A count rather than a duration on purpose: the builder must stay a
-   * pure function of its inputs, and a wall-clock check would take a different
-   * branch on a slower host and so break Temporal replay. Derived from the worker
-   * deadline and a measured throughput — see TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK.
+   * Best root separation below which there is no structure to search for, so the
+   * first pass stands. A floor, deliberately not a band: a CEILING is what broke
+   * this path, because the projects whose root K flickers worst reach separations far
+   * above any "comfortable" threshold.
    */
-  readonly maxSearchWork: number
+  readonly minRootSeparation: number
 }
 
 export interface BuildStaticHierarchicalClustersInput {
@@ -198,20 +204,11 @@ export interface RelativeClusteringDiagnostics {
    * percentiles cannot, since a collapsed root contributes nothing to them.
    */
   readonly bestRootSeparation: number
-  /** True when the root landed near the separation gate and the build was re-searched. */
-  readonly escalated: boolean
   /**
-   * True when the band asked for a re-search and the projected work budget refused
-   * it. Distinguishes "no re-search was needed" from "one was needed and declined",
-   * which is otherwise invisible: both return the first pass.
+   * How many K the root re-search swept. Zero when the corpus had no structure to
+   * search for, which is the only thing that skips it.
    */
-  readonly escalationSkipped: boolean
-  /**
-   * Upper bound on the dot-product element operations the root sweeps would cost,
-   * as the budget check saw it. Reported so the throughput constant behind
-   * `maxSearchWork` can be retuned against production rather than re-derived.
-   */
-  readonly projectedRootSearchWork: number
+  readonly rootSearchKs: number
 }
 
 export interface BuildRelativeHierarchicalClustersResult {
@@ -731,74 +728,38 @@ const buildRelativeOnce = (
       routingThresholds,
       fellBackToStatic,
       bestRootSeparation,
-      escalated: false,
-      escalationSkipped: false,
-      projectedRootSearchWork: 0,
+      rootSearchKs: 0,
     },
   }
 }
 
 /**
- * A re-search is worth its cost only inside a band. Above the ceiling the root
- * split is comfortably clear of the gate and more search cannot change it. Below
- * the floor the corpus has no structure to find — a unimodal project's best root
- * candidate reaches ~0.09, and re-searching it burns the larger budget every run
- * to confirm the leaf it already had.
+ * The K the re-search spends the deep restart budget on: the K the first pass
+ * ACCEPTED, plus the best-scoring others up to `width`. A k-means run costs
+ * O(n·k·dimensions), so re-sweeping all of 2..maxChildren spends most of the budget
+ * re-confirming K the first pass already ranked last. Ties break on the lower K,
+ * which is both cheaper and the more conservative split.
  *
- * The band is read off the ROOT, so the re-search spends its budget there and
- * nowhere else. The cost of this whole path has to fit the clustering worker's
- * deadline; see TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS.
+ * The accepted K is pinned rather than left to the ranking because the scores rank
+ * every candidate that got as far as being SCORED, including ones the separation gate
+ * went on to reject — so the highest scorers need not include the K that actually
+ * produced the tree, and without the pin a re-search can return a worse root than the
+ * pass it was meant to improve.
  */
-const shouldEscalate = (
-  result: BuildRelativeHierarchicalClustersResult,
-  escalation: RelativeClusteringEscalation,
-): boolean => {
-  const observed = result.diagnostics.bestRootSeparation
-  return observed >= escalation.marginFloor && observed < escalation.marginThreshold
-}
-
-/**
- * The K the re-search is worth spending the larger budget on: the `width` best by
- * the score their first pass reached. A k-means run costs O(n·k·dimensions), so
- * re-sweeping all of 2..maxChildren multiplies the budget by the whole sweep to
- * re-confirm K values the first pass already ranked last. Ties break on the lower
- * K, which is both cheaper and the more conservative split.
- */
-const promisingRootK = (scoreByK: ReadonlyMap<number, number>, width: number): ReadonlySet<number> =>
-  new Set(
-    [...scoreByK.entries()]
-      .sort(([leftK, leftScore], [rightK, rightScore]) => rightScore - leftScore || leftK - rightK)
-      .slice(0, width)
-      .map(([k]) => k),
-  )
-
-/**
- * Upper bound on the dot-product element operations one root K sweep performs:
- * every (k, restart) pair runs at most `maxIter` k-means iterations, and each
- * iteration compares all members against k centroids across every dimension. An
- * upper bound because k-means usually converges before `maxIter`, so the budget
- * check errs toward declining a re-search rather than starting one that overruns.
- */
-const projectedRootSweepWork = (input: {
-  readonly memberCount: number
-  readonly dimensions: number
-  readonly restarts: number
-  readonly maxIter: number
-  readonly kSum: number
-}): number => input.restarts * input.maxIter * input.memberCount * input.dimensions * input.kSum
-
-/** The K a root sweep visits when nothing restricts it. */
-const rootKRange = (memberCount: number, schedule: RelativeDepthSchedule): number[] => {
-  const { maxK } = sweepBounds(memberCount, schedule)
-  const ks: number[] = []
-  for (let k = 2; k <= maxK; k++) ks.push(k)
-  return ks
-}
-
-const sumOf = (values: Iterable<number>): number => {
-  let total = 0
-  for (const value of values) total += value
-  return total
+const promisingRootK = (
+  scoreByK: ReadonlyMap<number, number>,
+  width: number,
+  acceptedK: number | undefined,
+): ReadonlySet<number> => {
+  const ranked = [...scoreByK.entries()]
+    .sort(([leftK, leftScore], [rightK, rightScore]) => rightScore - leftScore || leftK - rightK)
+    .map(([k]) => k)
+  const chosen = new Set<number>(acceptedK === undefined ? [] : [acceptedK])
+  for (const k of ranked) {
+    if (chosen.size >= width) break
+    chosen.add(k)
+  }
+  return chosen
 }
 
 export const buildRelativeHierarchicalClusters = (
@@ -809,50 +770,18 @@ export const buildRelativeHierarchicalClusters = (
     const previous = rootScoreByK.get(k)
     if (previous === undefined || score > previous) rootScoreByK.set(k, score)
   })
-  const escalation = input.escalation
-  if (!escalation || !shouldEscalate(first, escalation)) return first
+  const rootSearch = input.rootSearch
+  if (!rootSearch) return first
+  if (first.diagnostics.bestRootSeparation < rootSearch.minRootSeparation) return first
 
-  // Escalating implies a candidate cleared the score gate, so the map is populated;
-  // an unrestricted sweep is the safe reading if it somehow is not.
-  const restrictToK = promisingRootK(rootScoreByK, escalation.searchWidth)
+  // Nothing scored at the root leaves no initialization to improve on.
+  const restrictToK = promisingRootK(rootScoreByK, rootSearch.searchWidth, first.diagnostics.selectedKByDepth[0]?.[0])
+  if (restrictToK.size === 0) return first
 
-  // Whether the re-search can afford to run, decided BEFORE any of it happens. The
-  // first pass is charged too: both root sweeps land inside one worker invocation,
-  // and it is their sum the deadline has to cover.
-  const dimensions = input.embeddings[0]?.length ?? 0
-  const memberCount = input.embeddings.reduce(
-    (count, vector) => (vector && vector.length === dimensions ? count + 1 : count),
-    0,
-  )
-  const rootSchedule = input.depthSchedule[0]
-  const shared = { memberCount, dimensions, maxIter: input.maxIter }
-  const projectedRootSearchWork = rootSchedule
-    ? projectedRootSweepWork({
-        ...shared,
-        restarts: input.restarts,
-        kSum: sumOf(rootKRange(memberCount, rootSchedule)),
-      }) +
-      projectedRootSweepWork({
-        ...shared,
-        restarts: escalation.restarts,
-        kSum: sumOf(restrictToK.size > 0 ? restrictToK : rootKRange(memberCount, rootSchedule)),
-      })
-    : 0
-
-  if (projectedRootSearchWork > escalation.maxSearchWork) {
-    return {
-      root: first.root,
-      diagnostics: { ...first.diagnostics, escalationSkipped: true, projectedRootSearchWork },
-    }
-  }
-
-  const rescued = buildRelativeOnce(input, {
-    restarts: escalation.restarts,
-    ...(restrictToK.size > 0 ? { restrictToK } : {}),
-  })
+  const rescued = buildRelativeOnce(input, { restarts: rootSearch.restarts, restrictToK })
   return {
     root: rescued.root,
-    diagnostics: { ...rescued.diagnostics, escalated: true, projectedRootSearchWork },
+    diagnostics: { ...rescued.diagnostics, rootSearchKs: restrictToK.size },
   }
 }
 

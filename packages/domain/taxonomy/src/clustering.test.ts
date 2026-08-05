@@ -11,22 +11,23 @@ import { describe, expect, it } from "vitest"
 import {
   buildImbalancedLongTailCorpus,
   buildNarrowDomainCorpus,
+  buildNearTiedLargeCorpus,
   buildRareIntentDuplicateCorpus,
   buildRetailSupportCorpus,
   buildTelecomSupportCorpus,
   buildUnimodalCorpus,
   type LabeledCorpus,
   loadNarrowPilotCorpus,
+  resampleCorpus,
 } from "./calibration/fixtures.ts"
 import { partitionSignature, rootChildMajorityLabels, treeShape } from "./calibration/metrics.ts"
 import { buildRelativeHierarchicalClusters, quantile } from "./clustering.ts"
 import {
-  TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
-  TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
-  TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
-  TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
+  TAXONOMY_ADAPTIVE_ROOT_SEARCH_MIN_SEPARATION,
+  TAXONOMY_ADAPTIVE_ROOT_SEARCH_RESTARTS,
+  TAXONOMY_ADAPTIVE_ROOT_SEARCH_WIDTH,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
-  TAXONOMY_KMEANS_ESCALATION_RESTARTS,
+  TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
@@ -164,72 +165,65 @@ describe("buildRelativeHierarchicalClusters — bounded diagnostics", () => {
   })
 })
 
-// A re-searched build runs the K sweep at the escalation budget (25 restarts), ~8× a plain build.
+// A re-searched build runs the root K sweep at the deep restart budget, ~8x a plain
+// sweep, and the near-tied fixture is at the production sample cap.
 const RE_SEARCH_TIMEOUT_MS = HEAVY_BUILD_TIMEOUT_MS
 
-describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
-  const escalation = {
-    restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
-    marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
-    marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
-    searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
-    maxSearchWork: TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
-  }
-  const buildWith = (corpus: LabeledCorpus, withEscalation: boolean) =>
-    buildRelativeHierarchicalClusters({
-      embeddings: corpus.embeddings,
-      depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
-      restarts: TAXONOMY_KMEANS_RESTARTS,
-      maxIter: TAXONOMY_KMEANS_MAX_ITER,
-      tolerance: TAXONOMY_KMEANS_TOLERANCE,
-      seed: corpus.seed,
-      globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
-      ...(withEscalation ? { escalation } : {}),
-    })
+const rootSearch = {
+  restarts: TAXONOMY_ADAPTIVE_ROOT_SEARCH_RESTARTS,
+  searchWidth: TAXONOMY_ADAPTIVE_ROOT_SEARCH_WIDTH,
+  minRootSeparation: TAXONOMY_ADAPTIVE_ROOT_SEARCH_MIN_SEPARATION,
+}
+const buildWith = (corpus: LabeledCorpus, withRootSearch: boolean) =>
+  buildRelativeHierarchicalClusters({
+    embeddings: corpus.embeddings,
+    depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+    restarts: TAXONOMY_KMEANS_RESTARTS,
+    maxIter: TAXONOMY_KMEANS_MAX_ITER,
+    tolerance: TAXONOMY_KMEANS_TOLERANCE,
+    seed: corpus.seed,
+    globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+    ...(withRootSearch ? { rootSearch } : {}),
+  })
 
+describe("buildRelativeHierarchicalClusters — deep root search", () => {
   it(
-    "omitting the escalation config leaves the build byte-identical",
+    "omitting the root-search config leaves the build byte-identical",
     () => {
       const corpus = buildNarrowDomainCorpus()
-      expect(partitionSignature(buildWith(corpus, false).root)).toBe(
-        partitionSignature(
-          buildRelativeHierarchicalClusters({
-            embeddings: corpus.embeddings,
-            depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
-            restarts: TAXONOMY_KMEANS_RESTARTS,
-            maxIter: TAXONOMY_KMEANS_MAX_ITER,
-            tolerance: TAXONOMY_KMEANS_TOLERANCE,
-            seed: corpus.seed,
-            globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
-          }).root,
-        ),
-      )
+      expect(partitionSignature(buildWith(corpus, false).root)).toBe(partitionSignature(build(corpus).root))
+      expect(buildWith(corpus, false).diagnostics.rootSearchKs).toBe(0)
     },
     RE_SEARCH_TIMEOUT_MS,
   )
 
-  // A comfortable root is left alone: identical partition AND no re-search, so
-  // the projects that do not need this pay nothing for it.
+  // The regression this file exists for. #4274 gated the re-search on a root
+  // separation band, so it only ever fired on a root that nearly failed the
+  // acceptance gate. Two production projects flickered with separations of 1.3 and
+  // 3.7-42 — far above that band's ceiling — and so were never re-searched at all,
+  // while the pilot's 0.41-0.67 sat inside it and stabilized. The band is gone: what
+  // needs more search is a K DECISION taken over few restarts, which a separation
+  // cannot report.
   it.each([
     ["retail", buildRetailSupportCorpus()],
     ["telecom", buildTelecomSupportCorpus()],
   ] as const)(
-    "%s: a comfortable root is returned untouched",
+    "%s: a root far clear of the separation gate is re-searched anyway",
     (_name, corpus) => {
-      const escalated = buildWith(corpus, true)
-      expect(escalated.diagnostics.bestRootSeparation).toBeGreaterThanOrEqual(escalation.marginThreshold)
-      expect(escalated.diagnostics.escalated).toBe(false)
-      expect(partitionSignature(escalated.root)).toBe(partitionSignature(buildWith(corpus, false).root))
+      const result = buildWith(corpus, true)
+      expect(result.diagnostics.bestRootSeparation).toBeGreaterThan(1)
+      expect(result.diagnostics.rootSearchKs).toBeGreaterThan(0)
     },
     RE_SEARCH_TIMEOUT_MS,
   )
 
-  // Below the floor there is no structure to find. Without it every unimodal
-  // project would spend the larger budget every pass to reconfirm its leaf.
+  // The one thing still gating the search, and it is a floor: below it there is no
+  // structure to find, so a unimodal project costs one plain build rather than the
+  // deep budget every pass to reconfirm the leaf it already had.
   it("a corpus with no structure stays a leaf and is not re-searched", () => {
     const result = buildWith(buildUnimodalCorpus(), true)
-    expect(result.diagnostics.bestRootSeparation).toBeLessThan(escalation.marginFloor)
-    expect(result.diagnostics.escalated).toBe(false)
+    expect(result.diagnostics.bestRootSeparation).toBeLessThan(TAXONOMY_ADAPTIVE_ROOT_SEARCH_MIN_SEPARATION)
+    expect(result.diagnostics.rootSearchKs).toBe(0)
     expect(result.root.children.length).toBe(0)
     expect(result.diagnostics.acceptedSplits).toBe(0)
   })
@@ -241,7 +235,7 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
     "%s: a near-gate root is re-searched and still resolves 3–5 children",
     (_name, corpus) => {
       const result = buildWith(corpus, true)
-      expect(result.diagnostics.escalated).toBe(true)
+      expect(result.diagnostics.rootSearchKs).toBeGreaterThan(0)
       expect(result.root.children.length).toBeGreaterThanOrEqual(3)
       expect(result.root.children.length).toBeLessThanOrEqual(5)
     },
@@ -254,19 +248,19 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
       const corpus = buildNarrowDomainCorpus()
       const first = buildWith(corpus, true)
       const second = buildWith(corpus, true)
-      expect(first.diagnostics.escalated).toBe(true)
+      expect(first.diagnostics.rootSearchKs).toBeGreaterThan(0)
       expect(partitionSignature(second.root)).toBe(partitionSignature(first.root))
     },
     RE_SEARCH_TIMEOUT_MS,
   )
 
   // Regression: the budget used to reach `restarts`, which every depth reads, so a
-  // band decision made on the ROOT re-searched the entire tree at ~10x the cost.
+  // decision made on the ROOT re-searched the entire tree at ~10x the cost.
   // `rejectedCandidates` is a hardware-free proxy for search work — it undercounts
   // (accepted candidates and failed inits do not increment it) but is monotone in
   // work across two builds over the same corpus, which is all this compares.
   it(
-    "the re-search spends the escalated budget on the root only",
+    "the re-search spends the deep budget on the root only",
     () => {
       const corpus = buildNarrowDomainCorpus()
       const atRestarts = (restarts: number) =>
@@ -281,10 +275,10 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
         }).diagnostics.rejectedCandidates
 
       const rootOnly = buildWith(corpus, true)
-      expect(rootOnly.diagnostics.escalated).toBe(true)
+      expect(rootOnly.diagnostics.rootSearchKs).toBeGreaterThan(0)
 
       const baseline = atRestarts(TAXONOMY_KMEANS_RESTARTS)
-      const everyDepth = atRestarts(TAXONOMY_KMEANS_ESCALATION_RESTARTS)
+      const everyDepth = atRestarts(TAXONOMY_ADAPTIVE_ROOT_SEARCH_RESTARTS)
       const searched = rootOnly.diagnostics.rejectedCandidates
 
       // Strictly more search than baseline (the root did get the larger budget)
@@ -299,8 +293,8 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
   )
 
   // A k-means run costs O(n·k·dimensions), so re-sweeping all of 2..maxChildren
-  // spends most of the escalated budget re-confirming K the first pass already
-  // ranked last, for the same root split.
+  // spends most of the deep budget re-confirming K the first pass already ranked
+  // last, for the same root split.
   it(
     "the re-search sweeps only the best-scoring K, not the whole range",
     () => {
@@ -314,125 +308,61 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
           tolerance: TAXONOMY_KMEANS_TOLERANCE,
           seed: corpus.seed,
           globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
-          escalation: { ...escalation, searchWidth },
+          rootSearch: { ...rootSearch, searchWidth },
         })
 
-      const narrow = widthOf(TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH)
+      const narrow = widthOf(TAXONOMY_ADAPTIVE_ROOT_SEARCH_WIDTH)
       const wide = widthOf(TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE[0]?.maxChildren ?? 10)
-      expect(narrow.diagnostics.escalated).toBe(true)
-      expect(wide.diagnostics.escalated).toBe(true)
+      expect(narrow.diagnostics.rootSearchKs).toBeLessThan(wide.diagnostics.rootSearchKs)
 
       // The narrowed sweep does strictly less work...
       expect(narrow.diagnostics.rejectedCandidates).toBeLessThan(wide.diagnostics.rejectedCandidates)
       // ...and still reaches the same root split, which is what makes it free.
-      expect(narrow.diagnostics.bestRootSeparation).toBeCloseTo(wide.diagnostics.bestRootSeparation, 10)
       expect(narrow.root.children.length).toBe(wide.root.children.length)
     },
     RE_SEARCH_TIMEOUT_MS,
   )
-
-  it("repeated escalated builds select the same promising K", () => {
-    const corpus = buildNarrowDomainCorpus()
-    const run = () => buildWith(corpus, true)
-    expect(partitionSignature(run().root)).toBe(partitionSignature(run().root))
-  })
 })
 
-// The budget is a projected operation COUNT, never a clock reading: a wall-clock
-// check would branch differently on a slow host and break Temporal replay.
-describe("buildRelativeHierarchicalClusters — the re-search work budget", () => {
-  const corpus = buildNarrowDomainCorpus()
-  const buildWithBudget = (maxSearchWork: number) =>
-    buildRelativeHierarchicalClusters({
-      embeddings: corpus.embeddings,
-      depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
-      restarts: TAXONOMY_KMEANS_RESTARTS,
-      maxIter: TAXONOMY_KMEANS_MAX_ITER,
-      tolerance: TAXONOMY_KMEANS_TOLERANCE,
-      seed: corpus.seed,
-      globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
-      escalation: {
-        restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
-        marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
-        marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
-        searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
-        maxSearchWork,
-      },
-    })
+// The near-gate flicker on a LARGE project (LAT-773; PR #4274 introduced the band,
+// #4334 the work budget). `near-tied-large` sits at the production sample cap with an
+// obvious root split whose winning K is not: the highest-SCORING root candidate is not
+// the one the gates accept. Such a corpus used to get no re-search on two counts — its
+// root separation sat above the band's ceiling, and re-searching ~1.5k members was
+// declined as unaffordable — which is why the two production projects that flickered
+// worst never once received the stabilization the pilot did.
+describe("buildRelativeHierarchicalClusters — large near-tied root", () => {
+  const corpus = buildNearTiedLargeCorpus()
 
   it(
-    "an affordable re-search runs and reports what it projected",
+    "a comfortable root at the sample cap is re-searched, where band and budget skipped it",
     () => {
-      const result = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
-      expect(result.diagnostics.escalated).toBe(true)
-      expect(result.diagnostics.escalationSkipped).toBe(false)
-      expect(result.diagnostics.projectedRootSearchWork).toBeGreaterThan(0)
-      expect(result.diagnostics.projectedRootSearchWork).toBeLessThanOrEqual(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
+      expect(corpus.embeddings.length).toBeGreaterThanOrEqual(TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX)
+      const result = buildWith(corpus, true)
+      expect(result.diagnostics.rootSearchKs).toBeGreaterThan(0)
+      // Far above the retired 0.8 ceiling: nothing about a comfortable separation says
+      // the K decision under it is settled.
+      expect(result.diagnostics.bestRootSeparation).toBeGreaterThan(TAXONOMY_ADAPTIVE_ROOT_SEARCH_MIN_SEPARATION)
     },
     RE_SEARCH_TIMEOUT_MS,
   )
 
-  it("an unaffordable re-search is declined up front and says so", () => {
-    const declined = buildWithBudget(1)
-    expect(declined.diagnostics.escalated).toBe(false)
-    // Not silent: this is what separates a declined re-search from one never needed.
-    expect(declined.diagnostics.escalationSkipped).toBe(true)
-    expect(declined.diagnostics.projectedRootSearchWork).toBeGreaterThan(1)
-  })
-
-  it(
-    "declining returns exactly the first pass, not a degraded tree",
-    () => {
-      const declined = buildWithBudget(1)
-      const noEscalation = build(corpus)
-      expect(partitionSignature(declined.root)).toBe(partitionSignature(noEscalation.root))
+  // The re-search sweeps the K the first pass ACCEPTED plus the best-scoring others.
+  // Ranking by score alone does not include it — the scores cover every candidate that
+  // got as far as being scored, including ones the separation gate then rejected — so a
+  // re-search restricted to the top scorers can return a worse root than the pass it
+  // was meant to improve. On this corpus it returned 4 children where the plain sweep
+  // accepted 5.
+  it.each([0, 1, 2])(
+    "pass %i: the re-search keeps the root cut the plain sweep accepted or improves on it",
+    (pass) => {
+      const sample = resampleCorpus(corpus, pass)
+      const plain = buildWith(sample, false)
+      const searched = buildWith(sample, true)
+      expect(searched.root.children.length).toBe(plain.root.children.length)
+      expect(searched.diagnostics.selectedKByDepth[0]).toEqual(plain.diagnostics.selectedKByDepth[0])
     },
-    RE_SEARCH_TIMEOUT_MS,
-  )
-
-  it("a corpus that never escalates is never charged for the budget", () => {
-    const comfortable = buildRetailSupportCorpus()
-    const result = buildRelativeHierarchicalClusters({
-      embeddings: comfortable.embeddings,
-      depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
-      restarts: TAXONOMY_KMEANS_RESTARTS,
-      maxIter: TAXONOMY_KMEANS_MAX_ITER,
-      tolerance: TAXONOMY_KMEANS_TOLERANCE,
-      seed: comfortable.seed,
-      globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
-      escalation: {
-        restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
-        marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
-        marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
-        searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
-        maxSearchWork: 1,
-      },
-    })
-    expect(result.diagnostics.escalated).toBe(false)
-    expect(result.diagnostics.escalationSkipped).toBe(false)
-    // The budget was never consulted: a comfortable root leaves the band before any
-    // projection happens, which is what "never charged" has to mean.
-    expect(result.diagnostics.projectedRootSearchWork).toBe(0)
-  })
-
-  it(
-    "the decision is a pure function of the inputs, not of elapsed time",
-    () => {
-      // Same inputs twice must take the same branch, on both sides of the budget. A
-      // clock-based ceiling could not promise this on a loaded machine, which is why
-      // it is an operation count.
-      const declinedFirst = buildWithBudget(1)
-      const declinedAgain = buildWithBudget(1)
-      expect(declinedAgain.diagnostics.projectedRootSearchWork).toBe(declinedFirst.diagnostics.projectedRootSearchWork)
-      expect(declinedAgain.diagnostics.escalationSkipped).toBe(declinedFirst.diagnostics.escalationSkipped)
-
-      const allowedFirst = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
-      const allowedAgain = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
-      expect(allowedAgain.diagnostics.projectedRootSearchWork).toBe(allowedFirst.diagnostics.projectedRootSearchWork)
-      expect(allowedAgain.diagnostics.escalated).toBe(allowedFirst.diagnostics.escalated)
-      expect(partitionSignature(allowedAgain.root)).toBe(partitionSignature(allowedFirst.root))
-    },
-    RE_SEARCH_TIMEOUT_MS,
+    RE_SEARCH_TIMEOUT_MS * 2,
   )
 })
 

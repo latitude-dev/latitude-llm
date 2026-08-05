@@ -343,6 +343,55 @@ export const buildRareIntentDuplicateCorpus = (): LabeledCorpus => {
 }
 
 // ---------------------------------------------------------------------------
+// Large near-tied corpus — the LAT-773 root-search regression (PR #4274, #4334).
+//
+// A corpus AT the production sample cap whose root split is obvious (separation well
+// clear of the gate) but whose winning K is not: six heavily overlapping groups on a
+// geometric size gradient with spreads that widen down the gradient, so several K
+// produce structurally valid partitions and the highest-SCORING root candidate is not
+// the one the gates accept. That divergence is what a re-search restricted to the
+// best-scoring K loses, and it is why the corpus is here.
+//
+// 128 dims rather than 256 so a member count at the sample cap stays testable; the
+// geometry the K decision reasons about is dimension-independent.
+// ---------------------------------------------------------------------------
+
+const NEAR_TIED_LARGE_GROUPS = 6
+const NEAR_TIED_LARGE_TOTAL = 1_600
+
+export const buildNearTiedLargeCorpus = (): LabeledCorpus => {
+  const weights = Array.from({ length: NEAR_TIED_LARGE_GROUPS }, (_, index) => 0.78 ** index)
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0)
+  return buildCorpus({
+    name: "near-tied-large",
+    description: "Six overlapping groups at the sample cap: the best-scoring root K is not the accepted one.",
+    seed: 0x7ed1a2,
+    dimensions: 128,
+    groups: weights.map((weight, index) => ({
+      label: `group-${index}`,
+      size: Math.round((NEAR_TIED_LARGE_TOTAL * weight) / weightSum),
+      anchorWeight: 0.66,
+      spread: 0.05 + (0.06 * index) / (NEAR_TIED_LARGE_GROUPS - 1),
+    })),
+  })
+}
+
+/**
+ * The sample a gardening pass would see `pass` passes later: the same corpus with one
+ * member in twelve dropped on a rotating phase. Window turnover both drops members and
+ * RE-ADDRESSES the ones that remain, and k-means++ seeds are drawn as indices into that
+ * list, so a rotating drop reproduces the real perturbation without a second corpus.
+ */
+export const resampleCorpus = (corpus: LabeledCorpus, pass: number): LabeledCorpus => {
+  const kept = corpus.embeddings.map((_, index) => index).filter((index) => (index + pass) % 12 !== 0)
+  return {
+    ...corpus,
+    embeddings: kept.map((index) => corpus.embeddings[index] as readonly number[]),
+    labels: kept.map((index) => corpus.labels[index] as string),
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Registry.
 // ---------------------------------------------------------------------------
 
