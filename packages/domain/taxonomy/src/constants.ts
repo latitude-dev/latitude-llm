@@ -434,8 +434,7 @@ export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
  * none. Over the pilot's real historical windows 12 restarts collapses as many
  * roots as not re-searching at all, while costing only 6% less than 25, because the
  * first pass and the subtrees dominate that total rather than the root sweep. Narrow
- * the swept K (TAXONOMY_ADAPTIVE_ROOT_SEARCH_WIDTH) or the searched members
- * (TAXONOMY_ADAPTIVE_ROOT_SEARCH_MEMBER_CAP) instead.
+ * the swept K (TAXONOMY_ADAPTIVE_ROOT_SEARCH_WIDTH) instead.
  */
 export const TAXONOMY_ADAPTIVE_ROOT_SEARCH_RESTARTS = 25
 /**
