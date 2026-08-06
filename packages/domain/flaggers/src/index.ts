@@ -60,7 +60,7 @@ export {
   truncateExcerpt,
   type WorkSignals,
 } from "./flagger-strategies/index.ts"
-export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
+export { DETERMINISTIC_FLAGGER_SLUGS, FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
 export {
   collectToolCallErrorFindings,
   type DeterministicFlaggerMatch,

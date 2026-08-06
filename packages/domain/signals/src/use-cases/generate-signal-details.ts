@@ -58,9 +58,7 @@ const signalDetailsSchema = z.object(signalDetailsShape)
  */
 const signalDetailsWithSeveritySchema = z.object({
   ...signalDetailsShape,
-  severity: signalPrioritySchema
-    .nullish()
-    .describe("How much attention this pattern deserves, per the severity rubric"),
+  severity: signalPrioritySchema.describe("How much attention this pattern deserves, per the severity rubric"),
 })
 
 export interface SignalOccurrenceInput {
@@ -108,7 +106,13 @@ export type GenerateSignalDetailsError =
 const occurrenceTags = (occurrence: SignalOccurrenceInput): string => {
   const tags = [`source=${occurrence.sourceType}`]
   if (occurrence.flaggerSlug !== undefined) tags.push(`detector=${occurrence.flaggerSlug}`)
-  if (occurrence.value !== undefined) tags.push(`score=${occurrence.value.toFixed(2)}`)
+  // Only an evaluation produces a judged number. An annotation carries qualitative
+  // text and a placeholder `0` — measured across every triaged signal in
+  // production, all of them — so tagging it as a score would read to the model as
+  // "judged as bad as possible", including on the ones describing good behaviour.
+  if (occurrence.sourceType === "evaluation" && occurrence.value !== undefined) {
+    tags.push(`score=${occurrence.value.toFixed(2)}`)
+  }
   return tags.join(" ")
 }
 
@@ -256,29 +260,45 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
       "ISSUE_DETAILS_GENERATOR",
       SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL,
     )
-    const result = yield* ai.generate({
-      ...modelConfig,
-      telemetry: {
-        spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.signalDetails,
-        project: LATITUDE_TELEMETRY_PROJECT_SLUGS.signalDiscovery,
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.signalDetails],
-        metadata: buildProjectScopedAiMetadata(
-          { organizationId: input.organizationId, projectId: input.projectId },
-          {
-            ...(input.signalId ? { signalId: input.signalId } : {}),
-            occurrenceCount: occurrences.length,
-          },
-        ),
-      },
-      system: SIGNAL_DETAILS_SYSTEM_PROMPT,
-      prompt: buildPrompt({
-        previousName,
-        previousDescription,
-        occurrences,
-        withSeverity,
-      }),
-      schema: withSeverity ? signalDetailsWithSeveritySchema : signalDetailsSchema,
-    })
+    const generate = <T>(schema: z.ZodType<T>, askForSeverity: boolean) =>
+      ai.generate({
+        ...modelConfig,
+        telemetry: {
+          spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.signalDetails,
+          project: LATITUDE_TELEMETRY_PROJECT_SLUGS.signalDiscovery,
+          tags: [...AI_GENERATE_TELEMETRY_TAGS.signalDetails],
+          metadata: buildProjectScopedAiMetadata(
+            { organizationId: input.organizationId, projectId: input.projectId },
+            {
+              ...(input.signalId ? { signalId: input.signalId } : {}),
+              occurrenceCount: occurrences.length,
+            },
+          ),
+        },
+        system: SIGNAL_DETAILS_SYSTEM_PROMPT,
+        prompt: buildPrompt({
+          previousName,
+          previousDescription,
+          occurrences,
+          withSeverity: askForSeverity,
+        }),
+        schema,
+      })
+
+    /**
+     * `severity` is required, not optional. Offering the model a nullish field
+     * makes null a legitimate answer and it takes it: measured over the eval
+     * fixtures, an optional field came back unset 19 times out of 20, while the
+     * required one answered every time. Robustness comes from this retry
+     * instead — the same call produces the name and description a signal cannot
+     * be created without, so a model that cannot satisfy the wider schema falls
+     * back to the narrow one and the signal lands with no level.
+     */
+    const result = withSeverity
+      ? yield* generate(signalDetailsWithSeveritySchema, true).pipe(
+          Effect.catchCause(() => generate(signalDetailsSchema, false)),
+        )
+      : yield* generate(signalDetailsSchema, false)
 
     const severity = signalPrioritySchema.safeParse((result.object as { severity?: unknown }).severity)
 

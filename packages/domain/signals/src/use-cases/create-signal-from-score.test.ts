@@ -85,26 +85,28 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
 
 type AIGenerate = <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>>
 
-const createGenerateSignalDetails =
-  (name: string, description: string): AIGenerate =>
+/**
+ * Parses inside the Effect, the way a real adapter does: a model whose answer
+ * misses the schema is a failure in the error channel, not a synchronous throw.
+ * Parsing eagerly would escape `catchCause` and hide the severity retry.
+ */
+const respondWith =
+  (answer: Record<string, unknown>): AIGenerate =>
   <T>(input: GenerateInput<T>) =>
-    Effect.succeed({
-      object: input.schema.parse({
-        name,
-        description,
+    Effect.suspend(() =>
+      Effect.succeed({
+        object: input.schema.parse(answer) as T,
+        tokens: 10,
+        duration: 5,
       }),
-      tokens: 10,
-      duration: 5,
-    })
+    )
 
-const createGenerateSignalDetailsWithSeverity =
-  (name: string, description: string, severity: string): AIGenerate =>
-  <T>(input: GenerateInput<T>) =>
-    Effect.succeed({
-      object: input.schema.parse({ name, description, severity }),
-      tokens: 10,
-      duration: 5,
-    })
+/** A model that never returns a severity — the wider schema fails, the retry carries the signal. */
+const createGenerateSignalDetails = (name: string, description: string): AIGenerate =>
+  respondWith({ name, description })
+
+const createGenerateSignalDetailsWithSeverity = (name: string, description: string, severity: string): AIGenerate =>
+  respondWith({ name, description, severity })
 
 describe("createSignalFromScoreUseCase", () => {
   it("leaves the level unset when the model answers with no usable severity", async () => {
@@ -203,7 +205,46 @@ describe("createSignalFromScoreUseCase", () => {
 
     expect(issues.get(result.signalId)?.priority).toBe("urgent")
     expect(calls.generate[0]?.prompt).toContain("detector=pii-leakage")
-    expect(calls.generate[0]?.prompt).toContain("score=0.20")
+    // Annotation values are placeholders, not verdicts — no score tag for them.
+    expect(calls.generate[0]?.prompt).not.toContain("score=")
+  })
+
+  // A deterministic detector already established what happened, so the model is
+  // never asked to rate it — volume decides, starting at `low` for occurrence one.
+  it("starts a deterministic detector's signal at low without asking for a severity", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: createGenerateSignalDetails("Tool call errors", "A tool keeps returning errors."),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    const score = makeScore({
+      sourceId: "SYSTEM",
+      metadata: { rawFeedback: 'Tool "read_file" returned an error', flaggerSlug: "tool-call-errors" },
+    })
+    scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
+
+    const result = await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+      ),
+    )
+
+    expect(issues.get(result.signalId)?.priority).toBe("low")
+    // One call, not two: the severity schema is never attempted, so there is
+    // nothing for the retry to fall back from.
+    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate[0]?.prompt).not.toContain("`severity`")
   })
 
   it("generates details, creates a new issue, and claims score ownership", async () => {
@@ -241,7 +282,9 @@ describe("createSignalFromScoreUseCase", () => {
     expect(issues.get(result.signalId)?.name).toBe("Token leakage in assistant responses")
     expect(issues.get(result.signalId)?.description).toBe("The assistant exposes secrets or tokens in its replies.")
     expect(issues.get(result.signalId)?.centroid?.mass).toBeGreaterThan(0)
-    expect(calls.generate).toHaveLength(1)
+    // Two calls: this model never answers with a severity, so the wider schema
+    // fails and the narrow retry is what produces the name and description.
+    expect(calls.generate).toHaveLength(2)
 
     expect(outbox.events).toHaveLength(1)
     expect(outbox.events[0]).toMatchObject({
@@ -332,7 +375,8 @@ describe("createSignalFromScoreUseCase", () => {
       signalId: winningSignalId,
     })
     expect(issues.size).toBe(0)
-    expect(calls.generate).toHaveLength(1)
+    // Attempt plus severity retry — generation still runs once per creation attempt.
+    expect(calls.generate).toHaveLength(2)
   })
 
   describe("issue.source mapping", () => {

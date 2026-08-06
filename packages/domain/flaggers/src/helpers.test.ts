@@ -38,6 +38,55 @@ function assistantText(content: string): TraceDetail["outputMessages"][number] {
 }
 
 describe("detectToolCallErrorsFlagger", () => {
+  // An agent that runs hundreds of tools errors constantly and works through it;
+  // the user never sees those, so they must not become signals.
+  it("ignores an error the agent worked through", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-1"),
+        toolResponse("call-1", { ok: false, error: "rate limited" }),
+        assistantToolCall("call-2"),
+        toolResponse("call-2", { ok: true, temperature: 21 }),
+      ]),
+    )
+
+    expect(result.matched).toBe(false)
+  })
+
+  it("flags an error the run never recovered from", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall("call-1"),
+        toolResponse("call-1", { ok: true, temperature: 21 }),
+        assistantToolCall("call-2"),
+        toolResponse("call-2", { ok: false, error: "connection refused" }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toBe('Tool "get_weather" returned error: connection refused')
+      expect(result.messageIndex).toBe(2)
+    }
+  })
+
+  // Recovery is about transient failures. A malformed call is a bug in how the
+  // agent calls tools and stays worth flagging however the run ends.
+  it("still flags a structural defect when later calls succeed", () => {
+    const result = detectToolCallErrorsFlagger(
+      makeTrace([
+        assistantToolCall(""),
+        assistantToolCall("call-ok"),
+        toolResponse("call-ok", { ok: true, temperature: 21 }),
+      ]),
+    )
+
+    expect(result.matched).toBe(true)
+    if (result.matched) {
+      expect(result.feedback).toContain("Malformed tool call")
+    }
+  })
+
   it("matches failed tool result payloads and anchors to the assistant message that issued the call", () => {
     const result = detectToolCallErrorsFlagger(
       makeTrace([assistantToolCall("call-weather"), toolResponse("call-weather", { ok: false, error: "timeout" })]),

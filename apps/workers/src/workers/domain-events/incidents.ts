@@ -4,8 +4,14 @@ import {
   type EntrySignalsSnapshot,
 } from "@domain/incidents"
 import type { QueueConsumer } from "@domain/queue"
-import { OrganizationId, SignalId } from "@domain/shared"
-import { SignalRepository } from "@domain/signals"
+import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
+import { recomputeSignalLevelUseCase } from "@domain/signals"
+import {
+  ScoreAnalyticsRepositoryLive,
+  SessionRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import {
   IncidentRepositoryLive,
   OutboxEventWriterLive,
@@ -14,7 +20,7 @@ import {
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getPostgresClient } from "../../clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../../clients.ts"
 
 const logger = createLogger("alert-incidents")
 
@@ -23,6 +29,7 @@ interface AlertIncidentsDeps {
 }
 
 const repoLayer = Layer.mergeAll(IncidentRepositoryLive, OutboxEventWriterLive, SignalRepositoryLive)
+const analyticsLayer = Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive)
 
 const createIncidentForSignalEscalation = (payload: {
   readonly organizationId: string
@@ -32,13 +39,22 @@ const createIncidentForSignalEscalation = (payload: {
   readonly entrySignals?: EntrySignalsSnapshot | null
 }) =>
   Effect.gen(function* () {
-    // One level per signal: its escalation opens at the signal's own severity.
-    // Unset — signals created before severity derivation, or cleared by hand —
-    // keeps the "high" every escalation used to open at.
-    const signals = yield* SignalRepository
-    const signal = yield* signals
-      .findById(SignalId(payload.signalId))
-      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    // Re-level the signal BEFORE opening the incident, so the incident carries
+    // the raised level and the ordinary severity threshold decides delivery.
+    // Escalation gets no exemption from that threshold: it earns a higher level
+    // instead, which keeps one rule — below your minimum stays quiet.
+    const recomputed = yield* recomputeSignalLevelUseCase({
+      organizationId: OrganizationId(payload.organizationId),
+      projectId: ProjectId(payload.projectId),
+      signalId: SignalId(payload.signalId),
+      escalating: true,
+    }).pipe(
+      withClickHouse(analyticsLayer, getClickhouseClient(), OrganizationId(payload.organizationId)),
+      // A ClickHouse hiccup must not stop an incident opening; the signal keeps
+      // whatever level it had and the threshold still applies to that.
+      Effect.catchCause(() => Effect.succeed({ status: "skipped" as const, reason: "signal-not-found" as const })),
+    )
+    const level = recomputed.status === "skipped" ? null : recomputed.level
 
     return yield* createIncidentFromSignalEventUseCase({
       organizationId: payload.organizationId,
@@ -46,7 +62,7 @@ const createIncidentForSignalEscalation = (payload: {
       signalId: payload.signalId,
       occurredAt: payload.occurredAt,
       entrySignals: payload.entrySignals ?? null,
-      ...(signal?.priority ? { severity: signal.priority } : {}),
+      ...(level ? { severity: level } : {}),
     })
   }).pipe(
     withPostgres(repoLayer, getPostgresClient(), OrganizationId(payload.organizationId)),
@@ -67,12 +83,29 @@ const closeIncidentForSignalEscalation = (payload: {
   readonly endedAt: Date
   readonly reason?: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
 }) =>
-  closeIncidentFromSignalEventUseCase({
-    organizationId: payload.organizationId,
-    projectId: payload.projectId,
-    signalId: payload.signalId,
-    endedAt: payload.endedAt,
-    ...(payload.reason !== undefined ? { reason: payload.reason } : {}),
+  Effect.gen(function* () {
+    const closed = yield* closeIncidentFromSignalEventUseCase({
+      organizationId: payload.organizationId,
+      projectId: payload.projectId,
+      signalId: payload.signalId,
+      endedAt: payload.endedAt,
+      ...(payload.reason !== undefined ? { reason: payload.reason } : {}),
+    })
+
+    // The level comes back down with the rate. Without this the escalation tier
+    // latches and every signal that ever spiked keeps claiming to be urgent,
+    // which sorts nothing.
+    yield* recomputeSignalLevelUseCase({
+      organizationId: OrganizationId(payload.organizationId),
+      projectId: ProjectId(payload.projectId),
+      signalId: SignalId(payload.signalId),
+      escalating: false,
+    }).pipe(
+      withClickHouse(analyticsLayer, getClickhouseClient(), OrganizationId(payload.organizationId)),
+      Effect.catchCause(() => Effect.void),
+    )
+
+    return closed
   }).pipe(
     withPostgres(repoLayer, getPostgresClient(), OrganizationId(payload.organizationId)),
     Effect.tap(() => Effect.sync(() => logger.info(`alert_incident closed signalId=${payload.signalId}`))),

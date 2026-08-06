@@ -12,11 +12,12 @@ import {
   type WorkflowStarterShape,
 } from "@domain/queue"
 import type { ScoreSourceType } from "@domain/scores"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import {
   checkSignalEscalationUseCase,
   type DiscoverSignalResult,
   discoverSignalUseCase,
+  recomputeSignalLevelUseCase,
   refreshSignalDetailsUseCase,
   removeScoreFromSignalUseCase,
   sweepEscalatingSignalsUseCase,
@@ -24,7 +25,12 @@ import {
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  ScoreAnalyticsRepositoryLive,
+  SessionRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import {
   BillingOverrideRepositoryLive,
   BillingUsageEventRepositoryLive,
@@ -113,6 +119,25 @@ export const createSignalsWorker = async ({
     refresh: (payload) =>
       Effect.gen(function* () {
         const organizationId = OrganizationId(payload.organizationId)
+
+        // Levels track volume in both directions, so a signal that spread gets
+        // promoted and one that faded drops back. Deliberately ahead of the
+        // billing gate below: this is a ClickHouse read with no model call, and a
+        // blocked organization should still see accurate levels.
+        yield* recomputeSignalLevelUseCase({
+          organizationId,
+          projectId: ProjectId(payload.projectId),
+          signalId: SignalId(payload.signalId),
+          escalating: false,
+        }).pipe(
+          withClickHouse(
+            Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive),
+            chClient,
+            organizationId,
+          ),
+          Effect.catchCause(() => Effect.void),
+        )
+
         // No stable per-refresh identity exists in the payload; the random suffix
         // makes each refresh bill separately, while a retried job's generate hits
         // the 24h AI cache and is never re-charged.

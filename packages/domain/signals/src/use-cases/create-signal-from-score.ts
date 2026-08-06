@@ -9,7 +9,7 @@ import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
 import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
-import { applySeverityFloor, flaggerSeverityFloor } from "../severity-floor.ts"
+import { applySeverityFloor, flaggerSeverityFloor, isDeterministicFlagger } from "../severity-floor.ts"
 import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import type { GenerateSignalDetailsError } from "./generate-signal-details.ts"
@@ -150,6 +150,10 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     }
 
     const flaggerSlug = flaggerSlugOf(initialScoreResult.score)
+    // A deterministic detector already established what happened; volume decides
+    // how much it matters, starting at `low` for this first occurrence and moving
+    // with `recomputeSignalLevelUseCase` from there.
+    const deterministic = isDeterministicFlagger(flaggerSlug)
     const signalDetails = yield* generateSignalDetailsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -161,10 +165,12 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           ...(flaggerSlug === undefined ? {} : { flaggerSlug }),
         },
       ],
-      withSeverity: true,
+      withSeverity: !deterministic,
     })
     // The model may rate higher than a detector's floor, never lower.
-    const severity = applySeverityFloor(signalDetails.severity ?? null, flaggerSeverityFloor(flaggerSlug))
+    const severity = deterministic
+      ? "low"
+      : applySeverityFloor(signalDetails.severity ?? null, flaggerSeverityFloor(flaggerSlug))
 
     const sqlClient = yield* SqlClient
 
