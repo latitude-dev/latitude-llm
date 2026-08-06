@@ -35,6 +35,7 @@ interface DateRangePickerProps {
   readonly clearLabel?: string
   readonly disabled?: boolean
   readonly align?: "start" | "center" | "end"
+  readonly portalTarget?: "local" | "body"
   /** Fill the available width, pushing the chevron to the far end (defaults to sizing to content). */
   readonly fullWidth?: boolean
   readonly onChange: (change: DateRangePickerChange) => void
@@ -212,13 +213,13 @@ export function DateRangePicker({
   clearLabel = "Clear dates",
   disabled = false,
   align = "start",
+  portalTarget = "local",
   fullWidth = false,
   onChange,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
   const [draftRange, setDraftRange] = useState<DateRange | undefined>(() => copyRange(value))
-  // Portal target next to the trigger, as in Select: body-portaled content inside a modal sits
-  // outside the dialog's pointer-events/focus scope and becomes non-interactive.
+  // Local portals stay within modal interaction scopes; body portals escape ancestor stacking and overflow contexts.
   const [popoverContainer, setPopoverContainer] = useState<HTMLDivElement | null>(null)
 
   const selection = formatSelectionLabel({
@@ -300,7 +301,7 @@ export function DateRangePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          container={popoverContainer ?? undefined}
+          container={portalTarget === "local" ? (popoverContainer ?? undefined) : undefined}
           align={align}
           className="w-[min(100vw-2rem,360px)] p-0 sm:w-auto"
         >
