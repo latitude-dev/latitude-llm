@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Signals
+
+- Unified the two level scales. A signal's triage priority and an alert's severity were separate lists — `low|medium|high|urgent` against `low|medium|high` — so the same idea was expressed two ways and neither could filter the other. They are now one ascending scale shared by monitors, incidents and signals; monitors gain an Urgent tier, and no data migrates because the columns already store the wider set. The field names stay put: `signals.priority` is public API and `severity` is the key inside stored notification payloads (ref: #4362).
+- Newly discovered signals now arrive with a severity, rated by the same generation call that already writes their name and description, and committed in the transaction that announces the signal. The rating reads the score's own verdict and, where a deterministic detector authored it, the detector's slug; a `pii-leakage` match floors the level at urgent and `nsfw`/`jailbreaking` at high, so a detector that names the failure class outright beats inferring it from prose. Ties break upward, because an over-rated signal is noise while an under-rated one is filtered out silently. Only the initial value is derived — triage remains the sole writer afterwards (ref: #4362).
+- Signal notifications are now filtered by the severity threshold that already sits on each Slack channel and each user's email preferences, which previously applied to monitor incidents alone. A team can finally say "only high and above" and stop hearing about cosmetic findings. A signal nobody has judged sends no email, no Slack message and no agent dispatch, though its in-app row still lands; escalations are exempt, because a rate breaking its seasonal band is its own evidence of urgency and 97% of them come from signals nobody triaged. The notification group is relabelled from "Monitors" to "Alerts", which is what it has always governed (ref: #4362).
+
 ## v0.3.78 - 2026-08-05
 
 ### Imports
