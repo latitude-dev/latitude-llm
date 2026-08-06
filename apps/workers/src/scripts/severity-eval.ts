@@ -181,6 +181,7 @@ async function main(): Promise<void> {
   let exact = 0
   let acceptable = 0
   let unstable = 0
+  let majorityExact = 0
   const perCaseOutcomes: {
     readonly id: string
     readonly signalSlug?: string
@@ -198,6 +199,15 @@ async function main(): Promise<void> {
       const level = await Effect.runPromise(rate(testCase, orgId, projectId))
       results.push(level)
     }
+
+    // Majority of the repeats, not the first answer. Worth reporting separately:
+    // if voting beats single-shot by a lot, the rubric's problem is variance and
+    // the cheap fix is a lower temperature or a vote, not more tuning data.
+    const tally = new Map<string, number>()
+    for (const level of results) tally.set(level ?? "none", (tally.get(level ?? "none") ?? 0) + 1)
+    const majorityKey = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
+    const majority = majorityKey === "none" || majorityKey === undefined ? null : (majorityKey as SignalPriority)
+    if (majority === testCase.expected) majorityExact++
 
     const distinct = [...new Set(results.map((level) => level ?? "none"))]
     if (distinct.length > 1) unstable++
@@ -250,6 +260,9 @@ async function main(): Promise<void> {
   const pct = (n: number) => `${Math.round((100 * n) / gradable.length)}%`
   console.log(`\nexact            ${exact}/${gradable.length} (${pct(exact)})`)
   console.log(`within tolerance ${acceptable}/${gradable.length} (${pct(acceptable)})`)
+  if (runs > 1) {
+    console.log(`majority-of-${runs}     ${majorityExact}/${gradable.length} (${pct(majorityExact)}) exact`)
+  }
   console.log(`unstable         ${unstable}/${gradable.length} (${pct(unstable)}) — differed across runs`)
   if (bySignal.size !== gradable.length) {
     const unanimous = [...bySignal.values()].filter((entry) => entry.exact === entry.total).length
