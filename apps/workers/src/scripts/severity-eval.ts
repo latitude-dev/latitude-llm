@@ -12,7 +12,6 @@ import {
 import { AIGenerateLive, withAi } from "@platform/ai"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { getRedisClient } from "../clients.ts"
 import { SEVERITY_FIXTURES, type SeverityFixture } from "./severity-eval-fixtures.ts"
 import { type ReportCase, renderReport } from "./severity-eval-report.ts"
 
@@ -49,6 +48,8 @@ const rank = (level: SignalPriority) => LEVELS.indexOf(level)
 
 interface Case {
   readonly id: string
+  /** Cases sharing a signal share a label, so agreement is also reported per signal. */
+  readonly signalSlug?: string
   readonly feedback: string
   readonly sourceType: SeverityFixture["sourceType"]
   readonly value: number
@@ -72,7 +73,10 @@ const rate = (input: Case, organizationId: string, projectId: string) =>
     withSeverity: true,
   }).pipe(
     Effect.map((details) => applySeverityFloor(details.severity ?? null, flaggerSeverityFloor(input.flaggerSlug))),
-    withAi(AIGenerateLive, getRedisClient()),
+    // No Redis client, so no AI cache. Passing one makes `--runs` re-read a
+    // single cached answer — the prompt is the cache key — and instability
+    // silently reports 0% for every case no matter how much the model wavers.
+    withAi(AIGenerateLive),
   )
 
 /**
@@ -105,6 +109,9 @@ const loadFileCases = (path: string): readonly Case[] => {
       sourceType: ((row.sourceType ?? row.source_type) as SeverityFixture["sourceType"]) ?? "annotation",
       value: rawValue === undefined || rawValue === null ? 0 : Number(rawValue),
       ...(slug ? { flaggerSlug: slug } : {}),
+      ...(typeof (row.signalSlug ?? row.signal_slug) === "string"
+        ? { signalSlug: String(row.signalSlug ?? row.signal_slug) }
+        : {}),
       expected: label,
       acceptable: LEVELS.filter((level) => Math.abs(rank(level) - rank(label)) <= 1),
     }
@@ -174,6 +181,7 @@ async function main(): Promise<void> {
   let exact = 0
   let acceptable = 0
   let unstable = 0
+  const perCaseOutcomes: { readonly id: string; readonly signalSlug?: string; readonly matched: boolean }[] = []
   const falseLows: string[] = []
   const falseHighs: string[] = []
   const reportCases: ReportCase[] = []
@@ -208,6 +216,12 @@ async function main(): Promise<void> {
       floored: flaggerSeverityFloor(testCase.flaggerSlug) !== null,
     })
 
+    perCaseOutcomes.push({
+      id: testCase.id,
+      ...(testCase.signalSlug === undefined ? {} : { signalSlug: testCase.signalSlug }),
+      matched,
+    })
+
     const flag = matched ? "  " : withinAcceptable ? "~ " : "✗ "
     const stability = distinct.length > 1 ? `  [unstable: ${distinct.join("/")}]` : ""
     const label = casesFile ? testCase.id : testCase.id.padEnd(28)
@@ -216,10 +230,27 @@ async function main(): Promise<void> {
     )
   }
 
+  // An export with several occurrences per signal is correlated: one signal with
+  // twelve occurrences would otherwise dominate the flat percentage.
+  const bySignal = new Map<string, { readonly total: number; readonly exact: number }>()
+  for (const entry of perCaseOutcomes) {
+    const key = entry.signalSlug ?? entry.id
+    const prev = bySignal.get(key) ?? { total: 0, exact: 0 }
+    bySignal.set(key, { total: prev.total + 1, exact: prev.exact + (entry.matched ? 1 : 0) })
+  }
+
   const pct = (n: number) => `${Math.round((100 * n) / gradable.length)}%`
   console.log(`\nexact            ${exact}/${gradable.length} (${pct(exact)})`)
   console.log(`within tolerance ${acceptable}/${gradable.length} (${pct(acceptable)})`)
   console.log(`unstable         ${unstable}/${gradable.length} (${pct(unstable)}) — differed across runs`)
+  if (bySignal.size !== gradable.length) {
+    const unanimous = [...bySignal.values()].filter((entry) => entry.exact === entry.total).length
+    const partial = [...bySignal.values()].filter((entry) => entry.exact > 0 && entry.exact < entry.total).length
+    console.log(
+      `per signal       ${unanimous}/${bySignal.size} signals matched on every occurrence, ${partial} on some — ` +
+        "the flat percentages above overweight signals with more occurrences",
+    )
+  }
   console.log(`FALSE-LOW        ${falseLows.length} ${falseLows.length > 0 ? `→ ${falseLows.join(", ")}` : ""}`)
   console.log(`false-high       ${falseHighs.length} ${falseHighs.length > 0 ? `→ ${falseHighs.join(", ")}` : ""}`)
   if (falseLows.length > 0) {
@@ -236,7 +267,7 @@ async function main(): Promise<void> {
 }
 
 main()
-  // Redis and Postgres handles keep the loop alive; nothing here needs draining.
+  // Provider handles keep the loop alive; nothing here needs draining.
   .then(() => process.exit(0))
   .catch((err) => {
     console.error(err)
