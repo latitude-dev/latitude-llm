@@ -283,6 +283,16 @@ export const SIGNAL_DISCOVERY_MIN_RELEVANCE = 0.3
 // ---------------------------------------------------------------------------
 
 /** Language model used to generate stable issue names/descriptions. */
+/**
+ * `reasoning: "high"` is load-bearing for the severity rating, not just for the
+ * name and description. Measured against human-labelled production signals,
+ * dropping to `low` made the rubric both worse (5/18 exact against 6-8/18) and
+ * *less* reproducible (39% of cases differed across runs against 28%), and it
+ * stopped reaching `urgent` at all — the rating depends on the model working
+ * through whether a failure is one the caller can see, which it skips without the
+ * budget to do it. Temperature does not substitute: `temperature: 0` leaves
+ * instability at 28% because the reasoning trace is what varies.
+ */
 export const SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",
