@@ -323,6 +323,54 @@ describe("processImportPageUseCase", () => {
 
       expect(h.events).toEqual([])
     })
+
+    it("does not bill traces whose root has not arrived yet", async () => {
+      const job = makeJob()
+      const h = harness(job, {
+        rows: [
+          {
+            sourceTraceId: "trace-orphan-first",
+            sourceSpanId: "span-child",
+            name: "child",
+            startTime: new Date(FAKE_ROWS_LATEST.getTime() - 1_000),
+            isRoot: false,
+          },
+        ],
+      })
+
+      await h.run()
+
+      expect(h.spans.inserted.flat()).toHaveLength(1)
+      expect(h.events).toEqual([])
+    })
+
+    it("bills a trace once its root span lands, even when children arrived on an earlier page", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 1 } })
+      const h = harness(job, {
+        rows: [
+          {
+            sourceTraceId: "trace-split",
+            sourceSpanId: "span-child",
+            name: "child",
+            startTime: new Date(FAKE_ROWS_LATEST.getTime() - 1_000),
+            isRoot: false,
+          },
+          {
+            sourceTraceId: "trace-split",
+            sourceSpanId: "span-root",
+            name: "root",
+            startTime: new Date(FAKE_ROWS_LATEST.getTime() - 2_000),
+            isRoot: true,
+          },
+        ],
+      })
+
+      await h.drain()
+
+      expect(h.events).toHaveLength(1)
+      expect(h.events[0]?.payload.traceIds).toEqual([expect.any(String)])
+      expect(h.spans.inserted.flat()).toHaveLength(2)
+    })
   })
 
   describe("redaction", () => {

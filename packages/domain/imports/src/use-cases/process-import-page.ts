@@ -417,21 +417,25 @@ export const processImportPageUseCase =
         if (batch.length > 0) yield* spanRepo.insert(batch)
       }
 
-      const traceIds = new Set(importedSpans.map((span) => span.traceId as string))
+      const rootedTraceIds = [
+        ...new Set(
+          importedSpans.filter((span) => span.parentSpanId === "").map((span) => span.traceId as string),
+        ),
+      ]
 
       stats.sessionsImported += admitted.sessions
       stats.tracesImported += rootsInPage
       stats.spansImported += importedSpans.length
       stats.spansSkipped += skipped
 
-      if (traceIds.size > 0) {
+      if (rootedTraceIds.length > 0) {
         yield* eventsPublisher.publish({
           name: "TracesIngested",
           organizationId: job.organizationId,
           payload: {
             organizationId: job.organizationId,
             projectId: ProjectId(job.projectId),
-            traceIds: [...traceIds],
+            traceIds: rootedTraceIds,
             isSandbox: input.isSandbox,
             billing: {
               planSlug: input.plan.plan.slug,
