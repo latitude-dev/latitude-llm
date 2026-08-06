@@ -68,6 +68,11 @@ describe("isUserCentricReflagInapplicable", () => {
     expect(isUserCentricReflagInapplicable(["taxonomy:facet-extract"], false)).toBe(true)
   })
 
+  it("skips user-centric strategies on signal-details traces embedding occurrence feedback", () => {
+    expect(isUserCentricReflagInapplicable([...AI_GENERATE_TELEMETRY_TAGS.signalDetails], false)).toBe(true)
+    expect(isUserCentricReflagInapplicable([...AI_GENERATE_TELEMETRY_TAGS.signalDetails], true)).toBe(false)
+  })
+
   it("still allows assistant-response-centric strategies on nested-sample traces", () => {
     expect(isUserCentricReflagInapplicable([CLASSIFY], true)).toBe(false)
     expect(isUserCentricReflagInapplicable([CLASSIFY], undefined)).toBe(false)
