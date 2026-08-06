@@ -24,7 +24,13 @@ const escapeHtml = (value: string): string =>
  *
  * Blind by construction: the reader rates each case before the model's answer
  * and the stored label are revealed, so their judgement cannot anchor on either.
- * Verdicts persist in localStorage and export as JSON.
+ * Verdicts persist in localStorage.
+ *
+ * The export is the `--cases-file` shape with the reader's verdict as `priority`,
+ * which closes the loop: production triage levels were set from the full signal
+ * page — impact, trend, every occurrence — while the rubric sees only the one
+ * creating occurrence, so those levels are not predictable from its input. Rating
+ * the same single occurrence produces a target that is.
  */
 export const renderReport = (cases: readonly ReportCase[], source: string): string => `<!doctype html>
 <html lang="en">
@@ -75,7 +81,7 @@ export const renderReport = (cases: readonly ReportCase[], source: string): stri
   <span id="progress">0 / ${cases.length} rated</span>
   <span id="vsModel"></span>
   <span id="vsLabel"></span>
-  <button id="export" class="level">Copy verdicts as JSON</button>
+  <button id="export" class="level">Download re-labelled cases</button>
 </footer>
 <script>
 const CASES = ${JSON.stringify(cases)};
@@ -134,9 +140,25 @@ document.addEventListener("click", (event) => {
     render();
   }
   if (event.target.id === "export") {
-    navigator.clipboard.writeText(JSON.stringify(verdicts, null, 2));
-    event.target.textContent = "Copied";
-    setTimeout(() => { event.target.textContent = "Copy verdicts as JSON"; }, 1500);
+    // Emits the --cases-file shape with your verdict as the priority, so a blind
+    // pass feeds straight back into severity:eval as a re-labelled dataset.
+    // Unrated cases are dropped rather than kept at their stored label.
+    const relabelled = CASES.filter(c => verdicts[c.id]).map(c => ({
+      id: c.id,
+      feedback: c.feedback,
+      source_type: c.sourceType,
+      value: c.value,
+      flagger_slug: c.flaggerSlug ?? null,
+      priority: verdicts[c.id],
+    }));
+    const blob = new Blob([JSON.stringify(relabelled, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "severity-cases-relabelled.json";
+    link.click();
+    URL.revokeObjectURL(link.href);
+    event.target.textContent = "Downloaded " + relabelled.length + " case(s)";
+    setTimeout(() => { event.target.textContent = "Download re-labelled cases"; }, 2000);
   }
 });
 
