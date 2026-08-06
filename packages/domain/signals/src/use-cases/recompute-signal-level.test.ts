@@ -21,7 +21,8 @@ const projectId = ProjectId(cuid("p"))
 const signalId = SignalId(cuid("s"))
 const createdAt = new Date("2026-08-01T00:00:00.000Z")
 
-const makeSignal = (priority: SignalPriority | null): Signal => ({
+const makeSignal = (priority: SignalPriority | null, priorityFloor: SignalPriority | null = null): Signal => ({
+  priorityFloor,
   id: signalId,
   organizationId: orgId,
   projectId,
@@ -160,6 +161,43 @@ describe("recomputeSignalLevelUseCase", () => {
     const { result } = await run({ signal: null, affectedSessions: 0, totalSessions: 0 })
 
     expect(result).toMatchObject({ status: "skipped", reason: "signal-not-found" })
+  })
+
+  // The card-number case: one session out of five thousand, and demoting it
+  // would be the system overruling a severity judgement with a headcount.
+  it("will not demote below the floor a rating established", async () => {
+    const { result, issues } = await run({
+      signal: makeSignal("urgent", "urgent"),
+      affectedSessions: 1,
+      totalSessions: 5000,
+    })
+
+    expect(result).toMatchObject({ status: "unchanged", level: "urgent" })
+    expect(issues.get(signalId)?.priority).toBe("urgent")
+  })
+
+  // The floor only stops the downward move. A signal somebody filed as `low` has
+  // to be able to reach them when it turns into most of the traffic.
+  it("still promotes a floored signal when volume overtakes the floor", async () => {
+    const { result } = await run({
+      signal: makeSignal("low", "low"),
+      affectedSessions: 300,
+      totalSessions: 1000,
+    })
+
+    expect(result).toMatchObject({ status: "updated", from: "low", level: "urgent" })
+  })
+
+  // Deterministic detectors assert nothing about severity, so they get no floor
+  // and volume owns them in both directions.
+  it("demotes an unfloored signal all the way", async () => {
+    const { result } = await run({
+      signal: makeSignal("high", null),
+      affectedSessions: 1,
+      totalSessions: 5000,
+    })
+
+    expect(result).toMatchObject({ status: "updated", from: "high", level: "low" })
   })
 
   // A project with no sessions yet divides by zero otherwise.

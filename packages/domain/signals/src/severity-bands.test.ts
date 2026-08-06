@@ -37,4 +37,23 @@ describe("levelForImpact", () => {
     expect(at(0.02, true)).toBe("high")
     expect(at(0.02, false)).toBe("medium")
   })
+
+  // A card number read back to one customer out of five thousand sessions. The
+  // measurement says nobody is affected and it is still urgent.
+  it("never reports below the floor, however rare the signal is", () => {
+    expect(levelForImpact({ affectedSessionsPercent: 1 / 5000, escalating: false, floor: "urgent" })).toBe("urgent")
+  })
+
+  it("lets volume raise the level above the floor", () => {
+    expect(levelForImpact({ affectedSessionsPercent: 0.3, escalating: false, floor: "low" })).toBe("urgent")
+  })
+
+  it("still escalates a floored signal one tier", () => {
+    expect(levelForImpact({ affectedSessionsPercent: 0.06, escalating: true, floor: "medium" })).toBe("urgent")
+  })
+
+  it("ignores a floor at or below the measurement", () => {
+    expect(levelForImpact({ affectedSessionsPercent: 0.05, escalating: false, floor: "high" })).toBe("high")
+    expect(levelForImpact({ affectedSessionsPercent: 0.05, escalating: false, floor: null })).toBe("high")
+  })
 })

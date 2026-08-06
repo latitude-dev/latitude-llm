@@ -86,10 +86,16 @@ export const updateSignalTriageUseCase = (input: UpdateSignalTriageInput) =>
           return toResult(issue, false)
         }
 
+        // A person choosing a level asserts what the signal is worth, so it
+        // becomes the floor volume cannot pull back down. Volume may still raise
+        // it, which is the point: a signal filed as `low` on Monday still
+        // reaches whoever filed it when it explodes on Friday. Clearing the
+        // priority hands the level back to volume.
         const nextSignal: Signal = {
           ...issue,
           assigneeId: nextAssigneeId,
           priority: nextPriority,
+          ...(parsed.priority === undefined ? {} : { priorityFloor: parsed.priority }),
           updatedAt: now,
         }
         yield* signalRepository.save(nextSignal)

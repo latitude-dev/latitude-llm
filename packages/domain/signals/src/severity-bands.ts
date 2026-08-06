@@ -30,10 +30,16 @@ export interface LevelForImpactInput {
   readonly affectedSessionsPercent: number
   /** The signal is inside an open escalation right now. */
   readonly escalating: boolean
+  /**
+   * Intrinsic severity already established for this signal, which volume may
+   * exceed but never undercut. Null leaves the level to volume alone.
+   */
+  readonly floor?: SignalPriority | null
 }
 
 /**
- * The level a signal earns from what it is currently doing.
+ * The level a signal earns from what it is currently doing, never below the
+ * severity something already established about it.
  *
  * Escalation raises it one tier rather than bypassing the threshold: a rate
  * breaking its seasonal band is evidence the thing matters more than its
@@ -41,9 +47,17 @@ export interface LevelForImpactInput {
  * for delivery — "below your threshold stays quiet" holds with no exceptions.
  * It comes back down when the escalation ends, because this is recomputed
  * rather than latched.
+ *
+ * The floor is what keeps volume from arguing with severity. Both directions of
+ * the volume model are still live above it, but a card number read back to one
+ * customer is urgent at any share of traffic, and no measurement of how rare it
+ * is should say otherwise.
  */
 export const levelForImpact = (input: LevelForImpactInput): SignalPriority => {
   const band = IMPACT_BANDS.find((candidate) => input.affectedSessionsPercent >= candidate.minPercent)
   const base = band?.level ?? "low"
-  return input.escalating ? raiseOneTier(base) : base
+  const measured = input.escalating ? raiseOneTier(base) : base
+  const floor = input.floor
+  if (floor === null || floor === undefined) return measured
+  return rank(floor) > rank(measured) ? floor : measured
 }

@@ -86,6 +86,7 @@ const buildNewSignalFromScore = ({
   name,
   description,
   priority,
+  priorityFloor,
   slug,
 }: {
   readonly score: Score
@@ -95,6 +96,7 @@ const buildNewSignalFromScore = ({
   readonly name: string
   readonly description: string
   readonly priority: SignalPriority | null
+  readonly priorityFloor: SignalPriority | null
   readonly slug: string
 }): Signal => {
   const centroid = updateSignalCentroid({
@@ -125,6 +127,7 @@ const buildNewSignalFromScore = ({
     origin: "system",
     assigneeId: null,
     priority,
+    priorityFloor,
     centroid,
     clusteredAt: centroid.clusteredAt,
     resolvedAt: null,
@@ -168,9 +171,14 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
       withSeverity: !deterministic,
     })
     // The model may rate higher than a detector's floor, never lower.
+    const detectorFloor = flaggerSeverityFloor(flaggerSlug)
     const severity = deterministic
-      ? "low"
-      : applySeverityFloor(signalDetails.severity ?? null, flaggerSeverityFloor(flaggerSlug))
+      ? (detectorFloor ?? "low")
+      : applySeverityFloor(signalDetails.severity ?? null, detectorFloor)
+    // A rating asserts something intrinsic, so it becomes the floor volume cannot
+    // undercut. A deterministic detector asserted nothing about how much it
+    // matters, so it leaves the level entirely to volume.
+    const priorityFloor = deterministic ? detectorFloor : severity
 
     const sqlClient = yield* SqlClient
 
@@ -210,6 +218,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           // `priority` is the column and the public API field; `severity` is the
           // scale's name everywhere else. Same values, one list.
           priority: severity,
+          priorityFloor,
           slug,
         })
 

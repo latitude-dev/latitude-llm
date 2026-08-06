@@ -31,9 +31,11 @@ export type RecomputeSignalLevelError = RepositoryError
  * claims to be urgent and the threshold sorts nothing. Being a pure function of
  * present measurements is what makes coming down safe.
  *
- * There is no provenance check yet, so this can overwrite a level a person set
- * (see LAT-844). That is the deliberate trade: refusing to raise a signal
- * somebody once called `low` would silence the alert exactly when it explodes.
+ * `priorityFloor` is what volume cannot undercut: the discovery rubric's read of
+ * the prose, a detector floor, or a level somebody chose by hand. Coming down
+ * stops there. Raising is always allowed, so a signal a person filed as `low`
+ * still reaches them when it explodes on Friday — which is why this needs no
+ * provenance flag to be safe in either direction (see LAT-844).
  */
 export const recomputeSignalLevelUseCase = (input: RecomputeSignalLevelInput) =>
   Effect.gen(function* () {
@@ -56,6 +58,7 @@ export const recomputeSignalLevelUseCase = (input: RecomputeSignalLevelInput) =>
     const level = levelForImpact({
       affectedSessionsPercent: impact.affectedSessionsPercent,
       escalating: input.escalating,
+      floor: signal.priorityFloor ?? null,
     })
     yield* Effect.annotateCurrentSpan("level", level)
 

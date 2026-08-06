@@ -241,10 +241,72 @@ describe("createSignalFromScoreUseCase", () => {
     )
 
     expect(issues.get(result.signalId)?.priority).toBe("low")
+    // No floor: nothing asserted how much this matters, so volume owns the level
+    // in both directions from here.
+    expect(issues.get(result.signalId)?.priorityFloor).toBeNull()
     // One call, not two: the severity schema is never attempted, so there is
     // nothing for the retry to fall back from.
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]?.prompt).not.toContain("`severity`")
+  })
+
+  // What stops the volume recompute from demoting a rare-but-severe signal.
+  it("records a rated level as the floor volume cannot undercut", async () => {
+    const { layer: aiLayer } = createFakeAI({
+      generate: createGenerateSignalDetailsWithSeverity("Token leakage", "Secrets appear in replies.", "urgent"),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    const score = makeScore()
+    scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
+
+    const result = await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+      ),
+    )
+
+    expect(issues.get(result.signalId)?.priorityFloor).toBe("urgent")
+  })
+
+  it("leaves no floor when the model rated nothing", async () => {
+    const { layer: aiLayer } = createFakeAI({
+      generate: createGenerateSignalDetails("Token leakage", "Secrets appear in replies."),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    const score = makeScore()
+    scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
+
+    const result = await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+      ),
+    )
+
+    expect(issues.get(result.signalId)?.priorityFloor).toBeNull()
   })
 
   it("generates details, creates a new issue, and claims score ownership", async () => {

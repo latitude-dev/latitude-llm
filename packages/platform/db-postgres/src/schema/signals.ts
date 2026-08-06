@@ -23,7 +23,8 @@ export const signals = latitudeSchema.table(
     origin: varchar("origin", { length: 16 }).$type<SignalOrigin>().default("system").notNull(), // immutable user|system; how the signal was created. Gates annotation assignment; distinct from `source`. Existing rows backfilled to 'system'.
     filters: jsonb("filters").$type<FilterSet>(), // nullable FilterSet pre-gate; only meaningful alongside an evaluation
     assigneeId: cuid("assignee_id", { default: false }), // nullable; user (org member) assigned to triage this issue. No FK (repo convention); not auto-generated.
-    priority: varchar("priority", { length: 16 }).$type<SignalPriority>(), // nullable; manual triage priority (low/medium/high/urgent). Null = unset.
+    priority: varchar("priority", { length: 16 }).$type<SignalPriority>(), // nullable; effective triage priority (low/medium/high/urgent). Null = unset. Volume recompute writes this in both directions, never below `priorityFloor`.
+    priorityFloor: varchar("priority_floor", { length: 16 }).$type<SignalPriority>(), // nullable; the intrinsic severity a rating established — the discovery rubric, a detector floor, or a person's explicit choice. Volume may raise `priority` above it but never below, so a one-session card-number leak stays urgent. Null = volume owns the level outright.
     centroid: jsonb("centroid").$type<SignalCentroid>(), // nullable; canonical running weighted sum of clustered score feedback embeddings (discovered signals only — user-created evaluation-backed signals have none). `centroidEmbedding` stores the derived normalized pgvector used for search.
     // No IVFFlat/HNSW index: signals per project are expected in the hundreds to low thousands, so an
     // exact sequential scan over the project-scoped subset outperforms an approximate index (and

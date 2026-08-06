@@ -6,6 +6,7 @@ import {
   applySeverityFloor,
   flaggerSeverityFloor,
   generateSignalDetailsUseCase,
+  isDeterministicFlagger,
   type SignalPriority,
 } from "@domain/signals"
 import { AIGenerateLive, withAi } from "@platform/ai"
@@ -30,11 +31,14 @@ false-high is noise, and an adjacent middle tier is arguable.
 
 Options:
   --runs <n>          Repeats per case (default 3). Reveals instability.
-  --cases-file <p>    Grade cases exported from elsewhere — a notebook with database
-                      access, typically, since nothing here connects to one. Each entry
-                      needs "feedback" and "priority"; "sourceType", "value" and
-                      "flaggerSlug" are optional and snake_case keys are accepted. Keep
-                      the file outside this public repo — it holds customer text.
+  --cases-file <p>    Grade cases exported from elsewhere, since nothing here connects
+                      to a database. Each entry needs "feedback" and "priority";
+                      "sourceType", "value" and "flaggerSlug" are optional and
+                      snake_case keys are accepted. Keep the file outside this public
+                      repo — it holds customer text. Production priorities are human
+                      triage, never rubric output, so they are usable as labels.
+  --first <n>         Grade only the first n cases. Cheap way to sanity-check an export.
+  --html <p>          Write a side-by-side label-vs-rubric review page.
   --help
 `.trim()
 
@@ -135,10 +139,37 @@ async function main(): Promise<void> {
     return
   }
 
+  // Production does not rate these, so grading the rubric on them would measure
+  // a path nothing takes. Their labels are still evidence — a human calling one
+  // `urgent` is an argument against starting them at `low` — so they are
+  // reported rather than dropped.
+  const deterministic = cases.filter((testCase) => isDeterministicFlagger(testCase.flaggerSlug))
+  const gradable = cases.filter((testCase) => !isDeterministicFlagger(testCase.flaggerSlug))
+  if (deterministic.length > 0) {
+    const above = deterministic.filter((testCase) => rank(testCase.expected) > rank("low"))
+    console.log(
+      `${deterministic.length} deterministic-detector case(s) not graded — production starts them at low and lets volume move them.`,
+    )
+    if (above.length > 0) {
+      console.log(
+        `  ${above.length} of those were labelled above low: ${above
+          .map((testCase) => `${testCase.id}=${testCase.expected}`)
+          .join(", ")}`,
+      )
+      console.log("  A label above low here argues the volume model is too slow for that detector.\n")
+    } else {
+      console.log("  None were labelled above low, which is what starting them at low assumes.\n")
+    }
+  }
+  if (gradable.length === 0) {
+    console.log("Nothing left to grade.")
+    return
+  }
+
   const orgId = OrganizationId(SEED_ORG_ID)
   const projectId = "severity-eval"
   const sourceLabel = casesFile ? "exported cases" : "fixtures"
-  console.log(`Grading ${cases.length} case(s) × ${runs} run(s) — ${sourceLabel}\n`)
+  console.log(`Grading ${gradable.length} case(s) × ${runs} run(s) — ${sourceLabel}\n`)
 
   let exact = 0
   let acceptable = 0
@@ -147,7 +178,7 @@ async function main(): Promise<void> {
   const falseHighs: string[] = []
   const reportCases: ReportCase[] = []
 
-  for (const testCase of cases) {
+  for (const testCase of gradable) {
     const results: (SignalPriority | null)[] = []
     for (let run = 0; run < runs; run++) {
       const level = await Effect.runPromise(rate(testCase, orgId, projectId))
@@ -185,10 +216,10 @@ async function main(): Promise<void> {
     )
   }
 
-  const pct = (n: number) => `${Math.round((100 * n) / cases.length)}%`
-  console.log(`\nexact            ${exact}/${cases.length} (${pct(exact)})`)
-  console.log(`within tolerance ${acceptable}/${cases.length} (${pct(acceptable)})`)
-  console.log(`unstable         ${unstable}/${cases.length} (${pct(unstable)}) — differed across runs`)
+  const pct = (n: number) => `${Math.round((100 * n) / gradable.length)}%`
+  console.log(`\nexact            ${exact}/${gradable.length} (${pct(exact)})`)
+  console.log(`within tolerance ${acceptable}/${gradable.length} (${pct(acceptable)})`)
+  console.log(`unstable         ${unstable}/${gradable.length} (${pct(unstable)}) — differed across runs`)
   console.log(`FALSE-LOW        ${falseLows.length} ${falseLows.length > 0 ? `→ ${falseLows.join(", ")}` : ""}`)
   console.log(`false-high       ${falseHighs.length} ${falseHighs.length > 0 ? `→ ${falseHighs.join(", ")}` : ""}`)
   if (falseLows.length > 0) {

@@ -57,7 +57,8 @@ export const signalSchema = z.object({
   origin: signalOriginSchema, // immutable user|system; how the signal was created. Gates annotation assignment; distinct from `source`.
   filters: filterSetSchema.nullish(), // FilterSet pre-gate for the evaluation; null/absent when unset
   assigneeId: cuidSchema.nullable(), // user (org member) manually assigned to triage this issue; null when unassigned
-  priority: signalPrioritySchema.nullable(), // manual triage priority; null when unset
+  priority: signalPrioritySchema.nullable(), // effective triage priority; null when unset
+  priorityFloor: signalPrioritySchema.nullish(), // intrinsic severity a rating established (rubric, detector floor, or explicit human choice); volume raises `priority` above it, never below
   centroid: signalCentroidSchema.nullable(), // running weighted sum of clustered score feedback embeddings (discovered signals only); null for user-created evaluation-backed signals
   clusteredAt: z.date().nullable(), // last time the centroid/cluster state was refreshed (discovered signals only); authoritative decay anchor (not updatedAt)
   resolvedAt: z.date().nullable(), // manual resolve; archived, detector keeps running unless keepMonitoring was declined
