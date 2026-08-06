@@ -181,7 +181,13 @@ async function main(): Promise<void> {
   let exact = 0
   let acceptable = 0
   let unstable = 0
-  const perCaseOutcomes: { readonly id: string; readonly signalSlug?: string; readonly matched: boolean }[] = []
+  const perCaseOutcomes: {
+    readonly id: string
+    readonly signalSlug?: string
+    readonly matched: boolean
+    readonly expected: SignalPriority
+    readonly predicted: SignalPriority | null
+  }[] = []
   const falseLows: string[] = []
   const falseHighs: string[] = []
   const reportCases: ReportCase[] = []
@@ -220,6 +226,8 @@ async function main(): Promise<void> {
       id: testCase.id,
       ...(testCase.signalSlug === undefined ? {} : { signalSlug: testCase.signalSlug }),
       matched,
+      expected: testCase.expected,
+      predicted: first,
     })
 
     const flag = matched ? "  " : withinAcceptable ? "~ " : "✗ "
@@ -255,6 +263,25 @@ async function main(): Promise<void> {
   console.log(`false-high       ${falseHighs.length} ${falseHighs.length > 0 ? `→ ${falseHighs.join(", ")}` : ""}`)
   if (falseLows.length > 0) {
     console.log("\nA false-low is delivered to nobody. Treat any non-zero count as a rubric bug.")
+  }
+
+  // The level is consumed as a threshold cut, not as a 4-way label. What decides
+  // whether this is good enough is per-cut: at the level a customer actually
+  // sets, how much do they lose and how much noise do they keep?
+  console.log("\nAs a delivery threshold — what a customer setting each cut would see:")
+  for (const cut of ["medium", "high", "urgent"] as const) {
+    const wanted = perCaseOutcomes.filter((entry) => rank(entry.expected) >= rank(cut))
+    const unwanted = perCaseOutcomes.filter((entry) => rank(entry.expected) < rank(cut))
+    const delivered = (entry: { readonly predicted: SignalPriority | null }) =>
+      entry.predicted !== null && rank(entry.predicted) >= rank(cut)
+    const kept = wanted.filter(delivered).length
+    const lost = wanted.length - kept
+    const noise = unwanted.filter(delivered).length
+    console.log(
+      `  >= ${cut.padEnd(6)} keeps ${kept}/${wanted.length} of what they wanted` +
+        `, loses ${lost}` +
+        `, plus ${noise} they did not (${unwanted.length} below the cut)`,
+    )
   }
 
   const htmlPath = values.html

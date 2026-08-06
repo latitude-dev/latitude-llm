@@ -183,6 +183,11 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     // which is what notifications read at creation, so nothing is delivered any
     // more quietly; it just stops outranking later measurement.
     const priorityFloor = detectorFloor
+    // `none` means the signal notifies nobody and dispatches nothing, which is
+    // the one failure here that reaches a customer as silence. On the span rather
+    // than a log line: `Effect.log*` has no Datadog bridge, so a span attribute
+    // is what a monitor can actually alert on.
+    yield* Effect.annotateCurrentSpan("severity", severity ?? "none")
 
     const sqlClient = yield* SqlClient
 
