@@ -1,8 +1,35 @@
 import { createHmac } from "node:crypto"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { createWebhookAdapter } from "./webhook-adapter.ts"
 
+const webhookUrl = "https://hooks.example.com/run"
+
+const dispatchWebhook = async () => {
+  const adapter = createWebhookAdapter(async () => ["8.8.8.8"])
+  const { Effect } = await import("effect")
+
+  return Effect.runPromise(
+    adapter.dispatch({
+      idempotencyKey: "webhook:incident.opened:src1",
+      prompt: "fix it",
+      context: {
+        trigger: "incident.opened",
+        organizationName: "Acme",
+        projectName: "App",
+        projectSlug: "app",
+        deepLinkUrl: "https://example.com",
+      },
+      config: { kind: "webhook", webhookUrl },
+      credential: { webhookSecret: "test-secret" },
+    }),
+  )
+}
+
 describe("createWebhookAdapter", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it("signs the payload with HMAC-SHA256", async () => {
     const secret = "test-secret"
     const calls: { headers: Headers; body: string }[] = []
@@ -18,26 +45,7 @@ describe("createWebhookAdapter", () => {
       }),
     )
 
-    const adapter = createWebhookAdapter(async () => ["8.8.8.8"])
-    const context = {
-      trigger: "incident.opened" as const,
-      organizationName: "Acme",
-      projectName: "App",
-      projectSlug: "app",
-      deepLinkUrl: "https://example.com",
-    }
-
-    await import("effect").then(({ Effect }) =>
-      Effect.runPromise(
-        adapter.dispatch({
-          idempotencyKey: "webhook:incident.opened:src1",
-          prompt: "fix it",
-          context,
-          config: { kind: "webhook", webhookUrl: "https://hooks.example.com/run" },
-          credential: { webhookSecret: secret },
-        }),
-      ),
-    )
+    await dispatchWebhook()
 
     expect(calls).toHaveLength(1)
     const call = calls[0]
@@ -45,7 +53,68 @@ describe("createWebhookAdapter", () => {
     const expectedSig = createHmac("sha256", secret).update(call.body).digest("hex")
     expect(call.headers.get("X-Latitude-Signature")).toBe(`sha256=${expectedSig}`)
     expect(call.headers.get("X-Latitude-Delivery")).toBe("webhook:incident.opened:src1")
+  })
 
-    vi.unstubAllGlobals()
+  it("returns external run metadata from a successful JSON acknowledgement", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              externalAgentId: "agent-scope",
+              externalRunId: "run-123",
+              deepLinkUrl: "https://agents.example.com/runs/run-123",
+            }),
+            { status: 202, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    )
+
+    await expect(dispatchWebhook()).resolves.toEqual({
+      status: "accepted",
+      externalAgentId: "agent-scope",
+      externalRunId: "run-123",
+      deepLinkUrl: "https://agents.example.com/runs/run-123",
+    })
+  })
+
+  it("keeps valid acknowledgement fields when other fields are invalid", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              externalAgentId: "agent-scope",
+              externalRunId: "   ",
+              deepLinkUrl: "javascript:alert(1)",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    )
+
+    await expect(dispatchWebhook()).resolves.toEqual({
+      status: "accepted",
+      externalAgentId: "agent-scope",
+      deepLinkUrl: webhookUrl,
+    })
+  })
+
+  it.each([
+    { name: "empty", response: () => new Response(null, { status: 204 }) },
+    { name: "plain-text", response: () => new Response("accepted", { status: 202 }) },
+    {
+      name: "malformed JSON",
+      response: () => new Response("{", { status: 200, headers: { "Content-Type": "application/json" } }),
+    },
+  ])("accepts a $name success response without metadata", async ({ response }) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => response()),
+    )
+
+    await expect(dispatchWebhook()).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
   })
 })

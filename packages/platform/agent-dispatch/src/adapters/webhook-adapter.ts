@@ -2,9 +2,30 @@ import { createHmac } from "node:crypto"
 import type { AgentDispatchAdapter } from "@domain/agent-dispatch"
 import { DispatchAdapterError } from "@domain/agent-dispatch"
 import { Effect } from "effect"
+import { z } from "zod"
 import { type HostLookup, resolvePublicWebhookUrl } from "../host-guard.ts"
 
 const signPayload = (secret: string, body: string): string => createHmac("sha256", secret).update(body).digest("hex")
+
+const httpUrlSchema = z
+  .string()
+  .trim()
+  .url()
+  .refine((value) => {
+    const protocol = new URL(value).protocol
+    return protocol === "http:" || protocol === "https:"
+  })
+
+const webhookAcknowledgementSchema = z.object({
+  externalAgentId: z.string().trim().min(1).optional().catch(undefined),
+  externalRunId: z.string().trim().min(1).optional().catch(undefined),
+  deepLinkUrl: httpUrlSchema.optional().catch(undefined),
+})
+
+const parseWebhookAcknowledgement = (value: unknown) => {
+  const parsed = webhookAcknowledgementSchema.safeParse(value)
+  return parsed.success ? parsed.data : {}
+}
 
 export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdapter => ({
   kind: "webhook",
@@ -64,6 +85,16 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
         return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: detail || response.status }))
       }
 
-      return { status: "accepted" as const, deepLinkUrl: target.webhookUrl }
+      const responseBody = yield* Effect.tryPromise(() => response.json() as Promise<unknown>).pipe(
+        Effect.orElseSucceed(() => undefined),
+      )
+      const acknowledgement = parseWebhookAcknowledgement(responseBody)
+
+      return {
+        status: "accepted" as const,
+        ...(acknowledgement.externalAgentId !== undefined ? { externalAgentId: acknowledgement.externalAgentId } : {}),
+        ...(acknowledgement.externalRunId !== undefined ? { externalRunId: acknowledgement.externalRunId } : {}),
+        deepLinkUrl: acknowledgement.deepLinkUrl ?? target.webhookUrl,
+      }
     }),
 })

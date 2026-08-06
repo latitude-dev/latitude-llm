@@ -36,6 +36,11 @@ Packages:
 
 **MCP:** The dispatcher never mints or forwards Latitude MCP credentials. The customer's Cursor environment or Claude routine must already have MCP connected (OAuth, once, out of band).
 
+Webhook receivers can return a successful JSON acknowledgement with optional `externalAgentId`, `externalRunId`, and
+`deepLinkUrl` fields. The adapter records valid non-empty IDs and absolute HTTP(S) links through the same dispatch ledger
+path as the built-in adapters. Acknowledgement parsing is best-effort: empty, non-JSON, malformed, or partially invalid
+success responses remain accepted, and the configured webhook URL is the fallback deep link.
+
 ## Configuration
 
 Settings → Integrations:

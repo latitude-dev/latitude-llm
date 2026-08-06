@@ -2261,6 +2261,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       vitest:
         specifier: 'catalog:'
