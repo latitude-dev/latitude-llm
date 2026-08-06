@@ -124,13 +124,20 @@ const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
     .join("\n")
 
 /**
- * A signal is usually one occurrence old when it is created, so there is no
- * impact to measure yet: this rates how bad the failure mechanism is, not how
- * widespread it turned out to be. Ties resolve upward because this value gates
- * notification delivery against a minimum-severity threshold — an over-rated
- * signal is noise, an under-rated one is never delivered and leaves no trace.
- * A dispatch gate wanting the opposite bias should narrow its own configured
- * tiers rather than push the rating down for every consumer.
+ * Rates the failure mechanism the prose describes. Asking instead how much the
+ * pattern should *interrupt* someone was tried and measurably lost: recall at a
+ * `high` threshold fell from 8-9 of 11 wanted signals to 3, because a tier
+ * defined by team workflow ("the next thing they pick up") is not answerable from
+ * one sentence of user feedback, while a tier defined by what happened in the
+ * conversation is exactly what that sentence describes. Ask a question the
+ * evidence can answer.
+ *
+ * A signal is one occurrence old at creation — `createSignalFromScoreUseCase`
+ * passes the single creating score — so there is no impact to measure yet and
+ * ties resolve upward: this value gates notification delivery, and an over-rated
+ * signal is noise where an under-rated one is never delivered and leaves no
+ * trace. `recomputeSignalLevelUseCase` takes the level over from measurement
+ * afterwards, which is what bounds the damage from rating it wrong here.
  */
 const SEVERITY_RUBRIC = [
   "Also return `severity`, rating how much attention this pattern deserves:",

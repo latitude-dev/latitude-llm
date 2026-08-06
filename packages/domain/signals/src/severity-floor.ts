@@ -2,26 +2,27 @@ import { ALERT_SEVERITIES } from "@domain/shared"
 import type { SignalPriority } from "./entities/signal.ts"
 
 /**
- * Minimum level for signals a deterministic detector authored. Where a flagger
- * names the failure class outright, that beats re-inferring it from prose: the
- * rubric's `urgent` tier is defined as leaked personal data or a safety breach,
- * which is exactly what `pii-leakage` matched on.
+ * Minimum level for signals a named detector authored. Where a flagger names the
+ * failure class outright, that beats re-inferring it from prose: data that left
+ * cannot be recalled, so `pii-leakage` is something somebody has to act on now
+ * whatever the prose sounds like.
  *
  * A floor only ever raises — the model may rate higher, never lower — so the
  * outcome stays explainable when someone asks why they were paged. Detectors
- * absent from this map are left entirely to the model; being deterministic is
- * not the same as being severe (`low-cache-hit-rate` is a cost observation).
+ * absent from this map are left entirely to the model; matching a detector is
+ * not the same as deserving attention (`low-cache-hit-rate` is a cost
+ * observation, and `jailbreaking` fires on an attempt that the guardrail may
+ * well have stopped — the one production signal a person triaged for it, they
+ * parked at `low`).
  *
  * Keyed on `metadata.flaggerSlug`, which flagger-authored scores already carry.
- * `nsfw` sits at `high` rather than `urgent` because its own patterns span
- * explicit, sexual and violent classes at different weights and the matched
- * class does not reach the score; `jailbreaking` because an attempt is not
- * evidence the guardrail actually gave way.
+ * `nsfw` sits at `high` rather than `urgent` because its patterns span explicit,
+ * sexual and violent classes at different weights and the matched class does not
+ * reach the score.
  */
 const FLAGGER_SEVERITY_FLOOR: Readonly<Record<string, SignalPriority>> = {
   "pii-leakage": "urgent",
   nsfw: "high",
-  jailbreaking: "high",
 }
 
 /**

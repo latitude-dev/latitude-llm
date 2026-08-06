@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest"
 import { applySeverityFloor, flaggerSeverityFloor } from "./severity-floor.ts"
 
 describe("flaggerSeverityFloor", () => {
-  it("floors the detectors whose failure class is defined as severe", () => {
+  it("floors the detectors whose failure class always needs acting on", () => {
     expect(flaggerSeverityFloor("pii-leakage")).toBe("urgent")
     expect(flaggerSeverityFloor("nsfw")).toBe("high")
-    expect(flaggerSeverityFloor("jailbreaking")).toBe("high")
   })
 
-  // Deterministic is not the same as severe: these are left to the model.
+  // Matching a detector is not the same as deserving attention. `jailbreaking`
+  // fires on an attempt the guardrail may have stopped, and the one production
+  // signal a person triaged for it they parked at `low` — so it is left to the
+  // rubric like any other detector.
   it("leaves other detectors and non-flagger scores unfloored", () => {
+    expect(flaggerSeverityFloor("jailbreaking")).toBeNull()
     expect(flaggerSeverityFloor("low-cache-hit-rate")).toBeNull()
     expect(flaggerSeverityFloor("frustration")).toBeNull()
     expect(flaggerSeverityFloor(undefined)).toBeNull()
