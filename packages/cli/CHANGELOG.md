@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.9.0] - 2026-08-06
+
+### Changed
+
+- Severity gained an `urgent` tier, on top of `low`, `medium` and `high`. `latitude monitors` accepts it for a monitor's rule, and incidents can print as `urgent`.
+
 ## [7.8.0] - 2026-08-05
 
 ### Added

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.9.0] - 2026-08-06
+
+### Changed
+
+- Severity gained an `urgent` tier, on top of `low`, `medium` and `high`. `client.monitors` accepts it when creating or updating a monitor's rule, and any incident you read can now come back as `urgent`. Existing values are untouched, so the only upgrade to make is widening code that matches on every severity.
+
 ## [9.8.0] - 2026-08-05
 
 ### Added
