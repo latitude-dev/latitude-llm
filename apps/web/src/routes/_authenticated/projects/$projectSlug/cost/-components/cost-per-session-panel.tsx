@@ -175,12 +175,14 @@ function FactorTile({ row }: { readonly row: SessionCostContribution }) {
           <Text.H6M color="foregroundMuted" ellipsis noWrap>
             {meta.label}
           </Text.H6M>
-          <Text.H3M color="foreground" noWrap className="tabular-nums">
-            <SplitValue formatted={meta.format(row.current)} />
-          </Text.H3M>
-          <TrendBadge color={color} icon={icon}>
-            {formatMultiplier(row.multiplier)}
-          </TrendBadge>
+          <div className="flex flex-col gap-0.5">
+            <Text.H3M color="foreground" noWrap className="tabular-nums">
+              <SplitValue formatted={meta.format(row.current)} />
+            </Text.H3M>
+            <TrendBadge color={color} icon={icon}>
+              {formatMultiplier(row.multiplier)}
+            </TrendBadge>
+          </div>
         </div>
       }
     >
@@ -222,17 +224,19 @@ function HeadlineBlock({
             <Text.H6M color="foregroundMuted" noWrap>
               {label}
             </Text.H6M>
-            <Text.H3M color="foreground" noWrap className="tabular-nums">
-              <SplitValue formatted={value} />
-            </Text.H3M>
-            <div className="flex flex-row items-center gap-1">
-              {changePct === null ? (
-                <Badge variant="muted">no comparison</Badge>
-              ) : (
-                <TrendBadge color={color} icon={icon}>
-                  {neutral ? "flat" : formatPercentage(Math.abs(changePct) / 100)}
-                </TrendBadge>
-              )}
+            <div className="flex flex-col gap-0.5">
+              <Text.H3M color="foreground" noWrap className="tabular-nums">
+                <SplitValue formatted={value} />
+              </Text.H3M>
+              <div className="flex flex-row items-center gap-1">
+                {changePct === null ? (
+                  <Badge variant="muted">no comparison</Badge>
+                ) : (
+                  <TrendBadge color={color} icon={icon}>
+                    {neutral ? "flat" : formatPercentage(Math.abs(changePct) / 100)}
+                  </TrendBadge>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex h-[47px] w-full items-end border-border border-b">

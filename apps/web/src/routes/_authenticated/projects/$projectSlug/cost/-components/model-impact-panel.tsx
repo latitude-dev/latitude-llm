@@ -1,6 +1,7 @@
 import { COST_PER_CALL_MIN_SAMPLE_CALLS, type CostBreakdown } from "@domain/spans"
 import { Badge, Skeleton, Text, Tooltip, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
+import { CircleDollarSignIcon } from "lucide-react"
 import { ChartHeader } from "../../-components/chart-header.tsx"
 import {
   costPerCallMultiple,
@@ -11,6 +12,7 @@ import {
   splitBreakdownRows,
 } from "./cost-formatters.ts"
 import { callsSeriesColor, otherSeriesColor, trendColor } from "./cost-series-colors.ts"
+import { EmptyState } from "./empty-state.tsx"
 
 // Models charted individually. Past this the paired bars stop being scannable, and
 // the remainder row keeps the shares adding to 100% anyway.
@@ -222,9 +224,7 @@ export function ModelImpactPanel({
           ))}
         </div>
       ) : !hasSpend || rows.length === 0 ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
-          <Text.H6 color="foregroundMuted">No spend recorded in this time window</Text.H6>
-        </div>
+        <EmptyState icon={CircleDollarSignIcon} message="No spend recorded in this time window" />
       ) : (
         <div className="flex flex-col gap-2 px-4 py-3">
           <div className="flex flex-col gap-2.5">

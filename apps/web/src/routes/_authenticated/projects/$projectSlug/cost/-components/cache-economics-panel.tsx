@@ -1,5 +1,5 @@
 import { CACHE_ECONOMICS_MIN_CALLS, CACHE_MIN_CACHEABLE_INPUT_TOKENS } from "@domain/spans"
-import type { BadgeProps, TextColor } from "@repo/ui"
+import type { BadgeProps } from "@repo/ui"
 import {
   Badge,
   cn,
@@ -47,6 +47,7 @@ import {
 import { microcentsToUsd } from "./cost-formatters.ts"
 import { callsSeriesColor, trendColor } from "./cost-series-colors.ts"
 import { CostTableHead } from "./cost-table-head.tsx"
+import { EmptyState } from "./empty-state.tsx"
 import { SplitValue } from "./split-value.tsx"
 
 const DASH = "—"
@@ -64,7 +65,6 @@ const STATE_META: Record<
     /** The same thing in a tile's worth of words. */
     readonly short: string
     readonly icon: typeof CircleIcon
-    readonly iconColor: TextColor
     /** Keeps every recommendation visually distinct in the flat "All models" table. */
     readonly badgeVariant: NonNullable<BadgeProps["variant"]>
   }
@@ -74,7 +74,6 @@ const STATE_META: Record<
     body: "Caching is off on calls where turning it on looks like it would pay for itself.",
     short: "Caching is off where it would pay.",
     icon: TriangleAlertIcon,
-    iconColor: "warningMutedForeground",
     badgeVariant: "warningMuted",
   },
   stopCaching: {
@@ -82,7 +81,6 @@ const STATE_META: Record<
     body: "These calls pay to write a cache that expires before anything reads it.",
     short: "Paying to write caches that expire unread.",
     icon: CircleSlashIcon,
-    iconColor: "destructive",
     badgeVariant: "destructiveMuted",
   },
   investigate: {
@@ -92,7 +90,6 @@ const STATE_META: Record<
     body: "These calls arrive close enough together to reuse a cached prompt, and miss anyway. Worth a look at what changes between them.",
     short: "The timing allows it; something in the prompt does not.",
     icon: SearchIcon,
-    iconColor: "warningMutedForeground",
     badgeVariant: "purple",
   },
   optimal: {
@@ -100,7 +97,6 @@ const STATE_META: Record<
     body: "Nothing to change on these.",
     short: "Nothing to change.",
     icon: CircleCheckIcon,
-    iconColor: "success",
     badgeVariant: "successMuted",
   },
   nothingToDo: {
@@ -108,13 +104,12 @@ const STATE_META: Record<
     body: "A cache would not pay off on these, or there are too few calls to tell yet.",
     short: "No cache would pay, or too few calls to tell.",
     icon: CircleIcon,
-    iconColor: "foregroundMuted",
     badgeVariant: "muted",
   },
 }
 
 const LIFETIME_TOOLTIP =
-  "Play with the cache time to see how our estimate changes. By model uses what each provider publishes: a day for most OpenAI models, which keep entries that long at no extra cost, and five minutes for Claude. The other values are what-ifs — a day is longer than Anthropic offers at all."
+  "Play with the cache time to see how our estimate changes. Received uses what each provider publishes: a day for most OpenAI models, which keep entries that long at no extra cost, and five minutes for Claude. The other values are what-ifs — a day is longer than Anthropic offers at all."
 
 const SAVINGS_TOOLTIP =
   "An estimate for the time window you picked, worked out from your token counts and each model's list prices. It will not match the spend figures elsewhere on this page exactly."
@@ -126,7 +121,7 @@ const formatLifetime = (lifetimeSeconds: number | null): string | null =>
   lifetimeSeconds === null ? null : formatDuration(lifetimeSeconds * 1_000_000_000)
 
 const lifetimeOptionLabel = (option: CacheLifetimeSelection): string =>
-  option === "documented" ? "By model" : (formatLifetime(option) ?? String(option))
+  option === "documented" ? "Received" : (formatLifetime(option) ?? String(option))
 
 const avgInputTokensPerCall = (row: CacheRowView): number =>
   row.calls > 0 ? (row.inputTokens + row.cacheReadTokens + row.cacheCreateTokens) / row.calls : 0
@@ -409,9 +404,10 @@ const CACHE_FINDING_TILES = ["stopCaching", "investigate", "cacheIt"] as const
 type CacheFindingKey = (typeof CACHE_FINDING_TILES)[number]
 
 /**
- * Bar-only colours for the three findings sharing one track. `investigate` and `cacheIt`
- * carry the same (amber) icon colour in `STATE_META`, which would make two of three
- * segments indistinguishable here — so the bar gets its own palette instead.
+ * Colours for the three findings, shared by their bar segment and their tile's icon so the
+ * two read as one thing. `investigate` and `cacheIt` used to carry the same (amber) icon
+ * colour in `STATE_META`, which would have made two of three bar segments indistinguishable
+ * — so this is its own palette rather than reusing that one.
  */
 const recommendationBarColor = (key: CacheFindingKey, isDark: boolean): string => {
   if (key === "investigate") return trendColor(isDark)
@@ -423,23 +419,29 @@ const recommendationBarColor = (key: CacheFindingKey, isDark: boolean): string =
 function RecommendationLine({
   tileKey,
   group,
+  isDark,
 }: {
   readonly tileKey: CacheFindingKey
   /** Null when no model is in this state at the selected lifetime. */
   readonly group: CacheStateGroup | null
+  readonly isDark: boolean
 }) {
   const meta = STATE_META[tileKey]
   return (
     <div className="flex w-[156px] flex-col gap-1">
       <div className="flex flex-row items-center gap-1.5">
-        <Icon icon={meta.icon} size="sm" color={group ? meta.iconColor : "foregroundMuted"} />
+        {group ? (
+          <Icon icon={meta.icon} size="sm" style={{ color: recommendationBarColor(tileKey, isDark) }} />
+        ) : (
+          <Icon icon={meta.icon} size="sm" color="foregroundMuted" />
+        )}
         <Text.H6M color="foregroundMuted" noWrap>
           {meta.label}
         </Text.H6M>
       </div>
       <div className="flex flex-col">
         <Text.H3M color={group ? "foreground" : "foregroundMuted"} noWrap className="tabular-nums">
-          {group ? <SplitValue formatted={formatPrice(microcentsToUsd(group.savingsMicrocents))} /> : DASH}
+          <SplitValue formatted={formatPrice(microcentsToUsd(group?.savingsMicrocents ?? 0))} />
         </Text.H3M>
         <Text.H6 color="foregroundMuted" noWrap>
           {group ? `${formatCount(group.rows.length)} ${group.rows.length === 1 ? "model" : "models"}` : "No models"}
@@ -449,22 +451,42 @@ function RecommendationLine({
   )
 }
 
-/** The three findings' savings on one shared track, so their relative size reads at a glance. */
+/**
+ * The three findings' savings against total spend, so the bar says how big the opportunity
+ * actually is rather than just how it splits three ways. The uncoloured remainder — spend
+ * the findings don't touch — is just the track's own `bg-muted`, the same grey the Cache
+ * hit rate bar beside it shows under its own fill, rather than a second, separately-coloured
+ * "rest" segment.
+ */
 function RecommendationsBar({
   groups,
-  recoverableMicrocents,
+  totalSpendMicrocents,
   isDark,
 }: {
   readonly groups: ReadonlyMap<CacheFindingKey, CacheStateGroup | null>
-  readonly recoverableMicrocents: number
+  readonly totalSpendMicrocents: number
   readonly isDark: boolean
 }) {
+  if (totalSpendMicrocents <= 0) {
+    return <div className="flex h-1 w-full overflow-hidden rounded-sm bg-muted" />
+  }
+
+  const recoverableMicrocents = CACHE_FINDING_TILES.reduce(
+    (sum, key) => sum + (groups.get(key)?.savingsMicrocents ?? 0),
+    0,
+  )
+  // Modeled savings and recorded spend come from different places and can disagree on a
+  // row priced oddly (see `recoverableShare`) — widening the denominator to whichever is
+  // larger keeps the three segments proportional to each other and the bar at exactly
+  // 100%, rather than letting a rare overshoot push it past its own edge.
+  const denominator = Math.max(totalSpendMicrocents, recoverableMicrocents)
+
   return (
     <div className="flex h-1 w-full overflow-hidden rounded-sm bg-muted">
       {CACHE_FINDING_TILES.map((key) => {
         const group = groups.get(key)
-        if (!group || recoverableMicrocents <= 0) return null
-        const share = group.savingsMicrocents / recoverableMicrocents
+        if (!group) return null
+        const share = group.savingsMicrocents / denominator
         return (
           <div
             key={key}
@@ -490,12 +512,12 @@ function RecommendationsCard({ summary, isDark }: { readonly summary: CacheSumma
       <div className="flex flex-1 flex-col justify-between gap-5 p-5 pt-4">
         <div className="flex flex-row gap-5">
           {CACHE_FINDING_TILES.map((key) => (
-            <RecommendationLine key={key} tileKey={key} group={groups.get(key) ?? null} />
+            <RecommendationLine key={key} tileKey={key} group={groups.get(key) ?? null} isDark={isDark} />
           ))}
         </div>
         <div className="flex flex-col gap-3">
-          <Text.H6M color="foregroundMuted">Bars show the impact of caching or not caching on average.</Text.H6M>
-          <RecommendationsBar groups={groups} recoverableMicrocents={summary.recoverableMicrocents} isDark={isDark} />
+          <Text.H6M color="foregroundMuted">The colour is what these findings could recover from total spend.</Text.H6M>
+          <RecommendationsBar groups={groups} totalSpendMicrocents={summary.totalSpendMicrocents} isDark={isDark} />
         </div>
       </div>
     </div>
@@ -509,7 +531,7 @@ function RecommendationsCard({ summary, isDark }: { readonly summary: CacheSumma
  */
 function CacheHitRateCard({ summary, isDark }: { readonly summary: CacheSummary; readonly isDark: boolean }) {
   const pct = (value: number): number => Math.max(0, Math.min(100, value * 100))
-  const barColor = callsSeriesColor(isDark)
+  const barColor = trendColor(isDark)
 
   return (
     <div className="flex flex-1 flex-col rounded-lg bg-secondary">
@@ -591,7 +613,7 @@ function CacheHitRateCard({ summary, isDark }: { readonly summary: CacheSummary;
 /**
  * What a chosen lifetime does not account for.
  *
- * Only on a chosen one, never on `By model`: the providers that offer a longer lifetime
+ * Only on a chosen one, never on `Received`: the providers that offer a longer lifetime
  * charge for it — Anthropic doubles the write price for an hour, Gemini bills explicit
  * cache storage — and the registry carries only the short-lifetime write price, so the
  * savings above are optimistic in exactly the direction the reader just leaned.
@@ -712,9 +734,7 @@ export function CacheEconomicsPanel({
       {isLoading || !economics || !summary ? (
         <TableSkeleton rows={4} cols={4} />
       ) : economics.rows.length === 0 ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center">
-          <Text.H6 color="foregroundMuted">No billable model usage in this time window</Text.H6>
-        </div>
+        <EmptyState icon={TableIcon} message="No billable model usage in this time window" />
       ) : view === "summary" ? (
         <CacheSummaryView summary={summary} selection={selection} isDark={isDark} />
       ) : (

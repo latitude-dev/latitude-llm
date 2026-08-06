@@ -32,6 +32,12 @@ export interface ChartBarSeries {
  * Line series. Set `area: true` to fill under the line (an area chart).
  * Set `stack` to stack with sibling lines that share the key — combined
  * with `area: true` this is the standard "stacked area" composition.
+ *
+ * `step` draws right-angle jumps between points instead of a straight or
+ * smoothed segment — the correct shape for a value that holds constant
+ * within a bucket and jumps at the boundary, rather than drifting between
+ * two buckets' centers. Ignored together with `smooth`; echarts itself
+ * only honours one.
  */
 export interface ChartLineSeries {
   readonly kind: "line"
@@ -42,6 +48,7 @@ export interface ChartLineSeries {
   readonly stack?: string
   readonly area?: boolean
   readonly smooth?: boolean
+  readonly step?: "start" | "middle" | "end"
 }
 
 export type ChartSeries = ChartBarSeries | ChartLineSeries
@@ -189,7 +196,7 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
       data: [...s.values],
       yAxisIndex,
       ...(s.stack ? { stack: s.stack } : {}),
-      smooth: s.smooth ?? false,
+      ...(s.step ? { step: s.step } : { smooth: s.smooth ?? false }),
       showSymbol: false,
       lineStyle: { width: s.area ? 1 : 2, color: s.color, opacity: s.area ? 0.8 : 1 },
       itemStyle: { color: s.color },

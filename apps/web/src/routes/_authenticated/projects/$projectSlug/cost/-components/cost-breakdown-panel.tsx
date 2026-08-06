@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
-import { TriangleAlertIcon } from "lucide-react"
+import { PieChartIcon, TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import {
@@ -25,6 +25,7 @@ import {
   splitBreakdownRows,
 } from "./cost-formatters.ts"
 import { CostTableHead } from "./cost-table-head.tsx"
+import { EmptyState } from "./empty-state.tsx"
 
 const DASH = "—"
 
@@ -401,9 +402,7 @@ export function CostBreakdownPanel({
       {isLoading || !breakdown ? (
         <TableSkeleton rows={5} cols={6} />
       ) : breakdown.rows.length === 0 ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center">
-          <Text.H6 color="foregroundMuted">{`No billable usage by ${meta.plural} in this time window`}</Text.H6>
-        </div>
+        <EmptyState icon={PieChartIcon} message={`No billable usage by ${meta.plural} in this time window`} />
       ) : (
         <BreakdownTable key={dimension} breakdown={breakdown} dimension={dimension} />
       )}

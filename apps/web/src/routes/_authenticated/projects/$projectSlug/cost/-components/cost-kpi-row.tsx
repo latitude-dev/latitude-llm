@@ -1,5 +1,5 @@
-import { Icon, Skeleton, Text, Tooltip } from "@repo/ui"
-import { formatCount, formatPrice } from "@repo/utils"
+import { Icon, ProviderIcon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { formatCount, formatPercentage, formatPrice } from "@repo/utils"
 import { InfoIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import type { CostOverviewRecord } from "../../../../../../domains/cost/cost.functions.ts"
@@ -67,6 +67,8 @@ export function CostKpiRow({
   readonly isLoading: boolean
 }): ReactNode {
   const topSpend = overview?.topSpendModel
+  const topSpendShare =
+    topSpend && overview && overview.totalMicrocents > 0 ? topSpend.costMicrocents / overview.totalMicrocents : null
   const perTrace = overview?.avgPerTraceMicrocents ?? 0
   const unit = bucketUnitLabel(bucketSeconds)
   // The same rollup vocabulary the traces and sessions tables use, so a total of
@@ -107,9 +109,22 @@ export function CostKpiRow({
       />
       <KpiTile
         label="Top spend model"
-        value={topSpend ? topSpend.model || "unknown" : DASH}
+        value={
+          topSpend ? (
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <ProviderIcon provider={topSpend.provider || "unknown"} size="sm" />
+              <span className="truncate">{topSpend.model || "unknown"}</span>
+            </span>
+          ) : (
+            DASH
+          )
+        }
         {...(topSpend
-          ? { detail: `${formatPrice(microcentsToUsd(topSpend.costMicrocents))} · ${topSpend.provider || "unknown"}` }
+          ? {
+              detail: `${formatPrice(microcentsToUsd(topSpend.costMicrocents))}${
+                topSpendShare === null ? "" : ` · ${formatPercentage(topSpendShare)} of spend`
+              }`,
+            }
           : {})}
         hint="The model with the highest total spend in this window — not the highest unit price."
         isLoading={isLoading}

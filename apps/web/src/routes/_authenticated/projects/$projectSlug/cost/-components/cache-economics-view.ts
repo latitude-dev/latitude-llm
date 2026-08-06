@@ -185,6 +185,8 @@ export interface CacheSummary {
   readonly recoverableMicrocents: number
   /** Against recorded spend in the window, so it is comparable with the rest of the page. */
   readonly recoverableShareOfSpend: number | null
+  /** The denominator behind `recoverableShareOfSpend` — what the findings bar sizes itself against. */
+  readonly totalSpendMicrocents: number
   readonly findings: readonly CacheStateGroup[]
   /** Measured across the whole project: cache reads over every input-side token. */
   readonly actualRate: number | null
@@ -227,6 +229,7 @@ export function buildCacheSummary({
     recoverableMicrocents,
     recoverableShareOfSpend:
       totals.costMicrocents > 0 ? Math.min(1, recoverableMicrocents / totals.costMicrocents) : null,
+    totalSpendMicrocents: totals.costMicrocents,
     findings,
     actualRate: totalTokens > 0 ? totals.cacheReadTokens / totalTokens : null,
     ceilingRate: measuredTokens > 0 ? warmTokens / measuredTokens : null,

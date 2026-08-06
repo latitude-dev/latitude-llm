@@ -1,5 +1,6 @@
-import { Button, Chart, type ChartSeries, cn, HistogramSkeleton, Tabs, Text, useChartCssTheme } from "@repo/ui"
+import { Button, Chart, type ChartSeries, cn, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
+import { CircleDollarSignIcon, HashIcon } from "lucide-react"
 import { useState } from "react"
 import type { ModelUsageSeriesRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { ChartHeader } from "../../-components/chart-header.tsx"
@@ -12,6 +13,7 @@ import {
   microcentsToUsd,
 } from "./cost-formatters.ts"
 import { modelColorAt, otherSeriesColor } from "./cost-series-colors.ts"
+import { EmptyState } from "./empty-state.tsx"
 import { ExpandableLegend } from "./expandable-legend.tsx"
 
 const CHART_HEIGHT = 260
@@ -173,13 +175,12 @@ export function ModelUsagePanel({
           <HistogramSkeleton height={CHART_HEIGHT} />
         </div>
       ) : isEmpty ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center px-4 py-3">
-          <Text.H6 color="foregroundMuted">
-            {measure === "cost"
-              ? "No spend recorded in this time window"
-              : "No token usage recorded in this time window"}
-          </Text.H6>
-        </div>
+        <EmptyState
+          icon={measure === "cost" ? CircleDollarSignIcon : HashIcon}
+          message={
+            measure === "cost" ? "No spend recorded in this time window" : "No token usage recorded in this time window"
+          }
+        />
       ) : (
         <div className="flex flex-col gap-2 px-4 py-3">
           <UsageLegend
@@ -206,12 +207,6 @@ export function ModelUsagePanel({
             }}
             ariaLabel="Model usage over time"
           />
-          <Text.H6 color="foregroundMuted">
-            {/* Ranking by volume would crowd out the expensive model that is the story. */}
-            Top {series?.models.length ?? 0} models by spend in this window
-            {(series?.otherModels ?? 0) > 0 ? `; the remaining ${series?.otherModels} are grouped as Other` : null}.
-            Select a model to isolate it.
-          </Text.H6>
         </div>
       )}
     </div>
