@@ -175,10 +175,14 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     const severity = deterministic
       ? (detectorFloor ?? "low")
       : applySeverityFloor(signalDetails.severity ?? null, detectorFloor)
-    // A rating asserts something intrinsic, so it becomes the floor volume cannot
-    // undercut. A deterministic detector asserted nothing about how much it
-    // matters, so it leaves the level entirely to volume.
-    const priorityFloor = deterministic ? detectorFloor : severity
+    // Only the detector floor persists as a floor — never the model's own rating.
+    // Graded against human-labelled production signals the rubric is exact on
+    // 44% of cases and wavers on a third of them, and its errors skew high, so
+    // treating its guess as a floor would permanently pin over-ratings that
+    // volume used to correct within hours. The guess still decides `priority`,
+    // which is what notifications read at creation, so nothing is delivered any
+    // more quietly; it just stops outranking later measurement.
+    const priorityFloor = detectorFloor
 
     const sqlClient = yield* SqlClient
 

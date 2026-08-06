@@ -204,6 +204,10 @@ describe("createSignalFromScoreUseCase", () => {
     )
 
     expect(issues.get(result.signalId)?.priority).toBe("urgent")
+    // A detector floor persists as a floor, unlike the model's own rating: a
+    // classifier with one job matched, which is a narrower claim than a rubric
+    // guessing from prose, so volume must not walk it back.
+    expect(issues.get(result.signalId)?.priorityFloor).toBe("urgent")
     expect(calls.generate[0]?.prompt).toContain("detector=pii-leakage")
     // Annotation values are placeholders, not verdicts — no score tag for them.
     expect(calls.generate[0]?.prompt).not.toContain("score=")
@@ -250,8 +254,11 @@ describe("createSignalFromScoreUseCase", () => {
     expect(calls.generate[0]?.prompt).not.toContain("`severity`")
   })
 
-  // What stops the volume recompute from demoting a rare-but-severe signal.
-  it("records a rated level as the floor volume cannot undercut", async () => {
+  // The model's guess decides the level notifications read, but it must not
+  // become a floor: the rubric over-rates far more often than it under-rates, and
+  // a floor would make those over-ratings permanent instead of letting the next
+  // volume recompute correct them.
+  it("does not let a model-rated level become a floor", async () => {
     const { layer: aiLayer } = createFakeAI({
       generate: createGenerateSignalDetailsWithSeverity("Token leakage", "Secrets appear in replies.", "urgent"),
     })
@@ -277,7 +284,8 @@ describe("createSignalFromScoreUseCase", () => {
       ),
     )
 
-    expect(issues.get(result.signalId)?.priorityFloor).toBe("urgent")
+    expect(issues.get(result.signalId)?.priority).toBe("urgent")
+    expect(issues.get(result.signalId)?.priorityFloor).toBeNull()
   })
 
   it("leaves no floor when the model rated nothing", async () => {
