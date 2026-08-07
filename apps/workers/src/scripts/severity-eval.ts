@@ -54,6 +54,8 @@ interface Case {
   readonly sourceType: SeverityFixture["sourceType"]
   readonly value: number
   readonly flaggerSlug?: string
+  /** A check wrote this line. From `source_id = 'SYSTEM'`; survives a missing slug. */
+  readonly machineAuthored?: boolean
   readonly expected: SignalPriority
   readonly acceptable: readonly SignalPriority[]
 }
@@ -67,7 +69,7 @@ const rate = (input: Case, organizationId: string, projectId: string) =>
         sourceType: input.sourceType,
         feedback: input.feedback,
         value: input.value,
-        machineAuthored: input.flaggerSlug !== undefined,
+        machineAuthored: input.machineAuthored === true,
         ...(input.flaggerSlug === undefined ? {} : { flaggerSlug: input.flaggerSlug }),
       },
     ],
@@ -113,6 +115,7 @@ const loadFileCases = (path: string): readonly Case[] => {
       ...(typeof (row.signalSlug ?? row.signal_slug) === "string"
         ? { signalSlug: String(row.signalSlug ?? row.signal_slug) }
         : {}),
+      machineAuthored: (row.machineAuthored ?? row.machine_authored) === true || Boolean(slug),
       expected: label,
       acceptable: LEVELS.filter((level) => Math.abs(rank(level) - rank(label)) <= 1),
     }
@@ -187,6 +190,7 @@ async function main(): Promise<void> {
     readonly id: string
     readonly signalSlug?: string
     readonly matched: boolean
+    readonly machineAuthored: boolean
     readonly expected: SignalPriority
     readonly predicted: SignalPriority | null
   }[] = []
@@ -237,6 +241,7 @@ async function main(): Promise<void> {
       id: testCase.id,
       ...(testCase.signalSlug === undefined ? {} : { signalSlug: testCase.signalSlug }),
       matched,
+      machineAuthored: testCase.machineAuthored === true,
       expected: testCase.expected,
       predicted: first,
     })
@@ -247,6 +252,18 @@ async function main(): Promise<void> {
     console.log(
       `${flag}${label} expected=${testCase.expected.padEnd(6)} got=${(first ?? "none").padEnd(6)}${stability}`,
     )
+  }
+
+  // Split by who wrote the text. Production rates detector-authored occurrences
+  // whenever the slug is missing, so they belong in the eval — but if agreement
+  // is much worse on them, that is a finding about rating templated output, not
+  // about the rubric's reading of prose.
+  const byAuthor = (machine: boolean) => perCaseOutcomes.filter((entry) => entry.machineAuthored === machine)
+  const human = byAuthor(false)
+  const detector = byAuthor(true)
+  if (human.length > 0 && detector.length > 0) {
+    const share = (group: typeof perCaseOutcomes) => `${group.filter((entry) => entry.matched).length}/${group.length}`
+    console.log(`by author        human-written ${share(human)} exact, detector-written ${share(detector)} exact`)
   }
 
   // An export with several occurrences per signal is correlated: one signal with
