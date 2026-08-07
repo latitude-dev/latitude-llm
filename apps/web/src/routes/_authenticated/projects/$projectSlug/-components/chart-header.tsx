@@ -45,7 +45,7 @@ export function ChartHeader({
   if (!window && !title && !actions) return null
 
   return (
-    <div className="flex min-h-11 items-center justify-between gap-2 px-4 pt-3">
+    <div className="flex min-h-11 items-start justify-between gap-2 px-4 pt-3">
       <div className="flex min-w-0 flex-col gap-0.5">
         {title ? <Text.H6 color={titleColor}>{title}</Text.H6> : null}
         {window ? (

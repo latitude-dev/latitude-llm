@@ -1,7 +1,7 @@
 import { COST_PER_CALL_MIN_SAMPLE_CALLS, type CostBreakdown } from "@domain/spans"
-import { Badge, Skeleton, Text, Tooltip, useChartCssTheme } from "@repo/ui"
+import { Badge, Icon, Skeleton, Text, Tooltip, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
-import { CircleDollarSignIcon } from "lucide-react"
+import { ArrowUpRightIcon, CircleDollarSignIcon } from "lucide-react"
 import { ChartHeader } from "../../-components/chart-header.tsx"
 import {
   costPerCallMultiple,
@@ -13,6 +13,7 @@ import {
 } from "./cost-formatters.ts"
 import { callsSeriesColor, otherSeriesColor, trendColor } from "./cost-series-colors.ts"
 import { EmptyState } from "./empty-state.tsx"
+import { useGoToModelSessions } from "./use-go-to-model-sessions.ts"
 
 // Models charted individually. Past this the paired bars stop being scannable, and
 // the remainder row keeps the shares adding to 100% anyway.
@@ -27,6 +28,8 @@ const AXIS_TICKS = [0, 0.25, 0.5, 0.75, 1] as const
 interface ImpactRow {
   readonly key: string
   readonly label: string
+  /** The unmodified dimension value, for filtering — "" for unknown model, distinct from `key`'s display fallback. */
+  readonly rawModel: string
   readonly spendShare: number
   readonly callsShare: number
   readonly costMicrocents: number
@@ -91,6 +94,30 @@ function SharePair({ row, isDark }: { readonly row: ImpactRow; readonly isDark: 
   )
 }
 
+/** Plain text for the remainder row and unknown models — there's nothing a single-model filter could mean there. */
+function ModelLabel({ row, onClick }: { readonly row: ImpactRow; readonly onClick: (model: string) => void }) {
+  if (row.isRemainder || !row.rawModel) {
+    return (
+      <Text.H6 color={row.isRemainder ? "foregroundMuted" : "foreground"} ellipsis noWrap>
+        {row.label}
+      </Text.H6>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(row.rawModel)}
+      aria-label={`View sessions for ${row.label}`}
+      className="group inline-flex min-w-0 items-center gap-1 text-left"
+    >
+      <Text.H6 color="foreground" ellipsis noWrap className="group-hover:text-primary">
+        {row.label}
+      </Text.H6>
+      <Icon icon={ArrowUpRightIcon} size="xs" color="foregroundMuted" className="shrink-0 group-hover:text-primary" />
+    </button>
+  )
+}
+
 function MultipleChip({ row }: { readonly row: ImpactRow }) {
   if (row.multiple === null) {
     return (
@@ -133,6 +160,7 @@ function buildImpactRows(breakdown: CostBreakdown): readonly ImpactRow[] {
   const rows: ImpactRow[] = visible.map((row) => ({
     key: row.key || "unknown",
     label: row.key || "unknown model",
+    rawModel: row.key,
     spendShare: shareOf(row.totalMicrocents, totals.totalMicrocents) ?? 0,
     callsShare: shareOf(row.calls, totals.calls) ?? 0,
     costMicrocents: row.totalMicrocents,
@@ -151,6 +179,7 @@ function buildImpactRows(breakdown: CostBreakdown): readonly ImpactRow[] {
     {
       key: "__other__",
       label: remainder.valueCount === 1 ? "Other (1 model)" : `Other (${remainder.valueCount} models)`,
+      rawModel: "",
       spendShare: shareOf(remainder.totalMicrocents, totals.totalMicrocents) ?? 0,
       callsShare: shareOf(remainder.calls, totals.calls) ?? 0,
       costMicrocents: remainder.totalMicrocents,
@@ -174,15 +203,18 @@ export function ModelImpactPanel({
   rangeFromIso,
   rangeToIso,
   isAllTime,
+  projectSlug,
   isLoading,
 }: {
   readonly breakdown: CostBreakdown | undefined
   readonly rangeFromIso: string
   readonly rangeToIso: string
   readonly isAllTime: boolean
+  readonly projectSlug: string
   readonly isLoading: boolean
 }) {
   const { isDark } = useChartCssTheme()
+  const goToModelSessions = useGoToModelSessions(projectSlug)
   const rows = breakdown ? buildImpactRows(breakdown) : []
   const hasSpend = (breakdown?.totals.totalMicrocents ?? 0) > 0
 
@@ -231,9 +263,7 @@ export function ModelImpactPanel({
             {rows.map((row) => (
               <div key={row.key} className="flex flex-row items-center gap-3">
                 <div className="flex w-32 shrink-0 flex-col">
-                  <Text.H6 color={row.isRemainder ? "foregroundMuted" : "foreground"} ellipsis noWrap>
-                    {row.label}
-                  </Text.H6>
+                  <ModelLabel row={row} onClick={goToModelSessions} />
                 </div>
                 <SharePair row={row} isDark={isDark} />
                 <div className="flex w-16 shrink-0 justify-end">

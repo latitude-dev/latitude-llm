@@ -1,4 +1,4 @@
-import { Icon, ProviderIcon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { cn, Icon, ProviderIcon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPercentage, formatPrice } from "@repo/utils"
 import { InfoIcon } from "lucide-react"
 import type { ReactNode } from "react"
@@ -6,6 +6,7 @@ import type { CostOverviewRecord } from "../../../../../../domains/cost/cost.fun
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { bucketUnitLabel, microcentsToUsd } from "./cost-formatters.ts"
 import { SplitValue } from "./split-value.tsx"
+import { useGoToModelSessions } from "./use-go-to-model-sessions.ts"
 
 const DASH = "—"
 
@@ -59,14 +60,17 @@ export function CostKpiRow({
   overview,
   dailyAverageMicrocents,
   bucketSeconds,
+  projectSlug,
   isLoading,
 }: {
   readonly overview: CostOverviewRecord | undefined
   readonly dailyAverageMicrocents: number | null
   readonly bucketSeconds: number
+  readonly projectSlug: string
   readonly isLoading: boolean
 }): ReactNode {
   const topSpend = overview?.topSpendModel
+  const goToModelSessions = useGoToModelSessions(projectSlug)
   const topSpendShare =
     topSpend && overview && overview.totalMicrocents > 0 ? topSpend.costMicrocents / overview.totalMicrocents : null
   const perTrace = overview?.avgPerTraceMicrocents ?? 0
@@ -111,10 +115,19 @@ export function CostKpiRow({
         label="Top spend model"
         value={
           topSpend ? (
-            <span className="inline-flex min-w-0 items-center gap-1.5">
+            <button
+              type="button"
+              disabled={!topSpend.model}
+              onClick={() => goToModelSessions(topSpend.model)}
+              aria-label={topSpend.model ? `View sessions for ${topSpend.model}` : "Unknown model"}
+              className={cn("inline-flex min-w-0 items-center gap-1.5 text-left transition-colors", {
+                "cursor-pointer hover:text-primary": topSpend.model,
+                "cursor-default": !topSpend.model,
+              })}
+            >
               <ProviderIcon provider={topSpend.provider || "unknown"} size="sm" />
               <span className="truncate">{topSpend.model || "unknown"}</span>
-            </span>
+            </button>
           ) : (
             DASH
           )

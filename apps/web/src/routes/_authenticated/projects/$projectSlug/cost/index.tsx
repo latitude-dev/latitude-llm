@@ -60,6 +60,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/cost
 
 function CostPageContent() {
   const project = useRouteProject()
+  const projectSlug = project.slug
   const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
   const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })
   const tw = useAnalyticsTimeWindow({
@@ -200,6 +201,7 @@ function CostPageContent() {
           overview={overview}
           dailyAverageMicrocents={dailyAverageMicrocents}
           bucketSeconds={bucketSeconds}
+          projectSlug={projectSlug}
           isLoading={overviewLoading || seriesLoading || totalSeriesLoading}
         />
         <CostOverTimePanel
@@ -237,12 +239,13 @@ function CostPageContent() {
               rangeFromIso={range.fromIso}
               rangeToIso={range.toIso}
               isAllTime={tw.isAllTime}
+              projectSlug={projectSlug}
               isLoading={modelBreakdownLoading}
             />
           </div>
         </div>
         <SectionHeading>Cache</SectionHeading>
-        <CacheEconomicsPanel economics={cacheEconomics} isLoading={cacheEconomicsLoading} />
+        <CacheEconomicsPanel economics={cacheEconomics} projectSlug={projectSlug} isLoading={cacheEconomicsLoading} />
         <CostBreakdownPanel
           breakdown={breakdown}
           dimension={dimension}

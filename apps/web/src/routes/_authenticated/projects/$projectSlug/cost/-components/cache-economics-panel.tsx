@@ -18,6 +18,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPercentage, formatPrice } from "@repo/utils"
 import {
+  ArrowUpRightIcon,
   CircleCheckIcon,
   CircleIcon,
   CircleSlashIcon,
@@ -49,6 +50,7 @@ import { callsSeriesColor, trendColor } from "./cost-series-colors.ts"
 import { CostTableHead } from "./cost-table-head.tsx"
 import { EmptyState } from "./empty-state.tsx"
 import { SplitValue } from "./split-value.tsx"
+import { useGoToModelSessions } from "./use-go-to-model-sessions.ts"
 
 const DASH = "—"
 
@@ -298,7 +300,15 @@ function RecommendationCell({ row }: { readonly row: CacheRowView }) {
   )
 }
 
-function CacheRow({ row, isDark }: { readonly row: CacheRowView; readonly isDark: boolean }) {
+function CacheRow({
+  row,
+  isDark,
+  onModelClick,
+}: {
+  readonly row: CacheRowView
+  readonly isDark: boolean
+  readonly onModelClick: (model: string) => void
+}) {
   const spend = rollupCostDisplay({
     costTotalMicrocents: row.costMicrocents,
     unpricedSpanCount: row.unpricedCalls,
@@ -309,9 +319,28 @@ function CacheRow({ row, isDark }: { readonly row: CacheRowView; readonly isDark
     <TableRow className="border-background bg-secondary/40 [&>td]:py-2.5">
       <TableCell>
         <div className="flex min-w-0 flex-row items-center gap-2">
-          <Text.H5 color="foregroundMuted" ellipsis noWrap>
-            {row.model || "unknown model"}
-          </Text.H5>
+          {row.model ? (
+            <button
+              type="button"
+              onClick={() => onModelClick(row.model)}
+              aria-label={`View sessions for ${row.model}`}
+              className="group inline-flex min-w-0 items-center gap-1 text-left"
+            >
+              <Text.H5 color="foregroundMuted" ellipsis noWrap className="group-hover:text-primary">
+                {row.model}
+              </Text.H5>
+              <Icon
+                icon={ArrowUpRightIcon}
+                size="xs"
+                color="foregroundMuted"
+                className="shrink-0 group-hover:text-primary"
+              />
+            </button>
+          ) : (
+            <Text.H5 color="foregroundMuted" ellipsis noWrap>
+              unknown model
+            </Text.H5>
+          )}
           {row.verdictDependsOnLifetime ? (
             <Tooltip
               asChild
@@ -516,11 +545,32 @@ function RecommendationsCard({ summary, isDark }: { readonly summary: CacheSumma
           ))}
         </div>
         <div className="flex flex-col gap-3">
-          <Text.H6M color="foregroundMuted">The colour is what these findings could recover from total spend.</Text.H6M>
+          <Text.H6M color="foregroundMuted">The colour is what these findings could recover from total spend</Text.H6M>
           <RecommendationsBar groups={groups} totalSpendMicrocents={summary.totalSpendMicrocents} isDark={isDark} />
         </div>
       </div>
     </div>
+  )
+}
+
+/** How far the actual rate sits from what the traffic's timing would allow, worded like the design's callout. */
+function HitRateCaption({ summary }: { readonly summary: CacheSummary }) {
+  if (summary.actualRate === null || summary.ceilingRate === null) {
+    return <Text.H6M color="foregroundMuted">How much of your prompts came from cache</Text.H6M>
+  }
+  const diff = summary.ceilingRate - summary.actualRate
+  // Models with no measurable cadence are left out of the ceiling rather than counted as
+  // nothing, so say how much of the traffic it covers.
+  const measuredNote =
+    summary.measuredTokenShare < 0.99
+      ? `, measured on ${formatPercentage(summary.measuredTokenShare)} of your tokens`
+      : ""
+  return (
+    <Text.H6M color="foregroundMuted">
+      {"You're "}
+      {diff > 0 ? <Text.H6B color="foregroundMuted">{`${formatPercentage(diff)} behind`}</Text.H6B> : "at"}
+      {` the possible cache hit rate of ${formatPercentage(summary.ceilingRate)}${measuredNote}`}
+    </Text.H6M>
   )
 }
 
@@ -579,27 +629,17 @@ function CacheHitRateCard({ summary, isDark }: { readonly summary: CacheSummary;
           </div>
         </div>
         <div className="flex flex-col gap-3">
-          <Text.H6M color="foregroundMuted">
-            {summary.ceilingRate === null
-              ? "How much of your prompts came from cache."
-              : `The pale bar is what the timing of your calls would allow${
-                  // Models with no measurable cadence are left out of the ceiling rather than
-                  // counted as nothing, so say how much of the traffic it covers.
-                  summary.measuredTokenShare < 0.99
-                    ? `, measured on ${formatPercentage(summary.measuredTokenShare)} of your tokens`
-                    : ""
-                }.`}
-          </Text.H6M>
+          <HitRateCaption summary={summary} />
           <div className="relative h-1 w-full overflow-hidden rounded-sm bg-muted">
             {summary.ceilingRate === null ? null : (
               <div
-                className="absolute inset-y-0 left-0 opacity-25"
+                className="absolute inset-y-0 left-0 opacity-50"
                 style={{ width: `${pct(summary.ceilingRate)}%`, backgroundColor: barColor }}
                 aria-hidden="true"
               />
             )}
             <div
-              className="absolute inset-y-0 left-0"
+              className="absolute inset-y-0 left-0 rounded-r-full"
               style={{ width: `${pct(summary.actualRate ?? 0)}%`, backgroundColor: barColor }}
               aria-hidden="true"
             />
@@ -656,12 +696,15 @@ function CacheSummaryView({
  */
 export function CacheEconomicsPanel({
   economics,
+  projectSlug,
   isLoading,
 }: {
   readonly economics: CacheEconomicsRecord | undefined
+  readonly projectSlug: string
   readonly isLoading: boolean
 }) {
   const { isDark } = useChartCssTheme()
+  const goToModelSessions = useGoToModelSessions(projectSlug)
   const [selection, setSelection] = useState<CacheLifetimeSelection>("documented")
   const [view, setView] = useState<CacheView>("summary")
   const [sort, setSort] = useState<{ column: CacheSortColumn; direction: "asc" | "desc" }>({
@@ -762,7 +805,12 @@ export function CacheEconomicsPanel({
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <CacheRow key={`${row.provider}/${row.model}`} row={row} isDark={isDark} />
+              <CacheRow
+                key={`${row.provider}/${row.model}`}
+                row={row}
+                isDark={isDark}
+                onModelClick={goToModelSessions}
+              />
             ))}
           </TableBody>
         </Table>
