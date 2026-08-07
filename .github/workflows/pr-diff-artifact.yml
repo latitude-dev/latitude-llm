@@ -13,6 +13,10 @@ on:
         required: false
         default: development
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   generate-diff-artifact:
     if: github.repository == 'latitude-dev/latitude-llm' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
