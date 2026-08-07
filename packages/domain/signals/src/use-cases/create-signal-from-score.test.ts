@@ -6,7 +6,7 @@ import { createProject, ProjectRepository } from "@domain/projects"
 import { createFakeProjectRepository } from "@domain/projects/testing"
 import { type AnnotationScore, type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { OrganizationId, ProjectId, ScoreId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { OrganizationId, ProjectId, ScoreId, SessionId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { SignalRepository } from "../ports/signal-repository.ts"
@@ -263,6 +263,91 @@ describe("createSignalFromScoreUseCase", () => {
   // become a floor: the rubric over-rates far more often than it under-rates, and
   // a floor would make those over-ratings permanent instead of letting the next
   // volume recompute correct them.
+  // Several independent checks matching one conversation is evidence no single
+  // line of feedback carries. Gathered in the use-case rather than the flagger
+  // pass, so human annotations and evaluations get the same session context.
+  it("tells the model which other detectors matched the same session", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: createGenerateSignalDetailsWithSeverity("Tool loop", "The agent repeats a call.", "high"),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository } = createFakeSignalRepository()
+    const sessionId = SessionId("session-with-several-detectors")
+    const score = makeScore({
+      sessionId,
+      sourceId: "SYSTEM",
+      metadata: { rawFeedback: "Repeated identical tool calls.", flaggerSlug: "trashing" },
+    })
+    scores.set(score.id, score)
+    for (const [index, slug] of ["frustration", "incompletion"].entries()) {
+      const sibling = makeScore({
+        id: ScoreId(`sibling${index}`.padEnd(24, "x")),
+        sessionId,
+        sourceId: "SYSTEM",
+        metadata: { rawFeedback: "Another detector fired.", flaggerSlug: slug },
+      })
+      scores.set(sibling.id, sibling)
+    }
+    const outbox = createFakeOutboxEventWriter()
+
+    await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+      ),
+    )
+
+    const tags = /^1\. \[([^\]]*)\]/m.exec(calls.generate[0]?.prompt ?? "")?.[1] ?? ""
+    // Sorted, and the occurrence's own detector is not listed alongside itself.
+    expect(tags).toContain("alongside=frustration,incompletion")
+    expect(tags).toContain("detector=trashing")
+  })
+
+  it("omits the alongside tag when nothing else matched the session", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: createGenerateSignalDetailsWithSeverity("Tool loop", "The agent repeats a call.", "high"),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository } = createFakeSignalRepository()
+    const score = makeScore({
+      sessionId: SessionId("lonely-session"),
+      sourceId: "SYSTEM",
+      metadata: { rawFeedback: "Repeated identical tool calls.", flaggerSlug: "trashing" },
+    })
+    scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
+
+    await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+      ),
+    )
+
+    // The tag block, not the whole prompt: the rubric explains what an
+    // `alongside=` tag means, so a bare substring search hits the instructions.
+    const tags = /^1\. \[([^\]]*)\]/m.exec(calls.generate[0]?.prompt ?? "")?.[1] ?? ""
+    expect(tags).not.toContain("alongside=")
+  })
+
   it("does not let a model-rated level become a floor", async () => {
     const { layer: aiLayer } = createFakeAI({
       generate: createGenerateSignalDetailsWithSeverity("Token leakage", "Secrets appear in replies.", "urgent"),

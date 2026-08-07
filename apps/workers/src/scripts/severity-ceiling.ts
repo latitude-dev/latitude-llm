@@ -196,8 +196,11 @@ const aggregate = (paths: readonly string[], sourcePath?: string, emitPath?: str
     )
   }
 
+  // A ceiling needs two people; a dataset does not. One rater's labels are still
+  // a valid target, so the emit happens either way.
   if (files.length < 2) {
     console.log("\nOnly one rater — no ceiling yet. Two is the minimum, three is better.")
+    if (sourcePath !== undefined && emitPath !== undefined) emitCases(files, sourcePath, emitPath)
     return
   }
 

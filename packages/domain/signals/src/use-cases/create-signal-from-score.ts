@@ -2,8 +2,9 @@ import { resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
 import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { generateId, type NotFoundError, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import { generateId, type NotFoundError, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
+import { CO_OCCURRENCE_SAMPLE_LIMIT } from "../constants.ts"
 import type { Signal, SignalPriority, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
@@ -77,6 +78,37 @@ const flaggerSlugOf = (score: Score): string | undefined => {
   const slug = (score.metadata as { flaggerSlug?: unknown } | null)?.flaggerSlug
   return typeof slug === "string" && slug.length > 0 ? slug : undefined
 }
+
+/**
+ * Other detectors that matched the same session.
+ *
+ * Three checks firing on one conversation says something the prose of any single
+ * one does not, and it is a fact rather than a reading of a sentence — the kind
+ * of evidence the rating is short of. One indexed query on
+ * `(organization_id, project_id, session_id, created_at, id)`.
+ *
+ * Best-effort by nature: the sibling scores are written during the same screening
+ * pass, so a signal created from the first of them may see fewer than a signal
+ * created from the last. An undercount weakens the evidence, it never invents any,
+ * and a failed read is not worth blocking signal creation over.
+ */
+const coOccurringDetectors = (score: Score, exclude: string | undefined) =>
+  Effect.gen(function* () {
+    if (score.sessionId === null) return []
+    const scoreRepository = yield* ScoreRepository
+    const siblings = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
+      projectId: ProjectId(score.projectId),
+      sessionId: score.sessionId,
+      limit: CO_OCCURRENCE_SAMPLE_LIMIT,
+    })
+    const slugs = new Set<string>()
+    for (const sibling of siblings) {
+      if (sibling.id === score.id) continue
+      const slug = flaggerSlugOf(sibling)
+      if (slug !== undefined && slug !== exclude) slugs.add(slug)
+    }
+    return [...slugs].sort()
+  }).pipe(Effect.catchCause(() => Effect.succeed<readonly string[]>([])))
 
 const buildNewSignalFromScore = ({
   score,
@@ -157,6 +189,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     // how much it matters, starting at `low` for this first occurrence and moving
     // with `recomputeSignalLevelUseCase` from there.
     const deterministic = isDeterministicFlagger(flaggerSlug)
+    const alongside = yield* coOccurringDetectors(initialScoreResult.score, flaggerSlug)
     const signalDetails = yield* generateSignalDetailsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -166,6 +199,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           feedback: initialScoreResult.score.feedback,
           value: initialScoreResult.score.value,
           machineAuthored: initialScoreResult.score.sourceId === "SYSTEM",
+          ...(alongside.length === 0 ? {} : { coOccurringDetectors: alongside }),
           ...(flaggerSlug === undefined ? {} : { flaggerSlug }),
         },
       ],

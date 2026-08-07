@@ -299,6 +299,14 @@ export const SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL = {
   reasoning: "high",
 } as const
 
+/**
+ * Sibling flagger annotations sampled from a session when collecting the
+ * detectors that matched alongside a new signal's occurrence. Detector variety
+ * on one session converges well before this, so the cap only bounds the scan on
+ * a pathological session.
+ */
+export const CO_OCCURRENCE_SAMPLE_LIMIT = 20
+
 /** Maximum recent assigned issue occurrences used when regenerating existing issue details. */
 export const SIGNAL_DETAILS_MAX_OCCURRENCES = 25
 

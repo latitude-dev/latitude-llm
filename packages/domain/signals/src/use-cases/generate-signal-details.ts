@@ -70,6 +70,8 @@ export interface SignalOccurrenceInput {
   readonly flaggerSlug?: string
   /** A detector wrote this line, not a person. `sourceType` cannot say: flagger scores are annotations too. */
   readonly machineAuthored?: boolean
+  /** Other detectors that matched the same session. Evidence the prose cannot carry. */
+  readonly coOccurringDetectors?: readonly string[]
 }
 
 export interface GeneratedSignalDetails {
@@ -111,6 +113,9 @@ const occurrenceTags = (occurrence: SignalOccurrenceInput): string => {
   // so without this the prompt reads templated check output as hand-written.
   tags.push(`author=${occurrence.machineAuthored === true ? "detector" : "human"}`)
   if (occurrence.flaggerSlug !== undefined) tags.push(`detector=${occurrence.flaggerSlug}`)
+  if (occurrence.coOccurringDetectors !== undefined && occurrence.coOccurringDetectors.length > 0) {
+    tags.push(`alongside=${occurrence.coOccurringDetectors.join(",")}`)
+  }
   // Only an evaluation produces a judged number. An annotation carries qualitative
   // text and a placeholder `0` — measured across every triaged signal in
   // production, all of them — so tagging it as a score would read to the model as
@@ -153,6 +158,7 @@ export const SEVERITY_RUBRIC = [
   "Use the whole scale. Most patterns are not `medium` or `high`; those two are for genuinely middling cases, not a safe default when a case could be read either way. If the description fits `urgent` or `low`, answer that.",
   "Rate the mechanism itself, not how often it appears: a new pattern is typically a single occurrence, so frequency is not evidence yet. When the occurrences do not say enough to separate two levels, choose the higher one.",
   "Weigh the tags on each occurrence as evidence. `author=human` means a person stopped to write this up, which is itself weak evidence somebody cared; `author=detector` means a check emitted templated text and the wording carries no judgement about how much it matters. A `detector=` slug names the failure class that check matched. A `score=` tag, present only on evaluation-sourced occurrences, is the judge verdict where 0 is worst.",
+  "An `alongside=` tag lists other detectors that matched the same conversation. Several independent checks firing on one session is evidence the run went badly in a way no single line of feedback shows, so let it raise your reading; its absence means nothing, because most sessions are only ever screened by one matching check.",
 ].join("\n")
 
 const buildPrompt = (input: {
