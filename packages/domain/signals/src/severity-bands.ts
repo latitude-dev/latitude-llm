@@ -20,6 +20,26 @@ const IMPACT_BANDS: readonly { readonly minPercent: number; readonly level: Sign
   { minPercent: 0, level: "low" },
 ]
 
+/**
+ * Sessions a signal must touch before a share is treated as a measurement at all.
+ *
+ * A ratio with a tiny numerator is noise wearing a percentage sign. Measured
+ * across 90 days of production, a quarter of the signals the bands called
+ * `urgent` affected exactly one session — arithmetically they must sit in
+ * projects of five sessions or fewer, since one session cannot otherwise reach
+ * 20% — and 61% of `high` affected fewer than five.
+ *
+ * Guards the numerator rather than the project size on purpose. A minimum
+ * project size would also block the genuine case: 40 of 80 sessions really is
+ * urgent, and a small customer should not be unreachable by volume for being
+ * small. What is never true is that one session is widespread.
+ *
+ * Floors are unaffected — a `pii-leakage` signal is still urgent on its first
+ * occurrence, and escalation still raises. This only stops *volume* from
+ * claiming a spread it has not seen.
+ */
+const MIN_AFFECTED_SESSIONS = 5
+
 const rank = (level: SignalPriority): number => ALERT_SEVERITIES.indexOf(level)
 
 const raiseOneTier = (level: SignalPriority): SignalPriority =>
@@ -28,6 +48,8 @@ const raiseOneTier = (level: SignalPriority): SignalPriority =>
 export interface LevelForImpactInput {
   /** Fraction in `[0, 1]` — `affectedSessionsPercent` from the impact rollup. */
   readonly affectedSessionsPercent: number
+  /** Distinct sessions the signal touches. Below `MIN_AFFECTED_SESSIONS` the share is not trusted. */
+  readonly affectedSessions: number
   /** The signal is inside an open escalation right now. */
   readonly escalating: boolean
   /**
@@ -52,9 +74,15 @@ export interface LevelForImpactInput {
  * the volume model are still live above it, but a card number read back to one
  * customer is urgent at any share of traffic, and no measurement of how rare it
  * is should say otherwise.
+ *
+ * Too few affected sessions and the share is not read at all: see
+ * `MIN_AFFECTED_SESSIONS`.
  */
 export const levelForImpact = (input: LevelForImpactInput): SignalPriority => {
-  const band = IMPACT_BANDS.find((candidate) => input.affectedSessionsPercent >= candidate.minPercent)
+  const measurable = input.affectedSessions >= MIN_AFFECTED_SESSIONS
+  const band = measurable
+    ? IMPACT_BANDS.find((candidate) => input.affectedSessionsPercent >= candidate.minPercent)
+    : undefined
   const base = band?.level ?? "low"
   const measured = input.escalating ? raiseOneTier(base) : base
   const floor = input.floor

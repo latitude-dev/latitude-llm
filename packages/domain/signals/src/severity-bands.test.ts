@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { levelForImpact } from "./severity-bands.ts"
 
+// Well above the sample floor: these cases are about the bands, not the guard.
 const at = (affectedSessionsPercent: number, escalating = false) =>
-  levelForImpact({ affectedSessionsPercent, escalating })
+  levelForImpact({ affectedSessionsPercent, escalating, affectedSessions: 50 })
 
 describe("levelForImpact", () => {
   it("reads the share of sessions, not a count", () => {
@@ -38,22 +39,53 @@ describe("levelForImpact", () => {
     expect(at(0.02, false)).toBe("medium")
   })
 
+  // A quarter of the signals these bands called `urgent` in production affected
+  // exactly one session — arithmetically they sit in projects of five sessions or
+  // fewer, since one session cannot otherwise reach 20%.
+  it("does not read a share off too few sessions", () => {
+    expect(levelForImpact({ affectedSessionsPercent: 0.34, escalating: false, affectedSessions: 1 })).toBe("low")
+    expect(levelForImpact({ affectedSessionsPercent: 0.8, escalating: false, affectedSessions: 4 })).toBe("low")
+  })
+
+  it("reads the share as soon as enough sessions are affected", () => {
+    expect(levelForImpact({ affectedSessionsPercent: 0.34, escalating: false, affectedSessions: 5 })).toBe("urgent")
+  })
+
+  // The guard is on volume's claim, not on severity. A detector floor and an
+  // escalation both still apply to a signal nobody has seen spread.
+  it("leaves floors and escalation untouched below the sample floor", () => {
+    expect(
+      levelForImpact({ affectedSessionsPercent: 1, escalating: false, affectedSessions: 1, floor: "urgent" }),
+    ).toBe("urgent")
+    expect(levelForImpact({ affectedSessionsPercent: 1, escalating: true, affectedSessions: 1 })).toBe("medium")
+  })
+
   // A card number read back to one customer out of five thousand sessions. The
   // measurement says nobody is affected and it is still urgent.
   it("never reports below the floor, however rare the signal is", () => {
-    expect(levelForImpact({ affectedSessionsPercent: 1 / 5000, escalating: false, floor: "urgent" })).toBe("urgent")
+    expect(
+      levelForImpact({ affectedSessionsPercent: 1 / 5000, escalating: false, affectedSessions: 50, floor: "urgent" }),
+    ).toBe("urgent")
   })
 
   it("lets volume raise the level above the floor", () => {
-    expect(levelForImpact({ affectedSessionsPercent: 0.3, escalating: false, floor: "low" })).toBe("urgent")
+    expect(
+      levelForImpact({ affectedSessionsPercent: 0.3, escalating: false, affectedSessions: 50, floor: "low" }),
+    ).toBe("urgent")
   })
 
   it("still escalates a floored signal one tier", () => {
-    expect(levelForImpact({ affectedSessionsPercent: 0.06, escalating: true, floor: "medium" })).toBe("urgent")
+    expect(
+      levelForImpact({ affectedSessionsPercent: 0.06, escalating: true, affectedSessions: 50, floor: "medium" }),
+    ).toBe("urgent")
   })
 
   it("ignores a floor at or below the measurement", () => {
-    expect(levelForImpact({ affectedSessionsPercent: 0.05, escalating: false, floor: "high" })).toBe("high")
-    expect(levelForImpact({ affectedSessionsPercent: 0.05, escalating: false, floor: null })).toBe("high")
+    expect(
+      levelForImpact({ affectedSessionsPercent: 0.05, escalating: false, affectedSessions: 50, floor: "high" }),
+    ).toBe("high")
+    expect(
+      levelForImpact({ affectedSessionsPercent: 0.05, escalating: false, affectedSessions: 50, floor: null }),
+    ).toBe("high")
   })
 })

@@ -116,6 +116,7 @@ export const recomputeSignalLevelUseCase = (input: RecomputeSignalLevelInput) =>
     const floor = highestFloor(signal.priorityFloor ?? null, walkedAway)
     const level = levelForImpact({
       affectedSessionsPercent: impact.affectedSessionsPercent,
+      affectedSessions: impact.affectedSessions,
       escalating: input.escalating,
       floor,
     })
