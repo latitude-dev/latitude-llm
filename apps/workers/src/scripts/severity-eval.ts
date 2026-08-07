@@ -67,6 +67,7 @@ const rate = (input: Case, organizationId: string, projectId: string) =>
         sourceType: input.sourceType,
         feedback: input.feedback,
         value: input.value,
+        machineAuthored: input.flaggerSlug !== undefined,
         ...(input.flaggerSlug === undefined ? {} : { flaggerSlug: input.flaggerSlug }),
       },
     ],

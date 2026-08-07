@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { parseArgs } from "node:util"
-import { SEVERITY_RUBRIC, type SignalPriority } from "@domain/signals"
+import { isDeterministicFlagger, SEVERITY_RUBRIC, type SignalPriority } from "@domain/signals"
 import { type CeilingSlot, renderCeilingPage } from "./severity-ceiling-page.ts"
 
 const USAGE = `
@@ -43,9 +43,17 @@ const loadCases = (path: string): readonly SourceCase[] => {
     const feedback = row.feedback
     if (typeof feedback !== "string" || feedback.trim() === "") return []
     const slug = (row.flaggerSlug ?? row.flagger_slug) as string | null | undefined
+    // Production never rates these, so asking a person to would measure the
+    // ceiling on a population the rubric is never shown.
+    if (isDeterministicFlagger(slug ?? undefined)) return []
     const sourceType = ((row.sourceType ?? row.source_type) as string | undefined) ?? "annotation"
     // The same tag line the prompt builds, so raters and the model read one input.
-    const tags = [`source=${sourceType}`, ...(slug ? [`detector=${slug}`] : [])].join(" ")
+    const machineAuthored = typeof slug === "string" && slug.length > 0
+    const tags = [
+      `source=${sourceType}`,
+      `author=${machineAuthored ? "detector" : "human"}`,
+      ...(slug ? [`detector=${slug}`] : []),
+    ].join(" ")
     return [{ id: String(row.id ?? `case-${index + 1}`), feedback, tags }]
   })
 }

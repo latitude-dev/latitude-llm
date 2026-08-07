@@ -208,9 +208,14 @@ describe("createSignalFromScoreUseCase", () => {
     // classifier with one job matched, which is a narrower claim than a rubric
     // guessing from prose, so volume must not walk it back.
     expect(issues.get(result.signalId)?.priorityFloor).toBe("urgent")
-    expect(calls.generate[0]?.prompt).toContain("detector=pii-leakage")
+    // The tag block on the occurrence line, not the whole prompt: the rubric
+    // itself explains what a `score=` tag means, so a bare substring search hits
+    // the instructions rather than the data.
+    const tags = /^1\. \[([^\]]*)\]/m.exec(calls.generate[0]?.prompt ?? "")?.[1] ?? ""
+    expect(tags).toContain("detector=pii-leakage")
+    expect(tags).toContain("author=detector")
     // Annotation values are placeholders, not verdicts — no score tag for them.
-    expect(calls.generate[0]?.prompt).not.toContain("score=")
+    expect(tags).not.toContain("score=")
   })
 
   // A deterministic detector already established what happened, so the model is

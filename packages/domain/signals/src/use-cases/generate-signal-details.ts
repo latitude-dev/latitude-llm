@@ -68,6 +68,8 @@ export interface SignalOccurrenceInput {
   readonly value?: number
   /** Slug of the flagger that authored this score, from `metadata.flaggerSlug`. */
   readonly flaggerSlug?: string
+  /** A detector wrote this line, not a person. `sourceType` cannot say: flagger scores are annotations too. */
+  readonly machineAuthored?: boolean
 }
 
 export interface GeneratedSignalDetails {
@@ -105,6 +107,9 @@ export type GenerateSignalDetailsError =
  */
 const occurrenceTags = (occurrence: SignalOccurrenceInput): string => {
   const tags = [`source=${occurrence.sourceType}`]
+  // `sourceType` is `annotation` for a detector's output as well as a person's,
+  // so without this the prompt reads templated check output as hand-written.
+  tags.push(`author=${occurrence.machineAuthored === true ? "detector" : "human"}`)
   if (occurrence.flaggerSlug !== undefined) tags.push(`detector=${occurrence.flaggerSlug}`)
   // Only an evaluation produces a judged number. An annotation carries qualitative
   // text and a placeholder `0` — measured across every triaged signal in
@@ -147,7 +152,7 @@ export const SEVERITY_RUBRIC = [
   '- "low": cosmetic or stylistic only (tone, formatting, verbosity), or the pattern describes desirable behavior rather than a failure.',
   "Use the whole scale. Most patterns are not `medium` or `high`; those two are for genuinely middling cases, not a safe default when a case could be read either way. If the description fits `urgent` or `low`, answer that.",
   "Rate the mechanism itself, not how often it appears: a new pattern is typically a single occurrence, so frequency is not evidence yet. When the occurrences do not say enough to separate two levels, choose the higher one.",
-  "Weigh the tags on each occurrence as evidence: a low `score` means the evaluation judged the output badly, a `detector=` slug names the failure class a deterministic check matched, and `source=annotation` means a person wrote the feedback by hand rather than a check firing.",
+  "Weigh the tags on each occurrence as evidence. `author=human` means a person stopped to write this up, which is itself weak evidence somebody cared; `author=detector` means a check emitted templated text and the wording carries no judgement about how much it matters. A `detector=` slug names the failure class that check matched. A `score=` tag, present only on evaluation-sourced occurrences, is the judge verdict where 0 is worst.",
 ].join("\n")
 
 const buildPrompt = (input: {

@@ -165,6 +165,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           sourceType: initialScoreResult.score.sourceType,
           feedback: initialScoreResult.score.feedback,
           value: initialScoreResult.score.value,
+          machineAuthored: initialScoreResult.score.sourceId === "SYSTEM",
           ...(flaggerSlug === undefined ? {} : { flaggerSlug }),
         },
       ],
