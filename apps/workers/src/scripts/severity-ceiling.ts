@@ -23,6 +23,9 @@ Options:
   --repeats <n>     How many of those to show twice, for self-consistency (default 5).
   --include-user-origin  Include user-created signals. Off by default: none of them is low.
   --aggregate       Treat remaining arguments as rating exports and report agreement.
+  --emit-cases <p>  With --aggregate and --cases-file: write the cases every rater agreed
+                    on as a severity:eval dataset. Split cases are dropped, not
+                    majority-voted — a case two people read differently is not truth.
   --help
 `.trim()
 
@@ -138,7 +141,44 @@ const kappa = (pairs: readonly (readonly [SignalPriority, SignalPriority])[]): n
   return expected === 1 ? Number.NaN : (observed - expected) / (1 - expected)
 }
 
-const aggregate = (paths: readonly string[]): void => {
+/**
+ * Consensus label per case, for turning a rating round into a gradable dataset.
+ * Cases the raters split on are dropped rather than resolved by majority: a case
+ * two people read differently is not ground truth, and keeping it would bake the
+ * disagreement into the target the rubric is then scored against.
+ */
+const consensusLabels = (files: readonly RatingExport[]): Map<string, SignalPriority> => {
+  const byCase = new Map<string, SignalPriority[]>()
+  for (const file of files) {
+    for (const [caseId, level] of firstAnswers(file)) {
+      byCase.set(caseId, [...(byCase.get(caseId) ?? []), level])
+    }
+  }
+  const agreed = new Map<string, SignalPriority>()
+  for (const [caseId, levels] of byCase) {
+    if (levels.length === files.length && new Set(levels).size === 1) {
+      agreed.set(caseId, levels[0] as SignalPriority)
+    }
+  }
+  return agreed
+}
+
+const emitCases = (files: readonly RatingExport[], sourcePath: string, outPath: string): void => {
+  const source = JSON.parse(readFileSync(sourcePath, "utf8")) as readonly Record<string, unknown>[]
+  const agreed = consensusLabels(files)
+  const cases = source.flatMap((row) => {
+    const id = String(row.id ?? "")
+    const level = agreed.get(id)
+    return level === undefined ? [] : [{ ...row, priority: level }]
+  })
+  writeFileSync(outPath, JSON.stringify(cases, null, 2), "utf8")
+  console.log(
+    `\nWrote ${cases.length} unanimously-labelled case(s) to ${outPath}` +
+      ` — grade with: severity:eval --cases-file ${outPath}`,
+  )
+}
+
+const aggregate = (paths: readonly string[], sourcePath?: string, emitPath?: string): void => {
   const files = paths.map((path) => JSON.parse(readFileSync(path, "utf8")) as RatingExport)
   if (files.length === 0) {
     console.log("Nothing to aggregate.")
@@ -193,6 +233,8 @@ const aggregate = (paths: readonly string[]): void => {
     `\nCEILING  exact ${Math.round(100 * mean(exactRates))}%, within one ${Math.round(100 * mean(withinRates))}%`,
   )
   console.log("Compare severity:eval against these, not against 100%. A rubric that matches them is finished.")
+
+  if (sourcePath !== undefined && emitPath !== undefined) emitCases(files, sourcePath, emitPath)
 }
 
 const main = (): void => {
@@ -203,6 +245,7 @@ const main = (): void => {
       cases: { type: "string" },
       repeats: { type: "string" },
       "include-user-origin": { type: "boolean", default: false },
+      "emit-cases": { type: "string" },
       aggregate: { type: "boolean", default: false },
       help: { type: "boolean", default: false },
     },
@@ -214,7 +257,7 @@ const main = (): void => {
     return
   }
   if (values.aggregate) {
-    aggregate(positionals)
+    aggregate(positionals, values["cases-file"], values["emit-cases"])
     return
   }
 
