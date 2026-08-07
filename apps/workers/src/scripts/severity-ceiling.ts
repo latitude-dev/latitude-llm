@@ -21,6 +21,7 @@ Options:
   --out <p>         Where to write the page. Default ./severity-ceiling.html
   --cases <n>       How many cases to include (default 30).
   --repeats <n>     How many of those to show twice, for self-consistency (default 5).
+  --include-user-origin  Include user-created signals. Off by default: none of them is low.
   --aggregate       Treat remaining arguments as rating exports and report agreement.
   --help
 `.trim()
@@ -34,7 +35,7 @@ interface SourceCase {
   readonly tags: string
 }
 
-const loadCases = (path: string): readonly SourceCase[] => {
+const loadCases = (path: string, includeUserOrigin: boolean): readonly SourceCase[] => {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"))
   if (!Array.isArray(parsed)) throw new Error(`${path} must contain a JSON array`)
 
@@ -42,6 +43,13 @@ const loadCases = (path: string): readonly SourceCase[] => {
     const row = entry as Record<string, unknown>
     const feedback = row.feedback
     if (typeof feedback !== "string" || feedback.trim() === "") return []
+    // A user-created signal's level was chosen by its author before any
+    // occurrence existed, and nobody creates a signal to record something
+    // unimportant: across production every one of them is medium or above, not a
+    // single `low`. Grading them drags the `low` share of the set from 10% to 3%
+    // and teaches nothing about the boundary a threshold actually acts on.
+    const origin = (row.origin ?? null) as string | null
+    if (origin === "user" && !includeUserOrigin) return []
     const slug = (row.flaggerSlug ?? row.flagger_slug) as string | null | undefined
     // Production never rates these, so asking a person to would measure the
     // ceiling on a population the rubric is never shown.
@@ -194,6 +202,7 @@ const main = (): void => {
       out: { type: "string" },
       cases: { type: "string" },
       repeats: { type: "string" },
+      "include-user-origin": { type: "boolean", default: false },
       aggregate: { type: "boolean", default: false },
       help: { type: "boolean", default: false },
     },
@@ -215,7 +224,7 @@ const main = (): void => {
     return
   }
 
-  const all = loadCases(casesFile)
+  const all = loadCases(casesFile, values["include-user-origin"] === true)
   const chosen = takeSpread(all, Number(values.cases ?? 30))
   const slots = buildSlots(chosen, Number(values.repeats ?? 5))
   const out = values.out ?? "./severity-ceiling.html"

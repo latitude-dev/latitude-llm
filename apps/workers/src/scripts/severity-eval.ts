@@ -36,6 +36,8 @@ Options:
                       snake_case keys are accepted. Keep the file outside this public
                       repo — it holds customer text. Production priorities are human
                       triage, never rubric output, so they are usable as labels.
+  --include-user-origin  Also grade user-created signals. Off by default: their level was
+                      picked by the author for a concept, and none of them is low.
   --first <n>         Grade only the first n cases. Cheap way to sanity-check an export.
   --html <p>          Write a side-by-side label-vs-rubric review page.
   --help
@@ -90,11 +92,11 @@ const rate = (input: Case, organizationId: string, projectId: string) =>
  * Keep the file outside the repo: it holds real customer feedback and this
  * repository is public.
  */
-const loadFileCases = (path: string): readonly Case[] => {
+const loadFileCases = (path: string, includeUserOrigin: boolean): readonly Case[] => {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"))
   if (!Array.isArray(parsed)) throw new Error(`${path} must contain a JSON array of cases`)
 
-  return parsed.map((entry, index) => {
+  return parsed.flatMap((entry, index) => {
     const row = entry as Record<string, unknown>
     const label = (row.priority ?? row.expected) as SignalPriority | undefined
     const feedback = row.feedback as string | undefined
@@ -104,21 +106,30 @@ const loadFileCases = (path: string): readonly Case[] => {
     if (typeof feedback !== "string" || feedback.trim() === "") {
       throw new Error(`case ${index}: "feedback" is required`)
     }
+    // A user-created signal's level was chosen by its author before any
+    // occurrence existed, and nobody creates a signal to record something
+    // unimportant: across production every one of them is medium or above, not a
+    // single `low`. Grading them drags the `low` share of the set from 10% to 3%
+    // and teaches nothing about the boundary a threshold actually acts on.
+    const origin = (row.origin ?? null) as string | null
+    if (origin === "user" && !includeUserOrigin) return []
     const slug = (row.flaggerSlug ?? row.flagger_slug) as string | null | undefined
     const rawValue = row.value
-    return {
-      id: String(row.id ?? `case-${index + 1}`),
-      feedback,
-      sourceType: ((row.sourceType ?? row.source_type) as SeverityFixture["sourceType"]) ?? "annotation",
-      value: rawValue === undefined || rawValue === null ? 0 : Number(rawValue),
-      ...(slug ? { flaggerSlug: slug } : {}),
-      ...(typeof (row.signalSlug ?? row.signal_slug) === "string"
-        ? { signalSlug: String(row.signalSlug ?? row.signal_slug) }
-        : {}),
-      machineAuthored: (row.machineAuthored ?? row.machine_authored) === true || Boolean(slug),
-      expected: label,
-      acceptable: LEVELS.filter((level) => Math.abs(rank(level) - rank(label)) <= 1),
-    }
+    return [
+      {
+        id: String(row.id ?? `case-${index + 1}`),
+        feedback,
+        sourceType: ((row.sourceType ?? row.source_type) as SeverityFixture["sourceType"]) ?? "annotation",
+        value: rawValue === undefined || rawValue === null ? 0 : Number(rawValue),
+        ...(slug ? { flaggerSlug: slug } : {}),
+        ...(typeof (row.signalSlug ?? row.signal_slug) === "string"
+          ? { signalSlug: String(row.signalSlug ?? row.signal_slug) }
+          : {}),
+        machineAuthored: (row.machineAuthored ?? row.machine_authored) === true || Boolean(slug),
+        expected: label,
+        acceptable: LEVELS.filter((level) => Math.abs(rank(level) - rank(label)) <= 1),
+      },
+    ]
   })
 }
 
@@ -129,6 +140,7 @@ async function main(): Promise<void> {
       first: { type: "string" },
       html: { type: "string" },
       "cases-file": { type: "string" },
+      "include-user-origin": { type: "boolean", default: false },
       help: { type: "boolean", default: false },
     },
     strict: true,
@@ -141,7 +153,7 @@ async function main(): Promise<void> {
   const runs = Number(values.runs ?? 3)
   const casesFile = values["cases-file"]
   const all: readonly Case[] = casesFile
-    ? loadFileCases(casesFile)
+    ? loadFileCases(casesFile, values["include-user-origin"] === true)
     : SEVERITY_FIXTURES.map((fixture) => ({ ...fixture }))
   const cases = values.first === undefined ? all : all.slice(0, Number(values.first))
 
