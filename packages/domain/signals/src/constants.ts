@@ -307,6 +307,13 @@ export const SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL = {
  */
 export const CO_OCCURRENCE_SAMPLE_LIMIT = 20
 
+/**
+ * Occurrences sampled when looking for a session a user walked away from. One
+ * qualifying occurrence is enough to floor the signal, so this only bounds the
+ * scan on a noisy signal rather than shaping the answer.
+ */
+export const ABANDONMENT_OCCURRENCE_SAMPLE_LIMIT = 50
+
 /** Maximum recent assigned issue occurrences used when regenerating existing issue details. */
 export const SIGNAL_DETAILS_MAX_OCCURRENCES = 25
 

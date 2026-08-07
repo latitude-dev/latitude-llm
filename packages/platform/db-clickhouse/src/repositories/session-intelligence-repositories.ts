@@ -15,6 +15,7 @@ import {
   type ChSqlClientShape,
   OrganizationId,
   ProjectId,
+  type RepositoryError,
   SessionId,
   TraceId,
   toRepositoryError,
@@ -392,3 +393,50 @@ export const SessionMomentLabelRepositoryLive = Layer.effect(
     }
   }),
 )
+
+/**
+ * Earliest message index at which each of these sessions was seen being
+ * abandoned. Backs the deterministic-detector floor in `@domain/signals`, which
+ * requires the abandonment to come at or after the message a detector matched
+ * on — mere co-occurrence would also count a user who gave up over something
+ * unrelated before the tool ever failed.
+ *
+ * A bare function rather than a `Layer`, because the port it satisfies is
+ * declared in `@domain/signals` and this package does not depend on it. Adding
+ * that edge re-resolves the lockfile against the release-age gate for one read,
+ * so the app binds this to the tag instead (`apps/workers/src/clients.ts`).
+ *
+ * Sessions with no abandonment, and sessions conversation intelligence never
+ * analysed, are absent rather than zero: a miss means "no evidence", never "the
+ * user was fine".
+ */
+export const listAbandonmentIndexBySession = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly sessionIds: readonly string[]
+}): Effect.Effect<ReadonlyMap<string, number>, RepositoryError, ChSqlClient> =>
+  Effect.gen(function* () {
+    if (input.sessionIds.length === 0) return new Map<string, number>()
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+    return yield* chSqlClient
+      .query(async (client) => {
+        const result = await client.query({
+          query: `SELECT session_id AS sessionId, min(first_message_index) AS firstMessageIndex
+                  FROM session_moment_labels FINAL
+                  WHERE organization_id = {organizationId:String}
+                    AND project_id = {projectId:String}
+                    AND session_id IN {sessionIds:Array(String)}
+                    AND kind = 'abandonment'
+                  GROUP BY session_id`,
+          query_params: {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            sessionIds: [...input.sessionIds],
+          },
+          format: "JSONEachRow",
+        })
+        const rows = (await result.json()) as { sessionId: string; firstMessageIndex: number | string }[]
+        return new Map(rows.map((row) => [row.sessionId, Number(row.firstMessageIndex)]))
+      })
+      .pipe(Effect.mapError((error) => toRepositoryError(error, "listAbandonmentIndexBySession")))
+  })

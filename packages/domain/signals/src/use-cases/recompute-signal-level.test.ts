@@ -1,6 +1,6 @@
-import { ScoreAnalyticsRepository } from "@domain/scores"
-import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { ChSqlClient, OrganizationId, ProjectId, SignalId, SqlClient } from "@domain/shared"
+import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
+import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
+import { ChSqlClient, OrganizationId, ProjectId, ScoreId, SessionId, SignalId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import {
   SessionRepository,
@@ -11,6 +11,7 @@ import {
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Signal, SignalPriority } from "../entities/signal.ts"
+import { SessionAbandonmentRepository } from "../ports/session-abandonment-repository.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
 import { recomputeSignalLevelUseCase } from "./recompute-signal-level.ts"
@@ -48,6 +49,14 @@ const makeLayer = (input: {
   readonly signal?: Signal | null
   readonly affectedSessions: number
   readonly totalSessions: number
+  /** Occurrences the signal owns, for the abandonment floor. */
+  readonly occurrences?: readonly {
+    readonly sessionId: string
+    readonly flaggerSlug: string
+    readonly messageIndex: number
+  }[]
+  /** Session id -> index the user was seen abandoning at. */
+  readonly abandonedAt?: Readonly<Record<string, number>>
 }) => {
   const { repository: signalRepository, issues } = createFakeSignalRepository(input.signal ? [input.signal] : [])
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
@@ -69,7 +78,41 @@ const makeLayer = (input: {
     countByProjectId: () => Effect.succeed({ totalCount: input.totalSessions }),
   } as unknown as SessionRepositoryShape
 
+  const { repository: scoreRepository, scores } = createFakeScoreRepository()
+  for (const [index, occurrence] of (input.occurrences ?? []).entries()) {
+    const id = ScoreId(`occ${index}`.padEnd(24, "x"))
+    scores.set(id, {
+      id,
+      organizationId: orgId,
+      projectId,
+      sessionId: SessionId(occurrence.sessionId),
+      traceId: null,
+      spanId: null,
+      sourceType: "annotation",
+      sourceId: "SYSTEM",
+      simulationId: null,
+      signalId,
+      value: 0,
+      passed: false,
+      feedback: 'Tool "x" returned error: boom',
+      metadata: { flaggerSlug: occurrence.flaggerSlug, messageIndex: occurrence.messageIndex },
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt,
+      updatedAt: createdAt,
+    } as never)
+  }
+
   const layer = Layer.mergeAll(
+    Layer.succeed(ScoreRepository, scoreRepository),
+    Layer.succeed(SessionAbandonmentRepository, {
+      listAbandonmentIndexBySession: () => Effect.succeed(new Map(Object.entries(input.abandonedAt ?? {}))),
+    }),
     Layer.succeed(SignalRepository, signalRepository),
     Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
     Layer.succeed(TraceRepository, traceRepository),
@@ -85,6 +128,12 @@ const run = (input: {
   readonly affectedSessions: number
   readonly totalSessions: number
   readonly escalating?: boolean
+  readonly occurrences?: readonly {
+    readonly sessionId: string
+    readonly flaggerSlug: string
+    readonly messageIndex: number
+  }[]
+  readonly abandonedAt?: Readonly<Record<string, number>>
 }) => {
   const { layer, issues } = makeLayer(input)
   return Effect.runPromise(
@@ -155,6 +204,63 @@ describe("recomputeSignalLevelUseCase", () => {
     const { result } = await run({ signal: makeSignal(null), affectedSessions: 100, totalSessions: 1000 })
 
     expect(result).toMatchObject({ status: "updated", from: null, level: "high" })
+  })
+
+  // The population with no other severity input: created at `low`, never rated
+  // by a model, only volume moves them. A user walking away afterwards is the one
+  // piece of evidence they have, and it is a measurement rather than a judgement.
+  it("floors a deterministic detector whose user walked away after it fired", async () => {
+    const { result, issues } = await run({
+      signal: makeSignal("low"),
+      affectedSessions: 1,
+      totalSessions: 5000,
+      occurrences: [{ sessionId: "walked-away", flaggerSlug: "tool-call-errors", messageIndex: 3 }],
+      abandonedAt: { "walked-away": 6 },
+    })
+
+    expect(result).toMatchObject({ status: "updated", from: "low", level: "medium" })
+    // Persisted, so volume cannot take it back down on the next pass.
+    expect(issues.get(signalId)?.priorityFloor).toBe("medium")
+  })
+
+  it("leaves a tool error nobody abandoned at the volume band", async () => {
+    const { result, issues } = await run({
+      signal: makeSignal("low"),
+      affectedSessions: 1,
+      totalSessions: 5000,
+      occurrences: [{ sessionId: "carried-on", flaggerSlug: "tool-call-errors", messageIndex: 3 }],
+      abandonedAt: {},
+    })
+
+    expect(result).toMatchObject({ status: "unchanged", level: "low" })
+    expect(issues.get(signalId)?.priorityFloor ?? null).toBeNull()
+  })
+
+  // Ordering, not co-occurrence: a user who gave up before the tool ever failed
+  // did not give up because of it.
+  it("ignores abandonment that preceded the detector match", async () => {
+    const { result } = await run({
+      signal: makeSignal("low"),
+      affectedSessions: 1,
+      totalSessions: 5000,
+      occurrences: [{ sessionId: "gave-up-early", flaggerSlug: "tool-call-errors", messageIndex: 9 }],
+      abandonedAt: { "gave-up-early": 2 },
+    })
+
+    expect(result).toMatchObject({ status: "unchanged", level: "low" })
+  })
+
+  // Volume still owns everything above the floor.
+  it("lets volume raise a floored signal further", async () => {
+    const { result } = await run({
+      signal: makeSignal("low"),
+      affectedSessions: 300,
+      totalSessions: 1000,
+      occurrences: [{ sessionId: "walked-away", flaggerSlug: "tool-call-errors", messageIndex: 1 }],
+      abandonedAt: { "walked-away": 4 },
+    })
+
+    expect(result).toMatchObject({ status: "updated", level: "urgent" })
   })
 
   it("skips a signal it cannot find", async () => {

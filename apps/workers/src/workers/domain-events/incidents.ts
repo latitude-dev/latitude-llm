@@ -5,8 +5,9 @@ import {
 } from "@domain/incidents"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId, SignalId } from "@domain/shared"
-import { recomputeSignalLevelUseCase } from "@domain/signals"
+import { recomputeSignalLevelUseCase, SessionAbandonmentRepository } from "@domain/signals"
 import {
+  listAbandonmentIndexBySession,
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
   TraceRepositoryLive,
@@ -15,6 +16,7 @@ import {
 import {
   IncidentRepositoryLive,
   OutboxEventWriterLive,
+  ScoreRepositoryLive,
   SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -28,8 +30,18 @@ interface AlertIncidentsDeps {
   consumer: QueueConsumer
 }
 
-const repoLayer = Layer.mergeAll(IncidentRepositoryLive, OutboxEventWriterLive, SignalRepositoryLive)
-const analyticsLayer = Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive)
+const repoLayer = Layer.mergeAll(
+  IncidentRepositoryLive,
+  OutboxEventWriterLive,
+  SignalRepositoryLive,
+  ScoreRepositoryLive,
+)
+const analyticsLayer = Layer.mergeAll(
+  ScoreAnalyticsRepositoryLive,
+  TraceRepositoryLive,
+  SessionRepositoryLive,
+  Layer.succeed(SessionAbandonmentRepository, { listAbandonmentIndexBySession }),
+)
 
 const createIncidentForSignalEscalation = (payload: {
   readonly organizationId: string

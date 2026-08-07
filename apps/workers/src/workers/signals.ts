@@ -20,12 +20,14 @@ import {
   recomputeSignalLevelUseCase,
   refreshSignalDetailsUseCase,
   removeScoreFromSignalUseCase,
+  SessionAbandonmentRepository,
   sweepEscalatingSignalsUseCase,
 } from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import {
+  listAbandonmentIndexBySession,
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
   TraceRepositoryLive,
@@ -131,7 +133,12 @@ export const createSignalsWorker = async ({
           escalating: false,
         }).pipe(
           withClickHouse(
-            Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SessionRepositoryLive),
+            Layer.mergeAll(
+              ScoreAnalyticsRepositoryLive,
+              TraceRepositoryLive,
+              SessionRepositoryLive,
+              Layer.succeed(SessionAbandonmentRepository, { listAbandonmentIndexBySession }),
+            ),
             chClient,
             organizationId,
           ),

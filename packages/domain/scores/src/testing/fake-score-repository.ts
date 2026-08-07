@@ -68,7 +68,26 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     countAnnotationsByTraceIds: () => Effect.succeed([]),
     listBySessionId: () => Effect.succeed(EMPTY_PAGE),
     listBySpanId: () => Effect.succeed(EMPTY_PAGE),
-    listBySignalId: () => Effect.succeed(EMPTY_PAGE),
+    // Filters for real, unlike its siblings: the abandonment floor in
+    // `@domain/signals` reads a signal's occurrences through this, so an
+    // always-empty page would make that path untestable.
+    listBySignalId: ({ projectId, signalId, source, options }) => {
+      const items = [...scores.values()].filter(
+        (score) =>
+          score.projectId === projectId &&
+          score.signalId === signalId &&
+          score.draftedAt === null &&
+          (source === undefined || score.sourceType === source),
+      )
+      const limit = options?.limit ?? 50
+      const offset = options?.offset ?? 0
+      return Effect.succeed({
+        items: items.slice(offset, offset + limit),
+        hasMore: items.length > offset + limit,
+        limit,
+        offset,
+      })
+    },
     findPublishedSystemAnnotationByTraceAndFeedback: ({ projectId, traceId, feedback }) =>
       Effect.succeed(
         [...scores.values()].find(

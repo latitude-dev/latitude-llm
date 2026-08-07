@@ -2,7 +2,13 @@
 // web client bundles via the package's `browser` export condition. The server-only mutation
 // use-cases below stay out of that bundle — they transitively pull server-only code (the judge
 // template / @domain/ai) and are only ever run by the API and workers.
+
+export { type AbandonmentOccurrence, abandonmentFloor } from "./abandonment-floor.ts"
 export * from "./browser.ts"
+export {
+  SessionAbandonmentRepository,
+  type SessionAbandonmentRepositoryShape,
+} from "./ports/session-abandonment-repository.ts"
 export { levelForImpact } from "./severity-bands.ts"
 export { applySeverityFloor, flaggerSeverityFloor, isDeterministicFlagger } from "./severity-floor.ts"
 export {
