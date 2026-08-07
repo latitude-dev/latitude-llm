@@ -204,10 +204,6 @@ describe("createSignalFromScoreUseCase", () => {
     )
 
     expect(issues.get(result.signalId)?.priority).toBe("urgent")
-    // A detector floor persists as a floor, unlike the model's own rating: a
-    // classifier with one job matched, which is a narrower claim than a rubric
-    // guessing from prose, so volume must not walk it back.
-    expect(issues.get(result.signalId)?.priorityFloor).toBe("urgent")
     // The tag block on the occurrence line, not the whole prompt: the rubric
     // itself explains what a `score=` tag means, so a bare substring search hits
     // the instructions rather than the data.
@@ -250,9 +246,6 @@ describe("createSignalFromScoreUseCase", () => {
     )
 
     expect(issues.get(result.signalId)?.priority).toBe("low")
-    // No floor: nothing asserted how much this matters, so volume owns the level
-    // in both directions from here.
-    expect(issues.get(result.signalId)?.priorityFloor).toBeNull()
     // One call, not two: the severity schema is never attempted, so there is
     // nothing for the retry to fall back from.
     expect(calls.generate).toHaveLength(1)
@@ -346,65 +339,6 @@ describe("createSignalFromScoreUseCase", () => {
     // `alongside=` tag means, so a bare substring search hits the instructions.
     const tags = /^1\. \[([^\]]*)\]/m.exec(calls.generate[0]?.prompt ?? "")?.[1] ?? ""
     expect(tags).not.toContain("alongside=")
-  })
-
-  it("does not let a model-rated level become a floor", async () => {
-    const { layer: aiLayer } = createFakeAI({
-      generate: createGenerateSignalDetailsWithSeverity("Token leakage", "Secrets appear in replies.", "urgent"),
-    })
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: signalRepository, issues } = createFakeSignalRepository()
-    const score = makeScore()
-    scores.set(score.id, score)
-    const outbox = createFakeOutboxEventWriter()
-
-    const result = await Effect.runPromise(
-      createSignalFromScoreUseCase({
-        organizationId,
-        projectId,
-        scoreId: score.id,
-        normalizedEmbedding: makeEmbedding(),
-      }).pipe(
-        Effect.provide(aiLayer),
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(SignalRepository, signalRepository),
-        Effect.provideService(ProjectRepository, projectRepository),
-        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
-        Effect.provideService(OutboxEventWriter, outbox.service),
-      ),
-    )
-
-    expect(issues.get(result.signalId)?.priority).toBe("urgent")
-    expect(issues.get(result.signalId)?.priorityFloor).toBeNull()
-  })
-
-  it("leaves no floor when the model rated nothing", async () => {
-    const { layer: aiLayer } = createFakeAI({
-      generate: createGenerateSignalDetails("Token leakage", "Secrets appear in replies."),
-    })
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: signalRepository, issues } = createFakeSignalRepository()
-    const score = makeScore()
-    scores.set(score.id, score)
-    const outbox = createFakeOutboxEventWriter()
-
-    const result = await Effect.runPromise(
-      createSignalFromScoreUseCase({
-        organizationId,
-        projectId,
-        scoreId: score.id,
-        normalizedEmbedding: makeEmbedding(),
-      }).pipe(
-        Effect.provide(aiLayer),
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(SignalRepository, signalRepository),
-        Effect.provideService(ProjectRepository, projectRepository),
-        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
-        Effect.provideService(OutboxEventWriter, outbox.service),
-      ),
-    )
-
-    expect(issues.get(result.signalId)?.priorityFloor).toBeNull()
   })
 
   it("generates details, creates a new issue, and claims score ownership", async () => {

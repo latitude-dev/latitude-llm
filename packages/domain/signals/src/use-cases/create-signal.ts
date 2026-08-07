@@ -82,9 +82,6 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           filters: parsed.filters ?? null,
           assigneeId: null,
           priority: parsed.priority ?? null,
-          // A level chosen at creation is the author's assertion, so it floors
-          // what volume can later reduce it to.
-          priorityFloor: parsed.priority ?? null,
           centroid: null,
           clusteredAt: null,
           resolvedAt: null,

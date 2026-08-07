@@ -41,6 +41,12 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
     const context = contextLine(
       `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}${triageContextSuffix({ priority: payload.priority, assigneeName })}`,
     )
+    // A signal escalating ignores this channel's minimum severity, so say so.
+    // Without it the message reads as the threshold leaking, and the first thing
+    // anyone does is turn the channel down further.
+    const whyDelivered = contextLine(
+      "Sent because this signal's rate broke its usual pattern, regardless of the channel's minimum severity.",
+    )
 
     if (isMonitorIncident) {
       const searchRef = sourceName ?? "a monitored target"
@@ -74,6 +80,7 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
         ...attribution,
         context,
+        whyDelivered,
         actionsLink("View signal", signalUrl),
       ],
     }

@@ -32,12 +32,23 @@ export type SlackRoute = z.infer<typeof slackRouteSchema>
  * stays the bottom of the scale — add a tier below it and the sentinel silently
  * starts filtering. It also conflates "unset" with "explicitly Low", which the
  * settings UI already does and which has misled a production audit.
+ *
+ * A signal escalating is exempt from both. Its level says how bad the pattern
+ * is; escalating says the rate just broke its own seasonal band, which is a
+ * different claim and not one a severity threshold was set to answer. 97% of
+ * production escalations come from signals nobody has triaged, so honouring the
+ * threshold here would silence almost all of them. The notification says it
+ * fired on volume, so the exemption is visible to whoever receives it rather
+ * than looking like the filter leaking.
  */
+export const isSignalEscalation = (payload: Record<string, unknown>): boolean => payload.sourceType === "signal"
+
 export const routeAdmitsPayload = (
   route: SlackRoute,
   payload: Record<string, unknown>,
   options: { readonly requiresSeverity?: boolean } = {},
 ): boolean => {
+  if (isSignalEscalation(payload)) return true
   const severity = alertSeveritySchema.safeParse(payload.severity)
   if (!severity.success) return options.requiresSeverity !== true
   if (route.minSeverity === undefined) return true

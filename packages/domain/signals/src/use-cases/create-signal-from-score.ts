@@ -118,7 +118,6 @@ const buildNewSignalFromScore = ({
   name,
   description,
   priority,
-  priorityFloor,
   slug,
 }: {
   readonly score: Score
@@ -128,7 +127,6 @@ const buildNewSignalFromScore = ({
   readonly name: string
   readonly description: string
   readonly priority: SignalPriority | null
-  readonly priorityFloor: SignalPriority | null
   readonly slug: string
 }): Signal => {
   const centroid = updateSignalCentroid({
@@ -159,7 +157,6 @@ const buildNewSignalFromScore = ({
     origin: "system",
     assigneeId: null,
     priority,
-    priorityFloor,
     centroid,
     clusteredAt: centroid.clusteredAt,
     resolvedAt: null,
@@ -210,14 +207,6 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     const severity = deterministic
       ? (detectorFloor ?? "low")
       : applySeverityFloor(signalDetails.severity ?? null, detectorFloor)
-    // Only the detector floor persists as a floor — never the model's own rating.
-    // Graded against human-labelled production signals the rubric is exact on
-    // 44% of cases and wavers on a third of them, and its errors skew high, so
-    // treating its guess as a floor would permanently pin over-ratings that
-    // volume used to correct within hours. The guess still decides `priority`,
-    // which is what notifications read at creation, so nothing is delivered any
-    // more quietly; it just stops outranking later measurement.
-    const priorityFloor = detectorFloor
     // `none` means the signal notifies nobody and dispatches nothing, which is
     // the one failure here that reaches a customer as silence. On the span rather
     // than a log line: `Effect.log*` has no Datadog bridge, so a span attribute
@@ -262,7 +251,6 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           // `priority` is the column and the public API field; `severity` is the
           // scale's name everywhere else. Same values, one list.
           priority: severity,
-          priorityFloor,
           slug,
         })
 

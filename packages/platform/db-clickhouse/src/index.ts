@@ -25,7 +25,6 @@ export { MessageEmbeddingRepositoryLive } from "./repositories/message-embedding
 export { MetricSeriesReaderLive } from "./repositories/metric-series-reader.ts"
 export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-repository.ts"
 export {
-  listAbandonmentIndexBySession,
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
   SessionSemanticMomentRepositoryLive,

@@ -8,6 +8,22 @@ const route = (minSeverity?: SlackRoute["minSeverity"]): SlackRoute => ({
 })
 
 describe("routeAdmitsPayload", () => {
+  // Escalating says the rate broke its own seasonal band — a different claim
+  // from how bad the pattern is, and not one a severity threshold answers. 97%
+  // of production escalations come from signals nobody triaged, so honouring the
+  // threshold would silence nearly all of them.
+  it("always admits a signal escalating, whatever the threshold", () => {
+    expect(routeAdmitsPayload(route("urgent"), { sourceType: "signal", severity: "low" })).toBe(true)
+    expect(routeAdmitsPayload(route("urgent"), { sourceType: "signal" })).toBe(true)
+    expect(routeAdmitsPayload(route("urgent"), { sourceType: "signal" }, { requiresSeverity: true })).toBe(true)
+  })
+
+  // Monitor incidents are not escalations and keep the threshold.
+  it("still filters a monitor incident by severity", () => {
+    expect(routeAdmitsPayload(route("urgent"), { sourceType: "monitor", severity: "low" })).toBe(false)
+    expect(routeAdmitsPayload(route("low"), { sourceType: "monitor", severity: "high" })).toBe(true)
+  })
+
   it("admits everything when the route has no minimum severity", () => {
     expect(routeAdmitsPayload(route(), { severity: "low" })).toBe(true)
     expect(routeAdmitsPayload(route(), { severity: "high" })).toBe(true)

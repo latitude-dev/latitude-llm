@@ -3,13 +3,7 @@
 // use-cases below stay out of that bundle — they transitively pull server-only code (the judge
 // template / @domain/ai) and are only ever run by the API and workers.
 
-export { type AbandonmentOccurrence, abandonmentFloor } from "./abandonment-floor.ts"
 export * from "./browser.ts"
-export {
-  SessionAbandonmentRepository,
-  type SessionAbandonmentRepositoryShape,
-} from "./ports/session-abandonment-repository.ts"
-export { levelForImpact } from "./severity-bands.ts"
 export { applySeverityFloor, flaggerSeverityFloor, isDeterministicFlagger } from "./severity-floor.ts"
 export {
   assembleSignalGenerationGrounding,
@@ -40,12 +34,6 @@ export {
   type DeleteSignalResult,
   deleteSignalUseCase,
 } from "./use-cases/delete-signal.ts"
-export {
-  type RecomputeSignalLevelError,
-  type RecomputeSignalLevelInput,
-  type RecomputeSignalLevelResult,
-  recomputeSignalLevelUseCase,
-} from "./use-cases/recompute-signal-level.ts"
 export {
   type UpdateSignalError,
   type UpdateSignalInput,
