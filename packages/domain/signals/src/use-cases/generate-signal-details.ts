@@ -139,7 +139,7 @@ const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
  * trace. `recomputeSignalLevelUseCase` takes the level over from measurement
  * afterwards, which is what bounds the damage from rating it wrong here.
  */
-const SEVERITY_RUBRIC = [
+export const SEVERITY_RUBRIC = [
   "Also return `severity`, rating how much attention this pattern deserves:",
   '- "urgent": data loss, a safety or compliance breach, leaked credentials or personal data — or a failure the caller cannot see and cannot recover from. An agent that stalls mid-task, loops on one call indefinitely, loses track of what it was doing, or reports success for work it did not do belongs here, because nothing downstream can tell that run from a finished one. Reserve this for silent or unrecoverable failures: if the user can see that it went wrong and retry, it is not urgent, however annoying it is.',
   '- "high": the task fails or the answer is wrong in a way the user would act on, but the failure is visible and the work can be redone. Refusing to do the work, doing it lazily, or producing an answer the user pushes back on lands here rather than in `urgent`.',
