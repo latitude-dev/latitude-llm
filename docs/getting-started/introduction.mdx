@@ -31,6 +31,8 @@ Observe lets you inspect:
 - model providers, models, tokens, latency, cost, and errors
 - tool calls and nested execution paths
 - per-user activity in the **Users** view, and per-tool reliability, errors, and latency in the **Tools** view
+- how your agent's persistent memory evolves, record by record, in the **Memory** view
+- where spend goes, what caching saves, and cost per session in the **Cost** view
 - tags, metadata, environments, and releases
 
 <Frame>
@@ -40,15 +42,16 @@ Observe lets you inspect:
   />
 </Frame>
 
-Learn more in [Observability](../observability/overview), [Sessions](../observability/sessions), [Users](../observability/users), and [Tools](../observability/tools).
+Learn more in [Observability](../observability/overview), [Sessions](../observability/sessions), [Users](../observability/users), [Tools](../observability/tools), and [Memory](../observability/memory).
 
 ## Understand
 
 Once traffic is flowing, Understand helps you find what matters and group it into something you can track.
 
-- **Search** finds behaviours across production traces by meaning, exact text, or metadata filters, so you can move from a broad question to a focused set of real examples.
-- **Behaviours** clusters your sessions by meaning into the topics users actually hit, with trends and outcome metrics, so you discover what matters without writing a query.
+- **Search** finds behaviors across production traces by meaning, exact text, or metadata filters, so you can move from a broad question to a focused set of real examples.
+- **Behaviors** clusters your sessions by meaning into the topics users actually hit, with trends and outcome metrics, so you discover what matters without writing a query.
 - **Signals** are the recurring failure patterns Latitude groups from failed scores. Human annotations, flaggers, evaluations, and custom checks all feed in, and each signal carries example traces, affected-user counts, trends, and a lifecycle your team can act on.
+- **Experiments** compare two or more slices of your traffic side by side, every metric Latitude tracks, so you can measure how a release, a model swap, or a user cohort actually differs.
 
 <Frame>
   <img
@@ -57,7 +60,7 @@ Once traffic is flowing, Understand helps you find what matters and group it int
   />
 </Frame>
 
-Learn more in [Search](../search/overview), [Behaviours](../behaviours/overview), and [Signals](../signals/overview).
+Learn more in [Search](../search/overview), [Behaviors](../behaviours/overview), [Signals](../signals/overview), and [Experiments](../experiments/overview).
 
 ## Refine
 
@@ -74,12 +77,12 @@ Learn more in [Monitors](../monitors/overview) and [Evaluations](../evaluations/
 
 ## Why Latitude?
 
-AI agents fail in ways that are hard to predict upfront. Logs and dashboards show individual events, but teams also need to understand repeated behavioural failures: what users experienced, how often it happened, who was affected, and whether a fix prevented it from coming back.
+AI agents fail in ways that are hard to predict upfront. Logs and dashboards show individual events, but teams also need to understand repeated behavioral failures: what users experienced, how often it happened, who was affected, and whether a fix prevented it from coming back.
 
 Latitude is built around that loop:
 
-- **Agent-native telemetry**: inspect multi-step agent behaviour, not just isolated API calls.
-- **Semantic discovery**: search by meaning, and let Behaviours surface patterns you did not know to look for.
+- **Agent-native telemetry**: inspect multi-step agent behavior, not just isolated API calls.
+- **Semantic discovery**: search by meaning, and let Behaviors surface patterns you did not know to look for.
 - **Signal-centric workflow**: turn failures into named, trackable problems instead of scattered examples.
 - **Human-aligned monitoring**: annotations, evaluations, and scores work together so automated monitoring stays connected to human judgment.
 - **Open source and MIT licensed**: run, inspect, self-host, fork, and contribute to the platform your team depends on.
@@ -88,14 +91,14 @@ Latitude is built around that loop:
 
 Most LLM observability platforms focus on one narrow part of the production quality loop. Tools such as Langfuse, Datadog, Sentry, and PostHog are useful for visibility, evaluation, analytics, or feedback workflows, but they usually leave the work of turning scattered findings into trackable AI-agent signals to the team using them.
 
-Latitude is built around **LLM signal discovery**. Observability, semantic search, behaviours, annotations, flaggers, scores, and evaluations are designed to work together automatically so teams can track production agent failures with minimal manual setup.
+Latitude is built around **LLM signal discovery**. Observability, semantic search, behaviors, annotations, flaggers, scores, and evaluations are designed to work together automatically so teams can track production agent failures with minimal manual setup.
 
 It is also **open source**, where most tools in this space are closed, proprietary SaaS. Latitude is MIT licensed and self-hostable, so you can run it in your own infrastructure, audit exactly how your data is handled, and adapt it to your needs. See [Open source](#open-source) below.
 
 The difference is the combined workflow:
 
 - **Flaggers** detect common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
-- **Search and Behaviours** help teams find product-specific failure modes across real conversations.
+- **Search and Behaviors** help teams find product-specific failure modes across real conversations.
 - **Annotations** turn human review into structured input that can create or refine signals.
 - **Automatically human-aligned evaluations** convert important signal patterns into monitors that stay connected to human judgment.
 - **Signals** bring those findings together into named, prioritized, lifecycle-managed production failure patterns.
