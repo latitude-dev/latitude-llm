@@ -77,21 +77,45 @@ export function getAllModels(): Model[] {
 }
 
 /**
+ * Providers spell a version with a different separator than models.dev keys it. Claude Code reports
+ * `claude-opus-4.8`; the catalog keys the same model `claude-opus-4-8`. Canonicalise a version dot
+ * (a `.` sitting between two digits) to a `-` so the two spellings of one version collapse to a
+ * single form. The lookahead keeps consecutive separators (`4.8.1`) all converting. This only ever
+ * rewrites punctuation inside a version, never a letter or a word, so it cannot rename the model.
+ */
+const VERSION_DOT_RE = /(\d)\.(?=\d)/g
+
+function normalizeVersionPunctuation(id: string): string {
+  return id.replace(VERSION_DOT_RE, "$1-")
+}
+
+/**
  * Find a model by ID (case-insensitive) with prefix fallback.
  *
- * First tries an exact match; if none is found, falls back to the
- * model whose ID is the longest prefix of the requested `modelId`.
+ * First tries an exact match; then a version-punctuation match, so an id that differs from its
+ * catalog key only in how a version is separated (`claude-opus-4.8` vs `claude-opus-4-8`) still
+ * resolves; then falls back to the model whose ID is the longest prefix of the requested `modelId`.
  * Useful for versioned model names like `gpt-4.1-2025-04-14` matching `gpt-4.1`.
  *
- * The fallback stops at a `:` modifier (`:free`, `:thinking`, a context size), which selects a
- * variant the catalog lists and prices separately. Matching past one would answer with the
- * unmodified model, and a free tier would come back at the paid rate.
+ * The punctuation match requires a single candidate: collapsing a dot must never pick between two
+ * genuinely different entries. The prefix fallback stops at a `:` modifier (`:free`, `:thinking`, a
+ * context size), which selects a variant the catalog lists and prices separately. Matching past one
+ * would answer with the unmodified model, and a free tier would come back at the paid rate.
  */
 export function findModel(models: Model[], modelId: string): Model | undefined {
   const needle = modelId.toLowerCase()
 
   const exact = models.find((m) => m.id.toLowerCase() === needle)
   if (exact) return exact
+
+  // Same version, different punctuation. Match on the normalised form so `claude-opus-4.8` finds the
+  // catalog's `claude-opus-4-8` (and the reverse), but only when exactly one entry normalises to it,
+  // so a punctuation-only collapse can never resolve one model to a different one.
+  const normalizedNeedle = normalizeVersionPunctuation(needle)
+  const punctuationMatches = models.filter(
+    (m) => normalizeVersionPunctuation(m.id.toLowerCase()) === normalizedNeedle,
+  )
+  if (punctuationMatches.length === 1) return punctuationMatches[0]
 
   let best: Model | undefined
   let bestLen = 0
