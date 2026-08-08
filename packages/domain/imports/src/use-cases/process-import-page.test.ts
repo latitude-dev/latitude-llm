@@ -724,6 +724,24 @@ describe("processImportPageUseCase", () => {
       expect(h.fetchPageCalls).toHaveLength(0)
     })
 
+    it("admits only the traces the plan can still bill on a single page", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100 } })
+      const h = harness(
+        job,
+        { rows: fakeImportRows(50) },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 3,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "succeeded" })
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(3)
+    })
+
     it("keeps importing while the plan still has room", async () => {
       const job = makeJob()
       const h = harness(

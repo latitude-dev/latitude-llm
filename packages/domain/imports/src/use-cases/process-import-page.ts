@@ -20,7 +20,7 @@ import { ImportSourceError, sanitizedImportError } from "../errors.ts"
 import { ImportJobRepository } from "../ports/import-job-repository.ts"
 import { getAdapter, ImportSourceAdapters } from "../ports/import-source-adapter.ts"
 import { finishImport } from "./finish-import.ts"
-import { importUsageAvailable } from "./import-usage-available.ts"
+import { importTraceBudget } from "./import-usage-available.ts"
 
 export interface ProcessImportPageInput {
   readonly organizationId: string
@@ -259,10 +259,12 @@ export const processImportPageUseCase =
         return { done: true as const, reason: "succeeded" as const }
       }
 
+      const traceBudget = input.isSandbox ? null : yield* importTraceBudget(input.plan)
+
       // Read fresh each page rather than trusting the snapshot, so live ingestion or a
       // spending-limit change during a long import stops it too. The snapshot in
       // `config.maxTraces` is the user's own ceiling; this is the plan's.
-      if (!input.isSandbox && !(yield* importUsageAvailable(input.plan))) {
+      if (!input.isSandbox && traceBudget !== null && traceBudget === 0) {
         yield* finishImport(job, "capped", { error: PLAN_CAP_REASON })
         return { done: true as const, reason: "capped" as const }
       }
@@ -391,7 +393,9 @@ export const processImportPageUseCase =
         normalized.push(result.span)
       }
 
-      const admitted = admitNewestTraces(normalized, job.config.maxTraces - stats.tracesImported)
+      const userTraceBudget = job.config.maxTraces - stats.tracesImported
+      const admitBudget = traceBudget === null ? userTraceBudget : Math.min(userTraceBudget, traceBudget)
+      const admitted = admitNewestTraces(normalized, admitBudget)
       const spans = admitted.spans
       const rootsInPage = admitted.traces
       const truncatedByCap = admitted.truncated
