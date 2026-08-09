@@ -112,9 +112,7 @@ export function findModel(models: Model[], modelId: string): Model | undefined {
   // catalog's `claude-opus-4-8` (and the reverse), but only when exactly one entry normalises to it,
   // so a punctuation-only collapse can never resolve one model to a different one.
   const normalizedNeedle = normalizeVersionPunctuation(needle)
-  const punctuationMatches = models.filter(
-    (m) => normalizeVersionPunctuation(m.id.toLowerCase()) === normalizedNeedle,
-  )
+  const punctuationMatches = models.filter((m) => normalizeVersionPunctuation(m.id.toLowerCase()) === normalizedNeedle)
   if (punctuationMatches.length === 1) return punctuationMatches[0]
 
   let best: Model | undefined
