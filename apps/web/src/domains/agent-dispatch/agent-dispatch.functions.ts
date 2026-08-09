@@ -711,12 +711,15 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
 export const disconnectAgentDispatchIntegration = createServerFn({ method: "POST" })
   .inputValidator(z.object({ integrationId: z.string() }))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     await Effect.runPromise(
-      disconnectAgentDispatchIntegrationUseCase({ integrationId: data.integrationId }).pipe(
-        withPostgres(agentDispatchLayer, client, organizationId),
+      Effect.gen(function* () {
+        yield* requireOrganizationOwner({ organizationId, userId, what: "the organization agent dispatch integration" })
+        yield* disconnectAgentDispatchIntegrationUseCase({ integrationId: data.integrationId })
+      }).pipe(
+        withPostgres(Layer.merge(agentDispatchLayer, MembershipRepositoryLive), client, organizationId),
         withTracing,
       ),
     )

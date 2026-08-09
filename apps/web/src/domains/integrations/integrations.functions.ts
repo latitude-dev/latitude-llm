@@ -32,13 +32,14 @@ import {
   SlackIntegrationId as SlackIntegrationIdBrand,
   type SqlClient,
 } from "@domain/shared"
-import { SlackIntegrationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { MembershipRepositoryLive, SlackIntegrationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
+import { requireOrganizationOwner } from "../../server/require-owner.ts"
 
 const logger = createLogger("slack-disconnect")
 
@@ -128,8 +129,15 @@ export const getActiveSlackIntegration = createServerFn({ method: "GET" }).handl
  */
 export const disconnectSlackIntegration = createServerFn({ method: "POST" }).handler(
   async (): Promise<{ readonly revoked: boolean }> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
+
+    await Effect.runPromise(
+      requireOrganizationOwner({ organizationId, userId, what: "the organization Slack integration" }).pipe(
+        withPostgres(MembershipRepositoryLive, client, organizationId),
+        withTracing,
+      ),
+    )
 
     return Effect.runPromise(
       disconnectSlackIntegrationEffect.pipe(

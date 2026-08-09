@@ -101,7 +101,15 @@ export const getActiveGithubIntegration = createServerFn({ method: "GET" }).hand
 
 export const disconnectGithubIntegration = createServerFn({ method: "POST" }).handler(
   async (): Promise<{ readonly revoked: boolean }> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
+
+    await Effect.runPromise(
+      requireOrganizationOwner({ organizationId, userId, what: "the organization GitHub integration" }).pipe(
+        withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId),
+        withTracing,
+      ),
+    )
+
     return Effect.runPromise(
       disconnectGithubIntegrationEffect.pipe(
         withPostgres(GithubIntegrationRepositoryLive, getPostgresClient(), organizationId),
