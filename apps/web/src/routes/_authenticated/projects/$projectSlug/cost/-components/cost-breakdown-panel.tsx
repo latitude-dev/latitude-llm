@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
-import { TriangleAlertIcon } from "lucide-react"
+import { PieChartIcon, TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import {
@@ -24,7 +24,8 @@ import {
   shareOf,
   splitBreakdownRows,
 } from "./cost-formatters.ts"
-import { CostTableHead } from "./cost-table-head.tsx"
+import { CostTableHead, HeaderSummary } from "./cost-table-head.tsx"
+import { EmptyState } from "./empty-state.tsx"
 
 const DASH = "—"
 
@@ -156,7 +157,9 @@ function BreakdownTable({
           { column, direction: column === "name" ? "asc" : "desc" },
     )
 
-  const headProps = { sort, onSort } as const
+  // `h-auto` clears the shared header cell's fixed 40px so the sum line underneath the
+  // label has room; `py-3` is the breathing room before the first body row that was missing.
+  const headProps = { sort, onSort, className: "h-auto py-3" } as const
 
   return (
     <div className="flex flex-col gap-2">
@@ -164,9 +167,30 @@ function BreakdownTable({
         <TableHeader className="[&_tr]:border-b-0">
           <TableRow hoverable={false}>
             <CostTableHead column="name" label={meta.label} align="left" isFirst alphabetical {...headProps} />
-            <CostTableHead column="total" label="Total cost" align="right" isFirst={false} {...headProps} />
-            <CostTableHead column="input" label="Input" align="right" isFirst={false} {...headProps} />
-            <CostTableHead column="output" label="Output" align="right" isFirst={false} {...headProps} />
+            <CostTableHead
+              column="total"
+              label="Total cost"
+              align="right"
+              isFirst={false}
+              summary={<HeaderSummary kind="SUM" value={usd(totals.totalMicrocents)} />}
+              {...headProps}
+            />
+            <CostTableHead
+              column="input"
+              label="Input"
+              align="right"
+              isFirst={false}
+              summary={<HeaderSummary kind="SUM" value={usd(totals.inputMicrocents)} />}
+              {...headProps}
+            />
+            <CostTableHead
+              column="output"
+              label="Output"
+              align="right"
+              isFirst={false}
+              summary={<HeaderSummary kind="SUM" value={usd(totals.outputMicrocents)} />}
+              {...headProps}
+            />
             {showCacheColumn ? (
               <CostTableHead
                 column="cacheAndOther"
@@ -174,6 +198,7 @@ function BreakdownTable({
                 align="right"
                 isFirst={false}
                 tooltipMessage="Total minus input and output. Provider-reported cost folds cache reads and writes into the input side, and some providers return a total that is not the sum of the two, so this column is what closes each row."
+                summary={<HeaderSummary kind="SUM" value={usd(totals.cacheAndOtherMicrocents)} />}
                 {...headProps}
               />
             ) : null}
@@ -244,52 +269,12 @@ function BreakdownTable({
               showCacheColumn={showCacheColumn}
             />
           ) : null}
-          <TableRow hoverable={false} borderBottom={false} className="bg-secondary">
-            <TableCell>
-              <Text.H5M color="foregroundMuted" noWrap>
-                {`All ${meta.plural}`}
-              </Text.H5M>
-            </TableCell>
-            <TableCell align="right">
-              <TotalCostCell
-                totalMicrocents={totals.totalMicrocents}
-                unpricedCalls={totals.unpricedCalls + totals.unknownCalls}
-                unpricedTokens={totals.unpricedTokens + totals.unknownTokens}
-                tokens={totals.tokens}
-                muted
-              />
-            </TableCell>
-            <TableCell align="right">
-              <MutedCell>{usd(totals.inputMicrocents)}</MutedCell>
-            </TableCell>
-            <TableCell align="right">
-              <MutedCell>{usd(totals.outputMicrocents)}</MutedCell>
-            </TableCell>
-            {showCacheColumn ? (
-              <TableCell align="right">
-                <MutedCell>{usd(totals.cacheAndOtherMicrocents)}</MutedCell>
-              </TableCell>
-            ) : null}
-            <TableCell align="right">
-              <MutedCell>{totals.totalMicrocents > 0 ? formatPercentage(1) : DASH}</MutedCell>
-            </TableCell>
-            <TableCell align="right">
-              <div className="flex flex-col items-end">
-                <MutedCell>
-                  {usd(totals.tracesWithUsage > 0 ? totals.totalMicrocents / totals.tracesWithUsage : 0)}
-                </MutedCell>
-                <Text.H6 color="foregroundMuted" noWrap>
-                  {`${formatCount(totals.tracesWithUsage)} traces`}
-                </Text.H6>
-              </div>
-            </TableCell>
-          </TableRow>
         </TableBody>
       </Table>
       {breakdown.rows.length > BREAKDOWN_ROWS_SHOWN ? (
-        <div className="flex flex-row items-center gap-2">
+        <div className="flex flex-row items-center justify-center gap-2">
           <Button variant="link" size="sm" onClick={() => setShowAll(!showAll)}>
-            {showAll ? `Show top ${BREAKDOWN_ROWS_SHOWN}` : `Show all ${formatCount(breakdown.rows.length)}`}
+            {showAll ? "Show less" : `Show all ${formatCount(breakdown.rows.length)}`}
           </Button>
           {showAll && hidden > 0 ? (
             <Text.H6 color="foregroundMuted">
@@ -380,9 +365,9 @@ export function CostBreakdownPanel({
 
   return (
     // The row separators are painted in `--background`, so the card must actually carry it.
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <Text.H6 color="foreground">Cost breakdown</Text.H6>
+    <div className="flex flex-col gap-3 rounded-lg bg-background p-3">
+      <div className="flex min-h-8 flex-row flex-wrap items-center justify-between gap-2">
+        <Text.H6 color="foregroundMuted">Cost breakdown</Text.H6>
         <Tabs
           variant="bordered"
           size="sm"
@@ -401,9 +386,7 @@ export function CostBreakdownPanel({
       {isLoading || !breakdown ? (
         <TableSkeleton rows={5} cols={6} />
       ) : breakdown.rows.length === 0 ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center">
-          <Text.H6 color="foregroundMuted">{`No billable usage by ${meta.plural} in this time window`}</Text.H6>
-        </div>
+        <EmptyState icon={PieChartIcon} message={`No billable usage by ${meta.plural} in this time window`} />
       ) : (
         <BreakdownTable key={dimension} breakdown={breakdown} dimension={dimension} />
       )}

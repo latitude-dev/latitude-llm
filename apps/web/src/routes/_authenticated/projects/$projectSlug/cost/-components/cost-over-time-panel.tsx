@@ -1,6 +1,7 @@
 import type { CostSeriesMetric } from "@domain/spans"
-import { Chart, type ChartSeries, HistogramSkeleton, Tabs, Text } from "@repo/ui"
+import { Chart, type ChartSeries, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
 import { formatPrice } from "@repo/utils"
+import { CircleDollarSignIcon } from "lucide-react"
 import type { CostSeriesBucketRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { ChartHeader } from "../../-components/chart-header.tsx"
 import {
@@ -10,7 +11,8 @@ import {
   isCostSeriesMetric,
   microcentsToUsd,
 } from "./cost-formatters.ts"
-import { modelColorAt, TREND_COLOR } from "./cost-series-colors.ts"
+import { modelColorAt, trendColor } from "./cost-series-colors.ts"
+import { EmptyState } from "./empty-state.tsx"
 
 const CHART_HEIGHT = 220
 
@@ -23,15 +25,39 @@ const METRIC_OPTIONS: readonly { readonly id: CostSeriesMetric; readonly label: 
 const modelLabel = (model: string): string => model || "unknown model"
 
 /**
- * Series for the additive metric: one stacked bar segment per model, biggest
+ * `step: "end"` holds a bucket's value from its own tick to the *next* tick, so the last
+ * real bucket has no next tick to hold toward — it draws as a bare point with no plateau,
+ * which can leave a single-bucket window looking empty despite having spend. Repeating the
+ * last tick's label and every series' last value gives that final plateau somewhere to end.
+ * `tooltipTitle` below already returns `""` past the real bucket count, so the extra point
+ * never claims a bucket that doesn't exist.
+ */
+function padTrailingStepBoundary(
+  categories: readonly string[],
+  series: readonly ChartSeries[],
+): { readonly categories: readonly string[]; readonly series: readonly ChartSeries[] } {
+  if (categories.length === 0) return { categories, series }
+  return {
+    categories: [...categories, categories[categories.length - 1]],
+    series: series.map((s) => ({ ...s, values: [...s.values, s.values[s.values.length - 1] ?? 0] })),
+  }
+}
+
+/**
+ * Series for the additive metric: one stacked step-area band per model, biggest
  * spender at the baseline so stacks stay comparable across buckets.
+ *
+ * `step: "end"` — labels mark each bucket's *start*, so a bucket's value has to
+ * hold flat from its own tick through to the next bucket's tick, then jump.
+ * That is `step: "end"`'s behaviour, not `"start"`'s: "start" would jump right
+ * after this tick and hold flat at the *next* bucket's value instead.
  */
 function buildStackedModelSeries({
   buckets,
-  provisionalIndex,
+  isDark,
 }: {
   readonly buckets: readonly CostSeriesBucketRecord[]
-  readonly provisionalIndex: number | undefined
+  readonly isDark: boolean
 }): readonly ChartSeries[] {
   const spendByModel = new Map<string, number>()
   for (const bucket of buckets) {
@@ -42,14 +68,15 @@ function buildStackedModelSeries({
   const models = [...spendByModel.entries()].sort(([, a], [, b]) => b - a).map(([model]) => model)
 
   return models.map((model, index) => ({
-    kind: "bar" as const,
+    kind: "line" as const,
     name: modelLabel(model),
     values: buckets.map((bucket) =>
       microcentsToUsd(bucket.byModel.find((slice) => slice.model === model)?.costMicrocents ?? 0),
     ),
-    color: modelColorAt(index),
+    color: modelColorAt(index, isDark),
     stack: "cost",
-    ...(provisionalIndex === undefined ? {} : { provisionalIndex }),
+    area: true,
+    step: "end" as const,
   }))
 }
 
@@ -74,23 +101,29 @@ export function CostOverTimePanel({
   readonly isAllTime: boolean
   readonly isLoading: boolean
 }) {
+  const { isDark } = useChartCssTheme()
   const unit = bucketUnitLabel(bucketSeconds)
   const categories = buckets.map((bucket) => formatUtcBucketLabel(bucket.bucketStartIso, bucketSeconds))
-  // Total is additive, so bars stack by model and their area means something.
-  // Average and p95 summarise a distribution that does not accumulate — a line.
+  // Total is additive, so its bands stack by model and their area means something.
+  // Average and p95 summarise a distribution that does not accumulate — one band.
+  // Both read as step areas: a bucket's value holds rather than drifting toward
+  // the next one, which is what the data actually did.
   const series: readonly ChartSeries[] =
     metric === "total"
-      ? buildStackedModelSeries({ buckets, provisionalIndex })
+      ? buildStackedModelSeries({ buckets, isDark })
       : [
           {
             kind: "line",
             name: metric === "p95" ? "p95 cost per trace" : "Avg cost per trace",
             values: buckets.map((bucket) => microcentsToUsd(bucket.valueMicrocents)),
-            color: TREND_COLOR,
+            color: trendColor(isDark),
+            area: true,
+            step: "end" as const,
           },
         ]
   // Reads as spend, not usage: an all-free-priced window also sums to zero.
   const isEmpty = buckets.length === 0 || buckets.every((bucket) => bucket.valueMicrocents === 0)
+  const { categories: chartCategories, series: chartSeries } = padTrailingStepBoundary(categories, series)
 
   return (
     <div className="flex flex-col rounded-lg border border-border bg-background">
@@ -99,8 +132,10 @@ export function CostOverTimePanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
-        // The picker above states this window; only the All-time slice differs from it.
-        showWindow={isAllTime}
+        // The picker above states this window already, and the recent-activity
+        // distinction that other dashboards flag isn't relevant to this panel.
+        showWindow={false}
+        titleColor="foregroundMuted"
         actions={
           <Tabs
             variant="bordered"
@@ -120,18 +155,16 @@ export function CostOverTimePanel({
         }
       />
       {isLoading ? (
-        <div className="p-3">
+        <div className="px-4 py-3">
           <HistogramSkeleton height={CHART_HEIGHT} />
         </div>
       ) : isEmpty ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center p-3">
-          <Text.H6 color="foregroundMuted">No spend recorded in this time window</Text.H6>
-        </div>
+        <EmptyState icon={CircleDollarSignIcon} message="No spend recorded in this time window" />
       ) : (
-        <div className="flex flex-col gap-1 p-3">
+        <div className="flex flex-col gap-1 px-4 py-3">
           <Chart
-            categories={categories}
-            series={series}
+            categories={chartCategories}
+            series={chartSeries}
             height={CHART_HEIGHT}
             xAxisLabelFontSize={10}
             primaryAxis={{
@@ -147,16 +180,6 @@ export function CostOverTimePanel({
             }}
             ariaLabel="Cost over time"
           />
-          {provisionalIndex === undefined ? null : (
-            <Text.H6 color="foregroundMuted">
-              {/* A zero current bucket draws nothing, so naming the marking would point at empty space. */}
-              {(buckets[provisionalIndex]?.valueMicrocents ?? 0) > 0
-                ? metric === "total"
-                  ? `The hatched ${unit} is still in progress.`
-                  : `The current ${unit} is still in progress.`
-                : `No spend recorded yet in the current ${unit} (UTC).`}
-            </Text.H6>
-          )}
         </div>
       )}
     </div>

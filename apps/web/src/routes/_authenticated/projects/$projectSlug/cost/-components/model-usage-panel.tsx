@@ -1,6 +1,6 @@
-import { Button, Chart, type ChartSeries, cn, HistogramSkeleton, Tabs, Text } from "@repo/ui"
+import { Chart, type ChartSeries, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
-import { useState } from "react"
+import { CircleDollarSignIcon, HashIcon } from "lucide-react"
 import type { ModelUsageSeriesRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { ChartHeader } from "../../-components/chart-header.tsx"
 import {
@@ -11,7 +11,8 @@ import {
   type ModelUsageMeasure,
   microcentsToUsd,
 } from "./cost-formatters.ts"
-import { modelColorAt, OTHER_SERIES_COLOR } from "./cost-series-colors.ts"
+import { modelColorAt, otherSeriesColor } from "./cost-series-colors.ts"
+import { EmptyState } from "./empty-state.tsx"
 
 const CHART_HEIGHT = 260
 
@@ -35,16 +36,18 @@ interface UsageSeries {
 function buildUsageSeries({
   series,
   measure,
+  isDark,
 }: {
   readonly series: ModelUsageSeriesRecord
   readonly measure: ModelUsageMeasure
+  readonly isDark: boolean
 }): readonly UsageSeries[] {
   const measureOf = (slice: { readonly costMicrocents: number; readonly tokens: number }): number =>
     measure === "cost" ? microcentsToUsd(slice.costMicrocents) : slice.tokens
 
   const modelSeries = series.models.map((model, index) => ({
     name: modelLabel(model),
-    color: modelColorAt(index),
+    color: modelColorAt(index, isDark),
     values: series.buckets.map((bucket) => {
       const slice = bucket.byModel.find((entry) => entry.model === model)
       return slice ? measureOf(slice) : 0
@@ -56,42 +59,10 @@ function buildUsageSeries({
     ...modelSeries,
     {
       name: otherLabel(series.otherModels),
-      color: OTHER_SERIES_COLOR,
+      color: otherSeriesColor(isDark),
       values: series.buckets.map((bucket) => measureOf(bucket.other)),
     },
   ]
-}
-
-/** Click-to-isolate, so a model outside the charted ranks is still reachable by muting the rest. */
-function UsageLegend({
-  series,
-  isolated,
-  onIsolate,
-}: {
-  readonly series: readonly UsageSeries[]
-  readonly isolated: string | null
-  readonly onIsolate: (name: string | null) => void
-}) {
-  return (
-    <div className="flex flex-row flex-wrap items-center gap-1">
-      {series.map((entry) => {
-        const isMuted = isolated !== null && isolated !== entry.name
-        return (
-          <Button
-            key={entry.name}
-            variant="ghost"
-            size="sm"
-            onClick={() => onIsolate(isolated === entry.name ? null : entry.name)}
-            aria-pressed={isolated === entry.name}
-            className={cn({ "opacity-50": isMuted })}
-          >
-            <span className="h-2 w-3 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }} aria-hidden="true" />
-            {entry.name}
-          </Button>
-        )
-      })}
-    </div>
-  )
 }
 
 /**
@@ -119,16 +90,12 @@ export function ModelUsagePanel({
   readonly isAllTime: boolean
   readonly isLoading: boolean
 }) {
-  const [isolated, setIsolated] = useState<string | null>(null)
+  const { isDark } = useChartCssTheme()
   const unit = bucketUnitLabel(bucketSeconds)
   const buckets = series?.buckets ?? []
-  const usageSeries = series ? buildUsageSeries({ series, measure }) : []
+  const usageSeries = series ? buildUsageSeries({ series, measure, isDark }) : []
   const isEmpty = usageSeries.every((entry) => entry.values.every((value) => value === 0))
-  // Falls back rather than resetting state: a model isolated before a range change
-  // may not survive the re-ranking, and filtering to a name that is gone draws nothing.
-  const isolatedSeries = isolated === null ? [] : usageSeries.filter((entry) => entry.name === isolated)
-  const visible = isolatedSeries.length > 0 ? isolatedSeries : usageSeries
-  const chartSeries: readonly ChartSeries[] = visible.map((entry) => ({
+  const chartSeries: readonly ChartSeries[] = usageSeries.map((entry) => ({
     kind: "line" as const,
     name: entry.name,
     values: entry.values,
@@ -142,8 +109,10 @@ export function ModelUsagePanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
-        // The picker above states this window; only the All-time slice differs from it.
-        showWindow={isAllTime}
+        // The picker above states this window already, and the recent-activity
+        // distinction that other dashboards flag isn't relevant to this panel.
+        showWindow={false}
+        titleColor="foregroundMuted"
         actions={
           <Tabs
             variant="bordered"
@@ -163,29 +132,22 @@ export function ModelUsagePanel({
         }
       />
       {isLoading ? (
-        <div className="p-3">
+        <div className="px-4 py-3">
           <HistogramSkeleton height={CHART_HEIGHT} />
         </div>
       ) : isEmpty ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center p-3">
-          <Text.H6 color="foregroundMuted">
-            {measure === "cost"
-              ? "No spend recorded in this time window"
-              : "No token usage recorded in this time window"}
-          </Text.H6>
-        </div>
+        <EmptyState
+          icon={measure === "cost" ? CircleDollarSignIcon : HashIcon}
+          message={
+            measure === "cost" ? "No spend recorded in this time window" : "No token usage recorded in this time window"
+          }
+        />
       ) : (
-        <div className="flex flex-col gap-2 p-3">
-          <UsageLegend
-            series={usageSeries}
-            isolated={isolatedSeries.length > 0 ? isolated : null}
-            onIsolate={setIsolated}
-          />
+        <div className="flex flex-col gap-1 px-4 py-3">
           <Chart
             categories={buckets.map((bucket) => formatUtcBucketLabel(bucket.bucketStartIso, bucketSeconds))}
             series={chartSeries}
             height={CHART_HEIGHT}
-            hideLegend
             xAxisLabelFontSize={10}
             primaryAxis={{
               name: measure === "cost" ? `$/${unit}` : `tokens/${unit}`,
@@ -200,12 +162,6 @@ export function ModelUsagePanel({
             }}
             ariaLabel="Model usage over time"
           />
-          <Text.H6 color="foregroundMuted">
-            {/* Ranking by volume would crowd out the expensive model that is the story. */}
-            Top {series?.models.length ?? 0} models by spend in this window
-            {(series?.otherModels ?? 0) > 0 ? `; the remaining ${series?.otherModels} are grouped as Other` : null}.
-            Select a model to isolate it.
-          </Text.H6>
         </div>
       )}
     </div>

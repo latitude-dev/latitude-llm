@@ -4,14 +4,16 @@ import {
   type SessionCostContribution,
   type SessionCostFactor,
 } from "@domain/spans"
-import { Icon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Badge, type BadgeProps, cn, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatChartWindowCaption, formatCount, formatPercentage, formatPrice } from "@repo/utils"
-import { ArrowDownIcon, ArrowUpIcon, InfoIcon, MinusIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, GitCompareIcon, type LucideIcon, MinusIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import type { CostPerSessionRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
-import { ChartHeader } from "../../-components/chart-header.tsx"
 import { microcentsToUsd } from "./cost-formatters.ts"
+import { EmptyState } from "./empty-state.tsx"
 import { SessionSparkline } from "./session-sparkline.tsx"
+import { SplitValue } from "./split-value.tsx"
 
 // Above this share of the denominator, "per session" stops meaning what it says and
 // the card has to name the substitution rather than leaving it in a tooltip.
@@ -84,14 +86,20 @@ const FACTOR_META: Record<SessionCostFactor, FactorMeta> = {
   },
 }
 
-const formatMultiplier = (multiplier: number): string => `×${multiplier.toFixed(2)}`
+/**
+ * The six factors shown in the "Contributing changes" grid, in reading order. `modelMix`
+ * ("Which models") is deliberately absent from this card.
+ */
+const FACTOR_GRID_ORDER: readonly SessionCostFactor[] = [
+  "tokensPerCall",
+  "tokenMix",
+  "tracesPerSession",
+  "promptRate",
+  "callsPerTrace",
+  "outputRate",
+]
 
-// The arrow reads off the rounded figure, not the raw one: at +0.4 the two disagree
-// and the caret points up beside a `0%`.
-const signedPercent = (pct: number): string => {
-  const rounded = Math.round(pct)
-  return `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`
-}
+const formatMultiplier = (multiplier: number): string => `×${multiplier.toFixed(2)}`
 
 const isStill = (multiplier: number): boolean => Math.abs(multiplier - 1) < SESSION_COST_QUIET_BAND
 
@@ -100,8 +108,45 @@ const directionColor = (multiplier: number): "destructive" | "success" | "foregr
   return multiplier > 1 ? "destructive" : "success"
 }
 
-const directionArrow = (multiplier: number) =>
-  isStill(multiplier) ? MinusIcon : multiplier > 1 ? ArrowUpIcon : ArrowDownIcon
+/** Null on a still factor — held-flat gets plain muted text, not a dash icon. */
+const directionArrow = (multiplier: number): LucideIcon | null => {
+  if (isStill(multiplier)) return null
+  return multiplier > 1 ? ArrowUpIcon : ArrowDownIcon
+}
+
+const TREND_BADGE_VARIANT: Record<"destructive" | "success" | "foregroundMuted", NonNullable<BadgeProps["variant"]>> = {
+  destructive: "destructiveMuted",
+  success: "successMuted",
+  foregroundMuted: "muted",
+}
+
+/**
+ * The arrow-plus-figure trend indicator, as a badge — shared by the factor grid and the
+ * headline blocks. `className` exists for the factor grid: that badge sits directly in a
+ * `flex-col`, which would stretch it full-width without `self-start`; the headline blocks'
+ * badge sits in a `flex-row` that already centers it correctly on its own.
+ */
+function TrendBadge({
+  color,
+  icon,
+  className,
+  children,
+}: {
+  readonly color: "destructive" | "success" | "foregroundMuted"
+  readonly icon: LucideIcon | null
+  readonly className?: string
+  readonly children: ReactNode
+}) {
+  return (
+    <Badge
+      variant={TREND_BADGE_VARIANT[color]}
+      className={cn("tabular-nums", className)}
+      {...(icon ? { iconProps: { icon, placement: "start" as const } } : {})}
+    >
+      {children}
+    </Badge>
+  )
+}
 
 /**
  * What the standing value is a share of, where the number alone would be ambiguous.
@@ -119,67 +164,54 @@ function rowSubject(row: SessionCostContribution): string | null {
  * blended per-side price, which moves with model mix, so it would contradict a marker
  * that holds the mix fixed.
  *
- * A still factor keeps its tile rather than disappearing: which seven things the
- * decomposition accounts for is part of what the card says, and it cannot be read
- * off a list whose shape changes every period.
+ * A still factor keeps its tile rather than disappearing: which six things this grid
+ * accounts for is part of what the card says, and it cannot be read off a list whose
+ * shape changes every period. Its subject (which model, what the rate covers) lives in
+ * the tooltip rather than a third line, matched to the design's plain two-line tile.
  */
 function FactorTile({ row }: { readonly row: SessionCostContribution }) {
   const meta = FACTOR_META[row.factor]
-  const subject = rowSubject(row)
   const color = directionColor(row.multiplier)
+  const icon = directionArrow(row.multiplier)
+  const subject = rowSubject(row)
 
   return (
     <Tooltip
       asChild
       trigger={
-        <div className="flex min-w-0 cursor-default flex-col gap-0.5 rounded-md bg-background/40 p-2">
-          <Text.H6 color="foregroundMuted" ellipsis noWrap>
+        <div
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: focusable tooltip trigger, no click action
+          tabIndex={0}
+          className="flex min-w-0 flex-1 cursor-default flex-col gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Text.H6M color="foregroundMuted" ellipsis noWrap>
             {meta.label}
-          </Text.H6>
-          <div className="flex flex-row flex-wrap items-baseline gap-x-2">
-            <Text.H4M color="foreground" noWrap className="tabular-nums">
-              {meta.format(row.current)}
-            </Text.H4M>
-            <div className="flex flex-row items-center gap-0.5">
-              <Icon icon={directionArrow(row.multiplier)} size="sm" color={color} />
-              <Text.H6 color={color} noWrap className="tabular-nums">
-                {formatMultiplier(row.multiplier)}
-              </Text.H6>
-            </div>
+          </Text.H6M>
+          <div className="flex flex-col gap-0.5">
+            <Text.H3M color="foreground" noWrap className="tabular-nums">
+              <SplitValue formatted={meta.format(row.current)} />
+            </Text.H3M>
+            <TrendBadge color={color} icon={icon} className="self-start">
+              {formatMultiplier(row.multiplier)}
+            </TrendBadge>
           </div>
-          <Text.H6 color="foregroundMuted" ellipsis noWrap>
-            {subject ?? ""}
-          </Text.H6>
         </div>
       }
     >
-      {meta.hint}
+      {subject ? `${subject}. ${meta.hint}` : meta.hint}
     </Tooltip>
   )
 }
 
 /**
- * Heading for the grid, spanning the cells the seven factors leave over.
- *
- * Carries no figure of its own. The total belongs to the Cost per session block, and
- * printing it twice invited the two copies to disagree in their last digit — which is
- * unavoidable once each tile is rounded for display.
+ * A headline measure: the number, which way it moved, and the shape it took getting there.
+ * No icon and plain "flat" text when the change doesn't clear the neutral band, matching
+ * how a still factor tile reads in the grid beside it.
  */
-function TotalTile() {
-  return (
-    <div className="col-span-2 flex min-w-0 flex-col justify-center gap-1 p-2">
-      <Text.H4M color="foreground">What changed</Text.H4M>
-      <Text.H6 color="foregroundMuted">Each of these pushed the cost of a session up or down.</Text.H6>
-    </div>
-  )
-}
-
-/** A headline measure: the number, its change, and the shape it took getting there. */
 function HeadlineBlock({
   label,
   value,
   changePct,
-  detail,
   points,
   boundaryIndex,
   hint,
@@ -187,53 +219,52 @@ function HeadlineBlock({
   readonly label: string
   readonly value: string
   readonly changePct: number | null
-  readonly detail?: string
   readonly points: readonly (number | null)[]
   readonly boundaryIndex: number | undefined
   readonly hint: string
 }) {
-  const neutral = changePct === null || Math.abs(Math.round(changePct)) < NEUTRAL_PERCENT
+  const neutral = changePct === null || Math.abs(changePct) < NEUTRAL_PERCENT
+  const color = neutral ? "foregroundMuted" : changePct !== null && changePct > 0 ? "destructive" : "success"
+  const icon = neutral || changePct === null ? null : changePct > 0 ? ArrowUpIcon : ArrowDownIcon
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-1">
-      <div className="flex flex-row items-center gap-1">
-        <Text.H6 color="foregroundMuted">{label}</Text.H6>
-        <Tooltip
-          asChild
-          trigger={
-            <span className="inline-flex cursor-default">
-              <Icon icon={InfoIcon} size="sm" color="foregroundMuted" />
-            </span>
-          }
+    <Tooltip
+      asChild
+      trigger={
+        <div
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: focusable tooltip trigger, no click action
+          tabIndex={0}
+          className="flex min-w-0 flex-1 cursor-default flex-col justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {hint}
-        </Tooltip>
-      </div>
-      <Text.H3 color="foreground" className="tabular-nums">
-        {value}
-      </Text.H3>
-      <div className="flex flex-row items-baseline gap-2">
-        {changePct === null ? (
-          <Text.H6 color="foregroundMuted" noWrap>
-            no comparison
-          </Text.H6>
-        ) : (
-          <Text.H6
-            color={neutral ? "foregroundMuted" : changePct > 0 ? "destructive" : "success"}
-            noWrap
-            className="tabular-nums"
-          >
-            {neutral ? "flat" : signedPercent(changePct)}
-          </Text.H6>
-        )}
-        {detail ? (
-          <Text.H6 color="foregroundMuted" ellipsis noWrap>
-            {detail}
-          </Text.H6>
-        ) : null}
-      </div>
-      <SessionSparkline points={points} boundaryIndex={boundaryIndex} label={`${label} over both periods`} />
-    </div>
+          <div className="flex flex-col gap-1">
+            <Text.H6M color="foregroundMuted" noWrap>
+              {label}
+            </Text.H6M>
+            <div className="flex flex-col gap-0.5">
+              <Text.H3M color="foreground" noWrap className="tabular-nums">
+                <SplitValue formatted={value} />
+              </Text.H3M>
+              <div className="flex flex-row items-center gap-1">
+                {changePct === null ? (
+                  <TrendBadge color="foregroundMuted" icon={null}>
+                    no comparison
+                  </TrendBadge>
+                ) : (
+                  <TrendBadge color={color} icon={icon}>
+                    {neutral ? "flat" : formatPercentage(Math.abs(changePct) / 100)}
+                  </TrendBadge>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex h-[47px] w-full items-end border-border border-b">
+            <SessionSparkline points={points} boundaryIndex={boundaryIndex} label={`${label} over both periods`} />
+          </div>
+        </div>
+      }
+    >
+      {hint}
+    </Tooltip>
   )
 }
 
@@ -261,6 +292,83 @@ function notEnoughDataReason(record: CostPerSessionRecord): string {
   return `Not enough data to compare periods: ${short.join(" and ")}, against the ${SESSION_COST_MIN_SESSIONS} sessions a comparison needs on both sides.`
 }
 
+/** "Cost per session": sessions and the headline figure, each with its own shape over time. */
+function SessionHeadlineCard({
+  record,
+  cost,
+  sessionsChangePct,
+  boundaryIndex,
+}: {
+  readonly record: CostPerSessionRecord
+  readonly cost: { readonly label: string; readonly note?: string }
+  readonly sessionsChangePct: number | null
+  readonly boundaryIndex: number | undefined
+}) {
+  return (
+    <div className="flex flex-1 flex-col rounded-lg bg-secondary">
+      <div className="p-4">
+        <Text.H6M color="foregroundMuted">Cost per session</Text.H6M>
+      </div>
+      <div className="flex flex-1 flex-col px-4 pb-4">
+        <div className="flex flex-1 flex-row gap-6">
+          <HeadlineBlock
+            label="Sessions"
+            value={formatCount(record.volume.currentSessions)}
+            changePct={sessionsChangePct}
+            points={record.buckets.map((bucket) => bucket.sessions)}
+            boundaryIndex={boundaryIndex}
+            hint="Sessions with billable spend. Traffic that reported no session id keys on its trace id instead, so it counts as a single-trace session rather than dropping out of the denominator. More sessions does not move what each one costs — that is the figure beside it."
+          />
+          <HeadlineBlock
+            label="Cost per session"
+            value={cost.label}
+            changePct={record.changePct}
+            points={record.buckets.map((bucket) =>
+              bucket.costPerSessionMicrocents === null ? null : microcentsToUsd(bucket.costPerSessionMicrocents),
+            )}
+            boundaryIndex={boundaryIndex}
+            hint={`Spend divided by sessions, against the equal-length window before it (${formatChartWindowCaption(record.comparedFromIso, record.comparedToIso)}). Each factor in "Contributing changes" shows where it stands now and which way it pushed this figure.`}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** "Contributing changes": the six factors, each a tile in a fixed 3x2 reading order. */
+function ContributingChangesCard({ record }: { readonly record: CostPerSessionRecord }) {
+  const rowByFactor = new Map(record.rows.map((row) => [row.factor, row]))
+  const rows = FACTOR_GRID_ORDER.map((factor) => rowByFactor.get(factor)).filter(
+    (row): row is SessionCostContribution => row !== undefined,
+  )
+
+  return (
+    <div className="flex flex-1 flex-col rounded-lg bg-secondary">
+      {record.status === "notEnoughData" ? (
+        <EmptyState icon={GitCompareIcon} message={notEnoughDataReason(record)} />
+      ) : record.status === "flat" ? (
+        <EmptyState
+          icon={MinusIcon}
+          message="Cost per session held flat against the previous period, so no factor moved it"
+        />
+      ) : (
+        <div className="flex flex-1 flex-col gap-6 p-4">
+          <div className="flex flex-row gap-3">
+            {rows.slice(0, 3).map((row) => (
+              <FactorTile key={row.factor} row={row} />
+            ))}
+          </div>
+          <div className="flex flex-row gap-3">
+            {rows.slice(3, 6).map((row) => (
+              <FactorTile key={row.factor} row={row} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /**
  * What moved average cost per session, as a multiplier per factor.
  *
@@ -274,14 +382,10 @@ function notEnoughDataReason(record: CostPerSessionRecord): string {
 export function CostPerSessionPanel({
   record,
   rangeFromIso,
-  rangeToIso,
-  isAllTime,
   isLoading,
 }: {
   readonly record: CostPerSessionRecord | undefined
   readonly rangeFromIso: string
-  readonly rangeToIso: string
-  readonly isAllTime: boolean
   readonly isLoading: boolean
 }) {
   const cost = record
@@ -304,67 +408,30 @@ export function CostPerSessionPanel({
   const boundaryIndex = currentWindowStart !== undefined && currentWindowStart > 0 ? currentWindowStart : undefined
 
   return (
-    <div className="flex flex-col rounded-lg bg-secondary">
-      <ChartHeader title="Cost per session" fromIso={rangeFromIso} toIso={rangeToIso} isAllTime={isAllTime} />
+    <div className="flex flex-col gap-2">
       {isLoading || !record || !cost ? (
-        <div className="flex flex-col gap-6 px-4 py-3 lg:flex-row">
-          {[0, 1, 2].map((column) => (
-            <Skeleton key={column} className="h-24 flex-1" />
+        <div className="flex flex-col gap-2 lg:flex-row">
+          {[0, 1].map((column) => (
+            <Skeleton key={column} className="h-40 flex-1 rounded-lg" />
           ))}
         </div>
       ) : (
-        <div className="flex flex-col gap-4 px-4 py-3">
-          <div className="flex flex-col gap-6 lg:flex-row">
-            {/* The two measures on the left, the factors of the second one on the right. */}
-            <div className="flex min-w-0 flex-col gap-4 lg:w-1/3 lg:shrink-0">
-              <HeadlineBlock
-                label="Sessions"
-                value={formatCount(record.volume.currentSessions)}
-                changePct={sessionsChangePct}
-                {...(record.volume.previousSessions > 0
-                  ? { detail: `from ${formatCount(record.volume.previousSessions)}` }
-                  : {})}
-                points={record.buckets.map((bucket) => bucket.sessions)}
-                boundaryIndex={boundaryIndex}
-                hint="Sessions with billable spend. Traffic that reported no session id keys on its trace id instead, so it counts as a single-trace session rather than dropping out of the denominator. More sessions does not move what each one costs — that is the figure below."
-              />
-              <HeadlineBlock
-                label="Cost per session"
-                value={cost.label}
-                changePct={record.changePct}
-                points={record.buckets.map((bucket) =>
-                  bucket.costPerSessionMicrocents === null ? null : microcentsToUsd(bucket.costPerSessionMicrocents),
-                )}
-                boundaryIndex={boundaryIndex}
-                hint={`Spend divided by sessions, against the equal-length window before it (${formatChartWindowCaption(record.comparedFromIso, record.comparedToIso)}). Each factor beside it shows where it stands now and which way it pushed this figure.`}
-              />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-2 lg:border-border lg:border-l lg:pl-6">
-              {record.status === "notEnoughData" ? (
-                <Text.H6 color="foregroundMuted">{notEnoughDataReason(record)}</Text.H6>
-              ) : record.status === "flat" ? (
-                <Text.H6 color="foregroundMuted">
-                  Cost per session held flat against the previous period, so no factor moved it.
-                </Text.H6>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <TotalTile />
-                    {record.rows.map((row) => (
-                      <FactorTile key={row.factor} row={row} />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+        <>
+          <div className="flex flex-col gap-2 lg:flex-row">
+            <SessionHeadlineCard
+              record={record}
+              cost={cost}
+              sessionsChangePct={sessionsChangePct}
+              boundaryIndex={boundaryIndex}
+            />
+            <ContributingChangesCard record={record} />
           </div>
-
           {traceKeyed !== null && traceKeyed >= TRACE_KEYED_DISCLOSURE_SHARE ? (
             <Text.H6 color="foregroundMuted">
               {`${Math.round(traceKeyed * 100)}% of these sessions are single traces that reported no session id, so this figure is close to average cost per trace.`}
             </Text.H6>
           ) : null}
-        </div>
+        </>
       )}
     </div>
   )

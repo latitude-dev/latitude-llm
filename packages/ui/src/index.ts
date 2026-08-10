@@ -79,6 +79,7 @@ export {
 } from "./components/charts/histogram-skeleton.tsx"
 export { LazyBarChart as BarChart } from "./components/charts/lazy-bar-chart.tsx"
 export { LazyChart as Chart } from "./components/charts/lazy-chart.tsx"
+export { useChartCssTheme } from "./components/charts/use-chart-css-theme.ts"
 export {
   Checkbox,
   type CheckedState,

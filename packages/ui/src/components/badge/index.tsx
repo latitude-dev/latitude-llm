@@ -7,35 +7,33 @@ import { DotIndicator, type DotIndicatorProps } from "../dot-indicator/dot-indic
 import { Icon, type IconProps } from "../icons/icons.tsx"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  // No `self-start` here: it would win over a row parent's `items-center` and pin the badge
+  // to the top instead of centering it. A badge that must not stretch in a `flex-col` parent
+  // takes `self-start` via `className` at that call site instead.
+  "inline-flex shrink-0 items-center rounded-md font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
-        default: "border-primary-foreground/10 bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary: "border-secondary-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        yellow: "border-transparent bg-yellow text-foreground hover:bg-yellow/80",
-        purple: "border-purple-foreground/10 bg-purple text-purple-foreground hover:bg-purple/80",
-        accent: "border-accent-foreground/10 bg-accent text-accent-foreground hover:bg-accent/80",
-        success: "border-transparent bg-green-500 text-success-foreground hover:bg-green-500/80",
-        successMuted:
-          "border-success-muted-foreground/10 bg-success-muted text-success-muted-foreground hover:bg-success-muted/80",
-        destructive:
-          "border-destructive-foreground/10 bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        destructiveMuted:
-          "border-destructive-muted-foreground/10 bg-destructive-muted text-destructive-muted-foreground hover:bg-destructive-muted/80",
-        warningMuted:
-          "border-warning-muted-foreground/10 bg-warning-muted text-warning-muted-foreground hover:bg-warning-muted/80",
-        muted: "border-muted-foreground/10 bg-muted text-muted-foreground hover:bg-muted/80",
-        outline: "text-foreground",
-        outlineMuted: "border-muted-foreground/30 text-muted-foreground",
-        outlineAccent: "border-accent-foreground/30 text-accent-foreground",
-        outlinePurple: "border-purple-foreground/30 text-purple-foreground",
-        outlineSuccessMuted: "border-success-muted-foreground/30 text-success-muted-foreground",
-        outlineDestructiveMuted: "border-destructive-muted-foreground/30 text-destructive-muted-foreground",
-        outlineWarningMuted: "border-warning-muted-foreground/30 text-warning-muted-foreground",
-        noBorderMuted: "bg-muted border-none text-muted-foreground hover:bg-muted/80",
-        noBorderDestructiveMuted:
-          "bg-destructive-muted border-none text-destructive-muted-foreground hover:bg-destructive-muted/80",
+        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        yellow: "bg-yellow text-foreground hover:bg-yellow/80",
+        purple: "bg-purple text-purple-foreground hover:bg-purple/80",
+        accent: "bg-accent text-accent-foreground hover:bg-accent/80",
+        success: "bg-green-500 text-success-foreground hover:bg-green-500/80",
+        successMuted: "bg-success-muted text-success-muted-foreground hover:bg-success-muted/80",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        destructiveMuted: "bg-destructive-muted text-destructive-muted-foreground hover:bg-destructive-muted/80",
+        warningMuted: "bg-warning-muted text-warning-muted-foreground hover:bg-warning-muted/80",
+        muted: "bg-muted text-muted-foreground hover:bg-muted/80",
+        // The only variants that keep a border — the outline family has no fill, so the
+        // border is what makes it a badge rather than bare text.
+        outline: "border text-foreground",
+        outlineMuted: "border border-muted-foreground/30 text-muted-foreground",
+        outlineAccent: "border border-accent-foreground/30 text-accent-foreground",
+        outlinePurple: "border border-purple-foreground/30 text-purple-foreground",
+        outlineSuccessMuted: "border border-success-muted-foreground/30 text-success-muted-foreground",
+        outlineDestructiveMuted: "border border-destructive-muted-foreground/30 text-destructive-muted-foreground",
+        outlineWarningMuted: "border border-warning-muted-foreground/30 text-warning-muted-foreground",
         white: "bg-white text-primary hover:bg-white/80",
       },
       shape: {
@@ -58,6 +56,7 @@ const badgeVariants = cva(
 
 export interface BadgeProps extends ComponentPropsWithRef<"div">, VariantProps<typeof badgeVariants> {
   ellipsis?: boolean
+  /** The label is always `whitespace-nowrap`; this only lets the badge shrink (`min-w-0`) so a sibling `ellipsis` can clip it. */
   noWrap?: boolean
   centered?: boolean
   /** Uppercase label text (tracking slightly widened for readability). */
@@ -102,16 +101,15 @@ function Badge({
       {...props}
     >
       {indicatorProps ? <DotIndicator {...indicatorProps} /> : null}
-      {iconProps && iconProps.placement === "start" ? <Icon {...iconProps} size="xs" /> : null}
+      {iconProps && iconProps.placement === "start" ? <Icon weight="L" {...iconProps} size="xs" /> : null}
       <span
-        className={cn({
+        className={cn("whitespace-nowrap", {
           truncate: ellipsis,
-          "whitespace-nowrap": noWrap,
         })}
       >
         {children}
       </span>
-      {iconProps && iconProps.placement === "end" ? <Icon {...iconProps} size="xs" /> : null}
+      {iconProps && iconProps.placement === "end" ? <Icon weight="L" {...iconProps} size="xs" /> : null}
     </div>
   )
 }

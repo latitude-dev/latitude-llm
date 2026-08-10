@@ -1,6 +1,7 @@
 import { COST_PER_CALL_MIN_SAMPLE_CALLS, type CostBreakdown } from "@domain/spans"
-import { Badge, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Badge, Icon, Skeleton, Text, Tooltip, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
+import { ArrowUpRightIcon, CircleDollarSignIcon } from "lucide-react"
 import { ChartHeader } from "../../-components/chart-header.tsx"
 import {
   costPerCallMultiple,
@@ -10,7 +11,9 @@ import {
   shareOf,
   splitBreakdownRows,
 } from "./cost-formatters.ts"
-import { CALLS_SERIES_COLOR, OTHER_SERIES_COLOR, TREND_COLOR } from "./cost-series-colors.ts"
+import { callsSeriesColor, otherSeriesColor, trendColor } from "./cost-series-colors.ts"
+import { EmptyState } from "./empty-state.tsx"
+import { useGoToModelSessions } from "./use-go-to-model-sessions.ts"
 
 // Models charted individually. Past this the paired bars stop being scannable, and
 // the remainder row keeps the shares adding to 100% anyway.
@@ -25,6 +28,8 @@ const AXIS_TICKS = [0, 0.25, 0.5, 0.75, 1] as const
 interface ImpactRow {
   readonly key: string
   readonly label: string
+  /** The unmodified dimension value, for filtering — "" for unknown model, distinct from `key`'s display fallback. */
+  readonly rawModel: string
   readonly spendShare: number
   readonly callsShare: number
   readonly costMicrocents: number
@@ -44,10 +49,14 @@ function Gridlines() {
 }
 
 /** Length on a shared 0-100% scale for both measures, so the two are directly comparable. */
-function SharePair({ row }: { readonly row: ImpactRow }) {
+function SharePair({ row, isDark }: { readonly row: ImpactRow; readonly isDark: boolean }) {
   const bars = [
-    { label: "spend", share: row.spendShare, color: row.isRemainder ? OTHER_SERIES_COLOR : TREND_COLOR },
-    { label: "calls", share: row.callsShare, color: row.isRemainder ? OTHER_SERIES_COLOR : CALLS_SERIES_COLOR },
+    { label: "spend", share: row.spendShare, color: row.isRemainder ? otherSeriesColor(isDark) : trendColor(isDark) },
+    {
+      label: "calls",
+      share: row.callsShare,
+      color: row.isRemainder ? otherSeriesColor(isDark) : callsSeriesColor(isDark),
+    },
   ]
 
   return (
@@ -55,24 +64,75 @@ function SharePair({ row }: { readonly row: ImpactRow }) {
       {/* Gridlines are scoped to the track so a tick and a bar of the same share line up. */}
       <div className="relative flex w-full flex-col gap-1 py-0.5">
         <Gridlines />
-        {bars.map((bar) => (
-          <div key={bar.label} className="relative flex h-2.5 w-full overflow-hidden rounded-sm bg-muted">
-            <div
-              className="h-full min-w-[2px] rounded-sm"
-              style={{ width: `${Math.max(0, Math.min(100, bar.share * 100))}%`, backgroundColor: bar.color }}
-            />
+        {bars.map((bar, index) => (
+          <div
+            key={bar.label}
+            // The two bars hug the seam between their slots — bottom-aligned then top-aligned —
+            // instead of each centering in its own slot, which halved this gap by centering it
+            // in the space around the pair rather than around each bar individually.
+            className={`relative flex h-4 w-full ${index === 0 ? "items-end" : "items-start"}`}
+          >
+            <div className="relative h-1 w-full overflow-hidden rounded-sm bg-muted">
+              <div
+                className="h-full min-w-[2px] rounded-sm"
+                style={{ width: `${Math.max(0, Math.min(100, bar.share * 100))}%`, backgroundColor: bar.color }}
+              />
+            </div>
           </div>
         ))}
       </div>
       <div className="flex w-12 shrink-0 flex-col gap-1">
         {bars.map((bar) => (
-          <div key={bar.label} className="flex h-2.5 items-center justify-end">
+          <div key={bar.label} className="flex h-4 items-center justify-end">
             <Text.H6 color="foregroundMuted" noWrap className="tabular-nums">
               {formatPercentage(bar.share)}
             </Text.H6>
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+/** Plain text for the remainder row and unknown models — there's nothing a single-model filter could mean there. */
+function ModelLabel({ row, onClick }: { readonly row: ImpactRow; readonly onClick: (model: string) => void }) {
+  if (row.isRemainder || !row.rawModel) {
+    return (
+      <Text.H6 color={row.isRemainder ? "foregroundMuted" : "foreground"} ellipsis noWrap>
+        {row.label}
+      </Text.H6>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(row.rawModel)}
+      aria-label={`View sessions for ${row.label}`}
+      className="group inline-flex min-w-0 items-center gap-1 text-left"
+    >
+      <Text.H6 color="foreground" ellipsis noWrap className="min-w-0 group-hover:text-primary">
+        {row.label}
+      </Text.H6>
+      <Icon icon={ArrowUpRightIcon} size="xs" color="foregroundMuted" className="shrink-0 group-hover:text-primary" />
+    </button>
+  )
+}
+
+/** Colour key for the two bars — its own row below the header, centered like every other chart's legend. */
+function ImpactLegend({ isDark }: { readonly isDark: boolean }) {
+  return (
+    <div className="flex flex-row items-center justify-center gap-3">
+      {[
+        { label: "Share of spend", color: trendColor(isDark) },
+        { label: "Share of calls", color: callsSeriesColor(isDark) },
+      ].map((entry) => (
+        <div key={entry.label} className="flex flex-row items-center gap-1.5">
+          <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }} aria-hidden="true" />
+          <Text.H6 color="foregroundMuted" noWrap>
+            {entry.label}
+          </Text.H6>
+        </div>
+      ))}
     </div>
   )
 }
@@ -98,7 +158,7 @@ function MultipleChip({ row }: { readonly row: ImpactRow }) {
     <Tooltip
       asChild
       trigger={
-        <Badge variant={row.multiple >= 2 ? "warningMuted" : "muted"} size="small">
+        <Badge className="self-start" variant={row.multiple >= 2 ? "warningMuted" : "muted"} size="small">
           {`${formatCostMultiple(row.multiple)} avg`}
         </Badge>
       }
@@ -119,6 +179,7 @@ function buildImpactRows(breakdown: CostBreakdown): readonly ImpactRow[] {
   const rows: ImpactRow[] = visible.map((row) => ({
     key: row.key || "unknown",
     label: row.key || "unknown model",
+    rawModel: row.key,
     spendShare: shareOf(row.totalMicrocents, totals.totalMicrocents) ?? 0,
     callsShare: shareOf(row.calls, totals.calls) ?? 0,
     costMicrocents: row.totalMicrocents,
@@ -137,6 +198,7 @@ function buildImpactRows(breakdown: CostBreakdown): readonly ImpactRow[] {
     {
       key: "__other__",
       label: remainder.valueCount === 1 ? "Other (1 model)" : `Other (${remainder.valueCount} models)`,
+      rawModel: "",
       spendShare: shareOf(remainder.totalMicrocents, totals.totalMicrocents) ?? 0,
       callsShare: shareOf(remainder.calls, totals.calls) ?? 0,
       costMicrocents: remainder.totalMicrocents,
@@ -160,14 +222,18 @@ export function ModelImpactPanel({
   rangeFromIso,
   rangeToIso,
   isAllTime,
+  projectSlug,
   isLoading,
 }: {
   readonly breakdown: CostBreakdown | undefined
   readonly rangeFromIso: string
   readonly rangeToIso: string
   readonly isAllTime: boolean
+  readonly projectSlug: string
   readonly isLoading: boolean
 }) {
+  const { isDark } = useChartCssTheme()
+  const goToModelSessions = useGoToModelSessions(projectSlug)
   const rows = breakdown ? buildImpactRows(breakdown) : []
   const hasSpend = (breakdown?.totals.totalMicrocents ?? 0) > 0
 
@@ -178,52 +244,30 @@ export function ModelImpactPanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
-        // The picker above states this window; only the All-time slice differs from it.
-        showWindow={isAllTime}
-        actions={
-          <div className="flex flex-row items-center gap-3">
-            {[
-              { label: "Share of spend", color: TREND_COLOR },
-              { label: "Share of calls", color: CALLS_SERIES_COLOR },
-            ].map((entry) => (
-              <div key={entry.label} className="flex flex-row items-center gap-1.5">
-                <span
-                  className="h-2 w-3 shrink-0 rounded-sm"
-                  style={{ backgroundColor: entry.color }}
-                  aria-hidden="true"
-                />
-                <Text.H6 color="foregroundMuted" noWrap>
-                  {entry.label}
-                </Text.H6>
-              </div>
-            ))}
-          </div>
-        }
+        // The picker above states this window already, and the recent-activity
+        // distinction that other dashboards flag isn't relevant to this panel.
+        showWindow={false}
+        titleColor="foregroundMuted"
       />
       {isLoading || !breakdown ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 px-4 py-3">
           {[0, 1, 2].map((row) => (
             <Skeleton key={row} className="h-8 w-full" />
           ))}
         </div>
       ) : !hasSpend || rows.length === 0 ? (
-        <div className="flex w-full min-h-[120px] items-center justify-center p-3">
-          <Text.H6 color="foregroundMuted">No spend recorded in this time window</Text.H6>
-        </div>
+        <EmptyState icon={CircleDollarSignIcon} message="No spend recorded in this time window" />
       ) : (
-        <div className="flex flex-col gap-2 p-3">
+        <div className="flex flex-col gap-2 px-4 py-3">
+          <ImpactLegend isDark={isDark} />
           <div className="flex flex-col gap-2.5">
             {rows.map((row) => (
               <div key={row.key} className="flex flex-row items-center gap-3">
-                <div className="flex w-32 shrink-0 flex-col">
-                  <Text.H6 color={row.isRemainder ? "foregroundMuted" : "foreground"} ellipsis noWrap>
-                    {row.label}
-                  </Text.H6>
-                </div>
-                <SharePair row={row} />
-                <div className="flex w-16 shrink-0 justify-end">
+                <div className="flex w-32 shrink-0 flex-col gap-1 pr-2">
+                  <ModelLabel row={row} onClick={goToModelSessions} />
                   <MultipleChip row={row} />
                 </div>
+                <SharePair row={row} isDark={isDark} />
               </div>
             ))}
           </div>
@@ -239,7 +283,6 @@ export function ModelImpactPanel({
               </div>
               <div className="w-12 shrink-0" />
             </div>
-            <div className="w-16 shrink-0" />
           </div>
         </div>
       )}
