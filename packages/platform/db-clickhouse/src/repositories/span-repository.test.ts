@@ -1514,4 +1514,66 @@ describe("SpanRepository", () => {
       expect(span.toolDefinitions).toEqual([{ name: "defined_only_tool", description: "d", parameters: {} }])
     })
   })
+
+  /**
+   * The read the redaction preview samples from, and it had no coverage. Ordering and the dedupe
+   * are the parts that matter: a preview built on the oldest spans, or on superseded copies of
+   * them, would answer a question nobody asked.
+   */
+  describe("listRecentDetailsByProjectId", () => {
+    it("returns the newest deduped spans for the project, with their content payloads", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "1111111111111111",
+            name: "oldest",
+            ingested_at: "2026-01-01 00:00:00.000",
+            tool_output: "mail old@example.com",
+          }),
+          makeSpanRow({
+            span_id: "2222222222222222",
+            name: "newest",
+            ingested_at: "2026-01-01 00:00:05.000",
+            attr_string: { "acme.note": "ref ACME-1234" },
+          }),
+          makeSpanRow({
+            span_id: "2222222222222222",
+            name: "superseded",
+            ingested_at: "2026-01-01 00:00:02.000",
+          }),
+          makeSpanRow({ span_id: "3333333333333333", project_id: OTHER_PROJECT_ID, name: "other-project" }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listRecentDetailsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 10 }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["newest", "oldest"])
+      expect(spans[0]?.attrString["acme.note"]).toBe("ref ACME-1234")
+      expect(spans[1]?.toolOutput).toBe("mail old@example.com")
+    })
+
+    it("honours the limit, newest first", async () => {
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          Array.from({ length: 5 }, (_, index) =>
+            makeSpanRow({
+              span_id: String(index).repeat(16),
+              name: `span-${index}`,
+              ingested_at: `2026-01-01 00:00:0${index}.000`,
+            }),
+          ),
+        ),
+      )
+
+      const spans = await runCh(
+        repo.listRecentDetailsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 2 }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["span-4", "span-3"])
+    })
+  })
 })

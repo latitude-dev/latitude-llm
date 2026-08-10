@@ -110,6 +110,7 @@ function makeTraceDetail(
     costInputMicrocents: 50,
     costOutputMicrocents: 25,
     costTotalMicrocents: 75,
+    unpricedSpanCount: 0,
     sessionId: overrides?.sessionId ?? SessionId("session"),
     userId: ExternalUserId("user"),
     userEmail: "",

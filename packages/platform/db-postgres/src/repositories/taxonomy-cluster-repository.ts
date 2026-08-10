@@ -135,7 +135,7 @@ const toInsertRow = (
   updatedAt: cluster.updatedAt,
 })
 
-// Every view's tree shares one table; a view is (scope × lens). Reads MUST pin
+// Every view's tree shares one table; a view is (scope × facet). Reads MUST pin
 // BOTH discriminators so the online whole-project topic tree (NULL, NULL) never
 // leaks cohort or facet rows: omit/null a discriminator ⇒ IS NULL, an id ⇒
 // equality. `(customBehaviorId=null, facetId=null)` is the online topic tree.
@@ -191,9 +191,10 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map(toDomainCluster)
         }),
 
-      listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId }) =>
+      listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId, states }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const readStates = states ?? ["active"]
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
@@ -202,7 +203,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
-                  eq(taxonomyClusters.state, "active"),
+                  inArray(taxonomyClusters.state, readStates),
                   scopeCondition({ customBehaviorId, facetId }),
                   ...(parentClusterId === undefined
                     ? []
@@ -460,6 +461,22 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   inArray(taxonomyClusters.id, clusterIds as TaxonomyClusterId[]),
                 ),
               ),
+          )
+        }),
+
+      deleteByBehavior: ({ projectId, customBehaviorId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db, organizationId) =>
+            db.delete(taxonomyClusters).where(
+              and(
+                eq(taxonomyClusters.organizationId, organizationId),
+                eq(taxonomyClusters.projectId, projectId),
+                // Equality on a required id, never `IS NULL`: the whole-project tree
+                // must stay unreachable from here.
+                eq(taxonomyClusters.customBehaviorId, customBehaviorId),
+              ),
+            ),
           )
         }),
     }

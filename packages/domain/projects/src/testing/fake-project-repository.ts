@@ -14,13 +14,17 @@ export const createFakeProjectRepository = (seed: readonly Project[] = []) => {
 
   const isLive = (p: Project | undefined): p is Project => p !== undefined && p.deletedAt === null
 
+  const findById: ProjectRepositoryShape["findById"] = (id) =>
+    Effect.gen(function* () {
+      const row = rows.get(id)
+      if (!isLive(row)) return yield* new NotFoundError({ entity: "project", id })
+      return row
+    })
+
   const repository: ProjectRepositoryShape = {
-    findById: (id) =>
-      Effect.gen(function* () {
-        const row = rows.get(id)
-        if (!isLive(row)) return yield* new NotFoundError({ entity: "project", id })
-        return row
-      }),
+    findById,
+    // Nothing to lock in a Map; the locking read is exercised against real Postgres.
+    findByIdForUpdate: findById,
 
     findBySlug: (slug) =>
       Effect.gen(function* () {

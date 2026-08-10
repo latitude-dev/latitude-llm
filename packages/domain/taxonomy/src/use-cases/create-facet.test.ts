@@ -2,8 +2,7 @@ import { ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { MAX_FACETS_PER_PROJECT } from "../constants.ts"
-import { FacetInvalidError, FacetLimitReachedError } from "../errors.ts"
+import { FacetInvalidError } from "../errors.ts"
 import { FacetRepository } from "../ports/facet-repository.ts"
 import { createFakeFacetRepository } from "../testing/fake-facet-repository.ts"
 import { createFacet } from "./create-facet.ts"
@@ -27,7 +26,7 @@ const validInput = {
 }
 
 describe("createFacet", () => {
-  it("persists a lens definition with a slugified name and does not garden on its own", async () => {
+  it("persists a facet definition with a slugified name and does not garden on its own", async () => {
     const { layer, rows } = makeLayer()
     const facet = await Effect.runPromise(createFacet(validInput).pipe(Effect.provide(layer)))
 
@@ -44,17 +43,22 @@ describe("createFacet", () => {
     ).rejects.toBeInstanceOf(FacetInvalidError)
   })
 
-  it("enforces the per-project facet cap", async () => {
+  it("does not cap the number of facet definitions per project", async () => {
+    const { layer, rows } = makeLayer()
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        for (let index = 0; index < 15; index++) {
+          yield* createFacet({ ...validInput, name: `Facet ${index}` })
+        }
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(rows.size).toBe(15)
+  })
+
+  it("rejects a name that slugifies into the reserved lat- preset namespace", async () => {
     const { layer } = makeLayer()
     await expect(
-      Effect.runPromise(
-        Effect.gen(function* () {
-          for (let index = 0; index < MAX_FACETS_PER_PROJECT; index++) {
-            yield* createFacet({ ...validInput, name: `Lens ${index}` })
-          }
-          return yield* createFacet({ ...validInput, name: "One too many" })
-        }).pipe(Effect.provide(layer)),
-      ),
-    ).rejects.toBeInstanceOf(FacetLimitReachedError)
+      Effect.runPromise(createFacet({ ...validInput, name: "Lat something" }).pipe(Effect.provide(layer))),
+    ).rejects.toBeInstanceOf(FacetInvalidError)
   })
 })

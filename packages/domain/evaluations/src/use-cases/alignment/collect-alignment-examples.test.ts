@@ -53,6 +53,7 @@ function makeTraceDetail(traceId: TraceId): TraceDetail {
     costInputMicrocents: 0,
     costOutputMicrocents: 0,
     costTotalMicrocents: 0,
+    unpricedSpanCount: 0,
     sessionId: SessionId("s".repeat(128)),
     userId: ExternalUserId("u".repeat(24)),
     userEmail: "",

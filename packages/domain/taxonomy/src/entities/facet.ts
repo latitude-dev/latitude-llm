@@ -7,15 +7,15 @@ import { FACET_DESCRIPTION_MAX_LENGTH, FACET_INSTRUCTIONS_MAX_LENGTH, FACET_NAME
 // ---------------------------------------------------------------------------
 
 /**
- * A project-scoped lens, addressed by a `slug` unique per project so a single
+ * A project-scoped facet definition, addressed by a `slug` unique per project so a single
  * facet is reused across every view that picks it (whole-project + each cohort),
  * which is what keeps extraction cost bounded per facet.
  *
  * `instructions` is free-text guidance compiled into a controlled extraction
  * prompt (Phase 2) whose one-sentence answer is embedded and clustered instead
- * of the raw transcript; it is **write-once** — to change what a lens means you
+ * of the raw transcript; it is **write-once**: to change what a facet means you
  * create a new facet, never mutate this one. `name` + `description` are
- * presentation (the picker label and the "why this lens helps" blurb) and stay
+ * presentation (the picker label and the "why this facet helps" blurb) and stay
  * editable. Presets ship curated instructions/description; custom facets author
  * both.
  */

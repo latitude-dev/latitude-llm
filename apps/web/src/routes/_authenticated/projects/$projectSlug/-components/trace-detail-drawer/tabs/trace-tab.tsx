@@ -13,6 +13,7 @@ import {
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon, WrenchIcon } from "lucide-react"
 import { useMemo } from "react"
+import { rollupCostDisplay } from "../../../../../../../domains/spans/cost-display.ts"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import { MemoryChangesSection } from "../../memory-changes/memory-changes-section.tsx"
@@ -178,7 +179,7 @@ export function TraceTab({
               badges={durationBadge}
               isLoading={isSpansLoading}
             />
-            <UsageSummary data={traceRecord} costBadges={costBadgesNode} />
+            <UsageSummary data={traceRecord} costBadges={costBadgesNode} costDisplay={rollupCostDisplay(traceRecord)} />
             <MemorySummary projectId={projectId} sessionId={traceRecord.sessionId || traceId} traceId={traceId} />
           </div>
         )

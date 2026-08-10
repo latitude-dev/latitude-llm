@@ -121,6 +121,8 @@ const makeLayer = (opts: {
       Effect.succeed(configs.filter((row) => row.projectId === null || row.projectId === forProjectId)),
     findDefaultByIntegration: (forIntegrationId) =>
       Effect.succeed(configs.find((row) => row.projectId === null && row.integrationId === forIntegrationId) ?? null),
+    countProjectOverrides: (forIntegrationId) =>
+      Effect.succeed(configs.filter((row) => row.projectId !== null && row.integrationId === forIntegrationId).length),
     findOverrideByProjectAndIntegration: (query) =>
       Effect.succeed(
         configs.find((row) => row.projectId === query.projectId && row.integrationId === query.integrationId) ?? null,

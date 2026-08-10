@@ -1,6 +1,6 @@
 import { AICredentialError, AIGenerate, EMBEDDING_DIMENSIONS } from "@domain/ai"
-import { Effect, Result } from "effect"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { Effect, Logger, Result } from "effect"
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 const {
   bedrockModelFactoryMock,
@@ -222,6 +222,90 @@ describe("AIGenerateLive", () => {
     expect(generateTextMock).toHaveBeenCalledTimes(2)
     expect(generateTextMock.mock.calls[0]?.[0].model).toEqual({ modelId: "minimax.minimax-m2.5" })
     expect(generateTextMock.mock.calls[1]?.[0].model).toEqual({ modelId: "openai.gpt-oss-120b-1:0" })
+  })
+
+  it("reports the fallback as the model that served a fallen-back call", async () => {
+    generateTextMock
+      .mockRejectedValueOnce(new Error("Bedrock is unable to process your request."))
+      .mockResolvedValueOnce({ output: { ok: true }, usage: { totalTokens: 3, inputTokens: 2, outputTokens: 1 } })
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const ai = yield* AIGenerate
+
+        return yield* ai.generate({
+          provider: "amazon-bedrock",
+          model: "minimax.minimax-m2.5",
+          system: "Return JSON.",
+          prompt: "Say ok.",
+          schema: { parse: (value: unknown) => value } as never,
+        })
+      }).pipe(Effect.provide(AIGenerateLive)),
+    )
+
+    expect(result.servedBy).toEqual({ provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" })
+  })
+
+  it("reports the requested model as the model that served a normal call", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      output: { ok: true },
+      usage: { totalTokens: 3, inputTokens: 2, outputTokens: 1 },
+    })
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const ai = yield* AIGenerate
+
+        return yield* ai.generate({
+          provider: "amazon-bedrock",
+          model: "minimax.minimax-m2.5",
+          system: "Return JSON.",
+          prompt: "Say ok.",
+          schema: { parse: (value: unknown) => value } as never,
+        })
+      }).pipe(Effect.provide(AIGenerateLive)),
+    )
+
+    expect(result.servedBy).toEqual({ provider: "amazon-bedrock", model: "minimax.minimax-m2.5" })
+    expect(generateTextMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports the failed primary attempt in the duration and records why it fell back", async () => {
+    let clockMs = 0
+    const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => clockMs)
+    onTestFinished(() => nowSpy.mockRestore())
+
+    generateTextMock
+      .mockImplementationOnce(() => {
+        clockMs += 500
+        return Promise.reject(new Error("Bedrock is unable to process your request."))
+      })
+      .mockImplementationOnce(() => {
+        clockMs += 200
+        return Promise.resolve({ output: { ok: true }, usage: { totalTokens: 3, inputTokens: 2, outputTokens: 1 } })
+      })
+
+    const logs: string[] = []
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const ai = yield* AIGenerate
+
+        return yield* ai.generate({
+          provider: "amazon-bedrock",
+          model: "minimax.minimax-m2.5",
+          system: "Return JSON.",
+          prompt: "Say ok.",
+          schema: { parse: (value: unknown) => value } as never,
+        })
+      }).pipe(
+        Effect.provide(AIGenerateLive),
+        Effect.provide(Logger.layer([Logger.make(({ message }) => logs.push(String(message)))])),
+      ),
+    )
+
+    expect(result.duration).toBe(700_000_000)
+    expect(logs.join("\n")).toContain("Bedrock is unable to process your request.")
+    expect(logs.join("\n")).toContain("amazon-bedrock/openai.gpt-oss-120b-1:0")
   })
 })
 

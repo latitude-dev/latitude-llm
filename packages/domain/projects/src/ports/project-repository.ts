@@ -4,6 +4,11 @@ import type { Project } from "../entities/project.ts"
 
 export interface ProjectRepositoryShape {
   findById(id: string): Effect.Effect<Project, NotFoundError | RepositoryError, SqlClient>
+  /**
+   * `SELECT … FOR UPDATE`. Only meaningful inside a transaction, where it serializes
+   * read-modify-write cycles on `settings` against concurrent writers.
+   */
+  findByIdForUpdate(id: string): Effect.Effect<Project, NotFoundError | RepositoryError, SqlClient>
   findBySlug(slug: string): Effect.Effect<Project, NotFoundError | RepositoryError, SqlClient>
   list(): Effect.Effect<readonly Project[], RepositoryError, SqlClient>
   listIncludingDeleted(): Effect.Effect<readonly Project[], RepositoryError, SqlClient>

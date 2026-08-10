@@ -34,6 +34,7 @@ function setup(
     name: "Alice",
     jobTitle: null,
     phoneNumber: null,
+    heardAboutUs: null,
     emailVerified: true,
     image: null,
     role: "user",
@@ -91,6 +92,10 @@ function setup(
 
   const projectRepo = ProjectRepository.of({
     findById: (id) =>
+      project && project.id === id
+        ? Effect.succeed(project)
+        : Effect.fail(new NotFoundError({ entity: "Project", id })),
+    findByIdForUpdate: (id) =>
       project && project.id === id
         ? Effect.succeed(project)
         : Effect.fail(new NotFoundError({ entity: "Project", id })),

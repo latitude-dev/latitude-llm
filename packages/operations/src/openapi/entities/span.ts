@@ -49,9 +49,9 @@ const spanListFields = {
   tokensCacheRead: z.number().describe("Tokens served from the provider's prompt cache."),
   tokensCacheCreate: z.number().describe("Tokens written to the provider's prompt cache."),
   tokensReasoning: z.number().describe("Reasoning tokens reported by the model."),
-  costInputMicrocents: z.number().describe("Cost of input tokens in microcents (1/1,000,000 USD)."),
-  costOutputMicrocents: z.number().describe("Cost of output tokens in microcents (1/1,000,000 USD)."),
-  costTotalMicrocents: z.number().describe("Total cost in microcents (1/1,000,000 USD)."),
+  costInputMicrocents: z.number().describe("Cost of input tokens in microcents (100,000,000 per USD)."),
+  costOutputMicrocents: z.number().describe("Cost of output tokens in microcents (100,000,000 per USD)."),
+  costTotalMicrocents: z.number().describe("Total cost in microcents (100,000,000 per USD)."),
   costIsEstimated: z
     .boolean()
     .describe("`true` when the cost was derived from public pricing tables instead of the provider's bill."),

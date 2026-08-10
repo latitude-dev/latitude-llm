@@ -86,3 +86,20 @@ describe("transformOtlpToSpans — memory operations", () => {
     expect(span?.attrInt["gen_ai.memory.record.count"]).toBe(3)
   })
 })
+
+describe("transformOtlpToSpans — int64 precision", () => {
+  it("keeps an int past 2^53 as exact text rather than rounding it into attrInt", () => {
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([
+        { key: "event.timestamp_ns", value: { intValue: "1785506507050123456" } },
+        { key: "gen_ai.usage.input_tokens", value: { intValue: "215813" } },
+      ]),
+      context,
+    )
+
+    const span = spans[0]
+    expect(span?.attrString["event.timestamp_ns"]).toBe("1785506507050123456")
+    expect(span?.attrInt).not.toHaveProperty("event.timestamp_ns")
+    expect(span?.attrInt["gen_ai.usage.input_tokens"]).toBe(215813)
+  })
+})

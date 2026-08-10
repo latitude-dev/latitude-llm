@@ -1,5 +1,5 @@
 /**
- * Names one cluster of a facet lens's scoped tree (whole-project or cohort×facet).
+ * Names one cluster of a facet's scoped tree (whole-project or cohort×facet).
  *
  * Shares all naming logic (prompts, collision guard, deepest-first ordering)
  * with the topic taxonomy via `nameClusterCore`; this wrapper only supplies the
@@ -19,7 +19,7 @@ import { facetNamingPolicy, nameClusterCore } from "./name-taxonomy.ts"
 export interface NameFacetClusterInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  /** The lens; its `name` + `instructions` drive the per-tree naming policy. */
+  /** The facet; its `name` + `instructions` drive the per-tree naming policy. */
   readonly facet: Pick<TaxonomyFacet, "id" | "name" | "instructions">
   /** The wrapping behavior — every facet view is a custom behavior (whole-project or cohort). */
   readonly customBehaviorId: CustomBehaviorId

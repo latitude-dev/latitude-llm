@@ -12,6 +12,12 @@ interface ChartHeaderProps {
   readonly isAllTime: boolean
   /** Right-aligned controls (e.g. the Incidents overlay toggle). */
   readonly actions?: ReactNode
+  /**
+   * Whether to caption the rendered window. Pass `false` where a visible picker
+   * already states the same range — repeating it on every panel is noise. Pages
+   * whose chart range can differ from the picker must keep it.
+   */
+  readonly showWindow?: boolean
 }
 
 /**
@@ -19,8 +25,8 @@ interface ChartHeaderProps {
  * All-time default the chart is a recent, latest-activity-anchored slice while the totals/list cover
  * the full range — the subtitle + tooltip make that explicit so the window isn't read as "all time".
  */
-export function ChartHeader({ title, fromIso, toIso, isAllTime, actions }: ChartHeaderProps) {
-  const window = formatChartWindowCaption(fromIso, toIso)
+export function ChartHeader({ title, fromIso, toIso, isAllTime, actions, showWindow = true }: ChartHeaderProps) {
+  const window = showWindow ? formatChartWindowCaption(fromIso, toIso) : ""
   if (!window && !title && !actions) return null
 
   return (

@@ -15,12 +15,14 @@ export function KeywordListEditor({
   onChange,
   error,
   onReset,
+  disabled = false,
 }: {
   label: string
   value: readonly string[]
   onChange: (next: string[]) => void
   error?: string | undefined
   onReset?: () => void
+  disabled?: boolean
 }) {
   const [draft, setDraft] = useState("")
 
@@ -36,7 +38,7 @@ export function KeywordListEditor({
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-row items-center justify-between gap-2">
         <Text.H6 weight="medium">{label}</Text.H6>
-        {onReset ? (
+        {onReset && !disabled ? (
           <Button variant="link" size="sm" onClick={onReset}>
             Reset to defaults
           </Button>
@@ -46,17 +48,20 @@ export function KeywordListEditor({
         {value.map((keyword) => (
           <Badge key={keyword} variant="muted" size="normal">
             <span className="truncate">{keyword}</span>
-            <button
-              type="button"
-              aria-label={`Remove ${keyword}`}
-              className="ml-1 cursor-pointer rounded-sm opacity-70 hover:opacity-100"
-              onClick={() => onChange(value.filter((existing) => existing !== keyword))}
-            >
-              <Icon icon={X} size="xs" />
-            </button>
+            {disabled ? null : (
+              <button
+                type="button"
+                aria-label={`Remove ${keyword}`}
+                className="ml-1 cursor-pointer rounded-sm opacity-70 hover:opacity-100"
+                onClick={() => onChange(value.filter((existing) => existing !== keyword))}
+              >
+                <Icon icon={X} size="xs" />
+              </button>
+            )}
           </Badge>
         ))}
         <input
+          disabled={disabled}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
@@ -68,7 +73,7 @@ export function KeywordListEditor({
             }
           }}
           onBlur={() => addKeyword(draft)}
-          placeholder={value.length === 0 ? "Add a keyword…" : ""}
+          placeholder={disabled ? "" : value.length === 0 ? "Add a keyword…" : ""}
           className="min-w-[8rem] flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
       </div>

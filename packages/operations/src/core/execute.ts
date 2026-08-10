@@ -98,6 +98,7 @@ export const executeToHandler = <R extends AppRouteConfig, E extends Env>(
       workflowStarter: c.get("workflowStarter"),
       workflowQuerier: c.get("workflowQuerier"),
       storageDisk: c.get("storageDisk"),
+      importSourceAdapters: c.get("importSourceAdapters"),
     }
     const result = (await Effect.runPromise(execute(input, ctx))) as { status: number; body?: unknown }
     return result.body !== undefined ? c.json(result.body, result.status) : c.body(null, result.status)
