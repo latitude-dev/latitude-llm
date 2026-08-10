@@ -209,12 +209,6 @@ function BreakdownTable({
               align="right"
               isFirst={false}
               tooltipMessage={`Spend divided by the traces containing this ${meta.singular}, not by every trace in the window — a trace can hit several.`}
-              summary={
-                <HeaderSummary
-                  kind="AVG"
-                  value={usd(totals.tracesWithUsage > 0 ? totals.totalMicrocents / totals.tracesWithUsage : 0)}
-                />
-              }
               {...headProps}
             />
           </TableRow>

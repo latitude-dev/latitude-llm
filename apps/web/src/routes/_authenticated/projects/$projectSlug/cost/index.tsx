@@ -51,7 +51,11 @@ function CostBreadcrumb() {
 function Section({ heading, children }: { readonly heading?: string; readonly children: ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
-      {heading ? <Text.H5M color="foreground">{heading}</Text.H5M> : null}
+      {heading ? (
+        <Text.H5M asChild color="foreground">
+          <h2>{heading}</h2>
+        </Text.H5M>
+      ) : null}
       <div className="flex flex-col gap-2">{children}</div>
     </div>
   )

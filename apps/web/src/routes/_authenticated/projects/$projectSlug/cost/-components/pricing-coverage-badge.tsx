@@ -32,13 +32,19 @@ export function PricingCoverageBadge({
   if (isLoading || !confidence || confidence.pricedCoverage === null) return null
 
   const fullyPriced = confidence.gapPairs.length === 0 && confidence.gapTokens <= 0
+  // Zero-cost usage stored before `costSource` existed cannot say whether it was free or
+  // unpriced, so a window with any of it can only ever be a lower bound on coverage.
+  const isLowerBound = confidence.unknownTokens > 0
 
   return (
     <Tooltip
       variant="inverse"
       maxWidth="max-w-64"
       className="p-2"
-      triggerBadge={{ variant: "accent", children: `${formatPercentage(confidence.pricedCoverage)} priced` }}
+      triggerBadge={{
+        variant: "accent",
+        children: `${isLowerBound ? "At least " : ""}${formatPercentage(confidence.pricedCoverage)} priced`,
+      }}
     >
       <div className="flex flex-col gap-3 text-left">
         <div className="flex flex-col gap-1">

@@ -60,7 +60,7 @@ const TooltipContent = forwardRef<ElementRef<typeof TooltipPrimitive.Content>, C
 )
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-function useTooltipTextContentColor(variant: TooltipVariant): TextColor {
+function tooltipTextContentColor(variant: TooltipVariant): TextColor {
   switch (variant) {
     case "default":
       return "foreground"
@@ -112,7 +112,7 @@ function Tooltip({
   hideWhenEmpty = false,
   className,
 }: TooltipProps) {
-  const textColor = useTooltipTextContentColor(variant)
+  const textColor = tooltipTextContentColor(variant)
   const isChildrenString = typeof children === "string"
 
   if (hideWhenEmpty && !children) {
@@ -148,7 +148,9 @@ function Tooltip({
             {trigger}
           </TooltipTrigger>
         ) : (
-          <TooltipTrigger asChild={asChild} className="flex items-center gap-x-2">
+          // Always a real element here, never `asChild`: this branch renders up to three
+          // children (trigger, badge, icon), and Radix's `Slot` requires exactly one.
+          <TooltipTrigger asChild={false} className="flex cursor-default items-center gap-x-2">
             {trigger}
             {triggerBadge ? <Badge {...triggerBadge} /> : null}
             {triggerIcon ? <Icon {...triggerIcon} /> : null}
@@ -164,4 +166,4 @@ function Tooltip({
   )
 }
 
-export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger, useTooltipTextContentColor }
+export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger, tooltipTextContentColor }

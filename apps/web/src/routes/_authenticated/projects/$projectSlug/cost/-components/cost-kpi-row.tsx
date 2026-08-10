@@ -126,7 +126,7 @@ export function CostKpiRow({
               })}
             >
               <ProviderIcon provider={topSpend.provider || "unknown"} size="sm" />
-              <span className="truncate">{topSpend.model || "unknown"}</span>
+              <span className="min-w-0 truncate">{topSpend.model || "unknown"}</span>
             </button>
           ) : (
             DASH

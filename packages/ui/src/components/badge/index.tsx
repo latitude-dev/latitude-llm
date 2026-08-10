@@ -7,9 +7,10 @@ import { DotIndicator, type DotIndicatorProps } from "../dot-indicator/dot-indic
 import { Icon, type IconProps } from "../icons/icons.tsx"
 
 const badgeVariants = cva(
-  // `self-start shrink-0`: a badge is a compact chip sized to its own content, never a flex
-  // item stretched to fill a `flex-col` parent's cross axis or squeezed by a crowded row.
-  "inline-flex shrink-0 items-center self-start rounded-md font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  // No `self-start` here: it would win over a row parent's `items-center` and pin the badge
+  // to the top instead of centering it. A badge that must not stretch in a `flex-col` parent
+  // takes `self-start` via `className` at that call site instead.
+  "inline-flex shrink-0 items-center rounded-md font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
@@ -55,6 +56,7 @@ const badgeVariants = cva(
 
 export interface BadgeProps extends ComponentPropsWithRef<"div">, VariantProps<typeof badgeVariants> {
   ellipsis?: boolean
+  /** The label is always `whitespace-nowrap`; this only lets the badge shrink (`min-w-0`) so a sibling `ellipsis` can clip it. */
   noWrap?: boolean
   centered?: boolean
   /** Uppercase label text (tracking slightly widened for readability). */

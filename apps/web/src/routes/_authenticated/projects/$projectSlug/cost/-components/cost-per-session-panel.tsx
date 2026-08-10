@@ -4,7 +4,7 @@ import {
   type SessionCostContribution,
   type SessionCostFactor,
 } from "@domain/spans"
-import { Badge, type BadgeProps, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Badge, type BadgeProps, cn, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatChartWindowCaption, formatCount, formatPercentage, formatPrice } from "@repo/utils"
 import { ArrowDownIcon, ArrowUpIcon, GitCompareIcon, type LucideIcon, MinusIcon } from "lucide-react"
 import type { ReactNode } from "react"
@@ -120,20 +120,27 @@ const TREND_BADGE_VARIANT: Record<"destructive" | "success" | "foregroundMuted",
   foregroundMuted: "muted",
 }
 
-/** The arrow-plus-figure trend indicator, as a badge — shared by the factor grid and the headline blocks. */
+/**
+ * The arrow-plus-figure trend indicator, as a badge — shared by the factor grid and the
+ * headline blocks. `className` exists for the factor grid: that badge sits directly in a
+ * `flex-col`, which would stretch it full-width without `self-start`; the headline blocks'
+ * badge sits in a `flex-row` that already centers it correctly on its own.
+ */
 function TrendBadge({
   color,
   icon,
+  className,
   children,
 }: {
   readonly color: "destructive" | "success" | "foregroundMuted"
   readonly icon: LucideIcon | null
+  readonly className?: string
   readonly children: ReactNode
 }) {
   return (
     <Badge
       variant={TREND_BADGE_VARIANT[color]}
-      className="tabular-nums"
+      className={cn("tabular-nums", className)}
       {...(icon ? { iconProps: { icon, placement: "start" as const } } : {})}
     >
       {children}
@@ -172,7 +179,11 @@ function FactorTile({ row }: { readonly row: SessionCostContribution }) {
     <Tooltip
       asChild
       trigger={
-        <div className="flex min-w-0 flex-1 cursor-default flex-col gap-1">
+        <div
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: focusable tooltip trigger, no click action
+          tabIndex={0}
+          className="flex min-w-0 flex-1 cursor-default flex-col gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <Text.H6M color="foregroundMuted" ellipsis noWrap>
             {meta.label}
           </Text.H6M>
@@ -180,7 +191,7 @@ function FactorTile({ row }: { readonly row: SessionCostContribution }) {
             <Text.H3M color="foreground" noWrap className="tabular-nums">
               <SplitValue formatted={meta.format(row.current)} />
             </Text.H3M>
-            <TrendBadge color={color} icon={icon}>
+            <TrendBadge color={color} icon={icon} className="self-start">
               {formatMultiplier(row.multiplier)}
             </TrendBadge>
           </div>
@@ -212,7 +223,7 @@ function HeadlineBlock({
   readonly boundaryIndex: number | undefined
   readonly hint: string
 }) {
-  const neutral = changePct === null || Math.abs(Math.round(changePct)) < NEUTRAL_PERCENT
+  const neutral = changePct === null || Math.abs(changePct) < NEUTRAL_PERCENT
   const color = neutral ? "foregroundMuted" : changePct !== null && changePct > 0 ? "destructive" : "success"
   const icon = neutral || changePct === null ? null : changePct > 0 ? ArrowUpIcon : ArrowDownIcon
 
@@ -220,7 +231,11 @@ function HeadlineBlock({
     <Tooltip
       asChild
       trigger={
-        <div className="flex min-w-0 flex-1 cursor-default flex-col justify-between gap-2">
+        <div
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: focusable tooltip trigger, no click action
+          tabIndex={0}
+          className="flex min-w-0 flex-1 cursor-default flex-col justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <div className="flex flex-col gap-1">
             <Text.H6M color="foregroundMuted" noWrap>
               {label}
@@ -231,7 +246,9 @@ function HeadlineBlock({
               </Text.H3M>
               <div className="flex flex-row items-center gap-1">
                 {changePct === null ? (
-                  <Badge variant="muted">no comparison</Badge>
+                  <TrendBadge color="foregroundMuted" icon={null}>
+                    no comparison
+                  </TrendBadge>
                 ) : (
                   <TrendBadge color={color} icon={icon}>
                     {neutral ? "flat" : formatPercentage(Math.abs(changePct) / 100)}

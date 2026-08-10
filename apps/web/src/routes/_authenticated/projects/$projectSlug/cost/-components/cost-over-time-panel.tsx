@@ -25,6 +25,25 @@ const METRIC_OPTIONS: readonly { readonly id: CostSeriesMetric; readonly label: 
 const modelLabel = (model: string): string => model || "unknown model"
 
 /**
+ * `step: "end"` holds a bucket's value from its own tick to the *next* tick, so the last
+ * real bucket has no next tick to hold toward — it draws as a bare point with no plateau,
+ * which can leave a single-bucket window looking empty despite having spend. Repeating the
+ * last tick's label and every series' last value gives that final plateau somewhere to end.
+ * `tooltipTitle` below already returns `""` past the real bucket count, so the extra point
+ * never claims a bucket that doesn't exist.
+ */
+function padTrailingStepBoundary(
+  categories: readonly string[],
+  series: readonly ChartSeries[],
+): { readonly categories: readonly string[]; readonly series: readonly ChartSeries[] } {
+  if (categories.length === 0) return { categories, series }
+  return {
+    categories: [...categories, categories[categories.length - 1]],
+    series: series.map((s) => ({ ...s, values: [...s.values, s.values[s.values.length - 1] ?? 0] })),
+  }
+}
+
+/**
  * Series for the additive metric: one stacked step-area band per model, biggest
  * spender at the baseline so stacks stay comparable across buckets.
  *
@@ -104,6 +123,7 @@ export function CostOverTimePanel({
         ]
   // Reads as spend, not usage: an all-free-priced window also sums to zero.
   const isEmpty = buckets.length === 0 || buckets.every((bucket) => bucket.valueMicrocents === 0)
+  const { categories: chartCategories, series: chartSeries } = padTrailingStepBoundary(categories, series)
 
   return (
     <div className="flex flex-col rounded-lg border border-border bg-background">
@@ -143,8 +163,8 @@ export function CostOverTimePanel({
       ) : (
         <div className="flex flex-col gap-1 px-4 py-3">
           <Chart
-            categories={categories}
-            series={series}
+            categories={chartCategories}
+            series={chartSeries}
             height={CHART_HEIGHT}
             xAxisLabelFontSize={10}
             primaryAxis={{

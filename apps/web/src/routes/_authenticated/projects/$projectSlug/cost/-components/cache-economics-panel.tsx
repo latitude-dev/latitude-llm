@@ -326,7 +326,7 @@ function CacheRow({
               aria-label={`View sessions for ${row.model}`}
               className="group inline-flex min-w-0 items-center gap-1 text-left"
             >
-              <Text.H5 color="foregroundMuted" ellipsis noWrap className="group-hover:text-primary">
+              <Text.H5 color="foregroundMuted" ellipsis noWrap className="min-w-0 group-hover:text-primary">
                 {row.model}
               </Text.H5>
               <Icon
@@ -794,6 +794,7 @@ export function CacheEconomicsPanel({
                 className="w-2/5"
                 {...headProps}
               />
+              {/* Hand-rolled rather than `CostTableHead`: this column has no sort. */}
               <TableHead align="left" className="border-l border-border bg-transparent">
                 <Text.H5M color="foregroundMuted" noWrap>
                   Recommendation

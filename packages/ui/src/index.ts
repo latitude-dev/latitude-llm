@@ -352,7 +352,7 @@ export {
   TooltipRoot,
   TooltipTrigger,
   type TooltipVariant,
-  useTooltipTextContentColor,
+  tooltipTextContentColor,
 } from "./components/tooltip/tooltip.tsx"
 export { hashToHue, useHashColor } from "./hooks/use-hash-color.ts"
 export { useHover } from "./hooks/use-hover.ts"

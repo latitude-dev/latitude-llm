@@ -110,7 +110,7 @@ function ModelLabel({ row, onClick }: { readonly row: ImpactRow; readonly onClic
       aria-label={`View sessions for ${row.label}`}
       className="group inline-flex min-w-0 items-center gap-1 text-left"
     >
-      <Text.H6 color="foreground" ellipsis noWrap className="group-hover:text-primary">
+      <Text.H6 color="foreground" ellipsis noWrap className="min-w-0 group-hover:text-primary">
         {row.label}
       </Text.H6>
       <Icon icon={ArrowUpRightIcon} size="xs" color="foregroundMuted" className="shrink-0 group-hover:text-primary" />
@@ -158,7 +158,7 @@ function MultipleChip({ row }: { readonly row: ImpactRow }) {
     <Tooltip
       asChild
       trigger={
-        <Badge variant={row.multiple >= 2 ? "warningMuted" : "muted"} size="small">
+        <Badge className="self-start" variant={row.multiple >= 2 ? "warningMuted" : "muted"} size="small">
           {`${formatCostMultiple(row.multiple)} avg`}
         </Badge>
       }
