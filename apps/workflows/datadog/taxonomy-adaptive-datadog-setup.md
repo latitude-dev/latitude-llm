@@ -98,8 +98,8 @@ readable as soon as the first spans land (~6–11h after the flag flip).
    filter to the top per Gate 2.
 2. Apply `taxonomy-adaptive-rollout-dashboard.json` with `upsert_datadog_dashboard`.
 3. Enable `adaptiveTaxonomyClustering` for the target organizations (or
-   `enabled_for_all` for the fleet). The env kill switch
-   (`LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE=off`) overrides the flag everywhere.
+   `enabled_for_all` for the fleet). The flag is the only gate — there is no env
+   override, so turning it off is also how you kill the rollout.
 4. Trigger a garden run (or wait ~6h) → confirm spans via Trace Explorer:
    `service:workflows operation_name:taxonomy.gardenTaxonomyWorkflow.shadow`.
 5. Watch `fallbacks` first. To revert an organization, unset its flag: the next

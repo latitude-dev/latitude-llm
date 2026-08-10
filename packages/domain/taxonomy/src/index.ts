@@ -1,8 +1,6 @@
 export { adaptiveFallbackReason, type TaxonomyAdaptiveFallbackReason } from "./adaptive-fallback.ts"
 export {
   isAdaptiveModeActive,
-  parseTaxonomyAdaptiveModeBaseline,
-  resolveTaxonomyAdaptiveMode,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_DEFAULT,
   type TaxonomyAdaptiveClusteringMode,
 } from "./adaptive-mode.ts"
@@ -34,7 +32,6 @@ export {
   FACET_PRESET_SLUG_PREFIX,
   FACET_PROJECTION_TEXT_MAX_LENGTH,
   MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
-  TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODES,
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,

@@ -16,15 +16,12 @@ import {
   emitLineageUseCase,
   type HierarchicalTaxonomyPlan,
   isDisplayableTaxonomyName,
-  parseTaxonomyAdaptiveModeBaseline,
   planFacetGardenUseCase,
   planHierarchicalTaxonomyUseCase,
   type ReassignmentLeaf,
   type ReassignTaxonomyObservationByIdInput,
-  resolveTaxonomyAdaptiveMode,
   routeObservationsToLeaves,
   type StagingLeafCluster,
-  TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
@@ -60,7 +57,6 @@ import {
   TaxonomyRunRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
@@ -69,26 +65,20 @@ import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.
 import { adaptiveGardenRunFields, adaptiveSpanAttributes } from "./taxonomy-gardening-telemetry.ts"
 
 /**
- * Resolve which builder this garden run persists, from the environment kill
- * switch and the per-organization `adaptiveTaxonomyClustering` feature flag. Read
- * in the planning activity ONLY (never workflow code — Temporal determinism): the
- * env via `parseEnv`, the flag via `hasFeatureFlagUseCase` under the garden run's
- * org id (server-side, no request context). The env `off` kill switch always wins
- * and short-circuits the flag lookup, so a killed environment stays a
- * byte-identical no-op with no extra Postgres round-trip.
+ * Resolve which builder this garden run persists, from the per-organization
+ * `adaptiveTaxonomyClustering` feature flag. Read in the planning activity ONLY
+ * (never workflow code — Temporal determinism), via `hasFeatureFlagUseCase` under
+ * the garden run's org id (server-side, no request context).
  *
  * Resolved per run, so flipping the flag either way takes effect on the
  * organization's next pass — nothing carries over from the previous one.
  */
 const resolveAdaptiveMode = (organizationId: string) =>
   Effect.gen(function* () {
-    const raw = yield* parseEnv(TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV, "string", "off")
-    const envBaseline = parseTaxonomyAdaptiveModeBaseline(raw)
-    if (envBaseline === "off") return "off" as const
     const flagEnabledForOrg = yield* hasFeatureFlagUseCase({ identifier: "adaptiveTaxonomyClustering" }).pipe(
       withPostgres(FeatureFlagRepositoryLive, getPostgresClient(), OrganizationId(organizationId)),
     )
-    return resolveTaxonomyAdaptiveMode({ envBaseline, flagEnabledForOrg })
+    return flagEnabledForOrg ? ("enforced" as const) : ("off" as const)
   })
 
 const logger = createLogger("taxonomy-gardening-workflow")
@@ -187,10 +177,10 @@ interface StoredGardenTaxonomyPlan {
   readonly facetId?: string | null
   readonly deprecatedClusterIds: readonly string[]
   /**
-   * Rollout mode resolved at plan time. Downstream activities branch on THIS
-   * value (never re-reading env/flag state) so the publish path is a pure
-   * function of the staged plan artifact. Absent on plans staged by pre-change
-   * code — treated as `off`.
+   * Which builder this plan persisted, resolved at plan time. Downstream
+   * activities branch on THIS value (never re-reading the flag) so the publish
+   * path is a pure function of the staged plan artifact. Absent on plans staged by
+   * pre-change code — treated as `off`.
    */
   readonly mode?: TaxonomyAdaptiveClusteringMode
   /**

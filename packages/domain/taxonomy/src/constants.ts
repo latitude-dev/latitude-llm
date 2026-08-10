@@ -31,23 +31,20 @@ export const TAXONOMY_DIMENSIONS = ["topic"] as const
 export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated", "staging"] as const
 
 // ---------------------------------------------------------------------------
-// Adaptive-clustering gate (LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE)
+// Adaptive-clustering gate
 //
 // Which builder a garden run persists, resolved once in the planning activity
-// (never in workflow code — Temporal determinism). `off` is a guaranteed
-// byte-identical no-op: static builder, `computeSplitLinkThreshold`, sample-only
-// reassignment, centroid-similarity naming, original publish sequence.
-// `enforced` runs the adaptive machinery (adaptive builder, member-confidence
-// routing thresholds, shape-aware naming, staging + atomic swap, full-window
-// reassignment). Exactly one of the two builders runs per garden pass; static is
-// also the fallback when an adaptive build fails or is structurally rejected.
-//
-// The env var is the environment-wide kill switch; the per-organization
-// `adaptiveTaxonomyClustering` feature flag is the switch that selects adaptive.
+// from the per-organization `adaptiveTaxonomyClustering` feature flag (never in
+// workflow code — Temporal determinism). `off` is a guaranteed byte-identical
+// no-op: static builder, `computeSplitLinkThreshold`, sample-only reassignment,
+// centroid-similarity naming, original publish sequence. `enforced` runs the
+// adaptive machinery (adaptive builder, member-confidence routing thresholds,
+// shape-aware naming, staging + atomic swap, full-window reassignment). Exactly
+// one of the two builders runs per garden pass; static is also the fallback when
+// an adaptive build fails or is structurally rejected.
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "enforced"] as const
-export const TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV = "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE"
 
 /**
  * Tag stamped on every adaptive telemetry event so a dashboard can slice
