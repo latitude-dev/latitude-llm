@@ -5,6 +5,7 @@ import {
   AmazonBedrockIcon,
   AmazonSagemakerIcon,
   AzureIcon,
+  BraintrustIcon,
   ClaudeCodeIcon,
   ClaudeIcon,
   CloudflareIcon,
@@ -27,6 +28,7 @@ import {
   KilocodeIcon,
   KimiIcon,
   LangchainIcon,
+  LangfuseIcon,
   LitellmIcon,
   LlamaindexIcon,
   MetaIcon,
@@ -64,6 +66,7 @@ export const PROVIDER_ICON_MAP: Record<string, ProviderIconComponent> = {
   anthropic: ClaudeIcon, // Alternative: AnthropicIcon
   azure: AzureIcon, // Alternative: OpenaiIcon
   "azure-cognitive-services": AzureIcon,
+  braintrust: BraintrustIcon,
   claude: ClaudeIcon,
   "claude-code": ClaudeCodeIcon,
   "cloudflare-ai-gateway": CloudflareIcon,
@@ -89,6 +92,8 @@ export const PROVIDER_ICON_MAP: Record<string, ProviderIconComponent> = {
   kilo: KilocodeIcon,
   "kimi-for-coding": KimiIcon,
   langchain: LangchainIcon,
+  langfuse: LangfuseIcon,
+  langsmith: LangchainIcon, // LangSmith is LangChain's platform
   litellm: LitellmIcon,
   llama: OllamaIcon,
   llamaindex: LlamaindexIcon,

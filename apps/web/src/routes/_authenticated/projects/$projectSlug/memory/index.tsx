@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useMemo } from "react"
+import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import {
   useMemoryActivityHistogram,
   useMemoryOverview,
@@ -13,7 +14,6 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
-import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { MemoryAnalyticsPanel } from "./-components/memory-analytics-panel.tsx"
 import { MemoryEmptyState } from "./-components/memory-empty-state.tsx"

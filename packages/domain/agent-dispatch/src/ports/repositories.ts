@@ -24,6 +24,8 @@ export interface AgentDispatchConfigRepositoryShape {
     readonly projectId: ProjectId
     readonly integrationId: string
   }) => Effect.Effect<AgentDispatchConfigRow | null, RepositoryError, SqlClient>
+  /** How many projects override the org default for an integration — the settings "N override it" count. */
+  readonly countProjectOverrides: (integrationId: string) => Effect.Effect<number, RepositoryError, SqlClient>
   readonly findById: (id: string) => Effect.Effect<AgentDispatchConfigRow, RepositoryError, SqlClient>
   readonly upsert: (config: AgentDispatchConfigRow) => Effect.Effect<AgentDispatchConfigRow, RepositoryError, SqlClient>
   readonly delete: (id: string) => Effect.Effect<void, RepositoryError, SqlClient>

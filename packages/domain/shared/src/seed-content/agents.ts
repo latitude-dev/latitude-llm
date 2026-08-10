@@ -82,8 +82,8 @@ function requiredAt<T>(items: readonly T[], index: number, name: string): T {
 const openAiMiniModel = requiredModel(openaiModels, (model) => model.model === "gpt-4o-mini", "gpt-4o-mini")
 const knowledgeAssistantModel = requiredModel(
   anthropicModels,
-  (model) => model.model === "claude-3-5-haiku",
-  "claude-3-5-haiku",
+  (model) => model.model === "claude-sonnet-5",
+  "claude-sonnet-5",
 )
 const defaultEmbeddingModel = requiredAt(EMBEDDING_MODELS, 0, "default embedding model")
 

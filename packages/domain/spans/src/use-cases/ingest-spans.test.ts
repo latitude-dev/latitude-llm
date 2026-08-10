@@ -23,11 +23,15 @@ import {
 } from "@domain/sandboxes"
 import { createFakeSandboxRepository, createFakeSandboxSignals } from "@domain/sandboxes/testing"
 import {
+  DEFAULT_REDACTION_ENTITIES,
   generateId,
   NotFoundError,
   OrganizationId,
+  type OrganizationRedactionSetting,
   ProjectId,
   type ProjectSettings,
+  type RedactionRule,
+  type SerializedRedactionPolicy,
   SettingsReader,
   SqlClient,
   StorageDisk,
@@ -115,6 +119,7 @@ const makeProjectRepository = (
 ) =>
   ProjectRepository.of({
     findById: () => Effect.die("not used"),
+    findByIdForUpdate: () => Effect.die("not used"),
     findBySlug: (slug: string) => {
       const id = resolutions[slug]
       if (!id) return Effect.fail(new NotFoundError({ entity: "Project", id: slug }))
@@ -129,13 +134,21 @@ const makeProjectRepository = (
     countBySlug: () => Effect.die("not used"),
   })
 
-const makeInput = (payload: Uint8Array, opts: { defaultProjectSlug?: string; isSandbox?: boolean } = {}) => ({
+const makeInput = (
+  payload: Uint8Array,
+  opts: {
+    defaultProjectSlug?: string
+    isSandbox?: boolean
+    organizationRedaction?: OrganizationRedactionSetting | null
+  } = {},
+) => ({
   organizationId: ORGANIZATION_ID,
   apiKeyId: "key-1",
   isSandbox: opts.isSandbox ?? false,
   payload,
   contentType: "application/json",
   ...(opts.defaultProjectSlug ? { defaultProjectSlug: opts.defaultProjectSlug } : {}),
+  ...(opts.organizationRedaction !== undefined ? { organizationRedaction: opts.organizationRedaction } : {}),
 })
 
 const runUseCase = (
@@ -376,6 +389,7 @@ describe("ingestSpansUseCase project scoping", () => {
         ProjectRepository,
         ProjectRepository.of({
           findById: () => Effect.die("not used"),
+          findByIdForUpdate: () => Effect.die("not used"),
           findBySlug: (slug: string) => {
             findBySlugCalls++
             return Effect.succeed(makeProject(slug, slug === "primary" ? PRIMARY_PROJECT_ID : SECONDARY_PROJECT_ID))
@@ -819,5 +833,277 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
     expect((published[0]?.payload as { isSandbox: boolean }).isSandbox).toBe(false)
     expect(sandboxSignals.state.quotaIncrements).toHaveLength(0)
     expect(sandboxRepo.stampCount).toBe(0)
+  })
+})
+
+describe("ingestSpansUseCase redaction policy stamping", () => {
+  const singleSpanBatch = (slug?: string): Uint8Array =>
+    new TextEncoder().encode(
+      JSON.stringify({
+        resourceSpans: [
+          {
+            resource: { attributes: [{ key: "service.name", value: { stringValue: "test" } }] },
+            scopeSpans: [
+              {
+                scope: { name: "test", version: "1.0.0" },
+                spans: [
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "b7ad6b7169203331",
+                    name: "test-span",
+                    kind: 3,
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: slug ? [{ key: "latitude.project", value: { stringValue: slug } }] : [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+  const publishedRedaction = (published: { payload: unknown }[]) =>
+    (published[0]?.payload as { redaction?: Record<string, SerializedRedactionPolicy> } | undefined)?.redaction
+
+  const stamp = async (
+    opts: {
+      organizationRedaction?: OrganizationRedactionSetting | null
+      settingsBySlug?: Record<string, ProjectSettings>
+      resolutions?: Record<string, string | null>
+      slug?: string
+    } = {},
+  ) => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      runUseCase(
+        makeInput(singleSpanBatch(opts.slug), {
+          defaultProjectSlug: "primary",
+          ...(opts.organizationRedaction !== undefined ? { organizationRedaction: opts.organizationRedaction } : {}),
+        }),
+        disk,
+        publisher,
+        opts.resolutions ?? { primary: PRIMARY_PROJECT_ID },
+        opts.settingsBySlug ?? {},
+      ),
+    )
+
+    return { published, redaction: publishedRedaction(published) }
+  }
+
+  it("omits the redaction field entirely when no project opted in", async () => {
+    const { published, redaction } = await stamp()
+
+    expect(published).toHaveLength(1)
+    expect(redaction).toBeUndefined()
+    expect(published[0]?.payload).not.toHaveProperty("redaction")
+  })
+
+  it("omits a project whose policy resolves to off", async () => {
+    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "off" } } } })
+
+    expect(redaction).toBeUndefined()
+  })
+
+  it("stamps an enforce policy keyed by project id", async () => {
+    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "enforce" } } } })
+
+    expect(redaction).toEqual({
+      [PRIMARY_PROJECT_ID]: {
+        entities: [...DEFAULT_REDACTION_ENTITIES],
+        redactMetadata: false,
+        identities: "keep",
+      },
+    })
+  })
+
+  it("serializes the configured entity set and scopes", async () => {
+    const { redaction } = await stamp({
+      settingsBySlug: {
+        primary: {
+          redaction: {
+            mode: "enforce",
+            entities: ["email", "secret"],
+            scopes: { metadata: true },
+            identities: "pseudonymize",
+          },
+        },
+      },
+    })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]).toEqual({
+      entities: ["email", "secret"],
+      redactMetadata: true,
+      identities: "pseudonymize",
+    })
+  })
+
+  it("applies an organization policy to a project that configured nothing", async () => {
+    const { redaction } = await stamp({ organizationRedaction: { mode: "enforce" } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]).toMatchObject({ entities: [...DEFAULT_REDACTION_ENTITIES] })
+  })
+
+  it("lets a project override an unlocked organization policy", async () => {
+    const { redaction } = await stamp({
+      organizationRedaction: { mode: "enforce" },
+      settingsBySlug: { primary: { redaction: { mode: "off" } } },
+    })
+
+    expect(redaction).toBeUndefined()
+  })
+
+  it("keeps a locked organization policy even when the project turns redaction off", async () => {
+    const { redaction } = await stamp({
+      organizationRedaction: { mode: "enforce", locked: true },
+      settingsBySlug: { primary: { redaction: { mode: "off" } } },
+    })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]).toMatchObject({ entities: [...DEFAULT_REDACTION_ENTITIES] })
+  })
+
+  it("stamps one entry per opted-in project in a multi-project batch", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const payload = new TextEncoder().encode(
+      JSON.stringify({
+        resourceSpans: [
+          {
+            resource: { attributes: [{ key: "service.name", value: { stringValue: "test" } }] },
+            scopeSpans: [
+              {
+                scope: { name: "test", version: "1.0.0" },
+                spans: [
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "b7ad6b7169203331",
+                    name: "a",
+                    kind: 3,
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [{ key: "latitude.project", value: { stringValue: "primary" } }],
+                  },
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "b7ad6b7169203332",
+                    name: "b",
+                    kind: 3,
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [{ key: "latitude.project", value: { stringValue: "secondary" } }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    await Effect.runPromise(
+      runUseCase(
+        makeInput(payload),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID, secondary: SECONDARY_PROJECT_ID },
+        { primary: { redaction: { mode: "enforce" } }, secondary: { redaction: { mode: "off" } } },
+      ),
+    )
+
+    const redaction = publishedRedaction(published)
+    expect(Object.keys(redaction ?? {})).toEqual([PRIMARY_PROJECT_ID])
+  })
+
+  it("stamps custom rules alongside the entity set", async () => {
+    const rules: RedactionRule[] = [
+      { id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] },
+      { id: "rule-2", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.*"] },
+    ]
+    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "enforce", rules } } } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(rules)
+  })
+
+  it("omits the rules field for a project with none, keeping the payload as it was", async () => {
+    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "enforce" } } } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]).not.toHaveProperty("rules")
+  })
+
+  it("carries disabled rules through, since the engine decides what to compile", async () => {
+    const rules: RedactionRule[] = [
+      { id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"], enabled: false },
+    ]
+    const { redaction } = await stamp({ settingsBySlug: { primary: { redaction: { mode: "enforce", rules } } } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(rules)
+  })
+
+  /**
+   * A project whose whole policy is one key-drop rule has nothing to scan for, but it still has
+   * work to do. Treating an empty entity set as "nothing to redact" would silently ignore it.
+   */
+  it("stamps a policy whose only instruction is a key rule and no entities", async () => {
+    const rules: RedactionRule[] = [{ id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] }]
+    const { redaction } = await stamp({
+      settingsBySlug: { primary: { redaction: { mode: "enforce", entities: [], rules } } },
+    })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]).toEqual({
+      entities: [],
+      redactMetadata: false,
+      identities: "keep",
+      rules,
+    })
+  })
+
+  it("inherits organization rules when the project sets none", async () => {
+    const rules: RedactionRule[] = [{ id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] }]
+    const { redaction } = await stamp({ organizationRedaction: { mode: "enforce", rules } })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(rules)
+  })
+
+  it("lets a project replace the organization rule list rather than adding to it", async () => {
+    const orgRules: RedactionRule[] = [{ id: "org", label: "ORG_RULE", kind: "terms", terms: ["ORG-1"] }]
+    const projectRules: RedactionRule[] = [{ id: "proj", label: "PROJECT_RULE", kind: "terms", terms: ["PROJ-1"] }]
+    const { redaction } = await stamp({
+      organizationRedaction: { mode: "enforce", rules: orgRules },
+      settingsBySlug: { primary: { redaction: { rules: projectRules } } },
+    })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(projectRules)
+  })
+
+  it("keeps the locked organization rules when the project has its own", async () => {
+    const orgRules: RedactionRule[] = [{ id: "org", label: "ORG_RULE", kind: "terms", terms: ["ORG-1"] }]
+    const { redaction } = await stamp({
+      organizationRedaction: { mode: "enforce", locked: true, rules: orgRules },
+      settingsBySlug: {
+        primary: { redaction: { rules: [{ id: "proj", label: "PROJECT_RULE", kind: "terms", terms: ["PROJ-1"] }] } },
+      },
+    })
+
+    expect(redaction?.[PRIMARY_PROJECT_ID]?.rules).toEqual(orgRules)
+  })
+
+  it("does not enqueue anything, and so stamps nothing, when the batch is sampled out", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      runUseCase(
+        makeInput(singleSpanBatch(), { defaultProjectSlug: "primary" }),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID },
+        { primary: { redaction: { mode: "enforce" }, sampling: { enabled: true, rate: 0 } } },
+      ),
+    )
+
+    expect(published).toHaveLength(0)
   })
 })

@@ -1,14 +1,16 @@
-import { CheckIcon, ChevronDownIcon, ChevronRightIcon, ScanSearchIcon, WrenchIcon, XIcon } from "lucide-react"
-import { useId, useMemo, useState } from "react"
+import { ScanSearchIcon, WrenchIcon, XIcon } from "lucide-react"
+import { useMemo } from "react"
 import { cn } from "../../../utils/cn.ts"
-import { Button } from "../../button/button.tsx"
 import { CodeBlockControls } from "../../code-block/code-block-controls.tsx"
 import { CopyButton } from "../../copy-button/index.tsx"
+import { Icon } from "../../icons/icons.tsx"
 import { Text } from "../../text/text.tsx"
 import { Tooltip } from "../../tooltip/tooltip.tsx"
+import { ChatDropdown } from "./chat-dropdown.tsx"
 import { formatJson } from "./helpers.tsx"
 import type { ToolCallPart, ToolCallResult } from "./types.ts"
 
+/** Only surfaces a failure — a successful call has no separate status affordance (the badge itself stays neutral). */
 function ToolCallStatusIcon({
   result,
   failed = false,
@@ -16,19 +18,18 @@ function ToolCallStatusIcon({
   readonly result: ToolCallResult | undefined
   readonly failed?: boolean
 }) {
-  if (!result && !failed) return null
-
   const isError = failed || result?.isError === true
-  const label = isError ? "Error" : "Success"
-  const icon = isError ? (
-    <XIcon className="w-3.5 h-3.5 text-destructive" />
-  ) : (
-    <CheckIcon className="w-3.5 h-3.5 text-success" />
-  )
+  if (!isError) return null
 
   return (
-    <Tooltip trigger={<span className="flex items-center">{icon}</span>}>
-      <Text.H6>{label}</Text.H6>
+    <Tooltip
+      trigger={
+        <span className="flex items-center">
+          <XIcon className="w-3.5 h-3.5 text-destructive" />
+        </span>
+      }
+    >
+      <Text.H6>Error</Text.H6>
     </Tooltip>
   )
 }
@@ -47,92 +48,80 @@ export function ToolCallBlock({
   readonly onNavigateToSpan?: () => void
   readonly defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(defaultOpen)
-  const panelId = useId()
   const isError = failed || result?.isError === true
-
-  const toggleOpen = () => setOpen((prev) => !prev)
 
   const argsContent = useMemo(() => formatJson(call.arguments), [call.arguments])
   const resultContent = useMemo(() => (result ? formatJson(result.response) : ""), [result])
 
-  return (
-    <div
-      data-tool-call-id={call.id || undefined}
-      className={cn("flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border sm:max-w-150", {
-        "border-border": !isError,
-        "border-destructive": isError,
-      })}
-    >
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: row is a pointer-only hit target; chevron Button handles keyboard disclosure */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: same — toggle is available via the chevron control */}
-      <div
-        className="flex min-w-0 flex-row items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50"
-        onClick={toggleOpen}
-      >
-        <WrenchIcon className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="min-w-0 flex-1 text-left">
-          <Text.Mono size="h6">{call.name}</Text.Mono>
-        </span>
-        <ToolCallStatusIcon result={result} failed={failed} />
-        {call.id && <CopyButton value={call.id} tooltip={call.id} />}
-        {onNavigateToSpan && (
-          <Tooltip
-            asChild
-            trigger={
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onNavigateToSpan()
-                }}
-                className="flex items-center text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <ScanSearchIcon className="w-4 h-4" />
-              </button>
-            }
-          >
-            <Text.H6>View execution span</Text.H6>
-          </Tooltip>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleOpen()
-          }}
-          aria-expanded={open}
-          aria-controls={panelId}
-          aria-label={open ? "Hide tool call details" : "Show tool call details"}
+  const actions = (
+    <div className="flex items-center gap-2">
+      <ToolCallStatusIcon result={result} failed={failed} />
+      {onNavigateToSpan && (
+        <Tooltip
+          asChild
+          trigger={
+            <button
+              type="button"
+              onClick={onNavigateToSpan}
+              className="flex cursor-pointer items-center text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/dropdown-row:opacity-100"
+            >
+              <Icon icon={ScanSearchIcon} size="sm" />
+            </button>
+          }
         >
-          {open ? <ChevronDownIcon className="w-3.5 h-3.5" /> : <ChevronRightIcon className="w-3.5 h-3.5" />}
-        </Button>
-      </div>
+          <Text.H6 color="foregroundMuted">View execution span</Text.H6>
+        </Tooltip>
+      )}
+      {call.id && (
+        <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover/dropdown-row:opacity-100">
+          <CopyButton value={call.id} tooltip={call.id} />
+        </span>
+      )}
+    </div>
+  )
 
-      <div id={panelId} className={cn("flex min-w-0 flex-col", !open && "hidden")}>
-        <div className="relative">
-          <pre className="max-w-full overflow-auto border-y border-border bg-muted p-3 text-xs">{argsContent}</pre>
-          <CodeBlockControls content={argsContent} language="json" />
-        </div>
-        {result && (
-          <div className="flex min-w-0 flex-col p-3">
+  return (
+    <div data-tool-call-id={call.id || undefined} className="flex min-w-0 max-w-full flex-col sm:max-w-150">
+      <ChatDropdown
+        icon={WrenchIcon}
+        title={call.name}
+        hasError={isError}
+        actions={actions}
+        defaultExpanded={defaultOpen}
+      >
+        <div
+          className={cn("flex min-w-0 flex-col gap-2.5 rounded-xl border p-2.5", {
+            "border-border": !isError,
+            "border-destructive": isError,
+          })}
+        >
+          <div className="flex min-w-0 flex-col gap-1.5 rounded-lg bg-secondary p-3">
+            <Text.Mono size="h6" color="foregroundMuted">
+              Input
+            </Text.Mono>
             <div className="relative">
-              <pre
-                className={cn("max-w-full overflow-auto rounded-lg p-3 text-xs", {
-                  "bg-muted": !isError,
-                  "bg-destructive-muted": isError,
-                })}
-              >
-                {resultContent}
-              </pre>
-              <CodeBlockControls content={resultContent} language="json" />
+              <pre className="max-w-full overflow-auto text-xs">{argsContent}</pre>
+              <CodeBlockControls content={argsContent} language="json" />
             </div>
           </div>
-        )}
-      </div>
+          {result && (
+            <div
+              className={cn(
+                "flex min-w-0 flex-col gap-1.5 rounded-lg p-3",
+                isError ? "bg-destructive-muted" : "bg-secondary",
+              )}
+            >
+              <Text.Mono size="h6" color="foregroundMuted">
+                Output
+              </Text.Mono>
+              <div className="relative">
+                <pre className="max-w-full overflow-auto text-xs">{resultContent}</pre>
+                <CodeBlockControls content={resultContent} language="json" />
+              </div>
+            </div>
+          )}
+        </div>
+      </ChatDropdown>
     </div>
   )
 }

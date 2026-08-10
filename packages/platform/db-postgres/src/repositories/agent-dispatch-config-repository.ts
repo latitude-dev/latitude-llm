@@ -16,6 +16,7 @@ import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { agentDispatchConfigs } from "../schema/agent-dispatch-configs.ts"
 import { agentDispatches } from "../schema/agent-dispatches.ts"
+import { projects } from "../schema/projects.ts"
 
 const toDomainConfig = (row: typeof agentDispatchConfigs.$inferSelect): AgentDispatchConfigRow => ({
   id: row.id,
@@ -71,6 +72,29 @@ export const AgentDispatchConfigRepositoryLive = Layer.succeed(AgentDispatchConf
         )
         .pipe(Effect.mapError((e) => toRepositoryError(e, "findDefaultAgentDispatchConfig")))
       return rows[0] ? toDomainConfig(rows[0]) : null
+    }),
+
+  countProjectOverrides: (integrationId) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(agentDispatchConfigs)
+            // Joined to live projects because nothing cleans these rows up on ProjectDeleted, and
+            // the caller's total comes from live projects, so orphans would overshoot it.
+            .innerJoin(projects, and(eq(projects.id, agentDispatchConfigs.projectId), isNull(projects.deletedAt)))
+            .where(
+              and(
+                sql`${agentDispatchConfigs.projectId} is not null`,
+                eq(agentDispatchConfigs.integrationId, integrationId),
+                eq(agentDispatchConfigs.organizationId, organizationId),
+              ),
+            ),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "countAgentDispatchProjectOverrides")))
+      return rows[0]?.count ?? 0
     }),
 
   findOverrideByProjectAndIntegration: ({ projectId, integrationId }) =>

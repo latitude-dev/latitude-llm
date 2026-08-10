@@ -10,7 +10,7 @@ import {
   TaxonomyRunId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
-import { Effect, Layer } from "effect"
+import { Duration, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { isAdaptiveModeActive } from "../adaptive-mode.ts"
 import type { ClusteringTreeNode } from "../clustering.ts"
@@ -164,14 +164,16 @@ describe("planHierarchicalTaxonomyUseCase adaptive (enforced) publish plan", () 
 })
 
 describe("planHierarchicalTaxonomyUseCase off is a byte-identical no-op", () => {
-  it("global: active clusters, sample assignments, no staging machinery", async () => {
+  it("global: staged clusters, sample assignments, no full-window routing leaves", async () => {
     const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
     const clusters = createFakeTaxonomyClusterRepository([])
 
     const plan = await runPlan(observations, clusters, { now })
 
     expect(plan.mode).toBe("off")
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    // Fresh births stage on every mode: the swap publishes a named tree.
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
+    expect([...plan.stagedClusterIds].sort()).toEqual(plan.clusters.map((cluster) => cluster.id).sort())
     expect(plan.leafClusters).toEqual([])
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.decisionMetadata).toBeNull()
@@ -179,7 +181,7 @@ describe("planHierarchicalTaxonomyUseCase off is a byte-identical no-op", () => 
     expect(plan.customAssignments).toEqual([])
   })
 
-  it("scoped: active clusters, custom assignments, no staging machinery", async () => {
+  it("scoped: active clusters (views publish in place), custom assignments, no staging machinery", async () => {
     const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
     const clusters = createFakeTaxonomyClusterRepository([])
     const customBehaviorId = CustomBehaviorId("b".repeat(24))
@@ -225,8 +227,8 @@ describe("planHierarchicalTaxonomyUseCase shadow persists static and computes ad
     const plan = await runPlan(observations, clusters, { now, mode: "shadow" })
 
     expect(plan.mode).toBe("shadow")
-    // Persisted tree is static: active clusters, sample-only assignments, no staging machinery.
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    // Persisted tree is static: sample-only assignments, no full-window routing leaves.
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
@@ -254,7 +256,7 @@ describe("planHierarchicalTaxonomyUseCase shadow persists static and computes ad
 
     expect(shadowPlan.clusters.length).toBe(offPlan.clusters.length)
     expect(depthMultiset(shadowPlan)).toEqual(depthMultiset(offPlan))
-    expect(shadowPlan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(shadowPlan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(shadowPlan.observationAssignments.length).toBe(offPlan.observationAssignments.length)
   })
 })
@@ -293,9 +295,9 @@ describe("planHierarchicalTaxonomyUseCase enforced falls back to static on unsaf
 
     expect(plan.mode).toBe("enforced")
     expect(plan.fallbackReason).toBe(kind)
-    // Fell back to the static publish path: active clusters, sample assignments, no staging.
+    // Fell back to the static publish path: sample assignments, no full-window leaves.
     expect(plan.clusters.length).toBeGreaterThan(0)
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
@@ -327,7 +329,7 @@ describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive b
     )
 
     expect(plan.clusters.length).toBeGreaterThan(0)
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
     expect(plan.comparison).toBeNull()
     expect(plan.decisionMetadata).toBeNull()
@@ -344,9 +346,41 @@ describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive b
 
     expect(plan.mode).toBe("enforced")
     expect(plan.fallbackReason).toBe("buildError")
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
+  })
+
+  // Catching outside `Effect.timed` reported 0 ms for every failure, so a build the
+  // worker deadline killed looked identical to one that threw on arrival. The builder
+  // here burns measurable time before failing, which is what makes the assertion
+  // below fail under that shape rather than pass vacuously.
+  it("enforced: a failed adaptive build reports why it failed and how long it ran", async () => {
+    const slowRejectingBuilder: TaxonomyClusterBuilder = (request) =>
+      isAdaptiveModeActive(request.mode)
+        ? Effect.sleep(Duration.millis(20)).pipe(Effect.andThen(Effect.fail(new Error("adaptive worker crashed"))))
+        : Effect.sync(() => runTaxonomyClusterBuild(request))
+
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "enforced", clusterBuilder: slowRejectingBuilder },
+    )
+
+    expect(plan.fallbackReason).toBe("buildError")
+    expect(plan.adaptiveBuildError).toBe("adaptive worker crashed")
+    expect(plan.adaptiveDurationMs).toBeGreaterThan(0)
+  })
+
+  it("a successful adaptive build records no build error", async () => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "enforced" },
+    )
+
+    expect(plan.fallbackReason).toBeNull()
+    expect(plan.adaptiveBuildError).toBeNull()
   })
 })
 
@@ -367,9 +401,77 @@ describe("shadow guardrails hold across contrasting corpora", () => {
       expect(shape?.maxDepth ?? 0).toBeLessThanOrEqual(TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length)
       expect(shape?.nodeCount ?? 0).toBeLessThanOrEqual(TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES)
     }
-    // Shadow never persists adaptive, so it never falls back and never stages.
+    // Shadow never persists adaptive, so it never falls back.
     expect(plan.fallbackReason).toBeNull()
-    expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
+    expect(plan.leafClusters).toEqual([])
+  })
+})
+
+// One vector repeated: identical sibling centroids, so no candidate split is accepted and both builders bare-root.
+const unsplittableCorpus = (at: Date): TaxonomyMomentObservation[] =>
+  Array.from({ length: 40 }, (_, index) => ({ ...makeObservation(index, 0, at), embedding: groupVector(0, 0) }))
+
+const priorTree = (): TaxonomyCluster[] => {
+  const root = "1".repeat(24)
+  return [
+    { id: root, parentClusterId: null, depth: 0, path: "" },
+    { id: "2".repeat(24), parentClusterId: root, depth: 1, path: `${root}/` },
+    { id: "3".repeat(24), parentClusterId: root, depth: 1, path: `${root}/` },
+  ].map((node) =>
+    taxonomyClusterSchema.parse({
+      ...node,
+      organizationId,
+      projectId,
+      customBehaviorId: null,
+      dimension: "topic",
+      splitLinkThreshold: null,
+      name: `Prior ${node.depth}`,
+      description: "A prior behaviour.",
+      centroid: { base: groupVector(0, 0), mass: 1, model: "m", decay: 1, weights: { default: 1 } },
+      observationCount: 10,
+      state: "active",
+      mergedIntoClusterId: null,
+      firstObservedAt: now,
+      lastObservedAt: now,
+      clusteredAt: now,
+      createdAt: now,
+      updatedAt: now,
+    }),
+  )
+}
+
+describe("a degenerate rebuild is detectable before any publish branch runs", () => {
+  it.each([
+    "off",
+    "shadow",
+    "enforced",
+  ] as const)("reports topLevelClustersBuilt 0 and would retire the whole prior tree (%s)", async (mode) => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(unsplittableCorpus(now)),
+      createFakeTaxonomyClusterRepository(priorTree()),
+      { now, mode },
+    )
+
+    // Above the gardening minimum, so not a cold start: the build ran and produced a bare root.
+    expect(plan.observationsSampled).toBe(40)
+    expect(plan.topLevelClustersBuilt).toBe(0)
+    expect(plan.clusters).toHaveLength(1)
+    expect(plan.maxDepthReached).toBe(0)
+    // What publishing would retire, on whichever branch this mode takes.
+    const retired = [...plan.deprecatedClusterIds, ...plan.supersededClusterIds]
+    expect(retired).toContain("2".repeat(24))
+    expect(retired).toContain("3".repeat(24))
+  })
+
+  it("a healthy rebuild reports its top-level count, so the guard stays out of the way", async () => {
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository(priorTree()),
+      { now, mode: "shadow" },
+    )
+
+    expect(plan.topLevelClustersBuilt).toBeGreaterThanOrEqual(2)
+    expect(plan.topLevelClustersBuilt).toBe(plan.comparison?.static.rootChildCount)
   })
 })
 

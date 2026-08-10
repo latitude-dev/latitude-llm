@@ -7,12 +7,14 @@ const OnboardingWaitingLottie = lazy(() => import("../../onboarding-waiting-lott
 
 export function Left({
   traceReceived,
+  projectId,
   projectSlug,
   sampleProjectSlug,
   onBack,
   onOpenSampleProject,
 }: {
   readonly traceReceived: boolean
+  readonly projectId: string
   readonly projectSlug: string
   readonly sampleProjectSlug: string | undefined
   readonly onBack: () => void
@@ -36,7 +38,7 @@ export function Left({
           </div>
         </div>
 
-        <TelemetryInstructions projectSlug={projectSlug} />
+        <TelemetryInstructions projectId={projectId} projectSlug={projectSlug} importFollowUp="wait-for-trace" />
 
         <div className="flex flex-row flex-wrap items-center gap-3">
           <Button variant="outline" onClick={onBack}>

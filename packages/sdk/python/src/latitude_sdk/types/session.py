@@ -112,20 +112,20 @@ class Session(UniversalBaseModel):
         float,
         FieldMetadata(alias="costInputMicrocents"),
         pydantic.Field(
-            alias="costInputMicrocents", description="Cost of input tokens in microcents (1/1,000,000 USD)."
+            alias="costInputMicrocents", description="Cost of input tokens in microcents (100,000,000 per USD)."
         ),
     ]
     cost_output_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costOutputMicrocents"),
         pydantic.Field(
-            alias="costOutputMicrocents", description="Cost of output tokens in microcents (1/1,000,000 USD)."
+            alias="costOutputMicrocents", description="Cost of output tokens in microcents (100,000,000 per USD)."
         ),
     ]
     cost_total_microcents: typing_extensions.Annotated[
         float,
         FieldMetadata(alias="costTotalMicrocents"),
-        pydantic.Field(alias="costTotalMicrocents", description="Total cost in microcents (1/1,000,000 USD)."),
+        pydantic.Field(alias="costTotalMicrocents", description="Total cost in microcents (100,000,000 per USD)."),
     ]
     user_id: typing_extensions.Annotated[
         typing.Optional[str],

@@ -14,6 +14,7 @@ import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon, WrenchIcon } from "lucide-react"
 import { type ReactNode, useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
+import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
 import { MemoryChangesSection } from "../memory-changes/memory-changes-section.tsx"
 import { MemorySummary } from "../memory-summary.tsx"
@@ -71,7 +72,7 @@ function MetadataSpanBreakdown({
           badges={durationBadge}
           isLoading={isLoading}
         />
-        <UsageSummary data={session} costBadges={costBadges} />
+        <UsageSummary data={session} costBadges={costBadges} costDisplay={rollupCostDisplay(session)} />
         <MemorySummary projectId={session.projectId} sessionId={session.sessionId} />
       </div>
       <AgentsBreakdown graph={agentGraph} />
@@ -217,7 +218,7 @@ export function MetadataTab({
       {largeSession ? (
         <div className="flex flex-col gap-2">
           <DurationBar segments={[]} wallClockMs={session.durationNs / 1_000_000} badges={durationBadge} />
-          <UsageSummary data={session} costBadges={costBadgesNode} />
+          <UsageSummary data={session} costBadges={costBadgesNode} costDisplay={rollupCostDisplay(session)} />
           <MemorySummary projectId={session.projectId} sessionId={session.sessionId} />
           <Text.H6 color="foregroundMuted">
             Duration, agent, and tool breakdowns are deferred for large sessions. Open Spans to inspect details.

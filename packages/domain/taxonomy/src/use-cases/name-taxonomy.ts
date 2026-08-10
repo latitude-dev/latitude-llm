@@ -37,6 +37,13 @@ export interface NameClusterInput {
   readonly projectId: ProjectId
   readonly clusterId: TaxonomyCluster["id"]
   readonly now?: Date
+  /**
+   * Naming sample for a cluster whose membership is not in ClickHouse yet: a
+   * `staging` tree is named before the reassignment repoints assignments at it,
+   * so the publish passes the staged plan's own member ids. Omit to read members
+   * by `assigned_cluster_id` (the post-publish path).
+   */
+  readonly memberObservationIds?: readonly string[]
 }
 
 export interface NameTaxonomyResult {
@@ -69,8 +76,8 @@ const TOPIC_POLICY =
   "Conversation topic clusters describe what users come to do (e.g. 'Order Status', 'Returns and Refunds', 'Account Billing'). They are NOT conversational rituals (no 'user greets', 'user thanks', 'user says hello'), NOT model behaviours (no 'agent apologizes'), and NOT generic dispositions ('frustrated user'). If samples disagree, name the dominant topic of the conversation transcripts."
 
 /**
- * The per-tree naming policy — the wording that varies between the topic tree
- * and each facet lens. Everything else about naming (prompts, collision guard,
+ * The per-tree naming policy: the wording that varies between the topic tree
+ * and each facet. Everything else about naming (prompts, collision guard,
  * deepest-first ordering) is shared. `TOPIC_NAMING_POLICY` reproduces the
  * previously hard-coded topic strings byte-for-byte, so a topic tree named
  * without an explicit policy is unchanged.
@@ -94,18 +101,18 @@ export const TOPIC_NAMING_POLICY: ClusterNamingPolicy = {
 }
 
 /**
- * Naming policy for a facet lens: the clusters group one-sentence extracted
+ * Naming policy for a facet: the clusters group one-sentence extracted
  * statements (not raw transcripts), so the model is told to name the shared
  * answer to the facet's question rather than a conversation topic.
  */
 export const facetNamingPolicy = (facet: Pick<TaxonomyFacet, "name" | "instructions">): ClusterNamingPolicy => {
-  const lens = facet.name.trim()
-  const subject = lens.toLowerCase()
+  const facetName = facet.name.trim()
+  const subject = facetName.toLowerCase()
   return {
-    guidance: `Each cluster groups one-sentence statements extracted from separate conversations through the "${lens}" lens: ${facet.instructions} Name each cluster by the shared ${subject} its statements express — a short label, never the lens name itself, never a conversational ritual or generic disposition. If samples disagree, name the dominant one.`,
+    guidance: `Each cluster groups one-sentence statements extracted from separate conversations through the "${facetName}" facet: ${facet.instructions} Name each cluster by the shared ${subject} its statements express, a short label, never the facet name itself, never a conversational ritual or generic disposition. If samples disagree, name the dominant one.`,
     subjectLabel: "THEME",
     descriptionClause: `of the shared ${subject} these statements express`,
-    leafModeContext: `These are one-sentence statements extracted from separate conversations through the "${lens}" lens. Find the dominant ${subject} across them.`,
+    leafModeContext: `These are one-sentence statements extracted from separate conversations through the "${facetName}" facet. Find the dominant ${subject} across them.`,
   }
 }
 
@@ -224,7 +231,7 @@ const generateWithCollisionGuard = (input: Omit<GenerateInput, "retryForbiddenNa
 
 /**
  * The view a cluster is named within. Every tree (global topic, cohort topic,
- * and each facet lens) shares the same prompts, collision guard, and
+ * and each facet) shares the same prompts, collision guard, and
  * deepest-first ordering and differs only here: which sub-tree the
  * siblings/children come from (`customBehaviorId` × `facetId`), where the member
  * embeddings/summaries are read from (`listMembers`), and the wording `policy`.
@@ -233,7 +240,7 @@ const generateWithCollisionGuard = (input: Omit<GenerateInput, "retryForbiddenNa
 interface ClusterNamingSource {
   /** Omit/null for whole-project scope; set to scope the cluster tree to a cohort. */
   readonly customBehaviorId?: CustomBehaviorId | null
-  /** Omit/null for the topic lens; set to scope the cluster tree to a facet. */
+  /** Omit/null for the topic tree; set to scope the cluster tree to a facet. */
   readonly facetId?: FacetId | null
   /** Per-tree naming wording. Defaults to `TOPIC_NAMING_POLICY`. */
   readonly policy?: ClusterNamingPolicy
@@ -241,6 +248,17 @@ interface ClusterNamingSource {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly clusterId: TaxonomyCluster["id"]
+    readonly limit: number
+  }) => Effect.Effect<readonly TaxonomyClusterNamingMember[], RepositoryError, ChSqlClient>
+  /**
+   * Members by explicit observation id, used when `NameClusterInput` carries the
+   * staged plan's member ids. Absent ⇒ that tree is always named after its
+   * assignments land, so `listMembers` is the only source.
+   */
+  readonly listMembersByIds?: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly observationIds: readonly string[]
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyClusterNamingMember[], RepositoryError, ChSqlClient>
 }
@@ -272,16 +290,22 @@ const loadNamingContext = (input: NameClusterInput, source: ClusterNamingSource)
       ...(source.customBehaviorId ? { customBehaviorId: source.customBehaviorId } : {}),
       ...(source.facetId ? { facetId: source.facetId } : {}),
     }
+    // A staged tree is named before the swap activates it, so the family lookups
+    // must span both states — a staging node's parent/siblings/children are
+    // staging too, and only a reused-id continuation is already active.
+    const states = ["active", "staging"] as const
     const siblings = (yield* clusters.listActiveByProject({
       projectId: input.projectId,
       dimension: cluster.dimension,
       parentClusterId: cluster.parentClusterId,
+      states,
       ...scope,
     })).filter((candidate) => candidate.id !== cluster.id && candidate.name !== "Pending")
     const children = (yield* clusters.listActiveByProject({
       projectId: input.projectId,
       dimension: cluster.dimension,
       parentClusterId: cluster.id,
+      states,
       ...scope,
     })).filter((child) => child.name !== "Pending" && child.description.trim().length > 0)
     return { cluster, parent, siblings, children } satisfies NamingContext
@@ -289,12 +313,21 @@ const loadNamingContext = (input: NameClusterInput, source: ClusterNamingSource)
 
 const loadMemberSummaries = (input: NameClusterInput, source: ClusterNamingSource) =>
   Effect.gen(function* () {
-    const rows = yield* source.listMembers({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      clusterId: input.clusterId,
-      limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
-    })
+    const stagedMemberIds = input.memberObservationIds ?? []
+    const rows =
+      stagedMemberIds.length > 0 && source.listMembersByIds !== undefined
+        ? yield* source.listMembersByIds({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            observationIds: stagedMemberIds,
+            limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
+          })
+        : yield* source.listMembers({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            clusterId: input.clusterId,
+            limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
+          })
     const ranked = [...rows].sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
     return ranked.flatMap((row) => {
       const summary = readableObservationSummary(row.projectionMetadata.summary)
@@ -418,5 +451,6 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
     const observations = yield* TaxonomyObservationRepository
     return yield* nameClusterCore(input, {
       listMembers: (params) => observations.listAllByCluster(params),
+      listMembersByIds: (params) => observations.listAllByObservationIds(params),
     })
   }).pipe(Effect.withSpan("taxonomy.nameCluster"))

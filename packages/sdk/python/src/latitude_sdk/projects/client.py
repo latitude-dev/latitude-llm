@@ -6,9 +6,9 @@ from ..core.client_wrapper import AsyncClientWrapper, SyncClientWrapper
 from ..core.request_options import RequestOptions
 from ..types.paginated_projects import PaginatedProjects
 from ..types.project import Project
+from ..types.project_settings_patch import ProjectSettingsPatch
 from .raw_client import AsyncRawProjectsClient, RawProjectsClient
 from .types.update_project_body_flaggers import UpdateProjectBodyFlaggers
-from .types.update_project_body_settings import UpdateProjectBodySettings
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -152,7 +152,7 @@ class ProjectsClient:
         project_slug: str,
         *,
         name: typing.Optional[str] = OMIT,
-        settings: typing.Optional[UpdateProjectBodySettings] = OMIT,
+        settings: typing.Optional[ProjectSettingsPatch] = OMIT,
         flaggers: typing.Optional[UpdateProjectBodyFlaggers] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Project:
@@ -167,8 +167,7 @@ class ProjectsClient:
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
 
-        settings : typing.Optional[UpdateProjectBodySettings]
-            Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
+        settings : typing.Optional[ProjectSettingsPatch]
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.
@@ -368,7 +367,7 @@ class AsyncProjectsClient:
         project_slug: str,
         *,
         name: typing.Optional[str] = OMIT,
-        settings: typing.Optional[UpdateProjectBodySettings] = OMIT,
+        settings: typing.Optional[ProjectSettingsPatch] = OMIT,
         flaggers: typing.Optional[UpdateProjectBodyFlaggers] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Project:
@@ -383,8 +382,7 @@ class AsyncProjectsClient:
         name : typing.Optional[str]
             New human-readable name. Renaming never changes the slug.
 
-        settings : typing.Optional[UpdateProjectBodySettings]
-            Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.
+        settings : typing.Optional[ProjectSettingsPatch]
 
         flaggers : typing.Optional[UpdateProjectBodyFlaggers]
             Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched.

@@ -161,7 +161,7 @@ describe("TaxonomyViewAssignmentRepositoryLive", () => {
         const repo = yield* TaxonomyViewAssignmentRepository
         yield* repo.upsertMany([
           makeAssignment({ observationId: "topic".padEnd(24, "0"), facetId: null }),
-          // Same scope + cluster but a facet lens — a different projection space
+          // Same scope + cluster but a different facet: a different projection space
           // that topic reads (facet_id = '') must never surface.
           makeAssignment({ observationId: "facetrow".padEnd(24, "0"), facetId }),
         ])
@@ -232,7 +232,7 @@ describe("TaxonomyViewAssignmentRepositoryLive", () => {
     expect(observations[0]?.embedding).toEqual([1, 0, 0])
   })
 
-  it("deleteByBehavior purges the cohort's edges across BOTH lenses (topic + facet)", async () => {
+  it("deleteByBehavior purges the cohort's edges across BOTH the topic and facet slices", async () => {
     const cb = CustomBehaviorId("del".padEnd(24, "0"))
     await run(
       Effect.gen(function* () {
@@ -253,7 +253,7 @@ describe("TaxonomyViewAssignmentRepositoryLive", () => {
     expect(Number(row?.c ?? -1)).toBe(0)
   })
 
-  it("reads facet-lens cluster members from taxonomy_facet_projections (not taxonomy_observations)", async () => {
+  it("reads facet-scoped cluster members from taxonomy_facet_projections (not taxonomy_observations)", async () => {
     const fp = "fp".padEnd(24, "0")
     await ch.client.insert({
       table: "taxonomy_facet_projections",

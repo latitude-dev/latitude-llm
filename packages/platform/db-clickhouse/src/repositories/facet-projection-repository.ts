@@ -123,6 +123,69 @@ export const FacetProjectionRepositoryLive = Layer.effect(
             )
         }),
 
+      healthByFacet: ({ organizationId, projectId, facetId }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT count() AS analyzed,
+                               countIf(extracted_text != '') AS clear,
+                               uniqExactIf(extracted_text, extracted_text != '') AS distinctAnswers
+                        FROM taxonomy_facet_projections FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND facet_id = {facetId:String}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  facetId: facetId as string,
+                },
+                format: "JSONEachRow",
+              })
+              const [row] = await result.json<{
+                analyzed: string | number
+                clear: string | number
+                distinctAnswers: string | number
+              }>()
+              return {
+                analyzed: Number(row?.analyzed ?? 0),
+                clear: Number(row?.clear ?? 0),
+                distinctAnswers: Number(row?.distinctAnswers ?? 0),
+              }
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "FacetProjectionRepository.healthByFacet")))
+        }),
+
+      listRecentByFacet: ({ organizationId, projectId, facetId, limit, offset }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${selectColumns}
+                        FROM taxonomy_facet_projections FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND facet_id = {facetId:String}
+                          AND extracted_text != ''
+                        ORDER BY indexed_at DESC, session_observation_id ASC
+                        LIMIT {limit:UInt32} OFFSET {offset:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  facetId: facetId as string,
+                  limit,
+                  offset: offset ?? 0,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<TaxonomyFacetProjectionRow>()
+              return rows.map(toDomain)
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "FacetProjectionRepository.listRecentByFacet")))
+        }),
+
       deleteByFacet: ({ organizationId, projectId, facetId }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

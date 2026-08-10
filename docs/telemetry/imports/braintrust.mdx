@@ -1,0 +1,66 @@
+---
+title: Braintrust
+description: Import historical project logs from Braintrust into a Latitude project.
+---
+
+## Overview
+
+This guide shows you how to import your **Braintrust** history into Latitude. Latitude
+reads the logs in a Braintrust project and maps each span to a Latitude span.
+
+<Check>
+  Importing only reads from Braintrust. Nothing is changed or deleted at the source.
+</Check>
+
+---
+
+## Requirements
+
+- A **Braintrust project** with the logs you want to import
+- A Braintrust **API key** (`sk-…`) with read access to that project
+- Your Braintrust **data plane** — EU or US, found under **Settings → Data plane**
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Create an API key in Braintrust">
+    In Braintrust, open **Settings → API keys** and create a key.
+  </Step>
+
+  <Step title="Connect">
+    In Latitude, go to **Project settings → Imports**, choose **Braintrust** and your data
+    plane, enter the API key, then press **Test connection**.
+  </Step>
+
+  <Step title="Preview and start">
+    Pick the Braintrust project, set the time range and trace limit, check the preview,
+    then press **Start import**.
+  </Step>
+
+</Steps>
+
+---
+
+## Braintrust specifics
+
+- Session and user identity are read from `metadata.session_id` and `metadata.user_id`;
+  token usage and Braintrust's own cost estimate come through directly.
+- Images and files are fetched from Braintrust while the import runs and stored with the
+  message (up to 2 MB each), so imported conversations do not depend on your Braintrust
+  account afterwards.
+
+<Note>
+  Braintrust flattens messages logged over **OpenTelemetry** and can drop reasoning blocks
+  doing so. Set `braintrust.otel.preserve_attributes: true` in your instrumentation and
+  reasoning imports intact. Logs written with Braintrust's own SDK are unaffected.
+</Note>
+
+---
+
+## Seeing your traces
+
+Once imported, traces appear in your project's **Traces** view like any live trace, marked
+with `import.*` metadata naming Braintrust and their original ids.
