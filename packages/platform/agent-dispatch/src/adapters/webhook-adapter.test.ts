@@ -79,7 +79,11 @@ describe("createWebhookAdapter", () => {
     })
   })
 
-  it("keeps valid acknowledgement fields when other fields are invalid", async () => {
+  it.each([
+    "javascript:alert(1)",
+    "not a url",
+    "   ",
+  ])("keeps valid acknowledgement fields when the deep link %j is invalid", async (deepLinkUrl) => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -88,7 +92,7 @@ describe("createWebhookAdapter", () => {
             JSON.stringify({
               externalAgentId: "agent-scope",
               externalRunId: "   ",
-              deepLinkUrl: "javascript:alert(1)",
+              deepLinkUrl,
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           ),

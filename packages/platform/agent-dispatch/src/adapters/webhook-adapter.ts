@@ -12,8 +12,12 @@ const httpUrlSchema = z
   .trim()
   .url()
   .refine((value) => {
-    const protocol = new URL(value).protocol
-    return protocol === "http:" || protocol === "https:"
+    try {
+      const protocol = new URL(value).protocol
+      return protocol === "http:" || protocol === "https:"
+    } catch {
+      return false
+    }
   })
 
 const webhookAcknowledgementSchema = z.object({
