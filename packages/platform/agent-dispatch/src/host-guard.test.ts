@@ -27,4 +27,14 @@ describe("resolvePublicWebhookUrl", () => {
       "webhook_host_resolved_to_non_public_ip",
     )
   })
+
+  it("rejects malformed webhook URLs", async () => {
+    await expect(resolvePublicWebhookUrl("not-a-url")).rejects.toThrow("invalid_webhook_url")
+  })
+
+  it("rejects hosts that fail DNS resolution", async () => {
+    await expect(resolvePublicWebhookUrl("https://hooks.example.com/run", async () => [])).rejects.toThrow(
+      "dns_resolution_failed",
+    )
+  })
 })

@@ -1,6 +1,21 @@
 import { createHmac } from "node:crypto"
+import { DispatchAdapterError } from "@domain/agent-dispatch"
+import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import { createWebhookAdapter } from "./webhook-adapter.ts"
+
+const baseInput = {
+  idempotencyKey: "webhook:incident.opened:src1",
+  prompt: "fix it",
+  context: {
+    trigger: "incident.opened" as const,
+    organizationName: "Acme",
+    projectName: "App",
+    projectSlug: "app",
+    deepLinkUrl: "https://example.com",
+  },
+  credential: { webhookSecret: "test-secret" },
+}
 
 describe("createWebhookAdapter", () => {
   it("signs the payload with HMAC-SHA256", async () => {
@@ -47,5 +62,28 @@ describe("createWebhookAdapter", () => {
     expect(call.headers.get("X-Latitude-Delivery")).toBe("webhook:incident.opened:src1")
 
     vi.unstubAllGlobals()
+  })
+
+  describe("host-guard rejections", () => {
+    it.each([
+      ["malformed URL", "not-a-url", async () => ["8.8.8.8"]],
+      ["non-https URL", "http://hooks.example.com/run", async () => ["8.8.8.8"]],
+      ["unresolvable host", "https://hooks.example.com/run", async () => []],
+      ["host resolving to a private IP", "https://hooks.example.com/run", async () => ["127.0.0.1"]],
+    ] as const)("classifies %s as a config error, not a retryable transport error", async (_case, webhookUrl, lookupHost) => {
+      const adapter = createWebhookAdapter(lookupHost)
+
+      const error = await Effect.runPromise(
+        adapter
+          .dispatch({
+            ...baseInput,
+            config: { kind: "webhook", webhookUrl },
+          })
+          .pipe(Effect.flip),
+      )
+
+      expect(error).toBeInstanceOf(DispatchAdapterError)
+      expect((error as DispatchAdapterError).reason).toBe("config")
+    })
   })
 })
