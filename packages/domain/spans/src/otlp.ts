@@ -4,6 +4,6 @@
  * this so the client bundle does not pull in protobufjs.
  */
 export { decodeOtlpProtobuf } from "./otlp/proto.ts"
-export type { TransformContext } from "./otlp/transform.ts"
+export type { TransformContext, UnpricedSpanGroup } from "./otlp/transform.ts"
 export { transformOtlpToSpans } from "./otlp/transform.ts"
 export type { OtlpExportTraceServiceRequest } from "./otlp/types.ts"

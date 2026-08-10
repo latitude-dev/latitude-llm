@@ -17,14 +17,16 @@ export function MarkdownContent({
   content,
   messageIndex,
   partIndex,
+  flat = false,
 }: {
   readonly content: string
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
+  readonly flat?: boolean
 }) {
   return (
     <Suspense fallback={<MarkdownFallback />}>
-      <MarkdownContentLazy content={content} messageIndex={messageIndex} partIndex={partIndex} />
+      <MarkdownContentLazy content={content} messageIndex={messageIndex} partIndex={partIndex} flat={flat} />
     </Suspense>
   )
 }

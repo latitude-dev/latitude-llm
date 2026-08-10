@@ -1,32 +1,35 @@
 import { type AgentNode, agentGraphSpanKey } from "@domain/spans"
-import { Button, Conversation, Icon, Text } from "@repo/ui"
-import { ChevronLeftIcon } from "lucide-react"
+import { Button, Conversation, Skeleton, Text } from "@repo/ui"
 import { useMemo } from "react"
-import { useSpansByTraceCollection } from "../../../../../../../domains/spans/spans.collection.ts"
+import {
+  useConversationSpanMaps,
+  useSpansByTraceCollection,
+} from "../../../../../../../domains/spans/spans.collection.ts"
 import { useSpanConversationMessages } from "../../../../../../../domains/traces/traces.collection.ts"
-import { AgentBreadcrumb } from "./agent-breadcrumb.tsx"
 import { buildSubagentToolCalls } from "./agent-decorations.ts"
 import { useAgentGraph } from "./use-agent-graph.ts"
 import { useSubagentPreviews } from "./use-subagent-previews.ts"
 
 /**
- * Renders one selected subagent's conversation in place of the main one. Owns
- * its own graph + decorations from its trace's spans, so nested subagents
- * decorate and drill identically at every depth. `onSelectAgent(null)` returns
- * to the main conversation (also bound to Escape).
+ * Renders one selected subagent's conversation in place of the main one,
+ * drilled into from its `SubagentCard`. Owns its own graph + decorations
+ * from its trace's spans, so nested subagents decorate and drill identically
+ * at every depth — `onOpenAgent` reports further drill-downs up to the
+ * caller, which is responsible for the breadcrumb trail.
  */
 export function SubagentConversationView({
   projectId,
   agentTraceId,
   agentSpanId,
-  onSelectAgent,
+  onOpenAgent,
+  navigateToSpan,
 }: {
   readonly projectId: string
   readonly agentTraceId: string
   readonly agentSpanId: string
-  readonly onSelectAgent: (node: AgentNode | null) => void
+  readonly onOpenAgent: (node: AgentNode) => void
+  readonly navigateToSpan?: ((spanId: string, traceId?: string) => void) | undefined
 }) {
-  // Agent nesting is trace-local, so a subagent's own subtree lives entirely in its trace.
   const { data: spans } = useSpansByTraceCollection({ projectId, traceId: agentTraceId })
   const graph = useAgentGraph(spans)
   const node = graph.nodeForSpanId.get(agentGraphSpanKey(agentTraceId, agentSpanId))
@@ -39,55 +42,86 @@ export function SubagentConversationView({
     enabled: node?.kind === "subagent",
   })
 
+  const { data: navSpanMaps } = useConversationSpanMaps({
+    projectId,
+    traceId: agentTraceId,
+    startTime: node ? new Date(node.startTime).toISOString() : undefined,
+    allMessages: conversation.messages,
+    enabled: navigateToSpan !== undefined && conversation.messages.length > 0,
+  })
+
+  const messageActions = useMemo(() => {
+    if (!navigateToSpan || !navSpanMaps || Object.keys(navSpanMaps.messageSpanMap).length === 0) return undefined
+    return new Map(
+      Object.entries(navSpanMaps.messageSpanMap).map(([idx, ref]) => [
+        Number(idx),
+        () => navigateToSpan(ref.spanId, ref.traceId),
+      ]),
+    )
+  }, [navigateToSpan, navSpanMaps])
+
+  const toolCallActions = useMemo(() => {
+    if (!navigateToSpan || !navSpanMaps || Object.keys(navSpanMaps.toolCallSpanMap).length === 0) return undefined
+    return new Map(
+      Object.entries(navSpanMaps.toolCallSpanMap).map(([toolCallId, ref]) => [
+        toolCallId,
+        () => navigateToSpan(ref.spanId, ref.traceId),
+      ]),
+    )
+  }, [navigateToSpan, navSpanMaps])
+
   const subagentPreviews = useSubagentPreviews({ projectId, graph })
   const subagentToolCalls = useMemo(
-    () => buildSubagentToolCalls({ graph, onOpenConversation: onSelectAgent, previews: subagentPreviews }),
-    [graph, onSelectAgent, subagentPreviews],
+    () =>
+      buildSubagentToolCalls({
+        graph,
+        previews: subagentPreviews,
+        onOpenConversation: onOpenAgent,
+        excludeNodeId: node?.id,
+      }),
+    [graph, subagentPreviews, onOpenAgent, node?.id],
   )
   const subagentToolCallsProp = subagentToolCalls.size > 0 ? subagentToolCalls : undefined
 
   if (!node || node.kind !== "subagent") {
     return (
-      <div className="flex flex-1 flex-col">
-        <button
-          type="button"
-          onClick={() => onSelectAgent(null)}
-          className="flex w-full shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2 text-left transition-colors hover:bg-muted cursor-pointer"
-        >
-          <div className="flex h-8 items-center gap-2">
-            <Icon icon={ChevronLeftIcon} size="sm" color="foregroundMuted" />
-            <Text.H6 color="foregroundMuted">Back to conversation</Text.H6>
-          </div>
-        </button>
-        <div className="flex flex-1 items-center justify-center">
-          <Text.H5 color="foregroundMuted">Agent not found</Text.H5>
-        </div>
+      <div className="flex flex-1 items-center justify-center py-6">
+        <Text.H5 color="foregroundMuted">Agent not found</Text.H5>
+      </div>
+    )
+  }
+
+  if (conversation.isLoading) {
+    return (
+      <div className="flex flex-col gap-4 px-4 py-8">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-12 w-3/4" />
+        <Skeleton className="h-16 w-full" />
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <AgentBreadcrumb node={node} graph={graph} onSelect={onSelectAgent} />
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
-        <Conversation
-          messages={conversation.messages}
-          {...(subagentToolCallsProp ? { subagentToolCalls: subagentToolCallsProp } : {})}
-        />
-        {conversation.hasNextPage && (
-          <div className="flex flex-col items-center py-6">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={conversation.isFetchingNextPage}
-              onClick={() => conversation.fetchNextPage()}
-            >
-              {conversation.isFetchingNextPage ? "Loading…" : "Load more"}
-            </Button>
-          </div>
-        )}
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-8">
+      <Conversation
+        messages={conversation.messages}
+        {...(subagentToolCallsProp ? { subagentToolCalls: subagentToolCallsProp } : {})}
+        {...(messageActions ? { messageActions } : {})}
+        {...(toolCallActions ? { toolCallActions } : {})}
+      />
+      {conversation.hasNextPage && (
+        <div className="flex flex-col items-center py-6">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={conversation.isFetchingNextPage}
+            onClick={() => conversation.fetchNextPage()}
+          >
+            {conversation.isFetchingNextPage ? "Loading…" : "Load more"}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

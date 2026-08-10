@@ -96,7 +96,7 @@ class EvaluationScoreResponse(UniversalBaseModel):
 
     cost: int = pydantic.Field()
     """
-    Score cost in microcents (1/1,000,000 of a USD).
+    Score cost in microcents (100,000,000 per USD).
     """
 
     drafted_at: typing_extensions.Annotated[

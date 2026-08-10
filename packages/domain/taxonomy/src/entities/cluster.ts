@@ -49,7 +49,7 @@ export const taxonomyClusterSchema = z.object({
   organizationId: cuidSchema,
   projectId: cuidSchema,
   // A view is (scope × facet). `customBehaviorId` names the scope (NULL =
-  // whole-project); `facetId` names the lens (NULL = topic). (NULL, NULL) is the
+  // whole-project); `facetId` names the facet (NULL = topic). (NULL, NULL) is the
   // one online-routed whole-project topic tree.
   customBehaviorId: customBehaviorIdSchema.nullable().default(null),
   facetId: facetIdSchema.nullable().default(null),

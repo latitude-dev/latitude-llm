@@ -4,14 +4,13 @@ import {
   type StoredAgentDispatchTarget,
 } from "@domain/agent-dispatch"
 import {
+  Alert,
   Badge,
   Button,
   Checkbox,
-  ClaudeCodeIcon,
   CloseTrigger,
   CopyableText,
   CopyButton,
-  CursorIcon,
   Icon,
   InfiniteTable,
   type InfiniteTableColumn,
@@ -27,7 +26,7 @@ import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { BookOpen, Copy, ExternalLink, FileText, type LucideProps, Plus, Settings, Webhook } from "lucide-react"
+import { BookOpen, Copy, ExternalLink, FileText } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import {
@@ -40,6 +39,7 @@ import {
   connectWebhookIntegration,
   disconnectAgentDispatchIntegration,
   getOrgDefaultDispatchConfig,
+  getProjectDispatchSettings,
   getWebhookSecret,
   listAgentDispatches,
   listAgentDispatchIntegrations,
@@ -48,14 +48,23 @@ import {
   listLinearMembers,
   listLinearTeams,
   listLinearTeamsForApiKey,
+  resetProjectDispatchOverride,
   sendToDestinationsQueryKey,
   upsertOrgDefaultDispatchConfig,
+  upsertProjectDispatchOverride,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
+import {
+  AGENT_DISPATCH_KIND_LABELS,
+  type AgentDispatchKindKey,
+} from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import { useIsOrganizationOwner } from "../../../../../../domains/members/members.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
 import { useDebounce } from "../../../../../../lib/hooks/useDebounce.ts"
 import { maskSensitiveValue } from "../../../../../../lib/mask-sensitive-value.ts"
-import { IntegrationCard } from "./integration-card.tsx"
+import { useAuthenticatedUser } from "../../../../-route-data.ts"
+import { OrgDefaultBlastRadius, otherAffectedProjects, useOrgDefaultConfirm } from "./org-default-confirm.tsx"
+import { ScopedSetting, type SettingScope } from "./scoped-setting.tsx"
 
 export const AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY = ["agent-dispatch-integrations"] as const
 
@@ -69,15 +78,6 @@ export interface DispatchConfigFormValues {
   readonly target: StoredAgentDispatchTarget
   readonly guardrails: { readonly maxDispatchesPerDay: number; readonly cooldownMinutes: number }
 }
-
-export const AGENT_DISPATCH_KIND_LABELS = {
-  cursor: "Cursor",
-  claude_code: "Claude Code",
-  linear: "Linear",
-  webhook: "Webhook",
-} as const
-
-export type AgentDispatchKindKey = keyof typeof AGENT_DISPATCH_KIND_LABELS
 
 const KIND_LABELS = AGENT_DISPATCH_KIND_LABELS
 
@@ -150,13 +150,6 @@ function DispatchErrorDetailModal({
   )
 }
 
-const INTEGRATION_SUBTITLES: Record<AgentDispatchKindKey, string> = {
-  cursor: "Cursor agents react to Latitude signals and monitors, then push fixes to your code.",
-  claude_code: "Claude Code routines react to Latitude signals and monitors, then push fixes to your code.",
-  linear: "Create Linear issues for signals that need follow-up.",
-  webhook: "Send integration events to your own endpoint.",
-}
-
 const INTEGRATION_DOC_URLS: Record<AgentDispatchKindKey, string> = {
   cursor: "https://docs.latitude.so/agent-dispatch/cursor",
   claude_code: "https://docs.latitude.so/agent-dispatch/claude-code",
@@ -202,27 +195,6 @@ function isActiveDispatchTrigger(trigger: string): trigger is (typeof ACTIVE_DIS
   return ACTIVE_DISPATCH_TRIGGERS.some((activeTrigger) => activeTrigger === trigger)
 }
 
-function LinearIcon(props: LucideProps) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" {...props}>
-      <circle cx="12" cy="12" r="10" fill="currentColor" />
-      <path d="M5.8 14.6L14.6 5.8" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M8.8 17.2L17.2 8.8" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M5.6 10.8L10.8 5.6" stroke="white" strokeLinecap="round" strokeWidth="2" />
-      <path d="M13.2 18.4L18.4 13.2" stroke="white" strokeLinecap="round" strokeWidth="2" />
-    </svg>
-  )
-}
-
-export const AGENT_DISPATCH_KIND_ICONS = {
-  cursor: CursorIcon,
-  claude_code: ClaudeCodeIcon,
-  linear: LinearIcon,
-  webhook: Webhook,
-} as const
-
-const INTEGRATION_ICONS = AGENT_DISPATCH_KIND_ICONS
-
 const CLAUDE_ROUTINE_TEMPLATE =
   "Inspect the Latitude signal, identify the regression or newly discovered issue, implement the fix, run the relevant checks, and report what changed."
 
@@ -236,7 +208,7 @@ function IntegrationDocsButton({
   readonly variant?: "outline" | "ghost"
 }) {
   return (
-    <Button asChild variant={variant} size="sm" className={fullWidth ? "w-full" : "w-auto shrink-0"}>
+    <Button asChild variant={variant} size="sm" className={fullWidth ? "w-full" : "shrink-0"}>
       <a href={INTEGRATION_DOC_URLS[kind]} target="_blank" rel="noreferrer">
         <Icon icon={BookOpen} size="sm" />
         Setup guide
@@ -249,209 +221,305 @@ function extractClaudeRoutineTriggerId(routineUrl: string) {
   return routineUrl.trim().match(/\/routines\/(trig_[^/?#]+)/)?.[1] ?? null
 }
 
-export function AgentDispatchSection({
-  projectId,
-  projectSlug,
-}: {
-  readonly projectId: string
-  readonly projectSlug: string
-}) {
-  const { data: integrations = [], isLoading } = useQuery({
-    queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
-    queryFn: () => listAgentDispatchIntegrations(),
-  })
-
-  if (isLoading) return null
-
-  return (
-    <>
-      {(Object.keys(KIND_LABELS) as AgentDispatchKindKey[]).map((kind) => (
-        <AgentDispatchKindCard
-          key={kind}
-          kind={kind}
-          integration={integrations.find((row: AgentDispatchIntegrationRecord) => row.kind === kind) ?? null}
-          projectId={projectId}
-          projectSlug={projectSlug}
-        />
-      ))}
-    </>
-  )
-}
-
-function AgentDispatchKindCard({
-  kind,
-  integration,
-  projectId,
-  projectSlug,
-}: {
-  readonly kind: AgentDispatchKindKey
-  readonly integration: AgentDispatchIntegrationRecord | null
-  readonly projectId: string
-  readonly projectSlug: string
-}) {
-  const [connectOpen, setConnectOpen] = useState(false)
-  const [, setWebhookSecret] = useState<string | null>(null)
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
-
-  const disconnectMutation = useMutation({
-    mutationFn: () => disconnectAgentDispatchIntegration({ data: { integrationId: integration!.id } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
-      await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
-      await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
-      toast({ description: `${KIND_LABELS[kind]} disconnected` })
-    },
-    onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
-  })
-
-  if (!integration) {
-    return (
-      <>
-        <IntegrationCard
-          icon={INTEGRATION_ICONS[kind]}
-          title={KIND_LABELS[kind]}
-          subtitle={INTEGRATION_SUBTITLES[kind]}
-          actions={
-            <Button onClick={() => setConnectOpen(true)}>
-              <Icon icon={Plus} size="sm" />
-              Connect
-            </Button>
-          }
-        />
-        <ConnectAgentDispatchModal
-          kind={kind}
-          projectId={projectId}
-          open={connectOpen}
-          onClose={() => setConnectOpen(false)}
-          onWebhookSecret={setWebhookSecret}
-        />
-      </>
-    )
-  }
-
-  return (
-    <IntegrationCard
-      icon={INTEGRATION_ICONS[kind]}
-      title={KIND_LABELS[kind]}
-      subtitle={`Connected ${relativeTime(new Date(integration.installedAt))}`}
-      actions={
-        <div className="flex flex-row flex-nowrap items-center gap-2">
-          <Button asChild variant="outline">
-            <Link
-              to="/projects/$projectSlug/settings/integrations/$integrationKind"
-              params={{ projectSlug, integrationKind: kind }}
-            >
-              <Icon icon={Settings} size="sm" />
-              Manage
-            </Link>
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => disconnectMutation.mutate()}
-            isLoading={disconnectMutation.isPending}
-          >
-            Disconnect
-          </Button>
-        </div>
-      }
-    />
-  )
-}
-
 export function AgentDispatchIntegrationDetails({
   projectId,
   projectSlug,
   kind,
+  projectCount,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly kind: AgentDispatchKindKey
+  readonly projectCount: number
 }) {
   const { data: integrations = [], isLoading } = useQuery({
     queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
     queryFn: () => listAgentDispatchIntegrations(),
   })
-  const [connectOpen, setConnectOpen] = useState(false)
-  const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
   const integration = integrations.find((row: AgentDispatchIntegrationRecord) => row.kind === kind) ?? null
 
   if (isLoading) return <Skeleton className="h-32 w-full" />
 
   if (!integration) {
     return (
-      <>
-        <IntegrationCard
-          icon={INTEGRATION_ICONS[kind]}
-          title={KIND_LABELS[kind]}
-          subtitle={INTEGRATION_SUBTITLES[kind]}
-          actions={
-            <Button onClick={() => setConnectOpen(true)}>
-              <Icon icon={Plus} size="sm" />
-              Connect
-            </Button>
-          }
-        />
-        <ConnectAgentDispatchModal
-          kind={kind}
-          projectId={projectId}
-          open={connectOpen}
-          onClose={() => setConnectOpen(false)}
-          onWebhookSecret={setWebhookSecret}
-        />
-      </>
+      <Alert
+        variant="default"
+        showIcon
+        title={`${KIND_LABELS[kind]} is not connected`}
+        description="Connect it from the integrations page to configure it."
+        cta={
+          <Button asChild variant="outline">
+            <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
+              Back to integrations
+            </Link>
+          </Button>
+        }
+      />
     )
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex max-w-3xl flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <Text.H5 display="block" weight="semibold">
-            {KIND_LABELS[kind]} setup guide
-          </Text.H5>
-          <Text.H6 display="block" color="foregroundMuted">
-            Review setup, dispatch behavior, and troubleshooting for this integration.
-          </Text.H6>
-        </div>
-        <IntegrationDocsButton kind={kind} />
-      </div>
-      <div className="flex max-w-3xl flex-col gap-1">
-        <Text.H5 display="block" weight="semibold">
-          Default settings
-        </Text.H5>
-        <Text.H6 display="block" color="foregroundMuted">
-          These defaults apply to every project in your organization.{" "}
-          <Link
-            to="/projects/$projectSlug/settings/signals"
-            params={{ projectSlug }}
-            className="font-semibold text-foreground hover:underline"
-          >
-            Configure for this project only →
-          </Link>
-        </Text.H6>
-      </div>
-      <AgentDispatchConfigForm
+    <div className="flex w-full flex-col gap-6 @[900px]:w-2/3">
+      <DispatchConnectionSection kind={kind} integration={integration} projectId={projectId} />
+      <DispatchBehaviorSection
         kind={kind}
-        integrationId={integration.id}
-        vendorAccountId={integration.vendorAccountId}
-        webhookSecret={kind === "webhook" ? webhookSecret : null}
+        integration={integration}
+        projectId={projectId}
+        projectCount={projectCount}
       />
       <AgentDispatchHistorySection projectId={projectId} projectSlug={projectSlug} kind={kind} />
     </div>
   )
 }
 
-function AgentDispatchConfigForm({
+function DispatchConnectionSection({
+  kind,
+  integration,
+  projectId,
+}: {
+  readonly kind: AgentDispatchKindKey
+  readonly integration: AgentDispatchIntegrationRecord
+  readonly projectId: string
+}) {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const disconnectMutation = useMutation({
+    mutationFn: () => disconnectAgentDispatchIntegration({ data: { integrationId: integration.id } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY })
+      await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
+      await queryClient.invalidateQueries({ queryKey: projectDispatchSettingsQueryKey(projectId, kind) })
+      await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
+      toast({ description: `${KIND_LABELS[kind]} disconnected` })
+      setConfirmOpen(false)
+    },
+    onError: (error) => {
+      setConfirmOpen(false)
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    },
+  })
+
+  return (
+    <>
+      <ScopedSetting
+        idPrefix={`${kind}-connection`}
+        title="Connection"
+        description="Shared by every project in your organization."
+        scope={{ kind: "fixed", value: "organization" }}
+        footer={
+          <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+            <Text.H6 color="foregroundMuted">
+              Setup, dispatch behavior, and troubleshooting for this integration.
+            </Text.H6>
+            <IntegrationDocsButton kind={kind} />
+          </div>
+        }
+      >
+        <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Text.H5 weight="semibold">{integration.vendorAccountId}</Text.H5>
+            <Text.H6 color="foregroundMuted">Connected {relativeTime(new Date(integration.installedAt))}</Text.H6>
+          </div>
+          <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
+            Disconnect
+          </Button>
+        </div>
+      </ScopedSetting>
+
+      {confirmOpen ? (
+        <Modal
+          open
+          dismissible
+          onOpenChange={(next) => {
+            if (!next && !disconnectMutation.isPending) setConfirmOpen(false)
+          }}
+          title={`Disconnect ${KIND_LABELS[kind]}`}
+          description={`Latitude will stop dispatching to ${KIND_LABELS[kind]}, and the organization default plus every project override for it are removed. This affects every project in the organization.`}
+          footer={
+            <div className="flex flex-row items-center gap-2">
+              <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={disconnectMutation.isPending}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => disconnectMutation.mutate()}
+                isLoading={disconnectMutation.isPending}
+                disabled={disconnectMutation.isPending}
+              >
+                Disconnect {KIND_LABELS[kind]}
+              </Button>
+            </div>
+          }
+        />
+      ) : null}
+    </>
+  )
+}
+
+function DispatchBehaviorSection({
+  kind,
+  integration,
+  projectId,
+  projectCount,
+}: {
+  readonly kind: AgentDispatchKindKey
+  readonly integration: AgentDispatchIntegrationRecord
+  readonly projectId: string
+  readonly projectCount: number
+}) {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const user = useAuthenticatedUser()
+  const isOwner = useIsOrganizationOwner(user.id)
+  const [editingDefault, setEditingDefault] = useState(false)
+  const [isSwitching, setIsSwitching] = useState(false)
+  const [stagedScope, setStagedScope] = useState<SettingScope | null>(null)
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: projectDispatchSettingsQueryKey(projectId, kind),
+    queryFn: () => getProjectDispatchSettings({ data: { projectId, kind } }),
+  })
+
+  const invalidate = async () => {
+    await queryClient.invalidateQueries({ queryKey: projectDispatchSettingsQueryKey(projectId, kind) })
+    await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
+  }
+
+  if (isLoading) return <Skeleton className="h-32 w-full" />
+
+  const effective = settings?.effective ?? null
+  const overrideCount = settings?.overrideCount ?? 0
+  const storedScope: SettingScope = settings?.override != null ? "project" : "organization"
+  const scope = stagedScope ?? storedScope
+  // Dropping the override is the only destructive direction, so it waits for an explicit apply.
+  const pendingRemoval = storedScope === "project" && scope === "organization"
+
+  const shown = scope === "organization" ? (settings?.defaultConfig ?? null) : effective
+
+  const applyRemoval = async () => {
+    setIsSwitching(true)
+    try {
+      await resetProjectDispatchOverride({ data: { projectId, integrationId: integration.id } })
+      setStagedScope(null)
+      await invalidate()
+      toast({ description: "This project now follows the organization" })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setIsSwitching(false)
+    }
+  }
+
+  return (
+    <>
+      <ScopedSetting
+        idPrefix={`${kind}-behavior`}
+        title="Dispatch behavior"
+        description="When Latitude dispatches to this integration, and what it sends."
+        scope={{
+          kind: "selectable",
+          value: scope,
+          onChange: (next) => setStagedScope(next === storedScope ? null : next),
+        }}
+        pendingChange={
+          pendingRemoval
+            ? {
+                description:
+                  "This project will follow the organization default, and its own dispatch behavior is discarded.",
+                applyLabel: "Follow organization",
+                isApplying: isSwitching,
+                onApply: () => void applyRemoval(),
+                onDiscard: () => setStagedScope(null),
+              }
+            : undefined
+        }
+        notice={
+          storedScope === "organization" && scope === "project" ? (
+            <Text.H6 color="foregroundMuted">
+              This project has no behavior of its own yet. Saving copies these values into one, and replaces the whole
+              block, so later changes to the organization default won’t reach this project.
+            </Text.H6>
+          ) : null
+        }
+        footer={
+          <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+            <Text.H6 color="foregroundMuted">
+              {overrideCount > 0
+                ? `Organization default in effect for ${projectCount - overrideCount} of ${projectCount} projects · ${overrideCount} override it`
+                : `Organization default in effect for all ${projectCount} projects`}
+            </Text.H6>
+            {isOwner ? (
+              <Button variant="outline" onClick={() => setEditingDefault(true)} disabled={isSwitching}>
+                Edit organization default
+              </Button>
+            ) : scope === "organization" ? (
+              <Text.H6 color="foregroundMuted">Ask an owner to change the default.</Text.H6>
+            ) : null}
+          </div>
+        }
+      >
+        <AgentDispatchConfigFormInner
+          key={`${kind}:${scope}:${shown?.updatedAt ?? "new"}`}
+          kind={kind}
+          integrationId={integration.id}
+          vendorAccountId={integration.vendorAccountId}
+          initial={shown}
+          webhookSecret={null}
+          readOnly={scope === "organization"}
+          submitLabel="Save for this project"
+          onSubmit={async (values) => {
+            await upsertProjectDispatchOverride({
+              data: {
+                projectId,
+                integrationId: integration.id,
+                kind,
+                enabled: values.triggers.length > 0,
+                triggers: values.triggers,
+                target: values.target,
+                guardrails: values.guardrails,
+              },
+            })
+            setStagedScope(null)
+            await invalidate()
+            toast({ description: `${KIND_LABELS[kind]} settings saved for this project` })
+          }}
+        />
+      </ScopedSetting>
+
+      {editingDefault ? (
+        <OrganizationDispatchModal
+          kind={kind}
+          integrationId={integration.id}
+          vendorAccountId={integration.vendorAccountId}
+          projectCount={projectCount}
+          overrideCount={overrideCount}
+          currentProjectInherits={storedScope === "organization"}
+          onClose={() => setEditingDefault(false)}
+        />
+      ) : null}
+    </>
+  )
+}
+
+/** Editing the organization default from a project page, so an org-wide write interrupts. */
+export function OrganizationDispatchModal({
   kind,
   integrationId,
   vendorAccountId,
-  webhookSecret,
+  projectCount,
+  overrideCount,
+  currentProjectInherits = false,
+  onClose,
 }: {
   readonly kind: AgentDispatchKindKey
   readonly integrationId: string
   readonly vendorAccountId: string
-  readonly webhookSecret: string | null
+  readonly projectCount: number
+  readonly overrideCount: number
+  readonly currentProjectInherits?: boolean
+  readonly onClose: () => void
 }) {
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -460,32 +528,60 @@ function AgentDispatchConfigForm({
     queryFn: () => getOrgDefaultDispatchConfig({ data: { kind } }),
   })
 
-  if (isLoading) return null
+  const otherAffected = otherAffectedProjects({ projectCount, overrideCount, currentProjectInherits })
+  const confirm = useOrgDefaultConfirm(otherAffected)
 
   return (
-    <AgentDispatchConfigFormInner
-      key={config ? `${config.id}:${config.updatedAt}` : "new"}
-      kind={kind}
-      integrationId={integrationId}
-      vendorAccountId={vendorAccountId}
-      initial={config ?? null}
-      webhookSecret={webhookSecret}
-      onSubmit={async (values) => {
-        await upsertOrgDefaultDispatchConfig({
-          data: {
-            integrationId,
-            kind,
-            enabled: values.triggers.length > 0,
-            triggers: values.triggers,
-            target: values.target,
-            guardrails: values.guardrails,
-          },
-        })
-        await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
-        await queryClient.invalidateQueries({ queryKey: ["send-to-destinations"] })
-        toast({ description: "Default settings saved" })
+    <Modal
+      open
+      dismissible
+      onOpenChange={(next) => {
+        if (!next) onClose()
       }}
-    />
+      title={`${KIND_LABELS[kind]} organization default`}
+      description="The dispatch behavior every project inherits unless it sets its own."
+    >
+      <div className="flex flex-col gap-6">
+        <OrgDefaultBlastRadius
+          projectCount={projectCount}
+          overrideCount={overrideCount}
+          otherAffected={otherAffected}
+          awaitingConfirm={confirm.awaitingConfirm}
+        />
+
+        {isLoading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : (
+          <AgentDispatchConfigFormInner
+            key={config ? `${config.id}:${config.updatedAt}` : "new"}
+            kind={kind}
+            integrationId={integrationId}
+            vendorAccountId={vendorAccountId}
+            initial={config ?? null}
+            webhookSecret={null}
+            submitLabel={confirm.submitLabel}
+            beforeSubmit={confirm.gate}
+            onSubmit={async (values) => {
+              await upsertOrgDefaultDispatchConfig({
+                data: {
+                  integrationId,
+                  kind,
+                  enabled: values.triggers.length > 0,
+                  triggers: values.triggers,
+                  target: values.target,
+                  guardrails: values.guardrails,
+                },
+              })
+              await queryClient.invalidateQueries({ queryKey: orgDefaultConfigQueryKey(kind) })
+              await queryClient.invalidateQueries({ queryKey: ["agent-dispatch-project-settings"] })
+              await queryClient.invalidateQueries({ queryKey: ["send-to-destinations"] })
+              toast({ description: "Organization default updated" })
+              onClose()
+            }}
+          />
+        )}
+      </div>
+    </Modal>
   )
 }
 
@@ -498,6 +594,7 @@ export function AgentDispatchConfigFormInner({
   readOnly = false,
   submitLabel = "Save settings",
   extraActions,
+  beforeSubmit,
   onSubmit,
 }: {
   readonly kind: AgentDispatchKindKey
@@ -508,6 +605,8 @@ export function AgentDispatchConfigFormInner({
   readonly readOnly?: boolean
   readonly submitLabel?: string
   readonly extraActions?: ReactNode
+  /** Returning false aborts the save, for a caller that needs to confirm first. */
+  readonly beforeSubmit?: () => boolean
   readonly onSubmit: (values: DispatchConfigFormValues) => Promise<void>
 }) {
   const target = initial?.target
@@ -585,6 +684,7 @@ export function AgentDispatchConfigFormInner({
     },
     onSubmit: createFormSubmitHandler(
       async (values: Record<string, unknown>) => {
+        if (beforeSubmit?.() === false) return
         const common = z
           .object({
             triggers: z.array(z.enum(AGENT_DISPATCH_TRIGGERS)),
@@ -807,7 +907,7 @@ export function AgentDispatchConfigFormInner({
   )
 }
 
-function ConnectAgentDispatchModal({
+export function ConnectAgentDispatchModal({
   kind,
   projectId,
   open,
@@ -862,7 +962,6 @@ function ConnectAgentDispatchModal({
           await connectCursorIntegration({
             data: {
               kind: "cursor",
-              projectId,
               cursorApiKey: parsed.cursorApiKey,
               ...(parsed.repoUrl ? { repoUrl: parsed.repoUrl } : {}),
               ...(parsed.startingRef ? { startingRef: parsed.startingRef } : {}),
@@ -884,7 +983,6 @@ function ConnectAgentDispatchModal({
           await connectClaudeIntegration({
             data: {
               kind: "claude_code",
-              projectId,
               claudeRoutineToken: parsed.claudeRoutineToken,
               routineTriggerId: extractClaudeRoutineTriggerId(parsed.routineUrl)!,
             },
@@ -892,12 +990,12 @@ function ConnectAgentDispatchModal({
         } else if (kind === "linear") {
           const parsed = z.object({ linearApiKey: z.string().min(1), teamId: z.string().uuid() }).parse(values)
           await connectLinearIntegration({
-            data: { kind: "linear", projectId, linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
+            data: { kind: "linear", linearApiKey: parsed.linearApiKey, teamId: parsed.teamId },
           })
         } else {
           const parsed = z.object({ webhookUrl: z.string().url() }).parse(values)
           const result = await connectWebhookIntegration({
-            data: { kind: "webhook", projectId, webhookUrl: parsed.webhookUrl },
+            data: { kind: "webhook", webhookUrl: parsed.webhookUrl },
           })
           setWebhookSecret(result.webhookSecret)
           onWebhookSecret(result.webhookSecret)
@@ -1049,13 +1147,13 @@ function ConnectAgentDispatchModal({
               </Text.H6>
             </div>
             <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
-              <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
+              <Button asChild variant="outline" size="sm" className="shrink-0">
                 <a href="https://cursor.com/dashboard/api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Cursor
                 </a>
               </Button>
-              <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
+              <Button asChild variant="ghost" size="sm" className="shrink-0">
                 <a
                   href="https://cursor.com/docs/cli/reference/authentication#api-key-authentication"
                   target="_blank"
@@ -1184,13 +1282,13 @@ function ConnectAgentDispatchModal({
                 Copy routine description
               </Button>
               <div className="flex flex-row flex-wrap items-center justify-center gap-2">
-                <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
+                <Button asChild variant="outline" size="sm" className="shrink-0">
                   <a href="https://claude.ai/code/routines" target="_blank" rel="noreferrer">
                     <Icon icon={ExternalLink} size="sm" />
                     Claude Code
                   </a>
                 </Button>
-                <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
+                <Button asChild variant="ghost" size="sm" className="shrink-0">
                   <a href="https://code.claude.com/docs/en/routines" target="_blank" rel="noreferrer">
                     <Icon icon={ExternalLink} size="sm" />
                     Claude Code docs
@@ -1242,13 +1340,13 @@ function ConnectAgentDispatchModal({
               </Text.H6>
             </div>
             <div className="flex flex-row flex-wrap items-center gap-2 pt-1">
-              <Button asChild variant="outline" size="sm" className="w-auto shrink-0">
-                <a href="https://linear.app/latitude/settings/account/security" target="_blank" rel="noreferrer">
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <a href="https://linear.app/settings/account/security" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API settings
                 </a>
               </Button>
-              <Button asChild variant="ghost" size="sm" className="w-auto shrink-0">
+              <Button asChild variant="ghost" size="sm" className="shrink-0">
                 <a href="https://linear.app/docs/graphql/working-with-the-graphql-api" target="_blank" rel="noreferrer">
                   <Icon icon={ExternalLink} size="sm" />
                   Linear API docs

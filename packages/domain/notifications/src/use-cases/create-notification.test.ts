@@ -37,6 +37,7 @@ function setup(opts: SetupOpts = {}) {
     name: "User",
     jobTitle: null,
     phoneNumber: null,
+    heardAboutUs: null,
     emailVerified: true,
     image: null,
     role: "user",

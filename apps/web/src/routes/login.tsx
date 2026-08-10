@@ -8,6 +8,7 @@ import { Turnstile } from "../components/turnstile.tsx"
 import { sendMagicLink } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { lookupSsoForEmail } from "../domains/sso/sso.functions.ts"
+import { clarityHeadScripts } from "../lib/analytics/clarity.ts"
 import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib/analytics/gtm.ts"
 import { setSignupAttributionCookie } from "../lib/analytics/signup-attribution-cookie.ts"
 import { oauthCallbackErrorMessage } from "../lib/auth/oauth-errors.ts"
@@ -41,7 +42,7 @@ export const Route = createFileRoute("/login")({
       throw redirect({ to: "/" })
     }
   },
-  head: () => ({ scripts: gtmHeadScripts() }),
+  head: () => ({ scripts: [...gtmHeadScripts(), ...clarityHeadScripts()] }),
   component: LoginPage,
 })
 

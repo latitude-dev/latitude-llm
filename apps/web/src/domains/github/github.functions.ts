@@ -34,6 +34,7 @@ import {
   GithubIntegrationRepositoryLive,
   GithubSignalReferenceRepositoryLive,
   GithubSyncConfigRepositoryLive,
+  MembershipRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { getInstallationToken, listInstallationRepositories, loadGithubConfig } from "@platform/github"
@@ -43,12 +44,13 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
+import { requireOrganizationOwner } from "../../server/require-owner.ts"
 
 const githubConfigLayer = Layer.mergeAll(GithubIntegrationRepositoryLive, GithubSyncConfigRepositoryLive)
 
 const REPO_CACHE_TTL_SECONDS = 5 * 60
 
-export interface GithubIntegrationRecord {
+interface GithubIntegrationRecord {
   readonly id: string
   readonly installationId: number
   readonly accountLogin: string
@@ -71,6 +73,10 @@ const toRecord = (integration: GithubIntegration, baseUrl: string | null): Githu
   suspendedAt: integration.suspendedAt?.toISOString() ?? null,
   installedAt: integration.installedAt.toISOString(),
 })
+
+export const GITHUB_INTEGRATION_QUERY_KEY = ["github-integration"] as const
+export const GITHUB_REPOS_QUERY_KEY = ["github-integration", "repos"] as const
+export const GITHUB_ORG_DEFAULTS_QUERY_KEY = ["github-integration", "org-defaults"] as const
 
 export const isGithubIntegrationConfigured = createServerFn({ method: "GET" }).handler(async (): Promise<boolean> => {
   await requireSession()
@@ -118,8 +124,12 @@ const disconnectGithubIntegrationEffect: Effect.Effect<
 })
 
 export interface GithubProjectConfigRecord {
-  /** Whether this project has its own override (vs inheriting the org default). */
+  /** Whether this project has its own config row, which is what binds a repo. */
   readonly hasOverride: boolean
+  /** Whether this project replaces the org default's monitoring behavior. */
+  readonly hasBehaviorOverride: boolean
+  /** How many projects in the org replace the behavior default — the "N override it" count. */
+  readonly overrideCount: number
   /** Effective repo/branch: the override's when present, else the org default's; null when neither is set. */
   readonly repoId: number | null
   readonly repoFullName: string | null
@@ -137,6 +147,8 @@ export interface GithubDefaultRepoRecord {
 interface GithubOrgDefaultsRecord {
   readonly integrationId: string
   readonly settings: GithubMonitorSettings
+  /** How many projects replace this behavior default — the "N override it" count. */
+  readonly overrideCount: number
   /** Org-default repo/branch inherited by projects with no binding of their own (D16); null when unset. */
   readonly defaultRepo: GithubDefaultRepoRecord | null
 }
@@ -167,11 +179,22 @@ const effectiveSettings = (
   rules: override?.rules ?? orgDefault?.rules ?? DEFAULT_GITHUB_MONITOR_SETTINGS.rules,
 })
 
+/**
+ * Whether a row replaces the org default's behavior. Distinct from having a row at
+ * all: a project can bind its own repo while still inheriting every behavior field.
+ */
+const hasBehaviorOverride = (row: GithubSyncConfigRow | null): boolean =>
+  row !== null &&
+  (row.monitorPullRequests !== null || row.monitorCommits !== null || row.sources !== null || row.rules !== null)
+
 const toProjectConfigRecord = (
   override: GithubSyncConfigRow | null,
   orgDefault: GithubSyncConfigRow | null,
+  overrideCount: number,
 ): GithubProjectConfigRecord => ({
   hasOverride: override !== null,
+  hasBehaviorOverride: hasBehaviorOverride(override),
+  overrideCount,
   repoId: override?.repoId ?? orgDefault?.repoId ?? null,
   repoFullName: override?.repoFullName ?? orgDefault?.repoFullName ?? null,
   branch: override?.branch ?? orgDefault?.branch ?? null,
@@ -233,10 +256,12 @@ export const getGithubOrgDefaults = createServerFn({ method: "GET" }).handler(
         if (!integration) return null
         const orgDefault = yield* syncRepo.findDefaultByIntegration(integration.id)
         if (!orgDefault) return null
+        const projectConfigs = yield* syncRepo.listProjectConfigs(integration.id)
         return {
           integrationId: integration.id,
           settings: settingsFromRow(orgDefault),
           defaultRepo: toDefaultRepo(orgDefault),
+          overrideCount: projectConfigs.filter(hasBehaviorOverride).length,
         }
       }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
@@ -251,12 +276,22 @@ const updateOrgDefaultsSchema = githubMonitorSettingsInputSchema.extend({
 export const updateGithubOrgDefaults = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => updateOrgDefaultsSchema.parse(data))
   .handler(async ({ data }): Promise<GithubOrgDefaultsRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const { defaultRepoId, defaultBranch, ...settings } = data
+
+    // Ahead of loadInstallationRepos, so a rejected caller never reaches the GitHub API.
+    await Effect.runPromise(
+      requireOrganizationOwner({ organizationId, userId, what: "the organization GitHub defaults" }).pipe(
+        withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId),
+        withTracing,
+      ),
+    )
+
     const allowedRepos = defaultRepoId === null ? [] : await loadInstallationRepos(organizationId)
     return Effect.runPromise(
       Effect.gen(function* () {
         const integrationRepo = yield* GithubIntegrationRepository
+        const syncRepo = yield* GithubSyncConfigRepository
         const integration = yield* integrationRepo.findActiveByOrganizationId()
         if (!integration) return yield* Effect.fail(new GithubIntegrationNotFoundError({ reason: "not_connected" }))
         const row = yield* updateGithubOrgDefaultsUseCase({
@@ -266,7 +301,13 @@ export const updateGithubOrgDefaults = createServerFn({ method: "POST" })
           defaultRepo: defaultRepoId === null ? null : { repoId: defaultRepoId, branch: defaultBranch ?? "" },
           allowedRepos,
         })
-        return { integrationId: integration.id, settings: settingsFromRow(row), defaultRepo: toDefaultRepo(row) }
+        const projectConfigs = yield* syncRepo.listProjectConfigs(integration.id)
+        return {
+          integrationId: integration.id,
+          settings: settingsFromRow(row),
+          defaultRepo: toDefaultRepo(row),
+          overrideCount: projectConfigs.filter(hasBehaviorOverride).length,
+        }
       }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
   })
@@ -283,7 +324,8 @@ export const getGithubProjectConfig = createServerFn({ method: "GET" })
         if (!integration) return null
         const orgDefault = yield* syncRepo.findDefaultByIntegration(integration.id)
         const override = yield* syncRepo.findByProject(integration.id, data.projectId)
-        return toProjectConfigRecord(override, orgDefault)
+        const projectConfigs = yield* syncRepo.listProjectConfigs(integration.id)
+        return toProjectConfigRecord(override, orgDefault, projectConfigs.filter(hasBehaviorOverride).length)
       }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
   })
@@ -333,7 +375,8 @@ export const upsertGithubProjectConfig = createServerFn({ method: "POST" })
           allowedRepos,
         })
         const orgDefault = yield* syncRepo.findDefaultByIntegration(integration.id)
-        return toProjectConfigRecord(override, orgDefault)
+        const projectConfigs = yield* syncRepo.listProjectConfigs(integration.id)
+        return toProjectConfigRecord(override, orgDefault, projectConfigs.filter(hasBehaviorOverride).length)
       }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
   })
@@ -350,7 +393,8 @@ export const resetGithubProjectOverride = createServerFn({ method: "POST" })
         const integration = yield* integrationRepo.findActiveByOrganizationId()
         if (!integration) return null
         const orgDefault = yield* syncRepo.findDefaultByIntegration(integration.id)
-        return toProjectConfigRecord(null, orgDefault)
+        const projectConfigs = yield* syncRepo.listProjectConfigs(integration.id)
+        return toProjectConfigRecord(null, orgDefault, projectConfigs.filter(hasBehaviorOverride).length)
       }).pipe(withPostgres(githubConfigLayer, getPostgresClient(), organizationId), withTracing),
     )
   })

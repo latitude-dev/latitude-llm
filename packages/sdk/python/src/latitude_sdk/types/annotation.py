@@ -98,7 +98,7 @@ class Annotation(UniversalBaseModel):
 
     cost: int = pydantic.Field()
     """
-    Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations.
+    Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations.
     """
 
     drafted_at: typing_extensions.Annotated[

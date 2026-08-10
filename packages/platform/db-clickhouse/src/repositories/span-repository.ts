@@ -27,10 +27,11 @@ import type {
   ToolDefinition,
   TraceConversationChunk,
 } from "@domain/spans"
-import { MEMORY_OPERATIONS, SpanRepository, type SpanRepositoryShape } from "@domain/spans"
+import { MEMORY_OPERATIONS, parseCostSource, SpanRepository, type SpanRepositoryShape } from "@domain/spans"
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
+import { sessionMembershipClause } from "../registries/helpers.ts"
 import { buildSpanFilterClauses } from "../registries/span-fields.ts"
 
 const SPAN_KIND_TO_INT: Record<SpanKind, number> = {
@@ -76,7 +77,8 @@ const LIST_COLUMNS_LEAN = `
   tokens_input, tokens_output, tokens_cache_read,
   tokens_cache_create, tokens_reasoning,
   cost_input_microcents, cost_output_microcents,
-  cost_total_microcents, cost_is_estimated,
+  cost_total_microcents, cost_is_estimated, cost_source,
+  cost_priced_provider, cost_priced_model,
   time_to_first_token_ns, is_streaming,
   response_id, finish_reasons,
   scope_name, scope_version,
@@ -166,6 +168,9 @@ type SpanListRow = {
   cost_total_microcents: string
   duration_ns: string
   cost_is_estimated: number
+  cost_source: string
+  cost_priced_provider: string
+  cost_priced_model: string
   time_to_first_token_ns: string
   is_streaming: number
   response_id: string
@@ -250,6 +255,14 @@ const toBaseFields = (row: SpanListRow) => ({
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
   costIsEstimated: row.cost_is_estimated !== 0,
+  costSource: parseCostSource(normalizeCHString(row.cost_source), {
+    costTotalMicrocents: Number(row.cost_total_microcents),
+    costIsEstimated: row.cost_is_estimated !== 0,
+    hasTokens:
+      row.tokens_input + row.tokens_output + row.tokens_cache_read + row.tokens_cache_create + row.tokens_reasoning > 0,
+  }),
+  costPricedProvider: normalizeCHString(row.cost_priced_provider),
+  costPricedModel: normalizeCHString(row.cost_priced_model),
   timeToFirstTokenNs: Number(row.time_to_first_token_ns),
   isStreaming: row.is_streaming !== 0,
   responseId: normalizeCHString(row.response_id),
@@ -386,6 +399,9 @@ const toInsertRow = (span: SpanDetail) => ({
   cost_output_microcents: span.costOutputMicrocents,
   cost_total_microcents: span.costTotalMicrocents,
   cost_is_estimated: span.costIsEstimated ? 1 : 0,
+  cost_source: span.costSource,
+  cost_priced_provider: span.costPricedProvider,
+  cost_priced_model: span.costPricedModel,
   time_to_first_token_ns: span.timeToFirstTokenNs,
   is_streaming: span.isStreaming ? 1 : 0,
   response_id: span.responseId,
@@ -409,25 +425,10 @@ const toInsertRow = (span: SpanDetail) => ({
   ingested_at: formatCHDate(span.ingestedAt),
 })
 
-// Session membership mirrors the sessions_mv grouping key
-// (`coalesce(nullIf(session_id, ''), toString(trace_id))`): conversation-id
-// sessions match on session_id, orphan single-trace sessions (empty
-// session_id) match on their trace_id. Split into bare column equalities —
-// the coalesce form wraps both columns in functions, defeating the
-// idx_session_id / idx_trace_id bloom-filter skip indexes, so it scanned
-// every granule of the org/project. Orphan session ids are 32-hex trace ids;
-// any other length cannot match a FixedString(32) trace_id, so the trace arm
-// is dropped (toFixedString on a longer value would throw).
-const sessionMembership = (sessionId: string): { clause: string; params: Record<string, string> } => {
-  if (sessionId.length === 0) return { clause: "1 = 0", params: {} }
-  if (sessionId.length === 32) {
-    return {
-      clause: "(session_id = {sessionId:String} OR (session_id = '' AND trace_id = {sessionTraceId:FixedString(32)}))",
-      params: { sessionId, sessionTraceId: sessionId },
-    }
-  }
-  return { clause: "session_id = {sessionId:String}", params: { sessionId } }
-}
+// See `sessionMembershipClause`, which the trace filter registry shares. Every caller spreads the
+// returned params, so the prefix only has to avoid colliding with a name the query binds itself.
+const sessionMembership = (sessionId: string): { clause: string; params: Record<string, string> } =>
+  sessionMembershipClause(sessionId, "membership")
 
 // Defense-in-depth for multi-span reads: single-threaded formatting, a per-query
 // memory cap, and an execution-time cap so a pathological query fails its own

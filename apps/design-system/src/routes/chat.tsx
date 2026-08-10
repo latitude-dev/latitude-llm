@@ -14,8 +14,14 @@ const IMAGE_BLOB_B64 =
 // A small CSV (base64) used to demonstrate downloading an inline blob document.
 const CSV_BLOB_B64 = "bmFtZSxzY29yZQpBbGljZSw5CkJvYiw3CkNhcm9sLDgK"
 // Minimal PDF (base64). Also used with a wrong producer modality (`image`) to show mime-aware UX.
+// It has no content stream, so it renders as a blank page — use RENDERABLE_PDF_B64 to see pixels.
 const PDF_BLOB_B64 =
   "JVBERi0xLjAKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIF0vQ291bnQgMT4+CmVuZG9iagozIDAgb2JqCjw8L1R5cGUvUGFnZS9QYXJlbnQgMiAwIFI+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmCjAwMDAwMDAwMDkgMDAwMDAgbgowMDAwMDAwMDU2IDAwMDAwIG4KMDAwMDAwMDExNSAwMDAwMCBuCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTUzCiUlRU9G"
+// A real 306x396 PDF drawing Helvetica text and a filled rect, for the inline preview thumbnail.
+const RENDERABLE_PDF_B64 =
+  "JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMzA2IDM5Nl0vUmVzb3VyY2VzPDwvRm9udDw8L0YxIDQgMCBSPj4+Pi9Db250ZW50cyA1IDAgUj4+ZW5kb2JqCjQgMCBvYmo8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PmVuZG9iago1IDAgb2JqPDwvTGVuZ3RoIDE4Mj4+c3RyZWFtCkJUIC9GMSAyMCBUZiAzMCAzMzAgVGQgKExhdGl0dWRlKSBUaiBFVApCVCAvRjEgMTIgVGYgMzAgMzA1IFRkIChJbmxpbmUgUERGIHByZXZpZXcgZml4dHVyZSkgVGogRVQKMC4xNSAwLjM5IDAuOTIgcmcgMzAgNDAgMjQ2IDI0MCByZSBmCjEgMSAxIHJnIEJUIC9GMSAxNCBUZiA1MCAxNTAgVGQgKFBhZ2UgMSkgVGogRVQKZW5kc3RyZWFtZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDUyIDAwMDAwIG4gCjAwMDAwMDAxMDEgMDAwMDAgbiAKMDAwMDAwMDIxMSAwMDAwMCBuIAowMDAwMDAwMjcyIDAwMDAwIG4gCnRyYWlsZXI8PC9TaXplIDYvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgo0OTkKJSVFT0YK"
+// Valid base64, invalid PDF — exercises the corrupt-document error card.
+const CORRUPT_PDF_B64 = "JVBERi0xLjQKY29ycnVwdCBub3QgYSBwZGYK"
 
 // Remote sample media (renders when online; the broken URLs below show the
 // fallback behavior when a source is missing / inaccessible).
@@ -131,6 +137,20 @@ const FILE_MESSAGES = [
       { type: "blob", modality: "image", mime_type: "application/pdf", content: PDF_BLOB_B64 },
     ],
   },
+  {
+    role: "user",
+    parts: [
+      { type: "text", content: "Inline PDF blob that actually renders — thumbnail expands to the viewer:" },
+      { type: "blob", modality: "document", mime_type: "application/pdf", content: RENDERABLE_PDF_B64 },
+    ],
+  },
+  {
+    role: "user",
+    parts: [
+      { type: "text", content: "Unreadable PDF blob — the preview falls back to an error card:" },
+      { type: "blob", modality: "document", mime_type: "application/pdf", content: CORRUPT_PDF_B64 },
+    ],
+  },
 ] as GenAIMessage[]
 
 const TOOL_MESSAGES = [
@@ -242,7 +262,7 @@ const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }
   {
     title: "Files & documents",
     description:
-      "file_id references, a linked PDF (Preview), an inline CSV (Download), and a mis-tagged PDF blob (Download).",
+      "file_id references, a cross-origin PDF (Preview only), an inline CSV (Download), and inline PDF blobs with a rendered thumbnail, a blank page, and a corrupt document. Font and CMap assets are only served by apps/web, so exotic PDFs degrade here.",
     messages: FILE_MESSAGES,
   },
   {
@@ -296,7 +316,7 @@ function ChatPage() {
 
       <ComponentDemoSection
         title="Subagent tool call"
-        description="A tool call that spawned a subagent renders as a nested sub-conversation: the agent's request and reply as a chat peek, with an Open conversation affordance."
+        description="A tool call that spawned a subagent renders as an inline card: expanding it reveals a Prompt dropdown and a result peek — clicking the peek opens the subagent's full conversation in place."
         frameClassName="block"
       >
         <div className="mx-auto w-full max-w-3xl">

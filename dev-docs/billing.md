@@ -156,8 +156,8 @@ platform-internal work (demo seeding, backoffice tooling); every org-serving AI 
 point must provide a scope. Flows that carry one today: flagger classification and
 draft annotations, live evaluations, evaluation alignment/optimization (baseline/
 incremental judging, GEPA proposals and candidate evaluation), session analysis,
-signal discovery/refresh, taxonomy cluster naming, and annotation publication
-enrichment. Known unbilled follow-ups: web/API semantic search (`planSearch` query
+signal discovery/refresh, taxonomy cluster naming (topic, custom-behavior, and facet
+trees), facet projection extraction, and annotation publication enrichment. Known unbilled follow-ups: web/API semantic search (`planSearch` query
 embeds — needs out-of-credits UX; the planner already falls back to lexical-only),
 the signal-generation agent (`AIAgent` bypasses `withAIMetering`; needs metering on
 the agent service itself), and eval/signal previews (free by design for now).
@@ -175,7 +175,8 @@ Canonical charge points:
 - live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` — every scan records the baseline `eval-scan` credit after execution; `llm()`-capable scripts authorize one `llm-call` (the larger estimate) and meter each generation and query embed on top under a `live-eval` scope
 - evaluation alignment and GEPA optimization: `apps/workflows/src/activities/evaluation-alignment-activities.ts` and `evaluation-optimization-activities.ts`, metered per call under per-activity scopes
 - session analysis: `apps/workflows/src/activities/analyze-session-activities.ts` (`analyzeSessionActivity`), metered under a `session-analysis` activity scope
-- signal discovery, refresh, and taxonomy naming: `signal-discovery-activities.ts` (`signal-create`, `signal-assign`), `apps/workers/src/workers/signals.ts` refresh handler (`signal-refresh`), `taxonomy-naming-activities.ts` (`taxonomy-name`)
+- signal discovery, refresh, and taxonomy naming: `signal-discovery-activities.ts` (`signal-create`, `signal-assign`), `apps/workers/src/workers/signals.ts` refresh handler (`signal-refresh`), `taxonomy-naming-activities.ts` (`taxonomy-name`, on all three branches: topic, custom-behavior, and facet)
+- facet projection extraction: `taxonomy-gardening-activities.ts` (`taxonomy-facet-extract`) — one generation per sampled session, the taxonomy's heaviest AI spend. Extraction runs `FACET_EXTRACTION_CONCURRENCY` calls at a time, so its keys are not order-stable across retries; that undercharges the unflushed tail (a reused key dedupes to "already charged") rather than double-charging it, and work already cached in `taxonomy_facet_projections` is skipped instead of re-extracted
 - annotation publication enrichment: `annotation-publication-activities.ts` (`annotation-enrich`)
 
 Expensive flows still authorize (and cap-reserve) **one** flat-estimate `llm-call` at

@@ -1,5 +1,5 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
-import type { QueuePublishError } from "@domain/queue"
+import { QueuePublishError } from "@domain/queue"
 import { ChSqlClient, type ChSqlClientShape, OrganizationId, StorageDisk } from "@domain/shared"
 import { createFakeStorageDisk } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -93,5 +93,338 @@ describe("processIngestedSpansUseCase sandbox bit", () => {
       name: "TracesIngested",
       payload: { isSandbox: false },
     })
+  })
+})
+
+const EMAIL = "victim@example.com"
+const PROJECT_ID = "proj_realtime_sandbox_test"
+const OTHER_PROJECT_ID = "proj_other_redaction_test"
+
+const spanWith = (attributes: { key: string; value: { stringValue: string } }[], spanId: string, slug?: string) => ({
+  traceId: "0af7651916cd43dd8448eb211c80319c",
+  spanId,
+  name: "chat",
+  startTimeUnixNano: "1710590400000000000",
+  endTimeUnixNano: "1710590401000000000",
+  attributes: slug ? [...attributes, { key: "latitude.project", value: { stringValue: slug } }] : attributes,
+  status: { code: 1 },
+})
+
+const contentAttributes = [
+  { key: "gen_ai.system", value: { stringValue: "openai" } },
+  {
+    key: "gen_ai.input.messages",
+    value: {
+      stringValue: JSON.stringify([{ role: "user", parts: [{ type: "text", content: `contact ${EMAIL}` }] }]),
+    },
+  },
+]
+
+const payloadFor = (spans: unknown[]) =>
+  Buffer.from(
+    JSON.stringify({
+      resourceSpans: [
+        {
+          resource: { attributes: [{ key: "service.name", value: { stringValue: "test" } }] },
+          scopeSpans: [{ scope: { name: "test", version: "1.0.0" }, spans }],
+        },
+      ],
+    }),
+    "utf-8",
+  ).toString("base64")
+
+const enforcePolicy = {
+  entities: ["email" as const],
+  redactMetadata: false,
+  identities: "keep" as const,
+}
+
+const runRedaction = (opts: {
+  payload?: string
+  fileKey?: string | null
+  redaction?: Record<string, unknown>
+  projectIdBySlug?: Record<string, string>
+  defaultProjectId?: string | null
+}) => {
+  const eventsPublisher = createFakeEventsPublisher()
+  const { repository: spanRepo, inserted } = createFakeSpanRepository()
+  const payload = opts.payload ?? payloadFor([spanWith(contentAttributes, "b7ad6b7169203331")])
+  const storage = createFakeStorageDisk({
+    getBytes: async () => new Uint8Array(Buffer.from(payload, "base64")),
+  })
+
+  const effect = processIngestedSpansUseCase({ eventsPublisher })({
+    organizationId: ORGANIZATION_ID,
+    apiKeyId: "key-1",
+    contentType: "application/json",
+    ingestedAt: new Date("2026-03-18T10:00:00.000Z"),
+    isSandbox: false,
+    inlinePayload: opts.fileKey ? null : payload,
+    fileKey: opts.fileKey ?? null,
+    defaultProjectId: opts.defaultProjectId === undefined ? PROJECT_ID : opts.defaultProjectId,
+    projectIdBySlug: opts.projectIdBySlug ?? {},
+    ...(opts.redaction ? { redaction: opts.redaction as never } : {}),
+  }).pipe(
+    Effect.provide(
+      Layer.mergeAll(
+        Layer.succeed(SpanRepository, spanRepo),
+        Layer.succeed(StorageDisk, storage.disk),
+        Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
+      ),
+    ),
+  )
+
+  return { effect, inserted, eventsPublisher, storage }
+}
+
+describe("processIngestedSpansUseCase redaction", () => {
+  it("inserts byte-identical rows when no project opted in", async () => {
+    const withoutField = runRedaction({})
+    await Effect.runPromise(withoutField.effect)
+
+    const withEmptyMap = runRedaction({ redaction: {} })
+    await Effect.runPromise(withEmptyMap.effect)
+
+    expect(JSON.stringify(withEmptyMap.inserted)).toBe(JSON.stringify(withoutField.inserted))
+    expect(JSON.stringify(withoutField.inserted)).toContain(EMAIL)
+  })
+
+  it("redacts both the content column and the raw attribute for an enforce project", async () => {
+    const { effect, inserted } = runRedaction({ redaction: { [PROJECT_ID]: enforcePolicy } })
+    await Effect.runPromise(effect)
+
+    const span = inserted[0]?.[0]
+    expect(JSON.stringify(inserted)).not.toContain(EMAIL)
+    expect(JSON.stringify(span?.inputMessages)).toContain("[REDACTED_EMAIL]")
+    expect(span?.attrString["gen_ai.input.messages"]).toContain("[REDACTED_EMAIL]")
+    expect(span?.attrString["gen_ai.system"]).toBe("openai")
+  })
+
+  it("redacts only the opted-in project in a multi-project batch", async () => {
+    const payload = payloadFor([
+      spanWith(contentAttributes, "b7ad6b7169203331", "primary"),
+      spanWith(contentAttributes, "b7ad6b7169203332", "secondary"),
+    ])
+    const { effect, inserted } = runRedaction({
+      payload,
+      projectIdBySlug: { primary: PROJECT_ID, secondary: OTHER_PROJECT_ID },
+      redaction: { [PROJECT_ID]: enforcePolicy },
+    })
+    await Effect.runPromise(effect)
+
+    const spans = inserted[0] ?? []
+    const primary = spans.find((span) => (span.projectId as string) === PROJECT_ID)
+    const secondary = spans.find((span) => (span.projectId as string) === OTHER_PROJECT_ID)
+
+    expect(JSON.stringify(primary?.inputMessages)).toContain("[REDACTED_EMAIL]")
+    expect(JSON.stringify(secondary?.inputMessages)).toContain(EMAIL)
+  })
+
+  it("still publishes TracesIngested after redacting, so downstream consumers see redacted content", async () => {
+    const { effect, eventsPublisher } = runRedaction({ redaction: { [PROJECT_ID]: enforcePolicy } })
+    await Effect.runPromise(effect)
+
+    expect(eventsPublisher.published[0]).toMatchObject({ name: "TracesIngested" })
+  })
+
+  it("fails without inserting when a policy is present but malformed", async () => {
+    const { effect, inserted } = runRedaction({ redaction: { [PROJECT_ID]: { entities: "not-an-array" } } })
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Failure")
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("fails without inserting when a policy names an unknown entity", async () => {
+    const { effect, inserted } = runRedaction({
+      redaction: { [PROJECT_ID]: { ...enforcePolicy, entities: ["passport"] } },
+    })
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Failure")
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("applies a custom terms rule carried on the wire policy", async () => {
+    const attributes = [
+      { key: "gen_ai.system", value: { stringValue: "openai" } },
+      { key: "acme.note", value: { stringValue: "account ACME-1234" } },
+    ]
+    const { effect, inserted } = runRedaction({
+      payload: payloadFor([spanWith(attributes, "b7ad6b7169203331")]),
+      redaction: {
+        [PROJECT_ID]: {
+          ...enforcePolicy,
+          rules: [{ id: "r1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] }],
+        },
+      },
+    })
+    await Effect.runPromise(effect)
+
+    expect(inserted[0]?.[0]?.attrString["acme.note"]).toBe("account [REDACTED_ACCOUNT_NUMBER]")
+  })
+
+  it("masks the attribute a custom key rule names, carried on the wire policy", async () => {
+    const attributes = [
+      { key: "gen_ai.system", value: { stringValue: "openai" } },
+      { key: "acme.staff.id", value: { stringValue: "staff-77" } },
+    ]
+    const { effect, inserted } = runRedaction({
+      payload: payloadFor([spanWith(attributes, "b7ad6b7169203331")]),
+      redaction: {
+        [PROJECT_ID]: {
+          ...enforcePolicy,
+          rules: [{ id: "r1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.*"] }],
+        },
+      },
+    })
+    await Effect.runPromise(effect)
+
+    expect(inserted[0]?.[0]?.attrString["acme.staff.id"]).toBe("[REDACTED_STAFF_ID]")
+  })
+
+  // Same reasoning as a malformed policy: a corrupt rule on a project that opted in must never
+  // resolve to a plaintext write.
+  it("fails without inserting when a rule on the wire is malformed", async () => {
+    const { effect, inserted } = runRedaction({
+      redaction: { [PROJECT_ID]: { ...enforcePolicy, rules: [{ kind: "terms" }] } },
+    })
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Failure")
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("fails without inserting when a rule's pattern cannot compile", async () => {
+    const { effect, inserted } = runRedaction({
+      redaction: {
+        [PROJECT_ID]: {
+          ...enforcePolicy,
+          rules: [{ id: "r1", label: "BROKEN", kind: "pattern", pattern: "ACCT-(\\d{9}" }],
+        },
+      },
+    })
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Failure")
+    expect(inserted).toHaveLength(0)
+  })
+
+  it("deletes the buffered payload once the spans are durable", async () => {
+    const { effect, storage, inserted } = runRedaction({
+      fileKey: "tmp-ingest/org/proj/abc.json",
+      redaction: { [PROJECT_ID]: enforcePolicy },
+    })
+    await Effect.runPromise(effect)
+
+    expect(inserted).toHaveLength(1)
+    expect(storage.deleted).toEqual(["tmp-ingest/org/proj/abc.json"])
+  })
+
+  /**
+   * A batch whose spans are all dropped by the transform still had a payload, and that
+   * payload is unredacted. The early return skipped the cleanup, so on a self-hosted disk
+   * backend with no lifecycle rule the raw object stayed forever and repeated malformed
+   * batches grew without bound.
+   */
+  it("deletes the buffered payload when every span is dropped", async () => {
+    const { effect, inserted, storage } = runRedaction({
+      payload: payloadFor([spanWith(contentAttributes, "b7ad6b7169203331", "unknown-project-slug")]),
+      defaultProjectId: null,
+      fileKey: "tmp-ingest/org/proj/all-dropped.json",
+    })
+    await Effect.runPromise(effect)
+
+    expect(inserted).toHaveLength(0)
+    expect(storage.deleted).toEqual(["tmp-ingest/org/proj/all-dropped.json"])
+  })
+
+  it("does not delete an inline payload, which has no object to delete", async () => {
+    const { effect, storage } = runRedaction({ redaction: { [PROJECT_ID]: enforcePolicy } })
+    await Effect.runPromise(effect)
+
+    expect(storage.deleted).toEqual([])
+  })
+
+  it("keeps the ingest successful when deleting the buffered payload fails", async () => {
+    const eventsPublisher = createFakeEventsPublisher()
+    const { repository: spanRepo, inserted } = createFakeSpanRepository()
+    const payload = payloadFor([spanWith(contentAttributes, "b7ad6b7169203331")])
+    const storage = createFakeStorageDisk({
+      getBytes: async () => new Uint8Array(Buffer.from(payload, "base64")),
+      delete: async () => {
+        throw new Error("object store unavailable")
+      },
+    })
+
+    const effect = processIngestedSpansUseCase({ eventsPublisher })({
+      organizationId: ORGANIZATION_ID,
+      apiKeyId: "key-1",
+      contentType: "application/json",
+      ingestedAt: new Date("2026-03-18T10:00:00.000Z"),
+      isSandbox: false,
+      inlinePayload: null,
+      fileKey: "tmp-ingest/org/proj/abc.json",
+      defaultProjectId: PROJECT_ID,
+      projectIdBySlug: {},
+    }).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          Layer.succeed(SpanRepository, spanRepo),
+          Layer.succeed(StorageDisk, storage.disk),
+          Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
+        ),
+      ),
+    )
+
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Success")
+    expect(inserted).toHaveLength(1)
+  })
+})
+
+describe("processIngestedSpansUseCase buffered payload recovery", () => {
+  /**
+   * The delete must come after the events are published, not right after the insert.
+   * Deleting earlier makes a job that dies mid-processing unrecoverable: redelivery
+   * finds no payload, so the batch ends up inserted with `TracesIngested` never fired,
+   * silently losing trace-end, billing, and search indexing.
+   */
+  it("keeps the buffered payload when publishing the event fails", async () => {
+    const { repository: spanRepo, inserted } = createFakeSpanRepository()
+    const payload = payloadFor([spanWith(contentAttributes, "b7ad6b7169203331")])
+    const storage = createFakeStorageDisk({
+      getBytes: async () => new Uint8Array(Buffer.from(payload, "base64")),
+    })
+    const failingPublisher: EventsPublisher<QueuePublishError> = {
+      publish: () => Effect.fail(new QueuePublishError({ cause: "redis down", queue: "domain-events" })),
+    }
+
+    const effect = processIngestedSpansUseCase({ eventsPublisher: failingPublisher })({
+      organizationId: ORGANIZATION_ID,
+      apiKeyId: "key-1",
+      contentType: "application/json",
+      ingestedAt: new Date("2026-03-18T10:00:00.000Z"),
+      isSandbox: false,
+      inlinePayload: null,
+      fileKey: "tmp-ingest/org/proj/abc.json",
+      defaultProjectId: PROJECT_ID,
+      projectIdBySlug: {},
+    }).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          Layer.succeed(SpanRepository, spanRepo),
+          Layer.succeed(StorageDisk, storage.disk),
+          Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
+        ),
+      ),
+    )
+
+    const exit = await Effect.runPromiseExit(effect)
+
+    expect(exit._tag).toBe("Failure")
+    expect(inserted).toHaveLength(1)
+    expect(storage.deleted).toEqual([])
   })
 })

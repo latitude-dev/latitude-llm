@@ -7,6 +7,7 @@ import { Effect } from "effect"
 import { closeClickhouse, createClickhouseClient } from "../client.ts"
 import { allSeeders } from "./all.ts"
 import { runSeeders } from "./runner.ts"
+import { costArchetypeSeeders } from "./spans/cost-archetypes/index.ts"
 import { customBehaviorQaSeeder } from "./spans/custom-behavior-qa.ts"
 import { oldTracesQaSeeder } from "./spans/index.ts"
 import { truncateDataTables } from "./truncate-data-tables.ts"
@@ -46,9 +47,9 @@ const main = async () => {
           console.log("- truncating all data tables")
           yield* truncateDataTables(client)
         }
-        // `oldTracesQaSeeder` and `customBehaviorQaSeeder` are bootstrap-only (kept out of `allSeeders`
-        // so they never run during runtime demo-project creation, which reuses `allSeeders`).
-        yield* runSeeders([...allSeeders, oldTracesQaSeeder, customBehaviorQaSeeder], {
+        // The QA seeders are bootstrap-only (kept out of `allSeeders` so they never
+        // run during runtime demo-project creation, which reuses `allSeeders`).
+        yield* runSeeders([...allSeeders, oldTracesQaSeeder, customBehaviorQaSeeder, ...costArchetypeSeeders], {
           client,
           scope: bootstrapSeedScope,
         })

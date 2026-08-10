@@ -5,6 +5,7 @@ import {
   type WorkflowExecutionStatus,
   type WorkflowQuerierShape,
   type WorkflowStarterShape,
+  type WorkflowTerminatorShape,
 } from "@domain/queue"
 import { createLogger } from "@repo/observability"
 import type { WorkflowExecutionStatusName } from "@temporalio/client"
@@ -319,6 +320,28 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
           signal: options.signal,
           runId: handle.signaledRunId,
         })
+      }),
+  }
+}
+
+/**
+ * Hard-stop a running workflow (e.g. a facet garden the user chose to stop or
+ * refine). Best-effort: a workflow that finished or was GC'd between the user's
+ * click and this call is treated as already stopped.
+ */
+export function createWorkflowTerminator(client: Client): WorkflowTerminatorShape {
+  return {
+    terminate: (workflowId, reason) =>
+      Effect.promise(async () => {
+        try {
+          await client.workflow.getHandle(workflowId).terminate(reason)
+        } catch (error) {
+          if (error instanceof WorkflowNotFoundError) return
+          // A completed/terminated workflow can't be terminated again. Nothing to stop.
+          const message = error instanceof Error ? error.message.toLowerCase() : ""
+          if (message.includes("completed") || message.includes("not found") || message.includes("terminated")) return
+          throw error
+        }
       }),
   }
 }
