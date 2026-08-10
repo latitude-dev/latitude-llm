@@ -37,7 +37,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   source: "annotation",
   origin: "system",
   assigneeId: null,
-  priority: "high",
+  priority: null,
   centroid: {
     base: [1, 0],
     mass: 1,
@@ -199,18 +199,6 @@ describe("requestAgentDispatchUseCase", () => {
     )
 
     expect(result).toEqual({ status: "skipped", reason: "user-origin-signal" })
-  })
-
-  // No level means nobody has judged the signal, so no agent is sent at it —
-  // an unjudged signal must not open a PR.
-  it("skips dispatches for a signal with no level", async () => {
-    const result = await Effect.runPromise(
-      requestAgentDispatchUseCase(input).pipe(
-        Effect.provide(makeLayer({ signal: makeSignal({ origin: "system", priority: null }) })),
-      ),
-    )
-
-    expect(result).toEqual({ status: "skipped", reason: "signal-no-severity" })
   })
 
   it("dispatches signal.discovered for system-origin signals", async () => {

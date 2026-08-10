@@ -137,8 +137,6 @@ export const requestAgentDispatchUseCase = (input: {
       if (signal.mutedAt !== null) return { status: "skipped", reason: "signal-muted" } as const
       if (signal.ignoredAt !== null) return { status: "skipped", reason: "signal-ignored" } as const
       if (signal.resolvedAt !== null) return { status: "skipped", reason: "signal-resolved" } as const
-      // No level means nobody has judged this signal, so no agent is sent at it.
-      if (signal.priority === null) return { status: "skipped", reason: "signal-no-severity" } as const
       // Discovery skips user-created signals; runtime triggers (regression) dispatch regardless of origin.
       if (trigger === "signal.discovered" && signal.origin === "user") {
         return { status: "skipped", reason: "user-origin-signal" } as const
@@ -204,9 +202,6 @@ export const requestAgentDispatchUseCase = (input: {
       if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) {
         return { status: "skipped", reason: "signal-resolved" } as const
       }
-      // No level gate on the escalation path: the incident's own severity is the
-      // judgment here (the rate broke its band), and gating on the signal's level
-      // would drop the ~97% of escalations that come from untriaged signals.
     }
 
     const context = yield* buildDispatchContextFromIncident({ incident, trigger, webAppUrl: input.webAppUrl })

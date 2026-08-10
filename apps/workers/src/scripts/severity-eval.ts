@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { parseArgs } from "node:util"
+import type { ScoreSourceType } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { SEED_ORG_ID } from "@domain/shared/seeding"
 import {
@@ -12,11 +13,9 @@ import {
 import { AIGenerateLive, withAi } from "@platform/ai"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { SEVERITY_FIXTURES, type SeverityFixture } from "./severity-eval-fixtures.ts"
-import { type ReportCase, renderReport } from "./severity-eval-report.ts"
 
 const USAGE = `
-Usage: pnpm --filter @app/workers severity:eval [options]
+Usage: pnpm --filter @app/workers severity:eval --cases-file <p> [options]
 
 Grades the severity rubric by running real generation over cases with a known
 expected level, then reports what moved. Not a CI test: it costs money per run,
@@ -30,16 +29,22 @@ false-high is noise, and an adjacent middle tier is arguable.
 
 Options:
   --runs <n>          Repeats per case (default 3). Reveals instability.
-  --cases-file <p>    Grade cases exported from elsewhere, since nothing here connects
-                      to a database. Each entry needs "feedback" and "priority";
-                      "sourceType", "value" and "flaggerSlug" are optional and
-                      snake_case keys are accepted. Keep the file outside this public
-                      repo — it holds customer text. Production priorities are human
-                      triage, never rubric output, so they are usable as labels.
+  --cases-file <p>    Required. Cases exported from elsewhere, since nothing here
+                      connects to a database. Each entry needs "feedback" and
+                      "priority"; "sourceType", "value" and "flaggerSlug" are optional
+                      and snake_case keys are accepted. Keep the file outside this
+                      public repo — it holds customer text.
+
+                      Two things to know about production labels before trusting a
+                      number. They are genuinely human (rating at creation has never
+                      run there), but a person can only triage a signal that already
+                      exists — so every label was applied to a signal with history
+                      while the rubric sees one occurrence. And two people rating the
+                      same occurrence blind agree on the exact tier only 60% of the
+                      time, so read any score against that, not against 100%.
   --include-user-origin  Also grade user-created signals. Off by default: their level was
                       picked by the author for a concept, and none of them is low.
   --first <n>         Grade only the first n cases. Cheap way to sanity-check an export.
-  --html <p>          Write a side-by-side label-vs-rubric review page.
   --help
 `.trim()
 
@@ -53,7 +58,7 @@ interface Case {
   /** Cases sharing a signal share a label, so agreement is also reported per signal. */
   readonly signalSlug?: string
   readonly feedback: string
-  readonly sourceType: SeverityFixture["sourceType"]
+  readonly sourceType: ScoreSourceType
   readonly value: number
   readonly flaggerSlug?: string
   /** A check wrote this line. From `source_id = 'SYSTEM'`; survives a missing slug. */
@@ -119,7 +124,7 @@ const loadFileCases = (path: string, includeUserOrigin: boolean): readonly Case[
       {
         id: String(row.id ?? `case-${index + 1}`),
         feedback,
-        sourceType: ((row.sourceType ?? row.source_type) as SeverityFixture["sourceType"]) ?? "annotation",
+        sourceType: ((row.sourceType ?? row.source_type) as ScoreSourceType) ?? "annotation",
         value: rawValue === undefined || rawValue === null ? 0 : Number(rawValue),
         ...(slug ? { flaggerSlug: slug } : {}),
         ...(typeof (row.signalSlug ?? row.signal_slug) === "string"
@@ -138,7 +143,6 @@ async function main(): Promise<void> {
     options: {
       runs: { type: "string" },
       first: { type: "string" },
-      html: { type: "string" },
       "cases-file": { type: "string" },
       "include-user-origin": { type: "boolean", default: false },
       help: { type: "boolean", default: false },
@@ -152,9 +156,11 @@ async function main(): Promise<void> {
 
   const runs = Number(values.runs ?? 3)
   const casesFile = values["cases-file"]
-  const all: readonly Case[] = casesFile
-    ? loadFileCases(casesFile, values["include-user-origin"] === true)
-    : SEVERITY_FIXTURES.map((fixture) => ({ ...fixture }))
+  if (casesFile === undefined) {
+    console.log(USAGE)
+    return
+  }
+  const all: readonly Case[] = loadFileCases(casesFile, values["include-user-origin"] === true)
   const cases = values.first === undefined ? all : all.slice(0, Number(values.first))
 
   if (cases.length === 0) {
@@ -191,8 +197,7 @@ async function main(): Promise<void> {
 
   const orgId = OrganizationId(SEED_ORG_ID)
   const projectId = "severity-eval"
-  const sourceLabel = casesFile ? "exported cases" : "fixtures"
-  console.log(`Grading ${gradable.length} case(s) × ${runs} run(s) — ${sourceLabel}\n`)
+  console.log(`Grading ${gradable.length} case(s) × ${runs} run(s)\n`)
 
   let exact = 0
   let acceptable = 0
@@ -208,7 +213,6 @@ async function main(): Promise<void> {
   }[] = []
   const falseLows: string[] = []
   const falseHighs: string[] = []
-  const reportCases: ReportCase[] = []
 
   for (const testCase of gradable) {
     const results: (SignalPriority | null)[] = []
@@ -238,17 +242,6 @@ async function main(): Promise<void> {
     if (expectedHigh && first === "low") falseLows.push(testCase.id)
     if (!expectedHigh && first !== null && rank(first) >= rank("high")) falseHighs.push(testCase.id)
 
-    reportCases.push({
-      id: testCase.id,
-      feedback: testCase.feedback,
-      sourceType: testCase.sourceType,
-      value: testCase.value,
-      ...(testCase.flaggerSlug === undefined ? {} : { flaggerSlug: testCase.flaggerSlug }),
-      label: testCase.expected,
-      model: first,
-      floored: flaggerSeverityFloor(testCase.flaggerSlug) !== null,
-    })
-
     perCaseOutcomes.push({
       id: testCase.id,
       ...(testCase.signalSlug === undefined ? {} : { signalSlug: testCase.signalSlug }),
@@ -260,7 +253,7 @@ async function main(): Promise<void> {
 
     const flag = matched ? "  " : withinAcceptable ? "~ " : "✗ "
     const stability = distinct.length > 1 ? `  [unstable: ${distinct.join("/")}]` : ""
-    const label = casesFile ? testCase.id : testCase.id.padEnd(28)
+    const label = testCase.id
     console.log(
       `${flag}${label} expected=${testCase.expected.padEnd(6)} got=${(first ?? "none").padEnd(6)}${stability}`,
     )
@@ -325,14 +318,6 @@ async function main(): Promise<void> {
         `, loses ${lost}` +
         `, plus ${noise} they did not (${unwanted.length} below the cut)`,
     )
-  }
-
-  const htmlPath = values.html
-  if (htmlPath !== undefined) {
-    // Written to disk and opened locally, never published: in production mode
-    // every card holds real customer feedback.
-    writeFileSync(htmlPath, renderReport(reportCases, sourceLabel), "utf8")
-    console.log(`\nBlind review written to ${htmlPath}`)
   }
 }
 

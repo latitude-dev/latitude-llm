@@ -183,7 +183,6 @@ export {
   type GenerateSignalDetailsError,
   type GenerateSignalDetailsInput,
   generateSignalDetailsUseCase,
-  SEVERITY_RUBRIC,
   type SignalOccurrenceInput,
 } from "./use-cases/generate-signal-details.ts"
 export {
