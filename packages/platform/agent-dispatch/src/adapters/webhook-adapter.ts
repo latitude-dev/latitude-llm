@@ -7,6 +7,9 @@ import { type HostLookup, resolvePublicWebhookUrl } from "../host-guard.ts"
 
 const signPayload = (secret: string, body: string): string => createHmac("sha256", secret).update(body).digest("hex")
 
+const WEBHOOK_ACK_MAX_BYTES = 64 * 1024
+const WEBHOOK_ACK_READ_TIMEOUT_MS = 1_000
+
 const httpUrlSchema = z
   .string()
   .trim()
@@ -29,6 +32,73 @@ const webhookAcknowledgementSchema = z.object({
 const parseWebhookAcknowledgement = (value: unknown) => {
   const parsed = webhookAcknowledgementSchema.safeParse(value)
   return parsed.success ? parsed.data : {}
+}
+
+const cancelReader = (reader: ReadableStreamDefaultReader<Uint8Array>): void => {
+  try {
+    void reader.cancel().catch(() => undefined)
+  } catch {}
+}
+
+const readWebhookAcknowledgement = (response: Response, signal: AbortSignal): Promise<unknown> => {
+  if (!response.body) return Promise.resolve(undefined)
+
+  const reader = response.body.getReader()
+  return new Promise((resolve, reject) => {
+    let settled = false
+    let bytesRead = 0
+    const chunks: Uint8Array[] = []
+
+    const removeAbortListener = () => signal.removeEventListener("abort", onAbort)
+    const fail = (cause: unknown) => {
+      if (settled) return
+      settled = true
+      removeAbortListener()
+      cancelReader(reader)
+      reject(cause)
+    }
+    const onAbort = () => fail(new Error("webhook acknowledgement read interrupted"))
+
+    signal.addEventListener("abort", onAbort, { once: true })
+    if (signal.aborted) {
+      onAbort()
+      return
+    }
+
+    void (async () => {
+      try {
+        while (!settled) {
+          const { done, value } = await reader.read()
+          if (done) {
+            if (settled) return
+            const payload = new Uint8Array(bytesRead)
+            let offset = 0
+            for (const chunk of chunks) {
+              payload.set(chunk, offset)
+              offset += chunk.byteLength
+            }
+            resolve(JSON.parse(new TextDecoder().decode(payload)))
+            settled = true
+            removeAbortListener()
+            return
+          }
+
+          bytesRead += value.byteLength
+          if (bytesRead > WEBHOOK_ACK_MAX_BYTES) {
+            fail(new Error("webhook acknowledgement body exceeded the size limit"))
+            return
+          }
+          chunks.push(value)
+        }
+      } catch (cause) {
+        fail(cause)
+      } finally {
+        try {
+          reader.releaseLock()
+        } catch {}
+      }
+    })()
+  })
 }
 
 export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdapter => ({
@@ -89,7 +159,11 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
         return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: detail || response.status }))
       }
 
-      const responseBody = yield* Effect.tryPromise(() => response.json() as Promise<unknown>).pipe(
+      const responseBody = yield* Effect.tryPromise((signal) => readWebhookAcknowledgement(response, signal)).pipe(
+        Effect.timeoutOrElse({
+          duration: WEBHOOK_ACK_READ_TIMEOUT_MS,
+          orElse: () => Effect.succeed(undefined),
+        }),
         Effect.orElseSucceed(() => undefined),
       )
       const acknowledgement = parseWebhookAcknowledgement(responseBody)

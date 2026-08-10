@@ -121,4 +121,39 @@ describe("createWebhookAdapter", () => {
 
     await expect(dispatchWebhook()).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
   })
+
+  it("discards metadata when the acknowledgement body exceeds the read limit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ externalRunId: "run-123" }) + "x".repeat(64 * 1024), {
+            status: 202,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    )
+
+    await expect(dispatchWebhook()).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
+  })
+
+  it("discards metadata and cancels a response that never finishes", async () => {
+    let cancelled = false
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(JSON.stringify({ externalRunId: "run-123" })))
+      },
+      cancel() {
+        cancelled = true
+      },
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(body, { status: 202 })),
+    )
+
+    await expect(dispatchWebhook()).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
+    await vi.waitFor(() => expect(cancelled).toBe(true))
+  })
 })
