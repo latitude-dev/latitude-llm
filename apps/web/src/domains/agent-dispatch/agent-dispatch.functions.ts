@@ -168,7 +168,13 @@ const agentDispatchLayer = Layer.mergeAll(
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchConfigRepositoryLive,
   AgentDispatchRepositoryLive,
+  MembershipRepositoryLive,
 )
+
+const agentDispatchCredentialLayer = Layer.mergeAll(AgentDispatchCredentialRepositoryLive, MembershipRepositoryLive)
+
+const requireOrgDispatchOwner = (organizationId: string, userId: string) =>
+  requireOrganizationOwner({ organizationId, userId, what: "org-wide agent dispatch integrations" })
 
 const parseKindFromIdempotencyKey = (key: string): AgentDispatchKind | null => {
   const vendor = key.split(":")[0]
@@ -461,12 +467,13 @@ export const listSignalAgentDispatches = createServerFn({ method: "GET" })
 export const listCursorRepositories = createServerFn({ method: "GET" })
   .inputValidator(z.object({ integrationId: z.string() }))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const credentials = await Effect.runPromise(
       Effect.gen(function* () {
+        yield* requireOrgDispatchOwner(organizationId, userId)
         const credentialRepo = yield* AgentDispatchCredentialRepository
         return yield* credentialRepo.getDecrypted(data.integrationId)
-      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId), withTracing),
+      }).pipe(withPostgres(agentDispatchCredentialLayer, getPostgresClient(), organizationId), withTracing),
     )
 
     if (!credentials.cursorApiKey) return []
@@ -477,12 +484,13 @@ export const listCursorRepositories = createServerFn({ method: "GET" })
 export const listLinearMembers = createServerFn({ method: "GET" })
   .inputValidator(z.object({ integrationId: z.string() }))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const credentials = await Effect.runPromise(
       Effect.gen(function* () {
+        yield* requireOrgDispatchOwner(organizationId, userId)
         const credentialRepo = yield* AgentDispatchCredentialRepository
         return yield* credentialRepo.getDecrypted(data.integrationId)
-      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId), withTracing),
+      }).pipe(withPostgres(agentDispatchCredentialLayer, getPostgresClient(), organizationId), withTracing),
     )
 
     if (!credentials.linearApiKey) return []
@@ -492,12 +500,13 @@ export const listLinearMembers = createServerFn({ method: "GET" })
 export const listLinearTeams = createServerFn({ method: "GET" })
   .inputValidator(z.object({ integrationId: z.string() }))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const credentials = await Effect.runPromise(
       Effect.gen(function* () {
+        yield* requireOrgDispatchOwner(organizationId, userId)
         const credentialRepo = yield* AgentDispatchCredentialRepository
         return yield* credentialRepo.getDecrypted(data.integrationId)
-      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId), withTracing),
+      }).pipe(withPostgres(agentDispatchCredentialLayer, getPostgresClient(), organizationId), withTracing),
     )
 
     if (!credentials.linearApiKey) return []
@@ -507,26 +516,39 @@ export const listLinearTeams = createServerFn({ method: "GET" })
 export const listLinearTeamsForApiKey = createServerFn({ method: "POST" })
   .inputValidator(z.object({ linearApiKey: z.string().min(1) }))
   .handler(async ({ data }) => {
-    await requireSession()
+    const { organizationId, userId } = await requireSession()
+    await Effect.runPromise(
+      requireOrgDispatchOwner(organizationId, userId).pipe(
+        withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId),
+        withTracing,
+      ),
+    )
     return fetchLinearTeams(data.linearApiKey)
   })
 
 export const listCursorRepositoriesForApiKey = createServerFn({ method: "POST" })
   .inputValidator(z.object({ cursorApiKey: z.string().min(1) }))
   .handler(async ({ data }) => {
-    await requireSession()
+    const { organizationId, userId } = await requireSession()
+    await Effect.runPromise(
+      requireOrgDispatchOwner(organizationId, userId).pipe(
+        withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId),
+        withTracing,
+      ),
+    )
     return fetchCursorRepositories(data.cursorApiKey)
   })
 
 export const getWebhookSecret = createServerFn({ method: "GET" })
   .inputValidator(z.object({ integrationId: z.string() }))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const credentials = await Effect.runPromise(
       Effect.gen(function* () {
+        yield* requireOrgDispatchOwner(organizationId, userId)
         const credentialRepo = yield* AgentDispatchCredentialRepository
         return yield* credentialRepo.getDecrypted(data.integrationId)
-      }).pipe(withPostgres(AgentDispatchCredentialRepositoryLive, getPostgresClient(), organizationId), withTracing),
+      }).pipe(withPostgres(agentDispatchCredentialLayer, getPostgresClient(), organizationId), withTracing),
     )
 
     return { webhookSecret: credentials.webhookSecret ?? null }
@@ -607,6 +629,7 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
 
     return Effect.runPromise(
       Effect.gen(function* () {
+        yield* requireOrgDispatchOwner(organizationId, userId)
         const integration = yield* connectAgentDispatchIntegrationUseCase({
           kind: "cursor",
           vendorAccountId: `cursor:${organizationId}`,
@@ -638,6 +661,7 @@ export const connectClaudeIntegration = createServerFn({ method: "POST" })
 
     return Effect.runPromise(
       Effect.gen(function* () {
+        yield* requireOrgDispatchOwner(organizationId, userId)
         const integration = yield* connectAgentDispatchIntegrationUseCase({
           kind: "claude_code",
           vendorAccountId: `claude:${data.routineTriggerId}`,
@@ -666,6 +690,7 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
 
     return Effect.runPromise(
       Effect.gen(function* () {
+        yield* requireOrgDispatchOwner(organizationId, userId)
         const integration = yield* connectAgentDispatchIntegrationUseCase({
           kind: "linear",
           vendorAccountId: `linear:${data.teamId}`,
@@ -694,6 +719,7 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
 
     return Effect.runPromise(
       Effect.gen(function* () {
+        yield* requireOrgDispatchOwner(organizationId, userId)
         const integration = yield* connectAgentDispatchIntegrationUseCase({
           kind: "webhook",
           vendorAccountId: createHmac("sha256", webhookSecret).update(data.webhookUrl).digest("hex").slice(0, 32),
