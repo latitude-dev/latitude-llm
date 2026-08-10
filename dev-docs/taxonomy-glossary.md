@@ -258,13 +258,7 @@ static builder vs adaptive builder, where the *only* difference is the
 split-acceptance gate — which is why the code forks k-means verbatim rather than
 sharing it.
 
-**Node cap / churn ceiling / fallback ceiling / shadow window.** Rollout limits
-for later phases. **Node cap** (128) caps how many categories the tree may grow.
-**Churn ceiling** (0.5) limits how much the taxonomy is allowed to change
-between rebuilds. **Fallback ceiling** (0.05) limits how often the adaptive
-builder may bail out to static. **Shadow window** (14 days) is a period where
-the new system runs alongside production without affecting it, so its behavior
-can be observed safely.
+**Node cap / churn ceiling / fallback ceiling.** Rollout limits from the calibration harness. **Node cap** (128) caps how many categories the tree may grow. **Churn ceiling** (0.5) limits how much the taxonomy is allowed to change between rebuilds. **Fallback ceiling** (0.05) limits how often the adaptive builder may bail out to static. Shadow mode (running adaptive alongside static without persisting it) was retired — adaptive is now gated per organization by the `adaptiveTaxonomyClustering` feature flag and persists directly when enabled.
 
 **RSS (Resident Set Size).** The amount of actual physical RAM a process is
 using. "Peak RSS ~300 MB (≤ 512 MB worker budget)" means the worst-case memory

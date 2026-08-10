@@ -35,13 +35,13 @@ Net: "behaviour" in code (`listProjectBehavioursUseCase`, `BehaviourSignalRecord
 `taxonomy_clusters` (Postgres, `packages/platform/db-postgres/src/schema/taxonomy-clusters.ts`) rows carry the tree shape. The `TaxonomyCluster` entity (`packages/domain/taxonomy/src/entities/cluster.ts`) mirrors them:
 
 - `parent_cluster_id` — null for roots.
-- `depth` — 0 for roots, bounded by the length of `TAXONOMY_TREE_DEPTH_SCHEDULE` (current schedule: roots, sub-topics, fine leaves).
+- `depth` — 0 for roots, bounded by the length of `TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE` (current schedule: roots, sub-topics, fine leaves).
 - `path` — slash-terminated ancestor id chain (`"rootId/parentId/"`, empty for roots). Subtree membership is a path prefix match (`listSubtreeIds`), safe because cuids contain no LIKE metacharacters and segments are slash-delimited.
 - `split_link_threshold` — the cosine density boundary at which this node's children are still distinguishable from each other (the minimum pairwise cosine between its children's centroids). Null for leaves. The **online router reads it as a per-level descent gate** so the coarse root threshold can't force descent into a tight subtree on marginal similarity.
 - `centroid` — JSONB decayed weighted sum (shared math with issues via `@domain/shared` centroid helpers), plus a derived `centroid_embedding vector(2048)` for pgvector nearest-neighbour. An interior node keeps a full-topic centroid representing the parent topic for the first hop of descent.
 - `observation_count` — a **cached counter of direct assignments only**; ClickHouse rows are the truth (see "Counter discipline"). A freshly built interior node carries `0` (every member is assigned to a leaf), but online assignment can park residue on an interior node between rebuilds, so the counter is not always zero for interiors.
 - `name` / `description` — `name` is `TAXONOMY_PENDING_DISPLAY_NAME` (`"Pending"`) until the naming step runs; `description` may be empty until then.
-- Lifecycle `state` (`active` / `merged` / `deprecated`), `merged_into_cluster_id`, and observed/clustered timestamps. `clustered_at` is the centroid decay anchor (not `updated_at`).
+- Lifecycle `state` (`active` / `merged` / `deprecated` / `staging`), `merged_into_cluster_id`, and observed/clustered timestamps. `clustered_at` is the centroid decay anchor (not `updated_at`). `staging` clusters are a freshly built adaptive tree awaiting the atomic publish swap — every read and the online router ignore them until the swap flips them to `active` (see "Adaptive clustering").
 
 ### Residue
 
@@ -118,13 +118,38 @@ The split build path keeps CPU/read planning separate from the write activities.
 6. **Deprecate every previously-active cluster** that no new node continued.
 7. **Emit lineage**: a `continuation` row per reused id, a `birth` row per genuinely new node, a `death` row per deprecated cluster.
 
+### Adaptive clustering
+
+Which builder a garden pass persists is resolved once in the planning activity from the per-organization `adaptiveTaxonomyClustering` feature flag (`hasFeatureFlagUseCase` under the run's org id — never in workflow code, for Temporal determinism). The flag is read fresh every pass, so flipping it on or off takes effect on that organization's next gardening run with no carry-over from the previous tree.
+
+| Mode | Flag | Builder | Depth schedule | Split gate |
+| --- | --- | --- | --- | --- |
+| `off` | disabled | static | `TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE` | absolute sibling cosine (`maxSiblingCosine`) |
+| `enforced` | enabled | adaptive | `TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE` | node-relative separation (see [taxonomy glossary](./taxonomy-glossary.md)) |
+
+Exactly one builder runs per pass. Shadow mode (running both builders and comparing without persisting adaptive) is retired.
+
+**Static path (`off`).** The divisive build described above. Continuation matches reuse cluster ids in place so trend charts stay stable. Reassignment moves only the clustering sample (`gardening_birth` on sampled members). New clusters are born `active`.
+
+**Adaptive path (`enforced`).** Same top-down divisive shape, but the relative schedule judges splits against each node's own member spread instead of a fixed cosine ceiling — the fix for narrow-domain corpora where real topics sit too close for the static 0.85 sibling gate. The builder also:
+
+- **Root re-search** when the best root separation lands in the `[0.25, 0.8)` band: re-sweep a narrowed K range with `TAXONOMY_KMEANS_ESCALATION_RESTARTS` restarts, bounded by `TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK` so the worker deadline is not breached. Declining the re-search still publishes from the first pass (`escalationSkipped`).
+- **Member-confidence routing thresholds** derived from each node's spread (the `withinDistanceQuantile` / `routingSimilarityQuantile` fields in the relative schedule).
+- **Shape-aware naming** (`ClusterNamingPolicy` tuned to the relative tree).
+- **Full-window reassignment** — every observation in the lookback window is routed onto the new leaf centroids, not just the clustering sample.
+- **Staging + atomic swap** on the whole-project Topics tree: every new cluster is saved `staging` (invisible to reads and the online router), named from the plan's sample members *before* reassignment, reassigned across the full window onto staging leaves, then activated in one swap that deprecates the superseded active tree. Continuity is carried by lineage rows, not by reusing cluster ids — a live upsert onto a reused id would collapse the old tree before the swap. Custom-behavior and facet views skip staging and publish `active` immediately (their naming samples come from the assignment slice the reassignment writes, so naming still runs after reassignment on those paths).
+
+**Fallback.** The adaptive build is best-effort. A worker crash, timeout, non-finite centroid, or structurally impossible tree (`nodeCount` above `TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES`) sets a `fallbackReason` (`buildError`, `nonFinite`, `structuralLimit`) and the pass falls back to the static builder for persistence. A static build failure is fatal — there is no second tree to publish.
+
+**Telemetry.** Enforced runs emit build diagnostics on the APM span `taxonomy.gardenTaxonomyWorkflow.shadow` (service `workflows`). The span name is a legacy identifier — dashboards and retention filters key on it. Off runs emit nothing on that span. Setup and interpretation: `apps/workflows/datadog/taxonomy-adaptive-datadog-setup.md`. Policy calibrations are tagged with `TAXONOMY_ADAPTIVE_POLICY_VERSION`.
+
 ### Clustering primitives (`clustering.ts`)
 
 Pure, dependency-free, and deterministic given the inputs (seeded mulberry32 PRNG keyed off the project id; no `Math.random()` so Temporal replays match). Inputs are L2-normalized embeddings, so cosine equals the dot product and the centroid update is "mean then re-normalize" (spherical k-means).
 
 - **Auto-K per node**: sweep K = 2..`maxChildren`, run k-means++ initialization + spherical k-means for `TAXONOMY_KMEANS_RESTARTS` (3) restarts (`TAXONOMY_KMEANS_MAX_ITER` 25, `TAXONOMY_KMEANS_TOLERANCE` 1e-4), and keep the best K by a cosine-adapted **Calinski–Harabasz** variance-ratio score.
 - **Reject** any K that produces an undersized cluster, two siblings closer than `maxSiblingCosine`, or a score below `minSplitScore`. If no K is valid the node stays a leaf.
-- **Per-depth schedule** (`TAXONOMY_TREE_DEPTH_SCHEDULE`) makes the tree broad at the root and narrow at the leaves without per-corpus tuning:
+- **Per-depth schedule** (`TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE` on the static builder; `TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE` on the adaptive builder — see "Adaptive clustering") makes the tree broad at the root and narrow at the leaves without per-corpus tuning:
 
   | depth | maxChildren | minClusterFraction | minClusterAbs | maxSiblingCosine | minSplitScore |
   | --- | --- | --- | --- | --- | --- |
