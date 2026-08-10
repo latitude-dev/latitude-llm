@@ -132,6 +132,10 @@ The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full a
 | API-key validator | `packages/platform/api-key-auth/` |
 | OAuth access-token validator | `packages/platform/oauth-token-auth/` |
 
+## Trace detail shape
+
+`GET /v1/projects/{projectId}/traces/{traceId}` returns `TraceDetail` with a `conversation` array (OpenTelemetry GenAI messages) instead of separate `system_instructions`, `input_messages`, and `output_messages`. The single field carries the full multi-turn history the domain stores in `TraceDetail.allMessages`. Span detail endpoints are unchanged — they still expose per-span `inputMessages` / `outputMessages`. See [`spans.md`](./spans.md) for how the canonical conversation is built and consumed internally.
+
 ## Related docs
 
 - [`mcp.md`](./mcp.md) — MCP server architecture and the OAuth discovery flow.
