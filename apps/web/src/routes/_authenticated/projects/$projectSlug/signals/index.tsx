@@ -133,6 +133,7 @@ const BULK_LIFECYCLE_MODAL: Record<
 }
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import { invalidateSignalQueries, useSignals } from "../../../../../domains/signals/signals.collection.ts"
 import {
   applyBulkSignalLifecycleAction,
@@ -145,7 +146,6 @@ import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
-import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { parseFilters } from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { AssigneeFilter, UNASSIGNED_FILTER_TOKEN } from "./-components/assignee-filter.tsx"

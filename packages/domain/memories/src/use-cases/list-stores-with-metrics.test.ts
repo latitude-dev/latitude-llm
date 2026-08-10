@@ -2,7 +2,12 @@ import { ChSqlClient, ExternalUserId, OrganizationId, ProjectId, SessionId, Span
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { MemoryStoreMetricSortField } from "../entities/memory-analytics.ts"
+import {
+  MEMORY_TREND_BUCKET_SECONDS,
+  MEMORY_TREND_MAX_BUCKETS,
+  type MemoryStoreMetricSortField,
+  resolveMemoryTrendWindow,
+} from "../entities/memory-analytics.ts"
 import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
 import type { MemoryEvent } from "../entities/memory-event.ts"
 import { MemoryAnalyticsRepository } from "../ports/memory-analytics-repository.ts"
@@ -81,7 +86,6 @@ const run = (
     sortDirection: "asc" | "desc"
     limit: number
     offset: number
-    trendBucketSeconds: number
   }> = {},
 ) =>
   Effect.runPromise(
@@ -94,7 +98,6 @@ const run = (
       sortDirection: opts.sortDirection ?? "desc",
       limit: opts.limit ?? 50,
       offset: opts.offset ?? 0,
-      trendBucketSeconds: opts.trendBucketSeconds ?? 3600,
     }).pipe(Effect.provide(layerFor(memory))),
   )
 
@@ -277,6 +280,62 @@ describe("getMemoryOverview", () => {
     expect(o.zeroHitSearches).toBe(1)
     expect(o.writes).toBe(2) // two in-window adds; the at(500) update is excluded
     expect(o.recordsRetrieved).toBe(1)
+  })
+})
+
+describe("listStoresWithMetrics trend window", () => {
+  const day = (iso: string) => new Date(iso)
+
+  it("buckets the per-row trend by day over the last 30 days, excluding older writes still inside the window", async () => {
+    const memory = createFakeMemoryAnalyticsRepository()
+    seed(
+      memory,
+      [
+        // Inside the 60-day list window but older than 30 days → counts as a write, not in the trend.
+        makeEvent({ storeId: "A", recordId: "old", changeKind: "add", endTime: day("2026-04-20T09:00:00.000Z") }),
+        makeEvent({ storeId: "A", recordId: "r1", changeKind: "add", endTime: day("2026-05-25T09:00:00.000Z") }),
+        makeEvent({ storeId: "A", recordId: "r1", changeKind: "update", endTime: day("2026-06-01T08:00:00.000Z") }),
+      ],
+      [],
+    )
+    const page = await Effect.runPromise(
+      listStoresWithMetricsUseCase({
+        organizationId,
+        projectId,
+        from: day("2026-04-01T12:00:00.000Z"),
+        to: day("2026-06-01T12:00:00.000Z"),
+        sortBy: "lastActivity",
+        sortDirection: "desc",
+        limit: 50,
+        offset: 0,
+      }).pipe(Effect.provide(layerFor(memory))),
+    )
+    const a = page.items[0]!
+    expect(a.writes).toBe(3) // every mutation in the 60-day window
+    expect(a.trend).toEqual([
+      { bucketStart: "2026-05-25T00:00:00.000Z", writes: 1 },
+      { bucketStart: "2026-06-01T00:00:00.000Z", writes: 1 },
+    ])
+  })
+})
+
+describe("resolveMemoryTrendWindow", () => {
+  const dayMs = MEMORY_TREND_BUCKET_SECONDS * 1000
+
+  it("caps the window at the most recent 30 day-aligned buckets ending at `to`", () => {
+    const to = Date.parse("2026-06-01T12:34:00.000Z")
+    const from = Date.parse("2026-01-01T00:00:00.000Z")
+    const window = resolveMemoryTrendWindow(from, to)
+    expect(window.toMs).toBe(to)
+    // Start is the midnight of `to`'s day, 29 days back → 30 daily buckets inclusive.
+    expect(new Date(window.fromMs).toISOString()).toBe("2026-05-03T00:00:00.000Z")
+    expect((Date.parse("2026-06-01T00:00:00.000Z") - window.fromMs) / dayMs).toBe(MEMORY_TREND_MAX_BUCKETS - 1)
+  })
+
+  it("never reaches before `from` when the range is shorter than 30 days", () => {
+    const to = Date.parse("2026-06-01T12:00:00.000Z")
+    const from = Date.parse("2026-05-28T06:00:00.000Z")
+    expect(resolveMemoryTrendWindow(from, to).fromMs).toBe(from)
   })
 })
 

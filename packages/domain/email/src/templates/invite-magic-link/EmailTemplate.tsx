@@ -20,10 +20,10 @@ export function InviteMagicLinkEmail({ inviterName, organizationName, magicLinkU
         {`You have been invited to ${organizationName}`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`${inviterName} would like you to collaborate in the ${organizationName} organization on Latitude — the open-source AI Agent Monitoring platform.`}
+        {`${inviterName} invited you to collaborate in the ${organizationName} organization on Latitude.`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        Tap the button below to join the team and start exploring.
+        Tap the button below to join the team.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>

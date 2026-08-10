@@ -19,7 +19,7 @@ export function DatasetExportEmail({ datasetName, downloadUrl, recipientName = "
     <ContainerLayout previewText={`Your "${datasetName}" export is ready`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${recipientName},`}</EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`Good news — your "${datasetName}" dataset has been exported and is ready for download.`}
+        {`Your "${datasetName}" dataset has been exported and is ready to download.`}
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>

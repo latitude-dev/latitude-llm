@@ -21,6 +21,10 @@ export const recordBillableActionUseCase = Effect.fn("billing.recordBillableActi
 ) {
   yield* Effect.annotateCurrentSpan("billing.action", input.action)
   yield* Effect.annotateCurrentSpan("billing.idempotencyKey", input.idempotencyKey)
+  const pricing = input.metadata?.pricing
+  if (typeof pricing === "string") {
+    yield* Effect.annotateCurrentSpan("billing.pricing", pricing)
+  }
 
   const updated = yield* recordUsageEventUseCase({
     organizationId: input.organizationId,

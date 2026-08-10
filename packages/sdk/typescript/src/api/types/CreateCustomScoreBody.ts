@@ -17,7 +17,7 @@ export interface CreateCustomScoreBody {
     duration?: number | undefined;
     /** LLM tokens consumed generating the score, if any. `0` for externally-computed scores. */
     tokens?: number | undefined;
-    /** Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores. */
+    /** Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores. */
     cost?: number | undefined;
     trace: Latitude.TraceRef;
     /** User-supplied tag identifying the score's origin (e.g. `"prod-pipeline"`, `"qa-script-v2"`). */

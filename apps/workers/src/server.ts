@@ -66,6 +66,8 @@ import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
 import { createFlaggerScreeningWorker } from "./workers/flagger-screening.ts"
+import { createGithubEventsWorker } from "./workers/github-events.ts"
+import { createImportsWorker } from "./workers/imports.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createMemoryProjectionWorker } from "./workers/memory-projection.ts"
 import { createMonitorsWorker } from "./workers/monitors.ts"
@@ -217,6 +219,7 @@ const bootstrap = async () => {
       adminPostgresClient: getAdminPostgresClient(),
       clickhouseClient: ctx.clickhouseClient,
     })
+    createImportsWorker(ctx)
     createApiKeysWorker(ctx)
     createBillingWorker({ consumer: ctx.consumer, postgresClient: ctx.postgresClient })
     createBillingOverageWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })
@@ -231,6 +234,7 @@ const bootstrap = async () => {
     createExportsWorker(ctx)
     await createSignalsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
     createMonitorsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
+    createGithubEventsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)

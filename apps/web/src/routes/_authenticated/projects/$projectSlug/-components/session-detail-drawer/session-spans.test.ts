@@ -61,6 +61,7 @@ function makeTrace(
     costInputMicrocents: 0,
     costOutputMicrocents: 0,
     costTotalMicrocents: 0,
+    unpricedSpanCount: 0,
     sessionId: "session",
     userId: "",
     simulationId: "",

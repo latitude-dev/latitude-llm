@@ -15,7 +15,7 @@ import {
   seedBillingUsagePeriod,
 } from "@domain/billing/testing"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { OrganizationId, ProjectId, SqlClient, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SettingsReader, SqlClient, TraceId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -26,6 +26,11 @@ const OTHER_PROJECT_ID = ProjectId("q".repeat(24))
 const PERIOD_START = new Date("2026-01-01T00:00:00.000Z")
 const PERIOD_END = new Date("2026-02-01T00:00:00.000Z")
 const SQL_CLIENT = createFakeSqlClient({ organizationId: ORGANIZATION_ID })
+
+const emptySettingsReader = SettingsReader.of({
+  getOrganizationSettings: () => Effect.succeed(null),
+  getProjectSettings: () => Effect.succeed(null),
+})
 
 const createBillingQueueLayer = () => {
   const { repository: events, eventsByPeriodAndIdempotencyKey } = createFakeBillingUsageEventRepository()
@@ -46,6 +51,7 @@ const createBillingQueueLayer = () => {
       }),
       Layer.succeed(BillingUsageEventRepository, events),
       Layer.succeed(BillingUsagePeriodRepository, periods),
+      Layer.succeed(SettingsReader, emptySettingsReader),
       Layer.succeed(SqlClient, SQL_CLIENT),
     ),
   }
@@ -88,7 +94,7 @@ describe("recordBillableActionUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(result.overageCredits).toBe(15)
+    expect(result.overageCredits).toBe(1)
     expect(outboxEvents[0]).toMatchObject({
       eventName: "BillingUsagePeriodUpdated",
       payload: {
@@ -97,8 +103,9 @@ describe("recordBillableActionUseCase", () => {
         periodEnd: PERIOD_END.toISOString(),
         planSource: "subscription",
         overageAllowed: true,
-        overageCredits: 15,
+        overageCredits: 1,
         reportedOverageCredits: 0,
+        limitsCrossed: [],
       },
     })
   })

@@ -46,10 +46,10 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
     if (isMonitorIncident) {
       const searchRef = sourceName ?? "a monitored target"
       return {
-        text: `Resolved: escalation on ${searchRef} — elevated for ${duration}`,
+        text: `Resolved: escalation on ${searchRef}, elevated for ${duration}`,
         color: COLORS.resolved,
         blocks: [
-          sectionMarkdown(`Escalation resolved on *${searchRef}* — elevated for *${duration}*.`),
+          sectionMarkdown(`Escalation resolved on *${searchRef}*, elevated for *${duration}*.`),
           ...attribution,
           context,
           actionsLink("View monitor", monitorUrl),
@@ -60,7 +60,7 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
     const chart = trendChartBlock(ctx.notificationId, ctx.webAppUrl)
 
     return {
-      text: `Signal recovered in ${projectName} — elevated for ${duration}`,
+      text: `Signal recovered in ${projectName}, elevated for ${duration}`,
       color: COLORS.resolved,
       blocks: [
         ...(sourceName ? [sectionMarkdown(`*<${signalUrl}|${sourceName}>*`)] : []),

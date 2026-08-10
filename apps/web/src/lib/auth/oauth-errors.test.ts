@@ -7,7 +7,7 @@ describe("oauthCallbackErrorMessage", () => {
   })
 
   it("maps account_not_linked to copy that steers the user to email sign-in", () => {
-    expect(oauthCallbackErrorMessage("account_not_linked")).toContain("Continue with email")
+    expect(oauthCallbackErrorMessage("account_not_linked")).toContain("Sign in with your email")
   })
 
   it("falls back to a generic message without echoing unknown codes", () => {

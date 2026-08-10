@@ -32,6 +32,8 @@ export type ChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "onSe
   /** Optional tooltip title formatter; receives the bucket category + index. */
   readonly tooltipTitle?: (category: string, dataIndex: number) => string
   readonly xAxisLabelFontSize?: number
+  /** Suppress the built-in legend when rendering your own (echarts' legend only toggles series). */
+  readonly hideLegend?: boolean
   /**
    * Called when the user selects a range via brush (drag on the chart).
    * Receives the selected category range [startIndex, endIndex] or null when cleared.
@@ -71,6 +73,7 @@ export function Chart({
   secondaryAxis,
   tooltipTitle,
   xAxisLabelFontSize,
+  hideLegend = false,
   onSelect,
   className,
   ...rest
@@ -99,8 +102,9 @@ export function Chart({
         ...(tooltipTitle ? { tooltipTitle } : {}),
         ...(xAxisLabelFontSize !== undefined ? { xAxisLabelFontSize } : {}),
         enableBrush: hasBrush,
+        hideLegend,
       }),
-    [categories, series, colors, primaryAxis, secondaryAxis, tooltipTitle, xAxisLabelFontSize, hasBrush],
+    [categories, series, colors, primaryAxis, secondaryAxis, tooltipTitle, xAxisLabelFontSize, hasBrush, hideLegend],
   )
 
   // Stable handlers reading the latest onSelect from a ref so echarts-for-react

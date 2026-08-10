@@ -78,7 +78,7 @@ export function RevokeAllSessionsButton({ userId, userEmail }: RevokeAllSessions
       >
         <Alert
           variant="warning"
-          description="This signs the user out everywhere — every browser, every device. They'll need to sign in again. The user's data and memberships are not affected."
+          description="This signs the user out of every browser and device. They'll need to sign in again. Their data and memberships aren't affected."
         />
       </Modal>
     </>

@@ -1,5 +1,5 @@
 import type { OutboxEventWriter } from "@domain/events"
-import type { OrganizationId, ProjectId, SqlClient, TraceId } from "@domain/shared"
+import type { OrganizationId, ProjectId, SettingsReader, SqlClient, TraceId } from "@domain/shared"
 import { Context, Effect, Ref } from "effect"
 import { buildBillingIdempotencyKey, type ChargeableAction } from "./constants.ts"
 import { AIMeteringRecordError } from "./errors.ts"
@@ -47,7 +47,12 @@ export interface MakeAIMeteringScopeInput {
   readonly traceId?: TraceId | undefined
 }
 
-type RecordDependencies = BillingUsageEventRepository | BillingUsagePeriodRepository | OutboxEventWriter | SqlClient
+type RecordDependencies =
+  | BillingUsageEventRepository
+  | BillingUsagePeriodRepository
+  | OutboxEventWriter
+  | SettingsReader
+  | SqlClient
 
 export const makeAIMeteringScope = Effect.fn("billing.makeAIMeteringScope")(function* (
   input: MakeAIMeteringScopeInput,

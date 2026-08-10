@@ -6,6 +6,8 @@ import type { AgentDispatchRecord } from "../../../../../../../domains/agent-dis
 import {
   AGENT_DISPATCH_KIND_ICONS,
   AGENT_DISPATCH_KIND_LABELS,
+} from "../../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import {
   DISPATCH_ERROR_TITLES,
   DISPATCH_TRIGGER_TITLES,
 } from "../../../settings/-components/agent-dispatch-section.tsx"
@@ -67,6 +69,7 @@ export function SignalDispatchHistory({
   readonly triggerClassName?: string
 }) {
   const latest = dispatches[0]
+  const extra = dispatches.length - 1
 
   return (
     <Popover modal={false}>
@@ -74,6 +77,7 @@ export function SignalDispatchHistory({
         <Button variant="outline" size="sm" className={cn("text-sm", triggerClassName)}>
           <Icon icon={latest?.kind ? AGENT_DISPATCH_KIND_ICONS[latest.kind] : History} size="sm" />
           {`Sent to ${kindLabel(latest?.kind ?? null)}`}
+          {extra > 0 ? <span className="text-muted-foreground">{`+${extra}`}</span> : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="max-w-72 p-2">

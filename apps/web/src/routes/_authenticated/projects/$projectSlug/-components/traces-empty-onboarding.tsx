@@ -122,7 +122,12 @@ export function TracesEmptyOnboarding({
           apiKeyToken={apiKeyToken}
         />
       </div>
-      <TracesSetupSheet open={setupOpen} onClose={() => setSetupOpen(false)} projectSlug={projectSlug} />
+      <TracesSetupSheet
+        open={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        projectId={projectId}
+        projectSlug={projectSlug}
+      />
     </div>
   )
 }
@@ -202,7 +207,7 @@ function ConnectCard({
 
   const headline = orgHasConnectedProjects ? "Send traces to this project" : "Waiting for your first trace"
   const subcopy = orgHasConnectedProjects
-    ? "Your organization already sends traces to Latitude. Point some of your traffic to this project's slug — or set it up from scratch."
+    ? "Your organization already sends traces to Latitude. Point some traffic at this project's slug, or set it up from scratch."
     : "This is where your traces will appear. Instrument your app with Latitude to start streaming them in."
   const ctaLabel = orgHasConnectedProjects ? "Full setup instructions" : "Set up tracing"
 
@@ -261,10 +266,12 @@ function TraceWaitingIndicator({ traceReceived }: { readonly traceReceived: bool
 function TracesSetupSheet({
   open,
   onClose,
+  projectId,
   projectSlug,
 }: {
   readonly open: boolean
   readonly onClose: () => void
+  readonly projectId: string
   readonly projectSlug: string
 }) {
   return (
@@ -277,7 +284,7 @@ function TracesSetupSheet({
           </Button>
         </div>
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
-          <TelemetryInstructions projectSlug={projectSlug} />
+          <TelemetryInstructions projectId={projectId} projectSlug={projectSlug} importFollowUp="go-to-imports" />
         </div>
       </div>
     </Sheet>

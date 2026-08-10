@@ -10,9 +10,9 @@ export interface UpdateContactOnboardingInput {
 
 /**
  * Updates the marketing contact with onboarding-form fields (jobTitle,
- * userGroup) once the user finishes the project-onboarding step. `firstName`
- * is included as well so magic-link signups (no name at signup) get their
- * name on the contact at this point.
+ * heardAboutUs, userGroup) once the user finishes the project-onboarding step.
+ * `firstName` is included as well so magic-link signups (no name at signup) get
+ * their name on the contact at this point.
  */
 export const updateContactOnboarding = ({ marketingContacts }: { readonly marketingContacts: MarketingContactsPort }) =>
   Effect.fn("marketing.updateContactOnboarding")(function* (input: UpdateContactOnboardingInput) {
@@ -30,6 +30,7 @@ export const updateContactOnboarding = ({ marketingContacts }: { readonly market
       firstName: user.name,
       jobTitle: user.jobTitle,
       phoneNumber: user.phoneNumber,
+      heardAboutUs: user.heardAboutUs,
       userGroup: stackChoiceToOnboardingType(input.stackChoice),
     })
   })

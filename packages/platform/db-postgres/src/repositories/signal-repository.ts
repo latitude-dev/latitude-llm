@@ -745,7 +745,6 @@ const signalRepositoryCoreLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = and(
             eq(signals.organizationId, sqlClient.organizationId),
-            eq(signals.projectId, input.projectId),
             eq(signals.slug, input.slug),
             isNull(signals.deletedAt),
             ...(input.excludeSignalId ? [ne(signals.id, input.excludeSignalId)] : []),

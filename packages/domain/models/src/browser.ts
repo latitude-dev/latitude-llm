@@ -31,4 +31,9 @@ export {
   modelPricingSchema,
   modelSchema,
 } from "./entities/model.ts"
+export {
+  PROMPT_CACHE_TTL_SECONDS_OPTIONS,
+  promptCacheTtlSeconds,
+  promptCacheTtlSource,
+} from "./prompt-cache-ttl.ts"
 export { PROVIDER_ALIASES, resolveProviderName } from "./provider-aliases.ts"

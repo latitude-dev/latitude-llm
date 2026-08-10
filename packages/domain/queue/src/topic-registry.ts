@@ -1,4 +1,5 @@
 import type { DomainEvent } from "@domain/events"
+import type { SerializedRedactionPolicy } from "@domain/shared"
 
 /**
  * Phantom type helper: returns an empty object at runtime but carries type T
@@ -87,6 +88,14 @@ const _registry = {
       readonly defaultProjectId: string | null
       readonly projectIdBySlug: Readonly<Record<string, string>>
       readonly isSandbox?: boolean
+      /**
+       * Redaction policy per project id, resolved at the ingest boundary where each
+       * project's settings are already loaded for sampling. Projects resolving to
+       * `off` are absent and the field is omitted when no project opted in, so a
+       * missing field means "redact nothing" — which is what makes this field safe
+       * to deploy in either order and is why the worker needs no legacy fallback.
+       */
+      readonly redaction?: Readonly<Record<string, SerializedRedactionPolicy>>
     }
   }>(),
 
@@ -205,6 +214,22 @@ const _registry = {
       readonly failureMessage: string | null
     }
     /**
+     * Producer step for billing limit alerts. Fired by the domain-events
+     * router once per entry in `BillingUsagePeriodUpdated.limitsCrossed`
+     * (free included credits, Pro overage entry, or Pro spend cap). The
+     * consumer fans out to owners/admins only and emits one
+     * `create-notification` per recipient.
+     */
+    "request-billing-limit-notifications": {
+      readonly organizationId: string
+      readonly periodStart: string
+      readonly periodEnd: string
+      readonly limitKind: "included-credits" | "overage-started" | "spend-cap"
+      readonly includedCredits: number
+      readonly consumedCredits: number
+      readonly overageCredits: number
+    }
+    /**
      * Creator step. One message per recipient. The consumer writes the
      * in-app row idempotently via the `(org_id, user_id, idempotency_key)`
      * unique index and then fans out to channel-specific delivery jobs
@@ -304,6 +329,71 @@ const _registry = {
       readonly prompt: string
       readonly context: Record<string, unknown>
       readonly target: Record<string, unknown>
+    }
+  }>(),
+
+  // Inbound GitHub App webhook events, slim-extracted by the receiver (5.7). Never carries a raw
+  // payload — the receiver caps commit messages and count before enqueueing. Routed to the org by
+  // `installationId`; `pull-request`/`push` are stubbed in Phase 1 to ledger-claim + skip.
+  "github-events": payloads<{
+    "pull-request": {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly repoId: number
+      readonly repoFullName: string
+      readonly action: string
+      readonly prNumber: number
+      readonly title: string
+      readonly body: string | null
+      readonly state: string
+      readonly draft: boolean
+      readonly merged: boolean
+      readonly mergeCommitSha: string | null
+      readonly mergedAt: string | null
+      readonly headRef: string
+      readonly headSha: string
+      readonly headRepoId: number | null
+      readonly baseRef: string
+      readonly htmlUrl: string
+      readonly userLogin: string
+      readonly authorAssociation: string
+      /** Present only on `edited` retargets — the previous base ref. */
+      readonly changesBaseRef: string | null
+    }
+    push: {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly repoId: number
+      readonly repoFullName: string
+      readonly defaultBranch: string
+      readonly ref: string
+      readonly before: string
+      readonly after: string
+      readonly created: boolean
+      readonly deleted: boolean
+      readonly forced: boolean
+      readonly commits: readonly {
+        readonly id: string
+        readonly message: string
+        readonly timestamp: string
+        readonly authorUsername: string | null
+        readonly url: string
+      }[]
+      /** commits[] hit the per-push cap or GitHub's truncation; the API walk (Phase 5) completes it. */
+      readonly truncated: boolean
+    }
+    installation: {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly event: "installation" | "installation_repositories"
+      readonly action: string
+      readonly accountLogin: string
+      readonly accountType: string
+      readonly repositorySelection: string
+    }
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
     }
   }>(),
 
@@ -773,6 +863,26 @@ const _registry = {
       readonly remainingSegments: readonly { readonly start: string; readonly end: string }[]
       /** The chain's lower bound (ISO); coverage extends to it once the chain drains. */
       readonly coverageFloor: string
+    }
+  }>(),
+
+  imports: payloads<{
+    start: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly importJobId: string
+    }
+    fetchPage: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly importJobId: string
+      /** Consecutive `Retry-After` waits already spent on this page; bounded, carried in the payload. */
+      readonly rateLimitWaits?: number
+    }
+    /** Cascade cleanup fired by the domain-events router on `ProjectDeleted`. */
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
     }
   }>(),
 }

@@ -82,7 +82,7 @@ function SpansPreviewBody({
   return query.data.hasData ? (
     <pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">{query.data.eventsJson}</pre>
   ) : (
-    <Text.H6 color="foregroundMuted">No data yet — send spans to this project to preview a payload.</Text.H6>
+    <Text.H6 color="foregroundMuted">Nothing to preview yet. Send spans to this project first.</Text.H6>
   )
 }
 

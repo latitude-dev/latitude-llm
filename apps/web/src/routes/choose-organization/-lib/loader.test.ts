@@ -10,8 +10,9 @@ const orgs = [
 
 const makeDeps = (overrides: Partial<ChooseOrganizationLoaderDeps> = {}): ChooseOrganizationLoaderDeps =>
   ({
-    getSession: vi.fn(async () => ({ user: {}, session: {} })),
+    getSession: vi.fn(async () => ({ user: { email: "member@acme.com" }, session: {} })),
     resolveEntryDestination: vi.fn(async (): Promise<EntryDestination> => ({ kind: "choose", organizations: orgs })),
+    isLatitudeStaffEmail: vi.fn(() => false),
     ...overrides,
   }) as unknown as ChooseOrganizationLoaderDeps
 
@@ -41,6 +42,32 @@ describe("chooseOrganizationLoader", () => {
   })
 
   it("returns the org list for the picker when the user has several", async () => {
-    await expect(chooseOrganizationLoader(makeDeps())).resolves.toEqual({ organizations: orgs })
+    await expect(chooseOrganizationLoader(makeDeps())).resolves.toEqual({
+      organizations: orgs,
+      excludeFromAnalytics: false,
+    })
+  })
+
+  it("excludes staff sessions from analytics", async () => {
+    await expect(
+      chooseOrganizationLoader(
+        makeDeps({
+          isLatitudeStaffEmail: vi.fn(() => true) as unknown as ChooseOrganizationLoaderDeps["isLatitudeStaffEmail"],
+        }),
+      ),
+    ).resolves.toMatchObject({ excludeFromAnalytics: true })
+  })
+
+  it("excludes impersonated sessions from analytics", async () => {
+    await expect(
+      chooseOrganizationLoader(
+        makeDeps({
+          getSession: vi.fn(async () => ({
+            user: { email: "member@acme.com" },
+            session: { impersonatedBy: "admin-id" },
+          })) as unknown as ChooseOrganizationLoaderDeps["getSession"],
+        }),
+      ),
+    ).resolves.toMatchObject({ excludeFromAnalytics: true })
   })
 })

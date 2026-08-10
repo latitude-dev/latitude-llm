@@ -9,7 +9,7 @@ export function ToolsDiscoveryBanner({ projectId }: { readonly projectId: string
   if (dismissed) return null
   return (
     <Alert
-      description="These tools were detected automatically from tool definitions on your LLM spans — none have been called in this window. Open a tool to see where it's offered."
+      description="We detected these tools from the definitions on your LLM spans. None have been called in this window. Open a tool to see where it's offered."
       cta={
         <Button variant="ghost" size="icon-xs" onClick={() => setDismissed(true)} aria-label="Dismiss">
           <XIcon className="h-4 w-4" />

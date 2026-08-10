@@ -1,10 +1,11 @@
 import { OutboxEventWriter } from "@domain/events"
 import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
-import { generateId, SqlClient, toRepositoryError } from "@domain/shared"
+import { generateId, SettingsReader, SqlClient, toRepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import { ACTION_CREDITS, type ChargeableAction, persistedIncludedCreditsForPlan } from "../constants.ts"
 import type { BillingUsageEvent } from "../entities/billing-usage-event.ts"
 import type { BillingUsagePeriod } from "../entities/billing-usage-period.ts"
+import { detectBillingLimitCrossed } from "../helpers/detect-billing-limit-crossed.ts"
 import { BillingUsageEventRepository } from "../ports/billing-usage-event-repository.ts"
 import { BillingUsagePeriodRepository } from "../ports/billing-usage-period-repository.ts"
 
@@ -51,10 +52,21 @@ const loadCurrentOrEmptyUsagePeriod = Effect.fn("billing.loadCurrentOrEmptyUsage
   return period ?? buildEmptyUsagePeriod(input)
 })
 
+const resolveSpendingLimitCents = Effect.fn("billing.resolveSpendingLimitCents")(function* (overageAllowed: boolean) {
+  if (!overageAllowed) return null
+  const reader = yield* SettingsReader
+  const orgSettings = yield* reader.getOrganizationSettings()
+  return orgSettings?.billing?.spendingLimitCents ?? null
+})
+
 export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(function* (input: RecordUsageEventInput) {
   yield* Effect.annotateCurrentSpan("billing.organizationId", input.organizationId)
   yield* Effect.annotateCurrentSpan("billing.action", input.action)
   yield* Effect.annotateCurrentSpan("billing.idempotencyKey", input.idempotencyKey)
+  const pricing = input.metadata?.pricing
+  if (typeof pricing === "string") {
+    yield* Effect.annotateCurrentSpan("billing.pricing", pricing)
+  }
 
   // A credits override outside the ledger's invariants (positive integer) is a caller
   // bug, never a runtime condition — die instead of widening every caller's error union.
@@ -94,6 +106,7 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
         return yield* loadCurrentOrEmptyUsagePeriod(input)
       }
 
+      const previous = yield* loadCurrentOrEmptyUsagePeriod(input)
       const updated = yield* periodRepo.appendCreditsForBillingPeriod({
         organizationId: input.organizationId,
         periodStart: input.periodStart,
@@ -101,6 +114,16 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
         planSlug: input.planSlug,
         persistedIncludedCredits,
         creditsDelta: credits,
+      })
+
+      const spendingLimitCents = yield* resolveSpendingLimitCents(input.overageAllowed)
+      const limitsCrossed = detectBillingLimitCrossed({
+        previousConsumedCredits: previous.consumedCredits,
+        consumedCredits: updated.consumedCredits,
+        includedCredits: updated.includedCredits,
+        overageAllowed: input.overageAllowed,
+        planSlug: input.planSlug,
+        spendingLimitCents,
       })
 
       yield* outboxEventWriter
@@ -119,6 +142,7 @@ export const recordUsageEventUseCase = Effect.fn("billing.recordUsageEvent")(fun
             consumedCredits: updated.consumedCredits,
             overageCredits: updated.overageCredits,
             reportedOverageCredits: updated.reportedOverageCredits,
+            limitsCrossed,
           },
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "outbox.writeBillingUsagePeriodUpdated")))

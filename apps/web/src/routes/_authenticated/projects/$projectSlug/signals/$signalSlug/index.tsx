@@ -13,6 +13,7 @@ import { SignalLifecycleActions } from "../-components/signal-lifecycle-actions.
 import { SignalLifecycleStatuses } from "../-components/signal-lifecycle-statuses.tsx"
 import { SignalRenameModal } from "../-components/signal-rename-modal.tsx"
 import { SignalExamples } from "./-components/signal-examples.tsx"
+import { SignalGithubReferencesPill } from "./-components/signal-github-references.tsx"
 import { SignalNeighborNav } from "./-components/signal-neighbor-nav.tsx"
 import { SignalPatterns } from "./-components/signal-patterns.tsx"
 import { SignalRelated } from "./-components/signal-related.tsx"
@@ -143,6 +144,12 @@ function SignalDetailPage() {
           }
           actions={
             <>
+              <SignalGithubReferencesPill
+                projectId={project.id}
+                projectSlug={projectSlug}
+                signalId={signalId}
+                disabled={isLoading || !signal}
+              />
               <SignalSendTo
                 projectId={project.id}
                 projectSlug={projectSlug}

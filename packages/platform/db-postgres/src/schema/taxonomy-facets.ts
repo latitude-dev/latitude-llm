@@ -4,11 +4,11 @@ import { index, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 /**
- * A project-scoped lens, addressed by a `slug` unique per project so one facet is
+ * A project-scoped facet definition, addressed by a `slug` unique per project so one facet is
  * reused across every view that picks it. `instructions` is free-text guidance
- * compiled into a controlled extraction prompt (write-once — to change what a
- * lens means, create a new facet). `name` + `description` are editable
- * presentation (the picker label and the "why this lens helps" blurb).
+ * compiled into a controlled extraction prompt (write-once: to change what a
+ * facet means, create a new facet). `name` + `description` are editable
+ * presentation (the picker label and the "why this facet helps" blurb).
  */
 export const taxonomyFacets = latitudeSchema.table(
   "taxonomy_facets",

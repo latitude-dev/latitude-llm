@@ -20,7 +20,7 @@ export interface CreateEvaluationScoreBody {
     duration?: number | undefined;
     /** LLM tokens consumed generating the score, if any. `0` for externally-computed scores. */
     tokens?: number | undefined;
-    /** Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores. */
+    /** Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores. */
     cost?: number | undefined;
     trace: Latitude.TraceRef;
     /** Discriminator: `true` flags the body as an evaluation score (internal); `false`/omit for custom. */

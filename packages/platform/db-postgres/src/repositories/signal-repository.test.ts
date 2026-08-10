@@ -215,3 +215,54 @@ describe("SignalRepositoryLive.listIdsCreatedInTimeRange", () => {
     expect([...ids].sort()).toEqual([SignalId(CREATED_IN_WINDOW.id), SignalId(CREATED_BEFORE_WINDOW.id)].sort())
   })
 })
+
+describe("SignalRepositoryLive.countBySlug organization-wide (D15)", () => {
+  const OTHER_PROJECT_ID = ProjectId("proj-other-repo-test".padEnd(24, "y").slice(0, 24))
+  const seedInProject = (input: {
+    readonly id: string
+    readonly slug: string
+    readonly projectId: ProjectId
+    readonly deletedAt?: Date
+  }) =>
+    pg.db.insert(signals).values({
+      id: input.id,
+      organizationId: ORG_ID,
+      projectId: input.projectId,
+      slug: input.slug,
+      name: input.slug,
+      description: `${input.slug} description`,
+      source: "custom",
+      origin: "user",
+      deletedAt: input.deletedAt ?? null,
+      createdAt: WINDOW_FROM,
+      updatedAt: WINDOW_FROM,
+    })
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("counts a slug that lives in another project of the org (org-wide, not project-scoped)", async () => {
+    await seedInProject({ id: "sig-b".padEnd(24, "b"), slug: "LAT-AB12", projectId: OTHER_PROJECT_ID })
+
+    const count = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).countBySlug({ slug: "LAT-AB12" })
+      }),
+    )
+
+    expect(count).toBe(1)
+  })
+
+  it("ignores soft-deleted signals (the slug is freed)", async () => {
+    await seedInProject({ id: "sig-c".padEnd(24, "c"), slug: "LAT-CD34", projectId: PROJECT_ID, deletedAt: WINDOW_TO })
+
+    const count = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).countBySlug({ slug: "LAT-CD34" })
+      }),
+    )
+
+    expect(count).toBe(0)
+  })
+})

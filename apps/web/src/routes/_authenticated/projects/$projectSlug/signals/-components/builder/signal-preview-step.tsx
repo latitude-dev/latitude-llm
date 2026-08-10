@@ -96,7 +96,7 @@ function PreviewResultCard({
   const prompt = row.summary?.firstUserMessage?.trim()
   const reason =
     verdict === "skipped"
-      ? "Session not embedded yet — it'll be scored once embeddings are ready"
+      ? "This session isn't embedded yet. It'll be scored once its embeddings are ready"
       : (row.error ?? (row.feedback.trim().length > 0 ? row.feedback : null))
 
   return (

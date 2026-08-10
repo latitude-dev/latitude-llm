@@ -552,7 +552,7 @@ export function SignalBuilderModal({
           <div className="flex flex-col gap-4">
             <StepHeading
               title="Try it on your real traffic"
-              hint="We run your evaluation against recent sessions from this project. Nothing is saved. If the verdicts look off, go back and adjust."
+              hint="We run your evaluation against recent sessions from this project without saving anything. If the verdicts look off, go back and adjust."
             />
             <SignalPreviewStep
               result={previewResult}

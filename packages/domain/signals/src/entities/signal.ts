@@ -50,7 +50,7 @@ export const signalSchema = z.object({
   id: signalIdSchema, // CUID issue identifier
   organizationId: cuidSchema, // owning organization
   projectId: cuidSchema, // owning project
-  slug: z.string().min(1).max(SLUG_MAX_LENGTH), // url-safe identifier derived from name; regenerated when name changes via `refreshSignalDetailsUseCase`. Unique per (organization_id, project_id).
+  slug: z.string().min(1).max(SLUG_MAX_LENGTH), // url-safe identifier assigned once at creation; never regenerated on rename. Unique per organization (D15), spanning projects.
   name: z.string().min(1).max(SIGNAL_NAME_MAX_LENGTH), // generated from clustered score feedback and related evaluation/annotation context; generic enough to represent the shared failure pattern across different backgrounds
   description: z.string().min(1), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation; helps both human understanding and BM25 matching
   source: signalSourceSchema, // provenance of the first creating score

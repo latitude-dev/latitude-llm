@@ -68,7 +68,6 @@ describe("TaxonomyFacet contracts", () => {
 
     expect(found.name).toBe("Apparent user goal")
     expect(bySlug?.id).toBe(facetId)
-    expect(await run(repository.countByProject({ projectId }))).toBe(1)
     expect(gardenedAt.get(facetId)).toEqual(gardenedTime)
     expect(rows.size).toBe(1)
   })

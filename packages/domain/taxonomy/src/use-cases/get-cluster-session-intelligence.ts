@@ -1,4 +1,4 @@
-import type { CustomBehaviorId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import type { CustomBehaviorId, FacetId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
 import type {
   ClusterAnalysisAggregate,
@@ -17,6 +17,8 @@ export interface GetClusterSessionIntelligenceInput {
   readonly sourceWindowEnd?: Date
   /** Omit/null = global taxonomy; an id scopes the subtree to that behavior's sub-tree. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** The behavior's facet; omit/null = topic edges, a facet id = that facet's edges. */
+  readonly facetId?: FacetId | null
 }
 
 export interface GetClusterSessionIntelligenceResult {
@@ -50,12 +52,15 @@ export const getClusterSessionIntelligenceUseCase = (input: GetClusterSessionInt
     // A tree node's profile covers its whole subtree: interior nodes hold
     // only residue directly, but represent every session routed below them —
     // matching the subtree-scoped session list shown next to this profile.
+    const scope =
+      input.customBehaviorId != null
+        ? { customBehaviorId: input.customBehaviorId, ...(input.facetId != null ? { facetId: input.facetId } : {}) }
+        : {}
     const clusterIds = yield* clusters.listSubtreeIds({
       projectId: input.projectId,
       clusterId: input.clusterId,
-      ...(input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}),
+      ...scope,
     })
-    const scope = input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}
     const aggregate = yield* intelligence.getClusterAggregate({
       organizationId: input.organizationId,
       projectId: input.projectId,

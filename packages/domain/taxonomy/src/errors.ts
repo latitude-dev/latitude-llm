@@ -60,13 +60,3 @@ export class FacetInvalidError extends Data.TaggedError("FacetInvalidError")<{
     return this.message
   }
 }
-
-export class FacetLimitReachedError extends Data.TaggedError("FacetLimitReachedError")<{
-  readonly projectId: string
-  readonly limit: number
-}> {
-  readonly httpStatus = 422
-  get httpMessage() {
-    return `This project already has the maximum of ${this.limit} facets`
-  }
-}

@@ -1,3 +1,4 @@
+import { billingLimitReachedRenderer } from "./billing-limit-reached.ts"
 import { customMessageRenderer } from "./custom-message.ts"
 import { destinationQuarantinedRenderer } from "./destination-quarantined.ts"
 import { incidentClosedRenderer } from "./incident-closed.ts"
@@ -24,4 +25,5 @@ export const NOTIFICATION_SLACK_RENDERERS: SlackNotificationRendererRegistry = {
   "signal.discovered": signalDiscoveredRenderer,
   "signal.regressed": signalRegressedRenderer,
   "destination.quarantined": destinationQuarantinedRenderer,
+  "billing.limit-reached": billingLimitReachedRenderer,
 }

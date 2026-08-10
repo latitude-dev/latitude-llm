@@ -1,4 +1,10 @@
-import { type CustomBehaviorId, type OrganizationId, type ProjectId, RepositoryError } from "@domain/shared"
+import {
+  type CustomBehaviorId,
+  type FacetId,
+  type OrganizationId,
+  type ProjectId,
+  RepositoryError,
+} from "@domain/shared"
 import { Effect, Option } from "effect"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
@@ -35,6 +41,11 @@ export interface ListProjectBehavioursInput {
    * stable cluster ids, so trend/novelty/spiking read the same as the global tree.
    */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /**
+   * The behavior's facet; omit/null = the topic slice (`facet_id = ''`), a facet
+   * id reads that facet's edges in the same `taxonomy_view_assignments` slice.
+   */
+  readonly facetId?: FacetId | null
 }
 
 /**
@@ -181,6 +192,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
       projectId: input.projectId,
       dimension,
       customBehaviorId,
+      ...(input.facetId != null ? { facetId: input.facetId } : {}),
     })
     const displayable = allActiveClusters.filter((cluster) => isDisplayableTaxonomyName(cluster.name))
     const childrenByParentId = new Map<string, TaxonomyCluster[]>()
@@ -200,6 +212,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
             organizationId: input.organizationId,
             projectId: input.projectId,
             customBehaviorId,
+            ...(input.facetId != null ? { facetId: input.facetId } : {}),
             ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
             ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
           })
@@ -225,6 +238,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
             organizationId: input.organizationId,
             projectId: input.projectId,
             customBehaviorId,
+            ...(input.facetId != null ? { facetId: input.facetId } : {}),
             clusterIds: displayable.map((cluster) => cluster.id),
             currentSince,
             baselineSince,

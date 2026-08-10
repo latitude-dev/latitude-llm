@@ -12,6 +12,7 @@ export class UserRepository extends Context.Service<
       userId: string
       jobTitle?: string | undefined
       phoneNumber?: string | undefined
+      heardAboutUs?: string | undefined
     }) => Effect.Effect<void, RepositoryError, SqlClient>
     updateNotificationPreferences: (params: {
       userId: string

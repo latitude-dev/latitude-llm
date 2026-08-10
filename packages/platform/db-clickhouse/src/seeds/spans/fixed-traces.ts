@@ -4,11 +4,15 @@ import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import { isSentinelPresent } from "../idempotency.ts"
 import type { Seeder, TraceSlot } from "../types.ts"
-import type { SpanRow } from "./span-builders.ts"
+import { type SpanRow, seedLlmCostMicrocents } from "./span-builders.ts"
 
 function formatClickHouseTimestamp(date: Date): string {
   return date.toISOString().replace("T", " ").replace("Z", "000")
 }
+
+/** Every fixture in this file is one gpt-4.1 chat, and its price comes from the registry. */
+const TAU2_PROVIDER = "openai"
+const TAU2_MODEL = "gpt-4.1"
 
 type Tau2Message = {
   role: "user" | "assistant" | "tool"
@@ -102,8 +106,7 @@ function createTau2LlmSpan(opts: {
 }): SpanRow {
   const inputTokens = estimateTau2Tokens(opts.inputMessages)
   const outputTokens = estimateTau2Tokens([opts.outputMessage])
-  const costInput = inputTokens * 25
-  const costOutput = outputTokens * 100
+  const cost = seedLlmCostMicrocents({ provider: TAU2_PROVIDER, model: TAU2_MODEL, inputTokens, outputTokens })
   const hasToolCall = opts.outputMessage.parts.some((part) => part.type === "tool_call")
   return {
     organization_id: opts.scope.organizationId,
@@ -127,8 +130,8 @@ function createTau2LlmSpan(opts: {
     tags: [...opts.tags],
     metadata: opts.metadata,
     operation: "chat",
-    provider: "openai",
-    model: "gpt-4.1",
+    provider: TAU2_PROVIDER,
+    model: TAU2_MODEL,
     agent_name: "",
     response_model: "gpt-4.1-2025-04-14",
     tokens_input: inputTokens,
@@ -136,10 +139,11 @@ function createTau2LlmSpan(opts: {
     tokens_cache_read: 0,
     tokens_cache_create: 0,
     tokens_reasoning: 0,
-    cost_input_microcents: costInput,
-    cost_output_microcents: costOutput,
-    cost_total_microcents: costInput + costOutput,
+    cost_input_microcents: cost.input,
+    cost_output_microcents: cost.output,
+    cost_total_microcents: cost.input + cost.output,
     cost_is_estimated: 1,
+    cost_source: "estimated",
     time_to_first_token_ns: hasToolCall ? 0 : 220_000_000,
     is_streaming: hasToolCall ? 0 : 1,
     response_id: `seed-${opts.spanId}`,
@@ -264,6 +268,7 @@ function createCompatibilityChatSpan(opts: {
   ]
   const inputTokens = estimateTau2Tokens(inputMessages)
   const outputTokens = estimateTau2Tokens(outputMessages)
+  const cost = seedLlmCostMicrocents({ provider: TAU2_PROVIDER, model: TAU2_MODEL, inputTokens, outputTokens })
 
   return {
     organization_id: opts.scope.organizationId,
@@ -287,8 +292,8 @@ function createCompatibilityChatSpan(opts: {
     tags: [...opts.tags],
     metadata: opts.metadata,
     operation: "chat",
-    provider: "openai",
-    model: "gpt-4.1",
+    provider: TAU2_PROVIDER,
+    model: TAU2_MODEL,
     agent_name: "",
     response_model: "gpt-4.1-2025-04-14",
     tokens_input: inputTokens,
@@ -296,10 +301,11 @@ function createCompatibilityChatSpan(opts: {
     tokens_cache_read: 0,
     tokens_cache_create: 0,
     tokens_reasoning: 0,
-    cost_input_microcents: inputTokens * 25,
-    cost_output_microcents: outputTokens * 100,
-    cost_total_microcents: inputTokens * 25 + outputTokens * 100,
+    cost_input_microcents: cost.input,
+    cost_output_microcents: cost.output,
+    cost_total_microcents: cost.input + cost.output,
     cost_is_estimated: 1,
+    cost_source: "estimated",
     time_to_first_token_ns: 180_000_000,
     is_streaming: 1,
     response_id: `seed-${spanId}`,
@@ -498,6 +504,7 @@ function createLargeConversationChatSpan(opts: {
   const outputMessages = [outputMessage]
   const inputTokens = estimateTau2Tokens(inputMessages)
   const outputTokens = estimateTau2Tokens(outputMessages)
+  const cost = seedLlmCostMicrocents({ provider: TAU2_PROVIDER, model: TAU2_MODEL, inputTokens, outputTokens })
   const durationMs = 1200
 
   return {
@@ -527,8 +534,8 @@ function createLargeConversationChatSpan(opts: {
       turnCount: String(spec.turnCount),
     },
     operation: "chat",
-    provider: "openai",
-    model: "gpt-4.1",
+    provider: TAU2_PROVIDER,
+    model: TAU2_MODEL,
     agent_name: "",
     response_model: "gpt-4.1-2025-04-14",
     tokens_input: inputTokens,
@@ -536,10 +543,11 @@ function createLargeConversationChatSpan(opts: {
     tokens_cache_read: 0,
     tokens_cache_create: 0,
     tokens_reasoning: 0,
-    cost_input_microcents: inputTokens * 25,
-    cost_output_microcents: outputTokens * 100,
-    cost_total_microcents: inputTokens * 25 + outputTokens * 100,
+    cost_input_microcents: cost.input,
+    cost_output_microcents: cost.output,
+    cost_total_microcents: cost.input + cost.output,
     cost_is_estimated: 1,
+    cost_source: "estimated",
     time_to_first_token_ns: 260_000_000,
     is_streaming: 1,
     response_id: `seed-${spanId}`,
@@ -714,8 +722,8 @@ export function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU
       tags,
       metadata,
       operation: "invoke_agent",
-      provider: "openai",
-      model: "gpt-4.1",
+      provider: TAU2_PROVIDER,
+      model: TAU2_MODEL,
       agent_name: "",
       response_model: "gpt-4.1-2025-04-14",
       tokens_input: 0,
@@ -727,6 +735,7 @@ export function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU
       cost_output_microcents: 0,
       cost_total_microcents: 0,
       cost_is_estimated: 1,
+      cost_source: "estimated",
       time_to_first_token_ns: 0,
       is_streaming: 0,
       response_id: "",
@@ -819,8 +828,14 @@ export function buildTau2TrajectorySpans(scope: SeedScope, maxTrajectories = TAU
 
     root.tokens_input = rootInputTokens
     root.tokens_output = rootOutputTokens
-    root.cost_input_microcents = rootInputTokens * 25
-    root.cost_output_microcents = rootOutputTokens * 100
+    const rootCost = seedLlmCostMicrocents({
+      provider: TAU2_PROVIDER,
+      model: TAU2_MODEL,
+      inputTokens: rootInputTokens,
+      outputTokens: rootOutputTokens,
+    })
+    root.cost_input_microcents = rootCost.input
+    root.cost_output_microcents = rootCost.output
     root.cost_total_microcents = root.cost_input_microcents + root.cost_output_microcents
     root.input_messages = serializeMessages(rootInputMessages)
     root.output_messages = serializeMessages(rootOutputMessages)

@@ -434,37 +434,63 @@ export const createDomainEventsWorker = ({
       ),
 
     BillingUsagePeriodUpdated: (event) => {
-      if (
-        event.payload.planSource !== "subscription" ||
-        !event.payload.overageAllowed ||
-        event.payload.overageCredits <= event.payload.reportedOverageCredits
-      ) {
-        return Effect.void
+      const effects: Effect.Effect<void, unknown>[] = []
+
+      for (const limitKind of event.payload.limitsCrossed ?? []) {
+        effects.push(
+          pub.publish(
+            "notifications",
+            "request-billing-limit-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              periodStart: event.payload.periodStart,
+              periodEnd: event.payload.periodEnd,
+              limitKind,
+              includedCredits: event.payload.includedCredits,
+              consumedCredits: event.payload.consumedCredits,
+              overageCredits: event.payload.overageCredits,
+            },
+            {
+              dedupeKey: `notifications:request-billing-limit:${event.payload.organizationId}:${event.payload.periodStart}:${limitKind}`,
+            },
+          ),
+        )
       }
 
-      const periodStart = new Date(event.payload.periodStart)
-      const periodEnd = new Date(event.payload.periodEnd)
+      if (
+        event.payload.planSource === "subscription" &&
+        event.payload.overageAllowed &&
+        event.payload.overageCredits > event.payload.reportedOverageCredits
+      ) {
+        const periodStart = new Date(event.payload.periodStart)
+        const periodEnd = new Date(event.payload.periodEnd)
 
-      return pub.publish(
-        "billing-overage",
-        "reportOverage",
-        {
-          organizationId: event.payload.organizationId,
-          periodStart: event.payload.periodStart,
-          periodEnd: event.payload.periodEnd,
-          snapshotOverageCredits: event.payload.overageCredits,
-        },
-        {
-          dedupeKey: buildBillingOverageDedupeKey({
-            organizationId: event.payload.organizationId,
-            periodStart,
-            periodEnd,
-          }),
-          latestThrottleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
-          attempts: 10,
-          backoff: { type: "exponential", delayMs: 1_000 },
-        },
-      )
+        effects.push(
+          pub.publish(
+            "billing-overage",
+            "reportOverage",
+            {
+              organizationId: event.payload.organizationId,
+              periodStart: event.payload.periodStart,
+              periodEnd: event.payload.periodEnd,
+              snapshotOverageCredits: event.payload.overageCredits,
+            },
+            {
+              dedupeKey: buildBillingOverageDedupeKey({
+                organizationId: event.payload.organizationId,
+                periodStart,
+                periodEnd,
+              }),
+              latestThrottleMs: BILLING_OVERAGE_SYNC_THROTTLE_MS,
+              attempts: 10,
+              backoff: { type: "exponential", delayMs: 1_000 },
+            },
+          ),
+        )
+      }
+
+      if (effects.length === 0) return Effect.void
+      return Effect.all(effects, { concurrency: "unbounded" }).pipe(Effect.asVoid)
     },
 
     MemberJoined: () => Effect.void,
@@ -485,9 +511,6 @@ export const createDomainEventsWorker = ({
     DatasetCreated: () => Effect.void,
     EvaluationCreated: () => Effect.void,
     EvaluationAligned: () => Effect.void,
-    // Detector-health degradation is audit-only for now: the outbox row is
-    // the durable surfacing until a notification kind lands with the signals
-    // rollout (specs/sandbox-runtime.md P1-2).
     EvaluationDetectorDegraded: () => Effect.void,
     ProjectDeleted: (event) =>
       Effect.all(
@@ -514,22 +537,45 @@ export const createDomainEventsWorker = ({
               dedupeKey: `destinations:delete-by-project:${event.payload.projectId}`,
             },
           ),
+          pub.publish(
+            "imports",
+            "delete-by-project",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+            },
+            {
+              dedupeKey: `imports:delete-by-project:${event.payload.projectId}`,
+            },
+          ),
+          pub.publish(
+            "github-events",
+            "delete-by-project",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+            },
+            {
+              dedupeKey: `github-events:delete-by-project:${event.payload.projectId}`,
+            },
+          ),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
     FlaggerToggled: () => Effect.void,
     SavedSearchCreated: () => Effect.void,
-    // Impersonation events are audit-only — their value is being
-    // persisted in the outbox for support / compliance queries.
-    // No downstream worker consumes them, so these handlers are no-ops.
-    // Present here only because `EventHandlerMap` exhaustively covers
-    // every key in `EventPayloads` and would fail typecheck otherwise.
+    ImportStarted: () => Effect.void,
+    ImportRetried: () => Effect.void,
+    ImportFinished: () => Effect.void,
     AdminImpersonationStarted: () => Effect.void,
     AdminImpersonationStopped: () => Effect.void,
     AdminUserRoleChanged: () => Effect.void,
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
+    // Redaction policy changes are audit-only for the same reason.
+    ProjectRedactionPolicyChanged: () => Effect.void,
+    OrganizationRedactionPolicyChanged: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

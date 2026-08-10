@@ -110,6 +110,7 @@ function makeTraceDetail(
     costInputMicrocents: 50,
     costOutputMicrocents: 25,
     costTotalMicrocents: 75,
+    unpricedSpanCount: 0,
     sessionId: overrides?.sessionId ?? SessionId("session"),
     userId: ExternalUserId("user"),
     userEmail: "",
@@ -939,7 +940,7 @@ describe("runLiveEvaluationUseCase", () => {
             periodStart: currentPeriodStart,
             periodEnd: currentPeriodEnd,
             includedCredits: 20_000,
-            consumedCredits: 19_980,
+            consumedCredits: 20_000,
           }),
         )
         .pipe(

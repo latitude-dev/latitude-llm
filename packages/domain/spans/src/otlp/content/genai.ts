@@ -2,14 +2,17 @@
  * Content parser for OTEL GenAI semconv v1.37+ (gen_ai.{input,output}.messages,
  * gen_ai.system_instructions, gen_ai.tool.definitions — structured or JSON string).
  */
+import { resolveContentModality } from "@repo/utils"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { Provider, safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
+import { normalizeGenAIMessages } from "../../helpers/normalize-genai-messages.ts"
+import { toolDefinitionsFrom } from "../../helpers/resolve-tool-definitions.ts"
 import { anyValueToPlain } from "../any-value.ts"
+import { resolveToolDefinitionsPayload } from "../resolvers/tool-definitions.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
 import type { ParsedContent } from "./index.ts"
-import { toToolDefinition } from "./utils.ts"
 import { parseVercelOutput } from "./vercel.ts"
 
 function messagesHaveContent(messages: readonly GenAIMessage[]): boolean {
@@ -87,28 +90,32 @@ function normalizeSemconvMessage(msg: unknown): unknown {
   return { ...kept, parts }
 }
 
-// Hoist tool_call_response parts into their own "tool" message (downstream pairing keys off
-// role === "tool"); some providers (Anthropic) nest tool results in a "user" turn.
-function hoistToolResults(messages: readonly GenAIMessage[]): GenAIMessage[] {
-  const out: GenAIMessage[] = []
-  for (const msg of messages) {
-    const parts = Array.isArray(msg.parts) ? msg.parts : []
-    if (msg.role === "tool" || !parts.some((p) => (p as RawPart)?.type === "tool_call_response")) {
-      out.push(msg)
-      continue
-    }
-    const toolParts = parts.filter((p) => (p as RawPart)?.type === "tool_call_response")
-    const otherParts = parts.filter((p) => (p as RawPart)?.type !== "tool_call_response")
-    out.push({ role: "tool", parts: toolParts } as GenAIMessage)
-    if (otherParts.length > 0) out.push({ ...msg, parts: otherParts })
-  }
-  return out
+function normalizePartModality(part: unknown): unknown {
+  if (!part || typeof part !== "object") return part
+  const p = part as Record<string, unknown>
+  if (p.type !== "blob" && p.type !== "uri" && p.type !== "file") return part
+  if (typeof p.modality !== "string") return part
+  const mime = typeof p.mime_type === "string" ? p.mime_type : null
+  const modality = resolveContentModality(p.modality, mime)
+  if (modality === p.modality) return part
+  return { ...p, modality }
+}
+
+function normalizeMessagePartModalities(msg: unknown): unknown {
+  if (!msg || typeof msg !== "object") return msg
+  const m = msg as Record<string, unknown>
+  if (!Array.isArray(m.parts)) return msg
+  return { ...m, parts: m.parts.map(normalizePartModality) }
+}
+
+function normalizeMessagesModalities(messages: readonly GenAIMessage[]): GenAIMessage[] {
+  return messages.map((msg) => normalizeMessagePartModalities(msg) as GenAIMessage)
 }
 
 function parseMessages(attrs: readonly OtlpKeyValue[], key: string): GenAIMessage[] {
   const raw = extractJsonAttr(attrs, key)
   if (!Array.isArray(raw)) return []
-  return hoistToolResults(raw.map(normalizeSemconvMessage) as GenAIMessage[])
+  return raw.map(normalizeSemconvMessage) as GenAIMessage[]
 }
 
 // Cloudflare AI Gateway sends the raw request body under gen_ai.input.messages
@@ -151,10 +158,7 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
   const systemRaw = extractJsonAttr(attrs, "gen_ai.system_instructions")
   let systemInstructions: GenAISystem = Array.isArray(systemRaw) ? (systemRaw as GenAISystem) : []
 
-  const toolsRaw = extractJsonAttr(attrs, "gen_ai.tool.definitions")
-  let toolDefinitions: ToolDefinition[] = Array.isArray(toolsRaw)
-    ? (toolsRaw.map(toToolDefinition).filter(Boolean) as ToolDefinition[])
-    : []
+  let toolDefinitions: ToolDefinition[] = toolDefinitionsFrom(resolveToolDefinitionsPayload(attrs))
 
   // litellm and some gen_ai emitters leave gen_ai.{input,output}.messages contentless and
   // keep the real data in the deprecated split attributes; recover whatever's empty.
@@ -212,5 +216,12 @@ export function parseGenAICurrent(attrs: readonly OtlpKeyValue[]): ParsedContent
     if (!result.error) outputMessages = result.messages as GenAIMessage[]
   }
 
-  return { inputMessages, outputMessages, systemInstructions, toolDefinitions }
+  // Last, because the translations above are identity passes for `Provider.GenAI` that drop
+  // `_provider_metadata`, and this is what puts a tool's name into it.
+  return {
+    inputMessages: normalizeMessagesModalities(normalizeGenAIMessages(inputMessages)),
+    outputMessages: normalizeMessagesModalities(normalizeGenAIMessages(outputMessages)),
+    systemInstructions,
+    toolDefinitions,
+  }
 }

@@ -68,6 +68,11 @@ export {
   UnknownStripePlanError,
   UsageEventAlreadyRecordedError,
 } from "./errors.ts"
+export {
+  BILLING_LIMIT_KINDS,
+  type BillingLimitKind,
+  detectBillingLimitCrossed,
+} from "./helpers/detect-billing-limit-crossed.ts"
 export { BillingOverrideRepository } from "./ports/billing-override-repository.ts"
 export {
   BillingSpendReservation,

@@ -33,6 +33,24 @@ export function formatRatio(reads: number, writes: number): string {
   return `${ratio < 10 ? ratio.toFixed(1).replace(/\.0$/, "") : Math.round(ratio)}×`
 }
 
+const MINUTE_MS = 60 * 1000
+const HOUR_MS = 60 * MINUTE_MS
+const DAY_MS = 24 * HOUR_MS
+const MONTH_MS = 30 * DAY_MS
+const YEAR_MS = 365 * DAY_MS
+
+const plural = (count: number, unit: string) => `${count} ${unit}${count === 1 ? "" : "s"}`
+
+/** Coarse single-unit elapsed time for idle labels: "moments", "12 hours", "8 days", "2 months". */
+export function formatElapsed(ms: number): string {
+  if (ms < MINUTE_MS) return "moments"
+  if (ms < HOUR_MS) return plural(Math.floor(ms / MINUTE_MS), "minute")
+  if (ms < DAY_MS) return plural(Math.floor(ms / HOUR_MS), "hour")
+  if (ms < MONTH_MS) return plural(Math.floor(ms / DAY_MS), "day")
+  if (ms < YEAR_MS) return plural(Math.floor(ms / MONTH_MS), "month")
+  return plural(Math.floor(ms / YEAR_MS), "year")
+}
+
 // Day buckets round to the NEAREST day so the default 30-day window gets daily
 // buckets rather than rounding up to 2-day ones.
 export function pickMemoryTrendBucketSeconds(rangeMs: number): number {
@@ -40,6 +58,19 @@ export function pickMemoryTrendBucketSeconds(rangeMs: number): number {
   if (rawSeconds <= HOUR_SECONDS) return HOUR_SECONDS
   if (rawSeconds <= DAY_SECONDS) return Math.ceil(rawSeconds / HOUR_SECONDS) * HOUR_SECONDS
   return Math.max(1, Math.round(rawSeconds / DAY_SECONDS)) * DAY_SECONDS
+}
+
+export const MEMORY_TREND_BUCKET_SECONDS = DAY_SECONDS
+const MEMORY_TREND_MAX_BUCKETS = 30
+
+// Mirrors resolveMemoryTrendWindow in @domain/memories (the server's query window); kept
+// web-local so the memory route's client bundle never pulls the domain package (and Effect).
+// Deterministic from the same range, so the sparkline axis matches the aggregated buckets.
+export function resolveMemoryTrendWindow(fromMs: number, toMs: number): { fromMs: number; toMs: number } {
+  const dayMs = MEMORY_TREND_BUCKET_SECONDS * 1000
+  const endDayStartMs = Math.floor(toMs / dayMs) * dayMs
+  const startMs = Math.max(fromMs, endDayStartMs - (MEMORY_TREND_MAX_BUCKETS - 1) * dayMs)
+  return { fromMs: startMs, toMs }
 }
 
 export function formatBucketLabel(bucketStartIso: string, bucketSeconds: number): string {

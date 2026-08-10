@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useMemo } from "react"
+import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import {
   useMemoryActivityHistogram,
   useMemoryOverview,
@@ -13,7 +14,6 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
-import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { MemoryAnalyticsPanel } from "./-components/memory-analytics-panel.tsx"
 import { MemoryEmptyState } from "./-components/memory-empty-state.tsx"
@@ -97,10 +97,6 @@ function MemoryPage() {
     () => ({ fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso }),
     [tw.listRange, tw.trendRange],
   )
-  const trendBucketSeconds = useMemo(
-    () => pickMemoryTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
-    [range],
-  )
   // The chart's right edge is "today" under All time (else the selected end),
   // with the All-time span clamped to the project window so it never scans the
   // full history per bucket. Unlike the shared trend range (anchored to the
@@ -119,12 +115,11 @@ function MemoryPage() {
     [histogramRange],
   )
 
-  const { stores, isLoading, infiniteScroll } = useMemoryStoresWithMetrics({
+  const { stores, isLoading, isError, infiniteScroll } = useMemoryStoresWithMetrics({
     projectId: project.id,
     range,
     sort: sorting.column,
     direction: sorting.direction,
-    trendBucketSeconds,
   })
   const { data: overview, isLoading: overviewLoading } = useMemoryOverview({ projectId: project.id, range })
   const { data: histogram = [], isLoading: histogramLoading } = useMemoryActivityHistogram({
@@ -135,7 +130,8 @@ function MemoryPage() {
 
   // Empty over All time means the project has never had memory activity — a
   // real empty state (a picked window that's empty just shows the table's blank slate).
-  const showEmptyState = !isLoading && stores.length === 0 && tw.isAllTime
+  // A failed load must not read as "no memory" — keep the table so its error/blank slate shows.
+  const showEmptyState = !isLoading && !isError && stores.length === 0 && tw.isAllTime
 
   return (
     <Layout>
@@ -185,7 +181,6 @@ function MemoryPage() {
             projectSlug={projectSlug}
             rangeFromIso={range.fromIso}
             rangeToIso={range.toIso}
-            trendBucketSeconds={trendBucketSeconds}
           />
         </>
       )}

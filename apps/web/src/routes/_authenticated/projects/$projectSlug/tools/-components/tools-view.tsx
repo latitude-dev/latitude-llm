@@ -213,7 +213,7 @@ export function ToolsView({
           </Tooltip>
         ) : (
           <Tooltip asChild trigger={<span>-</span>}>
-            Calls per offer needs tool definitions on chat spans — none were found for this tool.
+            Calls per offer needs tool definitions on chat spans. None were found for this tool.
           </Tooltip>
         ),
     },

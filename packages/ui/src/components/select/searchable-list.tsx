@@ -19,6 +19,7 @@ interface SearchableOption<V = unknown> {
   value: V
   icon?: ReactNode
   disabled?: boolean
+  searchText?: string
 }
 
 interface SearchableSelectListProps<V = unknown> {
@@ -79,7 +80,7 @@ export function SearchableSelectList<V = unknown>({
   const filtered = useMemo(() => {
     if (searchMode === "server" || !search) return options
     const lower = search.toLowerCase()
-    return options.filter((o) => o.label.toLowerCase().includes(lower))
+    return options.filter((o) => (o.searchText ?? o.label).toLowerCase().includes(lower))
   }, [options, search, searchMode])
 
   const handleOptionsScroll = (event: UIEvent<HTMLDivElement>) => {

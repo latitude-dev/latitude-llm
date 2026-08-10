@@ -27,6 +27,10 @@ const healthyDiagnostics = (): RelativeClusteringDiagnostics => ({
   acceptedRelativeSeparations: [0.5],
   routingThresholds: [0.8],
   fellBackToStatic: false,
+  bestRootSeparation: 0.5,
+  escalated: false,
+  escalationSkipped: false,
+  projectedRootSearchWork: 0,
 })
 
 const chainToDepth = (maxDepth: number): ClusteringTreeNode => {
