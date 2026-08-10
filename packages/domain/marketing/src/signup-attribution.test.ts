@@ -32,9 +32,16 @@ describe("toMarketingAttribution", () => {
   it("forwards whitelisted UTM / click-id params and drops the rest", () => {
     expect(
       toMarketingAttribution({
-        trackingParams: { utm_source: "google", utm_medium: "cpc", gclid: "abc", _gl: "x", baker_anon_id: "y" },
+        trackingParams: {
+          utm_source: "google",
+          utm_medium: "cpc",
+          gclid: "abc",
+          rdt_cid: "rdt-1",
+          _gl: "x",
+          baker_anon_id: "y",
+        },
       }),
-    ).toEqual({ utm_source: "google", utm_medium: "cpc", gclid: "abc" })
+    ).toEqual({ utm_source: "google", utm_medium: "cpc", gclid: "abc", rdt_cid: "rdt-1" })
   })
 
   it("omits empty fields rather than emitting empty strings", () => {
