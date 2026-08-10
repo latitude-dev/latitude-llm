@@ -323,8 +323,7 @@ const boundNamingSamples = (samples: readonly string[]): readonly string[] => {
     return perSample
   }
 
-  const framing =
-    perSample.reduce((sum, _, index) => sum + `${index}: `.length, 0) + Math.max(0, perSample.length - 1)
+  const framing = perSample.reduce((sum, _, index) => sum + `${index}: `.length, 0) + Math.max(0, perSample.length - 1)
   const bodyBudget = Math.max(perSample.length, TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP - framing)
   const perCap = Math.max(1, Math.floor(bodyBudget / perSample.length))
   return perSample.map((sample) => middleTruncate(sample, perCap))
