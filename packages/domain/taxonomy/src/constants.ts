@@ -292,14 +292,10 @@ export const TAXONOMY_DEFAULT_NAMING_MODEL = {
 export const TAXONOMY_NAMING_REFRESH_OBSERVATIONS = 25
 export const TAXONOMY_NAMING_TIMEOUT_MS = 60_000
 
-/**
- * Per FPS-sampled member summary in leaf naming prompts. Topic observations
- * store up to ~24KB conversation digests for embedding; naming only needs a
- * short cue, so each sample is middle-truncated to this length before prompting.
- */
+/** Per-sample middle-truncate cap for leaf naming prompts (digests are larger at ingest). */
 export const TAXONOMY_NAMING_SAMPLE_CHAR_CAP = 2_000
 
-/** Hard cap on the concatenated `Samples:` block passed to naming LLMs. */
+/** Hard cap on the serialized `Samples:` block (`N: …` lines joined by newlines). */
 export const TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP = 12_000
 
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MIN = 4
