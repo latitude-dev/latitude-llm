@@ -481,7 +481,7 @@ Returns incidents in the project, ordered from oldest to newest. The time window
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time window. Defaults to now. |
 | `--source-type` | `monitor | signal` | No | Restrict to incidents triggered by this source type: `monitor` or `signal`. |
 | `--source-id` | `string` | No | Restrict to incidents tied to one source entity id. |
-| `--severities` | `low | medium | high[]` | No | Restrict to incidents whose severity matches any value in this list. |
+| `--severities` | `low | medium | high | urgent[]` | No | Restrict to incidents whose severity matches any value in this list. |
 
 #### `latitude incidents resolve`
 

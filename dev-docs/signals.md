@@ -158,6 +158,14 @@ A `user` signal **must** have an evaluation. `createSignal` accepts `evaluation.
 Lifecycle:
 
 - **Update** (`updateSignalUseCase`) edits `name`/`description`/`filters`; filter changes apply forward-only and the slug is stable. Triage (priority/assignee) and resolve/ignore keep their own use-cases.
+- **Level.** `signals.priority` holds the shared `ALERT_SEVERITIES` scale (`low` → `urgent`), so a signal's level and a monitor's severity are one vocabulary; the field name stays `priority` because it is public API. The level flows on to the notification payloads as `severity` (see `dev-docs/notifications.md`) and sets the severity of the signal's escalation incidents. **No level means no notification** — no email, no Slack. Agent dispatch is untouched by this and keeps its own rules.
+
+  **Level.** `signals.priority` holds the shared `ALERT_SEVERITIES` scale (`low` → `urgent`), so a signal's level and a monitor's severity are one vocabulary; the field name stays `priority` because it is public API. The level flows on to the `signal.discovered` / `signal.regressed` notification payloads as `severity` (see `dev-docs/notifications.md`), so a Slack route's minimum severity and a user's `emailMinSeverity` filter signals the same way they filter monitor incidents.
+
+  **Nothing assigns it automatically.** A discovered signal is created with `priority: null` and stays there until somebody triages it through `updateSignalTriageUseCase`. An automatic rating was built and removed before merge: any heuristic — a model reading the occurrence, or a level derived from measured volume — is going to disagree with what a particular customer expected, and a level that moves on its own is one nobody can reason about. Noisy discovery notifications are a notifications problem, to be solved with per-project opt-outs and digest delivery rather than by guessing a priority.
+
+  A payload with no severity is admitted by every threshold, so an untriaged signal notifies exactly as it did before this change. Filtering only starts to apply once a human has said what a signal is worth.
+
 - **Delete** (`deleteSignalUseCase`) **soft-deletes** the signal (`deleted_at`) and **archives** its active evaluation so the matching pipeline stops running it. No ClickHouse cleanup — deleted-signal scores linger and are excluded read-side (every signal read filters `deleted_at IS NULL`); the slug becomes reusable (the slug-unique index is partial on `deleted_at IS NULL`).
 
 REST surface: `POST /` (create), `PATCH /{signalSlug}` (update), `DELETE /{signalSlug}` (delete), under `/v1/projects/{projectSlug}/signals`. Regenerate the SDK/MCP with `pnpm generate:sdk` after route changes.

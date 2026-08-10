@@ -42,6 +42,12 @@ export interface ToolCallErrorFinding {
   readonly messageIndex: number
   readonly toolName?: string | undefined
   readonly toolCallId?: string | undefined
+  /**
+   * A later tool call succeeded, so the agent carried on working after this
+   * error. Only meaningful for `kind: "error"`; structural defects (malformed,
+   * duplicate, undeclared) are not something a run recovers from.
+   */
+  readonly recovered?: boolean
 }
 
 const conversationHasAnyToolCall = (conversation: ConversationMessagesOnly): boolean =>
@@ -56,9 +62,10 @@ const conversationHasAnyToolCall = (conversation: ConversationMessagesOnly): boo
 // Every tool-call defect in encounter order; the deterministic flagger
 // annotates the first, the `tool:error` hint gatherer surfaces them all.
 export function collectToolCallErrorFindings(conversation: ToolErrorConversation): readonly ToolCallErrorFinding[] {
-  const findings: ToolCallErrorFinding[] = []
+  const findings: (ToolCallErrorFinding & { responseIndex?: number })[] = []
   const callById = new Map<string, { name: string; messageIndex: number }>()
   const successfulCallIds = new Set<string>()
+  let lastSuccessfulResponseIndex = -1
   const hasAnyToolCall = conversationHasAnyToolCall(conversation)
   const definedTools =
     conversation.definedTools && conversation.definedTools.length > 0 ? new Set(conversation.definedTools) : null
@@ -140,22 +147,45 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
           messageIndex: call.messageIndex,
           toolName: call.name,
           toolCallId,
+          responseIndex: msgIdx,
         })
       } else if (toolCallId) {
         // Successful execution proves availability; incomplete definedTools must not flag it.
         successfulCallIds.add(toolCallId)
+        lastSuccessfulResponseIndex = msgIdx
       }
     }
   }
 
-  if (successfulCallIds.size === 0) return findings
-  return findings.filter(
-    (finding) => !(finding.kind === "undeclared" && finding.toolCallId && successfulCallIds.has(finding.toolCallId)),
+  const kept = findings.filter(
+    (finding) =>
+      successfulCallIds.size === 0 ||
+      !(finding.kind === "undeclared" && finding.toolCallId && successfulCallIds.has(finding.toolCallId)),
+  )
+
+  // A tool error followed by a later successful call is one the agent worked
+  // through — an agent that runs hundreds of tools hits these constantly and
+  // the user never sees them. Marked here rather than dropped, because the hint
+  // gatherer still wants every defect.
+  return kept.map((finding) =>
+    finding.kind === "error" && finding.responseIndex !== undefined
+      ? { ...finding, recovered: lastSuccessfulResponseIndex > finding.responseIndex }
+      : finding,
   )
 }
 
+/**
+ * Flags the first defect the run did NOT work through. A tool error the agent
+ * retried or moved past is invisible to the user — a coding agent produces them
+ * by the dozen — and raising a signal for one costs a clustering pass, a naming
+ * generation and a row in someone's triage list. Structural defects (malformed,
+ * duplicate, undeclared, unknown id) always flag: they are bugs in how the
+ * agent calls tools, not transient failures.
+ */
 export function detectToolCallErrorsFlagger(conversation: ToolErrorConversation): DeterministicFlaggerMatch {
-  const finding = collectToolCallErrorFindings(conversation)[0]
+  const finding = collectToolCallErrorFindings(conversation).find(
+    (candidate) => candidate.kind !== "error" || candidate.recovered !== true,
+  )
   return finding ? match(finding.feedback, finding.messageIndex) : NO_MATCH
 }
 
