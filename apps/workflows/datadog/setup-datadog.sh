@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 #
-# Datadog APM setup for the taxonomy adaptive shadow comparison.
-# Creates the retention filter (100% keep of the shadow spans, which Datadog's
+# Datadog APM setup for the taxonomy adaptive clustering rollout.
+# Creates the retention filter (100% keep of the garden-run spans, which Datadog's
 # default intelligent retention would otherwise only sample) and the span-based
 # metrics (15-month durable history) over the taxonomy.gardenTaxonomyWorkflow.shadow
-# span. Run this BEFORE enabling shadow in prod — neither is retroactive.
+# span. Run this BEFORE enabling the flag for an organization — neither is
+# retroactive. The span keeps its shadow-era name on purpose: both objects below
+# key on it, so renaming the span orphans them.
 #
 # Requires a Datadog API key and Application key (read/write APM config). They are
 # read from the environment and never printed; do not paste them into shared logs.
@@ -21,6 +23,8 @@ set -euo pipefail
 
 DD=https://api.datadoghq.eu/api/v2/apm/config
 Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow'
+# Also the key this script converges on, so renaming it would leave the deployed
+# filter behind and create a duplicate.
 RETENTION_FILTER_NAME='Taxonomy adaptive shadow spans'
 HDR=(-H "DD-API-KEY: ${DD_API_KEY}" -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" -H 'Content-Type: application/json')
 
@@ -71,10 +75,6 @@ while IFS='|' read -r id path; do
   del "${DD}/metrics/${id}"
   post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"'"${id}"'","attributes":{"compute":{"aggregation_type":"distribution","include_percentiles":true,"path":"'"${path}"'"},"filter":{"query":"'"${Q}"'"},"group_by":'"${GRP}"'}}}'
 done <<'METRICS'
-taxonomy.shadow.partition_ari|@taxonomy.shadow.diff.partitionAri
-taxonomy.shadow.static_root_children|@taxonomy.shadow.static.rootChildCount
-taxonomy.shadow.adaptive_root_children|@taxonomy.shadow.adaptive.rootChildCount
-taxonomy.shadow.root_child_delta|@taxonomy.shadow.diff.rootChildDelta
 taxonomy.adaptive.duration_ms|@taxonomy.adaptive.durationMs
 taxonomy.adaptive.static_duration_ms|@taxonomy.adaptive.staticDurationMs
 taxonomy.adaptive.peak_rss_bytes|@taxonomy.adaptive.peakRssBytes
@@ -84,6 +84,18 @@ METRICS
 echo "== fallback count metric =="
 del "${DD}/metrics/taxonomy.adaptive.fallback"
 post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"taxonomy.adaptive.fallback","attributes":{"compute":{"aggregation_type":"count"},"filter":{"query":"'"${Q}"' -@taxonomy.adaptive.fallbackReason:none"},"group_by":[{"path":"@taxonomy.projectId","tag_name":"project_id"},{"path":"@taxonomy.adaptive.fallbackReason","tag_name":"fallback_reason"}]}}}'
+
+echo "== retired shadow-comparison metrics =="
+# The paired static-vs-adaptive attributes are no longer emitted (LAT-774), so these
+# metrics would sit at no-data forever. Deleted here rather than dropped from the
+# list above, which would leave them in Datadog.
+for id in \
+  taxonomy.shadow.partition_ari \
+  taxonomy.shadow.static_root_children \
+  taxonomy.shadow.adaptive_root_children \
+  taxonomy.shadow.root_child_delta; do
+  del "${DD}/metrics/${id}"
+done
 
 if [ "${FAILED}" -gt 0 ]; then
   echo "== ${FAILED} call(s) failed (non-2xx) — see statuses above =="

@@ -1,6 +1,6 @@
 {
-  "title": "Taxonomy adaptive clustering — shadow comparison (LAT-773)",
-  "description": "Reads the APM span `taxonomy.gardenTaxonomyWorkflow.shadow` emitted by the workflows service to compare the static (production) taxonomy tree against the adaptive candidate tree while shadow mode is enabled environment-wide. The app ships logs to CloudWatch only, so this dashboard uses the APM spans channel, not Datadog Logs. Requires a Datadog APM retention filter that keeps resource_name:taxonomy.gardenTaxonomyWorkflow.shadow and span facets on the @taxonomy.* numeric attributes charted here. Apply with the Datadog MCP upsert_datadog_dashboard (title/description/template_variables/widgets); the spans-source request syntax should be validated on first apply.",
+  "title": "Taxonomy adaptive clustering — rollout (LAT-774)",
+  "description": "Reads the APM span `taxonomy.gardenTaxonomyWorkflow.shadow` emitted by the workflows service to monitor the adaptive clustering rollout: one span per garden run, for every organization the adaptiveTaxonomyClustering flag has enabled. The span name is kept from the retired shadow phase deliberately — the retention filter and the span-based metrics key on it. The app ships logs to CloudWatch only, so this dashboard uses the APM spans channel, not Datadog Logs. Requires a Datadog APM retention filter that keeps resource_name:taxonomy.gardenTaxonomyWorkflow.shadow and span facets on the @taxonomy.* numeric attributes charted here. Apply with the Datadog MCP upsert_datadog_dashboard (title/description/template_variables/widgets).",
   "layout_type": "ordered",
   "template_variables": [
     { "name": "organization", "prefix": "@taxonomy.organizationId", "available_values": [], "default": "*" },
@@ -10,7 +10,7 @@
     {
       "definition": {
         "type": "note",
-        "content": "## Taxonomy adaptive clustering — shadow comparison\n\nInternal engineering view over the `taxonomy.gardenTaxonomyWorkflow.shadow` APM span emitted by the **workflows** service. Each span carries the static (production) tree shape, the adaptive (candidate) tree shape, and their diff, so we can compare the two clustering algorithms without swapping what gets persisted.\n\n**Pilot tell:** a project row where `static.rootChildCount` ≈ 1 while adaptive is 3–5 — static collapsed everything under one root child, adaptive split it into real top-level clusters.\n\n**Decision-grade reads need ~1–2 weeks of turnover** — gardening runs are infrequent per project, so give the window time to accumulate representative runs.\n\n> Requires a Datadog APM retention filter keeping `resource_name:taxonomy.gardenTaxonomyWorkflow.shadow` and span facets on these numeric attributes.",
+        "content": "## Taxonomy adaptive clustering — rollout\n\nInternal engineering view over the `taxonomy.gardenTaxonomyWorkflow.shadow` APM span emitted by the **workflows** service. One span per garden run of an organization the `adaptiveTaxonomyClustering` flag has enabled, describing the tree that was actually persisted: its build cost, its split decisions, and whether it fell back to static.\n\n**Watch first:** `Adaptive fallbacks` should stay at 0. A `buildError` fallback means the clustering worker hit its deadline or crashed and the run persisted the static tree instead.\n\n**Decision-grade reads need ~1–2 weeks of turnover** — gardening runs are infrequent per project, so give the window time to accumulate representative runs.\n\n> The static-vs-adaptive comparison widgets went away with shadow mode (LAT-774). The span name is retained so the retention filter and span metrics keep working.\n\n> Requires a Datadog APM retention filter keeping `resource_name:taxonomy.gardenTaxonomyWorkflow.shadow` and span facets on these numeric attributes.",
         "background_color": "yellow",
         "font_size": "14",
         "text_align": "left",
@@ -21,114 +21,6 @@
         "tick_edge": "left"
       },
       "layout": { "width": 12, "height": 4 }
-    },
-    {
-      "definition": {
-        "type": "group",
-        "layout_type": "ordered",
-        "title": "Shadow comparison — static vs adaptive tree shape",
-        "show_title": true,
-        "widgets": [
-          {
-            "definition": {
-              "type": "query_table",
-              "title": "Static vs adaptive rootChildCount, partition ARI, observations sampled by project / custom behavior",
-              "requests": [
-                {
-                  "queries": [
-                    {
-                      "data_source": "spans",
-                      "name": "static_root",
-                      "search": {
-                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
-                      },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.shadow.static.rootChildCount" },
-                      "group_by": [
-                        { "facet": "@taxonomy.projectId", "limit": 50 },
-                        { "facet": "@taxonomy.customBehaviorId", "limit": 50 }
-                      ]
-                    },
-                    {
-                      "data_source": "spans",
-                      "name": "adaptive_root",
-                      "search": {
-                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
-                      },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.shadow.adaptive.rootChildCount" },
-                      "group_by": [
-                        { "facet": "@taxonomy.projectId", "limit": 50 },
-                        { "facet": "@taxonomy.customBehaviorId", "limit": 50 }
-                      ]
-                    },
-                    {
-                      "data_source": "spans",
-                      "name": "partition_ari",
-                      "search": {
-                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
-                      },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.shadow.diff.partitionAri" },
-                      "group_by": [
-                        { "facet": "@taxonomy.projectId", "limit": 50 },
-                        { "facet": "@taxonomy.customBehaviorId", "limit": 50 }
-                      ]
-                    },
-                    {
-                      "data_source": "spans",
-                      "name": "obs_sampled",
-                      "search": {
-                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
-                      },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.observationsSampled" },
-                      "group_by": [
-                        { "facet": "@taxonomy.projectId", "limit": 50 },
-                        { "facet": "@taxonomy.customBehaviorId", "limit": 50 }
-                      ]
-                    }
-                  ],
-                  "formulas": [
-                    { "formula": "static_root", "alias": "avg static rootChildCount" },
-                    { "formula": "adaptive_root", "alias": "avg adaptive rootChildCount" },
-                    { "formula": "partition_ari", "alias": "avg partition ARI" },
-                    { "formula": "obs_sampled", "alias": "avg observations sampled" }
-                  ],
-                  "response_format": "scalar",
-                  "sort": { "count": 100, "order_by": [{ "type": "formula", "index": 1, "order": "desc" }] }
-                }
-              ]
-            },
-            "layout": { "width": 12, "height": 4 }
-          },
-          {
-            "definition": {
-              "type": "timeseries",
-              "title": "avg rootChildDelta (adaptive − static) by project",
-              "show_legend": true,
-              "legend_layout": "auto",
-              "requests": [
-                {
-                  "queries": [
-                    {
-                      "data_source": "spans",
-                      "name": "root_child_delta",
-                      "search": {
-                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
-                      },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.shadow.diff.rootChildDelta" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 50 }]
-                    }
-                  ],
-                  "formulas": [{ "formula": "root_child_delta", "alias": "avg rootChildDelta" }],
-                  "response_format": "timeseries",
-                  "display_type": "line",
-                  "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
-                }
-              ]
-            },
-            "layout": { "width": 12, "height": 4 }
-          }
-        ]
-      },
-      "layout": { "width": 12, "height": 9 }
     },
     {
       "definition": {
@@ -198,7 +90,7 @@
           {
             "definition": {
               "type": "timeseries",
-              "title": "avg adaptive vs static clustering duration (ms)",
+              "title": "avg adaptive build duration, and static duration on fallback runs only (ms)",
               "show_legend": true,
               "legend_layout": "auto",
               "requests": [
@@ -216,14 +108,14 @@
                       "data_source": "spans",
                       "name": "static_dur",
                       "search": {
-                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project -@taxonomy.adaptive.fallbackReason:none"
                       },
                       "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.staticDurationMs" }
                     }
                   ],
                   "formulas": [
                     { "formula": "adaptive_dur", "alias": "avg adaptive durationMs" },
-                    { "formula": "static_dur", "alias": "avg static durationMs" }
+                    { "formula": "static_dur", "alias": "avg static durationMs (fallback runs)" }
                   ],
                   "response_format": "timeseries",
                   "display_type": "line",
@@ -292,7 +184,7 @@
           {
             "definition": {
               "type": "query_value",
-              "title": "max adaptive peak RSS",
+              "title": "max RSS sample at plan time (process-wide, not a per-build peak)",
               "autoscale": true,
               "precision": 2,
               "requests": [

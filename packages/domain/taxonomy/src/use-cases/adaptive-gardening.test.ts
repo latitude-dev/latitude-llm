@@ -76,7 +76,7 @@ const runPlan = (
   clusters: ReturnType<typeof createFakeTaxonomyClusterRepository>,
   args: {
     readonly now: Date
-    readonly mode?: "off" | "shadow" | "enforced"
+    readonly mode?: "off" | "enforced"
     readonly customBehaviorId?: CustomBehaviorId
     readonly clusterBuilder?: TaxonomyClusterBuilder
   },
@@ -214,50 +214,80 @@ describe("planHierarchicalTaxonomyUseCase off is a byte-identical no-op", () => 
   })
 })
 
-const depthMultiset = (plan: HierarchicalTaxonomyPlan): number[] => plan.clusters.map((cluster) => cluster.depth).sort()
-
 const oneGroupCorpus = (at: Date): TaxonomyMomentObservation[] =>
   Array.from({ length: 40 }, (_, index) => makeObservation(index, 0, at))
 
-describe("planHierarchicalTaxonomyUseCase shadow persists static and computes adaptive for comparison", () => {
-  it("persists the static tree while still computing adaptive diagnostics + comparison", async () => {
+// Records which builder each pass asked for, and otherwise builds normally.
+const recordingBuilder = (): { readonly modes: string[]; readonly builder: TaxonomyClusterBuilder } => {
+  const modes: string[] = []
+  return {
+    modes,
+    builder: (request) =>
+      Effect.sync(() => {
+        modes.push(request.mode)
+        return runTaxonomyClusterBuild(request)
+      }),
+  }
+}
+
+describe("exactly one tree is built per garden pass", () => {
+  it("adaptive: builds only the adaptive tree — the static builder is never invoked", async () => {
+    const recorder = recordingBuilder()
+
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, mode: "enforced", clusterBuilder: recorder.builder },
+    )
+
+    expect(recorder.modes).toEqual(["enforced"])
+    expect(plan.leafClusters.length).toBeGreaterThanOrEqual(2)
+    expect(plan.decisionMetadata).not.toBeNull()
+    expect(plan.adaptiveDurationMs).toBeGreaterThanOrEqual(0)
+    // Nothing to report: the static builder never ran.
+    expect(plan.staticDurationMs).toBe(0)
+  })
+
+  it("off: builds only the static tree", async () => {
+    const recorder = recordingBuilder()
+
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      { now, clusterBuilder: recorder.builder },
+    )
+
+    expect(recorder.modes).toEqual(["off"])
+    expect(plan.decisionMetadata).toBeNull()
+    expect(plan.adaptiveDurationMs).toBe(0)
+  })
+})
+
+describe("flipping the flag off reverts the next pass to static", () => {
+  it("rebuilds static and retires the whole adaptive tree it replaces", async () => {
     const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
     const clusters = createFakeTaxonomyClusterRepository([])
 
-    const plan = await runPlan(observations, clusters, { now, mode: "shadow" })
+    // Pass one with the flag on, then simulate its atomic swap so the adaptive
+    // tree is what the next pass sees as live.
+    const adaptivePass = await runPlan(observations, clusters, { now, mode: "enforced" })
+    for (const cluster of adaptivePass.clusters) clusters.clusters.set(cluster.id, { ...cluster, state: "active" })
+    const adaptiveIds = new Set(adaptivePass.clusters.map((cluster) => cluster.id))
 
-    expect(plan.mode).toBe("shadow")
-    // Persisted tree is static: sample-only assignments, no full-window routing leaves.
-    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
-    expect(plan.leafClusters).toEqual([])
-    expect(plan.supersededClusterIds).toEqual([])
-    expect(plan.observationAssignments.length).toBeGreaterThan(0)
-    expect(plan.fallbackReason).toBeNull()
-    // Adaptive was still computed for comparison/telemetry.
-    expect(plan.decisionMetadata).not.toBeNull()
-    expect(plan.comparison).not.toBeNull()
-    expect(plan.comparison?.static.rootChildCount).toBeGreaterThanOrEqual(1)
-    expect(plan.comparison?.adaptive.rootChildCount).toBeGreaterThanOrEqual(1)
-    expect(plan.staticDurationMs).toBeGreaterThanOrEqual(0)
-    expect(plan.adaptiveDurationMs).toBeGreaterThanOrEqual(0)
-  })
+    const staticPass = await runPlan(observations, clusters, { now: new Date(now.getTime() + 6 * 60 * 60_000) })
 
-  it("persists a static tree with the same shape as off (deterministic static builder, no staging)", async () => {
-    const offPlan = await runPlan(
-      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
-      createFakeTaxonomyClusterRepository([]),
-      { now },
-    )
-    const shadowPlan = await runPlan(
-      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
-      createFakeTaxonomyClusterRepository([]),
-      { now, mode: "shadow" },
-    )
-
-    expect(shadowPlan.clusters.length).toBe(offPlan.clusters.length)
-    expect(depthMultiset(shadowPlan)).toEqual(depthMultiset(offPlan))
-    expect(shadowPlan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
-    expect(shadowPlan.observationAssignments.length).toBe(offPlan.observationAssignments.length)
+    // Plain static publish path: sample assignments, no full-window routing leaves.
+    expect(staticPass.mode).toBe("off")
+    expect(staticPass.leafClusters).toEqual([])
+    expect(staticPass.supersededClusterIds).toEqual([])
+    expect(staticPass.observationAssignments.length).toBeGreaterThan(0)
+    // Nothing from the adaptive tree is orphaned: every id it left active is either
+    // continued in place by this plan or deprecated by it.
+    const accountedFor = new Set([
+      ...staticPass.deprecatedClusterIds.map((clusterId) => clusterId as string),
+      ...staticPass.clusters.map((cluster) => cluster.id as string),
+    ])
+    for (const clusterId of adaptiveIds) expect(accountedFor.has(clusterId)).toBe(true)
   })
 })
 
@@ -303,6 +333,28 @@ describe("planHierarchicalTaxonomyUseCase enforced falls back to static on unsaf
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
   })
 
+  it("only then builds static — the fallback is the second build, never a speculative one", async () => {
+    const modes: string[] = []
+    const rejected = badAdaptiveBuilder("nonFinite")
+
+    const plan = await runPlan(
+      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
+      createFakeTaxonomyClusterRepository([]),
+      {
+        now,
+        mode: "enforced",
+        clusterBuilder: (request) => {
+          modes.push(request.mode)
+          return rejected(request)
+        },
+      },
+    )
+
+    expect(modes).toEqual(["enforced", "off"])
+    expect(plan.fallbackReason).toBe("nonFinite")
+    expect(plan.leafClusters).toEqual([])
+  })
+
   it("persists adaptive (no fallback) when the real adaptive output is finite and sane", async () => {
     const observations = createFakeTaxonomyObservationRepository(twoGroupCorpus(now))
     const clusters = createFakeTaxonomyClusterRepository([])
@@ -320,22 +372,6 @@ describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive b
     isAdaptiveModeActive(request.mode)
       ? Effect.fail(new Error("adaptive worker crashed"))
       : Effect.sync(() => runTaxonomyClusterBuild(request))
-
-  it("shadow: persists static, no comparison, no fallbackReason (discardable branch failed)", async () => {
-    const plan = await runPlan(
-      createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
-      createFakeTaxonomyClusterRepository([]),
-      { now, mode: "shadow", clusterBuilder: rejectingAdaptiveBuilder },
-    )
-
-    expect(plan.clusters.length).toBeGreaterThan(0)
-    expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
-    expect(plan.leafClusters).toEqual([])
-    expect(plan.comparison).toBeNull()
-    expect(plan.decisionMetadata).toBeNull()
-    expect(plan.fallbackReason).toBeNull()
-    expect(plan.observationAssignments.length).toBeGreaterThan(0)
-  })
 
   it("enforced: falls back to static with fallbackReason=buildError", async () => {
     const plan = await runPlan(
@@ -384,26 +420,22 @@ describe("planHierarchicalTaxonomyUseCase degrades to static when the adaptive b
   })
 })
 
-describe("shadow guardrails hold across contrasting corpora", () => {
+describe("adaptive structural guardrails hold across contrasting corpora", () => {
   it.each([
     ["two well-separated groups", twoGroupCorpus(now)],
     ["one tight unimodal group", oneGroupCorpus(now)],
-  ] as const)("keeps both trees within the node cap and schedule depth (%s)", async (_label, corpus) => {
+  ] as const)("keeps the persisted tree within the node cap and schedule depth (%s)", async (_label, corpus) => {
     const plan = await runPlan(
       createFakeTaxonomyObservationRepository(corpus),
       createFakeTaxonomyClusterRepository([]),
-      { now, mode: "shadow" },
+      { now, mode: "enforced" },
     )
 
-    const comparison = plan.comparison
-    expect(comparison).not.toBeNull()
-    for (const shape of [comparison?.static, comparison?.adaptive]) {
-      expect(shape?.maxDepth ?? 0).toBeLessThanOrEqual(TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length)
-      expect(shape?.nodeCount ?? 0).toBeLessThanOrEqual(TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES)
-    }
-    // Shadow never persists adaptive, so it never falls back.
+    // Within the guardrails the fallback check enforces, so a real corpus is
+    // never rejected into static by shape alone.
+    expect(plan.maxDepthReached).toBeLessThanOrEqual(TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length)
+    expect(plan.clusters.length).toBeLessThanOrEqual(TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES)
     expect(plan.fallbackReason).toBeNull()
-    expect(plan.leafClusters).toEqual([])
   })
 })
 
@@ -443,7 +475,6 @@ const priorTree = (): TaxonomyCluster[] => {
 describe("a degenerate rebuild is detectable before any publish branch runs", () => {
   it.each([
     "off",
-    "shadow",
     "enforced",
   ] as const)("reports topLevelClustersBuilt 0 and would retire the whole prior tree (%s)", async (mode) => {
     const plan = await runPlan(
@@ -467,11 +498,11 @@ describe("a degenerate rebuild is detectable before any publish branch runs", ()
     const plan = await runPlan(
       createFakeTaxonomyObservationRepository(twoGroupCorpus(now)),
       createFakeTaxonomyClusterRepository(priorTree()),
-      { now, mode: "shadow" },
+      { now, mode: "enforced" },
     )
 
     expect(plan.topLevelClustersBuilt).toBeGreaterThanOrEqual(2)
-    expect(plan.topLevelClustersBuilt).toBe(plan.comparison?.static.rootChildCount)
+    expect(plan.topLevelClustersBuilt).toBe(plan.clusters.filter((cluster) => cluster.depth === 1).length)
   })
 })
 

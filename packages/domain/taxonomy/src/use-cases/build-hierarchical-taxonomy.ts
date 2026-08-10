@@ -16,9 +16,10 @@
  *      projection metadata does not round-trip through the workflow worker.
  *      The sample is deterministic (hash-ordered, no rand()) so a gardening
  *      pass replays identically under Temporal.
- *   2. Build the tree top-down with `buildStaticHierarchicalClusters` using the
- *      per-depth schedule. The schedule encodes broad-at-the-root,
- *      narrow-at-the-leaves without per-corpus tuning.
+ *   2. Build the tree top-down with exactly one builder — the node-relative
+ *      adaptive one when the organization is gated on, `buildStaticHierarchicalClusters`
+ *      on its per-depth schedule otherwise. The static schedule encodes
+ *      broad-at-the-root, narrow-at-the-leaves without per-corpus tuning.
  *   3. Persist clusters top-down so child rows always have a valid parent.
  *      Interior nodes get a `splitLinkThreshold` derived from the chosen K's
  *      tightest sibling-pair cosine so the online router has a per-level
@@ -112,7 +113,6 @@ import {
   TaxonomyObservationRepository,
   type TaxonomyScopedClusteringObservation,
 } from "../ports/taxonomy-observation-repository.ts"
-import { compareTaxonomyTrees, type TaxonomyShadowComparison } from "../shadow-comparison.ts"
 
 export interface BuildHierarchicalTaxonomyInput {
   readonly organizationId: OrganizationId
@@ -143,8 +143,8 @@ export interface BuildHierarchicalTaxonomyResult {
 /**
  * Mode-tagged build request. The builder (worker or in-process) branches on
  * `mode` internally: `off` runs the static absolute-sibling-cosine builder,
- * `shadow`/`enforced` run the node-relative adaptive builder. Schedules and
- * k-means constants are resolved builder-side so the request stays slim.
+ * `enforced` runs the node-relative adaptive builder. Schedules and k-means
+ * constants are resolved builder-side so the request stays slim.
  */
 export interface TaxonomyClusterBuildRequest {
   readonly mode: TaxonomyAdaptiveClusteringMode
@@ -224,10 +224,10 @@ export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomy
    */
   readonly facetObservations?: readonly TaxonomyScopedClusteringObservation[]
   /**
-   * Rollout mode, resolved in the planning activity. `off` (default) is a
-   * byte-identical no-op: static builder, sample-only reassignment, active
-   * clusters, centroid-similarity naming. `shadow`/`enforced` build the adaptive
-   * tree as `staging` clusters for the full-window reassignment + atomic swap.
+   * Which builder to persist, resolved in the planning activity. `off` (default)
+   * is a byte-identical no-op: static builder, sample-only reassignment, active
+   * clusters, centroid-similarity naming. `enforced` builds the adaptive tree as
+   * `staging` clusters for the full-window reassignment + atomic swap.
    */
   readonly mode?: TaxonomyAdaptiveClusteringMode
 }
@@ -310,17 +310,16 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
   readonly decisionMetadata: RelativeClusteringDiagnostics | null
   /**
    * Non-null ⇒ enforced planning rejected the adaptive tree and persisted static
-   * instead (structural or non-finite violation). Resolved before staging/writes,
-   * so downstream publish is the plain static path even under an `enforced` mode.
+   * instead (structural or non-finite violation, or a failed build). Resolved
+   * before staging/writes, so downstream publish is the plain static path even
+   * under an `enforced` mode.
    */
   readonly fallbackReason: TaxonomyAdaptiveFallbackReason | null
   /**
-   * Static-vs-adaptive shape counts + partition ARI on the shared sample.
-   * Populated whenever adaptive is computed (shadow/enforced); null on off.
-   */
-  readonly comparison: TaxonomyShadowComparison | null
-  /**
-   * Wall-clock of each build for the runtime telemetry panels; 0 when not built.
+   * Wall-clock of whichever build ran; 0 for the one that did not. Exactly one
+   * builder runs per pass, so on an adaptive run `staticDurationMs` is 0 unless
+   * adaptive was rejected and static built the fallback.
+   *
    * A FAILED adaptive build still reports the time it burned before failing —
    * distinguishing a builder that threw immediately from one the worker deadline
    * killed is the whole diagnosis, and reporting 0 for both hides it.
@@ -516,9 +515,9 @@ const resolveTaxonomyLineage = (input: {
   readonly descriptors: readonly NodeDescriptor[]
   readonly previouslyActive: readonly TaxonomyCluster[]
   /**
-   * Whether this run actually stages an adaptive tree. Off, shadow, and an
-   * enforced run that fell back to static all persist the static tree in place,
-   * so they reuse continued ids (byte-identical to the pre-change path); only a
+   * Whether this run actually stages an adaptive tree. Off and an adaptive run
+   * that fell back to static both persist the static tree in place, so they reuse
+   * continued ids (byte-identical to the pre-change path); only a
    * genuinely-persisted adaptive tree gives every node a fresh id and carries
    * continuity through the lineage rows.
    */
@@ -560,7 +559,7 @@ const resolveTaxonomyLineage = (input: {
   const reusedIds = new Set<string>()
   for (const node of input.descriptors) {
     const decision = decisionByTempId.get(node.tempId)
-    // Static-persist runs (off, shadow, enforced-fallback) reuse the continued id
+    // Static-persist runs (off, adaptive-fallback) reuse the continued id
     // in place (id-keyed trend continuity). A persisted adaptive tree stages a
     // fresh tree that atomically replaces the old one, so every staging node gets
     // a fresh id and continuity is carried by the lineage rows, not the literal id
@@ -580,10 +579,10 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const now = input.now ?? new Date()
     const dimension = input.dimension ?? TaxonomyDimension.Topic
     const mode = input.mode ?? TAXONOMY_ADAPTIVE_CLUSTERING_MODE_DEFAULT
-    // `computeAdaptive` (shadow OR enforced) decides whether the adaptive tree is
-    // built at all; `persistAdaptive` (resolved after the build + fallback check)
-    // decides whether it is what we persist. Shadow always persists static.
-    const computeAdaptive = isAdaptiveModeActive(mode)
+    // `buildAdaptive` decides which builder this pass attempts; `persistAdaptive`
+    // (resolved after the build + fallback check) decides whether its output is
+    // what we persist, or whether static builds the fallback tree instead.
+    const buildAdaptive = isAdaptiveModeActive(mode)
     const embeddingConfig = yield* resolveEmbeddingConfig()
     const observationsRepo = yield* TaxonomyObservationRepository
     const clustersRepo = yield* TaxonomyClusterRepository
@@ -672,7 +671,6 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         mode,
         decisionMetadata: null,
         fallbackReason: null,
-        comparison: null,
         adaptiveDurationMs: 0,
         staticDurationMs: 0,
         adaptiveBuildError: null,
@@ -689,24 +687,13 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       `${input.projectId}${scopedBehaviorId ? `:${scopedBehaviorId}` : ""}${scopedFacetId ? `:facet:${scopedFacetId}` : ""}`,
     )
 
-    // Static is always built: it is the tree we persist for off/shadow (and for an
-    // enforced run that falls back), and the comparison baseline for shadow.
-    const [staticElapsed, staticBuild] = yield* Effect.timed(
-      clusterBuilder({ mode: "off", embeddings: normalizedEmbeddings, seed }),
-    )
-    const staticDurationMs = Duration.toMillis(staticElapsed)
-
-    // Adaptive is built for shadow (comparison only) and enforced (candidate to
-    // persist). It runs in the same worker budget as static (see the worker).
     // The adaptive build is best-effort: a builder failure (worker crash,
     // timeout, thrown error) degrades to `null` rather than aborting the whole
-    // garden, so shadow stays a discardable comparison and enforced can still
-    // fall back to the static tree. A static build failure IS fatal (no tree to
-    // persist), so only the adaptive call is caught.
+    // garden, so the run can still fall back to the static tree.
     // Catch INSIDE the timing so a failure keeps its elapsed time: a build the
     // worker deadline killed and one that threw on arrival are the same
     // `buildError` otherwise, and telling them apart is the whole diagnosis.
-    const adaptiveTimed = computeAdaptive
+    const adaptiveTimed = buildAdaptive
       ? yield* Effect.timed(
           clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed }).pipe(
             Effect.map((build) => ({ build, error: null as string | null })),
@@ -719,23 +706,30 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const adaptiveDurationMs = adaptiveTimed ? Duration.toMillis(adaptiveTimed[0]) : 0
 
     // Fallback selection, here in the planning use case BEFORE any staging/writes:
-    // only enforced can persist adaptive, and only when a finite, structurally
-    // sane tree was actually built. A missing adaptive build (builder failure) is
-    // `buildError`. Shadow never persists adaptive; off never builds it.
-    const fallbackReason: TaxonomyAdaptiveFallbackReason | null =
-      mode === "enforced"
-        ? adaptiveBuild
-          ? adaptiveFallbackReason({
-              root: adaptiveBuild.root,
-              diagnostics: adaptiveBuild.diagnostics,
-              maxDepth: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length,
-              maxNodes: TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
-            })
-          : "buildError"
-        : null
+    // adaptive is persisted only when a finite, structurally sane tree was
+    // actually built. A missing adaptive build (builder failure) is `buildError`.
+    const fallbackReason: TaxonomyAdaptiveFallbackReason | null = buildAdaptive
+      ? adaptiveBuild
+        ? adaptiveFallbackReason({
+            root: adaptiveBuild.root,
+            diagnostics: adaptiveBuild.diagnostics,
+            maxDepth: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length,
+            maxNodes: TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
+          })
+        : "buildError"
+      : null
 
-    const persistAdaptive = mode === "enforced" && adaptiveBuild !== null && fallbackReason === null
-    const adaptive = persistAdaptive
+    const acceptedAdaptiveBuild = fallbackReason === null ? adaptiveBuild : null
+    const persistAdaptive = acceptedAdaptiveBuild !== null
+    // Exactly one tree per pass: static runs only when it is the tree we persist —
+    // the `off` path, or an adaptive run whose output was rejected. A static build
+    // failure IS fatal (nothing left to persist), so unlike adaptive it is uncaught.
+    const persisted = acceptedAdaptiveBuild
+      ? { build: acceptedAdaptiveBuild, staticDurationMs: 0 }
+      : yield* Effect.timed(clusterBuilder({ mode: "off", embeddings: normalizedEmbeddings, seed })).pipe(
+          Effect.map(([elapsed, build]) => ({ build, staticDurationMs: Duration.toMillis(elapsed) })),
+        )
+    const staticDurationMs = persisted.staticDurationMs
     // On the whole-project topic tree a fresh id is born `staging`: it becomes
     // visible to reads only in the swap, once it is named AND ClickHouse points
     // at it. A reused id (a static-persist continuation) IS the live row, so it
@@ -743,20 +737,8 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // from its assignment slice, which the reassignment writes after naming would
     // run, so views keep publishing as before.
     const isView = scopedBehaviorId !== null || scopedFacetId !== null
-    const freshClusterState: TaxonomyClusterState = adaptive || !isView ? "staging" : "active"
-    const persistBuild = persistAdaptive && adaptiveBuild ? adaptiveBuild : staticBuild
-    const tree = persistBuild.root
-
-    // Shape/ARI comparison on the shared sample — computed whenever adaptive ran,
-    // independent of which tree we persist. Bounded scalars only, no embeddings.
-    const comparison =
-      computeAdaptive && adaptiveBuild
-        ? compareTaxonomyTrees({
-            staticRoot: staticBuild.root,
-            adaptiveRoot: adaptiveBuild.root,
-            sampleSize: normalizedEmbeddings.length,
-          })
-        : null
+    const freshClusterState: TaxonomyClusterState = persistAdaptive || !isView ? "staging" : "active"
+    const tree = persisted.build.root
 
     const descriptors: NodeDescriptor[] = []
     collectNodes(tree, null, { value: 0 }, descriptors)
@@ -869,7 +851,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // reassigns the FULL bounded live window in a later activity, routing every
     // window observation to these leaf centroids — so it publishes `leafClusters`
     // instead and leaves both sample-assignment arrays empty.
-    const leafClusters: StagingLeafCluster[] = adaptive
+    const leafClusters: StagingLeafCluster[] = persistAdaptive
       ? bornLeaves.map((leaf) => ({ clusterId: leaf.clusterId, centroid: [...leaf.centroid] }))
       : []
 
@@ -878,7 +860,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // view (cohort topic or facet) writes the `taxonomy_view_assignments` slice
     // (keyed by customBehaviorId × facetId, carrying sessionId), never the column.
     const observationAssignments: ReassignTaxonomyObservationByIdInput[] =
-      adaptive || scopedBehaviorId
+      persistAdaptive || scopedBehaviorId
         ? []
         : leafMembers.map(({ leaf, observation, confidence }) => ({
             observationId: observation.observationId,
@@ -889,7 +871,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
             indexedAt: now,
           }))
     const customAssignments: TaxonomyViewAssignment[] =
-      !adaptive && scopedBehaviorId
+      !persistAdaptive && scopedBehaviorId
         ? leafMembers.flatMap(({ leaf, observation, confidence }) => {
             // Scoped/facet samples carry a sessionId; guard at runtime (via a
             // widening cast, not an unchecked one) so a whole-project topic
@@ -977,11 +959,10 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       customBehaviorId: scopedBehaviorId,
       facetId: scopedFacetId,
       deprecatedClusterIds,
-      supersededClusterIds: adaptive ? previouslyActive.map((cluster) => cluster.id) : [],
+      supersededClusterIds: persistAdaptive ? previouslyActive.map((cluster) => cluster.id) : [],
       mode,
       decisionMetadata: adaptiveBuild?.diagnostics ?? null,
       fallbackReason,
-      comparison,
       adaptiveDurationMs,
       staticDurationMs,
       adaptiveBuildError,

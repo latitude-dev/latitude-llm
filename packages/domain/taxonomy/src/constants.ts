@@ -31,23 +31,23 @@ export const TAXONOMY_DIMENSIONS = ["topic"] as const
 export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated", "staging"] as const
 
 // ---------------------------------------------------------------------------
-// Adaptive-clustering rollout gate (LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE)
+// Adaptive-clustering gate
 //
-// The environment baseline for the divisive-build rollout, resolved once in the
-// planning activity (never in workflow code — Temporal determinism). `off` is a
-// guaranteed byte-identical no-op: static builder, `computeSplitLinkThreshold`,
-// sample-only reassignment, centroid-similarity naming, original publish
-// sequence. `shadow`/`enforced` exercise the new machinery (adaptive builder,
-// member-confidence routing thresholds, shape-aware naming, staging + atomic
-// swap, full-window reassignment). The per-organization enforcement flag that
-// can raise the baseline to `enforced` lands in Phase 4 (LAT-773).
+// Which builder a garden run persists, resolved once in the planning activity
+// from the per-organization `adaptiveTaxonomyClustering` feature flag (never in
+// workflow code — Temporal determinism). `off` is a guaranteed byte-identical
+// no-op: static builder, `computeSplitLinkThreshold`, sample-only reassignment,
+// centroid-similarity naming, original publish sequence. `enforced` runs the
+// adaptive machinery (adaptive builder, member-confidence routing thresholds,
+// shape-aware naming, staging + atomic swap, full-window reassignment). Exactly
+// one of the two builders runs per garden pass; static is also the fallback when
+// an adaptive build fails or is structurally rejected.
 // ---------------------------------------------------------------------------
 
-export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "shadow", "enforced"] as const
-export const TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV = "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE"
+export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "enforced"] as const
 
 /**
- * Tag stamped on every shadow/enforced telemetry event so a dashboard can slice
+ * Tag stamped on every adaptive telemetry event so a dashboard can slice
  * by the policy that produced a run. Bump it whenever the relative schedule or
  * routing constants change so old and new calibrations are separable in Logs.
  */
