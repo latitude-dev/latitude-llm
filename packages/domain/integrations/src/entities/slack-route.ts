@@ -1,4 +1,10 @@
-import { alertSeveritySchema, meetsMinSeverity, NOTIFICATION_GROUPS, type NotificationGroup } from "@domain/shared"
+import {
+  alertSeveritySchema,
+  isSignalEscalation,
+  meetsMinSeverity,
+  NOTIFICATION_GROUPS,
+  type NotificationGroup,
+} from "@domain/shared"
 import { z } from "zod"
 
 /**
@@ -41,7 +47,6 @@ export type SlackRoute = z.infer<typeof slackRouteSchema>
  * fired on volume, so the exemption is visible to whoever receives it rather
  * than looking like the filter leaking.
  */
-export const isSignalEscalation = (payload: Record<string, unknown>): boolean => payload.sourceType === "signal"
 
 export const routeAdmitsPayload = (
   route: SlackRoute,

@@ -182,9 +182,10 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     }
 
     const flaggerSlug = flaggerSlugOf(initialScoreResult.score)
-    // A deterministic detector already established what happened; volume decides
-    // how much it matters, starting at `low` for this first occurrence and moving
-    // with `recomputeSignalLevelUseCase` from there.
+    // A deterministic detector already established what happened, so there is
+    // nothing for a model to judge — asking anyway agreed with human triage on
+    // none of the production signals these detectors opened. They start at `low`
+    // and stay there until somebody triages them.
     const deterministic = isDeterministicFlagger(flaggerSlug)
     const alongside = yield* coOccurringDetectors(initialScoreResult.score, flaggerSlug)
     const signalDetails = yield* generateSignalDetailsUseCase({

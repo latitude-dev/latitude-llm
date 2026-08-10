@@ -13,6 +13,20 @@ export const incidentSourceTypeSchema = z.enum(INCIDENT_SOURCE_TYPES)
 export type IncidentSourceType = z.infer<typeof incidentSourceTypeSchema>
 
 /**
+ * A signal-sourced incident, i.e. a signal escalating.
+ *
+ * Such a notification ignores both severity thresholds — the Slack route's
+ * `minSeverity` and the user's `emailMinSeverity`. The signal's level says how
+ * bad the pattern is; escalating says its rate just broke its own seasonal band,
+ * and a severity threshold was not set to answer the second. 97% of production
+ * escalations come from signals nobody has triaged, so honouring either
+ * threshold silences nearly all of them. Monitor incidents keep both.
+ *
+ * Lives here rather than in either channel so the two cannot drift apart.
+ */
+export const isSignalEscalation = (payload: Record<string, unknown>): boolean => payload.sourceType === "signal"
+
+/**
  * The one severity scale, ascending. Shared with signals, whose `priority`
  * column holds the same values under a different field name (kept because
  * `priority` is public API and `severity` is the key inside every stored

@@ -28,8 +28,10 @@ export interface CreateIncidentFromSignalEventInput {
   readonly entrySignals?: EntrySignalsSnapshot | null
   readonly condition?: AlertIncidentCondition | null
   /**
-   * The escalating signal's own level, resolved by the caller. Absent ⇒ `"high"`,
-   * which is what every signal escalation used to open at unconditionally.
+   * Incident severity. No caller passes it today — every real signal escalation
+   * opens at `"high"` — so this exists for a caller that wants to override, and
+   * the tests are its only exercise. Do not read the parameter's existence as
+   * evidence that escalations carry the signal's own level; they do not.
    */
   readonly severity?: AlertSeverity
 }

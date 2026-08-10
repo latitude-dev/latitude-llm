@@ -1,12 +1,13 @@
 import { ProjectRepository } from "@domain/projects"
-import type {
-  NotFoundError,
-  NotificationId,
-  OrganizationId,
-  ProjectId,
-  RepositoryError,
-  SqlClient,
-  UserId,
+import {
+  isSignalEscalation,
+  type NotFoundError,
+  type NotificationId,
+  type OrganizationId,
+  type ProjectId,
+  type RepositoryError,
+  type SqlClient,
+  type UserId,
 } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
@@ -100,7 +101,9 @@ export const createNotificationUseCase = (input: CreateNotificationInput) =>
 
     const emailEligible =
       user !== null &&
-      shouldSendEmail(user.notificationPreferences ?? null, input.kind, severityFromPayload(input.payload))
+      shouldSendEmail(user.notificationPreferences ?? null, input.kind, severityFromPayload(input.payload), {
+        isEscalation: isSignalEscalation(input.payload),
+      })
 
     return { notification: inserted, emailEligible } as const
   }).pipe(Effect.withSpan("notifications.createNotification")) as Effect.Effect<

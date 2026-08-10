@@ -528,11 +528,11 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     }
     // No "unjudged ⇒ no delivery" gate here, deliberately: escalation is its own
     // evidence of urgency (the occurrence rate broke its seasonal band), which is
-    // independent of how bad the mechanism is. The incident carries the signal's
-    // level when it has one and `"high"` when it does not, so an untriaged signal
-    // that starts spiking still pages — 97% of production escalations come from
-    // signals nobody has triaged. The unjudged rule applies to discovery, where
-    // there is no such evidence.
+    // independent of how bad the mechanism is. Signal escalations open at `high`
+    // regardless of the signal's own level, so an untriaged signal that starts
+    // spiking still pages — 97% of production escalations come from signals nobody
+    // has triaged. The unjudged rule applies to discovery, where there is no such
+    // evidence.
 
     const notificationKind = resolveKind(incident, input.transition)
     yield* Effect.annotateCurrentSpan("kind", notificationKind)

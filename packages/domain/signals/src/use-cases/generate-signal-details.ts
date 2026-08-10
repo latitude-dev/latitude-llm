@@ -143,11 +143,11 @@ const buildOccurrenceBlock = (occurrences: readonly SignalOccurrenceInput[]) =>
  * evidence can answer.
  *
  * A signal is one occurrence old at creation — `createSignalFromScoreUseCase`
- * passes the single creating score — so there is no impact to measure yet and
- * ties resolve upward: this value gates notification delivery, and an over-rated
- * signal is noise where an under-rated one is never delivered and leaves no
- * trace. `recomputeSignalLevelUseCase` takes the level over from measurement
- * afterwards, which is what bounds the damage from rating it wrong here.
+ * passes the single creating score — so this rates the failure mechanism rather
+ * than measured spread, and ties resolve upward: the value gates notification
+ * delivery, so an over-rated signal is noise where an under-rated one is never
+ * delivered and leaves no trace. Nothing re-rates it afterwards; only triage
+ * changes it.
  */
 const SEVERITY_RUBRIC = [
   "Also return `severity`, rating how much attention this pattern deserves:",

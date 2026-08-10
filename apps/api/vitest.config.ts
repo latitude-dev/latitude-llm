@@ -1,6 +1,6 @@
 import { defineConfig, mergeConfig } from "vitest/config"
-import base from "../../vitest.config.ts"
 import { PGLITE_HOOK_TIMEOUT_MS } from "../../packages/vitest-config/index.ts"
+import base from "../../vitest.config.ts"
 
 export default mergeConfig(
   base,

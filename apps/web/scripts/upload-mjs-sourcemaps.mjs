@@ -5,7 +5,7 @@
 // /api/v2/srcmap intake using the same multipart shape datadog-ci uses
 // (event + source_map + minified_file).
 
-import { readFile, readdir, stat } from "node:fs/promises"
+import { readdir, readFile, stat } from "node:fs/promises"
 import { join, relative } from "node:path"
 
 const { DATADOG_API_KEY, DATADOG_SITE = "datadoghq.com", DD_GIT_REPOSITORY_URL, DD_GIT_COMMIT_SHA } = process.env

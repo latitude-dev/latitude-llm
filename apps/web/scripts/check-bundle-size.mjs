@@ -1,6 +1,6 @@
+import { existsSync } from "node:fs"
 import { readdir, stat } from "node:fs/promises"
 import path from "node:path"
-import { existsSync } from "node:fs"
 
 const MAX_SIZE_BYTES = 500 * 1024
 const assetsDir = path.resolve(process.cwd(), ".output/public/assets")
