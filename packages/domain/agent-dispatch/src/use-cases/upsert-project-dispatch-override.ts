@@ -22,6 +22,10 @@ export interface UpsertProjectDispatchOverrideInput {
   readonly guardrails?: AgentDispatchGuardrails | null
 }
 
+/** A target with no fields is stored as inherit: kept non-null it would override the default with nothing. */
+const asStoredTarget = (target: StoredAgentDispatchTarget | null) =>
+  target !== null && Object.keys(target).length > 0 ? target : null
+
 export const upsertProjectDispatchOverrideUseCase = (input: UpsertProjectDispatchOverrideInput) =>
   Effect.gen(function* () {
     const configRepo = yield* AgentDispatchConfigRepository
@@ -40,7 +44,7 @@ export const upsertProjectDispatchOverrideUseCase = (input: UpsertProjectDispatc
       enabled: input.enabled !== undefined ? input.enabled : (existing?.enabled ?? null),
       triggers:
         input.triggers !== undefined ? (input.triggers ? [...input.triggers] : null) : (existing?.triggers ?? null),
-      target: input.target !== undefined ? input.target : (existing?.target ?? null),
+      target: input.target !== undefined ? asStoredTarget(input.target) : (existing?.target ?? null),
       promptTemplate: input.promptTemplate !== undefined ? input.promptTemplate : (existing?.promptTemplate ?? null),
       guardrails: input.guardrails !== undefined ? input.guardrails : (existing?.guardrails ?? null),
       createdAt: existing?.createdAt ?? now,

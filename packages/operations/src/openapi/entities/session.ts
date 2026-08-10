@@ -76,9 +76,9 @@ const sessionFields = {
   tokensCacheCreate: z.number().describe("Total tokens written to the provider's prompt cache."),
   tokensReasoning: z.number().describe("Total reasoning tokens reported by the model."),
   tokensTotal: z.number().describe("Sum of all token counters."),
-  costInputMicrocents: z.number().describe("Cost of input tokens in microcents (1/1,000,000 USD)."),
-  costOutputMicrocents: z.number().describe("Cost of output tokens in microcents (1/1,000,000 USD)."),
-  costTotalMicrocents: z.number().describe("Total cost in microcents (1/1,000,000 USD)."),
+  costInputMicrocents: z.number().describe("Cost of input tokens in microcents (100,000,000 per USD)."),
+  costOutputMicrocents: z.number().describe("Cost of output tokens in microcents (100,000,000 per USD)."),
+  costTotalMicrocents: z.number().describe("Total cost in microcents (100,000,000 per USD)."),
   userId: nullableString().describe("End-user identifier set by the SDK. `null` when absent."),
   userEmail: nullableString().describe("End-user email set by the SDK. `null` when absent."),
   simulationId: nullableString().describe(

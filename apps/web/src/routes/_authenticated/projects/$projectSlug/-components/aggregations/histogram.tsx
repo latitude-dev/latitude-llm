@@ -10,7 +10,7 @@ import { useIncidentBucketHoverPopover } from "../../../../../../domains/alerts/
 import { useSessionTimeHistogram } from "../../../../../../domains/sessions/sessions.collection.ts"
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
 import { ChartHeader } from "../chart-header.tsx"
-import { HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
+import { type AggregationsMode, HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
 
 function formatBucketAxisLabel(iso: string): string {
   const d = new Date(iso)
@@ -26,7 +26,7 @@ interface HistogramProps {
   readonly projectId: string
   readonly projectSlug: string
   readonly filters: FilterSet
-  readonly mode: "traces" | "sessions"
+  readonly mode: AggregationsMode
   readonly metric: TraceHistogramMetric
   readonly showIncidents: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined

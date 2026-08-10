@@ -24,12 +24,12 @@ export const createFakeTaxonomyClusterRepository = (
         ids.map((id) => clusters.get(id)).filter((cluster): cluster is TaxonomyCluster => cluster !== undefined),
       ),
 
-    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId }) =>
+    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId, states }) =>
       Effect.sync(() =>
         [...clusters.values()].filter(
           (cluster) =>
             cluster.projectId === projectId &&
-            cluster.state === "active" &&
+            (states ?? ["active"]).includes(cluster.state) &&
             (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
             (cluster.facetId ?? null) === (facetId ?? null) &&
             (parentClusterId === undefined || cluster.parentClusterId === parentClusterId),
@@ -164,6 +164,13 @@ export const createFakeTaxonomyClusterRepository = (
         for (const clusterId of clusterIds) {
           const existing = clusters.get(clusterId)
           if (existing && existing.state === "staging") clusters.delete(clusterId)
+        }
+      }),
+
+    deleteByBehavior: ({ projectId, customBehaviorId }) =>
+      Effect.sync(() => {
+        for (const [id, cluster] of clusters) {
+          if (cluster.projectId === projectId && cluster.customBehaviorId === customBehaviorId) clusters.delete(id)
         }
       }),
 

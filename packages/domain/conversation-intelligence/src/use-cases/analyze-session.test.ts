@@ -92,6 +92,7 @@ const makeSession = (overrides: Partial<SessionDetail> = {}): SessionDetail => (
   costInputMicrocents: 1,
   costOutputMicrocents: 2,
   costTotalMicrocents: 3,
+  unpricedSpanCount: 0,
   userId: ExternalUserId("user-1"),
   userEmail: "",
   simulationId: "",

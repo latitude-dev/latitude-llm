@@ -68,6 +68,7 @@ describe("completeOnboardingUseCase", () => {
         Effect.provideService(OrganizationRepository, organizationRepo),
         Effect.provideService(ProjectRepository, {
           findById: () => Effect.die(new Error("unused")),
+          findByIdForUpdate: () => Effect.die(new Error("unused")),
           findBySlug: () => Effect.die(new Error("unused")),
           list: () => Effect.succeed(savedProjects),
           listIncludingDeleted: () => Effect.succeed(savedProjects),

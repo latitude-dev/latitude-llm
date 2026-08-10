@@ -52,6 +52,7 @@ const traceDetail: TraceDetail = {
   costInputMicrocents: 50,
   costOutputMicrocents: 25,
   costTotalMicrocents: 75,
+  unpricedSpanCount: 0,
   sessionId,
   userId: ExternalUserId("user"),
   userEmail: "",

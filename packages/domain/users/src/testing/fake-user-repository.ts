@@ -7,7 +7,7 @@ type UserRepositoryShape = (typeof UserRepository)["Service"]
 
 export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape>) => {
   const users = new Map<string, User>()
-  const updates: { userId: string; jobTitle?: string; phoneNumber?: string }[] = []
+  const updates: { userId: string; jobTitle?: string; phoneNumber?: string; heardAboutUs?: string }[] = []
 
   const repository: UserRepositoryShape = {
     findById: (userId) => {
@@ -26,19 +26,17 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
       Effect.sync(() => {
         const trimmedJobTitle = params.jobTitle?.trim() || undefined
         const trimmedPhoneNumber = params.phoneNumber?.trim() || undefined
-        if (!trimmedJobTitle && !trimmedPhoneNumber) return
-        updates.push({
-          userId: params.userId,
+        const trimmedHeardAboutUs = params.heardAboutUs?.trim() || undefined
+        if (!trimmedJobTitle && !trimmedPhoneNumber && !trimmedHeardAboutUs) return
+        const changes = {
           ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
           ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
-        })
+          ...(trimmedHeardAboutUs ? { heardAboutUs: trimmedHeardAboutUs } : {}),
+        }
+        updates.push({ userId: params.userId, ...changes })
         const existing = users.get(params.userId)
         if (existing) {
-          users.set(params.userId, {
-            ...existing,
-            ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
-            ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
-          })
+          users.set(params.userId, { ...existing, ...changes })
         }
       }),
 

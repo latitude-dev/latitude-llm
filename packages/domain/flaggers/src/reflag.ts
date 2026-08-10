@@ -22,6 +22,14 @@ const FLAGGER_PROVENANCE_TAGS: readonly string[] = [
   ...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft,
 ]
 
+// Tags whose user-role text embeds nested conversation samples (see `dev-docs/flaggers.md`).
+const NESTED_CONVERSATION_SAMPLE_TAGS: readonly string[] = [
+  ...FLAGGER_PROVENANCE_TAGS,
+  ...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes,
+  ...AI_GENERATE_TELEMETRY_TAGS.taxonomyNameCluster,
+  ...AI_GENERATE_TELEMETRY_TAGS.facetExtract,
+]
+
 const FLAGGER_NO_REFLAG_TAG: string = AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag[0]
 
 /**
@@ -30,6 +38,9 @@ const FLAGGER_NO_REFLAG_TAG: string = AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag
  */
 export const isFlaggerGeneratedTrace = (tags: readonly string[]): boolean =>
   tags.some((tag) => FLAGGER_PROVENANCE_TAGS.includes(tag))
+
+const hasNestedConversationSamples = (tags: readonly string[]): boolean =>
+  tags.some((tag) => NESTED_CONVERSATION_SAMPLE_TAGS.includes(tag))
 
 /**
  * True when the trace is explicitly marked "do not flag again" — emitted by a
@@ -45,7 +56,11 @@ export const isReflagSuppressed = (tags: readonly string[]): boolean => tags.inc
 export const reflagSuppressionTags = (inputTraceTags: readonly string[]): readonly string[] =>
   isFlaggerGeneratedTrace(inputTraceTags) ? AI_GENERATE_TELEMETRY_TAGS.flaggerNoReflag : []
 
+/**
+ * True when a user/input-centric strategy must not run on this session.
+ * Nested-sample tags only — assistant-response-centric strategies still run.
+ */
 export const isUserCentricReflagInapplicable = (
   tags: readonly string[],
   classifiesAssistantResponseOnly: boolean | undefined,
-): boolean => isFlaggerGeneratedTrace(tags) && classifiesAssistantResponseOnly === false
+): boolean => hasNestedConversationSamples(tags) && classifiesAssistantResponseOnly === false

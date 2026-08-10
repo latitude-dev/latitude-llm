@@ -1,16 +1,6 @@
 import type { AnnotationAnchor } from "@domain/scores"
-import { formatPartText } from "@repo/utils"
+import { formatPartText, getAnchorPartText, joinAnchorPartText } from "@repo/utils"
 import type { GenAIMessage } from "rosetta-ai"
-
-function joinTextParts(parts: GenAIMessage["parts"] | undefined): string {
-  let out = ""
-  for (const part of parts ?? []) {
-    if (part.type === "text" && typeof part.content === "string") {
-      out += part.content
-    }
-  }
-  return out
-}
 
 /**
  * Resolves the exact substring the anchor refers to from the canonical GenAI messages
@@ -18,9 +8,9 @@ function joinTextParts(parts: GenAIMessage["parts"] | undefined): string {
  *
  * When `anchor.textFormat` is set, the part text is first transformed with
  * {@link formatPartText} so offsets line up with the representation the user
- * saw when the selection was captured. This is the single anchor-resolution
- * helper used by both the backend (annotation enrichment) and the frontend
- * (debug views); keep them in sync via this function.
+ * saw when the selection was captured. Which parts are anchorable comes from
+ * {@link getAnchorPartText}, shared with the conversation UI that captures the
+ * selection — a part selectable there but rejected here is a guaranteed 400.
  *
  * @returns `undefined` when the anchor does not select a message range, or indices are invalid.
  */
@@ -39,17 +29,13 @@ export function resolveAnnotationAnchorText(
 
   let text: string
   if (anchor.partIndex !== undefined) {
-    const part = message.parts?.[anchor.partIndex]
-    if (!part) {
+    const partText = getAnchorPartText(message, anchor.partIndex)
+    if (partText === null) {
       return undefined
     }
-    if (part.type === "text" && typeof part.content === "string") {
-      text = part.content
-    } else {
-      return undefined
-    }
+    text = partText
   } else {
-    text = joinTextParts(message.parts)
+    text = joinAnchorPartText(message)
   }
 
   text = formatPartText(text, anchor.textFormat)

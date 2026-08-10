@@ -23,6 +23,12 @@ const generateResultSchema = Schema.Struct({
   object: Schema.Unknown,
   tokens: Schema.Number,
   duration: Schema.Number,
+  servedBy: Schema.optional(
+    Schema.Struct({
+      provider: Schema.String,
+      model: Schema.String,
+    }),
+  ),
   tokenUsage: Schema.optional(
     Schema.Struct({
       input: Schema.Number,
@@ -95,8 +101,9 @@ const invalidGenerateResult = (source: "cached" | "provider", cause: unknown) =>
     cause,
   })
 
-type GenerateResultForValidation = Omit<GenerateResult<unknown>, "tokenUsage"> & {
+type GenerateResultForValidation = Omit<GenerateResult<unknown>, "tokenUsage" | "servedBy"> & {
   readonly tokenUsage?: GenerateResult<unknown>["tokenUsage"] | undefined
+  readonly servedBy?: GenerateResult<unknown>["servedBy"] | undefined
 }
 
 const validateGenerateResult = <T>(
@@ -110,6 +117,7 @@ const validateGenerateResult = <T>(
         object: parsed.data,
         tokens: result.tokens,
         duration: result.duration,
+        ...(result.servedBy === undefined ? {} : { servedBy: result.servedBy }),
         ...(result.tokenUsage === undefined ? {} : { tokenUsage: result.tokenUsage }),
       } satisfies GenerateResult<T>)
     : Effect.fail(invalidGenerateResult(source, parsed.error))
