@@ -194,7 +194,7 @@ describe("nameClusterUseCase", () => {
     ])
   })
 
-  it("middle-truncates oversized leaf samples before prompting the naming model", async () => {
+  it("middle-truncates oversized leaf samples and keeps the serialized Samples block in budget", async () => {
     const prompts: string[] = []
     const head = "user: please help me track my order status\n"
     const middle = "ASSISTANT[tools: terminal]\n".repeat(2_000)
@@ -202,36 +202,24 @@ describe("nameClusterUseCase", () => {
     const oversized = `${head}${middle}${tail}`
     expect(oversized.length).toBeGreaterThan(TAXONOMY_NAMING_SAMPLE_CHAR_CAP)
 
+    // observationCount high enough that FPS picks the max 12 samples, forcing the
+    // aggregate rebudget path (12 × 2KB bodies exceed TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP).
+    const sampleCount = 12
+    const seedObservations = Array.from({ length: sampleCount }, (_, index) => {
+      const angle = (Math.PI / 2) * (index / (sampleCount - 1))
+      const idChar = String.fromCharCode("a".charCodeAt(0) + index)
+      return observation({
+        observationId: idChar.repeat(24),
+        sessionId: SessionId(`session-oversized-${index}`),
+        momentId: idChar.repeat(64),
+        embedding: [Math.cos(angle), Math.sin(angle)],
+        projectionMetadata: { summary: oversized },
+      })
+    })
+
     const { effect } = runNameCluster({
-      seedObservations: [
-        observation({
-          observationId: "a".repeat(24),
-          sessionId: SessionId("session-oversized"),
-          embedding: [1, 0],
-          projectionMetadata: { summary: oversized },
-        }),
-        observation({
-          observationId: "b".repeat(24),
-          sessionId: SessionId("session-oversized-2"),
-          momentId: "g".repeat(64),
-          embedding: [0, 1],
-          projectionMetadata: { summary: oversized },
-        }),
-        observation({
-          observationId: "c".repeat(24),
-          sessionId: SessionId("session-oversized-3"),
-          momentId: "h".repeat(64),
-          embedding: [0.7, 0.7],
-          projectionMetadata: { summary: oversized },
-        }),
-        observation({
-          observationId: "d".repeat(24),
-          sessionId: SessionId("session-oversized-4"),
-          momentId: "i".repeat(64),
-          embedding: [0.3, 0.95],
-          projectionMetadata: { summary: oversized },
-        }),
-      ],
+      seedCluster: cluster({ observationCount: 100 }),
+      seedObservations,
       ai: {
         generate: <T>(input: GenerateInput<T>) => {
           prompts.push(input.prompt)
@@ -260,15 +248,15 @@ describe("nameClusterUseCase", () => {
       expect(samplesOnly).toContain("[...truncated...]")
       expect(samplesOnly).toContain("track my order status")
       expect(samplesOnly).toContain("package ships tomorrow")
-      expect(samplesOnly.length).toBeLessThan(oversized.length)
+      expect(samplesOnly.startsWith("0: ")).toBe(true)
 
       const bodies = samplesOnly.split(/(?:^|\n)(?=\d+: )/g).flatMap((chunk) => {
         const match = chunk.match(/^\d+: ([\s\S]*)$/)
         return match?.[1] === undefined ? [] : [match[1]]
       })
-      expect(bodies.length).toBeGreaterThan(0)
+      expect(bodies.length).toBe(sampleCount)
       for (const body of bodies) {
-        expect(body.length).toBeLessThanOrEqual(TAXONOMY_NAMING_SAMPLE_CHAR_CAP)
+        expect(body.length).toBeLessThan(TAXONOMY_NAMING_SAMPLE_CHAR_CAP)
       }
     }
   })

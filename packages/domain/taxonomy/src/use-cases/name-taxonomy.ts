@@ -73,9 +73,7 @@ const TOPIC_POLICY =
 /**
  * The per-tree naming policy: the wording that varies between the topic tree
  * and each facet. Everything else about naming (prompts, collision guard,
- * deepest-first ordering) is shared. `TOPIC_NAMING_POLICY` reproduces the
- * previously hard-coded topic strings byte-for-byte, so a topic tree named
- * without an explicit policy is unchanged.
+ * deepest-first ordering) is shared. Defaults to `TOPIC_NAMING_POLICY`.
  */
 export interface ClusterNamingPolicy {
   /** Domain guidance folded into both naming prompts (was the hard-coded `TOPIC_POLICY`). */
@@ -213,14 +211,21 @@ const middleTruncate = (value: string, maxLength: number): string => {
   return `${value.slice(0, head)}${NAMING_SAMPLE_TRUNCATION_MARKER}${value.slice(value.length - tail)}`
 }
 
+const serializedNamingSamplesLength = (bodies: readonly string[]): number => {
+  if (bodies.length === 0) return 0
+  return bodies.reduce((sum, body, index) => sum + `${index}: ${body}`.length, 0) + (bodies.length - 1)
+}
+
 const boundNamingSamples = (samples: readonly string[]): readonly string[] => {
   const perSample = samples.map((sample) => middleTruncate(sample, TAXONOMY_NAMING_SAMPLE_CHAR_CAP))
-  const joinedLength = perSample.reduce((sum, sample) => sum + sample.length, 0) + Math.max(0, perSample.length - 1)
-  if (joinedLength <= TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP || perSample.length === 0) return perSample
+  if (serializedNamingSamplesLength(perSample) <= TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP || perSample.length === 0) {
+    return perSample
+  }
 
-  const separators = Math.max(0, perSample.length - 1)
-  const budget = Math.max(perSample.length, TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP - separators)
-  const perCap = Math.max(1, Math.floor(budget / perSample.length))
+  const framing =
+    perSample.reduce((sum, _, index) => sum + `${index}: `.length, 0) + Math.max(0, perSample.length - 1)
+  const bodyBudget = Math.max(perSample.length, TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP - framing)
+  const perCap = Math.max(1, Math.floor(bodyBudget / perSample.length))
   return perSample.map((sample) => middleTruncate(sample, perCap))
 }
 
