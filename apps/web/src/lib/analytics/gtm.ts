@@ -15,6 +15,7 @@ export const TRACKING_PARAM_KEYS = [
   "ttclid",
   "li_fat_id",
   "msclkid",
+  "rdt_cid",
   "_gl",
   "utm_source",
   "utm_medium",
