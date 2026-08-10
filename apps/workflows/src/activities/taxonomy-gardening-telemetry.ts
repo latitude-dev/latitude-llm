@@ -1,10 +1,9 @@
 /**
- * Shapes the per-run adaptive garden telemetry. Pure (bar the resident-memory
- * reading) and separate from the activity so the emitted field set — what the
- * Datadog dashboard and its monitors read — is unit-testable.
+ * Shapes the per-run adaptive garden telemetry, split out from the activity so the
+ * emitted field set — the Datadog dashboard's contract — is unit-testable.
  *
- * Everything here is bounded and embedding-free: scalars, fixed-width records,
- * and percentile summaries, never a raw per-split array, member id, or embedding.
+ * Every value is bounded and embedding-free: scalars, fixed-width records, and
+ * percentile summaries, never a raw per-split array, member id, or embedding.
  */
 
 import type { HierarchicalTaxonomyPlan } from "@domain/taxonomy"
@@ -17,12 +16,7 @@ export interface AdaptiveTelemetryScope {
   readonly customBehaviorId?: string | undefined
 }
 
-/**
- * Log payload for one adaptive garden run. This goes to stdout → CloudWatch (the
- * workflows service does not forward logs to Datadog), so it is the un-sampled,
- * always-there record and a debugging breadcrumb alongside the rest of the
- * service's logs. The dashboard reads the span mirror below, which is sampled.
- */
+/** Log payload for one adaptive garden run — CloudWatch only, so un-sampled unlike the span mirror below. */
 export const adaptiveGardenRunFields = (scope: AdaptiveTelemetryScope, plan: HierarchicalTaxonomyPlan) => {
   const diagnostics = plan.decisionMetadata
   return {
@@ -36,8 +30,7 @@ export const adaptiveGardenRunFields = (scope: AdaptiveTelemetryScope, plan: Hie
     adaptiveDurationMs: plan.adaptiveDurationMs,
     adaptiveBuildError: plan.adaptiveBuildError,
     staticDurationMs: plan.staticDurationMs,
-    // Best-effort resident memory at plan time; worker threads share this process,
-    // so the build's footprint is reflected here (see the clustering worker).
+    // A process-wide sample, not a per-build high-water mark, despite the name.
     peakRssBytes: process.memoryUsage().rss,
     rejectionReason: diagnostics?.rejectionReasonCounts,
     relativeSeparation: boundedPercentiles(diagnostics?.acceptedRelativeSeparations ?? []),
@@ -54,12 +47,7 @@ export const adaptiveGardenRunFields = (scope: AdaptiveTelemetryScope, plan: Hie
   }
 }
 
-/**
- * Flattened attributes for the APM span. Datadog span tags are flat scalars, so
- * nested diagnostics are dotted out. This is the channel the adaptive dashboard
- * actually reads: the app ships logs only to CloudWatch, but the workflows service
- * already exports these spans to Datadog APM.
- */
+/** Flattened attributes for the APM span — Datadog span tags are flat scalars, so nested diagnostics are dotted out. */
 export const adaptiveSpanAttributes = (
   scope: AdaptiveTelemetryScope,
   plan: HierarchicalTaxonomyPlan,
@@ -75,12 +63,10 @@ export const adaptiveSpanAttributes = (
     "taxonomy.customBehaviorId": scope.customBehaviorId ?? "none",
     "taxonomy.adaptive.observationsSampled": plan.observationsSampled,
     "taxonomy.adaptive.fallbackReason": plan.fallbackReason ?? "none",
-    // Carries the time a FAILED build burned as well as a successful one, so a
-    // deadline breach is visible as a duration at the deadline rather than a 0.
+    // A failed build reports the time it burned, so a deadline kill reads as a duration AT the deadline, not a 0.
     "taxonomy.adaptive.durationMs": plan.adaptiveDurationMs,
     "taxonomy.adaptive.buildError": plan.adaptiveBuildError ?? "none",
-    // Non-zero only when static built the tree: `off`, or an adaptive run whose
-    // output was rejected and fell back.
+    // Non-zero only on a fallback run, the only time static builds the persisted tree.
     "taxonomy.adaptive.staticDurationMs": plan.staticDurationMs,
     "taxonomy.adaptive.peakRssBytes": process.memoryUsage().rss,
     "taxonomy.adaptive.clustersBorn": plan.clustersBorn,
@@ -104,13 +90,10 @@ export const adaptiveSpanAttributes = (
     attributes["taxonomy.adaptive.rejection.lowScore"] = diagnostics.rejectionReasonCounts.lowScore
     attributes["taxonomy.adaptive.rejection.lowRelativeSeparation"] =
       diagnostics.rejectionReasonCounts.lowRelativeSeparation
-    // The quantity the root gate actually decides on, and whether it forced a
-    // re-search. The relSep percentiles above cover accepted splits tree-wide, so
-    // they say nothing about a run whose root collapsed.
+    // The relSep percentiles cover accepted splits tree-wide, so they say nothing about a run whose root collapsed.
     attributes["taxonomy.adaptive.bestRootSeparation"] = diagnostics.bestRootSeparation
     attributes["taxonomy.adaptive.escalated"] = diagnostics.escalated ? 1 : 0
-    // A declined re-search reports the same tree as one that was never needed, so
-    // without these two the work budget could suppress adaptive silently.
+    // A declined re-search looks identical to one never needed, so without this the work budget suppresses adaptive silently.
     attributes["taxonomy.adaptive.escalationSkipped"] = diagnostics.escalationSkipped ? 1 : 0
     attributes["taxonomy.adaptive.projectedRootSearchWork"] = diagnostics.projectedRootSearchWork
   }

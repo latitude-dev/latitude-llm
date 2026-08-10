@@ -36,8 +36,7 @@ const plan = (overrides: Partial<HierarchicalTaxonomyPlan> = {}): HierarchicalTa
     ...overrides,
   }) as HierarchicalTaxonomyPlan
 
-// The Datadog dashboard (suz-mb6-27u) and its monitors read these span tags by
-// name, so a rename or drop silently empties a widget rather than failing a build.
+// The dashboard (suz-mb6-27u) reads these by name; a rename empties a widget instead of failing a build.
 const REQUIRED_SPAN_TAGS = [
   "taxonomy.adaptive.mode",
   "taxonomy.adaptive.fallbackReason",

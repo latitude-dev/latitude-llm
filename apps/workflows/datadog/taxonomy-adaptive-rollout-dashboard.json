@@ -90,7 +90,7 @@
           {
             "definition": {
               "type": "timeseries",
-              "title": "avg adaptive vs static clustering duration (ms)",
+              "title": "avg adaptive build duration, and static duration on fallback runs only (ms)",
               "show_legend": true,
               "legend_layout": "auto",
               "requests": [
@@ -108,14 +108,14 @@
                       "data_source": "spans",
                       "name": "static_dur",
                       "search": {
-                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project -@taxonomy.adaptive.fallbackReason:none"
                       },
                       "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.staticDurationMs" }
                     }
                   ],
                   "formulas": [
                     { "formula": "adaptive_dur", "alias": "avg adaptive durationMs" },
-                    { "formula": "static_dur", "alias": "avg static durationMs" }
+                    { "formula": "static_dur", "alias": "avg static durationMs (fallback runs)" }
                   ],
                   "response_format": "timeseries",
                   "display_type": "line",
@@ -184,7 +184,7 @@
           {
             "definition": {
               "type": "query_value",
-              "title": "max adaptive peak RSS",
+              "title": "max RSS sample at plan time (process-wide, not a per-build peak)",
               "autoscale": true,
               "precision": 2,
               "requests": [

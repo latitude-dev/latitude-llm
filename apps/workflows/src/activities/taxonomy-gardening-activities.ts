@@ -567,25 +567,17 @@ const emitAdaptivePlanTelemetry = (input: GardenTaxonomyStepInput, plan: Hierarc
   })
 }
 
-// Mirror the run's diagnostics onto a dedicated APM span so the adaptive
-// dashboard has a channel that reaches Datadog (logs go only to CloudWatch here).
-// Off runs emit nothing. `annotateCurrentSpan`/`withSpan` are no-ops without a
-// live tracer, so this is inert in tests and under the `off` default.
+// The dashboard's only channel into Datadog: logs go to CloudWatch, spans do not.
 const annotateAdaptiveTelemetrySpan = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan) =>
   plan.mode === "off"
     ? Effect.void
     : Effect.gen(function* () {
-        // Force the Datadog trace agent to keep this trace chunk at ingestion.
-        // Garden runs are low-volume (one span per project per ~6h), so agent-side
-        // APM sampling could otherwise drop them before the backend retention
-        // filter can index them. `manual.keep` is the ingestion half; the 100%
-        // retention filter on this operation is the indexing half.
+        // Without this, agent-side APM sampling can drop these low-volume traces before the retention filter indexes them.
         yield* Effect.annotateCurrentSpan("manual.keep", true)
         for (const [key, value] of Object.entries(adaptiveSpanAttributes(input, plan))) {
           yield* Effect.annotateCurrentSpan(key, value)
         }
-        // Renaming this span silently empties the dashboard AND drops the runs: both
-        // its widgets and the 100%-retention filter key on this operation name.
+        // Renaming this span orphans the retention filter, the span metrics, and the dashboard, all silently.
       }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.shadow"))
 
 // Emitted for every mode: the adaptive telemetry above returns early on `off`, which is what most projects run.

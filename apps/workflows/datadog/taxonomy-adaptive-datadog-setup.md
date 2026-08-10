@@ -8,8 +8,10 @@ enabling the flag for an organization, since retention filters and span metrics
 are not retroactive.
 
 The span keeps its shadow-era name deliberately: the retention filter, the
-span-based metrics, and the dashboard widgets all key on the operation name, so a
-rename orphans three objects at once and silently empties the dashboard.
+span-based metrics, and the dashboard widgets all key on the span name, so a
+rename orphans three objects at once and silently empties the dashboard. In
+Datadog that name lands in **`resource_name`**, not `operation_name` — every query
+below and in the script filters on `resource_name`.
 
 Site: `datadoghq.eu`. All calls need `DD-API-KEY` + `DD-APPLICATION-KEY` headers,
 and the keys' role must carry the RBAC permissions for each write: the retention
@@ -27,7 +29,7 @@ Ingestion Controls) keeping `service:workflows` at 100%.
 ## Gate 2 — retention filter (indexes ingested spans for 15 days)
 
 `setup-datadog.sh` creates a 100%-keep retention filter over
-`operation_name:taxonomy.gardenTaxonomyWorkflow.shadow`
+`resource_name:taxonomy.gardenTaxonomyWorkflow.shadow`
 (`POST .../apm/config/retention-filters`; exact body in the script). It keeps
 100% of the garden spans, searchable/aggregatable in Trace Explorer and the
 spans-source dashboard for 15 days.
@@ -43,7 +45,7 @@ script can't set ordering.
 
 Indexed spans expire after 15 days, so `setup-datadog.sh` also generates
 span-based metrics (`POST .../apm/config/metrics`) for durable, cheap aggregation:
-distributions (percentiles) of the build durations, peak RSS, and
+distributions (percentiles) of the build durations, the RSS sample, and
 relative-separation p50, plus a `count` metric for fallbacks — all grouped by
 `@taxonomy.projectId` / `@taxonomy.organizationId` / `@taxonomy.customBehaviorId`.
 The exact metric list and payloads live in the script (the single source of
@@ -70,7 +72,7 @@ projects to ~1 root child; the node-relative gate recovers the real intents.
 | `escalated` / `escalationSkipped` | Whether the root landed in the re-search band, and whether the projected work budget declined it | `escalated:1` on narrow projects that need it; `escalationSkipped:0` | `escalationSkipped:1` recurring → `TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK` is too tight for that corpus. Adaptive still publishes, but from the un-escalated first pass, which on a near-gate corpus is the collapse-prone tree the re-search exists to avoid. Compare `projectedRootSearchWork` against the budget |
 | `bestRootSeparation` | Best separation any ROOT candidate reached, accepted or not | Above the 0.45 root gate, or well below 0.25 on genuinely unimodal projects | Sitting inside the [0.25, 0.8) band every run → that project re-searches on every pass and pays for it |
 | `buildError` | Message behind a `fallbackReason:buildError` | `none` | A timeout message → the build is exceeding the worker deadline; anything else is a builder fault |
-| `peakRssBytes` (max) | Process RSS around the build | Comfortably **under** the worker limit (512 MB old-gen heap) | Approaching it → OOM risk, which itself trips a `buildError` fallback |
+| `peakRssBytes` (max) | **A single process-wide RSS sample taken at plan time, despite the name — not a per-build high-water mark.** Worker threads share the process, so a heavy build is usually reflected, but a spike that ends before the sample is invisible. Read it as a floor on memory pressure | Comfortably **under** the worker limit (512 MB old-gen heap) | Approaching it → OOM risk, which itself trips a `buildError` fallback. A value that looks safe does not prove the build stayed there |
 | `fallbacks` (`fallbackReason:*` count) | Runs that fell back to static: `nonFinite` / `structuralLimit` / `buildError` | **0** | Any. `nonFinite`/`structuralLimit` = a builder correctness bug; frequent `buildError` = worker instability. This is the primary rollout health gate |
 | `nodeCount` / `leafCount` / `maxDepth` | Shape of the persisted tree | Stable per project across runs | Oscillating run-to-run → instability; a sudden collapse toward 1 root child → read `rejectionReason` |
 | `observationsSampled` | Sample size feeding the build (min 15, cap 1,500) | Context only | Near 15 → thin sample; treat that project's row with lower confidence |
@@ -101,7 +103,7 @@ readable as soon as the first spans land (~6–11h after the flag flip).
    `enabled_for_all` for the fleet). The flag is the only gate — there is no env
    override, so turning it off is also how you kill the rollout.
 4. Trigger a garden run (or wait ~6h) → confirm spans via Trace Explorer:
-   `service:workflows operation_name:taxonomy.gardenTaxonomyWorkflow.shadow`.
+   `service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow`.
 5. Watch `fallbacks` first. To revert an organization, unset its flag: the next
    garden pass rebuilds that project's tree with the static builder, with no
    manual cleanup.
