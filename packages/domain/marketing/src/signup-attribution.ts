@@ -19,6 +19,7 @@ export type MarketingAttribution = {
   readonly ttclid?: string
   readonly li_fat_id?: string
   readonly msclkid?: string
+  readonly rdt_cid?: string
 }
 
 /** Raw signup attribution captured in the browser; stored transiently in the cache.
@@ -51,6 +52,7 @@ const FORWARDED_PARAM_KEYS = [
   "ttclid",
   "li_fat_id",
   "msclkid",
+  "rdt_cid",
 ] as const
 
 /** Maps captured attribution to PostHog property names (spread verbatim onto the event). */
