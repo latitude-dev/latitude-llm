@@ -19,6 +19,7 @@ export namespace UpdateMonitorBody {
         Low: "low",
         Medium: "medium",
         High: "high",
+        Urgent: "urgent",
     } as const;
     export type Severity = (typeof Severity)[keyof typeof Severity];
 }

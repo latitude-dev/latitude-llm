@@ -2,4 +2,4 @@
 
 import typing
 
-UpdateMonitorBodySeverity = typing.Union[typing.Literal["low", "medium", "high"], typing.Any]
+UpdateMonitorBodySeverity = typing.Union[typing.Literal["low", "medium", "high", "urgent"], typing.Any]

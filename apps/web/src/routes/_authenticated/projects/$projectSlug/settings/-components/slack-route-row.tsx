@@ -138,9 +138,6 @@ export function SlackRouteRow({
                 {selected.id === "" ? (
                   <Text.H5 color="foregroundMuted">Don't send</Text.H5>
                 ) : (
-                  // Channel names run long (`#p-priority-based-signal-dispatch-…`).
-                  // `ellipsis` switches Text to block+truncate; `min-w-0` lets it
-                  // shrink below its content as a flex item.
                   <Text.H5 ellipsis className="min-w-0">
                     #{selected.name}
                   </Text.H5>

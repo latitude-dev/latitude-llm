@@ -8190,7 +8190,8 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
                 "description": "Severity assigned to incidents opened by this monitor."
               },
@@ -8249,7 +8250,8 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
                 "description": "Severity assigned to incidents opened by this monitor."
               },
@@ -8318,7 +8320,8 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
                 "description": "Severity assigned to incidents opened by this monitor."
               },
@@ -8422,7 +8425,8 @@
             "enum": [
               "low",
               "medium",
-              "high"
+              "high",
+              "urgent"
             ],
             "description": "Replacement incident severity."
           }
