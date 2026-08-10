@@ -1,5 +1,5 @@
 import type { ClassifiedUnpricedPair } from "@domain/spans"
-import { Text, Tooltip } from "@repo/ui"
+import { Badge, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
 import type { CostConfidenceRecord } from "../../../../../../domains/cost/cost.functions.ts"
 
@@ -8,10 +8,10 @@ const GAP_PAIRS_SHOWN = 5
 function GapPairRow({ pair }: { readonly pair: ClassifiedUnpricedPair }) {
   return (
     <div className="flex w-full items-center justify-between gap-3">
-      <Text.H6 weight="medium" color="background" textOpacity={80} ellipsis noWrap>
+      <Text.H6 weight="medium" color="foregroundMuted" ellipsis noWrap>
         {pair.model || "unknown model"}
       </Text.H6>
-      <Text.H6 color="background" textOpacity={80} noWrap className="shrink-0">
+      <Text.H6 color="foregroundMuted" noWrap className="shrink-0">
         {`${formatCount(pair.tokens)} tokens`}
       </Text.H6>
     </div>
@@ -38,18 +38,19 @@ export function PricingCoverageBadge({
 
   return (
     <Tooltip
-      variant="inverse"
-      maxWidth="max-w-64"
-      className="p-2"
-      triggerBadge={{
-        variant: "accent",
-        children: `${isLowerBound ? "At least " : ""}${formatPercentage(confidence.pricedCoverage)} priced`,
-      }}
+      asChild
+      trigger={
+        <span className="inline-flex cursor-default">
+          <Badge variant="accent">
+            {`${isLowerBound ? "At least " : ""}${formatPercentage(confidence.pricedCoverage)} priced`}
+          </Badge>
+        </span>
+      }
     >
       <div className="flex flex-col gap-3 text-left">
         <div className="flex flex-col gap-1">
-          <Text.H5M color="background">{fullyPriced ? "Usage fully priced" : "Usage not fully priced"}</Text.H5M>
-          <Text.H6 color="background" textOpacity={80}>
+          <Text.H5M color="foreground">{fullyPriced ? "Usage fully priced" : "Usage not fully priced"}</Text.H5M>
+          <Text.H6 color="foregroundMuted">
             {fullyPriced
               ? `Every model in this window has pricing${
                   confidence.freeTokens > 0 ? ` (${formatCount(confidence.freeTokens)} tokens on free models)` : ""
@@ -63,9 +64,7 @@ export function PricingCoverageBadge({
               <GapPairRow key={`${pair.provider}/${pair.model}`} pair={pair} />
             ))}
             {confidence.gapPairs.length > GAP_PAIRS_SHOWN ? (
-              <Text.H6 color="background" textOpacity={80}>
-                {`and ${confidence.gapPairs.length - GAP_PAIRS_SHOWN} more`}
-              </Text.H6>
+              <Text.H6 color="foregroundMuted">{`and ${confidence.gapPairs.length - GAP_PAIRS_SHOWN} more`}</Text.H6>
             ) : null}
           </div>
         ) : null}

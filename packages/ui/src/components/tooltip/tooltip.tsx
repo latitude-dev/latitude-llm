@@ -1,13 +1,9 @@
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
-import type { ComponentPropsWithoutRef, ElementRef, ReactNode } from "react"
+import type { ReactNode } from "react"
 import { forwardRef } from "react"
 
-import type { TextColor } from "../../tokens/colors.ts"
 import { zIndex } from "../../tokens/zIndex.ts"
 import { cn } from "../../utils/cn.ts"
-import { Badge, type BadgeProps } from "../badge/index.tsx"
-import { Icon, type IconProps } from "../icons/icons.tsx"
-import { Text } from "../text/text.tsx"
 
 const TooltipProvider = TooltipPrimitive.Provider
 
@@ -15,155 +11,56 @@ const TooltipRoot = TooltipPrimitive.Root
 
 const TooltipTrigger = TooltipPrimitive.Trigger
 
-export type TooltipVariant = "default" | "destructive" | "inverse" | "ghost"
-
-type ProviderProps = ComponentPropsWithoutRef<typeof TooltipProvider>
-type RootProps = ComponentPropsWithoutRef<typeof TooltipRoot>
-type ContentProps = ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & {
-  variant?: TooltipVariant
-  maxWidth?: string
-}
-
-const TooltipContent = forwardRef<ElementRef<typeof TooltipPrimitive.Content>, ContentProps>(
-  ({ className, variant = "default", sideOffset = 4, maxWidth = "max-w-72", children, ...props }, ref) => (
+const TooltipContent = forwardRef<
+  React.ComponentRef<typeof TooltipPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
+>(({ className, sideOffset = 4, ...props }, ref) => (
+  <TooltipPrimitive.Portal>
     <TooltipPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "overflow-hidden rounded-md text-center text-foreground px-3 py-3 text-xs animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        maxWidth,
-        className,
+        "overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "max-w-70",
         zIndex.tooltip,
-        {
-          "bg-background border": variant === "default",
-          "bg-destructive": variant === "destructive",
-          "bg-foreground text-background": variant === "inverse",
-          "bg-transparent p-0 rounded-none": variant === "ghost",
-        },
+        className,
       )}
       {...props}
-    >
-      {children}
-      {variant !== "ghost" && (
-        <TooltipPrimitive.Arrow
-          width={11}
-          height={6}
-          className={cn({
-            "fill-background": variant === "default",
-            "fill-destructive": variant === "destructive",
-            "fill-foreground": variant === "inverse",
-          })}
-        />
-      )}
-    </TooltipPrimitive.Content>
-  ),
-)
+    />
+  </TooltipPrimitive.Portal>
+))
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-function tooltipTextContentColor(variant: TooltipVariant): TextColor {
-  switch (variant) {
-    case "default":
-      return "foreground"
-    case "destructive":
-      return "destructiveForeground"
-    case "inverse":
-      return "background"
-    case "ghost":
-      return "foreground"
-  }
+interface TooltipProps {
+  children: ReactNode
+  trigger: ReactNode
+  asChild?: boolean
+  side?: "top" | "right" | "bottom" | "left"
+  sideOffset?: number
+  delayDuration?: number
+  align?: "start" | "center" | "end"
 }
 
-type TooltipProps = ProviderProps &
-  RootProps &
-  ContentProps & {
-    trigger?: ReactNode
-    children?: ReactNode
-    triggerIcon?: IconProps
-    triggerBadge?: BadgeProps
-    hideWhenEmpty?: boolean
-    asChild?: boolean
-  }
+const textAlignMap = {
+  start: "text-left",
+  center: "text-center",
+  end: "text-right",
+} as const
 
-// Black tooltip by default. In dark mode, it renders white via the `inverse` variant.
-function Tooltip({
-  children,
-  trigger,
-  delayDuration = 200,
-  disableHoverableContent,
-  open,
-  defaultOpen,
-  onOpenChange,
-  variant = "inverse",
-  side,
-  sideOffset,
-  align,
-  alignOffset,
-  arrowPadding,
-  avoidCollisions,
-  collisionBoundary,
-  collisionPadding,
-  sticky,
-  hideWhenDetached,
-  updatePositionStrategy,
-  maxWidth,
-  asChild = false,
-  triggerIcon,
-  triggerBadge,
-  hideWhenEmpty = false,
-  className,
-}: TooltipProps) {
-  const textColor = tooltipTextContentColor(variant)
-  const isChildrenString = typeof children === "string"
-
-  if (hideWhenEmpty && !children) {
-    return <>{trigger}</>
-  }
-
-  const rootProps: RootProps = { delayDuration }
-  if (disableHoverableContent !== undefined) rootProps.disableHoverableContent = disableHoverableContent
-  if (open !== undefined) rootProps.open = open
-  if (defaultOpen !== undefined) rootProps.defaultOpen = defaultOpen
-  if (onOpenChange !== undefined) rootProps.onOpenChange = onOpenChange
-
-  const contentProps: ContentProps = { variant }
-  if (maxWidth !== undefined) contentProps.maxWidth = maxWidth
+function Tooltip({ children, trigger, asChild = false, side, sideOffset, delayDuration = 250, align }: TooltipProps) {
+  const contentProps: React.ComponentPropsWithoutRef<typeof TooltipContent> = {}
   if (side !== undefined) contentProps.side = side
   if (sideOffset !== undefined) contentProps.sideOffset = sideOffset
-  if (align !== undefined) contentProps.align = align
-  if (alignOffset !== undefined) contentProps.alignOffset = alignOffset
-  if (arrowPadding !== undefined) contentProps.arrowPadding = arrowPadding
-  if (avoidCollisions !== undefined) contentProps.avoidCollisions = avoidCollisions
-  if (collisionBoundary !== undefined) contentProps.collisionBoundary = collisionBoundary
-  if (collisionPadding !== undefined) contentProps.collisionPadding = collisionPadding
-  if (sticky !== undefined) contentProps.sticky = sticky
-  if (hideWhenDetached !== undefined) contentProps.hideWhenDetached = hideWhenDetached
-  if (updatePositionStrategy !== undefined) contentProps.updatePositionStrategy = updatePositionStrategy
-  if (className !== undefined) contentProps.className = className
+  if (align !== undefined) contentProps.className = textAlignMap[align]
 
   return (
     <TooltipProvider>
-      <TooltipRoot {...rootProps}>
-        {!triggerIcon && !triggerBadge ? (
-          <TooltipTrigger className="cursor-default" asChild={asChild}>
-            {trigger}
-          </TooltipTrigger>
-        ) : (
-          // Always a real element here, never `asChild`: this branch renders up to three
-          // children (trigger, badge, icon), and Radix's `Slot` requires exactly one.
-          <TooltipTrigger asChild={false} className="flex cursor-default items-center gap-x-2">
-            {trigger}
-            {triggerBadge ? <Badge {...triggerBadge} /> : null}
-            {triggerIcon ? <Icon {...triggerIcon} /> : null}
-          </TooltipTrigger>
-        )}
-        <TooltipPrimitive.Portal>
-          <TooltipContent {...contentProps}>
-            {isChildrenString ? <Text.H6 color={textColor}>{children}</Text.H6> : children}
-          </TooltipContent>
-        </TooltipPrimitive.Portal>
+      <TooltipRoot delayDuration={delayDuration}>
+        <TooltipTrigger asChild={asChild}>{trigger}</TooltipTrigger>
+        <TooltipContent {...contentProps}>{children}</TooltipContent>
       </TooltipRoot>
     </TooltipProvider>
   )
 }
 
-export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger, tooltipTextContentColor }
+export { Tooltip, TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent }
