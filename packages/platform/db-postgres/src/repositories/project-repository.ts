@@ -98,6 +98,31 @@ export const ProjectRepositoryLive = Layer.effect(
             )
         }),
 
+      findByIdForUpdate: (id: ProjectIdType) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(projects)
+                .where(
+                  and(eq(projects.organizationId, organizationId), eq(projects.id, id), isNull(projects.deletedAt)),
+                )
+                .limit(1)
+                .for("update"),
+            )
+            .pipe(
+              Effect.flatMap((results) => {
+                const [result] = results
+                if (!result) {
+                  return Effect.fail(new NotFoundError({ entity: "Project", id }))
+                }
+                return Effect.succeed(toDomainProject(result))
+              }),
+            )
+        }),
+
       findBySlug: (slug: string) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

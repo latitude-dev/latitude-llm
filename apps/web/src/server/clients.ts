@@ -1,6 +1,11 @@
 import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
 import { stashSignupAttribution } from "@domain/marketing"
-import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
+import type {
+  QueuePublisherShape,
+  WorkflowQuerierShape,
+  WorkflowStarterShape,
+  WorkflowTerminatorShape,
+} from "@domain/queue"
 import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { isSsoEnforcedForEmailUseCase } from "@domain/sso"
 import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
@@ -25,7 +30,6 @@ import {
   createWorkflowStarter,
   createWorkflowTerminator,
   loadTemporalConfig,
-  type WorkflowTerminator,
 } from "@platform/workflows-temporal"
 import { withTracing } from "@repo/observability"
 import { mcp } from "better-auth/plugins"
@@ -45,7 +49,7 @@ let redisInstance: RedisClient | undefined
 let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
-let workflowTerminatorPromise: Promise<WorkflowTerminator> | undefined
+let workflowTerminatorPromise: Promise<WorkflowTerminatorShape> | undefined
 
 /**
  * Postgres client using the admin (superuser) connection.
@@ -134,7 +138,7 @@ export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
   return workflowStarterPromise
 }
 
-export function getWorkflowTerminator(): Promise<WorkflowTerminator> {
+export function getWorkflowTerminator(): Promise<WorkflowTerminatorShape> {
   if (!workflowTerminatorPromise) {
     workflowTerminatorPromise = getTemporalClient()
       .then((client) => createWorkflowTerminator(client))

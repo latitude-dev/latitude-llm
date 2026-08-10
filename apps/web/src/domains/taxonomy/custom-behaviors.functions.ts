@@ -1,4 +1,4 @@
-import { QueuePublisher } from "@domain/queue"
+import { QueuePublisher, WorkflowTerminator } from "@domain/queue"
 import { CustomBehaviorId, type FilterSet, ProjectId, toSlug } from "@domain/shared"
 import {
   CUSTOM_BEHAVIOR_NAME_MAX_LENGTH,
@@ -7,7 +7,7 @@ import {
   type CustomBehaviorStatus,
   createCustomBehavior,
   customBehaviorFilterSetSchema,
-  deleteCustomBehavior,
+  deleteCustomBehaviorWithViews,
   facetSelectionSchema,
   previewCustomBehaviorSampleUseCase,
   updateCustomBehavior,
@@ -22,7 +22,12 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getWorkflowTerminator,
+} from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
@@ -133,9 +138,10 @@ export const updateCustomBehaviorFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<CustomBehaviorRecord> => {
     const orgId = await resolveOrgScope(context)
-    // A cohort change re-gardens the view from scratch, so the use-case needs both the
-    // assignment slice (to purge) and a QueuePublisher (to enqueue the run).
-    const publisher = await getQueuePublisher()
+    // A cohort change re-gardens the view from scratch, so the use-case needs the
+    // assignment slice (to purge), a terminator (to stop the run holding the old
+    // filter) and a QueuePublisher (to enqueue the replacement run).
+    const [publisher, terminator] = await Promise.all([getQueuePublisher(), getWorkflowTerminator()])
 
     const updated = await Effect.runPromise(
       updateCustomBehavior({
@@ -144,6 +150,7 @@ export const updateCustomBehaviorFn = createServerFn({ method: "POST" })
         ...(data.filterSet !== undefined ? { filterSet: data.filterSet } : {}),
       }).pipe(
         Effect.provideService(QueuePublisher, publisher),
+        Effect.provideService(WorkflowTerminator, terminator),
         withScopedPostgres(CustomBehaviorRepositoryLive, getPostgresClient(), orgId),
         withScopedClickHouse(TaxonomyViewAssignmentRepositoryLive, getClickhouseClient(), orgId),
         withTracing,
@@ -156,9 +163,15 @@ export const deleteCustomBehaviorFn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data, context }): Promise<void> => {
     const orgId = await resolveOrgScope(context)
+    // Deleting stops the garden that feeds the behavior, so the use-case needs a terminator.
+    const terminator = await getWorkflowTerminator()
 
     await Effect.runPromise(
-      deleteCustomBehavior({ id: CustomBehaviorId(data.id) }).pipe(
+      deleteCustomBehaviorWithViews({
+        id: CustomBehaviorId(data.id),
+        reason: "behavior deleted by user",
+      }).pipe(
+        Effect.provideService(WorkflowTerminator, terminator),
         withScopedPostgres(
           Layer.mergeAll(CustomBehaviorRepositoryLive, TaxonomyClusterRepositoryLive, FacetRepositoryLive),
           getPostgresClient(),

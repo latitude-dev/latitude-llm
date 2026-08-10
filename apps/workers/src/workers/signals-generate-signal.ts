@@ -74,6 +74,7 @@ import {
   SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { createImportAdapterRegistry } from "@platform/import-sources"
 import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { createLogger, withTracing } from "@repo/observability"
 import { type OperationContext, signalAgentToolset } from "@repo/operations"
@@ -256,6 +257,7 @@ const runAgenticGeneration = async (params: {
       workflowStarter,
       workflowQuerier,
       storageDisk: getStorageDisk(),
+      importSourceAdapters: createImportAdapterRegistry(),
     }
 
     progress.writeStep("Looking at your project's data")

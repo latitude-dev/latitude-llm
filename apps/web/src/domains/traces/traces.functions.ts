@@ -70,6 +70,7 @@ export interface TraceRecord {
   readonly costInputMicrocents: number
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
+  readonly unpricedSpanCount: number
   readonly sessionId: string
   readonly userId: string
   readonly simulationId: string
@@ -106,6 +107,7 @@ const toTraceRecord = (trace: Trace): TraceRecord => ({
   costInputMicrocents: trace.costInputMicrocents,
   costOutputMicrocents: trace.costOutputMicrocents,
   costTotalMicrocents: trace.costTotalMicrocents,
+  unpricedSpanCount: trace.unpricedSpanCount,
   sessionId: trace.sessionId,
   userId: trace.userId,
   simulationId: trace.simulationId,

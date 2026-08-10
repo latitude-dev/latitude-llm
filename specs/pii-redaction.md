@@ -209,7 +209,8 @@ Similarly, `events_json = JSON.stringify(span.events)` (`transform.ts:223`) is s
 | `toolInput`, `toolOutput` | If the string parses as JSON, walk and re-serialize; otherwise treat as plain text |
 | `statusMessage` | Plain text |
 | `eventsJson` | Parse JSON, walk all string leaves, re-serialize; on parse failure treat as plain text |
-| `attrString` | **Drop known content keys entirely**, then value-redact the remaining values ([§4.2.2](#422-attribute-map-handling)) |
+| `attrString` | Value-redact every value, JSON-aware; keys are never removed ([§4.2.2](#422-attribute-map-handling)) |
+| `attrInt`, `attrFloat` | Scan as text; a match relocates the key into `attrString` as a placeholder ([§4.2.2](#422-attribute-map-handling)) |
 | `resourceString` | Value-redact all values (small map, keys preserved) |
 
 #### Metadata scope — opt-in, `scopes.metadata`, default off
@@ -225,9 +226,13 @@ Default off because both are explicitly customer-supplied filtering dimensions; 
 
 `userId`, `userEmail`. Two modes, `keep` or `pseudonymize` ([§4.9](#49-identity-pseudonymization)). Deliberately **not** a plain redact option: a feature called PII redaction that leaves `user_email` in plaintext across `spans`, `traces`, and `sessions` fails the first compliance review, but blanking it breaks every user-analytics query. Pseudonymization keeps equality filters and group-bys working and removes the plaintext, which is strictly better than either.
 
+Both columns are *resolved copies* of span attributes, so the substitution also covers the maps holding the originals — `attrString`, `resourceString`, `metadata`, `tags` — matched by raw value in all four, and in the last two whether or not `scopes.metadata` is on. Replacing only the columns leaves the plaintext id one panel away in the UI ([T-15](#8-traps)).
+
 #### Never touched, with reasons
 
-`linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrInt`/`attrFloat`/`attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
+`linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
+
+`attrInt` and `attrFloat` were on this list until the key drop was reversed; they are now scanned as text and relocated on a match ([§4.2.2](#422-attribute-map-handling)). `attrBool` stays because no detector can match `"true"`.
 
 #### 4.2.1 GenAI part walk
 
@@ -256,12 +261,19 @@ The risk this trades into is redacting a tool-call id and breaking the tool-call
 
 #### 4.2.2 Attribute map handling
 
-`attr_string` gets two passes, in order:
+> **Amended.** This section originally specified dropping known content keys from `attr_string` before value-redacting the rest, on the grounds that the parsed columns already carry that content. That is reversed: **redaction replaces values and never deletes a key.** The three reasons are below; the original text is in git history.
 
-1. **Drop content keys.** When `mode == "enforce"`, delete every key for which `isContentAttributeKey(key)` is true. Zero false positives (exact/prefix key matching, no value scanning), zero CPU, and nothing is lost from the product surface because the UI reads the parsed columns.
-2. **Value-redact the remainder.** Backstop for vendors we have not enumerated: run the detectors over the remaining values. Attribute values are small, so this is cheap.
+1. **The drop set and the parse set were never the same set.** `parseContent` returns at the first matching parser, but `isContentAttributeKey` was the union of all eight. An OpenInference span lost `input.value` / `output.value` although the json-value parser never ran and nothing promoted them to a column — content deleted that no code had read.
+2. **"Nothing is lost from the product surface" was false.** The Attributes panel renders `attr_string` directly, so the drop made it display a span the exporter never sent, with no way to distinguish a missing attribute from one we removed. Content under keys no parser claims (`agent_end.messages`) survived regardless, so the effective rule was "deleted if we recognise the key" — not a guarantee, and not explainable to a customer.
+3. **It was a storage decision inside a privacy feature.** The duplicate copy in `attr_string` is a real cost ([T-1](#8-traps)), but it is every project's cost. Deleting it only for projects that enabled a compliance control made redaction a storage optimisation and left redacting projects storing less than everyone else. If the duplication is worth removing, it gets its own setting applying to all projects.
 
-`isContentAttributeKey` must **not** be a hand-maintained list in the redaction module. Each parser in `packages/domain/spans/src/otlp/content/` already knows its own keys; have each module export a key matcher and compose them in `content/index.ts` next to the existing vendor dispatch table (`content/index.ts:41-87`). A new vendor parser then gets redaction coverage automatically. Known families to cover: `genai`, `genai_deprecated`, `openinference`, `vercel`, `livekit`, `flue`, `claude-code`, `json-value`.
+The current behaviour:
+
+- `attr_string` and `resource_string` are value-redacted through `redactJsonString`, not a flat leaf scan, so an attribute holding the same JSON as a parsed column gets the same structural walk — depth cap, `blob`/`file` part skipping, raw-number preservation. One payload redacted by two different passes would be two behaviours to defend rather than one.
+- `attr_int` and `attr_float` are scanned as text, and a match **relocates** the key into `attr_string` as a whole-value placeholder, since `Map(String, Int64)` cannot hold `[REDACTED_*]`. Only `credit_card` is reachable on a bare number — every other entity needs a separator, a sigil, or a letter — and it is gated by length, issuer prefix, and Luhn, so a token count or millisecond timestamp does not match.
+- `attr_bool` is not scanned: no detector matches `"true"` or `"false"`.
+
+The per-parser key matchers this section previously required are deleted along with the drop; the content parsers no longer export their key lists.
 
 ### 4.3 Policy model
 
@@ -276,7 +288,6 @@ export const REDACTION_ENTITIES = [
   "us_ssn",
   "ip_address",
   "secret",
-  "crypto_wallet",
 ] as const
 
 export const DEFAULT_REDACTION_ENTITIES = [
@@ -432,7 +443,7 @@ Without these, nobody can answer "is it working" or "why did my content disappea
 | `redaction.bytes` | bytes scanned |
 | `redaction.matches` | total accepted matches |
 | `redaction.matches.<entity>` | per-entity counts, one annotation per enabled entity with a nonzero count |
-| `redaction.droppedAttributeKeys` | content attribute keys removed from `attr_string` |
+| `redaction.relocatedNumericAttributes` | numeric attributes moved into `attr_string` as a placeholder |
 | `redaction.oversizedFields` | leaves dropped for exceeding `REDACTION_MAX_FIELD_CHARS` or `REDACTION_MAX_DEPTH` |
 | `redaction.pseudonymizedIdentities` | identity values replaced |
 | `redaction.durationMs` | pass duration |
@@ -454,6 +465,7 @@ anon_${hmacSha256Hex(secret, `${organizationId}:${value}`).slice(0, 16)}
 - **Memoize per batch**: build a `Map<string, string>` of distinct identity values so a 500-span batch performs a handful of HMACs, not 1000.
 - **Empty values stay empty.** `userId`/`userEmail` default to `""`; pseudonymizing `""` would fabricate a user.
 - **Missing secret degrades to full redaction** (`[REDACTED_USER]`), counted and logged at error level, rather than failing the job or passing plaintext through. Degrade toward more privacy, never less, and never block a self-hoster's ingestion on a config gap.
+- **The columns are copies, so the substitution runs over the maps that hold the originals too** — `attr_string`, `resource_string`, `metadata`, `tags` ([T-15](#8-traps)). Keyed by raw value rather than attribute key, so every vendor spelling is covered by one pass; whole-value matches only, so a short numeric user id cannot rewrite `gpt-4`. Metadata and tags are substituted regardless of `redactMetadata`, because identity handling is its own control.
 
 ### 4.10 Ports
 
@@ -486,20 +498,25 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 ## 5. Detector specification
 
-`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label }` matches. Precision is the design goal, not recall: a false negative leaves content visible, which the customer can see and report, while a false positive is permanent silent data corruption with no delete path.
+`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label, rank }` matches.
 
-**The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, and file paths appearing in `tool_output`.
+**Recall was raised above precision in [Phase 7](#phase-7---detector-accuracy).** The original stance was the opposite, and the reasoning behind it still holds — a false negative leaves content visible and reportable, while a false positive is permanent silent corruption with no delete path ([T-4](#8-traps)). It was reversed anyway, on the evidence that the shipped detectors fully removed only 60% of the PII in a labelled corpus, which is not a compliance control. Ambiguous shapes now resolve toward redacting. What makes that affordable is that [P7-1](#phase-7---detector-accuracy) landed a corpus first, so every over-redaction is counted and reviewed before it ships rather than found by a customer.
+
+**The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, usage counters like `max_tokens`, opaque `*_key` identifiers, and file paths appearing in `tool_output`.
 
 | Entity | Default | Rule | Precision notes |
 | --- | --- | --- | --- |
-| `email` | **on** | Standard local-part + dotted domain + 2+ char TLD | Very high. `@types/node` and `foo@bar` correctly do not match |
-| `phone` | **on** | E.164 (`+` then 8-15 digits, word-boundaried) **and** NANP separated forms (`(NNN) NNN-NNNN`, `NNN-NNN-NNNN`, `NNN.NNN.NNNN`) | The likeliest FP source, hence individually disable-able. `2024-01-15` (4-2-2) and `192.168.1.100` do not match the 3-3-4 shape |
-| `credit_card` | **on** | 13-19 digits with optional space/dash separators, **and** Luhn valid, **and** a known IIN prefix (`4`, `51`-`55`, `2221`-`2720`, `34`, `37`, `6011`, `65`, `35`, `30`, `36`, `38`) | Luhn alone gives ~1-in-10 FP on random digit runs. The IIN requirement is what makes this safe |
-| `iban` | **on** | 2 letters + 2 digits + 11-30 alphanumerics, **and** mod-97 checksum == 1 | Checksum makes it very high precision |
-| `us_ssn` | **on** | `NNN-NN-NNNN` with `-` or space separators only, excluding area `000`/`666`/`900`-`999`, group `00`, serial `0000` | Bare 9-digit matching is explicitly **excluded**: it would eat ids everywhere |
-| `secret` | **on** | **Prefixed vendor forms only**: `sk-…`, `sk-ant-…`, `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`/`github_pat_`, `AKIA[0-9A-Z]{16}`, `xox[abposr]-…`, `AIza[0-9A-Za-z_-]{35}`, Stripe `(sk\|rk)_(live\|test)_…`, JWT `eyJ….….…`, and PEM `-----BEGIN … PRIVATE KEY-----` blocks | See the exclusion below |
-| `ip_address` | **off** | IPv4 dotted-quad with octet range validation; IPv6 standard forms | Default off: `1.2.3.4` is a valid semver and version strings are everywhere in coding-agent traces |
-| `crypto_wallet` | **off** | BTC (`bc1…`, base58 `[13]…`), ETH `0x[a-fA-F0-9]{40}` | Default off: collides with hex hashes, git SHAs, and content hashes |
+| `email` | **on** | Unicode local part (apostrophe included) + dotted domain + 2+ char TLD, plus the `%40` encoded form. Both halves bounded to RFC 5321 lengths | `@types/node` and `foo@bar` do not match. A two-label domain whose TLD is a file extension is rejected, which is what excludes `logo@2x.png`. The length bounds are load-bearing: unbounded, a long run of dashes backtracks quadratically |
+| `phone` | **on** | E.164 contiguous, **and** separated international forms (one pattern per separator, country code `[1-9]`, up to 4 groups, 8-20 digits), **and** NANP separated forms with an optional `1` trunk code and `[2-9]\d\d` area and exchange codes | Still the likeliest FP source, hence individually disable-able. NANP validity is what excludes `100 200 3000` and `123 456 7890`. The 20-digit ceiling deliberately exceeds E.164 so a greedy over-run over-redacts an adjacent number instead of discarding the match and storing the phone number |
+| `credit_card` | **on** | 13-19 digits, compact or grouped with space, dash or slash, **and** Luhn valid, **and** a known IIN prefix (`4`, `51`-`55`, `2221`-`2720`, `34`, `37`, `6011`, `65`, `35`, `30`, `36`, `38`, `50`, `56`-`58`, `6304`, `6759`-`6763`, `62`, `81`) | Luhn plus an IIN still accepts about 1 in 10 random 16-digit runs beginning with 4. That is inherent and documented publicly rather than fixed |
+| `iban` | **on** | 2 letters + 2 digits + 11-30 alphanumerics, any case, compact or grouped with spaces or dashes, **and** mod-97 checksum == 1 | The checksum is what makes case-insensitivity affordable: lowercase alphanumeric runs are far more common in tool output than uppercase ones |
+| `us_ssn` | **on** | `NNN-NN-NNNN` with `-`, `.` or space separators, excluding area `000`/`666`, group `00`, serial `0000`; a 9xx area is accepted only in the ITIN group ranges (70-88, 90-92, 94-99) | Bare 9-digit matching is still explicitly **excluded**: it would eat ids everywhere |
+| `secret` | **on** | Prefixed vendor forms (`sk-`, `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`/`github_pat_`, `AKIA`/`ASIA`, `xox[abposr]-`, `AIza`, Stripe, `hf_`, `glpat-`, `npm_`, `ya29.`, `SG.x.y`, Slack webhook URLs), JWTs, PEM blocks, `scheme://user:password@host` credentials, **and** values assigned to a credential-shaped key | See the exclusion below. The assignment form is the only detector whose extent is not fixed by shape, so it carries the most guards |
+| `ip_address` | **off** | IPv4 dotted-quad with octet range validation; IPv6 standard, compressed, and left-compressed (`::1`) forms | Default off: `1.2.3.4` is a valid semver and version strings are everywhere in coding-agent traces |
+
+**Credential detection reads the key, never the value's entropy.** Values with no distinctive shape — `POSTGRES_PASSWORD=…`, an opaque `Bearer` token, an AWS secret access key, a base64 value in a Kubernetes `Secret` — are recognised from the key they are assigned to. This is the principled version of what the exclusion below rules out: the evidence is the name the customer gave the field, not a guess about how random the bytes look. It is also why plural `tokens` and a bare `key` are excluded from the key list, since `max_tokens` and `cache_key` are in nearly every span we ingest.
+
+**Overlap resolution is leftmost, then most specific, then longest.** Rank exists because a DSN password is also a valid email local part, and the wider email match was labelling passwords `[REDACTED_EMAIL]`. Only detectors with a demonstrated collision carry a rank.
 
 **Explicitly excluded: any generic entropy or generic base64 "possible secret" heuristic.** On coding-agent traffic it fires on diffs, minified bundles, inline images, and hashes. It is the single most likely cause of catastrophic silent corruption, and no amount of tuning makes it safe on this traffic mix. If a customer needs it, that is what the Phase 4 remote tier is for.
 
@@ -526,32 +543,52 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 | File | Change |
 | --- | --- |
 | `packages/domain/shared/src/settings.ts` | `redactionSettingSchema`, `organizationRedactionSettingSchema`, both parent schemas, `resolveRedactionPolicy`, `ResolvedRedactionPolicy` |
-| `packages/domain/spans/src/otlp/content/*.ts` + `index.ts` | Per-parser content-key matchers, composed into `isContentAttributeKey` |
+| `packages/domain/spans/src/otlp/content/*.ts` + `index.ts` | Content parsers only; the per-parser key matchers were removed with the drop ([§4.2.2](#422-attribute-map-handling)) |
 | `packages/domain/spans/src/use-cases/ingest-spans.ts` | Resolve policy from `projectBySlug` + cached org settings, build the `redaction` map, pass it to `publisher.publish` |
 | `packages/domain/spans/src/use-cases/process-ingested-spans.ts` | Accept `redaction` in the input, apply between `:133` and `:147`, annotate stats |
 | `packages/domain/queue/src/topic-registry.ts` | `redaction?` on `span-ingestion:ingest` |
 | `packages/platform/db-postgres/src/resolve-redaction-policy-cached.ts` | New, modeled on `resolve-effective-plan-cached.ts` |
 | `apps/workers/src/workers/span-ingestion.ts` | Pass `wire.redaction` through; parse `LAT_REDACTION_PSEUDONYM_SECRET` |
 | `apps/ingest/src/routes/traces.ts` | Provide the Redis cache layer needed by the cached org-settings resolver |
-| `packages/operations/src/operations/projects.ts` | `RedactionSettingSchema` with `.describe()` per field, added to `ProjectSettingsSchema` (`:103-118`); regenerate `openapi.json` / `mcp.json` per the api-endpoints skill |
-| `apps/web/.../settings/general.tsx` | PII redaction section, modeled on `TraceSamplingSection` (`:196-257`) |
-| `apps/web/.../settings/organization.tsx` | Org-level section incl. `locked`, alongside `OrganizationNameSection` (`:22`) |
-| `apps/web/src/domains/organizations/organizations.functions.ts` | Widen the local `organizationSettingsSchema` (`:150-152`). **See [T-5](#8-traps): this is a data-loss trap** |
+| `packages/operations/src/operations/projects.ts` | `RedactionSettingSchema` with `.describe()` per field, added to `ProjectSettingsSchema` (`:101-118`); settings updates pass `settingsPatch` ([T-12](#8-traps), [T-13](#8-traps)) and `redaction` routes to `updateProjectRedactionUseCase` for the audit event ([T-14](#8-traps)); regenerate `openapi.json` / `mcp.json` per the api-endpoints skill |
+| `apps/web/.../settings/privacy.tsx` | New Privacy page: the project policy card plus the owner-only organization policy card ([§6.3](#63-ui)) |
+| `apps/web/src/domains/projects/project-sections.ts` | Register `privacy` in the **Project** group of `PROJECT_SETTINGS_GROUPS` (`:148-170`) |
+| `apps/web/src/domains/projects/projects.functions.ts` | Add `redaction` to `toRecord` (`:63-70`) — **see [T-11](#8-traps)** — and an admin/owner `updateProjectRedaction` server fn that merges rather than replaces |
+| `apps/web/src/domains/organizations/organizations.functions.ts` | Widen the local `organizationSettingsSchema` (`:150-152`) and add an owner-only `updateOrganizationRedaction` server fn that merges and invalidates the redaction cache. **See [T-5](#8-traps): this is a data-loss trap** |
+| `packages/ui/src/components/genai-conversation/parts/` | Placeholder → chip rendering in the markdown pipeline ([§6.4](#64-rendering-redacted-content)) |
 | `.env.example` | `LAT_REDACTION_PSEUDONYM_SECRET` in the workers block near `:134`, with a development value rather than commented out, matching `LAT_MASTER_ENCRYPTION_KEY` and `LAT_BETTER_AUTH_SECRET`. A commented-out secret reads as "required but unconfigured" and made a reviewer ask whether local PII work needed it. |
 | `docs/security/pii-redaction.mdx` | New "Ingest PII redaction" section; keep and rename the existing SDK section per [§2.4](#24-what-already-exists) |
 
 ### 6.3 UI
 
-Project section, in `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/general.tsx`, following the existing `Draft`/`pending`/`dirtyFields` pattern (`:34-106`) and the `rounded-lg bg-muted/30` card shape of `TraceSamplingSection` (`:196-257`):
+**A dedicated Privacy page**, `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/privacy.tsx`, registered in the **Project** group of `PROJECT_SETTINGS_GROUPS`. An earlier draft put the project section on the General page next to `TraceSamplingSection`; the control surface is a switch plus eight entity checkboxes plus a scope toggle, an identity selector, and three sentences of compliance copy, which is a page rather than a card. The cascade is also unreadable when split across two pages: diagnosing "why is my project control greyed out" requires seeing the org policy next to it. So **both cards live on this one page**, the organization card rendered only for owners. That is consistent with how the settings area already works — every page under `settings/` is project-scoped by URL, including the org-level and personal ones.
+
+Project policy card, using the `rounded-lg bg-muted/30` card shape of `TraceSamplingSection` (`general.tsx:196-257`) and the `Draft`/`pending`/`dirtyFields` pattern (`general.tsx:34-141`) reproduced on the new page:
 
 - A `Switch`: redaction is on or off ([§4.3](#43-policy-model)).
-- Entity checkboxes, revealed when redaction is on, in a `border-t` sub-row.
-- Metadata-and-tags toggle and identity-handling selector in the same sub-row.
-- `DotIndicator` on dirty, participating in the existing `dirtyCount` / Apply / Discard / cmd-S / `useBlocker` machinery.
+- Entity checkboxes (`CheckboxInput`), revealed when redaction is on, in a `border-t` sub-row, pre-ticked from `DEFAULT_REDACTION_ENTITIES`. `phone` carries an inline note that it is the most false-positive-prone detector ([§5](#5-detector-specification)).
+- Metadata-and-tags toggle and identity-handling `Select` in the same sub-row.
+- `DotIndicator` on dirty, participating in a `dirtyCount` / Apply / Discard / cmd-S / `useBlocker` set.
 - Copy must state: applies only to spans ingested from now on, takes effect within a minute, and redacted content cannot be recovered.
-- When the org policy is `locked`, render the whole section read-only with an explanation naming the org policy.
+- `identities: "pseudonymize"` needs `LAT_REDACTION_PSEUDONYM_SECRET`; without it the value degrades to `[REDACTED_USER]` ([§4.9](#49-identity-pseudonymization)). Say so on the option rather than promising stable pseudonyms the deployment may not produce.
+- When the org policy is `locked`, render the card read-only with an explanation naming the org policy, resolved through `resolveRedactionPolicy` so the reason and the `source` come from the same function the engine uses.
 
-Org section in `settings/organization.tsx`: same controls plus `locked`, owner-only, with copy explaining that locking prevents projects from weakening it.
+Organization policy card: the same controls plus `locked`, owner-only, with copy explaining that locking prevents projects from weakening it.
+
+**Propagation is asymmetric and the copy should not flatten it.** Project settings are read per batch from an uncached `repo.findBySlug` (`ingest-spans.ts:136-139`), so a project toggle takes effect immediately. Only the organization half is the 60 s Redis TTL (`traces.ts:91`), and wiring `invalidateOrganizationRedactionCache` into the org write makes that immediate too, leaving the TTL as a backstop rather than the expected latency.
+
+### 6.4 Rendering redacted content
+
+Removing dry-run mode ([§4.3](#43-policy-model)) left the visible placeholder and the entity toggles as the *only* feedback a customer ever gets that redaction is working. An unstyled `[REDACTED_EMAIL]` in a wall of prose reads as model output or as corruption, so the placeholder has to render as something the platform obviously did on purpose.
+
+A `rehype` plugin in the `MarkdownContent` pipeline (`packages/ui/src/components/genai-conversation/parts/markdown-content.tsx:137-144`) rewrites placeholders into an inline chip: a solid dark slab carrying the category in inverted monospace (`EMAIL`, `PHONE`, `US SSN`), with a `Tooltip` explaining what was removed and that it cannot be recovered.
+
+- **The chip shows the label rather than hiding it.** A bar that *covers* text implies text underneath and invites a click-to-reveal that can never be honored, since redaction is destructive and there is no delete path ([T-4](#8-traps)). The censor-bar look is right; occlusion is not.
+- **Match the placeholder shape**, `\[REDACTED_([A-Z][A-Z0-9_]*)\]`, not an allowlist of our own labels. An earlier draft required the allowlist so arbitrary customer text was never chipped, but that needs either a `@repo/ui` → `@domain/spans` dependency — which pulls the OTLP parsers and the redaction engine into the browser bundle — or a hand-maintained copy that drifts from the engine. The false-positive worry it addressed is already handled by keeping the copy provenance-neutral, which is required regardless because no per-span flag records who redacted a value. Shape matching also covers the SDKs' client-side masking, which emits the same grammar. Bare `[REDACTED]` carries no label and stays plain text.
+- **Copy stays provenance-neutral.** A customer can configure client-side SDK masking that emits the same string ([§2.4](#24-what-already-exists)), and no per-span flag records who redacted what — so the tooltip says PII redaction replaced a value here, never that *this project's policy* did it. Closing that gap is [Phase 6](#phase-6---redaction-visibility).
+- **`OVERSIZED_FIELD` gets its own sentence.** Nothing was detected there; the field exceeded `REDACTION_MAX_FIELD_CHARS` and was dropped wholesale ([§4.7](#47-size-and-time-budget)).
+- **Prose only; code fences keep the literal placeholder.** `sourceMappedTextPlugin` tracks position inside `<code>` with a running character counter (`source-mapped-text-plugin.ts:71-92`), so a chip whose rendered text is shorter than the placeholder it replaces would shift every search highlight after it in that block. Skipping fences avoids that, and inside a JSON tool payload the literal string is the more useful thing to show, because it is what is stored and what gets copied.
+- **Ordering matters.** The chip plugin runs *before* `sourceMappedTextPlugin` and assigns `position` offsets to the text nodes it splits out, so search-highlight and annotation offsets stay exact across a chip. The chip's own inner text gets no position, which correctly makes a placeholder unhighlightable and unannotatable.
 
 ---
 
@@ -565,7 +602,7 @@ Org section in `settings/organization.tsx`: same controls plus `locked`, owner-o
 - No redaction of span `name`, `serviceName`, `model`, or other identifier/enum columns.
 - No client-SDK changes. The existing SDK attribute redaction stays as-is and keeps its own name.
 - No change to `resolveSettingsCascade`/`ResolvedSettings`.
-- Exposing `sampling` through the public API is a pre-existing gap (`packages/operations/src/operations/projects.ts:103-118` omits it) and stays out of scope.
+- Exposing `sampling` through the public API is a pre-existing gap (`packages/operations/src/operations/projects.ts:101-118` omits it) and stays out of scope. The shallow-merge change in [T-12](#8-traps) stops an API settings update from *wiping* it, which is a different thing from exposing it.
 
 ---
 
@@ -573,7 +610,7 @@ Org section in `settings/organization.tsx`: same controls plus `locked`, owner-o
 
 Numbered so PR review can reference them.
 
-**T-1. `attr_string` duplicates all content.** Verified at `transform.ts:181-198` and `span-repository.ts:393`. Any scope that omits it ships a no-op. See [§4.2.2](#422-attribute-map-handling). **This is the single highest-risk item in the project.**
+**T-1. `attr_string` duplicates all content.** Verified at `transform.ts:181-198` and `span-repository.ts:393`. Any scope that omits it ships a no-op, so the map must be in scope. It is value-redacted rather than stripped ([§4.2.2](#422-attribute-map-handling)) — the duplication is a storage cost every project already pays, not something for a privacy control to solve for the subset who enabled one.
 
 **T-2. `events_json` is an unscoped content channel.** Verified at `transform.ts:223`; no content parser reads events. Customers on the older OTel gen_ai convention have all content there.
 
@@ -581,7 +618,9 @@ Numbered so PR review can reference them.
 
 **T-4. No delete path exists.** No `SpanRepository` delete method; project deletion is a PG soft-delete that never touches ClickHouse. This is why fail-closed is mandatory and why Phase 5 exists.
 
-**T-5. The web org-settings update silently drops fields.** `apps/web/src/domains/organizations/organizations.functions.ts:150-152` defines a **local** `organizationSettingsSchema` containing only `keepMonitoring`, and `updateOrganizationUseCase` (`packages/domain/organizations/src/use-cases/update-organization.ts:20-30`) does a **full replace** of `settings`. Zod strips unknown keys, so writing org redaction settings through the current path would wipe `billing.spendingLimitCents` and `wantsShowcase`. The local schema must be widened to every field it needs to preserve, and a test must assert round-trip preservation. This is a pre-existing latent bug that this project would otherwise trigger.
+**T-5. The web org-settings update silently drops fields.** `apps/web/src/domains/organizations/organizations.functions.ts:150-152` defines a **local** `organizationSettingsSchema` containing only `keepMonitoring`, and `updateOrganizationUseCase` (`packages/domain/organizations/src/use-cases/update-organization.ts:20-30`) does a **full replace** of `settings`. Zod strips unknown keys, so writing org redaction settings through the current path would wipe `billing.spendingLimitCents` and `wantsShowcase`. The local schema must be widened to every field it needs to preserve, and a test must assert round-trip preservation.
+
+**This is not latent — it fires in production today.** The collection's `onUpdate` always sends `settings` (`organizations.collection.ts:19-24`, `mutation.modified?.settings ?? {}`), so `input.settings` is never `undefined` and the replace always runs. Renaming an organization through `OrganizationNameForm` (`settings/organization.tsx:32-89`) therefore already wipes `billing.spendingLimitCents` and `wantsShowcase`. Fixing it is a prerequisite for storing anything else in org settings, not just a hazard this project introduces. The same defect exists on the project side ([T-11](#8-traps)) and in the public API ([T-12](#8-traps)).
 
 **T-6. Do not add a worker-side `SettingsReader` fallback.** See [§4.5](#45-policy-resolution-decide-at-ingest-apply-in-the-worker). Absent policy means no redaction and that is correct at every rollout ordering; a fallback creates a second policy path with different caching that will silently diverge.
 
@@ -593,6 +632,22 @@ Numbered so PR review can reference them.
 
 **T-10. Search recall changes.** `trace_search_documents.search_text` and its tokenbf/ngrambf indexes are built from redacted content once redaction is on. Expected, but state it in the docs so support does not chase it.
 
+**T-11. The project-settings write has the same defect as [T-5](#8-traps), and it silently disables redaction.** `toRecord` (`apps/web/src/domains/projects/projects.functions.ts:63-70`) picks settings fields one by one and omits `redaction` (and `settings.isShowcase`). `projects.collection.ts:55-68` sends `mutation.modified.settings` wholesale and `updateProjectUseCase` (`packages/domain/projects/src/use-cases/update-project.ts:105`) full-replaces. So once a project has a redaction policy, **the existing Signals toggle (`settings/signals.tsx:34-35`) and the existing sampling slider each turn it off**, with no error and nothing in the UI to indicate it. `toRecord` must carry every settings field the client round-trips. Prefer a dedicated merge-based server fn for the redaction write so a future settings writer cannot reintroduce this by omission.
+
+**T-12. The public API can silently disable redaction.** `ProjectSettingsSchema` (`packages/operations/src/operations/projects.ts:101-118`) is shared by the response *and* `UpdateRequestSchema`, and the update execute replaces `settings` outright (`:293`). Adding `redaction` there without changing the semantics means `PATCH /projects/{slug}` with `{"settings":{"keepMonitoring":true}}` turns a compliance control off — exactly the failure mode [§4.4](#44-settings-cascade-authorization) says enterprises ask about. Settings updates therefore pass `settingsPatch` instead of `settings` ([T-13](#8-traps)). That is consistent with the field's existing description ("To clear overrides entirely, edit via the web UI") and it also fixes the pre-existing silent wipe of `sampling` and the onboarding flags.
+
+**T-13. Merge at the boundary, never inside the update use cases.** The tempting one-line fix for [T-5](#8-traps), [T-11](#8-traps) and [T-12](#8-traps) is to make `updateProjectUseCase` / `updateOrganizationUseCase` merge instead of replace, fixing every caller at once. It would break billing. `updateSpendingLimitUseCase` (`packages/domain/billing/src/use-cases/update-spending-limit.ts:47-60`) **clears** `billing.spendingLimitCents` by rebuilding settings without the key and relying on the replace; under a top-level merge the stale `billing` object survives and removing a spending limit silently stops working. So `settings` keeps replace semantics and an explicit `settingsPatch` input carries patch intent instead. A caller that means "replace" and a caller that means "patch" are different operations and only the caller knows which it is, so both are named rather than one being inferred.
+
+**The merge belongs inside the use case's transaction, not in the caller.** An earlier draft of this trap said the callers should merge. They cannot do it safely: a merge computed outside the transaction reads a snapshot that another writer can invalidate before the save, so the later write drops the earlier one's field. `settingsPatch` merges against a `findByIdForUpdate` read inside the transaction, which is the only placement that is both correct and impossible for a future caller to get wrong. A transaction alone is not enough — READ COMMITTED lets both transactions read the pre-write row, so the locking read is the load-bearing part.
+
+
+**T-14. Gating the dedicated write does not gate the field.** Adding role checks and audit events to `updateProjectRedaction` / `updateOrganizationRedaction` leaves `redaction` writable through every *other* settings path: the web `updateProject` server fn (no role check at all), `updateOrganizationUseCase` for any direct caller, and `PATCH /v1/projects/{slug}`. Patch semantics make it worse rather than better, because the field then persists instead of being incidentally dropped. So any member could turn the compliance control off with nothing recorded.
+
+The fix is a pin inside both generic use cases: `redaction` is forced to the stored value whatever the caller sent. That closes it for every current and future caller at one point each, rather than relying on each boundary schema to keep excluding the field. A replace therefore no longer fully replaces, which is the intended asymmetry. The public API keeps working by routing `settings.redaction` to the dedicated use case so it picks up the audit event; API keys are organization-scoped and carry no member role, so there is no role to check on that path.
+
+**T-15. `identities` is [T-1](#8-traps) again, and Phase 2 shipped it broken.** [§4.9](#49-identity-pseudonymization) originally said "replace `userId` and `userEmail`", and `redactSpanDetail` did exactly that. But those two columns are *resolved copies*: `resolveAttributes` (`packages/domain/spans/src/otlp/resolvers/index.ts:64-65`) reads them from span attributes via `userIdCandidates` / `userEmailCandidates`, and `transform.ts:180-198` also copies **every** string attribute verbatim into `attr_string`. So a project on `pseudonymize` got `anon_…` in the `user_id` column while `attr_string["user.id"]` kept the plaintext id — visible in the UI's attribute viewer, which is how this was found. Same for `metadata`, since `resolveMetadata` lifts `traceloop.association.properties.user_id` and `langsmith.metadata.user_id` into it.
+
+The entity detectors do not cover the gap: an opaque id like `usr_devin_hartley` matches nothing, and where the value *was* an email the row disagreed with itself — `[REDACTED_EMAIL]` in the attribute against `anon_…` in the column, breaking the join the pseudonym exists to preserve. The substitution is therefore keyed by **raw value, not attribute key** — the candidate lists build accessor closures that never expose their keys, and a key allowlist would silently miss both custom attributes and the metadata copies. It matches **whole values only**: a substring pass would rewrite `gpt-4` for a project whose user ids are short numbers. This is the identity-shaped instance of T-1, so treat any new identity-derived column as leaking into `attr_string` until proven otherwise.
 ---
 
 ## 9. Testing plan
@@ -613,7 +668,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 **Integration, `packages/domain/spans/src/use-cases/process-ingested-spans.test.ts` (extend the existing file):**
 
-- `enforce` project: content redacted, **`attr_string` content keys dropped**, `events_json` redacted, `resource_string` values redacted.
+- `enforce` project: content redacted, **`attr_string` values redacted with every key preserved**, `events_json` redacted, `resource_string` values redacted.
 - Project absent from the policy map: byte-identical to today's output. Add this as a regression guard against accidental unconditional redaction.
 - Mixed batch: one `enforce` project and one absent project in the same OTLP batch, each handled correctly.
 - `metadata` scope off by default and applied when on.
@@ -637,11 +692,11 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 ## 10. Open questions
 
 1. **Latitude's own API key format** for the `secret` detector. Derive it from `packages/domain/*/api-keys` rather than guessing, or drop it from the detector.
-2. **Should the UI surface a per-span "content was redacted" indicator** beyond the inline placeholder? Placeholders alone may read as data loss on a trace a user did not know was redacted.
+2. ~~**Should the UI surface a per-span "content was redacted" indicator** beyond the inline placeholder?~~ **Answered: yes, but deferred to [Phase 6](#phase-6---redaction-visibility).** Phase 3 addresses the "reads as data loss" half by styling the placeholder itself ([§6.4](#64-rendering-redacted-content)); a real per-span indicator needs a stored signal that does not exist today, so it is a migration rather than a UI change.
 3. **ClickHouse deletion mechanics for Phase 5.** Lightweight `DELETE FROM` versus `ALTER TABLE … DELETE`, cost at our partition sizes, and how `traces`/`sessions` aggregate state is corrected. Needs its own design pass before that phase is scoped.
-4. **Should `phone` default off** rather than on? It is the highest-false-positive detector that is on by default. Answer it offline: a script that reads a sample of real spans from ClickHouse and runs `findRedactionMatches` over them, reporting matches per entity with surrounding context. That needs no product surface, and it is the general answer for tuning any detector default. Worth doing before Phase 3 ships the toggle to customers.
+4. **Should `phone` be pre-ticked** when a project opts in? It is the highest-false-positive detector in `DEFAULT_REDACTION_ENTITIES`. **Decided for Phase 3: keep it pre-ticked and flag it in the UI**, since redaction itself is opt-in and every entity is individually disable-able, so the cost of a wrong default is a visible placeholder the customer can turn off rather than silent loss. Measuring it properly is [P6-3](#phase-6---redaction-visibility): a script that reads a sample of real spans from ClickHouse and runs `findRedactionMatches` over them, reporting matches per entity with surrounding context. That reads customer content, which is why it is a deliberate decision rather than a chore.
 5. **Should `span-ingestion` retry before dropping a batch?** It runs on BullMQ's default single attempt today, so any failure — redaction or otherwise — drops the batch immediately. Fail-closed redaction is correct either way, but "retry then drop" loses far less data than "drop", and a transient ClickHouse or object-store blip currently costs the whole batch. Adding `attempts` changes failure handling for all ingest, not just redaction, so it needs its own decision. Duplicate inserts on retry are safe: `spans` is a `ReplacingMergeTree`.
-6. **Is a customer-facing redaction preview worth building?** Running the detectors on demand over spans already in ClickHouse, returning counts plus before/after samples, is the only honest way to answer "will this eat my tool outputs" before enabling it. It is out of scope here ([§4.3](#43-policy-model)) but it is the feature a dry-run mode was standing in for, and without it a customer's first enforce is their validation.
+6. **Is a customer-facing redaction preview worth building?** Running the detectors on demand over spans already in ClickHouse, returning counts plus before/after samples, is the only honest way to answer "will this eat my tool outputs" before enabling it. It is out of scope here ([§4.3](#43-policy-model)) but it is the feature a dry-run mode was standing in for, and without it a customer's first enforce is their validation. Carried as [P6-2](#phase-6---redaction-visibility).
 
 ---
 
@@ -655,7 +710,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - [x] **P1-2**: `redaction/labels.ts` and `redaction/detectors.ts` per [§5](#5-detector-specification), including Luhn and IBAN mod-97 helpers. No generic entropy detector.
 - [x] **P1-3**: `redaction/redact-text.ts` with overlap resolution per [§4.3](#43-policy-model).
 - [x] **P1-4**: `redaction/redact-json.ts` structure-aware walk with skip-keys, `blob`/`file` skipping, and stringified-JSON handling.
-- [x] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families.
+- [x] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families. — **Superseded:** shipped, then removed with the key drop ([§4.2.2](#422-attribute-map-handling)).
 - [x] **P1-6**: `redaction/redact-span.ts` implementing the full field surface in [§4.2](#42-the-complete-field-surface), and `redaction/redact-spans.ts` batch entry point with pseudonym memoization, stat aggregation, and the size cap.
 - [x] **P1-7**: `RedactionError` in `packages/domain/spans/src/errors.ts`.
 - [x] **P1-8**: Unit tests per [§9](#9-testing-plan), including the coding-agent negative vector corpus.
@@ -664,14 +719,14 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 - [x] `pnpm --filter @domain/spans test` (1208 tests) and `pnpm --filter @domain/shared test` (168) pass. `pnpm typecheck` clean across all 90 packages. `pnpm knip` and `pnpm format` clean.
 - [x] Every entity in `REDACTION_ENTITIES` has positive vectors and, where immunity is achievable, negative vectors. `ip_address` is the exception and is pinned as such: a test asserts it *does* match version strings, which is the reason it is off by default. Asserting immunity there would have been false.
-- [x] `isContentAttributeKey` covered for all eight vendor parsers, with vectors derived from the parsers' own declarations rather than restated in the test.
+- [x] `isContentAttributeKey` covered for all eight vendor parsers, with vectors derived from the parsers' own declarations rather than restated in the test. — **Superseded** along with the matcher itself; the pipeline tests now assert that a key belonging to a parser that never ran survives redacted.
 - [x] Diff is inert: no non-test file outside `src/redaction/` imports the module, verified by grep.
-- [x] Validators, overlap resolution, and `attr_string` key-dropping each mutation-tested — disabling them fails 9, 2, and 2 tests respectively, so none are decorative.
+- [x] Validators and overlap resolution each mutation-tested — disabling them fails 9 and 2 tests respectively, so neither is decorative.
 
 **Findings from Phase 1** (fold into the relevant sections when promoting to `dev-docs/`):
 
 - The email local-part class must exclude `/`, `=`, `?` and `&`. They are RFC-legal and effectively never issued, but they precede addresses constantly in URLs, paths, and query strings, and including them ran the match left through the whole path: `https://api.example.com/v1/users/john@example.com` collapsed to `https:[REDACTED_EMAIL]`.
-- Dropping content attribute keys is **not** redundant with the `attr_string` value pass, which was the original justification. The value pass only removes what a pattern matches; the duplicate copy also holds names, addresses, and ordinary prose. Dropping is the only thing that removes those.
+- Content attribute keys are value-redacted, not dropped ([§4.2.2](#422-attribute-map-handling)). Prose no detector matches survives in `attr_string` exactly as it already survives in `input_messages` — redaction removes matches, not payloads.
 - `REDACTION_MAX_FIELD_BYTES` became `REDACTION_MAX_FIELD_CHARS`. A byte count would mean encoding every leaf just to size it; UTF-16 code units are exact and allocation-free.
 - Effect in this repo is `4.0.0-beta.57`, which has no `Effect.timeoutFail`. Use `Effect.timeoutOrElse`, as `semantic-similarity.ts` and `name-taxonomy.ts` already do.
 
@@ -691,7 +746,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 **Exit gate** — met:
 
 - [x] With every project `off`, inserted rows are byte-identical to pre-change output, asserted two ways: no `redaction` field, and an empty `redaction` map.
-- [x] An `enforce` project's inserted row has redacted content **and** no content keys left in `attr_string`, while its operational attributes survive.
+- [x] An `enforce` project's inserted row has redacted content **and** keeps every `attr_string` key, content and operational alike, with matches replaced.
 - [x] A malformed policy produces zero inserts and fails the job. Verified by mutation: skipping malformed policies instead of failing breaks two tests.
 - [x] The `tmp-ingest` object is gone after a successful large-payload ingest, and a failed delete does not fail the ingest. Verified by mutation: removing the delete breaks one test.
 - [x] Benchmark run and recorded below; the target is met with headroom rather than missed.
@@ -733,21 +788,79 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 
 ### Phase 3 - Surfaces: UI, API, docs
 
-- [ ] **P3-1**: Project PII redaction section in `settings/general.tsx` per [§6.3](#63-ui), including the read-only state when the org policy is `locked`.
-- [ ] **P3-2**: Org-level section in `settings/organization.tsx`, owner-only, including `locked`.
-- [ ] **P3-3**: Widen the local `organizationSettingsSchema` in `organizations.functions.ts` to preserve every existing field, with a round-trip test ([T-5](#8-traps)).
-- [ ] **P3-4**: Role checks: project section requires `admin`/`owner`, org section requires `owner`. Log actor plus before/after on every change.
-- [ ] **P3-5**: `RedactionSettingSchema` in `packages/operations/src/operations/projects.ts` with a `.describe()` on every field, added to `ProjectSettingsSchema`; regenerate `openapi.json` and `mcp.json` per the api-endpoints skill.
-- [ ] **P3-6**: Extend `docs/security/pii-redaction.mdx` with the ingest-redaction section: the exact promise from [§1](#1-purpose-and-the-exact-promise), the entity coverage matrix, the 60 s propagation window, non-retroactivity, buffer lifetime ([T-3](#8-traps)), and the search/dedup notes ([T-9](#8-traps), [T-10](#8-traps)). Rename the existing section to "SDK attribute redaction."
-- [ ] **P3-7**: Write `dev-docs/spans.md` and `dev-docs/settings.md` sections for the redaction stage and the settings cascade.
+- [x] **P3-1**: Fix the settings-wipe defects first, because every later task writes through them. Add an explicit `settingsPatch` input to both update use cases, merged against a locking read inside the transaction, and leave `settings` as replace ([T-13](#8-traps)). Patching is what preserves the keys the web's local Zod schemas strip, so [T-5](#8-traps) needs no schema widening. Add `redaction` to `toRecord` so the Privacy page can read the current policy ([T-11](#8-traps)); `settings.isShowcase` then needs no entry, since the merge preserves it and adding it would collide with the record's top-level `isShowcase`. Round-trip tests: a project write preserves `redaction`, an org write preserves `billing.spendingLimitCents` and `wantsShowcase`, and **clearing a spending limit still clears it** ([T-13](#8-traps)).
+- [x] **P3-2**: Dedicated server fns — `updateProjectRedaction` (`admin`/`owner`) and `updateOrganizationRedaction` (`owner`). Both read-modify-write so they merge rather than replace, log actor plus before/after, and the org one calls `invalidateOrganizationRedactionCache`. Roles come from `MembershipRepository.isAdmin` (admin **or** owner) and `findByOrganizationAndUser` for owner-only; neither `updateProject` nor `updateOrganization` has any role check today, so this is new gating rather than a tightening, and it must not gate project renames or the sampling slider.
+- [x] **P3-3**: The Privacy page per [§6.3](#63-ui): route, `PROJECT_SETTINGS_GROUPS` entry, project policy card, `locked` read-only state.
+- [x] **P3-4**: Organization policy card on the same page, owner-only, including `locked`.
+- [x] **P3-5**: `RedactionSettingSchema` in `packages/operations/src/operations/projects.ts` with a `.describe()` on every field, added to `ProjectSettingsSchema`, **plus shallow-merge semantics for settings updates** ([T-12](#8-traps)). Regenerate `openapi.json` and `mcp.json`, then `pnpm generate:all` for the SDKs and CLI, per the api-endpoints skill — `api-manifests.yml` fails on drift.
+- [x] **P3-6**: Placeholder → chip rendering per [§6.4](#64-rendering-redacted-content), with tests in the existing `markdown-content.test.tsx` covering a chip mid-sentence, a chip at offset 0, two chips in one text node, an unknown label left as plain text, and search-highlight offsets still exact for text following a chip.
+- [x] **P3-7**: Extend `docs/security/pii-redaction.mdx` with the ingest-redaction section: the exact promise from [§1](#1-purpose-and-the-exact-promise), the entity coverage matrix, the propagation window, non-retroactivity, buffer lifetime ([T-3](#8-traps)), and the search/dedup notes ([T-9](#8-traps), [T-10](#8-traps)). Rename the existing section to "SDK attribute redaction."
+- [x] **P3-8**: Write `dev-docs/spans.md` and `dev-docs/settings.md` sections for the redaction stage and the settings cascade. `settings.md` already has a `## Field Resolution` section with a `keepMonitoring` subsection; the cascade goes there.
+
+**Exit gate** — met except the manual end-to-end pass, which needs a running stack:
+
+- [ ] A toggle set in the UI round-trips and takes effect on newly ingested spans, verified manually end to end.
+- [x] Org `locked` visibly disables the project control.
+- [x] Org settings round-trip preserves `billing.spendingLimitCents` and `wantsShowcase`; project settings round-trip preserves `redaction` across a Signals-toggle and a sampling write.
+- [x] A member-role user cannot change either policy; a non-owner cannot change the org policy.
+- [x] A redacted span renders chips in the conversation view, and search highlighting in the same message still lands on the right characters.
+- [x] The public doc contains no claim stronger than the promise in [§1](#1-purpose-and-the-exact-promise).
+- [x] `pnpm typecheck`, `pnpm format`, and knip all clean (the pre-commit hook runs `turbo format` plus knip; unused exports block the commit).
+
+**Findings from Phase 3** (fold into the relevant sections when promoting to `dev-docs/`):
+
+- **The settings-wipe defect had a third face, and merging at the boundary was the wrong shape for it.** [T-13](#8-traps) rules out merging inside the use cases, but merging in each *caller* leaves a read-modify-write race and has to be re-done correctly by every future caller. An explicit `settingsPatch` input, merged against the freshly-read row inside the existing transaction, closes the race and keeps `settings` (replace) available for the one caller that needs it. Replace and patch are different operations and only the caller knows which it means; naming both makes that explicit rather than implicit.
+- **[T-5](#8-traps) needed no schema widening at all.** Once the write patches, the keys the web's local Zod schema strips are simply absent from the patch and survive untouched. The originally-planned widening would have been a second place to forget a field.
+- **The chip should match the placeholder shape, not an allowlist of our own labels.** [§6.4](#64-rendering-redacted-content) called for a strict list. That would have meant either a `@repo/ui` → `@domain/spans` dependency, pulling the OTLP parsers and redaction engine into the browser bundle, or a hand-maintained copy that drifts. A shape match needs neither, and it also covers the SDKs' client-side masking, which emits the same grammar. The false-positive worry the allowlist addressed is already handled by keeping the tooltip copy provenance-neutral — which it has to be regardless, since no per-span flag records who redacted what.
+- **Radix tooltip content does not render in `renderToStaticMarkup`.** It mounts on hover, so copy assertions have to live in a unit test of the pure explanation function rather than in the markdown render test. Worth knowing before writing a render test that asserts tooltip text.
+- **English articles cannot be derived from spelling.** The chip explanation first inferred "a" vs "an" from the leading letter, which produced "A IP address" — "IP" and "SSN" read with "an" despite starting with consonant letters. Articles are written out per phrase now.
+- **Owner-only authorization could not be symmetric with the domain-side precedent.** `updateSpendingLimitUseCase` checks the role inside the use case, but `@domain/projects` cannot import `MembershipRepository` from `@domain/organizations` without a cycle (organizations already depends on projects). Both redaction gates therefore live in the web server functions. A future public-API path has no member role to check anyway, since API keys are organization-scoped.
+- **Gating the write is not the same as gating the field, and this one got shipped wrong.** Role checks and audit events went on the dedicated server functions while every other settings path still accepted `redaction`; patch semantics then made the field persist rather than be dropped. Caught in review, now [T-14](#8-traps). The lesson generalises: when a field needs different authorization from its siblings, the enforcement has to sit where the write happens, not where the intended caller happens to be.
+- **A transaction is not a lock.** The `settingsPatch` merge was described as closing the read-modify-write race because it ran inside the transaction. Under READ COMMITTED both transactions read the pre-write row, so the race was still open; `findByIdForUpdate` is the part that closes it. `OrganizationRepository` already had the method, which is a hint the pattern was already needed elsewhere.
+- **PGlite cannot test row locking.** It runs a single in-process connection, so two "concurrent" transactions serialize and a concurrency test passes with the non-locking read too. Verified by mutation before deleting the test that had been written for it — a green test that proves nothing is worse than an acknowledged gap.
+- **Radix tooltip content is absent from `renderToStaticMarkup`.** It mounts on hover, so tooltip copy has to be asserted through the pure function that produces it, not through a render test.
+- **A negative assertion is only as good as the string it forbids.** The provenance-neutrality test forbade "this project's policy", so copy saying "this project" passed. Assert on the shortest offending substring, not the phrasing that happened to be wrong first.
+- **Intermediate commits can break `knip` even when the final tree is clean.** A server function with no caller yet is an unused export, and the pre-commit hook blocks on it. Sequencing the write path into the same commit as its first caller, rather than a commit earlier, keeps every commit independently green.
+
+
+### Phase 7 - Detector accuracy
+
+> Ran after Phase 3 shipped, on the finding that the detectors fully removed only 60% of the PII in a labelled
+> corpus. Independent of Phases 4-6, which remain unbuilt.
+
+Measured before: 117 labelled occurrences, 71 fully redacted (60%), 41 stored verbatim, 5 partially
+redacted, 4 mislabelled, 12 accepted false positives. After, over 118 occurrences (a SendGrid case joined
+the corpus with [P7-7](#phase-7---detector-accuracy)): 107 fully redacted (91%), 9 stored verbatim, 2
+partial, 2 mislabelled, 5 false positives.
+
+- [x] **P7-1**: `redaction/accuracy.test.ts`. A labelled corpus asserted case by case with pinned totals, not against a recall threshold, matching the one regression suite the repo already had. Closing a gap fails the suite until the row and the total are both edited, so an improvement is as visible in the diff as a regression. Ships with a punctuation sweep over 13 identifier shapes, seeded collision probes on synthetic identifiers, and a backtracking canary. Landed first, so every later commit's effect is measured rather than argued.
+- [x] **P7-2**: Trailing-guard fix on the five card patterns, NANP phone, and IPv4. `(?![\d.])` rejects a sentence-final period along with a decimal, and backtracking cannot recover the match. `"My card number is 4111111111111111."` was stored verbatim.
+- [x] **P7-3**: NANP area and exchange code validity (`[2-9]\d\d`), which removes three of the five measured phone false positives at no cost to recall.
+- [x] **P7-4**: Separated international phone forms, one pattern per separator. The 20-digit validator ceiling is deliberate: see the note in [§5](#5-detector-specification).
+- [x] **P7-5**: Detector rank in `resolveOverlaps`, plus a DSN credential detector. Fixes passwords labelled `[REDACTED_EMAIL]`, and passwords stored verbatim when the DSN host is an IP.
+- [x] **P7-6**: Credential detection from the assignment key, with a `group` field on `Detector` so a pattern can require context it must not redact. Forward-matching rather than a lookbehind, for a measurable reason: a lookbehind is evaluated at every position in the leaf.
+- [x] **P7-7**: The missing vendor token prefixes, in one alternation rather than one detector each.
+- [x] **P7-8**: ~~Base58 address checksum~~ — superseded by P7-12, which retired the entity outright.
+- [x] **P7-9**: Email domain gate (file-extension TLDs), Unicode and apostrophe local parts, `%40` form, and RFC length bounds.
+- [x] **P7-10**: IBAN case-insensitivity and dash grouping, Maestro and UnionPay prefixes, slash-grouped cards, dotted SSNs, ITIN ranges, left-compressed IPv6.
+- [x] **P7-11**: This section, the [§5](#5-detector-specification) rewrite, and a known-limits section in `docs/security/pii-redaction.mdx`.
+- [x] **P7-12**: Retire the `crypto_wallet` entity. Ethereum cannot be separated from a 40-character hex digest at all, which made the entity unsafe to enable whatever Bitcoin did, so the checksum work in P7-8 was buying precision on the one form that was not the problem. Removing it drops three patterns, the base58 decoder, the checksum and its digest dependency. `wireRedactionEntitiesSchema` gains a retired-entity list so a policy naming a removed entity drops it rather than failing closed, while an entity that was *never* in the enum still fails closed — those two cases are indistinguishable on the wire and must not be treated alike.
 
 **Exit gate**:
 
-- A toggle set in the UI round-trips and takes effect on newly ingested spans within 60 s, verified manually end to end.
-- Org `locked` visibly disables the project control.
-- Org settings round-trip preserves `billing.spendingLimitCents` and `wantsShowcase`.
-- The public doc contains no claim stronger than the promise in [§1](#1-purpose-and-the-exact-promise).
-- `pnpm typecheck`, `pnpm format`, and knip all clean (the pre-commit hook runs `turbo format` plus knip; unused exports block the commit).
+- [x] The corpus suite is green with pinned totals, and every entity in `REDACTION_ENTITIES` has positive and negative vectors.
+- [x] Scan cost inside the [§4.7](#47-size-and-time-budget) budget: 1.71 ms per 32 KB leaf with all seven entities enabled, 1.42 ms with the default six, against a 5 ms target. Up from 0.86 ms and 0.59 ms, for roughly 20 additional patterns.
+- [ ] A toggle set in the UI round-trips and takes effect on newly ingested spans, verified manually end to end. Shared with the Phase 3 exit gate.
+
+**Findings from Phase 7**:
+
+- **The corpus had to land before any detector change, and that ordering did most of the work.** Every commit after it names the gaps it closes and the false positives it accepts, because the suite would not go green otherwise. Two commits changed a false positive's *extent* rather than removing it, which no aggregate metric would have surfaced.
+- **A guard written for one hazard silently created another.** `(?![\d.])` was added to keep the card detector out of decimals and did that correctly, while also dropping every card at the end of a sentence. The punctuation sweep turned that from one anecdote into eighteen failing combinations across four detectors. Sweeping the axis is what found it; no amount of reading the pattern did.
+- **A validator cannot shorten a match.** Once a greedy pattern commits, rejecting it in `validate` discards the whole thing, so a too-strict bound turns an over-redaction into a leak. This is the same trap already documented for the card detector, met again from the other direction in phone.
+- **Prototyping the two hard detectors against negatives before writing them found four false positives that review would not have.** `max_tokens=1048576`, `cache_key=…`, `const apiKey = options.apiKey`, and `# TOKEN=  (unset)` all matched the first draft of the credential detector.
+- **The backtracking canary paid for itself immediately.** Widening the email local part to Unicode made an already-quadratic pattern slow enough to fail: 307 ms on a crafted leaf. Bounding both halves to their RFC lengths took the same input to 1.9 ms. The pre-existing quadratic had never been noticed.
+- **Two detectors matching the same span is normal, not a bug.** Three existing tests asserted the raw match list and broke once a vendor prefix and an assignment key both matched one token. Asserting the redacted text instead is both stabler and closer to what the feature promises.
+- **Test data can be the thing that is wrong.** The corpus GitHub token was 30 characters after its prefix where real ones carry 36, so it never reached the github detector and the case looked like a detector gap. Same for an ITIN written with an all-zero serial.
 
 ### Phase 4 - Optional ML tier
 
@@ -778,4 +891,12 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 **Exit gate**:
 
 - A trace's content is verifiably gone from every table in [§2.3](#23-every-place-span-content-lands), asserted by test.
+
+### Phase 6 - Redaction visibility
+
+> Needs its own design pass. Both items answer the same question — "what did redaction actually do to my data?" — which Phase 3 can only answer through the inline chip ([§6.4](#64-rendering-redacted-content)), and which nothing answers for false negatives at all.
+
+- [ ] **P6-1**: Per-span "content was redacted" indicator. Requires a stored signal: the [§4.8](#48-observability) stats land on Latitude's own telemetry span, not on the row, so nothing in `spans` records that a policy ran. Needs a ClickHouse column (entity counts, or at minimum a boolean plus the policy `source`), which makes it a migration rather than a UI change. It is also what would let the chip tooltip attribute a placeholder to *this project's policy* instead of staying provenance-neutral.
+- [ ] **P6-2**: Customer-facing redaction preview — run the detectors on demand over spans already in ClickHouse and return counts plus before/after samples ([open question 6](#10-open-questions)). The only honest way to answer "will this eat my tool outputs" before enabling enforce, and the thing a dry-run mode was standing in for.
+- [ ] **P6-3**: Offline detector-tuning script ([open question 4](#10-open-questions)): read a sample of real spans and report matches per entity with surrounding context. Reads customer content, so it needs an explicit decision about which org to sample before it runs.
 - Deletion is organization-scoped at the boundary and cannot cross tenants.

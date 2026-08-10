@@ -1,6 +1,7 @@
 import { CodeBlock, DetailSummary, ModelBadge, Text } from "@repo/ui"
 import { relativeTime, safeParseJson } from "@repo/utils"
 import { useMemo } from "react"
+import { spanCostDisplay } from "../../../../../../../../../domains/spans/cost-display.ts"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { formatDuration } from "../span-tree/tree-utils.ts"
 import { mergeAttributes, StatusBadge } from "./helpers.tsx"
@@ -134,7 +135,7 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
       <ModelBadge provider={span.provider} model={span.model} responseModel={span.responseModel} />
 
       {/* ── Usage: tokens + cost ── */}
-      <UsageSummary data={span} />
+      <UsageSummary data={span} costDisplay={spanCostDisplay(span)} />
 
       {/* ── User context: tags + metadata ── */}
       <UserContextSection span={span} />

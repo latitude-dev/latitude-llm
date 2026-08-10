@@ -146,6 +146,8 @@ const makeOrganizationRepository = (organization: Organization): (typeof Organiz
 const makeProjectRepository = (project: Project): (typeof ProjectRepository)["Service"] => ({
   findById: (id) =>
     id === project.id ? Effect.succeed(project) : Effect.fail(new NotFoundError({ entity: "Project", id })),
+  findByIdForUpdate: (id) =>
+    id === project.id ? Effect.succeed(project) : Effect.fail(new NotFoundError({ entity: "Project", id })),
   findBySlug: () => Effect.die("findBySlug not used"),
   list: () => Effect.die("list not used"),
   listIncludingDeleted: () => Effect.die("listIncludingDeleted not used"),

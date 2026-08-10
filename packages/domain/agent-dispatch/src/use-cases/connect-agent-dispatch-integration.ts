@@ -1,13 +1,25 @@
 import type { OrganizationId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import type { AgentDispatchKind } from "../entities/agent-dispatch-config.ts"
-import { AgentDispatchCredentialRepository, AgentDispatchIntegrationRepository } from "../ports/repositories.ts"
+import {
+  type AgentDispatchKind,
+  type StoredAgentDispatchTarget,
+  storedAgentDispatchTargetSchema,
+} from "../entities/agent-dispatch-config.ts"
+import type { AgentDispatchTrigger } from "../entities/agent-dispatch-context.ts"
+import {
+  AgentDispatchConfigRepository,
+  AgentDispatchCredentialRepository,
+  AgentDispatchIntegrationRepository,
+} from "../ports/repositories.ts"
+import { upsertOrgDefaultDispatchConfigUseCase } from "./upsert-org-default-dispatch-config.ts"
 
 export interface ConnectAgentDispatchIntegrationInput {
   readonly kind: AgentDispatchKind
   readonly vendorAccountId: string
   readonly installedByUserId: string
   readonly organizationId: OrganizationId
+  readonly target: StoredAgentDispatchTarget
+  readonly triggers: readonly AgentDispatchTrigger[]
   readonly cursorApiKey?: string | null
   readonly claudeRoutineToken?: string | null
   readonly linearApiKey?: string | null
@@ -18,6 +30,7 @@ export const connectAgentDispatchIntegrationUseCase = (input: ConnectAgentDispat
   Effect.gen(function* () {
     const integrationRepo = yield* AgentDispatchIntegrationRepository
     const credentialRepo = yield* AgentDispatchCredentialRepository
+    const configRepo = yield* AgentDispatchConfigRepository
 
     const existing = yield* integrationRepo.findActiveByKind(input.kind)
     const integration =
@@ -37,9 +50,25 @@ export const connectAgentDispatchIntegrationUseCase = (input: ConnectAgentDispat
       ...(input.webhookSecret !== undefined ? { webhookSecret: input.webhookSecret } : {}),
     })
 
+    const defaultConfig = yield* configRepo.findDefaultByIntegration(integration.id)
+    const mergedTarget = storedAgentDispatchTargetSchema.safeParse({
+      ...(defaultConfig?.target ?? {}),
+      ...input.target,
+    })
+    const triggers = defaultConfig?.triggers ?? input.triggers
+
+    yield* upsertOrgDefaultDispatchConfigUseCase({
+      organizationId: input.organizationId,
+      integrationId: integration.id,
+      kind: input.kind,
+      enabled: defaultConfig?.enabled ?? triggers.length > 0,
+      triggers,
+      target: mergedTarget.success ? mergedTarget.data : input.target,
+    })
+
     return integration
   }).pipe(Effect.withSpan("agentDispatch.connectIntegration")) as Effect.Effect<
     import("../ports/repositories.ts").AgentDispatchIntegration,
     unknown,
-    AgentDispatchIntegrationRepository | AgentDispatchCredentialRepository | SqlClient
+    AgentDispatchIntegrationRepository | AgentDispatchCredentialRepository | AgentDispatchConfigRepository | SqlClient
   >

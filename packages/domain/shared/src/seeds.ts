@@ -298,6 +298,56 @@ export const SEED_OLD_TRACES_QA_FROM_DAYS_AGO = 45
 export const SEED_OLD_TRACES_QA_TO_DAYS_AGO = 31
 export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
 
+/**
+ * QA fixtures for the cost section: one project per archetype, because an
+ * archetype is only judgeable when the whole project tells the same story. A
+ * project stuffed with every failure mode proves the code paths execute; it
+ * cannot tell you whether the page cries wolf on a well-run project.
+ *
+ * The unhealthy archetype is deliberately absent — it lives on the default seed
+ * project, which already is the demo project where findings should fire.
+ */
+export interface SeedCostArchetypeProject {
+  readonly id: ProjectId
+  readonly name: string
+  readonly slug: string
+  /** Backdated so All time reaches the archetype's oldest span. */
+  readonly firstTraceAtDaysAgo: number
+}
+
+export const SEED_COST_ARCHETYPE_PROJECTS = {
+  healthy: {
+    id: ProjectId("costqahealthy00000000001"),
+    name: "Cost: healthy at scale (QA)",
+    slug: "cost-healthy-qa",
+    firstTraceAtDaysAgo: 91,
+  },
+  singleTurn: {
+    id: ProjectId("costqasingleturn00000001"),
+    name: "Cost: single-turn pipeline (QA)",
+    slug: "cost-single-turn-qa",
+    firstTraceAtDaysAgo: 22,
+  },
+  regression: {
+    id: ProjectId("costqaregression00000001"),
+    name: "Cost: spend regression (QA)",
+    slug: "cost-regression-qa",
+    firstTraceAtDaysAgo: 57,
+  },
+  tiny: {
+    id: ProjectId("costqatiny00000000000001"),
+    name: "Cost: tiny and new (QA)",
+    slug: "cost-tiny-qa",
+    firstTraceAtDaysAgo: 3,
+  },
+  free: {
+    id: ProjectId("costqafree00000000000001"),
+    name: "Cost: genuinely free (QA)",
+    slug: "cost-free-qa",
+    firstTraceAtDaysAgo: 15,
+  },
+} as const satisfies Readonly<Record<string, SeedCostArchetypeProject>>
+
 // Dogfood projects — one per internal AI feature, mirroring
 // `LATITUDE_TELEMETRY_PROJECT_SLUGS`. Each receives the LLM generations that
 // feature exports (and, for flaggers / annotation-enrichment, the product-feedback

@@ -316,7 +316,7 @@ function ChatPage() {
 
       <ComponentDemoSection
         title="Subagent tool call"
-        description="A tool call that spawned a subagent renders as a nested sub-conversation: the agent's request and reply as a chat peek, with an Open conversation affordance."
+        description="A tool call that spawned a subagent renders as an inline card: expanding it reveals a Prompt dropdown and a result peek — clicking the peek opens the subagent's full conversation in place."
         frameClassName="block"
       >
         <div className="mx-auto w-full max-w-3xl">

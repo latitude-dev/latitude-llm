@@ -16,7 +16,7 @@ import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
 import { RedactionError, SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
-import { transformOtlpToSpans } from "../otlp/transform.ts"
+import { transformOtlpToSpans, type UnpricedSpanGroup } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import { SpanRepository } from "../ports/span-repository.ts"
 import { redactSpans, type SpanRedactionSummary } from "../redaction/redact-spans.ts"
@@ -94,10 +94,15 @@ function resolvePayload(
   )
 }
 
+interface DecodedSpans {
+  readonly spans: readonly SpanDetail[]
+  readonly unpricedSpanGroups: readonly UnpricedSpanGroup[]
+}
+
 function decodeAndTransform(
   payload: Uint8Array,
   input: ProcessIngestedSpansInput,
-): Effect.Effect<readonly SpanDetail[], SpanDecodingError> {
+): Effect.Effect<DecodedSpans, SpanDecodingError> {
   return Effect.gen(function* () {
     const request = decodeRequest(payload, input.contentType)
     if (!request) {
@@ -107,10 +112,10 @@ function decodeAndTransform(
     }
 
     if (!request.resourceSpans?.length) {
-      return []
+      return { spans: [], unpricedSpanGroups: [] }
     }
 
-    const { spans, rejectedSpans } = transformOtlpToSpans(request, {
+    const { spans, rejectedSpans, unpricedSpanGroups } = transformOtlpToSpans(request, {
       organizationId: input.organizationId,
       apiKeyId: input.apiKeyId,
       ingestedAt: input.ingestedAt,
@@ -122,7 +127,7 @@ function decodeAndTransform(
       yield* Effect.annotateCurrentSpan("rejectedSpans", rejectedSpans)
     }
 
-    return spans
+    return { spans, unpricedSpanGroups }
   })
 }
 
@@ -138,7 +143,7 @@ function annotateRedaction(summary: SpanRedactionSummary): Effect.Effect<void> {
     yield* Effect.annotateCurrentSpan("redaction.leavesScanned", summary.leavesScanned)
     yield* Effect.annotateCurrentSpan("redaction.charsScanned", summary.charsScanned)
     yield* Effect.annotateCurrentSpan("redaction.matches", totalRedactionCount(summary.counts))
-    yield* Effect.annotateCurrentSpan("redaction.droppedAttributeKeys", summary.droppedAttributeKeys)
+    yield* Effect.annotateCurrentSpan("redaction.relocatedNumericAttributes", summary.relocatedNumericAttributes)
 
     for (const [entity, count] of Object.entries(summary.counts)) {
       yield* Effect.annotateCurrentSpan(`redaction.matches.${entity}`, count)
@@ -204,12 +209,50 @@ function discardBufferedPayload(fileKey: string | null): Effect.Effect<void, nev
   })
 }
 
+/**
+ * Reports token usage that no pricing matched, so a customer seeing $0 on real usage surfaces as
+ * our bug rather than staying silent. Observability infrastructure stays out of the domain, so the
+ * adapter owns log/error-tracking shape and rate limiting.
+ */
+type UnpricedSpansReporter = (
+  groups: readonly UnpricedSpanGroup[],
+  organizationId: OrganizationId,
+) => Effect.Effect<void>
+
 export interface ProcessIngestedSpansDeps<TPublishError = unknown> {
   readonly eventsPublisher: EventsPublisher<TPublishError>
+  readonly onUnpricedSpans?: UnpricedSpansReporter
+}
+
+/**
+ * Called only once the insert has succeeded, so a report always describes stored spans: reporting
+ * before the write would announce — and, in the adapter, rate-limit — a batch that a later failure
+ * sends back for redelivery, muting the retry that actually persists it.
+ *
+ * Every failure is swallowed, defects included, because by this point the spans are already stored
+ * and a broken reporter must not turn a completed ingest into a retry.
+ */
+function reportUnpricedSpans(
+  groups: readonly UnpricedSpanGroup[],
+  organizationId: OrganizationId,
+  report: UnpricedSpansReporter | undefined,
+): Effect.Effect<void> {
+  if (groups.length === 0) return Effect.void
+
+  return Effect.gen(function* () {
+    yield* Effect.annotateCurrentSpan(
+      "cost.unpricedSpans",
+      groups.reduce((total, group) => total + group.spans, 0),
+    )
+    if (!report) return
+    yield* Effect.catchCause(report(groups, organizationId), () =>
+      Effect.annotateCurrentSpan("cost.unpricedReportFailed", true),
+    )
+  })
 }
 
 export const processIngestedSpansUseCase =
-  <TPublishError>({ eventsPublisher }: ProcessIngestedSpansDeps<TPublishError>) =>
+  <TPublishError>({ eventsPublisher, onUnpricedSpans }: ProcessIngestedSpansDeps<TPublishError>) =>
   (
     input: ProcessIngestedSpansInput,
   ): Effect.Effect<
@@ -221,7 +264,7 @@ export const processIngestedSpansUseCase =
       yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
 
       const payload = yield* resolvePayload(input)
-      const transformed = yield* decodeAndTransform(payload, input)
+      const { spans: transformed, unpricedSpanGroups } = yield* decodeAndTransform(payload, input)
 
       // Redaction runs before the retention stamp and the insert, which makes it the
       // single choke point for every content sink: `traces` and `sessions` are
@@ -254,6 +297,8 @@ export const processIngestedSpansUseCase =
 
       const repo = yield* SpanRepository
       yield* repo.insert(persistedSpans)
+
+      yield* reportUnpricedSpans(unpricedSpanGroups, input.organizationId, onUnpricedSpans)
 
       // Spans in a single OTLP batch may now belong to different projects (per-span scoping).
       // Group by projectId so each TracesIngested event addresses one project at a time —

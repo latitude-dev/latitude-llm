@@ -47,13 +47,13 @@ import {
 } from "lucide-react"
 import { Fragment, type ReactNode, useRef, useState } from "react"
 import { FilterBuilder } from "../../../../../../components/filters-builder/filter-builder.tsx"
+import { TIME_PRESETS } from "../../../../../../components/time-filter-dropdown.tsx"
 import type {
   ExperimentVariantRecord,
   VariantPatch,
 } from "../../../../../../domains/experiments/experiments.collection.ts"
 import { topicBehaviourClusterLink } from "../../../../../../domains/taxonomy/topic-behaviour-link.ts"
 import { SearchInput } from "../../-components/search-input.tsx"
-import { TIME_PRESETS } from "../../-components/time-filter-dropdown.tsx"
 import { serializeFilters } from "../../-components/trace-page-state.ts"
 import { ENTITY_ICON, ENTITY_LABEL, formatMetricValue, MetricDelta } from "./metric-format.tsx"
 import {

@@ -41,6 +41,7 @@ const projectRepo = (overrides: {
     getCurrentSignalStateCounts: () => Effect.succeed(overrides.snapshot ?? { untracked: 0, tracked: 0, resolved: 0 }),
     getSignalLifecycleEvents: () => Effect.succeed(overrides.events ?? []),
     findSignalDetailsByIds: () => Effect.succeed(overrides.details ?? new Map<SignalId, ProjectSignalDetails>()),
+    findManySummariesByIds: () => Effect.succeed(new Map()),
   })
 
 const metricsRepo = (overrides: {

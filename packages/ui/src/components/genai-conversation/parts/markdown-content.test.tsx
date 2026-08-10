@@ -86,6 +86,37 @@ describe("MarkdownContent", () => {
     expect(markup).toMatch(/Show [\d,]+ more characters/)
   })
 
+  // Text with no `data-source-*` cannot be annotated: the popover opens, then the thumb click resolves to no anchor.
+  describe("source coverage", () => {
+    function sourceSpans(markup: string, content: string) {
+      return [...markup.matchAll(/data-source-start="(\d+)" data-source-end="(\d+)"/g)].map(([, start, end]) =>
+        content.slice(Number(start), Number(end)),
+      )
+    }
+
+    it("keeps offsets on both sides of a soft line break", () => {
+      const content = "line one\nline two"
+      const markup = renderToStaticMarkup(<MarkdownContent content={content} />)
+
+      expect(markup).toContain("<br/>")
+      expect(sourceSpans(markup, content)).toEqual(["line one", "line two"])
+    })
+
+    it("maps every line of a multi-line paragraph", () => {
+      const content = "Heyyy this is a test.\nName: Ada\nRole: engineer"
+      const markup = renderToStaticMarkup(<MarkdownContent content={content} />)
+
+      expect(sourceSpans(markup, content)).toEqual(["Heyyy this is a test.", "Name: Ada", "Role: engineer"])
+    })
+
+    it("maps raw HTML blocks, which render as escaped text", () => {
+      const content = "<system-reminder>\nbe brief\n</system-reminder>\n\nAfter"
+      const markup = renderToStaticMarkup(<MarkdownContent content={content} />)
+
+      expect(sourceSpans(markup, content)).toEqual(["<system-reminder>\nbe brief\n</system-reminder>", "After"])
+    })
+  })
+
   it("routes JSON object content to the JSON code-block renderer", () => {
     const json = '{"hello":"world","n":42}'
     const markup = renderToStaticMarkup(<MarkdownContent content={json} />)
@@ -186,5 +217,71 @@ describe("MarkdownContent", () => {
 
     expect(markup).not.toContain('data-content-type="json"')
     expect(markup).toMatch(/Show [\d,]+ more characters/)
+  })
+
+  describe("redaction placeholders", () => {
+    it("renders a placeholder as a chip carrying its category, not the raw string", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="Contact [REDACTED_EMAIL] for access." />)
+
+      expect(textContentOf(markup)).not.toContain("[REDACTED_EMAIL]")
+      expect(textContentOf(markup)).toContain("EMAIL")
+      expect(markup).toContain("font-mono")
+    })
+
+    it("keeps the prose around the chip intact", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="Contact [REDACTED_EMAIL] for access." />)
+
+      expect(textContentOf(markup)).toContain("Contact ")
+      expect(textContentOf(markup)).toContain(" for access.")
+    })
+
+    it("opens underscores in the label so it reads as words", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="ssn [REDACTED_US_SSN] end" />)
+
+      expect(textContentOf(markup)).toContain("US SSN")
+    })
+
+    // Offsets after a chip must still address the original string, or search
+    // highlighting in the same message lands on the wrong characters.
+    it("keeps source offsets addressing the original content after a chip", () => {
+      const content = "before [REDACTED_EMAIL] after"
+      const markup = renderToStaticMarkup(<MarkdownContent content={content} />)
+
+      const spans = [...markup.matchAll(/data-source-start="(\d+)" data-source-end="(\d+)"/g)]
+      expect(spans.length).toBeGreaterThan(0)
+      for (const [, start, end] of spans) {
+        const slice = content.slice(Number(start), Number(end))
+        expect(content).toContain(slice)
+      }
+      const lastEnd = Math.max(...spans.map(([, , end]) => Number(end)))
+      expect(lastEnd).toBe(content.length)
+    })
+
+    it("leaves the literal placeholder alone inside a code fence", () => {
+      const fenced = '```json\n{"email":"[REDACTED_EMAIL]"}\n```'
+      const markup = renderToStaticMarkup(<MarkdownContent content={fenced} />)
+
+      expect(textContentOf(markup)).toContain("[REDACTED_EMAIL]")
+    })
+
+    it("chips an oversized-field placeholder too", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="output [REDACTED_OVERSIZED_FIELD] end" />)
+
+      expect(textContentOf(markup)).toContain("OVERSIZED FIELD")
+      expect(textContentOf(markup)).not.toContain("[REDACTED_OVERSIZED_FIELD]")
+    })
+
+    it("makes the chip keyboard reachable and names the explanation for screen readers", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="Contact [REDACTED_EMAIL] now." />)
+
+      expect(markup).toContain("<button")
+      expect(markup).toMatch(/aria-label="[^"]*cannot be recovered/)
+    })
+
+    it("does not chip a bare [REDACTED] with no category", () => {
+      const markup = renderToStaticMarkup(<MarkdownContent content="value [REDACTED] here" />)
+
+      expect(textContentOf(markup)).toContain("[REDACTED] here")
+    })
   })
 })

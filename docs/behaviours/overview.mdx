@@ -1,22 +1,22 @@
 ---
-title: Behaviours
+title: Behaviors
 description: Group your sessions by a question, such as what they were about or what the user was trying to do, and save filtered views of each grouping.
 ---
 
 <Info>
-  **Where this fits:** Behaviours are part of the **Understand** section. Search finds what you
-  already know to look for; behaviours surface what you didn't.
+  **Where this fits:** Behaviors are part of the **Understand** section. Search finds what you
+  already know to look for; behaviors surface what you didn't.
 </Info>
 
-A **behaviour** is a question your [sessions](../getting-started/concepts) get grouped by. Latitude ships one out of the box, **Topics** ("what was this conversation about?"), and you can add more. Each behaviour clusters the same sessions a different way, so the same traffic can be read as "what were people doing", "what were they trying to accomplish", or "why did we fall short".
+A **behavior** is a question your [sessions](../getting-started/concepts) get grouped by. Latitude ships one out of the box, **Topics** ("what was this conversation about?"), and you can add more. Each behavior clusters the same sessions a different way, so the same traffic can be read as "what were people doing", "what were they trying to accomplish", or "why did we fall short".
 
-The Behaviours page is the catalog of those groupings: one card per behaviour, each showing what it groups by and a preview of its top groups.
+The Behaviors page is the catalog of those groupings: one card per behavior, each showing what it groups by and a preview of its top groups.
 
-<Frame caption="The Behaviours catalog: one card per behaviour (Topics, User goal, Assistant approach, Capability gap), each previewing its top groups with session and view counts.">
-  <img src="/images/behaviours/behaviors-dashboard.png" alt="The Behaviours catalog page with cards for Topics, User goal, Assistant approach, and Capability gap, each showing a preview of its top groups and a session count" />
+<Frame caption="The Behaviors catalog: one card per behavior (Topics, User goal, Assistant approach, Capability gap), each previewing its top groups with session and view counts.">
+  <img src="/images/behaviours/behaviors-dashboard.png" alt="The Behaviors catalog page with cards for Topics, User goal, Assistant approach, and Capability gap, each showing a preview of its top groups and a session count" />
 </Frame>
 
-## The behaviours you can add
+## The behaviors you can add
 
 **Topics** is always there and needs no setup: Latitude builds it from your traffic by default. Alongside it you can add:
 
@@ -26,33 +26,33 @@ The Behaviours page is the catalog of those groupings: one card per behaviour, e
 - **Assistant approach** — the strategy the assistant took to help.
 - **Capability gap** — what the assistant could not do, to reveal missing capabilities.
 
-You can also write your own behaviour by describing the question you want sessions grouped by.
+You can also write your own behavior by describing the question you want sessions grouped by.
 
-## Add a behaviour
+## Add a behavior
 
 <Note>
-  Adding behaviours beyond **Topics** is in early access, enabled per workspace. Topics is
-  available to everyone. If you'd like to try adding your own behaviours and views, contact us at
+  Adding behaviors beyond **Topics** is in early access, enabled per workspace. Topics is
+  available to everyone. If you'd like to try adding your own behaviors and views, contact us at
   [hello@latitude.so](mailto:hello@latitude.so).
 </Note>
 
-Click **+ Behaviour** to open the catalog. Pick one of the presets, or author your own by giving it a name, a short description, and the instructions that define what to extract from each session.
+Click **+ Behavior** to open the catalog. Pick one of the presets, or author your own by giving it a name, a short description, and the instructions that define what to extract from each session.
 
-<Frame caption="Adding a behaviour: pick a preset such as User goal or Outcome, or author your own.">
-  <img src="/images/behaviours/behavior-modal.png" alt="The new-behaviour modal showing a grid of preset cards and an option to author a custom behaviour" />
+<Frame caption="Adding a behavior: pick a preset such as User goal or Outcome, or author your own.">
+  <img src="/images/behaviours/behavior-modal.png" alt="The new-behavior modal showing a grid of preset cards and an option to author a custom behavior" />
 </Frame>
 
-When you add a behaviour, Latitude analyses a sample of your sessions through it once to build the first grouping. During that pass you see the answers it extracts and a quick read on their quality, such as how often the question was answerable and how many distinct answers came back. If a question does not separate your sessions well, you can refine it before the grouping is built rather than after.
+When you add a behavior, Latitude analyses a sample of your sessions through it once to build the first grouping. During that pass you see the answers it extracts and a quick read on their quality, such as how often the question was answerable and how many distinct answers came back. If a question does not separate your sessions well, you can refine it before the grouping is built rather than after.
 
 <Note>
-  A behaviour keeps itself up to date on a schedule as new sessions arrive. A brand-new behaviour,
+  A behavior keeps itself up to date on a schedule as new sessions arrive. A brand-new behavior,
   or one on a project without enough traffic yet, shows a waiting state until it has clustered
   enough sessions.
 </Note>
 
-## Inspect a behaviour
+## Inspect a behavior
 
-Open a behaviour to see its groups as a hierarchy that emerges from your data. For each group the page shows:
+Open a behavior to see its groups as a hierarchy that emerges from your data. For each group the page shows:
 
 - a **trend**, for example new, spiking, rising, steady, cooling, or fading
 - the **number of sessions** in that group
@@ -60,23 +60,23 @@ Open a behaviour to see its groups as a hierarchy that emerges from your data. F
 
 From a group you can review the underlying [traces](../observability/traces), [annotate](../annotations/overview) them, and let recurring failures flow into [Signals](../signals/overview).
 
-<Frame caption="A behaviour's detail view: its groups over time, a breakdown of detected moments, and the sessions behind them.">
-  <img src="/images/behaviours/behavior-detail.png" alt="A behaviour detail view with session activity over time, a detected-moments breakdown, and the associated sessions" />
+<Frame caption="A behavior's detail view: its groups over time, a breakdown of detected moments, and the sessions behind them.">
+  <img src="/images/behaviours/behavior-detail.png" alt="A behavior detail view with session activity over time, a detected-moments breakdown, and the associated sessions" />
 </Frame>
 
-## Narrow a behaviour with views
+## Narrow a behavior with views
 
-A **view** is a saved filtered slice of a behaviour. Inside any behaviour, click **+ View** to keep only the sessions that match a filter, for example one environment, one release, or a metadata value, and the behaviour re-groups those sessions alone. Views are saved under their behaviour, so you can return to "User goal, EU customers only" without rebuilding the filter each time.
+A **view** is a saved filtered slice of a behavior. Inside any behavior, click **+ View** to keep only the sessions that match a filter, for example one environment, one release, or a metadata value, and the behavior re-groups those sessions alone. Views are saved under their behavior, so you can return to "User goal, EU customers only" without rebuilding the filter each time.
 
-<Frame caption="Creating a view: filter a behaviour down to a slice of sessions, saved under that behaviour.">
-  <img src="/images/behaviours/behavior-view.png" alt="The new-view modal filtering a behaviour down to a subset of sessions" />
+<Frame caption="Creating a view: filter a behavior down to a slice of sessions, saved under that behavior.">
+  <img src="/images/behaviours/behavior-view.png" alt="The new-view modal filtering a behavior down to a subset of sessions" />
 </Frame>
 
 ## Filter searches by topic
 
-The Topics behaviour is also available as a **Topics** filter in [Search](../search/overview), so you can narrow any search to a specific topic and combine it with semantic, text, and metadata filters.
+The Topics behavior is also available as a **Topics** filter in [Search](../search/overview), so you can narrow any search to a specific topic and combine it with semantic, text, and metadata filters.
 
 ## Next step
 
 - [Saved searches](../search/saved-searches): bookmark a search and review it over time.
-- [Signals](../signals/overview): turn recurring failures in a behaviour into a tracked signal.
+- [Signals](../signals/overview): turn recurring failures in a behavior into a tracked signal.

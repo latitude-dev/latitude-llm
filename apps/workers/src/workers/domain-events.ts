@@ -511,9 +511,6 @@ export const createDomainEventsWorker = ({
     DatasetCreated: () => Effect.void,
     EvaluationCreated: () => Effect.void,
     EvaluationAligned: () => Effect.void,
-    // Detector-health degradation is audit-only for now: the outbox row is
-    // the durable surfacing until a notification kind lands with the signals
-    // rollout (specs/sandbox-runtime.md P1-2).
     EvaluationDetectorDegraded: () => Effect.void,
     ProjectDeleted: (event) =>
       Effect.all(
@@ -541,6 +538,17 @@ export const createDomainEventsWorker = ({
             },
           ),
           pub.publish(
+            "imports",
+            "delete-by-project",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+            },
+            {
+              dedupeKey: `imports:delete-by-project:${event.payload.projectId}`,
+            },
+          ),
+          pub.publish(
             "github-events",
             "delete-by-project",
             {
@@ -556,17 +564,18 @@ export const createDomainEventsWorker = ({
       ).pipe(Effect.asVoid),
     FlaggerToggled: () => Effect.void,
     SavedSearchCreated: () => Effect.void,
-    // Impersonation events are audit-only — their value is being
-    // persisted in the outbox for support / compliance queries.
-    // No downstream worker consumes them, so these handlers are no-ops.
-    // Present here only because `EventHandlerMap` exhaustively covers
-    // every key in `EventPayloads` and would fail typecheck otherwise.
+    ImportStarted: () => Effect.void,
+    ImportRetried: () => Effect.void,
+    ImportFinished: () => Effect.void,
     AdminImpersonationStarted: () => Effect.void,
     AdminImpersonationStopped: () => Effect.void,
     AdminUserRoleChanged: () => Effect.void,
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
+    // Redaction policy changes are audit-only for the same reason.
+    ProjectRedactionPolicyChanged: () => Effect.void,
+    OrganizationRedactionPolicyChanged: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

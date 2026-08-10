@@ -229,6 +229,7 @@ const makeTraceDetail = (traceId: string, content: string): TraceDetail => ({
   costInputMicrocents: 0,
   costOutputMicrocents: 0,
   costTotalMicrocents: 0,
+  unpricedSpanCount: 0,
   sessionId: SessionId("s".repeat(64)),
   userId: ExternalUserId("u".repeat(24)),
   userEmail: "",

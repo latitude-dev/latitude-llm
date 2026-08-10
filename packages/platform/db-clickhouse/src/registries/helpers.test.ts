@@ -2,7 +2,7 @@ import type { FilterCondition } from "@domain/shared"
 import { setupTestClickHouse } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
 import { buildClickHouseWhere } from "../filter-builder.ts"
-import { buildCacheHitRateClause, dateTime64BestEffortExpression } from "./helpers.ts"
+import { buildCacheHitRateClause, buildSessionMembershipClause, dateTime64BestEffortExpression } from "./helpers.ts"
 
 describe("buildCacheHitRateClause", () => {
   it("builds a divide-by-zero-guarded HAVING ratio for gte, treating the value as a percentage", () => {
@@ -149,5 +149,100 @@ describe("cacheHitRate via buildClickHouseWhere", () => {
     expect(clauses[0]).toContain(">= {f_0:Float64} / 100")
     expect(clauses[1]).toContain("<= {f_1:Float64} / 100")
     expect(params).toEqual({ f_0: 80, f_1: 95 })
+  })
+})
+
+/**
+ * Executed rather than string-compared, because the orphan arm compares a `FixedString(32)` trace id
+ * — as an id in the exact form and through `toString` in the fragment form — and whether ClickHouse
+ * accepts that is the whole question.
+ */
+describe("sessionId membership via buildClickHouseWhere", () => {
+  const ch = setupTestClickHouse()
+  const registry = {
+    sessionId: { kind: "synthetic", buildClause: buildSessionMembershipClause },
+  } as const
+
+  const CONVERSATION_TRACE_ID = "aaaa0000000000000000000000000001"
+  const ORPHAN_TRACE_ID = "bbbb0000000000000000000000000002"
+
+  async function matches(
+    op: FilterCondition["op"],
+    value: FilterCondition["value"],
+    row: { readonly sessionId: string; readonly traceId: string },
+  ) {
+    const { clauses, params } = buildClickHouseWhere({ sessionId: [{ op, value }] }, registry)
+    const result = await ch.client.query({
+      query: `SELECT ${clauses[0]} AS matched
+              FROM (SELECT {rowSessionId:String} AS session_id, toFixedString({rowTraceId:String}, 32) AS trace_id)`,
+      query_params: { ...params, rowSessionId: row.sessionId, rowTraceId: row.traceId },
+      format: "JSONEachRow",
+    })
+    const rows = await result.json<{ matched: boolean | number }>()
+    return rows[0]?.matched === true || rows[0]?.matched === 1
+  }
+
+  const conversationRow = { sessionId: "sess-checkout-42", traceId: CONVERSATION_TRACE_ID }
+  const orphanRow = { sessionId: "", traceId: ORPHAN_TRACE_ID }
+
+  describe("a whole id", () => {
+    it("matches a trace by its session id", async () => {
+      await expect(matches("eq", "sess-checkout-42", conversationRow)).resolves.toBe(true)
+      await expect(matches("eq", "sess-checkout-42", orphanRow)).resolves.toBe(false)
+    })
+
+    it("matches a sessionless trace by its own trace id", async () => {
+      await expect(matches("eq", ORPHAN_TRACE_ID, orphanRow)).resolves.toBe(true)
+      await expect(matches("eq", ORPHAN_TRACE_ID, conversationRow)).resolves.toBe(false)
+    })
+
+    it("matches any of several ids", async () => {
+      await expect(matches("in", ["sess-other", ORPHAN_TRACE_ID], orphanRow)).resolves.toBe(true)
+      await expect(matches("in", ["sess-other", "sess-another"], conversationRow)).resolves.toBe(false)
+    })
+
+    it("negates membership rather than comparing the column", async () => {
+      await expect(matches("neq", "sess-checkout-42", conversationRow)).resolves.toBe(false)
+      await expect(matches("neq", "sess-checkout-42", orphanRow)).resolves.toBe(true)
+      await expect(matches("notIn", [ORPHAN_TRACE_ID], orphanRow)).resolves.toBe(false)
+    })
+  })
+
+  // What the filter box actually sends: every text field debounces into `contains`, so this is the
+  // operator a user reaches by typing into "Session ID" — it used to throw, which died as an
+  // unhandled defect rather than a rejected filter.
+  describe("a fragment of an id", () => {
+    it("matches a session id containing it", async () => {
+      await expect(matches("contains", "checkout", conversationRow)).resolves.toBe(true)
+      await expect(matches("contains", "refund", conversationRow)).resolves.toBe(false)
+    })
+
+    it("matches a sessionless trace whose trace id contains it", async () => {
+      await expect(matches("contains", "bbbb", orphanRow)).resolves.toBe(true)
+      await expect(matches("contains", "aaaa", orphanRow)).resolves.toBe(false)
+    })
+
+    it("ignores case, as ILIKE does everywhere else", async () => {
+      await expect(matches("contains", "CHECKOUT", conversationRow)).resolves.toBe(true)
+      await expect(matches("contains", "BBBB", orphanRow)).resolves.toBe(true)
+    })
+
+    it("negates a fragment match", async () => {
+      await expect(matches("notContains", "checkout", conversationRow)).resolves.toBe(false)
+      await expect(matches("notContains", "checkout", orphanRow)).resolves.toBe(true)
+    })
+  })
+
+  describe("nothing to match", () => {
+    it("matches no row for an empty id, and every row for its negation", async () => {
+      await expect(matches("eq", "", conversationRow)).resolves.toBe(false)
+      await expect(matches("neq", "", conversationRow)).resolves.toBe(true)
+    })
+
+    it("rejects an ordering comparison on an opaque id", () => {
+      expect(() => buildSessionMembershipClause({ op: "gt", value: "sess-1" }, "f_0")).toThrow(
+        /Unsupported sessionId filter operator/,
+      )
+    })
   })
 })

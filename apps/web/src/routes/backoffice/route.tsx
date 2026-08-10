@@ -1,6 +1,15 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, notFound, Outlet, useRouter } from "@tanstack/react-router"
-import { ArrowLeft, Building2, Flag, Presentation, Search, ShieldAlertIcon, Sparkles } from "lucide-react"
+import {
+  ArrowLeft,
+  Building2,
+  CircleDollarSign,
+  Flag,
+  Presentation,
+  Search,
+  ShieldAlertIcon,
+  Sparkles,
+} from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { SidebarCollapseProvider } from "../../layouts/AppSidebar/sidebar-collapse.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
@@ -105,6 +114,13 @@ function BackofficeLayout() {
                   label="Feature Flags"
                   to="/backoffice/feature-flags"
                   active={pathname === "/backoffice/feature-flags" || pathname === "/backoffice/feature-flags/"}
+                  collapsed={collapsed}
+                />
+                <NavItem
+                  icon={CircleDollarSign}
+                  label="Unpriced Spans"
+                  to="/backoffice/unpriced-spans"
+                  active={pathname === "/backoffice/unpriced-spans" || pathname === "/backoffice/unpriced-spans/"}
                   collapsed={collapsed}
                 />
                 <NavItem

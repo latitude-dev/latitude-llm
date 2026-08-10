@@ -5,6 +5,7 @@ import { annotationsModule } from "./annotations.ts"
 import { apiKeysModule } from "./api-keys.ts"
 import { datasetsModule } from "./datasets.ts"
 import { experimentsModule } from "./experiments.ts"
+import { importsModule } from "./imports.ts"
 import { incidentsModule } from "./incidents.ts"
 import { membersModule } from "./members.ts"
 import { memoryModule } from "./memory.ts"
@@ -43,4 +44,5 @@ export const operationModules: ReadonlyArray<OperationModule> = [
   experimentsModule,
   sessionsModule,
   memoryModule,
+  importsModule,
 ]

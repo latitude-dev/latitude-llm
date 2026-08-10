@@ -66,7 +66,7 @@ const scoreBodyCommonFields = {
     .int()
     .nonnegative()
     .default(0)
-    .describe("Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores."),
+    .describe("Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores."),
   trace: TraceRefSchema.describe("Target trace. Either an explicit id or a filter set matching exactly one trace."),
 } as const
 
@@ -140,7 +140,7 @@ const scoreResponseCommonFields = {
   errored: z.boolean().describe("`true` when the score could not be generated successfully."),
   duration: z.number().int().nonnegative().describe("Score generation duration in nanoseconds."),
   tokens: z.number().int().nonnegative().describe("LLM tokens consumed generating the score."),
-  cost: z.number().int().nonnegative().describe("Score cost in microcents (1/1,000,000 of a USD)."),
+  cost: z.number().int().nonnegative().describe("Score cost in microcents (100,000,000 per USD)."),
   draftedAt: z.iso
     .datetime()
     .nullable()

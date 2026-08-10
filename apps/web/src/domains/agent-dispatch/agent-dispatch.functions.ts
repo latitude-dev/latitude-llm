@@ -26,7 +26,7 @@ import {
   resolveEffectiveConfigsForProject,
   type StoredAgentDispatchTarget,
   sendAgentDispatchUseCase,
-  setProjectDispatchRepoUseCase,
+  setDispatchRepoUseCase,
   storedAgentDispatchTargetSchema,
   upsertOrgDefaultDispatchConfigUseCase,
   upsertProjectDispatchOverrideUseCase,
@@ -43,6 +43,7 @@ import {
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
   IncidentMonitorReaderLive,
+  MembershipRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
@@ -56,6 +57,7 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { requireOrganizationOwner } from "../../server/require-owner.ts"
 
 export interface AgentDispatchRecord {
   readonly id: string
@@ -553,6 +555,7 @@ interface ProjectDispatchSettingsRecord {
   readonly defaultConfig: AgentDispatchConfigRecord | null
   readonly override: AgentDispatchOverrideRecord | null
   readonly effective: AgentDispatchConfigRecord | null
+  readonly overrideCount: number
 }
 
 export const getProjectDispatchSettings = createServerFn({ method: "GET" })
@@ -567,10 +570,12 @@ export const getProjectDispatchSettings = createServerFn({ method: "GET" })
         const integrationRepo = yield* AgentDispatchIntegrationRepository
         const configRepo = yield* AgentDispatchConfigRepository
         const integration = yield* integrationRepo.findActiveByKind(data.kind)
-        if (!integration) return { integrationId: null, defaultConfig: null, override: null, effective: null }
-        const [defaultRow, overrideRow] = yield* Effect.all([
+        if (!integration)
+          return { integrationId: null, defaultConfig: null, override: null, effective: null, overrideCount: 0 }
+        const [defaultRow, overrideRow, overrideCount] = yield* Effect.all([
           configRepo.findDefaultByIntegration(integration.id),
           configRepo.findOverrideByProjectAndIntegration({ projectId, integrationId: integration.id }),
+          configRepo.countProjectOverrides(integration.id),
         ])
         const effective = resolveEffectiveConfig({ projectId, defaultConfig: defaultRow, override: overrideRow })
         const effectiveUpdatedAt = new Date(
@@ -581,6 +586,7 @@ export const getProjectDispatchSettings = createServerFn({ method: "GET" })
           defaultConfig: defaultRow ? toConfigRecord(defaultRow) : null,
           override: overrideRow ? toOverrideRecord(overrideRow) : null,
           effective: effective ? toEffectiveRecord(effective, effectiveUpdatedAt) : null,
+          overrideCount,
         }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
@@ -590,7 +596,6 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       kind: z.literal("cursor"),
-      projectId: z.string(),
       cursorApiKey: z.string().min(1),
       repoUrl: z.string().url().optional(),
       startingRef: z.string().optional(),
@@ -608,20 +613,13 @@ export const connectCursorIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           cursorApiKey: data.cursorApiKey,
-        })
-        const config = yield* upsertProjectDispatchOverrideUseCase({
-          organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(data.projectId),
-          integrationId: integration.id,
-          kind: "cursor",
-          enabled: true,
           triggers: ["signal.discovered"],
           target: {
             ...(data.repoUrl ? { repoUrl: data.repoUrl } : {}),
             ...(data.startingRef ? { startingRef: data.startingRef } : {}),
           },
         })
-        return { integrationId: integration.id, config: toConfigRecord(config) }
+        return { integrationId: integration.id }
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })
@@ -630,7 +628,6 @@ export const connectClaudeIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       kind: z.literal("claude_code"),
-      projectId: z.string(),
       claudeRoutineToken: z.string().min(1),
       routineTriggerId: z.string().min(1),
     }),
@@ -647,13 +644,6 @@ export const connectClaudeIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           claudeRoutineToken: data.claudeRoutineToken,
-        })
-        yield* upsertProjectDispatchOverrideUseCase({
-          organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(data.projectId),
-          integrationId: integration.id,
-          kind: "claude_code",
-          enabled: true,
           triggers: ["signal.discovered"],
           target: { routineTriggerId: data.routineTriggerId },
         })
@@ -666,7 +656,6 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       kind: z.literal("linear"),
-      projectId: z.string(),
       linearApiKey: z.string().min(1),
       teamId: z.string().uuid(),
     }),
@@ -683,13 +672,6 @@ export const connectLinearIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           linearApiKey: data.linearApiKey,
-        })
-        yield* upsertProjectDispatchOverrideUseCase({
-          organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(data.projectId),
-          integrationId: integration.id,
-          kind: "linear",
-          enabled: true,
           triggers: ["signal.discovered"],
           target: { teamId: data.teamId },
         })
@@ -702,7 +684,6 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       kind: z.literal("webhook"),
-      projectId: z.string(),
       webhookUrl: z.string().url(),
     }),
   )
@@ -719,13 +700,6 @@ export const connectWebhookIntegration = createServerFn({ method: "POST" })
           installedByUserId: userId,
           organizationId: OrganizationId(organizationId),
           webhookSecret,
-        })
-        yield* upsertProjectDispatchOverrideUseCase({
-          organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(data.projectId),
-          integrationId: integration.id,
-          kind: "webhook",
-          enabled: true,
           triggers: ["signal.discovered"],
           target: { webhookUrl: data.webhookUrl },
         })
@@ -977,20 +951,26 @@ export const sendSignalToIntegration = createServerFn({ method: "POST" })
 export const upsertOrgDefaultDispatchConfig = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => orgDefaultConfigSchema.parse(data))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     const config = await Effect.runPromise(
-      upsertOrgDefaultDispatchConfigUseCase({
-        organizationId: OrganizationId(organizationId),
-        integrationId: data.integrationId,
-        kind: data.kind,
-        enabled: data.enabled,
-        triggers: data.triggers,
-        target: data.target,
-        ...(data.promptTemplate !== undefined ? { promptTemplate: data.promptTemplate } : {}),
-        ...(data.guardrails !== undefined ? { guardrails: data.guardrails } : {}),
-      }).pipe(withPostgres(AgentDispatchConfigRepositoryLive, client, organizationId), withTracing),
+      Effect.gen(function* () {
+        yield* requireOrganizationOwner({ organizationId, userId, what: "an organization dispatch default" })
+        return yield* upsertOrgDefaultDispatchConfigUseCase({
+          organizationId: OrganizationId(organizationId),
+          integrationId: data.integrationId,
+          kind: data.kind,
+          enabled: data.enabled,
+          triggers: data.triggers,
+          target: data.target,
+          ...(data.promptTemplate !== undefined ? { promptTemplate: data.promptTemplate } : {}),
+          ...(data.guardrails !== undefined ? { guardrails: data.guardrails } : {}),
+        })
+      }).pipe(
+        withPostgres(Layer.merge(AgentDispatchConfigRepositoryLive, MembershipRepositoryLive), client, organizationId),
+        withTracing,
+      ),
     )
 
     return toConfigRecord(config)
@@ -1034,8 +1014,8 @@ export const resetProjectDispatchOverride = createServerFn({ method: "POST" })
     return { reset: true }
   })
 
-export const setProjectDispatchRepo = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ projectId: z.string(), kind: z.literal("cursor"), repoUrl: z.string().url() }))
+export const setDispatchRepo = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ kind: z.literal("cursor"), repoUrl: z.string().url() }))
   .handler(async ({ data }) => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
@@ -1045,13 +1025,12 @@ export const setProjectDispatchRepo = createServerFn({ method: "POST" })
         const integrationRepo = yield* AgentDispatchIntegrationRepository
         const integration = yield* integrationRepo.findActiveByKind(data.kind)
         if (!integration) return yield* Effect.fail(new Error("Cursor is not connected"))
-        const config = yield* setProjectDispatchRepoUseCase({
+        const config = yield* setDispatchRepoUseCase({
           organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(data.projectId),
           integrationId: integration.id,
           repoUrl: data.repoUrl,
         })
-        return toOverrideRecord(config)
+        return toConfigRecord(config)
       }).pipe(withPostgres(agentDispatchLayer, client, organizationId), withTracing),
     )
   })

@@ -865,6 +865,26 @@ const _registry = {
       readonly coverageFloor: string
     }
   }>(),
+
+  imports: payloads<{
+    start: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly importJobId: string
+    }
+    fetchPage: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly importJobId: string
+      /** Consecutive `Retry-After` waits already spent on this page; bounded, carried in the payload. */
+      readonly rateLimitWaits?: number
+    }
+    /** Cascade cleanup fired by the domain-events router on `ProjectDeleted`. */
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
+    }
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry

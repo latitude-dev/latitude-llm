@@ -421,17 +421,104 @@ export const TAXONOMY_KMEANS_MAX_ITER = 25
 /** k-means convergence tolerance in (1 - cosine) centroid drift. */
 export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
 
+/**
+ * Restart budget for re-searching the ROOT split when it lands near the separation
+ * gate. k-means finds a local optimum, so the tree depends on where k-means++
+ * seeded, and seeds are drawn as indices into a member list that window turnover
+ * re-addresses (LAT-825). Three restarts is too small a sample on a corpus whose
+ * root sits near `minRelativeSeparation`: the tree alternates between a real split
+ * and a bare leaf.
+ *
+ * Do not lower this to buy headroom against the worker deadline — it buys almost
+ * none. Over the pilot's real historical windows 12 restarts collapses as many
+ * roots as not re-searching at all, while costing only 6% less than 25, because the
+ * first pass and the subtrees dominate that total rather than the root sweep.
+ * Narrow the swept K instead (TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH).
+ */
+export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 25
+/**
+ * Root relative separation at or above which the first-pass build is kept as-is.
+ * Measured on real corpora across historical 7-day windows: an unstable project
+ * sits at 0.35–0.57 while a stable one sits at 1.06 and above, with no overlap.
+ * 0.8 centres the threshold in that gap. Builds above it are returned untouched,
+ * so projects that do not need the re-search are unaffected by it.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN = 0.8
+/**
+ * Lower edge of the re-search band. A corpus with no structure to find reaches
+ * only ~0.09 at its best root candidate, while a corpus whose real split merely
+ * fell short on this run reaches ~0.4. Without this floor every unimodal project
+ * would re-search on every pass to reconfirm the leaf it already had.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
+/**
+ * How many K the root re-search sweeps, best-scoring-first from the first pass.
+ *
+ * A k-means run costs O(n·k·dimensions), so sweeping all of 2..maxChildren spends
+ * most of the escalated budget re-confirming K the first pass already ranked last.
+ * On the real pilot corpus the root's accepted split is identical at every sweep
+ * width from 3 to 10 while the build ranges 6.9s to 46.3s. 3 rather than 2 for a
+ * spare candidate if the best-scoring K fails the gates at the higher restart count.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH = 3
+
 // ---------------------------------------------------------------------------
 // Clustering worker resource bounds
 //
-// The divisive build runs in a dedicated Node worker thread. These bound a
-// single worker invocation — one shared deadline and memory budget covering
-// the whole run (static plus, in shadow mode, adaptive). The measured
-// max-sample (1,500 × 2,048) build is ~6s and a real 2,048d pilot build ~12s;
-// the timeout is a generous backstop against a hung/looping worker, not a tuned
-// SLA. The old-generation budget is the calibrated worker heap ceiling: the
-// measured build peaks well under it.
+// The divisive build runs in a dedicated Node worker thread. The old-generation
+// budget is the worker heap ceiling: memory is a function of the sample, not of the
+// search budget.
+//
+// The deadline is the binding constraint on the search budget, not a spare backstop:
+// the re-search is bounded to fit it (TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK), so
+// raising the search budget without re-deriving that is a deadline breach. Sizing
+// it needs production numbers, not local ones — the build this was set against runs
+// ~12s locally but 61-65s on the activity worker, whose speed varies ~4.4x pass to
+// pass. Kept well under the 30-minute Temporal start-to-close of the planning
+// activity that awaits it.
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 5 * 60_000
 export const TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB = 512
+
+/**
+ * ROOT-SWEEP dot-product element operations per millisecond of TOTAL build time.
+ *
+ * Deliberately not raw throughput. The budget check can only charge the root K
+ * sweeps, because the work below the root depends on a partition that does not exist
+ * until the split is chosen — and a rigorous whole-tree upper bound (every depth
+ * sweeping its full K range over all members, no early convergence) overstates a
+ * real build by ~2x and would decline corpora that finish comfortably. So the
+ * subtree cost is folded into this ratio instead: the numerator counts only the root
+ * sweep, the denominator is the whole build's wall time.
+ *
+ * Calibrated that way from production: a plain build over 970 observations sweeps
+ * K=2..10 at 3 restarts and <=25 iterations, so at most `3 * 25 * 970 * 2048 * 54`
+ * ~ 8.0e9 root-sweep operations, against 61-65s of total build time — ~128_000 per
+ * millisecond. 80_000 leaves headroom for a slow host pass. Retune from
+ * `taxonomy.adaptive.projectedRootSearchWork` against observed `durationMs`, which
+ * keeps both sides of the ratio measured rather than derived.
+ *
+ * Not exported: only the derived budget below is a contract.
+ */
+const CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS = 80_000
+
+/**
+ * Ceiling on the projected ROOT-SWEEP work of an escalated build, in the units of
+ * CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS (which is what makes charging the root
+ * sweeps alone dimensionally sound — see there).
+ *
+ * A projected operation COUNT rather than a duration: the builder must stay a pure
+ * function of its inputs, and a wall-clock check would branch differently on a slow
+ * host and break Temporal replay.
+ *
+ * Exceeding it declines the RE-SEARCH, not the adaptive build: the first pass still
+ * stands, so the run publishes an un-escalated adaptive tree — which on a near-gate
+ * corpus is exactly the collapse-prone one the re-search exists to avoid. That is
+ * why declining reports `escalationSkipped` and `projectedRootSearchWork`; a
+ * too-tight budget degrades tree quality quietly otherwise. At current settings a
+ * ~900-observation corpus projects to ~74% of this and a
+ * TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX corpus is declined.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK =
+  TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS * CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS

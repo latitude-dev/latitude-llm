@@ -24,12 +24,12 @@ export const createFakeTaxonomyClusterRepository = (
         ids.map((id) => clusters.get(id)).filter((cluster): cluster is TaxonomyCluster => cluster !== undefined),
       ),
 
-    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId }) =>
+    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId, states }) =>
       Effect.sync(() =>
         [...clusters.values()].filter(
           (cluster) =>
             cluster.projectId === projectId &&
-            cluster.state === "active" &&
+            (states ?? ["active"]).includes(cluster.state) &&
             (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
             (cluster.facetId ?? null) === (facetId ?? null) &&
             (parentClusterId === undefined || cluster.parentClusterId === parentClusterId),

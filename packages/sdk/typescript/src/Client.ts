@@ -6,6 +6,7 @@ import { AnnotationsClient } from "./api/resources/annotations/client/Client.js"
 import { ApiKeysClient } from "./api/resources/apiKeys/client/Client.js";
 import { DatasetsClient } from "./api/resources/datasets/client/Client.js";
 import { ExperimentsClient } from "./api/resources/experiments/client/Client.js";
+import { ImportsClient } from "./api/resources/imports/client/Client.js";
 import { IncidentsClient } from "./api/resources/incidents/client/Client.js";
 import { MembersClient } from "./api/resources/members/client/Client.js";
 import { MemoryClient } from "./api/resources/memory/client/Client.js";
@@ -52,6 +53,7 @@ export class LatitudeClient {
     protected _experiments: ExperimentsClient | undefined;
     protected _sessions: SessionsClient | undefined;
     protected _memory: MemoryClient | undefined;
+    protected _imports: ImportsClient | undefined;
 
     constructor(options: LatitudeClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
@@ -135,6 +137,10 @@ export class LatitudeClient {
 
     public get memory(): MemoryClient {
         return (this._memory ??= new MemoryClient(this._options));
+    }
+
+    public get imports(): ImportsClient {
+        return (this._imports ??= new ImportsClient(this._options));
     }
 
     /**

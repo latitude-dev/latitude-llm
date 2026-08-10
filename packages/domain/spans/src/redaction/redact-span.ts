@@ -1,36 +1,44 @@
-import type { RedactionPolicy } from "@domain/shared"
 import type { SpanDetail } from "../entities/span.ts"
-import { isContentAttributeKey } from "../otlp/content/index.ts"
 import { REDACTED_IDENTITY_PLACEHOLDER } from "./labels.ts"
 import {
   emptyScanTally,
+  maskKeyedScalars,
+  maskKeyedValues,
   mergeScanTally,
+  type NumberMapRedactionResult,
   redactJsonString,
   redactJsonValue,
+  redactNumberMap,
   redactStringMap,
+  type ScalarMaskResult,
   type ScanTally,
 } from "./redact-json.ts"
 import { mergeRedactionCounts, type RedactionCounts, redactLeaf } from "./redact-text.ts"
+import type { CompiledPolicy } from "./rules.ts"
 
 interface SpanRedactionStats {
   readonly counts: RedactionCounts
   readonly scan: ScanTally
-  readonly droppedAttributeKeys: number
+  readonly relocatedNumericAttributes: number
   readonly pseudonymizedIdentities: number
 }
+
+/** Pseudonym collection runs before compilation, so it is stated as the field it needs rather than a whole policy. */
+type IdentityHandling = Pick<CompiledPolicy, "identities">
 
 /** Resolved before the synchronous walk, because deriving a pseudonym needs an async HMAC. */
 export type PseudonymLookup = ReadonlyMap<string, string>
 
 export function redactSpanDetail(
   span: SpanDetail,
-  policy: RedactionPolicy,
+  policy: CompiledPolicy,
   pseudonyms: PseudonymLookup,
 ): { span: SpanDetail; stats: SpanRedactionStats } {
-  const entities = policy.entities
+  const ruleSet = policy.ruleSet
   const counts: RedactionCounts = {}
   const scan = emptyScanTally()
-  let droppedAttributeKeys = 0
+  const relocated: Record<string, string> = {}
+  let relocatedNumericAttributes = 0
   let pseudonymizedIdentities = 0
 
   const take = <T>(result: { value: T; counts: RedactionCounts; scan: ScanTally }): T => {
@@ -39,40 +47,85 @@ export function redactSpanDetail(
     return result.value
   }
 
-  const inputMessages = take(redactJsonValue(span.inputMessages, entities))
-  const outputMessages = take(redactJsonValue(span.outputMessages, entities))
-  const systemInstructions = take(redactJsonValue(span.systemInstructions, entities))
-  const toolDefinitions = take(redactJsonValue(span.toolDefinitions, entities))
-  const toolInput = take(redactJsonString(span.toolInput, entities))
-  const toolOutput = take(redactJsonString(span.toolOutput, entities))
-  const eventsJson = take(redactJsonString(span.eventsJson, entities))
+  const takeScalars = <T>(result: ScalarMaskResult<T>): Record<string, T> => {
+    mergeRedactionCounts(counts, result.counts)
+    for (const [key, placeholder] of Object.entries(result.relocated)) {
+      relocated[key] = placeholder
+      relocatedNumericAttributes += 1
+    }
+    return result.kept
+  }
 
-  const statusMessageOutcome = redactLeaf(span.statusMessage, entities)
+  const takeNumbers = <T extends number>(result: NumberMapRedactionResult<T>): Record<string, T> => {
+    mergeRedactionCounts(counts, result.counts)
+    mergeScanTally(scan, result.scan)
+    for (const [key, placeholder] of Object.entries(result.relocated)) {
+      relocated[key] = placeholder
+      relocatedNumericAttributes += 1
+    }
+    return result.kept
+  }
+
+  const inputMessages = take(redactJsonValue(span.inputMessages, ruleSet))
+  const outputMessages = take(redactJsonValue(span.outputMessages, ruleSet))
+  const systemInstructions = take(redactJsonValue(span.systemInstructions, ruleSet))
+  const toolDefinitions = take(redactJsonValue(span.toolDefinitions, ruleSet))
+  const toolInput = take(redactJsonString(span.toolInput, ruleSet))
+  const toolOutput = take(redactJsonString(span.toolOutput, ruleSet))
+  const eventsJson = take(redactJsonString(span.eventsJson, ruleSet))
+
+  const statusMessageOutcome = redactLeaf(span.statusMessage, ruleSet)
   mergeRedactionCounts(counts, statusMessageOutcome.counts)
   scan.leaves += 1
   scan.chars += statusMessageOutcome.scannedChars
   if (statusMessageOutcome.oversized) scan.oversized += 1
 
-  // Dropping is not redundant with the value pass behind it: it also removes the prose no detector matches.
-  const contentKeys = Object.keys(span.attrString).filter(isContentAttributeKey)
-  droppedAttributeKeys = contentKeys.length
-  const attrStringSource =
-    contentKeys.length > 0
-      ? Object.fromEntries(Object.entries(span.attrString).filter(([key]) => !isContentAttributeKey(key)))
-      : span.attrString
-  const attrString = take(redactStringMap(attrStringSource, entities))
-  const resourceString = take(redactStringMap(span.resourceString, entities))
+  // Not redundant with the identity columns below: those are resolved copies, and these maps hold the originals.
+  const identities = identityReplacements(span, policy, pseudonyms)
+  const substitute = (map: Readonly<Record<string, string>>): Readonly<Record<string, string>> => {
+    const outcome = substituteIdentities(map, identities)
+    pseudonymizedIdentities += outcome.replaced
+    return outcome.value
+  }
 
-  const metadata = policy.redactMetadata ? take(redactStringMap(span.metadata, entities)) : span.metadata
+  // A key rule masks the whole value wherever the key appears. Unlike the value pass it is not
+  // gated on the metadata scope: a key named explicitly is meant everywhere, and masking one
+  // cannot produce a false positive.
+  const maskedAttrString = take(maskKeyedValues(substitute(span.attrString), ruleSet))
+  const maskedResourceString = take(maskKeyedValues(substitute(span.resourceString), ruleSet))
+  const redactedAttrString = take(redactStringMap(maskedAttrString, ruleSet))
+  const resourceString = take(redactStringMap(maskedResourceString, ruleSet))
+
+  // A key rule reaches the typed maps too: the customer named an attribute, not a column type.
+  // Values are only scanned in the numeric ones — no detector can match "true" or "false".
+  const maskedInt = takeScalars(maskKeyedScalars(span.attrInt, ruleSet))
+  const maskedFloat = takeScalars(maskKeyedScalars(span.attrFloat, ruleSet))
+  const attrBool = takeScalars(maskKeyedScalars(span.attrBool, ruleSet))
+  const attrInt = takeNumbers(redactNumberMap(maskedInt, ruleSet))
+  const attrFloat = takeNumbers(redactNumberMap(maskedFloat, ruleSet))
+  const attrString = { ...relocated, ...redactedAttrString }
+
+  // Identity handling is its own control, so it applies to metadata and tags whether or not the metadata scope is on.
+  const metadataSource = take(maskKeyedValues(substitute(span.metadata), ruleSet))
+  const metadata = policy.redactMetadata ? take(redactStringMap(metadataSource, ruleSet)) : metadataSource
+  const tagsSource =
+    identities.size === 0
+      ? span.tags
+      : span.tags.map((tag) => {
+          const replacement = identities.get(tag)
+          if (replacement === undefined) return tag
+          pseudonymizedIdentities += 1
+          return replacement
+        })
   const tags = policy.redactMetadata
-    ? span.tags.map((tag) => {
-        const outcome = redactLeaf(tag, entities)
+    ? tagsSource.map((tag) => {
+        const outcome = redactLeaf(tag, ruleSet)
         mergeRedactionCounts(counts, outcome.counts)
         scan.leaves += 1
         scan.chars += outcome.scannedChars
         return outcome.text
       })
-    : span.tags
+    : tagsSource
 
   let userId = span.userId
   let userEmail = span.userEmail
@@ -95,6 +148,9 @@ export function redactSpanDetail(
       metadata,
       eventsJson,
       attrString,
+      attrInt,
+      attrFloat,
+      attrBool,
       resourceString,
       inputMessages,
       outputMessages,
@@ -103,7 +159,7 @@ export function redactSpanDetail(
       toolInput,
       toolOutput,
     },
-    stats: { counts, scan, droppedAttributeKeys, pseudonymizedIdentities },
+    stats: { counts, scan, relocatedNumericAttributes, pseudonymizedIdentities },
   }
 }
 
@@ -114,9 +170,49 @@ const replaceIdentity = (value: string, pseudonyms: PseudonymLookup): string => 
   return pseudonyms.get(value) ?? REDACTED_IDENTITY_PLACEHOLDER
 }
 
+const NO_IDENTITIES: ReadonlyMap<string, string> = new Map()
+
+/** Keyed by the raw value rather than the attribute key, so every vendor spelling of `user.id` is covered at once. */
+function identityReplacements(
+  span: SpanDetail,
+  policy: IdentityHandling,
+  pseudonyms: PseudonymLookup,
+): ReadonlyMap<string, string> {
+  if (policy.identities !== "pseudonymize") return NO_IDENTITIES
+
+  const replacements = new Map<string, string>()
+  for (const value of [span.userId as string, span.userEmail]) {
+    if (value !== "") replacements.set(value, replaceIdentity(value, pseudonyms))
+  }
+
+  return replacements
+}
+
+/** Whole-value matches only: a substring pass would rewrite `gpt-4` for a project whose user ids are short numbers. */
+function substituteIdentities(
+  map: Readonly<Record<string, string>>,
+  identities: ReadonlyMap<string, string>,
+): { value: Readonly<Record<string, string>>; replaced: number } {
+  if (identities.size === 0) return { value: map, replaced: 0 }
+
+  let replaced = 0
+  const next: Record<string, string> = {}
+  for (const [key, value] of Object.entries(map)) {
+    const replacement = identities.get(value)
+    if (replacement === undefined) {
+      next[key] = value
+      continue
+    }
+    next[key] = replacement
+    replaced += 1
+  }
+
+  return replaced === 0 ? { value: map, replaced: 0 } : { value: next, replaced }
+}
+
 export function collectIdentityValues(
   spans: readonly SpanDetail[],
-  policyFor: (span: SpanDetail) => RedactionPolicy | undefined,
+  policyFor: (span: SpanDetail) => IdentityHandling | undefined,
 ): Set<string> {
   const values = new Set<string>()
 

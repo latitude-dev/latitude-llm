@@ -57,7 +57,9 @@ The provider also holds:
   listing its child commands (keyboard drill-down).
 
 Shared fields: `id` (globally unique; also the cmdk item `value`), `title`, `icon`
-(`LucideIcon`), `section` (`"context" | "search" | "navigation" | "projects" | "actions"`),
+(`ComponentType<LucideProps>` — the same shape `@repo/ui`'s `Icon` accepts, so brand marks like
+`SlackIcon` / `LinearIcon` work alongside lucide icons),
+`section` (`"context" | "search" | "navigation" | "projects" | "actions"`),
 optional `leading` (overrides the icon, e.g. a project emoji), `subtitle`, `badge`,
 `keywords` (extra search terms), and `group` (sub-heading for contextual commands, e.g.
 `"Issue"`, `"Trace"`).
@@ -74,10 +76,12 @@ The palette merges, in render order:
 2. **In-project search results** (only when inside a project with a non-empty query):
    **Issues**, **Datasets**, **Saved searches**.
 3. **Central providers** (always available hooks):
-   - `useNavigationCommands` — the current project's sections + settings pages.
+   - `useNavigationCommands` — the current project's sections, settings pages, and each
+     integration (Slack/GitHub → the Integrations page; Cursor/Claude Code/Linear/Webhook →
+     their own `settings/integrations/$integrationKind` route).
    - `useProjectCommands` — switch to any project in the org.
    - `useGlobalCommands` — switch organization (drill-down), switch theme, create
-     project/org, docs, backoffice (admins), log out.
+     project/org, copy page link, docs + MCP setup, backoffice (admins), log out.
 4. **Traces fallback** — a single "Search traces for "…"" action, rendered last.
 
 `useCurrentProject` (`commands/use-current-project.ts`) resolves the active project from the
@@ -171,6 +175,7 @@ in the Projects group, which renders before the Actions group, so it already out
 | Monitor search | `apps/web/src/components/command-palette/commands/use-monitor-search-commands.ts` |
 | Experiment search | `apps/web/src/components/command-palette/commands/use-experiment-search-commands.ts` |
 | Shared project sections (source of truth) | `apps/web/src/domains/projects/project-sections.ts` |
+| Agent-dispatch kind labels + icons (source of truth) | `apps/web/src/domains/agent-dispatch/agent-dispatch-kinds.ts` |
 | Mount point + header button | `apps/web/src/routes/_authenticated.tsx` |
 
 ## Maintaining the palette
@@ -189,6 +194,15 @@ Project sections and settings pages are defined once in
 To add a section/settings page: add an entry with `{ key, label, icon, path(slug) }`. It then appears in the
 sidebar, the settings sub-nav, **and** the palette automatically — no palette-specific change.
 Do **not** hardcode a new nav command in the palette; that would duplicate the source of truth.
+
+Individual integrations are the one navigable surface not modeled in `project-sections.ts`, since
+they sit under the Integrations settings page rather than being sidebar entries of their own.
+Agent-dispatch integrations (Cursor, Claude Code, Linear, Webhook) are route-backed — each has a
+`settings/integrations/$integrationKind` page — and their palette entries are derived in
+`use-navigation-commands.ts` from `AGENT_DISPATCH_KIND_LABELS` / `AGENT_DISPATCH_KIND_ICONS`
+(`domains/agent-dispatch/agent-dispatch-kinds.ts`), so a new dispatch kind surfaces with no palette
+change. Slack and GitHub render as sections of the Integrations page with no route of their own, so
+they are listed explicitly and point at that page.
 
 ### 2. New global action → `use-global-commands.tsx`
 

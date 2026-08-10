@@ -15,6 +15,7 @@ export {
   type ClusteringTreeNode,
   quantile,
   type RelativeClusteringDiagnostics,
+  type RelativeClusteringEscalation,
   type RelativeClusteringRejectionReason,
   type RelativeDepthSchedule,
   type StaticDepthSchedule,
@@ -35,6 +36,10 @@ export {
   MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODES,
+  TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
+  TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+  TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
+  TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
   TAXONOMY_ADAPTIVE_POLICY_VERSION,
   TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
@@ -63,6 +68,7 @@ export {
   TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   TAXONOMY_GARDENING_SWEEP_SPREAD_MS,
   TAXONOMY_GARDENING_THROTTLE_MS,
+  TAXONOMY_KMEANS_ESCALATION_RESTARTS,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
@@ -319,6 +325,7 @@ export {
   decideClusterAssignment,
 } from "./use-cases/decide-cluster-assignment.ts"
 export { deleteCustomBehavior } from "./use-cases/delete-custom-behavior.ts"
+export { deleteCustomBehaviorWithViews } from "./use-cases/delete-custom-behavior-with-views.ts"
 export { type DiscardBehaviorInput, discardBehavior } from "./use-cases/discard-behavior.ts"
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export { expandTopicFilterSetUseCase } from "./use-cases/expand-topic-filter-set.ts"

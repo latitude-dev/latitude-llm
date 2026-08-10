@@ -28,7 +28,6 @@ import type {
 } from "./parts/types.ts"
 import { TextSelectionContext } from "./text-selection.tsx"
 
-export { ReasoningGroup } from "./parts/reasoning-group.tsx"
 export type { SubagentToolCallInfo, ToolCallResult } from "./parts/types.ts"
 
 /** Last non-empty path segment of a URI, used as a file card's display name (undefined if none). */
@@ -71,6 +70,7 @@ export function Part({
   subagent,
   messageIndex,
   partIndex,
+  flat = false,
 }: {
   readonly part: GenAIPart
   readonly toolResult?: ToolCallResult | undefined
@@ -79,6 +79,8 @@ export function Part({
   readonly subagent?: SubagentToolCallInfo | undefined
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
+  /** Mutes rendered text color, for nested contexts like a subagent's inline conversation. */
+  readonly flat?: boolean
 }) {
   const selectionCtx = use(TextSelectionContext)
   const partHighlights =
@@ -109,7 +111,7 @@ export function Part({
       return (
         <>
           {refusalBadge}
-          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} />
+          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} flat={flat} />
         </>
       )
     }
@@ -184,7 +186,7 @@ export function Part({
       const p = part as ReasoningPart
       return (
         <div className="text-muted-foreground italic">
-          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} />
+          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} flat={flat} />
         </div>
       )
     }

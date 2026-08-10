@@ -191,9 +191,10 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map(toDomainCluster)
         }),
 
-      listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId }) =>
+      listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId, states }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const readStates = states ?? ["active"]
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
@@ -202,7 +203,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
-                  eq(taxonomyClusters.state, "active"),
+                  inArray(taxonomyClusters.state, readStates),
                   scopeCondition({ customBehaviorId, facetId }),
                   ...(parentClusterId === undefined
                     ? []
