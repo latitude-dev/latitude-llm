@@ -8,11 +8,12 @@ export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regre
 export const SIGNAL_SOURCES = ["annotation", "flagger", "custom"] as const
 
 /**
- * A signal's level, ascending. The same scale monitors and incidents call
- * severity — one list, two field names: `signals.priority` is public API
- * (`operations/signals.ts`) and `severity` is the key inside stored
- * notification payloads, so neither can be renamed for free. Null means
- * "unset", which only signals have (a monitor's level is required).
+ * Manual triage priority levels, ascending in urgency. Null means "unset".
+ *
+ * The same list monitors and incidents call severity — one array, two names:
+ * `signals.priority` is public API and `severity` is the key inside stored
+ * notification payloads, so neither can be renamed for free. Aliasing rather
+ * than repeating the values is what stops the two scales drifting apart again.
  */
 export const SIGNAL_PRIORITIES = ALERT_SEVERITIES
 
@@ -283,29 +284,11 @@ export const SIGNAL_DISCOVERY_MIN_RELEVANCE = 0.3
 // ---------------------------------------------------------------------------
 
 /** Language model used to generate stable issue names/descriptions. */
-/**
- * `reasoning: "high"` is load-bearing for the severity rating, not just for the
- * name and description. Measured against human-labelled production signals,
- * dropping to `low` made the rubric both worse (5/18 exact against 6-8/18) and
- * *less* reproducible (39% of cases differed across runs against 28%), and it
- * stopped reaching `urgent` at all — the rating depends on the model working
- * through whether a failure is one the caller can see, which it skips without the
- * budget to do it. Temperature does not substitute: `temperature: 0` leaves
- * instability at 28% because the reasoning trace is what varies.
- */
 export const SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",
   reasoning: "high",
 } as const
-
-/**
- * Sibling flagger annotations sampled from a session when collecting the
- * detectors that matched alongside a new signal's occurrence. Detector variety
- * on one session converges well before this, so the cap only bounds the scan on
- * a pathological session.
- */
-export const CO_OCCURRENCE_SAMPLE_LIMIT = 20
 
 /** Maximum recent assigned issue occurrences used when regenerating existing issue details. */
 export const SIGNAL_DETAILS_MAX_OCCURRENCES = 25

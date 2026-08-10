@@ -2,15 +2,13 @@ import { resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
 import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { generateId, type NotFoundError, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import { generateId, type NotFoundError, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { CO_OCCURRENCE_SAMPLE_LIMIT } from "../constants.ts"
-import type { Signal, SignalPriority, SignalSource } from "../entities/signal.ts"
+import type { Signal, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
 import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
-import { applySeverityFloor, flaggerSeverityFloor, isDeterministicFlagger } from "../severity-floor.ts"
 import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import type { GenerateSignalDetailsError } from "./generate-signal-details.ts"
@@ -72,44 +70,6 @@ const loadEligibleScoreOrCurrentOwner = (input: {
     ),
   )
 
-/** Only flagger-authored annotation scores carry a detector slug. */
-const flaggerSlugOf = (score: Score): string | undefined => {
-  if (score.sourceType !== "annotation") return undefined
-  const slug = (score.metadata as { flaggerSlug?: unknown } | null)?.flaggerSlug
-  return typeof slug === "string" && slug.length > 0 ? slug : undefined
-}
-
-/**
- * Other detectors that matched the same session.
- *
- * Three checks firing on one conversation says something the prose of any single
- * one does not, and it is a fact rather than a reading of a sentence — the kind
- * of evidence the rating is short of. One indexed query on
- * `(organization_id, project_id, session_id, created_at, id)`.
- *
- * Best-effort by nature: the sibling scores are written during the same screening
- * pass, so a signal created from the first of them may see fewer than a signal
- * created from the last. An undercount weakens the evidence, it never invents any,
- * and a failed read is not worth blocking signal creation over.
- */
-const coOccurringDetectors = (score: Score, exclude: string | undefined) =>
-  Effect.gen(function* () {
-    if (score.sessionId === null) return []
-    const scoreRepository = yield* ScoreRepository
-    const siblings = yield* scoreRepository.listPublishedSystemAnnotationsBySession({
-      projectId: ProjectId(score.projectId),
-      sessionId: score.sessionId,
-      limit: CO_OCCURRENCE_SAMPLE_LIMIT,
-    })
-    const slugs = new Set<string>()
-    for (const sibling of siblings) {
-      if (sibling.id === score.id) continue
-      const slug = flaggerSlugOf(sibling)
-      if (slug !== undefined && slug !== exclude) slugs.add(slug)
-    }
-    return [...slugs].sort()
-  }).pipe(Effect.catchCause(() => Effect.succeed<readonly string[]>([])))
-
 const buildNewSignalFromScore = ({
   score,
   normalizedEmbedding,
@@ -117,7 +77,6 @@ const buildNewSignalFromScore = ({
   assignedAt,
   name,
   description,
-  priority,
   slug,
 }: {
   readonly score: Score
@@ -126,7 +85,6 @@ const buildNewSignalFromScore = ({
   readonly assignedAt: Date
   readonly name: string
   readonly description: string
-  readonly priority: SignalPriority | null
   readonly slug: string
 }): Signal => {
   const centroid = updateSignalCentroid({
@@ -156,7 +114,7 @@ const buildNewSignalFromScore = ({
     source,
     origin: "system",
     assigneeId: null,
-    priority,
+    priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
     resolvedAt: null,
@@ -181,13 +139,6 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
       } satisfies CreateSignalFromScoreResult
     }
 
-    const flaggerSlug = flaggerSlugOf(initialScoreResult.score)
-    // A deterministic detector already established what happened, so there is
-    // nothing for a model to judge — asking anyway agreed with human triage on
-    // none of the production signals these detectors opened. They start at `low`
-    // and stay there until somebody triages them.
-    const deterministic = isDeterministicFlagger(flaggerSlug)
-    const alongside = yield* coOccurringDetectors(initialScoreResult.score, flaggerSlug)
     const signalDetails = yield* generateSignalDetailsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -195,24 +146,9 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
         {
           sourceType: initialScoreResult.score.sourceType,
           feedback: initialScoreResult.score.feedback,
-          value: initialScoreResult.score.value,
-          machineAuthored: initialScoreResult.score.sourceId === "SYSTEM",
-          ...(alongside.length === 0 ? {} : { coOccurringDetectors: alongside }),
-          ...(flaggerSlug === undefined ? {} : { flaggerSlug }),
         },
       ],
-      withSeverity: !deterministic,
     })
-    // The model may rate higher than a detector's floor, never lower.
-    const detectorFloor = flaggerSeverityFloor(flaggerSlug)
-    const severity = deterministic
-      ? (detectorFloor ?? "low")
-      : applySeverityFloor(signalDetails.severity ?? null, detectorFloor)
-    // `none` means the signal notifies nobody and dispatches nothing, which is
-    // the one failure here that reaches a customer as silence. On the span rather
-    // than a log line: `Effect.log*` has no Datadog bridge, so a span attribute
-    // is what a monitor can actually alert on.
-    yield* Effect.annotateCurrentSpan("severity", severity ?? "none")
 
     const sqlClient = yield* SqlClient
 
@@ -249,9 +185,6 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           assignedAt,
           name: signalDetails.name,
           description: signalDetails.description,
-          // `priority` is the column and the public API field; `severity` is the
-          // scale's name everywhere else. Same values, one list.
-          priority: severity,
           slug,
         })
 

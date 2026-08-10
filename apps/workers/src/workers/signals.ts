@@ -113,7 +113,6 @@ export const createSignalsWorker = async ({
     refresh: (payload) =>
       Effect.gen(function* () {
         const organizationId = OrganizationId(payload.organizationId)
-
         // No stable per-refresh identity exists in the payload; the random suffix
         // makes each refresh bill separately, while a retried job's generate hits
         // the 24h AI cache and is never re-charged.

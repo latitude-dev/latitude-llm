@@ -56,7 +56,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   source: "annotation",
   origin: "system",
   assigneeId: null,
-  priority: "high",
+  priority: null,
   centroid: {
     base: [1, 0],
     mass: 1,
@@ -185,20 +185,6 @@ const makeLayer = (opts: {
 }
 
 describe("requestIncidentNotificationsUseCase", () => {
-  // 97% of production escalations come from signals nobody triaged; the rate
-  // breaking its band is the judgment, so they still page.
-  it("still fans out when the escalating signal has no level", async () => {
-    const incident = makeIncident()
-    const result = await Effect.runPromise(
-      requestIncidentNotificationsUseCase({
-        alertIncidentId: incident.id,
-        transition: "created",
-      }).pipe(Effect.provide(makeLayer({ incident, signal: makeSignal({ priority: null }) }))),
-    )
-
-    expect(result.status).toBe("ok")
-  })
-
   it("fans out signal escalation incidents when the signal is not muted", async () => {
     const incident = makeIncident()
     const result = await Effect.runPromise(

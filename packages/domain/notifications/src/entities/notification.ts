@@ -241,18 +241,9 @@ export const signalAssignedPayloadSchema = z.object({
 })
 export type SignalAssignedPayload = z.infer<typeof signalAssignedPayloadSchema>
 
-/**
- * The signal's level at producer time, under the same `severity` key incident
- * payloads use — that is what `routeAdmitsPayload` and `severityFromPayload`
- * filter on, so a Slack route's `minSeverity` and a user's `emailMinSeverity`
- * apply to discovered signals with no further wiring. Optional: rows written
- * before this field, and signals with no level yet, carry none and are always
- * admitted.
- */
 export const signalDiscoveredPayloadSchema = z.object({
   signalId: cuidSchema,
   discoveredAt: z.iso.datetime(),
-  severity: alertSeveritySchema.optional(),
 })
 export type SignalDiscoveredPayload = z.infer<typeof signalDiscoveredPayloadSchema>
 
@@ -261,7 +252,6 @@ export const signalRegressedPayloadSchema = z.object({
   regressedAt: z.iso.datetime(),
   /** Occurrence that reopened the resolved signal; discriminates regression cycles. */
   triggerScoreId: cuidSchema,
-  severity: alertSeveritySchema.optional(),
 })
 export type SignalRegressedPayload = z.infer<typeof signalRegressedPayloadSchema>
 
@@ -311,16 +301,14 @@ export type BillingLimitReachedPayload = z.infer<typeof billingLimitReachedPaylo
  * each channel's renderer registry to fail until the new kind is handled.
  */
 export const NOTIFICATION_KIND_META = {
-  "incident.event": { group: "incidents", payload: incidentEventPayloadSchema, requiresSeverity: true },
+  "incident.event": { group: "incidents", payload: incidentEventPayloadSchema },
   "incident.opened": {
     group: "incidents",
     payload: incidentOpenedPayloadSchema,
-    requiresSeverity: true,
   },
   "incident.closed": {
     group: "incidents",
     payload: incidentClosedPayloadSchema,
-    requiresSeverity: true,
   },
   "wrapped.report": {
     group: "wrapped_reports",
@@ -331,8 +319,8 @@ export const NOTIFICATION_KIND_META = {
     payload: customMessagePayloadSchema,
   },
   "issue.assigned": { group: "personal", payload: signalAssignedPayloadSchema },
-  "signal.discovered": { group: "incidents", payload: signalDiscoveredPayloadSchema, requiresSeverity: true },
-  "signal.regressed": { group: "incidents", payload: signalRegressedPayloadSchema, requiresSeverity: true },
+  "signal.discovered": { group: "incidents", payload: signalDiscoveredPayloadSchema },
+  "signal.regressed": { group: "incidents", payload: signalRegressedPayloadSchema },
   "destination.quarantined": {
     group: "destinations",
     payload: destinationQuarantinedPayloadSchema,
@@ -341,30 +329,13 @@ export const NOTIFICATION_KIND_META = {
     group: "billing",
     payload: billingLimitReachedPayloadSchema,
   },
-} as const satisfies Record<
-  string,
-  {
-    readonly group: NotificationGroup
-    readonly payload: z.ZodTypeAny
-    /**
-     * The kind is expected to carry a `severity`. A missing one means nobody has
-     * judged the source yet, so it is NOT delivered — the opposite of kinds with
-     * no severity concept (wrapped reports, announcements, destination and
-     * billing alerts), which always pass the threshold.
-     */
-    readonly requiresSeverity?: boolean
-  }
->
+} as const satisfies Record<string, { readonly group: NotificationGroup; readonly payload: z.ZodTypeAny }>
 
 export type NotificationKind = keyof typeof NOTIFICATION_KIND_META
 export const NOTIFICATION_KINDS = Object.keys(NOTIFICATION_KIND_META) as readonly NotificationKind[]
 export const notificationKindSchema = z.enum(NOTIFICATION_KINDS as [NotificationKind, ...NotificationKind[]])
 
 export const groupOf = (kind: NotificationKind): NotificationGroup => NOTIFICATION_KIND_META[kind].group
-
-/** Whether a missing payload severity means "unjudged, do not deliver" for this kind. */
-export const kindRequiresSeverity = (kind: NotificationKind): boolean =>
-  "requiresSeverity" in NOTIFICATION_KIND_META[kind] && NOTIFICATION_KIND_META[kind].requiresSeverity === true
 
 export const payloadSchemaFor = <K extends NotificationKind>(kind: K): (typeof NOTIFICATION_KIND_META)[K]["payload"] =>
   NOTIFICATION_KIND_META[kind].payload

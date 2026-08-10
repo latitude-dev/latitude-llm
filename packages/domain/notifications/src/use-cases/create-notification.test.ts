@@ -67,10 +67,9 @@ function setup(opts: SetupOpts = {}) {
   return { orgId, projectId, userId, rows, layer }
 }
 
-const incidentPayload = (alertIncidentId: string, severity: "low" | "medium" | "high" | "urgent" = "high") => ({
+const incidentPayload = (alertIncidentId: string) => ({
   incidentKind: "signal.discovered" as const,
   alertIncidentId,
-  severity,
 })
 
 describe("createNotificationUseCase", () => {
@@ -291,7 +290,7 @@ describe("createNotificationUseCase", () => {
     expect(result.emailEligible).toBe(false)
   })
 
-  it("ignores the minimum severity for kinds with no severity concept", async () => {
+  it("ignores the minimum severity for payloads without a severity", async () => {
     const prefs: NotificationPreferences = { incidents: { email: true, emailMinSeverity: "high" } }
     const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
 
@@ -300,35 +299,13 @@ describe("createNotificationUseCase", () => {
         organizationId: orgId,
         userId,
         notificationId: NotificationId(generateId()),
-        kind: "wrapped.report",
-        idempotencyKey: `wrapped.report:${cuid("wr")}`,
+        kind: "incident.opened",
+        idempotencyKey: `incident.opened:${cuid("ai")}`,
         projectId: null,
-        payload: { wrappedReportId: cuid("wr"), link: "https://example/x" },
+        payload: incidentPayload(cuid("ai")),
       }).pipe(Effect.provide(layer)),
     )
 
     expect(result.emailEligible).toBe(true)
-  })
-
-  // A severity-bearing kind arriving without one means nobody judged the source.
-  // The in-app row still lands; the email does not.
-  it("keeps the in-app row but sends no email when a severity-bearing kind has no severity", async () => {
-    const { orgId, projectId, userId, rows, layer } = setup()
-
-    const result = await Effect.runPromise(
-      createNotificationUseCase({
-        organizationId: orgId,
-        userId,
-        notificationId: NotificationId(generateId()),
-        kind: "signal.discovered",
-        idempotencyKey: `signal.discovered:${cuid("i")}`,
-        projectId,
-        payload: { signalId: cuid("i"), discoveredAt: new Date().toISOString() },
-      }).pipe(Effect.provide(layer)),
-    )
-
-    expect(result.notification).not.toBeNull()
-    expect(result.emailEligible).toBe(false)
-    expect(rows).toHaveLength(1)
   })
 })

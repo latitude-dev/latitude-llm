@@ -6,7 +6,7 @@ import { createProject, ProjectRepository } from "@domain/projects"
 import { createFakeProjectRepository } from "@domain/projects/testing"
 import { type AnnotationScore, type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { OrganizationId, ProjectId, ScoreId, SessionId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { OrganizationId, ProjectId, ScoreId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { SignalRepository } from "../ports/signal-repository.ts"
@@ -85,262 +85,19 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
 
 type AIGenerate = <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>>
 
-/**
- * Parses inside the Effect, the way a real adapter does: a model whose answer
- * misses the schema is a failure in the error channel, not a synchronous throw.
- * Parsing eagerly would escape `catchCause` and hide the severity retry.
- */
-const respondWith =
-  (answer: Record<string, unknown>): AIGenerate =>
+const createGenerateSignalDetails =
+  (name: string, description: string): AIGenerate =>
   <T>(input: GenerateInput<T>) =>
-    Effect.suspend(() =>
-      Effect.succeed({
-        object: input.schema.parse(answer) as T,
-        tokens: 10,
-        duration: 5,
+    Effect.succeed({
+      object: input.schema.parse({
+        name,
+        description,
       }),
-    )
-
-/** A model that never returns a severity — the wider schema fails, the retry carries the signal. */
-const createGenerateSignalDetails = (name: string, description: string): AIGenerate =>
-  respondWith({ name, description })
-
-const createGenerateSignalDetailsWithSeverity = (name: string, description: string, severity: string): AIGenerate =>
-  respondWith({ name, description, severity })
+      tokens: 10,
+      duration: 5,
+    })
 
 describe("createSignalFromScoreUseCase", () => {
-  it("leaves the level unset when the model answers with no usable severity", async () => {
-    const { layer: aiLayer } = createFakeAI({
-      generate: createGenerateSignalDetails("Token leakage", "Secrets appear in replies."),
-    })
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: signalRepository, issues } = createFakeSignalRepository()
-    const score = makeScore()
-    scores.set(score.id, score)
-    const outbox = createFakeOutboxEventWriter()
-
-    const result = await Effect.runPromise(
-      createSignalFromScoreUseCase({
-        organizationId,
-        projectId,
-        scoreId: score.id,
-        normalizedEmbedding: makeEmbedding(),
-      }).pipe(
-        Effect.provide(aiLayer),
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(SignalRepository, signalRepository),
-        Effect.provideService(ProjectRepository, projectRepository),
-        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
-        Effect.provideService(OutboxEventWriter, outbox.service),
-      ),
-    )
-
-    // No severity is survivable: the payload simply carries none, and a payload
-    // without a severity is always admitted by the notification threshold.
-    expect(issues.get(result.signalId)?.priority).toBeNull()
-  })
-
-  it("writes the derived severity into the priority field at creation", async () => {
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: createGenerateSignalDetailsWithSeverity("Token leakage", "Secrets appear in replies.", "urgent"),
-    })
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: signalRepository, issues } = createFakeSignalRepository()
-    const score = makeScore()
-    scores.set(score.id, score)
-    const outbox = createFakeOutboxEventWriter()
-
-    const result = await Effect.runPromise(
-      createSignalFromScoreUseCase({
-        organizationId,
-        projectId,
-        scoreId: score.id,
-        normalizedEmbedding: makeEmbedding(),
-      }).pipe(
-        Effect.provide(aiLayer),
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(SignalRepository, signalRepository),
-        Effect.provideService(ProjectRepository, projectRepository),
-        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
-        Effect.provideService(OutboxEventWriter, outbox.service),
-      ),
-    )
-
-    // Committed with the signal, so the SignalCreated consumers (notifications,
-    // dispatch) read a level rather than a null.
-    expect(issues.get(result.signalId)?.priority).toBe("urgent")
-    expect(calls.generate[0]?.prompt).toContain("`severity`")
-  })
-
-  // A detector that names the failure class outright beats the model's reading of
-  // the prose — the floor raises the rating, and the tags reach the prompt.
-  it("floors the level at urgent for a pii-leakage detector, whatever the model says", async () => {
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: createGenerateSignalDetailsWithSeverity("Email addresses in replies", "Contact details echoed.", "low"),
-    })
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: signalRepository, issues } = createFakeSignalRepository()
-    const score = makeScore({
-      sourceId: "SYSTEM",
-      metadata: { rawFeedback: "Assistant echoed a customer email address.", flaggerSlug: "pii-leakage" },
-    })
-    scores.set(score.id, score)
-    const outbox = createFakeOutboxEventWriter()
-
-    const result = await Effect.runPromise(
-      createSignalFromScoreUseCase({
-        organizationId,
-        projectId,
-        scoreId: score.id,
-        normalizedEmbedding: makeEmbedding(),
-      }).pipe(
-        Effect.provide(aiLayer),
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(SignalRepository, signalRepository),
-        Effect.provideService(ProjectRepository, projectRepository),
-        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
-        Effect.provideService(OutboxEventWriter, outbox.service),
-      ),
-    )
-
-    expect(issues.get(result.signalId)?.priority).toBe("urgent")
-    // The tag block on the occurrence line, not the whole prompt: the rubric
-    // itself explains what a `score=` tag means, so a bare substring search hits
-    // the instructions rather than the data.
-    const tags = /^1\. \[([^\]]*)\]/m.exec(calls.generate[0]?.prompt ?? "")?.[1] ?? ""
-    expect(tags).toContain("detector=pii-leakage")
-    expect(tags).toContain("author=detector")
-    // Annotation values are placeholders, not verdicts — no score tag for them.
-    expect(tags).not.toContain("score=")
-  })
-
-  // A deterministic detector already established what happened, so the model is
-  // never asked to rate it — volume decides, starting at `low` for occurrence one.
-  it("starts a deterministic detector's signal at low without asking for a severity", async () => {
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: createGenerateSignalDetails("Tool call errors", "A tool keeps returning errors."),
-    })
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: signalRepository, issues } = createFakeSignalRepository()
-    const score = makeScore({
-      sourceId: "SYSTEM",
-      metadata: { rawFeedback: 'Tool "read_file" returned an error', flaggerSlug: "tool-call-errors" },
-    })
-    scores.set(score.id, score)
-    const outbox = createFakeOutboxEventWriter()
-
-    const result = await Effect.runPromise(
-      createSignalFromScoreUseCase({
-        organizationId,
-        projectId,
-        scoreId: score.id,
-        normalizedEmbedding: makeEmbedding(),
-      }).pipe(
-        Effect.provide(aiLayer),
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(SignalRepository, signalRepository),
-        Effect.provideService(ProjectRepository, projectRepository),
-        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
-        Effect.provideService(OutboxEventWriter, outbox.service),
-      ),
-    )
-
-    expect(issues.get(result.signalId)?.priority).toBe("low")
-    // One call, not two: the severity schema is never attempted, so there is
-    // nothing for the retry to fall back from.
-    expect(calls.generate).toHaveLength(1)
-    expect(calls.generate[0]?.prompt).not.toContain("`severity`")
-  })
-
-  // The model's guess decides the level notifications read, but it must not
-  // become a floor: the rubric over-rates far more often than it under-rates, and
-  // a floor would make those over-ratings permanent instead of letting the next
-  // volume recompute correct them.
-  // Several independent checks matching one conversation is evidence no single
-  // line of feedback carries. Gathered in the use-case rather than the flagger
-  // pass, so human annotations and evaluations get the same session context.
-  it("tells the model which other detectors matched the same session", async () => {
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: createGenerateSignalDetailsWithSeverity("Tool loop", "The agent repeats a call.", "high"),
-    })
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: signalRepository } = createFakeSignalRepository()
-    const sessionId = SessionId("session-with-several-detectors")
-    const score = makeScore({
-      sessionId,
-      sourceId: "SYSTEM",
-      metadata: { rawFeedback: "Repeated identical tool calls.", flaggerSlug: "trashing" },
-    })
-    scores.set(score.id, score)
-    for (const [index, slug] of ["frustration", "incompletion"].entries()) {
-      const sibling = makeScore({
-        id: ScoreId(`sibling${index}`.padEnd(24, "x")),
-        sessionId,
-        sourceId: "SYSTEM",
-        metadata: { rawFeedback: "Another detector fired.", flaggerSlug: slug },
-      })
-      scores.set(sibling.id, sibling)
-    }
-    const outbox = createFakeOutboxEventWriter()
-
-    await Effect.runPromise(
-      createSignalFromScoreUseCase({
-        organizationId,
-        projectId,
-        scoreId: score.id,
-        normalizedEmbedding: makeEmbedding(),
-      }).pipe(
-        Effect.provide(aiLayer),
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(SignalRepository, signalRepository),
-        Effect.provideService(ProjectRepository, projectRepository),
-        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
-        Effect.provideService(OutboxEventWriter, outbox.service),
-      ),
-    )
-
-    const tags = /^1\. \[([^\]]*)\]/m.exec(calls.generate[0]?.prompt ?? "")?.[1] ?? ""
-    // Sorted, and the occurrence's own detector is not listed alongside itself.
-    expect(tags).toContain("alongside=frustration,incompletion")
-    expect(tags).toContain("detector=trashing")
-  })
-
-  it("omits the alongside tag when nothing else matched the session", async () => {
-    const { layer: aiLayer, calls } = createFakeAI({
-      generate: createGenerateSignalDetailsWithSeverity("Tool loop", "The agent repeats a call.", "high"),
-    })
-    const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: signalRepository } = createFakeSignalRepository()
-    const score = makeScore({
-      sessionId: SessionId("lonely-session"),
-      sourceId: "SYSTEM",
-      metadata: { rawFeedback: "Repeated identical tool calls.", flaggerSlug: "trashing" },
-    })
-    scores.set(score.id, score)
-    const outbox = createFakeOutboxEventWriter()
-
-    await Effect.runPromise(
-      createSignalFromScoreUseCase({
-        organizationId,
-        projectId,
-        scoreId: score.id,
-        normalizedEmbedding: makeEmbedding(),
-      }).pipe(
-        Effect.provide(aiLayer),
-        Effect.provideService(ScoreRepository, scoreRepository),
-        Effect.provideService(SignalRepository, signalRepository),
-        Effect.provideService(ProjectRepository, projectRepository),
-        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
-        Effect.provideService(OutboxEventWriter, outbox.service),
-      ),
-    )
-
-    // The tag block, not the whole prompt: the rubric explains what an
-    // `alongside=` tag means, so a bare substring search hits the instructions.
-    const tags = /^1\. \[([^\]]*)\]/m.exec(calls.generate[0]?.prompt ?? "")?.[1] ?? ""
-    expect(tags).not.toContain("alongside=")
-  })
-
   it("generates details, creates a new issue, and claims score ownership", async () => {
     const { layer: aiLayer, calls } = createFakeAI({
       generate: createGenerateSignalDetails(
@@ -376,9 +133,7 @@ describe("createSignalFromScoreUseCase", () => {
     expect(issues.get(result.signalId)?.name).toBe("Token leakage in assistant responses")
     expect(issues.get(result.signalId)?.description).toBe("The assistant exposes secrets or tokens in its replies.")
     expect(issues.get(result.signalId)?.centroid?.mass).toBeGreaterThan(0)
-    // Two calls: this model never answers with a severity, so the wider schema
-    // fails and the narrow retry is what produces the name and description.
-    expect(calls.generate).toHaveLength(2)
+    expect(calls.generate).toHaveLength(1)
 
     expect(outbox.events).toHaveLength(1)
     expect(outbox.events[0]).toMatchObject({
@@ -469,8 +224,7 @@ describe("createSignalFromScoreUseCase", () => {
       signalId: winningSignalId,
     })
     expect(issues.size).toBe(0)
-    // Attempt plus severity retry — generation still runs once per creation attempt.
-    expect(calls.generate).toHaveLength(2)
+    expect(calls.generate).toHaveLength(1)
   })
 
   describe("issue.source mapping", () => {

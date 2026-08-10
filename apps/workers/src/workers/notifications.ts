@@ -2,7 +2,6 @@ import { routeAdmitsPayload, SlackIntegrationRepository } from "@domain/integrat
 import {
   createNotificationUseCase,
   deleteNotificationsByProjectUseCase,
-  kindRequiresSeverity,
   NOTIFICATION_KIND_META,
   type NotificationKind,
   requestBillingLimitNotificationsUseCase,
@@ -99,13 +98,9 @@ const fanOutSlackRoutes = (
     // Personal kinds target a single user — never broadcast them to a
     // shared channel, even if a stale route were somehow configured.
     if (!NOTIFICATION_GROUP_META[group].slackRoutable) return
-    // Routes can set a minimum severity; payloads below it never reach the
-    // channel. For kinds that should carry a severity, a missing one means the
-    // source is unjudged and is dropped too.
-    const requiresSeverity = kindRequiresSeverity(kind)
-    const routes = (integration.routes[group] ?? []).filter((route) =>
-      routeAdmitsPayload(route, first.payload, { requiresSeverity }),
-    )
+    // Routes can set a minimum incident severity; incidents below it never
+    // reach the channel (payloads without a severity always pass).
+    const routes = (integration.routes[group] ?? []).filter((route) => routeAdmitsPayload(route, first.payload))
     if (routes.length === 0) return
 
     yield* Effect.all(

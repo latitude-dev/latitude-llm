@@ -2,7 +2,6 @@ import { OutboxEventWriter } from "@domain/events"
 import {
   type AlertIncidentCondition,
   AlertIncidentId,
-  type AlertSeverity,
   generateId,
   OrganizationId,
   ProjectId,
@@ -27,13 +26,6 @@ export interface CreateIncidentFromSignalEventInput {
    */
   readonly entrySignals?: EntrySignalsSnapshot | null
   readonly condition?: AlertIncidentCondition | null
-  /**
-   * Incident severity. No caller passes it today — every real signal escalation
-   * opens at `"high"` — so this exists for a caller that wants to override, and
-   * the tests are its only exercise. Do not read the parameter's existence as
-   * evidence that escalations carry the signal's own level; they do not.
-   */
-  readonly severity?: AlertSeverity
 }
 
 export type CreateIncidentFromSignalEventError = RepositoryError
@@ -58,7 +50,7 @@ export const createIncidentFromSignalEventUseCase = (input: CreateIncidentFromSi
           projectId: ProjectId(input.projectId),
           sourceType: "signal",
           sourceId: input.signalId,
-          severity: input.severity ?? "high",
+          severity: "high",
           startedAt: input.occurredAt,
           endedAt: null,
           createdAt: now,

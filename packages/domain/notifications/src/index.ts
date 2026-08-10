@@ -34,7 +34,6 @@ export {
   incidentTagsSchema,
   incidentTrendPointSchema,
   incidentTrendSchema,
-  kindRequiresSeverity,
   NOTIFICATION_KIND_META,
   NOTIFICATION_KINDS,
   notificationKindSchema,

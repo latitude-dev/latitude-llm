@@ -2,9 +2,7 @@
 // web client bundles via the package's `browser` export condition. The server-only mutation
 // use-cases below stay out of that bundle — they transitively pull server-only code (the judge
 // template / @domain/ai) and are only ever run by the API and workers.
-
 export * from "./browser.ts"
-export { applySeverityFloor, flaggerSeverityFloor, isDeterministicFlagger } from "./severity-floor.ts"
 export {
   assembleSignalGenerationGrounding,
   type SignalGenerationGroundingResult,

@@ -22,23 +22,6 @@ export const FLAGGER_STRATEGY_SLUGS = [
 
 export type FlaggerSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
 
-/**
- * Strategies that decide by inspecting the conversation, with no model call:
- * they implement `detectDeterministically` and neither prompt builder.
- *
- * Listed rather than derived from the registry on purpose — reading the registry
- * at module load pins every strategy's system prompt into the importing bundle,
- * which is the same reason `assertFlaggerRegistryValid` is called from tests
- * instead of a top-level IIFE. `flagger-strategies/index.test.ts` asserts this
- * list against the real strategies, so it cannot drift.
- */
-export const DETERMINISTIC_FLAGGER_SLUGS = [
-  "tool-call-errors",
-  "output-schema-validation",
-  "empty-response",
-  "low-cache-hit-rate",
-] as const satisfies readonly FlaggerSlug[]
-
 export type DetectionResult =
   | { readonly kind: "matched"; readonly feedback: string; readonly messageIndex?: number | undefined }
   | { readonly kind: "unmatched" }
