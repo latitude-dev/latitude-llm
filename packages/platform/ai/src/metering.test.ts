@@ -93,6 +93,86 @@ describe("withAIMetering", () => {
     ])
   })
 
+  it("bills a fallback-served generation with the serving model's pricing, not the requested model's", async () => {
+    const usage = { input: 100_000, output: 20_000 }
+    const servedSpec = getCostSpec("amazon-bedrock", "openai.gpt-oss-120b-1:0")
+    const requestedSpec = getCostSpec("amazon-bedrock", "minimax.minimax-m2.5")
+    expect(servedSpec.costImplemented).toBe(true)
+    expect(estimateTotalCost(servedSpec.cost, usage)).not.toBe(estimateTotalCost(requestedSpec.cost, usage))
+
+    const { scope, recorded } = createScope()
+    const ai = withAIMetering(
+      createFakeAI({
+        generateResult: {
+          object: { ok: true },
+          tokens: 120_000,
+          duration: 1,
+          tokenUsage: usage,
+          servedBy: { provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" },
+        },
+      }),
+    )
+
+    await Effect.runPromise(
+      ai
+        .generate(generateInput("amazon-bedrock", "minimax.minimax-m2.5"))
+        .pipe(Effect.provideService(AIMeteringScope, scope)),
+    )
+
+    const estimatedCostUsd = estimateTotalCost(servedSpec.cost, usage)
+    expect(recorded).toEqual([
+      {
+        action: "llm-call",
+        credits: creditsForLlmGenerationCost(estimatedCostUsd),
+        metadata: {
+          provider: "amazon-bedrock",
+          model: "openai.gpt-oss-120b-1:0",
+          requestedModel: "amazon-bedrock/minimax.minimax-m2.5",
+          pricing: "cost-based",
+          estimatedCostUsd,
+          tokensInput: 100_000,
+          tokensOutput: 20_000,
+        },
+      },
+    ])
+  })
+
+  it("leaves a normally served generation billed against the requested model", async () => {
+    const usage = { input: 100_000, output: 4_000 }
+    const costSpec = getCostSpec("openai", "gpt-4o")
+    const { scope, recorded } = createScope()
+    const ai = withAIMetering(
+      createFakeAI({
+        generateResult: {
+          object: { ok: true },
+          tokens: 104_000,
+          duration: 1,
+          tokenUsage: usage,
+          servedBy: { provider: "openai", model: "gpt-4o" },
+        },
+      }),
+    )
+
+    await Effect.runPromise(
+      ai.generate(generateInput("openai", "gpt-4o")).pipe(Effect.provideService(AIMeteringScope, scope)),
+    )
+
+    expect(recorded).toEqual([
+      {
+        action: "llm-call",
+        credits: creditsForLlmGenerationCost(estimateTotalCost(costSpec.cost, usage)),
+        metadata: {
+          provider: "openai",
+          model: "gpt-4o",
+          pricing: "cost-based",
+          estimatedCostUsd: estimateTotalCost(costSpec.cost, usage),
+          tokensInput: 100_000,
+          tokensOutput: 4_000,
+        },
+      },
+    ])
+  })
+
   it("falls back to the flat llm-call price when the registry has no pricing for the model", async () => {
     const { scope, recorded } = createScope()
     const ai = withAIMetering(

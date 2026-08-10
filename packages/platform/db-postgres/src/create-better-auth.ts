@@ -177,6 +177,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         // surface — we write it via our own onboarding server function.
         jobTitle: { type: "string", required: false, input: false },
         phoneNumber: { type: "string", required: false, input: false },
+        heardAboutUs: { type: "string", required: false, input: false },
       },
     },
     /**

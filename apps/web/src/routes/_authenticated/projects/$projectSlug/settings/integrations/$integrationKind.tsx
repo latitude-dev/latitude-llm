@@ -2,14 +2,15 @@ import { Button, Icon, Text, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
 import { ArrowLeftIcon } from "lucide-react"
-import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
-import { useRouteProject } from "../../-route-data.ts"
 import {
   AGENT_DISPATCH_KIND_ICONS,
   AGENT_DISPATCH_KIND_LABELS,
-  AgentDispatchIntegrationDetails,
   type AgentDispatchKindKey,
-} from "../-components/agent-dispatch-section.tsx"
+  isAgentDispatchKind,
+} from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
+import { useRouteProject } from "../../-route-data.ts"
+import { AgentDispatchIntegrationDetails } from "../-components/agent-dispatch-section.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations/$integrationKind")({
@@ -18,10 +19,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
   },
   component: AgentDispatchIntegrationSettingsPage,
 })
-
-function isAgentDispatchKind(kind: string): kind is AgentDispatchKindKey {
-  return kind in AGENT_DISPATCH_KIND_LABELS
-}
 
 function AgentDispatchIntegrationSettingsPage() {
   const { projectSlug, integrationKind } = Route.useParams()
@@ -32,6 +29,10 @@ function AgentDispatchIntegrationSettingsPage() {
     [projectSlug],
   )
   const currentProject = project ?? routeProject
+
+  const { data: allProjects } = useProjectsCollection()
+  // The shared Showcase project is merged into this collection but isn't the org's.
+  const projectCount = (allProjects ?? []).filter((row) => !row.isShowcase).length
 
   return (
     <SettingsPage
@@ -54,9 +55,14 @@ function AgentDispatchIntegrationSettingsPage() {
           <Text.H3M>{AGENT_DISPATCH_KIND_LABELS[kind]}</Text.H3M>
         </div>
       }
-      description="Configure this integration and review its dispatch history."
+      description="Connection, dispatch behavior, and history for this integration."
     >
-      <AgentDispatchIntegrationDetails projectId={currentProject.id} projectSlug={currentProject.slug} kind={kind} />
+      <AgentDispatchIntegrationDetails
+        projectId={currentProject.id}
+        projectSlug={currentProject.slug}
+        kind={kind}
+        projectCount={projectCount}
+      />
     </SettingsPage>
   )
 }

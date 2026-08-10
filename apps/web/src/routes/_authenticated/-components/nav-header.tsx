@@ -105,6 +105,9 @@ export function NavHeader() {
         <Combobox
           autoHighlight
           modal
+          // No ComboboxInput here, so base-ui's internal query state goes stale after a selection and
+          // silently filters out other orgs on reopen; filter={null} disables that filtering entirely.
+          filter={null}
           value={selectedOrgOption}
           onValueChange={(picked: OrgOption | null) => {
             if (!picked) return

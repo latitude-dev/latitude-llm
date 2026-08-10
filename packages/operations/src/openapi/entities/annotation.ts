@@ -91,7 +91,7 @@ export const AnnotationSchema = z
       .number()
       .int()
       .nonnegative()
-      .describe("Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."),
+      .describe("Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."),
     draftedAt: z.iso
       .datetime()
       .nullable()

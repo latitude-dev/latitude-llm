@@ -206,6 +206,37 @@ describe("createAiLayer", () => {
     expect(generateCalls.count).toBe(3)
   })
 
+  it("keeps the served model on a cached generate result so a cache hit prices the same as the miss", async () => {
+    const redis = createRedisClient()
+    const generateCalls = { count: 0 }
+    const servedBy = { provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" } as const
+    const layer = Layer.succeed(AIGenerate, {
+      generate: <T>(_input: GenerateInput<T>) => {
+        generateCalls.count += 1
+        return Effect.succeed({ object: {} as T, tokens: 3, duration: 1, servedBy })
+      },
+    })
+
+    const ai = await Effect.runPromise(getAI(createAiLayer(layer, redis)))
+    const input = {
+      provider: "amazon-bedrock",
+      model: "minimax.minimax-m2.5",
+      system: "system",
+      prompt: "prompt",
+      schema: { safeParse: (value: unknown) => ({ success: true, data: value }) } as never,
+    } as const
+
+    const miss = await Effect.runPromise(ai.generate(input))
+    expect(generateCalls.count).toBe(1)
+
+    const hit = await Effect.runPromise(ai.generate(input))
+    // Still 1, so `hit` came back through the cache's encode/decode rather than the provider.
+    expect(generateCalls.count).toBe(1)
+
+    expect(miss.servedBy).toEqual(servedBy)
+    expect(hit.servedBy).toEqual(servedBy)
+  })
+
   it("caches rerank keyed on provider, model, query, and documents", async () => {
     const rerankCalls = { count: 0 }
     const redis = createRedisClient()

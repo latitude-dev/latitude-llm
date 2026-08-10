@@ -475,7 +475,8 @@ describe("createSpanIngestionWorker", () => {
     expect(Number(rows[1]?.cost_total_microcents ?? 0)).toBeGreaterThan(0)
     expect(rows[1]?.parent_span_id).toBe("aaaaaaaaaaaaaaaa")
     expect(rows[1]?.ai_operation_id).toBe("ai.generateText.doGenerate")
-    expect(rows[1]?.provider).toBe("openai.responses")
+    // Normalized like the wrapper above, though it arrives on `gen_ai.system` rather than `ai.model.provider`.
+    expect(rows[1]?.provider).toBe("openai")
     expect(rows[1]?.model).toBe("gpt-4o")
 
     expect(pub.published).toHaveLength(1)
@@ -648,10 +649,14 @@ describe("createSpanIngestionWorker", () => {
     const disk = new FakeStorageDisk()
     const pub = createFakeEventsPublisher()
     const queue = createFakeQueuePublisher()
-    const fileKey = `span-ingestion/${generateId()}-duplicate.json`
+    // A key per request, as production does: `putInDisk` mints a fresh id per OTLP
+    // request, so two ingests of the same trace never share a buffered payload.
+    const firstFileKey = `span-ingestion/${generateId()}-duplicate.json`
+    const secondFileKey = `span-ingestion/${generateId()}-duplicate.json`
     const organizationId = generateId()
     const projectId = generateId()
-    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+    disk.putBytes(firstFileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+    disk.putBytes(secondFileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
 
     createSpanIngestionWorker({
       consumer,
@@ -669,7 +674,7 @@ describe("createSpanIngestionWorker", () => {
 
     let processedEvents = 0
 
-    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchValidIngest(consumer, firstFileKey, organizationId, projectId)
     await dispatchPublishedDomainEvents(consumer, pub.published, processedEvents)
     processedEvents = pub.published.length
     for (const message of queue.published.filter(
@@ -678,7 +683,7 @@ describe("createSpanIngestionWorker", () => {
       await consumer.dispatchTask("billing", "recordTraceUsageBatch", message.payload)
     }
 
-    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchValidIngest(consumer, secondFileKey, organizationId, projectId)
     await dispatchPublishedDomainEvents(consumer, pub.published, processedEvents)
     processedEvents = pub.published.length
     for (const message of queue.published

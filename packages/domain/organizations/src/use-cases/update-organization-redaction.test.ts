@@ -1,0 +1,152 @@
+import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
+import { OrganizationId, type OrganizationRedactionSetting, SqlClient, type SqlClientShape } from "@domain/shared"
+import { Effect, Layer } from "effect"
+import { describe, expect, it } from "vitest"
+import type { Organization } from "../entities/organization.ts"
+import { OrganizationRepository } from "../ports/organization-repository.ts"
+import { createFakeOrganizationRepository } from "../testing/index.ts"
+import { updateOrganizationRedactionUseCase } from "./update-organization-redaction.ts"
+
+const ORG_ID = OrganizationId("oooooooooooooooooooooooo")
+const ACTOR = "uuuuuuuuuuuuuuuuuuuuuuuu"
+
+const sqlClient: SqlClientShape = {
+  organizationId: ORG_ID,
+  transaction: (effect) => effect,
+  query: () => Effect.die(new Error("unexpected query")),
+}
+
+const LOCKED: OrganizationRedactionSetting = {
+  mode: "enforce",
+  entities: ["email", "us_ssn"],
+  locked: true,
+}
+
+const seedOrg = (settings: Organization["settings"]): Organization => ({
+  id: ORG_ID,
+  name: "Acme",
+  slug: "acme",
+  logo: null,
+  metadata: null,
+  settings,
+  parentOrgId: null,
+  expiresAt: null,
+  createdAt: new Date(0),
+  updatedAt: new Date(0),
+})
+
+const run = (org: Organization, redaction: OrganizationRedactionSetting | null) => {
+  const { repository, organizations } = createFakeOrganizationRepository()
+  organizations.set(ORG_ID, org)
+  const written: OutboxWriteEvent[] = []
+  const layer = Layer.mergeAll(
+    Layer.succeed(OrganizationRepository, repository),
+    Layer.succeed(SqlClient, sqlClient),
+    Layer.succeed(OutboxEventWriter, {
+      write: (event) => {
+        written.push(event)
+        return Effect.void
+      },
+    }),
+  )
+  return Effect.runPromise(
+    updateOrganizationRedactionUseCase({ actorUserId: ACTOR, redaction }).pipe(Effect.provide(layer)),
+  ).then((updated) => ({ updated, organizations, written }))
+}
+
+describe("updateOrganizationRedactionUseCase", () => {
+  it("sets the policy without clobbering billing or showcase state", async () => {
+    const { organizations } = await run(
+      seedOrg({ billing: { spendingLimitCents: 12_300 }, wantsShowcase: true }),
+      LOCKED,
+    )
+
+    expect(organizations.get(ORG_ID)?.settings).toEqual({
+      billing: { spendingLimitCents: 12_300 },
+      wantsShowcase: true,
+      redaction: LOCKED,
+    })
+  })
+
+  it("removes the org policy when given null", async () => {
+    const { organizations } = await run(seedOrg({ redaction: LOCKED, keepMonitoring: false }), null)
+
+    expect(organizations.get(ORG_ID)?.settings).toEqual({ keepMonitoring: false })
+  })
+
+  it("records the transition, including the locked flag", async () => {
+    const { written } = await run(seedOrg({ redaction: { mode: "enforce", locked: false } }), LOCKED)
+
+    expect(written).toHaveLength(1)
+    expect(written[0]?.eventName).toBe("OrganizationRedactionPolicyChanged")
+    expect(written[0]?.payload).toEqual({
+      organizationId: ORG_ID,
+      actorUserId: ACTOR,
+      fromRedaction: { mode: "enforce", locked: false },
+      toRedaction: LOCKED,
+    })
+  })
+
+  it("emits nothing when the policy is unchanged", async () => {
+    const { written } = await run(seedOrg({ redaction: LOCKED }), { ...LOCKED })
+
+    expect(written).toHaveLength(0)
+  })
+
+  // Locking is the whole point of the org layer, so a change to it alone must register.
+  it("treats a change to locked alone as a real change", async () => {
+    const { written } = await run(seedOrg({ redaction: LOCKED }), { ...LOCKED, locked: false })
+
+    expect(written).toHaveLength(1)
+  })
+
+  it("merges into null settings without crashing", async () => {
+    const { organizations } = await run(seedOrg(null), LOCKED)
+
+    expect(organizations.get(ORG_ID)?.settings).toEqual({ redaction: LOCKED })
+  })
+
+  // Change detection compared a hand-listed set of fields, so a rules-only edit looked identical
+  // to the stored policy and was discarded with no save and no audit event.
+  it("saves and audits a change that touches only the rules", async () => {
+    const rules: OrganizationRedactionSetting["rules"] = [
+      { id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] },
+    ]
+    const { organizations, written } = await run(seedOrg({ redaction: LOCKED }), { ...LOCKED, rules })
+
+    expect(organizations.get(ORG_ID)?.settings?.redaction?.rules).toEqual(rules)
+    expect(written).toHaveLength(1)
+  })
+
+  /**
+   * This use case replaces the whole `redaction` object, so a write that cannot express `rules` must
+   * not be read as an instruction to delete them. Pinned on this side too: the rule is shared with
+   * the project use case, and only the project side had a test, so the organization path could have
+   * lost it silently.
+   */
+  it("keeps stored rules through a write that never mentions them", async () => {
+    const rules: OrganizationRedactionSetting["rules"] = [
+      { id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] },
+    ]
+    const { organizations } = await run(seedOrg({ redaction: { ...LOCKED, rules } }), {
+      mode: "off",
+      entities: ["email"],
+      locked: false,
+    })
+
+    expect(organizations.get(ORG_ID)?.settings?.redaction).toMatchObject({ mode: "off", rules })
+  })
+
+  // An empty array is the dashboard saying "no rules", which is different from not mentioning them.
+  it("clears stored rules when the write says so explicitly", async () => {
+    const stored: OrganizationRedactionSetting["rules"] = [
+      { id: "rule-1", label: "STAFF_ID", kind: "attribute_key", keys: ["acme.staff.id"] },
+    ]
+    const { organizations } = await run(seedOrg({ redaction: { ...LOCKED, rules: stored } }), {
+      ...LOCKED,
+      rules: [],
+    })
+
+    expect(organizations.get(ORG_ID)?.settings?.redaction?.rules).toEqual([])
+  })
+})

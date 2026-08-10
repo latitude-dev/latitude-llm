@@ -1,6 +1,5 @@
 import type { OrganizationId, RepositoryError } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { AdminOrganizationUsageCursor } from "./organization-usage-summary.ts"
 
 /** Per-organisation slice of trace activity inside the rolling usage window. */
 export interface AdminOrganizationUsageRow {
@@ -9,18 +8,10 @@ export interface AdminOrganizationUsageRow {
   readonly lastTraceAt: Date | null
 }
 
-export interface ListOrganizationsByTraceCountInput {
+export interface FindOrganizationUsageByIdsInput {
+  readonly organizationIds: readonly OrganizationId[]
   /** Inclusive lower bound on trace start time. */
   readonly since: Date
-  /** Page size; the adapter probes `limit + 1` internally to set `hasMore`. */
-  readonly limit: number
-  /** Resume marker from a previous page; absent on the first page. */
-  readonly cursor?: AdminOrganizationUsageCursor
-}
-
-export interface OrganizationsByTraceCountPage {
-  readonly rows: readonly AdminOrganizationUsageRow[]
-  readonly hasMore: boolean
 }
 
 /**
@@ -37,14 +28,12 @@ export class AdminOrganizationUsageRepository extends Context.Service<
   AdminOrganizationUsageRepository,
   {
     /**
-     * Aggregate traces ingested at or after `since` by organisation, sort
-     * by trace count desc + organisation id asc, and return up to `limit`
-     * rows starting strictly after `cursor` when present. Excludes orgs
-     * with zero traces in the window — the table is a usage ranking, not
-     * a directory.
+     * Aggregate traces ingested at or after `since` for the given
+     * organisations. Orgs with no traces in the window are absent from
+     * the returned map (callers treat missing as zero).
      */
-    listByTraceCount(
-      input: ListOrganizationsByTraceCountInput,
-    ): Effect.Effect<OrganizationsByTraceCountPage, RepositoryError>
+    findManyByOrganizationIds(
+      input: FindOrganizationUsageByIdsInput,
+    ): Effect.Effect<ReadonlyMap<OrganizationId, AdminOrganizationUsageRow>, RepositoryError>
   }
 >()("@domain/admin/AdminOrganizationUsageRepository") {}

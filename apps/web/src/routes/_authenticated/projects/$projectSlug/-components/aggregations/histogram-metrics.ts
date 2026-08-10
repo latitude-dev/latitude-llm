@@ -23,11 +23,53 @@ export interface HistogramMetricDefinition {
    */
   readonly selectMetricsValue: (metrics: TraceMetrics | SessionMetrics, totalCount: number) => number
   /**
+   * Per-row average shown under the card value. The rollup is computed over session rows in sessions
+   * mode and trace rows in traces mode, so `avg` is already per-unit — and it is the only thing that
+   * moves between modes on a card whose headline is a sum, since a sum over sessions equals the same
+   * sum over their traces.
+   */
+  readonly selectUnitAverage?: (metrics: TraceMetrics | SessionMetrics) => number
+  /**
    * Whether to show this metric's card/series for the current aggregate. Omit
    * for always-visible metrics; a ratio metric hides itself when its
    * denominator is empty so it doesn't render a meaningless permanent 0.
    */
   readonly isAvailable?: (metrics: TraceMetrics | SessionMetrics | undefined) => boolean
+}
+
+export type AggregationsMode = "traces" | "sessions"
+
+/**
+ * Card + histogram metric order per mode, leading with the mode's own unit. `sessions` is absent in
+ * traces mode: the session count is a project-wide count of sessions matching the filters read as
+ * *session* filters, so it cannot answer "how many sessions do these traces belong to" — showing it
+ * beside a filtered trace list reads as a broken number rather than a different question.
+ */
+const METRIC_ORDER_BY_MODE: Readonly<
+  Record<AggregationsMode, readonly [TraceHistogramMetric, ...TraceHistogramMetric[]]>
+> = {
+  sessions: ["sessions", "cost", "duration", "tokens", "cacheHitRate", "traces", "spans"],
+  traces: ["traces", "cost", "duration", "tokens", "cacheHitRate", "spans"],
+}
+
+export const metricOrderForMode = (mode: AggregationsMode): readonly TraceHistogramMetric[] =>
+  METRIC_ORDER_BY_MODE[mode]
+
+/** Row noun of the aggregate backing each mode — the denominator of every `selectUnitAverage`. */
+export const unitNounForMode = (mode: AggregationsMode): string => (mode === "sessions" ? "session" : "trace")
+
+/**
+ * Resolves the selected metric against the active mode: an explicit pick wins as long as the mode
+ * offers that metric, otherwise the mode's leading metric does — so the chart plots the unit the
+ * table below it is listing.
+ */
+export const resolveMetricForMode = (
+  metric: TraceHistogramMetric | undefined,
+  mode: AggregationsMode,
+): TraceHistogramMetric => {
+  const [leading, ...rest] = METRIC_ORDER_BY_MODE[mode]
+  if (metric && (metric === leading || rest.includes(metric))) return metric
+  return leading
 }
 
 const microcentsToUSD = (microcents: number): string => formatPrice(microcents / 100_000_000)
@@ -61,6 +103,7 @@ export const HISTOGRAM_METRIC_DEFINITIONS: Readonly<Record<TraceHistogramMetric,
     formatBucket: microcentsToUSD,
     selectBucket: (b) => b.costTotalMicrocentsSum,
     selectMetricsValue: (m) => m.costTotalMicrocents.sum,
+    selectUnitAverage: (m) => m.costTotalMicrocents.avg,
   },
   duration: {
     id: "duration",
@@ -70,6 +113,7 @@ export const HISTOGRAM_METRIC_DEFINITIONS: Readonly<Record<TraceHistogramMetric,
     formatBucket: formatDuration,
     selectBucket: (b) => b.durationNsMedian,
     selectMetricsValue: (m) => m.durationNs.median,
+    selectUnitAverage: (m) => m.durationNs.avg,
   },
   tokens: {
     id: "tokens",
@@ -79,6 +123,7 @@ export const HISTOGRAM_METRIC_DEFINITIONS: Readonly<Record<TraceHistogramMetric,
     formatBucket: formatCount,
     selectBucket: (b) => b.tokensTotalSum,
     selectMetricsValue: (m) => m.tokensTotal.sum,
+    selectUnitAverage: (m) => m.tokensTotal.avg,
   },
   cacheHitRate: {
     id: "cacheHitRate",
@@ -105,5 +150,6 @@ export const HISTOGRAM_METRIC_DEFINITIONS: Readonly<Record<TraceHistogramMetric,
     formatBucket: formatCount,
     selectBucket: (b) => b.spanCountSum,
     selectMetricsValue: (m) => m.spanCount.sum,
+    selectUnitAverage: (m) => m.spanCount.avg,
   },
 }

@@ -62,13 +62,21 @@ describe("isUserCentricReflagInapplicable", () => {
     expect(isUserCentricReflagInapplicable([DRAFT], false)).toBe(true)
   })
 
-  it("still allows assistant-response-centric strategies on flagger-generated traces", () => {
+  it("skips user-centric strategies on taxonomy nested-sample traces", () => {
+    expect(isUserCentricReflagInapplicable(["taxonomy:propose-themes"], false)).toBe(true)
+    expect(isUserCentricReflagInapplicable(["taxonomy:name-cluster"], false)).toBe(true)
+    expect(isUserCentricReflagInapplicable(["taxonomy:facet-extract"], false)).toBe(true)
+  })
+
+  it("still allows assistant-response-centric strategies on nested-sample traces", () => {
     expect(isUserCentricReflagInapplicable([CLASSIFY], true)).toBe(false)
     expect(isUserCentricReflagInapplicable([CLASSIFY], undefined)).toBe(false)
+    expect(isUserCentricReflagInapplicable(["taxonomy:propose-themes"], true)).toBe(false)
   })
 
   it("does not skip user-centric strategies on ordinary production traces", () => {
     expect(isUserCentricReflagInapplicable([], false)).toBe(false)
     expect(isUserCentricReflagInapplicable(["live"], false)).toBe(false)
+    expect(isUserCentricReflagInapplicable(["eval:execute", "live"], false)).toBe(false)
   })
 })

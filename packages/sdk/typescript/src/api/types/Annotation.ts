@@ -33,7 +33,7 @@ export interface Annotation {
     duration: number;
     /** Total LLM tokens consumed generating the score. `0` for human annotations. */
     tokens: number;
-    /** Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations. */
+    /** Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations. */
     cost: number;
     /** ISO-8601 timestamp at which the annotation was drafted. `null` for published annotations. */
     draftedAt: string | null;

@@ -180,6 +180,30 @@ Its role, when concrete fields are approved, is:
 1. project settings
 2. organization settings
 
+### `redaction`
+
+PII redaction resolves through a **parallel** function, `resolveRedactionPolicy`, not through `resolveSettingsCascade`. That helper resolves a single boolean consumed elsewhere; keeping redaction separate holds the blast radius at zero.
+
+Resolution is not a plain narrowest-wins cascade, because the organization layer can seize it:
+
+1. if `organization.redaction.locked === true`, the organization policy is used **outright** and the project policy is ignored entirely, not merged
+2. otherwise resolve field by field: project value, else organization value, else system default
+3. system defaults are `mode: "off"`, the default entity set, metadata scope off, identities kept
+
+`locked` is all-or-nothing rather than per-field on purpose. Partial locking produces an effective policy no UI can explain, and the enterprise requirement it exists for is "projects cannot weaken this", which all-or-nothing already satisfies.
+
+The resolved policy carries a `source` of `organization`, `project`, or `default` so the settings UI can say where a value came from. The engine never sees it: `RedactionPolicy` is a narrower type without `source` or `mode`, because a policy exists only for a project that redacts — presence *is* the decision, which is why the queue wire format has no mode field.
+
+**Custom rules replace, they do not union.** `rules` resolves exactly like `entities`: project list, else organization list, else empty. Unioning them was considered and rejected, because it would add a third semantic to a model that already has two — an unlocked organization policy is a *default* a project may weaken, and `locked` is what makes it a floor. Under union a project could drop an organization *entity* but not an organization *rule*, which no UI can explain, and `locked` would shrink to meaning only "you cannot add". The ergonomic cost of replacement is paid in the UI: the `Set by` selector seeds a project's first override from the resolved organization values, so taking ownership changes attribution without changing behaviour. Rule *order* is significant and preserved: it decides which label wins an exact overlap tie.
+
+**Two structural comparisons, and one of them was a live bug.** `isSameRedactionSetting` decides whether a write is a no-op, and `hasRedactionField` decides `source`. Both used to enumerate the policy's fields by name, which made every field added later invisible to them. For `isSameRedactionSetting` that was not theoretical: a rules-only edit compared equal to the stored policy, so the use case took its early-return path and saved nothing, emitted no audit event, and still reported success to the caller. Both are now structural — a canonical normalization of the whole object, and a check over its own defined values — with `locked` excluded from the second because it gates who may change the policy rather than forming part of it. Do not "clarify" either one back into a field list.
+
+**Where each half is read.** Project settings are already loaded per ingest batch for sampling, so the project half is free. The organization half needs its own read and goes through a 60 s Redis cache (`org:${organizationId}:settings:redaction`); the web write invalidates it, so the TTL is a backstop rather than the expected propagation delay. A cache failure degrades to a database read, and a database failure propagates — degrading to "no organization policy" would let a `locked` policy fall through to a weaker project one and write plaintext.
+
+**Authorization** lives in the web server functions rather than the use cases: project-level needs `admin` or `owner`, organization-level needs `owner`. `@domain/projects` cannot reach `MembershipRepository` without a dependency cycle, so gating one side in the domain would leave the two asymmetric. Every change emits an audit-only outbox event carrying before and after snapshots.
+
+**Writes must patch, never replace.** `settingsPatch` on the update use cases merges against the freshly-read row inside the transaction; `settings` still replaces, because `updateSpendingLimitUseCase` clears a key by rebuilding settings without it. Any writer that replaces silently drops the keys it does not know about, which for redaction means turning a compliance control off with no error.
+
 ### Provider And Model Resolution
 
 For MVP and early hosted execution, evaluation `llm()` calls do not resolve provider/model from stored settings. They run through `@platform/ai-vercel` and the Vercel AI SDK with Latitude-managed provider/model/API-key configuration.

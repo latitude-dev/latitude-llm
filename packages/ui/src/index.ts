@@ -181,10 +181,10 @@ export { Conversation } from "./components/genai-conversation/conversation.tsx"
 export { Message } from "./components/genai-conversation/message.tsx"
 export {
   Part,
-  ReasoningGroup,
   type SubagentToolCallInfo,
   type ToolCallResult,
 } from "./components/genai-conversation/part.tsx"
+export { ChatDropdown } from "./components/genai-conversation/parts/chat-dropdown.tsx"
 export { CollapsibleBlock } from "./components/genai-conversation/parts/collapsible-block.tsx"
 export { SubagentCard, type SubagentCardProps } from "./components/genai-conversation/parts/subagent-card.tsx"
 export {

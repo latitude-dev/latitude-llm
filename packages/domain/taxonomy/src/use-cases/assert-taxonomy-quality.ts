@@ -10,7 +10,7 @@ export interface AssertTaxonomyQualityInput {
   readonly dimension?: TaxonomyDimensionType
   /** Omit/null asserts the whole-project tree; an id asserts that cohort's scoped tree. */
   readonly customBehaviorId?: CustomBehaviorId | null
-  /** Omit/null = topic lens; an id asserts that facet lens's tree. */
+  /** Omit/null = topic; an id asserts that facet's tree. */
   readonly facetId?: FacetId | null
 }
 

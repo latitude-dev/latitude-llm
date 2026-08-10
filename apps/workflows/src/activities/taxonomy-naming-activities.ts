@@ -27,8 +27,13 @@ export interface NameTaxonomyClusterActivityInput {
   readonly clusterId: string
   /** Present ⇒ name within a custom behavior's scoped member source; absent ⇒ the whole-project tree. */
   readonly customBehaviorId?: string
-  /** Present ⇒ a facet lens: read members from `taxonomy_facet_projections` and name in the facet's voice. */
+  /** Present ⇒ a facet-scoped view: read members from `taxonomy_facet_projections` and name in the facet's voice. */
   readonly facetId?: string
+  /**
+   * Naming sample for a `staging` cluster named before the publish swap, when
+   * `assigned_cluster_id` does not point at it yet. Whole-project topic tree only.
+   */
+  readonly memberObservationIds?: readonly string[]
 }
 
 export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityInput) => {
@@ -58,11 +63,17 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
         })
       }).pipe(
         Effect.asVoid,
+        withActivityAIMetering({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          label: "taxonomy-name",
+        }),
         withPostgres(
-          Layer.mergeAll(TaxonomyClusterRepositoryLive, FacetRepositoryLive),
+          Layer.mergeAll(TaxonomyClusterRepositoryLive, FacetRepositoryLive, billingMeteringRepositoriesLive),
           getPostgresClient(),
           organizationId,
         ),
+        Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
         withClickHouse(clickHouse, getClickhouseClient(), organizationId),
         withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
         Effect.provide(cache),
@@ -97,7 +108,12 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
     )
   }
   return Effect.runPromise(
-    nameClusterUseCase({ organizationId, projectId, clusterId }).pipe(
+    nameClusterUseCase({
+      organizationId,
+      projectId,
+      clusterId,
+      ...(input.memberObservationIds ? { memberObservationIds: input.memberObservationIds } : {}),
+    }).pipe(
       Effect.asVoid,
       withActivityAIMetering({
         organizationId: input.organizationId,
