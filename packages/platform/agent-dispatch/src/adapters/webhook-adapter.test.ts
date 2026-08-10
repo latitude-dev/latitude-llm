@@ -62,8 +62,8 @@ describe("createWebhookAdapter", () => {
         async () =>
           new Response(
             JSON.stringify({
-              externalAgentId: "agent-scope",
-              externalRunId: "run-123",
+              externalAgentId: "  agent-scope  ",
+              externalRunId: "  run-123  ",
               deepLinkUrl: "https://agents.example.com/runs/run-123",
             }),
             { status: 202, headers: { "Content-Type": "application/json" } },
