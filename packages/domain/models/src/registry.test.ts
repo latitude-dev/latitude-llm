@@ -70,6 +70,36 @@ describe("findModel", () => {
   it("returns undefined when no prefix matches either", () => {
     expect(findModel(mockModels, "totally-different")).toBeUndefined()
   })
+
+  it("matches a version whose separator differs from the catalog key", () => {
+    const models: Model[] = [{ id: "claude-opus-4-8", name: "Claude Opus 4.8", provider: "anthropic" }]
+    // Claude Code reports the version with a dot; the catalog keys it with a dash.
+    expect(findModel(models, "claude-opus-4.8")?.id).toBe("claude-opus-4-8")
+  })
+
+  it("matches version punctuation in the other direction too", () => {
+    const models: Model[] = [{ id: "gpt-4.1", name: "GPT-4.1", provider: "openai" }]
+    // Reported with a dash, catalog keyed with a dot.
+    expect(findModel(models, "gpt-4-1")?.id).toBe("gpt-4.1")
+  })
+
+  it("does not let a punctuation collapse pick between two different entries", () => {
+    const models: Model[] = [
+      { id: "claude-3-5-haiku", name: "Claude 3.5 Haiku", provider: "anthropic" },
+      { id: "claude-3.5-haiku", name: "Claude 3.5 Haiku (dup)", provider: "anthropic" },
+    ]
+    // Both normalise to the same form; an exact hit still resolves, an ambiguous one does not.
+    expect(findModel(models, "claude-3.5-haiku")?.id).toBe("claude-3.5-haiku")
+    expect(findModel(models, "claude-3-6-haiku")).toBeUndefined()
+  })
+
+  it("requires the whole normalised id to match, not just the version", () => {
+    const models: Model[] = [{ id: "gpt-5-3-instant", name: "GPT-5.3 Instant", provider: "openai" }]
+    // Normalising the version is not enough on its own: the rest of the id must still line up, so a
+    // different qualifier does not borrow this entry's price.
+    expect(findModel(models, "gpt-5.4-instant")).toBeUndefined()
+    expect(findModel(models, "gpt-5.3-instant")?.id).toBe("gpt-5-3-instant")
+  })
 })
 
 describe("getModelPricing", () => {
