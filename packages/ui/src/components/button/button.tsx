@@ -147,6 +147,14 @@ function getElementDisplayName(type: unknown): string {
   return ""
 }
 
+/** `asChild` merges container+variant classes onto one element, so `group-*` selectors (which need a separate ancestor `.group`) never match — rewrite them to plain self-referencing pseudo-classes. */
+function degroupSelectors(classNames: string): string {
+  return classNames
+    .replace(/\bgroup-hover:/g, "hover:")
+    .replace(/\bgroup-active:/g, "active:")
+    .replace(/\bgroup-disabled:/g, "disabled:")
+}
+
 function isLeadingIconLikeChild(child: unknown): boolean {
   if (!isValidElement(child)) {
     return false
@@ -187,10 +195,12 @@ function Button({
       <Slot
         ref={ref}
         className={cn(
-          buttonContainerVariants({ variant }),
-          buttonVariantsConfig({ variant, size }),
+          degroupSelectors(cn(buttonContainerVariants({ variant }), buttonVariantsConfig({ variant, size }))),
           // Slot can't add the inner wrapper that normally spaces icon and label.
           "gap-x-1.5",
+          // That wrapper is also what the base `w-full` fills; merged onto one element it would
+          // stretch to the parent instead, so shrink to content unless the size sets its own width.
+          { "w-auto": size !== "full" && size !== "icon" && size !== "icon-xs" },
           className,
           isLoading && "animate-pulse",
         )}

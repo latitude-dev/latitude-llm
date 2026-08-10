@@ -57,7 +57,7 @@ export function FlaggerBadge({ projectId, projectSlug, slug }: FlaggerBadgeProps
         </Link>
       }
     >
-      Flagged automatically by the {name} flagger — open its settings
+      Flagged automatically by the {name} flagger. Click to open its settings.
     </Tooltip>
   )
 }

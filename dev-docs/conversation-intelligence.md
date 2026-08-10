@@ -15,9 +15,9 @@ The workflow registers a `traceCompleted` signal handler on entry (so a signal d
 
 The persist activity also chains the **flagger screening pass** (see [`./flaggers.md`](./flaggers.md)): it publishes `flagger-screening` for every recorded generation — including `skipped_*`/`failed` analyses — with a dedupe key that embeds the `analysis_hash`. Flaggers deliberately run after moments so labels can serve as detection hints.
 
-## Design stance: embeddings-only in the hot path
+## Design stance: embedding candidates, contextual precision gate
 
-Analyzing every session with an LLM is not economically viable at telemetry volume. Everything that runs per session — segmentation, labeling, topic projection, cluster routing — uses **embeddings and deterministic math** only. LLM calls are reserved for amortized naming/profile work, never per-session analysis or merge decisions.
+Analyzing every turn with an LLM is not economically viable at telemetry volume. Semantic segmentation, label candidate generation, topic projection, and cluster routing therefore use embeddings and deterministic math. The label anchors are a cheap recall stage: sessions with no candidate incur no generation call. When candidates exist, one batched MiniMax call validates all selected candidates against the indexed conversation context before any label is persisted.
 
 The taxonomy and signal gates intentionally use fixed constants. This keeps QA tractable and prevents hidden per-project threshold drift; corpus-specific quality work happens through bounded gardening, naming, and evaluation rather than runtime threshold tuning.
 
@@ -37,7 +37,9 @@ resolve turn embeddings (shared message_embeddings store, voyage-4-large, 2048 d
         ▼
 semantic segmentation ──► semantic moments (full-exchange minimum unit)
         │
-        ├──► moment labels (anchor cosine vs static per-kind gates)
+        ├──► moment-label candidates (anchor cosine vs static per-kind gates)
+        │             ▼
+        │     contextual MiniMax validation (one batch, candidate-bearing sessions only)
         │
         └──► session topic projection (full conversation embedding)
                  ▼
@@ -69,9 +71,13 @@ Turns group into **semantic moments** by cosine continuity against the running m
 
 ### Moment labels (signals)
 
-`MOMENT_KINDS` (constants.ts): `escalation`, `hesitation`, `abandonment`, `user_frustration`, `user_satisfaction`, `resolution`, `policy_refusal`, `clarification_loop`, `user_correction` (the user asserts the assistant got it wrong or restates lost information — distinct from `clarification_loop`, where the assistant asks again), and `stalling` (the assistant-side mirror of `hesitation`: "one moment", "still working" without progress). New kinds must be semantically distinct from the existing set (separable anchor sets), and adding one bumps `CONVERSATION_INTELLIGENCE_DETECTOR_VERSION` so sessions re-analyze on their next trace. Kinds flow automatically into the flagger hint union as `moment:<kind>` hints (declare positive kinds in the flaggers domain).
+`MOMENT_KINDS` (constants.ts): `escalation`, `hesitation`, `abandonment`, `user_frustration`, `user_satisfaction`, `resolution`, `policy_refusal`, `clarification_loop`, `user_correction` (the user asserts the assistant got it wrong or restates lost information — distinct from `clarification_loop`, which anchors to an assistant's repeated request), and `stalling` (explicit assistant deferral, waiting, or ongoing checking/processing without progress; information requests, even redundant ones, are not stalling). New kinds must be semantically distinct from the existing set (separable anchor sets), and adding one bumps `CONVERSATION_INTELLIGENCE_DETECTOR_VERSION` so sessions re-analyze on their next trace. Kinds flow automatically into the flagger hint union as `moment:<kind>` hints (declare positive kinds in the flaggers domain).
 
-Each kind has a set of positive and contrast anchor phrases plus a role filter (`anchors.ts`), embedded once per process and detector version. A turn fires a kind when its cosine to the kind's best positive anchor clears that kind's static gate (threshold + margin over the contrast anchors). Labels attach to the semantic moment containing their message range, falling back to the nearest moment by index distance — never blindly the session's first moment.
+Each kind has a set of positive and contrast anchor phrases plus a role filter (`anchors.ts`), embedded once per process and detector version. A turn nominates a kind when its cosine to the kind's best positive anchor clears that kind's static gate (threshold + margin over the contrast anchors).
+
+The analyzer sorts candidates deterministically by confidence and validates at most 24 in one structured `MOMENT_CLASSIFIER` generation (`amazon-bedrock` / `minimax.minimax-m2.5` by default). The prompt carries original message indices, bounded surrounding context, the relevant positive/contrast definitions, and compact candidate ids. The model can only accept or reject nominated ids; it cannot create, relabel, or mutate a candidate. Each candidate's indexed evidence and rendered role must anchor the label correctly. Context may establish multi-turn facts such as repetition, but it cannot transfer a neighboring turn's behavior onto the candidate. Generic acknowledgements require contextual proof of satisfaction/resolution, clarification loops require repeated assistant requests, stalling requires deferral without progress, ordinary edits do not establish abandonment, and ordinary help requests do not establish escalation. Unknown or duplicate returned ids and provider/schema failures fail the analysis closed so Temporal can retry; unconfirmed candidates never persist. Prompt data is delimited, escaped, and treated as untrusted.
+
+Accepted labels attach to the semantic moment containing their message range, falling back to the nearest moment by index distance — never blindly the session's first moment.
 
 Labels are **behavioral signals, not topics**. They feed the Signals columns, the sessions-table moments filter, per-cluster intelligence rollups, and the flagger hint catalog (as `moment:<kind>` hints — [`./flaggers.md`](./flaggers.md)); they intentionally do not create taxonomy clusters or scores.
 
@@ -79,7 +85,9 @@ Labels are **behavioral signals, not topics**. They feed the Signals columns, th
 
 Each analyzed conversation emits at most one taxonomy observation: the full user/assistant conversation text is middle-truncated to `CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS`, embedded (`moment_text_embedding` remains the historical projection method name), normalized, and routed into the cluster tree with `routeToDeepestClusterUseCase` (deepest-fit descent — see taxonomy doc). The observation's `moment_id` is a synthetic session-topic id, not one of the semantic segment ids. Labels and process signals remain separate from the topic projection; routine verification or greeting steps do not get their own taxonomy dimension.
 
-Taxonomy observations are always ingested when a session produces a taxonomy projection. They use the same 30-day horizon as semantic-search embeddings (`TAXONOMY_OBSERVATION_RETENTION_DAYS`) so the taxonomy follows live semantic traffic instead of freezing at a one-time project sample. The analyzer still persists the full `session_semantic_moments` and `session_moment_labels` outputs on the broader conversation-retention horizon. Gardening is the bounded part: it rebuilds the whole tree from a day-stratified sample of up to `TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX` (10k) observations across the lookback window with a single top-down divisive clustering pass, then names the clusters. Observations that clear no online cluster gate persist as `noise`, but the rebuild samples every member regardless of current assignment and reassigns it to a leaf, so noise is reabsorbed at the next pass rather than swept incrementally. See [`./taxonomy.md`](./taxonomy.md) for the build algorithm.
+Taxonomy observations are always ingested when a session produces a taxonomy projection. They use the same 30-day horizon as semantic-search embeddings (`TAXONOMY_OBSERVATION_RETENTION_DAYS`) so the taxonomy follows live semantic traffic instead of freezing at a one-time project sample. The analyzer still persists the full `session_semantic_moments` and `session_moment_labels` outputs on the broader conversation-retention horizon. Gardening is the bounded part: it rebuilds the whole tree from a day-stratified sample of up to `TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX` observations across the lookback window with a single top-down divisive clustering pass, then names the clusters. Observations that clear no online cluster gate persist as `noise`, but the rebuild samples every member regardless of current assignment and reassigns it to a leaf, so noise is reabsorbed at the next pass rather than swept incrementally. See [`./taxonomy.md`](./taxonomy.md) for the build algorithm.
+
+**This is the Topics lens only.** The projection above (transcript embedding, online-routed) is what the default **Topics** behavior clusters. Other behaviors — **facets** ("user goal", "outcome", a custom question) — do not touch this live path: their projection is an LLM-extracted one-sentence answer to the facet's question, embedded and clustered **at gardening time**, sample-bounded and cached in `taxonomy_facet_projections` (`extractFacetProjectionsUseCase`). So the live analysis path stays embeddings-only per the design stance above; the only generative per-session work for facets runs in the batch garden, not here. See [`./taxonomy.md`](./taxonomy.md#behaviors-views-and-facets-lenses).
 
 ## Data model (ClickHouse)
 
@@ -132,7 +140,7 @@ The analyzer is a retried Temporal activity, so every write is either idempotent
 
 ## Trade-off decisions
 
-- **Embeddings-only per session**: lower per-moment label precision accepted for unit economics; precision is recovered statistically through static anchor thresholds and corpus-level aggregation.
+- **Candidate-gated generation**: embeddings keep recall cheap across all sessions; a single contextual generation cost is paid only for sessions with nominated labels. The 24-candidate cap bounds cost and may drop lower-confidence candidates in unusually long/noisy sessions.
 - **Full-exchange moment unit**: coarser than per-message moments, deliberately — topic embeddings need the user ask *and* the agent response to carry intent.
 - **Generations are append-only**: re-analysis never deletes prior rows (cheap writes, replayable history) at the cost of the pinning discipline on every read.
 

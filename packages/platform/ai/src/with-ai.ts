@@ -1,7 +1,8 @@
 import { AI, AIEmbed, AIError, AIGenerate, AIRerank, type AIShape } from "@domain/ai"
 import { CacheStore, type CacheStoreShape, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { Effect, Layer } from "effect"
-import { withAICache } from "./cache.ts"
+import { type AICacheOptions, withAICache } from "./cache.ts"
+import { withAIMetering } from "./metering.ts"
 
 type AIServiceShape = AIShape
 
@@ -52,11 +53,19 @@ const assembledAiLayer = <A, E, R>(layer: Layer.Layer<A, E, R>) =>
 export const createAiLayer = <A, E, R>(
   layer: Layer.Layer<A, E, R>,
   redisClient?: RedisClient,
+  cacheOptions?: AICacheOptions,
 ): Layer.Layer<AI, E, R> => {
-  const aiLayer = assembledAiLayer(layer)
+  // Metering sits under the cache so cache hits (no provider cost) are never billed.
+  const meteredAiLayer = Layer.effect(
+    AI,
+    Effect.gen(function* () {
+      const ai = yield* AI
+      return withAIMetering(ai)
+    }),
+  ).pipe(Layer.provideMerge(assembledAiLayer(layer)))
 
   if (!redisClient) {
-    return aiLayer
+    return meteredAiLayer
   }
 
   return Layer.effect(
@@ -64,10 +73,13 @@ export const createAiLayer = <A, E, R>(
     Effect.gen(function* () {
       const ai = yield* AI
       const cacheStore = yield* getCacheStore(redisClient)
-      return withAICache(ai, cacheStore)
+      return withAICache(ai, cacheStore, cacheOptions)
     }),
-  ).pipe(Layer.provideMerge(aiLayer))
+  ).pipe(Layer.provideMerge(meteredAiLayer))
 }
 
-export const withAi = <A, E, R>(layer: Layer.Layer<A, E, R>, redisClient?: RedisClient) =>
-  Effect.provide(createAiLayer(layer, redisClient))
+export const withAi = <A, E, R>(
+  layer: Layer.Layer<A, E, R>,
+  redisClient?: RedisClient,
+  cacheOptions?: AICacheOptions,
+) => Effect.provide(createAiLayer(layer, redisClient, cacheOptions))

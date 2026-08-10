@@ -168,7 +168,7 @@ export const runSignalsMatchJob =
             {
               // A bare execute dedupeKey rides a jobId that removeOnComplete retains, so a re-trigger
               // with the same key is shadowed. Suffix embeddings-ready so recovery is never dropped;
-              // existsByEvaluationIdAndTraceId guards against a double run against the ingest pass.
+              // findByEvaluationIdAndTraceId guards against a double run against the ingest pass.
               ...(pubInput.dedupeKey !== undefined
                 ? { dedupeKey: isEmbeddingsReady ? `${pubInput.dedupeKey}:embeddings-ready` : pubInput.dedupeKey }
                 : {}),

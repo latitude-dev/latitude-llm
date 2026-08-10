@@ -1,6 +1,7 @@
 import type {
   ChSqlClient,
   CustomBehaviorId,
+  FacetId,
   OrganizationId,
   ProjectId,
   RepositoryError,
@@ -8,6 +9,14 @@ import type {
   TraceId,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
+
+/**
+ * A scoped view's facet id, threaded beside `customBehaviorId` into every
+ * intelligence read so the `taxonomy_view_assignments` membership matches the
+ * right slice: omit/null = the view's topic edges; a facet id = that facet's
+ * edges. The edges resolve back to the same session observation in
+ * `taxonomy_observations`, so a facet drawer gets identical moment/score rollups.
+ */
 
 /**
  * Moment-turn range filter for the cluster session list. `metric` selects which
@@ -33,6 +42,8 @@ export interface ClusterSessionTraceIdsInput {
   readonly limit: number
   /** Omit/null = global taxonomy; an id resolves membership from that behavior's scoped assignment slice. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** The scoped view's facet; omit/null = topic edges, a facet id = that facet's edges. */
+  readonly facetId?: FacetId | null
 }
 
 export interface ClusterAnalysisAggregate {
@@ -89,6 +100,8 @@ export interface ListClusterSessionsInput {
   readonly limit: number
   /** Omit/null = global taxonomy; an id reads the scoped assignment slice. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** The scoped view's facet; omit/null = topic edges, a facet id = that facet's edges. */
+  readonly facetId?: FacetId | null
 }
 
 export type ClusterTrajectoryAxis = "day" | "turn"
@@ -115,6 +128,8 @@ export interface GetClusterTrajectoryInput {
   readonly startTimeFrom?: Date
   readonly startTimeTo?: Date
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** The scoped view's facet; omit/null = topic edges, a facet id = that facet's edges. */
+  readonly facetId?: FacetId | null
 }
 
 export interface TaxonomyClusterIntelligenceRepositoryShape {
@@ -126,6 +141,8 @@ export interface TaxonomyClusterIntelligenceRepositoryShape {
     readonly sourceWindowEnd: Date
     /** Omit/null = global taxonomy; an id reads the scoped assignment slice. */
     readonly customBehaviorId?: CustomBehaviorId | null
+    /** The scoped view's facet; omit/null = topic edges, a facet id = that facet's edges. */
+    readonly facetId?: FacetId | null
   }): Effect.Effect<ClusterAnalysisAggregate, RepositoryError, ChSqlClient>
   listRepresentativeExamples(input: {
     readonly organizationId: OrganizationId
@@ -136,6 +153,8 @@ export interface TaxonomyClusterIntelligenceRepositoryShape {
     readonly limit: number
     /** Omit/null = global taxonomy; an id reads the scoped assignment slice. */
     readonly customBehaviorId?: CustomBehaviorId | null
+    /** The scoped view's facet; omit/null = topic edges, a facet id = that facet's edges. */
+    readonly facetId?: FacetId | null
   }): Effect.Effect<readonly ClusterRepresentativeExample[], RepositoryError, ChSqlClient>
   /**
    * One trace id per session assigned to the cluster subtree, scoped by the

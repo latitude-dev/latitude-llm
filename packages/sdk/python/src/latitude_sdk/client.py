@@ -17,13 +17,16 @@ if typing.TYPE_CHECKING:
     from .api_keys.client import ApiKeysClient, AsyncApiKeysClient
     from .datasets.client import AsyncDatasetsClient, DatasetsClient
     from .experiments.client import AsyncExperimentsClient, ExperimentsClient
+    from .imports.client import AsyncImportsClient, ImportsClient
     from .incidents.client import AsyncIncidentsClient, IncidentsClient
     from .members.client import AsyncMembersClient, MembersClient
+    from .memory.client import AsyncMemoryClient, MemoryClient
     from .monitors.client import AsyncMonitorsClient, MonitorsClient
     from .oauth_keys.client import AsyncOauthKeysClient, OauthKeysClient
     from .projects.client import AsyncProjectsClient, ProjectsClient
     from .saved_searches.client import AsyncSavedSearchesClient, SavedSearchesClient
     from .scores.client import AsyncScoresClient, ScoresClient
+    from .sessions.client import AsyncSessionsClient, SessionsClient
     from .signals.client import AsyncSignalsClient, SignalsClient
     from .spans.client import AsyncSpansClient, SpansClient
     from .tools.client import AsyncToolsClient, ToolsClient
@@ -135,6 +138,9 @@ class LatitudeClient:
         self._analytics: typing.Optional[AnalyticsClient] = None
         self._spans: typing.Optional[SpansClient] = None
         self._experiments: typing.Optional[ExperimentsClient] = None
+        self._sessions: typing.Optional[SessionsClient] = None
+        self._memory: typing.Optional[MemoryClient] = None
+        self._imports: typing.Optional[ImportsClient] = None
 
     @property
     def account(self):
@@ -280,6 +286,30 @@ class LatitudeClient:
             self._experiments = ExperimentsClient(client_wrapper=self._client_wrapper)
         return self._experiments
 
+    @property
+    def sessions(self):
+        if self._sessions is None:
+            from .sessions.client import SessionsClient  # noqa: E402
+
+            self._sessions = SessionsClient(client_wrapper=self._client_wrapper)
+        return self._sessions
+
+    @property
+    def memory(self):
+        if self._memory is None:
+            from .memory.client import MemoryClient  # noqa: E402
+
+            self._memory = MemoryClient(client_wrapper=self._client_wrapper)
+        return self._memory
+
+    @property
+    def imports(self):
+        if self._imports is None:
+            from .imports.client import ImportsClient  # noqa: E402
+
+            self._imports = ImportsClient(client_wrapper=self._client_wrapper)
+        return self._imports
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -406,6 +436,9 @@ class AsyncLatitudeClient:
         self._analytics: typing.Optional[AsyncAnalyticsClient] = None
         self._spans: typing.Optional[AsyncSpansClient] = None
         self._experiments: typing.Optional[AsyncExperimentsClient] = None
+        self._sessions: typing.Optional[AsyncSessionsClient] = None
+        self._memory: typing.Optional[AsyncMemoryClient] = None
+        self._imports: typing.Optional[AsyncImportsClient] = None
 
     @property
     def account(self):
@@ -550,6 +583,30 @@ class AsyncLatitudeClient:
 
             self._experiments = AsyncExperimentsClient(client_wrapper=self._client_wrapper)
         return self._experiments
+
+    @property
+    def sessions(self):
+        if self._sessions is None:
+            from .sessions.client import AsyncSessionsClient  # noqa: E402
+
+            self._sessions = AsyncSessionsClient(client_wrapper=self._client_wrapper)
+        return self._sessions
+
+    @property
+    def memory(self):
+        if self._memory is None:
+            from .memory.client import AsyncMemoryClient  # noqa: E402
+
+            self._memory = AsyncMemoryClient(client_wrapper=self._client_wrapper)
+        return self._memory
+
+    @property
+    def imports(self):
+        if self._imports is None:
+            from .imports.client import AsyncImportsClient  # noqa: E402
+
+            self._imports = AsyncImportsClient(client_wrapper=self._client_wrapper)
+        return self._imports
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

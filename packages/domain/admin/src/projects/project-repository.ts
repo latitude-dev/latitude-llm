@@ -1,6 +1,16 @@
-import type { NotFoundError, ProjectId, RepositoryError, SignalId } from "@domain/shared"
+import type { NotFoundError, OrganizationId, ProjectId, RepositoryError, SignalId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { AdminProjectDetails } from "./project-details.ts"
+
+/** Flat identity for a project plus its parent organisation, for link rendering. */
+export interface AdminProjectSummary {
+  readonly id: ProjectId
+  readonly name: string
+  readonly slug: string
+  readonly organizationId: OrganizationId
+  readonly organizationName: string
+  readonly organizationSlug: string
+}
 
 /** Snapshot of issue counts by lifecycle state at request time. */
 export interface ProjectSignalStateSnapshot {
@@ -87,5 +97,18 @@ export class AdminProjectRepository extends Context.Service<
     findSignalDetailsByIds(
       ids: readonly SignalId[],
     ): Effect.Effect<ReadonlyMap<SignalId, ProjectSignalDetails>, RepositoryError>
+
+    /**
+     * Names, slugs and parent organisation for the given project ids, so views that start from a
+     * ClickHouse aggregate can render links instead of opaque ids.
+     *
+     * Ids missing from the map are hard-deleted projects; callers render the bare id rather than
+     * dropping the row, because the usage it accounts for was still real. Soft-deleted projects
+     * *are* returned here, unlike `findById` — a project deleted after its spans were ingested is
+     * exactly the case a staff reader needs named.
+     */
+    findManySummariesByIds(
+      ids: readonly ProjectId[],
+    ): Effect.Effect<ReadonlyMap<ProjectId, AdminProjectSummary>, RepositoryError>
   }
 >()("@domain/admin/AdminProjectRepository") {}

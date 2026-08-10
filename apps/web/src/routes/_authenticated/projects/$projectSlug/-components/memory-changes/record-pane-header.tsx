@@ -1,14 +1,12 @@
 import { Text } from "@repo/ui"
 import { Link, useParams } from "@tanstack/react-router"
 import { ArrowUpRightIcon } from "lucide-react"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { encodeRecordParam, encodeStoreSegment, recordDisplayLabel } from "../../memory/-components/store-encoding.ts"
 
 /**
  * A slim header above a record preview (span detail / session "Memory changes")
  * with an "Open in Memory" link to the full record page — deep-linking the record
- * and, when given, a specific change. Renders nothing when the Memory page is
- * gated off, since the destination would be unavailable.
+ * and, when given, a specific change.
  */
 export function RecordPaneHeader({
   storeId,
@@ -19,9 +17,8 @@ export function RecordPaneHeader({
   readonly recordId: string
   readonly changeSpanId?: string
 }) {
-  const enabled = useHasFeatureFlag("memoryObservability")
   const { projectSlug } = useParams({ strict: false })
-  if (!enabled || projectSlug == null) return null
+  if (projectSlug == null) return null
 
   return (
     <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-secondary/50 px-3 py-1">

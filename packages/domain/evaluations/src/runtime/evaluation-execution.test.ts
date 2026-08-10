@@ -1,9 +1,17 @@
+import { estimateCost } from "@domain/models"
 import { getEncoding } from "js-tiktoken"
 import { describe, expect, it } from "vitest"
-import { fitPromptToJudgeContextWindow } from "./evaluation-execution.ts"
+import {
+  EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
+  estimateEvaluationScriptCostMicrocents,
+  fitPromptToJudgeContextWindow,
+} from "./evaluation-execution.ts"
 
 const encoder = getEncoding("o200k_base")
 const countTokens = (text: string) => encoder.encode(text).length
+
+// ~165k tokens: over the ~119k budget the 128k fallback window leaves, without tokenizing 500k of filler.
+const OVERSIZED_FILLER = "the quick brown fox jumps over the lazy dog. ".repeat(15_000)
 
 describe("fitPromptToJudgeContextWindow", () => {
   it("returns the prompt unchanged when it fits comfortably", () => {
@@ -14,8 +22,7 @@ describe("fitPromptToJudgeContextWindow", () => {
   it("truncates a prompt that exceeds the resolved model's context window, keeping it under budget", () => {
     const head = "Criteria: the user got frustrated.\n\nConversation:\n"
     const tail = "\n[assistant] final resolution message"
-    const filler = "the quick brown fox jumps over the lazy dog. ".repeat(50_000)
-    const prompt = `${head}${filler}${tail}`
+    const prompt = `${head}${OVERSIZED_FILLER}${tail}`
 
     const fitted = fitPromptToJudgeContextWindow(prompt, "amazon-bedrock", "minimax.minimax-m2.5")
 
@@ -29,10 +36,13 @@ describe("fitPromptToJudgeContextWindow", () => {
   })
 
   it("sizes the budget off a configured maxOutputTokens instead of the hardcoded default", () => {
-    const filler = "the quick brown fox jumps over the lazy dog. ".repeat(50_000)
-
-    const fittedDefault = fitPromptToJudgeContextWindow(filler, "amazon-bedrock", "minimax.minimax-m2.5")
-    const fittedLargerOutput = fitPromptToJudgeContextWindow(filler, "amazon-bedrock", "minimax.minimax-m2.5", 40_000)
+    const fittedDefault = fitPromptToJudgeContextWindow(OVERSIZED_FILLER, "amazon-bedrock", "minimax.minimax-m2.5")
+    const fittedLargerOutput = fitPromptToJudgeContextWindow(
+      OVERSIZED_FILLER,
+      "amazon-bedrock",
+      "minimax.minimax-m2.5",
+      40_000,
+    )
 
     expect(countTokens(fittedLargerOutput)).toBeLessThan(countTokens(fittedDefault))
   })
@@ -72,5 +82,44 @@ describe("fitPromptToJudgeContextWindow", () => {
 
     expect(fitted.length).toBeLessThan(prompt.length)
     expect(fitted.startsWith(longInstructions)).toBe(false)
+  })
+})
+
+describe("estimateEvaluationScriptCostMicrocents", () => {
+  const usage = { input: 100_000, output: 20_000 }
+  const toMicrocents = (provider: string, model: string) =>
+    Math.round(estimateCost(provider, model, usage) * 100_000_000)
+
+  it("prices a fallback-served call with the fallback model's rates", () => {
+    const cost = estimateEvaluationScriptCostMicrocents(
+      {
+        tokens: 120_000,
+        tokenUsage: usage,
+        servedBy: { provider: "amazon-bedrock", model: "openai.gpt-oss-120b-1:0" },
+      },
+      EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
+    )
+
+    expect(cost).toBe(toMicrocents("amazon-bedrock", "openai.gpt-oss-120b-1:0"))
+    expect(cost).not.toBe(toMicrocents("amazon-bedrock", "minimax.minimax-m2.5"))
+  })
+
+  it("prices a call served by the requested model with the requested model's rates", () => {
+    const cost = estimateEvaluationScriptCostMicrocents(
+      {
+        tokens: 120_000,
+        tokenUsage: usage,
+        servedBy: { provider: "amazon-bedrock", model: "minimax.minimax-m2.5" },
+      },
+      EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
+    )
+
+    expect(cost).toBe(toMicrocents("amazon-bedrock", "minimax.minimax-m2.5"))
+  })
+
+  it("falls back to the requested model when the adapter reports no served model", () => {
+    const cost = estimateEvaluationScriptCostMicrocents({ tokens: 120_000, tokenUsage: usage })
+
+    expect(cost).toBe(toMicrocents("amazon-bedrock", "minimax.minimax-m2.5"))
   })
 })

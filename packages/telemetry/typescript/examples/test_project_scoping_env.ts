@@ -28,13 +28,14 @@
 import { randomUUID } from "node:crypto"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
+import { createOpenAIInstrumentation } from "../src/instrumentations/openai.ts"
 
 const DEFAULT_SLUG = process.env.LATITUDE_PROJECT_SLUG!
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: DEFAULT_SLUG,
   disableBatch: true,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
 })
 
 const openai = new OpenAI()
@@ -73,10 +74,18 @@ async function defaultRoute() {
   ]
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM },
-    { role: "user", content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence." },
+    {
+      role: "user",
+      content: "What's the weather in San Francisco? Use get_weather, then answer in one short sentence.",
+    },
   ]
 
-  const first = await openai.chat.completions.create({ model: MODEL, messages, tools, max_completion_tokens: MAX_TOKENS })
+  const first = await openai.chat.completions.create({
+    model: MODEL,
+    messages,
+    tools,
+    max_completion_tokens: MAX_TOKENS,
+  })
   const toolCall = first.choices[0]?.message?.tool_calls?.[0]
   messages.push(first.choices[0]!.message)
   messages.push({
@@ -85,7 +94,12 @@ async function defaultRoute() {
     content: JSON.stringify({ city: "San Francisco", temperatureC: 21, conditions: "sunny" }),
   })
 
-  const second = await openai.chat.completions.create({ model: MODEL, messages, tools, max_completion_tokens: MAX_TOKENS })
+  const second = await openai.chat.completions.create({
+    model: MODEL,
+    messages,
+    tools,
+    max_completion_tokens: MAX_TOKENS,
+  })
   return second.choices[0]?.message?.content
 }
 

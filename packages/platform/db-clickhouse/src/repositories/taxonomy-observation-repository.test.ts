@@ -258,6 +258,43 @@ describe("TaxonomyObservationRepositoryLive", () => {
     })
   })
 
+  it("lists naming members by observation id, before any assignment points at the cluster", async () => {
+    // The publish sequence names a staging tree before the reassignment repoints
+    // ClickHouse at it, so naming reads its samples by id, not by cluster.
+    const first = makeObservation({
+      observationId: "n".repeat(24),
+      sessionId: SessionId("staged-naming-session"),
+      projectionMetadata: { summary: "first staged member" },
+    })
+    const second = makeObservation({
+      observationId: "m".repeat(24),
+      sessionId: SessionId("staged-naming-session"),
+      startTime: new Date("2026-05-24T13:00:00.000Z"),
+      endTime: new Date("2026-05-24T13:01:00.000Z"),
+      projectionMetadata: { summary: "second staged member" },
+    })
+
+    const rows = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        yield* repo.upsert(first)
+        yield* repo.upsert(second)
+        return yield* repo.listAllByObservationIds({
+          organizationId,
+          projectId,
+          observationIds: [first.observationId, second.observationId, "z".repeat(24)],
+          limit: 10,
+        })
+      }),
+    )
+
+    // Every requested id that exists comes back, newest first, with the summary
+    // the namer samples — and the rows are still unassigned.
+    expect(rows.map((row) => row.observationId)).toEqual([second.observationId, first.observationId])
+    expect(rows.every((row) => row.assignedClusterId === null)).toBe(true)
+    expect(rows[0]?.projectionMetadata).toEqual({ summary: "second staged member" })
+  })
+
   it("treats reassignment as one current observation", async () => {
     const observation = makeObservation({ observationId: "u".repeat(24), sessionId: SessionId("current-session") })
 
@@ -574,5 +611,115 @@ describe("TaxonomyObservationRepositoryLive.listForCustomBehaviorSample", () => 
     expect(sample).toHaveLength(1)
     expect(sample[0]?.observationId).toBe("m".repeat(24))
     expect(sample[0]?.sessionId).toBe(matchSession)
+  })
+})
+
+describe("TaxonomyObservationRepositoryLive.listForFacetSample", () => {
+  it("projects each session's ids, start time, and transcript summary (whole-project, no filter)", async () => {
+    const scopedProjectId = ProjectId("u".repeat(24))
+    const at = new Date("2026-05-24T12:00:00.000Z")
+    await ch.client.insert({
+      table: "taxonomy_observations",
+      values: [
+        makeObservationRow(
+          makeObservation({
+            observationId: "g".repeat(24),
+            projectId: scopedProjectId,
+            sessionId: SessionId("facet-session-1"),
+            projectionMetadata: { summary: "User: cancel my order. Assistant: done." },
+            startTime: at,
+          }),
+        ),
+      ],
+      format: "JSONEachRow",
+    })
+
+    const sample = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        return yield* repo.listForFacetSample({
+          organizationId,
+          projectId: scopedProjectId,
+          since: new Date("2026-05-23T00:00:00.000Z"),
+          limit: 10,
+        })
+      }),
+    )
+
+    expect(sample).toHaveLength(1)
+    expect(sample[0]?.sessionObservationId).toBe("g".repeat(24))
+    expect(sample[0]?.sessionId).toBe("facet-session-1")
+    expect(sample[0]?.transcript).toBe("User: cancel my order. Assistant: done.")
+  })
+
+  it("scopes the facet sample to a cohort's sessions when a filterSet is supplied (cohort × facet)", async () => {
+    const scopedProjectId = ProjectId("v".repeat(24))
+    const matchSession = "facet-cohort-match"
+    const otherSession = "facet-cohort-other"
+    const at = new Date("2026-05-24T12:00:00.000Z")
+
+    await ch.client.insert({
+      table: "spans",
+      values: [
+        makeLlmSpanRow({
+          projectId: scopedProjectId,
+          sessionId: matchSession,
+          model: "gpt-4",
+          startTime: at,
+          traceId: "ft1",
+          spanId: "fs1",
+        }),
+        makeLlmSpanRow({
+          projectId: scopedProjectId,
+          sessionId: otherSession,
+          model: "claude-3",
+          startTime: at,
+          traceId: "ft2",
+          spanId: "fs2",
+        }),
+      ],
+      format: "JSONEachRow",
+    })
+    await ch.client.insert({
+      table: "taxonomy_observations",
+      values: [
+        makeObservationRow(
+          makeObservation({
+            observationId: "h".repeat(24),
+            projectId: scopedProjectId,
+            sessionId: SessionId(matchSession),
+            projectionMetadata: { summary: "matched" },
+            startTime: at,
+          }),
+        ),
+        makeObservationRow(
+          makeObservation({
+            observationId: "i".repeat(24),
+            projectId: scopedProjectId,
+            sessionId: SessionId(otherSession),
+            projectionMetadata: { summary: "excluded" },
+            startTime: at,
+          }),
+        ),
+      ],
+      format: "JSONEachRow",
+    })
+
+    const sample = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        return yield* repo.listForFacetSample({
+          organizationId,
+          projectId: scopedProjectId,
+          since: new Date("2026-05-23T00:00:00.000Z"),
+          limit: 10,
+          filterSet: { models: [{ op: "in", value: ["gpt-4"] }] },
+        })
+      }),
+    )
+
+    expect(sample).toHaveLength(1)
+    expect(sample[0]?.sessionObservationId).toBe("h".repeat(24))
+    expect(sample[0]?.transcript).toBe("matched")
   })
 })

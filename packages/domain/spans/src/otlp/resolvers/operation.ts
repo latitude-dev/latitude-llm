@@ -18,6 +18,28 @@ const OPENINFERENCE_OPERATION: Record<string, Operation> = {
   PROMPT: "prompt",
 }
 
+const openinferenceOperation = (kind: string): Operation | undefined => OPENINFERENCE_OPERATION[kind.toUpperCase()]
+
+/**
+ * A source's own span-kind or run-type string, mapped onto the operation vocabulary.
+ *
+ * The vocabulary is load-bearing rather than cosmetic: the trace rollup gates its token sums on
+ * `operation IN ('chat', 'text_completion', 'generate_content', 'embeddings', 'reranker')` and the
+ * conversation view selects message spans the same way. An unmapped vendor string would insert
+ * cleanly and then read back as a trace with no messages and no tokens, so anything unrecognised
+ * becomes `unspecified` — which is also what keeps a wrapper span out of the token gate.
+ *
+ * `sourceKinds` carries only the names that source coined itself; anything it took from OpenInference
+ * resolves above, whatever case it arrives in.
+ */
+export function resolveOperationFromSourceKind(
+  kind: string | null | undefined,
+  sourceKinds: Readonly<Record<string, Operation>> = {},
+): Operation {
+  if (!kind) return "unspecified"
+  return sourceKinds[kind] ?? openinferenceOperation(kind) ?? "unspecified"
+}
+
 const OPENLLMETRY_OPERATION: Record<string, Operation> = {
   completion: "text_completion",
   embedding: "embeddings",
@@ -31,17 +53,16 @@ const GENAI_OPERATION: Record<string, Operation> = {
   rerank: "reranker",
 }
 
-// Bare ai.generateText/streamText/generateObject/streamObject wrappers carry a lossy
-// summary (no tool results); classify them invoke_agent so the rollup excludes them and
-// the per-leaf .doGenerate/.doStream `chat` turns hold the real conversation.
+// Vercel wrappers duplicate their leaves' usage; agent_step keeps them out of the rollup,
+// while a trace-root wrapper is the agent itself (invoke_agent, in resolveOperation).
 const VERCEL_OPERATION: Record<string, Operation> = {
-  "ai.generateText": "invoke_agent",
+  "ai.generateText": "agent_step",
   "ai.generateText.doGenerate": "chat",
-  "ai.streamText": "invoke_agent",
+  "ai.streamText": "agent_step",
   "ai.streamText.doStream": "chat",
-  "ai.generateObject": "invoke_agent",
+  "ai.generateObject": "agent_step",
   "ai.generateObject.doGenerate": "chat",
-  "ai.streamObject": "invoke_agent",
+  "ai.streamObject": "agent_step",
   "ai.streamObject.doStream": "chat",
   "ai.embed": "embeddings",
   "ai.embed.doEmbed": "embeddings",
@@ -49,6 +70,13 @@ const VERCEL_OPERATION: Record<string, Operation> = {
   "ai.embedMany.doEmbed": "embeddings",
   "ai.toolCall": "execute_tool",
 }
+
+const VERCEL_ROOT_AGENT_OPERATION_IDS: ReadonlySet<string> = new Set([
+  "ai.generateText",
+  "ai.streamText",
+  "ai.generateObject",
+  "ai.streamObject",
+])
 
 // Latitude's openai-agents TS bridge tags non-LLM spans with latitude.span.kind=agents.*
 // (its LLM span already sets gen_ai.operation.name=chat). Map only these wrapper/tool spans.
@@ -94,17 +122,41 @@ function operationFromClaudeCodeNativeSpanName(spanName: string): string | undef
 
 const operationCandidates = [
   fromString("gen_ai.operation.name", (v) => GENAI_OPERATION[v] ?? v), // OTEL GenAI semconv (v1.37+ and v1.36)
-  fromString("openinference.span.kind", (v) => OPENINFERENCE_OPERATION[v] ?? v.toLowerCase()), // OpenInference / Arize Phoenix
+  fromString("openinference.span.kind", (v) => openinferenceOperation(v) ?? v.toLowerCase()), // OpenInference / Arize Phoenix
   fromString("llm.request.type", (v) => OPENLLMETRY_OPERATION[v] ?? v), // OpenLLMetry / Traceloop
   fromString("ai.operationId", (v) => VERCEL_OPERATION[v] ?? v), // Vercel AI SDK
   fromString("latitude.span.kind", (v) => OPENAI_AGENTS_OPERATION[v]), // OpenAI Agents
   fromString("span.type", (v) => CLAUDE_CODE_OPERATION[v]), // Claude Code
 ]
 
+const CLOUDFLARE_AIG_SPAN_NAME = "cf.aig.request"
+
+// Cloudflare AI Gateway hardcodes gen_ai.operation.name=chat for every request, including
+// embeddings. Detect the embedding response shape ({data,shape}, no chat envelope) and
+// reclassify so it isn't miscounted as a generation.
+function isCloudflareEmbeddingsSpan(attrs: readonly OtlpKeyValue[], spanName: string): boolean {
+  if (spanName !== CLOUDFLARE_AIG_SPAN_NAME) return false
+  const out = stringAttr(attrs, "gen_ai.output.messages") ?? stringAttr(attrs, "gen_ai.completion_json")
+  if (!out) return false
+  try {
+    const parsed = JSON.parse(out) as Record<string, unknown>
+    const result = parsed.result
+    const body = (result && typeof result === "object" ? result : parsed) as Record<string, unknown>
+    return Array.isArray(body.data) && Array.isArray(body.shape) && !("choices" in body) && !("content" in body)
+  } catch {
+    return false
+  }
+}
+
 // CrewAI's OpenInference instrumentor carries the whole conversation on the AGENT span (no
 // LLM leaf), so classify those `chat` for the rollup; other frameworks' AGENT spans keep
 // `invoke_agent` (they have real LLM leaves).
-export function resolveOperation(spanAttrs: readonly OtlpKeyValue[], spanName: string, scopeName = ""): string {
+export function resolveOperation(
+  spanAttrs: readonly OtlpKeyValue[],
+  spanName: string,
+  scopeName = "",
+  hasParent = true,
+): string {
   if (
     scopeName.startsWith(CREWAI_OPENINFERENCE_SCOPE) &&
     stringAttr(spanAttrs, "openinference.span.kind") === "AGENT"
@@ -115,5 +167,11 @@ export function resolveOperation(spanAttrs: readonly OtlpKeyValue[], spanName: s
     const mapped = OPENCLAW_SPAN_OPERATION[spanName]
     if (mapped) return mapped
   }
-  return first(operationCandidates, spanAttrs) ?? operationFromClaudeCodeNativeSpanName(spanName) ?? "unspecified"
+  if (!hasParent && VERCEL_ROOT_AGENT_OPERATION_IDS.has(stringAttr(spanAttrs, "ai.operationId") ?? "")) {
+    return "invoke_agent"
+  }
+  const operation =
+    first(operationCandidates, spanAttrs) ?? operationFromClaudeCodeNativeSpanName(spanName) ?? "unspecified"
+  if (operation === "chat" && isCloudflareEmbeddingsSpan(spanAttrs, spanName)) return "embeddings"
+  return operation
 }

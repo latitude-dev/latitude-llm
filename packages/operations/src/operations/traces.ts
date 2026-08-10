@@ -1,12 +1,14 @@
 import { getTraceAnnotationUseCase, listTraceAnnotationsUseCase } from "@domain/annotations"
+import { computeSessionMemoryDiffUseCase, computeSessionMemorySummaryUseCase } from "@domain/memories"
 import { MembershipRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { AnnotationScore } from "@domain/scores"
-import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
+import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import { getTraceAnalyticsUseCase, SpanRepository, TraceRepository } from "@domain/spans"
 import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
-import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
+import { MemoryRepositoryLive, SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   MembershipRepositoryLive,
   ProjectRepositoryLive,
@@ -18,6 +20,12 @@ import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
 import { AnnotationSchema, toAnnotationResponse } from "../openapi/entities/annotation.ts"
+import {
+  SessionMemoryChangesSchema,
+  SessionMemorySummarySchema,
+  toSessionMemoryChangesResponse,
+  toSessionMemorySummaryResponse,
+} from "../openapi/entities/memory.ts"
 import { SpanDetailSchema, SpanSchema, toSpanDetailResponse, toSpanResponse } from "../openapi/entities/span.ts"
 import {
   decodeTraceCursor,
@@ -32,7 +40,9 @@ import {
 import { TraceAnalyticsResponseSchema, toTraceAnalyticsResponse } from "../openapi/entities/trace-analytics.ts"
 import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
+  errorResponse,
   jsonBody,
+  jsonResponse,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   spanIdSchema,
@@ -444,6 +454,97 @@ const getTraceAnnotation = traceEndpoint({
     ),
 })
 
+const getTraceMemory = traceEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{traceId}/memory",
+    name: "getTraceMemory",
+    tags: ["Traces"],
+    group: "traces",
+    sdkMethod: "getMemory",
+    summary: "Get trace memory footprint",
+    description:
+      "Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.",
+    security: PROTECTED_SECURITY,
+    request: { params: ProjectParamsSchema.extend({ traceId: traceIdSchema }) },
+    responses: typedResponses({
+      status: 200,
+      schema: SessionMemorySummarySchema,
+      description: "Trace memory footprint",
+    }),
+  }),
+  access: "read-only",
+  rateLimitTier: "medium",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, traceId } = input.params
+      const orgId = OrganizationId(ctx.organization.id as string)
+
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectId = ProjectId(project.id as string)
+
+      const traceRepo = yield* TraceRepository
+      const trace = yield* traceRepo.findByTraceId({ organizationId: orgId, projectId, traceId: TraceId(traceId) })
+      const sessionId = (trace.sessionId as string) || traceId
+
+      const summary = yield* computeSessionMemorySummaryUseCase({
+        organizationId: orgId,
+        projectId,
+        sessionId: SessionId(sessionId),
+        traceId: TraceId(traceId),
+      })
+      return { status: 200, body: toSessionMemorySummaryResponse(summary) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(Layer.mergeAll(TraceRepositoryLive, MemoryRepositoryLive), ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
+})
+
+const getTraceMemoryChanges = traceEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{traceId}/memory/changes",
+    name: "getTraceMemoryChanges",
+    tags: ["Traces"],
+    group: "traces",
+    sdkMethod: "getMemoryChanges",
+    summary: "Get trace memory changes",
+    description: "Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.",
+    security: PROTECTED_SECURITY,
+    request: { params: ProjectParamsSchema.extend({ traceId: traceIdSchema }) },
+    responses: typedResponses({ status: 200, schema: SessionMemoryChangesSchema, description: "Trace memory changes" }),
+  }),
+  access: "read-only",
+  rateLimitTier: "medium",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, traceId } = input.params
+      const orgId = OrganizationId(ctx.organization.id as string)
+
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const projectId = ProjectId(project.id as string)
+
+      const traceRepo = yield* TraceRepository
+      const trace = yield* traceRepo.findByTraceId({ organizationId: orgId, projectId, traceId: TraceId(traceId) })
+      const sessionId = (trace.sessionId as string) || traceId
+
+      const diff = yield* computeSessionMemoryDiffUseCase({
+        organizationId: orgId,
+        projectId,
+        sessionId: SessionId(sessionId),
+        traceId: TraceId(traceId),
+      })
+      return { status: 200, body: toSessionMemoryChangesResponse(diff) } as const
+    }).pipe(
+      withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
+      withClickHouse(Layer.mergeAll(TraceRepositoryLive, MemoryRepositoryLive), ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
+})
+
 const exportTraces = traceEndpoint({
   route: createRoute({
     method: "post",
@@ -460,7 +561,13 @@ const exportTraces = traceEndpoint({
       params: ProjectParamsSchema,
       body: jsonBody(ExportBodySchema),
     },
-    responses: typedResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
+    responses: {
+      202: jsonResponse(ExportResponseSchema, "Export enqueued"),
+      400: errorResponse("Validation error"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+      429: errorResponse("Export rate limit exceeded"),
+    },
   }),
   access: "write",
   rateLimitTier: "ultra",
@@ -479,6 +586,17 @@ const exportTraces = traceEndpoint({
           message: "`recipient` must belong to a member of this organization.",
         })
       }
+
+      yield* Effect.tryPromise({
+        try: () =>
+          enforceExportRequestRateLimit({
+            redis: ctx.redis,
+            organizationId: ctx.organization.id as string,
+            projectId: project.id as string,
+            recipientEmail: body.recipient,
+          }),
+        catch: (cause) => cause,
+      })
 
       yield* ctx.queuePublisher.publish("exports", "generate", {
         kind: "traces",
@@ -565,6 +683,8 @@ export const tracesModule: OperationModule = {
     getTraceSpan,
     listTraceAnnotations,
     getTraceAnnotation,
+    getTraceMemory,
+    getTraceMemoryChanges,
     exportTraces,
   ],
 }

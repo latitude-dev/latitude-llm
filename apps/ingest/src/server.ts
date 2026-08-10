@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server"
 import { httpInstrumentationMiddleware as otel } from "@hono/otel"
 import { waitForRedisClientReady } from "@platform/cache-redis"
 import { parseEnv } from "@platform/env"
-import { createLogger, initializeObservability, shutdownObservability, withTracing } from "@repo/observability"
+import { createLogger, initializeObservability, shutdownObservability, trace, withTracing } from "@repo/observability"
 import { isHttpError, LatitudeObservabilityTestError, toHttpResponse } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
@@ -11,6 +11,12 @@ import { getQueuePublisher, getRedisClient } from "./clients.ts"
 import { suppressHttpErrorTelemetry } from "./middleware/suppress-http-error-telemetry.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
+import {
+  createTracePayloadProtection,
+  createTracePayloadRuntime,
+  loadTracePayloadLimits,
+  TracePayloadAdmission,
+} from "./trace-payload.ts"
 import type { IngestEnv } from "./types.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
@@ -23,6 +29,12 @@ const start = async () => {
   const app = new Hono<IngestEnv>()
   const port = Effect.runSync(parseEnv("LAT_INGEST_PORT", "number", 3002))
   const logger = createLogger("ingest")
+  const tracePayloadLimits = loadTracePayloadLimits()
+  const tracePayloadProtection = createTracePayloadProtection({
+    limits: tracePayloadLimits,
+    admission: new TracePayloadAdmission(tracePayloadLimits),
+    runtime: createTracePayloadRuntime(() => trace.getActiveSpan()),
+  })
 
   // Add Hono OpenTelemetry middleware
   app.use(otel())
@@ -42,7 +54,7 @@ const start = async () => {
     return c.json({ error: "Internal server error" }, 500)
   })
 
-  registerRoutes({ app })
+  registerRoutes({ app, tracePayloadProtection })
 
   await waitForRedisClientReady(getRedisClient())
   await getQueuePublisher()

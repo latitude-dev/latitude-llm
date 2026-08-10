@@ -1,13 +1,11 @@
 import { Button, Text, Tooltip } from "@repo/ui"
 import { createFileRoute, Link, useParams } from "@tanstack/react-router"
 import { ArrowLeftIcon, DatabaseIcon } from "lucide-react"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMemoryStoreSnapshot } from "../../../../../../domains/memories/memories.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../../-route-data.ts"
-import { MemoryUnavailableState } from "../-components/memory-empty-state.tsx"
 import {
   decodeRecordParam,
   decodeStoreSegment,
@@ -16,6 +14,7 @@ import {
 } from "../-components/store-encoding.ts"
 import { RecordContentView } from "./-components/record-content-view.tsx"
 import { RecordTreeSidebar } from "./-components/record-tree-sidebar.tsx"
+import { StoreHomeView } from "./-components/store-home-view.tsx"
 import { StoreUsersList } from "./-components/store-users-list.tsx"
 
 function StoreBreadcrumb() {
@@ -39,7 +38,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/memo
 })
 
 function StoreDetailPage() {
-  const enabled = useHasFeatureFlag("memoryObservability")
   const project = useRouteProject()
   const { projectSlug, store } = Route.useParams()
   const storeId = decodeStoreSegment(store)
@@ -47,15 +45,7 @@ function StoreDetailPage() {
   const [changeParam, setChangeParam] = useParamState("change", "")
   const selectedRecordId = recordParam === "" ? undefined : decodeRecordParam(recordParam)
 
-  const { data: snapshot, isLoading } = useMemoryStoreSnapshot({ projectId: project.id, storeId, enabled })
-
-  if (!enabled) {
-    return (
-      <Layout>
-        <MemoryUnavailableState />
-      </Layout>
-    )
-  }
+  const { data: snapshot, isLoading } = useMemoryStoreSnapshot({ projectId: project.id, storeId })
 
   return (
     <Layout className="gap-0">
@@ -94,6 +84,11 @@ function StoreDetailPage() {
               setRecordParam(encodeRecordParam(recordId))
               setChangeParam("")
             }}
+            onSelectHome={() => {
+              setRecordParam("")
+              setChangeParam("")
+            }}
+            homeActive={selectedRecordId === undefined}
           />
         </Layout.Sidebar>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -107,9 +102,13 @@ function StoreDetailPage() {
               onSelectChange={(spanId) => setChangeParam(spanId ?? "")}
             />
           ) : (
-            <div className="flex flex-1 items-center justify-center p-6">
-              <Text.H5 color="foregroundMuted">Select a record to view its contents.</Text.H5>
-            </div>
+            <StoreHomeView
+              storeId={storeId}
+              onSelectRecord={(recordId) => {
+                setRecordParam(encodeRecordParam(recordId))
+                setChangeParam("")
+              }}
+            />
           )}
         </div>
       </Layout.Body>

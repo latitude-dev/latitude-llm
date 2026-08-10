@@ -10,7 +10,8 @@ root-cause the issue and implement a fix.
 
 ## How it works
 
-1. A signal escalates (or an incident opens) on a monitored project.
+1. A dispatch trigger fires on a monitored project: a new signal is discovered, a signal escalates
+   into an incident, a resolved signal regresses, or a monitor opens an incident.
 2. Latitude assembles a prompt with the `signalId`, a deep link, and sample trace ids, and fires the
    configured dispatch target.
 3. The agent — already connected to the Latitude MCP — investigates the signal (below), implements a

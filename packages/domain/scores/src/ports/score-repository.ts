@@ -55,15 +55,12 @@ export interface ScoreRepositoryShape {
     readonly traceId: TraceId
     readonly sessionId?: SessionId | null
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
-  /**
-   * Checks whether a canonical persisted evaluation score already exists for
-   * one concrete `(evaluationId, traceId)` pair.
-   */
-  existsByEvaluationIdAndTraceId(input: {
+  /** Canonical persisted evaluation score for one `(evaluationId, traceId)` pair, or `null`. */
+  findByEvaluationIdAndTraceId(input: {
     readonly projectId: ProjectId
     readonly evaluationId: string
     readonly traceId: TraceId
-  }): Effect.Effect<boolean, RepositoryError, SqlClient>
+  }): Effect.Effect<Score | null, RepositoryError, SqlClient>
   listByProjectId(input: {
     readonly projectId: ProjectId
     readonly options?: ScoreListOptions

@@ -17,8 +17,7 @@ export function DatasetsEmptyState({
         <div className="flex flex-col items-center gap-2">
           <Text.H3 centered>No datasets yet</Text.H3>
           <Text.H5 color="foregroundMuted" centered>
-            Datasets let you curate traces for evaluation and regression testing. Create your first dataset to get
-            started.
+            Datasets let you curate traces for evaluation and regression testing.
           </Text.H5>
         </div>
         <div className="flex items-center gap-2">

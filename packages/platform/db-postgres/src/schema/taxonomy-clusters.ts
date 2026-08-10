@@ -31,6 +31,10 @@ export const taxonomyClusters = latitudeSchema.table(
     projectId: cuid("project_id").notNull(),
     // NULL = global taxonomy; non-null scopes the row to a custom behavior's sub-tree.
     customBehaviorId: cuid("custom_behavior_id", { default: false }),
+    // NULL = topic; non-null scopes the row to a facet's tree. A view's tree
+    // is the clusters where (custom_behavior_id, facet_id) match; (NULL, NULL) = the
+    // global topic tree.
+    facetId: cuid("facet_id", { default: false }),
     parentClusterId: cuid("parent_cluster_id", { default: false }),
     depth: bigint("depth", { mode: "number" }).notNull().default(0),
     path: varchar("path", { length: 256 }).notNull().default(""),

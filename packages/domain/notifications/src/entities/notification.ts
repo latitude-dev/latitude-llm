@@ -247,6 +247,14 @@ export const signalDiscoveredPayloadSchema = z.object({
 })
 export type SignalDiscoveredPayload = z.infer<typeof signalDiscoveredPayloadSchema>
 
+export const signalRegressedPayloadSchema = z.object({
+  signalId: cuidSchema,
+  regressedAt: z.iso.datetime(),
+  /** Occurrence that reopened the resolved signal; discriminates regression cycles. */
+  triggerScoreId: cuidSchema,
+})
+export type SignalRegressedPayload = z.infer<typeof signalRegressedPayloadSchema>
+
 /**
  * A data destination flipped to `quarantined` (5 consecutive terminal sync
  * failures) and stopped exporting. Fans out to org members so someone
@@ -264,6 +272,26 @@ export const destinationQuarantinedPayloadSchema = z.object({
   failureMessage: z.string().nullable(),
 })
 export type DestinationQuarantinedPayload = z.infer<typeof destinationQuarantinedPayloadSchema>
+
+/**
+ * Organization crossed a billing threshold for the current period — free
+ * included credits exhausted, Pro entered overage, or a configured Pro spend
+ * cap reached. Fans out to owners and admins only (members who cannot change
+ * billing settings are excluded). Org-scoped (`projectId` null); organization
+ * + period + limit kind form the once-per-period idempotency anchor (org is
+ * required because period bounds alone are not unique across tenants, and
+ * the create-notification queue dedupe key is built from this string).
+ */
+export const billingLimitReachedPayloadSchema = z.object({
+  organizationId: cuidSchema,
+  limitKind: z.enum(["included-credits", "overage-started", "spend-cap"]),
+  periodStart: z.iso.datetime(),
+  periodEnd: z.iso.datetime(),
+  includedCredits: z.number().int().nonnegative(),
+  consumedCredits: z.number().int().nonnegative(),
+  overageCredits: z.number().int().nonnegative(),
+})
+export type BillingLimitReachedPayload = z.infer<typeof billingLimitReachedPayloadSchema>
 
 /**
  * Single source of truth for notification kinds. Every kind declares its
@@ -292,9 +320,14 @@ export const NOTIFICATION_KIND_META = {
   },
   "issue.assigned": { group: "personal", payload: signalAssignedPayloadSchema },
   "signal.discovered": { group: "incidents", payload: signalDiscoveredPayloadSchema },
+  "signal.regressed": { group: "incidents", payload: signalRegressedPayloadSchema },
   "destination.quarantined": {
     group: "destinations",
     payload: destinationQuarantinedPayloadSchema,
+  },
+  "billing.limit-reached": {
+    group: "billing",
+    payload: billingLimitReachedPayloadSchema,
   },
 } as const satisfies Record<string, { readonly group: NotificationGroup; readonly payload: z.ZodTypeAny }>
 

@@ -188,6 +188,95 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(scores.size).toBe(0)
   })
 
+  it("drops user-centric strategies on a flagger.classify reflag session (nested evidence is not a real user)", async () => {
+    const nestedEvidence = [
+      "EVALUATED AGENT CONTEXT:",
+      "<evaluated_trace_evidence>",
+      "Task: give me a random fact you find in the memory",
+      "Assistant: you once went by PVC Poncho",
+      "User reaction: no but read the memory first",
+      "</evaluated_trace_evidence>",
+    ].join("\n")
+    const session = makeSessionDetail(
+      [user(nestedEvidence), assistant('{"matched":true,"feedback":"task not completed","messageIndex":"2"}')],
+      { tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify] },
+    )
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [
+        makeFlagger("frustration", 100),
+        makeFlagger("jailbreaking", 100),
+        makeFlagger("nsfw", 100),
+        makeFlagger("laziness", 100),
+      ],
+      momentLabels: [makeMomentLabel("user_frustration"), makeMomentLabel("stalling")],
+      analyses: [analyzedAnalysis()],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "missing-context",
+    })
+    expect(decisionFor(result.decisions, "jailbreaking")).toEqual({
+      slug: "jailbreaking",
+      action: "dropped",
+      reason: "missing-context",
+    })
+    expect(decisionFor(result.decisions, "nsfw")).toEqual({
+      slug: "nsfw",
+      action: "dropped",
+      reason: "missing-context",
+    })
+    // Assistant-response-centric strategies still screen — bad classifications are the point of reflag.
+    expect(decisionFor(result.decisions, "laziness")).toEqual({
+      slug: "laziness",
+      action: "classify",
+      reason: "hinted",
+      hintKinds: ["moment:stalling"],
+    })
+    expect(result.classifications.some((c) => c.flaggerSlug === "frustration")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "jailbreaking")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "nsfw")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "laziness")).toBe(true)
+    expect(scores.size).toBe(0)
+  })
+
+  it("drops user-centric strategies on taxonomy:propose-themes (cluster samples are not a real user)", async () => {
+    const clusterSamples = [
+      "Samples:",
+      "0: User: I just honestly don't understand why you couldn't get this done for me.",
+      "Clearly there is something broke about you. Do not bother giving me a bunch of excuses.",
+    ].join("\n")
+    const session = makeSessionDetail(
+      [user(clusterSamples), assistant('{"themes":[{"name":"Project delivery failures"}]}')],
+      { tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes] },
+    )
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("frustration", 100), makeFlagger("laziness", 100)],
+      momentLabels: [makeMomentLabel("user_frustration"), makeMomentLabel("stalling")],
+      analyses: [analyzedAnalysis()],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "frustration")).toEqual({
+      slug: "frustration",
+      action: "dropped",
+      reason: "missing-context",
+    })
+    expect(decisionFor(result.decisions, "laziness")).toEqual({
+      slug: "laziness",
+      action: "classify",
+      reason: "hinted",
+      hintKinds: ["moment:stalling"],
+    })
+    expect(result.classifications.some((c) => c.flaggerSlug === "frustration")).toBe(false)
+    expect(result.classifications.some((c) => c.flaggerSlug === "laziness")).toBe(true)
+    expect(scores.size).toBe(0)
+  })
+
   it("writes a session-anchored score with contentHash on a deterministic match", async () => {
     const session = makeSessionDetail([user("Please help me with this."), assistant("")])
     const { result, scores } = await runScreening({
@@ -525,6 +614,23 @@ describe("screenSessionFlaggersUseCase", () => {
     const written = [...scores.values()]
     expect(written[0]?.feedback).toContain('"undeclared_tool"')
     expect(written[0]?.feedback).toContain("not in the declared toolset")
+  })
+
+  it("does not flag an undeclared tool that executed successfully", async () => {
+    const call = assistantToolCall("WebSearch", { query: "x" })
+    const callId = (call.parts[0] as { id: string }).id
+    const session = makeSessionDetail(
+      [user("Search the web."), call, tool(callId, { results: ["ok"] }), assistant("Here are the results.")],
+      { definedTools: ["search", "read_file"] },
+    )
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("tool-call-errors", 0)],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "tool-call-errors")?.action).toBe("dropped")
+    expect([...scores.values()]).toEqual([])
   })
 
   it("hints trashing (tool:error) from a failed tool response", async () => {

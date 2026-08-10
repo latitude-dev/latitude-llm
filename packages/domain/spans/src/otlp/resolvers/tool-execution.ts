@@ -1,5 +1,7 @@
+import { stringifyPayload } from "../../helpers/message-payload.ts"
+import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
-import { type Candidate, fromString } from "./utils.ts"
+import { attrsFromMetadata, type Candidate, first, fromString } from "./utils.ts"
 
 const toolCallIdCandidates: Candidate<string>[] = [
   fromString("gen_ai.tool.call.id"), // OTEL GenAI v1.37+
@@ -14,15 +16,6 @@ const toolNameCandidates: Candidate<string>[] = [
   fromString("traceloop.entity.name"), // OpenLLMetry / Traceloop
   fromString("openai.agents.function.name"), // Latitude openai-agents TS bridge
 ]
-
-function jsonStringify(value: unknown): string {
-  if (typeof value === "string") return value
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return ""
-  }
-}
 
 function fromJsonOrString(key: string): Candidate<string> {
   return {
@@ -73,21 +66,62 @@ const EMPTY_TOOL_EXECUTION: ResolvedToolExecution = {
   toolOutput: "",
 }
 
-function first<T>(candidates: readonly Candidate<T>[], attrs: readonly OtlpKeyValue[]): T | undefined {
-  for (const c of candidates) {
-    const v = c.resolve(attrs)
-    if (v !== undefined) return v
-  }
-  return undefined
-}
-
 export function resolveToolExecution(spanAttrs: readonly OtlpKeyValue[], operation: string): ResolvedToolExecution {
   if (operation !== "execute_tool") return EMPTY_TOOL_EXECUTION
 
   return {
     toolCallId: first(toolCallIdCandidates, spanAttrs) ?? "",
     toolName: first(toolNameCandidates, spanAttrs) ?? "",
-    toolInput: jsonStringify(first(toolInputCandidates, spanAttrs) ?? ""),
-    toolOutput: jsonStringify(first(toolOutputCandidates, spanAttrs) ?? ""),
+    toolInput: stringifyPayload(first(toolInputCandidates, spanAttrs)),
+    toolOutput: stringifyPayload(first(toolOutputCandidates, spanAttrs)),
+  }
+}
+
+/**
+ * `tool_call_id` and `toolCallId` are what a vendor SDK writes into its own metadata. They are not
+ * OTEL attributes — the semconv spelling is the dotted `tool_call.id` above — so they are not
+ * candidates, and a live span should not resolve by them.
+ */
+const VENDOR_TOOL_CALL_ID_KEYS = ["tool_call_id", "toolCallId"] as const
+
+const vendorToolCallId = (attrs: readonly OtlpKeyValue[]): string | undefined =>
+  VENDOR_TOOL_CALL_ID_KEYS.reduce<string | undefined>((found, key) => found ?? stringAttr(attrs, key), undefined)
+
+/**
+ * `resolveToolExecution` for a span read out of a source's API rather than off OTLP attributes.
+ *
+ * Same shape, same `execute_tool` gate and the same candidate lists, so a tool span groups with the
+ * same tool ingested live. The row's `input` and `output` are the call's arguments and result — the
+ * correspondence the attribute resolver relies on when it reads OpenInference's `input.value` — and
+ * `input` is read for the call id too, for the sources that put it inside the arguments rather than
+ * beside them.
+ *
+ * `spanName` is only a fallback for the tool's name because it is only sometimes the tool's: Langfuse
+ * and LangSmith rename a tool span after the tool it ran, but Braintrust keeps the instrumentation's
+ * own name, which for Pydantic AI is `running tool: <name>` — so tool analytics grew a set of tools
+ * called `running tool: lookup_order` that never grouped with the same tool ingested live.
+ */
+export function resolveToolExecutionFromMetadata({
+  metadata,
+  operation,
+  spanName,
+  input,
+  output,
+}: {
+  readonly metadata: Record<string, unknown> | null | undefined
+  readonly operation: string
+  readonly spanName: string
+  readonly input: unknown
+  readonly output: unknown
+}): ResolvedToolExecution {
+  if (operation !== "execute_tool") return EMPTY_TOOL_EXECUTION
+
+  const attrs = attrsFromMetadata(metadata)
+  return {
+    toolCallId:
+      first(toolCallIdCandidates, attrs) ?? vendorToolCallId(attrs) ?? vendorToolCallId(attrsFromMetadata(input)) ?? "",
+    toolName: first(toolNameCandidates, attrs) ?? spanName,
+    toolInput: stringifyPayload(input),
+    toolOutput: stringifyPayload(output),
   }
 }

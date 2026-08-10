@@ -1,0 +1,62 @@
+---
+title: Langfuse
+description: Import historical traces and observations from Langfuse Cloud.
+---
+
+## Overview
+
+This guide shows you how to import your **Langfuse** history into Latitude. Latitude reads
+the observations in a Langfuse project and maps them to Latitude traces and spans.
+
+<Check>
+  Importing only reads from Langfuse. Nothing is changed or deleted at the source.
+</Check>
+
+---
+
+## Requirements
+
+- A **Langfuse Cloud project** with the history you want to import
+- A Langfuse **public key** (`pk-lf-…`) and **secret key** (`sk-lf-…`) for that project
+- Your Langfuse **region** — EU, US, Japan or HIPAA US
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Create an API key pair in Langfuse">
+    In Langfuse, open **Settings → API keys** for the project you are importing from and
+    create a key pair. Copy both keys.
+  </Step>
+
+  <Step title="Connect">
+    In Latitude, go to **Project settings → Imports**, choose **Langfuse** and your region,
+    enter both keys, then press **Test connection**.
+  </Step>
+
+  <Step title="Preview and start">
+    Pick the Langfuse project, set the time range and trace limit, check the preview, then
+    press **Start import**.
+  </Step>
+
+</Steps>
+
+---
+
+## Langfuse specifics
+
+- Sessions, users, tags, metadata, messages, tool calls, token usage and cost all map
+  directly — nothing needs configuring in Langfuse.
+- Prompt references (`promptName`, `promptVersion`) land in span metadata, since Latitude
+  has no prompt registry.
+- Langfuse Cloud regions are fully separate deployments: keys from another region will fail
+  the connection test. Pick the one you signed up in.
+
+---
+
+## Seeing your traces
+
+Once imported, traces appear in your project's **Traces** view like any live trace, marked
+with `import.*` metadata naming Langfuse and their original ids.

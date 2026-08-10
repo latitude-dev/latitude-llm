@@ -5,126 +5,78 @@ description: Watch how your agents' persistent memory evolves, with per-record h
 
 # Memory
 
-If your agents keep persistent memory, Latitude records every memory operation they perform and treats each write like a commit. The **Memory** page shows the current contents of every memory store, the full change history of each record, who read and wrote it, and a diff for every change, each one linked back to the session that caused it.
+If your agents keep persistent memory, Latitude records every memory operation they run and treats each write like a commit. The **Memory** page shows the current contents of every store, the full history of each record, who read and wrote it, and a diff for every change, each one linked back to the session that caused it.
 
-Memory operations arrive as ordinary spans through your existing tracing setup. Shortly after a trace completes, Latitude materializes its memory operations into a versioned ledger: each write stores the record's full new body, versions are ordered by span end time, and the most recent write wins. Diffs and token counts are derived from those versions, so you get history without your memory provider having to support it.
+<Frame>
+  <img src="/images/observability/memory-store-detail.png" alt="Memory store detail with the record filetree, a record's current body, and the Record Activity panel" />
+</Frame>
 
-## Send memory operations
+<Note>
+  Not emitting memory operations yet? See [Memory tracing](../telemetry/memory)
+  to instrument your agent, then come back here to explore the data.
+</Note>
 
-There is no separate API for memory. Latitude ingests the standard OpenTelemetry GenAI **memory operation spans**, so any agent already tracing to Latitude only needs to emit one span per memory call. Name the span after the operation and set `gen_ai.operation.name` to the same value.
+## How it works
 
-| Operation | Meaning |
-| --- | --- |
-| `create_memory` | Create new memory records |
-| `update_memory` | Modify existing records |
-| `upsert_memory` | Create or update, without choosing which |
-| `delete_memory` | Delete records. Without a record id, this wipes the whole store |
-| `search_memory` | Query or retrieve records (a read) |
-| `create_memory_store` | Create or initialize a store |
-| `delete_memory_store` | Delete a store and everything in it |
+Memory operations arrive as ordinary spans through your existing tracing setup. Shortly after a trace completes, Latitude materializes them into a versioned ledger: each write stores the record's full new body, versions are ordered by span end time, and the most recent write wins. Diffs and token counts are derived from those versions, so you get history and diffs without your memory provider having to support them.
 
-These attributes control what Latitude can show:
-
-| Attribute | Purpose |
-| --- | --- |
-| `gen_ai.operation.name` | The operation above. Required |
-| `gen_ai.memory.store.id` | The store the operation targets, e.g. `user/usr_4f2a`. Everything groups under this id |
-| `gen_ai.memory.record.id` | The record touched, e.g. `preferences/tone` |
-| `gen_ai.memory.record.count` | How many records were affected or returned |
-| `gen_ai.memory.query.text` | The search query, on `search_memory` spans |
-| `gen_ai.memory.records` | The content payload: an array of `{ id, content }` objects. This is what powers content browsing, diffs, and token counts |
-
-<Tabs>
-  <Tab title="TypeScript">
-    ```ts
-    import { trace } from "@opentelemetry/api"
-
-    const tracer = trace.getTracer("memory")
-
-    await tracer.startActiveSpan("update_memory", async (span) => {
-      span.setAttributes({
-        "gen_ai.operation.name": "update_memory",
-        "gen_ai.memory.store.id": `user/${user.id}`,
-        "gen_ai.memory.record.id": "preferences/tone",
-        "gen_ai.memory.records": JSON.stringify([
-          {
-            id: "preferences/tone",
-            content: "Prefers concise answers with code examples.",
-          },
-        ]),
-      })
-      await memory.update(...)
-      span.end()
-    })
-    ```
-  </Tab>
-  <Tab title="Python">
-    ```python
-    import json
-    from opentelemetry import trace
-
-    tracer = trace.get_tracer("memory")
-
-    with tracer.start_as_current_span("update_memory") as span:
-        span.set_attribute("gen_ai.operation.name", "update_memory")
-        span.set_attribute("gen_ai.memory.store.id", f"user/{user_id}")
-        span.set_attribute("gen_ai.memory.record.id", "preferences/tone")
-        span.set_attribute(
-            "gen_ai.memory.records",
-            json.dumps([
-                {
-                    "id": "preferences/tone",
-                    "content": "Prefers concise answers with code examples.",
-                }
-            ]),
-        )
-        memory.update(...)
-    ```
-  </Tab>
-</Tabs>
-
-### Getting attribution right
-
-- **Always set `gen_ai.memory.store.id`.** A span without it lands in the `(unattributed)` store, which still counts as activity but gives you nothing to browse.
-- **Per-user memory is a store naming convention.** Set the store id to the user id, or a `user/` prefix, and each user's memory becomes its own store. A store shared by several users is one store, and the latest write wins across all of them.
-- **Include `gen_ai.memory.records` with each record's `content`.** Without it, Latitude still records that a change happened, but the record shows "Content not captured" and diffs and token counts degrade.
-- **Put an `id` on each record in `search_memory` results.** That is how reads attribute to the record they came from; results without an id are bucketed together.
-
-Record ids can contain `/`, which the Memory page uses to nest records into folders within a store.
+Record bodies, diffs, and token counts appear when your instrumentation captures content. With content capture off, Latitude still records each operation with its store, record, and counts, but not the bodies or diffs.
 
 ## The Memory page
 
-The **Memory** page in your project lists every store, one row per store, with its record count, total tokens, last updated and last read times, the number of sessions that wrote to it, and the number of distinct users who accessed it.
+The **Memory** page lists every store, one row per store, with its record count, total tokens, when it was last updated and last read, the number of sessions that wrote to it, and the number of distinct users who accessed it.
 
-Click a store to browse it like a repository. The left sidebar shows the store's records as a tree, the center pane shows the selected record's current body (rendered as JSON when it parses as JSON), and the header lists the users who accessed the store, each linking to their user page.
+<Frame>
+  <img src="/images/observability/memory-overview.png" alt="The Memory page listing every store with its record count, tokens, last updated and last read times, sessions, and users" />
+</Frame>
+
+Open a store to browse it like a repository. The left sidebar shows its records as a tree, with record ids split on `/` to form folders, the center pane shows the selected record's current body, rendered as JSON when it parses as JSON, and the header lists the users who accessed the store, each linking to their user page.
 
 ### Record activity
 
-Below the record's content, the **Record Activity** panel shows everything that happened to it, in three tabs:
+Below a record's content, the **Record Activity** panel shows everything that happened to it, across three tabs:
 
-- **Changes**: the record's write history. Each row shows when the record was created, updated, or removed, the token delta of that change, and the user behind it. Clicking a row opens the change's diff, and each row also links to the span and session that made the change.
+- **Changes**: the record's write history. Each row shows when it was created, updated, or removed, the token delta of that change, and the user behind it. Clicking a row opens the change's diff, and each row links to the span, and to the session or trace it belongs to.
 - **Reads**: every time the record was retrieved, with the search query that matched it, the tokens returned, and the user.
 - **Users**: a per-user roll-up of reads and writes on this record, each row linking to the user's page.
 
 ### Change diffs
 
-Selecting a change on the **Changes** tab swaps the content pane for a unified, GitHub-style diff of that version against the previous one, with per-word highlighting and a `+added −removed` token summary. Arrow controls step to newer and older changes, and the selected change is shareable by URL, so you can link a teammate straight to the exact write that corrupted a record.
+Selecting a change on the **Changes** tab swaps the content pane for a GitHub-style unified diff of that version against the previous one, with per-word highlighting and a `+added −removed` token summary. Arrow controls step to newer and older changes, and the selected change is shareable by URL, so you can link a teammate straight to the write that corrupted a record.
+
+<Frame>
+  <img src="/images/observability/memory-change-diff.png" alt="A memory record change shown as a unified diff with per-word highlighting and a token summary" />
+</Frame>
 
 ## Memory on traces and sessions
 
-Trace and session detail views include a **Memory** row summarizing the interaction's memory footprint: tokens read, added, and removed. Hovering it expands a per-record breakdown grouped by store. The added and removed numbers compare each record's body before and after the session, so a record that was written twice in the same session counts once, by its net change.
+Trace and session detail views include a **Memory** row summarizing the interaction's memory footprint: tokens read, added, and removed. Hovering it expands a per-record breakdown grouped by store. The added and removed numbers compare each record's body before and after the interaction, so a record written twice in the same session counts once, by its net change.
+
+<Frame>
+  <img src="/images/observability/memory-summary.png" alt="The Memory footprint row on a session detail, showing tokens read, added, and removed" />
+</Frame>
+
+A collapsible **Memory changes** section below lists the per-record diffs the interaction produced, grouped by store.
+
+<Frame>
+  <img src="/images/observability/memory-changes.png" alt="The Memory changes panel on a session detail, showing per-record diffs grouped by store" />
+</Frame>
 
 ## Memory spans on the Spans tab
 
-Memory operations are first-class spans. They get their own color in the trace waterfall, a **Memory** filter on the Spans tab, and a detail section showing the operation's store, query, and records. Search results include each record's relevance score.
+Memory operations are first-class spans. They get their own color in the trace waterfall, a **Memory** filter on the Spans tab, and a detail panel showing the operation's store, query, and records. Search results include each record's relevance score. When content capture is off, the panel shows record ids and counts with a `Content not captured` note in place of the bodies.
+
+<Frame>
+  <img src="/images/observability/memory-span.png" alt="A search_memory span on the Spans tab, showing the query and the records it returned with relevance scores" />
+</Frame>
 
 ## Memory on user pages
 
-Each end user's page includes a **Memory stores** section listing the stores that user read or wrote, with their last access time, each linking into the Memory page. This is how you answer "whose sessions have been writing to this store" from either direction.
+Each end user's page includes a **Memory stores** section listing the stores that user read or wrote, with the last access time, each linking into the Memory page. It answers "whose sessions have been writing to this store" from either direction.
 
 ## Related
 
-- [Spans](./spans): The span model that memory operations ride on
-- [Sessions](./sessions): The sessions that memory changes link back to
+- [Memory tracing](../telemetry/memory): Instrument your agent to emit memory operations
+- [Spans](./spans): The span model memory operations ride on
+- [Sessions](./sessions): The sessions memory changes link back to
 - [Users](./users): Per-user activity, including memory stores accessed
-- [Start tracing](../telemetry/start-tracing): Set up telemetry if you are not sending traces yet

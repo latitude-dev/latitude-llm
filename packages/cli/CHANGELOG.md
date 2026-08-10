@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.8.0] - 2026-08-05
+
+### Added
+
+- `latitude imports` — import historical traces from Langfuse, LangSmith, or Braintrust into a project: `list`, `create`, `get`, `cancel`, and `retry`. An import runs in the background, newest traces first; `retry` resumes a failed, cancelled, or capped import from where it stopped.
+
+## [7.7.1] - 2026-08-03
+
+### Changed
+
+- `latitude traces export` now surfaces the server's HTTP 429 rate-limit response instead of a generic error. The endpoint is now throttled to match `latitude datasets export-rows` and `latitude signals export`.
+
+## [7.7.0] - 2026-07-28
+
+### Added
+
+- `latitude projects update` accepts `settings.redaction`, configuring server-side PII redaction for spans ingested from then on.
+
+### Changed
+
+- `latitude projects update` now patches `settings` instead of replacing it, so omitted fields keep their stored values.
+
+## [7.6.1] - 2026-07-24
+
+### Changed
+
+- `latitude datasets export-rows` and `latitude signals export` now surface the server's HTTP 429 rate-limit response instead of a generic error.
+
+## [7.6.0] - 2026-07-21
+
+### Added
+
+- `latitude memory` commands for reading memory observability: `list-stores` (cursor-paginated store roll-up), `get-store` (current snapshot, optional point-in-time `at`), `get-store-diff` (per-record diff between two timestamps), `list-store-users`, `get-record` (body + version history), `get-record-change` (one change's before/after diff), `list-record-reads`, and `list-record-users`. Stores and records are addressed by opaque id query params, so the unattributed (`""`) store and the unnamed record are reachable.
+- `latitude sessions get-memory` / `get-memory-changes` and `latitude traces get-memory` / `get-memory-changes` — a session's or trace's memory footprint (per-record read/added/removed token metrics and totals) and its per-record before/after write diffs.
+- `latitude users memory-stores` — the memory stores an end-user accessed.
+
+## [7.5.0] - 2026-07-21
+
+### Added
+
+- `latitude signals resolve` / `unresolve` / `ignore` / `unignore` lifecycle commands. Resolving archives a signal while its evaluations keep watching for regressions (`--keep-monitoring` controls this); ignoring archives it, stops monitoring, and mutes notifications.
+- Signal responses now carry `resolvedAt`, `ignoredAt`, and `regressedAt`, and `states` can include `resolved`, `regressed`, and `ignored`.
+- Signal analytics now include `resolved` and `ignored` counts.
+
+### Changed
+
+- Muting a signal is now a pure notification toggle: incidents keep opening while muted.
+
+## [7.4.0] - 2026-07-20
+
+### Added
+
+- `latitude sessions` commands for reading sessions (the traces of one conversation, grouped by session id): `list` (cursor-paginated, with `filters` + free-text `query`), `analytics` (per-metric totals/medians and a 12-hour bucket series over whole sessions), `get` (session detail with its GenAI conversation and latest trace id), `list-traces` (cursor-paginated traces of the session), `list-signals` (signals recorded across the session's traces), and `get-signal` (one session-scoped signal by slug).
+
 ## [7.3.0] - 2026-07-16
 
 ### Added

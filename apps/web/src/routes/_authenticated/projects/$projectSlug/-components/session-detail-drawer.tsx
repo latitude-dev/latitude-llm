@@ -8,6 +8,7 @@ import { useProjectScope } from "../../../../../domains/projects/project-scope.t
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { SignalLifecycleActions } from "../signals/-components/signal-lifecycle-actions.tsx"
+import { isLargeSession, MAX_SESSION_ANALYSIS_TRACE_COUNT } from "./session-detail-drawer/session-size.ts"
 import {
   isSessionTab,
   normalizeSessionTab,
@@ -58,8 +59,6 @@ export function SessionDetailDrawer({
   const [, setFocusAnnotationId] = useParamState("annotationId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
-  const [, setSelectedAgentSpanId] = useParamState("agentSpanId", "")
-  const [, setSelectedAgentTraceId] = useParamState("agentTraceId", "")
   const [q] = useParamState("q", "")
   // Land on the conversation tab when arriving from an active search, so the
   // conversation tab's search-match autoscroll/highlight has something to scroll to.
@@ -90,7 +89,15 @@ export function SessionDetailDrawer({
     projectId,
     sessionId,
   })
-  const { traces } = useSessionTraces({ projectId, sessionId, traceIds: session?.traceIds ?? [] })
+  const { traces } = useSessionTraces({
+    projectId,
+    sessionId,
+    traceIds: session?.traceIds ?? [],
+    enabled: session
+      ? !isLargeSession(session) ||
+        (activeTab === "scores" && session.traceIds.length <= MAX_SESSION_ANALYSIS_TRACE_COUNT)
+      : false,
+  })
 
   // The session search returns hits from the trace search index, which can
   // reference traces that have no row in the `sessions` table. Two cases
@@ -131,8 +138,6 @@ export function SessionDetailDrawer({
     const { focusAnnotationId, targetTab } = options
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setSelectedAgentSpanId("")
-    setSelectedAgentTraceId("")
     setFocusAnnotationId(focusAnnotationId ?? "")
     setTraceTab(targetTab ?? (focusAnnotationId ? "conversation" : "trace"))
     setTraceId(nextTraceId)
@@ -141,8 +146,6 @@ export function SessionDetailDrawer({
   const openSignal = (nextSignalId: string) => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setSelectedAgentSpanId("")
-    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId(nextSignalId)
@@ -156,8 +159,6 @@ export function SessionDetailDrawer({
   const backToSession = () => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setSelectedAgentSpanId("")
-    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId("")
@@ -166,8 +167,6 @@ export function SessionDetailDrawer({
   const handleClose = () => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setSelectedAgentSpanId("")
-    setSelectedAgentTraceId("")
     setFocusAnnotationId("")
     setTraceId("")
     setSignalId("")

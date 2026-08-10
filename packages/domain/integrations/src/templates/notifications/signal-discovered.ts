@@ -15,7 +15,9 @@ export const signalDiscoveredRenderer: SlackNotificationRenderer<"signal.discove
     const projectName = ctx.project?.name ?? ctx.organization.name
     const signalName = signal?.name ?? "A new signal"
     const signalUrl = ctx.project
-      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(payload.signalId)}`
+      ? signal
+        ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(signal.slug)}`
+        : `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals`
       : ctx.webAppUrl
 
     return {

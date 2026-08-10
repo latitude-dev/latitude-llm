@@ -651,7 +651,7 @@ export function FiltersBuilderFields({
             <Text.H7 color="foregroundMuted">
               {getHasAnnotationsOn(filters)
                 ? "Showing only items with a human score."
-                : "Off — scores don't filter results."}
+                : "Showing all items, scored or not."}
             </Text.H7>
             <Switch
               checked={getHasAnnotationsOn(filters)}

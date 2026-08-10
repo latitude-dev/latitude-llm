@@ -1,4 +1,4 @@
-import type { CustomBehaviorId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import type { CustomBehaviorId, FacetId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
 import {
   type ClusterTrajectoryAxis,
@@ -16,6 +16,8 @@ export interface GetBehaviourTrajectoryInput {
   readonly startTimeTo?: Date
   /** Omit/null = global taxonomy; an id reads that behavior's scoped slice. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** The behavior's facet; omit/null = topic edges, a facet id = that facet's edges. */
+  readonly facetId?: FacetId | null
 }
 
 export interface BehaviourTrajectoryCategoryRow extends ClusterTrajectoryRow {
@@ -41,7 +43,13 @@ export const getBehaviourTrajectoryUseCase = (input: GetBehaviourTrajectoryInput
 
     const clusters = yield* TaxonomyClusterRepository
     const intelligence = yield* TaxonomyClusterIntelligenceRepository
-    const scope = input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}
+    // Each id is spread on its own merit: the two are independent optionals on this
+    // contract, so nesting the facet inside the behavior check would silently read
+    // topic edges for a caller that passed a facet without a behavior.
+    const scope = {
+      ...(input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}),
+      ...(input.facetId != null ? { facetId: input.facetId } : {}),
+    }
 
     const perCategory = yield* Effect.forEach(
       categoryClusterIds,

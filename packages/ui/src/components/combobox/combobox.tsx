@@ -1,8 +1,9 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
 import { CheckIcon, ChevronDownIcon, Loader2Icon, SearchIcon, XIcon } from "lucide-react"
-import type { ComponentPropsWithRef } from "react"
+import type { ComponentPropsWithRef, ReactNode } from "react"
 import { cn } from "../../utils/cn.ts"
 import { Button } from "../button/button.tsx"
+import { Text } from "../text/text.tsx"
 
 const Combobox = ComboboxPrimitive.Root
 
@@ -10,7 +11,12 @@ function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />
 }
 
-function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Trigger.Props) {
+function ComboboxTrigger({
+  className,
+  children,
+  icon,
+  ...props
+}: ComboboxPrimitive.Trigger.Props & { icon?: ReactNode }) {
   return (
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
@@ -18,7 +24,7 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
       {...props}
     >
       {children}
-      <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+      {icon ?? <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />}
     </ComboboxPrimitive.Trigger>
   )
 }
@@ -119,7 +125,7 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-2 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex w-full cursor-pointer items-center gap-2 rounded-md py-1 pr-8 pl-3 text-sm outline-hidden select-none data-selected:bg-accent data-selected:text-accent-foreground not-data-[variant=destructive]:data-selected:**:text-accent-foreground not-data-selected:data-highlighted:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
@@ -162,6 +168,31 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
       )}
       {...props}
     />
+  )
+}
+
+export interface ComboboxFooterActionProps {
+  readonly label: string
+  readonly icon?: ReactNode
+  readonly onClick: () => void
+}
+
+/** Pin as a sibling right after `</ComboboxList>` — stays visible outside the list's own scroll/filter, styled to match a plain `ComboboxItem` row. */
+function ComboboxFooterAction({ label, icon, onClick }: ComboboxFooterActionProps) {
+  return (
+    <div className="sticky bottom-0 border-t border-border bg-popover p-1">
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "flex w-full cursor-pointer items-center gap-2 rounded-md py-1 pr-8 pl-3 text-sm select-none",
+          "hover:bg-muted [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        )}
+      >
+        {icon}
+        <Text.H5 className="flex-1 truncate text-left">{label}</Text.H5>
+      </button>
+    </div>
   )
 }
 
@@ -243,6 +274,7 @@ export {
   ComboboxCollection,
   ComboboxEmpty,
   ComboboxSeparator,
+  ComboboxFooterAction,
   ComboboxChips,
   ComboboxChip,
   ComboboxChipsInput,

@@ -1,14 +1,45 @@
+import { MembershipRepository } from "@domain/organizations"
 import type { Project } from "@domain/projects"
-import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
-import { isValidId, ProjectId, projectSettingsSchema } from "@domain/shared"
-import { OutboxEventWriterLive, ProjectRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
+import {
+  createProjectUseCase,
+  ProjectRepository,
+  updateProjectRedactionUseCase,
+  updateProjectUseCase,
+} from "@domain/projects"
+import {
+  BadRequestError,
+  ForbiddenError,
+  isValidId,
+  ProjectId,
+  projectSettingsSchema,
+  redactionRuleSchema,
+  redactionSettingSchema,
+  resolveRedactionPolicy,
+} from "@domain/shared"
+import {
+  previewRedactionUseCase,
+  type RedactionPreviewResult,
+  type RuleValidation,
+  validateRedactionRule,
+} from "@domain/spans"
+import { SpanRepositoryLive } from "@platform/db-clickhouse"
+import {
+  MembershipRepositoryLive,
+  OutboxEventWriterLive,
+  ProjectRepositoryLive,
+  SqlClientLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getCookies, setCookie } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
+import { rejectInvalidRedactionRules, rejectionMessage } from "../../lib/redaction-rules.ts"
 import { requireSession } from "../../server/auth.ts"
-import { getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
 const LAST_PROJECT_COOKIE_NAME = "latitude-last-project-slug"
 const LAST_PROJECT_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
@@ -68,6 +99,7 @@ export const toRecord = (project: Project) => ({
     onboardingCompleted: project.settings?.onboardingCompleted,
     isSample: project.settings?.isSample,
     sampling: project.settings?.sampling,
+    redaction: project.settings?.redaction,
   },
   firstTraceAt: project.firstTraceAt ? project.firstTraceAt.toISOString() : null,
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
@@ -142,7 +174,9 @@ export const updateProject = createServerFn({ method: "POST" })
         id: ProjectId(data.id),
         name: data.name,
         slug: data.slug,
-        settings: data.settings,
+        // Patch, not replace: `toRecord` narrows `settings` to what the client needs,
+        // so a replace here would drop every key it omits.
+        settingsPatch: data.settings,
       }).pipe(
         Effect.catchTag("InvalidProjectSlugError", (e) =>
           Effect.fail(new Error(JSON.stringify([{ path: ["slug"], message: e.reason ?? "Invalid project slug" }]))),
@@ -157,6 +191,135 @@ export const updateProject = createServerFn({ method: "POST" })
     return toRecord(project)
   })
 
+/**
+ * Change a project's PII redaction policy. Separate from `updateProject` because it
+ * is the only project setting that needs a role gate, and gating `updateProject`
+ * itself would take renames and the sampling slider away from members who have them
+ * today. Owners and admins only; `null` clears the override so the organization
+ * policy applies.
+ */
+export const updateProjectRedaction = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      redaction: redactionSettingSchema.nullable(),
+    }),
+  )
+  .handler(async ({ data }): Promise<ProjectRecord> => {
+    const { organizationId, userId } = await requireSession()
+    const client = getPostgresClient()
+
+    const project = await Effect.runPromise(
+      Effect.gen(function* () {
+        const memberships = yield* MembershipRepository
+        const isAdmin = yield* memberships.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({
+            message: "Only organization owners and admins can change the redaction policy",
+          })
+        }
+
+        const rejected = rejectInvalidRedactionRules(data.redaction)
+        if (rejected) {
+          return yield* new BadRequestError({ message: rejectionMessage(rejected) })
+        }
+
+        return yield* updateProjectRedactionUseCase({
+          projectId: ProjectId(data.projectId),
+          actorUserId: userId,
+          redaction: data.redaction,
+        })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
+          client,
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+
+    return toRecord(project)
+  })
+
+/**
+ * Score a draft redaction rule without saving it.
+ *
+ * Runs the same `validateRedactionRule` the write path uses, so the editor can never show a
+ * verdict the save disagrees with. It lives on the server because the engine is in
+ * `@domain/spans`, which has no business in the browser bundle.
+ *
+ * Gated like the write it previews, even though it reads nothing: it runs a caller's pattern, and
+ * only the people who can save a rule have any reason to ask what a rule would do.
+ */
+export const validateRedactionRuleDraft = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ rule: redactionRuleSchema }))
+  .handler(async ({ data }): Promise<RuleValidation> => {
+    const { organizationId, userId } = await requireSession()
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const memberships = yield* MembershipRepository
+        const isAdmin = yield* memberships.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({
+            message: "Only organization owners and admins can check redaction rules",
+          })
+        }
+
+        return validateRedactionRule(data.rule)
+      }).pipe(withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
+  })
+
+/** Kept modest: a preview that scans a thousand spans buys no more confidence than one that scans fifty. */
+const PREVIEW_SAMPLE_SIZE = 50
+
+/**
+ * Run a redaction policy over spans already stored, without saving the policy or the result.
+ *
+ * The only honest answer to "will this eat my tool outputs" before the first enforce, because
+ * redaction is destructive and not retroactive. Gated like the policy write itself: this reads
+ * customer content, so a member who cannot change the policy cannot preview against it either.
+ *
+ * The rules are validated here too, and for a sharper reason than the write path's. This runs the
+ * caller's pattern over stored tool outputs, which are far longer than anything the validator's own
+ * probe uses, so a pattern the save would reject must not reach the engine by way of the preview.
+ */
+export const previewRedaction = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ projectId: z.string(), redaction: redactionSettingSchema }))
+  .handler(async ({ data, context }): Promise<RedactionPreviewResult> => {
+    const { organizationId, userId } = await requireSession()
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const memberships = yield* MembershipRepository
+        const isAdmin = yield* memberships.isAdmin(organizationId, userId)
+        if (!isAdmin) {
+          return yield* new ForbiddenError({ message: "Only organization owners and admins can preview redaction" })
+        }
+
+        const rejected = rejectInvalidRedactionRules(data.redaction)
+        if (rejected) {
+          return yield* new BadRequestError({ message: rejectionMessage(rejected) })
+        }
+      }).pipe(withPostgres(MembershipRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
+
+    // Branded org id from `resolveOrgScope`, never the raw one: ClickHouse has no RLS, so this is
+    // the only thing keeping the read inside the tenant.
+    const orgId = await resolveOrgScope(context)
+
+    return Effect.runPromise(
+      previewRedactionUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        policy: resolveRedactionPolicy({ organization: null, project: { redaction: data.redaction } }),
+        sampleSize: PREVIEW_SAMPLE_SIZE,
+      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
 export const completeProjectOnboarding = createServerFn({ method: "POST" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<ProjectRecord> => {
@@ -164,13 +327,9 @@ export const completeProjectOnboarding = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        const current = yield* repo.findById(ProjectId(data.projectId))
-        return yield* updateProjectUseCase({
-          id: current.id,
-          settings: { ...(current.settings ?? {}), onboardingCompleted: true },
-        })
+      updateProjectUseCase({
+        id: ProjectId(data.projectId),
+        settingsPatch: { onboardingCompleted: true },
       }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId), withTracing),
     )
 

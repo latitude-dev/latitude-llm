@@ -547,6 +547,98 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             )
         }),
 
+      listForFacetSample: ({ organizationId, projectId, since, limit, filterSet }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const resolvedFilterSet = filterSet
+            ? yield* resolvePercentileFilters(organizationId, projectId, filterSet)
+            : undefined
+          return yield* chSqlClient
+            .query(async (client) => {
+              // Same day-stratified window + optional cohort session scoping as
+              // listForCustomBehaviorSample; additionally projects the stored
+              // transcript summary so the caller can build FacetExtractionSample.
+              let matchingSessionsClause = ""
+              let filterParams: Record<string, unknown> = {}
+              if (resolvedFilterSet) {
+                const { havingClauses, whereClauses, params } = buildSessionFilterClauses(resolvedFilterSet)
+                filterParams = params
+                const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+                const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+                matchingSessionsClause = `AND session_id IN (
+                        SELECT session_id
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM sessions
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            ${extraWhere}
+                          GROUP BY organization_id, project_id, session_id
+                          ${havingClause}
+                        )
+                      )`
+              }
+              const result = await client.query({
+                query: `SELECT
+                          observation_id,
+                          session_id,
+                          start_time,
+                          JSONExtractString(projection_metadata, 'summary') AS transcript
+                        FROM taxonomy_observations FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
+                          AND length(embedding) > 0
+                          AND start_time >= {since:DateTime64(9, 'UTC')}
+                          ${matchingSessionsClause}
+                          AND observation_id IN (
+                            SELECT observation_id
+                            FROM (
+                              SELECT
+                                observation_id,
+                                row_number() OVER (
+                                  PARTITION BY toDate(start_time)
+                                  ORDER BY cityHash64(observation_id)
+                                ) AS rn
+                              FROM taxonomy_observations FINAL
+                              WHERE organization_id = {organizationId:String}
+                                AND project_id = {projectId:String}
+                                AND ${validObservationIdClause}
+                                AND length(embedding) > 0
+                                AND start_time >= {since:DateTime64(9, 'UTC')}
+                                ${matchingSessionsClause}
+                            )
+                            ORDER BY rn ASC, observation_id ASC
+                            LIMIT {limit:UInt32}
+                          )
+                        ORDER BY start_time DESC, observation_id ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  since: formatCHDate(since),
+                  limit,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<{
+                observation_id: string
+                session_id: string
+                start_time: string
+                transcript: string
+              }>()
+              return rows.map((row) => ({
+                sessionObservationId: row.observation_id,
+                sessionId: SessionId(row.session_id),
+                startTime: parseCHDate(row.start_time),
+                transcript: row.transcript,
+              }))
+            })
+            .pipe(
+              Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listForFacetSample")),
+            )
+        }),
+
       listWindowForReassignment: ({ organizationId, projectId, limit, filterSet, excludeAssignedClusterIds }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -809,6 +901,39 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             })
             .pipe(
               Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listAllByCluster")),
+            )
+        }),
+
+      listAllByObservationIds: ({ organizationId, projectId, observationIds, limit }) =>
+        Effect.gen(function* () {
+          if (observationIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${selectColumns}
+                        FROM taxonomy_observations FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
+                          AND observation_id IN {observationIds:Array(String)}
+                        ORDER BY start_time DESC, observation_id ASC
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  observationIds: observationIds as readonly string[],
+                  limit,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<TaxonomyObservationRow>()
+              return rows.map(toDomainObservation)
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyObservationRepository.listAllByObservationIds"),
+              ),
             )
         }),
 

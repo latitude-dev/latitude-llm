@@ -67,11 +67,25 @@ export interface TaxonomyReassignmentWindowObservation {
 
 /**
  * A clustering-sample observation carrying its `sessionId`, so scoped custom
- * behavior assignments (which live in the `custom_behavior_assignments` slice,
+ * behavior assignments (which live in the `taxonomy_view_assignments` slice,
  * keyed by session) can be written without a second lookup.
  */
 export interface TaxonomyScopedClusteringObservation extends TaxonomyClusteringObservation {
   readonly sessionId: SessionId
+}
+
+/**
+ * One sampled session for facet extraction: the ids + start time the caller
+ * needs to build a `FacetExtractionSample`, plus the stored transcript summary
+ * (`projection_metadata.summary`) the extractor reads instead of refetching
+ * spans. `sessionObservationId` is the session's `taxonomy_observations`
+ * observation id — the facet-projection cache key.
+ */
+export interface TaxonomyFacetSample {
+  readonly sessionObservationId: string
+  readonly sessionId: SessionId
+  readonly startTime: Date
+  readonly transcript: string
 }
 
 export interface TaxonomyObservationCounts {
@@ -164,6 +178,20 @@ export interface TaxonomyObservationRepositoryShape {
     readonly filterSet: FilterSet
   }) => Effect.Effect<readonly TaxonomyScopedClusteringObservation[], RepositoryError, ChSqlClient>
   /**
+   * Facet-extraction sample over the same day-stratified `(since, limit)` window
+   * `listForCustomBehaviorSample` uses, returning each session's ids, start time,
+   * and stored transcript summary so the caller can build `FacetExtractionSample`
+   * records. An optional `filterSet` scopes it to a cohort's sessions; omit it for
+   * a whole-project facet. Reads global `taxonomy_observations`, never mutates it.
+   */
+  readonly listForFacetSample: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+    readonly limit: number
+    readonly filterSet?: FilterSet
+  }) => Effect.Effect<readonly TaxonomyFacetSample[], RepositoryError, ChSqlClient>
+  /**
    * The complete bounded live window (newest ≤ `limit`, no day-stratified
    * sampling) as slim rows carrying the current assignment — the read the
    * adaptive full-window reassignment and catch-up passes operate over. Optional
@@ -213,6 +241,18 @@ export interface TaxonomyObservationRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly clusterId: TaxonomyClusterId
+    readonly limit: number
+  }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Members by explicit observation id, for naming a cluster whose membership is
+   * not in `assigned_cluster_id` yet: a `staging` tree is named BEFORE the
+   * reassignment repoints ClickHouse at it, so its samples come from the staged
+   * plan's own member ids.
+   */
+  readonly listAllByObservationIds: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly observationIds: readonly string[]
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
   readonly listBySession: (input: {

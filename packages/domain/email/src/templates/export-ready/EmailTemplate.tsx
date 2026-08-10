@@ -19,7 +19,7 @@ export function ExportReadyEmail({ exportName, downloadUrl, recipientName = "the
     <ContainerLayout previewText={`Your "${exportName}" export is ready`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${recipientName},`}</EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`Good news — your "${exportName}" export has been generated and is ready for download.`}
+        {`Your "${exportName}" export is ready to download.`}
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>

@@ -15,9 +15,11 @@ const loadError = (cause: unknown) => ({
   cause,
 })
 
-const buildSignalUrl = (ctx: NotificationEmailRenderContext, signalId: string): string | undefined => {
+const buildSignalUrl = (ctx: NotificationEmailRenderContext, slug: string | null): string | undefined => {
   if (!ctx.project) return undefined
-  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(signalId)}`
+  return slug
+    ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(slug)}`
+    : `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals`
 }
 
 /**
@@ -43,7 +45,7 @@ export const signalAssignedRenderer: NotificationEmailRenderer<"issue.assigned">
     const signalName = issue?.name ?? "a signal"
     const actorName = actor ? (actor.name?.trim().length ? actor.name : actor.email) : "A teammate"
     const subject = `You were assigned to ${signalName}`
-    const signalUrl = buildSignalUrl(ctx, payload.signalId)
+    const signalUrl = buildSignalUrl(ctx, issue?.slug ?? null)
 
     const html = yield* Effect.tryPromise({
       try: () =>

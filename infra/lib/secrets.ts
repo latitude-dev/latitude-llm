@@ -260,6 +260,72 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["github-oauth-client-secret"] = githubOauthClientSecret.secret
   secretVersions["github-oauth-client-secret"] = githubOauthClientSecret.secretVersion
 
+  const githubAppId = createSingleSecret(
+    baseName,
+    "github-app-id",
+    "GitHub App ID — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GITHUB_APP_ID ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["github-app-id"] = githubAppId.secret
+  secretVersions["github-app-id"] = githubAppId.secretVersion
+
+  const githubAppSlug = createSingleSecret(
+    baseName,
+    "github-app-slug",
+    "GitHub App slug — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GITHUB_APP_SLUG ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["github-app-slug"] = githubAppSlug.secret
+  secretVersions["github-app-slug"] = githubAppSlug.secretVersion
+
+  const githubAppPrivateKey = createSingleSecret(
+    baseName,
+    "github-app-private-key",
+    "GitHub App private key (base64 of the .pem) — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GITHUB_APP_PRIVATE_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["github-app-private-key"] = githubAppPrivateKey.secret
+  secretVersions["github-app-private-key"] = githubAppPrivateKey.secretVersion
+
+  const githubAppWebhookSecret = createSingleSecret(
+    baseName,
+    "github-app-webhook-secret",
+    "GitHub App webhook secret — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GITHUB_WEBHOOK_SECRET ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["github-app-webhook-secret"] = githubAppWebhookSecret.secret
+  secretVersions["github-app-webhook-secret"] = githubAppWebhookSecret.secretVersion
+
+  const githubAppClientId = createSingleSecret(
+    baseName,
+    "github-app-client-id",
+    "GitHub App OAuth client ID — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GITHUB_APP_CLIENT_ID ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["github-app-client-id"] = githubAppClientId.secret
+  secretVersions["github-app-client-id"] = githubAppClientId.secretVersion
+
+  const githubAppClientSecret = createSingleSecret(
+    baseName,
+    "github-app-client-secret",
+    "GitHub App OAuth client secret — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GITHUB_APP_CLIENT_SECRET ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["github-app-client-secret"] = githubAppClientSecret.secret
+  secretVersions["github-app-client-secret"] = githubAppClientSecret.secretVersion
+
   const stripeSecretKey = createSingleSecret(
     baseName,
     "stripe-secret-key",

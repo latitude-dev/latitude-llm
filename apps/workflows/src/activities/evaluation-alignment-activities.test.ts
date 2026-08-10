@@ -101,8 +101,20 @@ vi.mock("@platform/ai", async () => {
 })
 
 vi.mock("../clients.ts", () => ({
+  getPostgresClient: () => ({}),
   getRedisClient: () => ({}),
 }))
+
+// Billing is exercised by @platform/ai metering tests and the billing worker suite;
+// here it would drag real Postgres billing repositories into the optimizer seam.
+vi.mock("./ai-metering.ts", async () => {
+  const { Layer: EffectLayer } = await import("effect")
+  return {
+    withActivityAIMetering: () => (effect: unknown) => effect,
+    activityMeteringKeyParts: (label: string) => [label, "test"],
+    billingMeteringRepositoriesLive: EffectLayer.empty,
+  }
+})
 
 import { optimizeEvaluationDraft } from "./index.ts"
 
@@ -134,6 +146,8 @@ const makeSignal = (): EvaluationSignal => ({
   projectId: projectId as string,
   name: SIGNAL_NAME,
   description: SIGNAL_DESCRIPTION,
+  resolvedAt: null,
+  ignoredAt: null,
 })
 
 const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation =>
@@ -164,6 +178,7 @@ const makeSignalRepoLayer = () =>
       String(id) === String(signalId)
         ? Effect.succeed(makeSignal())
         : Effect.fail(new NotFoundError({ entity: "EvaluationSignal", id: String(id) })),
+    claimReopenOnOccurrence: () => Effect.succeed(false),
   })
 
 const makeEvaluationRepoLayer = (overrides?: Partial<EvaluationRepositoryShape>) => {
@@ -214,6 +229,7 @@ const makeTraceDetail = (traceId: string, content: string): TraceDetail => ({
   costInputMicrocents: 0,
   costOutputMicrocents: 0,
   costTotalMicrocents: 0,
+  unpricedSpanCount: 0,
   sessionId: SessionId("s".repeat(64)),
   userId: ExternalUserId("u".repeat(24)),
   userEmail: "",

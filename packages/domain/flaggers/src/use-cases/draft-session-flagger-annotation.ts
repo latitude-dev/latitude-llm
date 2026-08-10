@@ -1,8 +1,9 @@
 import {
   authorizeBillableAction,
   buildBillingIdempotencyKey,
+  makeAIMeteringScope,
   NoCreditsRemainingError,
-  recordBillableActionUseCase,
+  provideAIMeteringScope,
 } from "@domain/billing"
 import { generateId, OrganizationId, ProjectId, type ScoreId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
@@ -53,37 +54,48 @@ export const draftSessionFlaggerAnnotationWithBillingUseCase = Effect.fn("flagge
       return { status: "duplicate", scoreId: existing.id } satisfies DraftSessionFlaggerAnnotationResult
     }
 
-    const idempotencyKey = buildBillingIdempotencyKey("flagger-scan", [
-      input.organizationId,
-      input.flaggerSlug,
-      input.sessionId,
-      input.contentHash,
-    ])
-
-    const billing = yield* authorizeBillableAction({
-      organizationId,
-      action: "flagger-scan",
-      skipIfBlocked: true,
-      idempotencyKey,
-    })
-
-    if (!billing.allowed) {
-      return yield* Effect.fail(
-        new NoCreditsRemainingError({
-          organizationId,
-          planSlug: billing.context.planSlug,
-          action: "flagger-scan",
-        }),
-      )
-    }
-
     const scoreId = generateId<"ScoreId">()
 
     // The classifier's feedback is normally final; the annotator is the fallback
-    // for a match that somehow arrived without feedback text.
+    // for a match that somehow arrived without feedback text. Only that fallback
+    // makes an LLM call, so billing gates that branch alone: saving already-drafted
+    // feedback costs no provider tokens and must succeed even out of credits. The
+    // annotator's calls bill at cost through the metering scope, keyed by the
+    // flagged anchor so a retried workflow replays the same idempotency keys.
     let feedback = input.feedback
     let messageIndex = input.messageIndex
     if (feedback === undefined) {
+      const billing = yield* authorizeBillableAction({
+        organizationId,
+        action: "llm-call",
+        skipIfBlocked: true,
+        idempotencyKey: buildBillingIdempotencyKey("llm-call", [
+          input.organizationId,
+          "flagger",
+          input.flaggerSlug,
+          input.sessionId,
+          input.contentHash,
+          "authorize",
+        ]),
+      })
+
+      if (!billing.allowed) {
+        return yield* Effect.fail(
+          new NoCreditsRemainingError({
+            organizationId,
+            planSlug: billing.context.planSlug,
+            action: "llm-call",
+          }),
+        )
+      }
+
+      const meteringScope = yield* makeAIMeteringScope({
+        organizationId,
+        projectId,
+        keyParts: ["flagger", input.flaggerSlug, input.sessionId, input.contentHash],
+        context: billing.context,
+        traceId: TraceId(input.latestTraceId),
+      })
       const context = yield* loadFlaggerSessionContextUseCase(input)
       const annotated = yield* annotateConversationForFlaggerUseCase({
         organizationId: input.organizationId,
@@ -98,24 +110,10 @@ export const draftSessionFlaggerAnnotationWithBillingUseCase = Effect.fn("flagge
         },
         sessionId: input.sessionId,
         traceId: context.latestTraceId,
-      })
+      }).pipe(provideAIMeteringScope(meteringScope))
       feedback = annotated.feedback
       messageIndex = annotated.messageIndex
     }
-
-    yield* recordBillableActionUseCase({
-      organizationId,
-      projectId,
-      action: "flagger-scan",
-      idempotencyKey,
-      context: billing.context,
-      traceId: TraceId(input.latestTraceId),
-      metadata: {
-        flaggerSlug: input.flaggerSlug,
-        sessionId: input.sessionId,
-        traceId: input.latestTraceId,
-      },
-    })
 
     return {
       status: "drafted",

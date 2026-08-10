@@ -308,11 +308,27 @@ export const ScoreRepositoryLive = Layer.effect(
           whereClause: sessionId ? eq(scores.sessionId, sessionId as string) : eq(scores.traceId, traceId as string),
         }),
 
-      existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
-        existsCanonicalEvaluationScore({
-          projectId,
-          evaluationId,
-          whereClause: eq(scores.traceId, traceId as string),
+      findByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select()
+                .from(scores)
+                .where(
+                  and(
+                    eq(scores.organizationId, organizationId),
+                    eq(scores.projectId, projectId),
+                    eq(scores.sourceType, "evaluation"),
+                    eq(scores.sourceId, evaluationId),
+                    isNull(scores.draftedAt),
+                    eq(scores.traceId, traceId as string),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null)))
         }),
 
       listByProjectId: ({

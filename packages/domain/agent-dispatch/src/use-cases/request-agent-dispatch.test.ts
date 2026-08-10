@@ -46,6 +46,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
     weights: { annotation: 1, custom: 0, evaluation: 0 },
   },
   clusteredAt: now,
+  resolvedAt: null,
+  ignoredAt: null,
+  regressedAt: null,
   mutedAt: null,
   createdAt: now,
   updatedAt: now,
@@ -118,6 +121,8 @@ const makeLayer = (opts: {
       Effect.succeed(configs.filter((row) => row.projectId === null || row.projectId === forProjectId)),
     findDefaultByIntegration: (forIntegrationId) =>
       Effect.succeed(configs.find((row) => row.projectId === null && row.integrationId === forIntegrationId) ?? null),
+    countProjectOverrides: (forIntegrationId) =>
+      Effect.succeed(configs.filter((row) => row.projectId !== null && row.integrationId === forIntegrationId).length),
     findOverrideByProjectAndIntegration: (query) =>
       Effect.succeed(
         configs.find((row) => row.projectId === query.projectId && row.integrationId === query.integrationId) ?? null,
@@ -345,6 +350,79 @@ describe("requestAgentDispatchUseCase", () => {
     expect(result.requests).toHaveLength(1)
     expect(result.requests[0]?.trigger).toBe("incident.opened")
     expect(result.requests[0]?.sourceId).toBe(signalId)
+  })
+
+  it("skips signal-sourced dispatches once the signal is resolved", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase(input).pipe(
+        Effect.provide(makeLayer({ signal: makeSignal({ origin: "system", resolvedAt: now }) })),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "signal-resolved" })
+  })
+
+  it("skips incident-sourced dispatches once the signal is resolved", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase({
+        source: {
+          type: "incident",
+          organizationId: orgId,
+          alertIncidentId: incidentId,
+        },
+        webAppUrl: "https://console.latitude.so",
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system", resolvedAt: now }),
+            incident: makeIncident(),
+            configs: [makeConfig({ triggers: ["incident.opened"] })],
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "signal-resolved" })
+  })
+
+  it("dispatches signal.regressed to subscribed configs, regardless of signal origin", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase({
+        source: { ...input.source, trigger: "signal.regressed" },
+        webAppUrl: input.webAppUrl,
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "user", source: "custom", regressedAt: now }),
+            configs: [makeConfig({ triggers: ["signal.regressed"] })],
+          }),
+        ),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
+    expect(result.requests).toHaveLength(1)
+    expect(result.requests[0]?.trigger).toBe("signal.regressed")
+    expect(result.requests[0]?.sourceId).toBe(signalId)
+  })
+
+  it("does not dispatch signal.regressed to configs subscribed only to discovery", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase({
+        source: { ...input.source, trigger: "signal.regressed" },
+        webAppUrl: input.webAppUrl,
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system", regressedAt: now }),
+            configs: [makeConfig({ triggers: ["signal.discovered"] })],
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "no-matching-config" })
   })
 
   it("skips when the organization has already been deleted", async () => {

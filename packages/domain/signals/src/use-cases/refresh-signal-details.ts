@@ -1,7 +1,7 @@
 import { ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS, EvaluationRepository, isActiveEvaluation } from "@domain/evaluations"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
-import { generateSlug, ProjectId, type RepositoryError, SignalId, SqlClient } from "@domain/shared"
+import { ProjectId, type RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { type GenerateSignalDetailsError, generateSignalDetailsUseCase } from "./generate-signal-details.ts"
@@ -119,23 +119,9 @@ export const refreshSignalDetailsUseCase = (input: RefreshSignalDetailsInput) =>
           } satisfies RefreshSignalDetailsResult
         }
 
-        // Slug regenerates only when the name actually changed; description-only refreshes keep the slug.
-        const slug =
-          issue.name === generatedDetailsResult.details.name
-            ? issue.slug
-            : yield* generateSlug({
-                name: generatedDetailsResult.details.name,
-                count: (slug) =>
-                  signalRepository.countBySlug({
-                    projectId: ProjectId(issue.projectId),
-                    slug,
-                    excludeSignalId: issue.id,
-                  }),
-              })
-
+        // The slug is a stable id assigned at creation; a rename never changes it.
         yield* signalRepository.save({
           ...issue,
-          slug,
           name: generatedDetailsResult.details.name,
           description: generatedDetailsResult.details.description,
           updatedAt: new Date(),

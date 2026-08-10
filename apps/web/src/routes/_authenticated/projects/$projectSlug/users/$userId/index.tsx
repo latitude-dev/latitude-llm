@@ -18,7 +18,6 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router"
 import { ArrowLeftIcon, TextAlignStartIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useUserActivity, useUserProfile } from "../../../../../../domains/end-users/end-users.collection.ts"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { userMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import { defaultProjectTimeWindowDays } from "../../../../../../domains/projects/default-time-window.ts"
 import { useSessionsCount, useSessionsInfiniteScroll } from "../../../../../../domains/sessions/sessions.collection.ts"
@@ -172,7 +171,6 @@ function UserDetailPage() {
   const [errorsParam, setErrorsParam] = useParamState("errors", "")
   const errorsOnly = errorsParam === "1"
   const { data: profile, isLoading: profileLoading } = useUserProfile({ projectId: project.id, userId, errorsOnly })
-  const showMemoryStores = useHasFeatureFlag("memoryObservability")
   const [sessionsSorting, setSessionsSorting] = useState(DEFAULT_SESSIONS_SORTING)
 
   const sessionFilters: FilterSet = useMemo(
@@ -309,12 +307,10 @@ function UserDetailPage() {
 
               <UserUsageSection projectId={project.id} userId={userId} errorsOnly={errorsOnly} />
 
-              {showMemoryStores ? (
-                <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
-                  <Text.H6 color="foregroundMuted">Memory stores</Text.H6>
-                  <UserMemoryStoresSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
-                </div>
-              ) : null}
+              <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+                <Text.H6 color="foregroundMuted">Memory stores</Text.H6>
+                <UserMemoryStoresSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
+              </div>
 
               <div className="flex min-w-0 flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">

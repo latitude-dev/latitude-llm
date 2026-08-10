@@ -1,13 +1,14 @@
 import {
   customBehaviorIdSchema,
   type FilterSet,
+  facetIdSchema,
   filterSetSchema,
   organizationIdSchema,
   projectIdSchema,
   SLUG_MAX_LENGTH,
 } from "@domain/shared"
 import { z } from "zod"
-import { CUSTOM_BEHAVIOR_NAME_MAX_LENGTH, CUSTOM_BEHAVIOR_STATUSES } from "../constants.ts"
+import { CUSTOM_BEHAVIOR_NAME_MAX_LENGTH, CUSTOM_BEHAVIOR_STATUSES, FACET_PRESET_SLUG_PREFIX } from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // CustomBehaviorStatus
@@ -74,16 +75,54 @@ export const CUSTOM_BEHAVIOR_EMPTY_FILTER_MESSAGE =
 export const customBehaviorFilterSetHasConditions = (filterSet: FilterSet): boolean =>
   Object.values(filterSet).some((conditions) => conditions.length > 0)
 
+/** A view is a behavior narrowed by a filter; the unfiltered one IS the behavior. */
+export const isCustomBehaviorView = (behavior: Pick<CustomBehavior, "filterSet">): boolean =>
+  customBehaviorFilterSetHasConditions(behavior.filterSet)
+
+/**
+ * How many views one behavior has. `facetId` null selects the topic behavior's own
+ * views — those rows carry no facet, which is exactly what makes them the topic
+ * behavior's and not some other behavior's.
+ */
+export const countCustomBehaviorViews = (
+  behaviors: readonly Pick<CustomBehavior, "facetId" | "filterSet">[],
+  facetId: string | null,
+): number => behaviors.filter((behavior) => behavior.facetId === facetId && isCustomBehaviorView(behavior)).length
+
+const stableFilterSet = (filterSet: FilterSet): string =>
+  JSON.stringify(filterSet, (_key, value) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)))
+      : value,
+  )
+
+/**
+ * Whether two FilterSets scope the same cohort. Key-order-insensitive: a re-serialized
+ * FilterSet carrying identical conditions must not read as a change, or saving a view
+ * without touching its filter would purge and re-garden its tree for nothing.
+ */
+export const customBehaviorFilterSetEquals = (left: FilterSet, right: FilterSet): boolean =>
+  stableFilterSet(left) === stableFilterSet(right)
+
+// ---------------------------------------------------------------------------
+// Reserved slugs
+// ---------------------------------------------------------------------------
+
+export const CUSTOM_BEHAVIOR_RESERVED_SLUG_MESSAGE = `Names starting with "${FACET_PRESET_SLUG_PREFIX}" are reserved`
+
+/**
+ * Behavior slugs are the web's routing namespace, which the `lat-` prefix reserves
+ * for preset facets and route sentinels (`TOPICS_BEHAVIOR_SLUG`). No legitimate
+ * behavior slug starts with it — a preset behavior is named after the preset
+ * ("User goal" → `user-goal`); only the facet row carries the prefixed slug.
+ */
+export const isReservedCustomBehaviorSlug = (slug: string): boolean => slug.startsWith(FACET_PRESET_SLUG_PREFIX)
+
 // ---------------------------------------------------------------------------
 // CustomBehavior
 // ---------------------------------------------------------------------------
 
-/**
- * A named, project-scoped exploration scope. Its `filterSet` selects the
- * sessions the Phase 2 workflow samples and clusters into a scoped behavior
- * sub-tree (mirrored by `custom_behavior_id`-tagged rows in Postgres and the
- * ClickHouse `custom_behavior_assignments` slice).
- */
+/** A named, project-scoped view = (facet × filterSet); `facetId` null = topic, set = a facet. */
 export const customBehaviorSchema = z.object({
   id: customBehaviorIdSchema,
   organizationId: organizationIdSchema,
@@ -91,6 +130,7 @@ export const customBehaviorSchema = z.object({
   slug: z.string().min(1).max(SLUG_MAX_LENGTH),
   name: z.string().min(1).max(CUSTOM_BEHAVIOR_NAME_MAX_LENGTH),
   filterSet: customBehaviorFilterSetSchema,
+  facetId: facetIdSchema.nullable().default(null),
   status: customBehaviorStatusSchema,
   createdAt: z.date(),
   updatedAt: z.date(),

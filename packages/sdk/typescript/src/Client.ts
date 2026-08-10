@@ -6,13 +6,16 @@ import { AnnotationsClient } from "./api/resources/annotations/client/Client.js"
 import { ApiKeysClient } from "./api/resources/apiKeys/client/Client.js";
 import { DatasetsClient } from "./api/resources/datasets/client/Client.js";
 import { ExperimentsClient } from "./api/resources/experiments/client/Client.js";
+import { ImportsClient } from "./api/resources/imports/client/Client.js";
 import { IncidentsClient } from "./api/resources/incidents/client/Client.js";
 import { MembersClient } from "./api/resources/members/client/Client.js";
+import { MemoryClient } from "./api/resources/memory/client/Client.js";
 import { MonitorsClient } from "./api/resources/monitors/client/Client.js";
 import { OauthKeysClient } from "./api/resources/oauthKeys/client/Client.js";
 import { ProjectsClient } from "./api/resources/projects/client/Client.js";
 import { SavedSearchesClient } from "./api/resources/savedSearches/client/Client.js";
 import { ScoresClient } from "./api/resources/scores/client/Client.js";
+import { SessionsClient } from "./api/resources/sessions/client/Client.js";
 import { SignalsClient } from "./api/resources/signals/client/Client.js";
 import { SpansClient } from "./api/resources/spans/client/Client.js";
 import { ToolsClient } from "./api/resources/tools/client/Client.js";
@@ -48,6 +51,9 @@ export class LatitudeClient {
     protected _analytics: AnalyticsClient | undefined;
     protected _spans: SpansClient | undefined;
     protected _experiments: ExperimentsClient | undefined;
+    protected _sessions: SessionsClient | undefined;
+    protected _memory: MemoryClient | undefined;
+    protected _imports: ImportsClient | undefined;
 
     constructor(options: LatitudeClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
@@ -123,6 +129,18 @@ export class LatitudeClient {
 
     public get experiments(): ExperimentsClient {
         return (this._experiments ??= new ExperimentsClient(this._options));
+    }
+
+    public get sessions(): SessionsClient {
+        return (this._sessions ??= new SessionsClient(this._options));
+    }
+
+    public get memory(): MemoryClient {
+        return (this._memory ??= new MemoryClient(this._options));
+    }
+
+    public get imports(): ImportsClient {
+        return (this._imports ??= new ImportsClient(this._options));
     }
 
     /**

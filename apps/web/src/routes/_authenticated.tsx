@@ -6,12 +6,12 @@ import { useOrganizationsCollection } from "../domains/organizations/organizatio
 import { createProject, listProjects } from "../domains/projects/projects.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { getSupportUserIdentity } from "../domains/support/support.functions.ts"
+import { ClarityRecorder } from "../lib/analytics/clarity-provider.tsx"
 import { resolveEntryDestination } from "../lib/entry-destination.ts"
 import { IntercomProvider } from "../lib/intercom/intercom-provider.tsx"
 import { isLatitudeStaffEmail } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { ImpersonationBanner } from "./_authenticated/-components/impersonation-banner.tsx"
-import { NavHeader } from "./_authenticated/-components/nav-header.tsx"
 import { isProjectOnboardingPathname } from "./_authenticated/-lib/is-project-onboarding-pathname.ts"
 import { authenticatedLoader } from "./_authenticated/-lib/loader.ts"
 
@@ -57,6 +57,7 @@ function AuthenticatedLayout() {
   })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
+  const excludeFromAnalytics = isLatitudeStaffEmail(user.email) || impersonatedBy != null
 
   return (
     <IntercomProvider identity={supportIdentity} floatingButton="none">
@@ -71,10 +72,10 @@ function AuthenticatedLayout() {
             organizationName={org?.name}
             organizationSlug={org?.slug}
             organizationPlan={organizationPlan}
-            excludeFromAnalytics={isLatitudeStaffEmail(user.email) || impersonatedBy != null}
+            excludeFromAnalytics={excludeFromAnalytics}
           />
+          <ClarityRecorder excludeFromAnalytics={excludeFromAnalytics} />
           {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
-          {isProjectOnboarding ? null : <NavHeader />}
           <main
             className={
               isProjectOnboarding

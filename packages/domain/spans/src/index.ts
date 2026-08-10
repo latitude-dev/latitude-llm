@@ -43,32 +43,119 @@ export {
 export type { Session, SessionDetail } from "./entities/session.ts"
 export { sessionConversationMessages, sessionDetailSchema, sessionSchema } from "./entities/session.ts"
 export type { SessionSearchMatch } from "./entities/session-search-match.ts"
-export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
+export type {
+  CostSource,
+  Operation,
+  Span,
+  SpanDetail,
+  SpanKind,
+  SpanStatusCode,
+  SpanTokenCounts,
+  ToolDefinition,
+} from "./entities/span.ts"
 export {
+  costSourceSchema,
   isMemoryOperation,
+  isUsageOperation,
   MEMORY_OPERATIONS,
   operationSchema,
+  parseCostSource,
   spanDetailSchema,
   spanKindSchema,
   spanSchema,
   spanStatusCodeSchema,
   toolDefinitionSchema,
+  USAGE_OPERATIONS,
 } from "./entities/span.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
-export { SpanDecodingError } from "./errors.ts"
+export { RedactionError, SpanDecodingError } from "./errors.ts"
+export type {
+  CacheCadence,
+  CacheCadenceHistogram,
+  CacheSavingsInput,
+  CacheTokenFlow,
+} from "./helpers/cache-ceiling.ts"
+export {
+  CACHE_CEILING_LIFETIME_SECONDS,
+  CACHE_CEILING_PLAUSIBLE_LIFETIME_SECONDS,
+  CACHE_SAVINGS_MIN_SPEND_SHARE,
+  CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS,
+  cacheCeilingRate,
+  cacheCeilingRatesByLifetime,
+  cacheCeilingSavingsMicrocents,
+  cachingPremiumMicrocents,
+  clearsCacheSavingsFloor,
+  modeledInputCostMicrocents,
+  weeklyCacheSavingsMicrocents,
+} from "./helpers/cache-ceiling.ts"
+export type {
+  CacheClassification,
+  CacheClassificationInput,
+  CacheEconomicsPricing,
+  CacheState,
+  CacheUrgency,
+} from "./helpers/cache-economics.ts"
+export {
+  CACHE_CEILING_MIN_MATERIAL_GAP,
+  CACHE_ECONOMICS_MIN_CALLS,
+  CACHE_MIN_CACHEABLE_INPUT_TOKENS,
+  CACHE_STATES,
+  CACHE_URGENCIES,
+  cacheBreakEvenRate,
+  classifyCacheState,
+} from "./helpers/cache-economics.ts"
+export type { ClassifiedUnpricedPair, UnpricedCause, UnpricedUsageSummary } from "./helpers/classify-unpriced-cost.ts"
+export {
+  classifyUnpricedPair,
+  isUnpricedGap,
+  summarizeUnpricedUsage,
+  UNPRICED_CAUSES,
+} from "./helpers/classify-unpriced-cost.ts"
+export type {
+  CostPerSessionDecomposition,
+  DecomposeCostPerSessionInput,
+  SessionCostCell,
+  SessionCostContribution,
+  SessionCostDecompositionStatus,
+  SessionCostFactor,
+  SessionCostPeriod,
+  SessionCostShareShift,
+  TokenSide,
+} from "./helpers/decompose-cost-per-session.ts"
+export {
+  decomposeCostPerSession,
+  SESSION_COST_MIN_SESSIONS,
+  SESSION_COST_QUIET_BAND,
+  sessionCostMicrocents,
+  sessionCostTokens,
+  TOKEN_SIDES,
+} from "./helpers/decompose-cost-per-session.ts"
+export { resolveSpanCost, usdToMicrocents } from "./helpers/estimate-span-cost.ts"
+export type { CacheModelJudgment, JudgedCacheModel } from "./helpers/judge-cache-economics.ts"
+export { judgeCacheEconomics, promptCacheTtlSeconds } from "./helpers/judge-cache-economics.ts"
 export {
   canonicalizeMessageForEmbedding,
   hashMessageContent,
   type MessageEmbeddingInput,
   type MessageEmbeddingRole,
 } from "./helpers/message-embedding.ts"
+export { parseMessagePayload, stringifyPayload } from "./helpers/message-payload.ts"
+export { modelCacheBreakEvenRate } from "./helpers/model-cache-break-even.ts"
+export { type ModelRegistryPricing, modelRegistryPricing } from "./helpers/model-registry-pricing.ts"
 export { normalizeLiteralPhrase, stripLoneSurrogates } from "./helpers/normalize-literal-phrase.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export { toolDefinitionsFrom } from "./helpers/resolve-tool-definitions.ts"
+export {
+  shouldReportUnpricedSpan,
+  UNPRICEABLE_PAIR_REASONS,
+  type UnpriceablePairReason,
+  unpriceablePairReason,
+} from "./helpers/should-report-unpriced.ts"
 export { tokenizePhrase } from "./helpers/tokenize-phrase.ts"
 export {
   resolveTraceIdFromRef,
@@ -86,8 +173,56 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
+export { resolveErrorTypeFromMetadata } from "./otlp/resolvers/error.ts"
+export {
+  resolveModelFromMetadata,
+  resolveProviderFromMetadata,
+  resolveUserEmailFromMetadata,
+} from "./otlp/resolvers/identity.ts"
+export { resolveOperationFromSourceKind } from "./otlp/resolvers/operation.ts"
+export { resolveReportedPerformance } from "./otlp/resolvers/performance.ts"
+export { resolveResponseIdFromMetadata } from "./otlp/resolvers/response.ts"
+export { resolveToolDefinitionsFromMetadata } from "./otlp/resolvers/tool-definitions.ts"
+export { resolveToolExecutionFromMetadata } from "./otlp/resolvers/tool-execution.ts"
+export type { UnpricedSpanGroup } from "./otlp/transform.ts"
 export type { AnalyticsQueryInput, AnalyticsQueryReaderShape } from "./ports/analytics-query-reader.ts"
 export { AnalyticsQueryReader } from "./ports/analytics-query-reader.ts"
+export type {
+  CacheCadenceRow,
+  CacheEconomics,
+  CacheModelUsage,
+  CacheUsageMeasures,
+  CostAnalyticsRepositoryShape,
+  CostAnalyticsScope,
+  CostBreakdown,
+  CostBreakdownDimension,
+  CostBreakdownRow,
+  CostBreakdownTotals,
+  CostBreakdownUsage,
+  CostConfidence,
+  CostModelSpend,
+  CostOverview,
+  CostSeriesBucket,
+  CostSeriesMetric,
+  CostSeriesModelSlice,
+  CostZeroCostPair,
+  ModelUsageBucket,
+  ModelUsageMeasures,
+  ModelUsageSeries,
+  ModelUsageSlice,
+  SessionCostBucket,
+  SessionCostFactorsPair,
+  SessionCostFactorsScope,
+} from "./ports/cost-analytics-repository.ts"
+export {
+  CACHE_ECONOMICS_ROW_LIMIT,
+  COST_BREAKDOWN_DIMENSIONS,
+  COST_BREAKDOWN_ROW_LIMIT,
+  COST_PER_CALL_MIN_SAMPLE_CALLS,
+  COST_SERIES_METRICS,
+  CostAnalyticsRepository,
+  MODEL_USAGE_SERIES_LIMIT,
+} from "./ports/cost-analytics-repository.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
 export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
 export type {
@@ -192,6 +327,9 @@ export type {
   UserUsageSlice,
 } from "./ports/user-analytics-repository.ts"
 export { isUserSortField, USER_SORT_FIELDS, UserAnalyticsRepository } from "./ports/user-analytics-repository.ts"
+export { redactSpans, type SpanRedactionSummary } from "./redaction/redact-spans.ts"
+export type { RuleValidation, RuleValidationIssue } from "./redaction/validate-rule.ts"
+export { REDACTION_VALIDATOR_VERSION, validateRedactionRule } from "./redaction/validate-rule.ts"
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {
@@ -223,6 +361,15 @@ export type {
   TraceSearchHighlightsResult,
 } from "./use-cases/compute-trace-search-highlights.ts"
 export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
+export type {
+  GetSessionAnalyticsError,
+  GetSessionAnalyticsInput,
+  GetSessionAnalyticsResult,
+  SessionAnalyticsBucket,
+  SessionAnalyticsMedianMetric,
+  SessionAnalyticsTotalMetric,
+} from "./use-cases/get-session-analytics.ts"
+export { getSessionAnalyticsUseCase } from "./use-cases/get-session-analytics.ts"
 export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
 export type { GetSpanConversationChunkInput } from "./use-cases/get-span-conversation-chunk.ts"
@@ -253,6 +400,13 @@ export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-en
 export { buildConversationSpanMaps, type ConversationSpanRef } from "./use-cases/map-conversation-to-spans.ts"
 export type { ParsedSearchQuery } from "./use-cases/parse-search-query.ts"
 export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
+export type {
+  PreviewRedactionInput,
+  RedactionPreviewChange,
+  RedactionPreviewLabelCount,
+  RedactionPreviewResult,
+} from "./use-cases/preview-redaction.ts"
+export { IDENTITY_PREVIEW_LABEL, previewRedactionUseCase } from "./use-cases/preview-redaction.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
 export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"
 export type { QueryAnalyticsInput } from "./use-cases/query-analytics.ts"

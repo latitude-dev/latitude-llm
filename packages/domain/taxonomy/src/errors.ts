@@ -50,3 +50,13 @@ export class CustomBehaviorLimitReachedError extends Data.TaggedError("CustomBeh
     return `This project already has the maximum of ${this.limit} custom behaviors`
   }
 }
+
+export class FacetInvalidError extends Data.TaggedError("FacetInvalidError")<{
+  readonly field: string
+  readonly message: string
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.message
+  }
+}

@@ -47,12 +47,13 @@ import {
 } from "lucide-react"
 import { Fragment, type ReactNode, useRef, useState } from "react"
 import { FilterBuilder } from "../../../../../../components/filters-builder/filter-builder.tsx"
+import { TIME_PRESETS } from "../../../../../../components/time-filter-dropdown.tsx"
 import type {
   ExperimentVariantRecord,
   VariantPatch,
 } from "../../../../../../domains/experiments/experiments.collection.ts"
+import { topicBehaviourClusterLink } from "../../../../../../domains/taxonomy/topic-behaviour-link.ts"
 import { SearchInput } from "../../-components/search-input.tsx"
-import { TIME_PRESETS } from "../../-components/time-filter-dropdown.tsx"
 import { serializeFilters } from "../../-components/trace-page-state.ts"
 import { ENTITY_ICON, ENTITY_LABEL, formatMetricValue, MetricDelta } from "./metric-format.tsx"
 import {
@@ -804,10 +805,11 @@ function TopListRow({
     )
   }
   if (entity === "signals") {
+    // For the signals entity `item.key` is the signal slug (see the experiments relabel).
     return (
       <Link
-        to="/projects/$projectSlug/signals/$signalId"
-        params={{ projectSlug, signalId: item.key }}
+        to="/projects/$projectSlug/signals/$signalSlug"
+        params={{ projectSlug, signalSlug: item.key }}
         className={className}
       >
         {children}
@@ -816,12 +818,7 @@ function TopListRow({
   }
   if (entity === "behaviours") {
     return (
-      <Link
-        to="/projects/$projectSlug/behaviours"
-        params={{ projectSlug }}
-        search={{ behaviourPath: item.key }}
-        className={className}
-      >
+      <Link {...topicBehaviourClusterLink(projectSlug, item.key)} className={className}>
         {children}
       </Link>
     )

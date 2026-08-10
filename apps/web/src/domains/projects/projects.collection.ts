@@ -1,4 +1,4 @@
-import { generateId, OrganizationId, ProjectId } from "@domain/shared"
+import { generateId, OrganizationId, ProjectId, type RedactionSetting } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { useLiveQuery } from "@tanstack/react-db"
@@ -6,7 +6,13 @@ import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { getShowcaseProjectRecord } from "../showcase/showcase.functions.ts"
 import type { ProjectRecord } from "./projects.functions.ts"
-import { createProject, deleteProject, listProjects, updateProject } from "./projects.functions.ts"
+import {
+  createProject,
+  deleteProject,
+  listProjects,
+  updateProject,
+  updateProjectRedaction,
+} from "./projects.functions.ts"
 import { mergeShowcaseProject } from "./showcase-project.ts"
 
 const queryClient = getQueryClient()
@@ -80,6 +86,13 @@ const projectsCollection = createAppCollection(
   }),
 )
 
+// Refetches instead of mutating optimistically: the server may reject on role, and a
+// rolled-back "redaction is on" is the worst thing a compliance control could flash.
+export async function updateProjectRedactionMutation(projectId: string, redaction: RedactionSetting | null) {
+  await updateProjectRedaction({ data: { projectId, redaction } })
+  await queryClient.invalidateQueries({ queryKey: ["projects"] })
+}
+
 export function createProjectMutation(name: string) {
   const now = new Date().toISOString()
   const projectId = generateId<"ProjectId">()
@@ -97,6 +110,7 @@ export function createProjectMutation(name: string) {
       onboardingCompleted: undefined,
       isSample: undefined,
       sampling: undefined,
+      redaction: undefined,
     },
     firstTraceAt: null,
     deletedAt: null,

@@ -1,10 +1,15 @@
 import type { RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import { AdminSearchRepository } from "./search-repository.ts"
-import { emptyUnifiedSearchResult, type SearchEntityType, type UnifiedSearchResult } from "./search-result.ts"
+import {
+  emptyUnifiedSearchResult,
+  MAX_SEARCH_QUERY_LENGTH,
+  MIN_SEARCH_QUERY_LENGTH,
+  type SearchEntityType,
+  type UnifiedSearchResult,
+} from "./search-result.ts"
 
-export const MIN_SEARCH_QUERY_LENGTH = 2
-export const MAX_SEARCH_QUERY_LENGTH = 100
+export { MAX_SEARCH_QUERY_LENGTH, MIN_SEARCH_QUERY_LENGTH }
 
 const getRelevanceScore = (value: string, query: string): number => {
   const lowerValue = value.toLowerCase()

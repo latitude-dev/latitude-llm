@@ -2,6 +2,7 @@ import { Input, Tabs, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { CircleSlashIcon, LayoutGridIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import { allToolsMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectTools, useToolCallHistogram } from "../../../../../domains/tools/tools.collection.ts"
@@ -11,7 +12,6 @@ import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
-import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddTargetMonitorButton } from "../monitors/-components/add-target-monitor-button.tsx"
 import { getToolStatuses, pickToolTrendBucketSeconds } from "./-components/tool-formatters.ts"
@@ -173,6 +173,8 @@ function ToolsPageContent() {
               <Tabs
                 variant="bordered"
                 size="sm"
+                className="border-none bg-muted"
+                indicatorClassName="border-none"
                 options={[
                   { id: "all", label: "All", icon: <LayoutGridIcon className="w-4 h-4" /> },
                   {

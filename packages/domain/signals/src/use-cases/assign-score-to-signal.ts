@@ -148,8 +148,17 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
             }
 
             const assignedAt = new Date()
+            // Reopen-on-occurrence, reified at write time: clearing `resolvedAt`
+            // under the row lock makes the regression a stored fact, so a later
+            // score in the same cycle sees `resolvedAt === null` and cannot
+            // re-emit. The `createdAt > resolvedAt` guard keeps replayed
+            // historical scores from reopening; ignored signals never regress.
+            const isRegression =
+              issue.ignoredAt === null &&
+              issue.resolvedAt !== null &&
+              score.createdAt.getTime() > issue.resolvedAt.getTime()
             const updatedSignal = buildSignalWithAssignedScore({
-              issue,
+              issue: isRegression ? { ...issue, resolvedAt: null, regressedAt: assignedAt } : issue,
               score,
               normalizedEmbedding: input.normalizedEmbedding,
               assignedAt,
@@ -187,6 +196,22 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
                 signalId: issue.id,
               },
             })
+
+            if (isRegression) {
+              yield* outboxEventWriter.write({
+                eventName: "SignalRegressed",
+                aggregateType: "issue",
+                aggregateId: issue.id,
+                organizationId: issue.organizationId,
+                payload: {
+                  organizationId: issue.organizationId,
+                  projectId: issue.projectId,
+                  signalId: issue.id,
+                  regressedAt: assignedAt.toISOString(),
+                  triggerScoreId: score.id,
+                },
+              })
+            }
 
             return {
               action: "assigned",

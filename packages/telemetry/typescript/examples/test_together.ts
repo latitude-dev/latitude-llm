@@ -9,21 +9,21 @@
  * Install: npm install together-ai
  *
  * No Together key on hand, so we point the (OpenAI-wire-compatible) together-ai SDK at OpenAI's
- * endpoint with an OpenAI model. This still exercises the real @traceloop/instrumentation-together
+ * endpoint with an OpenAI model. This still exercises the real
  * + Latitude's parse/display; only gen_ai.system / model won't reflect a real Together backend.
  */
 
 import { randomUUID } from "node:crypto"
 import Together from "together-ai"
 import { capture, Latitude } from "../src"
+import { createTogetherAIInstrumentation } from "../src/instrumentations/togetherai.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  // The Traceloop instrumentor patches Together.Chat.Completions / Together.Completions — pass the
-  // client class, not the module namespace (which has no Chat/Completions statics).
-  instrumentations: { togetherai: Together },
+  // Traceloop patches Together.Chat.Completions / Together.Completions on the client class, not the module namespace.
+  instrumentations: [createTogetherAIInstrumentation(Together)],
 })
 
 const PROVIDER = "togetherai"

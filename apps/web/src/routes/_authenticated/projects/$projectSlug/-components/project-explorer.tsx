@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
+import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import {
   addTracesToDatasetFunction,
   createDatasetFromTracesFunction,
@@ -60,7 +61,6 @@ import {
   SessionsView,
 } from "./sessions-view.tsx"
 import { useTableColumnSettings } from "./table-column-settings.ts"
-import { TimeFilterDropdown } from "./time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./trace-detail-drawer.tsx"
 import { DEFAULT_SEARCH_SORTING, DEFAULT_TRACE_SORTING, parseFilters, serializeFilters } from "./trace-page-state.ts"
 import { TracesEmptyOnboarding } from "./traces-empty-onboarding.tsx"
@@ -556,7 +556,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                   asChild
                   trigger={
                     <span className="inline-flex">
-                      <Button variant="outline" size="sm" className="h-8 w-auto" disabled>
+                      <Button variant="outline" size="default" className="h-8 w-auto" disabled>
                         <Icon icon={BellPlusIcon} size="sm" />
                         Monitor sessions
                       </Button>
@@ -585,7 +585,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                 trigger={
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="h-8 w-auto"
                     onClick={() => void createCustomBehaviorFromFilters()}
                   >
@@ -600,6 +600,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <Tabs
               variant="bordered"
               size="sm"
+              className="border-none bg-muted"
+              indicatorClassName="border-none"
               options={[
                 {
                   id: "sessions",
