@@ -3,12 +3,16 @@ import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
 import {
   type OrganizationId,
+  type OrganizationRedactionSetting,
   ProjectId,
   putInDisk,
   type RepositoryError,
+  resolveRedactionPolicy,
+  type SerializedRedactionPolicy,
   type SqlClient,
   StorageDisk,
   type StorageError,
+  serializeRedactionPolicy,
 } from "@domain/shared"
 import { base64Encode } from "@repo/utils"
 import { Effect } from "effect"
@@ -28,6 +32,12 @@ export interface IngestSpansInput {
   readonly contentType: string
   readonly isSandbox: boolean
   readonly defaultProjectSlug?: string
+  /**
+   * Organization-level redaction setting. Resolved and cached by the transport,
+   * because the cached resolver lives in the platform layer and the domain must not
+   * reach into it. Absent means "no organization policy".
+   */
+  readonly organizationRedaction?: OrganizationRedactionSetting | null
 }
 
 /**
@@ -98,6 +108,29 @@ export const inspectOtlpForSandbox = (decoded: OtlpExportTraceServiceRequest | n
   }
 
   return { totalSpans }
+}
+
+/**
+ * Effective redaction policy per project id, for the projects this batch touches.
+ *
+ * Resolved here rather than in the worker because every project's settings are
+ * already in hand for sampling, so this costs no extra query. Projects resolving
+ * to `off` are omitted, which makes an empty result mean "redact nothing" and lets
+ * the queue field be dropped entirely.
+ */
+function buildRedactionPolicies(
+  projects: Iterable<Project>,
+  organizationRedaction: OrganizationRedactionSetting | null,
+): Record<string, SerializedRedactionPolicy> {
+  const organization = organizationRedaction ? { redaction: organizationRedaction } : {}
+  const policies: Record<string, SerializedRedactionPolicy> = {}
+
+  for (const project of projects) {
+    const serialized = serializeRedactionPolicy(resolveRedactionPolicy({ organization, project: project.settings }))
+    if (serialized) policies[project.id as string] = serialized
+  }
+
+  return policies
 }
 
 const resolveProject = (slug: string): Effect.Effect<Project | null, RepositoryError, ProjectRepository | SqlClient> =>
@@ -223,6 +256,12 @@ export const ingestSpansUseCase = (
       projectIdBySlug[slug] = project.id as string
     }
 
+    const redaction = buildRedactionPolicies(projectBySlug.values(), input.organizationRedaction ?? null)
+    const redactedProjects = Object.keys(redaction).length
+    if (redactedProjects > 0) {
+      yield* Effect.annotateCurrentSpan("redaction.projects", redactedProjects)
+    }
+
     yield* publisher.publish("span-ingestion", "ingest", {
       fileKey,
       inlinePayload,
@@ -233,6 +272,7 @@ export const ingestSpansUseCase = (
       defaultProjectId,
       projectIdBySlug,
       isSandbox: input.isSandbox ?? false,
+      ...(redactedProjects > 0 ? { redaction } : {}),
     })
 
     return { totalSpans, acceptedSpans, rejectedSpans }

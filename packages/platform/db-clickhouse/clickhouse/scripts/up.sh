@@ -106,7 +106,10 @@ while true; do
   if [ "$attempt" -ge "$MAX_RETRIES" ] || [ "$is_retryable_replica_lag" != "true" ]; then
     echo "ClickHouse migrations failed after ${attempt} attempt(s)." >&2
     if [ "$is_retryable_replica_lag" = "true" ]; then
-      echo "Hint: increase LAT_CLICKHOUSE_MIGRATION_MAX_RETRIES or LAT_CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS for heavily loaded clusters." >&2
+      echo "Hint: if the reported metadata version rose on every attempt, the migration issues" >&2
+      echo "consecutive ALTERs on one replicated table and each retry re-runs the first and re-bumps" >&2
+      echo "the version. Combine them into a single ALTER. Raising LAT_CLICKHOUSE_MIGRATION_MAX_RETRIES" >&2
+      echo "only helps when the version stops advancing, which is genuine cluster load." >&2
     fi
     exit "$goose_status"
   fi

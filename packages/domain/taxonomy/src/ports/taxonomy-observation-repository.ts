@@ -243,6 +243,18 @@ export interface TaxonomyObservationRepositoryShape {
     readonly clusterId: TaxonomyClusterId
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Members by explicit observation id, for naming a cluster whose membership is
+   * not in `assigned_cluster_id` yet: a `staging` tree is named BEFORE the
+   * reassignment repoints ClickHouse at it, so its samples come from the staged
+   * plan's own member ids.
+   */
+  readonly listAllByObservationIds: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly observationIds: readonly string[]
+    readonly limit: number
+  }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
   readonly listBySession: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

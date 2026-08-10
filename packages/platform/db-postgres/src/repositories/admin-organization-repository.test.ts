@@ -3,6 +3,7 @@ import { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { members, organizations, users } from "../schema/better-auth.ts"
+import { billingUsagePeriods } from "../schema/billing.ts"
 import { projects } from "../schema/projects.ts"
 import { sandboxes } from "../schema/sandboxes.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
@@ -249,5 +250,234 @@ describe("AdminOrganizationRepositoryLive.setWantsShowcase", () => {
         }),
       ),
     ).rejects.toMatchObject({ _tag: "NotFoundError", entity: "Organization" })
+  })
+})
+
+describe("AdminOrganizationRepositoryLive.listByConsumedCredits", () => {
+  const NOW = new Date("2026-04-15T12:00:00.000Z")
+  const PERIOD_START = new Date("2026-04-01T00:00:00.000Z")
+  const PERIOD_END = new Date("2026-05-01T00:00:00.000Z")
+  const PAST_START = new Date("2026-03-01T00:00:00.000Z")
+  const PAST_END = new Date("2026-04-01T00:00:00.000Z")
+
+  const ORG_HIGH = makeId("org-credit-high")
+  const ORG_MID = makeId("org-credit-mid")
+  const ORG_LOW = makeId("org-credit-low")
+  const ORG_ZERO = makeId("org-credit-zero")
+  const ORG_SANDBOX = makeId("org-credit-sbx")
+  const ORG_PARENT = makeId("org-credit-parent")
+
+  beforeAll(async () => {
+    const baseTime = new Date("2025-06-01T12:00:00.000Z")
+
+    await pg.db.insert(organizations).values([
+      { id: ORG_HIGH, name: "High Spend", slug: "high-spend", createdAt: baseTime, updatedAt: baseTime },
+      { id: ORG_MID, name: "Mid Spend", slug: "mid-spend", createdAt: baseTime, updatedAt: baseTime },
+      { id: ORG_LOW, name: "Low Spend", slug: "low-spend", createdAt: baseTime, updatedAt: baseTime },
+      { id: ORG_ZERO, name: "Zero Spend", slug: "zero-spend", createdAt: baseTime, updatedAt: baseTime },
+      { id: ORG_PARENT, name: "Sandbox Parent", slug: "sandbox-parent", createdAt: baseTime, updatedAt: baseTime },
+      {
+        id: ORG_SANDBOX,
+        name: "Sandbox Child",
+        slug: "sandbox-child",
+        parentOrgId: ORG_PARENT,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+    ])
+
+    await pg.db.insert(billingUsagePeriods).values([
+      {
+        id: makeId("bup-high"),
+        organizationId: ORG_HIGH,
+        planSlug: "pro",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 100_000,
+        consumedCredits: 50_000,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: makeId("bup-mid"),
+        organizationId: ORG_MID,
+        planSlug: "pro",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 100_000,
+        consumedCredits: 20_000,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: makeId("bup-low"),
+        organizationId: ORG_LOW,
+        planSlug: "free",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 20_000,
+        consumedCredits: 5_000,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: makeId("bup-zero"),
+        organizationId: ORG_ZERO,
+        planSlug: "free",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 20_000,
+        consumedCredits: 0,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: makeId("bup-sbx"),
+        organizationId: ORG_SANDBOX,
+        planSlug: "free",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 20_000,
+        consumedCredits: 99_000,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: makeId("bup-past"),
+        organizationId: ORG_LOW,
+        planSlug: "free",
+        periodStart: PAST_START,
+        periodEnd: PAST_END,
+        includedCredits: 20_000,
+        consumedCredits: 80_000,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+    ])
+  })
+
+  it("ranks non-sandbox orgs by current-period consumed credits descending", async () => {
+    const page = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminOrganizationRepository
+        return yield* repo.listByConsumedCredits({ now: NOW, limit: 10 })
+      }),
+    )
+
+    expect(page.hasMore).toBe(false)
+    expect(page.rows.map((r) => ({ id: r.organizationId as string, credits: r.consumedCredits }))).toEqual([
+      { id: ORG_HIGH, credits: 50_000 },
+      { id: ORG_MID, credits: 20_000 },
+      { id: ORG_LOW, credits: 5_000 },
+    ])
+  })
+
+  it("paginates with a composite consumedCredits + organizationId cursor", async () => {
+    const first = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminOrganizationRepository
+        return yield* repo.listByConsumedCredits({ now: NOW, limit: 1 })
+      }),
+    )
+    expect(first.rows).toHaveLength(1)
+    expect(first.hasMore).toBe(true)
+    const firstRow = first.rows[0]
+    expect(firstRow).toBeDefined()
+    if (!firstRow) throw new Error("expected first page row")
+    expect(firstRow.organizationId).toBe(ORG_HIGH)
+
+    const second = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminOrganizationRepository
+        return yield* repo.listByConsumedCredits({
+          now: NOW,
+          limit: 10,
+          cursor: {
+            consumedCredits: firstRow.consumedCredits,
+            organizationId: firstRow.organizationId as string,
+            asOf: NOW,
+          },
+        })
+      }),
+    )
+
+    expect(second.rows.map((r) => r.organizationId as string)).toEqual([ORG_MID, ORG_LOW])
+    expect(second.hasMore).toBe(false)
+  })
+
+  it("picks the earliest overlapping current period before applying the zero-spend filter", async () => {
+    // Earliest overlapping row has 0 credits; a later overlapping row has spend.
+    // findOptionalCurrent would pick the earliest (zero) — ranking must match
+    // and therefore exclude the org rather than promote the later spend row.
+    const ORG_OVERLAP = makeId("org-credit-overlap")
+    const baseTime = new Date("2025-06-01T12:00:00.000Z")
+    const earlyStart = new Date("2026-03-15T00:00:00.000Z")
+    const lateStart = new Date("2026-04-01T00:00:00.000Z")
+    const lateEnd = new Date("2026-05-15T00:00:00.000Z")
+
+    await pg.db.insert(organizations).values({
+      id: ORG_OVERLAP,
+      name: "Overlap",
+      slug: "overlap",
+      createdAt: baseTime,
+      updatedAt: baseTime,
+    })
+    await pg.db.insert(billingUsagePeriods).values([
+      {
+        id: makeId("bup-ov-early"),
+        organizationId: ORG_OVERLAP,
+        planSlug: "free",
+        periodStart: earlyStart,
+        periodEnd: lateEnd,
+        includedCredits: 20_000,
+        consumedCredits: 0,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      {
+        id: makeId("bup-ov-late"),
+        organizationId: ORG_OVERLAP,
+        planSlug: "pro",
+        periodStart: lateStart,
+        periodEnd: lateEnd,
+        includedCredits: 100_000,
+        consumedCredits: 75_000,
+        overageCredits: 0,
+        reportedOverageCredits: 0,
+        overageAmountMills: 0,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+    ])
+
+    const page = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminOrganizationRepository
+        return yield* repo.listByConsumedCredits({ now: NOW, limit: 50 })
+      }),
+    )
+
+    expect(page.rows.map((r) => r.organizationId as string)).not.toContain(ORG_OVERLAP)
   })
 })

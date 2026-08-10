@@ -2,11 +2,12 @@ import { NoCreditsRemainingError } from "@domain/billing"
 import { SandboxArchivedError, SandboxQuotaExceededError } from "@domain/sandboxes"
 import { OrganizationId } from "@domain/shared"
 import { ingestSpansWithBillingUseCase } from "@domain/spans"
-import { SandboxSignalsLive } from "@platform/cache-redis"
+import { RedisCacheStoreLive, SandboxSignalsLive } from "@platform/cache-redis"
 import {
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   ProjectRepositoryLive,
+  resolveOrganizationRedactionCached,
   SandboxRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -83,17 +84,30 @@ export const registerTracesRoute = ({ app, tracePayloadProtection }: TracesRoute
     const disk = getStorageDisk()
     const publisher = await getQueuePublisher()
     const postgresClient = getPostgresClient()
-    const ingestionEffect = ingestSpansWithBillingUseCase({
-      organizationId: organization,
-      apiKeyId,
-      isSandbox,
-      payload: body,
-      contentType,
-      ...(defaultProjectSlug ? { defaultProjectSlug } : {}),
+    // The org half of the redaction cascade is read here, not in the domain: the
+    // cached resolver is a platform concern. The project half is free downstream,
+    // where project settings are already loaded for sampling.
+    const ingestionEffect = Effect.gen(function* () {
+      const organizationRedaction = yield* resolveOrganizationRedactionCached(organization)
+
+      return yield* ingestSpansWithBillingUseCase({
+        organizationId: organization,
+        apiKeyId,
+        isSandbox,
+        payload: body,
+        contentType,
+        organizationRedaction,
+        ...(defaultProjectSlug ? { defaultProjectSlug } : {}),
+      })
     }).pipe(
       withPostgres(traceIngestionBillingLayers, postgresClient, organization),
       Effect.provide(
-        Layer.mergeAll(StorageDiskLive(disk), QueuePublisherLive(publisher), SandboxSignalsLive(getRedisClient())),
+        Layer.mergeAll(
+          StorageDiskLive(disk),
+          QueuePublisherLive(publisher),
+          SandboxSignalsLive(getRedisClient()),
+          RedisCacheStoreLive(getRedisClient()),
+        ),
       ),
       withTracing,
     )

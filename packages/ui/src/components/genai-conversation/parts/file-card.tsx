@@ -107,6 +107,26 @@ function ActionLink({
   )
 }
 
+type FileCardProps = {
+  readonly fileName?: string | undefined
+  readonly mimeType?: string | null | undefined
+  readonly modality?: string | undefined
+  readonly fileId?: string | undefined
+  readonly sizeBytes?: number | undefined
+  readonly href?: string | undefined
+  readonly downloadDataUri?: string | undefined
+  readonly preview?: ReactNode | undefined
+} & (
+  | {
+      readonly onActivate: () => void
+      readonly activateLabel: string
+    }
+  | {
+      readonly onActivate?: undefined
+      readonly activateLabel?: undefined
+    }
+)
+
 export function FileCard({
   fileName,
   mimeType,
@@ -115,15 +135,10 @@ export function FileCard({
   sizeBytes,
   href,
   downloadDataUri,
-}: {
-  readonly fileName?: string | undefined
-  readonly mimeType?: string | null | undefined
-  readonly modality?: string | undefined
-  readonly fileId?: string | undefined
-  readonly sizeBytes?: number | undefined
-  readonly href?: string | undefined
-  readonly downloadDataUri?: string | undefined
-}) {
+  preview,
+  onActivate,
+  activateLabel,
+}: FileCardProps) {
   const FileTypeIcon = fileIconForMime(mimeType, modality)
   const typeLabel = fileTypeLabel(mimeType, modality)
   const primary = fileName ?? typeLabel
@@ -142,10 +157,10 @@ export function FileCard({
   // Download is only offered for same-origin data URIs (cross-origin `download` is ignored).
   if (isPdf && href && downloadDataUri) {
     actions = (
-      <div className="flex shrink-0 items-center gap-1.5">
+      <>
         <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
         <ActionLink href={downloadDataUri} label="Download PDF" download={downloadName} icon={DownloadIcon} />
-      </div>
+      </>
     )
   } else if (isPdf && href) {
     actions = <ActionLink href={href} label="Preview PDF" icon={ExternalLinkIcon} />
@@ -177,24 +192,41 @@ export function FileCard({
   }
 
   return (
-    <div className="flex max-w-md items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
-        <Icon icon={FileTypeIcon} size="default" color="foregroundMuted" />
+    <div
+      className={cn("relative flex max-w-md flex-col overflow-hidden rounded-lg border border-border bg-card", {
+        "cursor-pointer transition-colors hover:bg-muted": Boolean(onActivate),
+      })}
+    >
+      {preview ? <div className="border-border border-b">{preview}</div> : null}
+      <div className="flex items-center gap-3 px-3 py-2">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+          <Icon icon={FileTypeIcon} size="default" color="foregroundMuted" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Text.H6 ellipsis>{primary}</Text.H6>
+          {secondary ? (
+            <Text.H6 color="foregroundMuted" ellipsis>
+              {secondary}
+            </Text.H6>
+          ) : null}
+          {fileId ? (
+            <Text.Mono size="h6" color="foregroundMuted" ellipsis>
+              {fileId}
+            </Text.Mono>
+          ) : null}
+        </div>
+        <div className={cn("flex shrink-0 items-center gap-1.5", { "relative z-1": Boolean(onActivate) })}>
+          {actions}
+        </div>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Text.H6 ellipsis>{primary}</Text.H6>
-        {secondary ? (
-          <Text.H6 color="foregroundMuted" ellipsis>
-            {secondary}
-          </Text.H6>
-        ) : null}
-        {fileId ? (
-          <Text.Mono size="h6" color="foregroundMuted" ellipsis>
-            {fileId}
-          </Text.Mono>
-        ) : null}
-      </div>
-      {actions}
+      {onActivate ? (
+        <button
+          type="button"
+          onClick={onActivate}
+          aria-label={activateLabel}
+          className="absolute inset-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        />
+      ) : null}
     </div>
   )
 }

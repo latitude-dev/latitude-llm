@@ -20,9 +20,9 @@
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
+import { toToolDefinition } from "../../helpers/resolve-tool-definitions.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import type { ParsedContent } from "./index.ts"
-import { toToolDefinition } from "./utils.ts"
 
 interface ToolCallData {
   id?: string

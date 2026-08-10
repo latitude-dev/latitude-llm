@@ -10,7 +10,7 @@ import {
   Text,
   Tooltip,
 } from "@repo/ui"
-import { formatCount, formatDuration, formatPercentage, formatPrice, relativeTime } from "@repo/utils"
+import { formatCount, formatDuration, formatPercentage, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
@@ -24,6 +24,7 @@ import {
   useSessionsInfiniteScroll,
 } from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord, SessionSearchMatchRecord } from "../../../../../domains/sessions/sessions.functions.ts"
+import { rollupCostDisplay } from "../../../../../domains/spans/cost-display.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -518,13 +519,24 @@ export function SessionsView({
         width: 146,
         render: (row) => {
           const costTotalMicrocents = field(row, "costTotalMicrocents")
-          return (
+          const cost = rollupCostDisplay({
+            costTotalMicrocents,
+            unpricedSpanCount: field(row, "unpricedSpanCount"),
+            tokensTotal: field(row, "tokensTotal"),
+          })
+          const cell = (
             <span className="flex items-center justify-end gap-1">
               {row.kind === "session" && (
                 <SessionOutlierBadge projectId={projectId} value={costTotalMicrocents} metric="costTotalMicrocents" />
               )}
-              {costTotalMicrocents > 0 ? formatPrice(costTotalMicrocents / 100_000_000) : "-"}
+              {cost.label}
             </span>
+          )
+          if (!cost.note) return cell
+          return (
+            <Tooltip trigger={cell} asChild>
+              {cost.note}
+            </Tooltip>
           )
         },
         renderSubheader: () => (

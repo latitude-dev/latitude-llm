@@ -276,7 +276,7 @@ Two LLM calls name a taxonomy cluster; both route to `latitude-taxonomy`. The be
 > - `packages/domain/taxonomy/src/use-cases/name-taxonomy.ts` (`generateClusterName`)
 
 > **Facet Extraction**
-> Compiles a facet's free-text `instructions` into a controlled prompt (system-owned guardrails the facet cannot override: one sentence, untrusted transcript, no PII, English, explicit "unclear", bounded length) and extracts a one-sentence answer per sampled session for a custom lens. Answers are embedded (`AI.embed`, not captured) and cached in `taxonomy_facet_projections` keyed `(facetId, sessionObservationId)`. Model resolves under feature `FACET_EXTRACTION` (default Bedrock `minimax.minimax-m2.5`).
+> Compiles a facet's free-text `instructions` into a controlled prompt (system-owned guardrails the facet cannot override: one sentence, untrusted transcript, no PII, English, explicit "unclear", bounded length) and extracts a one-sentence answer per sampled session for a custom behavior. Answers are embedded (`AI.embed`, not captured) and cached in `taxonomy_facet_projections` keyed `(facetId, sessionObservationId)`. Model resolves under feature `FACET_EXTRACTION` (default Bedrock `minimax.minimax-m2.5`).
 > **Tags:** `taxonomy:facet-extract`
 > **Metadata:**
 >

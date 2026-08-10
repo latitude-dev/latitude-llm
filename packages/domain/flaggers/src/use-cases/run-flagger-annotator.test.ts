@@ -58,6 +58,7 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
     costInputMicrocents: 0,
     costOutputMicrocents: 0,
     costTotalMicrocents: 0,
+    unpricedSpanCount: 0,
     sessionId: SessionId("session"),
     userId: ExternalUserId("user"),
     userEmail: "",

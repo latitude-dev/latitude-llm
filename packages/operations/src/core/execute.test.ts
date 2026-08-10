@@ -20,6 +20,7 @@ const contextVars: Record<string, unknown> = {
   workflowStarter: { tag: "workflow-starter" },
   workflowQuerier: { tag: "workflow-querier" },
   storageDisk: { tag: "storage" },
+  importSourceAdapters: { tag: "import-adapters" },
 }
 
 const buildApp = (vars: Record<string, unknown> = contextVars) => {

@@ -208,6 +208,7 @@ export function BehavioursTrajectoryChart({
   selectedPath,
   timeRange,
   customBehaviorId,
+  facetId,
   onSelectPath,
   onSelectPoint,
 }: {
@@ -216,6 +217,7 @@ export function BehavioursTrajectoryChart({
   readonly selectedPath: readonly string[]
   readonly timeRange: BehaviourTimeRangeRecord | undefined
   readonly customBehaviorId?: string
+  readonly facetId?: string
   readonly onSelectPath: (path: readonly string[]) => void
   readonly onSelectPoint: (selection: {
     readonly path: readonly string[]
@@ -231,7 +233,7 @@ export function BehavioursTrajectoryChart({
   const visibleLevel = useMemo(() => resolveVisibleLevel(topics, selectedPath), [topics, selectedPath])
   const visibleNodes = showAll ? visibleLevel.nodes : visibleLevel.nodes.slice(0, MAX_COLLAPSED_ROWS)
   const visibleIds = visibleNodes.map((node) => node.cluster.id)
-  const { data, isLoading } = useBehaviourTrajectory(projectId, visibleIds, axis, timeRange, customBehaviorId)
+  const { data, isLoading } = useBehaviourTrajectory(projectId, visibleIds, axis, timeRange, customBehaviorId, facetId)
   const rawRows = data?.rows ?? []
   const trajectory = useMemo(() => coarsenTrajectoryRows(rawRows, axis, metric), [rawRows, axis, metric])
   const rows = trajectory.rows

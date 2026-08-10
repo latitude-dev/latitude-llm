@@ -13,16 +13,7 @@ import {
 import { formatBytes } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import {
-  type ReactNode,
-  type RefObject,
-  startTransition,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
@@ -46,7 +37,6 @@ import {
   visibleRangeToBand,
 } from "../../../../../../../lib/conversation-timeline/message-windows.ts"
 import { wallToTimeline } from "../../../../../../../lib/conversation-timeline/timeline-scale.ts"
-import { useParamState } from "../../../../../../../lib/hooks/useParamState.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
   type TextSelectionPopoverControls,
@@ -57,6 +47,7 @@ import { MessageAnnotationTrigger } from "../../annotations/message-annotation-t
 import { findNearestMessageAnchor, flashElement } from "../../conversation-timeline/flash-highlight.ts"
 import { TimelineBar } from "../../conversation-timeline/timeline-bar.tsx"
 import { useViewportBand } from "../../conversation-timeline/use-viewport-band.ts"
+import { AgentBreadcrumb } from "../../session-detail-drawer/agents-breakdown/agent-breadcrumb.tsx"
 import { buildSubagentToolCalls } from "../../session-detail-drawer/agents-breakdown/agent-decorations.ts"
 import { SubagentConversationView } from "../../session-detail-drawer/agents-breakdown/subagent-conversation-view.tsx"
 import { useAgentGraph } from "../../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
@@ -130,7 +121,6 @@ function ConversationContent({
   hasMoreMessages,
   isLoadingMoreMessages,
   onLoadMoreMessages,
-  onSelectAgent,
   agentGraph: agentGraphOverride,
 }: {
   readonly traceDetail: TraceDetailRecord
@@ -163,8 +153,6 @@ function ConversationContent({
   readonly hasMoreMessages: boolean
   readonly isLoadingMoreMessages: boolean
   readonly onLoadMoreMessages: () => unknown
-  /** Opens a subagent's conversation in place (from a decorated tool call). */
-  readonly onSelectAgent?: ((node: AgentNode) => void) | undefined
   /** Session-wide agent graph. When set, replaces the trace-local graph so tool calls from every trace in the accumulated conversation decorate, not just the latest. */
   readonly agentGraph?: AgentGraph | undefined
 }) {
@@ -209,6 +197,29 @@ function ConversationContent({
   const traceAgentGraph = useAgentGraph(agentSpans)
   // A session passes the session-wide graph so tool calls from every trace decorate; a plain trace uses its own.
   const agentGraph = agentGraphOverride ?? traceAgentGraph
+
+  // Path from the main conversation down to the subagent currently drilled into.
+  // Empty means "show the main conversation" — the breadcrumb's segment 0.
+  const [agentStack, setAgentStack] = useState<readonly { traceId: string; spanId: string; label: string }[]>([])
+  // TODO(frontend-use-effect-policy): resets the drill-down path when the trace prop changes underneath this component.
+  useEffect(() => {
+    setAgentStack([])
+  }, [traceDetail.traceId])
+
+  const openAgent = useCallback((node: AgentNode) => {
+    const spanId = node.ref.spanId
+    if (!spanId) return
+    setAgentStack((prev) => {
+      // A node already on the path can't be re-entered — that would only happen from a
+      // mis-decorated self-link and would otherwise render as a duplicated breadcrumb segment.
+      if (prev.some((entry) => entry.traceId === node.ref.traceId && entry.spanId === spanId)) return prev
+      return [...prev, { traceId: node.ref.traceId, spanId, label: node.label }]
+    })
+  }, [])
+
+  const selectBreadcrumb = useCallback((index: number) => {
+    setAgentStack((prev) => (index === 0 ? [] : prev.slice(0, index)))
+  }, [])
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
 
@@ -566,8 +577,8 @@ function ConversationContent({
 
   const subagentPreviews = useSubagentPreviews({ projectId, graph: agentGraph })
   const subagentToolCalls = useMemo(
-    () => buildSubagentToolCalls({ graph: agentGraph, onOpenConversation: onSelectAgent, previews: subagentPreviews }),
-    [agentGraph, onSelectAgent, subagentPreviews],
+    () => buildSubagentToolCalls({ graph: agentGraph, previews: subagentPreviews, onOpenConversation: openAgent }),
+    [agentGraph, subagentPreviews, openAgent],
   )
   const subagentToolCallsProp = subagentToolCalls && subagentToolCalls.size > 0 ? subagentToolCalls : undefined
 
@@ -576,6 +587,25 @@ function ConversationContent({
   const failedToolCallIds = timeline && timeline.failedToolCallIds.size > 0 ? timeline.failedToolCallIds : undefined
 
   const showBar = timeline != null && timeline.scale.totalTimelineMs > 0 && timeline.messages.length > 0
+
+  const currentAgent = agentStack[agentStack.length - 1]
+  if (currentAgent) {
+    return (
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        <AgentBreadcrumb
+          segments={[{ label: "Conversation" }, ...agentStack.map((entry) => ({ label: entry.label }))]}
+          onSelect={selectBreadcrumb}
+        />
+        <SubagentConversationView
+          projectId={projectId}
+          agentTraceId={currentAgent.traceId}
+          agentSpanId={currentAgent.spanId}
+          onOpenAgent={openAgent}
+          {...(navigateToSpan ? { navigateToSpan } : {})}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
@@ -773,42 +803,6 @@ export function ConversationTab({
     enabled: traceDetail != null,
   })
 
-  const [agentTraceId, setAgentTraceId] = useParamState("agentTraceId", "", { history: "push" })
-  const [agentSpanId, setAgentSpanId] = useParamState("agentSpanId", "", { history: "push" })
-  const [mountedAgent, setMountedAgent] = useState<{ readonly traceId: string; readonly spanId: string } | null>(null)
-  const [subagentSlidIn, setSubagentSlidIn] = useState(false)
-
-  const selectAgent = useCallback(
-    (node: AgentNode | null) => {
-      if (!node?.ref.spanId) {
-        setSubagentSlidIn(false)
-        setAgentTraceId("")
-        setAgentSpanId("")
-        return
-      }
-      // Flip the transform in the same tick as the click so the slide starts
-      // immediately; the pane's content mounts a beat later (see the effect below).
-      setSubagentSlidIn(true)
-      setAgentTraceId(node.ref.traceId)
-      setAgentSpanId(node.ref.spanId)
-    },
-    [setAgentTraceId, setAgentSpanId],
-  )
-  const showSubagent = agentSpanId.length > 0 && agentTraceId.length > 0
-
-  // Reconcile the slide with the URL (browser back/forward, or the drawer
-  // clearing the params) and mount the pane's content off the critical path via
-  // startTransition so the transform can start animating right away.
-  // TODO(frontend-use-effect-policy): coordinates URL-driven mount/animate with the DOM transition.
-  useEffect(() => {
-    if (showSubagent) {
-      setSubagentSlidIn(true)
-      startTransition(() => setMountedAgent({ traceId: agentTraceId, spanId: agentSpanId }))
-    } else {
-      setSubagentSlidIn(false)
-    }
-  }, [showSubagent, agentTraceId, agentSpanId])
-
   if (isDetailLoading || (traceDetail && conversation.isLoading)) {
     return (
       <div className="flex flex-col gap-4 py-8 px-4 flex-1">
@@ -829,55 +823,29 @@ export function ConversationTab({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <div
-          className="flex h-full w-full transition-transform duration-300 ease-out"
-          style={{ transform: subagentSlidIn ? "translateX(-100%)" : "translateX(0)" }}
-          onTransitionEnd={(e) => {
-            // Unmount the subagent pane only after it has slid fully back out.
-            if (e.target === e.currentTarget && !showSubagent) setMountedAgent(null)
-          }}
-        >
-          {/* Main conversation — stays mounted through the slide so its scroll position survives. */}
-          <div className="flex min-h-0 w-full shrink-0 flex-col">
-            <ConversationContent
-              isActive={isActive && !showSubagent}
-              annotationsEnabled={annotationsEnabled}
-              traceDetail={traceDetail}
-              messages={conversation.messages}
-              navigateToSpan={navigateToSpan}
-              sessionSpanScope={sessionSpanScope}
-              projectId={projectId}
-              scrollContainerRef={scrollContainerRef}
-              textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
-              onPopoverClose={onPopoverClose}
-              searchQuery={searchQuery}
-              messageTrailingSlot={messageTrailingSlot}
-              timeline={timeline}
-              timelineNotice={timelineNotice}
-              focusMessageIndex={focusMessageIndex}
-              totalMessages={conversation.totalMessages}
-              payloadBytes={conversation.payloadBytes}
-              hasMoreMessages={conversation.hasNextPage}
-              isLoadingMoreMessages={conversation.isFetchingNextPage}
-              onLoadMoreMessages={() => conversation.fetchNextPage()}
-              onSelectAgent={selectAgent}
-              agentGraph={agentGraph}
-            />
-          </div>
-          {/* Subagent conversation — lazily mounted to the right, then slid into view. */}
-          <div className="flex min-h-0 w-full shrink-0 flex-col">
-            {mountedAgent && (
-              <SubagentConversationView
-                projectId={projectId}
-                agentTraceId={mountedAgent.traceId}
-                agentSpanId={mountedAgent.spanId}
-                onSelectAgent={selectAgent}
-              />
-            )}
-          </div>
-        </div>
-      </div>
+      <ConversationContent
+        isActive={isActive}
+        annotationsEnabled={annotationsEnabled}
+        traceDetail={traceDetail}
+        messages={conversation.messages}
+        navigateToSpan={navigateToSpan}
+        sessionSpanScope={sessionSpanScope}
+        projectId={projectId}
+        scrollContainerRef={scrollContainerRef}
+        textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
+        onPopoverClose={onPopoverClose}
+        searchQuery={searchQuery}
+        messageTrailingSlot={messageTrailingSlot}
+        timeline={timeline}
+        timelineNotice={timelineNotice}
+        focusMessageIndex={focusMessageIndex}
+        totalMessages={conversation.totalMessages}
+        payloadBytes={conversation.payloadBytes}
+        hasMoreMessages={conversation.hasNextPage}
+        isLoadingMoreMessages={conversation.isFetchingNextPage}
+        onLoadMoreMessages={() => conversation.fetchNextPage()}
+        agentGraph={agentGraph}
+      />
     </div>
   )
 }

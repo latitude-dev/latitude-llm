@@ -4,10 +4,12 @@ import { ArrowRight } from "lucide-react"
 import { useState } from "react"
 import { AuthScreen } from "../../components/auth-screen.tsx"
 import { getSession } from "../../domains/sessions/session.functions.ts"
+import { clarityHeadScriptsUnlessExcluded } from "../../lib/analytics/clarity.ts"
 import { gtmHeadScripts, validateTrackingSearch } from "../../lib/analytics/gtm.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { type Organization, resolveEntryDestination } from "../../lib/entry-destination.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+import { isLatitudeStaffEmail } from "../../lib/posthog/posthog-client.ts"
 import { chooseOrganizationLoader } from "./-lib/loader.ts"
 
 function OrgAvatar({ name }: { name: string }) {
@@ -25,8 +27,10 @@ function OrgAvatar({ name }: { name: string }) {
 export const Route = createFileRoute("/choose-organization/")({
   component: ChooseOrganizationPage,
   validateSearch: validateTrackingSearch,
-  head: () => ({ scripts: gtmHeadScripts() }),
-  loader: () => chooseOrganizationLoader({ getSession, resolveEntryDestination }),
+  head: ({ loaderData }) => ({
+    scripts: [...gtmHeadScripts(), ...clarityHeadScriptsUnlessExcluded(loaderData?.excludeFromAnalytics)],
+  }),
+  loader: () => chooseOrganizationLoader({ getSession, resolveEntryDestination, isLatitudeStaffEmail }),
 })
 
 function ChooseOrganizationPage() {

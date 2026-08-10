@@ -4,12 +4,21 @@ import {
   generateUniqueOrganizationSlugUseCase,
   MembershipRepository,
   OrganizationRepository,
+  updateOrganizationRedactionUseCase,
   updateOrganizationUseCase,
 } from "@domain/organizations"
 import { purgeOrganizationProjectsUseCase } from "@domain/projects"
-import { BadRequestError, ForbiddenError, OrganizationId, UserId } from "@domain/shared"
+import {
+  BadRequestError,
+  ForbiddenError,
+  OrganizationId,
+  organizationRedactionSettingSchema,
+  UserId,
+} from "@domain/shared"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   ApiKeyRepositoryLive,
+  invalidateOrganizationRedactionCache,
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
   OutboxEventWriterLive,
@@ -21,8 +30,9 @@ import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
+import { rejectInvalidRedactionRules, rejectionMessage } from "../../lib/redaction-rules.ts"
 import { requireSession, requireUserSession } from "../../server/auth.ts"
-import { getAdminPostgresClient, getBetterAuth, getPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getBetterAuth, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import {
   type CompleteOnboardingDeps,
   completeOnboardingInputSchema,
@@ -163,8 +173,61 @@ export const updateOrganization = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     return await Effect.runPromise(
-      updateOrganizationUseCase({ name: data.name, settings: data.settings }).pipe(
+      // Patch, not replace: the schema above narrows `settings` to the keys this
+      // endpoint owns, so a replace would drop billing and showcase state.
+      updateOrganizationUseCase({ name: data.name, settingsPatch: data.settings }).pipe(
         withPostgres(OrganizationRepositoryLive, client, organizationId),
+        withTracing,
+      ),
+    )
+  })
+
+/**
+ * Change the organization-wide PII redaction policy. Owner-only: `locked` lets an
+ * organization stop its projects from weakening the policy, which is not a decision an
+ * admin should be able to make. `null` clears it, leaving each project to its own.
+ *
+ * Ingestion resolves the org half of the cascade through a 60 s Redis cache, so the
+ * write invalidates it — otherwise a customer who just enabled redaction would watch
+ * plaintext land for another minute. A failed invalidation is not fatal: the TTL is
+ * the backstop, and the policy is already committed.
+ */
+export const updateOrganizationRedaction = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ redaction: organizationRedactionSettingSchema.nullable() }))
+  .handler(async ({ data }): Promise<void> => {
+    const { organizationId, userId } = await requireSession()
+    const client = getPostgresClient()
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const memberships = yield* MembershipRepository
+        const caller = yield* memberships.findByOrganizationAndUser(organizationId, userId)
+        if (caller.role !== "owner") {
+          return yield* new ForbiddenError({
+            message: "Only the organization owner can change the organization redaction policy",
+          })
+        }
+
+        const rejected = rejectInvalidRedactionRules(data.redaction)
+        if (rejected) {
+          return yield* new BadRequestError({ message: rejectionMessage(rejected) })
+        }
+
+        return yield* updateOrganizationRedactionUseCase({ actorUserId: userId, redaction: data.redaction })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(OrganizationRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
+          client,
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+
+    await Effect.runPromise(
+      invalidateOrganizationRedactionCache(organizationId).pipe(
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        Effect.ignore,
         withTracing,
       ),
     )

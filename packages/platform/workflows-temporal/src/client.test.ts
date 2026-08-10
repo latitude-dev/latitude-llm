@@ -1,12 +1,13 @@
 import { WorkflowAlreadyStartedError } from "@domain/queue"
 import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import type { Client } from "@temporalio/client"
-import { Connection, WorkflowExecutionAlreadyStartedError } from "@temporalio/client"
+import { Connection, WorkflowExecutionAlreadyStartedError, WorkflowNotFoundError } from "@temporalio/client"
 import { Cause, Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import {
   createTemporalClientEffect,
   createWorkflowStarter,
+  createWorkflowTerminator,
   resolveWorkflowFailureReason,
   TemporalConnectionError,
 } from "./client.ts"
@@ -278,6 +279,54 @@ describe("createWorkflowStarter", () => {
         workflowIdConflictPolicy: "FAIL",
         workflowIdReusePolicy: "ALLOW_DUPLICATE",
       }),
+    )
+  })
+})
+
+describe("createWorkflowTerminator", () => {
+  const clientTerminating = (terminate: () => Promise<void>) =>
+    ({ workflow: { getHandle: () => ({ terminate }) } }) as unknown as Client
+
+  it("terminates the workflow with the caller's reason", async () => {
+    const terminate = vi.fn(async () => {})
+    const terminator = createWorkflowTerminator(clientTerminating(terminate))
+
+    await Effect.runPromise(terminator.terminate("garden:org-1:behavior-1", "behavior deleted by user"))
+
+    expect(terminate).toHaveBeenCalledWith("behavior deleted by user")
+  })
+
+  it("succeeds when the workflow is gone, so callers can terminate without querying first", async () => {
+    const notFound = Object.create(WorkflowNotFoundError.prototype)
+    const terminator = createWorkflowTerminator(
+      clientTerminating(async () => {
+        throw notFound
+      }),
+    )
+
+    await expect(Effect.runPromise(terminator.terminate("garden:org-1:behavior-1"))).resolves.toBeUndefined()
+  })
+
+  it("succeeds when the workflow already closed", async () => {
+    // Temporal reports this as a plain error naming the terminal state, not a typed one.
+    const terminator = createWorkflowTerminator(
+      clientTerminating(async () => {
+        throw new Error("workflow execution already completed")
+      }),
+    )
+
+    await expect(Effect.runPromise(terminator.terminate("garden:org-1:behavior-1"))).resolves.toBeUndefined()
+  })
+
+  it("propagates any other failure", async () => {
+    const terminator = createWorkflowTerminator(
+      clientTerminating(async () => {
+        throw new Error("permission denied")
+      }),
+    )
+
+    await expect(Effect.runPromise(terminator.terminate("garden:org-1:behavior-1"))).rejects.toThrow(
+      "permission denied",
     )
   })
 })

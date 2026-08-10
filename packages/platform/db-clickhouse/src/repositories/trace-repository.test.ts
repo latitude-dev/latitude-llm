@@ -231,6 +231,75 @@ describe("TraceRepository", () => {
     })
   })
 
+  // The session rollups fold an absent session id onto the trace id, so a sessionless trace is
+  // listed as a session of one under its own trace id. Filtering traces on the raw `session_id`
+  // column could never match that — an empty string — so `listSessionTraces` returned an empty page
+  // for a session `sessions list` had just reported with one trace in it.
+  describe("sessionId filter on a trace that has no session", () => {
+    const SESSIONLESS_TRACE_ID = "beef0000000000000000000000000001"
+
+    beforeEach(async () => {
+      const span: SpanRow = makeSpanRow({
+        traceId: SESSIONLESS_TRACE_ID,
+        spanId: "beef00000000a001",
+        startTime: new Date("2026-03-15T12:00:00Z"),
+        costTotalMicrocents: 0,
+        tokensInput: 0,
+        tokensOutput: 0,
+      })
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [span]))
+    })
+
+    it("matches it under its own trace id", async () => {
+      const matches = await runCh(
+        repo.matchesFiltersByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TraceId(SESSIONLESS_TRACE_ID),
+          filters: { sessionId: [{ op: "eq", value: SESSIONLESS_TRACE_ID }] },
+        }),
+      )
+      expect(matches).toBe(true)
+    })
+
+    it("does not match it under some other id", async () => {
+      const matches = await runCh(
+        repo.matchesFiltersByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TraceId(SESSIONLESS_TRACE_ID),
+          filters: { sessionId: [{ op: "eq", value: "sess-unrelated" }] },
+        }),
+      )
+      expect(matches).toBe(false)
+    })
+
+    it("still matches a trace that has a real session id", async () => {
+      const withSession: SpanRow = {
+        ...makeSpanRow({
+          traceId: "beef0000000000000000000000000002",
+          spanId: "beef00000000a002",
+          startTime: new Date("2026-03-15T12:00:00Z"),
+          costTotalMicrocents: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+        }),
+        session_id: "sess-real",
+      }
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [withSession]))
+
+      const matches = await runCh(
+        repo.matchesFiltersByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TraceId("beef0000000000000000000000000002"),
+          filters: { sessionId: [{ op: "eq", value: "sess-real" }] },
+        }),
+      )
+      expect(matches).toBe(true)
+    })
+  })
+
   describe("tools filter (rollup column)", () => {
     beforeEach(async () => {
       // A tool-call span on TRACE_ID so the trace matches a tools filter.

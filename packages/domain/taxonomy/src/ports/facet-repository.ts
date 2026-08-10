@@ -15,11 +15,17 @@ export interface FacetRepositoryShape {
   listByProject(input: {
     readonly projectId: ProjectId
   }): Effect.Effect<readonly TaxonomyFacet[], RepositoryError, SqlClient>
-  /** Count for the per-project cap (`MAX_FACETS_PER_PROJECT`) enforced in the create use-case. */
-  countByProject(input: { readonly projectId: ProjectId }): Effect.Effect<number, RepositoryError, SqlClient>
   /** Existing rows using `slug` in the project; pairs with `generateSlug`'s `count` callback for custom facets. */
   countBySlug(input: FindFacetBySlugInput): Effect.Effect<number, RepositoryError, SqlClient>
   save(facet: TaxonomyFacet): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Insert `facet` unless its `(organization, project, slug)` is already taken, and
+   * return whichever row now holds that slug. This is how a preset pick converges:
+   * a read-then-insert races two concurrent picks into a unique violation, and
+   * because the insert runs inside the create-behavior transaction that violation
+   * would abort the transaction rather than something the caller could recover from.
+   */
+  findOrCreateBySlug(facet: TaxonomyFacet): Effect.Effect<TaxonomyFacet, RepositoryError, SqlClient>
   /**
    * Stamp `last_gardened_at` when a scoped garden run starts. Kept off `save`
    * (and the entity) so the scheduling column stays repository-internal: `save`

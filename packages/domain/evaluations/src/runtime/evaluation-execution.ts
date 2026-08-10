@@ -159,9 +159,11 @@ export const toEvaluationConversationMessages = (
     content: formatGenAIMessage(message),
   }))
 
+/** Prices with `result.servedBy` when the adapter reports it, so a fallback-served call is not costed at the requested rates. */
 export const estimateEvaluationScriptCostMicrocents = (
   result: {
     readonly tokens: number
+    readonly servedBy?: { readonly provider: string; readonly model: string }
     readonly tokenUsage?: {
       readonly input: number
       readonly output: number
@@ -170,12 +172,13 @@ export const estimateEvaluationScriptCostMicrocents = (
       readonly cacheWrite?: number | undefined
     }
   },
-  costModel: { readonly provider: string; readonly model: string } = EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
+  requestedModel: { readonly provider: string; readonly model: string } = EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
 ): number => {
   const usage = result.tokenUsage ?? {
     input: 0,
     output: result.tokens,
   }
+  const costModel = result.servedBy ?? requestedModel
 
   return Math.round(estimateCost(costModel.provider, costModel.model, usage) * 100_000_000)
 }
