@@ -327,14 +327,14 @@ describe("taxonomy gardening workflow (divisive build)", () => {
     )
   })
 
-  it("issues a mode-independent command sequence (replay-safe across off/shadow/enforced)", async () => {
+  it("issues a mode-independent command sequence (replay-safe across off/enforced)", async () => {
     await gardenTaxonomyWorkflow(globalInput)
 
-    // The workflow never reads the rollout mode: mode resolution, shadow compute,
-    // and fallback selection all live in the plan activity, and the reassign /
-    // deprecate / cleanup activities branch on the staged plan internally. So the
+    // The workflow never reads which builder a run persists: mode resolution, the
+    // build, and fallback selection all live in the plan activity, and the reassign
+    // / deprecate / cleanup activities branch on the staged plan internally. So the
     // recorded command sequence is identical whatever the resolved mode, which is
-    // what makes an in-flight history replay deterministically across a mode flip.
+    // what makes an in-flight history replay deterministically across a flag flip.
     // This locks that no mode-conditional command was added to the workflow.
     const names = Object.keys(mockActivities) as Array<keyof typeof mockActivities>
     const ordered = names

@@ -268,16 +268,7 @@ export {
   type RoutedLeafAssignment,
   routeObservationsToLeaves,
 } from "./reassignment.ts"
-export {
-  adjustedRandIndex,
-  type BoundedPercentiles,
-  boundedPercentiles,
-  compareTaxonomyTrees,
-  leafPartitionLabels,
-  summarizeTreeShape,
-  type TaxonomyShadowComparison,
-  type TaxonomyTreeShape,
-} from "./shadow-comparison.ts"
+export { type BoundedPercentiles, boundedPercentiles } from "./telemetry-percentiles.ts"
 export {
   classifyClusterTrend,
   type GetLastRunInput,

@@ -483,7 +483,8 @@ function createTaskDefinition(
           { name: "LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT", value: "http://localhost:4318/v1/traces" },
           { name: "LAT_OSS_TELEMETRY_ENABLED", value: "false" },
           { name: "LAT_POSTHOG_HOST", value: "https://eu.i.posthog.com" },
-          { name: "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE", value: config.name === "production" ? "shadow" : "off" },
+          // Kill switch only; the per-org adaptiveTaxonomyClustering flag is the actual gate.
+          { name: "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE", value: "enforced" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [

@@ -1,0 +1,222 @@
+{
+  "title": "Taxonomy adaptive clustering — rollout (LAT-774)",
+  "description": "Reads the APM span `taxonomy.gardenTaxonomyWorkflow.shadow` emitted by the workflows service to monitor the adaptive clustering rollout: one span per garden run, for every organization the adaptiveTaxonomyClustering flag has enabled. The span name is kept from the retired shadow phase deliberately — the retention filter and the span-based metrics key on it. The app ships logs to CloudWatch only, so this dashboard uses the APM spans channel, not Datadog Logs. Requires a Datadog APM retention filter that keeps resource_name:taxonomy.gardenTaxonomyWorkflow.shadow and span facets on the @taxonomy.* numeric attributes charted here. Apply with the Datadog MCP upsert_datadog_dashboard (title/description/template_variables/widgets).",
+  "layout_type": "ordered",
+  "template_variables": [
+    { "name": "organization", "prefix": "@taxonomy.organizationId", "available_values": [], "default": "*" },
+    { "name": "project", "prefix": "@taxonomy.projectId", "available_values": [], "default": "*" }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "type": "note",
+        "content": "## Taxonomy adaptive clustering — rollout\n\nInternal engineering view over the `taxonomy.gardenTaxonomyWorkflow.shadow` APM span emitted by the **workflows** service. One span per garden run of an organization the `adaptiveTaxonomyClustering` flag has enabled, describing the tree that was actually persisted: its build cost, its split decisions, and whether it fell back to static.\n\n**Watch first:** `Adaptive fallbacks` should stay at 0. A `buildError` fallback means the clustering worker hit its deadline or crashed and the run persisted the static tree instead.\n\n**Decision-grade reads need ~1–2 weeks of turnover** — gardening runs are infrequent per project, so give the window time to accumulate representative runs.\n\n> The static-vs-adaptive comparison widgets went away with shadow mode (LAT-774). The span name is retained so the retention filter and span metrics keep working.\n\n> Requires a Datadog APM retention filter keeping `resource_name:taxonomy.gardenTaxonomyWorkflow.shadow` and span facets on these numeric attributes.",
+        "background_color": "yellow",
+        "font_size": "14",
+        "text_align": "left",
+        "vertical_align": "top",
+        "has_padding": true,
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left"
+      },
+      "layout": { "width": 12, "height": 4 }
+    },
+    {
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "title": "Adaptive engine internals — rejections, cost, separation, safety",
+        "show_title": true,
+        "widgets": [
+          {
+            "definition": {
+              "type": "timeseries",
+              "title": "Adaptive split rejections by reason (sum)",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "rej_undersized",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "sum", "metric": "@taxonomy.adaptive.rejection.undersizedChild" }
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "rej_dominant",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "sum", "metric": "@taxonomy.adaptive.rejection.dominantChild" }
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "rej_low_score",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "sum", "metric": "@taxonomy.adaptive.rejection.lowScore" }
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "rej_low_relsep",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": {
+                        "aggregation": "sum",
+                        "metric": "@taxonomy.adaptive.rejection.lowRelativeSeparation"
+                      }
+                    }
+                  ],
+                  "formulas": [
+                    { "formula": "rej_undersized", "alias": "undersizedChild" },
+                    { "formula": "rej_dominant", "alias": "dominantChild" },
+                    { "formula": "rej_low_score", "alias": "lowScore" },
+                    { "formula": "rej_low_relsep", "alias": "lowRelativeSeparation" }
+                  ],
+                  "response_format": "timeseries",
+                  "display_type": "bars"
+                }
+              ]
+            },
+            "layout": { "width": 6, "height": 4 }
+          },
+          {
+            "definition": {
+              "type": "timeseries",
+              "title": "avg adaptive vs static clustering duration (ms)",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "adaptive_dur",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.durationMs" }
+                    },
+                    {
+                      "data_source": "spans",
+                      "name": "static_dur",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.staticDurationMs" }
+                    }
+                  ],
+                  "formulas": [
+                    { "formula": "adaptive_dur", "alias": "avg adaptive durationMs" },
+                    { "formula": "static_dur", "alias": "avg static durationMs" }
+                  ],
+                  "response_format": "timeseries",
+                  "display_type": "line",
+                  "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
+                }
+              ]
+            },
+            "layout": { "width": 6, "height": 4 }
+          },
+          {
+            "definition": {
+              "type": "query_value",
+              "title": "avg relative separation p50",
+              "autoscale": true,
+              "precision": 2,
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "rel_sep_p50",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "avg", "metric": "@taxonomy.adaptive.relSep.p50" }
+                    }
+                  ],
+                  "formulas": [{ "formula": "rel_sep_p50" }],
+                  "response_format": "scalar",
+                  "aggregator": "avg"
+                }
+              ]
+            },
+            "layout": { "width": 4, "height": 3 }
+          },
+          {
+            "definition": {
+              "type": "query_value",
+              "title": "Adaptive fallbacks (excludes fallbackReason:none) — target 0",
+              "autoscale": true,
+              "precision": 0,
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "fallbacks",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project -@taxonomy.adaptive.fallbackReason:none"
+                      },
+                      "compute": { "aggregation": "count", "metric": "count" }
+                    }
+                  ],
+                  "formulas": [{ "formula": "fallbacks" }],
+                  "response_format": "scalar",
+                  "aggregator": "sum",
+                  "conditional_formats": [
+                    { "comparator": ">", "value": 0, "palette": "white_on_red" },
+                    { "comparator": "<=", "value": 0, "palette": "white_on_green" }
+                  ]
+                }
+              ]
+            },
+            "layout": { "width": 4, "height": 3 }
+          },
+          {
+            "definition": {
+              "type": "query_value",
+              "title": "max adaptive peak RSS",
+              "autoscale": true,
+              "precision": 2,
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "peak_rss",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow $organization $project"
+                      },
+                      "compute": { "aggregation": "max", "metric": "@taxonomy.adaptive.peakRssBytes" }
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "peak_rss",
+                      "number_format": {
+                        "unit": { "type": "canonical_unit", "unit_name": "byte_in_binary_bytes_family" }
+                      }
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "aggregator": "max"
+                }
+              ]
+            },
+            "layout": { "width": 4, "height": 3 }
+          }
+        ]
+      },
+      "layout": { "width": 12, "height": 8 }
+    }
+  ]
+}

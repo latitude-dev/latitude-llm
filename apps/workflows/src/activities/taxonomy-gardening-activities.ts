@@ -10,7 +10,6 @@ import {
 } from "@domain/shared"
 import {
   assertTaxonomyQualityUseCase,
-  boundedPercentiles,
   CustomBehaviorRepository,
   CustomBehaviorStatus,
   customBehaviorFilterSetHasConditions,
@@ -26,7 +25,6 @@ import {
   routeObservationsToLeaves,
   type StagingLeafCluster,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
-  TAXONOMY_ADAPTIVE_POLICY_VERSION,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
@@ -68,15 +66,19 @@ import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
+import { adaptiveGardenRunFields, adaptiveSpanAttributes } from "./taxonomy-gardening-telemetry.ts"
 
 /**
- * Resolve the adaptive-clustering rollout mode from the environment baseline and
- * the per-organization `adaptiveTaxonomyClustering` feature flag. Read in the
- * planning activity ONLY (never workflow code — Temporal determinism): the env
- * via `parseEnv`, the flag via `hasFeatureFlagUseCase` under the garden run's
- * org id (server-side, no request context). The env `off` kill switch always
- * wins and short-circuits the flag lookup, so the default path stays a
+ * Resolve which builder this garden run persists, from the environment kill
+ * switch and the per-organization `adaptiveTaxonomyClustering` feature flag. Read
+ * in the planning activity ONLY (never workflow code — Temporal determinism): the
+ * env via `parseEnv`, the flag via `hasFeatureFlagUseCase` under the garden run's
+ * org id (server-side, no request context). The env `off` kill switch always wins
+ * and short-circuits the flag lookup, so a killed environment stays a
  * byte-identical no-op with no extra Postgres round-trip.
+ *
+ * Resolved per run, so flipping the flag either way takes effect on the
+ * organization's next pass — nothing carries over from the previous one.
  */
 const resolveAdaptiveMode = (organizationId: string) =>
   Effect.gen(function* () {
@@ -225,9 +227,9 @@ interface StoredGardenTaxonomyPlan {
  * Whether this plan actually stages an adaptive tree — the single gate every
  * publish step branches on. Keyed on the plan SHAPE (are there staging leaves?),
  * not the mode: a persisted adaptive tree is exactly one that produced staging
- * `leafClusters` for full-window routing. `off`, `shadow`, and an enforced run
- * that fell back to static all leave `leafClusters` empty, so they take the off
- * publish path; only a genuinely-staged adaptive tree has them.
+ * `leafClusters` for full-window routing. `off` and an enforced run that fell back
+ * to static both leave `leafClusters` empty, so they take the off publish path;
+ * only a genuinely-staged adaptive tree has them.
  *
  * Shape beats mode here because the plan artifact carries no code version: a
  * plan staged by one deploy can be published by the next (Temporal activities
@@ -566,144 +568,19 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
   return step.customBehaviorId ? startCustomBehaviorRun(step) : startGlobalRun(step)
 }
 
-/**
- * One bounded, embedding-free event per adaptive garden run (`gardenRun`), plus
- * — in shadow mode — a paired `shadowComparison` event carrying static-vs-adaptive
- * shape counts, deltas, and partition ARI. This goes to stdout → CloudWatch (the
- * workflows service does not forward logs to Datadog), so it is the un-sampled,
- * always-there record and a debugging breadcrumb alongside the rest of the
- * service's logs. The Datadog dashboard reads the APM span mirror
- * (`annotateAdaptiveTelemetrySpan`), which is sampled, not these logs. Off runs
- * compute no adaptive tree and emit nothing. Distributions are bounded
- * percentiles, never raw arrays.
- */
+// Off runs build no adaptive tree and emit nothing.
 const emitAdaptivePlanTelemetry = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan): void => {
-  const mode = plan.mode
-  if (mode === "off") return
-  const diagnostics = plan.decisionMetadata
-  const relativeSeparation = boundedPercentiles(diagnostics?.acceptedRelativeSeparations ?? [])
-  const routingThreshold = boundedPercentiles(diagnostics?.routingThresholds ?? [])
-  const shared = {
-    policyVersion: TAXONOMY_ADAPTIVE_POLICY_VERSION,
-    mode,
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    customBehaviorId: input.customBehaviorId,
-    observationsSampled: plan.observationsSampled,
-    fallbackReason: plan.fallbackReason,
-    adaptiveDurationMs: plan.adaptiveDurationMs,
-    adaptiveBuildError: plan.adaptiveBuildError,
-    staticDurationMs: plan.staticDurationMs,
-    // Best-effort resident memory at plan time; worker threads share this process,
-    // so the build's footprint is reflected here (see the clustering worker).
-    peakRssBytes: process.memoryUsage().rss,
-    rejectionReason: diagnostics?.rejectionReasonCounts,
-    relativeSeparation,
-  }
+  if (plan.mode === "off") return
   logger.info("Taxonomy adaptive garden run", {
     metric: "taxonomy.gardenTaxonomyWorkflow.gardenRun",
-    ...shared,
-    nodeCount: diagnostics?.nodeCount ?? 0,
-    leafCount: diagnostics?.leafCount ?? 0,
-    maxDepth: diagnostics?.maxDepth ?? 0,
-    selectedKByDepth: diagnostics?.selectedKByDepth,
-    acceptedSplits: diagnostics?.acceptedSplits ?? 0,
-    rejectedCandidates: diagnostics?.rejectedCandidates ?? 0,
-    routingThreshold,
-    clustersBorn: plan.clustersBorn,
-    clustersContinued: plan.clustersContinued,
-    clustersDeprecated: plan.clustersDeprecated,
+    ...adaptiveGardenRunFields(input, plan),
   })
-  if (mode === "shadow" && plan.comparison) {
-    logger.info("Taxonomy shadow comparison", {
-      metric: "taxonomy.gardenTaxonomyWorkflow.shadowComparison",
-      ...shared,
-      static: plan.comparison.static,
-      adaptive: plan.comparison.adaptive,
-      diff: plan.comparison.diff,
-    })
-  }
 }
 
-// Flattened, embedding-free attributes for the APM span. Datadog span tags are
-// flat scalars, so nested comparison objects are dotted out. This is the channel
-// the shadow dashboard actually reads: the app ships logs only to CloudWatch,
-// but the workflows service already exports these spans to Datadog APM.
-const adaptiveSpanAttributes = (
-  input: GardenTaxonomyStepInput,
-  plan: HierarchicalTaxonomyPlan,
-): Record<string, string | number> => {
-  const diagnostics = plan.decisionMetadata
-  const relativeSeparation = boundedPercentiles(diagnostics?.acceptedRelativeSeparations ?? [])
-  const routingThreshold = boundedPercentiles(diagnostics?.routingThresholds ?? [])
-  const attributes: Record<string, string | number> = {
-    "taxonomy.adaptive.policyVersion": TAXONOMY_ADAPTIVE_POLICY_VERSION,
-    "taxonomy.adaptive.mode": plan.mode,
-    "taxonomy.organizationId": input.organizationId,
-    "taxonomy.projectId": input.projectId,
-    "taxonomy.customBehaviorId": input.customBehaviorId ?? "none",
-    "taxonomy.adaptive.observationsSampled": plan.observationsSampled,
-    "taxonomy.adaptive.fallbackReason": plan.fallbackReason ?? "none",
-    // Carries the time a FAILED build burned as well as a successful one, so a
-    // deadline breach is visible as a duration at the deadline rather than a 0.
-    "taxonomy.adaptive.durationMs": plan.adaptiveDurationMs,
-    "taxonomy.adaptive.buildError": plan.adaptiveBuildError ?? "none",
-    "taxonomy.adaptive.staticDurationMs": plan.staticDurationMs,
-    "taxonomy.adaptive.peakRssBytes": process.memoryUsage().rss,
-    "taxonomy.adaptive.clustersBorn": plan.clustersBorn,
-    "taxonomy.adaptive.clustersContinued": plan.clustersContinued,
-    "taxonomy.adaptive.clustersDeprecated": plan.clustersDeprecated,
-    "taxonomy.adaptive.relSep.p10": relativeSeparation.p10,
-    "taxonomy.adaptive.relSep.p50": relativeSeparation.p50,
-    "taxonomy.adaptive.relSep.p90": relativeSeparation.p90,
-    "taxonomy.adaptive.routing.p10": routingThreshold.p10,
-    "taxonomy.adaptive.routing.p50": routingThreshold.p50,
-    "taxonomy.adaptive.routing.p90": routingThreshold.p90,
-  }
-  if (diagnostics) {
-    attributes["taxonomy.adaptive.nodeCount"] = diagnostics.nodeCount
-    attributes["taxonomy.adaptive.leafCount"] = diagnostics.leafCount
-    attributes["taxonomy.adaptive.maxDepth"] = diagnostics.maxDepth
-    attributes["taxonomy.adaptive.acceptedSplits"] = diagnostics.acceptedSplits
-    attributes["taxonomy.adaptive.rejectedCandidates"] = diagnostics.rejectedCandidates
-    attributes["taxonomy.adaptive.rejection.undersizedChild"] = diagnostics.rejectionReasonCounts.undersizedChild
-    attributes["taxonomy.adaptive.rejection.dominantChild"] = diagnostics.rejectionReasonCounts.dominantChild
-    attributes["taxonomy.adaptive.rejection.lowScore"] = diagnostics.rejectionReasonCounts.lowScore
-    attributes["taxonomy.adaptive.rejection.lowRelativeSeparation"] =
-      diagnostics.rejectionReasonCounts.lowRelativeSeparation
-    // The quantity the root gate actually decides on, and whether it forced a
-    // re-search. The relSep percentiles above cover accepted splits tree-wide, so
-    // they say nothing about a run whose root collapsed.
-    attributes["taxonomy.adaptive.bestRootSeparation"] = diagnostics.bestRootSeparation
-    attributes["taxonomy.adaptive.escalated"] = diagnostics.escalated ? 1 : 0
-    // A declined re-search reports the same tree as one that was never needed, so
-    // without these two the work budget could suppress adaptive silently.
-    attributes["taxonomy.adaptive.escalationSkipped"] = diagnostics.escalationSkipped ? 1 : 0
-    attributes["taxonomy.adaptive.projectedRootSearchWork"] = diagnostics.projectedRootSearchWork
-  }
-  const comparison = plan.comparison
-  if (comparison) {
-    attributes["taxonomy.shadow.static.rootChildCount"] = comparison.static.rootChildCount
-    attributes["taxonomy.shadow.static.nodeCount"] = comparison.static.nodeCount
-    attributes["taxonomy.shadow.static.leafCount"] = comparison.static.leafCount
-    attributes["taxonomy.shadow.static.maxDepth"] = comparison.static.maxDepth
-    attributes["taxonomy.shadow.adaptive.rootChildCount"] = comparison.adaptive.rootChildCount
-    attributes["taxonomy.shadow.adaptive.nodeCount"] = comparison.adaptive.nodeCount
-    attributes["taxonomy.shadow.adaptive.leafCount"] = comparison.adaptive.leafCount
-    attributes["taxonomy.shadow.adaptive.maxDepth"] = comparison.adaptive.maxDepth
-    attributes["taxonomy.shadow.diff.rootChildDelta"] = comparison.diff.rootChildDelta
-    attributes["taxonomy.shadow.diff.nodeCountDelta"] = comparison.diff.nodeCountDelta
-    attributes["taxonomy.shadow.diff.leafCountDelta"] = comparison.diff.leafCountDelta
-    attributes["taxonomy.shadow.diff.maxDepthDelta"] = comparison.diff.maxDepthDelta
-    attributes["taxonomy.shadow.diff.partitionAri"] = comparison.diff.partitionAri
-  }
-  return attributes
-}
-
-// Mirror the comparison onto a dedicated APM span so the shadow dashboard has a
-// channel that reaches Datadog (logs go only to CloudWatch here). Off runs emit
-// nothing. `annotateCurrentSpan`/`withSpan` are no-ops without a live tracer, so
-// this is inert in tests and under the pre-change (off) default.
+// Mirror the run's diagnostics onto a dedicated APM span so the adaptive
+// dashboard has a channel that reaches Datadog (logs go only to CloudWatch here).
+// Off runs emit nothing. `annotateCurrentSpan`/`withSpan` are no-ops without a
+// live tracer, so this is inert in tests and under the `off` default.
 const annotateAdaptiveTelemetrySpan = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan) =>
   plan.mode === "off"
     ? Effect.void
@@ -717,6 +594,8 @@ const annotateAdaptiveTelemetrySpan = (input: GardenTaxonomyStepInput, plan: Hie
         for (const [key, value] of Object.entries(adaptiveSpanAttributes(input, plan))) {
           yield* Effect.annotateCurrentSpan(key, value)
         }
+        // Renaming this span silently empties the dashboard AND drops the runs: both
+        // its widgets and the 100%-retention filter key on this operation name.
       }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.shadow"))
 
 // Emitted for every mode: the adaptive telemetry above returns early on `off`, which is what most projects run.
