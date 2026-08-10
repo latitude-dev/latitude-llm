@@ -1,3 +1,4 @@
+import { UnauthorizedError } from "@domain/shared"
 import type { OpenAPIHono, z } from "@hono/zod-openapi"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
@@ -8,12 +9,15 @@ import type { AppEnv, ProtectedEnv } from "../types.ts"
 
 /**
  * Mounts the MCP transport endpoint on `routes` (which already lives behind
- * the unified auth + org-context middleware). Tool dispatch re-enters the
- * root Hono app via `app.fetch(internalRequest)` so every tool call runs
- * through the same middleware chain (validation, rate-limit, auth,
- * organization context). The outer `Authorization` and `X-Forwarded-For`
- * headers are forwarded so the inner request authenticates as the same
- * caller and counts against the same rate-limit bucket.
+ * the unified auth + org-context middleware). The transport narrows that ring
+ * to OAuth bearers only — organization API keys are rejected even though they
+ * authenticate fine on the REST routes, so consent, org binding, and token
+ * revocation always sit on the transport. Tool dispatch re-enters the root
+ * Hono app via `app.fetch(internalRequest)` so every tool call runs through
+ * the same middleware chain (validation, rate-limit, auth, organization
+ * context). The outer `Authorization` and `X-Forwarded-For` headers are
+ * forwarded so the inner request authenticates as the same caller and counts
+ * against the same rate-limit bucket.
  *
  * The MCP mount path (`/mcp`) is internal to this function — when `routes`
  * is mounted at `/${API_VERSION}` on the root, the public URL becomes
@@ -62,6 +66,12 @@ export const registerMcpRoute = ({
   const toolDescriptors = collectToolDescriptors()
 
   routes.all("/mcp", async (c) => {
+    // 401, not 403, so a client pointed here with an API key starts the OAuth
+    // dance instead of failing hard.
+    if (c.get("auth")?.method !== "oauth") {
+      throw new UnauthorizedError({ message: "The MCP endpoint requires an OAuth access token" })
+    }
+
     const mcpServer = new McpServer(MCP_INFO, { instructions: MCP_INFO.instructions, capabilities: { tools: {} } })
 
     for (const tool of toolDescriptors) {

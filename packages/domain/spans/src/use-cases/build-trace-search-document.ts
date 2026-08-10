@@ -49,7 +49,7 @@ function formatPartForMessageEmbedding(part: GenAIPart): string {
   if (part.type === "reasoning") return ""
   if (typeof record.content === "string") return record.content
   if (part.type === "tool_call" && typeof part.name === "string") return `[TOOL CALL: ${part.name}]`
-  if (part.type === "tool_call_response") return typeof record.result === "string" ? record.result : "[TOOL RESULT]"
+  if (part.type === "tool_call_response") return typeof record.response === "string" ? record.response : "[TOOL RESULT]"
   return ""
 }
 

@@ -18,6 +18,7 @@ const toDomainUser = (row: typeof users.$inferSelect): User => ({
   name: row.name ?? null,
   jobTitle: row.jobTitle ?? null,
   phoneNumber: row.phoneNumber ?? null,
+  heardAboutUs: row.heardAboutUs ?? null,
   emailVerified: row.emailVerified,
   image: row.image ?? null,
   role: row.role,
@@ -68,15 +69,18 @@ export const UserRepositoryLive = Layer.effect(
         userId,
         jobTitle,
         phoneNumber,
+        heardAboutUs,
       }: {
         userId: string
         jobTitle?: string | undefined
         phoneNumber?: string | undefined
+        heardAboutUs?: string | undefined
       }) =>
         Effect.gen(function* () {
           const trimmedJobTitle = jobTitle?.trim() || undefined
           const trimmedPhoneNumber = phoneNumber?.trim() || undefined
-          if (!trimmedJobTitle && !trimmedPhoneNumber) return
+          const trimmedHeardAboutUs = heardAboutUs?.trim() || undefined
+          if (!trimmedJobTitle && !trimmedPhoneNumber && !trimmedHeardAboutUs) return
 
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db) =>
@@ -85,6 +89,7 @@ export const UserRepositoryLive = Layer.effect(
               .set({
                 ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
                 ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
+                ...(trimmedHeardAboutUs ? { heardAboutUs: trimmedHeardAboutUs } : {}),
                 updatedAt: new Date(),
               })
               .where(eq(users.id, userId)),

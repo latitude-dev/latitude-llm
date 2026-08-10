@@ -30,6 +30,7 @@ const makeTrace = (traceId: string, overrides: Partial<Trace> = {}): Trace =>
     costInputMicrocents: 1,
     costOutputMicrocents: 2,
     costTotalMicrocents: 3,
+    unpricedSpanCount: 0,
     sessionId: "session-1" as Trace["sessionId"],
     userId: "user-1" as Trace["userId"],
     userEmail: "",

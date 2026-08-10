@@ -1,12 +1,14 @@
 import {
   type AdminProjectDetails,
   AdminProjectRepository,
+  type AdminProjectSummary,
   type ProjectSignalDetails,
   type ProjectSignalLifecycleEvent,
   type ProjectSignalStateSnapshot,
 } from "@domain/admin"
 import {
   NotFoundError,
+  type OrganizationId,
   type ProjectId,
   type ProjectSettings,
   SignalId,
@@ -211,6 +213,42 @@ export const AdminProjectRepositoryLive = Layer.effect(
             const state: ProjectSignalDetails["state"] =
               row.resolvedAt !== null || row.ignoredAt !== null ? "resolved" : row.hasEval ? "tracked" : "untracked"
             out.set(SignalId(row.id), { name: row.name, state })
+          }
+          return out
+        }),
+
+      findManySummariesByIds: (ids) =>
+        Effect.gen(function* () {
+          if (ids.length === 0) return new Map<ProjectId, AdminProjectSummary>()
+          const idList = ids as readonly string[]
+
+          // No `deletedAt` filter, unlike `findById`: these ids come from ClickHouse usage that
+          // already happened, and a project deleted since is exactly the one a reader needs named.
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                id: projects.id,
+                name: projects.name,
+                slug: projects.slug,
+                organizationId: organizations.id,
+                organizationName: organizations.name,
+                organizationSlug: organizations.slug,
+              })
+              .from(projects)
+              .innerJoin(organizations, eq(projects.organizationId, organizations.id))
+              .where(inArray(projects.id, idList)),
+          )
+
+          const out = new Map<ProjectId, AdminProjectSummary>()
+          for (const row of rows) {
+            out.set(row.id as ProjectId, {
+              id: row.id as ProjectId,
+              name: row.name,
+              slug: row.slug,
+              organizationId: row.organizationId as OrganizationId,
+              organizationName: row.organizationName,
+              organizationSlug: row.organizationSlug,
+            })
           }
           return out
         }),

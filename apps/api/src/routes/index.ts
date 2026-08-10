@@ -31,6 +31,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
     c.set("workflowStarter", options.workflowStarter)
     c.set("workflowQuerier", options.workflowQuerier)
     c.set("storageDisk", options.storageDisk)
+    c.set("importSourceAdapters", options.importSourceAdapters)
     await next()
   })
 

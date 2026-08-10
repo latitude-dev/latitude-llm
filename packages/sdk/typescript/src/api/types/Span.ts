@@ -59,11 +59,11 @@ export interface Span {
     tokensCacheCreate: number;
     /** Reasoning tokens reported by the model. */
     tokensReasoning: number;
-    /** Cost of input tokens in microcents (1/1,000,000 USD). */
+    /** Cost of input tokens in microcents (100,000,000 per USD). */
     costInputMicrocents: number;
-    /** Cost of output tokens in microcents (1/1,000,000 USD). */
+    /** Cost of output tokens in microcents (100,000,000 per USD). */
     costOutputMicrocents: number;
-    /** Total cost in microcents (1/1,000,000 USD). */
+    /** Total cost in microcents (100,000,000 per USD). */
     costTotalMicrocents: number;
     /** `true` when the cost was derived from public pricing tables instead of the provider's bill. */
     costIsEstimated: boolean;

@@ -254,6 +254,8 @@ if typing.TYPE_CHECKING:
     from .api_key_list import ApiKeyList
     from .api_key_list_item import ApiKeyListItem
     from .bootstrap_account_response import BootstrapAccountResponse
+    from .braintrust_import_credentials import BraintrustImportCredentials
+    from .braintrust_import_credentials_region import BraintrustImportCredentialsRegion
     from .create_custom_score_body import CreateCustomScoreBody
     from .create_evaluation_score_body import CreateEvaluationScoreBody
     from .create_monitor_body import (
@@ -550,7 +552,22 @@ if typing.TYPE_CHECKING:
     from .health_response import HealthResponse
     from .health_response_service import HealthResponseService
     from .health_response_status import HealthResponseStatus
+    from .import_ import Import
+    from .import_config import ImportConfig
+    from .import_credentials import (
+        ImportCredentials,
+        ImportCredentials_Braintrust,
+        ImportCredentials_Langfuse,
+        ImportCredentials_Langsmith,
+    )
+    from .import_detail import ImportDetail
     from .import_rows_from_traces_response import ImportRowsFromTracesResponse
+    from .import_run import ImportRun
+    from .import_run_stats import ImportRunStats
+    from .import_run_status import ImportRunStatus
+    from .import_source import ImportSource
+    from .import_stats import ImportStats
+    from .import_status import ImportStatus
     from .incident import Incident
     from .incident_condition import IncidentCondition
     from .incident_notifications_setting import IncidentNotificationsSetting
@@ -560,6 +577,11 @@ if typing.TYPE_CHECKING:
     from .invited_member import InvitedMember
     from .invited_member_role import InvitedMemberRole
     from .invited_member_status import InvitedMemberStatus
+    from .langfuse_import_credentials import LangfuseImportCredentials
+    from .langfuse_import_credentials_region import LangfuseImportCredentialsRegion
+    from .langsmith_import_credentials import LangsmithImportCredentials
+    from .langsmith_import_credentials_region import LangsmithImportCredentialsRegion
+    from .list_imports_response import ListImportsResponse
     from .list_incidents_response import ListIncidentsResponse
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
@@ -692,10 +714,16 @@ if typing.TYPE_CHECKING:
     from .paginated_traces import PaginatedTraces
     from .project import Project
     from .project_settings import ProjectSettings
+    from .project_settings_patch import ProjectSettingsPatch
     from .project_user import ProjectUser
     from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
     from .recent_tool_call_status_code import RecentToolCallStatusCode
+    from .redaction_setting import RedactionSetting
+    from .redaction_setting_entities_item import RedactionSettingEntitiesItem
+    from .redaction_setting_identities import RedactionSettingIdentities
+    from .redaction_setting_mode import RedactionSettingMode
+    from .redaction_setting_scopes import RedactionSettingScopes
     from .relative_variant_time_range import RelativeVariantTimeRange
     from .relative_variant_time_range_type import RelativeVariantTimeRangeType
     from .resolved_range import ResolvedRange
@@ -1057,6 +1085,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ApiKeyList": ".api_key_list",
     "ApiKeyListItem": ".api_key_list_item",
     "BootstrapAccountResponse": ".bootstrap_account_response",
+    "BraintrustImportCredentials": ".braintrust_import_credentials",
+    "BraintrustImportCredentialsRegion": ".braintrust_import_credentials_region",
     "CreateCustomScoreBody": ".create_custom_score_body",
     "CreateEvaluationScoreBody": ".create_evaluation_score_body",
     "CreateMonitorBody": ".create_monitor_body",
@@ -1323,7 +1353,20 @@ _dynamic_imports: typing.Dict[str, str] = {
     "HealthResponse": ".health_response",
     "HealthResponseService": ".health_response_service",
     "HealthResponseStatus": ".health_response_status",
+    "Import": ".import_",
+    "ImportConfig": ".import_config",
+    "ImportCredentials": ".import_credentials",
+    "ImportCredentials_Braintrust": ".import_credentials",
+    "ImportCredentials_Langfuse": ".import_credentials",
+    "ImportCredentials_Langsmith": ".import_credentials",
+    "ImportDetail": ".import_detail",
     "ImportRowsFromTracesResponse": ".import_rows_from_traces_response",
+    "ImportRun": ".import_run",
+    "ImportRunStats": ".import_run_stats",
+    "ImportRunStatus": ".import_run_status",
+    "ImportSource": ".import_source",
+    "ImportStats": ".import_stats",
+    "ImportStatus": ".import_status",
     "Incident": ".incident",
     "IncidentCondition": ".incident_condition",
     "IncidentNotificationsSetting": ".incident_notifications_setting",
@@ -1333,6 +1376,11 @@ _dynamic_imports: typing.Dict[str, str] = {
     "InvitedMember": ".invited_member",
     "InvitedMemberRole": ".invited_member_role",
     "InvitedMemberStatus": ".invited_member_status",
+    "LangfuseImportCredentials": ".langfuse_import_credentials",
+    "LangfuseImportCredentialsRegion": ".langfuse_import_credentials_region",
+    "LangsmithImportCredentials": ".langsmith_import_credentials",
+    "LangsmithImportCredentialsRegion": ".langsmith_import_credentials_region",
+    "ListImportsResponse": ".list_imports_response",
     "ListIncidentsResponse": ".list_incidents_response",
     "Member": ".member",
     "MemberList": ".member_list",
@@ -1461,10 +1509,16 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedTraces": ".paginated_traces",
     "Project": ".project",
     "ProjectSettings": ".project_settings",
+    "ProjectSettingsPatch": ".project_settings_patch",
     "ProjectUser": ".project_user",
     "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
     "RecentToolCallStatusCode": ".recent_tool_call_status_code",
+    "RedactionSetting": ".redaction_setting",
+    "RedactionSettingEntitiesItem": ".redaction_setting_entities_item",
+    "RedactionSettingIdentities": ".redaction_setting_identities",
+    "RedactionSettingMode": ".redaction_setting_mode",
+    "RedactionSettingScopes": ".redaction_setting_scopes",
     "RelativeVariantTimeRange": ".relative_variant_time_range",
     "RelativeVariantTimeRangeType": ".relative_variant_time_range_type",
     "ResolvedRange": ".resolved_range",
@@ -1854,6 +1908,8 @@ __all__ = [
     "ApiKeyList",
     "ApiKeyListItem",
     "BootstrapAccountResponse",
+    "BraintrustImportCredentials",
+    "BraintrustImportCredentialsRegion",
     "CreateCustomScoreBody",
     "CreateEvaluationScoreBody",
     "CreateMonitorBody",
@@ -2120,7 +2176,20 @@ __all__ = [
     "HealthResponse",
     "HealthResponseService",
     "HealthResponseStatus",
+    "Import",
+    "ImportConfig",
+    "ImportCredentials",
+    "ImportCredentials_Braintrust",
+    "ImportCredentials_Langfuse",
+    "ImportCredentials_Langsmith",
+    "ImportDetail",
     "ImportRowsFromTracesResponse",
+    "ImportRun",
+    "ImportRunStats",
+    "ImportRunStatus",
+    "ImportSource",
+    "ImportStats",
+    "ImportStatus",
     "Incident",
     "IncidentCondition",
     "IncidentNotificationsSetting",
@@ -2130,6 +2199,11 @@ __all__ = [
     "InvitedMember",
     "InvitedMemberRole",
     "InvitedMemberStatus",
+    "LangfuseImportCredentials",
+    "LangfuseImportCredentialsRegion",
+    "LangsmithImportCredentials",
+    "LangsmithImportCredentialsRegion",
+    "ListImportsResponse",
     "ListIncidentsResponse",
     "Member",
     "MemberList",
@@ -2258,10 +2332,16 @@ __all__ = [
     "PaginatedTraces",
     "Project",
     "ProjectSettings",
+    "ProjectSettingsPatch",
     "ProjectUser",
     "QuerySpans",
     "RecentToolCall",
     "RecentToolCallStatusCode",
+    "RedactionSetting",
+    "RedactionSettingEntitiesItem",
+    "RedactionSettingIdentities",
+    "RedactionSettingMode",
+    "RedactionSettingScopes",
     "RelativeVariantTimeRange",
     "RelativeVariantTimeRangeType",
     "ResolvedRange",

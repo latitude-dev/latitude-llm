@@ -58,6 +58,14 @@ export const users = latitudeSchema.table("users", {
   jobTitle: text("job_title"),
   phoneNumber: text("phone_number"),
   /**
+   * How the user found Latitude, from the onboarding form: either one of the
+   * `heardAboutUs` channel slugs, or the source they typed when picking
+   * "Other". Free text is stored in place of the `'other'` sentinel, so this is
+   * plain `text` rather than a PG enum. Null for users who onboarded before the
+   * question shipped. Synced to Loops as `heardAboutUs`.
+   */
+  heardAboutUs: text("heard_about_us"),
+  /**
    * Per-channel notification preferences keyed by `NotificationGroup`.
    * `null` when the user has never visited the settings page — readers
    * (`shouldSendEmail`) treat that as "all defaults" (opt-out model).

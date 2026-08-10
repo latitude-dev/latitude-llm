@@ -1,5 +1,5 @@
-import base from "../../vitest.config.ts"
 import { defineConfig, mergeConfig } from "vitest/config"
+import base from "../../vitest.config.ts"
 
 export default mergeConfig(
   base,

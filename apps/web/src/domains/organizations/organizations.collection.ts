@@ -1,10 +1,11 @@
 import type { Organization } from "@domain/organizations"
+import type { OrganizationRedactionSetting } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { useLiveQuery } from "@tanstack/react-db"
 import { createAppCollection } from "../../lib/data/create-app-collection.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import { listOrganizations, updateOrganization } from "./organizations.functions.ts"
+import { listOrganizations, updateOrganization, updateOrganizationRedaction } from "./organizations.functions.ts"
 
 const queryClient = getQueryClient()
 
@@ -30,6 +31,12 @@ export function updateOrganizationMutation(id: string, patch: Partial<Organizati
   return organizationsCollection.update(id, (draft) => {
     Object.assign(draft, patch)
   })
+}
+
+/** Owner-gated and server-authoritative; see `updateProjectRedactionMutation` for why it refetches. */
+export async function updateOrganizationRedactionMutation(redaction: OrganizationRedactionSetting | null) {
+  await updateOrganizationRedaction({ data: { redaction } })
+  await queryClient.invalidateQueries({ queryKey: ["organizations"] })
 }
 
 type OrganizationsSource = { organizations: typeof organizationsCollection }

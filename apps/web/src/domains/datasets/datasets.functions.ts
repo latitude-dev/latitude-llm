@@ -32,6 +32,7 @@ import {
   DatasetId,
   DatasetRowId,
   DatasetVersionId,
+  FacetId,
   filterSetSchema,
   isValidId,
   type OrganizationId,
@@ -792,6 +793,8 @@ const clusterSourceSchema = z.object({
   // Present → resolve sessions from the behavior's scoped assignment slice
   // instead of the global taxonomy subtree.
   customBehaviorId: z.string().optional(),
+  // The behavior's facet; present → resolve from that facet's edges, not the topic slice.
+  facetId: z.string().optional(),
 })
 
 export type ClusterSource = z.infer<typeof clusterSourceSchema>
@@ -819,6 +822,7 @@ function resolveClusterTraceIds(
       ...(cluster.timeFromIso ? { startTimeFrom: new Date(cluster.timeFromIso) } : {}),
       ...(cluster.timeToIso ? { startTimeTo: new Date(cluster.timeToIso) } : {}),
       ...(cluster.customBehaviorId ? { customBehaviorId: CustomBehaviorId(cluster.customBehaviorId) } : {}),
+      ...(cluster.facetId ? { facetId: FacetId(cluster.facetId) } : {}),
       limit: MAX_TRACES_PER_DATASET_IMPORT + 1,
     })
     if (selection.mode === "all") return all

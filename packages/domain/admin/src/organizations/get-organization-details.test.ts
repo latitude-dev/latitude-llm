@@ -11,6 +11,7 @@ const successfulRepo = (result: AdminOrganizationDetails) =>
   Layer.succeed(AdminOrganizationRepository, {
     findById: () => Effect.succeed(result),
     findManySummariesByIds: () => Effect.succeed(new Map()),
+    listByConsumedCredits: () => Effect.die("listByConsumedCredits not used"),
     findFirstApiKeyId: () => Effect.succeed(null),
     setWantsShowcase: () => Effect.void,
   })
@@ -19,6 +20,7 @@ const missingRepo = () =>
   Layer.succeed(AdminOrganizationRepository, {
     findById: (id) => Effect.fail(new NotFoundError({ entity: "Organization", id })),
     findManySummariesByIds: () => Effect.succeed(new Map()),
+    listByConsumedCredits: () => Effect.die("listByConsumedCredits not used"),
     findFirstApiKeyId: () => Effect.succeed(null),
     setWantsShowcase: () => Effect.void,
   })

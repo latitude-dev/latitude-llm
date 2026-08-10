@@ -817,6 +817,7 @@ export class TracesClient {
      * @throws {@link Latitude.BadRequestError}
      * @throws {@link Latitude.UnauthorizedError}
      * @throws {@link Latitude.NotFoundError}
+     * @throws {@link Latitude.TooManyRequestsError}
      *
      * @example
      *     await client.traces.export("projectSlug", {
@@ -880,6 +881,11 @@ export class TracesClient {
                     );
                 case 404:
                     throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 429:
+                    throw new Latitude.TooManyRequestsError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
                 default:
                     throw new errors.LatitudeError({
                         statusCode: _response.error.statusCode,

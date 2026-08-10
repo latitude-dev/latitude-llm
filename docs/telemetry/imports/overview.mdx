@@ -1,0 +1,98 @@
+---
+title: Overview
+description: Backfill traces from Langfuse, LangSmith, or Braintrust into a Latitude project.
+---
+
+## Overview
+
+Latitude can import the traces you already have in another observability platform, so you
+do not start from an empty project when you switch. Imports run from **Project settings →
+Imports** and finish in the background — you can close the tab.
+
+<Note>
+  Importing is for **history**. Data produced from now on should arrive through
+  [live tracing](/telemetry/start-tracing), which is what powers evaluations, monitors and
+  signals in real time.
+</Note>
+
+Pick your platform to get started:
+
+<CardGroup cols={3}>
+  <Card title="Langfuse" href="/telemetry/imports/langfuse">
+    Langfuse Cloud, using your public and secret keys.
+  </Card>
+  <Card title="LangSmith" href="/telemetry/imports/langsmith">
+    Runs from a LangSmith project, with configurable session grouping.
+  </Card>
+  <Card title="Braintrust" href="/telemetry/imports/braintrust">
+    Project logs, queried through BTQL.
+  </Card>
+</CardGroup>
+
+---
+
+## How an import runs
+
+<Steps>
+  <Step title="Connect your platform">
+    Pick the platform and the region your account is in, then enter its credentials.
+    Latitude tests them before continuing and discards them once the import finishes.
+  </Step>
+  <Step title="Preview">
+    Choose the source project, the time range and how many traces to import. Latitude
+    shows a sample of what will come through before anything is written.
+  </Step>
+  <Step title="Start">
+    The import runs in the background. Progress, counts and any errors appear in the
+    imports table, which refreshes while it runs.
+  </Step>
+</Steps>
+
+Every platform is imported from its **cloud** offering — you pick a region, never a URL.
+Self-hosted deployments are not supported yet.
+
+---
+
+## What gets imported
+
+| Imported | Not imported |
+| --- | --- |
+| Traces and spans | Scores and annotations |
+| Session and user identity | Datasets and evaluations |
+| Tags and metadata | Prompt registries (references land in span metadata) |
+| Messages, tool calls, token usage and cost | |
+
+Imported spans carry `import.*` metadata (platform, source project, and the original trace
+and span ids), so you can always tell imported history from live telemetry. If your
+organization has a **PII redaction policy**, it applies to imported traces exactly as it
+does to live ones.
+
+An imported trace goes through the same pipeline as one that arrives live: it is grouped
+into sessions, embedded for semantic search, indexed, and evaluated by flaggers. Because of
+that it is **billed the same way: one credit per trace**. Re-importing the same trace does
+not charge twice.
+
+---
+
+## Limits
+
+| Limit | How it is set |
+| --- | --- |
+| Traces per import | Defaults to your plan's remaining usage for the period; hard ceiling 100,000 |
+| Time range | Defaults to the last 90 days, bounded by your plan's span retention |
+| Imports running at once | One per organization |
+
+Traces are imported **newest first**, so an import that stops early — it reached your trace
+limit or your plan's remaining usage — keeps the most recent history rather than an
+arbitrary slice. A stopped import is marked **capped**, everything imported stays, and
+**Continue** resumes it from where it stopped.
+
+---
+
+## Retrying
+
+Imports are **idempotent**: every imported span gets a deterministic id derived from its
+source ids, so importing the same range twice updates the same spans instead of duplicating
+them. If an import fails or is cancelled, **Retry** resumes from where it stopped — you
+will be asked for credentials again, because Latitude never keeps them after an import
+ends.

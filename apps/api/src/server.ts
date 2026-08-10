@@ -4,6 +4,7 @@ import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { reportOssDeploymentHeartbeat } from "@platform/analytics-posthog"
 import { parseEnv } from "@platform/env"
+import { createImportAdapterRegistry } from "@platform/import-sources"
 import { initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
@@ -61,6 +62,7 @@ const startServer = async () => {
     workflowStarter,
     workflowQuerier,
     storageDisk: getStorageDisk(),
+    importSourceAdapters: createImportAdapterRegistry(),
     logTouchBuffer: true,
   })
 

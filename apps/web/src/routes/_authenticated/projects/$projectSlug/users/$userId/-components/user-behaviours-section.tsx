@@ -2,6 +2,7 @@ import { Badge, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { useUserBehaviours } from "../../../../../../../domains/end-users/end-users.collection.ts"
+import { topicBehaviourClusterLink } from "../../../../../../../domains/taxonomy/topic-behaviour-link.ts"
 import { formatAgoLabel } from "../../-components/user-formatters.ts"
 
 export function UserBehavioursSection({
@@ -37,9 +38,7 @@ export function UserBehavioursSection({
       {behaviours.map((behaviour) => (
         <Link
           key={behaviour.clusterId}
-          to="/projects/$projectSlug/behaviours"
-          params={{ projectSlug }}
-          search={{ behaviourPath: behaviour.clusterId }}
+          {...topicBehaviourClusterLink(projectSlug, behaviour.clusterId)}
           aria-label={`Open behavior ${behaviour.name}`}
           className="-mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-background"
         >

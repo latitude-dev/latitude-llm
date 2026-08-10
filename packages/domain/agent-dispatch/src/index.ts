@@ -80,7 +80,7 @@ export { requestAgentDispatchUseCase } from "./use-cases/request-agent-dispatch.
 export { resetProjectDispatchOverrideUseCase } from "./use-cases/reset-project-dispatch-override.ts"
 export type { SendAgentDispatchInput, SendAgentDispatchOutcome } from "./use-cases/send-agent-dispatch.ts"
 export { sendAgentDispatchUseCase } from "./use-cases/send-agent-dispatch.ts"
-export { setProjectDispatchRepoUseCase } from "./use-cases/set-project-dispatch-repo.ts"
+export { setDispatchRepoUseCase } from "./use-cases/set-dispatch-repo.ts"
 export type { UpsertOrgDefaultDispatchConfigInput } from "./use-cases/upsert-org-default-dispatch-config.ts"
 export { upsertOrgDefaultDispatchConfigUseCase } from "./use-cases/upsert-org-default-dispatch-config.ts"
 export type { UpsertProjectDispatchOverrideInput } from "./use-cases/upsert-project-dispatch-override.ts"
