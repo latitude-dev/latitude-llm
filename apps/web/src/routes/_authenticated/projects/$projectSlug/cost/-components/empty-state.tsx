@@ -8,8 +8,8 @@ import type { LucideIcon } from "lucide-react"
  */
 export function EmptyState({ icon, message }: { readonly icon: LucideIcon; readonly message: string }) {
   return (
-    <div className="flex min-h-[120px] w-full flex-col items-center justify-center gap-2 px-4 py-3">
-      <Icon icon={icon} size="lg" color="foregroundMuted" />
+    <div className="flex min-h-[120px] w-full flex-1 flex-col items-center justify-center gap-2 px-4 py-3">
+      <Icon icon={icon} size="md" color="foregroundMuted" />
       <Text.H6 align="center" display="block" color="foregroundMuted">
         {message}
       </Text.H6>

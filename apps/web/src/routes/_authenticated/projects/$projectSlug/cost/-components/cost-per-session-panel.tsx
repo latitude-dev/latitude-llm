@@ -6,11 +6,12 @@ import {
 } from "@domain/spans"
 import { Badge, type BadgeProps, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatChartWindowCaption, formatCount, formatPercentage, formatPrice } from "@repo/utils"
-import { ArrowDownIcon, ArrowUpIcon, type LucideIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, GitCompareIcon, type LucideIcon, MinusIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import type { CostPerSessionRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { microcentsToUsd } from "./cost-formatters.ts"
+import { EmptyState } from "./empty-state.tsx"
 import { SessionSparkline } from "./session-sparkline.tsx"
 import { SplitValue } from "./split-value.tsx"
 
@@ -326,28 +327,27 @@ function ContributingChangesCard({ record }: { readonly record: CostPerSessionRe
 
   return (
     <div className="flex flex-1 flex-col rounded-lg bg-secondary">
-      <div className="flex flex-1 flex-col gap-6 p-4">
-        {record.status === "notEnoughData" ? (
-          <Text.H6 color="foregroundMuted">{notEnoughDataReason(record)}</Text.H6>
-        ) : record.status === "flat" ? (
-          <Text.H6 color="foregroundMuted">
-            Cost per session held flat against the previous period, so no factor moved it.
-          </Text.H6>
-        ) : (
-          <>
-            <div className="flex flex-row gap-3">
-              {rows.slice(0, 3).map((row) => (
-                <FactorTile key={row.factor} row={row} />
-              ))}
-            </div>
-            <div className="flex flex-row gap-3">
-              {rows.slice(3, 6).map((row) => (
-                <FactorTile key={row.factor} row={row} />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      {record.status === "notEnoughData" ? (
+        <EmptyState icon={GitCompareIcon} message={notEnoughDataReason(record)} />
+      ) : record.status === "flat" ? (
+        <EmptyState
+          icon={MinusIcon}
+          message="Cost per session held flat against the previous period, so no factor moved it"
+        />
+      ) : (
+        <div className="flex flex-1 flex-col gap-6 p-4">
+          <div className="flex flex-row gap-3">
+            {rows.slice(0, 3).map((row) => (
+              <FactorTile key={row.factor} row={row} />
+            ))}
+          </div>
+          <div className="flex flex-row gap-3">
+            {rows.slice(3, 6).map((row) => (
+              <FactorTile key={row.factor} row={row} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

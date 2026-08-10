@@ -1,7 +1,6 @@
-import { Button, Chart, type ChartSeries, cn, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
+import { Chart, type ChartSeries, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
 import { CircleDollarSignIcon, HashIcon } from "lucide-react"
-import { useState } from "react"
 import type { ModelUsageSeriesRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { ChartHeader } from "../../-components/chart-header.tsx"
 import {
@@ -14,7 +13,6 @@ import {
 } from "./cost-formatters.ts"
 import { modelColorAt, otherSeriesColor } from "./cost-series-colors.ts"
 import { EmptyState } from "./empty-state.tsx"
-import { ExpandableLegend } from "./expandable-legend.tsx"
 
 const CHART_HEIGHT = 260
 
@@ -67,38 +65,6 @@ function buildUsageSeries({
   ]
 }
 
-/** Click-to-isolate, so a model outside the charted ranks is still reachable by muting the rest. */
-function UsageLegend({
-  series,
-  isolated,
-  onIsolate,
-}: {
-  readonly series: readonly UsageSeries[]
-  readonly isolated: string | null
-  readonly onIsolate: (name: string | null) => void
-}) {
-  return (
-    <ExpandableLegend
-      entries={series.map((entry) => ({ ...entry, key: entry.name }))}
-      renderEntry={(entry) => {
-        const isMuted = isolated !== null && isolated !== entry.name
-        return (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onIsolate(isolated === entry.name ? null : entry.name)}
-            aria-pressed={isolated === entry.name}
-            className={cn({ "opacity-50": isMuted })}
-          >
-            <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }} aria-hidden="true" />
-            {entry.name}
-          </Button>
-        )
-      }}
-    />
-  )
-}
-
 /**
  * Cost or tokens per model over time. Both measures come from one payload and share
  * one spend-ranked series set, so toggling changes the axis and nothing else.
@@ -124,17 +90,12 @@ export function ModelUsagePanel({
   readonly isAllTime: boolean
   readonly isLoading: boolean
 }) {
-  const [isolated, setIsolated] = useState<string | null>(null)
   const { isDark } = useChartCssTheme()
   const unit = bucketUnitLabel(bucketSeconds)
   const buckets = series?.buckets ?? []
   const usageSeries = series ? buildUsageSeries({ series, measure, isDark }) : []
   const isEmpty = usageSeries.every((entry) => entry.values.every((value) => value === 0))
-  // Falls back rather than resetting state: a model isolated before a range change
-  // may not survive the re-ranking, and filtering to a name that is gone draws nothing.
-  const isolatedSeries = isolated === null ? [] : usageSeries.filter((entry) => entry.name === isolated)
-  const visible = isolatedSeries.length > 0 ? isolatedSeries : usageSeries
-  const chartSeries: readonly ChartSeries[] = visible.map((entry) => ({
+  const chartSeries: readonly ChartSeries[] = usageSeries.map((entry) => ({
     kind: "line" as const,
     name: entry.name,
     values: entry.values,
@@ -182,17 +143,11 @@ export function ModelUsagePanel({
           }
         />
       ) : (
-        <div className="flex flex-col gap-2 px-4 py-3">
-          <UsageLegend
-            series={usageSeries}
-            isolated={isolatedSeries.length > 0 ? isolated : null}
-            onIsolate={setIsolated}
-          />
+        <div className="flex flex-col gap-1 px-4 py-3">
           <Chart
             categories={buckets.map((bucket) => formatUtcBucketLabel(bucket.bucketStartIso, bucketSeconds))}
             series={chartSeries}
             height={CHART_HEIGHT}
-            hideLegend
             xAxisLabelFontSize={10}
             primaryAxis={{
               name: measure === "cost" ? `$/${unit}` : `tokens/${unit}`,

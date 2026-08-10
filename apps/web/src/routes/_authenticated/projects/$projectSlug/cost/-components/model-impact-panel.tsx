@@ -118,6 +118,25 @@ function ModelLabel({ row, onClick }: { readonly row: ImpactRow; readonly onClic
   )
 }
 
+/** Colour key for the two bars — its own row below the header, centered like every other chart's legend. */
+function ImpactLegend({ isDark }: { readonly isDark: boolean }) {
+  return (
+    <div className="flex flex-row items-center justify-center gap-3">
+      {[
+        { label: "Share of spend", color: trendColor(isDark) },
+        { label: "Share of calls", color: callsSeriesColor(isDark) },
+      ].map((entry) => (
+        <div key={entry.label} className="flex flex-row items-center gap-1.5">
+          <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: entry.color }} aria-hidden="true" />
+          <Text.H6 color="foregroundMuted" noWrap>
+            {entry.label}
+          </Text.H6>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function MultipleChip({ row }: { readonly row: ImpactRow }) {
   if (row.multiple === null) {
     return (
@@ -229,25 +248,6 @@ export function ModelImpactPanel({
         // distinction that other dashboards flag isn't relevant to this panel.
         showWindow={false}
         titleColor="foregroundMuted"
-        actions={
-          <div className="flex flex-row items-center gap-3">
-            {[
-              { label: "Share of spend", color: trendColor(isDark) },
-              { label: "Share of calls", color: callsSeriesColor(isDark) },
-            ].map((entry) => (
-              <div key={entry.label} className="flex flex-row items-center gap-1.5">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-sm"
-                  style={{ backgroundColor: entry.color }}
-                  aria-hidden="true"
-                />
-                <Text.H6 color="foregroundMuted" noWrap>
-                  {entry.label}
-                </Text.H6>
-              </div>
-            ))}
-          </div>
-        }
       />
       {isLoading || !breakdown ? (
         <div className="flex flex-col gap-3 px-4 py-3">
@@ -259,16 +259,15 @@ export function ModelImpactPanel({
         <EmptyState icon={CircleDollarSignIcon} message="No spend recorded in this time window" />
       ) : (
         <div className="flex flex-col gap-2 px-4 py-3">
+          <ImpactLegend isDark={isDark} />
           <div className="flex flex-col gap-2.5">
             {rows.map((row) => (
               <div key={row.key} className="flex flex-row items-center gap-3">
-                <div className="flex w-32 shrink-0 flex-col">
+                <div className="flex w-32 shrink-0 flex-col gap-1 pr-2">
                   <ModelLabel row={row} onClick={goToModelSessions} />
-                </div>
-                <SharePair row={row} isDark={isDark} />
-                <div className="flex w-16 shrink-0 justify-end">
                   <MultipleChip row={row} />
                 </div>
+                <SharePair row={row} isDark={isDark} />
               </div>
             ))}
           </div>
@@ -284,7 +283,6 @@ export function ModelImpactPanel({
               </div>
               <div className="w-12 shrink-0" />
             </div>
-            <div className="w-16 shrink-0" />
           </div>
         </div>
       )}

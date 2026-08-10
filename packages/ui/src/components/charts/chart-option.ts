@@ -145,8 +145,9 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
     : withAxisOptions(primaryAxis)
 
   // Reserve a touch of right-side padding for the secondary axis labels
-  // when present, and a top strip when the legend renders.
-  const gridTop = showLegend ? 28 : gridVerticalInsetPx
+  // when present, and a top strip when the legend renders — tall enough to
+  // leave a visible gap below the legend row, not just clear its own height.
+  const gridTop = showLegend ? 40 : gridVerticalInsetPx
   const gridRight = hasSecondaryAxis ? 48 : 16
 
   // A hatch in the chart's own background colour reads as "hollow" in both themes.
