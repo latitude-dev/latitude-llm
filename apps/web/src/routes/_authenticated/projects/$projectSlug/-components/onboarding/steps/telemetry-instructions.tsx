@@ -3,6 +3,7 @@ import {
   Badge,
   CodeBlock,
   CopyButton,
+  Icon,
   OpentelemetryIcon,
   ProviderIcon,
   PythonIcon,
@@ -10,10 +11,14 @@ import {
   Text,
   TypescriptIcon,
 } from "@repo/ui"
-import { Bot, Terminal } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
+import { Bot, ImportIcon, Loader2, Terminal } from "lucide-react"
 import type { ReactNode } from "react"
 import { useLayoutEffect, useMemo, useState } from "react"
+import { ImportWizard } from "../../../../../../../components/imports/import-wizard.tsx"
+import { SelectorChip } from "../../../../../../../components/selector-chip.tsx"
 import { useApiKeysCollection } from "../../../../../../../domains/api-keys/api-keys.collection.ts"
+import { useProjectScope } from "../../../../../../../domains/projects/project-scope.tsx"
 import {
   type CodingMachineAgentId,
   cloudflareAiGatewayConfig,
@@ -43,14 +48,22 @@ import {
   type TsPackageManager,
 } from "../../onboarding-integration-snippets.ts"
 
-type TelemetrySetupMode = "coding-agent" | "manual"
+type TelemetrySetupMode = "coding-agent" | "manual" | "import"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
 type TelemetryProviderId = OnboardingProviderId | CodingMachineAgentId
 
 const SETUP_MODE_TAB_OPTIONS = [
   { id: "coding-agent" as const, label: "Coding agent", icon: <Bot className="h-4 w-4" /> },
   { id: "manual" as const, label: "Manual", icon: <Terminal className="h-4 w-4" /> },
+  { id: "import" as const, label: "Import", icon: <ImportIcon className="h-4 w-4" /> },
 ] as const satisfies ReadonlyArray<{ id: TelemetrySetupMode; label: string; icon: ReactNode }>
+
+/**
+ * Importing writes to the session's own organization, so the tab is hidden wherever the surface
+ * belongs to another one: the sandbox and the showcase render this same panel for a project the
+ * viewer's org does not own, and an import there would attach to the wrong org.
+ */
+const SETUP_MODE_TAB_OPTIONS_WITHOUT_IMPORT = SETUP_MODE_TAB_OPTIONS.filter((option) => option.id !== "import")
 
 interface ProviderEntry {
   readonly id: TelemetryProviderId
@@ -446,11 +459,30 @@ function CloudflareAiGatewayInstructions({
 }
 
 /**
+ * What follows a started import, decided by the host: the onboarding flow already polls for the
+ * first trace and moves on by itself, so it waits in place; the traces empty state has no such
+ * onward path and goes to the imports settings page, where the job's progress lives.
+ */
+export type ImportFollowUp = "wait-for-trace" | "go-to-imports"
+
+/**
  * Install / connect instructions shared between the onboarding telemetry step and the
  * Traces page empty-project experience. Renders the body only (no heading or footer) so
  * each host can frame it with its own surrounding copy and actions.
  */
-export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: string }) {
+export function TelemetryInstructions({
+  projectId,
+  projectSlug,
+  importFollowUp,
+}: {
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly importFollowUp: ImportFollowUp
+}) {
+  const scope = useProjectScope()
+  const navigate = useNavigate()
+  const importable = scope.kind === "live"
+  const [importStarted, setImportStarted] = useState(false)
   const [telemetrySetupMode, setTelemetrySetupMode] = useState<TelemetrySetupMode>("coding-agent")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
     PROVIDER_ENTRIES[0] ?? { id: "claude-code", name: "Claude Code", icon: "claude-code" },
@@ -504,7 +536,7 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
       <div className="flex flex-col gap-3">
         <Text.H5M>Installation method</Text.H5M>
         <Tabs
-          options={SETUP_MODE_TAB_OPTIONS}
+          options={importable ? SETUP_MODE_TAB_OPTIONS : SETUP_MODE_TAB_OPTIONS_WITHOUT_IMPORT}
           active={telemetrySetupMode}
           onSelect={(id) => setTelemetrySetupMode(id)}
           size="sm"
@@ -512,7 +544,30 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
         />
       </div>
 
-      {telemetrySetupMode === "coding-agent" ? (
+      {telemetrySetupMode === "import" ? (
+        importStarted ? (
+          <div className="flex flex-col gap-2 rounded-lg bg-secondary p-4">
+            <div className="flex items-center gap-2">
+              <Icon icon={Loader2} className="animate-spin" size="sm" />
+              <Text.H5M>Importing traces…</Text.H5M>
+            </div>
+            <Text.H5 color="foregroundMuted">
+              We're importing your traces in the background. You'll move on when we receive the first one.
+            </Text.H5>
+          </div>
+        ) : (
+          <ImportWizard
+            projectId={projectId}
+            onStarted={() => {
+              if (importFollowUp === "go-to-imports") {
+                void navigate({ to: "/projects/$projectSlug/settings/imports", params: { projectSlug } })
+              } else {
+                setImportStarted(true)
+              }
+            }}
+          />
+        )
+      ) : telemetrySetupMode === "coding-agent" ? (
         <div className="flex flex-col gap-2">
           <span className="inline-flex items-center gap-1.5">
             <Text.H5M>Prompt</Text.H5M>
@@ -552,15 +607,13 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
             <Text.H5M>Select your provider</Text.H5M>
             <div className="flex flex-row flex-wrap gap-1">
               {PROVIDER_ENTRIES.map((provider) => (
-                <button
+                <SelectorChip
                   key={provider.id}
-                  type="button"
-                  onClick={() => setSelectedProvider(provider)}
-                  className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.id === provider.id ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
-                >
-                  <ProviderChipIcon provider={provider} />
-                  <span>{provider.name}</span>
-                </button>
+                  selected={selectedProvider.id === provider.id}
+                  onSelect={() => setSelectedProvider(provider)}
+                  icon={<ProviderChipIcon provider={provider} />}
+                  label={provider.name}
+                />
               ))}
             </div>
           </div>

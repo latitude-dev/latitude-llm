@@ -21,6 +21,11 @@ export interface ChartBarSeries {
   readonly color: string
   readonly axis?: "left" | "right"
   readonly stack?: string
+  /**
+   * Index drawn hatched, marking a still-filling bucket. Bars only: echarts has
+   * no per-point `lineStyle`, so a line's tail cannot be dashed from a data item.
+   */
+  readonly provisionalIndex?: number
 }
 
 /**
@@ -44,6 +49,10 @@ export type ChartSeries = ChartBarSeries | ChartLineSeries
 export interface ChartAxisDescriptor {
   /** Axis label shown adjacent to the values. */
   readonly name?: string
+  /** Smallest split interval. Defaults to 1, which flattens sub-unit ranges (e.g. dollars). */
+  readonly minInterval?: number
+  /** Formats this axis' tick labels and the tooltip values of its series. */
+  readonly formatValue?: (value: number) => string
 }
 
 interface ChartOptionInput {
@@ -61,6 +70,8 @@ interface ChartOptionInput {
   readonly xAxisLabelFontSize?: number
   /** Enable drag-to-select on the X axis (the chart's `onSelect` is wired). */
   readonly enableBrush?: boolean
+  /** Suppress the built-in legend when the caller renders its own (echarts' only toggles visibility). */
+  readonly hideLegend?: boolean
 }
 
 export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
@@ -73,16 +84,21 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
     tooltipTitle,
     xAxisLabelFontSize = 11,
     enableBrush = false,
+    hideLegend = false,
   } = input
 
   const hasSecondaryAxis = series.some((s) => s.axis === "right")
-  const showLegend = series.length > 1
+  const showLegend = !hideLegend && series.length > 1
   const hasBarSeries = series.some((s) => s.kind === "bar")
 
+  // Thinning is strided from the newest category, not the oldest, so the latest
+  // bucket always keeps its label — on a time series that's the one being read,
+  // and an unlabeled trailing bucket looks like missing data.
+  const lastCategoryIndex = categories.length - 1
+  const categoryLabelStride =
+    categories.length <= maxCategoryAxisLabels ? 1 : Math.max(1, Math.ceil(categories.length / maxCategoryAxisLabels))
   const categoryLabelInterval =
-    categories.length <= maxCategoryAxisLabels
-      ? 0
-      : Math.max(1, Math.ceil(categories.length / maxCategoryAxisLabels)) - 1
+    categoryLabelStride === 1 ? 0 : (index: number) => (lastCategoryIndex - index) % categoryLabelStride === 0
   const capBarWidth = categories.length > barMaxWidthCategoryThreshold
   const splitLineColor = colors.isDark ? colors.mutedForeground : colors.border
   const splitLineOpacity = colors.isDark ? 0.3 : 0.6
@@ -95,16 +111,22 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
     axisLabel: { color: colors.mutedForeground, fontSize: 11 },
   }
 
+  const withAxisOptions = (descriptor: ChartAxisDescriptor | undefined) => ({
+    ...yAxisBase,
+    ...(descriptor?.minInterval === undefined ? {} : { minInterval: descriptor.minInterval }),
+    ...(descriptor?.formatValue ? { axisLabel: { ...yAxisBase.axisLabel, formatter: descriptor.formatValue } } : {}),
+  })
+
   const yAxis = hasSecondaryAxis
     ? [
         {
-          ...yAxisBase,
+          ...withAxisOptions(primaryAxis),
           ...(primaryAxis?.name
             ? { name: primaryAxis.name, nameTextStyle: { color: colors.mutedForeground, fontSize: 10 } }
             : {}),
         },
         {
-          ...yAxisBase,
+          ...withAxisOptions(secondaryAxis),
           // Suppress the secondary's split lines so they don't double-stripe
           // with the primary's lines on dense charts.
           splitLine: { show: false },
@@ -113,12 +135,21 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
             : {}),
         },
       ]
-    : yAxisBase
+    : withAxisOptions(primaryAxis)
 
   // Reserve a touch of right-side padding for the secondary axis labels
   // when present, and a top strip when the legend renders.
   const gridTop = showLegend ? 28 : gridVerticalInsetPx
   const gridRight = hasSecondaryAxis ? 48 : 16
+
+  // A hatch in the chart's own background colour reads as "hollow" in both themes.
+  const provisionalDecal = {
+    color: colors.tooltipBackground,
+    symbol: "rect" as const,
+    dashArrayX: [1, 0],
+    dashArrayY: [2, 4],
+    rotation: -Math.PI / 4,
+  }
 
   // Build the series list. Per-kind shape choices:
   //  - `emphasis.disabled` keeps every series at full opacity on hover
@@ -130,10 +161,16 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
   const echartsSeries = series.map((s) => {
     const yAxisIndex = hasSecondaryAxis && s.axis === "right" ? 1 : 0
     if (s.kind === "bar") {
+      const data =
+        s.provisionalIndex === undefined
+          ? [...s.values]
+          : s.values.map((value, index) =>
+              index === s.provisionalIndex ? { value, itemStyle: { decal: provisionalDecal } } : value,
+            )
       return {
         name: s.name,
         type: "bar" as const,
-        data: [...s.values],
+        data,
         yAxisIndex,
         ...(s.stack ? { stack: s.stack } : {}),
         ...(capBarWidth ? { barMaxWidth: barMaxWidthPx } : {}),
@@ -199,9 +236,11 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
         const rawCategory = first?.name ?? ""
         const title = tooltipTitle ? tooltipTitle(rawCategory, dataIndex) : rawCategory
         const rows = list.map((p) => {
-          const item = p as { seriesName?: string; value?: number; marker?: string }
+          const item = p as { seriesName?: string; value?: number; marker?: string; seriesIndex?: number }
           const value = typeof item.value === "number" ? item.value : Number(item.value ?? 0)
-          return `${item.marker ?? ""} ${item.seriesName ?? ""} <b>${value}</b>`
+          const axis = series[item.seriesIndex ?? 0]?.axis === "right" ? secondaryAxis : primaryAxis
+          const formatted = axis?.formatValue ? axis.formatValue(value) : `${value}`
+          return `${item.marker ?? ""} ${item.seriesName ?? ""} <b>${formatted}</b>`
         })
         return `${title}<br/>${rows.join("<br/>")}`
       },

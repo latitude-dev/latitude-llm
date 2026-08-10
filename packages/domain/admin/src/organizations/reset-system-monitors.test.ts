@@ -30,6 +30,7 @@ const fakeAdminRepo = (org: AdminOrganizationDetails) =>
   AdminOrganizationRepository.of({
     findById: () => Effect.succeed(org),
     findManySummariesByIds: () => Effect.die("findManySummariesByIds not used"),
+    listByConsumedCredits: () => Effect.die("listByConsumedCredits not used"),
     findFirstApiKeyId: () => Effect.die("findFirstApiKeyId not used"),
     setWantsShowcase: () => Effect.die("setWantsShowcase not used"),
   })

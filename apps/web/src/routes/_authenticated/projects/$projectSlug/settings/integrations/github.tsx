@@ -1,6 +1,9 @@
 import { Button, GithubIcon, Icon, Text, Tooltip } from "@repo/ui"
+import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon } from "lucide-react"
+import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
+import { useRouteProject } from "../../-route-data.ts"
 import { GithubIntegrationManage } from "../-components/github-manage.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
 
@@ -10,6 +13,16 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 
 function GithubIntegrationManagePage() {
   const { projectSlug } = Route.useParams()
+  const routeProject = useRouteProject()
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
+  )
+  const currentProject = project ?? routeProject
+
+  const { data: allProjects } = useProjectsCollection()
+  // The shared Showcase project is merged into this collection but isn't the org's.
+  const projectCount = (allProjects ?? []).filter((row) => !row.isShowcase).length
 
   return (
     <SettingsPage
@@ -32,9 +45,13 @@ function GithubIntegrationManagePage() {
           <Text.H3M>GitHub</Text.H3M>
         </div>
       }
-      description="Connection and organization-wide defaults for the GitHub integration."
+      description="Connection, repository binding, and monitoring for this project."
     >
-      <GithubIntegrationManage projectSlug={projectSlug} />
+      <GithubIntegrationManage
+        projectId={currentProject.id}
+        projectSlug={currentProject.slug}
+        projectCount={projectCount}
+      />
     </SettingsPage>
   )
 }

@@ -27,6 +27,8 @@ export function GithubMonitorSettingsForm({
   extraActions,
   extraFields,
   submitDisabled = false,
+  readOnly = false,
+  beforeSubmit,
 }: {
   initial: GithubMonitorSettings
   submitLabel: string
@@ -35,6 +37,10 @@ export function GithubMonitorSettingsForm({
   /** Rendered above "What to watch" — used by the project override to attach a repo selector to the same save. */
   extraFields?: ReactNode
   submitDisabled?: boolean
+  /** Inherited values shown without the ability to edit them. */
+  readOnly?: boolean
+  /** Returning false aborts the save, for a caller that needs to confirm first. */
+  beforeSubmit?: () => boolean
 }) {
   const { toast } = useToast()
   const fieldId = useId()
@@ -61,6 +67,7 @@ export function GithubMonitorSettingsForm({
       return
     }
     setErrors({})
+    if (beforeSubmit?.() === false) return
     setSubmitting(true)
     try {
       await onSubmit(parsed.data)
@@ -81,12 +88,14 @@ export function GithubMonitorSettingsForm({
           label="Pull requests"
           description="Link and act on pull requests that target the configured branch."
           checked={draft.monitorPullRequests}
+          disabled={readOnly}
           onChange={(value) => setDraft((current) => ({ ...current, monitorPullRequests: value }))}
         />
         <ToggleRow
           label="Commits"
           description="Link and act on commits pushed to the configured branch."
           checked={draft.monitorCommits}
+          disabled={readOnly}
           onChange={(value) => setDraft((current) => ({ ...current, monitorCommits: value }))}
         />
       </div>
@@ -98,24 +107,28 @@ export function GithubMonitorSettingsForm({
             id={`${fieldId}-commit-message`}
             label="Commit messages"
             checked={draft.sources.commitMessage}
+            disabled={readOnly}
             onChange={(value) => setSource("commitMessage", value)}
           />
           <SourceCheckbox
             id={`${fieldId}-branch-name`}
             label="Branch names"
             checked={draft.sources.branchName}
+            disabled={readOnly}
             onChange={(value) => setSource("branchName", value)}
           />
           <SourceCheckbox
             id={`${fieldId}-pr-title`}
             label="Pull request titles"
             checked={draft.sources.prTitle}
+            disabled={readOnly}
             onChange={(value) => setSource("prTitle", value)}
           />
           <SourceCheckbox
             id={`${fieldId}-pr-body`}
             label="Pull request descriptions"
             checked={draft.sources.prBody}
+            disabled={readOnly}
             onChange={(value) => setSource("prBody", value)}
           />
         </div>
@@ -132,6 +145,7 @@ export function GithubMonitorSettingsForm({
         <KeywordListEditor
           label="Resolve"
           value={draft.rules.resolveKeywords}
+          disabled={readOnly}
           onChange={(next) => setRules("resolveKeywords", next)}
           error={errors.resolveKeywords}
           onReset={() => setRules("resolveKeywords", [...DEFAULT_RESOLVE_KEYWORDS])}
@@ -139,6 +153,7 @@ export function GithubMonitorSettingsForm({
         <KeywordListEditor
           label="Reopen"
           value={draft.rules.unresolveKeywords}
+          disabled={readOnly}
           onChange={(next) => setRules("unresolveKeywords", next)}
           error={errors.unresolveKeywords}
           onReset={() => setRules("unresolveKeywords", [...DEFAULT_UNRESOLVE_KEYWORDS])}
@@ -146,18 +161,25 @@ export function GithubMonitorSettingsForm({
         <KeywordListEditor
           label="Reference"
           value={draft.rules.referenceKeywords}
+          disabled={readOnly}
           onChange={(next) => setRules("referenceKeywords", next)}
           error={errors.referenceKeywords}
           onReset={() => setRules("referenceKeywords", [...DEFAULT_REFERENCE_KEYWORDS])}
         />
       </div>
 
-      <div className="flex flex-row items-center gap-2">
-        <Button onClick={() => void handleSubmit()} isLoading={submitting} disabled={submitDisabled}>
-          {submitLabel}
-        </Button>
-        {extraActions}
-      </div>
+      {readOnly ? (
+        extraActions ? (
+          <div className="flex flex-row items-center gap-2">{extraActions}</div>
+        ) : null
+      ) : (
+        <div className="flex flex-row items-center gap-2">
+          <Button onClick={() => void handleSubmit()} isLoading={submitting} disabled={submitDisabled}>
+            {submitLabel}
+          </Button>
+          {extraActions}
+        </div>
+      )}
     </div>
   )
 }
@@ -166,11 +188,13 @@ function ToggleRow({
   label,
   description,
   checked,
+  disabled = false,
   onChange,
 }: {
   label: string
   description?: string
   checked: boolean
+  disabled?: boolean
   onChange: (value: boolean) => void
 }) {
   return (
@@ -179,7 +203,7 @@ function ToggleRow({
         <Text.H6 weight="medium">{label}</Text.H6>
         {description ? <Text.H6 color="foregroundMuted">{description}</Text.H6> : null}
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
+      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
     </div>
   )
 }
@@ -188,16 +212,18 @@ function SourceCheckbox({
   id,
   label,
   checked,
+  disabled = false,
   onChange,
 }: {
   id: string
   label: string
   checked: boolean
+  disabled?: boolean
   onChange: (value: boolean) => void
 }) {
   return (
     <label htmlFor={id} className="flex cursor-pointer items-center gap-2">
-      <Checkbox id={id} checked={checked} onCheckedChange={(value) => onChange(value === true)} />
+      <Checkbox id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onChange(value === true)} />
       <Text.H6>{label}</Text.H6>
     </label>
   )

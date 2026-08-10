@@ -39,6 +39,8 @@ export const traceSchema = z.object({
   costInputMicrocents: z.number(),
   costOutputMicrocents: z.number(),
   costTotalMicrocents: z.number(),
+  /** Spans whose token usage no pricing matched, so `costTotalMicrocents` understates real spend. */
+  unpricedSpanCount: z.number().int().nonnegative(),
 
   sessionId: sessionIdSchema,
   userId: externalUserIdSchema,

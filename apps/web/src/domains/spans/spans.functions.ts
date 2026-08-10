@@ -1,5 +1,5 @@
 import { ProjectId, SpanId, TraceId } from "@domain/shared"
-import type { Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
+import type { CostSource, Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
 import { SpanRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
@@ -64,6 +64,9 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
   readonly costIsEstimated: boolean
+  readonly costSource: CostSource
+  readonly costPricedProvider: string
+  readonly costPricedModel: string
   readonly responseId: string
   readonly finishReasons: readonly string[]
   readonly attrString: Readonly<Record<string, string>>
@@ -130,6 +133,9 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   costOutputMicrocents: span.costOutputMicrocents,
   costTotalMicrocents: span.costTotalMicrocents,
   costIsEstimated: span.costIsEstimated,
+  costSource: span.costSource,
+  costPricedProvider: span.costPricedProvider,
+  costPricedModel: span.costPricedModel,
   responseId: span.responseId,
   finishReasons: span.finishReasons,
   attrString: span.attrString,

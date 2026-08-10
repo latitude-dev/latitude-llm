@@ -6,6 +6,8 @@ import type { AgentDispatchRecord } from "../../../../../../../domains/agent-dis
 import {
   AGENT_DISPATCH_KIND_ICONS,
   AGENT_DISPATCH_KIND_LABELS,
+} from "../../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import {
   DISPATCH_ERROR_TITLES,
   DISPATCH_TRIGGER_TITLES,
 } from "../../../settings/-components/agent-dispatch-section.tsx"

@@ -473,7 +473,7 @@ describe("domain-events dispatcher", () => {
     expect(published).toEqual([])
   })
 
-  it("routes ProjectDeleted to notifications and destinations delete-by-project for cascade cleanup", async () => {
+  it("routes ProjectDeleted to every delete-by-project cascade", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("ProjectDeleted", {
@@ -491,6 +491,12 @@ describe("domain-events dispatcher", () => {
     const dest = published.find((p) => p.queue === "destinations" && p.task === "delete-by-project")
     expect(dest?.payload).toEqual({ organizationId: "org-1", projectId: "proj-x" })
     expect(dest?.options?.dedupeKey).toBe("destinations:delete-by-project:proj-x")
+
+    // A queued or running import would otherwise keep paging its source into a
+    // deleted project and hold the org's single import slot.
+    const imports = published.find((p) => p.queue === "imports" && p.task === "delete-by-project")
+    expect(imports?.payload).toEqual({ organizationId: "org-1", projectId: "proj-x" })
+    expect(imports?.options?.dedupeKey).toBe("imports:delete-by-project:proj-x")
   })
 
   it("fans out whitelisted events to posthog-analytics:track in addition to the primary handler", async () => {
