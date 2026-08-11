@@ -51,8 +51,11 @@ const {
   },
 })
 
+// One naming call can now cover a whole sibling set (reading every sibling's
+// samples plus a joint map/reduce pair), so the window is sized for that set
+// rather than for a single cluster's two model calls.
 const { nameTaxonomyClusterActivity } = proxyActivities<typeof activities>({
-  startToCloseTimeout: "2 minutes",
+  startToCloseTimeout: "8 minutes",
   retry: {
     ...defaultActivityRetryPolicy,
     initialInterval: "30 seconds",
@@ -64,7 +67,8 @@ const { nameTaxonomyClusterActivity } = proxyActivities<typeof activities>({
 // already-named siblings to build the forbidden-name list its collision guard
 // enforces; siblings named concurrently each still see the other as "Pending"
 // and can collide, which the sibling-duplicate quality gate then rejects.
-// Sequential naming guarantees each sibling sees the ones named before it.
+// Sequential naming guarantees each sibling sees the ones named before it, and it
+// is what lets the first sibling of a set name the whole set in one call.
 const NAMING_ACTIVITY_CONCURRENCY = 1
 
 const runInBatches = async <A, B>(
@@ -146,6 +150,11 @@ export const gardenTaxonomyWorkflow = async (
             ...(started.customBehaviorId ? { customBehaviorId: started.customBehaviorId } : {}),
             ...(started.facetId ? { facetId: started.facetId } : {}),
             ...(memberObservationIds ? { memberObservationIds } : {}),
+            // Whole plan, not just this cluster's: contrastive naming samples the
+            // siblings too, and a staged sibling has no ClickHouse membership yet.
+            ...(namingPlan.memberObservationIdsByClusterId
+              ? { memberObservationIdsByClusterId: namingPlan.memberObservationIdsByClusterId }
+              : {}),
           })
         })
       }

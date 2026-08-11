@@ -34,6 +34,12 @@ export interface NameTaxonomyClusterActivityInput {
    * `assigned_cluster_id` does not point at it yet. Whole-project topic tree only.
    */
   readonly memberObservationIds?: readonly string[]
+  /**
+   * The naming plan's samples for every cluster of this pass. Contrastive naming
+   * names a whole sibling set in one call, and a staged sibling's membership is not
+   * in ClickHouse yet, so without this map a staged tree can only be named per child.
+   */
+  readonly memberObservationIdsByClusterId?: Readonly<Record<string, readonly string[]>>
 }
 
 export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityInput) => {
@@ -113,6 +119,9 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
       projectId,
       clusterId,
       ...(input.memberObservationIds ? { memberObservationIds: input.memberObservationIds } : {}),
+      ...(input.memberObservationIdsByClusterId
+        ? { memberObservationIdsByClusterId: input.memberObservationIdsByClusterId }
+        : {}),
     }).pipe(
       Effect.asVoid,
       withActivityAIMetering({
