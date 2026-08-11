@@ -687,6 +687,7 @@ function VariantTimeRangePicker({
       selectedPresetId={selectedPresetId}
       placeholder="Select range"
       clearLabel="Reset to default"
+      portalTarget="body"
       fullWidth
       onChange={({ range, source, presetId }) => {
         if (source === "clear" || !range) {
