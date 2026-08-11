@@ -311,16 +311,17 @@ describe("listProjectBehavioursUseCase", () => {
       ),
     )
 
-    // Topics sort by subtree volume; children nest under their parent node.
-    expect(result.topics.map((topic) => topic.cluster.id)).toEqual([rootId, leafRootId])
-    expect(result.topics[0]?.children.map((child) => child.cluster.id)).toEqual([childId])
+    // Roots are unwrapped, so the child surfaces as a row of its own; the
+    // childless root is the only group of its branch and stays.
+    expect(result.topics.map((topic) => topic.cluster.id)).toEqual([childId, leafRootId])
+    expect(result.topics.every((topic) => topic.children.length === 0)).toBe(true)
     // Parent counters are aggregate subtree counters, so the UI must not add
     // the parent value to its children and double-count the same sessions.
     expect(result.topics[0]?.subtreeObservationCount).toBe(3)
     expect(result.topics[1]?.subtreeObservationCount).toBe(3)
   })
 
-  it("unwraps the single englobing root and surfaces its depth-1 children as top-level rows", async () => {
+  it("unwraps the englobing root and surfaces its depth-1 children as top-level rows", async () => {
     const rootId = TaxonomyClusterId("a".repeat(24))
     const firstChildId = TaxonomyClusterId("b".repeat(24))
     const secondChildId = TaxonomyClusterId("c".repeat(24))

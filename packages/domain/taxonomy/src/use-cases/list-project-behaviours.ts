@@ -57,6 +57,8 @@ export interface ProjectBehaviourNode {
   readonly firstSeenLabel: BehaviourFirstSeenLabel
   readonly trend: TaxonomyClusterTrendSummary
   readonly novelty: BehaviourNovelty
+  /** Sessions assigned to this node itself, excluding everything under it. */
+  readonly directObservationCount: number
   /** Sessions represented by this node's visible subtree; aggregate parents are not double-counted. */
   readonly subtreeObservationCount: number
   readonly children: readonly ProjectBehaviourNode[]
@@ -64,6 +66,12 @@ export interface ProjectBehaviourNode {
 
 export interface ListProjectBehavioursResult {
   readonly topics: readonly ProjectBehaviourNode[]
+  /**
+   * Sessions that reached a node the reader removed (the unwrapped root, or a
+   * promoted signpost) and no group below it, so rows plus residue still sum to
+   * the project total. Whether to render it as a row is a product decision.
+   */
+  readonly residueObservationCount: number
 }
 
 const MS_PER_DAY = 24 * 60 * 60_000
@@ -141,7 +149,10 @@ const sortNodes = (nodes: readonly ProjectBehaviourNode[], sortBy: BehaviourSort
 const countNodes = (nodes: readonly ProjectBehaviourNode[]): number =>
   nodes.reduce((sum, node) => sum + 1 + countNodes(node.children), 0)
 
-const truncateNodes = (nodes: readonly ProjectBehaviourNode[], budget: number): readonly ProjectBehaviourNode[] => {
+export const truncateNodes = (
+  nodes: readonly ProjectBehaviourNode[],
+  budget: number,
+): readonly ProjectBehaviourNode[] => {
   const out: ProjectBehaviourNode[] = []
   let remaining = budget
   for (const node of nodes) {
@@ -152,6 +163,56 @@ const truncateNodes = (nodes: readonly ProjectBehaviourNode[], budget: number): 
     out.push({ ...node, children })
   }
   return out
+}
+
+/**
+ * Above this share of its own subtree a node holds real content; at or below it
+ * the node is a signpost that exists only to bracket its children. `max(1, …)`
+ * is what carries the rule on today's trees (interiors hold 0-1 sessions of
+ * their own); the fraction keeps the same question meaningful on a large tree.
+ */
+const SCAFFOLDING_OWN_FRACTION = 0.02
+
+const isScaffolding = (node: ProjectBehaviourNode): boolean =>
+  node.directObservationCount <= Math.max(1, SCAFFOLDING_OWN_FRACTION * node.subtreeObservationCount)
+
+interface PromoteScaffoldingResult {
+  readonly nodes: readonly ProjectBehaviourNode[]
+  readonly residueObservationCount: number
+}
+
+/**
+ * Removes nodes that hold nothing — not nesting.
+ *
+ * The root goes positionally, whatever it holds: it englobes the project by
+ * construction, so a content test that kept it would reintroduce the single
+ * all-encompassing row this exists to prevent. A root with no children is the
+ * project's only group and stays. Every other node goes only when it holds no
+ * content of its own, at any depth, so an interior with real members survives
+ * as a parent with its children and its count intact.
+ *
+ * On every tree in the fleet today each non-root interior is a signpost, so the
+ * result comes out flat. That is a fact about the current builder's output, not
+ * the contract — collapsing this to a leaves-only walk would return nothing for
+ * a childless root, silently drop residue, and foreclose real hierarchy.
+ */
+export const promoteScaffolding = (rootNodes: readonly ProjectBehaviourNode[]): PromoteScaffoldingResult => {
+  let residueObservationCount = 0
+  const promote = (nodes: readonly ProjectBehaviourNode[]): readonly ProjectBehaviourNode[] =>
+    nodes.flatMap((node) => {
+      if (node.children.length === 0) return [node]
+      const children = promote(node.children)
+      if (!isScaffolding(node)) return [{ ...node, children }]
+      residueObservationCount += node.directObservationCount
+      return children
+    })
+
+  const nodes = rootNodes.flatMap((root) => {
+    if (root.children.length === 0) return [root]
+    residueObservationCount += root.directObservationCount
+    return promote(root.children)
+  })
+  return { nodes, residueObservationCount }
 }
 
 export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) =>
@@ -278,12 +339,10 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         })
       const novelty = noveltyFor({ cluster, trend, firstSeenWindowStart, minObservations })
       const directObservationCount = directCountByClusterId.get(cluster.id) ?? 0
-      const ownObservationCount =
-        children.length > 0
-          ? children.reduce((sum, child) => sum + child.subtreeObservationCount, 0)
-          : directObservationCount
+      const subtreeObservationCount =
+        directObservationCount + children.reduce((sum, child) => sum + child.subtreeObservationCount, 0)
       const ownVisible =
-        ownObservationCount >= minObservations &&
+        subtreeObservationCount >= minObservations &&
         (segment === "all" ||
           (segment === "new_this_week" && novelty === "first_seen") ||
           (segment === "spiking" && novelty === "spiking"))
@@ -293,11 +352,12 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         firstSeenLabel: firstSeenLabel(cluster.firstObservedAt, now, firstSeenWindowDays),
         trend,
         novelty,
+        directObservationCount,
         // UI session counts come from current observation assignments in the
         // selected time range. Interior nodes are aggregates, so their count is
-        // the sum of visible descendants rather than their stored all-time
-        // Postgres counter.
-        subtreeObservationCount: ownObservationCount,
+        // their own members plus their visible descendants rather than their
+        // stored all-time Postgres counter.
+        subtreeObservationCount,
         children,
       }
     }
@@ -309,16 +369,14 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         return node === null ? [] : [node]
       })
 
-    // The divisive build always produces a single depth-0 root that englobes
-    // the entire project — it is the "everything" node, not a meaningful
-    // category. When it is the only root and it has children, surface its
-    // children (the real depth-1 categories) as the top-level rows so the
-    // behaviours table opens on several categories instead of one
-    // all-encompassing row. A tiny corpus that collapsed to a single childless
-    // root still shows that root.
-    const topLevel =
-      rootNodes.length === 1 && (rootNodes[0]?.children.length ?? 0) > 0 ? (rootNodes[0]?.children ?? []) : rootNodes
-    const topics = sortNodes(topLevel, sortBy)
+    // Promotion runs on the already-filtered tree so `ownVisible` decides which
+    // nodes exist first, and before truncation so the node budget is spent on
+    // real groups instead of scaffolding.
+    const { nodes: promoted, residueObservationCount } = promoteScaffolding(rootNodes)
+    const topics = sortNodes(promoted, sortBy)
 
-    return { topics: truncateNodes(topics, limit) } satisfies ListProjectBehavioursResult
+    return {
+      topics: truncateNodes(topics, limit),
+      residueObservationCount,
+    } satisfies ListProjectBehavioursResult
   }).pipe(Effect.withSpan("taxonomy.listProjectBehaviours"))
