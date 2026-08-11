@@ -109,11 +109,7 @@ export const adaptiveSpanAttributes = (
   return attributes
 }
 
-/**
- * Build-quality payload — emitted for EVERY mode, unlike the adaptive events
- * above, because the baseline these metrics exist to establish has to cover the
- * projects running `off` (which is most of them).
- */
+/** Build-quality payload — emitted for EVERY mode, unlike the adaptive events above. */
 export const buildQualityFields = (
   scope: QualityTelemetryScope,
   plan: HierarchicalTaxonomyPlan,

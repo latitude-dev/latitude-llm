@@ -608,8 +608,7 @@ const emitDegenerateRebuildTelemetry = (input: GardenTaxonomyStepInput, plan: Hi
   })
 }
 
-// Quality is emitted for every mode — `off` is what most projects run, and a
-// baseline that excluded them would be a baseline for nobody.
+// Emitted for every mode, unlike the adaptive telemetry above; `off` is what most projects run.
 const emitBuildQualityTelemetry = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan): void => {
   const metrics = plan.qualityMetrics
   if (!metrics) return
@@ -1039,8 +1038,7 @@ export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDep
     }),
   )
 
-// Measured before the gate runs, so a tree that trips the gate still reports how
-// its names came out — that is exactly the run worth measuring.
+// Measured before the gate runs, so a tree that trips it still reports how its names came out.
 const emitNameQualityTelemetry = (input: GardenTaxonomyStepInput, metrics: TaxonomyNameQualityMetrics) =>
   Effect.gen(function* () {
     yield* Effect.sync(() =>
