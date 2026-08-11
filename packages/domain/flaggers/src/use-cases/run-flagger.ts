@@ -252,15 +252,20 @@ const instructionExtractorOutputSchema = z
 type InstructionExtractorOutput = z.infer<typeof instructionExtractorOutputSchema>
 
 // Mask rather than reject a crude extraction: rejection would skip the flagger for the whole trace.
-const disallowedAgentContextWordingPattern = new RegExp(
+const disallowedExtractionWordingPattern = new RegExp(
   `${EXPLICIT_PROFANITY_PATTERN_SOURCE}|${SLUR_PATTERN_SOURCE}`,
   "gi",
 )
 
-const maskDisallowedAgentContextWording = (result: InstructionExtractorOutput): InstructionExtractorOutput =>
-  result.agentContext
-    ? { ...result, agentContext: result.agentContext.replace(disallowedAgentContextWordingPattern, "[redacted]") }
-    : result
+const maskDisallowedWording = (text: string): string => text.replace(disallowedExtractionWordingPattern, "[redacted]")
+
+const maskDisallowedExtractionWording = (result: InstructionExtractorOutput): InstructionExtractorOutput => ({
+  ...result,
+  agentContext: maskDisallowedWording(result.agentContext),
+  ...(result.reasonIfNotUnderstood === undefined
+    ? {}
+    : { reasonIfNotUnderstood: maskDisallowedWording(result.reasonIfNotUnderstood) }),
+})
 
 type InspectedAgentContext =
   | { readonly available: true; readonly text: string }
@@ -587,7 +592,7 @@ function runInstructionExtraction(input: {
                 }),
             }),
           ),
-          Effect.map(maskDisallowedAgentContextWording),
+          Effect.map(maskDisallowedExtractionWording),
           Effect.tap((result) => setCachedExtraction(input.cacheKey, result)),
           Effect.tap((result) =>
             result.understood

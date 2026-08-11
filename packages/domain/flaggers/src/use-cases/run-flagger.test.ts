@@ -489,6 +489,46 @@ describe("runFlaggerUseCase", () => {
     expect(cachedWrite?.value).not.toContain("shit")
   })
 
+  it("masks profanity the extractor echoes into reasonIfNotUnderstood before caching", async () => {
+    const longSystemPrompt = `Disconnected persona fragments only. ${"fragment ".repeat(700)}`
+    const cache = createMemoryCacheLayer()
+    const { layer: aiLayer } = createFakeAI({
+      generate: <T>() =>
+        Effect.succeed({
+          object: {
+            understood: false,
+            agentContext: "",
+            reasonIfNotUnderstood: 'Only persona fragments like "gets shit done" appear; no task is defined.',
+          } as T,
+          tokens: 20,
+          duration: 90_000_000,
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Please do the work." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Maybe later." }] },
+          ],
+          [],
+          [{ type: "text", content: longSystemPrompt }],
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    const contentKey = buildContentKey(INPUT.organizationId, longSystemPrompt)
+    const cachedWrite = cache.writes.find((write) => write.key === contentKey)
+    expect(cachedWrite?.value).toContain("[redacted]")
+    expect(cachedWrite?.value).not.toContain("shit")
+  })
+
   it("falls back to prompt excerpts when the extractor returns understood=true without context", async () => {
     const longSystemPrompt = `
 <identity>
