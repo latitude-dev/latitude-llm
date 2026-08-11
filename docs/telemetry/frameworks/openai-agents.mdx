@@ -127,9 +127,15 @@ Latitude includes dedicated instrumentation for the OpenAI Agents SDK, so agent 
         async def weather_agent_run():
             return await Runner.run(agent, "What's the weather in Barcelona?")
 
-        capture("weather-agent-run", weather_agent_run)
+        async def main():
+            await capture("weather-agent-run", weather_agent_run)
+            latitude.shutdown()
 
-        latitude.shutdown()
+
+        if __name__ == "__main__":
+            import asyncio
+
+            asyncio.run(main())
         ```
       </Tab>
     </Tabs>
