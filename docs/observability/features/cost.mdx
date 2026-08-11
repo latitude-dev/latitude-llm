@@ -1,0 +1,44 @@
+---
+title: Cost analysis
+description: Understand what your agents cost, what changed, and where caching can reduce spend.
+---
+
+# Cost analysis
+
+The **Cost** page explains how much your project spends, which models and operations drive it, and why cost changes over time.
+
+Open a project and select **Cost** in the sidebar. Use the time picker to change the analysis window.
+
+## Spend overview
+
+The summary shows total spend, average cost per day, average cost per trace, and the model responsible for the most spend. The cost-over-time chart lets you compare total, average, and p95 cost.
+
+The pricing-confidence strip shows how much billable usage Latitude could price. When a model has no known price, totals are a floor rather than a complete estimate.
+
+## Model usage and breakdowns
+
+Use **Model usage** to compare spend and token volume over time. Select a model to open the Sessions view filtered to that model.
+
+The breakdown table groups cost by model, provider, operation, or service. Each row shows total cost, input and output cost, other cost, share of total, and average cost per trace.
+
+## Cache economics
+
+The cache panel compares each model's measured cache hit rate with its break-even rate and achievable ceiling.
+
+- **Break-even** is the hit rate where cache reads offset cache-write cost for that model.
+- **Achievable ceiling** estimates how much traffic arrives within the provider's documented cache lifetime.
+- **Estimated savings** models the effect of following the recommendation using token counts and registry prices.
+
+Recommendations can include caching a model, stopping caching, or investigating a hit rate below the achievable ceiling. Estimates may not exactly match provider-reported cost.
+
+Use the lifetime selector to explore a different cache lifetime. Recommendation cards remain based on the documented provider and model lifetime.
+
+## Why cost per session changed
+
+The session-cost panel decomposes a change into traces per session, model calls per trace, tokens per call, model mix, prompt versus output mix, prompt price, and output price.
+
+The factors reconcile to the overall change in cost per session. Latitude requires at least 20 sessions in both comparison periods before showing the decomposition.
+
+<Note>
+  When **Recent activity** is selected, the page compares the latest 30 days of project activity with the preceding 30 days.
+</Note>
