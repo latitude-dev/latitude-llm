@@ -1,10 +1,11 @@
-import { Text } from "@repo/ui"
+import { cn, Text } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import type {
   BehaviourCatalogEntryRecord,
   BehaviourCatalogGroupRecord,
 } from "../../../../../../domains/taxonomy/behaviour-catalog.functions.ts"
+import { groupColorClassAt } from "../../../../../../domains/taxonomy/group-colors.ts"
 import { BehaviourBadge, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
 import { PreviewPlaceholder } from "./behaviour-catalog-card.tsx"
 
@@ -16,17 +17,22 @@ const PANEL_CLASS =
 
 function GroupRow({
   group,
+  colorIndex,
   totalSessionCount,
 }: {
   readonly group: BehaviourCatalogGroupRecord
+  readonly colorIndex: number
   readonly totalSessionCount: number
 }) {
   const share = totalSessionCount > 0 ? group.sessionCount / totalSessionCount : 0
   return (
     <div className="flex flex-row items-start gap-4 rounded-md bg-secondary px-4 py-3">
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <Text.H5 color="foreground">{group.name}</Text.H5>
-        {group.description ? <Text.H6 color="foregroundMuted">{group.description}</Text.H6> : null}
+      <div className="flex min-w-0 flex-1 flex-row items-start gap-2">
+        <span className={cn("mt-2 size-[5px] shrink-0 rounded-full", groupColorClassAt(colorIndex))} />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <Text.H5 color="foreground">{group.name}</Text.H5>
+          {group.description ? <Text.H6 color="foregroundMuted">{group.description}</Text.H6> : null}
+        </div>
       </div>
       <div className="flex shrink-0 flex-row items-center gap-6">
         <div className="flex flex-row items-center gap-1">
@@ -46,25 +52,43 @@ function GroupRow({
   )
 }
 
+/** Each top-level group's slice of the facet's sessions, in its row's color — predominance at a glance. */
+function GroupShareBar({ groups }: { readonly groups: readonly BehaviourCatalogGroupRecord[] }) {
+  return (
+    <div className="flex h-1 w-[136px] shrink-0 overflow-hidden rounded-full bg-muted">
+      {groups.map((group, index) => (
+        <div
+          key={group.id}
+          className={groupColorClassAt(index)}
+          style={{ flexGrow: group.sessionCount || 0, flexBasis: 0 }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function PanelHeader({ entry }: { readonly entry: BehaviourCatalogEntryRecord }) {
   const hasGroups = entry.groups.length > 0
   return (
-    <div className="flex flex-row items-center justify-between gap-4 bg-muted px-4 py-3">
+    <div className="flex flex-row items-start justify-between gap-4 bg-muted px-4 py-3">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <Text.H5M ellipsis noWrap>
           {entry.name}
         </Text.H5M>
-        <Text.H6 color="foregroundMuted" ellipsis noWrap>
+        <Text.H6 color="foregroundMuted" className="max-w-[400px]">
           {entry.description}
         </Text.H6>
       </div>
-      <Text.H6 color="foregroundMuted" noWrap className="shrink-0">
-        {entry.status === "generating"
-          ? "Analyzing"
-          : hasGroups
-            ? `${formatCount(entry.sessionCount)} sessions${entry.viewCount > 0 ? ` · ${entry.viewCount} ${entry.viewCount === 1 ? "view" : "views"}` : ""}`
-            : null}
-      </Text.H6>
+      <div className="flex shrink-0 flex-row items-center gap-3">
+        {entry.groups.length > 1 ? <GroupShareBar groups={entry.groups} /> : null}
+        <Text.H6 color="foregroundMuted" noWrap>
+          {entry.status === "generating"
+            ? "Analyzing"
+            : hasGroups
+              ? `${formatCount(entry.sessionCount)} sessions${entry.viewCount > 0 ? ` · ${entry.viewCount} ${entry.viewCount === 1 ? "view" : "views"}` : ""}`
+              : null}
+        </Text.H6>
+      </div>
     </div>
   )
 }
@@ -84,8 +108,8 @@ function PanelBody({ entry }: { readonly entry: BehaviourCatalogEntryRecord }) {
   }
   return (
     <div className="flex flex-col gap-1 border-t border-border p-4">
-      {entry.groups.map((group) => (
-        <GroupRow key={group.id} group={group} totalSessionCount={entry.sessionCount} />
+      {entry.groups.map((group, index) => (
+        <GroupRow key={group.id} group={group} colorIndex={index} totalSessionCount={entry.sessionCount} />
       ))}
     </div>
   )
