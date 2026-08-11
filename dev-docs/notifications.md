@@ -30,7 +30,7 @@ Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
 notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered,signal-regressed,destination-quarantined,billing-limit}-notifications
 ```
 
-`signal.discovered` currently fires from `SignalCreated`, i.e. the moment discovery creates the signal. It moves onto `SignalPromoted` — the same notification, only for signals that accumulated enough evidence to be promoted — when the promotion gate starts being enforced (`dev-docs/signals.md` § Denoising: promotion). The kind, templates, project gate, and payload shape are unchanged by that move; only `discoveredAt` changes meaning, from creation time to promotion time.
+`signal.discovered` fires from `SignalPromoted`, not from `SignalCreated`: discovery creates a signal's row before it has the evidence to deserve an announcement, so the notification waits for the promotion gate (`dev-docs/signals.md` § Denoising: promotion). The kind, templates, project gate, and payload shape are exactly as they were before that move; `discoveredAt` carries the promotion time rather than the creation time, which nothing renders (the templates use the notification's own timestamp) and which the `signal.discovered:${signalId}` idempotency key ignores.
 
 ```text
   → apps/workers/src/workers/notifications.ts
