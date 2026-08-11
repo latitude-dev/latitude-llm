@@ -3,6 +3,7 @@ import { type Incident, IncidentRepository, isSignalEscalationEntrySignals } fro
 import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
+  type AlertSeverity,
   AlertIncidentId,
   type ChSqlClient,
   generateId,
@@ -399,6 +400,9 @@ const buildRecovery = (incident: Incident): IncidentRecovery => ({
   durationMs: incident.endedAt !== null ? Math.max(0, incident.endedAt.getTime() - incident.startedAt.getTime()) : 0,
 })
 
+const notificationSeverity = (incident: SourcedIncident, triage: SignalTriageSnapshot | null): AlertSeverity =>
+  incident.sourceType === "signal" && triage?.priority != null ? triage.priority : incident.severity
+
 const buildPayload = (input: {
   readonly incident: SourcedIncident
   readonly kind: IncidentNotificationKind
@@ -410,12 +414,13 @@ const buildPayload = (input: {
   readonly triage: SignalTriageSnapshot | null
 }): IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload => {
   const { incident, kind, trend, triggerRatePerHour, tags, sampleExcerpt, monitor, triage } = input
+  const severity = notificationSeverity(incident, triage)
   const base = {
     alertIncidentId: incident.id,
     sourceType: incident.sourceType,
     sourceId: incident.sourceId,
     incidentKind: notificationKeyForIncident(incident),
-    severity: incident.severity,
+    severity,
   } as const
   // Monitor attribution + condition, spread into every variant; empty on legacy incidents.
   const attribution = {
