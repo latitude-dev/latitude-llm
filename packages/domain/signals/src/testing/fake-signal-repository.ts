@@ -38,11 +38,19 @@ export const createFakeSignalRepository = (
   const withLifecycle = (issue: Signal): SignalWithLifecycle =>
     Object.assign({}, issue, { lifecycle: lifecycleFor(issue.id) })
 
+  // Mirrors the adapter's `userVisibleSignal`. Fidelity matters here: a domain
+  // test whose fake still returns candidates would pass while the real read
+  // leaks one.
+  const isUserVisible = (issue: Signal): boolean => issue.deletedAt === null && issue.promotedAt !== null
+
   const repository: SignalRepositoryShape = {
-    findById: (id) =>
+    findById: (id, options) =>
       Effect.gen(function* () {
         const issue = issues.get(id)
         if (!issue) return yield* new NotFoundError({ entity: "Signal", id })
+        if (!options?.includeUnpromoted && !isUserVisible(issue)) {
+          return yield* new NotFoundError({ entity: "Signal", id })
+        }
         return withLifecycle(issue)
       }),
 
@@ -57,14 +65,16 @@ export const createFakeSignalRepository = (
       Effect.sync(() =>
         signalIds
           .map((signalId) => issues.get(signalId))
-          .filter((issue): issue is Signal => issue !== undefined && issue.projectId === projectId)
+          .filter(
+            (issue): issue is Signal => issue !== undefined && issue.projectId === projectId && isUserVisible(issue),
+          )
           .map(withLifecycle),
       ),
 
-    hybridSearch: ({ projectId }) =>
+    hybridSearch: ({ projectId, includeUnpromoted }) =>
       Effect.sync(() =>
         [...issues.values()]
-          .filter((issue) => issue.projectId === projectId)
+          .filter((issue) => issue.projectId === projectId && (includeUnpromoted || isUserVisible(issue)))
           .map((issue) => ({
             signalId: issue.id,
             name: issue.name,
@@ -79,12 +89,24 @@ export const createFakeSignalRepository = (
         // empty when the source is missing or has a zero-mass centroid,
         // zero-mass neighbors skipped, self excluded, project-scoped.
         const source = issues.get(signalId)
-        if (!source || source.projectId !== projectId || source.centroid === null || source.centroid.mass <= 0)
+        if (
+          !source ||
+          source.projectId !== projectId ||
+          !isUserVisible(source) ||
+          source.centroid === null ||
+          source.centroid.mass <= 0
+        )
           return []
         const sourceVector = normalize(source.centroid.base)
         if (sourceVector === null) return []
         return [...issues.values()]
-          .filter((issue) => issue.projectId === projectId && issue.id !== signalId && (issue.centroid?.mass ?? 0) > 0)
+          .filter(
+            (issue) =>
+              issue.projectId === projectId &&
+              issue.id !== signalId &&
+              isUserVisible(issue) &&
+              (issue.centroid?.mass ?? 0) > 0,
+          )
           .flatMap((issue) => {
             if (issue.centroid === null) return []
             const vector = normalize(issue.centroid.base)
@@ -98,12 +120,12 @@ export const createFakeSignalRepository = (
     searchOrgWide: ({ query, preferProjectId, limit }) =>
       Effect.sync(() => {
         // Default fake behavior: org-wide case-insensitive name match, embedding-agnostic, with the
-        // preferred project's issues first. Resolved/ignored signals are excluded like the real
-        // adapter. Tests that need distinct lexical vs semantic tiers override this method.
+        // preferred project's issues first. Resolved/ignored/unpromoted signals are excluded like
+        // the real adapter. Tests that need distinct lexical vs semantic tiers override this method.
         const q = query.trim().toLowerCase()
         const prefer = (projectId: string) => (preferProjectId && projectId === preferProjectId ? 1 : 0)
         return [...issues.values()]
-          .filter((issue) => issue.resolvedAt === null && issue.ignoredAt === null)
+          .filter((issue) => isUserVisible(issue) && issue.resolvedAt === null && issue.ignoredAt === null)
           .filter((issue) => issue.name.toLowerCase().includes(q))
           .sort((a, b) => prefer(b.projectId) - prefer(a.projectId))
           .slice(0, limit)
@@ -117,11 +139,12 @@ export const createFakeSignalRepository = (
 
     findBySlug: ({ projectId, slug }) =>
       Effect.gen(function* () {
-        const issue = [...issues.values()].find((i) => i.projectId === projectId && i.slug === slug)
+        const issue = [...issues.values()].find((i) => i.projectId === projectId && i.slug === slug && isUserVisible(i))
         if (!issue) return yield* new NotFoundError({ entity: "Signal", id: slug })
         return withLifecycle(issue)
       }),
 
+    // Slug uniqueness counts candidates: a candidate holds its slug for real.
     existsBySlug: ({ projectId, slug }) =>
       Effect.sync(() => [...issues.values()].some((i) => i.projectId === projectId && i.slug === slug)),
 
@@ -164,7 +187,7 @@ export const createFakeSignalRepository = (
     list: ({ projectId, limit, offset }) =>
       Effect.sync(() => {
         const rows = [...issues.values()]
-          .filter((issue) => issue.projectId === projectId)
+          .filter((issue) => issue.projectId === projectId && isUserVisible(issue))
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         const window = rows.slice(offset, offset + limit + 1)
         return {
@@ -179,7 +202,7 @@ export const createFakeSignalRepository = (
       Effect.sync(() => {
         const query = searchQuery?.trim().toLowerCase()
         const filtered = [...issues.values()]
-          .filter((issue) => issue.projectId === projectId)
+          .filter((issue) => issue.projectId === projectId && isUserVisible(issue))
           .map(withLifecycle)
           .filter((issue) => {
             const archived = issue.resolvedAt !== null || issue.ignoredAt !== null
@@ -221,7 +244,7 @@ export const createFakeSignalRepository = (
     listIdsCreatedInTimeRange: ({ projectId, timeRange }) =>
       Effect.sync(() =>
         [...issues.values()]
-          .filter((issue) => issue.projectId === projectId && issue.deletedAt === null)
+          .filter((issue) => issue.projectId === projectId && isUserVisible(issue))
           .filter(
             (issue) =>
               (!timeRange.from || issue.createdAt >= timeRange.from) &&

@@ -1,8 +1,10 @@
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { OrganizationId, ProjectId, SignalId, type SqlClient } from "@domain/shared"
-import { SignalRepository } from "@domain/signals"
+import { CENTROID_HALF_LIFE_SECONDS, CENTROID_SOURCE_WEIGHTS, SignalRepository } from "@domain/signals"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
+import { projects } from "../schema/projects.ts"
 import { signals } from "../schema/signals.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
@@ -26,6 +28,9 @@ const seedSignal = (input: {
   readonly resolvedAt?: Date | null
   readonly ignoredAt?: Date | null
   readonly regressedAt?: Date | null
+  /** Omitted means promoted at creation, which is what every read expects to see. */
+  readonly promotedAt?: Date | null
+  readonly centroidEmbedding?: readonly number[]
 }) =>
   pg.db.insert(signals).values({
     id: input.id,
@@ -39,6 +44,21 @@ const seedSignal = (input: {
     resolvedAt: input.resolvedAt ?? null,
     ignoredAt: input.ignoredAt ?? null,
     regressedAt: input.regressedAt ?? null,
+    promotedAt: input.promotedAt === undefined ? input.createdAt : input.promotedAt,
+    // `signals_centroid_embedding_consistency_check` requires a materialized
+    // embedding to be backed by a model-stamped centroid with positive mass.
+    ...(input.centroidEmbedding
+      ? {
+          centroidEmbedding: [...input.centroidEmbedding],
+          centroid: {
+            base: [...input.centroidEmbedding],
+            mass: 1,
+            model: "voyage-4-large",
+            decay: CENTROID_HALF_LIFE_SECONDS,
+            weights: CENTROID_SOURCE_WEIGHTS,
+          },
+        }
+      : {}),
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
   })
@@ -265,6 +285,126 @@ describe("SignalRepositoryLive.countBySlug organization-wide (D15)", () => {
     )
 
     expect(count).toBe(0)
+  })
+})
+
+describe("SignalRepositoryLive promotion gate", () => {
+  // Same unit vector on both rows, so cosine similarity is 1 and the vector-only
+  // admission path (`>= SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY`) accepts them.
+  const EMBEDDING = Array.from({ length: EMBEDDING_DIMENSIONS }, (_, index) => (index === 0 ? 1 : 0))
+  const PROMOTED = {
+    id: "sig-gate-promoted".padEnd(24, "p"),
+    slug: "gate-promoted",
+    createdAt: new Date("2026-03-05T00:00:00.000Z"),
+    centroidEmbedding: EMBEDDING,
+  }
+  const CANDIDATE = {
+    id: "sig-gate-candidate".padEnd(24, "n"),
+    slug: "gate-candidate",
+    createdAt: new Date("2026-03-06T00:00:00.000Z"),
+    promotedAt: null,
+    centroidEmbedding: EMBEDDING,
+  }
+  const ANCHOR = {
+    id: "sig-gate-anchor".padEnd(24, "z"),
+    slug: "gate-anchor",
+    createdAt: new Date("2026-03-07T00:00:00.000Z"),
+    centroidEmbedding: EMBEDDING,
+  }
+
+  const withRepo = <A, E>(f: (repo: SignalRepository) => Effect.Effect<A, E, SignalRepository | SqlClient>) =>
+    run(
+      Effect.gen(function* () {
+        return yield* f(yield* SignalRepository)
+      }),
+    )
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+    await pg.db.delete(projects)
+    // `searchOrgWide` inner-joins projects, so the palette tier needs a real row.
+    await pg.db
+      .insert(projects)
+      .values({ id: PROJECT_ID, organizationId: ORG_ID, name: "Gate project", slug: "gate-project" })
+    await seedSignal(PROMOTED)
+    await seedSignal(CANDIDATE)
+  })
+
+  it("omits a candidate from every user-facing read", async () => {
+    const [list, tableRows, createdIds, byIds, similar, orgWide] = await Promise.all([
+      withRepo((repo) => repo.list({ projectId: PROJECT_ID, limit: 50, offset: 0 })),
+      withRepo((repo) => repo.listTableRows({ projectId: PROJECT_ID, limit: 50, offset: 0 })),
+      withRepo((repo) => repo.listIdsCreatedInTimeRange({ projectId: PROJECT_ID, timeRange: {} })),
+      withRepo((repo) =>
+        repo.findByIds({ projectId: PROJECT_ID, signalIds: [SignalId(PROMOTED.id), SignalId(CANDIDATE.id)] }),
+      ),
+      withRepo((repo) =>
+        repo.findSimilarByCentroid({ projectId: PROJECT_ID, signalId: SignalId(PROMOTED.id), limit: 25 }),
+      ),
+      withRepo((repo) => repo.searchOrgWide({ query: "gate", limit: 50 })),
+    ])
+
+    expect(list.items.map((issue) => issue.id)).toEqual([PROMOTED.id])
+    expect(tableRows.items.map((issue) => issue.id)).toEqual([PROMOTED.id])
+    expect(tableRows.totalCount).toBe(1)
+    expect(createdIds).toEqual([SignalId(PROMOTED.id)])
+    expect(byIds.map((issue) => issue.id)).toEqual([PROMOTED.id])
+    expect(similar).toEqual([])
+    expect(orgWide.map((hit) => hit.issue.id)).toEqual([PROMOTED.id])
+  })
+
+  it("resolves a candidate as not found by id and by slug", async () => {
+    await expect(withRepo((repo) => repo.findById(SignalId(CANDIDATE.id)))).rejects.toThrow()
+    await expect(withRepo((repo) => repo.findBySlug({ projectId: PROJECT_ID, slug: CANDIDATE.slug }))).rejects.toThrow()
+
+    const promoted = await withRepo((repo) => repo.findById(SignalId(PROMOTED.id)))
+    expect(promoted.id).toBe(PROMOTED.id)
+  })
+
+  it("hides a candidate from the list search but keeps it visible to discovery", async () => {
+    const [listSearch, discovery] = await Promise.all([
+      withRepo((repo) => repo.hybridSearch({ projectId: PROJECT_ID, query: "gate", normalizedEmbedding: EMBEDDING })),
+      withRepo((repo) =>
+        repo.hybridSearch({
+          projectId: PROJECT_ID,
+          query: "gate",
+          normalizedEmbedding: EMBEDDING,
+          includeUnpromoted: true,
+        }),
+      ),
+    ])
+
+    expect(listSearch.map((candidate) => candidate.signalId)).toEqual([SignalId(PROMOTED.id)])
+    expect([...discovery.map((candidate) => candidate.signalId)].sort()).toEqual(
+      [SignalId(PROMOTED.id), SignalId(CANDIDATE.id)].sort(),
+    )
+  })
+
+  it("keeps a candidate reachable to the write and slug-uniqueness paths", async () => {
+    const locked = await withRepo((repo) => repo.findByIdForUpdate(SignalId(CANDIDATE.id)))
+    expect(locked.id).toBe(CANDIDATE.id)
+
+    const [byId, count, exists] = await Promise.all([
+      withRepo((repo) => repo.findById(SignalId(CANDIDATE.id), { includeUnpromoted: true })),
+      withRepo((repo) => repo.countBySlug({ slug: CANDIDATE.slug })),
+      withRepo((repo) => repo.existsBySlug({ projectId: PROJECT_ID, slug: CANDIDATE.slug })),
+    ])
+
+    expect(byId.id).toBe(CANDIDATE.id)
+    // A candidate holds its slug for real; handing it out twice would collide
+    // with `signals_unique_slug_per_org_idx`.
+    expect(count).toBe(1)
+    expect(exists).toBe(true)
+  })
+
+  it("returns nothing from findSimilarByCentroid when the source itself is a candidate", async () => {
+    await seedSignal(ANCHOR)
+
+    const neighbors = await withRepo((repo) =>
+      repo.findSimilarByCentroid({ projectId: PROJECT_ID, signalId: SignalId(CANDIDATE.id), limit: 25 }),
+    )
+
+    expect(neighbors).toEqual([])
   })
 })
 
