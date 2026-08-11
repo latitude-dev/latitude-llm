@@ -5,6 +5,14 @@ export {
   type TaxonomyAdaptiveClusteringMode,
 } from "./adaptive-mode.ts"
 export {
+  promotedTopLevelRows,
+  promoteScaffolding,
+  type ScaffoldingShape,
+  type TaxonomyBuildQualityMetrics,
+  type TaxonomyLeafQuality,
+  taxonomyBuildQualityMetrics,
+} from "./build-quality.ts"
+export {
   type BuildRelativeHierarchicalClustersInput,
   type BuildRelativeHierarchicalClustersResult,
   type BuildStaticHierarchicalClustersInput,
@@ -79,9 +87,11 @@ export {
   TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_PROJECTION_METHODS,
+  TAXONOMY_QUALITY_LEAF_PROFILE_MAX,
   TAXONOMY_REASSIGNMENT_BATCH_SIZE,
   TAXONOMY_RUN_STATUSES,
   TAXONOMY_RUN_TRIGGERS,
+  TAXONOMY_SCAFFOLDING_MAX_OWN_FRACTION,
   TAXONOMY_SEARCH_MIN_SCORE,
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
   TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
@@ -192,6 +202,12 @@ export {
   type TaxonomyLineageMatch,
 } from "./lineage.ts"
 export { taxonomyClusterLockKey, withTaxonomyClusterLock } from "./locks.ts"
+export {
+  normalizedTaxonomyName,
+  type TaxonomyNameQualityCluster,
+  type TaxonomyNameQualityMetrics,
+  taxonomyNameQualityMetrics,
+} from "./name-quality.ts"
 export {
   CustomBehaviorRepository,
   type CustomBehaviorRepositoryShape,
@@ -374,6 +390,10 @@ export {
   listUserBehavioursUseCase,
   type UserBehaviourItem,
 } from "./use-cases/list-user-behaviours.ts"
+export {
+  type MeasureTaxonomyNameQualityInput,
+  measureTaxonomyNameQualityUseCase,
+} from "./use-cases/measure-taxonomy-name-quality.ts"
 export {
   type NameCustomBehaviorClusterInput,
   nameCustomBehaviorClusterUseCase,

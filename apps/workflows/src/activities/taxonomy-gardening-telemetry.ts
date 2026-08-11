@@ -6,7 +6,11 @@
  * percentile summaries, never a raw per-split array, member id, or embedding.
  */
 
-import type { HierarchicalTaxonomyPlan } from "@domain/taxonomy"
+import type {
+  HierarchicalTaxonomyPlan,
+  TaxonomyBuildQualityMetrics,
+  TaxonomyNameQualityMetrics,
+} from "@domain/taxonomy"
 import { boundedPercentiles, TAXONOMY_ADAPTIVE_POLICY_VERSION } from "@domain/taxonomy"
 
 /** The scope fields the events carry; a structural subset of `GardenTaxonomyStepInput`. */
@@ -14,6 +18,11 @@ export interface AdaptiveTelemetryScope {
   readonly organizationId: string
   readonly projectId: string
   readonly customBehaviorId?: string | undefined
+}
+
+/** Quality is emitted for every tree, so unlike the adaptive events it names the facet too. */
+export interface QualityTelemetryScope extends AdaptiveTelemetryScope {
+  readonly facetId?: string | undefined
 }
 
 /** Log payload for one adaptive garden run — CloudWatch only, so un-sampled unlike the span mirror below. */
@@ -99,3 +108,87 @@ export const adaptiveSpanAttributes = (
   }
   return attributes
 }
+
+/**
+ * Build-quality payload — emitted for EVERY mode, unlike the adaptive events
+ * above, because the baseline these metrics exist to establish has to cover the
+ * projects running `off` (which is most of them).
+ */
+export const buildQualityFields = (
+  scope: QualityTelemetryScope,
+  plan: HierarchicalTaxonomyPlan,
+  metrics: TaxonomyBuildQualityMetrics,
+) => ({
+  mode: plan.mode,
+  organizationId: scope.organizationId,
+  projectId: scope.projectId,
+  customBehaviorId: scope.customBehaviorId,
+  facetId: scope.facetId,
+  fallbackReason: plan.fallbackReason,
+  membersClustered: metrics.membersClustered,
+  leafCount: metrics.leafCount,
+  largestLeafShare: metrics.largestLeafShare,
+  topLevelRowCount: metrics.topLevelRowCount,
+  largestTopLevelShare: metrics.largestTopLevelShare,
+  // The sorted vector is the point: [1302, 52, 43, 38] reads as a regression at a glance.
+  leafSizes: metrics.leaves.map((leaf) => leaf.size),
+  centeredCohesionByLeaf: metrics.leaves.map((leaf) => leaf.centeredCohesion),
+  leavesOmitted: metrics.leafCount - metrics.leaves.length,
+})
+
+const cohesions = (metrics: TaxonomyBuildQualityMetrics): readonly number[] =>
+  metrics.leaves.map((leaf) => leaf.centeredCohesion)
+
+export const buildQualitySpanAttributes = (
+  scope: QualityTelemetryScope,
+  plan: HierarchicalTaxonomyPlan,
+  metrics: TaxonomyBuildQualityMetrics,
+): Record<string, string | number> => {
+  const centeredCohesion = boundedPercentiles(cohesions(metrics))
+  return {
+    "taxonomy.organizationId": scope.organizationId,
+    "taxonomy.projectId": scope.projectId,
+    "taxonomy.customBehaviorId": scope.customBehaviorId ?? "none",
+    "taxonomy.facetId": scope.facetId ?? "none",
+    "taxonomy.quality.mode": plan.mode,
+    "taxonomy.quality.membersClustered": metrics.membersClustered,
+    "taxonomy.quality.leafCount": metrics.leafCount,
+    "taxonomy.quality.largestLeafShare": metrics.largestLeafShare,
+    // Rows AFTER content-free interiors are promoted away — not the root's literal child count.
+    "taxonomy.quality.topLevelRowCount": metrics.topLevelRowCount,
+    "taxonomy.quality.largestTopLevelShare": metrics.largestTopLevelShare,
+    // Span tags are flat scalars, so the vector travels as a string.
+    "taxonomy.quality.leafSizes": metrics.leaves.map((leaf) => leaf.size).join(","),
+    "taxonomy.quality.leavesOmitted": metrics.leafCount - metrics.leaves.length,
+    "taxonomy.quality.centeredCohesion.p10": centeredCohesion.p10,
+    "taxonomy.quality.centeredCohesion.p50": centeredCohesion.p50,
+    "taxonomy.quality.centeredCohesion.p90": centeredCohesion.p90,
+    // Residue shows up as the worst leaf, which percentiles over a 5-leaf tree can hide.
+    "taxonomy.quality.centeredCohesion.min": Math.min(...cohesions(metrics), 1),
+  }
+}
+
+export const nameQualityFields = (scope: QualityTelemetryScope, metrics: TaxonomyNameQualityMetrics) => ({
+  organizationId: scope.organizationId,
+  projectId: scope.projectId,
+  customBehaviorId: scope.customBehaviorId,
+  facetId: scope.facetId,
+  ...metrics,
+})
+
+export const nameQualitySpanAttributes = (
+  scope: QualityTelemetryScope,
+  metrics: TaxonomyNameQualityMetrics,
+): Record<string, string | number> => ({
+  "taxonomy.organizationId": scope.organizationId,
+  "taxonomy.projectId": scope.projectId,
+  "taxonomy.customBehaviorId": scope.customBehaviorId ?? "none",
+  "taxonomy.facetId": scope.facetId ?? "none",
+  "taxonomy.quality.leafCount": metrics.leafCount,
+  "taxonomy.quality.namedLeafCount": metrics.namedLeafCount,
+  "taxonomy.quality.duplicateNameRate": metrics.duplicateNameRate,
+  "taxonomy.quality.duplicateNameLeafCount": metrics.duplicateNameLeafCount,
+  // The collisions the sibling-scoped quality gate lets through.
+  "taxonomy.quality.crossBranchDuplicateLeafCount": metrics.crossBranchDuplicateLeafCount,
+  "taxonomy.quality.sharedSiblingWordShare": metrics.sharedSiblingWordShare,
+})

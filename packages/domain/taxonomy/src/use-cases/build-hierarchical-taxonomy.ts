@@ -66,6 +66,7 @@ import {
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_DEFAULT,
   type TaxonomyAdaptiveClusteringMode,
 } from "../adaptive-mode.ts"
+import { type TaxonomyBuildQualityMetrics, taxonomyBuildQualityMetrics } from "../build-quality.ts"
 import {
   buildRelativeHierarchicalClusters,
   buildStaticHierarchicalClusters,
@@ -332,6 +333,12 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
    * carries WHY — `Effect.logError` does not reach Datadog from here.
    */
   readonly adaptiveBuildError: string | null
+  /**
+   * Quality of the partition this pass actually persists — measured off the
+   * build's own tree, never off a window of live assignments. Null when the
+   * sample fell below the gardening minimum and no tree was built.
+   */
+  readonly qualityMetrics: TaxonomyBuildQualityMetrics | null
 }
 
 const lookbackStart = (now: Date): Date =>
@@ -674,6 +681,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         adaptiveDurationMs: 0,
         staticDurationMs: 0,
         adaptiveBuildError: null,
+        qualityMetrics: null,
       } satisfies HierarchicalTaxonomyPlan
     }
 
@@ -966,5 +974,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       adaptiveDurationMs,
       staticDurationMs,
       adaptiveBuildError,
+      // Measured on the tree this pass persists, which on a rejected adaptive run is the static fallback.
+      qualityMetrics: taxonomyBuildQualityMetrics({ root: tree, embeddings: normalizedEmbeddings }),
     } satisfies HierarchicalTaxonomyPlan
   }).pipe(Effect.withSpan("taxonomy.planHierarchicalTaxonomy"))
