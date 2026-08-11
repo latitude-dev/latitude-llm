@@ -16,13 +16,12 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
         return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: "missing webhook secret" }))
       }
 
+      // Every resolvePublicWebhookUrl failure (bad URL, non-https, DNS failure, private-IP target) is a
+      // deterministic property of the stored webhookUrl, not a network blip — always "config" so
+      // send-agent-dispatch.ts acknowledges it instead of retrying a permanently-broken URL.
       const url = yield* Effect.tryPromise({
         try: () => resolvePublicWebhookUrl(target.webhookUrl, lookupHost),
-        catch: (cause) =>
-          new DispatchAdapterError({
-            reason: cause instanceof Error && cause.message.startsWith("webhook_") ? "config" : "transport",
-            cause,
-          }),
+        catch: (cause) => new DispatchAdapterError({ reason: "config", cause }),
       })
 
       const body = JSON.stringify({ trigger: context.trigger, context, prompt })
