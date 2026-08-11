@@ -1,7 +1,7 @@
 import type { FilterSet } from "@domain/shared"
 import { Button, Icon, Skeleton, Text } from "@repo/ui"
 import { PlusIcon } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useBehaviourCatalog } from "../../../../../../domains/taxonomy/behaviour-catalog.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
@@ -37,12 +37,20 @@ export function BehavioursCatalogPage({
   // blank slate takes the whole screen and carries the actions itself.
   const showEmpty = !isLoading && entries.length === 1 && entries[0]?.groups.length === 0
 
+  // A stable sort: behaviors with groups already found stay above ones still
+  // waiting or analyzing, so the list leads with what's actually explorable.
+  const sortedEntries = useMemo(
+    () => [...entries].sort((a, b) => Number(b.groups.length > 0) - Number(a.groups.length > 0)),
+    [entries],
+  )
+
   // The modals sit OUTSIDE Layout: ListingLayout renders only its Content/Aside
   // children and drops anything else, so a modal placed under it never mounts.
   return (
     <>
       {/* Scroll on the whole column, not on the list: the title scrolls away with the panels rather than pinning. */}
-      <Layout className="overflow-y-auto">
+      {/* gap-6 overrides ListingLayout's default gap-3: the list needs more separation from the header than that section-internal spacing gives it. */}
+      <Layout className="overflow-y-auto gap-6">
         <Layout.Content>
           {showEmpty ? null : (
             <Layout.Header
@@ -56,7 +64,7 @@ export function BehavioursCatalogPage({
               actions={
                 <Button onClick={() => setNewBehaviorOpen(true)}>
                   <Icon icon={PlusIcon} size="sm" />
-                  Behavior
+                  Group
                 </Button>
               }
             />
@@ -68,7 +76,7 @@ export function BehavioursCatalogPage({
               <div className={BEHAVIOUR_LIST_CLASS}>
                 {isLoading
                   ? [0, 1, 2].map((index) => <Skeleton key={index} className="h-40 w-full rounded-lg" />)
-                  : entries.map((entry) => (
+                  : sortedEntries.map((entry) => (
                       <BehaviourCatalogPanel key={entry.slug} projectSlug={project.slug} entry={entry} />
                     ))}
               </div>

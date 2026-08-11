@@ -1,16 +1,21 @@
-import { cn, Text } from "@repo/ui"
+import { cn, Icon, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
+import { ClockArrowUpIcon, GlobeIcon } from "lucide-react"
 import type {
   BehaviourCatalogEntryRecord,
   BehaviourCatalogGroupRecord,
 } from "../../../../../../domains/taxonomy/behaviour-catalog.functions.ts"
+import {
+  FACET_SCOPE_GLOBAL_TOOLTIP,
+  FACET_SCOPE_WINDOWED_TOOLTIP,
+} from "../../../../../../domains/taxonomy/facet-scope-copy.ts"
 import { groupColorClassAt } from "../../../../../../domains/taxonomy/group-colors.ts"
 import { BehaviourBadge, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
 import { PreviewPlaceholder } from "./behaviour-catalog-card.tsx"
 
 /** The Behaviors home: a full-width panel per behavior, stacked top to bottom. */
-export const BEHAVIOUR_LIST_CLASS = "flex flex-col gap-4"
+export const BEHAVIOUR_LIST_CLASS = "flex flex-col gap-2"
 
 const PANEL_CLASS =
   "flex flex-col overflow-hidden rounded-lg border border-border text-left transition-colors hover:border-foreground/20"
@@ -27,8 +32,8 @@ function GroupRow({
   const share = totalSessionCount > 0 ? group.sessionCount / totalSessionCount : 0
   return (
     <div className="flex flex-row items-start gap-4 rounded-md bg-secondary px-4 py-3">
-      <div className="flex min-w-0 flex-1 flex-row items-start gap-2">
-        <span className={cn("mt-2 size-[5px] shrink-0 rounded-full", groupColorClassAt(colorIndex))} />
+      <div className="flex min-w-0 flex-1 flex-row gap-3">
+        <span className={cn("my-1 w-1 shrink-0 self-stretch rounded-full", groupColorClassAt(colorIndex))} />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <Text.H5 color="foreground">{group.name}</Text.H5>
           {group.description ? <Text.H6 color="foregroundMuted">{group.description}</Text.H6> : null}
@@ -52,18 +57,75 @@ function GroupRow({
   )
 }
 
-/** Each top-level group's slice of the facet's sessions, in its row's color — predominance at a glance. */
-function GroupShareBar({ groups }: { readonly groups: readonly BehaviourCatalogGroupRecord[] }) {
+/** The whole bar's legend: every group in its color, with its share — the same regardless of where on the bar you hover. */
+function GroupShareLegend({
+  groups,
+  totalSessionCount,
+}: {
+  readonly groups: readonly BehaviourCatalogGroupRecord[]
+  readonly totalSessionCount: number
+}) {
   return (
-    <div className="flex h-1 w-[136px] shrink-0 overflow-hidden rounded-full bg-muted">
-      {groups.map((group, index) => (
-        <div
-          key={group.id}
-          className={groupColorClassAt(index)}
-          style={{ flexGrow: group.sessionCount || 0, flexBasis: 0 }}
-        />
-      ))}
+    <div className="flex flex-col gap-1">
+      {groups.map((group, index) => {
+        const share = totalSessionCount > 0 ? group.sessionCount / totalSessionCount : 0
+        return (
+          <div key={group.id} className="flex flex-row items-center gap-2">
+            <span className={cn("size-[6px] shrink-0 rounded-full", groupColorClassAt(index))} />
+            <span className="min-w-0 flex-1 truncate">{group.name}</span>
+            <span className="shrink-0 text-muted-foreground tabular-nums">{formatPercentage(share)}</span>
+          </div>
+        )
+      })}
     </div>
+  )
+}
+
+/**
+ * Each top-level group's slice of the facet's sessions, in its row's color —
+ * predominance at a glance, with the full breakdown behind one hover on the bar.
+ */
+function GroupShareBar({
+  groups,
+  totalSessionCount,
+}: {
+  readonly groups: readonly BehaviourCatalogGroupRecord[]
+  readonly totalSessionCount: number
+}) {
+  return (
+    <Tooltip
+      asChild
+      className="max-w-96"
+      trigger={
+        <div className="flex h-1 w-[136px] shrink-0 overflow-hidden rounded-full bg-muted">
+          {groups.map((group, index) => (
+            <div
+              key={group.id}
+              className={groupColorClassAt(index)}
+              style={{ flexGrow: group.sessionCount || 0, flexBasis: 0 }}
+            />
+          ))}
+        </div>
+      }
+    >
+      <GroupShareLegend groups={groups} totalSessionCount={totalSessionCount} />
+    </Tooltip>
+  )
+}
+
+function FacetScopeIcon({ isGlobal }: { readonly isGlobal: boolean }) {
+  return (
+    <Tooltip
+      asChild
+      className="max-w-80"
+      trigger={
+        <span className="inline-flex shrink-0 cursor-default">
+          <Icon icon={isGlobal ? GlobeIcon : ClockArrowUpIcon} size="sm" color="foregroundMuted" />
+        </span>
+      }
+    >
+      {isGlobal ? FACET_SCOPE_GLOBAL_TOOLTIP : FACET_SCOPE_WINDOWED_TOOLTIP}
+    </Tooltip>
   )
 }
 
@@ -72,15 +134,20 @@ function PanelHeader({ entry }: { readonly entry: BehaviourCatalogEntryRecord })
   return (
     <div className="flex flex-row items-start justify-between gap-4 bg-muted px-4 py-3">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <Text.H5M ellipsis noWrap>
-          {entry.name}
-        </Text.H5M>
+        <div className="flex min-w-0 flex-row items-center gap-1">
+          <Text.H5M ellipsis noWrap>
+            {entry.name}
+          </Text.H5M>
+          <FacetScopeIcon isGlobal={entry.facetId === null} />
+        </div>
         <Text.H6 color="foregroundMuted" className="max-w-[400px]">
           {entry.description}
         </Text.H6>
       </div>
       <div className="flex shrink-0 flex-row items-center gap-3">
-        {entry.groups.length > 1 ? <GroupShareBar groups={entry.groups} /> : null}
+        {entry.groups.length > 1 ? (
+          <GroupShareBar groups={entry.groups} totalSessionCount={entry.sessionCount} />
+        ) : null}
         <Text.H6 color="foregroundMuted" noWrap>
           {entry.status === "generating"
             ? "Analyzing"

@@ -1,5 +1,5 @@
 import type { TaxonomyClusterTrendStatus } from "@domain/taxonomy"
-import { Icon } from "@repo/ui"
+import { Badge } from "@repo/ui"
 import { ArrowDownIcon, ArrowUpIcon, FlameIcon, type LucideIcon, MinusIcon, SparklesIcon } from "lucide-react"
 
 export const trendLabel = (status: TaxonomyClusterTrendStatus): string => {
@@ -35,12 +35,16 @@ export const trendIcon = (status: TaxonomyClusterTrendStatus) => {
   }
 }
 
-/** The pill used for a behavior's status badges (parent, sessions, trend, first seen), on the tree and the catalog alike. */
+/**
+ * The pill used for a behavior's status badges (parent, sessions, trend, first
+ * seen, facet timing), on the tree, the catalog, and the facet header alike —
+ * the app's shared `Badge`, not a bespoke one, so it stays in step with every
+ * other badge in the product.
+ */
 export function BehaviourBadge({ label, icon }: { readonly label: string; readonly icon: LucideIcon }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-xs leading-5 text-muted-foreground">
-      <Icon icon={icon} size="xs" color="foregroundMuted" />
-      <span className="truncate">{label}</span>
-    </span>
+    <Badge variant="outlineMuted" shape="rounded" ellipsis iconProps={{ icon, placement: "start" }}>
+      {label}
+    </Badge>
   )
 }
