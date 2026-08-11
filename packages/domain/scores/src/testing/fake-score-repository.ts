@@ -80,7 +80,9 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
                 score.draftedAt === null &&
                 score.createdAt.getTime() >= since.getTime(),
             )
-            .map((score) => score.sessionId ?? score.traceId ?? score.id),
+            // `||`, not `??`: the SQL side treats an empty id as absent (`nullif`), so a
+            // fake that kept `""` as a key would count unrelated scores as one session.
+            .map((score) => score.sessionId || score.traceId || score.id),
         ).size,
       ),
     findPublishedSystemAnnotationByTraceAndFeedback: ({ projectId, traceId, feedback }) =>

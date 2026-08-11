@@ -15,9 +15,11 @@ interface ResolveProjectSessionVolumeInput {
   readonly now?: Date
 }
 
+// Only the canonical form this use case writes is trusted: `parseInt` would read
+// "6e3" as 6 and "3000.9" as 3000, and either silently lowers the threshold.
 const parseCachedVolume = (raw: string): number | null => {
-  const parsed = Number.parseInt(raw, 10)
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
+  const parsed = Number(raw)
+  return Number.isSafeInteger(parsed) && parsed >= 0 && String(parsed) === raw ? parsed : null
 }
 
 /**
@@ -45,12 +47,8 @@ export const resolveProjectSessionVolumeUseCase = Effect.fn("signals.resolveProj
   const cached = yield* cache.get(cacheKey).pipe(Effect.catchTag("CacheError", () => Effect.succeed(null)))
   if (cached !== null) {
     const parsed = parseCachedVolume(cached)
-    if (parsed !== null) {
-      yield* Effect.annotateCurrentSpan("cache.hit", true)
-      return parsed
-    }
+    if (parsed !== null) return parsed
   }
-  yield* Effect.annotateCurrentSpan("cache.hit", false)
 
   const now = input.now ?? new Date()
   const windowStart = new Date(now.getTime() - PROMOTION_WINDOW_DAYS * MILLISECONDS_PER_DAY)

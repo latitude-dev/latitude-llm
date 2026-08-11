@@ -33,7 +33,8 @@ const makeUserSignal = (id: string): Signal => ({
   priority: null,
   centroid: null,
   clusteredAt: null,
-  promotedAt: null,
+  // User-created signals are born promoted.
+  promotedAt: new Date("2026-06-01T00:00:00Z"),
   resolvedAt: null,
   ignoredAt: null,
   regressedAt: null,

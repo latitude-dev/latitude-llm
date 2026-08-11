@@ -60,12 +60,21 @@ describe("resolveProjectSessionVolumeUseCase", () => {
     expect(cache.writes).toEqual([[`org:${organizationId}:projects:${projectId}:session-volume`, "12500"]])
   })
 
-  it("recomputes when the cached value is not a usable count", async () => {
+  // Anything but the canonical integer this use case writes is recomputed: a partially
+  // parsed value would silently lower the promotion threshold.
+  it.each([
+    ["not-a-number"],
+    ["6e3"],
+    ["3000.9"],
+    ["3000 sessions"],
+    ["-5"],
+    [" 12"],
+  ])("recomputes when the cached value is %j rather than a canonical count", async (cached) => {
     const { repository } = createFakeSessionRepository({
       countByProjectId: () => Effect.succeed({ totalCount: 7 }),
     })
 
-    await expect(run(makeCache("not-a-number").store, repository)).resolves.toBe(7)
+    await expect(run(makeCache(cached).store, repository)).resolves.toBe(7)
   })
 
   it("degrades to null when ClickHouse fails so the caller can fall back to the floor", async () => {
