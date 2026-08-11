@@ -22,7 +22,6 @@ const model = (
 /** Anthropic's 1.25x write / 0.1x read premium, so break-even lands at 21.7%. */
 export const CLAUDE_OPUS_4_5 = model({ provider: "anthropic", model: "claude-opus-4-5" })
 export const CLAUDE_HAIKU_4_5 = model({ provider: "anthropic", model: "claude-haiku-4-5" })
-export const CLAUDE_OPUS_4_1 = model({ provider: "anthropic", model: "claude-opus-4-1" })
 export const CLAUDE_OPUS_4_6 = model({ provider: "anthropic", model: "claude-opus-4-6" })
 /**
  * The only family still on a five-minute cache by default, which is what a `Stop caching`
@@ -30,6 +29,9 @@ export const CLAUDE_OPUS_4_6 = model({ provider: "anthropic", model: "claude-opu
  * spaced an hour apart are warm there and there is nothing to stop.
  */
 export const CLAUDE_OPUS_4_7 = model({ provider: "anthropic", model: "claude-opus-4-7" })
+
+/** A legacy-era model the registry still prices, for rows predating `cost_source`. */
+export const GPT_3_5_TURBO = model({ provider: "openai", model: "gpt-3.5-turbo" })
 
 /** No cache-write price at all, so break-even collapses to 0%. */
 export const GPT_5_MINI = model({ provider: "openai", model: "gpt-5-mini" })

@@ -1,12 +1,12 @@
 import type { CostCohort } from "./cohorts.ts"
 import {
   CLAUDE_HAIKU_4_5,
-  CLAUDE_OPUS_4_1,
   CLAUDE_OPUS_4_5,
   CLAUDE_OPUS_4_6,
   CLAUDE_OPUS_4_7,
   COST_LONG_TAIL_MODELS,
   GEMINI_2_5_FLASH_LITE,
+  GPT_3_5_TURBO,
   GPT_5_4_MINI,
   GPT_5_6_LUNA,
   GPT_5_MINI,
@@ -182,7 +182,7 @@ const MISSING_COST_COHORTS: readonly CostCohort[] = [
   {
     key: "b-unknown",
     serviceName: "legacy-worker",
-    modelConfig: CLAUDE_OPUS_4_1,
+    modelConfig: GPT_3_5_TURBO,
     cadence: { endDaysAgo: 0, clusters: 26, clusterSpacingHours: 5, callsPerCluster: 1, gapWithinClusterSeconds: 0 },
     cache: { kind: "off" },
     promptTokens: 900,

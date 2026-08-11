@@ -467,10 +467,10 @@ describe("getCostSpec bare model ids on namespaced providers", () => {
   })
 
   it("leaves a bare id unpriced when two vendors on that provider share the name", () => {
-    // nano-gpt lists `TEE/glm-5` and `zai-org/glm-5`: two vendors, two rates, so picking one would
-    // invent a number. Driven through getCostSpec because the fallback lives in
+    // nano-gpt lists `TEE/glm-5.1` and `zai-org/glm-5.1`: two vendors, two rates, so picking one
+    // would invent a number. Driven through getCostSpec because the fallback lives in
     // `getModelForProvider` — `findModel` never reaches it, so asserting there proves nothing.
-    expect(getCostSpec("nano-gpt", "glm-5").costImplemented).toBe(false)
+    expect(getCostSpec("nano-gpt", "glm-5.1").costImplemented).toBe(false)
   })
 
   it("does not reach into another provider's catalog for a model the reported one lacks", () => {
