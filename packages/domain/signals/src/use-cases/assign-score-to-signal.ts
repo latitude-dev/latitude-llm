@@ -164,6 +164,10 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
 
     const score = scoreResult.score
 
+    // Reads through the promotion gate on purpose: an unpromoted signal is
+    // exactly the case this pre-read exists for, so a default-deny lookup would
+    // report every candidate as already promoted and the latch would never fire.
+    //
     // Resolved before the lock: promotion needs the project's session volume,
     // which lives in ClickHouse behind a Redis cache, and neither belongs inside
     // the Postgres transaction below. The extra unlocked read buys that
@@ -172,7 +176,7 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
     // harmless direction — the transaction re-checks it under the row lock.
     const signals = yield* SignalRepository
     const unpromotedBeforeAssignment = yield* signals
-      .findById(SignalId(input.signalId))
+      .findById(SignalId(input.signalId), { includeUnpromoted: true })
       .pipe(Effect.map((signal) => signal.promotedAt === null))
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(false)))
     const promotion = unpromotedBeforeAssignment ? yield* resolvePromotionThreshold(input) : null

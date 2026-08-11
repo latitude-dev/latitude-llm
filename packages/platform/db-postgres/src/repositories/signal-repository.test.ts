@@ -1,6 +1,11 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { OrganizationId, ProjectId, SignalId, type SqlClient } from "@domain/shared"
-import { CENTROID_HALF_LIFE_SECONDS, CENTROID_SOURCE_WEIGHTS, SignalRepository } from "@domain/signals"
+import {
+  CENTROID_HALF_LIFE_SECONDS,
+  CENTROID_SOURCE_WEIGHTS,
+  SignalRepository,
+  type SignalRepositoryShape,
+} from "@domain/signals"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -312,7 +317,7 @@ describe("SignalRepositoryLive promotion gate", () => {
     centroidEmbedding: EMBEDDING,
   }
 
-  const withRepo = <A, E>(f: (repo: SignalRepository) => Effect.Effect<A, E, SignalRepository | SqlClient>) =>
+  const withRepo = <A, E>(f: (repo: SignalRepositoryShape) => Effect.Effect<A, E, SignalRepository | SqlClient>) =>
     run(
       Effect.gen(function* () {
         return yield* f(yield* SignalRepository)
