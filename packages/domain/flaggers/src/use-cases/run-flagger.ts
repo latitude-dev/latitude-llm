@@ -179,7 +179,7 @@ const annotationReviewOutputSchema = z.object({
 
 const INSPECTED_AGENT_EXTRACTED_TRUE_TTL_SECONDS = 30 * 24 * 60 * 60
 const INSPECTED_AGENT_EXTRACTED_FALSE_TTL_SECONDS = 24 * 60 * 60
-const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 2
+const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 3
 const INSPECTED_AGENT_CONTEXT_CACHE_BASE = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}`
 const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `${INSPECTED_AGENT_CONTEXT_CACHE_BASE}:sha256:`
 const FALLBACK_SYSTEM_PROMPT_CHARS = 600
@@ -380,6 +380,8 @@ Return exactly one JSON object matching one of these shapes:
 Return understood=true only when you can infer what the agent is and what it should do. If understood=true, agentContext is required. Include expected output or response format in agentContext when it is present, but do not require one.
 
 Do not copy examples, taxonomies, policy lists, unsafe content, quoted user content, or category rubrics. Omit details that are not needed to understand the agent's role and task.
+
+Write agentContext in neutral, professional wording. Never reproduce profanity, slurs, or crude phrasing from the inspected prompt, even when it describes the agent's persona or tone; paraphrase such wording professionally.
 
 Return understood=false when the prompt does not define enough agent context. Never return understood=true without agentContext.
 `.trim()

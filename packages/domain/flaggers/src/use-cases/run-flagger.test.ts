@@ -435,6 +435,10 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate).toHaveLength(2)
     expect(calls.generate[0]).toMatchObject(FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL)
     expect(calls.generate[0].system).toContain("You extract agent context")
+    // Customer persona lines with profanity were copied verbatim into
+    // agentContext; the extractor must paraphrase crude wording professionally.
+    expect(calls.generate[0].system).toContain("Never reproduce profanity")
+    expect(calls.generate[0].system).toContain("neutral, professional wording")
     expect(calls.generate[1].prompt).toContain("EVALUATED AGENT CONTEXT")
     expect(calls.generate[1].prompt).toContain("dashboard design assistant")
     expect(calls.generate[1].prompt).not.toContain("Detailed rubric")
@@ -528,7 +532,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
 
   it("uses cached long-prompt extraction results", async () => {
     const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(400)}`
-    const cacheKey = `org:${INPUT.organizationId}:flaggers:inspected-agent-context:v2:sha256:${createHash("sha256").update(normalizeSystemPromptForCacheKey(longSystemPrompt)).digest("hex")}`
+    const cacheKey = `org:${INPUT.organizationId}:flaggers:inspected-agent-context:v3:sha256:${createHash("sha256").update(normalizeSystemPromptForCacheKey(longSystemPrompt)).digest("hex")}`
     const cache = createMemoryCacheLayer(
       new Map([
         [
@@ -669,10 +673,10 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
   })
 
   const buildIndexKey = (organizationId: string, projectId: string) =>
-    `org:${organizationId}:flaggers:inspected-agent-context:v2:index:${projectId}`
+    `org:${organizationId}:flaggers:inspected-agent-context:v3:index:${projectId}`
 
   const buildContentKey = (organizationId: string, systemPrompt: string) =>
-    `org:${organizationId}:flaggers:inspected-agent-context:v2:sha256:${createHash("sha256").update(normalizeSystemPromptForCacheKey(systemPrompt)).digest("hex")}`
+    `org:${organizationId}:flaggers:inspected-agent-context:v3:sha256:${createHash("sha256").update(normalizeSystemPromptForCacheKey(systemPrompt)).digest("hex")}`
 
   const buildRephrasedSupportPrompt = (variant: "a" | "b") => {
     const intro =
