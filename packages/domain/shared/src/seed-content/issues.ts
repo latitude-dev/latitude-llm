@@ -226,6 +226,21 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     source: "flagger",
   },
   {
+    name: "Laziness flagger fires on a deliberately terse reply",
+    description:
+      "The flagger called a one-line answer lazy when brevity was the right call. Seeded as the second unpromoted case, and an older one: a candidate that has been sitting invisible for weeks looks no different to a user than one from yesterday.",
+    createdDaysAgo: 23,
+    clusteredDaysAgo: 23,
+    updatedDaysAgo: 23,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
+  {
     name: "Agent invents enterprise SLAs for standard support plans",
     description:
       "The support agent promises named SLAs, priority response guarantees, or dedicated support channels for customers on standard plans. The issue appears when the model upgrades ordinary customers into enterprise-style contracts that do not exist.",
