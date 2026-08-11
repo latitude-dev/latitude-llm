@@ -14,11 +14,13 @@ import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { TaxonomyViewAssignmentRepository } from "../ports/taxonomy-view-assignment-repository.ts"
 import { classifyClusterTrend, type TaxonomyClusterTrendSummary } from "./analytics.ts"
+import { clipRangeToLensCoverage, getLensCoverageUseCase, type TaxonomyLensCoverage } from "./lens-coverage.ts"
 
 export type BehaviourSegment = "all" | "new_this_week" | "spiking" | "high_escalation"
 export type BehaviourSortBy = "category" | "volume" | "trend" | "first_seen" | "last_seen" | "escalation_rate"
 export type BehaviourNovelty = "first_seen" | "spiking" | "resurfaced" | "unknown"
-export type BehaviourFirstSeenLabel = "today" | "this_week" | "older"
+/** `unknown`: membership does not reach far enough back to say when this started. */
+export type BehaviourFirstSeenLabel = "today" | "this_week" | "older" | "unknown"
 
 export interface ListProjectBehavioursInput {
   readonly organizationId: OrganizationId
@@ -69,6 +71,12 @@ export interface ListProjectBehavioursResult {
   readonly topics: readonly ProjectBehaviourNode[]
   /** Sessions the promoted-away nodes held, so they sit in no row; taken before `limit` truncates. */
   readonly residueObservationCount: number
+  /**
+   * The band every count above was actually computed over on a facet lens, whose
+   * membership only covers what gardening wrote. Null on trees that cover whole
+   * project history (the global tree, a cohort view's topic slice).
+   */
+  readonly coverage: TaxonomyLensCoverage | null
 }
 
 const MS_PER_DAY = 24 * 60 * 60_000
@@ -84,7 +92,17 @@ const startOfUtcDay = (date: Date): Date =>
 const daysWindowStart = (now: Date, days: number): Date =>
   startOfUtcDay(new Date(now.getTime() - (days - 1) * MS_PER_DAY))
 
-const firstSeenLabel = (firstObservedAt: Date, now: Date, firstSeenWindowDays: number): BehaviourFirstSeenLabel => {
+const firstSeenLabel = (
+  firstObservedAt: Date,
+  now: Date,
+  firstSeenWindowDays: number,
+  coverage: TaxonomyLensCoverage | null,
+): BehaviourFirstSeenLabel => {
+  // A cluster whose earliest member sits at the coverage floor started no later
+  // than the floor, and possibly long before it — the lens simply has no
+  // membership there. Reporting the floor as a first sighting is the customer's
+  // "First seen: August 3" on every row, where August 3 is when the lens began.
+  if (coverage !== null && firstObservedAt <= coverage.from) return "unknown"
   const todayStart = startOfUtcDay(now)
   if (firstObservedAt >= todayStart) return "today"
   if (firstObservedAt >= daysWindowStart(now, firstSeenWindowDays)) return "this_week"
@@ -96,8 +114,10 @@ const noveltyFor = (input: {
   readonly trend: TaxonomyClusterTrendSummary
   readonly firstSeenWindowStart: Date
   readonly minObservations: number
+  readonly coverage: TaxonomyLensCoverage | null
 }): BehaviourNovelty => {
-  if (input.cluster.firstObservedAt >= input.firstSeenWindowStart) return "first_seen"
+  const firstSeenUnknown = input.coverage !== null && input.cluster.firstObservedAt <= input.coverage.from
+  if (!firstSeenUnknown && input.cluster.firstObservedAt >= input.firstSeenWindowStart) return "first_seen"
   if (input.trend.status === "spike") return "spiking"
   if (input.trend.status === "new" && input.trend.currentCount >= input.minObservations) return "spiking"
   return "unknown"
@@ -237,6 +257,26 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
       childrenByParentId.set(cluster.parentClusterId, siblings)
     }
 
+    // A facet lens accumulates membership one gardening window at a time and
+    // never reaches the full-window reassignment a cohort view's topic slice
+    // takes, so the requested window is clipped to the band membership actually
+    // covers. Every count, trend and first-seen below is then computed over a
+    // range the data really spans, and the caller states that range instead of
+    // labelling nine days of counts with the four months someone picked.
+    const coverage =
+      scopedAssignmentRepository != null && customBehaviorId != null && input.facetId != null
+        ? yield* getLensCoverageUseCase({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            customBehaviorId,
+            facetId: input.facetId,
+            clusterIds: displayable.map((cluster) => cluster.id),
+            assignments: scopedAssignmentRepository,
+            now,
+          })
+        : null
+    const window = clipRangeToLensCoverage({ from: input.startTimeFrom, to: input.startTimeTo }, coverage)
+
     // Scoped trees read their per-cluster counts from the custom-behavior
     // assignment slice (never global observations); a global tree reads the
     // time-windowed global assignment counts.
@@ -247,15 +287,15 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
             projectId: input.projectId,
             customBehaviorId,
             ...(input.facetId != null ? { facetId: input.facetId } : {}),
-            ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
-            ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
+            ...(window.from ? { startTimeFrom: window.from } : {}),
+            ...(window.to ? { startTimeTo: window.to } : {}),
           })
         : yield* observationRepository.getClusterAssignmentCounts({
             organizationId: input.organizationId,
             projectId: input.projectId,
             clusterIds: displayable.map((cluster) => cluster.id),
-            ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
-            ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
+            ...(window.from ? { startTimeFrom: window.from } : {}),
+            ...(window.to ? { startTimeTo: window.to } : {}),
           })
     const directCountByClusterId = new Map(assignmentCounts.map((count) => [count.clusterId, count.count] as const))
 
@@ -264,8 +304,15 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
     // start_time-windowed born/continue/die trend the global tree derives is
     // computable over the taxonomy_view_assignments slice.
     const currentSince = new Date(now.getTime() - TREND_CURRENT_DAYS * MS_PER_DAY)
-    const baselineSince = new Date(now.getTime() - trendWindowDays * MS_PER_DAY)
-    const baselineDays = Math.max(trendWindowDays - TREND_CURRENT_DAYS, 1)
+    const requestedBaselineSince = new Date(now.getTime() - trendWindowDays * MS_PER_DAY)
+    // A baseline reaching past the covered band would average today's real counts
+    // against days the lens has no membership for, which reads as a spike on every
+    // row. Shorten the baseline to the covered part and divide by that.
+    const baselineSince =
+      coverage !== null && coverage.from > requestedBaselineSince
+        ? new Date(Math.min(coverage.from.getTime(), currentSince.getTime()))
+        : requestedBaselineSince
+    const baselineDays = Math.max(Math.round((currentSince.getTime() - baselineSince.getTime()) / MS_PER_DAY), 1)
     const trendCounts =
       scopedAssignmentRepository != null && customBehaviorId != null
         ? yield* scopedAssignmentRepository.getClusterTrendCounts({
@@ -308,9 +355,9 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         classifyClusterTrend({
           currentCount: 0,
           baselineCount: 0,
-          baselineDays: Math.max(trendWindowDays - TREND_CURRENT_DAYS, 1),
+          baselineDays,
         })
-      const novelty = noveltyFor({ cluster, trend, firstSeenWindowStart, minObservations })
+      const novelty = noveltyFor({ cluster, trend, firstSeenWindowStart, minObservations, coverage })
       const directObservationCount = directCountByClusterId.get(cluster.id) ?? 0
       const subtreeObservationCount =
         directObservationCount + children.reduce((sum, child) => sum + child.subtreeObservationCount, 0)
@@ -322,7 +369,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
       if (!ownVisible && children.length === 0) return null
       return {
         cluster,
-        firstSeenLabel: firstSeenLabel(cluster.firstObservedAt, now, firstSeenWindowDays),
+        firstSeenLabel: firstSeenLabel(cluster.firstObservedAt, now, firstSeenWindowDays, coverage),
         trend,
         novelty,
         directObservationCount,
@@ -347,5 +394,6 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
     return {
       topics: truncateNodes(topics, limit),
       residueObservationCount,
+      coverage,
     } satisfies ListProjectBehavioursResult
   }).pipe(Effect.withSpan("taxonomy.listProjectBehaviours"))

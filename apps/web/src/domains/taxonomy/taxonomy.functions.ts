@@ -2,8 +2,10 @@ import { MOMENT_KINDS, type MomentKind } from "@domain/conversation-intelligence
 import { CustomBehaviorId, FacetId, normalizeCentroid, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import {
   type ClusterAnalysisAggregate,
+  clipRangeToLensCoverage,
   getBehaviourTrajectoryUseCase,
   getClusterSessionIntelligenceUseCase,
+  getLensCoverageUseCase,
   isDisplayableTaxonomyName,
   listBehaviourSessionsUseCase,
   listProjectBehavioursUseCase,
@@ -12,6 +14,7 @@ import {
   TaxonomyClusterIntelligenceRepository,
   TaxonomyClusterRepository,
   type TaxonomyClusterTrendSummary,
+  TaxonomyViewAssignmentRepository,
 } from "@domain/taxonomy"
 import {
   TaxonomyClusterIntelligenceRepositoryLive,
@@ -79,8 +82,15 @@ export interface BehaviourNodeRecord {
   readonly children: readonly BehaviourNodeRecord[]
 }
 
+/** The band a facet lens's counts were computed over; null when the tree covers whole project history. */
+export interface BehaviourCoverageRecord {
+  readonly fromIso: string
+  readonly toIso: string
+}
+
 interface ProjectBehavioursRecord {
   readonly topics: readonly BehaviourNodeRecord[]
+  readonly coverage: BehaviourCoverageRecord | null
 }
 
 export interface BehaviourTimeRangeRecord {
@@ -421,8 +431,11 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
         })
         const nodes = flattenNodes(result.topics)
         const intelligence = yield* TaxonomyClusterIntelligenceRepository
-        const sourceWindowEnd = timeRange.to ?? new Date()
-        const sourceWindowStart = timeRange.from ?? new Date(0)
+        // Same clip the tree's counts got, so the intelligence rollup is measured
+        // over the range the lens actually covers rather than the one requested.
+        const clipped = clipRangeToLensCoverage(timeRange, result.coverage)
+        const sourceWindowEnd = clipped.to ?? new Date()
+        const sourceWindowStart = clipped.from ?? new Date(0)
         const aggregateEntries = yield* Effect.forEach(
           nodes,
           (node) =>
@@ -451,7 +464,60 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
           toBehaviourNodeRecord(topic, aggregatesByClusterId, positionsByClusterId),
         )
         const displayTopics = data.segment === "high_escalation" ? pruneToHighEscalation(topics) : topics
-        return { topics: isOpenableBehaviourTree(displayTopics) ? displayTopics : [] }
+        return {
+          topics: isOpenableBehaviourTree(displayTopics) ? displayTopics : [],
+          coverage: result.coverage
+            ? { fromIso: result.coverage.from.toISOString(), toIso: result.coverage.to.toISOString() }
+            : null,
+        }
+      }).pipe(
+        withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
+        withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+/**
+ * The band a facet lens has membership for, on its own key so the picker can be
+ * bounded before a range is applied — coverage is a property of the slice, not of
+ * the selected range, so folding it into the tree read would make the range
+ * depend on a response that depends on the range.
+ */
+export const getBehaviourCoverage = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      customBehaviorId: z.string(),
+      facetId: z.string(),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<BehaviourCoverageRecord | null> => {
+    const orgId = await resolveOrgScope(context)
+    const projectId = ProjectId(data.projectId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const clusters = yield* TaxonomyClusterRepository
+        const assignments = yield* TaxonomyViewAssignmentRepository
+        const customBehaviorId = CustomBehaviorId(data.customBehaviorId)
+        const facetId = FacetId(data.facetId)
+        const active = yield* clusters.listActiveByProject({
+          projectId,
+          dimension: "topic",
+          customBehaviorId,
+          facetId,
+        })
+        const coverage = yield* getLensCoverageUseCase({
+          organizationId: orgId,
+          projectId,
+          customBehaviorId,
+          facetId,
+          clusterIds: active.filter((cluster) => isDisplayableTaxonomyName(cluster.name)).map((cluster) => cluster.id),
+          assignments,
+          now: new Date(),
+        })
+        return coverage ? { fromIso: coverage.from.toISOString(), toIso: coverage.to.toISOString() } : null
       }).pipe(
         withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
         withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),

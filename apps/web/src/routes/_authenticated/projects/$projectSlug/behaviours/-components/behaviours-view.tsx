@@ -384,13 +384,13 @@ export function BehaviourDetailDrawer({
               {parentName ? <BehaviourBadge label={parentName} icon={TagIcon} /> : null}
               <BehaviourBadge label={`${formatCount(node.subtreeSessionCount)} sessions`} icon={TagIcon} />
               <BehaviourBadge label={trendLabel(node.trend.status)} icon={trendIcon(node.trend.status)} />
-              {node.firstSeenLabel === "older" ? null : (
+              {node.firstSeenLabel === "older" || node.firstSeenLabel === "unknown" ? null : (
                 <BehaviourBadge label={`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`} icon={SparklesIcon} />
               )}
             </div>
             <Text.H6 color="foregroundMuted">
-              First seen {formatDate(cluster.firstObservedAt)} · Last seen{" "}
-              {relativeTime(new Date(cluster.lastObservedAt))}
+              First seen {node.firstSeenLabel === "unknown" ? "on or before " : ""}
+              {formatDate(cluster.firstObservedAt)} · Last seen {relativeTime(new Date(cluster.lastObservedAt))}
             </Text.H6>
             <div className="flex flex-col gap-2">
               <Text.H2>{cluster.name}</Text.H2>
@@ -1074,11 +1074,26 @@ export function BehavioursView({
       width: 170,
       render: (row) => {
         const firstObservedAt = row.node.cluster.firstObservedAt
+        // "unknown" means the earliest member sits at the edge of what this
+        // behavior has been analyzed over: it started then AT THE LATEST, and
+        // reporting that edge as a first sighting is what made every row read
+        // "First seen: <the day the lens was created>".
+        const bounded = row.node.firstSeenLabel === "unknown"
         return (
-          <Tooltip asChild trigger={<span>{relativeTime(new Date(firstObservedAt))}</span>}>
+          <Tooltip
+            asChild
+            trigger={
+              <span>{bounded ? `Before ${formatDate(firstObservedAt)}` : relativeTime(new Date(firstObservedAt))}</span>
+            }
+          >
             <div className="flex flex-col gap-1">
               <Text.H6 color="foregroundMuted">First seen</Text.H6>
-              <Text.H6B>{formatDate(firstObservedAt)}</Text.H6B>
+              <Text.H6B>
+                {bounded ? `On or before ${formatDate(firstObservedAt)}` : formatDate(firstObservedAt)}
+              </Text.H6B>
+              {bounded ? (
+                <Text.H6 color="foregroundMuted">Grouping does not reach further back, so it may be older.</Text.H6>
+              ) : null}
               <Text.H6 color="foregroundMuted">Last seen</Text.H6>
               <Text.H6B>{new Date(row.node.cluster.lastObservedAt).toLocaleString()}</Text.H6B>
             </div>

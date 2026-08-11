@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   applyAnalyticsBrushSelect,
   applyAnalyticsTimeChange,
+  clipRangeToCoverage,
   isAllTimeRead,
   resolveAnalyticsListRange,
   resolveAnalyticsTrendRange,
@@ -120,5 +121,45 @@ describe("applyAnalyticsBrushSelect", () => {
 
   it("clearing the brush returns to All time (empty params)", () => {
     expect(applyAnalyticsBrushSelect(null)).toEqual(["", ""])
+  })
+})
+
+describe("clipRangeToCoverage", () => {
+  const coverageFromIso = iso(now - 6 * DAY)
+  const coverageToIso = iso(now)
+
+  it("clips a selection wider than coverage down to it", () => {
+    const clipped = clipRangeToCoverage({
+      range: { fromIso: iso(now - 120 * DAY), toIso: iso(now) },
+      coverageFromIso,
+      coverageToIso,
+    })
+    expect(clipped).toEqual({ fromIso: coverageFromIso, toIso: coverageToIso })
+  })
+
+  it("resolves an unbounded All-time read to exactly the covered band", () => {
+    const clipped = clipRangeToCoverage({ range: { toIso: iso(now) }, coverageFromIso, coverageToIso })
+    expect(clipped).toEqual({ fromIso: coverageFromIso, toIso: coverageToIso })
+  })
+
+  it("leaves a selection already inside coverage alone", () => {
+    const range = { fromIso: iso(now - 3 * DAY), toIso: iso(now - 1 * DAY) }
+    expect(clipRangeToCoverage({ range, coverageFromIso, coverageToIso })).toEqual(range)
+  })
+
+  it("collapses a selection entirely before coverage instead of inverting it", () => {
+    const clipped = clipRangeToCoverage({
+      range: { fromIso: iso(now - 60 * DAY), toIso: iso(now - 40 * DAY) },
+      coverageFromIso,
+      coverageToIso,
+    })
+    expect(clipped).toEqual({ fromIso: coverageFromIso, toIso: coverageFromIso })
+  })
+
+  it("passes the range through when no coverage constraint is given", () => {
+    const range = { fromIso: iso(now - 120 * DAY), toIso: iso(now) }
+    expect(clipRangeToCoverage({ range })).toEqual(range)
+    expect(clipRangeToCoverage({ range, coverageFromIso })).toEqual(range)
+    expect(clipRangeToCoverage({ range, coverageFromIso: "not-a-date", coverageToIso })).toEqual(range)
   })
 })

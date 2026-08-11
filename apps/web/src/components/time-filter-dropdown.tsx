@@ -24,6 +24,13 @@ interface TimeFilterDropdownProps {
   /** Overrides the trace-filtering presets for surfaces with a coarser natural cadence. */
   readonly presets?: readonly TimeFilterPreset[]
   readonly placeholder?: string
+  /**
+   * Selectable bounds, for a surface whose data only covers part of the timeline.
+   * Days outside are not offered, and a preset reaching past `minTime` is dropped —
+   * it would resolve to the same clipped answer under a label promising more.
+   */
+  readonly minTime?: string | undefined
+  readonly maxTime?: string | undefined
 }
 
 function buildPresetRange(seconds: number): DateRange {
@@ -76,24 +83,39 @@ function getActivePresetId(
   return undefined
 }
 
+function parseBound(iso?: string): Date | undefined {
+  if (!iso) return undefined
+  const date = new Date(iso)
+  return Number.isFinite(date.getTime()) ? date : undefined
+}
+
 export function TimeFilterDropdown({
   startTimeFrom,
   startTimeTo,
   onChange,
   presets = TIME_PRESETS,
   placeholder = "All time",
+  minTime,
+  maxTime,
 }: TimeFilterDropdownProps) {
-  const pickerPresets: readonly DateRangePickerPreset[] = presets.map((preset) => ({
+  const minDate = parseBound(minTime)
+  const maxDate = parseBound(maxTime)
+  const offeredPresets = minDate
+    ? presets.filter((preset) => Date.now() - preset.seconds * 1000 >= minDate.getTime())
+    : presets
+  const pickerPresets: readonly DateRangePickerPreset[] = offeredPresets.map((preset) => ({
     id: preset.id,
     label: preset.label,
     range: buildPresetRange(preset.seconds),
   }))
   const pickerRange = buildPickerRange(startTimeFrom, startTimeTo)
-  const selectedPresetId = getActivePresetId(presets, startTimeFrom, startTimeTo)
+  const selectedPresetId = getActivePresetId(offeredPresets, startTimeFrom, startTimeTo)
 
   return (
     <DateRangePicker
       value={pickerRange}
+      {...(minDate ? { minDate } : {})}
+      {...(maxDate ? { maxDate } : {})}
       presets={pickerPresets}
       selectedPresetId={selectedPresetId}
       placeholder={placeholder}

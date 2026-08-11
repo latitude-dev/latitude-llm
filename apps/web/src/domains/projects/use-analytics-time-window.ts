@@ -57,6 +57,28 @@ export function resolveAnalyticsListRange(input: {
 }
 
 /**
+ * Clips a list range into the range the screen's data actually covers. Absent coverage bounds are
+ * open, so a screen without a coverage constraint keeps its range untouched, and an "All time" read
+ * on a screen with one comes back as exactly the covered band rather than an unbounded scan whose
+ * counts would be labelled with a wider range than the data spans.
+ */
+export function clipRangeToCoverage(input: {
+  readonly range: AnalyticsListRange
+  readonly coverageFromIso?: string | null | undefined
+  readonly coverageToIso?: string | null | undefined
+}): AnalyticsListRange {
+  const { range, coverageFromIso, coverageToIso } = input
+  const coverageFromMs = coverageFromIso ? Date.parse(coverageFromIso) : Number.NaN
+  const coverageToMs = coverageToIso ? Date.parse(coverageToIso) : Number.NaN
+  if (!Number.isFinite(coverageFromMs) || !Number.isFinite(coverageToMs)) return range
+  const requestedFromMs = range.fromIso ? Date.parse(range.fromIso) : Number.NaN
+  const requestedToMs = Date.parse(range.toIso)
+  const fromMs = Number.isFinite(requestedFromMs) ? Math.max(requestedFromMs, coverageFromMs) : coverageFromMs
+  const toMs = Math.max(Math.min(Number.isFinite(requestedToMs) ? requestedToMs : coverageToMs, coverageToMs), fromMs)
+  return { fromIso: new Date(fromMs).toISOString(), toIso: new Date(toMs).toISOString() }
+}
+
+/**
  * Clamps the trend/histogram window to `maxSpanSeconds`, anchored to the end. When All time, anchors
  * to `lastActivityIso` (latest data) so the chart isn't a blank "last N days from now".
  */
@@ -101,6 +123,13 @@ interface UseAnalyticsTimeWindowInput {
   /** Concrete lower bound for "All time" when the screen's endpoint needs one (e.g. `firstTraceAt`). */
   readonly allTimeLowerBoundIso?: string | null
   readonly trendMaxSpanSeconds?: number
+  /**
+   * The range the screen's data actually covers. Both bounds must be present to take effect; when
+   * they are, every range this hook reports is clipped into them so a wider selection can never be
+   * read as a wider answer.
+   */
+  readonly coverageFromIso?: string | null
+  readonly coverageToIso?: string | null
 }
 
 interface AnalyticsTimeWindow {
@@ -124,6 +153,8 @@ export function useAnalyticsTimeWindow({
   lastActivityIso,
   allTimeLowerBoundIso,
   trendMaxSpanSeconds,
+  coverageFromIso,
+  coverageToIso,
 }: UseAnalyticsTimeWindowInput): AnalyticsTimeWindow {
   const [timeFrom, setTimeFrom] = useParamState(fromKey, "")
   const [timeTo, setTimeTo] = useParamState(toKey, "")
@@ -137,12 +168,25 @@ export function useAnalyticsTimeWindow({
 
   const { listRange, trendRange } = useMemo(() => {
     const nowMs = Date.now()
-    const list = resolveAnalyticsListRange({ timeFrom, timeTo, nowMs, allTimeLowerBoundIso })
+    const list = clipRangeToCoverage({
+      range: resolveAnalyticsListRange({ timeFrom, timeTo, nowMs, allTimeLowerBoundIso }),
+      coverageFromIso,
+      coverageToIso,
+    })
     return {
       listRange: list,
       trendRange: resolveAnalyticsTrendRange({ listRange: list, isAllTime, lastActivityIso, maxSpanSeconds, nowMs }),
     }
-  }, [timeFrom, timeTo, isAllTime, lastActivityIso, allTimeLowerBoundIso, maxSpanSeconds])
+  }, [
+    timeFrom,
+    timeTo,
+    isAllTime,
+    lastActivityIso,
+    allTimeLowerBoundIso,
+    maxSpanSeconds,
+    coverageFromIso,
+    coverageToIso,
+  ])
 
   const onTimeChange = useCallback(
     (from?: string, to?: string) => {
@@ -169,8 +213,10 @@ export function useAnalyticsTimeWindow({
     hasExplicitRange: !isAllTime,
     listRange,
     trendRange,
-    pickerStartFrom: isAllTime ? undefined : timeFrom,
-    pickerStartTo: isAllTime ? undefined : timeTo || undefined,
+    // The clipped bounds, not the raw params: a selection reaching past coverage must
+    // read back as what was answered, not as what was asked for.
+    pickerStartFrom: isAllTime ? undefined : (listRange.fromIso ?? timeFrom),
+    pickerStartTo: isAllTime ? undefined : timeTo ? listRange.toIso : undefined,
     onTimeChange,
     onBrushSelect,
   }
