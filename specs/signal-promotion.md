@@ -72,7 +72,7 @@ Two findings that change what "fix the noise" means:
 
 A discovered signal is created exactly as it is today, but **unpromoted**. An unpromoted signal is a **candidate**: it accumulates occurrences, participates in matching, and is invisible to users and to every automation. When its evidence crosses the promotion gate it is **promoted** once, irreversibly, and only then does it exist as far as the product is concerned.
 
-```
+```text
   flagger / human annotation
      └─ score (passed = false, feedback)
         └─ discovery: hybridSearch + rerank
@@ -106,7 +106,7 @@ Three properties define it:
 
 **Predicate.** `distinctSessions ≥ threshold(projectVolume)` within `PROMOTION_WINDOW`, where
 
-```
+```text
 threshold(sessionsInWindow) = clamp(
   PROMOTION_MIN_SESSIONS,                          // absolute floor
   ceil(PROMOTION_RATE_FLOOR × sessionsInWindow),   // volume-relative term
@@ -124,16 +124,17 @@ threshold(sessionsInWindow) = clamp(
 
 The **window** is deliberately long (30 days rather than 7) so that low-traffic projects clear the floor at all; the field evidence says real signals accumulate their second occurrence within a day, so a long window costs almost nothing in latency and buys the low-volume regime.
 
-**Project volume comes from a lazily-populated cache, never from ClickHouse inside the transaction.** Session counts live in ClickHouse; the promotion write runs inside a Postgres transaction on the score-assignment hot path, so an analytics query held open across it would add latency and a cross-store hazard to every annotation. `resolveProjectSessionVolumeUseCase` reads `org:${organizationId}:projects:${projectId}:session-volume` and, on a miss, computes it once via `SessionRepository.countByProjectId` and writes it back under a TTL — the same lazy shape as `getSessionCohortSummaryUseCase`. No periodic job: the decision order below means volume is only ever needed for a signal that already has 2+ sessions, which is rare enough that a TTL'd read-through is the whole mechanism. A miss or a ClickHouse failure degrades to `PROMOTION_MIN_SESSIONS` (the floor), so a cold cache can only make promotion *easier*, never hide a signal.
+**Project volume comes from a lazily-populated cache, never from ClickHouse inside the transaction.** Session counts live in ClickHouse; the promotion write runs inside a Postgres transaction on the score-assignment hot path, so an analytics query held open across it would add latency and a cross-store hazard to every annotation. `resolveProjectSessionVolumeUseCase` reads `org:${organizationId}:projects:${projectId}:session-volume` and, on a miss, computes it once via `SessionRepository.countByProjectId` and writes it back under a TTL — the same lazy shape as `getSessionCohortSummaryUseCase`. No periodic job: volume is only ever needed for an unpromoted signal, and a TTL'd read-through is cheap enough at that rate to be the whole mechanism. A miss or a ClickHouse failure degrades to `PROMOTION_MIN_SESSIONS` (the floor), so a cold cache can only make promotion *easier*, never hide a signal.
 
-**Decision order.** The order is part of the design, not an optimization:
+**Decision order.** Split by what each step is allowed to touch, not by cost:
 
-1. **Already promoted → stop**, before anything is counted.
-2. **Count distinct sessions** in the window (Postgres).
-3. **Below `PROMOTION_MIN_SESSIONS` → stop.** No volume lookup needed; this is the common case.
-4. **Resolve volume → compute threshold → compare.**
+1. **Already promoted → stop**, on an unlocked `findById`, before anything else runs.
+2. **Resolve volume → compute threshold** (Redis, ClickHouse on miss), outside the transaction.
+3. Inside the transaction and per-signal lock: **re-check the latch, count distinct sessions, compare, write.**
 
-Step 1 is load-bearing. Candidates hold at most `PROMOTION_MAX_SESSIONS` sessions by construction, so counting them is trivial; a promoted signal can hold hundreds of thousands of scores, and `scores_signal_lookup_idx` does not cover `session_id`, so counting one would mean a heap fetch per row on the ingestion hot path. Getting this order wrong turns a cheap check into a p99 regression on every annotation for the busiest signals.
+Step 1 is load-bearing. An unpromoted signal holds at most `PROMOTION_MAX_SESSIONS` sessions by construction, so counting it is trivial; a promoted signal can hold hundreds of thousands of scores, and `scores_signal_lookup_idx` does not cover `session_id`, so counting one would mean a heap fetch per row on the ingestion hot path. Getting *that* wrong turns a cheap check into a p99 regression on every annotation for the busiest signals.
+
+**Why the count does not gate volume resolution.** Counting first would spare the cached volume read for a signal that cannot promote yet — a one-session signal receiving a second score from the same session, say. It is rejected because the count that decides promotion has to include the score being claimed in this transaction, so the only authoritative count is the locked one, and volume cannot be resolved from inside the transaction. A pre-count outside the lock would have to guess whether the incoming score's session is new, and a pre-count that guesses low would defer a legitimate promotion to the next occurrence. What is left is one cached read per assignment to an unpromoted signal, on a path that already takes a distributed lock and writes several Postgres rows; the expensive part (the ClickHouse scan) happens once per TTL per project, not per assignment.
 
 **Where it runs.** Inside `assignScoreToSignalUseCase`. The volume resolution (Redis + ClickHouse) happens *before* the transaction, gated on an unlocked `findById` pre-read that says the signal is unpromoted; the count, the comparison, and the `promoted_at` write happen inside the existing transaction and per-signal lock (`SIGNAL_UPDATE_LOCK_KEY`) that already serializes centroid updates and the regression claim, re-checking `promoted_at` under the lock. Promotion is a one-way latch, so a stale pre-read can only err in the harmless direction. Same optimistic-pre-read-then-authoritative-recheck shape as `loadEligibleScoreOrCurrentOwner` in the same file, and the same "reified at write time" property as `isRegression`.
 
@@ -323,7 +324,7 @@ GROUP BY p.slug
 ORDER BY discovered DESC;
 ```
 
-Pair it with the `signalPromotionShadow` log event for the per-decision detail the table cannot carry: the threshold that applied, the project volume it came from, and whether volume resolution degraded to the floor. Together they answer the question that gates PR2 — is `pct_hidden` suppressing noise or suppressing signal, and does the threshold each project resolves to look sane for its traffic.
+Pair it with the `promotion.*` span attributes for the per-decision detail the table cannot carry: `promotion.sessions`, `promotion.threshold`, `promotion.volume`, and `promotion.volumeDegraded` on the `issues.assignScoreToSignal` span. Together they answer the question that gates PR2 — is `pct_hidden` suppressing noise or suppressing signal, and does the threshold each project resolves to look sane for its traffic.
 
 ## Appendix B — threshold measurement query (Q1)
 

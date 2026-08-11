@@ -21,7 +21,7 @@ Multi-channel notification system. Producers fan out to channel-specific workers
 
 ## Pipeline
 
-```
+```text
 Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
   → routed by apps/workers/src/workers/domain-events.ts
      (incidents: forwards a transition hint — "created" / "closed" —
@@ -31,7 +31,7 @@ notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered
 
 `signal.discovered` currently fires from `SignalCreated`, i.e. the moment discovery creates the signal. It moves onto `SignalPromoted` — the same notification, only for signals that accumulated enough evidence to be promoted — when the promotion gate starts being enforced (`dev-docs/signals.md` § Denoising: promotion). The kind, templates, project gate, and payload shape are unchanged by that move; only `discoveredAt` changes meaning, from creation time to promotion time.
 
-```
+```text
   → apps/workers/src/workers/notifications.ts
      – incidents: derive kind from incident.endedAt
        (endedAt = startedAt → incident.event;
