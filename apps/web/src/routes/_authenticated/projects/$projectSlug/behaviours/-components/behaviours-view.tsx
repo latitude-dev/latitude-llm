@@ -18,18 +18,7 @@ import {
 } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  BrainIcon,
-  ChevronRightIcon,
-  DatabaseIcon,
-  FlameIcon,
-  MinusIcon,
-  SparklesIcon,
-  TagIcon,
-  XIcon,
-} from "lucide-react"
+import { BrainIcon, ChevronRightIcon, DatabaseIcon, SparklesIcon, TagIcon, XIcon } from "lucide-react"
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import {
   addClusterSessionsToDatasetFunction,
@@ -49,6 +38,7 @@ import type {
   BehaviourTimeRangeRecord,
   BehaviourTrajectoryMetric,
 } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
+import { BehaviourBadge, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
@@ -132,38 +122,6 @@ const findBehaviourPath = (
   return undefined
 }
 
-const trendLabel = (status: BehaviourNodeRecord["trend"]["status"]): string => {
-  switch (status) {
-    case "new":
-      return "new"
-    case "spike":
-      return "spiking"
-    case "rising":
-      return "rising"
-    case "steady":
-      return "steady"
-    case "cooling":
-      return "cooling"
-    case "fading":
-      return "fading"
-  }
-}
-
-const trendIcon = (status: BehaviourNodeRecord["trend"]["status"]) => {
-  switch (status) {
-    case "new":
-      return SparklesIcon
-    case "spike":
-    case "rising":
-      return status === "spike" ? FlameIcon : ArrowUpIcon
-    case "cooling":
-    case "fading":
-      return ArrowDownIcon
-    case "steady":
-      return MinusIcon
-  }
-}
-
 const trendRank = (status: BehaviourNodeRecord["trend"]["status"]): number => {
   switch (status) {
     case "new":
@@ -192,15 +150,6 @@ const subtreeTrendStatus = (node: BehaviourNodeRecord): BehaviourNodeRecord["tre
     if (trendRank(childStatus) > trendRank(dominant)) dominant = childStatus
   }
   return dominant
-}
-
-function BehaviourBadge({ label, icon }: { readonly label: string; readonly icon: typeof TagIcon }) {
-  return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-xs leading-5 text-muted-foreground">
-      <Icon icon={icon} size="xs" color="foregroundMuted" />
-      <span className="truncate">{label}</span>
-    </span>
-  )
 }
 
 function BehaviourNameCell({

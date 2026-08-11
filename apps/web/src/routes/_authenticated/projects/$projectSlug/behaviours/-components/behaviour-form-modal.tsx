@@ -26,10 +26,9 @@ type RouteProject = ReturnType<typeof useRouteProject>
 type ViewParent = Pick<MainBehaviour, "slug" | "name" | "facetId">
 
 /**
- * Which behavior to narrow, shown as the same cards as the Behaviors home — the
- * groups teaser is what tells you whether this is the behavior you meant. A
- * behavior still on its first extraction has no cached answers to slice, so it
- * can't be picked yet.
+ * Which behavior to narrow, shown as a grid of cards — the groups teaser is what
+ * tells you whether this is the behavior you meant. A behavior still on its first
+ * extraction has no cached answers to slice, so it can't be picked yet.
  */
 function BehaviourPicker({
   entries,
