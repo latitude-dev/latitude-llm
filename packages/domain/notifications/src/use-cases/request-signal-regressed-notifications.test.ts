@@ -39,7 +39,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     priority: null,
     centroid: null,
     clusteredAt: null,
-    promotedAt: null,
+    // A signal can only regress after someone resolved it, which means someone
+    // could reach it, which means it was promoted.
+    promotedAt: now,
     resolvedAt: null,
     ignoredAt: null,
     regressedAt: new Date(regressedAt),

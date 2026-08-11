@@ -40,8 +40,9 @@ export const createFakeSignalRepository = (
 
   // Mirrors the adapter's `userVisibleSignal`. Fidelity matters here: a domain
   // test whose fake still returns candidates would pass while the real read
-  // leaks one.
-  const isUserVisible = (issue: Signal): boolean => issue.deletedAt === null && issue.promotedAt !== null
+  // leaks one. Loose comparisons on purpose — Postgres hands back null, but
+  // hand-built fixtures leave an unset timestamp `undefined`.
+  const isUserVisible = (issue: Signal): boolean => issue.deletedAt == null && issue.promotedAt != null
 
   const repository: SignalRepositoryShape = {
     findById: (id, options) =>
