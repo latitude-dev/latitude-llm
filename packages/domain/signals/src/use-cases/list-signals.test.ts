@@ -36,7 +36,6 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   priority: null,
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
-  promotedAt: new Date("2026-03-01T00:00:00.000Z"),
   resolvedAt: null,
   ignoredAt: null,
   regressedAt: null,
@@ -44,6 +43,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   deletedAt: null,
   createdAt: new Date("2026-03-01T00:00:00.000Z"),
   updatedAt: new Date("2026-03-01T00:00:00.000Z"),
+  // Tracks `createdAt` so a fixture that ages a signal ages the timestamp the
+  // "new" state actually derives from. Overridable, including to null.
+  promotedAt: overrides.createdAt ?? new Date("2026-03-01T00:00:00.000Z"),
   ...overrides,
 })
 

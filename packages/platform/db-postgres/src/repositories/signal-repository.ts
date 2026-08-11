@@ -349,11 +349,13 @@ const signalRepositoryCoreLive = Layer.effect(
               // Primary-state rank mirroring `LIFECYCLE_STATE_PRIORITY` in the
               // analytics list path: escalating < regressed < new < ongoing <
               // resolved < ignored. WHEN order encodes "min priority wins" over
-              // the derived state set.
+              // the derived state set. The "new" branch has to age from the same
+              // timestamp as `signalFirstVisibleAt`, or a promoted signal sorts
+              // differently here than the derived state the row renders.
               const stateRank = sql<number>`case
                 when ${isEscalatingExpr} then 0
                 when ${signals.regressedAt} is not null then 1
-                when ${signals.createdAt} > now() - (${NEW_SIGNAL_AGE_DAYS} * interval '1 day') then 2
+                when coalesce(${signals.promotedAt}, ${signals.createdAt}) > now() - (${NEW_SIGNAL_AGE_DAYS} * interval '1 day') then 2
                 when ${signals.resolvedAt} is not null then 4
                 when ${signals.ignoredAt} is not null then 5
                 else 3

@@ -167,6 +167,20 @@ describe("checkSignalEscalationUseCase", () => {
     expect(events).toEqual([])
   })
 
+  it("does not read series or open an incident for an unpromoted signal", async () => {
+    const { result, events } = await runUseCase({
+      // Entry-tripping series on purpose: an incident here would announce a
+      // signal the promotion gate has not released yet.
+      signal: makeSignal({ promotedAt: null }),
+      series: {
+        escalationSignalsBySignals: () => Effect.die("candidate should not read analytics"),
+      },
+    })
+
+    expect(result).toEqual({ transition: "none", currentlyEscalating: false })
+    expect(events).toEqual([])
+  })
+
   it("still checks muted signals — mute gates notification fan-out, not incidents", async () => {
     const { result, events } = await runUseCase({
       signal: makeSignal({ mutedAt: new Date("2026-05-07T09:00:00.000Z") }),
