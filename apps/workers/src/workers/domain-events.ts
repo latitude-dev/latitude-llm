@@ -188,7 +188,18 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    SignalCreated: (event) =>
+    // An audit fact with no consumers: discovery creates the row long before the
+    // signal earns an announcement, so both publishes live on `SignalPromoted`.
+    // The registration has to stay — `EventHandlerMap` is exhaustive over
+    // `EventPayloads`, and an unregistered name dead-letters on
+    // `UnhandledEventError`.
+    SignalCreated: () => Effect.void,
+
+    // Where a discovered signal becomes real. Same notification kind and same
+    // dispatch trigger as before, fired once the signal has the evidence to
+    // deserve them. `discoveredAt` carries the promotion time so the
+    // announcement does not date itself to a creation weeks earlier.
+    SignalPromoted: (event) =>
       Effect.all(
         [
           pub.publish(
@@ -198,7 +209,7 @@ export const createDomainEventsWorker = ({
               organizationId: event.payload.organizationId,
               projectId: event.payload.projectId,
               signalId: event.payload.signalId,
-              discoveredAt: event.payload.createdAt,
+              discoveredAt: event.payload.promotedAt,
             },
             {
               dedupeKey: `notifications:request-signal-discovered:${event.payload.signalId}`,
@@ -220,13 +231,6 @@ export const createDomainEventsWorker = ({
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
-
-    // Registered and deliberately inert: promotion is being measured against
-    // live traffic first. The `request-signal-discovered-notifications` and
-    // `agent-dispatch:request` publishes move here off `SignalCreated` when the
-    // gate starts being enforced. Without a registration the event would
-    // dead-letter on `UnhandledEventError`.
-    SignalPromoted: () => Effect.void,
 
     SignalEscalated: (event) =>
       pub.publish("alert-incidents", "signal-escalated", event.payload, {

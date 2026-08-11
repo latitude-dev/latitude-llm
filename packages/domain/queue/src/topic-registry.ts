@@ -172,13 +172,15 @@ const _registry = {
     }
     /**
      * Producer step for signal discovery. Fired by the domain-events router
-     * on `SignalCreated`; the consumer resolves org-member recipients and
-     * emits one `create-notification` task per recipient.
+     * on `SignalPromoted`, which is when a discovered signal starts existing for
+     * users; the consumer resolves org-member recipients and emits one
+     * `create-notification` task per recipient.
      */
     "request-signal-discovered-notifications": {
       readonly organizationId: string
       readonly projectId: string
       readonly signalId: string
+      /** Promotion time, not row-creation time — see `SignalPromoted`. */
       readonly discoveredAt: string
     }
     /**

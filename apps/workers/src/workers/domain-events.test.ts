@@ -279,7 +279,7 @@ describe("domain-events dispatcher", () => {
     expect(throttled?.options?.debounceMs).toBeUndefined()
   })
 
-  it("routes SignalCreated to discovery notification requests", async () => {
+  it("announces nothing when discovery creates the signal row", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SignalCreated", {
@@ -287,6 +287,25 @@ describe("domain-events dispatcher", () => {
       projectId: "proj-1",
       signalId: "signal-1",
       createdAt: "2026-05-07T10:00:00.000Z",
+    })
+
+    // Still registered, and that is the point: an unhandled event name
+    // dead-letters on `UnhandledEventError`, so the audit event has to stay
+    // routable even with no consumers.
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(0)
+  })
+
+  it("routes SignalPromoted to the discovery notification and agent dispatch", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalPromoted", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+      promotedAt: "2026-05-21T10:00:00.000Z",
+      triggerScoreId: "score-1",
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
@@ -299,7 +318,9 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       signalId: "signal-1",
-      discoveredAt: "2026-05-07T10:00:00.000Z",
+      // Promotion time, so the notification does not announce a signal as
+      // discovered weeks ago.
+      discoveredAt: "2026-05-21T10:00:00.000Z",
     })
     expect(notifications?.options?.dedupeKey).toBe("notifications:request-signal-discovered:signal-1")
 
@@ -312,25 +333,6 @@ describe("domain-events dispatcher", () => {
       source: "signal",
     })
     expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-signal:signal-1")
-  })
-
-  it("accepts SignalPromoted without publishing anything while promotion is only being measured", async () => {
-    const { consumer, published } = setupDispatcher()
-
-    const envelope = makeEnvelope("SignalPromoted", {
-      organizationId: "org-1",
-      projectId: "proj-1",
-      signalId: "signal-1",
-      promotedAt: "2026-05-07T10:00:00.000Z",
-      triggerScoreId: "score-1",
-    })
-
-    // Registration is the point: an unhandled event name dead-letters on
-    // `UnhandledEventError`, so this passing is what proves the event is safe to
-    // emit before its consumers exist.
-    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
-
-    expect(published).toHaveLength(0)
   })
 
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {
