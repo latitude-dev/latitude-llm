@@ -1120,4 +1120,76 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     expect(slugs).toEqual(["beta", "alpha"])
   })
+
+  it("countDistinctSessionsBySignalId counts sessions, falls back to trace then score id, and honors the window", async () => {
+    const organizationId = "y".repeat(24)
+    const signal = SignalId("c".repeat(24))
+    const otherSignal = SignalId("d".repeat(24))
+    const traceId = TraceId("f".repeat(32))
+    const windowStart = new Date("2026-05-10T00:00:00.000Z")
+
+    const write = (input: {
+      readonly feedback: string
+      readonly signalId: SignalId
+      readonly sessionId?: string
+      readonly traceId?: TraceId
+      readonly draftedAt?: Date
+    }) =>
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        signalId: input.signalId,
+        ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId }),
+        ...(input.traceId === undefined ? {} : { traceId: input.traceId }),
+        value: 0,
+        passed: false,
+        feedback: input.feedback,
+        metadata: { rawFeedback: input.feedback, flaggerSlug: "alpha" },
+        draftedAt: input.draftedAt ?? null,
+      })
+
+    const created = await Effect.runPromise(
+      Effect.gen(function* () {
+        return {
+          // Two scores in one session are one piece of evidence, not two.
+          sessionOneA: yield* write({ feedback: "one a", signalId: signal, sessionId: "session-1" }),
+          sessionOneB: yield* write({ feedback: "one b", signalId: signal, sessionId: "session-1" }),
+          sessionTwo: yield* write({ feedback: "two", signalId: signal, sessionId: "session-2" }),
+          // No session: stands in for itself, keyed by trace.
+          traceOnly: yield* write({ feedback: "trace only", signalId: signal, traceId }),
+          // Neither session nor trace: keyed by its own id.
+          bare: yield* write({ feedback: "bare", signalId: signal }),
+          drafted: yield* write({
+            feedback: "drafted",
+            signalId: signal,
+            sessionId: "session-9",
+            draftedAt: new Date(),
+          }),
+          other: yield* write({ feedback: "other signal", signalId: otherSignal, sessionId: "session-3" }),
+          stale: yield* write({ feedback: "stale", signalId: signal, sessionId: "session-4" }),
+        }
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2026-05-01T00:00:00.000Z") })
+      .where(eq(scoresTable.id, created.stale.id as string))
+
+    const count = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.countDistinctSessionsBySignalId({
+          projectId: annotationProjectId,
+          signalId: signal,
+          since: windowStart,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    // session-1 (twice, counted once) + session-2 + the trace-keyed row + the bare
+    // row. The draft, the other signal's row, and the pre-window row are excluded.
+    expect(count).toBe(4)
+  })
 })

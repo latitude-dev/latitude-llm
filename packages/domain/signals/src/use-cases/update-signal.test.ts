@@ -34,6 +34,7 @@ const makeUserSignal = (): Signal => ({
   priority: null,
   centroid: null,
   clusteredAt: null,
+  promotedAt: null,
   resolvedAt: null,
   ignoredAt: null,
   regressedAt: null,

@@ -322,6 +322,58 @@ export const SIGNAL_GENERATION_PROMPT_MAX_LENGTH = 2000
 export const SIGNAL_GENERATION_DISTINCT_VALUES_LIMIT = 50
 
 // ---------------------------------------------------------------------------
+// Promotion
+// ---------------------------------------------------------------------------
+
+/**
+ * Evidence required before a discovered signal is promoted, expressed as
+ * distinct sessions within `PROMOTION_WINDOW_DAYS`. A flat number is wrong in
+ * opposite directions at the two ends of the traffic range: at thousands of
+ * sessions a day, two independent false positives of the same kind inside one
+ * window stop being a coincidence, while at a few dozen sessions a month a
+ * chronic problem may never put two occurrences inside the window. Hence a
+ * floor, a volume-relative term, and a cap — see `promotionThreshold`.
+ */
+export const PROMOTION_MIN_SESSIONS = 2
+
+/**
+ * Volume-relative term: 0.05% of the project's sessions in the window. Guards
+ * against false positives that recur by chance in high-traffic projects, which
+ * is the failure the floor alone cannot catch. Provisional — the shadow readout
+ * is what calibrates it.
+ */
+export const PROMOTION_RATE_FLOOR = 0.0005
+
+/**
+ * Ceiling on required evidence. Uncapped, 0.05% of a 3M-session month is 1,500
+ * affected sessions, which does not make discovery stricter for a large
+ * customer but switches it off for them. Accepted consequence of the cap: above
+ * ~1,000 sessions/day every project sits at 15, so the volume-relative term
+ * only does work across a 7.5x band (floor binds to 4k sessions/window, cap
+ * from 28k). A sublinear rate would keep adapting without a ceiling; revisit
+ * only if the flat top proves wrong for a very large project.
+ */
+export const PROMOTION_MAX_SESSIONS = 15
+
+/**
+ * Evidence window. Deliberately long: real signals accumulate their second
+ * occurrence within hours, so a long window costs almost nothing in latency and
+ * is what lets a low-traffic project clear the floor at all.
+ */
+export const PROMOTION_WINDOW_DAYS = 30
+
+/**
+ * TTL for the cached per-project session volume. The value only steers the
+ * threshold, so hours-old traffic is fine; a miss recomputes it from ClickHouse
+ * and a failure degrades to `PROMOTION_MIN_SESSIONS`.
+ */
+export const PROJECT_SESSION_VOLUME_CACHE_TTL_SECONDS = 6 * 60 * 60
+
+/** Cache key for the per-project session volume steering the promotion threshold. */
+export const PROJECT_SESSION_VOLUME_CACHE_KEY = (organizationId: string, projectId: string): string =>
+  `org:${organizationId}:projects:${projectId}:session-volume`
+
+// ---------------------------------------------------------------------------
 // Signal refresh throttle
 // ---------------------------------------------------------------------------
 

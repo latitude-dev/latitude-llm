@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."signals" ADD COLUMN "promoted_at" timestamp with time zone;

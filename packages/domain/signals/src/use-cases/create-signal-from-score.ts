@@ -117,6 +117,9 @@ const buildNewSignalFromScore = ({
     priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
+    // A discovered signal starts with one session, so it can never clear the
+    // promotion floor at creation; the assignment path promotes it later.
+    promotedAt: null,
     resolvedAt: null,
     ignoredAt: null,
     regressedAt: null,

@@ -27,6 +27,11 @@ Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
      (incidents: forwards a transition hint — "created" / "closed" —
       not a hardcoded notification kind)
 notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered,signal-regressed,destination-quarantined,billing-limit}-notifications
+```
+
+`signal.discovered` currently fires from `SignalCreated`, i.e. the moment discovery creates the signal. It moves onto `SignalPromoted` — the same notification, only for signals that accumulated enough evidence to be promoted — when the promotion gate starts being enforced (`dev-docs/signals.md` § Denoising: promotion). The kind, templates, project gate, and payload shape are unchanged by that move; only `discoveredAt` changes meaning, from creation time to promotion time.
+
+```
   → apps/workers/src/workers/notifications.ts
      – incidents: derive kind from incident.endedAt
        (endedAt = startedAt → incident.event;

@@ -67,6 +67,23 @@ export interface EventPayloads {
     readonly createdAt: string
   }
   /**
+   * Emitted by `assignScoreToSignalUseCase` when a discovered signal
+   * accumulates enough distinct sessions to be promoted. Written inside the
+   * same transaction that stamps `promoted_at`, and the latch makes it
+   * exactly-once per signal.
+   *
+   * The handler is deliberately inert for now: promotion is being observed
+   * against live traffic before the discovery notification and agent dispatch
+   * move onto it from `SignalCreated`.
+   */
+  SignalPromoted: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly signalId: string
+    readonly promotedAt: string
+    readonly triggerScoreId: string
+  }
+  /**
    * Emitted by `updateSignalTriageUseCase` whenever the signal's assignee
    * actually changes (including clears — consumers filter). `assignedAt` is
    * the triage transaction's `now`, frozen into the outbox payload; it is

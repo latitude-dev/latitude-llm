@@ -84,6 +84,8 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           priority: parsed.priority ?? null,
           centroid: null,
           clusteredAt: null,
+          // A signal somebody built deliberately needs no evidence to be real.
+          promotedAt: now,
           resolvedAt: null,
           ignoredAt: null,
           regressedAt: null,

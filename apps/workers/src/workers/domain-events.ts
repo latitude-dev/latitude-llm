@@ -221,6 +221,13 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
+    // Registered and deliberately inert: promotion is being measured against
+    // live traffic first. The `request-signal-discovered-notifications` and
+    // `agent-dispatch:request` publishes move here off `SignalCreated` when the
+    // gate starts being enforced. Without a registration the event would
+    // dead-letter on `UnhandledEventError`.
+    SignalPromoted: () => Effect.void,
+
     SignalEscalated: (event) =>
       pub.publish("alert-incidents", "signal-escalated", event.payload, {
         dedupeKey: `alert-incidents:signal.escalating:${event.payload.signalId}:${event.payload.escalatedAt}`,

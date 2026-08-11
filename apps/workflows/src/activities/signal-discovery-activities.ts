@@ -15,8 +15,12 @@ import {
   SignalDiscoveryLockUnavailableError,
 } from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
-import { RedisBillingSpendReservationLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  RedisBillingSpendReservationLive,
+  RedisCacheStoreLive,
+  RedisDistributedLockRepositoryLive,
+} from "@platform/cache-redis"
+import { ScoreAnalyticsRepositoryLive, SessionRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   OutboxEventWriterLive,
@@ -117,6 +121,10 @@ export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
       ),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
+      // Promotion sizes its threshold from the project's session volume, read
+      // from ClickHouse through a Redis cache.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       // TODO(signal-discovery-rerank): drop AIRerankLive when assignOrCreateSignal
       // relies on Postgres pgvector hybrid search directly.
       withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
@@ -146,6 +154,10 @@ export const assignScoreToSignal = async (input: AssignScoreToSignalInput) =>
         OrganizationId(input.organizationId),
       ),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
+      // Promotion sizes its threshold from the project's session volume, read
+      // from ClickHouse through a Redis cache.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
       Effect.match({
         onFailure: (error) => {

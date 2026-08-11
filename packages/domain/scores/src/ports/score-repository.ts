@@ -115,6 +115,21 @@ export interface ScoreRepositoryShape {
     readonly source?: ScoreSourceType
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
+  /**
+   * Distinct sessions a signal has been seen in since `since`, which is the
+   * evidence unit the promotion gate counts.
+   *
+   * Sessions, not scores: one long session can trip the same flagger many times
+   * and one trace can carry several annotations, none of which is independent
+   * evidence. A score with no `session_id` counts as its own session keyed by
+   * `trace_id`, and failing that by its own id, so annotations from
+   * non-session instrumentation still count exactly once.
+   */
+  countDistinctSessionsBySignalId(input: {
+    readonly projectId: ProjectId
+    readonly signalId: SignalId
+    readonly since: Date
+  }): Effect.Effect<number, RepositoryError, SqlClient>
   findPublishedSystemAnnotationByTraceAndFeedback(input: {
     readonly projectId: ProjectId
     readonly traceId: TraceId

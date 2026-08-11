@@ -336,24 +336,29 @@ Recommended initial half-life:
 
 These thresholds, weights, half-lives, and other tunables should be defined as named constants inside `packages/domain/signals` rather than as scattered inline literals.
 
-## Denoising
+## Denoising: promotion
 
-The base v2 denoising strategy should remain conservative and aligned with the proposal:
+**A discovered signal is not real until it has been seen in enough distinct sessions.** `signals.promoted_at` is a one-way latch: null means the signal was discovered but has not yet earned its place, non-null means it has. The latch is never cleared — a promoted signal that goes quiet is handled by resolve / ignore / mute, not by demotion, because demotion would let a signal a person has already triaged silently vanish, and would let one signal announce itself twice.
 
-- low-evidence signals with no linked annotations can be hidden from the main UI
-- signals with at least one linked annotation are always visible
-- manually created signals and manually linked annotation signals are always visible
-- do not bring back the v1 merge/merged-state system
+Only two things create a promoted signal directly: `origin = 'user'` (somebody built it deliberately) and a signal with an active evaluation (somebody deliberately tracked it). Everything else has to accumulate evidence.
 
-The exact low-evidence visibility threshold should remain configurable.
+**The evidence unit is distinct sessions, not scores.** One long session can trip the same flagger many times and one trace can carry several annotations; none of that is independent evidence. A score with no `session_id` counts as its own session keyed by `trace_id`, and failing that by its own id, so annotations from non-session instrumentation still count exactly once (`ScoreRepository.countDistinctSessionsBySignalId`).
 
-The system may also support a stronger buffered/provisional workflow on top of the same signal entity. The exact promotion rules are still pending precise definition, but the intended shape is:
+**The threshold scales with the project's traffic**, because a flat number is wrong in opposite directions at the two ends. In a project doing thousands of sessions a day, two independent false positives of the same kind inside one window stop being a coincidence, so a flat `2` would promote noise that only repeated by chance. In a project doing a few dozen sessions a month, a chronic problem may never put two occurrences inside the window, so a flat `2` would bury a true positive. Hence `promotionThreshold(sessionsInWindow)`: a floor, a term proportional to volume, and a cap (`PROMOTION_*` constants in `@domain/signals`). The cap exists because uncapped the proportional term reaches ~1,500 sessions for a 3M-session month, which does not make discovery stricter for a large customer but switches it off for them.
 
-- persist newly created signal candidates immediately
-- keep provisional signals hidden until they pass promotion rules
-- promote them when enough evidence accumulates, when annotation evidence lands, or when a user explicitly promotes them
-- let the stronger provisional workflow absorb duplicate or noisy concurrent no-match signal candidates before they become visible in the main Signals UI
-- keep the core signal entity shape unchanged
+**Promotion conditions are uniform.** No flagger slug is special-cased, no human annotation short-circuits the count, and no severity or model rating is consulted. Accepted consequence: in a high-traffic project a `pii-leakage` or `jailbreaking` finding needs the full threshold before it is announced. A slug-keyed safety exception was considered and rejected — per-flagger behavior in the promotion rule cannot be explained or tuned, and such a list only grows. If safety findings need to reach a user sooner, that belongs in the flagger or in notification routing.
+
+**Where it runs.** `assignScoreToSignalUseCase`, in this order: return immediately if already promoted, count distinct sessions, return if below the floor, and only then resolve the project's volume and compare. Step one is load-bearing — a promoted signal can hold hundreds of thousands of scores and `scores_signal_lookup_idx` does not cover `session_id`, so counting one would mean a heap fetch per row on the ingestion hot path. The project's session volume is read through a TTL cache (`org:${organizationId}:projects:${projectId}:session-volume`) populated on miss from ClickHouse, resolved *before* the transaction opens; a failure at either layer degrades to the floor, so an unavailable cache can only make promotion easier, never suppress a signal. The count, the comparison, and the `promoted_at` write happen inside the transaction and per-signal lock that already serialize centroid updates and the regression claim.
+
+Crossing the threshold stamps `promoted_at` and emits `SignalPromoted`.
+
+**Rollout state.** Promotion is currently **computed and observed, not enforced**: `SignalPromoted` has a deliberately inert handler, and visibility, notifications, agent dispatch, and escalation all behave exactly as they did before the gate existed. This is on purpose — the threshold constants are being validated against live traffic before anything is suppressed. Pre-existing signals were backfilled to `promoted_at = created_at`, so the gate only ever applies to newly discovered signals.
+
+Once enforcement lands, an unpromoted signal becomes invisible everywhere (list, counts, detail, palette, related, session reads, exports, API) via a default-deny filter in `SignalRepository`, with an explicit opt-in for the discovery and consolidation paths that must keep seeing it; the discovery notification and agent dispatch move from `SignalCreated` onto `SignalPromoted`; escalation stops running for unpromoted signals; and `isSignalNew` anchors on `promoted_at` rather than `created_at`, since that is when a signal first exists for a user.
+
+Two mechanisms complete the model and are specified but not yet built: **consolidation** merges near-duplicate unpromoted signals so that a real problem fragmented across several one-session signals is not hidden forever (candidate-to-candidate only, on a looser threshold than live matching, as a real merge with no "merged" state — the v1 merge/merged-state system stays retired), and **expiry** sweeps unpromoted signals that stop accumulating, which is the first thing that lets discovery's row corpus shrink rather than grow forever.
+
+Full design, decisions, and open parameters: `specs/signal-promotion.md`.
 
 ## Naming
 

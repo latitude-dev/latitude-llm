@@ -39,6 +39,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     priority: null,
     centroid: null,
     clusteredAt: null,
+    promotedAt: null,
     resolvedAt: null,
     ignoredAt: null,
     regressedAt: new Date(regressedAt),
