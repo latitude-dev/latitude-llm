@@ -435,13 +435,58 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate).toHaveLength(2)
     expect(calls.generate[0]).toMatchObject(FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL)
     expect(calls.generate[0].system).toContain("You extract agent context")
-    // Customer persona lines with profanity were copied verbatim into
-    // agentContext; the extractor must paraphrase crude wording professionally.
     expect(calls.generate[0].system).toContain("Never reproduce profanity")
     expect(calls.generate[0].system).toContain("neutral, professional wording")
     expect(calls.generate[1].prompt).toContain("EVALUATED AGENT CONTEXT")
     expect(calls.generate[1].prompt).toContain("dashboard design assistant")
     expect(calls.generate[1].prompt).not.toContain("Detailed rubric")
+  })
+
+  it("masks profanity the extractor echoes into agentContext before caching and classification", async () => {
+    const longSystemPrompt = `You are a recruiting assistant. ${"Detailed persona and tooling rules. ".repeat(200)}`
+    const cache = createMemoryCacheLayer()
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext: "The agent is a recruiting assistant that is sharp, capable, and gets shit done.",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Find candidates for this role." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is a shortlist." }] },
+          ],
+          [],
+          [{ type: "text", content: longSystemPrompt }],
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate[1].prompt).toContain("gets [redacted] done")
+    expect(calls.generate[1].prompt).not.toContain("shit")
+
+    const contentKey = buildContentKey(INPUT.organizationId, longSystemPrompt)
+    const cachedWrite = cache.writes.find((write) => write.key === contentKey)
+    expect(cachedWrite?.value).toContain("[redacted]")
+    expect(cachedWrite?.value).not.toContain("shit")
   })
 
   it("falls back to prompt excerpts when the extractor returns understood=true without context", async () => {

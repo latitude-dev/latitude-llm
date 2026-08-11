@@ -8,6 +8,9 @@ export {
   MAX_SUSPICIOUS_SNIPPETS,
 } from "../constants.ts"
 
+export const EXPLICIT_PROFANITY_PATTERN_SOURCE = String.raw`\b(?:fuck|shit|bitch|damn|asshole|cunt|dick|cock|pussy)\b`
+export const SLUR_PATTERN_SOURCE = String.raw`\b(?:nigger|faggot|retard|kike|chink|spic|wetback)\b`
+
 // ---------------------------------------------------------------------------
 // SuspiciousSnippet - shared shape for snippet-based detection
 // ---------------------------------------------------------------------------
