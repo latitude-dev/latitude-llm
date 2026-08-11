@@ -116,6 +116,8 @@ const qualityMetrics: TaxonomyBuildQualityMetrics = {
   largestLeafShare: 0.868,
   topLevelRowCount: 8,
   largestTopLevelShare: 0.868,
+  promotedResidue: 0,
+  centeredCohesion: { p10: 0.249, p50: 0.684, p90: 0.862, min: 0.11 },
   leaves: [
     { size: 1_302, centeredCohesion: 0.249 },
     { size: 52, centeredCohesion: 0.684 },
@@ -129,7 +131,8 @@ describe("buildQualitySpanAttributes", () => {
 
     expect(attributes["taxonomy.quality.largestLeafShare"]).toBeCloseTo(0.868)
     expect(attributes["taxonomy.quality.leafSizes"]).toBe("1302,52,43")
-    expect(attributes["taxonomy.quality.centeredCohesion.min"]).toBeCloseTo(0.249)
+    // Taken over every leaf, so a low-cohesion leaf outside the bounded profile still shows here.
+    expect(attributes["taxonomy.quality.centeredCohesion.min"]).toBeCloseTo(0.11)
     // Emitted for every mode, unlike the adaptive attributes.
     expect(attributes["taxonomy.quality.mode"]).toBe("off")
   })

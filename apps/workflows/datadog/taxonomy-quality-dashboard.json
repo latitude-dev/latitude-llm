@@ -449,12 +449,12 @@
                     {
                       "data_source": "metrics",
                       "name": "p50",
-                      "query": "p50:taxonomy.quality.largest_leaf_share{$organization,$project}"
+                      "query": "p50:taxonomy.quality.largest_leaf_share{organization_id:$organization.value,project_id:$project.value}"
                     },
                     {
                       "data_source": "metrics",
                       "name": "p90",
-                      "query": "p90:taxonomy.quality.largest_leaf_share{$organization,$project}"
+                      "query": "p90:taxonomy.quality.largest_leaf_share{organization_id:$organization.value,project_id:$project.value}"
                     }
                   ],
                   "formulas": [
@@ -481,12 +481,12 @@
                     {
                       "data_source": "metrics",
                       "name": "rows_avg",
-                      "query": "avg:taxonomy.quality.top_level_row_count{$organization,$project}"
+                      "query": "avg:taxonomy.quality.top_level_row_count{organization_id:$organization.value,project_id:$project.value}"
                     },
                     {
                       "data_source": "metrics",
                       "name": "rows_p90",
-                      "query": "p90:taxonomy.quality.top_level_row_count{$organization,$project}"
+                      "query": "p90:taxonomy.quality.top_level_row_count{organization_id:$organization.value,project_id:$project.value}"
                     }
                   ],
                   "formulas": [

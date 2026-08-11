@@ -1,11 +1,7 @@
 /**
- * Naming quality for a published tree — pure arithmetic over the final names,
- * no LLM and no second naming pass.
- *
- * The duplicate rate here is deliberately wider than the `assertTaxonomyQuality`
- * gate, which only compares a cluster against its own sibling group: two leaves
- * under different parents can ship the same name today and nothing reports it.
- * This measures that, it does not block on it.
+ * Naming quality for a published tree. Wider than the `assertTaxonomyQuality` gate,
+ * which only compares a cluster against its own sibling group: this measures the
+ * cross-branch collisions that gate lets through, and never blocks on them.
  */
 
 export interface TaxonomyNameQualityCluster {

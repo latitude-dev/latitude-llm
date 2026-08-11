@@ -130,21 +130,20 @@ export const buildQualityFields = (
   largestLeafShare: metrics.largestLeafShare,
   topLevelRowCount: metrics.topLevelRowCount,
   largestTopLevelShare: metrics.largestTopLevelShare,
+  promotedResidue: metrics.promotedResidue,
   // The sorted vector is the point: [1302, 52, 43, 38] reads as a regression at a glance.
   leafSizes: metrics.leaves.map((leaf) => leaf.size),
   centeredCohesionByLeaf: metrics.leaves.map((leaf) => leaf.centeredCohesion),
+  centeredCohesion: metrics.centeredCohesion,
   leavesOmitted: metrics.leafCount - metrics.leaves.length,
 })
-
-const cohesions = (metrics: TaxonomyBuildQualityMetrics): readonly number[] =>
-  metrics.leaves.map((leaf) => leaf.centeredCohesion)
 
 export const buildQualitySpanAttributes = (
   scope: QualityTelemetryScope,
   plan: HierarchicalTaxonomyPlan,
   metrics: TaxonomyBuildQualityMetrics,
 ): Record<string, string | number> => {
-  const centeredCohesion = boundedPercentiles(cohesions(metrics))
+  const centeredCohesion = metrics.centeredCohesion
   return {
     "taxonomy.organizationId": scope.organizationId,
     "taxonomy.projectId": scope.projectId,
@@ -157,6 +156,8 @@ export const buildQualitySpanAttributes = (
     // Rows AFTER content-free interiors are promoted away — not the root's literal child count.
     "taxonomy.quality.topLevelRowCount": metrics.topLevelRowCount,
     "taxonomy.quality.largestTopLevelShare": metrics.largestTopLevelShare,
+    // Non-zero means rows do not sum to the partition, so the shares above have a wider denominator than the rows.
+    "taxonomy.quality.promotedResidue": metrics.promotedResidue,
     // Span tags are flat scalars, so the vector travels as a string.
     "taxonomy.quality.leafSizes": metrics.leaves.map((leaf) => leaf.size).join(","),
     "taxonomy.quality.leavesOmitted": metrics.leafCount - metrics.leaves.length,
@@ -164,7 +165,7 @@ export const buildQualitySpanAttributes = (
     "taxonomy.quality.centeredCohesion.p50": centeredCohesion.p50,
     "taxonomy.quality.centeredCohesion.p90": centeredCohesion.p90,
     // Residue shows up as the worst leaf, which percentiles over a 5-leaf tree can hide.
-    "taxonomy.quality.centeredCohesion.min": Math.min(...cohesions(metrics), 1),
+    "taxonomy.quality.centeredCohesion.min": centeredCohesion.min,
   }
 }
 

@@ -71,6 +71,45 @@ describe("taxonomyBuildQualityMetrics", () => {
     expect(metrics.largestLeafShare).toBeCloseTo(1)
   })
 
+  it("summarizes cohesion over every leaf, including ones the profile bound drops", () => {
+    // 60 leaves, so the bound drops 10. The smallest leaf is the least cohesive, and sorting by
+    // size puts it last — exactly where a summary taken after truncation would stop looking.
+    const residue = range(0, 24).map((index) => embedding((index / 24) * 2 * Math.PI, 3))
+    const tight = range(0, 60).map(() => embedding(0.5, 3))
+    const embeddings = [...tight, ...residue]
+    const leaves = range(0, 60).map((index) => node([index]))
+    const tree = node(range(0, 84), [...leaves, node(range(60, 84))])
+
+    const metrics = taxonomyBuildQualityMetrics({ root: tree, embeddings })
+
+    expect(metrics.leafCount).toBe(61)
+    expect(metrics.leaves.length).toBe(50)
+    expect(metrics.leaves.some((leaf) => leaf.size === 24)).toBe(true)
+    expect(metrics.centeredCohesion.min).toBeLessThan(0.5)
+  })
+
+  it("reports members left in no row when a signpost is promoted away", () => {
+    // The interior holds 1 member of its own, so promoting it leaves that member in no row.
+    const tree = node(range(0, 100), [
+      node(range(0, 60), [node(range(0, 30)), node(range(30, 59))]),
+      node(range(60, 100)),
+    ])
+
+    const metrics = taxonomyBuildQualityMetrics({ root: tree, embeddings: [] })
+
+    expect(metrics.topLevelRowCount).toBe(3)
+    expect(metrics.promotedResidue).toBe(1)
+    expect(metrics.promotedResidue + 30 + 29 + 40).toBe(metrics.membersClustered)
+  })
+
+  it("counts a member-holding root's residue too, since the root is always unwrapped", () => {
+    const tree = node(range(0, 100), [node(range(0, 55)), node(range(55, 91))])
+
+    const metrics = taxonomyBuildQualityMetrics({ root: tree, embeddings: [] })
+
+    expect(metrics.promotedResidue).toBe(9)
+  })
+
   it("has no leaves and no shares when nothing was clustered", () => {
     const metrics = taxonomyBuildQualityMetrics({ root: node([]), embeddings: [] })
 

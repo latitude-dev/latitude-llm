@@ -1,24 +1,15 @@
 /**
- * Quality metrics for one build's partition — pure arithmetic over the tree the
- * build produced and the sample it was built from. No LLM, no repository, no
- * effect on what gets clustered or persisted.
+ * Quality metrics for one build's partition.
  *
- * Two traps this module exists to encode:
- *
- * 1. Every share here is computed from a SINGLE build's partition. Deriving the
- *    same numbers from live `assigned_cluster_id` over a time window mixes the
- *    current tree with historical online assignments to deprecated clusters and
- *    biases them badly (two projects measured both ways came out 0.22 vs 0.54
- *    and 0.45 vs 0.87). A dashboard query must scope to one `reassignment_run_id`.
- * 2. Cohesion is mean-centered to MEASURE only. Raw cohesion spans 0.85-0.94
- *    across residue and genuine leaves alike because the corpus-wide shared
- *    component inflates both; centering separates them around 0.35-0.45. Feeding
- *    centered vectors to the builder is a separately measured regression, so
- *    nothing computed here is ever read back into clustering.
+ * Measured on a SINGLE build's tree: the same shares taken from live
+ * `assigned_cluster_id` over a window mix in deprecated clusters and read far
+ * too low. Cohesion is mean-centered for measurement only — centering the
+ * vectors the builder sees is a measured regression.
  */
 
 import type { ClusteringTreeNode } from "./clustering.ts"
 import { TAXONOMY_QUALITY_LEAF_PROFILE_MAX, TAXONOMY_SCAFFOLDING_MAX_OWN_FRACTION } from "./constants.ts"
+import { type BoundedPercentiles, boundedPercentiles } from "./telemetry-percentiles.ts"
 
 export interface TaxonomyLeafQuality {
   readonly size: number
@@ -32,15 +23,15 @@ export interface TaxonomyBuildQualityMetrics {
   readonly leafCount: number
   readonly largestLeafShare: number
   /**
-   * Rows the Behaviours screen renders once content-free scaffolding is promoted
-   * away — distinct from `topLevelClustersBuilt`, which is the root's literal
-   * child count, and the number the user actually sees only once the de-nesting
-   * read lands. The divisive builder routes every member to a leaf, so today's
-   * interiors all hold nothing and this equals `leafCount`; that is a fact about
-   * the current builder, not the definition.
+   * Rows left after scaffolding is promoted away, not the root's child count
+   * (`topLevelClustersBuilt`); it matches the screen only once the de-nesting read ships.
    */
   readonly topLevelRowCount: number
   readonly largestTopLevelShare: number
+  /** Members promoted-away nodes held, so they sit in no row: rows + this = `membersClustered`. */
+  readonly promotedResidue: number
+  /** Over EVERY leaf, so a residue leaf outside the bounded profile below still moves them. */
+  readonly centeredCohesion: BoundedPercentiles & { readonly min: number }
   /** Size-descending and bounded; `leafCount - leaves.length` were dropped by the bound. */
   readonly leaves: readonly TaxonomyLeafQuality[]
 }
@@ -52,24 +43,12 @@ export interface ScaffoldingShape<T> {
   readonly children: readonly T[]
 }
 
-/**
- * A node holds nothing of its own: it exists only to bracket its children, so
- * the rows below it are what the user should see. The threshold is not a free
- * parameter — swept from `own = 0` through `own <= 10% of subtree` across 8
- * production trees it produced identical output at every setting — but strict
- * zero is not enough either, since one project's depth-1 signpost holds exactly
- * one member.
- */
+/** Strict zero is not enough: a real signpost can hold one member of its own. */
 const isScaffolding = <T>(shape: ScaffoldingShape<T>): boolean =>
   shape.children.length > 0 &&
   shape.ownMemberCount <= Math.max(1, TAXONOMY_SCAFFOLDING_MAX_OWN_FRACTION * shape.subtreeMemberCount)
 
-/**
- * Replace every content-free interior with its children, recursively and at any
- * depth. Content-based, not "flatten everything": an interior that holds real
- * members of its own survives as a parent even though no tree in the current
- * fleet has one.
- */
+/** Content-based, not "flatten everything": an interior holding real members survives as a parent. */
 export const promoteScaffolding = <T>(nodes: readonly T[], shapeOf: (node: T) => ScaffoldingShape<T>): readonly T[] =>
   nodes.flatMap((node) => {
     const shape = shapeOf(node)
@@ -77,11 +56,9 @@ export const promoteScaffolding = <T>(nodes: readonly T[], shapeOf: (node: T) =>
   })
 
 /**
- * The root is the "everything" node by construction, so it is unwrapped
- * positionally rather than on a content test — a member-holding root left
- * visible would be the single all-encompassing row this rule exists to remove.
- * A childless root is the exception and stays: one project is a lone root with
- * ~1,900 members, and returning nothing there empties its whole screen.
+ * The root is unwrapped positionally, never on a content test — it is the "everything"
+ * node, and leaving it visible reinstates the single all-encompassing row. A childless
+ * root is the exception: dropping it empties the screen of a project that has only one.
  */
 export const promotedTopLevelRows = <T>(root: T, shapeOf: (node: T) => ScaffoldingShape<T>): readonly T[] => {
   const children = shapeOf(root).children
@@ -170,12 +147,17 @@ export const taxonomyBuildQualityMetrics = (input: {
     .sort((a, b) => b.size - a.size)
   const rows = promotedTopLevelRows(input.root, clusteringShape)
   const largestRow = rows.reduce((max, row) => Math.max(max, row.memberIndices.length), 0)
+  const inRows = rows.reduce((sum, row) => sum + row.memberIndices.length, 0)
+  const cohesions = leaves.map((leaf) => leaf.centeredCohesion)
   return {
     membersClustered,
     leafCount: leaves.length,
     largestLeafShare: share(leaves[0]?.size ?? 0, membersClustered),
     topLevelRowCount: rows.length,
     largestTopLevelShare: share(largestRow, membersClustered),
+    promotedResidue: Math.max(0, membersClustered - inRows),
+    // Computed before the profile is truncated, so the worst leaf cannot hide past the bound.
+    centeredCohesion: { ...boundedPercentiles(cohesions), min: cohesions.length === 0 ? 0 : Math.min(...cohesions) },
     leaves: leaves.slice(0, TAXONOMY_QUALITY_LEAF_PROFILE_MAX),
   }
 }
