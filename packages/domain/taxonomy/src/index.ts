@@ -357,6 +357,11 @@ export {
   getClusterDetailsUseCase,
 } from "./use-cases/get-details.ts"
 export {
+  clipRangeToLensCoverage,
+  getLensCoverageUseCase,
+  type TaxonomyLensCoverage,
+} from "./use-cases/lens-coverage.ts"
+export {
   type ListBehaviourSessionsInput,
   listBehaviourSessionsUseCase,
 } from "./use-cases/list-behaviour-sessions.ts"

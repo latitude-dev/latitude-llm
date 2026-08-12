@@ -481,6 +481,24 @@ export const createFakeTaxonomyObservationRepository = (
         }),
       ),
 
+    getClusterableCountsByDay: ({ organizationId, projectId, since }) =>
+      Effect.sync(() => {
+        const counts = new Map<number, number>()
+        for (const observation of rows.values()) {
+          if (observation.organizationId !== organizationId || observation.projectId !== projectId) continue
+          if (observation.embedding.length === 0 || observation.startTime < since) continue
+          const day = Date.UTC(
+            observation.startTime.getUTCFullYear(),
+            observation.startTime.getUTCMonth(),
+            observation.startTime.getUTCDate(),
+          )
+          counts.set(day, (counts.get(day) ?? 0) + 1)
+        }
+        return [...counts]
+          .sort(([left], [right]) => left - right)
+          .map(([day, count]) => ({ day: new Date(day), count }))
+      }),
+
     ...overrides,
   }
 

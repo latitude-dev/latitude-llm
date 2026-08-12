@@ -41,6 +41,12 @@ export interface TaxonomyViewAssignmentClusterTrendCount {
   readonly baselineDays: number
 }
 
+/** Assigned rows per UTC day, for the lens coverage scan. */
+export interface TaxonomyViewAssignmentDayCount {
+  readonly day: Date
+  readonly count: number
+}
+
 /**
  * ClickHouse-backed `taxonomy_view_assignments` slice — the shared edges table
  * for every non-online tree. It never touches global
@@ -87,6 +93,21 @@ export interface TaxonomyViewAssignmentRepositoryShape {
     readonly baselineSince: Date
     readonly baselineDays: number
   }) => Effect.Effect<readonly TaxonomyViewAssignmentClusterTrendCount[], RepositoryError, ChSqlClient>
+  /**
+   * Rows per UTC day pointing at one of `clusterIds` — the numerator of the lens
+   * coverage scan. Only currently-active ids count: a row left behind by an
+   * earlier pass whose cluster the rebuild deprecated is orphaned, and the day it
+   * sits on is under-covered even though the slice has rows for it.
+   */
+  readonly getAssignedCountsByDay: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly customBehaviorId: CustomBehaviorId
+    /** Omit/null = topic slice (`facet_id = ''`); an id reads that facet's edges. */
+    readonly facetId?: FacetId | null
+    readonly clusterIds: readonly TaxonomyClusterId[]
+    readonly since: Date
+  }) => Effect.Effect<readonly TaxonomyViewAssignmentDayCount[], RepositoryError, ChSqlClient>
   /**
    * Member rows of one scoped cluster for the naming step, resolved by joining
    * the view's assignment slice back to the projection source: the topic path

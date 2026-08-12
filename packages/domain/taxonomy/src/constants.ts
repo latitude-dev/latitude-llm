@@ -302,6 +302,25 @@ export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 /** Same TTL horizon as semantic-search embeddings. */
 export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
 
+// ---------------------------------------------------------------------------
+// Lens coverage
+// ---------------------------------------------------------------------------
+
+/**
+ * How far back a lens coverage scan looks: the `taxonomy_view_assignments` TTL
+ * horizon (retention plus the table's 30-day grace), past which no membership
+ * row survives to be covered.
+ */
+export const TAXONOMY_LENS_COVERAGE_HORIZON_DAYS = TAXONOMY_OBSERVATION_RETENTION_DAYS + 30
+
+/**
+ * A day counts as covered when its assigned share of clusterable observations
+ * reaches this fraction of the lens's current rate. The test is relative because
+ * the gardening sample is capped: a busy project's plateau sits well below 100%,
+ * and an absolute test would clip every such lens to nothing.
+ */
+export const TAXONOMY_LENS_COVERAGE_MIN_RATE_FRACTION = 0.75
+
 /**
  * Taxonomy observations are always ingested while retained. Gardening is the
  * bounded part: every pass operates on the newest live observations only.

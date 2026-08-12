@@ -24,6 +24,13 @@ interface TimeFilterDropdownProps {
   /** Overrides the trace-filtering presets for surfaces with a coarser natural cadence. */
   readonly presets?: readonly TimeFilterPreset[]
   readonly placeholder?: string
+  /**
+   * Selectable bounds, for a surface whose data only covers part of the timeline.
+   * Days outside are not offered, and a preset whose window misses the bounds
+   * entirely is dropped — it would carry a label promising data it cannot answer.
+   */
+  readonly minTime?: string | undefined
+  readonly maxTime?: string | undefined
 }
 
 function buildPresetRange(seconds: number): DateRange {
@@ -76,24 +83,61 @@ function getActivePresetId(
   return undefined
 }
 
+function parseBound(iso?: string): Date | undefined {
+  if (!iso) return undefined
+  const date = new Date(iso)
+  return Number.isFinite(date.getTime()) ? date : undefined
+}
+
+/**
+ * Presets worth offering inside selectable bounds. A preset is open-ended — it runs
+ * from its start to now — so it survives when its window overlaps the bounds at all:
+ * a start before `minDate` reaches for data that is not there, and a start after
+ * `maxDate` lands wholly past the data, which is the case that would otherwise offer
+ * "Last day" on a surface whose data stopped a week ago and answer it with nothing.
+ */
+export function presetsWithinBounds(
+  presets: readonly TimeFilterPreset[],
+  bounds: { readonly minDate?: Date; readonly maxDate?: Date },
+  nowMs: number,
+): readonly TimeFilterPreset[] {
+  const { minDate, maxDate } = bounds
+  if (!minDate && !maxDate) return presets
+  return presets.filter((preset) => {
+    const startMs = nowMs - preset.seconds * 1000
+    return (!minDate || startMs >= minDate.getTime()) && (!maxDate || startMs <= maxDate.getTime())
+  })
+}
+
 export function TimeFilterDropdown({
   startTimeFrom,
   startTimeTo,
   onChange,
   presets = TIME_PRESETS,
   placeholder = "All time",
+  minTime,
+  maxTime,
 }: TimeFilterDropdownProps) {
-  const pickerPresets: readonly DateRangePickerPreset[] = presets.map((preset) => ({
+  const minDate = parseBound(minTime)
+  const maxDate = parseBound(maxTime)
+  const offeredPresets = presetsWithinBounds(
+    presets,
+    { ...(minDate ? { minDate } : {}), ...(maxDate ? { maxDate } : {}) },
+    Date.now(),
+  )
+  const pickerPresets: readonly DateRangePickerPreset[] = offeredPresets.map((preset) => ({
     id: preset.id,
     label: preset.label,
     range: buildPresetRange(preset.seconds),
   }))
   const pickerRange = buildPickerRange(startTimeFrom, startTimeTo)
-  const selectedPresetId = getActivePresetId(presets, startTimeFrom, startTimeTo)
+  const selectedPresetId = getActivePresetId(offeredPresets, startTimeFrom, startTimeTo)
 
   return (
     <DateRangePicker
       value={pickerRange}
+      {...(minDate ? { minDate } : {})}
+      {...(maxDate ? { maxDate } : {})}
       presets={pickerPresets}
       selectedPresetId={selectedPresetId}
       placeholder={placeholder}
