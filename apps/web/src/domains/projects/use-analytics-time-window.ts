@@ -56,12 +56,7 @@ export function resolveAnalyticsListRange(input: {
   return allTimeLowerBoundIso ? { fromIso: allTimeLowerBoundIso, toIso } : { toIso }
 }
 
-/**
- * Clips a list range into the range the screen's data actually covers. Absent coverage bounds are
- * open, so a screen without a coverage constraint keeps its range untouched, and an "All time" read
- * on a screen with one comes back as exactly the covered band rather than an unbounded scan whose
- * counts would be labelled with a wider range than the data spans.
- */
+/** Clips a list range into the band the data covers. Without bounds it passes through; "All time" becomes the band. */
 export function clipRangeToCoverage(input: {
   readonly range: AnalyticsListRange
   readonly coverageFromIso?: string | null | undefined
