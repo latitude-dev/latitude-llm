@@ -472,17 +472,20 @@ describe("planHierarchicalTaxonomyUseCase facet-scoped (scope × facet)", () => 
     expect(plan.facetId).toBe(facetId)
     expect(plan.customBehaviorId).toBe(customBehaviorId)
     expect(plan.clustersBorn).toBe(1)
-    // Facet edges go to the view slice, never the inline global column.
+    // Facet edges go to the view slice, never the inline global column — and a
+    // facet defers them to the projection-space full-window pass, which needs the
+    // leaf centroids this plan stages.
     expect(plan.observationAssignments).toEqual([])
-    expect(plan.customAssignments).toHaveLength(20)
-    expect(plan.customAssignments.every((a) => a.customBehaviorId === customBehaviorId && a.facetId === facetId)).toBe(
-      true,
-    )
-    expect(plan.customAssignments.every((a) => (a.sessionId as string).startsWith("session-"))).toBe(true)
+    expect(plan.customAssignments).toEqual([])
+    expect(plan.leafClusters).toHaveLength(1)
+    expect(plan.leafClusters[0]?.centroid.length).toBeGreaterThan(0)
+    // Staging leaves is not the same fact as staging an adaptive tree; a facet has
+    // the first without the second, and publication reads the second.
+    expect(plan.persistsAdaptiveTree).toBe(false)
     expect(plan.clusters.every((c) => c.customBehaviorId === customBehaviorId && c.facetId === facetId)).toBe(true)
   })
 
-  it("whole-project facet (behavior, no filter): still writes facet-keyed view edges, never the global column", async () => {
+  it("whole-project facet (behavior, no filter): stages routing leaves, never the global column", async () => {
     const now = new Date("2026-05-24T12:00:00.000Z")
     const plan = await runFacetPlan({
       facetObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E1, now)),
@@ -492,10 +495,8 @@ describe("planHierarchicalTaxonomyUseCase facet-scoped (scope × facet)", () => 
 
     expect(plan.facetId).toBe(facetId)
     expect(plan.observationAssignments).toEqual([])
-    expect(plan.customAssignments).toHaveLength(20)
-    expect(plan.customAssignments.every((a) => a.customBehaviorId === customBehaviorId && a.facetId === facetId)).toBe(
-      true,
-    )
+    expect(plan.customAssignments).toEqual([])
+    expect(plan.leafClusters).toHaveLength(1)
   })
 
   it("fails fast on a facet-scoped run with no wrapping behavior (facet edges have nowhere to write)", async () => {

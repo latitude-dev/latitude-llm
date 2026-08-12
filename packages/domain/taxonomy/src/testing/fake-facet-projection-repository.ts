@@ -36,6 +36,22 @@ export const createFakeFacetProjectionRepository = (
         return [...rows.values()].filter((row) => row.facetId === facetId && wanted.has(row.sessionObservationId))
       }),
 
+    // `filterSet` is compiled in ClickHouse against `sessions`, which this fake has
+    // no view of; a test that needs cohort narrowing overrides the method.
+    listWindowForReassignment: ({ facetId, limit }) =>
+      Effect.sync(() =>
+        [...rows.values()]
+          .filter((row) => row.facetId === facetId && row.embedding.length > 0)
+          .sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
+          .slice(0, limit)
+          .map((row) => ({
+            observationId: row.sessionObservationId,
+            sessionId: row.sessionId,
+            embedding: row.embedding,
+            startTime: row.startTime,
+          })),
+      ),
+
     healthByFacet: ({ facetId }) =>
       Effect.sync(() => {
         const forFacet = [...rows.values()].filter((row) => row.facetId === facetId)

@@ -1,6 +1,29 @@
-import type { ChSqlClient, FacetId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type {
+  ChSqlClient,
+  FacetId,
+  FilterSet,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SessionId,
+} from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { TaxonomyFacetProjection } from "../entities/facet-projection.ts"
+
+/**
+ * A cached projection ready to be routed to a staging leaf — the projection-space
+ * analogue of `TaxonomyReassignmentWindowObservation`, without the inline cluster
+ * assignment (a facet's membership lives in `taxonomy_view_assignments`).
+ *
+ * `observationId` is the row's `session_observation_id`, the same session handle
+ * the assignment slice keys on.
+ */
+export interface TaxonomyFacetProjectionWindowRow {
+  readonly observationId: string
+  readonly sessionId: SessionId
+  readonly embedding: readonly number[]
+  readonly startTime: Date
+}
 
 /**
  * ClickHouse-backed `taxonomy_facet_projections` slice — the facet-global
@@ -24,6 +47,23 @@ export interface FacetProjectionRepositoryShape {
     readonly facetId: FacetId
     readonly sessionObservationIds: readonly string[]
   }) => Effect.Effect<readonly TaxonomyFacetProjection[], RepositoryError, ChSqlClient>
+  /**
+   * The full-window routing source: every clear projection cached for this facet,
+   * newest first, optionally narrowed to a cohort's sessions with the same
+   * `FilterSet` the sample used. Unclear projections carry no embedding and are
+   * excluded — there is nothing to route them by.
+   *
+   * This is what lets a facet lens accumulate coverage: extraction is cached per
+   * session forever, so each pass re-routes the whole cache rather than only the
+   * window it just sampled.
+   */
+  readonly listWindowForReassignment: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly facetId: FacetId
+    readonly limit: number
+    readonly filterSet?: FilterSet
+  }) => Effect.Effect<readonly TaxonomyFacetProjectionWindowRow[], RepositoryError, ChSqlClient>
   /**
    * Cold-start health for a facet: how many sessions have been analyzed, how many
    * produced a usable answer (non-empty), and how many distinct answers there are.
