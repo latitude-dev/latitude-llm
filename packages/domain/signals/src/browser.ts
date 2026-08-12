@@ -110,8 +110,10 @@ export {
 export { buildHistogramBucketScaffold, fillBuckets } from "./histogram-buckets.ts"
 export { type SignalDiscoveryLockInput, signalDiscoveryLockKey, withSignalDiscoveryLock } from "./locks.ts"
 export {
+  CACHE_FINDING_SIGNAL_STATUSES,
   CacheFindingRepository,
   type CacheFindingRepositoryShape,
+  type CacheFindingSignalStatus,
   type CacheFindingWithSignal,
 } from "./ports/cache-finding-repository.ts"
 export {

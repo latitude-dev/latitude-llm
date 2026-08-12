@@ -38,6 +38,8 @@ export interface SyncCacheFindingSignalsResult {
   readonly opened: readonly string[]
   readonly refreshed: readonly string[]
   readonly resolved: readonly string[]
+  /** Findings still true whose signal a user resolved or ignored, left deliberately alone. */
+  readonly skippedArchived: number
   /** Verdicts the panel shows that did not become signals, by the gate that held them. */
   readonly suppressed: Readonly<Record<string, number>>
 }
@@ -77,22 +79,37 @@ export const syncCacheFindingSignalsUseCase = (input: SyncCacheFindingSignalsInp
     const review = reviewCacheFindings(input.windows)
     const sqlClient = yield* SqlClient
 
-    const { opened, refreshed, staleSignalIds } = yield* sqlClient.transaction(
+    const { opened, refreshed, skipped, stale } = yield* sqlClient.transaction(
       Effect.gen(function* () {
         const findings = yield* CacheFindingRepository
         const signals = yield* SignalRepository
         const projects = yield* ProjectRepository
         const outbox = yield* OutboxEventWriter
 
-        const open = yield* findings.listOpenByProject({ projectId: input.projectId })
-        const openByFingerprint = new Map(open.map((finding) => [finding.fingerprint, finding]))
+        const existingRows = yield* findings.listByProject({ projectId: input.projectId })
+        const byFingerprint = new Map(existingRows.map((finding) => [finding.fingerprint, finding]))
         const openedIds: string[] = []
         const refreshedIds: string[] = []
-        const project = review.findings.length > 0 ? yield* projects.findById(input.projectId) : null
+        let skippedArchived = 0
+        const needsSignal = review.findings.filter(
+          (finding) => byFingerprint.get(finding.fingerprint)?.signalStatus !== "open",
+        )
+        const project = needsSignal.length > 0 ? yield* projects.findById(input.projectId) : null
 
         for (const finding of review.findings) {
-          const existing = openByFingerprint.get(finding.fingerprint)
-          if (existing) {
+          const existing = byFingerprint.get(finding.fingerprint)
+
+          // Someone resolved or ignored this one. The traffic that produced it has not
+          // changed, so it is still firing and will be tomorrow too — opening another
+          // signal would argue with that decision every single sweep. The row stays as
+          // the tombstone, untouched, and a genuinely new *state* is a different
+          // fingerprint that gets its own signal.
+          if (existing?.signalStatus === "archived") {
+            skippedArchived++
+            continue
+          }
+
+          if (existing?.signalStatus === "open") {
             yield* findings.upsert({ ...existing, measures: finding.measures, lastObservedAt: now, updatedAt: now })
             refreshedIds.push(existing.signalId)
             continue
@@ -129,17 +146,19 @@ export const syncCacheFindingSignalsUseCase = (input: SyncCacheFindingSignalsInp
             updatedAt: now,
           })
           yield* signals.save(signal)
+          // `signalId` moves on conflict, so a finding whose signal was deleted takes its
+          // own row over instead of leaving the new signal unlinked.
           yield* findings.upsert(
             cacheFindingSchema.parse({
-              id: generateId(),
+              id: existing?.id ?? generateId(),
               organizationId: input.organizationId,
               projectId: input.projectId,
               signalId: signal.id,
               fingerprint: finding.fingerprint,
               measures: finding.measures,
-              firstObservedAt: now,
+              firstObservedAt: existing?.firstObservedAt ?? now,
               lastObservedAt: now,
-              createdAt: now,
+              createdAt: existing?.createdAt ?? now,
               updatedAt: now,
             }),
           )
@@ -164,43 +183,62 @@ export const syncCacheFindingSignalsUseCase = (input: SyncCacheFindingSignalsInp
         }
 
         const stillFiring = new Set(review.findings.map((finding) => finding.fingerprint))
-        const stale = open.filter((finding) => !stillFiring.has(finding.fingerprint))
-        if (stale.length > 0) {
-          yield* findings.deleteBySignalIds({
-            projectId: input.projectId,
-            signalIds: stale.map((finding) => SignalId(finding.signalId)),
-          })
-        }
-
         return {
           opened: openedIds,
           refreshed: refreshedIds,
-          staleSignalIds: stale.map((finding) => SignalId(finding.signalId)),
+          skipped: skippedArchived,
+          stale: existingRows.filter((finding) => !stillFiring.has(finding.fingerprint)),
         }
       }),
     )
 
-    // Resolved through the shared lifecycle use case, which owns its own transaction: a
-    // cleared cost finding is archived exactly the way a person resolving it from the
-    // inbox would be, rather than through a second write path that could diverge.
+    // Archive first, drop the projection second, one finding at a time.
+    //
+    // The order is the whole point: deleting the row first and resolving afterwards leaves
+    // a signal open in the inbox with nothing left to find it by, and no later sweep can
+    // recover it. This way a crash between the two steps leaves an archived signal whose
+    // row is still there, which the next sweep sees as already-archived-and-not-firing and
+    // deletes. Errors are caught per finding so one bad row cannot strand the rest.
     const resolved: string[] = []
-    for (const signalId of staleSignalIds) {
-      const applied = yield* applySignalLifecycleCommandUseCase({
-        projectId: input.projectId,
-        signalIds: [signalId],
-        command: "resolve",
-        // Nothing is ever linked to a cost finding, so there is no monitoring to stop;
-        // passing it explicitly keeps the project-settings read off this path.
-        keepMonitoring: true,
-        now,
-      }).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-      if (applied !== null) resolved.push(signalId)
+    for (const finding of stale) {
+      const signalId = SignalId(finding.signalId)
+      const archived = yield* Effect.gen(function* () {
+        if (finding.signalStatus === "open") {
+          yield* applySignalLifecycleCommandUseCase({
+            projectId: input.projectId,
+            signalIds: [signalId],
+            command: "resolve",
+            // Nothing is ever linked to a cost finding, so there is no monitoring to stop;
+            // passing it explicitly keeps the project-settings read off this path.
+            keepMonitoring: true,
+            now,
+          })
+          return true
+        }
+        return false
+      }).pipe(
+        // A signal that vanished under us is already archived as far as this is concerned.
+        Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
+        Effect.catch(() => Effect.succeed(null)),
+      )
+      if (archived === null) continue
+
+      yield* sqlClient
+        .transaction(
+          Effect.gen(function* () {
+            const findings = yield* CacheFindingRepository
+            yield* findings.deleteBySignalIds({ projectId: input.projectId, signalIds: [signalId] })
+          }),
+        )
+        .pipe(Effect.catch(() => Effect.void))
+      if (archived) resolved.push(signalId)
     }
 
     return {
       opened,
       refreshed,
       resolved,
+      skippedArchived: skipped,
       suppressed: countSuppressions(review.suppressed),
     } satisfies SyncCacheFindingSignalsResult
   }).pipe(Effect.withSpan("signals.syncCacheFindingSignals")) as Effect.Effect<

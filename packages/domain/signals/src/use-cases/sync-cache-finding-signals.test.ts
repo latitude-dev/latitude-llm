@@ -5,6 +5,7 @@ import {
   generateId,
   OrganizationId,
   ProjectId,
+  RepositoryError,
   SettingsReader,
   SignalId,
   SqlClient,
@@ -16,7 +17,7 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { CacheFinding } from "../entities/cache-finding.ts"
 import type { Signal } from "../entities/signal.ts"
-import { CacheFindingRepository } from "../ports/cache-finding-repository.ts"
+import { CacheFindingRepository, type CacheFindingSignalStatus } from "../ports/cache-finding-repository.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
 import { syncCacheFindingSignalsUseCase } from "./sync-cache-finding-signals.ts"
@@ -66,11 +67,20 @@ const row = (overrides: Partial<JudgedCacheModel> = {}): JudgedCacheModel => ({
 const steady = (entry: JudgedCacheModel): readonly (readonly JudgedCacheModel[])[] =>
   Array.from({ length: CACHE_SIGNAL_STABILITY_WINDOWS }, () => [entry])
 
-const createFakeCacheFindingRepository = (seed: readonly CacheFinding[] = []) => {
+const createFakeCacheFindingRepository = (
+  seed: readonly CacheFinding[] = [],
+  statusOf: (finding: CacheFinding) => CacheFindingSignalStatus = () => "open",
+) => {
   const findings = new Map<string, CacheFinding>(seed.map((finding) => [finding.fingerprint, finding]))
   const repository = CacheFindingRepository.of({
-    listOpenByProject: () =>
-      Effect.sync(() => [...findings.values()].map((finding) => ({ ...finding, signalSlug: "PRO-AAAA" }))),
+    listByProject: () =>
+      Effect.sync(() =>
+        [...findings.values()].map((finding) => ({
+          ...finding,
+          signalSlug: "PRO-AAAA",
+          signalStatus: statusOf(finding),
+        })),
+      ),
     findBySignalId: ({ signalId }) =>
       Effect.sync(() => [...findings.values()].find((finding) => finding.signalId === signalId) ?? null),
     upsert: (finding) =>
@@ -109,9 +119,23 @@ const run = (input: {
   readonly windows: readonly (readonly JudgedCacheModel[])[]
   readonly signals?: readonly Signal[]
   readonly findings?: readonly CacheFinding[]
+  readonly signalStatus?: CacheFindingSignalStatus
+  readonly failResolve?: boolean
 }) => {
-  const { repository: signalRepository, issues } = createFakeSignalRepository(input.signals ?? [])
-  const { repository: cacheFindingRepository, findings } = createFakeCacheFindingRepository(input.findings ?? [])
+  const { repository: signalRepository, issues } = createFakeSignalRepository(
+    input.signals ?? [],
+    input.failResolve
+      ? {
+          // The lifecycle command writes through `save`; failing it is the transient
+          // repository error the ordering has to survive.
+          save: () => Effect.fail(new RepositoryError({ operation: "signals.save", cause: new Error("boom") })),
+        }
+      : undefined,
+  )
+  const { repository: cacheFindingRepository, findings } = createFakeCacheFindingRepository(
+    input.findings ?? [],
+    () => input.signalStatus ?? "open",
+  )
   const events: OutboxWriteEvent[] = []
 
   const effect = syncCacheFindingSignalsUseCase({ organizationId, projectId, windows: input.windows, now }).pipe(
@@ -273,6 +297,83 @@ describe("syncCacheFindingSignalsUseCase", () => {
     expect([...findings.values()].map((finding) => finding.measures.state)).toEqual(["stopCaching"])
   })
 
+  it("never re-opens a signal a user resolved or ignored, however long the finding keeps firing", async () => {
+    // The row is a tombstone. Without it, `listByProject` would hide the archived signal,
+    // the finding would read as new, and a fresh signal plus a dispatch would fire on every
+    // sweep — arguing daily with a decision someone already made.
+    const existing = makeFinding()
+    const { effect, findings, events } = run({
+      windows: steady(row()),
+      findings: [existing],
+      signalStatus: "archived",
+    })
+    const result = await Effect.runPromise(effect)
+
+    expect(result.opened).toEqual([])
+    expect(result.refreshed).toEqual([])
+    expect(result.resolved).toEqual([])
+    expect(result.skippedArchived).toBe(1)
+    expect(events).toEqual([])
+    // Untouched, so its age still reads as when the finding was first seen.
+    expect(findings.get(existing.fingerprint)?.lastObservedAt).toEqual(existing.lastObservedAt)
+  })
+
+  it("stays quiet across repeated sweeps once archived, rather than firing once per run", async () => {
+    const existing = makeFinding()
+    for (let sweep = 0; sweep < 3; sweep++) {
+      const result = await Effect.runPromise(
+        run({ windows: steady(row()), findings: [existing], signalStatus: "archived" }).effect,
+      )
+      expect(result.opened, `sweep ${sweep}`).toEqual([])
+    }
+  })
+
+  it("takes over the row of a deleted signal instead of orphaning the new one", async () => {
+    // A soft-deleted signal is not a decision to suppress the finding, but its row still
+    // holds the unique fingerprint — so the new signal has to claim it or go unlinked.
+    const existing = makeFinding()
+    const { effect, findings } = run({ windows: steady(row()), findings: [existing], signalStatus: "gone" })
+    const result = await Effect.runPromise(effect)
+
+    expect(result.opened).toHaveLength(1)
+    expect(findings.size).toBe(1)
+    expect(findings.get(existing.fingerprint)?.signalId).toBe(result.opened[0])
+    // Same finding, so its age survives the new signal.
+    expect(findings.get(existing.fingerprint)?.firstObservedAt).toEqual(existing.firstObservedAt)
+  })
+
+  it("keeps the projection row when the resolve fails, so a later sweep can retry", async () => {
+    // Deleting first would leave the signal open in the inbox with nothing left to find it
+    // by. The row has to outlive a failed resolve.
+    const existing = makeFinding()
+    const { effect, findings, issues } = run({
+      windows: steady(row({ documented: judgment({ state: "optimal", urgency: null }) })),
+      signals: [makeCostSignal(existing)],
+      findings: [existing],
+      failResolve: true,
+    })
+    const result = await Effect.runPromise(effect)
+
+    expect(result.resolved).toEqual([])
+    expect(findings.has(existing.fingerprint)).toBe(true)
+    expect(issues.get(existing.signalId)?.resolvedAt).toBeNull()
+  })
+
+  it("drops the row of an already-archived finding that has cleared, without resolving again", async () => {
+    // The recovery path after a crash between resolve and delete: archived, not firing.
+    const existing = makeFinding()
+    const { effect, findings } = run({
+      windows: steady(row({ documented: judgment({ state: "optimal", urgency: null }) })),
+      signals: [makeCostSignal(existing)],
+      findings: [existing],
+      signalStatus: "archived",
+    })
+    const result = await Effect.runPromise(effect)
+
+    expect(result.resolved).toEqual([])
+    expect(findings.size).toBe(0)
+  })
+
   it("opens nothing and reports the binding gate when every verdict is suppressed", async () => {
     const { effect, events } = run({
       windows: steady(row({ documented: judgment({ savingsClearsFloor: false }) })),
@@ -287,6 +388,6 @@ describe("syncCacheFindingSignalsUseCase", () => {
   it("opens nothing before the stability requirement is met", async () => {
     const short = Array.from({ length: CACHE_SIGNAL_STABILITY_WINDOWS - 1 }, () => [row()])
     const result = await Effect.runPromise(run({ windows: short }).effect)
-    expect(result).toEqual({ opened: [], refreshed: [], resolved: [], suppressed: {} })
+    expect(result).toEqual({ opened: [], refreshed: [], resolved: [], skippedArchived: 0, suppressed: {} })
   })
 })

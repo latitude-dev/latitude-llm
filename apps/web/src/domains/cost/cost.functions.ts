@@ -294,12 +294,21 @@ export const listCacheFindingSignals = createServerFn({ method: "GET" })
     return Effect.runPromise(
       Effect.gen(function* () {
         const findings = yield* CacheFindingRepository
-        const open = yield* findings.listOpenByProject({ projectId: ProjectId(data.projectId) })
-        return open.map((finding) => ({
-          fingerprint: finding.fingerprint,
-          signalSlug: finding.signalSlug,
-          firstObservedAtIso: finding.firstObservedAt.toISOString(),
-        }))
+        const all = yield* findings.listByProject({ projectId: ProjectId(data.projectId) })
+        // Only live signals get a badge. The producer keeps the archived rows so it can
+        // stay quiet on a decision someone made, but the panel must not link to a signal
+        // that is already resolved or ignored.
+        return all.flatMap((finding) =>
+          finding.signalStatus === "open" && finding.signalSlug !== null
+            ? [
+                {
+                  fingerprint: finding.fingerprint,
+                  signalSlug: finding.signalSlug,
+                  firstObservedAtIso: finding.firstObservedAt.toISOString(),
+                },
+              ]
+            : [],
+        )
       }).pipe(withScopedPostgres(CacheFindingRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
   })

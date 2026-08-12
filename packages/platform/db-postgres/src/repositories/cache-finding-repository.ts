@@ -1,6 +1,11 @@
 import { OrganizationId, ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { type CacheFinding, CacheFindingRepository, cacheFindingSchema } from "@domain/signals"
-import { and, eq, inArray, isNull } from "drizzle-orm"
+import {
+  type CacheFinding,
+  CacheFindingRepository,
+  type CacheFindingSignalStatus,
+  cacheFindingSchema,
+} from "@domain/signals"
+import { and, eq, inArray } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { cacheFindings } from "../schema/cache-findings.ts"
@@ -36,31 +41,37 @@ export const CacheFindingRepositoryLive = Layer.effect(
   CacheFindingRepository,
   Effect.gen(function* () {
     return {
-      listOpenByProject: ({ projectId }) =>
+      listByProject: ({ projectId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          // Joined rather than trusted: a signal resolved or ignored from the inbox
-          // leaves its projection row behind until the next sweep, and treating that row
-          // as open would re-fire against a decision someone already made.
+          // Left-joined and unfiltered: the caller needs archived rows to stay quiet on a
+          // decision someone made, and a soft-deleted signal must still surface its row so
+          // the finding can take it over rather than orphan a fresh signal.
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
-              .select({ finding: cacheFindings, signalSlug: signals.slug })
+              .select({
+                finding: cacheFindings,
+                signalSlug: signals.slug,
+                resolvedAt: signals.resolvedAt,
+                ignoredAt: signals.ignoredAt,
+                deletedAt: signals.deletedAt,
+              })
               .from(cacheFindings)
-              .innerJoin(
+              .leftJoin(
                 signals,
                 and(eq(signals.organizationId, cacheFindings.organizationId), eq(signals.id, cacheFindings.signalId)),
               )
-              .where(
-                and(
-                  eq(cacheFindings.organizationId, organizationId),
-                  eq(cacheFindings.projectId, projectId),
-                  isNull(signals.resolvedAt),
-                  isNull(signals.ignoredAt),
-                  isNull(signals.deletedAt),
-                ),
-              ),
+              .where(and(eq(cacheFindings.organizationId, organizationId), eq(cacheFindings.projectId, projectId))),
           )
-          return rows.map((row) => ({ ...toFinding(row.finding), signalSlug: row.signalSlug }))
+          return rows.map((row) => {
+            const signalStatus: CacheFindingSignalStatus =
+              row.signalSlug === null || row.deletedAt !== null
+                ? "gone"
+                : row.resolvedAt !== null || row.ignoredAt !== null
+                  ? "archived"
+                  : "open"
+            return { ...toFinding(row.finding), signalSlug: row.signalSlug, signalStatus }
+          })
         }),
 
       findBySignalId: ({ signalId }) =>
@@ -105,11 +116,12 @@ export const CacheFindingRepositoryLive = Layer.effect(
                 createdAt: finding.createdAt,
                 updatedAt: finding.updatedAt,
               })
-              // `firstObservedAt` and `signalId` deliberately absent: a finding that keeps
-              // being true is the same finding, opened once.
+              // `firstObservedAt` deliberately absent: a finding that keeps being true is the
+              // same finding, opened once, and its age is what says whether anyone acted.
               .onConflictDoUpdate({
                 target: [cacheFindings.organizationId, cacheFindings.projectId, cacheFindings.fingerprint],
                 set: {
+                  signalId: finding.signalId,
                   actualRate: measures.actualRate,
                   breakEvenRate: measures.breakEvenRate,
                   ceilingRate: measures.ceilingRate,

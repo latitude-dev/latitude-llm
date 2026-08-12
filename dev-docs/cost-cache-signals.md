@@ -68,9 +68,25 @@ concurrent sweeps rather than depending on a read.
 - **State change** opens a new signal and resolves the old one. `Investigate` becoming
   `Stop caching` is a different fix, not an edit to something someone already read.
 - **Resolve** when the finding clears, through `applySignalLifecycleCommandUseCase` — the
-  same path a person resolving it from the inbox takes, not a second write.
-- **Respect a decision**: the open-findings read joins `signals` and excludes resolved,
-  ignored and deleted rows, so re-firing cannot argue with a choice a user made.
+  same path a person resolving it from the inbox takes, not a second write. The signal is
+  archived **first** and its row dropped **second**: the other order leaves a signal open in
+  the inbox with nothing left to find it by, and no later sweep can recover it. A crash
+  between the two steps leaves an archived row that the next sweep reads as
+  already-handled-and-not-firing, and deletes.
+- **Respect a decision**: `listByProject` returns rows whose signal is resolved or ignored,
+  and the producer skips them. That direction is load-bearing and easy to get backwards —
+  *hiding* archived rows from the producer is exactly what makes it re-fire, because a
+  finding measured from steady traffic is still true tomorrow, so a hidden row reads as new
+  on every sweep and opens a fresh signal daily. The row is the tombstone. A signal that was
+  soft-deleted is a different case: that is not a decision to suppress anything, so the
+  finding opens a new signal and takes the row over.
+
+There is deliberately **no auto-reopen** of a resolved cost signal whose finding is still
+firing. Reopening would undo the resolve the user just made, and `SignalRegressed` requires a
+`triggerScoreId` a measured finding cannot supply. A finding that genuinely clears and later
+returns does get a new signal — its row was dropped when it cleared — which is the
+reopen-on-regression behaviour that matters. A verdict that *changes* is a different
+fingerprint and gets its own signal either way.
 
 ## Dispatch
 
