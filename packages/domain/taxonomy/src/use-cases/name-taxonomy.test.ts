@@ -417,9 +417,7 @@ describe("nameClusterUseCase", () => {
       ai: {
         generate: <T>(input: GenerateInput<T>) => {
           calls.push({ system: input.system ?? "", prompt: input.prompt })
-          // A joint call can fail on its own timeout, a provider error, or a
-          // response too short for the schema — none of which should stop the
-          // cluster from being named.
+          // Stands in for a joint-call timeout, provider error or short response.
           if ((input.system ?? "").startsWith("proposeContrastiveThemes")) {
             return Effect.fail(new Error("provider unavailable")) as unknown as Effect.Effect<GenerateResult<T>>
           }
