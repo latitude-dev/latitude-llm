@@ -6,6 +6,7 @@ import {
   RepositoryError,
 } from "@domain/shared"
 import { Effect, Option } from "effect"
+import { promotedTopLevelRows, type ScaffoldingRule } from "../build-quality.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import { isDisplayableTaxonomyName } from "../helpers.ts"
@@ -57,6 +58,8 @@ export interface ProjectBehaviourNode {
   readonly firstSeenLabel: BehaviourFirstSeenLabel
   readonly trend: TaxonomyClusterTrendSummary
   readonly novelty: BehaviourNovelty
+  /** Sessions assigned to this node itself, excluding everything under it. */
+  readonly directObservationCount: number
   /** Sessions represented by this node's visible subtree; aggregate parents are not double-counted. */
   readonly subtreeObservationCount: number
   readonly children: readonly ProjectBehaviourNode[]
@@ -64,6 +67,8 @@ export interface ProjectBehaviourNode {
 
 export interface ListProjectBehavioursResult {
   readonly topics: readonly ProjectBehaviourNode[]
+  /** Sessions the promoted-away nodes held, so they sit in no row; taken before `limit` truncates. */
+  readonly residueObservationCount: number
 }
 
 const MS_PER_DAY = 24 * 60 * 60_000
@@ -141,7 +146,10 @@ const sortNodes = (nodes: readonly ProjectBehaviourNode[], sortBy: BehaviourSort
 const countNodes = (nodes: readonly ProjectBehaviourNode[]): number =>
   nodes.reduce((sum, node) => sum + 1 + countNodes(node.children), 0)
 
-const truncateNodes = (nodes: readonly ProjectBehaviourNode[], budget: number): readonly ProjectBehaviourNode[] => {
+export const truncateNodes = (
+  nodes: readonly ProjectBehaviourNode[],
+  budget: number,
+): readonly ProjectBehaviourNode[] => {
   const out: ProjectBehaviourNode[] = []
   let remaining = budget
   for (const node of nodes) {
@@ -152,6 +160,32 @@ const truncateNodes = (nodes: readonly ProjectBehaviourNode[], budget: number): 
     out.push({ ...node, children })
   }
   return out
+}
+
+const behaviourScaffoldingRule: ScaffoldingRule<ProjectBehaviourNode> = {
+  shapeOf: (node) => ({
+    ownMemberCount: node.directObservationCount,
+    subtreeMemberCount: node.subtreeObservationCount,
+    children: node.children,
+  }),
+  withChildren: (node, children) => ({ ...node, children }),
+}
+
+interface PromotedBehaviourRows {
+  readonly nodes: readonly ProjectBehaviourNode[]
+  readonly residueObservationCount: number
+}
+
+/**
+ * Rows to show for a built tree, plus the sessions no row holds. Do not
+ * substitute a leaves-only walk: it looks equivalent on today's trees but
+ * returns nothing for a childless root and discards residue.
+ */
+export const promoteBehaviourScaffolding = (rootNodes: readonly ProjectBehaviourNode[]): PromotedBehaviourRows => {
+  const nodes = rootNodes.flatMap((root) => promotedTopLevelRows(root, behaviourScaffoldingRule))
+  const total = rootNodes.reduce((sum, root) => sum + root.subtreeObservationCount, 0)
+  const inRows = nodes.reduce((sum, node) => sum + node.subtreeObservationCount, 0)
+  return { nodes, residueObservationCount: Math.max(0, total - inRows) }
 }
 
 export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) =>
@@ -278,12 +312,10 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         })
       const novelty = noveltyFor({ cluster, trend, firstSeenWindowStart, minObservations })
       const directObservationCount = directCountByClusterId.get(cluster.id) ?? 0
-      const ownObservationCount =
-        children.length > 0
-          ? children.reduce((sum, child) => sum + child.subtreeObservationCount, 0)
-          : directObservationCount
+      const subtreeObservationCount =
+        directObservationCount + children.reduce((sum, child) => sum + child.subtreeObservationCount, 0)
       const ownVisible =
-        ownObservationCount >= minObservations &&
+        subtreeObservationCount >= minObservations &&
         (segment === "all" ||
           (segment === "new_this_week" && novelty === "first_seen") ||
           (segment === "spiking" && novelty === "spiking"))
@@ -293,11 +325,9 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         firstSeenLabel: firstSeenLabel(cluster.firstObservedAt, now, firstSeenWindowDays),
         trend,
         novelty,
-        // UI session counts come from current observation assignments in the
-        // selected time range. Interior nodes are aggregates, so their count is
-        // the sum of visible descendants rather than their stored all-time
-        // Postgres counter.
-        subtreeObservationCount: ownObservationCount,
+        directObservationCount,
+        // Counts come from assignments in the selected range, never the stored all-time Postgres counter.
+        subtreeObservationCount,
         children,
       }
     }
@@ -309,16 +339,13 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         return node === null ? [] : [node]
       })
 
-    // The divisive build always produces a single depth-0 root that englobes
-    // the entire project — it is the "everything" node, not a meaningful
-    // category. When it is the only root and it has children, surface its
-    // children (the real depth-1 categories) as the top-level rows so the
-    // behaviours table opens on several categories instead of one
-    // all-encompassing row. A tiny corpus that collapsed to a single childless
-    // root still shows that root.
-    const topLevel =
-      rootNodes.length === 1 && (rootNodes[0]?.children.length ?? 0) > 0 ? (rootNodes[0]?.children ?? []) : rootNodes
-    const topics = sortNodes(topLevel, sortBy)
+    // Must stay between `ownVisible` filtering and truncation: it reads the filtered
+    // tree, and truncating first spends the node budget on scaffolding.
+    const { nodes: promoted, residueObservationCount } = promoteBehaviourScaffolding(rootNodes)
+    const topics = sortNodes(promoted, sortBy)
 
-    return { topics: truncateNodes(topics, limit) } satisfies ListProjectBehavioursResult
+    return {
+      topics: truncateNodes(topics, limit),
+      residueObservationCount,
+    } satisfies ListProjectBehavioursResult
   }).pipe(Effect.withSpan("taxonomy.listProjectBehaviours"))

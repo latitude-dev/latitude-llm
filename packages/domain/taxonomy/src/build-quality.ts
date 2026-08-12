@@ -43,16 +43,23 @@ export interface ScaffoldingShape<T> {
   readonly children: readonly T[]
 }
 
+export interface ScaffoldingRule<T> {
+  readonly shapeOf: (node: T) => ScaffoldingShape<T>
+  readonly withChildren: (node: T, children: readonly T[]) => T
+}
+
 /** Strict zero is not enough: a real signpost can hold one member of its own. */
 const isScaffolding = <T>(shape: ScaffoldingShape<T>): boolean =>
   shape.children.length > 0 &&
   shape.ownMemberCount <= Math.max(1, TAXONOMY_SCAFFOLDING_MAX_OWN_FRACTION * shape.subtreeMemberCount)
 
 /** Content-based, not "flatten everything": an interior holding real members survives as a parent. */
-export const promoteScaffolding = <T>(nodes: readonly T[], shapeOf: (node: T) => ScaffoldingShape<T>): readonly T[] =>
+export const promoteScaffolding = <T>(nodes: readonly T[], rule: ScaffoldingRule<T>): readonly T[] =>
   nodes.flatMap((node) => {
-    const shape = shapeOf(node)
-    return isScaffolding(shape) ? promoteScaffolding(shape.children, shapeOf) : [node]
+    const shape = rule.shapeOf(node)
+    if (isScaffolding(shape)) return promoteScaffolding(shape.children, rule)
+    if (shape.children.length === 0) return [node]
+    return [rule.withChildren(node, promoteScaffolding(shape.children, rule))]
   })
 
 /**
@@ -60,13 +67,13 @@ export const promoteScaffolding = <T>(nodes: readonly T[], shapeOf: (node: T) =>
  * node, and leaving it visible reinstates the single all-encompassing row. A childless
  * root is the exception: dropping it empties the screen of a project that has only one.
  */
-export const promotedTopLevelRows = <T>(root: T, shapeOf: (node: T) => ScaffoldingShape<T>): readonly T[] => {
-  const children = shapeOf(root).children
-  return children.length === 0 ? [root] : promoteScaffolding(children, shapeOf)
+export const promotedTopLevelRows = <T>(root: T, rule: ScaffoldingRule<T>): readonly T[] => {
+  const children = rule.shapeOf(root).children
+  return children.length === 0 ? [root] : promoteScaffolding(children, rule)
 }
 
 /** `memberIndices` carries every member at a node, so a node's own share is what its children do not hold. */
-const clusteringShape = (node: ClusteringTreeNode): ScaffoldingShape<ClusteringTreeNode> => {
+const clusteringShapeOf = (node: ClusteringTreeNode): ScaffoldingShape<ClusteringTreeNode> => {
   const subtreeMemberCount = node.memberIndices.length
   const inChildren = node.children.reduce((sum, child) => sum + child.memberIndices.length, 0)
   return {
@@ -74,6 +81,11 @@ const clusteringShape = (node: ClusteringTreeNode): ScaffoldingShape<ClusteringT
     subtreeMemberCount,
     children: node.children,
   }
+}
+
+const clusteringRule: ScaffoldingRule<ClusteringTreeNode> = {
+  shapeOf: clusteringShapeOf,
+  withChildren: (node, children) => ({ ...node, children }),
 }
 
 const collectLeaves = (node: ClusteringTreeNode): readonly ClusteringTreeNode[] =>
@@ -145,7 +157,7 @@ export const taxonomyBuildQualityMetrics = (input: {
       centeredCohesion: centeredCohesion(memberVectors(leaf.memberIndices, input.embeddings), corpusMean),
     }))
     .sort((a, b) => b.size - a.size)
-  const rows = promotedTopLevelRows(input.root, clusteringShape)
+  const rows = promotedTopLevelRows(input.root, clusteringRule)
   const largestRow = rows.reduce((max, row) => Math.max(max, row.memberIndices.length), 0)
   const inRows = rows.reduce((sum, row) => sum + row.memberIndices.length, 0)
   const cohesions = leaves.map((leaf) => leaf.centeredCohesion)
