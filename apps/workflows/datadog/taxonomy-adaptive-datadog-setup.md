@@ -18,6 +18,11 @@ and the keys' role must carry the RBAC permissions for each write: the retention
 filter needs `apm_retention_filter_write`, the span metrics need
 `apm_generate_metrics`. A key without them returns 403.
 
+`setup-datadog.sh` also converges the tree-quality objects (the `.buildQuality` /
+`.nameQuality` spans, which are **not** flag-gated) — see
+[taxonomy-quality-datadog-setup.md](./taxonomy-quality-datadog-setup.md). One run
+of the script sets up both.
+
 ## Gate 1 — ingestion (mostly handled in code)
 
 The OTel SDK samples AlwaysOn, so the app exports 100% of spans to the DD agent.

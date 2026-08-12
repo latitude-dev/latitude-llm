@@ -78,6 +78,9 @@ export const selectColumns = `
 
 export const validObservationIdClause = "length(observation_id) = 24"
 
+/** `toDate()` renders a bare `YYYY-MM-DD`, which `new Date()` would read as local time. */
+export const parseCHDay = (day: string): Date => new Date(`${day}T00:00:00.000Z`)
+
 const latestProjectWindow = `
   SELECT ${selectColumns}
   FROM taxonomy_observations FINAL
@@ -1186,6 +1189,42 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(
               Effect.mapError((error) =>
                 toRepositoryError(error, "TaxonomyObservationRepository.getClusterTrendCounts"),
+              ),
+            )
+        }),
+
+      // Coverage denominator: what a gardening pass could have clustered per day.
+      // Eligibility mirrors the sampling reads (valid id, non-empty embedding) and
+      // deliberately ignores `assigned_cluster_id` — an observation the global tree
+      // left unassigned is still one a lens could have covered.
+      getClusterableCountsByDay: ({ organizationId, projectId, since }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT toDate(start_time) AS day, count() AS count
+                        FROM taxonomy_observations FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND ${validObservationIdClause}
+                          AND length(embedding) > 0
+                          AND start_time >= {since:DateTime64(9, 'UTC')}
+                        GROUP BY day
+                        ORDER BY day ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  since: formatCHDate(since),
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<{ day: string; count: string | number }>()
+              return rows.map((row) => ({ day: parseCHDay(row.day), count: Number(row.count) }))
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyObservationRepository.getClusterableCountsByDay"),
               ),
             )
         }),

@@ -2,6 +2,7 @@ import { AI, type AIShape, type GenerateResult } from "@domain/ai"
 import {
   ChSqlClient,
   CustomBehaviorId,
+  FacetId,
   OrganizationId,
   ProjectId,
   SessionId,
@@ -311,16 +312,13 @@ describe("listProjectBehavioursUseCase", () => {
       ),
     )
 
-    // Topics sort by subtree volume; children nest under their parent node.
-    expect(result.topics.map((topic) => topic.cluster.id)).toEqual([rootId, leafRootId])
-    expect(result.topics[0]?.children.map((child) => child.cluster.id)).toEqual([childId])
-    // Parent counters are aggregate subtree counters, so the UI must not add
-    // the parent value to its children and double-count the same sessions.
+    expect(result.topics.map((topic) => topic.cluster.id)).toEqual([childId, leafRootId])
+    expect(result.topics.every((topic) => topic.children.length === 0)).toBe(true)
     expect(result.topics[0]?.subtreeObservationCount).toBe(3)
     expect(result.topics[1]?.subtreeObservationCount).toBe(3)
   })
 
-  it("unwraps the single englobing root and surfaces its depth-1 children as top-level rows", async () => {
+  it("unwraps the englobing root and surfaces its depth-1 children as top-level rows", async () => {
     const rootId = TaxonomyClusterId("a".repeat(24))
     const firstChildId = TaxonomyClusterId("b".repeat(24))
     const secondChildId = TaxonomyClusterId("c".repeat(24))
@@ -674,6 +672,168 @@ describe("listProjectBehavioursUseCase (custom behavior scope)", () => {
     const trendById = new Map(result.topics.map((topic) => [topic.cluster.id, topic.trend.status] as const))
     expect(trendById.get(scopedA)).toBe("spike")
     expect(trendById.get(scopedB)).toBe("cooling")
+  })
+
+  it("clips a wider selection to the band facet membership covers, and stops claiming a first sighting", async () => {
+    const facetId = FacetId("f".repeat(24))
+    const lensCluster = TaxonomyClusterId("3".repeat(24))
+    const coverageFrom = new Date("2026-05-19T00:00:00.000Z")
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({
+        id: lensCluster,
+        name: "Lens group",
+        customBehaviorId: behaviorId,
+        facetId,
+        observationCount: 0,
+        // At the coverage floor: the lens has no membership before this, so the
+        // date is where grouping starts, not where the behaviour started.
+        firstObservedAt: coverageFrom,
+      }),
+    ])
+    // Uniform project traffic, but membership only from May 19 — the ramp before
+    // that is the coverage gap the picker must not offer.
+    const observations = createFakeTaxonomyObservationRepository(
+      Array.from({ length: 20 }, (_, index) => ({
+        ...makeObservation(index + 1, globalId),
+        startTime: new Date(now.getTime() - index * 24 * 60 * 60_000),
+      })),
+    )
+    const countWindows: { from?: Date; to?: Date }[] = []
+    const assignments = createFakeTaxonomyViewAssignmentRepository(
+      {},
+      {
+        getClusterAssignmentCounts: ({ startTimeFrom, startTimeTo }) => {
+          countWindows.push({
+            ...(startTimeFrom ? { from: startTimeFrom } : {}),
+            ...(startTimeTo ? { to: startTimeTo } : {}),
+          })
+          return Effect.succeed([{ clusterId: lensCluster, count: 9 }])
+        },
+        getAssignedCountsByDay: () =>
+          Effect.succeed(
+            [0, 1, 2, 3, 4, 5].map((back) => ({
+              day: new Date(Date.UTC(2026, 4, 24 - back)),
+              count: 1,
+            })),
+          ),
+      },
+    )
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({
+        organizationId,
+        projectId,
+        now,
+        customBehaviorId: behaviorId,
+        facetId,
+        startTimeFrom: new Date("2026-01-01T00:00:00.000Z"),
+      }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyViewAssignmentRepository, assignments.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.coverage).toEqual({ from: coverageFrom, to: now })
+    // The January selection was answered over the covered band, not over January.
+    expect(countWindows).toEqual([{ from: coverageFrom, to: now }])
+    expect(result.topics[0]?.firstSeenLabel).toBe("unknown")
+    expect(result.topics[0]?.novelty).not.toBe("first_seen")
+  })
+
+  it("anchors the trend at a stale band's end, so a lens that stopped gardening is not all fading", async () => {
+    const facetId = FacetId("f".repeat(24))
+    const lensCluster = TaxonomyClusterId("4".repeat(24))
+    // Membership stops 4 days before `now`: the last pass wrote nothing recent.
+    const lastCoveredDay = Date.UTC(2026, 4, 20)
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({
+        id: lensCluster,
+        name: "Stale lens group",
+        customBehaviorId: behaviorId,
+        facetId,
+        observationCount: 0,
+        firstObservedAt: new Date(Date.UTC(2026, 4, 14)),
+      }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository(
+      Array.from({ length: 12 }, (_, index) => ({
+        ...makeObservation(index + 1, globalId),
+        startTime: new Date(now.getTime() - index * 24 * 60 * 60_000),
+      })),
+    )
+    const coveredDays = [0, 1, 2, 3, 4, 5].map((back) => new Date(lastCoveredDay - back * 24 * 60 * 60_000))
+    const trendWindows: { currentSince: Date; baselineSince: Date; baselineDays: number }[] = []
+    const assignments = createFakeTaxonomyViewAssignmentRepository(
+      {},
+      {
+        getClusterAssignmentCounts: () => Effect.succeed([{ clusterId: lensCluster, count: 12 }]),
+        getAssignedCountsByDay: () => Effect.succeed(coveredDays.map((day) => ({ day, count: 1 }))),
+        // Counts derived from the window it is handed, one row per covered day, so an
+        // anchor sitting in the uncovered tail really does come back empty here.
+        getClusterTrendCounts: ({ clusterIds, currentSince, baselineSince, baselineDays }) => {
+          trendWindows.push({ currentSince, baselineSince, baselineDays })
+          const inWindow = (from: Date, to?: Date) =>
+            coveredDays.filter((day) => day >= from && (to === undefined || day < to)).length
+          return Effect.succeed(
+            clusterIds.map((clusterId) => ({
+              clusterId,
+              currentCount: inWindow(currentSince),
+              baselineCount: inWindow(baselineSince, currentSince),
+              baselineDays,
+            })),
+          )
+        },
+      },
+    )
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now, customBehaviorId: behaviorId, facetId }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyViewAssignmentRepository, assignments.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    // The band ends on the last covered day, and the current window sits inside it
+    // rather than in the 4 uncovered days before `now`.
+    const coverageTo = new Date(lastCoveredDay + 24 * 60 * 60_000)
+    expect(result.coverage?.to).toEqual(coverageTo)
+    expect(trendWindows).toHaveLength(1)
+    expect(trendWindows[0]?.currentSince).toEqual(new Date(coverageTo.getTime() - 24 * 60 * 60_000))
+    expect(trendWindows[0]?.baselineSince.getTime()).toBeLessThan(trendWindows[0]?.currentSince.getTime() ?? 0)
+    // Anchored at `now` this row reads `fading` (an empty current window against a
+    // covered baseline); anchored at the band's end it reads for what it is.
+    expect(result.topics[0]?.trend.currentCount).toBeGreaterThan(0)
+    expect(result.topics[0]?.trend.status).toBe("steady")
+  })
+
+  it("does not clip a cohort view's topic slice, which reassigns the full window", async () => {
+    const clusters = seededClusters()
+    const observations = createFakeTaxonomyObservationRepository([])
+    const assignments = createFakeTaxonomyViewAssignmentRepository(
+      {},
+      {
+        getClusterAssignmentCounts: () => Effect.succeed([{ clusterId: scopedA, count: 4 }]),
+        getAssignedCountsByDay: () => Effect.fail(new Error("a cohort view must not run a coverage scan") as never),
+      },
+    )
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now, customBehaviorId: behaviorId }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyViewAssignmentRepository, assignments.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.coverage).toBeNull()
   })
 
   it("the global read ignores custom-behavior clusters entirely", async () => {

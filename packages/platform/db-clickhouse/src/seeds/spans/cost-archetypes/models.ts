@@ -22,7 +22,7 @@ const model = (
 /** Anthropic's 1.25x write / 0.1x read premium, so break-even lands at 21.7%. */
 export const CLAUDE_OPUS_4_5 = model({ provider: "anthropic", model: "claude-opus-4-5" })
 export const CLAUDE_HAIKU_4_5 = model({ provider: "anthropic", model: "claude-haiku-4-5" })
-export const CLAUDE_OPUS_4_1 = model({ provider: "anthropic", model: "claude-opus-4-1" })
+export const CLAUDE_OPUS_4_8 = model({ provider: "anthropic", model: "claude-opus-4-8" })
 export const CLAUDE_OPUS_4_6 = model({ provider: "anthropic", model: "claude-opus-4-6" })
 /**
  * The only family still on a five-minute cache by default, which is what a `Stop caching`
