@@ -5,7 +5,7 @@ Every garden run emits two APM spans from the `workflows` service:
 | span (`resource_name`) | emitted by | carries |
 | --- | --- | --- |
 | `taxonomy.gardenTaxonomyWorkflow.buildQuality` | the planning activity, off the tree the run persists | `largestLeafShare`, `leafSizes`, `topLevelRowCount`, `largestTopLevelShare`, per-leaf `centeredCohesion` (p10/p50/p90 + min) |
-| `taxonomy.gardenTaxonomyWorkflow.nameQuality` | the assert-quality activity, after naming | `duplicateNameRate`, `crossBranchDuplicateLeafCount`, `sharedSiblingWordShare` |
+| `taxonomy.gardenTaxonomyWorkflow.nameQuality` | the assert-quality activity, after naming | `duplicateNameRate`, `crossBranchDuplicateLeafCount`, `sharedSiblingWordShare`, `nearDuplicateNameRate` |
 
 Unlike `taxonomy.gardenTaxonomyWorkflow.shadow`, **neither is flag-gated**: they
 fire for every project, every view, in every clustering mode, which is the point —
@@ -56,7 +56,8 @@ custom behavior and facet:
 
 `largest_leaf_share`, `largest_top_level_share`, `top_level_row_count`,
 `leaf_count`, `members_clustered`, `centered_cohesion_min`, `centered_cohesion_p50`,
-`duplicate_name_rate`, `cross_branch_duplicates`, `shared_sibling_word_share`.
+`duplicate_name_rate`, `cross_branch_duplicates`, `shared_sibling_word_share`,
+`near_duplicate_name_rate`.
 
 ## Interpreting the dashboard
 
@@ -70,6 +71,7 @@ custom behavior and facet:
 | `duplicateNameRate` | Leaves colliding with any other leaf **anywhere** in the tree | 0 | Non-zero. The shipped quality gate only compares siblings, so cross-branch collisions ship silently |
 | `crossBranchDuplicateLeafCount` | The subset the gate cannot see | 0 | Any. Observed twice in one tree |
 | `sharedSiblingWordShare` | Share of leaf-name words every sibling also uses | Below ~0.4 | Above ~0.6 — the namer described the shared domain instead of the split. On the best-separated partition available, 90% of leaf-name words came from vocabulary true of every session |
+| `nearDuplicateNameRate` | Share of leaf-name pairs, anywhere in the tree, scoring ≥ 0.5 Jaccard over segmented tokens | 0 | Any pair, and a rise after a naming change. This is the acceptance test for contrastive naming: exact collisions are its tail, and two names one word apart read as duplicates on the screen |
 
 ### The one pairing that matters
 

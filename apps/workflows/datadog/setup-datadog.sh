@@ -141,6 +141,7 @@ done <<'METRICS'
 taxonomy.quality.duplicate_name_rate|@taxonomy.quality.duplicateNameRate
 taxonomy.quality.cross_branch_duplicates|@taxonomy.quality.crossBranchDuplicateLeafCount
 taxonomy.quality.shared_sibling_word_share|@taxonomy.quality.sharedSiblingWordShare
+taxonomy.quality.near_duplicate_name_rate|@taxonomy.quality.nearDuplicateNameRate
 METRICS
 
 echo "== retired shadow-comparison metrics =="

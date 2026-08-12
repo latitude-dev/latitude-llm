@@ -163,10 +163,14 @@ describe("nameQualitySpanAttributes", () => {
       duplicateNameLeafCount: 4,
       crossBranchDuplicateLeafCount: 2,
       sharedSiblingWordShare: 0.9,
+      nearDuplicateNameRate: 0.2,
+      nearDuplicateNamePairCount: 9,
     })
 
     expect(attributes["taxonomy.quality.duplicateNameRate"]).toBeCloseTo(0.4)
     expect(attributes["taxonomy.quality.crossBranchDuplicateLeafCount"]).toBe(2)
     expect(attributes["taxonomy.quality.sharedSiblingWordShare"]).toBeCloseTo(0.9)
+    expect(attributes["taxonomy.quality.nearDuplicateNameRate"]).toBeCloseTo(0.2)
+    expect(attributes["taxonomy.quality.nearDuplicateNamePairCount"]).toBe(9)
   })
 })
