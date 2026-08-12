@@ -21,6 +21,8 @@ export interface NameCustomBehaviorClusterInput {
   readonly customBehaviorId: CustomBehaviorId
   readonly clusterId: TaxonomyCluster["id"]
   readonly now?: Date
+  /** The gardening run; scopes contrastive sibling-set naming to this pass. */
+  readonly namingPassId?: string
 }
 
 export const nameCustomBehaviorClusterUseCase = (input: NameCustomBehaviorClusterInput) =>

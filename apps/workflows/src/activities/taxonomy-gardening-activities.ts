@@ -281,6 +281,13 @@ export interface GardenTaxonomyNamingPlanResult {
    * path, which reads members by `assigned_cluster_id`.
    */
   readonly memberObservationIdsByClusterId: Readonly<Record<string, readonly string[]>>
+  /**
+   * Parent of each cluster to name, so the workflow hands a naming activity only
+   * its own sibling group's samples instead of repeating the whole map — the map
+   * spans the sampled window, and repeating it per activity grows the history with
+   * project volume.
+   */
+  readonly parentClusterIdByClusterId: Readonly<Record<string, string | null>>
 }
 
 export interface GardenTaxonomyQualityResult {
@@ -1150,6 +1157,9 @@ export const planGardenTaxonomyNamingActivity = (
         clusterIdsByDepth,
         clustersScanned: candidates.length,
         memberObservationIdsByClusterId,
+        parentClusterIdByClusterId: Object.fromEntries(
+          ordered.map((cluster) => [cluster.id as string, cluster.parentClusterId] as const),
+        ),
       } satisfies GardenTaxonomyNamingPlanResult
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )

@@ -295,6 +295,14 @@ export const TAXONOMY_NAMING_TIMEOUT_MS = 60_000
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MIN = 4
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 
+export const TAXONOMY_NAMING_PROMPT_TOKEN_BUDGET = 30_000
+export const TAXONOMY_NAMING_CHARS_PER_TOKEN = 4
+export const TAXONOMY_NAMING_SAMPLE_CHAR_MAX = 4_000
+export const TAXONOMY_NAMING_SAMPLE_CHAR_FLOOR = 800
+export const TAXONOMY_CONTRASTIVE_NAMING_TIMEOUT_MS = 180_000
+export const TAXONOMY_CONTRASTIVE_NAMING_MAX_TOKENS = 4_000
+export const TAXONOMY_NAMING_FORBIDDEN_PROMPT_MAX = 60
+
 // ---------------------------------------------------------------------------
 // Storage
 // ---------------------------------------------------------------------------
@@ -331,6 +339,8 @@ export const TAXONOMY_LENS_COVERAGE_MIN_RATE_FRACTION = 0.75
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
+
+export const TAXONOMY_CONTRASTIVE_NAMING_CACHE_TTL_SECONDS = 3_600
 
 // ---------------------------------------------------------------------------
 // Divisive builder — per-depth schedules
