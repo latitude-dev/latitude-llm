@@ -259,7 +259,7 @@ function ProjectFlaggersSettingsPage() {
                                   <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
                                 </div>
                                 <Text.H6 color="foregroundMuted">
-                                  30 credits per scan · runs on {row.viewSampling}% of eligible sessions
+                                  Billed by AI usage · runs on {row.viewSampling}% of eligible sessions
                                 </Text.H6>
                               </div>
                             )}
