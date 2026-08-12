@@ -25,6 +25,8 @@ export interface NameFacetClusterInput {
   readonly customBehaviorId: CustomBehaviorId
   readonly clusterId: TaxonomyCluster["id"]
   readonly now?: Date
+  /** The gardening run; scopes contrastive sibling-set naming to this pass. */
+  readonly namingPassId?: string
 }
 
 export const nameFacetClusterUseCase = (input: NameFacetClusterInput) =>
@@ -37,6 +39,7 @@ export const nameFacetClusterUseCase = (input: NameFacetClusterInput) =>
         projectId: input.projectId,
         clusterId: input.clusterId,
         ...(input.now ? { now: input.now } : {}),
+        ...(input.namingPassId ? { namingPassId: input.namingPassId } : {}),
       },
       {
         customBehaviorId: input.customBehaviorId,

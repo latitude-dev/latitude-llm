@@ -4,6 +4,8 @@ import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import type { TaxonomyViewAssignment } from "../entities/taxonomy-view-assignment.ts"
 import type { TaxonomyViewAssignmentRepositoryShape } from "../ports/taxonomy-view-assignment-repository.ts"
 
+const utcDayStart = (date: Date): number => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+
 export const createFakeTaxonomyViewAssignmentRepository = (
   /** Member observation rows returned by `listClusterMemberObservations`, keyed by cluster id. */
   membersByClusterId: Readonly<Record<string, readonly TaxonomyMomentObservation[]>> = {},
@@ -62,6 +64,23 @@ export const createFakeTaxonomyViewAssignmentRepository = (
           baselineCount: baseline.get(clusterId as string) ?? 0,
           baselineDays,
         }))
+      }),
+
+    getAssignedCountsByDay: ({ customBehaviorId, facetId, clusterIds, since }) =>
+      Effect.sync(() => {
+        const wanted = new Set(clusterIds.map((id) => id as string))
+        const counts = new Map<number, number>()
+        for (const assignment of assignments) {
+          if (assignment.customBehaviorId !== customBehaviorId) continue
+          if ((assignment.facetId ?? "") !== (facetId ?? "")) continue
+          if (assignment.assignedClusterId == null || !wanted.has(assignment.assignedClusterId as string)) continue
+          if (assignment.startTime < since) continue
+          const day = utcDayStart(assignment.startTime)
+          counts.set(day, (counts.get(day) ?? 0) + 1)
+        }
+        return [...counts]
+          .sort(([left], [right]) => left - right)
+          .map(([day, count]) => ({ day: new Date(day), count }))
       }),
 
     listClusterMemberObservations: ({ clusterId, limit }) =>

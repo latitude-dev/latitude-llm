@@ -34,6 +34,9 @@ interface DateRangePickerProps {
   readonly placeholder?: string
   readonly clearLabel?: string
   readonly disabled?: boolean
+  /** Selectable bounds. Days outside are disabled and month navigation stops at them. */
+  readonly minDate?: Date
+  readonly maxDate?: Date
   readonly align?: "start" | "center" | "end"
   readonly portalTarget?: "local" | "body"
   /** Fill the available width, pushing the chevron to the far end (defaults to sizing to content). */
@@ -145,16 +148,22 @@ function formatDraftSummary(range?: DateRange) {
 
 function RangeCalendar({
   value,
+  minDate,
+  maxDate,
   onChange,
 }: {
   readonly value: DateRange | undefined
+  readonly minDate?: Date
+  readonly maxDate?: Date
   readonly onChange: (next: DateRange | undefined) => void
 }) {
   return (
     <DayPicker
       mode="range"
       showOutsideDays
-      defaultMonth={value?.from ?? value?.to ?? new Date()}
+      defaultMonth={value?.from ?? value?.to ?? maxDate ?? new Date()}
+      {...(minDate ? { fromDate: minDate } : {})}
+      {...(maxDate ? { toDate: maxDate } : {})}
       selected={toDayPickerRange(value)}
       onSelect={(nextRange) => onChange(fromDayPickerRange(nextRange))}
       className="select-none"
@@ -212,6 +221,8 @@ export function DateRangePicker({
   placeholder = "Pick a date range",
   clearLabel = "Clear dates",
   disabled = false,
+  minDate,
+  maxDate,
   align = "start",
   portalTarget = "local",
   fullWidth = false,
@@ -322,7 +333,12 @@ export function DateRangePicker({
                 }}
               />
             ) : null}
-            <RangeCalendar value={draftRange} onChange={setDraftRange} />
+            <RangeCalendar
+              value={draftRange}
+              {...(minDate ? { minDate } : {})}
+              {...(maxDate ? { maxDate } : {})}
+              onChange={setDraftRange}
+            />
             <div className="flex items-center justify-between gap-3">
               <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
                 {formatDraftSummary(draftRange)}

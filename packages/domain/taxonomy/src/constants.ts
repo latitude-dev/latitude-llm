@@ -295,12 +295,39 @@ export const TAXONOMY_NAMING_TIMEOUT_MS = 60_000
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MIN = 4
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 
+export const TAXONOMY_NAMING_PROMPT_TOKEN_BUDGET = 30_000
+export const TAXONOMY_NAMING_CHARS_PER_TOKEN = 4
+export const TAXONOMY_NAMING_SAMPLE_CHAR_MAX = 4_000
+export const TAXONOMY_NAMING_SAMPLE_CHAR_FLOOR = 800
+export const TAXONOMY_CONTRASTIVE_NAMING_TIMEOUT_MS = 180_000
+export const TAXONOMY_CONTRASTIVE_NAMING_MAX_TOKENS = 4_000
+export const TAXONOMY_NAMING_FORBIDDEN_PROMPT_MAX = 60
+
 // ---------------------------------------------------------------------------
 // Storage
 // ---------------------------------------------------------------------------
 
 /** Same TTL horizon as semantic-search embeddings. */
 export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
+
+// ---------------------------------------------------------------------------
+// Lens coverage
+// ---------------------------------------------------------------------------
+
+/**
+ * How far back a lens coverage scan looks: the `taxonomy_view_assignments` TTL
+ * horizon (retention plus the table's 30-day grace), past which no membership
+ * row survives to be covered.
+ */
+export const TAXONOMY_LENS_COVERAGE_HORIZON_DAYS = TAXONOMY_OBSERVATION_RETENTION_DAYS + 30
+
+/**
+ * A day counts as covered when its assigned share of clusterable observations
+ * reaches this fraction of the lens's current rate. The test is relative because
+ * the gardening sample is capped: a busy project's plateau sits well below 100%,
+ * and an absolute test would clip every such lens to nothing.
+ */
+export const TAXONOMY_LENS_COVERAGE_MIN_RATE_FRACTION = 0.75
 
 /**
  * Taxonomy observations are always ingested while retained. Gardening is the
@@ -312,6 +339,8 @@ export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
+
+export const TAXONOMY_CONTRASTIVE_NAMING_CACHE_TTL_SECONDS = 3_600
 
 // ---------------------------------------------------------------------------
 // Divisive builder — per-depth schedules
@@ -522,3 +551,21 @@ const CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS = 80_000
  */
 export const TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK =
   TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS * CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS
+
+// ---------------------------------------------------------------------------
+// Build quality metrics
+// ---------------------------------------------------------------------------
+
+/**
+ * A node holding at most this share of its own subtree (floored at 1 member at the
+ * call site) is scaffolding. Not a tuning knob: swept 0 through 0.10 across 8
+ * production trees the promoted row list was identical at every setting.
+ */
+export const TAXONOMY_SCAFFOLDING_MAX_OWN_FRACTION = 0.05
+
+/**
+ * Cap on the per-leaf quality profile carried in telemetry; the structural worst case
+ * is 10 * 8 * 6 leaves. Cohesion summaries are taken before this truncates, and the
+ * emitter reports how many leaves it dropped.
+ */
+export const TAXONOMY_QUALITY_LEAF_PROFILE_MAX = 50

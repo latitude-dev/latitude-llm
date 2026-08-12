@@ -66,6 +66,7 @@ import {
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_DEFAULT,
   type TaxonomyAdaptiveClusteringMode,
 } from "../adaptive-mode.ts"
+import { type TaxonomyBuildQualityMetrics, taxonomyBuildQualityMetrics } from "../build-quality.ts"
 import {
   buildRelativeHierarchicalClusters,
   buildStaticHierarchicalClusters,
@@ -273,6 +274,14 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
   /** Leaf id + centroid for adaptive full-window routing. Empty on the off path. */
   readonly leafClusters: readonly StagingLeafCluster[]
   /**
+   * Whether this pass persists a freshly-built ADAPTIVE tree: every node gets a
+   * new id, so publication retires the whole prior tree rather than the ids no
+   * node continued. Distinct from having `leafClusters`, which says only that
+   * the assignment writes are deferred to a full-window routing pass — the two
+   * coincide today, and publication must keep reading this one.
+   */
+  readonly persistsAdaptiveTree: boolean
+  /**
    * The clusters this plan saves as `staging` — what the atomic swap activates
    * once they are named and ClickHouse points at them. Empty only when nothing
    * fresh was staged (a view's off path, which upserts active rows in place).
@@ -332,6 +341,12 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
    * carries WHY — `Effect.logError` does not reach Datadog from here.
    */
   readonly adaptiveBuildError: string | null
+  /**
+   * Quality of the partition this pass actually persists — measured off the
+   * build's own tree, never off a window of live assignments. Null when the
+   * sample fell below the gardening minimum and no tree was built.
+   */
+  readonly qualityMetrics: TaxonomyBuildQualityMetrics | null
 }
 
 const lookbackStart = (now: Date): Date =>
@@ -661,6 +676,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         observationAssignments: [],
         customAssignments: [],
         leafClusters: [],
+        persistsAdaptiveTree: false,
         stagedClusterIds: [],
         namingMembers: [],
         continuedRestore: [],
@@ -674,6 +690,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         adaptiveDurationMs: 0,
         staticDurationMs: 0,
         adaptiveBuildError: null,
+        qualityMetrics: null,
       } satisfies HierarchicalTaxonomyPlan
     }
 
@@ -932,6 +949,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       observationAssignments,
       customAssignments,
       leafClusters,
+      persistsAdaptiveTree: persistAdaptive,
       stagedClusterIds: bornClusters
         .filter((cluster) => cluster.state === "staging")
         .map((cluster) => cluster.id as TaxonomyClusterId),
@@ -966,5 +984,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       adaptiveDurationMs,
       staticDurationMs,
       adaptiveBuildError,
+      // Measured on the tree this pass persists, which on a rejected adaptive run is the static fallback.
+      qualityMetrics: taxonomyBuildQualityMetrics({ root: tree, embeddings: normalizedEmbeddings }),
     } satisfies HierarchicalTaxonomyPlan
   }).pipe(Effect.withSpan("taxonomy.planHierarchicalTaxonomy"))

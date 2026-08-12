@@ -175,6 +175,7 @@ describe("planHierarchicalTaxonomyUseCase off is a byte-identical no-op", () => 
     expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect([...plan.stagedClusterIds].sort()).toEqual(plan.clusters.map((cluster) => cluster.id).sort())
     expect(plan.leafClusters).toEqual([])
+    expect(plan.persistsAdaptiveTree).toBe(false)
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.decisionMetadata).toBeNull()
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
@@ -192,6 +193,7 @@ describe("planHierarchicalTaxonomyUseCase off is a byte-identical no-op", () => 
     expect(plan.customBehaviorId).toBe(customBehaviorId)
     expect(plan.clusters.every((cluster) => cluster.state === "active")).toBe(true)
     expect(plan.leafClusters).toEqual([])
+    expect(plan.persistsAdaptiveTree).toBe(false)
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.decisionMetadata).toBeNull()
     expect(plan.observationAssignments).toEqual([])
@@ -329,6 +331,9 @@ describe("planHierarchicalTaxonomyUseCase enforced falls back to static on unsaf
     expect(plan.clusters.length).toBeGreaterThan(0)
     expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters).toEqual([])
+    // The publish path reads this, not the mode: a fallen-back `enforced` run
+    // persists the static tree, so its swap must retire the dead ids only.
+    expect(plan.persistsAdaptiveTree).toBe(false)
     expect(plan.supersededClusterIds).toEqual([])
     expect(plan.observationAssignments.length).toBeGreaterThan(0)
   })
@@ -364,6 +369,7 @@ describe("planHierarchicalTaxonomyUseCase enforced falls back to static on unsaf
     expect(plan.fallbackReason).toBeNull()
     expect(plan.clusters.every((cluster) => cluster.state === "staging")).toBe(true)
     expect(plan.leafClusters.length).toBeGreaterThanOrEqual(2)
+    expect(plan.persistsAdaptiveTree).toBe(true)
   })
 })
 
