@@ -9,6 +9,7 @@ import {
   generateId,
   type IncidentNotificationKey,
   isIncidentNotificationEnabled,
+  meetsMinSeverity,
   type NotFoundError,
   NotificationId,
   type OrganizationId,
@@ -400,8 +401,11 @@ const buildRecovery = (incident: Incident): IncidentRecovery => ({
   durationMs: incident.endedAt !== null ? Math.max(0, incident.endedAt.getTime() - incident.startedAt.getTime()) : 0,
 })
 
-const notificationSeverity = (incident: SourcedIncident, triage: SignalTriageSnapshot | null): AlertSeverity =>
-  incident.sourceType === "signal" && triage?.priority != null ? triage.priority : incident.severity
+const notificationSeverity = (incident: SourcedIncident, triage: SignalTriageSnapshot | null): AlertSeverity => {
+  if (incident.sourceType !== "signal" || triage?.priority == null) return incident.severity
+  const triaged = triage.priority
+  return meetsMinSeverity(triaged, incident.severity) ? triaged : incident.severity
+}
 
 const buildPayload = (input: {
   readonly incident: SourcedIncident
