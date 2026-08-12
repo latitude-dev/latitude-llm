@@ -743,6 +743,75 @@ describe("listProjectBehavioursUseCase (custom behavior scope)", () => {
     expect(result.topics[0]?.novelty).not.toBe("first_seen")
   })
 
+  it("anchors the trend at a stale band's end, so a lens that stopped gardening is not all fading", async () => {
+    const facetId = FacetId("f".repeat(24))
+    const lensCluster = TaxonomyClusterId("4".repeat(24))
+    // Membership stops 4 days before `now`: the last pass wrote nothing recent.
+    const lastCoveredDay = Date.UTC(2026, 4, 20)
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({
+        id: lensCluster,
+        name: "Stale lens group",
+        customBehaviorId: behaviorId,
+        facetId,
+        observationCount: 0,
+        firstObservedAt: new Date(Date.UTC(2026, 4, 14)),
+      }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository(
+      Array.from({ length: 12 }, (_, index) => ({
+        ...makeObservation(index + 1, globalId),
+        startTime: new Date(now.getTime() - index * 24 * 60 * 60_000),
+      })),
+    )
+    const coveredDays = [0, 1, 2, 3, 4, 5].map((back) => new Date(lastCoveredDay - back * 24 * 60 * 60_000))
+    const trendWindows: { currentSince: Date; baselineSince: Date; baselineDays: number }[] = []
+    const assignments = createFakeTaxonomyViewAssignmentRepository(
+      {},
+      {
+        getClusterAssignmentCounts: () => Effect.succeed([{ clusterId: lensCluster, count: 12 }]),
+        getAssignedCountsByDay: () => Effect.succeed(coveredDays.map((day) => ({ day, count: 1 }))),
+        // Counts derived from the window it is handed, one row per covered day, so an
+        // anchor sitting in the uncovered tail really does come back empty here.
+        getClusterTrendCounts: ({ clusterIds, currentSince, baselineSince, baselineDays }) => {
+          trendWindows.push({ currentSince, baselineSince, baselineDays })
+          const inWindow = (from: Date, to?: Date) =>
+            coveredDays.filter((day) => day >= from && (to === undefined || day < to)).length
+          return Effect.succeed(
+            clusterIds.map((clusterId) => ({
+              clusterId,
+              currentCount: inWindow(currentSince),
+              baselineCount: inWindow(baselineSince, currentSince),
+              baselineDays,
+            })),
+          )
+        },
+      },
+    )
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now, customBehaviorId: behaviorId, facetId }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyViewAssignmentRepository, assignments.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    // The band ends on the last covered day, and the current window sits inside it
+    // rather than in the 4 uncovered days before `now`.
+    const coverageTo = new Date(lastCoveredDay + 24 * 60 * 60_000)
+    expect(result.coverage?.to).toEqual(coverageTo)
+    expect(trendWindows).toHaveLength(1)
+    expect(trendWindows[0]?.currentSince).toEqual(new Date(coverageTo.getTime() - 24 * 60 * 60_000))
+    expect(trendWindows[0]?.baselineSince.getTime()).toBeLessThan(trendWindows[0]?.currentSince.getTime() ?? 0)
+    // Anchored at `now` this row reads `fading` (an empty current window against a
+    // covered baseline); anchored at the band's end it reads for what it is.
+    expect(result.topics[0]?.trend.currentCount).toBeGreaterThan(0)
+    expect(result.topics[0]?.trend.status).toBe("steady")
+  })
+
   it("does not clip a cohort view's topic slice, which reassigns the full window", async () => {
     const clusters = seededClusters()
     const observations = createFakeTaxonomyObservationRepository([])

@@ -73,7 +73,13 @@ export function clipRangeToCoverage(input: {
   if (!Number.isFinite(coverageFromMs) || !Number.isFinite(coverageToMs)) return range
   const requestedFromMs = range.fromIso ? Date.parse(range.fromIso) : Number.NaN
   const requestedToMs = Date.parse(range.toIso)
-  const fromMs = Number.isFinite(requestedFromMs) ? Math.max(requestedFromMs, coverageFromMs) : coverageFromMs
+  // Clamped at both ends: a coverage window that ends before now (data stopped) lets a
+  // recent selection start past it, and a start outside the band would report a window
+  // the picker says is unselectable.
+  const requestedOrFromMs = Number.isFinite(requestedFromMs)
+    ? Math.max(requestedFromMs, coverageFromMs)
+    : coverageFromMs
+  const fromMs = Math.min(requestedOrFromMs, coverageToMs)
   const toMs = Math.max(Math.min(Number.isFinite(requestedToMs) ? requestedToMs : coverageToMs, coverageToMs), fromMs)
   return { fromIso: new Date(fromMs).toISOString(), toIso: new Date(toMs).toISOString() }
 }

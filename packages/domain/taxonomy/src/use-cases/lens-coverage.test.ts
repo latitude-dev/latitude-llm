@@ -165,10 +165,21 @@ describe("clipRangeToLensCoverage", () => {
     expect(clipRangeToLensCoverage(inside, coverage)).toEqual(inside)
   })
 
-  it("collapses a selection entirely outside coverage instead of inverting it", () => {
+  it("collapses a selection entirely before coverage instead of inverting it", () => {
     const clipped = clipRangeToLensCoverage({ from: day("2026-04-01"), to: day("2026-05-01") }, coverage)
 
     expect(clipped).toEqual({ from: coverage.from, to: coverage.from })
+  })
+
+  it("pins a selection starting after a stale band's end to that end, never outside it", () => {
+    // A lens whose last pass wrote nothing recent: coverage ends before now, so
+    // "the last day" starts past the band. The answer is zero either way, but the
+    // window it is answered over has to stay inside the range the UI offers.
+    const stale = { from: day("2026-08-01"), to: day("2026-08-07") }
+
+    const clipped = clipRangeToLensCoverage({ from: day("2026-08-10"), to: day("2026-08-11") }, stale)
+
+    expect(clipped).toEqual({ from: stale.to, to: stale.to })
   })
 
   it("passes the range through untouched when there is no coverage constraint", () => {

@@ -303,8 +303,13 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
     // stable cluster ids via the Hungarian lineage matcher, so the same
     // start_time-windowed born/continue/die trend the global tree derives is
     // computable over the taxonomy_view_assignments slice.
-    const currentSince = new Date(now.getTime() - TREND_CURRENT_DAYS * MS_PER_DAY)
-    const requestedBaselineSince = new Date(now.getTime() - trendWindowDays * MS_PER_DAY)
+    // Anchored at the covered band's end, not at now. A stale lens — one whose last
+    // pass wrote nothing for the newest days — would otherwise compare a current
+    // window it has no membership for against a covered baseline and report every row
+    // as fading: the same coverage-read-as-behaviour the clip exists to remove.
+    const trendAnchor = coverage !== null && coverage.to < now ? coverage.to : now
+    const currentSince = new Date(trendAnchor.getTime() - TREND_CURRENT_DAYS * MS_PER_DAY)
+    const requestedBaselineSince = new Date(trendAnchor.getTime() - trendWindowDays * MS_PER_DAY)
     // A baseline reaching past the covered band would average today's real counts
     // against days the lens has no membership for, which reads as a spike on every
     // row. Shorten the baseline to the covered part and divide by that.

@@ -156,6 +156,18 @@ describe("clipRangeToCoverage", () => {
     expect(clipped).toEqual({ fromIso: coverageFromIso, toIso: coverageFromIso })
   })
 
+  it("pins a selection starting after a stale coverage end to that end", () => {
+    // Coverage ended 4 days ago (data stopped). "Last day" starts past it; the clipped
+    // window must stay inside the band the picker advertises rather than escape it.
+    const staleToIso = iso(now - 4 * DAY)
+    const clipped = clipRangeToCoverage({
+      range: { fromIso: iso(now - 1 * DAY), toIso: iso(now) },
+      coverageFromIso: iso(now - 10 * DAY),
+      coverageToIso: staleToIso,
+    })
+    expect(clipped).toEqual({ fromIso: staleToIso, toIso: staleToIso })
+  })
+
   it("passes the range through when no coverage constraint is given", () => {
     const range = { fromIso: iso(now - 120 * DAY), toIso: iso(now) }
     expect(clipRangeToCoverage({ range })).toEqual(range)

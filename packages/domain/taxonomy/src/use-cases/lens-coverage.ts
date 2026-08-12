@@ -129,7 +129,11 @@ export const clipRangeToLensCoverage = (
   coverage: TaxonomyLensCoverage | null,
 ): { readonly from?: Date; readonly to?: Date } => {
   if (coverage === null) return { ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }
-  const from = range.from && range.from > coverage.from ? range.from : coverage.from
+  const requestedFrom = range.from && range.from > coverage.from ? range.from : coverage.from
+  // A stale lens's band ends before now, so a recent selection can start past it.
+  // Pinning the start to the band's end keeps the reported window inside the range
+  // the UI says is selectable; it answers zero, which is the true count there.
+  const from = requestedFrom > coverage.to ? coverage.to : requestedFrom
   const to = range.to && range.to < coverage.to ? range.to : coverage.to
   return { from, to: to > from ? to : from }
 }

@@ -26,8 +26,8 @@ interface TimeFilterDropdownProps {
   readonly placeholder?: string
   /**
    * Selectable bounds, for a surface whose data only covers part of the timeline.
-   * Days outside are not offered, and a preset reaching past `minTime` is dropped —
-   * it would resolve to the same clipped answer under a label promising more.
+   * Days outside are not offered, and a preset whose window misses the bounds
+   * entirely is dropped — it would carry a label promising data it cannot answer.
    */
   readonly minTime?: string | undefined
   readonly maxTime?: string | undefined
@@ -89,6 +89,26 @@ function parseBound(iso?: string): Date | undefined {
   return Number.isFinite(date.getTime()) ? date : undefined
 }
 
+/**
+ * Presets worth offering inside selectable bounds. A preset is open-ended — it runs
+ * from its start to now — so it survives when its window overlaps the bounds at all:
+ * a start before `minDate` reaches for data that is not there, and a start after
+ * `maxDate` lands wholly past the data, which is the case that would otherwise offer
+ * "Last day" on a surface whose data stopped a week ago and answer it with nothing.
+ */
+export function presetsWithinBounds(
+  presets: readonly TimeFilterPreset[],
+  bounds: { readonly minDate?: Date; readonly maxDate?: Date },
+  nowMs: number,
+): readonly TimeFilterPreset[] {
+  const { minDate, maxDate } = bounds
+  if (!minDate && !maxDate) return presets
+  return presets.filter((preset) => {
+    const startMs = nowMs - preset.seconds * 1000
+    return (!minDate || startMs >= minDate.getTime()) && (!maxDate || startMs <= maxDate.getTime())
+  })
+}
+
 export function TimeFilterDropdown({
   startTimeFrom,
   startTimeTo,
@@ -100,9 +120,11 @@ export function TimeFilterDropdown({
 }: TimeFilterDropdownProps) {
   const minDate = parseBound(minTime)
   const maxDate = parseBound(maxTime)
-  const offeredPresets = minDate
-    ? presets.filter((preset) => Date.now() - preset.seconds * 1000 >= minDate.getTime())
-    : presets
+  const offeredPresets = presetsWithinBounds(
+    presets,
+    { ...(minDate ? { minDate } : {}), ...(maxDate ? { maxDate } : {}) },
+    Date.now(),
+  )
   const pickerPresets: readonly DateRangePickerPreset[] = offeredPresets.map((preset) => ({
     id: preset.id,
     label: preset.label,
