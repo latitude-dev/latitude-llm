@@ -58,6 +58,64 @@ describe("taxonomyNameQualityMetrics", () => {
     expect(metrics.duplicateNameRate).toBe(0)
   })
 
+  it("catches siblings sharing most of their vocabulary without colliding exactly", () => {
+    const metrics = taxonomyNameQualityMetrics([
+      cluster("root", null, "Everything"),
+      cluster("a", "root", "Client report generation"),
+      cluster("b", "root", "Client report review"),
+      cluster("c", "root", "Refund disputes"),
+    ])
+
+    expect(metrics.duplicateNameRate).toBe(0)
+    expect(metrics.nearDuplicateNamePairCount).toBe(1)
+    expect(metrics.nearDuplicateNameRate).toBeCloseTo(1 / 3)
+  })
+
+  it("scores names across the whole tree, not only within a sibling set", () => {
+    const metrics = taxonomyNameQualityMetrics([
+      cluster("root", null, "Everything"),
+      cluster("a", "root", "Reporting"),
+      cluster("b", "root", "Onboarding"),
+      cluster("c", "a", "Weekly report export"),
+      cluster("d", "b", "Weekly report review"),
+    ])
+
+    expect(metrics.nearDuplicateNamePairCount).toBe(1)
+  })
+
+  it("scores unspaced names by segmented words rather than reading them as one token", () => {
+    const metrics = taxonomyNameQualityMetrics([
+      cluster("root", null, "全部"),
+      cluster("a", "root", "报告生成与导出"),
+      cluster("b", "root", "报告生成与查询"),
+    ])
+
+    expect(metrics.nearDuplicateNamePairCount).toBe(1)
+    expect(metrics.nearDuplicateNameRate).toBe(1)
+  })
+
+  it("compares composed and decomposed accents as the same name", () => {
+    const metrics = taxonomyNameQualityMetrics([
+      cluster("root", null, "Todo"),
+      cluster("a", "root", "Facturación de créditos".normalize("NFD")),
+      cluster("b", "root", "Facturación de créditos".normalize("NFC")),
+    ])
+
+    expect(metrics.nearDuplicateNameRate).toBe(1)
+  })
+
+  it("does not count leaves still waiting to be named as near-duplicates of each other", () => {
+    const metrics = taxonomyNameQualityMetrics([
+      cluster("root", null, "Everything"),
+      cluster("a", "root", "Pending"),
+      cluster("b", "root", "Pending"),
+      cluster("c", "root", "Refund requests"),
+    ])
+
+    expect(metrics.nearDuplicateNamePairCount).toBe(0)
+    expect(metrics.nearDuplicateNameRate).toBe(0)
+  })
+
   it("treats a lone root as the tree's only leaf", () => {
     const metrics = taxonomyNameQualityMetrics([cluster("root", null, "Ad campaign troubleshooting")])
 
