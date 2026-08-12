@@ -6,6 +6,7 @@ import {
   RepositoryError,
 } from "@domain/shared"
 import { Effect, Option } from "effect"
+import { promotedTopLevelRows, type ScaffoldingRule } from "../build-quality.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import { isDisplayableTaxonomyName } from "../helpers.ts"
@@ -66,11 +67,7 @@ export interface ProjectBehaviourNode {
 
 export interface ListProjectBehavioursResult {
   readonly topics: readonly ProjectBehaviourNode[]
-  /**
-   * Sessions that reached a node the reader removed (the unwrapped root, or a
-   * promoted signpost) and no group below it, so rows plus residue still sum to
-   * the project total. Whether to render it as a row is a product decision.
-   */
+  /** Sessions the promoted-away nodes held, so they sit in no row; taken before `limit` truncates. */
   readonly residueObservationCount: number
 }
 
@@ -165,54 +162,30 @@ export const truncateNodes = (
   return out
 }
 
-/**
- * Above this share of its own subtree a node holds real content; at or below it
- * the node is a signpost that exists only to bracket its children. `max(1, …)`
- * is what carries the rule on today's trees (interiors hold 0-1 sessions of
- * their own); the fraction keeps the same question meaningful on a large tree.
- */
-const SCAFFOLDING_OWN_FRACTION = 0.02
+const behaviourScaffoldingRule: ScaffoldingRule<ProjectBehaviourNode> = {
+  shapeOf: (node) => ({
+    ownMemberCount: node.directObservationCount,
+    subtreeMemberCount: node.subtreeObservationCount,
+    children: node.children,
+  }),
+  withChildren: (node, children) => ({ ...node, children }),
+}
 
-const isScaffolding = (node: ProjectBehaviourNode): boolean =>
-  node.directObservationCount <= Math.max(1, SCAFFOLDING_OWN_FRACTION * node.subtreeObservationCount)
-
-interface PromoteScaffoldingResult {
+interface PromotedBehaviourRows {
   readonly nodes: readonly ProjectBehaviourNode[]
   readonly residueObservationCount: number
 }
 
 /**
- * Removes nodes that hold nothing — not nesting.
- *
- * The root goes positionally, whatever it holds: it englobes the project by
- * construction, so a content test that kept it would reintroduce the single
- * all-encompassing row this exists to prevent. A root with no children is the
- * project's only group and stays. Every other node goes only when it holds no
- * content of its own, at any depth, so an interior with real members survives
- * as a parent with its children and its count intact.
- *
- * On every tree in the fleet today each non-root interior is a signpost, so the
- * result comes out flat. That is a fact about the current builder's output, not
- * the contract — collapsing this to a leaves-only walk would return nothing for
- * a childless root, silently drop residue, and foreclose real hierarchy.
+ * Rows to show for a built tree, plus the sessions no row holds. Do not
+ * substitute a leaves-only walk: it looks equivalent on today's trees but
+ * returns nothing for a childless root and discards residue.
  */
-export const promoteScaffolding = (rootNodes: readonly ProjectBehaviourNode[]): PromoteScaffoldingResult => {
-  let residueObservationCount = 0
-  const promote = (nodes: readonly ProjectBehaviourNode[]): readonly ProjectBehaviourNode[] =>
-    nodes.flatMap((node) => {
-      if (node.children.length === 0) return [node]
-      const children = promote(node.children)
-      if (!isScaffolding(node)) return [{ ...node, children }]
-      residueObservationCount += node.directObservationCount
-      return children
-    })
-
-  const nodes = rootNodes.flatMap((root) => {
-    if (root.children.length === 0) return [root]
-    residueObservationCount += root.directObservationCount
-    return promote(root.children)
-  })
-  return { nodes, residueObservationCount }
+export const promoteBehaviourScaffolding = (rootNodes: readonly ProjectBehaviourNode[]): PromotedBehaviourRows => {
+  const nodes = rootNodes.flatMap((root) => promotedTopLevelRows(root, behaviourScaffoldingRule))
+  const total = rootNodes.reduce((sum, root) => sum + root.subtreeObservationCount, 0)
+  const inRows = nodes.reduce((sum, node) => sum + node.subtreeObservationCount, 0)
+  return { nodes, residueObservationCount: Math.max(0, total - inRows) }
 }
 
 export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) =>
@@ -353,10 +326,7 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         trend,
         novelty,
         directObservationCount,
-        // UI session counts come from current observation assignments in the
-        // selected time range. Interior nodes are aggregates, so their count is
-        // their own members plus their visible descendants rather than their
-        // stored all-time Postgres counter.
+        // Counts come from assignments in the selected range, never the stored all-time Postgres counter.
         subtreeObservationCount,
         children,
       }
@@ -369,10 +339,9 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         return node === null ? [] : [node]
       })
 
-    // Promotion runs on the already-filtered tree so `ownVisible` decides which
-    // nodes exist first, and before truncation so the node budget is spent on
-    // real groups instead of scaffolding.
-    const { nodes: promoted, residueObservationCount } = promoteScaffolding(rootNodes)
+    // Must stay between `ownVisible` filtering and truncation: it reads the filtered
+    // tree, and truncating first spends the node budget on scaffolding.
+    const { nodes: promoted, residueObservationCount } = promoteBehaviourScaffolding(rootNodes)
     const topics = sortNodes(promoted, sortBy)
 
     return {

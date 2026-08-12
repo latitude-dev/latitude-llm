@@ -311,12 +311,8 @@ describe("listProjectBehavioursUseCase", () => {
       ),
     )
 
-    // Roots are unwrapped, so the child surfaces as a row of its own; the
-    // childless root is the only group of its branch and stays.
     expect(result.topics.map((topic) => topic.cluster.id)).toEqual([childId, leafRootId])
     expect(result.topics.every((topic) => topic.children.length === 0)).toBe(true)
-    // Parent counters are aggregate subtree counters, so the UI must not add
-    // the parent value to its children and double-count the same sessions.
     expect(result.topics[0]?.subtreeObservationCount).toBe(3)
     expect(result.topics[1]?.subtreeObservationCount).toBe(3)
   })

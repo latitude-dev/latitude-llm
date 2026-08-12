@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { promotedTopLevelRows, type ScaffoldingShape, taxonomyBuildQualityMetrics } from "./build-quality.ts"
+import {
+  promotedTopLevelRows,
+  type ScaffoldingRule,
+  type ScaffoldingShape,
+  taxonomyBuildQualityMetrics,
+} from "./build-quality.ts"
 import type { ClusteringTreeNode } from "./clustering.ts"
 
 /** `memberIndices` at a node covers its whole subtree, so a parent's list is the union of its children's. */
@@ -128,11 +133,14 @@ const row = (id: string, own: number, children: readonly Row[] = []): Row => ({ 
 
 const subtree = (node: Row): number => node.own + node.children.reduce((sum, child) => sum + subtree(child), 0)
 
-const rowShape = (node: Row): ScaffoldingShape<Row> => ({
-  ownMemberCount: node.own,
-  subtreeMemberCount: subtree(node),
-  children: node.children,
-})
+const rowRule: ScaffoldingRule<Row> = {
+  shapeOf: (node): ScaffoldingShape<Row> => ({
+    ownMemberCount: node.own,
+    subtreeMemberCount: subtree(node),
+    children: node.children,
+  }),
+  withChildren: (node, children) => ({ ...node, children }),
+}
 
 const ids = (rows: readonly Row[]): readonly string[] => rows.map((node) => node.id)
 
@@ -140,13 +148,13 @@ describe("promotedTopLevelRows", () => {
   it("leaves an already-flat tree untouched and in order", () => {
     const root = row("R", 0, [row("A", 30), row("B", 20), row("C", 10)])
 
-    expect(ids(promotedTopLevelRows(root, rowShape))).toEqual(["A", "B", "C"])
+    expect(ids(promotedTopLevelRows(root, rowRule))).toEqual(["A", "B", "C"])
   })
 
   it("collapses a whole chain of signposts in one pass, not one level per call", () => {
     const root = row("R", 0, [row("I1", 0, [row("I2", 0, [row("L1", 30), row("L2", 20)])])])
 
-    expect(ids(promotedTopLevelRows(root, rowShape))).toEqual(["L1", "L2"])
+    expect(ids(promotedTopLevelRows(root, rowRule))).toEqual(["L1", "L2"])
   })
 
   it("keeps a content-holding interior as a parent instead of flattening to its leaves", () => {
@@ -155,7 +163,7 @@ describe("promotedTopLevelRows", () => {
       row("B", 0, [row("B1", 10), row("B2", 10)]),
     ])
 
-    const rows = promotedTopLevelRows(root, rowShape)
+    const rows = promotedTopLevelRows(root, rowRule)
 
     expect(ids(rows)).toEqual(["A", "B1", "B2"])
     expect(ids(rows[0]?.children ?? [])).toEqual(["A1", "A2"])
@@ -164,12 +172,12 @@ describe("promotedTopLevelRows", () => {
   it("promotes an interior holding a single member — a strict-zero rule would silently keep it", () => {
     const root = row("R", 1, [row("I", 1, [row("L1", 99), row("L2", 55)]), row("L3", 494)])
 
-    expect(ids(promotedTopLevelRows(root, rowShape))).toEqual(["L1", "L2", "L3"])
+    expect(ids(promotedTopLevelRows(root, rowRule))).toEqual(["L1", "L2", "L3"])
   })
 
   it("unwraps a member-holding root positionally rather than on a content test", () => {
     const root = row("R", 9, [row("A", 40), row("B", 30)])
 
-    expect(ids(promotedTopLevelRows(root, rowShape))).toEqual(["A", "B"])
+    expect(ids(promotedTopLevelRows(root, rowRule))).toEqual(["A", "B"])
   })
 })
