@@ -522,3 +522,21 @@ const CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS = 80_000
  */
 export const TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK =
   TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS * CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS
+
+// ---------------------------------------------------------------------------
+// Build quality metrics
+// ---------------------------------------------------------------------------
+
+/**
+ * A node holding at most this share of its own subtree (floored at 1 member at the
+ * call site) is scaffolding. Not a tuning knob: swept 0 through 0.10 across 8
+ * production trees the promoted row list was identical at every setting.
+ */
+export const TAXONOMY_SCAFFOLDING_MAX_OWN_FRACTION = 0.05
+
+/**
+ * Cap on the per-leaf quality profile carried in telemetry; the structural worst case
+ * is 10 * 8 * 6 leaves. Cohesion summaries are taken before this truncates, and the
+ * emitter reports how many leaves it dropped.
+ */
+export const TAXONOMY_QUALITY_LEAF_PROFILE_MAX = 50

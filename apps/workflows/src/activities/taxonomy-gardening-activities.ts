@@ -16,6 +16,7 @@ import {
   emitLineageUseCase,
   type HierarchicalTaxonomyPlan,
   isDisplayableTaxonomyName,
+  measureTaxonomyNameQualityUseCase,
   planFacetGardenUseCase,
   planHierarchicalTaxonomyUseCase,
   type ReassignmentLeaf,
@@ -34,6 +35,7 @@ import {
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
   type TaxonomyDimension,
+  type TaxonomyNameQualityMetrics,
   TaxonomyObservationRepository,
   type TaxonomyRun,
   TaxonomyRunRepository,
@@ -62,7 +64,14 @@ import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
-import { adaptiveGardenRunFields, adaptiveSpanAttributes } from "./taxonomy-gardening-telemetry.ts"
+import {
+  adaptiveGardenRunFields,
+  adaptiveSpanAttributes,
+  buildQualityFields,
+  buildQualitySpanAttributes,
+  nameQualityFields,
+  nameQualitySpanAttributes,
+} from "./taxonomy-gardening-telemetry.ts"
 
 /**
  * Resolve which builder this garden run persists, from the per-organization
@@ -599,6 +608,28 @@ const emitDegenerateRebuildTelemetry = (input: GardenTaxonomyStepInput, plan: Hi
   })
 }
 
+// Emitted for every mode, unlike the adaptive telemetry above; `off` is what most projects run.
+const emitBuildQualityTelemetry = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan): void => {
+  const metrics = plan.qualityMetrics
+  if (!metrics) return
+  logger.info("Taxonomy build quality", {
+    metric: "taxonomy.gardenTaxonomyWorkflow.buildQuality",
+    ...buildQualityFields(input, plan, metrics),
+  })
+}
+
+const annotateBuildQualitySpan = (input: GardenTaxonomyStepInput, plan: HierarchicalTaxonomyPlan) => {
+  const metrics = plan.qualityMetrics
+  if (!metrics) return Effect.void
+  return Effect.gen(function* () {
+    // Same reason as the adaptive span: APM sampling drops these low-volume traces otherwise.
+    yield* Effect.annotateCurrentSpan("manual.keep", true)
+    for (const [key, value] of Object.entries(buildQualitySpanAttributes(input, plan, metrics))) {
+      yield* Effect.annotateCurrentSpan(key, value)
+    }
+  }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.buildQuality"))
+}
+
 // Telemetry + persist the staged plan artifact + shape the activity result. No
 // repository requirements (Redis + sync only), so both the topic and facet
 // planning paths reuse it after computing the plan under their own layers.
@@ -606,7 +637,9 @@ const finalizeGardenPlan = (input: GardenTaxonomyStepInput, plan: HierarchicalTa
   Effect.gen(function* () {
     yield* Effect.sync(() => emitAdaptivePlanTelemetry(input, plan))
     yield* Effect.sync(() => emitDegenerateRebuildTelemetry(input, plan))
+    yield* Effect.sync(() => emitBuildQualityTelemetry(input, plan))
     yield* annotateAdaptiveTelemetrySpan(input, plan)
+    yield* annotateBuildQualitySpan(input, plan)
     const planKey = yield* storeGardenTaxonomyPlan(input, {
       clusters: plan.clusters,
       observationAssignments: plan.observationAssignments,
@@ -1005,21 +1038,40 @@ export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDep
     }),
   )
 
-export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
+// Measured before the gate runs, so a tree that trips it still reports how its names came out.
+const emitNameQualityTelemetry = (input: GardenTaxonomyStepInput, metrics: TaxonomyNameQualityMetrics) =>
+  Effect.gen(function* () {
+    yield* Effect.sync(() =>
+      logger.info("Taxonomy name quality", {
+        metric: "taxonomy.gardenTaxonomyWorkflow.nameQuality",
+        ...nameQualityFields(input, metrics),
+      }),
+    )
+    yield* Effect.annotateCurrentSpan("manual.keep", true)
+    for (const [key, value] of Object.entries(nameQualitySpanAttributes(input, metrics))) {
+      yield* Effect.annotateCurrentSpan(key, value)
+    }
+  }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.nameQuality"))
+
+export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInput) => {
+  const scope = {
+    projectId: ProjectId(input.projectId),
+    dimension: input.dimension,
+    ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
+    ...(input.facetId ? { facetId: FacetId(input.facetId) } : {}),
+  }
+  return runGardenStep(
     "GardenTaxonomyWorkflow assert quality",
     input,
-    assertTaxonomyQualityUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      dimension: input.dimension,
-      ...(input.customBehaviorId ? { customBehaviorId: CustomBehaviorId(input.customBehaviorId) } : {}),
-      ...(input.facetId ? { facetId: FacetId(input.facetId) } : {}),
+    Effect.gen(function* () {
+      yield* emitNameQualityTelemetry(input, yield* measureTaxonomyNameQualityUseCase(scope))
+      return yield* assertTaxonomyQualityUseCase({ organizationId: OrganizationId(input.organizationId), ...scope })
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
     ),
   )
+}
 
 export const planGardenTaxonomyNamingActivity = (
   input: GardenTaxonomyStepInput & GardenTaxonomyLineageResult & { readonly planKey?: string },
