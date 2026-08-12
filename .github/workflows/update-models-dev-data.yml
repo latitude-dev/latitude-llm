@@ -41,6 +41,16 @@ jobs:
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Verify catalog-coupled tests
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          NODE_ENV: test
+        run: |
+          cp -n .env.example .env.test || true
+          pnpm --filter @domain/models exec vitest run --passWithNoTests src/registry.test.ts
+          pnpm --filter @platform/testkit chdb:build
+          pnpm --filter @platform/db-clickhouse exec vitest run --passWithNoTests src/seeds/spans/cost-archetypes/archetypes.test.ts
+
       - name: Create Pull Request
         if: steps.changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v8
@@ -52,6 +62,9 @@ jobs:
 
             Updates `packages/domain/models/src/data/models.dev.json`
             with the latest model information from the models.dev API.
+
+            Catalog-coupled unit and cost-archetype tests were run against the
+            refreshed data before opening this PR.
           branch: chore/update-models-dev-data
           delete-branch: true
           labels: |
