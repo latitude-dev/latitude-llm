@@ -295,25 +295,12 @@ export const TAXONOMY_NAMING_TIMEOUT_MS = 60_000
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MIN = 4
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 
-/**
- * Contrastive naming names a whole sibling set in one map/reduce pair, so its
- * prompt carries every sibling's samples. The budget below is per call and
- * decides samples-per-child; it is deliberately independent of the sibling count
- * so a wide set falls back to per-child naming instead of shrinking samples to
- * nothing. `CHARS_PER_TOKEN` is the coarse conversion used to keep the budget
- * expressed in tokens.
- */
 export const TAXONOMY_NAMING_PROMPT_TOKEN_BUDGET = 30_000
 export const TAXONOMY_NAMING_CHARS_PER_TOKEN = 4
-/** Head-truncation cap per sample. Beyond this a transcript adds tokens, not signal about what the user asked for. */
 export const TAXONOMY_NAMING_SAMPLE_CHAR_MAX = 4_000
-/** Below this the samples stop carrying the opening request, so the set is named per child instead. */
 export const TAXONOMY_NAMING_SAMPLE_CHAR_FLOOR = 800
-/** One joint call replaces up to `maxChildren` per-child calls, so it gets a proportionally longer wall clock. */
 export const TAXONOMY_CONTRASTIVE_NAMING_TIMEOUT_MS = 180_000
-/** A joint reduce returns a name + description per sibling, well past the single-name default. */
 export const TAXONOMY_CONTRASTIVE_NAMING_MAX_TOKENS = 4_000
-/** Forbidden-name list is tree-wide for the guard; the prompt carries the family first, then this many others. */
 export const TAXONOMY_NAMING_FORBIDDEN_PROMPT_MAX = 60
 
 // ---------------------------------------------------------------------------
@@ -353,12 +340,6 @@ export const TAXONOMY_LENS_COVERAGE_MIN_RATE_FRACTION = 0.75
 
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
 
-/**
- * A contrastive call names siblings that are still `Pending`; each sibling's own
- * naming pass reads its result from here instead of calling the model again. TTL
- * covers one naming pass with slack, and each entry is deleted when consumed so
- * a later rebuild reusing the same cluster id can never pick up a stale name.
- */
 export const TAXONOMY_CONTRASTIVE_NAMING_CACHE_TTL_SECONDS = 3_600
 
 // ---------------------------------------------------------------------------

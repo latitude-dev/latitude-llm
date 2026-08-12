@@ -51,11 +51,13 @@ const {
   },
 })
 
-// One naming call can now cover a whole sibling set (reading every sibling's
-// samples plus a joint map/reduce pair), so the window is sized for that set
-// rather than for a single cluster's two model calls.
+// One naming call can now cover a whole sibling set, so this must exceed the
+// domain-side worst case it wraps: a joint pair (180s) plus a collision retry
+// (180s) plus the per-child fallback's two attempts (60s each), plus the sibling
+// member reads and the locked write. Below that sum the fallback gets cancelled
+// and the cluster stays Pending.
 const { nameTaxonomyClusterActivity } = proxyActivities<typeof activities>({
-  startToCloseTimeout: "8 minutes",
+  startToCloseTimeout: "12 minutes",
   retry: {
     ...defaultActivityRetryPolicy,
     initialInterval: "30 seconds",
@@ -140,21 +142,31 @@ export const gardenTaxonomyWorkflow = async (
     // (see NAMING_ACTIVITY_CONCURRENCY). We await all of a depth before naming
     // the parents above it so each interior sees its children's final names.
     const nameTree = async (namingPlan: activities.GardenTaxonomyNamingPlanResult) => {
+      // Contrastive naming samples a cluster's unnamed siblings too, so each activity
+      // gets its own sibling group's staged samples — not the whole plan, which spans
+      // the sampled window and would grow the history with project volume.
+      const samplesBySiblingGroup = new Map<string, Record<string, readonly string[]>>()
+      for (const [clusterId, ids] of Object.entries(namingPlan.memberObservationIdsByClusterId ?? {})) {
+        const parentClusterId = namingPlan.parentClusterIdByClusterId?.[clusterId]
+        if (parentClusterId === undefined || parentClusterId === null) continue
+        const group = samplesBySiblingGroup.get(parentClusterId) ?? {}
+        group[clusterId] = ids
+        samplesBySiblingGroup.set(parentClusterId, group)
+      }
       for (const { clusterIds } of namingPlan.clusterIdsByDepth) {
         await runInBatches(clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) => {
           const memberObservationIds = namingPlan.memberObservationIdsByClusterId?.[clusterId]
+          const parentClusterId = namingPlan.parentClusterIdByClusterId?.[clusterId]
+          const siblingGroup = parentClusterId ? samplesBySiblingGroup.get(parentClusterId) : undefined
           return nameTaxonomyClusterActivity({
             organizationId: started.organizationId,
             projectId: started.projectId,
             clusterId,
+            namingPassId: started.runId,
             ...(started.customBehaviorId ? { customBehaviorId: started.customBehaviorId } : {}),
             ...(started.facetId ? { facetId: started.facetId } : {}),
             ...(memberObservationIds ? { memberObservationIds } : {}),
-            // Whole plan, not just this cluster's: contrastive naming samples the
-            // siblings too, and a staged sibling has no ClickHouse membership yet.
-            ...(namingPlan.memberObservationIdsByClusterId
-              ? { memberObservationIdsByClusterId: namingPlan.memberObservationIdsByClusterId }
-              : {}),
+            ...(siblingGroup ? { memberObservationIdsByClusterId: siblingGroup } : {}),
           })
         })
       }

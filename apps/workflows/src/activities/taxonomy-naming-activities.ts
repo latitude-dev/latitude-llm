@@ -35,11 +35,13 @@ export interface NameTaxonomyClusterActivityInput {
    */
   readonly memberObservationIds?: readonly string[]
   /**
-   * The naming plan's samples for every cluster of this pass. Contrastive naming
+   * The naming plan's samples for this cluster's sibling group. Contrastive naming
    * names a whole sibling set in one call, and a staged sibling's membership is not
    * in ClickHouse yet, so without this map a staged tree can only be named per child.
    */
   readonly memberObservationIdsByClusterId?: Readonly<Record<string, readonly string[]>>
+  /** The gardening run, so contrastive names parked for siblings cannot outlive this pass. */
+  readonly namingPassId?: string
 }
 
 export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityInput) => {
@@ -66,6 +68,7 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
           facet,
           clusterId,
           customBehaviorId: CustomBehaviorId(input.customBehaviorId as string),
+          ...(input.namingPassId ? { namingPassId: input.namingPassId } : {}),
         })
       }).pipe(
         Effect.asVoid,
@@ -94,6 +97,7 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
         projectId,
         clusterId,
         customBehaviorId: CustomBehaviorId(input.customBehaviorId),
+        ...(input.namingPassId ? { namingPassId: input.namingPassId } : {}),
       }).pipe(
         Effect.asVoid,
         withActivityAIMetering({
@@ -122,6 +126,7 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
       ...(input.memberObservationIdsByClusterId
         ? { memberObservationIdsByClusterId: input.memberObservationIdsByClusterId }
         : {}),
+      ...(input.namingPassId ? { namingPassId: input.namingPassId } : {}),
     }).pipe(
       Effect.asVoid,
       withActivityAIMetering({

@@ -12,7 +12,7 @@ import {
 import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { TAXONOMY_CENTROID_HALF_LIFE_SECONDS } from "../constants.ts"
+import { TAXONOMY_CENTROID_HALF_LIFE_SECONDS, TAXONOMY_CONTRASTIVE_NAMING_CACHE_TTL_SECONDS } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import {
   type TaxonomyMomentObservation,
@@ -29,6 +29,7 @@ const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const clusterId = TaxonomyClusterId("c".repeat(24))
 const now = new Date("2026-06-04T00:00:00.000Z")
+const namingPassId = "run-1"
 
 const cluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => ({
   id: clusterId,
@@ -85,18 +86,21 @@ const observation = (overrides: Partial<TaxonomyMomentObservation> = {}): Taxono
 
 const createFakeCacheStore = () => {
   const entries = new Map<string, string>()
+  const ttlSeconds = new Map<string, number | undefined>()
   const layer = Layer.succeed(CacheStore, {
     get: (key: string) => Effect.sync(() => entries.get(key) ?? null),
-    set: (key: string, value: string) =>
+    set: (key: string, value: string, options?: { readonly ttlSeconds?: number }) =>
       Effect.sync(() => {
         entries.set(key, value)
+        ttlSeconds.set(key, options?.ttlSeconds)
       }),
     delete: (key: string) =>
       Effect.sync(() => {
         entries.delete(key)
+        ttlSeconds.delete(key)
       }),
   })
-  return { layer, entries }
+  return { layer, entries, ttlSeconds }
 }
 
 const runNameCluster = (input: {
@@ -107,12 +111,19 @@ const runNameCluster = (input: {
   readonly target?: TaxonomyCluster["id"]
   readonly clusterRepository?: ReturnType<typeof createFakeTaxonomyClusterRepository>
   readonly cache?: Layer.Layer<CacheStore>
+  readonly namingPassId?: string
 }) => {
   const clusters =
     input.clusterRepository ??
     createFakeTaxonomyClusterRepository(input.seedClusters ?? [input.seedCluster ?? cluster()])
   const observations = createFakeTaxonomyObservationRepository(input.seedObservations)
-  const base = nameClusterUseCase({ organizationId, projectId, clusterId: input.target ?? clusterId, now }).pipe(
+  const base = nameClusterUseCase({
+    organizationId,
+    projectId,
+    clusterId: input.target ?? clusterId,
+    now,
+    namingPassId: input.namingPassId ?? namingPassId,
+  }).pipe(
     Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
     Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
     Effect.provide(Layer.succeed(AI, input.ai)),
@@ -320,12 +331,15 @@ describe("nameClusterUseCase", () => {
     { index: 2, name: "Password Resets", description: "Users are locked out and need their password reset." },
   ]
 
-  const contrastiveAi = (calls: { system: string; prompt: string }[]): AIShape => ({
+  const contrastiveAi = (
+    calls: { system: string; prompt: string }[],
+    names: typeof contrastiveNames = contrastiveNames,
+  ): AIShape => ({
     generate: <T>(input: GenerateInput<T>) => {
       calls.push({ system: input.system ?? "", prompt: input.prompt })
       const object = (input.system ?? "").startsWith("proposeContrastiveThemes")
-        ? { clusters: contrastiveNames.map(({ index }) => ({ index, differentiators: [`differentiator ${index}`] })) }
-        : { clusters: contrastiveNames }
+        ? { clusters: names.map(({ index }) => ({ index, differentiators: [`differentiator ${index}`] })) }
+        : { clusters: names }
       return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
     },
     embed: () => Effect.die("embed not used"),
@@ -350,10 +364,13 @@ describe("nameClusterUseCase", () => {
     expect(clusters.clusters.get(clusterId)?.name).toBe("Refund Requests")
     // Each row is still written only by its own naming pass; the siblings' names wait in the cache.
     expect(clusters.clusters.get(secondId)?.name).toBe("Pending")
+    const secondKey = `org:${organizationId}:taxonomy:naming:contrastive:${namingPassId}:${parentId}:${secondId}`
     expect([...cache.entries.keys()]).toEqual([
-      `org:${organizationId}:taxonomy:naming:contrastive:${parentId}:${secondId}`,
-      `org:${organizationId}:taxonomy:naming:contrastive:${parentId}:${thirdId}`,
+      secondKey,
+      `org:${organizationId}:taxonomy:naming:contrastive:${namingPassId}:${parentId}:${thirdId}`,
     ])
+    // A parked name must expire on its own even if its sibling's pass never runs.
+    expect(cache.ttlSeconds.get(secondKey)).toBe(TAXONOMY_CONTRASTIVE_NAMING_CACHE_TTL_SECONDS)
   })
 
   it("hands each sibling the name the set produced instead of calling the model again", async () => {
@@ -386,7 +403,40 @@ describe("nameClusterUseCase", () => {
     })
     expect(clusterRepository.clusters.get(secondId)?.name).toBe("Shipment Tracking")
     // Consumed, so a later rebuild reusing this cluster id cannot pick it up again.
-    expect(cache.entries.has(`org:${organizationId}:taxonomy:naming:contrastive:${parentId}:${secondId}`)).toBe(false)
+    expect(
+      cache.entries.has(`org:${organizationId}:taxonomy:naming:contrastive:${namingPassId}:${parentId}:${secondId}`),
+    ).toBe(false)
+  })
+
+  it("ignores names parked by a pass that never consumed them", async () => {
+    const seed = siblingSet()
+    const cache = createFakeCacheStore()
+    const clusterRepository = createFakeTaxonomyClusterRepository(seed.seedClusters)
+    // A pass that dies after naming the set leaves its siblings' names behind.
+    await Effect.runPromise(
+      runNameCluster({ ...seed, clusterRepository, ai: contrastiveAi([]), cache: cache.layer }).effect,
+    )
+    expect(cache.entries.size).toBe(2)
+
+    const calls: { system: string; prompt: string }[] = []
+    const nextPass = runNameCluster({
+      ...seed,
+      clusterRepository,
+      target: secondId,
+      cache: cache.layer,
+      namingPassId: "run-2",
+      ai: contrastiveAi(calls, [
+        { index: 0, name: "Parcel Tracking", description: "Users ask where a parcel they are waiting for is." },
+        { index: 1, name: "Sign-in Recovery", description: "Users are locked out and need their password reset." },
+      ]),
+    })
+
+    await Effect.runPromise(nextPass.effect)
+
+    // The stale entry is keyed to the dead pass, so this pass names from samples.
+    expect(calls).toHaveLength(2)
+    expect(calls[0]?.system).toContain("proposeContrastiveThemes")
+    expect(clusterRepository.clusters.get(secondId)?.name).toBe("Parcel Tracking")
   })
 
   it("falls back to per-child naming when the sibling set cannot be shown within the per-call budget", async () => {

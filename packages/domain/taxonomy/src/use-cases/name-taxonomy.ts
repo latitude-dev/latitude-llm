@@ -55,12 +55,19 @@ export interface NameClusterInput {
    */
   readonly memberObservationIds?: readonly string[]
   /**
-   * The same staged samples for every cluster of this naming pass, keyed by
-   * cluster id. Contrastive naming needs its siblings' samples too, and a staged
-   * sibling's membership is not in ClickHouse yet — without this map a staged
-   * tree can only be named per child.
+   * The staged samples for this cluster's sibling group, keyed by cluster id.
+   * Contrastive naming needs its siblings' samples too, and a staged sibling's
+   * membership is not in ClickHouse yet — without this map a staged tree can only
+   * be named per child.
    */
   readonly memberObservationIdsByClusterId?: Readonly<Record<string, readonly string[]>>
+  /**
+   * Identifies one naming pass over one tree. Contrastive naming parks its
+   * siblings' names under it, so a pass that dies before they are consumed cannot
+   * leak a name into the next pass over the same (reused) cluster ids. Absent ⇒
+   * no cross-cluster naming, because there is nowhere safe to park a result.
+   */
+  readonly namingPassId?: string
 }
 
 export interface NameTaxonomyResult {
@@ -408,21 +415,25 @@ const generateContrastiveNames = (input: ContrastiveGenerateInput) =>
   )
 
 /**
- * Resolves one contrastive attempt into a name per cluster, or `null` when the
- * model left a cluster out or returned names that collide with each other or with
- * the tree — the caller then falls back to per-child naming, the known-good path.
+ * Resolves one contrastive attempt into a name per cluster. `rejected` names
+ * collide with each other or with the tree and are worth one retry; `incomplete`
+ * means the model left a cluster out, which a retry cannot be told to fix, so the
+ * caller falls straight back to per-child naming.
  */
 const resolveContrastiveNames = (
   input: ContrastiveGenerateInput,
   returned: readonly { readonly index: number; readonly name: string; readonly description: string }[],
-): { readonly names: readonly ContrastiveClusterName[] } | { readonly rejected: readonly string[] } => {
+):
+  | { readonly names: readonly ContrastiveClusterName[] }
+  | { readonly rejected: readonly string[] }
+  | { readonly incomplete: true } => {
   const forbiddenNormalized = new Set(input.forbiddenNames.map(normalizeName).filter((name) => name.length > 0))
   const taken = new Set<string>()
   const rejected: string[] = []
   const names: ContrastiveClusterName[] = []
   for (const [index, member] of input.members.entries()) {
     const match = returned.find((entry) => entry.index === index)
-    if (match === undefined) return { rejected: [] }
+    if (match === undefined) return { incomplete: true }
     const normalized = normalizeName(match.name)
     if (normalized.length === 0 || forbiddenNormalized.has(normalized) || taken.has(normalized)) {
       rejected.push(match.name)
@@ -438,6 +449,7 @@ const generateContrastiveWithGuard = (input: ContrastiveGenerateInput) =>
   Effect.gen(function* () {
     const first = resolveContrastiveNames(input, yield* generateContrastiveNames(input))
     if ("names" in first) return first.names
+    if ("incomplete" in first) return null
     const retry = resolveContrastiveNames(
       input,
       yield* generateContrastiveNames({ ...input, retryRejectedNames: first.rejected }),
@@ -670,9 +682,11 @@ const generateName = (
 
 const contrastiveCacheKey = (input: {
   readonly organizationId: OrganizationId
+  readonly namingPassId: string
   readonly parentClusterId: string
   readonly clusterId: string
-}): string => `org:${input.organizationId}:taxonomy:naming:contrastive:${input.parentClusterId}:${input.clusterId}`
+}): string =>
+  `org:${input.organizationId}:taxonomy:naming:contrastive:${input.namingPassId}:${input.parentClusterId}:${input.clusterId}`
 
 const contrastiveCacheSchema = z.object({ name: z.string().min(1), description: z.string() })
 
@@ -686,18 +700,20 @@ const parseContrastiveCacheValue = (value: string): NameTaxonomyResult | null =>
 }
 
 /**
- * The name a sibling's contrastive call already produced for this cluster. Read
- * once and deleted: continuations reuse cluster ids across rebuilds, so an entry
- * must never be applied to a second naming pass.
+ * The name a sibling's contrastive call already produced for this cluster in this
+ * pass. Read once and deleted, and keyed by pass on top of that: continuations
+ * reuse cluster ids across rebuilds, so an entry must never reach a second pass.
  */
 const readContrastiveName = (input: NameClusterInput, context: NamingContext) =>
   Effect.gen(function* () {
     const parentClusterId = context.cluster.parentClusterId
-    if (parentClusterId === null) return null
+    const namingPassId = input.namingPassId
+    if (parentClusterId === null || namingPassId === undefined) return null
     const cacheOption = yield* Effect.serviceOption(CacheStore)
     if (Option.isNone(cacheOption)) return null
     const key = contrastiveCacheKey({
       organizationId: input.organizationId,
+      namingPassId,
       parentClusterId,
       clusterId: input.clusterId,
     })
@@ -712,6 +728,7 @@ const readContrastiveName = (input: NameClusterInput, context: NamingContext) =>
 
 const writeContrastiveNames = (
   input: NameClusterInput,
+  namingPassId: string,
   parentClusterId: string,
   names: readonly ContrastiveClusterName[],
 ) =>
@@ -724,6 +741,7 @@ const writeContrastiveNames = (
         .set(
           contrastiveCacheKey({
             organizationId: input.organizationId,
+            namingPassId,
             parentClusterId,
             clusterId: entry.clusterId,
           }),
@@ -750,7 +768,8 @@ const nameContrastiveSet = (
 ) =>
   Effect.gen(function* () {
     const parentClusterId = context.cluster.parentClusterId
-    if (parentClusterId === null || context.unnamedSiblings.length === 0) return null
+    const namingPassId = input.namingPassId
+    if (parentClusterId === null || namingPassId === undefined || context.unnamedSiblings.length === 0) return null
     // Without a cache there is nowhere to leave the siblings' names, so a joint
     // call would be repeated for every sibling instead of replacing their calls.
     if (Option.isNone(yield* Effect.serviceOption(CacheStore))) return null
@@ -791,7 +810,7 @@ const nameContrastiveSet = (
     if (generated === null) return null
     const own = generated.find((entry) => entry.clusterId === input.clusterId)
     if (own === undefined) return null
-    yield* writeContrastiveNames(input, parentClusterId, generated)
+    yield* writeContrastiveNames(input, namingPassId, parentClusterId, generated)
     yield* Effect.annotateCurrentSpan("taxonomy.naming.contrastiveSetSize", candidates.length)
     return { name: own.name, description: own.description } satisfies NameTaxonomyResult
   })
