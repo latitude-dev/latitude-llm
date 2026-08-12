@@ -14,12 +14,15 @@ on:
         default: development
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: pr-diff-artifact-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   generate-diff-artifact:
-    if: github.repository == 'latitude-dev/latitude-llm' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: >
+      github.repository == 'latitude-dev/latitude-llm' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false) &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     permissions:
       contents: read

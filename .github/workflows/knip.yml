@@ -7,7 +7,7 @@ on:
   workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: knip-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
