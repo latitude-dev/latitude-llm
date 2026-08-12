@@ -795,6 +795,8 @@ const nameContrastiveSet = (
       candidates.reduce((total, candidate) => total + candidate.samples.length, 0),
     )
     if (perSampleChars === null) return null
+    // A timeout, provider error or short response degrades to per-child naming
+    // rather than leaving the cluster Pending; a systemic failure resurfaces there.
     const generated = yield* generateContrastiveWithGuard({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -806,7 +808,7 @@ const nameContrastiveSet = (
       })),
       forbiddenNames: context.treeNames,
       ...parentContext(context.parent),
-    })
+    }).pipe(Effect.orElseSucceed(() => null))
     if (generated === null) return null
     const own = generated.find((entry) => entry.clusterId === input.clusterId)
     if (own === undefined) return null

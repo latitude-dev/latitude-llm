@@ -408,6 +408,42 @@ describe("nameClusterUseCase", () => {
     ).toBe(false)
   })
 
+  it("names per child when the joint call fails outright", async () => {
+    const calls: { system: string; prompt: string }[] = []
+    const cache = createFakeCacheStore()
+    const { effect, clusters } = runNameCluster({
+      ...siblingSet(),
+      cache: cache.layer,
+      ai: {
+        generate: <T>(input: GenerateInput<T>) => {
+          calls.push({ system: input.system ?? "", prompt: input.prompt })
+          // A joint call can fail on its own timeout, a provider error, or a
+          // response too short for the schema — none of which should stop the
+          // cluster from being named.
+          if ((input.system ?? "").startsWith("proposeContrastiveThemes")) {
+            return Effect.fail(new Error("provider unavailable")) as unknown as Effect.Effect<GenerateResult<T>>
+          }
+          const object = input.prompt.includes("Candidates:")
+            ? { name: "Refund Requests", description: "Users ask for money back on an order they placed." }
+            : { candidates: [{ theme: "refunds", examples: [0] }] }
+          return Effect.succeed({ object: object as T, tokens: 10, duration: 1 } satisfies GenerateResult<T>)
+        },
+        embed: () => Effect.die("embed not used"),
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await expect(Effect.runPromise(effect)).resolves.toEqual({
+      name: "Refund Requests",
+      description: "Users ask for money back on an order they placed.",
+    })
+
+    expect(calls[0]?.system).toContain("proposeContrastiveThemes")
+    expect(calls[1]?.system).toContain("proposeCandidateThemes")
+    expect(clusters.clusters.get(clusterId)?.name).toBe("Refund Requests")
+    expect(cache.entries.size).toBe(0)
+  })
+
   it("ignores names parked by a pass that never consumed them", async () => {
     const seed = siblingSet()
     const cache = createFakeCacheStore()
