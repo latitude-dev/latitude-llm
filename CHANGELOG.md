@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v0.3.80 - 2026-08-13
+
+### Settings
+
+- Split integration management into an org-vs-project model. Connecting, disconnecting and editing the organization default for Cursor, Claude Code, Linear and Webhook now lives under Settings > Organization > Global integrations, while a project's integration page shows a "Using default" / "Differs from default" badge with override and reset. Defaults keeps PII redaction and GitHub monitoring. Editing the org default stays owner-gated; disconnecting is unchanged (ref: #4433).
+
+### Filters
+
+- Grouped the session and trace filters by function instead of by control type. The sidebar now renders headings for Identity, Status, Models & tools, Performance & cost, Conversation, Scores and Custom, with a search box that narrows by filter or group label. Half-typed values in debounced text and range controls survive a search, and expand/collapse state does too (ref: #4361).
+
+### Docs
+
+- Added a guide for running agent simulations locally (ref: #4435).
+
 ## v0.3.79 - 2026-08-13
 
 ### Cost
