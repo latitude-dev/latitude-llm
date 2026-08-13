@@ -2,7 +2,7 @@ import { type ChSqlClient, OrganizationId, ProjectId } from "@domain/shared"
 import { type AnalyticsQueryInput, AnalyticsQueryReader, type AnalyticsQueryReaderShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
-import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
 import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { insertJsonEachRow } from "../sql.ts"
@@ -177,7 +177,7 @@ const score = (
   created_at: toCh3(new Date("2026-06-05T10:00:00.000Z")),
 })
 
-const ch = setupTestClickHouse()
+const ch = setupTestClickHouse({ truncateBetweenTests: false })
 const baseInput = {
   organizationId: ORG_ID,
   projectId: PROJECT_ID,
@@ -204,7 +204,8 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
 
   const run = (input: AnalyticsQueryInput) => runCh(reader.query(input))
 
-  beforeEach(async () => {
+  // Every test only reads, so the fixture is seeded once for the file.
+  beforeAll(async () => {
     await Effect.runPromise(
       insertJsonEachRow(ch.client, "spans", [
         span(1, DAY1, { model: "gpt-4o-mini" }),
