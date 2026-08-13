@@ -372,10 +372,21 @@ const coverageDay = (iso: string) => new Date(iso).toLocaleDateString(undefined,
  */
 function CoverageNote({ coverage }: { readonly coverage: BehaviourCoverageRecord }) {
   return (
-    <span className="flex flex-row items-center gap-1 text-muted-foreground">
-      <Icon icon={ClockIcon} size="sm" color="foregroundMuted" />
-      <Text.H6 color="foregroundMuted">{`Coverage: ${coverageDay(coverage.fromIso)} – ${coverageDay(coverage.toIso)}`}</Text.H6>
-    </span>
+    <Tooltip
+      asChild
+      side="bottom"
+      trigger={
+        <span className="flex cursor-default flex-row items-center gap-1 text-muted-foreground">
+          <Icon icon={ClockIcon} size="sm" color="foregroundMuted" />
+          <Text.H6 color="foregroundMuted">{`Coverage: ${coverageDay(coverage.fromIso)} – ${coverageDay(coverage.toIso)}`}</Text.H6>
+        </span>
+      }
+    >
+      <span className="block max-w-xs">
+        This behavior only groups the sessions it has been analyzed over, so counts and trends outside this range would
+        be incomplete. The range grows as it keeps running.
+      </span>
+    </Tooltip>
   )
 }
 
