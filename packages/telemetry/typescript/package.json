@@ -182,7 +182,7 @@
     "@traceloop/instrumentation-vertexai": "0.26.0"
   },
   "devDependencies": {
-    "@ai-sdk/openai": "3.0.73",
+    "@ai-sdk/openai": "4.0.11",
     "@ai-sdk/openai7": "npm:@ai-sdk/openai@4.0.0-beta.74",
     "@ai-sdk/otel": "1.0.0-beta.127",
     "@anthropic-ai/sdk": "0.104.1",

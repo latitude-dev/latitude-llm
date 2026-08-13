@@ -2340,8 +2340,8 @@ importers:
         specifier: 4.0.0-beta.49
         version: 4.0.0-beta.49(zod@4.3.6)
       '@ai-sdk/openai':
-        specifier: 4.0.0-beta.44
-        version: 4.0.0-beta.44(zod@4.3.6)
+        specifier: 4.0.11
+        version: 4.0.11(zod@4.3.6)
       '@ai-sdk/openai-compatible':
         specifier: 3.0.0-beta.36
         version: 3.0.0-beta.36(zod@4.3.6)
@@ -3277,8 +3277,8 @@ importers:
         version: 0.26.0
     devDependencies:
       '@ai-sdk/openai':
-        specifier: 3.0.73
-        version: 3.0.73(zod@4.3.6)
+        specifier: 4.0.11
+        version: 4.0.11(zod@4.3.6)
       '@ai-sdk/openai7':
         specifier: npm:@ai-sdk/openai@4.0.0-beta.74
         version: '@ai-sdk/openai@4.0.0-beta.74(zod@4.3.6)'
@@ -3696,20 +3696,14 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai@3.0.73':
-    resolution: {integrity: sha512-+3x9oxHv9Xp33Iv2L8D+e5hqmZi64jofBKig/9611JKyfV59NdkaDDajtwc0CxOEfARgCVq1BW7dP+526gKOKw==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/openai@4.0.0-beta.44':
-    resolution: {integrity: sha512-kXdGA6vyh9SwL/B11UhODjbw0koFkDA/yD7hacBxMHSZx6l3T9hZLECEwOkn6OZDrQR+vno5Ka/pUyXrG82BkQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
   '@ai-sdk/openai@4.0.0-beta.74':
     resolution: {integrity: sha512-1iss50q+WXsqUAJ2wxYugsNgczOpM3GNwNeUJPffui1FMOJEq17llhQMbtjby5xP+/sKd8rYciR29wL4Gn6nhA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai@4.0.11':
+    resolution: {integrity: sha512-2PLnVPBsdJusgquPVYgPWd3ox4lbUFkp7DVUSmM0lQ4VISQoNxdgo6TvFAHgwQn9wJ/ckVYVRLU7+BvHc7T8ww==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3745,6 +3739,12 @@ packages:
   '@ai-sdk/provider-utils@5.0.0-beta.7':
     resolution: {integrity: sha512-oQqukJG/h5mS0cGx/GHUSyhhhrvVvCRRxgtvnRttEnB3C4S+oc3m8+nO3u81IO5pRggCh4ZUtqzIbqH+Famhjg==}
     engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@5.0.7':
+    resolution: {integrity: sha512-OSm5/5kdrHa11WIOo5LYgDKnxYWp5aB/wx5EXRHi0jpUGduMDeB6oht9U6p+UNNWIP3F/EqPpV8d7vdP/iRnqg==}
+    engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
@@ -14310,22 +14310,16 @@ snapshots:
       '@ai-sdk/provider-utils': 5.0.0-beta.30(zod@4.3.6)
       zod: 4.3.6
 
-  '@ai-sdk/openai@3.0.73(zod@4.3.6)':
-    dependencies:
-      '@ai-sdk/provider': 4.0.0-beta.7
-      '@ai-sdk/provider-utils': 4.0.30(zod@4.3.6)
-      zod: 4.3.6
-
-  '@ai-sdk/openai@4.0.0-beta.44(zod@4.3.6)':
-    dependencies:
-      '@ai-sdk/provider': 4.0.0-beta.7
-      '@ai-sdk/provider-utils': 5.0.0-beta.30(zod@4.3.6)
-      zod: 4.3.6
-
   '@ai-sdk/openai@4.0.0-beta.74(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 4.0.0-beta.7
       '@ai-sdk/provider-utils': 5.0.0-beta.49(zod@4.3.6)
+      zod: 4.3.6
+
+  '@ai-sdk/openai@4.0.11(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.7
+      '@ai-sdk/provider-utils': 5.0.7(zod@4.3.6)
       zod: 4.3.6
 
   '@ai-sdk/otel@1.0.0-beta.127(zod@4.3.6)':
@@ -14371,6 +14365,14 @@ snapshots:
     dependencies:
       '@ai-sdk/provider': 4.0.0-beta.7
       '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.8
+      zod: 4.3.6
+
+  '@ai-sdk/provider-utils@5.0.7(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.7
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
       eventsource-parser: 3.0.8
       zod: 4.3.6
 
