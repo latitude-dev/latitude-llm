@@ -23,7 +23,13 @@ import {
 } from "../constants.ts"
 import type { FlaggerConversation } from "../conversation.ts"
 import { getFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
-import { isRecord, iterMessageParts, truncateExcerpt } from "../flagger-strategies/shared.ts"
+import {
+  EXPLICIT_PROFANITY_PATTERN_SOURCE,
+  isRecord,
+  iterMessageParts,
+  SLUR_PATTERN_SOURCE,
+  truncateExcerpt,
+} from "../flagger-strategies/shared.ts"
 import type { FlaggerStrategy } from "../flagger-strategies/types.ts"
 import type { SessionHint } from "../hints/types.ts"
 import { reflagSuppressionTags } from "../reflag.ts"
@@ -179,7 +185,7 @@ const annotationReviewOutputSchema = z.object({
 
 const INSPECTED_AGENT_EXTRACTED_TRUE_TTL_SECONDS = 30 * 24 * 60 * 60
 const INSPECTED_AGENT_EXTRACTED_FALSE_TTL_SECONDS = 24 * 60 * 60
-const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 2
+const INSPECTED_AGENT_CONTEXT_CACHE_VERSION = 3
 const INSPECTED_AGENT_CONTEXT_CACHE_BASE = `flaggers:inspected-agent-context:v${INSPECTED_AGENT_CONTEXT_CACHE_VERSION}`
 const INSPECTED_AGENT_CONTEXT_CACHE_PREFIX = `${INSPECTED_AGENT_CONTEXT_CACHE_BASE}:sha256:`
 const FALLBACK_SYSTEM_PROMPT_CHARS = 600
@@ -244,6 +250,22 @@ const instructionExtractorOutputSchema = z
   })
 
 type InstructionExtractorOutput = z.infer<typeof instructionExtractorOutputSchema>
+
+// Mask rather than reject a crude extraction: rejection would skip the flagger for the whole trace.
+const disallowedExtractionWordingPattern = new RegExp(
+  `${EXPLICIT_PROFANITY_PATTERN_SOURCE}|${SLUR_PATTERN_SOURCE}`,
+  "gi",
+)
+
+const maskDisallowedWording = (text: string): string => text.replace(disallowedExtractionWordingPattern, "[redacted]")
+
+const maskDisallowedExtractionWording = (result: InstructionExtractorOutput): InstructionExtractorOutput => ({
+  ...result,
+  agentContext: maskDisallowedWording(result.agentContext),
+  ...(result.reasonIfNotUnderstood === undefined
+    ? {}
+    : { reasonIfNotUnderstood: maskDisallowedWording(result.reasonIfNotUnderstood) }),
+})
 
 type InspectedAgentContext =
   | { readonly available: true; readonly text: string }
@@ -380,6 +402,8 @@ Return exactly one JSON object matching one of these shapes:
 Return understood=true only when you can infer what the agent is and what it should do. If understood=true, agentContext is required. Include expected output or response format in agentContext when it is present, but do not require one.
 
 Do not copy examples, taxonomies, policy lists, unsafe content, quoted user content, or category rubrics. Omit details that are not needed to understand the agent's role and task.
+
+Write agentContext in neutral, professional wording. Never reproduce profanity, slurs, or crude phrasing from the inspected prompt, even when it describes the agent's persona or tone; paraphrase such wording professionally.
 
 Return understood=false when the prompt does not define enough agent context. Never return understood=true without agentContext.
 `.trim()
@@ -568,6 +592,7 @@ function runInstructionExtraction(input: {
                 }),
             }),
           ),
+          Effect.map(maskDisallowedExtractionWording),
           Effect.tap((result) => setCachedExtraction(input.cacheKey, result)),
           Effect.tap((result) =>
             result.understood

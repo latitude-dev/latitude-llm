@@ -120,6 +120,15 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
+  --color-background-blue: hsl(var(--background-blue));
+  --color-background-violet: hsl(var(--background-violet));
+  --color-background-fuchsia: hsl(var(--background-fuchsia));
+  --color-background-teal: hsl(var(--background-teal));
+  --color-background-amber: hsl(var(--background-amber));
+  --color-background-red: hsl(var(--background-red));
+  --color-background-sky: hsl(var(--background-sky));
+  --color-background-lime: hsl(var(--background-lime));
+
   --color-scrollbar: hsl(var(--scrollbar));
 }
 
@@ -246,6 +255,14 @@
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
+  --background-blue: 213 94% 68%;
+  --background-violet: 255 92% 76%;
+  --background-fuchsia: 292 91% 73%;
+  --background-teal: 172 66% 50%;
+  --background-amber: 43 96% 56%;
+  --background-red: 0 91% 71%;
+  --background-sky: 198 93% 60%;
+  --background-lime: 83 78% 55%;
   --shadow-popover:
     0px 1px 3px 0px hsl(var(--background-shadow) / 0.1),
     0px 1px 2px -1px hsl(var(--background-shadow) / 0.1),
@@ -312,6 +329,14 @@
   --chart-3: 30 80% 55%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
+  --background-blue: 221 83% 53%;
+  --background-violet: 262 83% 58%;
+  --background-fuchsia: 293 69% 49%;
+  --background-teal: 175 84% 32%;
+  --background-amber: 32 95% 44%;
+  --background-red: 0 72% 51%;
+  --background-sky: 200 98% 39%;
+  --background-lime: 85 85% 35%;
   --shadow-popover:
     0px 2px 4px 0px hsl(var(--background-shadow) / 0.4),
     0px 1px 3px -1px hsl(var(--background-shadow) / 0.3),
