@@ -121,7 +121,7 @@ function BackofficeUserDetailPage() {
           description={
             user.role === "admin"
               ? "Revoke this user's platform-staff access. They keep their organization memberships."
-              : "Grant this user platform-staff access — backoffice + cross-org visibility + impersonation."
+              : "Grant this user platform-staff access: backoffice, cross-org visibility, and impersonation."
           }
           action={<PromoteDemoteStaffButton userId={user.id} userEmail={user.email} currentRole={user.role} />}
         />

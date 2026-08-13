@@ -83,7 +83,7 @@ const insertMomentLabel = (sessionId: string, kind: string, firstMessageIndex: n
 
 // An observation whose GLOBAL assigned_cluster_id is deliberately NOT the
 // scoped cluster, so a scoped read that still finds it proves it resolved
-// membership from custom_behavior_assignments rather than assigned_cluster_id.
+// membership from taxonomy_view_assignments rather than assigned_cluster_id.
 const insertObservationAssignedElsewhere = (sessionId: string) =>
   ch.client.insert({
     table: "taxonomy_observations",
@@ -109,9 +109,9 @@ const insertObservationAssignedElsewhere = (sessionId: string) =>
     format: "JSONEachRow",
   })
 
-const insertCustomBehaviorAssignment = (sessionId: string) =>
+const insertTaxonomyViewAssignment = (sessionId: string) =>
   ch.client.insert({
-    table: "custom_behavior_assignments",
+    table: "taxonomy_view_assignments",
     values: [
       {
         organization_id: organizationId as string,
@@ -232,7 +232,7 @@ describe("TaxonomyClusterIntelligenceRepository scoped custom-behavior reads", (
   it("resolves membership from the assignment slice, not the global assigned_cluster_id", async () => {
     await insertObservationAssignedElsewhere("scoped")
     await insertAnalysis("scoped", [traceIdFor(7)])
-    await insertCustomBehaviorAssignment("scoped")
+    await insertTaxonomyViewAssignment("scoped")
 
     const scoped = await run(
       Effect.gen(function* () {
@@ -322,7 +322,7 @@ describe("TaxonomyClusterIntelligenceRepository.listClusterSessions", () => {
   it("reads the scoped slice when customBehaviorId is set", async () => {
     await insertObservationAssignedElsewhere("scoped")
     await insertAnalysis("scoped", [traceIdFor(9)])
-    await insertCustomBehaviorAssignment("scoped")
+    await insertTaxonomyViewAssignment("scoped")
 
     const scoped = await listSessions({ clusterIds: [scopedClusterId], customBehaviorId })
     expect(scoped.sessions.map((session) => session.sessionId)).toEqual(["scoped"])

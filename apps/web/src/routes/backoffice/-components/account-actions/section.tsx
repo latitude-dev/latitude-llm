@@ -11,7 +11,7 @@ export function AccountActionsSection({ children }: { children: ReactNode }) {
   return (
     <ActionsSection
       title="Account actions"
-      description="Mutations on this user — impersonation, role changes, email, sign-outs."
+      description="Actions on this user: impersonation, role changes, email, and sign-outs."
     >
       {children}
     </ActionsSection>

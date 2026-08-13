@@ -56,4 +56,14 @@ describe("extractSamplingKey", () => {
     expect(extractSamplingKey({})).toBe(null)
     expect(extractSamplingKey({ resourceSpans: [{ scopeSpans: [] }] })).toBe(null)
   })
+
+  it("returns null instead of a non-string trace ID", () => {
+    const req = request([span({ traceId: { "0": "a" } as unknown as string })])
+    expect(extractSamplingKey(req)).toBe(null)
+  })
+
+  it("returns null instead of a missing trace ID", () => {
+    const req = request([span({ traceId: undefined as unknown as string })])
+    expect(extractSamplingKey(req)).toBe(null)
+  })
 })

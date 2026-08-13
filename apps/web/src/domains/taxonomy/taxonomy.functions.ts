@@ -1,9 +1,11 @@
 import { MOMENT_KINDS, type MomentKind } from "@domain/conversation-intelligence"
-import { CustomBehaviorId, normalizeCentroid, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import { CustomBehaviorId, FacetId, normalizeCentroid, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import {
   type ClusterAnalysisAggregate,
+  clipRangeToLensCoverage,
   getBehaviourTrajectoryUseCase,
   getClusterSessionIntelligenceUseCase,
+  getLensCoverageUseCase,
   isDisplayableTaxonomyName,
   listBehaviourSessionsUseCase,
   listProjectBehavioursUseCase,
@@ -12,11 +14,12 @@ import {
   TaxonomyClusterIntelligenceRepository,
   TaxonomyClusterRepository,
   type TaxonomyClusterTrendSummary,
+  TaxonomyViewAssignmentRepository,
 } from "@domain/taxonomy"
 import {
-  CustomBehaviorAssignmentRepositoryLive,
   TaxonomyClusterIntelligenceRepositoryLive,
   TaxonomyObservationRepositoryLive,
+  TaxonomyViewAssignmentRepositoryLive,
 } from "@platform/db-clickhouse"
 import { TaxonomyClusterRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -27,6 +30,7 @@ import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
+import { isOpenableBehaviourTree } from "./behaviour-tree-visibility.ts"
 import { type CentroidPoint2D, projectCentroidsTo2D } from "./centroid-projection.ts"
 
 export interface TaxonomyClusterRecord {
@@ -78,8 +82,15 @@ export interface BehaviourNodeRecord {
   readonly children: readonly BehaviourNodeRecord[]
 }
 
+/** The band a facet lens's counts were computed over; null when the tree covers whole project history. */
+export interface BehaviourCoverageRecord {
+  readonly fromIso: string
+  readonly toIso: string
+}
+
 interface ProjectBehavioursRecord {
   readonly topics: readonly BehaviourNodeRecord[]
+  readonly coverage: BehaviourCoverageRecord | null
 }
 
 export interface BehaviourTimeRangeRecord {
@@ -180,7 +191,7 @@ const clickHouseTaxonomyIntelligenceLayer = Layer.mergeAll(
   TaxonomyClusterIntelligenceRepositoryLive,
   // Provides scoped per-cluster counts to listProjectBehavioursUseCase when a
   // customBehaviorId is passed; unused (never resolved) on the global path.
-  CustomBehaviorAssignmentRepositoryLive,
+  TaxonomyViewAssignmentRepositoryLive,
 )
 
 const postgresTaxonomyReadLayer = Layer.mergeAll(TaxonomyClusterRepositoryLive)
@@ -242,9 +253,6 @@ const intelligenceFromAggregate = (aggregate: ClusterAnalysisAggregate | null): 
 
 const flattenNodes = (nodes: readonly ProjectBehaviourNode[]): readonly ProjectBehaviourNode[] =>
   nodes.flatMap((node) => [node, ...flattenNodes(node.children)])
-
-const countBehaviourNodes = (nodes: readonly BehaviourNodeRecord[]): number =>
-  nodes.reduce((sum, node) => sum + 1 + countBehaviourNodes(node.children), 0)
 
 interface WeightedIntelligence {
   readonly intelligence: BehaviourIntelligenceSummaryRecord
@@ -393,6 +401,7 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
       limit: z.number().int().positive().max(500).optional(),
       timeRange: behaviourTimeRangeSchema,
       customBehaviorId: z.string().optional(),
+      facetId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<ProjectBehavioursRecord> => {
@@ -406,6 +415,7 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId,
           ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+          ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
           ...(data.dimension ? { dimension: data.dimension } : {}),
           // high_escalation filters on intelligence rollups below, after the
           // tree and aggregates are loaded; the domain use-case has no
@@ -421,8 +431,11 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
         })
         const nodes = flattenNodes(result.topics)
         const intelligence = yield* TaxonomyClusterIntelligenceRepository
-        const sourceWindowEnd = timeRange.to ?? new Date()
-        const sourceWindowStart = timeRange.from ?? new Date(0)
+        // Same clip the tree's counts got, so the intelligence rollup is measured
+        // over the range the lens actually covers rather than the one requested.
+        const clipped = clipRangeToLensCoverage(timeRange, result.coverage)
+        const sourceWindowEnd = clipped.to ?? new Date()
+        const sourceWindowStart = clipped.from ?? new Date(0)
         const aggregateEntries = yield* Effect.forEach(
           nodes,
           (node) =>
@@ -436,6 +449,7 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
                 sourceWindowStart,
                 sourceWindowEnd,
                 ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+                ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
               })
               .pipe(Effect.map((aggregate) => [node.cluster.id, aggregate] as const)),
           { concurrency: 6 },
@@ -450,7 +464,60 @@ export const getProjectBehaviours = createServerFn({ method: "GET" })
           toBehaviourNodeRecord(topic, aggregatesByClusterId, positionsByClusterId),
         )
         const displayTopics = data.segment === "high_escalation" ? pruneToHighEscalation(topics) : topics
-        return { topics: countBehaviourNodes(displayTopics) >= 2 ? displayTopics : [] }
+        return {
+          topics: isOpenableBehaviourTree(displayTopics) ? displayTopics : [],
+          coverage: result.coverage
+            ? { fromIso: result.coverage.from.toISOString(), toIso: result.coverage.to.toISOString() }
+            : null,
+        }
+      }).pipe(
+        withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
+        withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+/**
+ * The band a facet lens has membership for, on its own key so the picker can be
+ * bounded before a range is applied — coverage is a property of the slice, not of
+ * the selected range, so folding it into the tree read would make the range
+ * depend on a response that depends on the range.
+ */
+export const getBehaviourCoverage = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      customBehaviorId: z.string(),
+      facetId: z.string(),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<BehaviourCoverageRecord | null> => {
+    const orgId = await resolveOrgScope(context)
+    const projectId = ProjectId(data.projectId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const clusters = yield* TaxonomyClusterRepository
+        const assignments = yield* TaxonomyViewAssignmentRepository
+        const customBehaviorId = CustomBehaviorId(data.customBehaviorId)
+        const facetId = FacetId(data.facetId)
+        const active = yield* clusters.listActiveByProject({
+          projectId,
+          dimension: "topic",
+          customBehaviorId,
+          facetId,
+        })
+        const coverage = yield* getLensCoverageUseCase({
+          organizationId: orgId,
+          projectId,
+          customBehaviorId,
+          facetId,
+          clusterIds: active.filter((cluster) => isDisplayableTaxonomyName(cluster.name)).map((cluster) => cluster.id),
+          assignments,
+          now: new Date(),
+        })
+        return coverage ? { fromIso: coverage.from.toISOString(), toIso: coverage.to.toISOString() } : null
       }).pipe(
         withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
         withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
@@ -467,6 +534,7 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
       axis: z.enum(["day", "turn"]),
       timeRange: behaviourTimeRangeSchema,
       customBehaviorId: z.string().optional(),
+      facetId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<BehaviourTrajectoryRecord> => {
@@ -485,6 +553,7 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
         ...(timeRange.from ? { startTimeFrom: timeRange.from } : {}),
         ...(timeRange.to ? { startTimeTo: timeRange.to } : {}),
         ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+        ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
       }).pipe(
         withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
         withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
@@ -504,6 +573,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
       timeRange: behaviourTimeRangeSchema,
       momentRange: behaviourMomentRangeSchema,
       customBehaviorId: z.string().optional(),
+      facetId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<BehaviourSessionsRecord> => {
@@ -522,6 +592,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
         offset: data.offset ?? 0,
         limit: data.limit ?? 50,
         ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+        ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
       }).pipe(
         withScopedPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId),
         withScopedClickHouse(clickHouseTaxonomyIntelligenceLayer, getClickhouseClient(), orgId),
@@ -555,6 +626,7 @@ export const getClusterProfile = createServerFn({ method: "GET" })
       clusterId: z.string(),
       timeRange: behaviourTimeRangeSchema,
       customBehaviorId: z.string().optional(),
+      facetId: z.string().optional(),
     }),
   )
   .handler(async ({ data, context }): Promise<ClusterSessionIntelligenceRecord> => {
@@ -570,6 +642,7 @@ export const getClusterProfile = createServerFn({ method: "GET" })
         sourceWindowStart: timeRange.from ?? new Date(0),
         sourceWindowEnd: timeRange.to ?? new Date(),
         ...(data.customBehaviorId ? { customBehaviorId: CustomBehaviorId(data.customBehaviorId) } : {}),
+        ...(data.facetId ? { facetId: FacetId(data.facetId) } : {}),
       }).pipe(
         Effect.map((result) => ({
           rates: result.rates,

@@ -131,6 +131,18 @@ describe("createLoopsContactsSender", () => {
     })
   })
 
+  it("forwards a typed source as the channel when the user picked Other", async () => {
+    const sender = createLoopsContactsSender({ apiKey: "test-key" })
+    updateContactMock.mockResolvedValueOnce(successResponse)
+
+    await Effect.runPromise(sender.updateContact({ userId: "user_123", heardAboutUs: " A talk at PyData " }))
+
+    expect(updateContactMock).toHaveBeenCalledWith({
+      userId: "user_123",
+      properties: { heardAboutUs: "A talk at PyData" },
+    })
+  })
+
   it("propagates update failures as MarketingContactsError", async () => {
     const sender = createLoopsContactsSender({ apiKey: "test-key" })
     updateContactMock.mockRejectedValueOnce(new APIError(404, { success: false, message: "contact not found" }))

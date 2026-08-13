@@ -167,9 +167,11 @@ export function SignalsView({
 
   const openSignal = useCallback(
     (signalId: string) => {
-      void navigate({ to: "/projects/$projectSlug/signals/$signalId", params: { projectSlug, signalId } })
+      const signalSlug = issues.find((issue) => issue.id === signalId)?.slug
+      if (!signalSlug) return
+      void navigate({ to: "/projects/$projectSlug/signals/$signalSlug", params: { projectSlug, signalSlug } })
     },
-    [navigate, projectSlug],
+    [navigate, projectSlug, issues],
   )
 
   useListRowKeyboardNav({
@@ -282,7 +284,10 @@ export function SignalsView({
         const metrics = rowMetricsBySignalId[issue.id]
         if (!metrics) return <AnalyticsCellSkeleton />
         if (metrics.occurrences === 0) return <span className="truncate text-muted-foreground">Never</span>
-        return <SeenAtCell lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
+        if (!metrics.lastSeenAt || !metrics.firstSeenAt) {
+          return <span className="truncate text-muted-foreground">Never</span>
+        }
+        return <SeenAtCell lastSeenAtIso={metrics.lastSeenAt} firstSeenAtIso={metrics.firstSeenAt} />
       },
     },
     {
@@ -340,8 +345,8 @@ export function SignalsView({
           )}
           renderRowLink={(issue, props) => (
             <Link
-              to="/projects/$projectSlug/signals/$signalId"
-              params={{ projectSlug, signalId: issue.id }}
+              to="/projects/$projectSlug/signals/$signalSlug"
+              params={{ projectSlug, signalSlug: issue.slug }}
               aria-label={`Open ${issue.name}`}
               {...props}
             />

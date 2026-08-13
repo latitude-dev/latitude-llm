@@ -1,5 +1,5 @@
-import { ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
-import type { Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
+import { ProjectId, SpanId, TraceId } from "@domain/shared"
+import type { CostSource, Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
 import { SpanRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { getClickhouseClient } from "../../server/clients.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
@@ -63,6 +64,9 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
   readonly costIsEstimated: boolean
+  readonly costSource: CostSource
+  readonly costPricedProvider: string
+  readonly costPricedModel: string
   readonly responseId: string
   readonly finishReasons: readonly string[]
   readonly attrString: Readonly<Record<string, string>>
@@ -129,6 +133,9 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   costOutputMicrocents: span.costOutputMicrocents,
   costTotalMicrocents: span.costTotalMicrocents,
   costIsEstimated: span.costIsEstimated,
+  costSource: span.costSource,
+  costPricedProvider: span.costPricedProvider,
+  costPricedModel: span.costPricedModel,
   responseId: span.responseId,
   finishReasons: span.finishReasons,
   attrString: span.attrString,
@@ -150,7 +157,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
@@ -175,11 +182,12 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
 // Reads by the session's authoritative `traceIds` rather than `session_id`
 // membership, so subagent spans that override `session_id` to the child's own
 // value still surface in the session's Spans tab and breakdowns.
-export const listSpansBySession = createServerFn({ method: "GET" })
+// POST keeps the up-to-500 trace-id payload below HTTP request-line limits.
+export const listSpansBySession = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(500),
+      traceIds: z.array(traceIdSchema).max(500),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
@@ -232,7 +240,7 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       startTime: dateTimeParamSchema,
     }),
   )
@@ -253,38 +261,12 @@ export const listConversationMessageSpans = createServerFn({ method: "GET" })
     return spans.map(serializeSpanMessages)
   })
 
-export const listSessionConversationMessageSpans = createServerFn({ method: "GET" })
-  .inputValidator(
-    z.object({
-      projectId: z.string(),
-      sessionId: z.string(),
-      sessionStartTime: dateTimeParamSchema,
-      sessionEndTime: dateTimeParamSchema,
-    }),
-  )
-  .handler(async ({ data, context }): Promise<SpanMessagesRecord[]> => {
-    const orgId = await resolveOrgScope(context)
-    const spans = await Effect.runPromise(
-      Effect.gen(function* () {
-        const spanRepo = yield* SpanRepository
-        return yield* spanRepo.findMessagesForSession({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          sessionId: SessionId(data.sessionId),
-          startTimeFrom: new Date(data.sessionStartTime.getTime() - 60 * 1000),
-          startTimeTo: new Date(data.sessionEndTime.getTime() + 24 * 60 * 60 * 1000),
-        })
-      }).pipe(withScopedClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
-    )
-    return spans.map(serializeSpanMessages)
-  })
-
 export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
-      spanId: z.string(),
+      traceId: traceIdSchema,
+      spanId: spanIdSchema,
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),

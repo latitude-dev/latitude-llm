@@ -17,7 +17,7 @@ export function SessionStatusPill({
 
   return (
     <Tooltip asChild trigger={<Status variant="success" label={`Live · ${lastActivity}`} />}>
-      This session had activity in the last 5 minutes — more may still be coming in.
+      Active within the last 5 minutes. More may still be on the way.
     </Tooltip>
   )
 }

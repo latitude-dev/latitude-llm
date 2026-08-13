@@ -279,7 +279,7 @@ function CtaBanner({ url }: { url: string }) {
           margin: "10px 0 0 0",
         }}
       >
-        Heatmap, workspaces, files, moments — the full story is on the web.
+        Heatmaps, workspaces, files, and moments. See the full story on the web.
       </p>
     </Section>
   )
@@ -330,7 +330,7 @@ function WrappedFooter({
         <Link href={homeUrl}>
           <Img src={logoUrl} alt="Latitude" width="120" height="22" style={{ display: "inline-block" }} />
         </Link>
-        <p style={{ ...footerLineStyle, marginTop: "8px" }}>Latitude — the AI observability platform.</p>
+        <p style={{ ...footerLineStyle, marginTop: "8px" }}>Latitude, the AI observability platform.</p>
       </div>
     </>
   )

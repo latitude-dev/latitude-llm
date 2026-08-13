@@ -1,6 +1,12 @@
 export const AGENT_DISPATCH_KINDS = ["cursor", "claude_code", "linear", "webhook"] as const
 
-export const AGENT_DISPATCH_TRIGGERS = ["incident.opened", "signal.discovered", "monitor.incident", "manual"] as const
+export const AGENT_DISPATCH_TRIGGERS = [
+  "incident.opened",
+  "signal.discovered",
+  "signal.regressed",
+  "monitor.incident",
+  "manual",
+] as const
 
 export const DEFAULT_MAX_DISPATCHES_PER_DAY = 10
 

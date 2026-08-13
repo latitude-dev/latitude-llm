@@ -1,21 +1,64 @@
-import { Button, CloseTrigger, Icon, Modal, useToast } from "@repo/ui"
+import { Button, CloseTrigger, Icon, Modal, Switch, Text, Tooltip, useToast } from "@repo/ui"
 import { useParams } from "@tanstack/react-router"
-import { BellIcon, BellOffIcon, LinkIcon } from "lucide-react"
-import { useMemo, useState } from "react"
+import { BellIcon, BellOffIcon, CheckIcon, EyeIcon, EyeOffIcon, LinkIcon, UndoIcon } from "lucide-react"
+import { useCallback, useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
 import { invalidateSignalQueries, useSignalDetail } from "../../../../../../domains/signals/signals.collection.ts"
 import { applySignalLifecycleAction } from "../../../../../../domains/signals/signals.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 
-type LifecycleConfirmationAction = "mute" | "unmute"
+type LifecycleConfirmationAction = "resolve" | "unresolve" | "ignore" | "unignore" | "mute" | "unmute"
+
+const CONFIRMATION_TOASTS: Record<LifecycleConfirmationAction, string> = {
+  resolve: "Signal resolved.",
+  unresolve: "Signal reopened.",
+  ignore: "Signal ignored.",
+  unignore: "Signal returned to the active list.",
+  mute: "Signal notifications muted.",
+  unmute: "Signal notifications unmuted.",
+}
 
 function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
   switch (action) {
+    case "resolve":
+      return {
+        title: "Resolve signal",
+        description:
+          "Mark this signal as resolved. If this signal starts occurring again we will alert you and promote it as regressed",
+        confirmLabel: "Resolve",
+        confirmIcon: CheckIcon,
+        confirmVariant: undefined,
+      }
+    case "unresolve":
+      return {
+        title: "Unresolve signal",
+        description: "Reopen this signal. New occurrences won't mark this signal as regressed",
+        confirmLabel: "Unresolve",
+        confirmIcon: UndoIcon,
+        confirmVariant: undefined,
+      }
+    case "ignore":
+      return {
+        title: "Ignore signal",
+        description:
+          "Mark this signal as ignored. We won't monitor or alert you about new occurrences of this signal anymore",
+        confirmLabel: "Ignore",
+        confirmIcon: EyeOffIcon,
+        confirmVariant: "destructive" as const,
+      }
+    case "unignore":
+      return {
+        title: "Unignore signal",
+        description: "Stop ignoring this signal. New occurrences will surface it again",
+        confirmLabel: "Unignore",
+        confirmIcon: EyeIcon,
+        confirmVariant: undefined,
+      }
     case "mute":
       return {
         title: "Mute signal",
-        description: "Mute this signal. New occurrences still start incidents, but they won't send notifications.",
+        description: "Silence this signal. New occurrences still start incidents, but they won't send notifications",
         confirmLabel: "Mute",
         confirmIcon: BellOffIcon,
         confirmVariant: "destructive" as const,
@@ -23,7 +66,7 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
     case "unmute":
       return {
         title: "Unmute signal",
-        description: "Unmute this signal so new occurrences can trigger notifications again.",
+        description: "Unmute this signal. New occurrences will be notified again",
         confirmLabel: "Unmute",
         confirmIcon: BellIcon,
         confirmVariant: undefined,
@@ -44,9 +87,20 @@ export function SignalLifecycleActions({
   const { projectSlug } = useParams({ strict: false })
   const { data: issue } = useSignalDetail({ projectId, signalId })
   const [lifecycleConfirmAction, setLifecycleConfirmAction] = useState<LifecycleConfirmationAction | null>(null)
+  const [keepMonitoring, setKeepMonitoring] = useState(true)
   const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
 
   const lifecycleConfirmation = lifecycleConfirmAction ? getLifecycleConfirmation(lifecycleConfirmAction) : null
+  const hasActiveEvaluations = (issue?.evaluations.length ?? 0) > 0
+
+  const keepMonitoringDefault = issue?.keepMonitoringDefault ?? true
+  const openConfirmation = useCallback(
+    (action: LifecycleConfirmationAction) => {
+      if (action === "resolve") setKeepMonitoring(keepMonitoringDefault)
+      setLifecycleConfirmAction(action)
+    },
+    [keepMonitoringDefault],
+  )
 
   const runLifecycleCommand = async (command: LifecycleConfirmationAction) => {
     setIsLifecycleLoading(true)
@@ -56,12 +110,11 @@ export function SignalLifecycleActions({
           projectId,
           signalId,
           command,
+          ...(command === "resolve" && hasActiveEvaluations ? { keepMonitoring } : {}),
         },
       })
       await invalidateSignalQueries(projectId, signalId)
-      toast({
-        description: command === "mute" ? "Signal muted." : "Signal unmuted.",
-      })
+      toast({ description: CONFIRMATION_TOASTS[command] })
       setLifecycleConfirmAction(null)
     } catch (error) {
       toast({
@@ -78,19 +131,39 @@ export function SignalLifecycleActions({
     const commands: PaletteCommand[] = []
 
     commands.push({
+      id: `issue:${signalId}:${issue.resolvedAt ? "unresolve" : "resolve"}`,
+      title: issue.resolvedAt ? "Unresolve signal" : "Resolve signal",
+      icon: issue.resolvedAt ? UndoIcon : CheckIcon,
+      section: "context",
+      group: "Signal",
+      keywords: issue.resolvedAt ? "unresolve reopen" : "resolve archive done fixed",
+      perform: () => openConfirmation(issue.resolvedAt ? "unresolve" : "resolve"),
+    })
+
+    commands.push({
+      id: `issue:${signalId}:${issue.ignoredAt ? "unignore" : "ignore"}`,
+      title: issue.ignoredAt ? "Unignore signal" : "Ignore signal",
+      icon: issue.ignoredAt ? EyeIcon : EyeOffIcon,
+      section: "context",
+      group: "Signal",
+      keywords: issue.ignoredAt ? "unignore restore" : "ignore archive dismiss noise",
+      perform: () => openConfirmation(issue.ignoredAt ? "unignore" : "ignore"),
+    })
+
+    commands.push({
       id: `issue:${signalId}:${issue.mutedAt ? "unmute" : "mute"}`,
       title: issue.mutedAt ? "Unmute signal" : "Mute signal",
       icon: issue.mutedAt ? BellIcon : BellOffIcon,
       section: "context",
       group: "Signal",
-      keywords: issue.mutedAt ? "unmute resume" : "mute pause",
-      perform: () => setLifecycleConfirmAction(issue.mutedAt ? "unmute" : "mute"),
+      keywords: issue.mutedAt ? "unmute resume notifications" : "mute pause notifications",
+      perform: () => openConfirmation(issue.mutedAt ? "unmute" : "mute"),
     })
 
     if (projectSlug) {
       commands.push({
         id: `issue:${signalId}:copy-link`,
-        title: "Copy issue link",
+        title: "Copy signal link",
         icon: LinkIcon,
         section: "context",
         group: "Signal",
@@ -103,25 +176,57 @@ export function SignalLifecycleActions({
     }
 
     return commands
-  }, [issue, projectSlug, signalId, toast])
+  }, [issue, openConfirmation, projectSlug, signalId, toast])
 
   useRegisterCommands(paletteCommands)
 
   const isLifecycleDisabled = issue === null || issue === undefined || isLifecycleLoading
-  const action = issue?.mutedAt ? "unmute" : "mute"
+  const buttonSize = compact ? ("sm" as const) : undefined
+  const buttonClassName = compact ? "text-sm" : "text-foreground group-hover:text-secondary-foreground/80"
+
+  const primaryAction: LifecycleConfirmationAction = issue?.resolvedAt ? "unresolve" : "resolve"
+  const secondaryAction: LifecycleConfirmationAction = issue?.ignoredAt ? "unignore" : "ignore"
 
   return (
     <>
       <Button
-        variant="outline"
-        size={compact ? "sm" : undefined}
-        className={compact ? "text-sm" : "text-foreground group-hover:text-secondary-foreground/80"}
+        size={buttonSize}
+        variant={issue?.resolvedAt ? "outline" : "default"}
+        className={issue?.resolvedAt ? buttonClassName : undefined}
         disabled={isLifecycleDisabled}
-        onClick={() => setLifecycleConfirmAction(action)}
+        onClick={() => openConfirmation(primaryAction)}
       >
-        <Icon icon={issue?.mutedAt ? BellIcon : BellOffIcon} size="sm" />
-        {issue?.mutedAt ? "Unmute" : "Mute"}
+        <Icon icon={issue?.resolvedAt ? UndoIcon : CheckIcon} size="sm" />
+        {issue?.resolvedAt ? "Unresolve" : "Resolve"}
       </Button>
+
+      <Button
+        variant="outline"
+        size={buttonSize}
+        className={buttonClassName}
+        disabled={isLifecycleDisabled}
+        onClick={() => openConfirmation(secondaryAction)}
+      >
+        <Icon icon={issue?.ignoredAt ? EyeIcon : EyeOffIcon} size="sm" />
+        {issue?.ignoredAt ? "Unignore" : "Ignore"}
+      </Button>
+
+      <Tooltip
+        side="bottom"
+        trigger={
+          <Button
+            variant="outline"
+            size={buttonSize}
+            className={buttonClassName}
+            disabled={isLifecycleDisabled}
+            onClick={() => openConfirmation(issue?.mutedAt ? "unmute" : "mute")}
+          >
+            <Icon icon={issue?.mutedAt ? BellOffIcon : BellIcon} size="sm" />
+          </Button>
+        }
+      >
+        {issue?.mutedAt ? "Unmute incident notifications" : "Mute incident notifications"}
+      </Tooltip>
 
       {lifecycleConfirmAction !== null && lifecycleConfirmation !== null ? (
         <Modal
@@ -145,7 +250,28 @@ export function SignalLifecycleActions({
               </Button>
             </>
           }
-        />
+        >
+          {/* A single expression child: `Modal` only renders its padded body
+              slot when children are truthy, and a two-expression list would
+              reach it as an always-truthy array. */}
+          {lifecycleConfirmAction === "resolve" && hasActiveEvaluations ? (
+            <div className="flex items-start gap-3">
+              <Switch checked={keepMonitoring} onCheckedChange={setKeepMonitoring} disabled={isLifecycleLoading} />
+              <div className="flex flex-col gap-1">
+                <Text.H6>Keep evaluating this signal</Text.H6>
+                <Text.H6 color="foregroundMuted">
+                  {keepMonitoring
+                    ? "Its evaluations keep running so a regression reopens the signal."
+                    : "Its evaluations will be archived; regressions won't be detected."}
+                </Text.H6>
+              </div>
+            </div>
+          ) : lifecycleConfirmAction === "ignore" && issue?.origin === "user" ? (
+            <Text.H6 color="foregroundMuted">
+              This signal's evaluation will be archived. Unignoring won't bring it back; re-create it from Edit.
+            </Text.H6>
+          ) : null}
+        </Modal>
       ) : null}
     </>
   )

@@ -414,7 +414,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(existsForDifferentTrace).toBe(false)
   })
 
-  it("existsByEvaluationIdAndTraceId ignores draft and non-evaluation rows", async () => {
+  it("findByEvaluationIdAndTraceId ignores draft and non-evaluation rows", async () => {
     const organizationId = "cccccccccccccccccccccccc"
     const matchingTraceId = TraceId("55555555555555555555555555555555")
     const draftOnlyTraceId = TraceId("66666666666666666666666666666666")
@@ -459,10 +459,10 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
-    const matchingExists = await Effect.runPromise(
+    const matchingScore = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.existsByEvaluationIdAndTraceId({
+        return yield* repository.findByEvaluationIdAndTraceId({
           projectId: customProjectId,
           evaluationId: evaluationSourceId,
           traceId: matchingTraceId,
@@ -470,10 +470,10 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    const draftOnlyExists = await Effect.runPromise(
+    const draftOnlyScore = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.existsByEvaluationIdAndTraceId({
+        return yield* repository.findByEvaluationIdAndTraceId({
           projectId: customProjectId,
           evaluationId: evaluationSourceId,
           traceId: draftOnlyTraceId,
@@ -481,10 +481,10 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    const missingExists = await Effect.runPromise(
+    const missingScore = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
-        return yield* repository.existsByEvaluationIdAndTraceId({
+        return yield* repository.findByEvaluationIdAndTraceId({
           projectId: customProjectId,
           evaluationId: evaluationSourceId,
           traceId: TraceId("77777777777777777777777777777777"),
@@ -492,9 +492,10 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    expect(matchingExists).toBe(true)
-    expect(draftOnlyExists).toBe(false)
-    expect(missingExists).toBe(false)
+    expect(matchingScore?.value).toBe(0.95)
+    expect(matchingScore?.sourceType).toBe("evaluation")
+    expect(draftOnlyScore).toBeNull()
+    expect(missingScore).toBeNull()
   })
 
   it("rejects a second canonical evaluation score for the same trace", async () => {

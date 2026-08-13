@@ -66,6 +66,42 @@ describe("AgentDispatchRepositoryLive", () => {
     expect(afterDispatch.claimed).toBe(false)
   })
 
+  it("lists dispatches for a single source newest-first, scoped to project and source", async () => {
+    const claim = (idempotencyKey: string, sourceId: string, projectId = PROJECT) =>
+      run(
+        Effect.gen(function* () {
+          const repo = yield* AgentDispatchRepository
+          return yield* repo.claim({
+            configId: CONFIG,
+            projectId,
+            idempotencyKey,
+            trigger: "manual" as const,
+            sourceType: "signal" as const,
+            sourceId,
+          })
+        }),
+      )
+
+    await claim("cursor:cfg:manual:sigA:1", "sigA")
+    await claim("linear:cfg:manual:sigA:2", "sigA")
+    await claim("cursor:cfg:manual:sigB:1", "sigB")
+    await claim("cursor:cfg:manual:sigA:1", "sigA", ProjectId("c".repeat(24)))
+
+    const forSignalA = await run(
+      Effect.gen(function* () {
+        const repo = yield* AgentDispatchRepository
+        return yield* repo.listBySource({ projectId: PROJECT, sourceType: "signal", sourceId: "sigA" })
+      }),
+    )
+
+    expect(forSignalA).toHaveLength(2)
+    expect(forSignalA.every((dispatch) => dispatch.sourceId === "sigA")).toBe(true)
+    expect(forSignalA.every((dispatch) => dispatch.projectId === PROJECT)).toBe(true)
+    const [newest, oldest] = forSignalA
+    if (!newest || !oldest) throw new Error("unreachable")
+    expect(newest.claimedAt.getTime()).toBeGreaterThanOrEqual(oldest.claimedAt.getTime())
+  })
+
   it("marks claimed rows failed by idempotency key", async () => {
     const input = {
       configId: CONFIG,

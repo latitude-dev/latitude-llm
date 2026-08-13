@@ -40,6 +40,17 @@ export class OverageReportFailedError extends Data.TaggedError("OverageReportFai
   readonly httpMessage = "Failed to report billing overage to Stripe"
 }
 
+export class AIMeteringRecordError extends Data.TaggedError("AIMeteringRecordError")<{
+  readonly organizationId: string
+  readonly action: string
+  readonly cause: unknown
+}> {
+  readonly httpStatus = 500
+  get httpMessage() {
+    return `Failed to record billable AI usage for action "${this.action}"`
+  }
+}
+
 export class InvalidBillingIdempotencyKeyError extends Data.TaggedError("InvalidBillingIdempotencyKeyError")<{
   readonly action: string
   readonly reason: string

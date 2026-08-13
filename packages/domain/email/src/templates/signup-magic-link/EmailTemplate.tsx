@@ -20,8 +20,8 @@ export function SignupMagicLinkEmail({ userName, magicLinkUrl }: SignupMagicLink
         className={emailDesignTokens.spacing.headingGap}
       >{`Hey ${userName}, let's get you set up`}</EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        Thanks for signing up for Latitude. Confirm your email address by tapping the button below, and we&apos;ll have
-        your workspace ready in seconds.
+        Thanks for signing up for Latitude. Tap the button below to confirm your email and finish setting up your
+        workspace.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>

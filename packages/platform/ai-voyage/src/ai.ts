@@ -78,7 +78,11 @@ export const embedWithVoyage = (input: EmbedInput): Effect.Effect<EmbedResult, A
             throw new Error("Voyage did not return an embedding")
           }
 
-          return { embedding: first.embedding } satisfies EmbedResult
+          const tokens = response.usage?.totalTokens
+          return {
+            embedding: first.embedding,
+            ...(tokens === undefined ? {} : { tokens }),
+          } satisfies EmbedResult
         }),
       catch: (cause) =>
         new AIError({

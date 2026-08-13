@@ -27,6 +27,9 @@ export const SignalState = {
   New: "new",
   Escalating: "escalating",
   Ongoing: "ongoing",
+  Resolved: "resolved",
+  Regressed: "regressed",
+  Ignored: "ignored",
 } as const satisfies Record<string, SignalState>
 
 // ---------------------------------------------------------------------------
@@ -47,7 +50,7 @@ export const signalSchema = z.object({
   id: signalIdSchema, // CUID issue identifier
   organizationId: cuidSchema, // owning organization
   projectId: cuidSchema, // owning project
-  slug: z.string().min(1).max(SLUG_MAX_LENGTH), // url-safe identifier derived from name; regenerated when name changes via `refreshSignalDetailsUseCase`. Unique per (organization_id, project_id).
+  slug: z.string().min(1).max(SLUG_MAX_LENGTH), // url-safe identifier assigned once at creation; never regenerated on rename. Unique per organization (D15), spanning projects.
   name: z.string().min(1).max(SIGNAL_NAME_MAX_LENGTH), // generated from clustered score feedback and related evaluation/annotation context; generic enough to represent the shared failure pattern across different backgrounds
   description: z.string().min(1), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation; helps both human understanding and BM25 matching
   source: signalSourceSchema, // provenance of the first creating score
@@ -57,7 +60,10 @@ export const signalSchema = z.object({
   priority: signalPrioritySchema.nullable(), // manual triage priority; null when unset
   centroid: signalCentroidSchema.nullable(), // running weighted sum of clustered score feedback embeddings (discovered signals only); null for user-created evaluation-backed signals
   clusteredAt: z.date().nullable(), // last time the centroid/cluster state was refreshed (discovered signals only); authoritative decay anchor (not updatedAt)
-  mutedAt: z.date().nullable(),
+  resolvedAt: z.date().nullable(), // manual resolve; archived, detector keeps running unless keepMonitoring was declined
+  ignoredAt: z.date().nullable(), // manual ignore; archived + auto-muted, detector archived
+  regressedAt: z.date().nullable(), // set when a new occurrence reopens a resolved signal; cleared by resolve/ignore
+  mutedAt: z.date().nullable(), // notification barrier only; incidents still open while muted
   deletedAt: z.date().nullish(), // soft-delete timestamp; deleted signals are excluded read-side
   createdAt: z.date(), // issue creation time
   updatedAt: z.date(), // issue update time

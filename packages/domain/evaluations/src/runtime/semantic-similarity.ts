@@ -152,6 +152,7 @@ export const buildSemanticSimilarityHost = ({
         for (const vector of sessionVectors) {
           maxSimilarity = Math.max(maxSimilarity, cosineSimilarity(queryVector, vector))
         }
+
         return { similarity: maxSimilarity, tokens }
       })
 

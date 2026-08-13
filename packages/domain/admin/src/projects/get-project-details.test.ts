@@ -13,6 +13,7 @@ const successfulRepo = (result: AdminProjectDetails) =>
     getCurrentSignalStateCounts: () => Effect.succeed({ untracked: 0, tracked: 0, resolved: 0 }),
     getSignalLifecycleEvents: () => Effect.succeed([]),
     findSignalDetailsByIds: () => Effect.succeed(new Map()),
+    findManySummariesByIds: () => Effect.succeed(new Map()),
   })
 
 const missingRepo = () =>
@@ -21,6 +22,7 @@ const missingRepo = () =>
     getCurrentSignalStateCounts: () => Effect.succeed({ untracked: 0, tracked: 0, resolved: 0 }),
     getSignalLifecycleEvents: () => Effect.succeed([]),
     findSignalDetailsByIds: () => Effect.succeed(new Map()),
+    findManySummariesByIds: () => Effect.succeed(new Map()),
   })
 
 const mkDetails = (overrides: Partial<AdminProjectDetails> = {}): AdminProjectDetails => ({

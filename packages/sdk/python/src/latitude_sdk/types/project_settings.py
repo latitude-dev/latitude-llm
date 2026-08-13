@@ -8,6 +8,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .escalation_setting import EscalationSetting
 from .notifications_setting import NotificationsSetting
+from .redaction_setting import RedactionSetting
 
 
 class ProjectSettings(UniversalBaseModel):
@@ -24,6 +25,7 @@ class ProjectSettings(UniversalBaseModel):
             description="When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
         ),
     ]
+    redaction: typing.Optional[RedactionSetting] = None
     notifications: typing.Optional[NotificationsSetting] = None
     escalation: typing.Optional[EscalationSetting] = None
 

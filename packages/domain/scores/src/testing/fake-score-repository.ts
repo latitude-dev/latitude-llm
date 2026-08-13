@@ -52,14 +52,14 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
           return score.traceId === traceId
         }),
       ),
-    existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
+    findByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
       Effect.succeed(
-        [...scores.values()].some(
+        [...scores.values()].find(
           (score) =>
             score.projectId === projectId &&
             isCanonicalEvaluationScore(score, evaluationId) &&
             score.traceId === traceId,
-        ),
+        ) ?? null,
       ),
     listByProjectId: () => Effect.succeed(EMPTY_PAGE),
     listBySourceId: () => Effect.succeed(EMPTY_PAGE),
@@ -80,6 +80,19 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
             score.feedback === feedback &&
             score.draftedAt === null,
         ) ?? null,
+      ),
+    listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, limit = 200 }) =>
+      Effect.succeed(
+        [...scores.values()]
+          .filter(
+            (score) =>
+              score.projectId === projectId &&
+              score.sourceType === "annotation" &&
+              score.sourceId === "SYSTEM" &&
+              score.sessionId === sessionId &&
+              score.draftedAt === null,
+          )
+          .slice(0, limit),
       ),
     listFlaggerSlugsBySignalId: ({ projectId, signalId }) =>
       Effect.succeed(

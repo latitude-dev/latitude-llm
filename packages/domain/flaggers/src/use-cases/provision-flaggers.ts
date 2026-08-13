@@ -1,7 +1,10 @@
 import type { ProjectId, RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import type { Flagger } from "../entities/flagger.ts"
-import { listFlaggerStrategySlugs } from "../flagger-strategies/index.ts"
+// Import slugs from the lightweight types module, not the strategy registry:
+// the registry drags every strategy's system prompt, which bloats the web
+// bundle when the onboarding server function reaches this use-case.
+import { FLAGGER_STRATEGY_SLUGS } from "../flagger-strategies/types.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 
 export interface ProvisionFlaggersInput {
@@ -25,7 +28,7 @@ export const provisionFlaggersUseCase = Effect.fn("flaggers.provisionFlaggers")(
   yield* Effect.annotateCurrentSpan("flaggers.projectId", input.projectId)
 
   const repository = yield* FlaggerRepository
-  const slugs = listFlaggerStrategySlugs()
+  const slugs = FLAGGER_STRATEGY_SLUGS
 
   const rows = yield* repository.saveManyForProject({
     projectId: input.projectId,

@@ -109,22 +109,47 @@ describe("seed timeline helpers", () => {
     expect(returnsCounts.has(1)).toBe(false)
 
     const installationSignal = SEED_SIGNAL_FIXTURES_BY_ID.get(SEED_INSTALLATION_SIGNAL_ID)
-    expect(installationSignal?.resolvedDaysAgo).not.toBeNull()
+    expect(installationSignal?.resolvedDaysAgo).toBeNull()
+    expect(installationSignal?.regressedDaysAgo).not.toBeNull()
 
-    const installationResolvedDaysAgo = installationSignal?.resolvedDaysAgo ?? 0
+    const installationRegressedDaysAgo = installationSignal?.regressedDaysAgo ?? 0
     const installationCounts = countSignalOccurrencesByDay(
       SEED_INSTALLATION_SIGNAL_ID,
       SEED_ADDITIONAL_SIGNAL_OCCURRENCES,
     )
 
-    expect(
-      [...installationCounts.keys()].some(
-        (daysAgo) => daysAgo > installationResolvedDaysAgo && daysAgo <= installationResolvedDaysAgo + 14,
-      ),
-    ).toBe(true)
-    expect([...installationCounts.keys()].some((daysAgo) => daysAgo < installationResolvedDaysAgo)).toBe(true)
+    expect([...installationCounts.keys()].some((daysAgo) => daysAgo > installationRegressedDaysAgo)).toBe(true)
+    expect([...installationCounts.keys()].some((daysAgo) => daysAgo < installationRegressedDaysAgo)).toBe(true)
     expect(installationCounts.get(0) ?? 0).toBeLessThan(20)
     expect(installationCounts.has(1)).toBe(false)
+  })
+
+  it("covers every restored signal lifecycle shape in the fixture set", async () => {
+    vi.setSystemTime(new Date("2026-04-10T11:23:45.000Z"))
+    vi.resetModules()
+
+    const { SEED_SIGNAL_FIXTURES } = await import("./seed-content/issues.ts")
+
+    const resolvedUnmuted = SEED_SIGNAL_FIXTURES.filter(
+      (issue) => issue.resolvedDaysAgo !== null && issue.mutedDaysAgo === null,
+    )
+    const resolvedMuted = SEED_SIGNAL_FIXTURES.filter(
+      (issue) => issue.resolvedDaysAgo !== null && issue.mutedDaysAgo !== null,
+    )
+    const ignored = SEED_SIGNAL_FIXTURES.filter((issue) => issue.ignoredDaysAgo !== null)
+    const regressed = SEED_SIGNAL_FIXTURES.filter((issue) => issue.regressedDaysAgo !== null)
+    const activeMuted = SEED_SIGNAL_FIXTURES.filter(
+      (issue) => issue.mutedDaysAgo !== null && issue.resolvedDaysAgo === null && issue.ignoredDaysAgo === null,
+    )
+
+    expect(resolvedUnmuted.length).toBeGreaterThanOrEqual(2)
+    expect(resolvedMuted.length).toBeGreaterThanOrEqual(1)
+    expect(ignored.length).toBeGreaterThanOrEqual(2)
+    expect(regressed.length).toBeGreaterThanOrEqual(2)
+    expect(activeMuted.length).toBeGreaterThanOrEqual(1)
+
+    expect(ignored.every((issue) => issue.mutedDaysAgo === issue.ignoredDaysAgo)).toBe(true)
+    expect(regressed.every((issue) => issue.resolvedDaysAgo === null)).toBe(true)
   })
 
   it("assigns deterministic trace ids to seeded issue occurrences and keeps long-tail feedback issue-specific", async () => {

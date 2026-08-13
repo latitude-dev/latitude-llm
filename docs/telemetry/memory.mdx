@@ -1,0 +1,332 @@
+---
+title: Memory tracing
+description: Instrument your agent's long-term memory so Latitude can show how it evolves.
+---
+
+## Overview
+
+This guide shows you how to send your agent's **long-term memory** operations to Latitude. Once instrumented, every read and write appears on the [Memory page](../observability/memory): each store's current contents, per-record history and diffs, and the tokens read and written per session, with every change linked to the session that caused it.
+
+<Check>
+  You keep using your memory store exactly as you do today. You emit one span
+  per memory operation, and Latitude derives the history, diffs, and token
+  counts from those spans. You never compute or send a diff yourself.
+</Check>
+
+---
+
+## Requirements
+
+- Base tracing already sending traces to Latitude. If you are not tracing yet, start with [Start tracing](./start-tracing).
+- An app with **long-term memory**: state your agent persists and reloads across separate interactions, such as a `memory/` directory, a database table, a vector store, a key-value store, or a provider like Mem0, Zep, or Supermemory. Within-request conversation history is not memory; base tracing already captures it.
+
+Memory operations ride the same exporter as the rest of your telemetry, so there is no extra account or endpoint to configure.
+
+---
+
+## Instrument with your coding agent
+
+Recommended. The Latitude skill inspects your codebase, finds your memory read and write call sites, and instruments them with the right operations and identifiers.
+
+<Steps>
+  <Step title="Ask your agent to add memory tracing">
+    Paste this prompt into Claude Code, Cursor, Windsurf, Codex, OpenCode, or another coding agent:
+
+    ```text
+    Install the `latitude-telemetry` skill from `github.com/latitude-dev/skills`, and use it to add Latitude memory observability to this app's long-term memory, following best practices.
+    ```
+
+  </Step>
+  <Step title="Run your agent">
+    Trigger one interaction that recalls memory and one that writes it.
+  </Step>
+  <Step title="Check Latitude">
+    Open your project and go to **Memory**. The store appears within a few seconds of the trace completing.
+  </Step>
+</Steps>
+
+Prefer to wire it up by hand? Continue below.
+
+---
+
+## The store and record model
+
+Two identifiers carry the whole model, and getting them right is the entire job, because they are how Latitude groups, versions, and attributes everything. Think of a store as a git repository and a record as a file in it.
+
+**Store (`gen_ai.memory.store.id`)** is one isolated pool of memory. The rule: two operations share a store if and only if a write by one should be visible to the other.
+
+- **Per-user memory** that users cannot see across each other: use the user id, or a `user/<id>` prefix, as the store id, so each user becomes a separate store.
+- **Shared memory** that several users read and write: one store id for all of them, and the latest write wins across them.
+- **Always set it.** A span without a store id lands in the `(unattributed)` store, which counts as activity but gives you nothing to browse. Keep it stable, or a store's history fragments into many stores.
+
+**Record (`gen_ai.memory.record.id`)** is one addressable unit within a store: what a write creates or updates and what a read returns. Use the store's natural key, such as a file path relative to the memory root, a key-value key, a row id, or the provider's own record id. Latitude splits record ids on `/` to nest them into folders on the Memory page, so a path-like id gives you a browsable tree. The only operations without a record id are the whole-store ones.
+
+<Note>
+  **Writes carry the whole record, not a delta.** Each write span is a full
+  snapshot of the record as it stands after the write. If your app updates only
+  part of a record, read back or reconstruct the full body and send that.
+  Sending only the changed fragment makes Latitude read everything you omitted
+  as a deletion.
+</Note>
+
+<Note>
+  **Content capture is opt-in.** Record bodies and the search query can hold
+  sensitive data, so the SDK does not send them unless you enable
+  `captureContent`. With it off you still get classification and counts, but no
+  diffs, no token deltas, and nothing to browse. Turn it on unless the memory
+  holds data you cannot send to Latitude; when only some fields are sensitive,
+  keep it on and scrub them with the `redact` hook.
+</Note>
+
+---
+
+## Instrument manually
+
+<Steps>
+  <Step title="Install">
+    The memory helper ships in the same telemetry package as base tracing, so there is nothing new to add if you already installed it.
+
+    <Tabs>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry
+          ```
+
+          ```bash bun
+          bun add @latitude-data/telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+      <Tab title="Python">
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Create the memory helper">
+    Pass the `latitude` instance from your base tracing setup. Set `storeId` to scope the memory, using a user id for per-user memory, and enable content capture so diffs and token deltas work.
+
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { createMemoryTelemetry } from "@latitude-data/telemetry"
+
+        // `latitude` is the instance from your base tracing setup.
+        const memory = createMemoryTelemetry({
+          latitude,
+          storeId: `user/${user.id}`,
+          captureContent: true,
+        })
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        from latitude_telemetry import create_memory_telemetry
+
+        # `latitude` is the instance from your base tracing setup.
+        memory = create_memory_telemetry(
+            latitude,
+            store_id=f"user/{user_id}",
+            capture_content=True,
+        )
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Emit memory operations">
+    Call the helper at your store's read and write boundaries, inside the `capture()` that already wraps the interaction so the spans join the trace. Each operation has a **wrap** form, where you pass `execute` and the helper runs your call inside the span and records its latency, status, and errors, and an **emit** form, with no `execute`, for when the read or write already happened elsewhere.
+
+    <Tabs>
+      <Tab title="TypeScript">
+        ```ts
+        import { capture } from "@latitude-data/telemetry"
+
+        await capture("support-agent-turn", async () => {
+          // Read: one span carries the query and every record it returned.
+          const hits = await memory.search({
+            query,
+            execute: () => store.search(query),
+            recordsFromResult: (rows) =>
+              rows.map((r) => ({ id: r.id, content: r.text, score: r.score })),
+          })
+
+          // Write: pass the record's full new body, not a delta.
+          await memory.upsert({
+            recordId: "preferences/tone",
+            records: [
+              { id: "preferences/tone", content: "Prefers concise answers with code." },
+            ],
+            execute: () => store.upsert("preferences/tone", nextValue),
+          })
+
+          // Emit form: record a completed span when the read or write already happened.
+          await memory.update({
+            recordId: "preferences/tone",
+            records: [
+              { id: "preferences/tone", content: "Prefers concise answers with code." },
+            ],
+          })
+
+          // Delete one record. Omit recordId to wipe the whole store.
+          await memory.delete({ recordId: "preferences/tone" })
+        })
+        ```
+      </Tab>
+      <Tab title="Python">
+        ```python
+        from latitude_telemetry import capture
+
+        def handle_turn():
+            # Read: one span carries the query and every record it returned.
+            hits = memory.search(
+                query=query,
+                execute=lambda: store.search(query),
+                records_from_result=lambda rows: [
+                    {"id": r["id"], "content": r["text"], "score": r["score"]} for r in rows
+                ],
+            )
+
+            # Write: pass the record's full new body, not a delta.
+            memory.upsert(
+                record_id="preferences/tone",
+                records=[
+                    {"id": "preferences/tone", "content": "Prefers concise answers with code."}
+                ],
+                execute=lambda: store.upsert("preferences/tone", next_value),
+            )
+
+            # Emit form: record a completed span when the read or write already happened.
+            memory.update(
+                record_id="preferences/tone",
+                records=[
+                    {"id": "preferences/tone", "content": "Prefers concise answers with code."}
+                ],
+            )
+
+            # Delete one record. Omit record_id to wipe the whole store.
+            memory.delete(record_id="preferences/tone")
+
+        capture("support-agent-turn", handle_turn)
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
+
+### Without the SDK
+
+If your app traces to Latitude without the Latitude SDK, or runs in another language, emit the spans on your existing tracer. Set the span name and `gen_ai.operation.name` to the operation, and add the `gen_ai.memory.*` attributes.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { trace } from "@opentelemetry/api"
+
+    const tracer = trace.getTracer("memory")
+
+    await tracer.startActiveSpan("update_memory", async (span) => {
+      span.setAttributes({
+        "gen_ai.operation.name": "update_memory",
+        "gen_ai.memory.store.id": `user/${user.id}`,
+        "gen_ai.memory.record.id": "preferences/tone",
+        "gen_ai.memory.records": JSON.stringify([
+          { id: "preferences/tone", content: "Prefers concise answers with code." },
+        ]),
+      })
+      await store.update("preferences/tone", nextValue)
+      span.end()
+    })
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    import json
+    from opentelemetry import trace
+
+    tracer = trace.get_tracer("memory")
+
+    with tracer.start_as_current_span("search_memory") as span:
+        span.set_attribute("gen_ai.operation.name", "search_memory")
+        span.set_attribute("gen_ai.memory.store.id", f"user/{user_id}")
+        span.set_attribute("gen_ai.memory.query.text", query)
+        hits = store.search(query)
+        span.set_attribute("gen_ai.memory.record.count", len(hits))
+        span.set_attribute(
+            "gen_ai.memory.records",
+            json.dumps(
+                [{"id": h["id"], "content": h["text"], "score": h["score"]} for h in hits]
+            ),
+        )
+    ```
+  </Tab>
+</Tabs>
+
+Other runtimes such as Go, Java, Ruby, and .NET set the same attributes on whatever span they already export. Only `gen_ai.operation.name` is required; add the rest to unlock more of the Memory page.
+
+---
+
+## Operations and attributes
+
+Memory operations are the standard OpenTelemetry GenAI **memory operation spans**, not a Latitude-specific format. The span name equals `gen_ai.operation.name`, and both are one of:
+
+| Operation | Meaning |
+| --- | --- |
+| `create_memory` | Create new records |
+| `update_memory` | Modify existing records |
+| `upsert_memory` | Create or update, without choosing which |
+| `delete_memory` | Delete records. Without a record id, this wipes the whole store |
+| `search_memory` | Query or retrieve records (a read) |
+| `create_memory_store` | Create or initialize a store |
+| `delete_memory_store` | Delete a store and everything in it |
+
+These attributes control what Latitude can show:
+
+| Attribute | Purpose |
+| --- | --- |
+| `gen_ai.operation.name` | The operation above. Required |
+| `gen_ai.memory.store.id` | The store the operation targets, e.g. `user/usr_4f2a`. Everything groups under it; absent lands in the `(unattributed)` store |
+| `gen_ai.memory.record.id` | The record touched, e.g. `preferences/tone`. Splits on `/` to nest records into folders |
+| `gen_ai.memory.record.count` | How many records were affected or returned |
+| `gen_ai.memory.query.text` | The search query, on `search_memory` spans. Opt-in |
+| `gen_ai.memory.records` | The content payload: an array of `{ id, content, score?, metadata? }` objects. Powers content browsing, diffs, and token counts. Opt-in |
+
+---
+
+## Verify
+
+Instrumentation is not finished when the code compiles, only when operations show up correctly in Latitude.
+
+- Run a real interaction that recalls memory and one that writes it, so you produce both a `search_memory` span and a mutating span. For short-lived scripts, call `await latitude.flush()` (Python: `latitude.flush()`) before exit so spans flush.
+- On the **Spans tab**, the operations classify and carry the store and record attributes.
+- On the **[Memory page](../observability/memory)**, the store appears under the expected id, its records show the expected bodies, and a second write to a record produces a new version and a diff.
+- On the **trace or session detail**, the **Memory** row shows tokens read, added, and removed.
+
+Common issues: an empty `store.id` (everything lands in `(unattributed)`), an unstable or missing `record.id` (history will not stitch and reads will not attribute), a write sending a partial body instead of the full snapshot, or a span emitted outside `capture()` so it never joins the trace.
+
+## Next steps
+
+- [Memory](../observability/memory): Explore stores, record history, diffs, and per-session footprint
+- [Start tracing](./start-tracing): Base tracing setup, if you are not sending traces yet

@@ -1,4 +1,4 @@
-export const CONVERSATION_INTELLIGENCE_DETECTOR_VERSION = "ci-v6" as const
+export const CONVERSATION_INTELLIGENCE_DETECTOR_VERSION = "ci-v9" as const
 export const CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS = 5 * 60_000
 export const CONVERSATION_INTELLIGENCE_RETENTION_DAYS = 90
 export const CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH = 40
@@ -35,6 +35,8 @@ export const MOMENT_KINDS = [
   "resolution",
   "policy_refusal",
   "clarification_loop",
+  "user_correction",
+  "stalling",
 ] as const
 export const MOMENT_ACTORS = ["user", "assistant", "tool", "system", "unknown"] as const
 

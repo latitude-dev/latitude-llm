@@ -163,4 +163,27 @@ export const AgentDispatchRepositoryLive = Layer.succeed(AgentDispatchRepository
         .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatches")))
       return rows.map(toDomainDispatch)
     }),
+
+  listBySource: ({ projectId, sourceType, sourceId }) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select()
+            .from(agentDispatches)
+            .where(
+              and(
+                eq(agentDispatches.organizationId, organizationId),
+                eq(agentDispatches.projectId, projectId),
+                eq(agentDispatches.sourceType, sourceType),
+                eq(agentDispatches.sourceId, sourceId),
+              ),
+            )
+            .orderBy(desc(agentDispatches.claimedAt))
+            .limit(50),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "listAgentDispatchesBySource")))
+      return rows.map(toDomainDispatch)
+    }),
 })

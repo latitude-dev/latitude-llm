@@ -7,19 +7,21 @@ const OnboardingWaitingLottie = lazy(() => import("../../onboarding-waiting-lott
 
 export function Left({
   traceReceived,
+  projectId,
   projectSlug,
   sampleProjectSlug,
   onBack,
   onOpenSampleProject,
 }: {
   readonly traceReceived: boolean
+  readonly projectId: string
   readonly projectSlug: string
   readonly sampleProjectSlug: string | undefined
   readonly onBack: () => void
   readonly onOpenSampleProject: () => void
 }) {
   const heading = traceReceived ? "Trace received. Redirecting…" : "Set up your first project"
-  const subheading = traceReceived ? "Taking you to your traces…" : "Initiate your first project on Latitude"
+  const subheading = traceReceived ? "Taking you to your traces…" : "Instrument your app so its traces show up here."
 
   return (
     <div className="mx-auto w-full max-w-[560px]">
@@ -36,7 +38,7 @@ export function Left({
           </div>
         </div>
 
-        <TelemetryInstructions projectSlug={projectSlug} />
+        <TelemetryInstructions projectId={projectId} projectSlug={projectSlug} importFollowUp="wait-for-trace" />
 
         <div className="flex flex-row flex-wrap items-center gap-3">
           <Button variant="outline" onClick={onBack}>

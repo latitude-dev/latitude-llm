@@ -54,6 +54,7 @@ export const saveFlaggerAnnotationUseCase = Effect.fn("flaggers.saveFlaggerAnnot
     feedback: input.feedback,
     flaggerSlug: parsedInput.flaggerSlug,
     messageIndex: input.messageIndex,
+    contentHash: parsedInput.contentHash,
   })
 
   return flaggerAnnotateOutputSchema.parse({

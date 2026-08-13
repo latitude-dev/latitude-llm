@@ -24,24 +24,27 @@ export const createFakeTaxonomyClusterRepository = (
         ids.map((id) => clusters.get(id)).filter((cluster): cluster is TaxonomyCluster => cluster !== undefined),
       ),
 
-    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId }) =>
+    listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId, states }) =>
       Effect.sync(() =>
         [...clusters.values()].filter(
           (cluster) =>
             cluster.projectId === projectId &&
-            cluster.state === "active" &&
+            (states ?? ["active"]).includes(cluster.state) &&
             (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
+            (cluster.facetId ?? null) === (facetId ?? null) &&
             (parentClusterId === undefined || cluster.parentClusterId === parentClusterId),
         ),
       ),
 
-    listSubtreeIds: ({ projectId, clusterId }) =>
+    listSubtreeIds: ({ projectId, clusterId, customBehaviorId, facetId }) =>
       Effect.sync(() =>
         [...clusters.values()]
           .filter(
             (cluster) =>
               cluster.projectId === projectId &&
               cluster.state === "active" &&
+              (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
+              (cluster.facetId ?? null) === (facetId ?? null) &&
               (cluster.id === clusterId || cluster.path.split("/").includes(clusterId as string)),
           )
           .map((cluster) => cluster.id),
@@ -86,14 +89,17 @@ export const createFakeTaxonomyClusterRepository = (
           })),
       ),
 
-    list: ({ projectId, state, sort, limit, offset, customBehaviorId }) =>
+    list: ({ projectId, state, sort, limit, offset, customBehaviorId, facetId }) =>
       Effect.sync(() => {
         const filtered = [...clusters.values()]
           .filter(
             (cluster) =>
               cluster.projectId === projectId &&
               (cluster.customBehaviorId ?? null) === (customBehaviorId ?? null) &&
-              (state ? cluster.state === state : true),
+              (cluster.facetId ?? null) === (facetId ?? null) &&
+              // `staging` is internal to the publish swap; never surface it unless
+              // explicitly requested (mirrors the Live repository).
+              (state ? cluster.state === state : cluster.state !== "staging"),
           )
           .sort((a, b) => {
             switch (sort ?? "observation_count_desc") {
@@ -138,6 +144,33 @@ export const createFakeTaxonomyClusterRepository = (
         const existing = clusters.get(clusterId)
         if (existing) {
           clusters.set(clusterId, { ...existing, state: "deprecated", updatedAt: timestamp })
+        }
+      }),
+
+    swapActiveTree: ({ supersededClusterIds, stagingClusterIds, timestamp }) =>
+      Effect.sync(() => {
+        for (const clusterId of supersededClusterIds) {
+          const existing = clusters.get(clusterId)
+          if (existing) clusters.set(clusterId, { ...existing, state: "deprecated", updatedAt: timestamp })
+        }
+        for (const clusterId of stagingClusterIds) {
+          const existing = clusters.get(clusterId)
+          if (existing) clusters.set(clusterId, { ...existing, state: "active", updatedAt: timestamp })
+        }
+      }),
+
+    deleteStaging: ({ clusterIds }) =>
+      Effect.sync(() => {
+        for (const clusterId of clusterIds) {
+          const existing = clusters.get(clusterId)
+          if (existing && existing.state === "staging") clusters.delete(clusterId)
+        }
+      }),
+
+    deleteByBehavior: ({ projectId, customBehaviorId }) =>
+      Effect.sync(() => {
+        for (const [id, cluster] of clusters) {
+          if (cluster.projectId === projectId && cluster.customBehaviorId === customBehaviorId) clusters.delete(id)
         }
       }),
 

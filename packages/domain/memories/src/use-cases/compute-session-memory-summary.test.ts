@@ -154,7 +154,20 @@ describe("computeSessionMemorySummary", () => {
 
     const summary = await summarize(memory, { sessionId: SessionId("sess1") })
     expect(summary.records).toHaveLength(0)
-    expect(summary.total).toEqual({ readTokens: 0, tokensAdded: 0, tokensRemoved: 0 })
+    expect(summary.total).toEqual({ readTokens: 0, tokensAdded: 0, tokensRemoved: 0, writeRecords: 0 })
+  })
+
+  it("counts a zero-token write in writeRecords even when it drops from the records list", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [makeSpan({ spanId: spanId("1"), operation: "create_memory", recordsRaw: records({ id: "rec1", content: "" }) })],
+      memory,
+    )
+
+    const summary = await summarize(memory, { sessionId: SessionId("sess1") })
+    expect(summary.records).toHaveLength(0) // no read/added/removed tokens, so filtered from the breakdown
+    expect(summary.total.tokensAdded).toBe(0)
+    expect(summary.total.writeRecords).toBe(1) // but the write still counts, so the section stays visible
   })
 
   it("lists each touched record across multiple stores in the session", async () => {

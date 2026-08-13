@@ -3,10 +3,11 @@ import { SignalRepository } from "@domain/signals"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 
-/** Live-resolved display name of an incident's source. `description` is issue-only. `null` name when the source was deleted. */
+/** Live-resolved display name of an incident's source. `description`/`slug` are issue-only. `null` fields when the source was deleted. */
 interface ResolvedIncidentSource {
   readonly name: string | null
   readonly description: string | null
+  readonly slug: string | null
 }
 
 const loadError = (cause: unknown) => ({
@@ -15,14 +16,14 @@ const loadError = (cause: unknown) => ({
   cause,
 })
 
-const MISSING: ResolvedIncidentSource = { name: null, description: null }
+const MISSING: ResolvedIncidentSource = { name: null, description: null, slug: null }
 
 export const resolveIncidentSource = (input: { readonly sourceType: string; readonly sourceId: string }) =>
   Effect.gen(function* () {
     if (input.sourceType !== "signal") return MISSING
     const repo = yield* SignalRepository
     return yield* repo.findById(SignalId(input.sourceId)).pipe(
-      Effect.map((i): ResolvedIncidentSource => ({ name: i.name, description: i.description ?? null })),
+      Effect.map((i): ResolvedIncidentSource => ({ name: i.name, description: i.description ?? null, slug: i.slug })),
       Effect.catchTag("NotFoundError", () => Effect.succeed(MISSING)),
       Effect.catchTag("RepositoryError", (cause) => Effect.fail(loadError(cause))),
     )

@@ -28,6 +28,15 @@ export function toTimelineSpan(span: SpanRecord): TimelineSpanInput {
   }
 }
 
+/** toolCallId → spanId from lightweight span rows (no message payload fetch). */
+export function toolCallSpanMapFromSpans(spans: readonly SpanRecord[] | undefined): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const span of spans ?? []) {
+    if (span.toolCallId) map[span.toolCallId] = span.spanId
+  }
+  return map
+}
+
 export function toTimelineTrace(trace: TraceRecord): TimelineTraceInput {
   return {
     traceId: trace.traceId,

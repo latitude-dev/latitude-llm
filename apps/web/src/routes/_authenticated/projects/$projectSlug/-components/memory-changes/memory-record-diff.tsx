@@ -1,0 +1,47 @@
+import { CodeDiff, Text } from "@repo/ui"
+import type { ReactNode } from "react"
+import { looksLikeJson } from "./looks-like-json.ts"
+
+/** Unchanged lines kept around each change; the rest fold behind an expander. */
+const DIFF_CONTEXT_LINES = 3
+
+function Centered({ children }: { readonly children: ReactNode }) {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <Text.H6 color="foregroundMuted">{children}</Text.H6>
+    </div>
+  )
+}
+
+/** Read-only unified diff of one record change; renders `fallback` (or an unavailable note) when `degraded`. */
+export function MemoryRecordDiff({
+  before,
+  after,
+  degraded,
+  unavailableLabel = "Content not captured for this change",
+  fallback,
+}: {
+  readonly before: string | null
+  readonly after: string | null
+  readonly degraded: boolean
+  readonly unavailableLabel?: string
+  readonly fallback?: ReactNode
+}) {
+  if (degraded) return fallback != null ? fallback : <Centered>{unavailableLabel}</Centered>
+
+  const beforeBody = before ?? ""
+  const afterBody = after ?? ""
+  if (beforeBody === afterBody) return <Centered>No content changes</Centered>
+
+  const language = looksLikeJson(afterBody) || looksLikeJson(beforeBody) ? "json" : undefined
+  return (
+    <CodeDiff
+      before={beforeBody}
+      after={afterBody}
+      fillHeight
+      contextLines={DIFF_CONTEXT_LINES}
+      className="h-full rounded-none"
+      {...(language ? { language } : {})}
+    />
+  )
+}

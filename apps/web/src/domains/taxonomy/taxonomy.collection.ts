@@ -4,6 +4,7 @@ import {
   type BehaviourSessionFilter,
   type BehaviourTimeRangeRecord,
   type BehaviourTrajectoryAxis,
+  getBehaviourCoverage,
   getBehaviourSessions,
   getBehaviourTrajectory,
   getClusterProfile,
@@ -83,6 +84,7 @@ export function useClusterProfile(
   clusterId: string | undefined,
   timeRange: BehaviourTimeRangeRecord | undefined,
   customBehaviorId?: string,
+  facetId?: string,
 ) {
   return useQuery({
     queryKey: clusterProfileQueryKey(projectId, clusterId ?? "", timeRange, customBehaviorId),
@@ -93,6 +95,7 @@ export function useClusterProfile(
           clusterId: clusterId ?? "",
           ...(timeRange ? { timeRange } : {}),
           ...(customBehaviorId ? { customBehaviorId } : {}),
+          ...(facetId ? { facetId } : {}),
         },
       }),
     staleTime: 30_000,
@@ -107,6 +110,7 @@ export function useBehaviourSessions(
   timeRange: BehaviourTimeRangeRecord | undefined,
   momentRange: BehaviourMomentRangeRecord | undefined,
   customBehaviorId?: string,
+  facetId?: string,
 ) {
   return useInfiniteQuery({
     queryKey: behaviourSessionsQueryKey(projectId, clusterId ?? "", filter, timeRange, momentRange, customBehaviorId),
@@ -121,6 +125,7 @@ export function useBehaviourSessions(
           ...(timeRange ? { timeRange } : {}),
           ...(momentRange ? { momentRange } : {}),
           ...(customBehaviorId ? { customBehaviorId } : {}),
+          ...(facetId ? { facetId } : {}),
         },
       }),
     initialPageParam: 0,
@@ -136,6 +141,7 @@ export function useBehaviourTrajectory(
   axis: BehaviourTrajectoryAxis,
   timeRange: BehaviourTimeRangeRecord | undefined,
   customBehaviorId?: string,
+  facetId?: string,
 ) {
   return useQuery({
     queryKey: behaviourTrajectoryQueryKey(projectId, categoryClusterIds, axis, timeRange, customBehaviorId),
@@ -147,6 +153,7 @@ export function useBehaviourTrajectory(
           axis,
           ...(timeRange ? { timeRange } : {}),
           ...(customBehaviorId ? { customBehaviorId } : {}),
+          ...(facetId ? { facetId } : {}),
         },
       }),
     staleTime: 30_000,
@@ -163,6 +170,8 @@ export function useProjectBehaviours({
   pollUntilTopics,
   poll,
   customBehaviorId,
+  facetId,
+  enabled = true,
 }: {
   readonly projectId: string
   readonly dimension: BehaviourDimension
@@ -174,6 +183,9 @@ export function useProjectBehaviours({
    * behavior is generating so the tree appears as soon as the run writes it. */
   readonly poll?: boolean
   readonly customBehaviorId?: string
+  readonly facetId?: string
+  /** Hold the read until the caller's range is final — a first fetch under a range that is about to be clipped is wasted. */
+  readonly enabled?: boolean
 }) {
   return useQuery({
     queryKey: projectBehavioursQueryKey({ projectId, dimension, segment, sortBy, timeRange, customBehaviorId }),
@@ -186,14 +198,40 @@ export function useProjectBehaviours({
           sortBy,
           ...(timeRange ? { timeRange } : {}),
           ...(customBehaviorId ? { customBehaviorId } : {}),
+          ...(facetId ? { facetId } : {}),
         },
       }),
     staleTime: 30_000,
-    enabled: projectId.length > 0,
+    enabled: projectId.length > 0 && enabled,
     refetchInterval: (query) => {
       if (poll) return 4_000
       return pollUntilTopics && (query.state.data?.topics.length ?? 0) === 0 ? 5_000 : false
     },
+  })
+}
+
+/**
+ * The band a facet lens has membership for, or null when it covers whole project
+ * history. Keyed without a time range: it bounds the range rather than answering
+ * one, so it must resolve before a range is applied.
+ */
+export function useBehaviourCoverage({
+  projectId,
+  customBehaviorId,
+  facetId,
+}: {
+  readonly projectId: string
+  readonly customBehaviorId?: string
+  readonly facetId?: string
+}) {
+  return useQuery({
+    queryKey: ["behaviourCoverage", projectId, customBehaviorId ?? "", facetId ?? ""] as const,
+    queryFn: () =>
+      getBehaviourCoverage({
+        data: { projectId, customBehaviorId: customBehaviorId ?? "", facetId: facetId ?? "" },
+      }),
+    staleTime: 60_000,
+    enabled: projectId.length > 0 && Boolean(customBehaviorId) && Boolean(facetId),
   })
 }
 

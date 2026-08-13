@@ -67,6 +67,7 @@ const cluster: TaxonomyCluster = {
   organizationId,
   projectId,
   customBehaviorId: null,
+  facetId: null,
   dimension: "topic",
   parentClusterId: null,
   depth: 0,

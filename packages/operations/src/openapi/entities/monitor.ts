@@ -119,7 +119,7 @@ const MonitorRuleSchema = z
     config: MonitorConfigSchema.describe("Rule configuration used when the monitor is evaluated."),
     severity: z
       .enum(ALERT_SEVERITIES)
-      .describe("Severity of incidents this monitor opens: `low`, `medium`, or `high`."),
+      .describe("Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."),
   })
   .openapi("MonitorRule")
 

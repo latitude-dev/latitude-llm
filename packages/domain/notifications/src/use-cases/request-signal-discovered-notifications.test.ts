@@ -44,6 +44,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
       weights: { annotation: 1, custom: 0, evaluation: 0 },
     },
     clusteredAt: now,
+    resolvedAt: null,
+    ignoredAt: null,
+    regressedAt: null,
     mutedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -88,6 +91,30 @@ describe("requestSignalDiscoveredNotificationsUseCase", () => {
     expect(first.slackEligible).toBe(true)
     expect(first.idempotencyKey).toBe(`signal.discovered:${signalId}`)
     expect(first.payload).toEqual({ signalId, discoveredAt })
+  })
+
+  // The signal's level rides along as `severity`, which is the key the Slack
+  // route threshold and `emailMinSeverity` filter on. Adding it does not move
+  // the idempotency key, which is derived from the signal id alone.
+  it("carries the signal's level as the payload severity", async () => {
+    const result = await Effect.runPromise(
+      requestSignalDiscoveredNotificationsUseCase(input).pipe(
+        Effect.provide(makeLayer({ signal: makeSignal({ priority: "urgent" }) })),
+      ),
+    )
+
+    if (result.status !== "ok") throw new Error("expected ok")
+    expect(result.requests[0]?.payload).toEqual({ signalId, discoveredAt, severity: "urgent" })
+    expect(result.requests[0]?.idempotencyKey).toBe(`signal.discovered:${signalId}`)
+  })
+
+  it("omits severity entirely for a signal with no level", async () => {
+    const result = await Effect.runPromise(
+      requestSignalDiscoveredNotificationsUseCase(input).pipe(Effect.provide(makeLayer({ signal: makeSignal() }))),
+    )
+
+    if (result.status !== "ok") throw new Error("expected ok")
+    expect(result.requests[0]?.payload).not.toHaveProperty("severity")
   })
 
   it("sends discovery requests only to the assignee when assigned", async () => {

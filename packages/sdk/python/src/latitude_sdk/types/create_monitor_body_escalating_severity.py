@@ -2,4 +2,4 @@
 
 import typing
 
-CreateMonitorBodyEscalatingSeverity = typing.Union[typing.Literal["low", "medium", "high"], typing.Any]
+CreateMonitorBodyEscalatingSeverity = typing.Union[typing.Literal["low", "medium", "high", "urgent"], typing.Any]

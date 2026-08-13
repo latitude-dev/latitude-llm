@@ -1,21 +1,9 @@
 import { toSlug } from "@domain/shared"
-import {
-  Button,
-  DotIndicator,
-  FormWrapper,
-  Input,
-  Label,
-  Modal,
-  Slider,
-  Switch,
-  Text,
-  useMountEffect,
-  useToast,
-} from "@repo/ui"
+import { Button, DotIndicator, FormWrapper, Input, Label, Modal, Slider, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute, useBlocker, useRouter } from "@tanstack/react-router"
-import { useRef, useState } from "react"
+import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { useState } from "react"
 import {
   deleteProjectMutation,
   updateProjectMutation,
@@ -24,7 +12,10 @@ import {
 import type { ProjectRecord } from "../../../../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
+import { useDirtyGuard } from "../../../../../lib/hooks/use-dirty-guard.ts"
+import { useDraftOverlay } from "../../../../../lib/hooks/use-draft-overlay.ts"
 import { useRouteProject } from "../-route-data.ts"
+import { DirtyActions } from "./-components/dirty-actions.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/general")({
@@ -53,31 +44,14 @@ function ProjectGeneralSettingsPage() {
     samplingRate: Math.round((currentProject.settings.sampling?.rate ?? 1) * 100),
   }
 
-  const [pending, setPending] = useState<Partial<Draft>>({})
   const [isApplying, setIsApplying] = useState(false)
+  const { view, setField, dirtyFields, dirtyCount, hasDirty, reset } = useDraftOverlay(baseline)
 
-  const view: Draft = { ...baseline, ...pending }
-
-  const setField = <K extends keyof Draft>(key: K, value: Draft[K]) => {
-    setPending((prev) => {
-      if (value === baseline[key]) {
-        const { [key]: _drop, ...rest } = prev
-        return rest
-      }
-      return { ...prev, [key]: value }
-    })
-  }
-
-  const dirtyFields = (Object.keys(pending) as (keyof Draft)[]).filter((k) => pending[k] !== baseline[k])
-  const dirtyCount = dirtyFields.length
-  const hasDirty = dirtyCount > 0
   const nameIsDirty = dirtyFields.includes("name")
   const samplingIsDirty = dirtyFields.includes("samplingEnabled") || dirtyFields.includes("samplingRate")
 
   const nameError = view.name.trim() === "" ? ["Name is required"] : undefined
   const canApply = hasDirty && !nameError && !isApplying
-
-  const discard = () => setPending({})
 
   const apply = async () => {
     if (!hasDirty || nameError || isApplying) return
@@ -96,7 +70,7 @@ function ProjectGeneralSettingsPage() {
       }
       const transaction = updateProjectMutation(currentProject.id, patch)
       await transaction.isPersisted.promise
-      setPending({})
+      reset()
       toast({ description: "Project settings updated" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
@@ -105,60 +79,28 @@ function ProjectGeneralSettingsPage() {
     }
   }
 
-  // Latest-value refs so the mount-only keydown listener never needs to re-subscribe.
-  const applyRef = useRef(apply)
-  applyRef.current = apply
-  const isApplyingRef = useRef(isApplying)
-  isApplyingRef.current = isApplying
-  const hasDirtyRef = useRef(hasDirty)
-  hasDirtyRef.current = hasDirty
-
-  useMountEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (!hasDirtyRef.current) return
-      const target = event.target as HTMLElement | null
-      const inField =
-        !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable === true)
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault()
-        void applyRef.current()
-      } else if (event.key === "Escape" && !inField && !isApplyingRef.current) {
-        event.preventDefault()
-        setPending({})
-      }
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
+  useDirtyGuard({
+    hasDirty,
+    isApplying,
+    canApply,
+    confirmMessage: "You have unsaved changes. Leave anyway?",
+    onApply: apply,
+    onDiscard: reset,
   })
-
-  useBlocker({
-    shouldBlockFn: () => {
-      if (!hasDirty) return false
-      return !window.confirm("You have unsaved changes. Leave anyway?")
-    },
-    enableBeforeUnload: () => hasDirty,
-    disabled: !hasDirty,
-  })
-
-  const dirtyActions = hasDirty ? (
-    <div className="flex flex-row items-center gap-3">
-      <Text.H5 color="foregroundMuted">
-        {dirtyCount} unsaved change{dirtyCount === 1 ? "" : "s"}
-      </Text.H5>
-      <Button variant="outline" onClick={discard} disabled={isApplying}>
-        Discard
-      </Button>
-      <Button onClick={() => void apply()} isLoading={isApplying} disabled={!canApply}>
-        Apply
-      </Button>
-    </div>
-  ) : null
 
   return (
     <SettingsPage
       title="Project settings"
       description="Set up your project info"
-      actions={dirtyActions}
+      actions={
+        <DirtyActions
+          dirtyCount={dirtyCount}
+          isApplying={isApplying}
+          canApply={canApply}
+          onApply={() => void apply()}
+          onDiscard={reset}
+        />
+      }
       headerSticky={hasDirty}
     >
       <div className="flex w-full flex-col gap-3 @[800px]:w-1/2">
@@ -216,9 +158,8 @@ function TraceSamplingSection({
               {isDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
             </Label>
             <Text.H6 color="foregroundMuted">
-              Process and store only a portion of the traces you send, instead of all of them. Useful for reducing
-              costs. Only recommended if you have really high traffic, where a smaller sample is still enough to spot
-              issues.
+              Choose how much of your traffic to process and store, to cut costs. Best for high-traffic projects where a
+              sample is still enough to spot issues.
             </Text.H6>
           </div>
           <Switch id="trace-sampling-enabled" checked={enabled} onCheckedChange={onEnabledChange} />
@@ -397,7 +338,7 @@ function ChangeSlugForm({ projectId, currentSlug }: { projectId: string; current
           if (!v) closeAndReset()
           else setOpen(v)
         }}
-        title="⚠️ Change project slug"
+        title="Change project slug"
         description={`Changing the slug from "${currentSlug}" breaks ingestion until your app points at the new slug. Existing traces stay under the project; only newly ingested traces are affected.`}
         footer={
           <form.Subscribe selector={(s) => [s.values.slug, s.isSubmitting] as const}>

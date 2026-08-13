@@ -86,7 +86,9 @@ export const AdminTaxonomyRepositoryLive = Layer.effect(
               name: row.name,
               description: row.description,
               observationCount: row.observationCount,
-              state: row.state,
+              // visibleRows is filtered to active above; the admin contract never
+              // surfaces `staging`/`merged`/`deprecated` here.
+              state: "active",
               firstObservedAt: row.firstObservedAt,
               lastObservedAt: row.lastObservedAt,
               createdAt: row.createdAt,

@@ -193,9 +193,28 @@ const gardenOnce = (runId: ReturnType<typeof TaxonomyRunId>) =>
       })
       const clusters = yield* TaxonomyClusterRepository
       const observations = yield* TaxonomyObservationRepository
-      // Persist the plan the way the split-build activities do: save clusters,
-      // reassign members, deprecate the clusters no node continued.
+      // Persist the plan the way the publish activities do: save the tree
+      // (fresh nodes land `staging`), name it, then reassign members and swap it
+      // in — so reads never see a tree that is unnamed or has no members.
       for (const cluster of plan.clusters) yield* clusters.save(cluster)
+      const bornIds = new Set(plan.lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])))
+      const memberIdsByClusterId = new Map(
+        plan.namingMembers.map((members) => [members.clusterId as string, members.observationIds] as const),
+      )
+      // Name births and continuations that drifted enough to be left "Pending",
+      // deepest-first so interior nodes see their children's final names.
+      const toName = [...plan.clusters]
+        .filter((cluster) => bornIds.has(cluster.id) || cluster.name === "Pending")
+        .sort((a, b) => b.depth - a.depth)
+      for (const cluster of toName) {
+        const memberObservationIds = memberIdsByClusterId.get(cluster.id as string)
+        yield* nameClusterUseCase({
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID_E2E,
+          clusterId: cluster.id,
+          ...(memberObservationIds ? { memberObservationIds } : {}),
+        })
+      }
       if (plan.observationAssignments.length > 0) {
         yield* observations.reassignManyById({
           organizationId: ORGANIZATION_ID,
@@ -203,19 +222,12 @@ const gardenOnce = (runId: ReturnType<typeof TaxonomyRunId>) =>
           assignments: plan.observationAssignments,
         })
       }
-      for (const clusterId of plan.deprecatedClusterIds)
-        yield* clusters.markDeprecated({ clusterId, timestamp: new Date() })
+      yield* clusters.swapActiveTree({
+        supersededClusterIds: plan.deprecatedClusterIds,
+        stagingClusterIds: plan.stagedClusterIds,
+        timestamp: new Date(),
+      })
       yield* emitLineageUseCase({ transitions: plan.lineage })
-      const active = yield* clusters.listActiveByProject({ projectId: PROJECT_ID_E2E, dimension: "topic" })
-      const bornIds = new Set(plan.lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])))
-      // Name births and continuations that drifted enough to be left "Pending",
-      // deepest-first so interior nodes see their children's final names.
-      const toName = [...active]
-        .filter((cluster) => bornIds.has(cluster.id) || cluster.name === "Pending")
-        .sort((a, b) => b.depth - a.depth)
-      for (const cluster of toName) {
-        yield* nameClusterUseCase({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E, clusterId: cluster.id })
-      }
     }).pipe(
       withPostgres(
         Layer.mergeAll(TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive),

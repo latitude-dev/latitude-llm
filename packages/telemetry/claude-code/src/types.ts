@@ -84,6 +84,20 @@ export interface ToolCall {
   endMs: number
 }
 
+export interface MemoryOp {
+  operation: "upsert_memory" | "update_memory" | "search_memory"
+  storeId: string
+  recordId: string
+  count: number
+  body?: string
+}
+
+export interface MemoryEmitOptions {
+  projectsRoot: string
+  captureContent: boolean
+  readFile?: (path: string) => string | undefined
+}
+
 export interface SubagentInvocation {
   agentId: string
   agentType: string

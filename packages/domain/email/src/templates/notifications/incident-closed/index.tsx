@@ -9,12 +9,11 @@ import { resolveAssigneeName, resolveIncidentSource } from "../-incident-source.
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentClosedEmail } from "./EmailTemplate.tsx"
 
-const buildSignalUrl = (
-  ctx: NotificationEmailRenderContext,
-  payload: Parameters<NotificationEmailRenderer<"incident.closed">>[0],
-): string | undefined => {
+const buildSignalUrl = (ctx: NotificationEmailRenderContext, slug: string | null): string | undefined => {
   if (!ctx.project) return undefined
-  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(payload.sourceId)}`
+  return slug
+    ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(slug)}`
+    : `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals`
 }
 
 export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"> = (payload, ctx) =>
@@ -23,7 +22,7 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
     const source = yield* resolveIncidentSource(payload)
     const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
     const sourceName = source.name ?? (isMonitorIncident ? "a monitored target" : "a signal")
-    const signalUrl = isMonitorIncident ? undefined : buildSignalUrl(ctx, payload)
+    const signalUrl = isMonitorIncident ? undefined : buildSignalUrl(ctx, source.slug)
 
     const chartUrl = buildChartUrl({
       notificationId: ctx.notificationId,

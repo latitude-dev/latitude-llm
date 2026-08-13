@@ -3,6 +3,7 @@ import {
   Badge,
   CodeBlock,
   CopyButton,
+  Icon,
   OpentelemetryIcon,
   ProviderIcon,
   PythonIcon,
@@ -10,12 +11,17 @@ import {
   Text,
   TypescriptIcon,
 } from "@repo/ui"
-import { Bot, Terminal } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
+import { Bot, ImportIcon, Loader2, Terminal } from "lucide-react"
 import type { ReactNode } from "react"
 import { useLayoutEffect, useMemo, useState } from "react"
+import { ImportWizard } from "../../../../../../../components/imports/import-wizard.tsx"
+import { SelectorChip } from "../../../../../../../components/selector-chip.tsx"
 import { useApiKeysCollection } from "../../../../../../../domains/api-keys/api-keys.collection.ts"
+import { useProjectScope } from "../../../../../../../domains/projects/project-scope.tsx"
 import {
   type CodingMachineAgentId,
+  cloudflareAiGatewayConfig,
   getCodingAgentTelemetryPrompt,
   getCodingMachineInstallDescription,
   getCodingMachineTelemetryInstallCommand,
@@ -42,14 +48,22 @@ import {
   type TsPackageManager,
 } from "../../onboarding-integration-snippets.ts"
 
-type TelemetrySetupMode = "coding-agent" | "manual"
+type TelemetrySetupMode = "coding-agent" | "manual" | "import"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
 type TelemetryProviderId = OnboardingProviderId | CodingMachineAgentId
 
 const SETUP_MODE_TAB_OPTIONS = [
   { id: "coding-agent" as const, label: "Coding agent", icon: <Bot className="h-4 w-4" /> },
   { id: "manual" as const, label: "Manual", icon: <Terminal className="h-4 w-4" /> },
+  { id: "import" as const, label: "Import", icon: <ImportIcon className="h-4 w-4" /> },
 ] as const satisfies ReadonlyArray<{ id: TelemetrySetupMode; label: string; icon: ReactNode }>
+
+/**
+ * Importing writes to the session's own organization, so the tab is hidden wherever the surface
+ * belongs to another one: the sandbox and the showcase render this same panel for a project the
+ * viewer's org does not own, and an import there would attach to the wrong org.
+ */
+const SETUP_MODE_TAB_OPTIONS_WITHOUT_IMPORT = SETUP_MODE_TAB_OPTIONS.filter((option) => option.id !== "import")
 
 interface ProviderEntry {
   readonly id: TelemetryProviderId
@@ -98,6 +112,7 @@ const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "flue", name: "Flue", icon: "flue" },
   { id: "elevenlabs", name: "ElevenLabs", icon: "elevenlabs" },
   { id: "pydantic-ai", name: "Pydantic AI", icon: "pydantic-ai" },
+  { id: "cloudflare-ai-gateway", name: "Cloudflare AI Gateway", icon: "cloudflare-ai-gateway" },
 ]
 
 function ProviderChipIcon({ provider }: { readonly provider: ProviderEntry }) {
@@ -298,8 +313,8 @@ function CodingMachineInstructions({
         <div className="flex flex-col gap-2">
           <Text.H5M>Enable in `~/.hermes/config.yaml`</Text.H5M>
           <Text.H5 color="foregroundMuted">
-            Add <code className="text-xs">latitude</code> under <code className="text-xs">plugins.enabled</code> — do
-            not use <code className="text-xs">hermes plugins enable</code> for pip-installed plugins.
+            Add <code className="text-xs">latitude</code> under <code className="text-xs">plugins.enabled</code>. Don't
+            use <code className="text-xs">hermes plugins enable</code> for pip-installed plugins.
           </Text.H5>
           <CodeBlock value={getHermesConfigYamlBlock()} copyable />
         </div>
@@ -327,8 +342,8 @@ function CodingMachineInstructions({
         <div className="flex flex-col gap-2">
           <Text.H5M>Restart and verify</Text.H5M>
           <Text.H5 color="foregroundMuted">
-            Restart pi so it loads the extension, send a prompt that uses the model or a tool, then open Traces in
-            Latitude — the new trace should appear within a few seconds.
+            Restart pi to load the extension, send a prompt that uses the model or a tool, then open Traces in Latitude.
+            Your first trace should appear within a few seconds.
           </Text.H5>
         </div>
       </>
@@ -347,7 +362,7 @@ function CodingMachineInstructions({
         <div className="flex flex-col gap-2">
           <Text.H5M>Latitude API key</Text.H5M>
           <Text.H5 color="foregroundMuted">
-            Default organization key (<code className="text-xs">{DEFAULT_API_KEY_NAME}</code>) — paste when the
+            Default organization key (<code className="text-xs">{DEFAULT_API_KEY_NAME}</code>). Paste it when the
             installer asks for your API key.
           </Text.H5>
           {defaultApiKeyToken ? (
@@ -375,12 +390,99 @@ function CodingMachineInstructions({
   )
 }
 
+// Cloudflare AI Gateway exports OTLP itself (no SDK); this panel shows the exporter config to paste.
+function CloudflareAiGatewayInstructions({
+  slug,
+  defaultApiKeyToken,
+}: {
+  readonly slug: string
+  readonly defaultApiKeyToken: string | null
+}) {
+  const config = cloudflareAiGatewayConfig(slug, defaultApiKeyToken)
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <Text.H5M>Cloudflare AI Gateway</Text.H5M>
+        <Text.H5 color="foregroundMuted">
+          Cloudflare AI Gateway exports OpenTelemetry spans for every request it proxies, so you don't need an SDK. In
+          your gateway's <span className="font-medium">Settings → OpenTelemetry</span>, click{" "}
+          <span className="font-medium">Add Otel Destination</span> and fill in the fields below.{" "}
+          {defaultApiKeyToken ? (
+            "The Authorization header is prefilled with your default Latitude API key."
+          ) : (
+            <>
+              Replace <code className="text-xs">YOUR_API_KEY</code> in the Authorization header with a Latitude API key
+              from Settings.
+            </>
+          )}
+        </Text.H5>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Text.H5M>OTLP Traces Endpoint</Text.H5M>
+        <CodeBlock value={config.endpoint} copyable />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Text.H5M>Content Type</Text.H5M>
+        <Text.H5 color="foregroundMuted">
+          Select <span className="font-medium">{config.contentType}</span>.
+        </Text.H5>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Text.H5M>Custom Headers</Text.H5M>
+        {config.headers.map((header) => (
+          <div key={header.key} className="flex flex-col gap-1">
+            <Text.H5 color="foregroundMuted">
+              Header name: <code className="text-xs">{header.key}</code>
+            </Text.H5>
+            <CodeBlock value={header.value} copyable />
+          </div>
+        ))}
+      </div>
+
+      <Text.H5 color="foregroundMuted">
+        See{" "}
+        <a
+          href="https://developers.cloudflare.com/ai-gateway/observability/otel-integration/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline-offset-2 hover:underline"
+        >
+          Cloudflare's OpenTelemetry docs
+        </a>{" "}
+        for where to add the destination. Traces appear in Latitude within a few seconds of your next request.
+      </Text.H5>
+    </div>
+  )
+}
+
+/**
+ * What follows a started import, decided by the host: the onboarding flow already polls for the
+ * first trace and moves on by itself, so it waits in place; the traces empty state has no such
+ * onward path and goes to the imports settings page, where the job's progress lives.
+ */
+export type ImportFollowUp = "wait-for-trace" | "go-to-imports"
+
 /**
  * Install / connect instructions shared between the onboarding telemetry step and the
  * Traces page empty-project experience. Renders the body only (no heading or footer) so
  * each host can frame it with its own surrounding copy and actions.
  */
-export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: string }) {
+export function TelemetryInstructions({
+  projectId,
+  projectSlug,
+  importFollowUp,
+}: {
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly importFollowUp: ImportFollowUp
+}) {
+  const scope = useProjectScope()
+  const navigate = useNavigate()
+  const importable = scope.kind === "live"
+  const [importStarted, setImportStarted] = useState(false)
   const [telemetrySetupMode, setTelemetrySetupMode] = useState<TelemetrySetupMode>("coding-agent")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
     PROVIDER_ENTRIES[0] ?? { id: "claude-code", name: "Claude Code", icon: "claude-code" },
@@ -434,7 +536,7 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
       <div className="flex flex-col gap-3">
         <Text.H5M>Installation method</Text.H5M>
         <Tabs
-          options={SETUP_MODE_TAB_OPTIONS}
+          options={importable ? SETUP_MODE_TAB_OPTIONS : SETUP_MODE_TAB_OPTIONS_WITHOUT_IMPORT}
           active={telemetrySetupMode}
           onSelect={(id) => setTelemetrySetupMode(id)}
           size="sm"
@@ -442,19 +544,42 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
         />
       </div>
 
-      {telemetrySetupMode === "coding-agent" ? (
+      {telemetrySetupMode === "import" ? (
+        importStarted ? (
+          <div className="flex flex-col gap-2 rounded-lg bg-secondary p-4">
+            <div className="flex items-center gap-2">
+              <Icon icon={Loader2} className="animate-spin" size="sm" />
+              <Text.H5M>Importing traces…</Text.H5M>
+            </div>
+            <Text.H5 color="foregroundMuted">
+              We're importing your traces in the background. You'll move on when we receive the first one.
+            </Text.H5>
+          </div>
+        ) : (
+          <ImportWizard
+            projectId={projectId}
+            onStarted={() => {
+              if (importFollowUp === "go-to-imports") {
+                void navigate({ to: "/projects/$projectSlug/settings/imports", params: { projectSlug } })
+              } else {
+                setImportStarted(true)
+              }
+            }}
+          />
+        )
+      ) : telemetrySetupMode === "coding-agent" ? (
         <div className="flex flex-col gap-2">
           <span className="inline-flex items-center gap-1.5">
             <Text.H5M>Prompt</Text.H5M>
             <Badge variant="accent">Recommended</Badge>
           </span>
           <Text.H5 color="foregroundMuted">
-            Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set up
-            Latitude telemetry in your project.
+            Paste this into your coding agent's chat (Cursor, Claude Code, Codex, or anything else) to set up Latitude
+            telemetry in your project.
           </Text.H5>
           <CodeBlock value={codingAgentPrompt} copyable wrapLines />
           <Text.H5 color="foregroundMuted">
-            For the smoothest experience, install both the{" "}
+            Install both the{" "}
             <a
               href="https://github.com/latitude-dev/skills"
               target="_blank"
@@ -482,15 +607,13 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
             <Text.H5M>Select your provider</Text.H5M>
             <div className="flex flex-row flex-wrap gap-1">
               {PROVIDER_ENTRIES.map((provider) => (
-                <button
+                <SelectorChip
                   key={provider.id}
-                  type="button"
-                  onClick={() => setSelectedProvider(provider)}
-                  className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.id === provider.id ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
-                >
-                  <ProviderChipIcon provider={provider} />
-                  <span>{provider.name}</span>
-                </button>
+                  selected={selectedProvider.id === provider.id}
+                  onSelect={() => setSelectedProvider(provider)}
+                  icon={<ProviderChipIcon provider={provider} />}
+                  label={provider.name}
+                />
               ))}
             </div>
           </div>
@@ -512,65 +635,72 @@ export function TelemetryInstructions({ projectSlug }: { readonly projectSlug: s
               />
 
               {integrationPanel === "opentelemetry" ? (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Text.H5M>OpenTelemetry (OTLP)</Text.H5M>
-                    <Text.H5 color="foregroundMuted">
-                      Send a standard OTLP <code className="text-xs">ExportTraceServiceRequest</code> over HTTP.
-                      Successful ingest returns <code className="text-xs">202</code> with{" "}
-                      <code className="text-xs">{"{}"}</code>.
-                    </Text.H5>
-                  </div>
-
-                  <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
-                    <div>
-                      <span className="text-foreground">POST</span>{" "}
-                      <span className="break-all">https://ingest.latitude.so/v1/traces</span>
-                    </div>
-                    <div>
-                      <span className="text-foreground">Authorization:</span> Bearer {defaultApiKeyToken ?? "<api-key>"}
-                    </div>
-                    <div>
-                      <span className="text-foreground">X-Latitude-Project:</span> {slugForSnippets}
-                    </div>
-                    <div>
-                      <span className="text-foreground">Content-Type:</span> application/json or application/x-protobuf
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-6">
+                selectedProvider.id === "cloudflare-ai-gateway" ? (
+                  <CloudflareAiGatewayInstructions slug={slugForSnippets} defaultApiKeyToken={defaultApiKeyToken} />
+                ) : (
+                  <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Text.H5M>Verify with cURL</Text.H5M>
+                      <Text.H5M>OpenTelemetry (OTLP)</Text.H5M>
                       <Text.H5 color="foregroundMuted">
-                        POST a minimal OTLP JSON trace.{" "}
-                        {defaultApiKeyToken ? (
-                          "The authorization header is prefilled with your default Latitude API key."
-                        ) : (
-                          <>
-                            Replace <code className="text-xs">YOUR_API_KEY</code> with a Latitude API key from Settings.
-                          </>
-                        )}{" "}
-                        Expect <code className="text-xs">202</code> and an empty JSON body on success. Project slug is
-                        prefilled on the header line.
+                        Send a standard OTLP <code className="text-xs">ExportTraceServiceRequest</code> over HTTP.
+                        Successful ingest returns <code className="text-xs">202</code> with{" "}
+                        <code className="text-xs">{"{}"}</code>.
                       </Text.H5>
-                      <CodeBlock value={getOtelCurlVerifySnippet(slugForSnippets, defaultApiKeyToken)} copyable />
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                      <Text.H5M>Language examples</Text.H5M>
-                      <Text.H5 color="foregroundMuted">Configure an OTLP HTTP exporter in your stack.</Text.H5>
-                      <OtelExporterLanguageChips active={otelExporterLanguage} onSelect={setOtelExporterLanguage} />
-                      <CodeBlock
-                        value={getOtelExporterLanguageSnippet(
-                          otelExporterLanguage,
-                          slugForSnippets,
-                          defaultApiKeyToken,
-                        )}
-                        copyable
-                      />
+                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
+                      <div>
+                        <span className="text-foreground">POST</span>{" "}
+                        <span className="break-all">https://ingest.latitude.so/v1/traces</span>
+                      </div>
+                      <div>
+                        <span className="text-foreground">Authorization:</span> Bearer{" "}
+                        {defaultApiKeyToken ?? "<api-key>"}
+                      </div>
+                      <div>
+                        <span className="text-foreground">X-Latitude-Project:</span> {slugForSnippets}
+                      </div>
+                      <div>
+                        <span className="text-foreground">Content-Type:</span> application/json or
+                        application/x-protobuf
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-col gap-2">
+                        <Text.H5M>Verify with cURL</Text.H5M>
+                        <Text.H5 color="foregroundMuted">
+                          POST a minimal OTLP JSON trace.{" "}
+                          {defaultApiKeyToken ? (
+                            "The authorization header is prefilled with your default Latitude API key."
+                          ) : (
+                            <>
+                              Replace <code className="text-xs">YOUR_API_KEY</code> with a Latitude API key from
+                              Settings.
+                            </>
+                          )}{" "}
+                          Expect <code className="text-xs">202</code> and an empty JSON body on success. Project slug is
+                          prefilled on the header line.
+                        </Text.H5>
+                        <CodeBlock value={getOtelCurlVerifySnippet(slugForSnippets, defaultApiKeyToken)} copyable />
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Text.H5M>Language examples</Text.H5M>
+                        <Text.H5 color="foregroundMuted">Configure an OTLP HTTP exporter in your stack.</Text.H5>
+                        <OtelExporterLanguageChips active={otelExporterLanguage} onSelect={setOtelExporterLanguage} />
+                        <CodeBlock
+                          value={getOtelExporterLanguageSnippet(
+                            otelExporterLanguage,
+                            slugForSnippets,
+                            defaultApiKeyToken,
+                          )}
+                          copyable
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
+                )
               ) : (
                 <SdkIntegrationInstructions
                   selectedProviderId={selectedProvider.id}

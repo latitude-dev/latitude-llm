@@ -1,4 +1,4 @@
-import type { CustomBehaviorId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import type { CustomBehaviorId, FacetId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
 import type { ClusterSessionMomentRange } from "../ports/taxonomy-cluster-intelligence-repository.ts"
 import { TaxonomyClusterIntelligenceRepository } from "../ports/taxonomy-cluster-intelligence-repository.ts"
@@ -16,6 +16,8 @@ export interface ListClusterSessionTraceIdsInput {
   readonly limit: number
   /** Omit/null = global taxonomy; an id resolves the subtree + sessions from that behavior's scoped slice. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** The behavior's facet; omit/null = topic edges, a facet id = that facet's edges. */
+  readonly facetId?: FacetId | null
 }
 
 /**
@@ -29,7 +31,10 @@ export const listClusterSessionTraceIdsUseCase = (input: ListClusterSessionTrace
     yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
     const clusters = yield* TaxonomyClusterRepository
     const intelligence = yield* TaxonomyClusterIntelligenceRepository
-    const scope = input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}
+    const scope =
+      input.customBehaviorId != null
+        ? { customBehaviorId: input.customBehaviorId, ...(input.facetId != null ? { facetId: input.facetId } : {}) }
+        : {}
     // A tree node represents its whole subtree: sessions are assigned to leaves.
     const clusterIds = yield* clusters.listSubtreeIds({
       projectId: input.projectId,

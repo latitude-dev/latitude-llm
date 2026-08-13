@@ -16,6 +16,7 @@ const makeProject = (over: Partial<ProjectRecord> = {}): ProjectRecord => ({
     onboardingCompleted: undefined,
     isSample: undefined,
     sampling: undefined,
+    redaction: undefined,
   },
   firstTraceAt: null,
   deletedAt: null,

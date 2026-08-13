@@ -76,6 +76,8 @@ In v7, OpenTelemetry collection **moved out of the `ai` package** into the separ
       project: process.env.LATITUDE_PROJECT_SLUG!,
     })
 
+    await latitude.ready
+
     // Register once, after Latitude. All AI SDK calls now emit telemetry (opt-out).
     registerTelemetry(new OpenTelemetry())
 

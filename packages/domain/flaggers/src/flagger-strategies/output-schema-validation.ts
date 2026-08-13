@@ -1,4 +1,4 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 import { detectOutputSchemaValidationFlagger } from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
@@ -13,14 +13,14 @@ export const outputSchemaValidationStrategy: FlaggerStrategy = {
     description: "Flags malformed or truncated structured output in assistant responses without calling an LLM.",
   },
 
-  hasRequiredContext(trace: TraceDetail): boolean {
-    return trace.outputMessages.length > 0
+  hasRequiredContext(conversation: FlaggerConversation): boolean {
+    return conversation.outputMessages.length > 0
   },
 
-  detectDeterministically(trace: TraceDetail): DetectionResult {
-    const result = detectOutputSchemaValidationFlagger(trace)
+  detectDeterministically(conversation: FlaggerConversation): DetectionResult {
+    const result = detectOutputSchemaValidationFlagger(conversation)
     return result.matched
       ? { kind: "matched", feedback: result.feedback, messageIndex: result.messageIndex }
-      : { kind: "no-match" }
+      : { kind: "unmatched" }
   },
 }

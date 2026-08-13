@@ -164,7 +164,7 @@ export const incidentFields = {
   sourceId: cuidSchema.describe("Id of the entity that triggered the incident (matches `sourceType`)."),
   severity: z
     .enum(INCIDENT_SEVERITIES)
-    .describe("Severity bucket assigned to the incident: `low`, `medium`, or `high`."),
+    .describe("Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."),
   startedAt: z.string().describe("ISO-8601 timestamp at which the incident opened."),
   endedAt: z.string().nullable().describe("ISO-8601 timestamp at which the incident closed, or `null` if still open."),
   createdAt: z.string().describe("ISO-8601 timestamp at which the incident row was created."),

@@ -225,6 +225,7 @@ const buildCohortRows = (cohort: CustomBehaviorQaCohort, scope: SeedScope, nowMs
         cost_output_microcents: 2000,
         cost_total_microcents: 3000,
         cost_is_estimated: 1,
+        cost_source: "estimated",
         time_to_first_token_ns: 180_000_000,
         is_streaming: 1,
         response_id: `seed-${spanId}`,

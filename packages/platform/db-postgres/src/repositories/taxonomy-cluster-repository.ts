@@ -1,6 +1,7 @@
 import { EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import {
   type CustomBehaviorId,
+  type FacetId,
   NotFoundError,
   RepositoryError,
   SqlClient,
@@ -16,7 +17,7 @@ import {
   TaxonomyDimension,
   taxonomyClusterSchema,
 } from "@domain/taxonomy"
-import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, like, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, like, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { taxonomyClusters } from "../schema/taxonomy-clusters.ts"
@@ -27,6 +28,7 @@ const toDomainCluster = (row: typeof taxonomyClusters.$inferSelect): TaxonomyClu
     organizationId: row.organizationId,
     projectId: row.projectId,
     customBehaviorId: row.customBehaviorId,
+    facetId: row.facetId,
     dimension: TaxonomyDimension.Topic,
     parentClusterId: row.parentClusterId,
     depth: row.depth,
@@ -114,6 +116,7 @@ const toInsertRow = (
   organizationId: cluster.organizationId,
   projectId: cluster.projectId,
   customBehaviorId: cluster.customBehaviorId,
+  facetId: cluster.facetId,
   parentClusterId: cluster.parentClusterId,
   depth: cluster.depth,
   path: cluster.path,
@@ -132,14 +135,24 @@ const toInsertRow = (
   updatedAt: cluster.updatedAt,
 })
 
-// Global taxonomy reads and scoped custom-behavior reads share one table.
-// Omit/null scopes to the global tree (custom_behavior_id IS NULL); an id
-// scopes to that behavior's sub-tree. Keeps the global Behaviours page and
-// Topics filter isolated from scoped rows.
-const scopeCondition = (customBehaviorId: CustomBehaviorId | null | undefined) =>
-  customBehaviorId == null
-    ? isNull(taxonomyClusters.customBehaviorId)
-    : eq(taxonomyClusters.customBehaviorId, customBehaviorId)
+// Every view's tree shares one table; a view is (scope × facet). Reads MUST pin
+// BOTH discriminators so the online whole-project topic tree (NULL, NULL) never
+// leaks cohort or facet rows: omit/null a discriminator ⇒ IS NULL, an id ⇒
+// equality. `(customBehaviorId=null, facetId=null)` is the online topic tree.
+const scopeCondition = (scope: {
+  readonly customBehaviorId: CustomBehaviorId | null | undefined
+  readonly facetId: FacetId | null | undefined
+}) =>
+  and(
+    scope.customBehaviorId == null
+      ? isNull(taxonomyClusters.customBehaviorId)
+      : eq(taxonomyClusters.customBehaviorId, scope.customBehaviorId),
+    scope.facetId == null ? isNull(taxonomyClusters.facetId) : eq(taxonomyClusters.facetId, scope.facetId),
+  )
+
+// The one online-routed tree. `listNearestActive`/`hybridSearch` pin this so the
+// live router and cluster search never see a cohort or facet cluster.
+const GLOBAL_TOPIC_SCOPE = { customBehaviorId: null, facetId: null } as const
 
 export const TaxonomyClusterRepositoryLive = Layer.effect(
   TaxonomyClusterRepository,
@@ -178,9 +191,10 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map(toDomainCluster)
         }),
 
-      listActiveByProject: ({ projectId, parentClusterId, customBehaviorId }) =>
+      listActiveByProject: ({ projectId, parentClusterId, customBehaviorId, facetId, states }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const readStates = states ?? ["active"]
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
@@ -189,8 +203,8 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
-                  eq(taxonomyClusters.state, "active"),
-                  scopeCondition(customBehaviorId),
+                  inArray(taxonomyClusters.state, readStates),
+                  scopeCondition({ customBehaviorId, facetId }),
                   ...(parentClusterId === undefined
                     ? []
                     : parentClusterId === null
@@ -203,7 +217,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map(toDomainCluster)
         }),
 
-      listSubtreeIds: ({ projectId, clusterId, customBehaviorId }) =>
+      listSubtreeIds: ({ projectId, clusterId, customBehaviorId, facetId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -215,7 +229,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
                   eq(taxonomyClusters.state, "active"),
-                  scopeCondition(customBehaviorId),
+                  scopeCondition({ customBehaviorId, facetId }),
                   or(eq(taxonomyClusters.id, clusterId), like(taxonomyClusters.path, `%${clusterId}/%`)),
                 ),
               ),
@@ -238,7 +252,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
                   eq(taxonomyClusters.state, "active"),
-                  isNull(taxonomyClusters.customBehaviorId),
+                  scopeCondition(GLOBAL_TOPIC_SCOPE),
                   isNotNull(taxonomyClusters.centroidEmbedding),
                   ...(parentClusterId === undefined
                     ? []
@@ -270,7 +284,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
             eq(taxonomyClusters.organizationId, sqlClient.organizationId),
             eq(taxonomyClusters.projectId, projectId),
             eq(taxonomyClusters.state, state ?? "active"),
-            isNull(taxonomyClusters.customBehaviorId),
+            scopeCondition(GLOBAL_TOPIC_SCOPE),
             isNotNull(taxonomyClusters.centroidEmbedding),
             or(gte(score, TAXONOMY_SEARCH_MIN_SCORE), gte(vectorScore, TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY)),
           ]
@@ -293,15 +307,17 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map((row) => ({ ...row, clusterId: TaxonomyClusterId(row.clusterId) }))
         }),
 
-      list: ({ projectId, state, sort, limit, offset, customBehaviorId }) =>
+      list: ({ projectId, state, sort, limit, offset, customBehaviorId, facetId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = [
             eq(taxonomyClusters.organizationId, sqlClient.organizationId),
             eq(taxonomyClusters.projectId, projectId),
-            scopeCondition(customBehaviorId),
+            scopeCondition({ customBehaviorId, facetId }),
           ]
-          if (state) conditions.push(eq(taxonomyClusters.state, state))
+          // `staging` is an internal publish-time state; never surface it from
+          // list-clusters. An explicit `state` filter still narrows further.
+          conditions.push(state ? eq(taxonomyClusters.state, state) : ne(taxonomyClusters.state, "staging"))
 
           const orderBy = (() => {
             switch (sort ?? "observation_count_desc") {
@@ -389,6 +405,78 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
               .update(taxonomyClusters)
               .set({ state: "deprecated", updatedAt: timestamp })
               .where(and(eq(taxonomyClusters.organizationId, organizationId), eq(taxonomyClusters.id, clusterId))),
+          )
+        }),
+
+      swapActiveTree: ({ supersededClusterIds, stagingClusterIds, timestamp }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          if (supersededClusterIds.length === 0 && stagingClusterIds.length === 0) return
+          yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              if (supersededClusterIds.length > 0) {
+                yield* sqlClient.query((db, organizationId) =>
+                  db
+                    .update(taxonomyClusters)
+                    .set({ state: "deprecated", updatedAt: timestamp })
+                    .where(
+                      and(
+                        eq(taxonomyClusters.organizationId, organizationId),
+                        inArray(taxonomyClusters.id, supersededClusterIds as TaxonomyClusterId[]),
+                      ),
+                    ),
+                )
+              }
+              if (stagingClusterIds.length > 0) {
+                // Guard on `state = 'staging'` so a retry (rows already active)
+                // matches nothing and never resurrects a deprecated tree.
+                yield* sqlClient.query((db, organizationId) =>
+                  db
+                    .update(taxonomyClusters)
+                    .set({ state: "active", updatedAt: timestamp })
+                    .where(
+                      and(
+                        eq(taxonomyClusters.organizationId, organizationId),
+                        eq(taxonomyClusters.state, "staging"),
+                        inArray(taxonomyClusters.id, stagingClusterIds as TaxonomyClusterId[]),
+                      ),
+                    ),
+                )
+              }
+            }),
+          )
+        }),
+
+      deleteStaging: ({ clusterIds }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          if (clusterIds.length === 0) return
+          yield* sqlClient.query((db, organizationId) =>
+            db
+              .delete(taxonomyClusters)
+              .where(
+                and(
+                  eq(taxonomyClusters.organizationId, organizationId),
+                  eq(taxonomyClusters.state, "staging"),
+                  inArray(taxonomyClusters.id, clusterIds as TaxonomyClusterId[]),
+                ),
+              ),
+          )
+        }),
+
+      deleteByBehavior: ({ projectId, customBehaviorId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db, organizationId) =>
+            db.delete(taxonomyClusters).where(
+              and(
+                eq(taxonomyClusters.organizationId, organizationId),
+                eq(taxonomyClusters.projectId, projectId),
+                // Equality on a required id, never `IS NULL`: the whole-project tree
+                // must stay unreachable from here.
+                eq(taxonomyClusters.customBehaviorId, customBehaviorId),
+              ),
+            ),
           )
         }),
     }

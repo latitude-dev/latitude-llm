@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."users" ADD COLUMN "heard_about_us" text;

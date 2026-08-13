@@ -12,6 +12,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { getPostgresClient } from "../../server/clients.ts"
+import { traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
@@ -82,7 +83,7 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
@@ -110,11 +111,12 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
  * `trace_id IN (...)` rather than `session_id` so orphan sessions still surface
  * their scores.
  */
-export const listScoresBySession = createServerFn({ method: "GET" })
+// POST keeps the up-to-500 trace-id payload below HTTP request-line limits.
+export const listScoresBySession = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(500),
+      traceIds: z.array(traceIdSchema).max(500),
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),

@@ -47,6 +47,7 @@ export { DestinationSyncRunRepositoryLive } from "./repositories/destination-syn
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"
 export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"
 export { ExperimentRepositoryLive } from "./repositories/experiment-repository.ts"
+export { FacetRepositoryLive } from "./repositories/facet-repository.ts"
 export { FeatureFlagRepositoryLive } from "./repositories/feature-flag-repository.ts"
 export { FlaggerRepositoryLive } from "./repositories/flagger-repository.ts"
 export {
@@ -54,6 +55,17 @@ export {
   listGardenableCustomBehaviors,
 } from "./repositories/gardenable-custom-behaviors.ts"
 export { type GardenableProjectRef, listGardenableProjectRefs } from "./repositories/gardenable-projects.ts"
+export { GithubDeliveryRepositoryLive } from "./repositories/github-delivery-repository.ts"
+export {
+  findActiveGithubInstallationAcrossOrgs,
+  GithubIntegrationRepositoryLive,
+} from "./repositories/github-integration-repository.ts"
+export { GithubSignalReferenceRepositoryLive } from "./repositories/github-signal-reference-repository.ts"
+export { GithubSyncConfigRepositoryLive } from "./repositories/github-sync-config-repository.ts"
+export {
+  ImportJobRepositoryLive,
+  redactedImportJob,
+} from "./repositories/import-job-repository.ts"
 export { IncidentMonitorReaderLive } from "./repositories/incident-monitor-reader.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"
@@ -84,6 +96,10 @@ export { TaxonomyRunRepositoryLive } from "./repositories/taxonomy-run-repositor
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
 export { WrappedReportRepositoryLive } from "./repositories/wrapped-report-repository.ts"
 export { invalidateEffectivePlanCache, resolveEffectivePlanCached } from "./resolve-effective-plan-cached.ts"
+export {
+  invalidateOrganizationRedactionCache,
+  resolveOrganizationRedactionCached,
+} from "./resolve-redaction-policy-cached.ts"
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"
 export { withPostgres } from "./with-postgres.ts"

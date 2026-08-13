@@ -25,6 +25,11 @@ const {
 })
 
 const runAnalyzeSessionPass = async (input: AnalyzeSessionWorkflowInput): Promise<AnalyzeSessionWorkflowResult> => {
+  // Keep the legacy activity sequence for histories recorded before this marker.
+  if (patched("analyze-session-persist-only-v1")) {
+    return persistAnalyzeSessionActivity(input)
+  }
+
   const loaded = await loadAnalyzeSessionActivity(input)
   const hashed = await hashAnalyzeSessionActivity({ ...input, ...loaded })
   const eligibility = await checkAnalyzeSessionEligibilityActivity({ ...input, ...loaded, ...hashed })

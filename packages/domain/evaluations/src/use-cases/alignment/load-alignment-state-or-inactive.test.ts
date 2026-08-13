@@ -50,7 +50,15 @@ const makeRepositoryReturning = (evaluation: Evaluation | null): EvaluationRepos
 
 const signalRepository = {
   findById: (id: ReturnType<typeof SignalId>) =>
-    Effect.succeed({ id, projectId, name: "Signal", description: "Signal description" }),
+    Effect.succeed({
+      id,
+      projectId,
+      name: "Signal",
+      description: "Signal description",
+      resolvedAt: null,
+      ignoredAt: null,
+    }),
+  claimReopenOnOccurrence: () => Effect.succeed(false),
 }
 
 const run = (repository: EvaluationRepositoryShape) =>

@@ -56,7 +56,7 @@ type MonitorTarget = {
 type MonitorRule = {
   trigger: "match" | "threshold" | "escalating"
   config: MonitorConfig
-  severity: "low" | "medium" | "high"
+  severity: "low" | "medium" | "high" | "urgent"
 }
 ```
 
@@ -121,7 +121,7 @@ type Incident = {
   projectId: ProjectId
   sourceType: "monitor" | "signal"
   sourceId: string
-  severity: "low" | "medium" | "high"
+  severity: "low" | "medium" | "high" | "urgent"
   startedAt: Date
   endedAt: Date | null
   createdAt: Date

@@ -197,9 +197,10 @@ function MetricSelector({
 // alert opens (incident lists, chart markers, notifications) — it doesn't
 // change when or how the alert fires.
 const SEVERITY_HELP: Record<AlertSeverity, string> = {
-  low: "Incidents open as low priority — informational, review when convenient",
-  medium: "Incidents open as medium priority — worth attention soon",
-  high: "Incidents open as high priority — needs immediate attention",
+  low: "Opens incidents as low priority. Informational; review when you have time.",
+  medium: "Opens incidents as medium priority. Worth a look soon.",
+  high: "Opens incidents as high priority. Needs attention right away.",
+  urgent: "Opens incidents as urgent. Drop what you're doing.",
 }
 
 const COMPARISON_TABS: readonly TabOption<ComparisonMode>[] = [

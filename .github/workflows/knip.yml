@@ -6,6 +6,10 @@ on:
       - development
   workflow_call:
 
+concurrency:
+  group: knip-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -24,7 +28,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 25
           cache: 'pnpm'

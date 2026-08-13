@@ -1,5 +1,6 @@
 import {
   CustomBehaviorId,
+  FacetId,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -19,6 +20,7 @@ const toCustomBehavior = (row: typeof customBehaviors.$inferSelect): CustomBehav
   slug: row.slug,
   name: row.name,
   filterSet: row.filterSet,
+  facetId: row.facetId === null ? null : FacetId(row.facetId),
   status: row.status,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
@@ -119,6 +121,7 @@ export const CustomBehaviorRepositoryLive = Layer.effect(
                 name: behavior.name,
                 slug: behavior.slug,
                 filterSet: behavior.filterSet,
+                facetId: behavior.facetId,
                 status: behavior.status,
                 createdAt: behavior.createdAt,
                 updatedAt: behavior.updatedAt,

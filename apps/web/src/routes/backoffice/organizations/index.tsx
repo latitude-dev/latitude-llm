@@ -81,6 +81,19 @@ function BackofficeOrganizationsByUsagePage() {
           row.plan ? <Badge variant="outlineMuted">{row.plan}</Badge> : <Text.H6 color="foregroundMuted">—</Text.H6>,
       },
       {
+        key: "creditSpend",
+        header: "Credit Spend",
+        sortKey: "creditSpend",
+        align: "end",
+        minWidth: 110,
+        width: 140,
+        render: (row) => (
+          <Text.H5 weight="medium" noWrap>
+            <span className="tabular-nums">{formatCount(row.consumedCredits)}</span>
+          </Text.H5>
+        ),
+      },
+      {
         key: "members",
         header: "Members",
         align: "end",
@@ -99,9 +112,9 @@ function BackofficeOrganizationsByUsagePage() {
         minWidth: 100,
         width: 130,
         render: (row) => (
-          <Text.H5 weight="medium" noWrap>
+          <Text.H6 noWrap>
             <span className="tabular-nums">{formatCount(row.traceCount)}</span>
-          </Text.H5>
+          </Text.H6>
         ),
       },
       {
@@ -141,7 +154,7 @@ function BackofficeOrganizationsByUsagePage() {
         <div className="flex flex-1 flex-col gap-1">
           <Text.H4 weight="semibold">Organizations by usage</Text.H4>
           <Text.H6 color="foregroundMuted">
-            Sorted by trace count over the last 30 days. Click a row to open the org detail page.
+            Sorted by credit spend in the current billing period. Click a row to open the org detail page.
           </Text.H6>
         </div>
       </div>
@@ -153,7 +166,8 @@ function BackofficeOrganizationsByUsagePage() {
           getRowKey={(row) => row.id}
           renderRowLink={renderRowLink}
           infiniteScroll={infiniteScroll}
-          blankSlate="No organizations have produced traces in the last 30 days."
+          defaultSorting={{ column: "creditSpend", direction: "desc" }}
+          blankSlate="No organizations have consumed credits in their current billing period."
         />
       </div>
     </div>

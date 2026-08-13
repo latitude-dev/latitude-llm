@@ -93,7 +93,7 @@ const ResolvedRangeSchema = z
 
 const TopListItemSchema = z
   .object({
-    key: z.string().describe("Stable identity: tool name, signal id, or cluster id."),
+    key: z.string().describe("Stable identity: tool name, signal slug, or cluster id."),
     label: z.string().describe("Human-readable label (resolved name; falls back to `key` when unresolved)."),
     value: z.number().describe("Ranking value: tool calls / signal occurrences / behaviour observations."),
   })
