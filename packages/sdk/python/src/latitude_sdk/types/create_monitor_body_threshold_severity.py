@@ -2,4 +2,4 @@
 
 import typing
 
-CreateMonitorBodyThresholdSeverity = typing.Union[typing.Literal["low", "medium", "high"], typing.Any]
+CreateMonitorBodyThresholdSeverity = typing.Union[typing.Literal["low", "medium", "high", "urgent"], typing.Any]

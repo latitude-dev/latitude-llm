@@ -1,4 +1,4 @@
-import { safeStringifyJson } from "@repo/utils"
+import { resolveContentModality, safeStringifyJson } from "@repo/utils"
 import type { GenAIMessage, GenAIPart } from "rosetta-ai"
 
 const PRIVATE_THOUGHT = "Thought in private..."
@@ -24,10 +24,12 @@ export function formatGenAIPart(part: GenAIPart): string {
       return typeof c === "string" && c.trim() !== "" ? c : PRIVATE_THOUGHT
     }
     case "blob": {
-      if (part.modality === "image") return "[IMAGE]"
-      if (part.modality === "video") return "[VIDEO]"
-      if (part.modality === "audio") return "[AUDIO]"
-      return `[BLOB:${String(part.modality)}]`
+      const mimeType = typeof part.mime_type === "string" ? part.mime_type : null
+      const modality = resolveContentModality(String(part.modality), mimeType)
+      if (modality === "image") return "[IMAGE]"
+      if (modality === "video") return "[VIDEO]"
+      if (modality === "audio") return "[AUDIO]"
+      return `[BLOB:${modality}]`
     }
     case "file":
       return `[FILE:${part.file_id}]`

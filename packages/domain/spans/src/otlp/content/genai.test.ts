@@ -100,6 +100,43 @@ describe("parseContent (GenAI current — gen_ai.{input,output}.messages)", () =
       ])
     })
 
+    it("corrects PDF blobs mis-tagged as image (as @ai-sdk/otel emits)", () => {
+      const result = parseContent([
+        str(
+          "gen_ai.input.messages",
+          JSON.stringify([
+            {
+              role: "user",
+              parts: [
+                { type: "text", content: "Summarize this PDF" },
+                {
+                  type: "blob",
+                  modality: "image",
+                  mime_type: "application/pdf",
+                  content: "JVBERi0=",
+                },
+              ],
+            },
+          ]),
+        ),
+      ])
+
+      expect(result.inputMessages).toEqual([
+        {
+          role: "user",
+          parts: [
+            { type: "text", content: "Summarize this PDF" },
+            {
+              type: "blob",
+              modality: "document",
+              mime_type: "application/pdf",
+              content: "JVBERi0=",
+            },
+          ],
+        },
+      ])
+    })
+
     it("passes reasoning parts through verbatim", () => {
       const result = parseContent([
         str(

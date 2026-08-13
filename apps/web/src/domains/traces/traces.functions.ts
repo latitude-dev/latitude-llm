@@ -27,7 +27,7 @@ import {
   TraceRepository,
 } from "@domain/spans"
 import { AIEmbedLive, withAi } from "@platform/ai"
-import { RedisCacheStoreLive } from "@platform/cache-redis"
+import { enforceExportRequestRateLimit, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
@@ -43,10 +43,10 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
-import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId } from "../../server/auth.ts"
 import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 
@@ -70,6 +70,7 @@ export interface TraceRecord {
   readonly costInputMicrocents: number
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
+  readonly unpricedSpanCount: number
   readonly sessionId: string
   readonly userId: string
   readonly simulationId: string
@@ -106,6 +107,7 @@ const toTraceRecord = (trace: Trace): TraceRecord => ({
   costInputMicrocents: trace.costInputMicrocents,
   costOutputMicrocents: trace.costOutputMicrocents,
   costTotalMicrocents: trace.costTotalMicrocents,
+  unpricedSpanCount: trace.unpricedSpanCount,
   sessionId: trace.sessionId,
   userId: trace.userId,
   simulationId: trace.simulationId,
@@ -170,7 +172,7 @@ export interface TraceConversationChunkRecord {
 const traceListCursorSchema = z.object({
   sortValue: z.string(),
   secondaryValue: z.string().optional(),
-  traceId: z.string(),
+  traceId: traceIdSchema,
 })
 
 interface TraceListResult {
@@ -227,6 +229,47 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       traces: page.items.map(toTraceRecord),
       hasMore: page.hasMore,
       nextCursor: page.nextCursor,
+    }
+  })
+
+export const listSessionTraces = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceIds: z.array(traceIdSchema).max(500),
+      limit: z.number().int().min(1).max(500),
+      cursor: traceListCursorSchema.optional(),
+      sortDirection: z.enum(["asc", "desc"]).optional(),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<TraceListResult> => {
+    const orgId = await resolveOrgScope(context)
+
+    const page = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.listByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          options: {
+            limit: data.limit,
+            ...(data.cursor ? { cursor: data.cursor } : {}),
+            sortBy: "startTime",
+            sortDirection: data.sortDirection ?? "desc",
+            filters: { traceId: [{ op: "in", value: data.traceIds }] },
+          },
+        })
+      }).pipe(
+        withScopedClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+
+    return {
+      traces: page.items.map(toTraceRecord),
+      hasMore: page.hasMore,
+      ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
     }
   })
 
@@ -397,7 +440,7 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       searchQuery: z.string().max(500),
     }),
   )
@@ -480,7 +523,7 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .inputValidator(z.object({ projectId: z.string(), traceId: traceIdSchema }))
   .handler(async ({ data, context }) => {
     const orgId = await resolveOrgScope(context)
 
@@ -509,7 +552,7 @@ export const getTraceConversationChunk = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),
     }),
@@ -538,8 +581,8 @@ export const getSpanConversationChunk = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
-      spanId: z.string(),
+      traceId: traceIdSchema,
+      spanId: spanIdSchema,
       offset: z.number().int().nonnegative().optional(),
       limit: z.number().int().positive().max(100).optional(),
     }),

@@ -65,6 +65,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
     weights: { annotation: 1, custom: 0, evaluation: 0 },
   },
   clusteredAt: startedAt,
+  resolvedAt: null,
+  ignoredAt: null,
+  regressedAt: null,
   mutedAt: null,
   createdAt: startedAt,
   updatedAt: startedAt,
@@ -241,6 +244,44 @@ describe("requestIncidentNotificationsUseCase", () => {
     )
 
     expect(result).toEqual({ status: "skipped", reason: "signal-muted" })
+  })
+
+  it("skips signal incidents for an ignored signal even after an unmute", async () => {
+    const incident = makeIncident()
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: incident.id,
+        transition: "created",
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            incident,
+            signal: makeSignal({ ignoredAt: new Date("2026-06-18T09:00:00.000Z"), mutedAt: null }),
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "signal-ignored" })
+  })
+
+  it("skips signal incidents when the signal was resolved before fan-out", async () => {
+    const incident = makeIncident()
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: incident.id,
+        transition: "created",
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            incident,
+            signal: makeSignal({ resolvedAt: new Date("2026-06-18T09:00:00.000Z") }),
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ status: "skipped", reason: "signal-resolved" })
   })
 
   it("fans out monitor match incidents from the monitor source id", async () => {

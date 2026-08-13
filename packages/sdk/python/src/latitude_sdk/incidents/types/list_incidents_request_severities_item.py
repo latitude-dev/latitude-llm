@@ -2,4 +2,4 @@
 
 import typing
 
-ListIncidentsRequestSeveritiesItem = typing.Union[typing.Literal["low", "medium", "high"], typing.Any]
+ListIncidentsRequestSeveritiesItem = typing.Union[typing.Literal["low", "medium", "high", "urgent"], typing.Any]

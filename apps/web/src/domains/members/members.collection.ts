@@ -56,6 +56,12 @@ export const useMembersCollection = () => {
   return useLiveQuery((query) => query.from({ member: membersCollection }))
 }
 
+/** Organization-wide settings writes are owner-only server-side, so their controls follow this. */
+export const useIsOrganizationOwner = (userId: string): boolean => {
+  const { data } = useMembersCollection()
+  return (data ?? []).some((member) => member.userId === userId && member.role === "owner")
+}
+
 /**
  * Invite is not a collection mutation, so it must not use `createOptimisticAction` with an empty
  * `onMutate`: TanStack DB skips `mutationFn` when the transaction has zero pending mutations.

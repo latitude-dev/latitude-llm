@@ -1,19 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { TagsIcon } from "lucide-react"
+import { listEnabledFeatureFlagIdentifiers } from "../../../../../domains/feature-flags/feature-flags.functions.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../-route-data.ts"
-import { BehavioursPage } from "./-components/behaviours-page.tsx"
+import { BehavioursCatalogPage } from "./-components/behaviours-catalog-page.tsx"
+import { LegacyBehavioursPage } from "./-components/legacy-behaviours-page.tsx"
 
 function BehavioursBreadcrumb() {
-  return (
-    <span className="flex min-w-0 items-center gap-2">
-      <TagsIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <BreadcrumbText variant="current">Behaviors</BreadcrumbText>
-    </span>
-  )
+  return <BreadcrumbText variant="current">Behaviors</BreadcrumbText>
 }
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/behaviours/")({
+  // Resolved here, not in the component: the flag picks the whole screen, and a
+  // client-side read would paint the legacy one first.
+  loader: async () => ({
+    customBehaviors: (await listEnabledFeatureFlagIdentifiers()).includes("customBehaviors"),
+  }),
   staticData: {
     breadcrumb: BehavioursBreadcrumb,
   },
@@ -22,5 +23,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/beha
 
 function BehavioursIndexPage() {
   const project = useRouteProject()
-  return <BehavioursPage project={project} />
+  const { customBehaviors } = Route.useLoaderData()
+  if (!customBehaviors) return <LegacyBehavioursPage project={project} />
+  return <BehavioursCatalogPage project={project} />
 }

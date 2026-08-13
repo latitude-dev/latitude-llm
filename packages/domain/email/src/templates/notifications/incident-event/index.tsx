@@ -9,12 +9,11 @@ import { resolveAssigneeName, resolveIncidentSource } from "../-incident-source.
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentEventEmail } from "./EmailTemplate.tsx"
 
-const buildSignalUrl = (
-  ctx: NotificationEmailRenderContext,
-  payload: Parameters<NotificationEmailRenderer<"incident.event">>[0],
-): string | undefined => {
+const buildSignalUrl = (ctx: NotificationEmailRenderContext, slug: string | null): string | undefined => {
   if (!ctx.project) return undefined
-  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(payload.sourceId)}`
+  return slug
+    ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(slug)}`
+    : `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals`
 }
 
 export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> = (payload, ctx) =>
@@ -32,7 +31,7 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
       incidentKind: payload.incidentKind,
       condition: payload.condition,
     })
-    const signalUrl = isMonitorIncident ? undefined : buildSignalUrl(ctx, payload)
+    const signalUrl = isMonitorIncident ? undefined : buildSignalUrl(ctx, source.slug)
     const ctaUrl = isMonitorIncident ? monitor?.url : signalUrl
     const subject = `${heading}: ${sourceName}`
 

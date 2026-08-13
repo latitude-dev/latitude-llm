@@ -34,7 +34,7 @@ export function ReadOnlyProjectModal() {
       dismissible
       onOpenChange={setOpen}
       title="This is a demo project"
-      description="The Latitude Demo is read-only. Explore everything you like — but to make changes, create your own project and start sending your own data."
+      description="It's read-only, so look around as much as you like. To make changes, create your own project and start sending it data."
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>

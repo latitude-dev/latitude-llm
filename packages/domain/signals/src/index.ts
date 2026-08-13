@@ -19,6 +19,7 @@ export {
   type MappedSignalDraft,
   mapGeneratedSignalDraft,
 } from "./signal-generation-schema.ts"
+export { generateSignalSlug } from "./slug.ts"
 export {
   type CreateSignalError,
   type CreateSignalInput,

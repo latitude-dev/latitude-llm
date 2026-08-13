@@ -4,11 +4,11 @@ import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { reportOssDeploymentHeartbeat } from "@platform/analytics-posthog"
 import { parseEnv } from "@platform/env"
+import { createImportAdapterRegistry } from "@platform/import-sources"
 import { initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import type { Hono } from "hono"
-import { logger as honoLogger } from "hono/logger"
 import {
   getClickhouseClient,
   getPostgresClient,
@@ -19,6 +19,7 @@ import {
   getWorkflowStarter,
 } from "./clients.ts"
 import { API_INFO, API_SECURITY_SCHEME } from "./constants.ts"
+import { accessLogger } from "./middleware/access-logger.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
 import { suppressHttpErrorTelemetry } from "./middleware/suppress-http-error-telemetry.ts"
@@ -37,11 +38,7 @@ const startServer = async () => {
   const url = Effect.runSync(parseEnv("LAT_API_URL", "string", "http://localhost:3001"))
   const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
 
-  app.use(
-    honoLogger((message: string, ...rest: string[]) => {
-      logger.info(message, ...rest)
-    }),
-  )
+  app.use(accessLogger((message) => logger.info(message)))
 
   // Add Hono OpenTelemetry middleware
   app.use(otel())
@@ -65,6 +62,7 @@ const startServer = async () => {
     workflowStarter,
     workflowQuerier,
     storageDisk: getStorageDisk(),
+    importSourceAdapters: createImportAdapterRegistry(),
     logTouchBuffer: true,
   })
 

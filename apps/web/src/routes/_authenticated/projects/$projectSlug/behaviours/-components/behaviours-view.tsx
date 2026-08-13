@@ -18,18 +18,7 @@ import {
 } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  BrainIcon,
-  ChevronRightIcon,
-  DatabaseIcon,
-  FlameIcon,
-  MinusIcon,
-  SparklesIcon,
-  TagIcon,
-  XIcon,
-} from "lucide-react"
+import { BrainIcon, ChevronRightIcon, DatabaseIcon, SparklesIcon, TagIcon, XIcon } from "lucide-react"
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import {
   addClusterSessionsToDatasetFunction,
@@ -49,6 +38,7 @@ import type {
   BehaviourTimeRangeRecord,
   BehaviourTrajectoryMetric,
 } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
+import { BehaviourBadge, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
@@ -132,38 +122,6 @@ const findBehaviourPath = (
   return undefined
 }
 
-const trendLabel = (status: BehaviourNodeRecord["trend"]["status"]): string => {
-  switch (status) {
-    case "new":
-      return "new"
-    case "spike":
-      return "spiking"
-    case "rising":
-      return "rising"
-    case "steady":
-      return "steady"
-    case "cooling":
-      return "cooling"
-    case "fading":
-      return "fading"
-  }
-}
-
-const trendIcon = (status: BehaviourNodeRecord["trend"]["status"]) => {
-  switch (status) {
-    case "new":
-      return SparklesIcon
-    case "spike":
-    case "rising":
-      return status === "spike" ? FlameIcon : ArrowUpIcon
-    case "cooling":
-    case "fading":
-      return ArrowDownIcon
-    case "steady":
-      return MinusIcon
-  }
-}
-
 const trendRank = (status: BehaviourNodeRecord["trend"]["status"]): number => {
   switch (status) {
     case "new":
@@ -192,15 +150,6 @@ const subtreeTrendStatus = (node: BehaviourNodeRecord): BehaviourNodeRecord["tre
     if (trendRank(childStatus) > trendRank(dominant)) dominant = childStatus
   }
   return dominant
-}
-
-function BehaviourBadge({ label, icon }: { readonly label: string; readonly icon: typeof TagIcon }) {
-  return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-xs leading-5 text-muted-foreground">
-      <Icon icon={icon} size="xs" color="foregroundMuted" />
-      <span className="truncate">{label}</span>
-    </span>
-  )
 }
 
 function BehaviourNameCell({
@@ -260,6 +209,7 @@ export function BehaviourDetailDrawer({
   momentRange,
   momentRangeMaxTurn,
   customBehaviorId,
+  facetId,
   onMomentRangeChange,
   onClose,
 }: {
@@ -270,6 +220,7 @@ export function BehaviourDetailDrawer({
   readonly momentRange: BehaviourMomentRangeRecord | undefined
   readonly momentRangeMaxTurn: number
   readonly customBehaviorId?: string
+  readonly facetId?: string
   readonly onMomentRangeChange: (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => void
   readonly onClose: () => void
 }) {
@@ -280,14 +231,14 @@ export function BehaviourDetailDrawer({
   const [sessionPanelEntered, setSessionPanelEntered] = useState(false)
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const { data: intelligence } = useClusterProfile(projectId, cluster.id, timeRange, customBehaviorId)
+  const { data: intelligence } = useClusterProfile(projectId, cluster.id, timeRange, customBehaviorId, facetId)
   const {
     data: behaviourSessionsData,
     isLoading: behaviourSessionsLoading,
     fetchNextPage: fetchNextBehaviourSessionsPage,
     hasNextPage: hasNextBehaviourSessionsPage,
     isFetchingNextPage: isFetchingNextBehaviourSessionsPage,
-  } = useBehaviourSessions(projectId, cluster.id, sessionFilter, timeRange, momentRange, customBehaviorId)
+  } = useBehaviourSessions(projectId, cluster.id, sessionFilter, timeRange, momentRange, customBehaviorId, facetId)
   const behaviourSessions = behaviourSessionsData?.pages.flatMap((page) => page.sessions) ?? []
   const behaviourSessionHistogram = behaviourSessionsData?.pages[0]?.histogram ?? []
   // A session row's identity is its (first) trace id — the unit a dataset row is
@@ -316,8 +267,9 @@ export function BehaviourDetailDrawer({
       ...(timeRange?.fromIso ? { timeFromIso: timeRange.fromIso } : {}),
       ...(timeRange?.toIso ? { timeToIso: timeRange.toIso } : {}),
       ...(customBehaviorId ? { customBehaviorId } : {}),
+      ...(facetId ? { facetId } : {}),
     }),
-    [cluster.id, sessionFilter, momentRange, timeRange, customBehaviorId],
+    [cluster.id, sessionFilter, momentRange, timeRange, customBehaviorId, facetId],
   )
   const datasetSelection = sessionSelection.bulkSelection
   const detectedSignals = intelligence?.topMoments ?? []
@@ -381,13 +333,13 @@ export function BehaviourDetailDrawer({
               {parentName ? <BehaviourBadge label={parentName} icon={TagIcon} /> : null}
               <BehaviourBadge label={`${formatCount(node.subtreeSessionCount)} sessions`} icon={TagIcon} />
               <BehaviourBadge label={trendLabel(node.trend.status)} icon={trendIcon(node.trend.status)} />
-              {node.firstSeenLabel === "older" ? null : (
+              {node.firstSeenLabel === "older" || node.firstSeenLabel === "unknown" ? null : (
                 <BehaviourBadge label={`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`} icon={SparklesIcon} />
               )}
             </div>
             <Text.H6 color="foregroundMuted">
-              First seen {formatDate(cluster.firstObservedAt)} · Last seen{" "}
-              {relativeTime(new Date(cluster.lastObservedAt))}
+              First seen {node.firstSeenLabel === "unknown" ? "on or before " : ""}
+              {formatDate(cluster.firstObservedAt)} · Last seen {relativeTime(new Date(cluster.lastObservedAt))}
             </Text.H6>
             <div className="flex flex-col gap-2">
               <Text.H2>{cluster.name}</Text.H2>
@@ -859,6 +811,7 @@ export function BehavioursView({
   timeRange,
   momentRange,
   customBehaviorId,
+  facetId,
   onSegmentChange,
   onBehaviourPathChange,
   onMomentRangeChange,
@@ -878,6 +831,8 @@ export function BehavioursView({
   /** Data scope only: reads the behavior's scoped clusters/sessions/trajectory.
    * It does not drive chrome — visible controls are chosen by the caller. */
   readonly customBehaviorId?: string
+  /** The behavior's facet; threads to scoped facet reads alongside customBehaviorId. */
+  readonly facetId?: string
   readonly onSegmentChange?: (segment: BehaviourSegment) => void
   readonly onBehaviourPathChange: (path: readonly string[]) => void
   readonly onMomentRangeChange: (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => void
@@ -1068,11 +1023,26 @@ export function BehavioursView({
       width: 170,
       render: (row) => {
         const firstObservedAt = row.node.cluster.firstObservedAt
+        // "unknown" means the earliest member sits at the edge of what this
+        // behavior has been analyzed over: it started then AT THE LATEST, and
+        // reporting that edge as a first sighting is what made every row read
+        // "First seen: <the day the lens was created>".
+        const bounded = row.node.firstSeenLabel === "unknown"
         return (
-          <Tooltip asChild trigger={<span>{relativeTime(new Date(firstObservedAt))}</span>}>
+          <Tooltip
+            asChild
+            trigger={
+              <span>{bounded ? `Before ${formatDate(firstObservedAt)}` : relativeTime(new Date(firstObservedAt))}</span>
+            }
+          >
             <div className="flex flex-col gap-1">
               <Text.H6 color="foregroundMuted">First seen</Text.H6>
-              <Text.H6B>{formatDate(firstObservedAt)}</Text.H6B>
+              <Text.H6B>
+                {bounded ? `On or before ${formatDate(firstObservedAt)}` : formatDate(firstObservedAt)}
+              </Text.H6B>
+              {bounded ? (
+                <Text.H6 color="foregroundMuted">Grouping does not reach further back, so it may be older.</Text.H6>
+              ) : null}
               <Text.H6 color="foregroundMuted">Last seen</Text.H6>
               <Text.H6B>{new Date(row.node.cluster.lastObservedAt).toLocaleString()}</Text.H6B>
             </div>
@@ -1119,6 +1089,7 @@ export function BehavioursView({
                 selectedPath={behaviourPath}
                 timeRange={timeRange}
                 {...(customBehaviorId ? { customBehaviorId } : {})}
+                {...(facetId ? { facetId } : {})}
                 onSelectPath={handleDotChartPathChange}
                 onSelectPoint={handleDotChartPointSelect}
               />

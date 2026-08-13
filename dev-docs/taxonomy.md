@@ -1,6 +1,8 @@
-# Taxonomy — the unified topic cluster tree
+# Taxonomy — behavior cluster trees
 
-Taxonomy organizes live-retained session-level **topic observations** produced by [conversation intelligence](./conversation-intelligence.md) into a **single tree of clusters** per project. There is no separate category model: every tree level is the same kind of node, and **depth is clustering density** — the tree is broad at the root and progressively narrower at the leaves. The divisive build always produces exactly one depth-0 root that englobes the whole project, so the **product UI hides that root and treats its depth-1 children as the top-level "categories"** (see "Read paths").
+Taxonomy organizes live-retained session-level observations produced by [conversation intelligence](./conversation-intelligence.md) into **cluster trees** per project. The default tree is the **Topics** behavior — sessions clustered by their transcript embedding — and it is what most of this doc describes. The product now also supports other **behaviors** (facets / "lenses") and **views** (filtered slices), which reuse this exact machinery on a different scope and a different embedding; see [Behaviors, views, and facets](#behaviors-views-and-facets-lenses). "Topic" is the default lens (`facet_id = NULL`), not a special dimension.
+
+There is no separate category model: every tree level is the same kind of node, and **depth is clustering density** — the tree is broad at the root and progressively narrower at the leaves. The divisive build always produces exactly one depth-0 root that englobes the whole project, so the **product UI hides that root and treats its depth-1 children as the top-level "categories"** (see "Read paths").
 
 The tree is produced two ways that must be read separately:
 
@@ -21,7 +23,12 @@ Three concepts here were renamed at the UI layer only (`#3704`), so a code ident
 
 Net: a bare "signal" in this codebase is ambiguous — in behaviours/taxonomy code it means a **moment label**; in `@domain/signals` it means a **failure pattern** (the former "issues"). Not the same thing, and nothing wires them together.
 
-The feature documented below as **Cohorts** keeps the code identifier prefix `custom_behavior_*` (its original name, "Custom behaviors"). A **cohort** is a saved session `FilterSet` — the *scope* — and its **behaviors** are what gardening produces from it; same label-vs-code split as topics / moments above.
+The product vocabulary shifted again with facets (see "Behaviors, views, and facets" below), and the code lags it:
+
+- A **behavior** is a *grouping question*: **Topics** (the default, this doc's tree) plus **facet** behaviors ("user goal", "outcome", …). A facet is the lens; in code, `facet_*` / `taxonomy_facets`.
+- A **view** is a saved *filtered slice* of a behavior — a `FilterSet` (the scope) paired with a lens. Its code identifiers keep the original prefix `custom_behavior_*` (the earlier name, "Custom behaviors" / "Cohorts"), so a `custom_behaviors` row is a **view**, and its optional `facet_id` is the lens.
+
+Net: "behaviour" in code (`listProjectBehavioursUseCase`, `BehaviourSignalRecord`) still means a taxonomy *cluster*; the product "behavior" is the whole grouping; `custom_behavior_*` is a *view*. Keep it straight.
 
 ## Tree model
 
@@ -61,7 +68,11 @@ Postgres (`@platform/db-postgres`):
 
 ClickHouse:
 
-- `taxonomy_observations` — the only live topic-observation table. It stores one retained projection per analyzed session: stable `observation_id`, `session_id`, `analysis_hash`, synthetic session-topic `moment_id`, `projection_method`, `projection_hash`, JSON `projection_metadata` (including the session conversation summary used for naming), 2048-d `embedding` (voyage-4-large), `assigned_cluster_id` (empty = noise), `assignment_method` (`centroid_online` / `gardening_birth` / `gardening_reassign` / `noise`), `assignment_confidence`, `reassignment_run_id`, `start_time` / `end_time` / `indexed_at`. Rows expire on the embedding horizon (`TAXONOMY_OBSERVATION_RETENTION_DAYS`, 30 days). `ReplacingMergeTree(indexed_at)` is keyed by `(organization_id, project_id, observation_id)`, so re-analysis of the same session replaces the prior projection by latest version. There is no observation `dimension` column in ClickHouse; clusters and run records still carry the singleton `topic` dimension. The old `behavior_observations` table is deprecated and removed by the cleanup migration.
+- `taxonomy_observations` — the only live topic-observation table. It stores one retained projection per analyzed session: stable `observation_id`, `session_id`, `analysis_hash`, synthetic session-topic `moment_id`, `projection_method`, `projection_hash`, JSON `projection_metadata` (including the session conversation summary used for naming), 2048-d `embedding` (voyage-4-large), `assigned_cluster_id` (empty = noise), `assignment_method` (`centroid_online` / `gardening_birth` / `gardening_reassign` / `noise`), `assignment_confidence`, `reassignment_run_id`, `start_time` / `end_time` / `indexed_at`. Rows expire on the embedding horizon (`TAXONOMY_OBSERVATION_RETENTION_DAYS`, 30 days). `ReplacingMergeTree(indexed_at)` is keyed by `(organization_id, project_id, observation_id)`, so re-analysis of the same session replaces the prior projection by latest version. There is no observation `dimension` column in ClickHouse. The old `behavior_observations` table is deprecated and removed by the cleanup migration.
+- `taxonomy_facet_projections` — a session's projection under one **facet** (lens): the extracted one-sentence answer, its 2048-d embedding, `analysis_hash`, `start_time`. `ReplacingMergeTree(indexed_at)` keyed `(organization_id, project_id, facet_id, session_observation_id)`; no cluster assignment (facet-global, shared across views). See "Behaviors, views, and facets".
+- `taxonomy_view_assignments` — the cluster-membership edges for every non-Topics-global tree (filtered Topics views and all facet trees). The renamed, generalized `custom_behavior_assignments`: `ReplacingMergeTree(indexed_at)` keyed `(organization_id, project_id, custom_behavior_id, facet_id, observation_id)`, edges only. `facet_id = ''` edges reference `taxonomy_observations`; a set `facet_id` references `taxonomy_facet_projections`. The global Topics tree keeps its membership inline on `taxonomy_observations.assigned_cluster_id` instead.
+
+`taxonomy_clusters` and `taxonomy_runs` carry a nullable `custom_behavior_id` (scope) **and** a nullable `facet_id` (lens); `(NULL, NULL)` is the global Topics tree.
 
 ### Read windows
 
@@ -150,46 +161,62 @@ The divisive build rebuilds the whole tree from scratch every pass, so without i
 
 The matcher is biased toward continuation on purpose — a false continuation is a visual no-op, a false birth+death pair breaks trend charts. It is pure and deterministic, so a pass replays identically under Temporal. Thresholds are MVP defaults seeded by analogy to published lineage-layer baselines; tune offline on real cross-pass corpora. `split` / `merge` are intentionally not modelled: a confident 1:1 continuation carries the identity trend UIs need, and the divisive build cannot produce near-duplicate siblings to merge.
 
-## Custom behaviors: scoped gardening
+## Behaviors, views, and facets (lenses)
 
-A custom behavior is a named, filter-scoped session slice that re-clusters the *global* observations its `filterSet` selects into its own sub-tree tagged with `custom_behavior_id`. It reuses the same clustering, naming, and continuity code as the global tree — the only novel piece is scoped sampling (`listForCustomBehaviorSample`), which draws from the **same gardening sample window as global** (`TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS`, the one shared constant both reference so they can't drift). The window tracks the global gardening model; it is not per-behavior selectable. The preview (`countForCustomBehaviorSample`) uses that same window, so the count a user sees is exactly what a run clusters. Crucially, a gardened custom behavior is **the same kind of thing as the global tree, filter-scoped** — not a different model — so it earns the same trend affordances with **no structural schema change**. Three properties make that work:
+The product's **Behaviours** page is a **catalog of behaviors**, not a single tree. A **behavior** is a question your sessions are grouped by; each clusters the same sessions a different way:
 
-- **A living slice, not a snapshot.** A per-behavior cron sweep (`gardenCustomBehaviorSweep`, the scoped analogue of `gardenSweep`) enqueues `gardenCustomBehavior` for every eligible behavior on the same 6h cadence, and creating a behavior auto-starts its first run — there is no manual trigger, exactly like the global tree. A custom behavior gardens for its whole lifetime; deleting it is the only off switch. Eligibility is a cross-org admin query (`listGardenableCustomBehaviors`): live project, and last gardened before the cadence throttle. The one additive nullable column this needs on `custom_behaviors` is `last_gardened_at`, stamped at each run start as the throttle anchor.
-- **Accumulate, don't truncate.** Each run re-emits only the freshly-sampled observations into the ClickHouse `custom_behavior_assignments` slice via an insert-only `upsertMany`. The `ReplacingMergeTree(indexed_at)` keyed by `(org, project, custom_behavior_id, observation_id)` replaces a re-observed row in place while retaining untouched older rows until TTL (`retention_days + 30`). Generation never deletes the slice (`deleteByBehavior` is delete-only, never called on the regenerate path), so history accumulates over the trend window instead of resetting each pass.
-- **Stable ids across runs.** The build runs the same Hungarian continuity matcher, but against the behavior's *own* previously-active clusters (`listActiveByProject({ customBehaviorId })`), so a cluster's id survives regeneration. Prior clusters no new node continued are deprecated only after the run succeeds (a failed run leaves the prior tree serving).
+- **Topics** — the default behavior, "what was this about?", built from every session's transcript embedding. It is the tree described above and the only one with an online router. It has **no `custom_behaviors` row**; the UI resolves it from the reserved slug `lat-topics` (`TOPICS_BEHAVIOR_SLUG`).
+- **Facet behaviors** — "user goal", "outcome", "friction reason", "assistant approach", "capability gap", or a user-authored question. Internally a **facet**: the answer to the question is extracted per session and clustered in that answer's embedding space instead of the transcript's.
 
-Given accumulated rows + stable ids, trend/novelty/spiking are the same computation as the global tree: `CustomBehaviorAssignmentRepository.getClusterTrendCounts` windows current-vs-baseline counts over `custom_behavior_assignments.start_time`, and the scoped branch of `listProjectBehavioursUseCase` feeds them through the same `classifyClusterTrend`. Segments and the time-window picker are the same UI, re-enabled on the scoped page. Global isolation is preserved throughout: global reads filter `custom_behavior_id IS NULL` and never touch the scoped slice, and the scoped path never writes `taxonomy_observations.assigned_cluster_id`.
+A **view** is a saved **filtered slice** of a behavior. Model: a saved view = `(scope filterSet × lens)`, stored as a `custom_behaviors` row (`packages/platform/db-postgres/src/schema/custom-behaviors.ts`) with `name`, project-unique `slug`, `filter_set` (jsonb), nullable **`facet_id`** (the lens; null = Topics), `status`, and `last_gardened_at`. Valid combinations:
+
+| filter | lens (`facet_id`) | meaning |
+| --- | --- | --- |
+| set | null | filtered Topics slice (the former "cohort") |
+| set | facet | filtered facet slice |
+| empty | facet | whole-project facet behavior |
+| empty | null | invalid — that *is* the global Topics tree |
+
+Slugs are the routing namespace, so the `lat-` prefix is reserved (rejected on both custom-behavior and facet slugs) and a user slug can never shadow `lat-topics` or a preset.
+
+### Facets: definition, projection, extraction
+
+A facet is an **immutable lens definition** in `taxonomy_facets` (Postgres): project-unique `slug`, `name`, `description`, and write-once `instructions` (the extraction question). Presets are code-defined with reserved `lat-` slugs, materialized on first pick (find-or-create). To change what a lens means you create a new facet; `name`/`description` stay editable.
+
+Unlike a Topics view (which reuses the transcript embeddings already in `taxonomy_observations`), a facet needs its **own** projection per session. `taxonomy_facet_projections` (ClickHouse, `ReplacingMergeTree(indexed_at)` keyed `(organization_id, project_id, facet_id, session_observation_id)`) stores the extracted one-sentence answer, its 2048-d embedding, `analysis_hash`, and `start_time`. It carries **no cluster assignment** — a facet projection is facet-global, shared by every view that samples the session.
+
+Extraction is **lazy, at gardening time** (`extractFacetProjectionsUseCase`): for the day-stratified clustering sample only, an LLM (`TAXONOMY_DEFAULT_FACET_EXTRACTION_MODEL`, Bedrock `minimax.minimax-m2.5`) answers the facet's `instructions` per session, cached by `(facetId, sessionObservationId)`; "unclear" answers are stored but excluded from clustering. This is the taxonomy's only generative per-session cost, and it stays out of the live path — the online hot path is still embeddings-only (see [conversation intelligence](./conversation-intelligence.md)). It is metered (`taxonomy-facet-extract`, `dev-docs/billing.md`).
+
+### One clustering path, keyed by (scope, facet)
+
+`taxonomy_clusters` and `taxonomy_runs` carry both a nullable `custom_behavior_id` (scope) and a nullable `facet_id` (lens); a tree is identified by that pair, and `(NULL, NULL)` is the global Topics tree. `planHierarchicalTaxonomyUseCase` resolves scope and lens **orthogonally**: scope picks the sample (`listForClusteringSample` whole-project, `listForFacetSample` / scoped sample for a filtered view), lens picks the embeddings (transcript from `taxonomy_observations`, or facet projections). Clustering, quality, and continuity (`lineage.ts`) are the shared code above, unchanged.
+
+**Membership lives in `taxonomy_view_assignments`** (ClickHouse; the renamed, generalized `custom_behavior_assignments`), keyed `(organization_id, project_id, custom_behavior_id, facet_id, observation_id)` with `start_time` + retention. Edges only, no embeddings — observations and facet projections are reused, not copied. `facet_id` had to enter the sort key because different facets reuse the same per-session `observation_id`. A `facet_id = ''` edge resolves against `taxonomy_observations`; a set `facet_id` resolves against `taxonomy_facet_projections`. **Only the global Topics tree writes the inline `taxonomy_observations.assigned_cluster_id`**; every other tree writes edges here and never touches the inline column.
+
+### Facet-aware naming
+
+`nameClusterUseCase` takes a per-tree `ClusterNamingPolicy` (`name-taxonomy.ts`) instead of a hard-coded topic policy, defaulting to `TOPIC_NAMING_POLICY` (byte-identical to the old topic prompts, golden-tested). A facet tree names clusters in the lens's voice and reads member text from `taxonomy_facet_projections` instead of the transcript summary.
+
+### Lifecycle and isolation
+
+Facet behaviors and views are **not a separate pipeline**: they garden through the same `gardenTaxonomyWorkflow` + `gardenCustomBehaviorSweep` + `createCustomBehavior` as filtered Topics views — a facet is just a lens of a custom behavior, so there is no facet-specific sweep, cron, or flag. Accumulate-don't-truncate (`upsertMany`, never `deleteByBehavior` on regenerate), stable-ids-across-runs (Hungarian continuity against the tree's own `listActiveByProject({ customBehaviorId, facetId })`), minimum-gate→waiting, deprecate-last, and preview all work exactly as for filtered Topics views. `getClusterTrendCounts` on `TaxonomyViewAssignmentRepository` windows current-vs-baseline over `taxonomy_view_assignments.start_time` for both lenses. **Isolation:** every Topics read pins `custom_behavior_id IS NULL AND facet_id IS NULL`; a scoped/facet run never writes `taxonomy_observations.assigned_cluster_id`; `deleteByBehavior` purges a behavior's edges across both lenses. Everything sits behind the `customBehaviors` flag; with it off, `/behaviours` renders the legacy single-tree page and no facet code is reachable.
 
 Out of scope (as for the global tree): per-run membership-migration history — the same observation's membership co-existing across runs. That is the only thing that would force `reassignment_run_id` into the sort key, and the global tree lacks it too.
 
 ## Read paths
 
 - **Behaviours page** (`listProjectBehavioursUseCase`): returns the literal tree, but **unwraps the single englobing root** — when there is exactly one depth-0 root with children, its depth-1 children become the top-level rows so the table opens on several real categories instead of one all-encompassing row (a tiny corpus collapsed to a single childless root is still shown). Each node's `subtreeObservationCount` is rolled up across visible descendants **at read time** (not the stored counter); zero-residue interior nodes synthesize a zero trend rather than vanish with their subtree. The web layer indents by **relative** tree-walk depth (not absolute `cluster.depth`), rolls conversation-intelligence rates up each subtree weighted by sessions, and renders an expandable tree. The topics filter dropdown (`getTopicFilterOptions`) applies the same root unwrap.
-- **Behaviour drawer / cluster intelligence** (`getClusterSessionIntelligenceUseCase` and web server functions): sessions list, histograms, trajectories, and the intelligence profile are all **subtree-scoped** (`listSubtreeIds` → `assigned_cluster_id IN (...)`), so an interior node's profile covers its whole subtree. The web SQL pins taxonomy observations and moment labels to the session's current analysis generation before joining them.
+- **Behaviours catalog** (`getBehaviourCatalog`): the grid of behavior cards (Topics + each facet behavior), one card per behavior with a shallow tree teaser and session/view counts, built by reusing `listProjectBehavioursUseCase` per behavior.
+- **Behaviour drawer / cluster intelligence** (`getClusterSessionIntelligenceUseCase`, `taxonomy-cluster-intelligence-repository.ts`): sessions list, histograms, trajectories, and the intelligence profile are all **subtree-scoped** (`listSubtreeIds`), and membership is resolved by `clusterMembership(customBehaviorId, facetId)` — the global Topics tree reads `taxonomy_observations.assigned_cluster_id`, every other tree reads its edges from `taxonomy_view_assignments` (with facet trees pulling member text from `taxonomy_facet_projections`). The moment-label and score rollups (the drawer overlays) are session-keyed, so they layer onto a facet tree unchanged. The web SQL pins taxonomy observations and moment labels to the session's current analysis generation before joining them.
 - **Sessions table topics filter**: selected nodes expand to subtree ids server-side before ClickHouse; see the CI doc for the subquery shape and time-bound pruning. Repository-level observation reads use `FINAL` over the stable `observation_id` key; read paths that join observations to moments or trace ids still pin through `session_analyses` so every joined row comes from the same current generation.
 - **Backoffice** (`AdminTaxonomyRepositoryLive`): keeps the legacy category/subcategory DTO shape but sources it from the tree — roots as groups, descendants rolled up by first path segment.
 
-## Cohorts — scoped behavior trees
+### Scope details (filtered views)
 
-A **cohort** (product name; code identifiers remain `custom_behavior_*`) is a user-named session `FilterSet` — the *scope* — whose gardened output is its own behavior tree: the same taxonomy machinery pointed at a subset. It answers "cluster the behaviors *within these sessions*" without touching the project-wide tree. Scope table `custom_behaviors` (`packages/platform/db-postgres/src/schema/custom-behaviors.ts`). Orchestration is the **shared** `apps/workflows/src/workflows/taxonomy-gardening-workflow.ts` — **one workflow, two scopes**: a global run (no `customBehaviorId`) rebuilds the project tree; a scoped run threads a `customBehaviorId` and writes the `custom_behavior_assignments` slice. The clustering / naming / lineage code is shared, not forked.
-
-- **Definition.** `custom_behaviors` rows carry `name`, project-unique `slug`, `filter_set` (jsonb), `status` (`pending` / `generating` / `ready` / `failed`), and `last_gardened_at`. The filter may use any Sessions field **except `topics`** — scoping a behavior tree on behavior clusters is circular (rejected by `customBehaviorFilterSetSchema`). Capped at `MAX_CUSTOM_BEHAVIORS_PER_PROJECT` (10); authz matches saved searches (any org member).
-- **One clustering path, tagged by scope.** `taxonomy_clusters` and `taxonomy_runs` carry a nullable `custom_behavior_id` (`NULL` = the global tree). The build/naming/lineage code is reused unchanged, filtered by that column, so a scoped tree is a first-class sibling of the global one — not a fork of the algorithm.
-
-### Isolation from the global tree
-
-Scoped assignments live in a **separate ClickHouse table**, `custom_behavior_assignments`, keyed `(organization_id, project_id, custom_behavior_id, observation_id)` with `start_time` + retention. A scoped run **never writes `taxonomy_observations.assigned_cluster_id`** — a cohort only *reads* the shared observations and re-clusters them into its own slice, so a bug in scoped sampling cannot corrupt or re-route the live global tree. Observations and their 2048-d embeddings are **reused, not copied**: the assignment table stores only the observation→cluster edge, no embedding (which is why it is `custom_behavior_assignments`, not a `custom_taxonomy_observations` clone).
-
-### Lifecycle — a scoped living taxonomy
-
-There is **no manual "generate"** step. Creating a cohort enqueues its first gardening run, and a per-behavior cron sweep (`gardenCustomBehaviorSweep`) re-gardens it on the global 6h cadence. Because scoped assignments **accumulate across runs** and cluster ids survive regeneration (scoped continuation via `lineage.ts` filtered by `custom_behavior_id`), a scoped tree is a **living taxonomy** — trend, novelty, "new this week", and spiking are all real, at parity with the global Behaviours page, read via a scoped `getClusterTrendCounts` windowed over `custom_behavior_assignments.start_time`.
-
-- **Sampling window.** Scoped gardening samples the **same shared gardening window as the global tree** — there is no custom-specific lookback. A scoped filter is sparser than the project as a whole, so a behavior may hold fewer observations than global at the same window.
-- **Minimum gate → waiting state.** A run needs ≥ `TAXONOMY_GARDENING_MIN_OBSERVATIONS` (15) matching observations to build; below that it produces no tree and the cohort shows a **waiting** state until enough accumulate and a later sweep gardens it. There is no manual override.
-- **Failure retains the prior tree** (deprecate-last): a failed run leaves the last good scoped tree in place.
-- **Preview** without a run: `countForCustomBehaviorSample` / `listForCustomBehaviorSample` compile the `FilterSet` to the scoped observation set.
-
-Read paths reuse the global **Behaviours** view parameterized by `custom_behavior_id`; cluster membership resolves from `custom_behavior_assignments` instead of `taxonomy_observations`, and the global read paths above are unchanged.
+- **Definition.** A view's `custom_behaviors` row carries `name`, project-unique `slug`, `filter_set` (jsonb), nullable `facet_id`, `status` (`pending` / `generating` / `ready` / `failed`), and `last_gardened_at`. The filter may use any Sessions field **except `topics`** — scoping on behavior clusters is circular (rejected by `customBehaviorFilterSetSchema`). Capped at `MAX_CUSTOM_BEHAVIORS_PER_PROJECT` (10); authz matches saved searches (any org member). Facet *definitions* (`taxonomy_facets`) are not capped — they are inert until a view uses them.
+- **Orchestration.** The **shared** `apps/workflows/src/workflows/taxonomy-gardening-workflow.ts` — one workflow, resolving scope (`customBehaviorId`) and lens (`facetId`) orthogonally in the activity. Creating a view enqueues its first run; `gardenCustomBehaviorSweep` re-gardens every eligible view on the 6h cadence (`listGardenableCustomBehaviors`: live project, last gardened before the throttle). No manual "generate".
+- **Sampling window.** Views sample the same shared gardening window as the global tree (`TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS`); a filter is sparser than the whole project, so a view holds fewer sessions at the same window.
+- **Minimum gate → waiting; failure retains the prior tree; preview** without a run via `countForCustomBehaviorSample` / `listForCustomBehaviorSample` (Topics) or `listForFacetSample` (facet).
 
 ## Trade-off decisions
 

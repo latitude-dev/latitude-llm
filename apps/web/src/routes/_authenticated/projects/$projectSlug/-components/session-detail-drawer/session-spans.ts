@@ -19,6 +19,20 @@ export function spanSelectionKey(selection: SpanSelection): string {
   return `${selection.traceId}:${selection.spanId}`
 }
 
+export function getLoadedSessionSpanTraceIds({
+  loadedTraceIds,
+  sessionTraceIds,
+  selectedSpanTraceId,
+}: {
+  readonly loadedTraceIds: readonly string[]
+  readonly sessionTraceIds: readonly string[]
+  readonly selectedSpanTraceId: string
+}): readonly string[] {
+  const traceIds = new Set(loadedTraceIds)
+  if (selectedSpanTraceId && sessionTraceIds.includes(selectedSpanTraceId)) traceIds.add(selectedSpanTraceId)
+  return [...traceIds]
+}
+
 export function getSessionTraceNumberById(groups: readonly SessionSpanGroup[]): ReadonlyMap<string, number> {
   return new Map(groups.map((group, index) => [group.traceId, index + 1]))
 }

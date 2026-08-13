@@ -3,7 +3,13 @@
 export interface SignalLifecycleItem {
     /** Signal this entry applies to. */
     signalId: string;
-    /** ISO-8601 timestamp at which the signal was muted, or `null`. */
+    /** ISO-8601 timestamp at which the signal was resolved, or `null`. */
+    resolvedAt: string | null;
+    /** ISO-8601 timestamp at which the signal was ignored, or `null`. */
+    ignoredAt: string | null;
+    /** ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`. */
+    regressedAt: string | null;
+    /** ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it. */
     mutedAt: string | null;
     /** ISO-8601 timestamp of the last update. */
     updatedAt: string;

@@ -1,5 +1,7 @@
 import type { FilterSet } from "@domain/shared"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { FacetSelection } from "@domain/taxonomy"
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { behaviourCatalogKey } from "./behaviour-catalog.collection.ts"
 import {
   type CustomBehaviorRecord,
   createCustomBehaviorFn,
@@ -9,7 +11,15 @@ import {
   updateCustomBehaviorFn,
 } from "./custom-behaviors.functions.ts"
 
-const listKey = (projectId: string) => ["customBehaviors", projectId] as const
+export const customBehaviorsListKey = (projectId: string) => ["customBehaviors", projectId] as const
+const listKey = customBehaviorsListKey
+
+// The home grid derives its cards and view counts from the same rows, so any
+// behavior write invalidates both reads.
+const invalidateBehaviourLists = (queryClient: QueryClient, projectId: string) => {
+  void queryClient.invalidateQueries({ queryKey: listKey(projectId) })
+  void queryClient.invalidateQueries({ queryKey: behaviourCatalogKey(projectId) })
+}
 
 // Sort object keys so a FilterSet with the same conditions in a different
 // insertion order maps to the same cache key (no spurious preview refetches).
@@ -41,9 +51,12 @@ export function useCustomBehaviorsList(projectId: string, { enabled = true } = {
 export function useCreateCustomBehavior(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { name: string; filterSet: FilterSet }): Promise<CustomBehaviorRecord> =>
-      createCustomBehaviorFn({ data: { projectId, ...input } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey(projectId) }),
+    mutationFn: (input: {
+      name: string
+      filterSet: FilterSet
+      facetSelection?: FacetSelection
+    }): Promise<CustomBehaviorRecord> => createCustomBehaviorFn({ data: { projectId, ...input } }),
+    onSuccess: () => invalidateBehaviourLists(queryClient, projectId),
   })
 }
 
@@ -52,7 +65,7 @@ export function useUpdateCustomBehavior(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string; name?: string; filterSet?: FilterSet }): Promise<CustomBehaviorRecord> =>
       updateCustomBehaviorFn({ data: input }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey(projectId) }),
+    onSuccess: () => invalidateBehaviourLists(queryClient, projectId),
   })
 }
 
@@ -60,7 +73,7 @@ export function useDeleteCustomBehavior(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => deleteCustomBehaviorFn({ data: { id } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey(projectId) }),
+    onSuccess: () => invalidateBehaviourLists(queryClient, projectId),
   })
 }
 

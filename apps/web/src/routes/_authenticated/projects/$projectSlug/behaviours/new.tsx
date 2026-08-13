@@ -5,9 +5,9 @@ import { listEnabledFeatureFlagIdentifiers } from "../../../../../domains/featur
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { parseFilters } from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
-import { BehavioursPage } from "./-components/behaviours-page.tsx"
+import { BehavioursCatalogPage } from "./-components/behaviours-catalog-page.tsx"
 
-function NewBehaviourBreadcrumb() {
+function NewViewBreadcrumb() {
   const { projectSlug } = Route.useParams()
   return (
     <>
@@ -15,11 +15,16 @@ function NewBehaviourBreadcrumb() {
         Behaviors
       </BreadcrumbLink>
       <BreadcrumbSeparator />
-      <BreadcrumbText variant="current">New behavior</BreadcrumbText>
+      <BreadcrumbText variant="current">New view</BreadcrumbText>
     </>
   )
 }
 
+/**
+ * Where a saved search (or any Sessions filter) turns into a view. It doesn't know
+ * which behavior the user wants to slice, so the form asks first — unless the
+ * project only has the topic behavior, in which case there is nothing to ask.
+ */
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/behaviours/new")({
   validateSearch: (search: Record<string, unknown>) =>
     typeof search.filters === "string" ? { filters: search.filters } : {},
@@ -30,12 +35,12 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/beha
     }
   },
   staticData: {
-    breadcrumb: NewBehaviourBreadcrumb,
+    breadcrumb: NewViewBreadcrumb,
   },
-  component: NewBehaviourPage,
+  component: NewViewPage,
 })
 
-function NewBehaviourPage() {
+function NewViewPage() {
   const project = useRouteProject()
   const navigate = useNavigate()
   const { projectSlug } = Route.useParams()
@@ -45,10 +50,10 @@ function NewBehaviourPage() {
     [filters],
   )
   return (
-    <BehavioursPage
+    <BehavioursCatalogPage
       project={project}
-      initialForm={{ mode: "create", ...(initialFilterSet ? { initialFilterSet } : {}) }}
-      onFormClose={() => void navigate({ to: "/projects/$projectSlug/behaviours", params: { projectSlug } })}
+      newView={{ ...(initialFilterSet ? { initialFilterSet } : {}) }}
+      onNewViewClose={() => void navigate({ to: "/projects/$projectSlug/behaviours", params: { projectSlug } })}
     />
   )
 }

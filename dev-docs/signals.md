@@ -54,7 +54,7 @@ Rules:
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
 - signal-generated evaluation creation is also asynchronous: kickoff starts a deterministic-id Temporal workflow and returns nothing to the caller; the frontend polls `getSignalAlignmentState`, which asks Temporal directly (`workflow.describe()` for the initial run, a query handler for in-flight manual-realignment) — there is no Redis-backed job-status key
 
-## Lifecycle and Mute
+## Lifecycle: resolve, ignore, and mute
 
 Signals can be:
 
@@ -63,6 +63,9 @@ export const SignalState = {
   New: "new",
   Escalating: "escalating",
   Ongoing: "ongoing",
+  Resolved: "resolved",
+  Regressed: "regressed",
+  Ignored: "ignored",
 } as const;
 
 export type SignalState = (typeof SignalState)[keyof typeof SignalState];
@@ -70,23 +73,33 @@ export type SignalState = (typeof SignalState)[keyof typeof SignalState];
 
 - `new`: first discovered less than 7 days ago
 - `escalating`: backed by an open signal-sourced incident
-- `ongoing`: existing, non-escalating signal activity
+- `ongoing`: fallback when no other state applies
+- `resolved`: manually resolved (`resolved_at` set); archived, detector keeps running unless "keep monitoring" was declined
+- `regressed`: a new occurrence reopened a resolved signal (`regressed_at` set); cleared by the next resolve or ignore
+- `ignored`: manually ignored (`ignored_at` set); archived, detector archived, auto-muted
 
-An signal can be in multiple states at the same time, for example `new` and `escalating`.
+A signal can be in multiple states at the same time, for example `new` and `escalating`. `resolved`/`regressed`/`ignored` are stored timestamps; the rest are derived at read time (`deriveSignalLifecycleStates`).
 
-Manual lifecycle control is **mute**, stored as `signals.muted_at`.
+Three manual controls, applied by `applySignalLifecycleCommandUseCase` (`resolve`/`unresolve`/`ignore`/`unignore`/`mute`/`unmute`, batch, idempotent per command):
 
-- muting a signal suppresses signal escalation notification fan-out
-- unmuting clears `muted_at`
-- discovery, score assignment, centroid updates, linked evaluations, and analytics continue while muted
+- **Resolve** stamps `resolved_at`, clears `ignored_at`/`regressed_at`/`muted_at` (unmuted so the regression alert can reach the user), and closes any open escalation silently (`SignalEscalationEnded` with reason `resolved`; the recovery notification is suppressed for manual closes). The effective `keepMonitoring` (input ?? project → org → system setting, default true) decides whether linked evaluations keep running; `false` soft-deletes them.
+- **Ignore** stamps `ignored_at`, clears `resolved_at`/`regressed_at`, **auto-mutes** (`muted_at` set if null), always soft-deletes linked evaluations, and closes any open escalation with reason `ignored`. Ignored signals are skipped by escalation checks entirely, but remain valid discovery match candidates so their noise keeps flowing into one bucket. Unignore releases the mute along with `ignored_at`, so notifications come back with the signal.
+- **Mute** (`muted_at`) is a pure **notification barrier**: escalation checks still run and incidents still open/close while muted; only notification fan-out and agent dispatch are suppressed. It never touches the other stamps, and resolve/unresolve/unignore never touch it.
+
+Resolve and ignore are mutually exclusive; the un-commands never resurrect soft-deleted evaluations (re-track or re-author instead). The mute rule: only an explicit mute or an ignore sets `muted_at` — resolve, unresolve, and unignore all clear it, so no lifecycle transition leaves a signal silently muted. `archived` in the UI/API (`lifecycleGroup`) means `resolved_at IS NOT NULL OR ignored_at IS NOT NULL`; muted-only signals are active.
+
+`applySignalLifecycleCommandUseCase` is also driven **externally** by the GitHub integration ([`github-integration.md`](github-integration.md)): a PR or commit that references a signal's slug and lands on a monitored branch auto-resolves (or, on a revert/reopen, unresolves) the signal, calling the same command with no actor attribution — provenance lives on the reference row, not the signal. This is why slugs are **organization-unique** (`(organization_id, slug) WHERE deleted_at IS NULL`, spanning projects): a GitHub reference resolves to exactly one signal org-wide.
+
+**Regression.** A new occurrence on a resolved signal reopens it: `resolved_at` is cleared, `regressed_at` is stamped, and `SignalRegressed` (with `triggerScoreId`) drives the `signal.regressed` notification (assignee-first, mute-gated) plus an agent-dispatch request for configs subscribed to the `signal.regressed` trigger. Both occurrence paths hook in — discovery assignment (`assignScoreToSignalUseCase`, under the signal row lock) and the live-evaluation writer (`runLiveEvaluationUseCase`, via the race-safe `claimReopenOnOccurrence` conditional UPDATE guarded on "resolved, not ignored, resolved before the occurrence"). Exactly one writer per regression cycle wins the claim and emits the event; replayed historical scores cannot reopen. Escalation `enter` on a resolved signal also reopens it (sets `regressed_at`) but emits no separate `SignalRegressed` — the escalation notification announces the recurrence.
 
 The `escalating` state is backed by an open incident with `source_type = "signal"` and `source_id = signal.id`. A seasonal detector opens/closes that row through `EscalationEngine`; closes fire on the absolute-rate backstop, a band-shape + dwell recovery, or a hard timeout. Signals with no seasonal history use the same band-shape + dwell exit on the close side, so they de-escalate shortly after going quiet.
 
 Important state timestamps:
 
 - `clusteredAt`: last centroid/cluster refresh
-- `escalatedAt`: latest escalation transition timestamp
-- `mutedAt`: manual mute timestamp, or `null`
+- `resolvedAt` / `ignoredAt`: manual archive stamps, or `null`
+- `regressedAt`: last occurrence-driven reopen, or `null`
+- `mutedAt`: manual notification mute timestamp, or `null`
 
 ## Signal Source
 
@@ -145,6 +158,14 @@ A `user` signal **must** have an evaluation. `createSignal` accepts `evaluation.
 Lifecycle:
 
 - **Update** (`updateSignalUseCase`) edits `name`/`description`/`filters`; filter changes apply forward-only and the slug is stable. Triage (priority/assignee) and resolve/ignore keep their own use-cases.
+- **Level.** `signals.priority` holds the shared `ALERT_SEVERITIES` scale (`low` → `urgent`), so a signal's level and a monitor's severity are one vocabulary; the field name stays `priority` because it is public API. The level flows on to the notification payloads as `severity` (see `dev-docs/notifications.md`) and sets the severity of the signal's escalation incidents. **No level means no notification** — no email, no Slack. Agent dispatch is untouched by this and keeps its own rules.
+
+  **Level.** `signals.priority` holds the shared `ALERT_SEVERITIES` scale (`low` → `urgent`), so a signal's level and a monitor's severity are one vocabulary; the field name stays `priority` because it is public API. The level flows on to the `signal.discovered` / `signal.regressed` notification payloads as `severity` (see `dev-docs/notifications.md`), so a Slack route's minimum severity and a user's `emailMinSeverity` filter signals the same way they filter monitor incidents.
+
+  **Nothing assigns it automatically.** A discovered signal is created with `priority: null` and stays there until somebody triages it through `updateSignalTriageUseCase`. An automatic rating was built and removed before merge: any heuristic — a model reading the occurrence, or a level derived from measured volume — is going to disagree with what a particular customer expected, and a level that moves on its own is one nobody can reason about. Noisy discovery notifications are a notifications problem, to be solved with per-project opt-outs and digest delivery rather than by guessing a priority.
+
+  A payload with no severity is admitted by every threshold, so an untriaged signal notifies exactly as it did before this change. Filtering only starts to apply once a human has said what a signal is worth.
+
 - **Delete** (`deleteSignalUseCase`) **soft-deletes** the signal (`deleted_at`) and **archives** its active evaluation so the matching pipeline stops running it. No ClickHouse cleanup — deleted-signal scores linger and are excluded read-side (every signal read filters `deleted_at IS NULL`); the slug becomes reusable (the slug-unique index is partial on `deleted_at IS NULL`).
 
 REST surface: `POST /` (create), `PATCH /{signalSlug}` (update), `DELETE /{signalSlug}` (delete), under `/v1/projects/{projectSlug}/signals`. Regenerate the SDK/MCP with `pnpm generate:sdk` after route changes.
@@ -206,7 +227,7 @@ Execution rules:
 - each Redis lock acquisition must be non-blocking; if the lock is already held, serialization returns a lock-unavailable result so the workflow sleeps durably and retries at that point instead of holding a database connection while waiting
 - both the create-from-score step and the assign-to-signal step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical signal row and centroid stay transactionally consistent
 - the assign-to-signal path must lock the canonical signal row before recomputing and saving the centroid so parallel score assignments into the same signal do not lose centroid contributions
-- muted signals are still valid discovery match candidates; mute controls notification noise, not score ownership or matching
+- muted, resolved, and ignored signals are still valid discovery match candidates; new occurrences keep attaching (and reopen resolved signals) instead of spawning duplicates
 
 ### Bounded locked serialization
 
@@ -400,7 +421,7 @@ Action-row behavior:
 - left side: time range selector and columns selector
 - right side: an assignee filter (multi-select over org members plus an `Unassigned` option), a `My signals` toggle whose count badge reflects the current time/search filters (but not the assignee filter itself), plus hybrid search without rerank
 - the time range filters score `created_at` in ClickHouse, not signal-row timestamps in Postgres
-- mute state affects notification fan-out, not the analytics panel
+- lifecycle stamps affect the Active/Archived tabs and notification fan-out, not the analytics panel
 - the page does not expose the generic Traces filter builder or filter drawer
 - signal search relies on the shared AI-layer Redis cache for embeddings; the signals domain does not add an extra embedding cache on top
 - the managed Signals surface is web-only for now; there is no public `apps/api` signals contract yet
@@ -433,7 +454,7 @@ Signal page behavior:
 
 - the dedicated route (`/projects/<slug>/signals/<signalId>`) is the single signal surface; it replaced the former right-side drawer. The list row click navigates here, and the legacy `?signalId=` deep link redirects to it
 - page-level time range and search controls do not apply on the page; signal reads use full history
-- the header shows the signal name + canonical status, mute/unmute action, the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list), and a copyable slug; the description and tags sit in a full-width row below
+- the header shows the signal name + canonical status, the resolve/ignore actions and mute toggle, the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list), and a copyable slug; the description and tags sit in a full-width row below
 - the command palette gains contextual `Assign to…` (Me / Unassigned / org members) and `Set priority…` drill-down commands while the page is open, running the same `updateSignalTriage` mutation as the pickers
 - triage fields are functional beyond the page: the signals list groups by priority and filters by assignee, incident notification payloads snapshot `assigneeId`/`priority` for email/Slack/in-app rendering, and changing the assignee emits `SignalAssigneeChanged` which notifies the new assignee (`issue.assigned`, in-app + email; see `dev-docs/notifications.md`)
 - the report body includes the impact summary band (occurrences, affected traces/sessions/users, cost), the Patterns section, a 14-day trend histogram, the linked-evaluations section, an Examples carousel (`H`/`L` cycling), and an infinitely paginated traces table; clicking a trace opens it in an overlay sheet on top of the page

@@ -33,7 +33,7 @@ export interface EvaluationScoreResponse {
     duration: number;
     /** LLM tokens consumed generating the score. */
     tokens: number;
-    /** Score cost in microcents (1/1,000,000 of a USD). */
+    /** Score cost in microcents (100,000,000 per USD). */
     cost: number;
     /** ISO-8601 timestamp while the score is awaiting human confirmation. `null` for published / system scores. */
     draftedAt: string | null;

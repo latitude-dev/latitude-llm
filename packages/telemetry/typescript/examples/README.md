@@ -8,12 +8,13 @@ The simplest way to use Latitude is with `new Latitude({...})` — no existing O
 
 ```typescript
 import OpenAI from "openai"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import { Latitude, capture } from "@latitude-data/telemetry"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI }, // Pass the LLM SDK module you use in app code.
+  instrumentations: [createOpenAIInstrumentation(OpenAI)], // Pass the LLM SDK module you use in app code.
 })
 
 const client = new OpenAI()
@@ -135,6 +136,7 @@ Use composable mode when:
 import OpenAI from "openai"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { LatitudeSpanProcessor, registerLatitudeInstrumentations } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 
 const provider = new NodeTracerProvider({
   spanProcessors: [
@@ -143,7 +145,7 @@ const provider = new NodeTracerProvider({
 })
 
 await registerLatitudeInstrumentations({
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
   tracerProvider: provider,
 })
 

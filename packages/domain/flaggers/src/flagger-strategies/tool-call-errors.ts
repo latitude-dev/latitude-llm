@@ -1,4 +1,4 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 import { detectToolCallErrorsFlagger } from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
@@ -13,14 +13,14 @@ export const toolCallErrorsStrategy: FlaggerStrategy = {
     description: "Flags malformed, duplicate, or explicitly failed tool responses without calling an LLM.",
   },
 
-  hasRequiredContext(trace: TraceDetail): boolean {
-    return trace.allMessages.length > 0
+  hasRequiredContext(conversation: FlaggerConversation): boolean {
+    return conversation.allMessages.length > 0
   },
 
-  detectDeterministically(trace: TraceDetail): DetectionResult {
-    const result = detectToolCallErrorsFlagger(trace)
+  detectDeterministically(conversation: FlaggerConversation): DetectionResult {
+    const result = detectToolCallErrorsFlagger(conversation)
     return result.matched
       ? { kind: "matched", feedback: result.feedback, messageIndex: result.messageIndex }
-      : { kind: "no-match" }
+      : { kind: "unmatched" }
   },
 }

@@ -5,15 +5,19 @@ import typing
 import pydantic
 from ..core.pydantic_utilities import UniversalBaseModel
 from .signal_analytics_escalating import SignalAnalyticsEscalating
+from .signal_analytics_ignored import SignalAnalyticsIgnored
 from .signal_analytics_new import SignalAnalyticsNew
 from .signal_analytics_occurrences import SignalAnalyticsOccurrences
 from .signal_analytics_ongoing import SignalAnalyticsOngoing
+from .signal_analytics_resolved import SignalAnalyticsResolved
 
 
 class SignalAnalyticsResponse(UniversalBaseModel):
     ongoing: SignalAnalyticsOngoing
     new: SignalAnalyticsNew
     escalating: SignalAnalyticsEscalating
+    resolved: SignalAnalyticsResolved
+    ignored: SignalAnalyticsIgnored
     occurrences: SignalAnalyticsOccurrences
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

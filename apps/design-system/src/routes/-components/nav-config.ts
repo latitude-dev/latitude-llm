@@ -37,6 +37,7 @@ export const DESIGN_SYSTEM_NAV: DesignSystemNavSection[] = [
       { label: "Button", to: "/button" },
       { label: "Chat", to: "/chat" },
       { label: "Checkbox", to: "/checkbox" },
+      { label: "Code diff", to: "/code-diff" },
       { label: "Copy button", to: "/copy-button" },
       { label: "Date range picker", to: "/date-range-picker" },
       { label: "Forms", to: "/forms" },

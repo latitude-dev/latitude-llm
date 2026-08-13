@@ -67,7 +67,7 @@ export function SandboxProjectChooser({
         <Select
           name="sandbox-production-project"
           label="Project to debug"
-          description="Reuses a production project's identifier so your dev traces land in the sandbox — production is untouched."
+          description="Reuses a production project's identifier so your dev traces land in the sandbox. Production stays untouched."
           placeholder="Select a production project"
           options={productionProjects.map((p) => ({
             label: p.name,
@@ -83,7 +83,7 @@ export function SandboxProjectChooser({
           required
           type="text"
           label="New project name"
-          description="A sandbox-only project that doesn't exist in production — that's perfectly fine, create whatever you need to experiment."
+          description="A sandbox-only project with no production counterpart. That's fine; create whatever you need to experiment."
           value={newName}
           onChange={(e) => onNewNameChange(e.target.value)}
           placeholder="My sandbox project"

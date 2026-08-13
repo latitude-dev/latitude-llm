@@ -10,13 +10,16 @@ Full command reference for `latitude`.
 - [`latitude api-keys`](#latitude-api-keys)
 - [`latitude datasets`](#latitude-datasets)
 - [`latitude experiments`](#latitude-experiments)
+- [`latitude imports`](#latitude-imports)
 - [`latitude incidents`](#latitude-incidents)
 - [`latitude members`](#latitude-members)
+- [`latitude memory`](#latitude-memory)
 - [`latitude monitors`](#latitude-monitors)
 - [`latitude oauth-keys`](#latitude-oauth-keys)
 - [`latitude projects`](#latitude-projects)
 - [`latitude saved-searches`](#latitude-saved-searches)
 - [`latitude scores`](#latitude-scores)
+- [`latitude sessions`](#latitude-sessions)
 - [`latitude signals`](#latitude-signals)
 - [`latitude spans`](#latitude-spans)
 - [`latitude tools`](#latitude-tools)
@@ -404,6 +407,65 @@ Replaces an experiment's mutable fields. `variants`, when supplied, fully replac
 
 ---
 
+### `latitude imports`
+
+#### `latitude imports cancel`
+
+Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.
+
+`POST /v1/projects/{projectSlug}/imports/{importId}/cancel`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
+
+#### `latitude imports create`
+
+Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.
+
+`POST /v1/projects/{projectSlug}/imports`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude imports get`
+
+Returns a single import, including its recent run history.
+
+`GET /v1/projects/{projectSlug}/imports/{importId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
+
+#### `latitude imports list`
+
+Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.
+
+`GET /v1/projects/{projectSlug}/imports`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
+#### `latitude imports retry`
+
+Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.
+
+`POST /v1/projects/{projectSlug}/imports/{importId}/retry`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+---
+
 ### `latitude incidents`
 
 #### `latitude incidents list`
@@ -419,7 +481,7 @@ Returns incidents in the project, ordered from oldest to newest. The time window
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time window. Defaults to now. |
 | `--source-type` | `monitor | signal` | No | Restrict to incidents triggered by this source type: `monitor` or `signal`. |
 | `--source-id` | `string` | No | Restrict to incidents tied to one source entity id. |
-| `--severities` | `low | medium | high[]` | No | Restrict to incidents whose severity matches any value in this list. |
+| `--severities` | `low | medium | high | urgent[]` | No | Restrict to incidents whose severity matches any value in this list. |
 
 #### `latitude incidents resolve`
 
@@ -482,6 +544,110 @@ Updates a member of the caller's organization. Today only the role is mutable. T
 |------|------|----------|-------------|
 | `--member-id` | `string` | Yes | Membership identifier. |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+---
+
+### `latitude memory`
+
+#### `latitude memory get-record`
+
+Returns one record's current body plus its mutating version history (newest first), each version carrying the authoring span/trace/session/user and per-version token deltas.
+
+`GET /v1/projects/{projectSlug}/memory/record`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
+
+#### `latitude memory get-record-change`
+
+Returns the before/after bodies for one change — the version authored by `spanId` against its predecessor in the record's mutating chain. Returns 404 when the span is not a recorded change of the record.
+
+`GET /v1/projects/{projectSlug}/memory/record/change`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
+| `--span-id` | `string` | Yes | Span that authored the change (the `after` side). |
+
+#### `latitude memory get-store`
+
+Returns the store's current records (ids, token counts, last-updated) as a snapshot. Pass `at` (ISO-8601) to reconstruct the store as of a past point in time. Record bodies are fetched separately, one record at a time.
+
+`GET /v1/projects/{projectSlug}/memory/store`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--at` | `string (date-time)` | No | Reconstruct the store as of this ISO-8601 timestamp. Defaults to the current state. |
+
+#### `latitude memory get-store-diff`
+
+Returns a per-record diff of the store between two points in time — added, updated, and removed records with token deltas. `from` defaults to the empty state (everything counts as added); `to` defaults to the current state. Unchanged records are pruned.
+
+`GET /v1/projects/{projectSlug}/memory/store/diff`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--from` | `string (date-time)` | No | Lower bound (inclusive) of the diff, ISO-8601. Defaults to the empty state. |
+| `--to` | `string (date-time)` | No | Upper bound (inclusive) of the diff, ISO-8601. Defaults to the current state. |
+
+#### `latitude memory list-record-reads`
+
+Returns the retrieval (`search_memory`) events for one record, newest first and capped, each with the query text (when captured), tokens returned, and the accessing span/trace/session/user.
+
+`GET /v1/projects/{projectSlug}/memory/record/reads`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
+| `--limit` | `integer` | No | Maximum number of read events to return. Capped at 200. |
+
+#### `latitude memory list-record-users`
+
+Returns the end-users who accessed one record with per-user read and write counts, most recent access first. Capped at the 1000 most recent accessors.
+
+`GET /v1/projects/{projectSlug}/memory/record/users`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+| `--record-id` | `string` | Yes | Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record. |
+
+#### `latitude memory list-store-users`
+
+Returns the end-users who accessed the store (reads and writes both count as access), most recent access first. Capped at the 1000 most recent accessors.
+
+`GET /v1/projects/{projectSlug}/memory/store/users`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--store-id` | `string` | Yes | Store identifier (`gen_ai.memory.store.id`). Pass an empty string to address the unattributed ("") store. |
+
+#### `latitude memory list-stores`
+
+Returns a cursor-paginated page of the project's memory stores, one roll-up row each (record count, tokens, last-updated, sessions, users). A store groups records under `gen_ai.memory.store.id`; the empty-string store is the unattributed bucket.
+
+`GET /v1/projects/{projectSlug}/memory/stores`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
+| `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
+| `--sort` | `lastUpdated | lastRead | records | tokens | sessions | users` | No | Field to sort by. Defaults to `lastUpdated` (most recently written first). |
+| `--direction` | `asc | desc` | No | Sort direction. Defaults to `desc`. |
 
 ---
 
@@ -763,6 +929,106 @@ Creates a score against a target trace. The trace is resolved by explicit id (`t
 
 ---
 
+### `latitude sessions`
+
+#### `latitude sessions analytics`
+
+Returns session analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.
+
+`GET /v1/projects/{projectSlug}/sessions/analytics`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`. |
+| `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time range. Defaults to now. |
+
+#### `latitude sessions get`
+
+Returns a single session by id, including its `conversation`: the system instructions and the messages of the session's latest LLM completion, in OpenTelemetry GenAI format.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+
+#### `latitude sessions get-memory`
+
+Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/memory`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--trace-id` | `string` | No | Restrict the memory footprint to this trace of the session. Omit for the whole session. |
+
+#### `latitude sessions get-memory-changes`
+
+Returns the memory writes the session made as per-record before/after diffs. Pass `traceId` to restrict to a single trace of the session.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/memory/changes`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--trace-id` | `string` | No | Restrict the memory changes to this trace of the session. Omit for the whole session. |
+
+#### `latitude sessions get-signal`
+
+Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/signals/{signalSlug}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--signal-slug` | `string` | Yes | Signal slug. |
+
+#### `latitude sessions list`
+
+Returns a cursor-paginated page of sessions in the project. A session groups the traces of one conversation. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Session list rows exclude per-message LLM content — use `getSession` for the conversation view.
+
+`POST /v1/projects/{projectSlug}/sessions/list`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude sessions list-signals`
+
+Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/signals`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+
+#### `latitude sessions list-traces`
+
+Returns a cursor-paginated page of the traces that belong to the session. Rows match the trace list shape and exclude per-message LLM content — use `getTrace` for the full conversation view.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/traces`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
+| `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
+| `--sort-by` | `startTime | endTime | durationNs | tokensTotal | costTotalMicrocents` | No | Field to sort by. Defaults to `startTime`. |
+| `--sort-direction` | `asc | desc` | No | Sort direction. Defaults to `desc` (most recent first). |
+
+---
+
 ### `latitude signals`
 
 #### `latitude signals analytics`
@@ -821,6 +1087,17 @@ Returns the full-history detail view of one signal: lifecycle `states`, lifetime
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--signal-slug` | `string` | Yes | Signal slug. |
 
+#### `latitude signals ignore`
+
+Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.
+
+`POST /v1/projects/{projectSlug}/signals/ignore`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
 #### `latitude signals list`
 
 Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
@@ -833,7 +1110,7 @@ Returns a cursor-paginated page of signals in the project. Each item includes li
 | `--cursor` | `string` | No | Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page. |
 | `--limit` | `integer` | No | Page size. Defaults to 50; max 200. |
 | `--query` | `string` | No | Free-text semantic search across the signals' names and descriptions. |
-| `--lifecycle-group` | `active | archived` | No | `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both. |
+| `--lifecycle-group` | `active | archived` | No | `"active"` for signals that are neither resolved nor ignored; `"archived"` for resolved or ignored signals. Omit to include both. |
 | `--sort-by` | `lastSeen | occurrences | state` | No | Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority. |
 | `--sort-direction` | `asc | desc` | No | Sort direction. Defaults to `desc`. |
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive) of the time window. Defaults to ~6 days ago. |
@@ -865,9 +1142,20 @@ Starts (or realigns) monitoring for the signal. When the signal has no active ev
 
 #### `latitude signals mute`
 
-Mutes each signal in `signalIds`.
+Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.
 
 `POST /v1/projects/{projectSlug}/signals/mute`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude signals resolve`
+
+Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.
+
+`POST /v1/projects/{projectSlug}/signals/resolve`
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
@@ -887,6 +1175,17 @@ Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The def
 | `--from-iso` | `string (date-time)` | No | Lower bound (inclusive). Defaults to ~14 days before `toIso`. |
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive). Defaults to now. |
 
+#### `latitude signals unignore`
+
+Returns each signal in `signalIds` to the active list and re-enables its notifications.
+
+`POST /v1/projects/{projectSlug}/signals/unignore`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
 #### `latitude signals unmonitor`
 
 Stops monitoring the signal. Idempotent — signals that aren't being monitored return 204 without changing anything.
@@ -900,9 +1199,20 @@ Stops monitoring the signal. Idempotent — signals that aren't being monitored 
 
 #### `latitude signals unmute`
 
-Reverts each signal in `signalIds` to an unmuted state.
+Re-enables notifications for each signal in `signalIds`.
 
 `POST /v1/projects/{projectSlug}/signals/unmute`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude signals unresolve`
+
+Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.
+
+`POST /v1/projects/{projectSlug}/signals/unresolve`
 
 | Flag | Type | Required | Description |
 |------|------|----------|-------------|
@@ -1108,6 +1418,28 @@ Returns one annotation by id pinned to the trace.
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
 | `--annotation-id` | `string` | Yes | Stable annotation identifier. |
 
+#### `latitude traces get-memory`
+
+Returns the trace's memory footprint: per-record read, added, and removed token metrics plus totals, scoped to this trace.
+
+`GET /v1/projects/{projectSlug}/traces/{traceId}/memory`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--trace-id` | `string` | Yes | 32-character trace identifier. |
+
+#### `latitude traces get-memory-changes`
+
+Returns the memory writes the trace made as per-record before/after diffs, scoped to this trace.
+
+`GET /v1/projects/{projectSlug}/traces/{traceId}/memory/changes`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--trace-id` | `string` | Yes | 32-character trace identifier. |
+
 #### `latitude traces get-span`
 
 Returns one span by id, including the LLM conversation (system instructions, input messages, output messages), tool data (definitions, call id, input, output), and the full OpenTelemetry payload (attributes, resource, events, links) that's excluded from the lighter list shape.
@@ -1213,6 +1545,17 @@ Returns a page of the project's identified end-users over the range, each with t
 | `--sort-by` | `lastSeen | firstSeen | traces | sessions | errors | tokens | cost | costAvg | costMedian` | No | Field to sort by. Defaults to most recently seen. |
 | `--sort-direction` | `asc | desc` | No | Sort direction. Defaults to descending. |
 | `--search-query` | `string` | No | Case-insensitive substring match on the user's id or email. |
+
+#### `latitude users memory-stores`
+
+Returns the memory stores the end-user accessed (reads and writes both count as access), most recent access first. Capped at the 1000 most recent stores. Each store links to the memory browsing operations under the `memory` group.
+
+`GET /v1/projects/{projectSlug}/users/{userId}/memory`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--user-id` | `string` | Yes | End-user identifier. URL-encode values containing special characters. |
 
 #### `latitude users overview`
 

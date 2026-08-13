@@ -103,6 +103,8 @@ export interface SignalListAnalyticsCounts {
   readonly newSignals: number
   readonly escalatingSignals: number
   readonly ongoingSignals: number
+  readonly resolvedSignals: number
+  readonly ignoredSignals: number
   readonly seenOccurrences: number
 }
 
@@ -128,6 +130,9 @@ export interface SignalListItem {
   readonly states: readonly string[]
   readonly assigneeId: string | null
   readonly priority: SignalPriority | null
+  readonly resolvedAt: Date | null
+  readonly ignoredAt: Date | null
+  readonly regressedAt: Date | null
   readonly mutedAt: Date | null
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -320,7 +325,7 @@ const matchesLifecycleGroup = (
     return true
   }
 
-  const isArchived = candidate.issue.mutedAt !== null
+  const isArchived = candidate.issue.resolvedAt !== null || candidate.issue.ignoredAt !== null
   return lifecycleGroup === "archived" ? isArchived : !isArchived
 }
 
@@ -362,8 +367,11 @@ const compareAsc = (left: number, right: number): number => left - right
 
 const LIFECYCLE_STATE_PRIORITY: Record<string, number> = {
   [SignalState.Escalating]: 0,
-  [SignalState.New]: 1,
-  [SignalState.Ongoing]: 2,
+  [SignalState.Regressed]: 1,
+  [SignalState.New]: 2,
+  [SignalState.Ongoing]: 3,
+  [SignalState.Resolved]: 4,
+  [SignalState.Ignored]: 5,
 }
 
 const UNKNOWN_STATE_PRIORITY = 99
@@ -504,6 +512,9 @@ const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem 
     priority: issue.priority,
     createdAt: issue.createdAt,
     updatedAt: issue.updatedAt,
+    resolvedAt: issue.resolvedAt,
+    ignoredAt: issue.ignoredAt,
+    regressedAt: issue.regressedAt,
     mutedAt: issue.mutedAt,
     firstSeenAt: issue.createdAt,
     lastSeenAt: issue.updatedAt,
@@ -522,6 +533,8 @@ const toAnalyticsCounts = (candidates: readonly AnalyticsCandidate[]): SignalLis
   escalatingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Escalating))
     .length,
   ongoingSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Ongoing)).length,
+  resolvedSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Resolved)).length,
+  ignoredSignals: candidates.filter((candidate) => candidate.lifecycleStates.includes(SignalState.Ignored)).length,
   seenOccurrences: candidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0),
 })
 
@@ -566,6 +579,8 @@ export const listSignalsUseCase = (
               newSignals: 0,
               escalatingSignals: 0,
               ongoingSignals: 0,
+              resolvedSignals: 0,
+              ignoredSignals: 0,
               seenOccurrences: 0,
             },
             histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
@@ -652,6 +667,8 @@ export const listSignalsUseCase = (
             newSignals: 0,
             escalatingSignals: 0,
             ongoingSignals: 0,
+            resolvedSignals: 0,
+            ignoredSignals: 0,
             seenOccurrences: 0,
           },
           histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
@@ -780,6 +797,8 @@ export const listSignalsUseCase = (
             newSignals: 0,
             escalatingSignals: 0,
             ongoingSignals: 0,
+            resolvedSignals: 0,
+            ignoredSignals: 0,
             seenOccurrences: 0,
           },
           histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
@@ -967,6 +986,9 @@ export const listSignalsUseCase = (
           states: candidate.lifecycleStates,
           assigneeId: candidate.issue.assigneeId,
           priority: candidate.issue.priority,
+          resolvedAt: candidate.issue.resolvedAt,
+          ignoredAt: candidate.issue.ignoredAt,
+          regressedAt: candidate.issue.regressedAt,
           mutedAt: candidate.issue.mutedAt,
           createdAt: candidate.issue.createdAt,
           updatedAt: candidate.issue.updatedAt,

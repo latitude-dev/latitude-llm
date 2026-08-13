@@ -109,7 +109,7 @@ interface OptimizeArgs {
 }
 
 interface PreFilterSignal {
-  readonly kind: "matched" | "no-match" | "ambiguous" | "no-required-context" | "no-detect-method"
+  readonly kind: "matched" | "unmatched" | "no-required-context" | "no-detect-method"
   readonly feedback?: string
 }
 
@@ -1144,18 +1144,9 @@ const evaluateRow = async (input: {
         errorMessage: null,
       }
     }
-    if (det.kind === "no-match") {
-      return {
-        predicted: false,
-        phase: "deterministic-no-match",
-        costUsd: 0,
-        tokensTotal: 0,
-        preFilter: { kind: "no-match" },
-        llmVerdict: null,
-        errorMessage: null,
-      }
-    }
-    // ambiguous → fall through to LLM
+    // unmatched → fall through to the LLM. Production routes unmatched
+    // strategies to the classifier via hints or sampling, so the benchmark
+    // measures the classifier on every non-matched row.
   }
 
   const meter = createTokenMeter()
@@ -1194,7 +1185,7 @@ const evaluateRow = async (input: {
     phase,
     costUsd: typeof cost.totalUsd === "number" ? cost.totalUsd : 0,
     tokensTotal,
-    preFilter: { kind: "ambiguous" },
+    preFilter: { kind: "unmatched" },
     llmVerdict: result.error !== null ? null : result.matched,
     errorMessage: result.error,
   }

@@ -8,6 +8,7 @@ export function scrollToSearchMatch(
   container: HTMLElement,
   target: SearchScrollTarget,
   behavior: ScrollBehavior = "smooth",
+  onScrolled?: () => void,
 ): () => void {
   let done = false
 
@@ -19,6 +20,7 @@ export function scrollToSearchMatch(
         : findNearestMessageAnchor(container, target.messageIndex)
     if (!node) return false
     centerHighlightInView(container, node, behavior)
+    onScrolled?.()
     return true
   }
 

@@ -192,6 +192,15 @@ export function createDnsRecords(
       allowOverwrite: true,
     })
 
+    records.jobsA = new aws.route53.Record(`${name}-jobs-a`, {
+      zoneId: hostedZoneId,
+      name: "jobs.latitude.so",
+      type: "A",
+      records: ["54.193.184.88"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
     // SPF record for notifications.latitude.so
     records.notificationsSpf = new aws.route53.Record(`${name}-notifications-spf`, {
       zoneId: hostedZoneId,

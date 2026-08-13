@@ -74,6 +74,7 @@ import {
   SignalRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { createImportAdapterRegistry } from "@platform/import-sources"
 import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { createLogger, withTracing } from "@repo/observability"
 import { type OperationContext, signalAgentToolset } from "@repo/operations"
@@ -108,6 +109,7 @@ type DomainServices =
   | SignalRepository
   | EvaluationRepository
   | OutboxEventWriter
+  | ProjectRepository
   | SessionRepository
   | SpanRepository
   | TraceRepository
@@ -206,7 +208,7 @@ const runAgenticGeneration = async (params: {
     const provideDomain = <A, E>(effect: Effect.Effect<A, E, DomainServices>): Effect.Effect<A, E> =>
       effect.pipe(
         withPostgres(
-          Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, SignalRepositoryLive),
+          Layer.mergeAll(EvaluationRepositoryLive, OutboxEventWriterLive, ProjectRepositoryLive, SignalRepositoryLive),
           deps.postgresClient,
           orgId,
         ),
@@ -255,6 +257,7 @@ const runAgenticGeneration = async (params: {
       workflowStarter,
       workflowQuerier,
       storageDisk: getStorageDisk(),
+      importSourceAdapters: createImportAdapterRegistry(),
     }
 
     progress.writeStep("Looking at your project's data")

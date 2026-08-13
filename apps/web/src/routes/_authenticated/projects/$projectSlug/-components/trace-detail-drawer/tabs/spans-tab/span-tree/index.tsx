@@ -1,13 +1,6 @@
 import { cn, Text, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  ChevronsDownUpIcon,
-  ChevronsUpDownIcon,
-  MaximizeIcon,
-  MinimizeIcon,
-} from "lucide-react"
+import { ChevronDownIcon, ChevronRightIcon, ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../../../components/hotkey-badge.tsx"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
@@ -17,13 +10,7 @@ import {
   spanTreeSelectionKey,
   toggleCollapsedSpan,
 } from "./grouped-tree-state.ts"
-import {
-  MIN_TREE_WIDTH,
-  MIN_WATERFALL_WIDTH,
-  MINIMIZED_MAX_HEIGHT,
-  ROW_HEIGHT,
-  WATERFALL_H_INSET_PX,
-} from "./helpers.ts"
+import { MIN_TREE_WIDTH, MIN_WATERFALL_WIDTH, ROW_HEIGHT, WATERFALL_H_INSET_PX } from "./helpers.ts"
 import { TreeRow } from "./tree-row.tsx"
 import { buildSpanTree, flattenTree, formatDuration, getTraceTimeRange, type TraceTimeRange } from "./tree-utils.ts"
 import { useResizablePanel } from "./use-resizable-panel.ts"
@@ -64,18 +51,12 @@ function TreeAxisHeader({
   hasCollapsible,
   isAllCollapsed,
   onToggleAll,
-  selectedSpan,
-  isMinimized,
-  onToggleMinimized,
 }: {
   readonly treeWidth: number
   readonly timeRange: TraceTimeRange
   readonly hasCollapsible: boolean
   readonly isAllCollapsed: boolean
   readonly onToggleAll: () => void
-  readonly selectedSpan: SpanTreeSelection | null
-  readonly isMinimized: boolean
-  readonly onToggleMinimized: () => void
 }) {
   return (
     <div
@@ -105,23 +86,6 @@ function TreeAxisHeader({
             }
           >
             {isAllCollapsed ? "Expand all" : "Collapse all"} <HotkeyBadge hotkey="E" />
-          </Tooltip>
-        )}
-        {selectedSpan && (
-          <Tooltip
-            asChild
-            side="bottom"
-            trigger={
-              <button
-                type="button"
-                className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted"
-                onClick={onToggleMinimized}
-              >
-                {isMinimized ? <MaximizeIcon className="h-3.5 w-3.5" /> : <MinimizeIcon className="h-3.5 w-3.5" />}
-              </button>
-            }
-          >
-            {isMinimized ? "Expand tree" : "Minimize tree"}
           </Tooltip>
         )}
       </div>
@@ -232,16 +196,16 @@ export function GroupedSpanTree({
   groups,
   selectedSpan,
   onSelectSpan,
-  isMinimized,
-  onToggleMinimized,
   isActive,
+  footer,
+  onScrollEnd,
 }: {
   readonly groups: readonly SpanTreeGroup[]
   readonly selectedSpan: SpanTreeSelection | null
   readonly onSelectSpan: (selection: SpanTreeSelection | null) => void
-  readonly isMinimized: boolean
-  readonly onToggleMinimized: () => void
   readonly isActive: boolean
+  readonly footer?: ReactNode | undefined
+  readonly onScrollEnd?: (() => void) | undefined
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -357,24 +321,22 @@ export function GroupedSpanTree({
   ])
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "relative flex flex-col overflow-hidden",
-        isMinimized ? "shrink-0 border-b border-border" : "flex-1",
-      )}
-      style={isMinimized ? { maxHeight: MINIMIZED_MAX_HEIGHT } : undefined}
-    >
-      <div className="flex flex-1 flex-col overflow-y-auto">
+    <div ref={containerRef} className="relative flex flex-1 flex-col overflow-hidden">
+      <div
+        className="flex flex-1 flex-col overflow-y-auto"
+        onScroll={(event) => {
+          if (!onScrollEnd) return
+          const container = event.currentTarget
+          const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+          if (distanceFromBottom <= ROW_HEIGHT * 5) onScrollEnd()
+        }}
+      >
         <TreeAxisHeader
           treeWidth={resolvedTreeWidth}
           timeRange={axisTimeRange}
           hasCollapsible={collapsibleSelections.length > 0}
           isAllCollapsed={isAllCollapsed}
           onToggleAll={toggleAll}
-          selectedSpan={selectedSpan}
-          isMinimized={isMinimized}
-          onToggleMinimized={onToggleMinimized}
         />
         {renderGroups.map(({ group, visibleNodes, collapsed: groupCollapsed, rowTimeRange }) => {
           const isTraceCollapsed = collapsedTraces.has(group.traceId)
@@ -404,6 +366,7 @@ export function GroupedSpanTree({
             </div>
           )
         })}
+        {footer}
       </div>
 
       {/* biome-ignore lint/a11y/useSemanticElements: resize handle requires div for drag events */}
@@ -434,15 +397,11 @@ export function SpanTree({
   spans,
   selectedSpanId,
   onSelectSpan,
-  isMinimized,
-  onToggleMinimized,
   isActive,
 }: {
   readonly spans: readonly SpanRecord[]
   readonly selectedSpanId: string
   readonly onSelectSpan: (spanId: string) => void
-  readonly isMinimized: boolean
-  readonly onToggleMinimized: () => void
   readonly isActive: boolean
 }) {
   const traceId = spans[0]?.traceId ?? ""
@@ -452,8 +411,6 @@ export function SpanTree({
       groups={[{ traceId, spans }]}
       selectedSpan={selectedSpan}
       onSelectSpan={(selection) => onSelectSpan(selection?.spanId ?? "")}
-      isMinimized={isMinimized}
-      onToggleMinimized={onToggleMinimized}
       isActive={isActive}
     />
   )

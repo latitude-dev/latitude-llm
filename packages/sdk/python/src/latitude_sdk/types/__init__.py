@@ -254,6 +254,8 @@ if typing.TYPE_CHECKING:
     from .api_key_list import ApiKeyList
     from .api_key_list_item import ApiKeyListItem
     from .bootstrap_account_response import BootstrapAccountResponse
+    from .braintrust_import_credentials import BraintrustImportCredentials
+    from .braintrust_import_credentials_region import BraintrustImportCredentialsRegion
     from .create_custom_score_body import CreateCustomScoreBody
     from .create_evaluation_score_body import CreateEvaluationScoreBody
     from .create_monitor_body import (
@@ -550,7 +552,22 @@ if typing.TYPE_CHECKING:
     from .health_response import HealthResponse
     from .health_response_service import HealthResponseService
     from .health_response_status import HealthResponseStatus
+    from .import_ import Import
+    from .import_config import ImportConfig
+    from .import_credentials import (
+        ImportCredentials,
+        ImportCredentials_Braintrust,
+        ImportCredentials_Langfuse,
+        ImportCredentials_Langsmith,
+    )
+    from .import_detail import ImportDetail
     from .import_rows_from_traces_response import ImportRowsFromTracesResponse
+    from .import_run import ImportRun
+    from .import_run_stats import ImportRunStats
+    from .import_run_status import ImportRunStatus
+    from .import_source import ImportSource
+    from .import_stats import ImportStats
+    from .import_status import ImportStatus
     from .incident import Incident
     from .incident_condition import IncidentCondition
     from .incident_notifications_setting import IncidentNotificationsSetting
@@ -560,9 +577,34 @@ if typing.TYPE_CHECKING:
     from .invited_member import InvitedMember
     from .invited_member_role import InvitedMemberRole
     from .invited_member_status import InvitedMemberStatus
+    from .langfuse_import_credentials import LangfuseImportCredentials
+    from .langfuse_import_credentials_region import LangfuseImportCredentialsRegion
+    from .langsmith_import_credentials import LangsmithImportCredentials
+    from .langsmith_import_credentials_region import LangsmithImportCredentialsRegion
+    from .list_imports_response import ListImportsResponse
     from .list_incidents_response import ListIncidentsResponse
     from .member import Member, Member_Active, Member_Invited
     from .member_list import MemberList
+    from .memory_record_change_diff import MemoryRecordChangeDiff
+    from .memory_record_change_diff_change_kind import MemoryRecordChangeDiffChangeKind
+    from .memory_record_detail import MemoryRecordDetail
+    from .memory_record_read import MemoryRecordRead
+    from .memory_record_reads import MemoryRecordReads
+    from .memory_record_summary import MemoryRecordSummary
+    from .memory_record_user import MemoryRecordUser
+    from .memory_record_users import MemoryRecordUsers
+    from .memory_record_version import MemoryRecordVersion
+    from .memory_record_version_change_kind import MemoryRecordVersionChangeKind
+    from .memory_store import MemoryStore
+    from .memory_store_change import MemoryStoreChange
+    from .memory_store_change_kind import MemoryStoreChangeKind
+    from .memory_store_diff import MemoryStoreDiff
+    from .memory_store_diff_records_changed import MemoryStoreDiffRecordsChanged
+    from .memory_store_record import MemoryStoreRecord
+    from .memory_store_snapshot import MemoryStoreSnapshot
+    from .memory_store_user import MemoryStoreUser
+    from .memory_store_users import MemoryStoreUsers
+    from .memory_user_store import MemoryUserStore
     from .metric_delta import MetricDelta
     from .metric_delta_one import MetricDeltaOne
     from .monitor import Monitor
@@ -660,31 +702,62 @@ if typing.TYPE_CHECKING:
     from .paginated_dataset_rows import PaginatedDatasetRows
     from .paginated_datasets import PaginatedDatasets
     from .paginated_experiments import PaginatedExperiments
+    from .paginated_memory_stores import PaginatedMemoryStores
     from .paginated_monitor_incidents import PaginatedMonitorIncidents
     from .paginated_monitors import PaginatedMonitors
     from .paginated_projects import PaginatedProjects
     from .paginated_saved_searches import PaginatedSavedSearches
+    from .paginated_sessions import PaginatedSessions
     from .paginated_signals import PaginatedSignals
     from .paginated_tool_calls import PaginatedToolCalls
     from .paginated_trace_annotations import PaginatedTraceAnnotations
     from .paginated_traces import PaginatedTraces
     from .project import Project
     from .project_settings import ProjectSettings
+    from .project_settings_patch import ProjectSettingsPatch
     from .project_user import ProjectUser
     from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
     from .recent_tool_call_status_code import RecentToolCallStatusCode
+    from .redaction_setting import RedactionSetting
+    from .redaction_setting_entities_item import RedactionSettingEntitiesItem
+    from .redaction_setting_identities import RedactionSettingIdentities
+    from .redaction_setting_mode import RedactionSettingMode
+    from .redaction_setting_scopes import RedactionSettingScopes
     from .relative_variant_time_range import RelativeVariantTimeRange
     from .relative_variant_time_range_type import RelativeVariantTimeRangeType
     from .resolved_range import ResolvedRange
     from .saved_search import SavedSearch
     from .score_response import ScoreResponse, ScoreResponse_Custom, ScoreResponse_Evaluation
+    from .session import Session
+    from .session_analytics_bucket import SessionAnalyticsBucket
+    from .session_analytics_cost import SessionAnalyticsCost
+    from .session_analytics_duration import SessionAnalyticsDuration
+    from .session_analytics_response import SessionAnalyticsResponse
+    from .session_analytics_sessions import SessionAnalyticsSessions
+    from .session_analytics_spans import SessionAnalyticsSpans
+    from .session_analytics_time_to_first_token import SessionAnalyticsTimeToFirstToken
+    from .session_analytics_tokens import SessionAnalyticsTokens
+    from .session_analytics_traces import SessionAnalyticsTraces
+    from .session_detail import SessionDetail
+    from .session_filter_set import SessionFilterSet
+    from .session_memory_change import SessionMemoryChange
+    from .session_memory_change_kind import SessionMemoryChangeKind
+    from .session_memory_changes import SessionMemoryChanges
+    from .session_memory_summary import SessionMemorySummary
+    from .session_memory_summary_total import SessionMemorySummaryTotal
+    from .session_signal import SessionSignal
+    from .session_signal_source import SessionSignalSource
+    from .session_signal_states_item import SessionSignalStatesItem
+    from .session_signals import SessionSignals
     from .signal import Signal
     from .signal_analytics_bucket import SignalAnalyticsBucket
     from .signal_analytics_escalating import SignalAnalyticsEscalating
+    from .signal_analytics_ignored import SignalAnalyticsIgnored
     from .signal_analytics_new import SignalAnalyticsNew
     from .signal_analytics_occurrences import SignalAnalyticsOccurrences
     from .signal_analytics_ongoing import SignalAnalyticsOngoing
+    from .signal_analytics_resolved import SignalAnalyticsResolved
     from .signal_analytics_response import SignalAnalyticsResponse
     from .signal_detail import SignalDetail
     from .signal_detail_source import SignalDetailSource
@@ -765,6 +838,7 @@ if typing.TYPE_CHECKING:
     from .user_behaviours_response import UserBehavioursResponse
     from .user_cost_rollup import UserCostRollup
     from .user_list_response import UserListResponse
+    from .user_memory_stores import UserMemoryStores
     from .user_profile_response import UserProfileResponse
     from .user_signal import UserSignal
     from .user_signals_response import UserSignalsResponse
@@ -1011,6 +1085,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ApiKeyList": ".api_key_list",
     "ApiKeyListItem": ".api_key_list_item",
     "BootstrapAccountResponse": ".bootstrap_account_response",
+    "BraintrustImportCredentials": ".braintrust_import_credentials",
+    "BraintrustImportCredentialsRegion": ".braintrust_import_credentials_region",
     "CreateCustomScoreBody": ".create_custom_score_body",
     "CreateEvaluationScoreBody": ".create_evaluation_score_body",
     "CreateMonitorBody": ".create_monitor_body",
@@ -1277,7 +1353,20 @@ _dynamic_imports: typing.Dict[str, str] = {
     "HealthResponse": ".health_response",
     "HealthResponseService": ".health_response_service",
     "HealthResponseStatus": ".health_response_status",
+    "Import": ".import_",
+    "ImportConfig": ".import_config",
+    "ImportCredentials": ".import_credentials",
+    "ImportCredentials_Braintrust": ".import_credentials",
+    "ImportCredentials_Langfuse": ".import_credentials",
+    "ImportCredentials_Langsmith": ".import_credentials",
+    "ImportDetail": ".import_detail",
     "ImportRowsFromTracesResponse": ".import_rows_from_traces_response",
+    "ImportRun": ".import_run",
+    "ImportRunStats": ".import_run_stats",
+    "ImportRunStatus": ".import_run_status",
+    "ImportSource": ".import_source",
+    "ImportStats": ".import_stats",
+    "ImportStatus": ".import_status",
     "Incident": ".incident",
     "IncidentCondition": ".incident_condition",
     "IncidentNotificationsSetting": ".incident_notifications_setting",
@@ -1287,11 +1376,36 @@ _dynamic_imports: typing.Dict[str, str] = {
     "InvitedMember": ".invited_member",
     "InvitedMemberRole": ".invited_member_role",
     "InvitedMemberStatus": ".invited_member_status",
+    "LangfuseImportCredentials": ".langfuse_import_credentials",
+    "LangfuseImportCredentialsRegion": ".langfuse_import_credentials_region",
+    "LangsmithImportCredentials": ".langsmith_import_credentials",
+    "LangsmithImportCredentialsRegion": ".langsmith_import_credentials_region",
+    "ListImportsResponse": ".list_imports_response",
     "ListIncidentsResponse": ".list_incidents_response",
     "Member": ".member",
     "MemberList": ".member_list",
     "Member_Active": ".member",
     "Member_Invited": ".member",
+    "MemoryRecordChangeDiff": ".memory_record_change_diff",
+    "MemoryRecordChangeDiffChangeKind": ".memory_record_change_diff_change_kind",
+    "MemoryRecordDetail": ".memory_record_detail",
+    "MemoryRecordRead": ".memory_record_read",
+    "MemoryRecordReads": ".memory_record_reads",
+    "MemoryRecordSummary": ".memory_record_summary",
+    "MemoryRecordUser": ".memory_record_user",
+    "MemoryRecordUsers": ".memory_record_users",
+    "MemoryRecordVersion": ".memory_record_version",
+    "MemoryRecordVersionChangeKind": ".memory_record_version_change_kind",
+    "MemoryStore": ".memory_store",
+    "MemoryStoreChange": ".memory_store_change",
+    "MemoryStoreChangeKind": ".memory_store_change_kind",
+    "MemoryStoreDiff": ".memory_store_diff",
+    "MemoryStoreDiffRecordsChanged": ".memory_store_diff_records_changed",
+    "MemoryStoreRecord": ".memory_store_record",
+    "MemoryStoreSnapshot": ".memory_store_snapshot",
+    "MemoryStoreUser": ".memory_store_user",
+    "MemoryStoreUsers": ".memory_store_users",
+    "MemoryUserStore": ".memory_user_store",
     "MetricDelta": ".metric_delta",
     "MetricDeltaOne": ".metric_delta_one",
     "Monitor": ".monitor",
@@ -1383,20 +1497,28 @@ _dynamic_imports: typing.Dict[str, str] = {
     "PaginatedDatasetRows": ".paginated_dataset_rows",
     "PaginatedDatasets": ".paginated_datasets",
     "PaginatedExperiments": ".paginated_experiments",
+    "PaginatedMemoryStores": ".paginated_memory_stores",
     "PaginatedMonitorIncidents": ".paginated_monitor_incidents",
     "PaginatedMonitors": ".paginated_monitors",
     "PaginatedProjects": ".paginated_projects",
     "PaginatedSavedSearches": ".paginated_saved_searches",
+    "PaginatedSessions": ".paginated_sessions",
     "PaginatedSignals": ".paginated_signals",
     "PaginatedToolCalls": ".paginated_tool_calls",
     "PaginatedTraceAnnotations": ".paginated_trace_annotations",
     "PaginatedTraces": ".paginated_traces",
     "Project": ".project",
     "ProjectSettings": ".project_settings",
+    "ProjectSettingsPatch": ".project_settings_patch",
     "ProjectUser": ".project_user",
     "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
     "RecentToolCallStatusCode": ".recent_tool_call_status_code",
+    "RedactionSetting": ".redaction_setting",
+    "RedactionSettingEntitiesItem": ".redaction_setting_entities_item",
+    "RedactionSettingIdentities": ".redaction_setting_identities",
+    "RedactionSettingMode": ".redaction_setting_mode",
+    "RedactionSettingScopes": ".redaction_setting_scopes",
     "RelativeVariantTimeRange": ".relative_variant_time_range",
     "RelativeVariantTimeRangeType": ".relative_variant_time_range_type",
     "ResolvedRange": ".resolved_range",
@@ -1404,12 +1526,35 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ScoreResponse": ".score_response",
     "ScoreResponse_Custom": ".score_response",
     "ScoreResponse_Evaluation": ".score_response",
+    "Session": ".session",
+    "SessionAnalyticsBucket": ".session_analytics_bucket",
+    "SessionAnalyticsCost": ".session_analytics_cost",
+    "SessionAnalyticsDuration": ".session_analytics_duration",
+    "SessionAnalyticsResponse": ".session_analytics_response",
+    "SessionAnalyticsSessions": ".session_analytics_sessions",
+    "SessionAnalyticsSpans": ".session_analytics_spans",
+    "SessionAnalyticsTimeToFirstToken": ".session_analytics_time_to_first_token",
+    "SessionAnalyticsTokens": ".session_analytics_tokens",
+    "SessionAnalyticsTraces": ".session_analytics_traces",
+    "SessionDetail": ".session_detail",
+    "SessionFilterSet": ".session_filter_set",
+    "SessionMemoryChange": ".session_memory_change",
+    "SessionMemoryChangeKind": ".session_memory_change_kind",
+    "SessionMemoryChanges": ".session_memory_changes",
+    "SessionMemorySummary": ".session_memory_summary",
+    "SessionMemorySummaryTotal": ".session_memory_summary_total",
+    "SessionSignal": ".session_signal",
+    "SessionSignalSource": ".session_signal_source",
+    "SessionSignalStatesItem": ".session_signal_states_item",
+    "SessionSignals": ".session_signals",
     "Signal": ".signal",
     "SignalAnalyticsBucket": ".signal_analytics_bucket",
     "SignalAnalyticsEscalating": ".signal_analytics_escalating",
+    "SignalAnalyticsIgnored": ".signal_analytics_ignored",
     "SignalAnalyticsNew": ".signal_analytics_new",
     "SignalAnalyticsOccurrences": ".signal_analytics_occurrences",
     "SignalAnalyticsOngoing": ".signal_analytics_ongoing",
+    "SignalAnalyticsResolved": ".signal_analytics_resolved",
     "SignalAnalyticsResponse": ".signal_analytics_response",
     "SignalDetail": ".signal_detail",
     "SignalDetailSource": ".signal_detail_source",
@@ -1492,6 +1637,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "UserBehavioursResponse": ".user_behaviours_response",
     "UserCostRollup": ".user_cost_rollup",
     "UserListResponse": ".user_list_response",
+    "UserMemoryStores": ".user_memory_stores",
     "UserProfileResponse": ".user_profile_response",
     "UserSignal": ".user_signal",
     "UserSignalsResponse": ".user_signals_response",
@@ -1762,6 +1908,8 @@ __all__ = [
     "ApiKeyList",
     "ApiKeyListItem",
     "BootstrapAccountResponse",
+    "BraintrustImportCredentials",
+    "BraintrustImportCredentialsRegion",
     "CreateCustomScoreBody",
     "CreateEvaluationScoreBody",
     "CreateMonitorBody",
@@ -2028,7 +2176,20 @@ __all__ = [
     "HealthResponse",
     "HealthResponseService",
     "HealthResponseStatus",
+    "Import",
+    "ImportConfig",
+    "ImportCredentials",
+    "ImportCredentials_Braintrust",
+    "ImportCredentials_Langfuse",
+    "ImportCredentials_Langsmith",
+    "ImportDetail",
     "ImportRowsFromTracesResponse",
+    "ImportRun",
+    "ImportRunStats",
+    "ImportRunStatus",
+    "ImportSource",
+    "ImportStats",
+    "ImportStatus",
     "Incident",
     "IncidentCondition",
     "IncidentNotificationsSetting",
@@ -2038,11 +2199,36 @@ __all__ = [
     "InvitedMember",
     "InvitedMemberRole",
     "InvitedMemberStatus",
+    "LangfuseImportCredentials",
+    "LangfuseImportCredentialsRegion",
+    "LangsmithImportCredentials",
+    "LangsmithImportCredentialsRegion",
+    "ListImportsResponse",
     "ListIncidentsResponse",
     "Member",
     "MemberList",
     "Member_Active",
     "Member_Invited",
+    "MemoryRecordChangeDiff",
+    "MemoryRecordChangeDiffChangeKind",
+    "MemoryRecordDetail",
+    "MemoryRecordRead",
+    "MemoryRecordReads",
+    "MemoryRecordSummary",
+    "MemoryRecordUser",
+    "MemoryRecordUsers",
+    "MemoryRecordVersion",
+    "MemoryRecordVersionChangeKind",
+    "MemoryStore",
+    "MemoryStoreChange",
+    "MemoryStoreChangeKind",
+    "MemoryStoreDiff",
+    "MemoryStoreDiffRecordsChanged",
+    "MemoryStoreRecord",
+    "MemoryStoreSnapshot",
+    "MemoryStoreUser",
+    "MemoryStoreUsers",
+    "MemoryUserStore",
     "MetricDelta",
     "MetricDeltaOne",
     "Monitor",
@@ -2134,20 +2320,28 @@ __all__ = [
     "PaginatedDatasetRows",
     "PaginatedDatasets",
     "PaginatedExperiments",
+    "PaginatedMemoryStores",
     "PaginatedMonitorIncidents",
     "PaginatedMonitors",
     "PaginatedProjects",
     "PaginatedSavedSearches",
+    "PaginatedSessions",
     "PaginatedSignals",
     "PaginatedToolCalls",
     "PaginatedTraceAnnotations",
     "PaginatedTraces",
     "Project",
     "ProjectSettings",
+    "ProjectSettingsPatch",
     "ProjectUser",
     "QuerySpans",
     "RecentToolCall",
     "RecentToolCallStatusCode",
+    "RedactionSetting",
+    "RedactionSettingEntitiesItem",
+    "RedactionSettingIdentities",
+    "RedactionSettingMode",
+    "RedactionSettingScopes",
     "RelativeVariantTimeRange",
     "RelativeVariantTimeRangeType",
     "ResolvedRange",
@@ -2155,12 +2349,35 @@ __all__ = [
     "ScoreResponse",
     "ScoreResponse_Custom",
     "ScoreResponse_Evaluation",
+    "Session",
+    "SessionAnalyticsBucket",
+    "SessionAnalyticsCost",
+    "SessionAnalyticsDuration",
+    "SessionAnalyticsResponse",
+    "SessionAnalyticsSessions",
+    "SessionAnalyticsSpans",
+    "SessionAnalyticsTimeToFirstToken",
+    "SessionAnalyticsTokens",
+    "SessionAnalyticsTraces",
+    "SessionDetail",
+    "SessionFilterSet",
+    "SessionMemoryChange",
+    "SessionMemoryChangeKind",
+    "SessionMemoryChanges",
+    "SessionMemorySummary",
+    "SessionMemorySummaryTotal",
+    "SessionSignal",
+    "SessionSignalSource",
+    "SessionSignalStatesItem",
+    "SessionSignals",
     "Signal",
     "SignalAnalyticsBucket",
     "SignalAnalyticsEscalating",
+    "SignalAnalyticsIgnored",
     "SignalAnalyticsNew",
     "SignalAnalyticsOccurrences",
     "SignalAnalyticsOngoing",
+    "SignalAnalyticsResolved",
     "SignalAnalyticsResponse",
     "SignalDetail",
     "SignalDetailSource",
@@ -2243,6 +2460,7 @@ __all__ = [
     "UserBehavioursResponse",
     "UserCostRollup",
     "UserListResponse",
+    "UserMemoryStores",
     "UserProfileResponse",
     "UserSignal",
     "UserSignalsResponse",

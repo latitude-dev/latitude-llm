@@ -71,6 +71,8 @@ The Vercel AI SDK can emit OpenTelemetry spans through its `experimental_telemet
       project: process.env.LATITUDE_PROJECT_SLUG!,
     })
 
+    await latitude.ready
+
     await capture("generate-support-reply", async () => {
       const { text } = await generateText({
         model: openai("gpt-4o"),

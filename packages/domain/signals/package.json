@@ -19,12 +19,14 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "catalog:",
     "@domain/ai": "workspace:*",
     "@domain/incidents": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/exports": "workspace:*",
     "@domain/organizations": "workspace:*",
+    "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/sandbox": "workspace:*",
     "@domain/shared": "workspace:*",

@@ -13,7 +13,7 @@ export interface MonitorIncident {
     sourceType: MonitorIncident.SourceType;
     /** Id of the entity that triggered the incident (matches `sourceType`). */
     sourceId: string;
-    /** Severity bucket assigned to the incident: `low`, `medium`, or `high`. */
+    /** Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`. */
     severity: MonitorIncident.Severity;
     /** ISO-8601 timestamp at which the incident opened. */
     startedAt: string;
@@ -34,11 +34,12 @@ export namespace MonitorIncident {
         Signal: "signal",
     } as const;
     export type SourceType = (typeof SourceType)[keyof typeof SourceType];
-    /** Severity bucket assigned to the incident: `low`, `medium`, or `high`. */
+    /** Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`. */
     export const Severity = {
         Low: "low",
         Medium: "medium",
         High: "high",
+        Urgent: "urgent",
     } as const;
     export type Severity = (typeof Severity)[keyof typeof Severity];
     /**

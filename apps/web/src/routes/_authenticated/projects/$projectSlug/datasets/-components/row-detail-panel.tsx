@@ -31,7 +31,7 @@ const BUILTIN_META: Record<
 > = {
   expectedOutput: {
     icon: SparklesIcon,
-    hint: "The correct answer for this row. Fill in by hand — not the same as `output`.",
+    hint: "The correct answer for this row. Fill it in by hand; it's different from `output`.",
   },
   input: { icon: ArrowDownRightIcon },
   output: { icon: ArrowUpRightIcon },

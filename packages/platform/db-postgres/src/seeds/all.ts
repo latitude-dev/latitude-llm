@@ -1,3 +1,4 @@
+import { agentDispatchSeeders } from "./agent-dispatch/index.ts"
 import { alertIncidentSeeders } from "./alert-incidents/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { customBehaviorQaSeeders } from "./custom-behaviors/index.ts"
@@ -44,6 +45,9 @@ export const contentSeeders: readonly Seeder[] = [
   // Must run after notificationSeeders so it fully controls which of its own
   // incidents read as "Notified" vs "Muted".
   ...monitorSeeders,
+  // Attaches agent-dispatch ledger rows to seeded signals; only depends on
+  // signalSeeders having run.
+  ...agentDispatchSeeders,
 ]
 
 export const allSeeders: readonly Seeder[] = [

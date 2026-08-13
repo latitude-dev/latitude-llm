@@ -64,7 +64,7 @@ export function Left({
           <div className="flex flex-col gap-2">
             <Text.H2 weight="medium">Choose automatic flaggers</Text.H2>
             <Text.H4 color="foregroundMuted">
-              Latitude inspects all incoming traces and creates issues when they detect common failure patterns. Choose
+              Latitude inspects all incoming traces and creates issues when it detects common failure patterns. Choose
               the patterns you want to monitor.
             </Text.H4>
           </div>

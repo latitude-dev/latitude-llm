@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "3.6.0",
+  "version": "4.0.0",
   "description": "Latitude Telemetry for TypeScript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -43,6 +43,116 @@
       "require": {
         "types": "./dist/cloudflare.d.cts",
         "default": "./dist/cloudflare.cjs"
+      }
+    },
+    "./instrumentations/openai": {
+      "source": "./src/instrumentations/openai.ts",
+      "import": {
+        "types": "./dist/instrumentations/openai.d.ts",
+        "default": "./dist/instrumentations/openai.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/openai.d.cts",
+        "default": "./dist/instrumentations/openai.cjs"
+      }
+    },
+    "./instrumentations/openai-agents": {
+      "source": "./src/instrumentations/openai-agents.ts",
+      "import": {
+        "types": "./dist/instrumentations/openai-agents.d.ts",
+        "default": "./dist/instrumentations/openai-agents.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/openai-agents.d.cts",
+        "default": "./dist/instrumentations/openai-agents.cjs"
+      }
+    },
+    "./instrumentations/anthropic": {
+      "source": "./src/instrumentations/anthropic.ts",
+      "import": {
+        "types": "./dist/instrumentations/anthropic.d.ts",
+        "default": "./dist/instrumentations/anthropic.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/anthropic.d.cts",
+        "default": "./dist/instrumentations/anthropic.cjs"
+      }
+    },
+    "./instrumentations/bedrock": {
+      "source": "./src/instrumentations/bedrock.ts",
+      "import": {
+        "types": "./dist/instrumentations/bedrock.d.ts",
+        "default": "./dist/instrumentations/bedrock.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/bedrock.d.cts",
+        "default": "./dist/instrumentations/bedrock.cjs"
+      }
+    },
+    "./instrumentations/cohere": {
+      "source": "./src/instrumentations/cohere.ts",
+      "import": {
+        "types": "./dist/instrumentations/cohere.d.ts",
+        "default": "./dist/instrumentations/cohere.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/cohere.d.cts",
+        "default": "./dist/instrumentations/cohere.cjs"
+      }
+    },
+    "./instrumentations/langchain": {
+      "source": "./src/instrumentations/langchain.ts",
+      "import": {
+        "types": "./dist/instrumentations/langchain.d.ts",
+        "default": "./dist/instrumentations/langchain.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/langchain.d.cts",
+        "default": "./dist/instrumentations/langchain.cjs"
+      }
+    },
+    "./instrumentations/llamaindex": {
+      "source": "./src/instrumentations/llamaindex.ts",
+      "import": {
+        "types": "./dist/instrumentations/llamaindex.d.ts",
+        "default": "./dist/instrumentations/llamaindex.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/llamaindex.d.cts",
+        "default": "./dist/instrumentations/llamaindex.cjs"
+      }
+    },
+    "./instrumentations/togetherai": {
+      "source": "./src/instrumentations/togetherai.ts",
+      "import": {
+        "types": "./dist/instrumentations/togetherai.d.ts",
+        "default": "./dist/instrumentations/togetherai.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/togetherai.d.cts",
+        "default": "./dist/instrumentations/togetherai.cjs"
+      }
+    },
+    "./instrumentations/vertexai": {
+      "source": "./src/instrumentations/vertexai.ts",
+      "import": {
+        "types": "./dist/instrumentations/vertexai.d.ts",
+        "default": "./dist/instrumentations/vertexai.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/vertexai.d.cts",
+        "default": "./dist/instrumentations/vertexai.cjs"
+      }
+    },
+    "./instrumentations/aiplatform": {
+      "source": "./src/instrumentations/aiplatform.ts",
+      "import": {
+        "types": "./dist/instrumentations/aiplatform.d.ts",
+        "default": "./dist/instrumentations/aiplatform.js"
+      },
+      "require": {
+        "types": "./dist/instrumentations/aiplatform.d.cts",
+        "default": "./dist/instrumentations/aiplatform.cjs"
       }
     }
   },

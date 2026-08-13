@@ -20,7 +20,7 @@ export async function inviteMagicLinkTemplate(data: InviteMagicLinkEmailData): P
         magicLinkUrl={data.magicLinkUrl}
       />,
     ),
-    subject: `Join ${data.organizationName} on Latitude — invited by ${data.inviterName}`,
+    subject: `${data.inviterName} invited you to ${data.organizationName} on Latitude`,
     text: `${data.inviterName} wants you to join the ${data.organizationName} workspace on Latitude. Accept here: ${data.magicLinkUrl}`,
   }
 }

@@ -22,7 +22,7 @@ class MonitorRule(UniversalBaseModel):
     config: MonitorConfig
     severity: MonitorRuleSeverity = pydantic.Field()
     """
-    Severity of incidents this monitor opens: `low`, `medium`, or `high`.
+    Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`.
     """
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

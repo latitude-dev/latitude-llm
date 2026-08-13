@@ -12,9 +12,9 @@ const RESIZABLE_HEADER_PADDING = "pl-3 pr-5" as const
 
 function SortIcon({ direction }: { direction: SortDirection | null }) {
   const cls = "h-3.5 w-3.5 shrink-0"
-  if (direction === "asc") return <ArrowUp className={cls} />
-  if (direction === "desc") return <ArrowDown className={cls} />
-  return <ArrowUpDown className={cn(cls, "opacity-40")} />
+  if (direction === "asc") return <ArrowUp className={cn(cls, "text-primary")} strokeWidth={2.5} />
+  if (direction === "desc") return <ArrowDown className={cn(cls, "text-primary")} strokeWidth={2.5} />
+  return <ArrowUpDown className={cn(cls, "opacity-40")} strokeWidth={2} />
 }
 
 function ariaSort(direction: SortDirection | null | undefined): "ascending" | "descending" | "none" {

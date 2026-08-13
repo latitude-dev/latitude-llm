@@ -1,4 +1,4 @@
-import type { TraceDetail } from "@domain/spans"
+import type { FlaggerConversation } from "../conversation.ts"
 
 // Re-export shared constants from parent package for convenience
 export {
@@ -7,6 +7,9 @@ export {
   MAX_STAGES_PER_PROMPT,
   MAX_SUSPICIOUS_SNIPPETS,
 } from "../constants.ts"
+
+export const EXPLICIT_PROFANITY_PATTERN_SOURCE = String.raw`\b(?:fuck|shit|bitch|damn|asshole|cunt|dick|cock|pussy)\b`
+export const SLUR_PATTERN_SOURCE = String.raw`\b(?:nigger|faggot|retard|kike|chink|spic|wetback)\b`
 
 // ---------------------------------------------------------------------------
 // SuspiciousSnippet - shared shape for snippet-based detection
@@ -57,11 +60,11 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * Filters out tool calls, tool responses, and system messages.
  */
 export function extractTextOnlyMessages(
-  trace: Pick<TraceDetail, "allMessages">,
+  conversation: Pick<FlaggerConversation, "allMessages">,
 ): Array<{ readonly role: "user" | "assistant"; readonly content: string }> {
   const result: Array<{ readonly role: "user" | "assistant"; readonly content: string }> = []
 
-  for (const message of trace.allMessages) {
+  for (const message of conversation.allMessages) {
     if (message.role !== "user" && message.role !== "assistant") continue
 
     const textParts: string[] = []
@@ -86,10 +89,10 @@ export function extractTextOnlyMessages(
  * Extract only user-authored text messages.
  * Used for frustration detection and user-focused analysis.
  */
-export function extractUserTextMessages(trace: Pick<TraceDetail, "allMessages">): string[] {
+export function extractUserTextMessages(conversation: Pick<FlaggerConversation, "allMessages">): string[] {
   const result: string[] = []
 
-  for (const message of trace.allMessages) {
+  for (const message of conversation.allMessages) {
     if (message.role !== "user") continue
 
     for (const part of iterMessageParts(message.parts)) {

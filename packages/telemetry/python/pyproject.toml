@@ -1,6 +1,6 @@
 [project]
 name = "latitude-telemetry"
-version = "3.6.0"
+version = "3.7.0"
 description = "Latitude Telemetry for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -11,15 +11,15 @@ urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages
 urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/python#readme"
 requires-python = ">=3.11, <3.15"
 dependencies = [
-    "opentelemetry-api==1.43.0",
-    "opentelemetry-sdk==1.43.0",
-    "opentelemetry-exporter-otlp-proto-http==1.43.0",
+    "opentelemetry-api==1.44.0",
+    "opentelemetry-sdk==1.44.0",
+    "opentelemetry-exporter-otlp-proto-http==1.44.0",
     "opentelemetry-semantic-conventions-ai==0.5.1",
     "openinference-semantic-conventions==0.1.30",
     "opentelemetry-instrumentation-alephalpha==0.61.0",
     "opentelemetry-instrumentation-anthropic==0.61.0",
-    "opentelemetry-instrumentation-bedrock==0.61.0",
-    "opentelemetry-instrumentation-cohere==0.61.0",
+    "opentelemetry-instrumentation-bedrock==0.62.1",
+    "opentelemetry-instrumentation-cohere==0.62.1",
     "openinference-instrumentation-crewai==1.1.10",
     "openinference-instrumentation-google-adk==0.1.15",
     "openinference-instrumentation-google-genai==1.1.0",
@@ -34,8 +34,8 @@ dependencies = [
     "opentelemetry-instrumentation-replicate==0.61.0",
     "opentelemetry-instrumentation-sagemaker==0.62.1",
     "opentelemetry-instrumentation-together==0.62.1",
-    "opentelemetry-instrumentation-threading==0.64b0",
-    "opentelemetry-instrumentation-transformers==0.61.0",
+    "opentelemetry-instrumentation-threading==0.65b0",
+    "opentelemetry-instrumentation-transformers==0.62.1",
     "opentelemetry-instrumentation-vertexai==0.61.0",
     "opentelemetry-instrumentation-watsonx==0.61.0",
     "pydantic==2.12.5",
@@ -48,16 +48,16 @@ dev = [
     "pytest-xdist==3.8.0",
     "pytest==9.1.1",
     "pyright==1.1.411",
-    "ruff==0.15.20",
+    "ruff==0.15.22",
     "sh==2.3.0",
-    "openai==2.41.1",
+    "openai==2.46.0",
     # Host SDK for the openai-agents integration (example/tests only). The
     # instrumentor (openinference-instrumentation-openai-agents) is the runtime
     # dep; the agents SDK itself is the user's to install.
     "openai-agents==0.15.1",
     # Note: 0.41.0 onwards made Prompt Caching generally available
     # which is not compatible with the instrumentation
-    "anthropic==0.40.0",
+    "anthropic==0.117.0",
     "litellm[proxy]==1.88.1",
     # Pinned <2.9.0: openinference-instrumentation-google-genai imports the
     # google.genai._interactions module, which google-genai removed in 2.9.0.

@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.9.0] - 2026-08-06
+
+### Changed
+
+- Severity gained an `urgent` tier, on top of `low`, `medium` and `high`. `client.monitors` accepts it when creating or updating a monitor's rule, and any incident you read can now come back as `urgent`. Existing values are untouched, so the only upgrade to make is widening an exhaustive `switch` over severity.
+
+## [9.8.0] - 2026-08-05
+
+### Added
+
+- `client.imports` — import historical traces from Langfuse, LangSmith, or Braintrust into a project: `list`, `create`, `get`, `cancel`, and `retry`. An import runs in the background, newest traces first; `retry` resumes a failed, cancelled, or capped import from where it stopped.
+
+## [9.7.1] - 2026-08-03
+
+### Changed
+
+- `client.traces.export` now throws `TooManyRequestsError` when the export is rate-limited (HTTP 429), instead of a generic error. The endpoint is now throttled to match `client.datasets.exportRows` and `client.signals.export`.
+
+## [9.7.0] - 2026-07-28
+
+### Added
+
+- `settings.redaction` on `client.projects.update` and on the project response: server-side PII redaction applied before spans are stored. Set `mode: "enforce"` to scan span content for the configured categories and replace matches with a labelled placeholder, with `entities` choosing the categories, `scopes.metadata` extending the scan to metadata and tags, and `identities` controlling whether user identifiers are kept or pseudonymized. Applies only to spans ingested after the change and cannot be undone.
+
+### Changed
+
+- `client.projects.update` now *patches* `settings` instead of replacing it. Fields you omit keep their stored values, so updating one setting no longer clears the others.
+
+## [9.6.1] - 2026-07-24
+
+### Changed
+
+- `client.datasets.exportRows` and `client.signals.export` now throw `TooManyRequestsError` when the export is rate-limited (HTTP 429), instead of a generic error.
+
+## [9.6.0] - 2026-07-22
+
+### Added
+
+- `client.memory` group for reading memory observability: `listStores` (cursor-paginated store roll-up), `getStore` (current snapshot, optional point-in-time `at`), `getStoreDiff` (per-record diff between two timestamps), `listStoreUsers`, `getRecord` (body plus version history), `getRecordChange` (one change's before/after diff), `listRecordReads`, and `listRecordUsers`. Store and record ids are opaque query params, so the unattributed (`""`) store and the unnamed record are reachable.
+- `client.sessions.getMemory` / `getMemoryChanges` and `client.traces.getMemory` / `getMemoryChanges` — a session's or trace's memory footprint (per-record read/added/removed token metrics and totals) and its per-record before/after write diffs.
+- `client.users.memoryStores` — the memory stores an end-user accessed.
+
+## [9.5.0] - 2026-07-21
+
+### Added
+
+- `client.signals` lifecycle methods `resolve` / `unresolve` / `ignore` / `unignore`. Resolving archives a signal while its evaluations keep watching for regressions; ignoring archives it, stops monitoring, and mutes notifications.
+- Signal responses now carry `resolvedAt`, `ignoredAt`, and `regressedAt`, and `states` can include `resolved`, `regressed`, and `ignored`.
+- Signal analytics now include `resolved` and `ignored` counts.
+
+### Changed
+
+- Muting a signal is now a pure notification toggle: incidents keep opening while muted.
+
+## [9.4.0] - 2026-07-20
+
+### Added
+
+- `client.sessions` group for reading sessions (the traces of one conversation, grouped by session id): `list` (cursor-paginated, with `filters` + free-text `query`), `analytics` (per-metric totals/medians and a 12-hour bucket series over whole sessions), `get` (session detail with its GenAI `conversation` and `latestTraceId`), `listTraces` (cursor-paginated traces of the session), `listSignals` (signals recorded across the session's traces), and `getSignal` (one session-scoped signal by slug).
+
+## [9.3.0] - 2026-07-16
+
+### Added
+
+- `client.projects.update` `flaggers` map accepts two new slugs: `bluffing` (the assistant proceeds past a failed tool call as if it succeeded) and `pii-leakage` (the assistant's output exposes personal data it should not have surfaced).
+
 ## [9.2.0] - 2026-07-16
 
 ### Added

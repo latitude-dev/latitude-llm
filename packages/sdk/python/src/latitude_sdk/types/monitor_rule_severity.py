@@ -2,4 +2,4 @@
 
 import typing
 
-MonitorRuleSeverity = typing.Union[typing.Literal["low", "medium", "high"], typing.Any]
+MonitorRuleSeverity = typing.Union[typing.Literal["low", "medium", "high", "urgent"], typing.Any]

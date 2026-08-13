@@ -11,7 +11,7 @@ export function OrganizationActionsSection({ children }: { children: ReactNode }
   return (
     <ActionsSection
       title="Organization actions"
-      description="Org-wide mutations — showcase visibility and future tenant operations."
+      description="Org-wide actions: showcase visibility and other tenant operations."
     >
       {children}
     </ActionsSection>

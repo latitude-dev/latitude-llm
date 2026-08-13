@@ -51,6 +51,7 @@ For each turn, the hook emits one trace with three span kinds:
 - **`interaction`** — the user prompt and turn-level timing / counts.
 - **`llm_request`** — one per model call. Carries the model name, token usage (input/output/cache), input and output messages, and — when the preload is active — the full system prompt (`gen_ai.system_instructions`), tool schemas (`gen_ai.tool.definitions`), and exact request parameters. A tool-loop turn produces N sibling `llm_request` spans, one per distinct assistant `message.id`.
 - **`tool_execution`** — one per tool call. Canonical `gen_ai.tool.*` attributes: `name`, `call.id`, `call.arguments`, `call.result`. Failures set `error.type` and OTel status code 2.
+- **memory operation** — a child of the `tool_execution` span whenever a successful `Read`/`Write`/`Edit`/`MultiEdit` targets a file inside Claude Code's [auto-memory](https://code.claude.com/docs/en/memory) directory (`~/.claude/projects/<project>/memory/`). Carries the standard `gen_ai.memory.*` attributes so memory shows up on the Memory page with per-record history and diffs. `Write` → `upsert_memory`, `Edit`/`MultiEdit` → `update_memory`, `Read` → `search_memory`. `gen_ai.memory.store.id` is the `<project>` slug, `gen_ai.memory.record.id` is the file path within the memory dir. Record bodies ride `gen_ai.memory.records` (captured by default; see privacy below).
 
 All spans share the session id so they group together in the Latitude UI.
 
@@ -95,6 +96,8 @@ Everything the installer writes. Edit `~/.claude/settings.json` directly if you 
 | `LATITUDE_BASE_URL` | no | `https://ingest.latitude.so` | Override ingest origin. Installer sets this only when you pass `--staging` or `--dev`. |
 | `BUN_OPTIONS` | written when `launchctl` isn't used (all non-macOS platforms, or macOS with `--no-launchctl`) | — | `--preload=<absolute-path-to-intercept.js>`. See "how it works" above. |
 | `LATITUDE_CLAUDE_CODE_ENABLED` | no | `1` | Set to `0` to pause the hook without uninstalling. |
+| `LATITUDE_CLAUDE_CODE_MEMORY` | no | `1` | Set to `0` to stop emitting memory-operation spans for auto-memory file ops. |
+| `LATITUDE_CLAUDE_CODE_MEMORY_CONTENT` | no | `1` | Set to `0` to emit memory spans without record bodies (structure and counts only). |
 | `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
 | `LATITUDE_REDACT_ATTRIBUTES` | no | — | JSON array or comma-separated custom attribute patterns to mask before export. |
 | `LATITUDE_REDACT_MASK` | no | `******` | Mask value for custom redaction. |
@@ -150,6 +153,8 @@ If that's not what you want, either:
 - Don't install the hook.
 - Set `LATITUDE_CLAUDE_CODE_ENABLED=0` in your shell before starting a sensitive session.
 - Run `uninstall`.
+
+This includes **auto-memory content**: the bodies of memory files Claude reads and writes ride `gen_ai.memory.records` by default. Memory can hold accumulated notes about your repo. Set `LATITUDE_CLAUDE_CODE_MEMORY_CONTENT=0` to keep memory spans but drop the bodies (structure and counts only), `LATITUDE_CLAUDE_CODE_MEMORY=0` to drop memory spans entirely, or add `gen_ai.memory.records` to `LATITUDE_REDACT_ATTRIBUTES` to mask them.
 
 For field-level PII controls while keeping the hook enabled, set `LATITUDE_REDACT_ATTRIBUTES` and optionally `LATITUDE_REDACT_MASK`. Patterns are exact strings, regex source strings, or `/pattern/flags` strings, and redaction happens before export.
 

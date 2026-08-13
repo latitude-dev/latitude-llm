@@ -1,14 +1,21 @@
 import type { ScoreSourceType } from "@domain/scores"
-import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
+import { ALERT_SEVERITIES, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 
 export const SIGNAL_NAME_MAX_LENGTH = 128
 
-export const SIGNAL_STATES = ["new", "escalating", "ongoing"] as const
+export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
 
 export const SIGNAL_SOURCES = ["annotation", "flagger", "custom"] as const
 
-/** Manual triage priority levels, ascending in urgency. Null means "unset". */
-export const SIGNAL_PRIORITIES = ["low", "medium", "high", "urgent"] as const
+/**
+ * Manual triage priority levels, ascending in urgency. Null means "unset".
+ *
+ * The same list monitors and incidents call severity — one array, two names:
+ * `signals.priority` is public API and `severity` is the key inside stored
+ * notification payloads, so neither can be renamed for free. Aliasing rather
+ * than repeating the values is what stops the two scales drifting apart again.
+ */
+export const SIGNAL_PRIORITIES = ALERT_SEVERITIES
 
 /**
  * Priority groups in display order for the always-grouped issues list.

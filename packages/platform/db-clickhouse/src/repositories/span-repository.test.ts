@@ -1241,6 +1241,59 @@ describe("SpanRepository", () => {
     })
   })
 
+  describe("findLatestOutputTraceId", () => {
+    const TRACE_A = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    const TRACE_B = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+    const SHARED_SPAN_ID = "sharedspan000001"
+
+    it("returns the trace with the latest output end_time across traces, deduping by (trace_id, span_id)", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: TRACE_A,
+            span_id: SHARED_SPAN_ID,
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"a"}]}]',
+            start_time: "2026-03-02 00:00:00.000000000",
+            end_time: "2026-03-02 00:00:01.000000000",
+            ingested_at: "2026-03-02 00:00:02.000",
+          }),
+          makeSpanRow({
+            trace_id: TRACE_B,
+            span_id: SHARED_SPAN_ID,
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"b"}]}]',
+            start_time: "2026-03-02 00:00:02.000000000",
+            end_time: "2026-03-02 00:00:03.000000000",
+            ingested_at: "2026-03-02 00:00:00.000",
+          }),
+        ]),
+      )
+
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [TRACE_A, TRACE_B],
+        }),
+      )
+
+      expect(latestTraceId).toBe(TRACE_B)
+    })
+
+    it("returns null when no trace ids are provided", async () => {
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [],
+        }),
+      )
+
+      expect(latestTraceId).toBeNull()
+    })
+  })
+
   describe("listToolSpansBySessionId", () => {
     const SESSION_ID = SessionId("tool-session")
     const TRACE_A = TraceId("11111111111111111111111111111111")
@@ -1459,6 +1512,68 @@ describe("SpanRepository", () => {
 
       expect(span.toolNames).toEqual(["defined_only_tool"])
       expect(span.toolDefinitions).toEqual([{ name: "defined_only_tool", description: "d", parameters: {} }])
+    })
+  })
+
+  /**
+   * The read the redaction preview samples from, and it had no coverage. Ordering and the dedupe
+   * are the parts that matter: a preview built on the oldest spans, or on superseded copies of
+   * them, would answer a question nobody asked.
+   */
+  describe("listRecentDetailsByProjectId", () => {
+    it("returns the newest deduped spans for the project, with their content payloads", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "1111111111111111",
+            name: "oldest",
+            ingested_at: "2026-01-01 00:00:00.000",
+            tool_output: "mail old@example.com",
+          }),
+          makeSpanRow({
+            span_id: "2222222222222222",
+            name: "newest",
+            ingested_at: "2026-01-01 00:00:05.000",
+            attr_string: { "acme.note": "ref ACME-1234" },
+          }),
+          makeSpanRow({
+            span_id: "2222222222222222",
+            name: "superseded",
+            ingested_at: "2026-01-01 00:00:02.000",
+          }),
+          makeSpanRow({ span_id: "3333333333333333", project_id: OTHER_PROJECT_ID, name: "other-project" }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listRecentDetailsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 10 }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["newest", "oldest"])
+      expect(spans[0]?.attrString["acme.note"]).toBe("ref ACME-1234")
+      expect(spans[1]?.toolOutput).toBe("mail old@example.com")
+    })
+
+    it("honours the limit, newest first", async () => {
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          Array.from({ length: 5 }, (_, index) =>
+            makeSpanRow({
+              span_id: String(index).repeat(16),
+              name: `span-${index}`,
+              ingested_at: `2026-01-01 00:00:0${index}.000`,
+            }),
+          ),
+        ),
+      )
+
+      const spans = await runCh(
+        repo.listRecentDetailsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 2 }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["span-4", "span-3"])
     })
   })
 })

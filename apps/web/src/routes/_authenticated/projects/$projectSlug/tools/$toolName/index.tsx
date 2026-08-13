@@ -197,7 +197,7 @@ function ToolDetailPageContent() {
               <Text.H5 color="foregroundMuted" italic>
                 {notFound
                   ? "No definition or calls were found for this tool in the selected time window."
-                  : "Definition not found — this tool was called but no chat span in this window carried its definition."}
+                  : "Definition not found. This tool was called, but no chat span in this window carried its definition."}
               </Text.H5>
             )
           }
@@ -214,12 +214,12 @@ function ToolDetailPageContent() {
               <Text.H5 color="foregroundMuted">
                 No calls in this window.
                 {definition
-                  ? ` It was offered to the model ${formatCount(definition.offeredCount)} times — the model never selected it.`
+                  ? ` It was offered to the model ${formatCount(definition.offeredCount)} times but never selected.`
                   : ""}
               </Text.H5>
             ) : !isLoading && errorsOnly && errorsUsage === null ? (
               <Text.H5 color="foregroundMuted">
-                No failed calls in this window — all {usage ? formatCount(usage.calls) : ""} calls succeeded.
+                No failed calls in this window. All {usage ? formatCount(usage.calls) : ""} succeeded.
               </Text.H5>
             ) : errorsOnly ? (
               <div className="flex flex-row flex-wrap gap-x-8 gap-y-4">
@@ -265,7 +265,7 @@ function ToolDetailPageContent() {
                       : "-"
                   }
                   tooltip={
-                    errorsUsage ? `p50 / p95 of failed calls — avg ${formatDuration(errorsUsage.avgDurationNs)}` : null
+                    errorsUsage ? `p50 / p95 of failed calls (avg ${formatDuration(errorsUsage.avgDurationNs)})` : null
                   }
                   isLoading={isLoading}
                 />
@@ -299,7 +299,7 @@ function ToolDetailPageContent() {
                   }
                   tooltip={
                     definition
-                      ? `How often the model picks this tool when it's available — offered ${formatCount(definition.offeredCount)} times. Can exceed 100% when one turn calls it multiple times.`
+                      ? `How often the model picks this tool when it's available, across ${formatCount(definition.offeredCount)} offers. Can exceed 100% when one turn calls it multiple times.`
                       : "Calls per offer needs tool definitions on chat spans."
                   }
                   isLoading={isLoading}
@@ -315,7 +315,7 @@ function ToolDetailPageContent() {
                   value={
                     usage ? `${formatDuration(usage.p50DurationNs)} / ${formatDuration(usage.p95DurationNs)}` : "-"
                   }
-                  tooltip={usage ? `p50 / p95 — avg ${formatDuration(usage.avgDurationNs)}` : null}
+                  tooltip={usage ? `p50 / p95 (avg ${formatDuration(usage.avgDurationNs)})` : null}
                   isLoading={isLoading}
                 />
                 <MetricTile

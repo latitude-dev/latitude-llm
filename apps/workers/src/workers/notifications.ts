@@ -4,14 +4,16 @@ import {
   deleteNotificationsByProjectUseCase,
   NOTIFICATION_KIND_META,
   type NotificationKind,
+  requestBillingLimitNotificationsUseCase,
   requestDestinationQuarantinedNotificationsUseCase,
   requestIncidentNotificationsUseCase,
   requestSignalAssignedNotificationsUseCase,
   requestSignalDiscoveredNotificationsUseCase,
+  requestSignalRegressedNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { NOTIFICATION_GROUP_META, OrganizationId, ProjectId, SignalId, type SqlClient } from "@domain/shared"
+import { NOTIFICATION_GROUP_META, OrganizationId, ProjectId, ScoreId, SignalId, type SqlClient } from "@domain/shared"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
@@ -352,6 +354,57 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         withTracing,
       ),
 
+    "request-signal-regressed-notifications": (payload) =>
+      requestSignalRegressedNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        signalId: SignalId(payload.signalId),
+        regressedAt: payload.regressedAt,
+        triggerScoreId: ScoreId(payload.triggerScoreId),
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-signal-regressed skipped signalId=${payload.signalId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.request-signal-regressed failed signalId=${payload.signalId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
     "request-destination-quarantined-notifications": (payload) =>
       requestDestinationQuarantinedNotificationsUseCase({
         organizationId: OrganizationId(payload.organizationId),
@@ -399,6 +452,62 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
           Effect.sync(() =>
             logger.error(
               `notifications.request-destination-quarantined failed destinationId=${payload.destinationId}`,
+              error,
+            ),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "request-billing-limit-notifications": (payload) =>
+      requestBillingLimitNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        periodStart: payload.periodStart,
+        periodEnd: payload.periodEnd,
+        limitKind: payload.limitKind,
+        includedCredits: payload.includedCredits,
+        consumedCredits: payload.consumedCredits,
+        overageCredits: payload.overageCredits,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-billing-limit skipped org=${payload.organizationId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(
+              `notifications.request-billing-limit failed org=${payload.organizationId} kind=${payload.limitKind}`,
               error,
             ),
           ),

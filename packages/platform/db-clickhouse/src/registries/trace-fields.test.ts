@@ -1,4 +1,4 @@
-import { SCORE_FILTER_FIELDS, TRACE_TELEMETRY_FILTER_FIELDS } from "@domain/shared"
+import { SCORE_FILTER_FIELDS, SESSION_TELEMETRY_FILTER_FIELDS, TRACE_TELEMETRY_FILTER_FIELDS } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SCORE_FILTER_KEYS } from "./score-fields.ts"
@@ -19,6 +19,18 @@ describe("trace filter registries stay in sync with the domain allow-list", () =
   it("registers endTime on both trace and session registries", () => {
     expect(TRACE_FIELD_REGISTRY).toHaveProperty("endTime")
     expect(SESSION_FIELD_REGISTRY).toHaveProperty("endTime")
+  })
+
+  // The session allow-list additionally exposes the conversation-intelligence
+  // fields `moments`/`topics`, which the query peels off before the registry —
+  // so they are legitimately absent from SESSION_FIELD_REGISTRY.
+  it("every SESSION_TELEMETRY_FILTER_FIELDS field except moments/topics is in SESSION_FIELD_REGISTRY", () => {
+    const sessionIntelligenceFields = new Set(["moments", "topics"])
+    const registryKeys = new Set(Object.keys(SESSION_FIELD_REGISTRY))
+    const missing = SESSION_TELEMETRY_FILTER_FIELDS.filter(
+      (field) => !sessionIntelligenceFields.has(field) && !registryKeys.has(field),
+    )
+    expect(missing).toEqual([])
   })
 })
 

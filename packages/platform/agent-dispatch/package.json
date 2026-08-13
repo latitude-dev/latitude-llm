@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@domain/agent-dispatch": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "vitest": "catalog:"

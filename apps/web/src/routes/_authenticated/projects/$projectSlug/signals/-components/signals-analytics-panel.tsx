@@ -15,6 +15,8 @@ const COUNT_CARDS = [
   { key: "ongoingSignals", label: "Ongoing" },
   { key: "newSignals", label: "New" },
   { key: "escalatingSignals", label: "Escalating" },
+  { key: "resolvedSignals", label: "Resolved" },
+  { key: "ignoredSignals", label: "Ignored" },
   { key: "seenOccurrences", label: "Occurrences" },
 ] as const
 

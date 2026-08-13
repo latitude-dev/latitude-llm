@@ -57,4 +57,5 @@ Once a trace is complete, Latitude can:
 - [Start tracing](../telemetry/start-tracing)
 - [Traces](./traces)
 - [Sessions](./sessions)
+- [Memory](./memory)
 - [Filters](./filters)
