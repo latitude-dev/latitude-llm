@@ -1,8 +1,8 @@
 import { MOMENT_KINDS } from "@domain/conversation-intelligence"
 import type { FilterCondition, FilterSet, TraceFilterGroupId } from "@domain/shared"
-import { Button, Input, Switch, Tabs, Text, Tooltip, useMountEffect } from "@repo/ui"
+import { Button, cn, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, SearchIcon, XIcon } from "lucide-react"
-import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useProjectMembersCollection } from "../../domains/members/members.collection.ts"
 import { isHasLlmActivityFilterOn } from "../../domains/sessions/sessions.collection.ts"
 import { useTopicFilterOptions } from "../../domains/taxonomy/taxonomy.collection.ts"
@@ -153,7 +153,6 @@ function DebouncedInput({
     () => {
       if (pendingChange === null) return
       onDebouncedChange(pendingChange)
-      setPendingChange(null)
     },
     300,
     [pendingChange, onDebouncedChange],
@@ -164,21 +163,6 @@ function DebouncedInput({
     setLocal(value)
     setPendingChange(null)
   }, [value])
-
-  // Search-filtering unmounts non-matching sections before the debounce above
-  // fires, which would otherwise clear the pending timeout and silently drop
-  // the edit. Flush whatever's still pending straight to the caller on unmount;
-  // `pendingChange` is reset to null as soon as the debounce delivers it, so a
-  // delivered value can't be flushed a second time here.
-  const pendingChangeRef = useRef(pendingChange)
-  pendingChangeRef.current = pendingChange
-  const onDebouncedChangeRef = useRef(onDebouncedChange)
-  onDebouncedChangeRef.current = onDebouncedChange
-  useMountEffect(() => {
-    return () => {
-      if (pendingChangeRef.current !== null) onDebouncedChangeRef.current(pendingChangeRef.current)
-    }
-  })
 
   return (
     <div className="relative">
@@ -211,14 +195,16 @@ function DebouncedInput({
 function NumberRangeFilter({
   minValue,
   maxValue,
-  onRangeChange,
+  onMinChange,
+  onMaxChange,
   minPlaceholder = "Min",
   maxPlaceholder = "Max",
   step,
 }: {
   readonly minValue: number | undefined
   readonly maxValue: number | undefined
-  readonly onRangeChange: (min: number | undefined, max: number | undefined) => void
+  readonly onMinChange: (v: number | undefined) => void
+  readonly onMaxChange: (v: number | undefined) => void
   readonly minPlaceholder?: string
   readonly maxPlaceholder?: string
   /** HTML `step` for both inputs; defaults to integer step when omitted. */
@@ -232,21 +218,19 @@ function NumberRangeFilter({
   useDebounce(
     () => {
       if (pendingMin === null) return
-      onRangeChange(pendingMin, maxValue)
-      setPendingMin(null)
+      onMinChange(pendingMin)
     },
     400,
-    [pendingMin, maxValue, onRangeChange],
+    [pendingMin, onMinChange],
   )
 
   useDebounce(
     () => {
       if (pendingMax === null) return
-      onRangeChange(minValue, pendingMax)
-      setPendingMax(null)
+      onMaxChange(pendingMax)
     },
     400,
-    [pendingMax, minValue, onRangeChange],
+    [pendingMax, onMaxChange],
   )
 
   // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
@@ -259,31 +243,6 @@ function NumberRangeFilter({
     setLocalMax(maxValue?.toString() ?? "")
     setPendingMax(null)
   }, [maxValue])
-
-  // Search-filtering unmounts non-matching sections before the debounces above
-  // fire, which would otherwise clear the pending timeouts and silently drop
-  // the edits. Flush both endpoints in a single call on unmount — `onRangeChange`
-  // replaces both conditions at once, so two sequential calls would let the
-  // second overwrite the first. `pendingMin`/`pendingMax` are reset to null as
-  // soon as their debounce delivers, so a delivered value can't be re-flushed.
-  const minValueRef = useRef(minValue)
-  minValueRef.current = minValue
-  const maxValueRef = useRef(maxValue)
-  maxValueRef.current = maxValue
-  const pendingMinRef = useRef(pendingMin)
-  pendingMinRef.current = pendingMin
-  const pendingMaxRef = useRef(pendingMax)
-  pendingMaxRef.current = pendingMax
-  const onRangeChangeRef = useRef(onRangeChange)
-  onRangeChangeRef.current = onRangeChange
-  useMountEffect(() => {
-    return () => {
-      if (pendingMinRef.current === null && pendingMaxRef.current === null) return
-      const min = pendingMinRef.current !== null ? pendingMinRef.current : minValueRef.current
-      const max = pendingMaxRef.current !== null ? pendingMaxRef.current : maxValueRef.current
-      onRangeChangeRef.current(min, max)
-    }
-  })
 
   const hasValue = minValue !== undefined || maxValue !== undefined
 
@@ -436,7 +395,8 @@ function NumberFilterSection({
         <NumberRangeFilter
           minValue={minValue}
           maxValue={maxValue}
-          onRangeChange={onRangeChange}
+          onMinChange={(min) => onRangeChange(min, maxValue)}
+          onMaxChange={(max) => onRangeChange(minValue, max)}
           {...(step !== undefined ? { step } : {})}
         />
       )}
@@ -800,20 +760,23 @@ export function FiltersBuilderFields({
         </div>
       </div>
 
-      {groups.length === 0 ? (
+      {groups.every((group) => group.hidden) && (
         <Text.H6 color="foregroundMuted" className="py-3">
           No filter matches “{search.trim()}”.
         </Text.H6>
-      ) : (
-        groups.map((group) => (
-          <div key={group.id} className="flex flex-col">
-            <Text.H6 color="foregroundMuted" weight="medium" className="pt-3 pb-0.5 uppercase tracking-wide">
-              {group.label}
-            </Text.H6>
-            {group.sections.map((section) => section.node)}
-          </div>
-        ))
       )}
+      {groups.map((group) => (
+        <div key={group.id} className={cn("flex flex-col", group.hidden && "hidden")}>
+          <Text.H6 color="foregroundMuted" weight="medium" className="pt-3 pb-0.5 uppercase tracking-wide">
+            {group.label}
+          </Text.H6>
+          {group.sections.map((section) => (
+            <div key={section.label} className={cn(section.hidden && "hidden")}>
+              {section.node}
+            </div>
+          ))}
+        </div>
+      ))}
     </>
   )
 }
