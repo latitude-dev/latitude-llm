@@ -113,7 +113,7 @@ function GlobalIntegrationDetailPage() {
           integration={integration}
           projectId={routeProject.id}
           projectSlug={projectSlug}
-          canDisconnect={isOwner}
+          canDisconnect
         />
         {settingsLoading ? (
           <Skeleton className="h-32 w-full" />
