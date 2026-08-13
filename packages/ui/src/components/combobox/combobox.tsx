@@ -90,7 +90,8 @@ function ComboboxContent({
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
-        positionMethod={positionMethod}
+        // Body portals use fixed so sticky/overflow ancestors of the trigger cannot trap the popup.
+        positionMethod={positionMethod ?? (container ? "absolute" : "fixed")}
         className="isolate z-[70]"
       >
         <ComboboxPrimitive.Popup
