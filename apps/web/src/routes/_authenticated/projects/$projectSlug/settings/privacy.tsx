@@ -195,7 +195,7 @@ function ProjectPrivacySettingsPage() {
       }
       headerSticky={valueDirty}
     >
-      <div className="flex w-full flex-col gap-8 @[900px]:w-2/3">
+      <div className="flex w-full flex-col gap-8">
         {/* The irreversibility and shape-matching caveats live on the card, next to the controls they qualify. */}
         <Text.H6 color="foregroundMuted">
           Matching values are replaced with a labelled placeholder before the span is stored. A change takes effect

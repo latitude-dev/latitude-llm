@@ -1,6 +1,7 @@
 import { Icon, Status, Text } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import { ChevronRight } from "lucide-react"
+import { isAgentDispatchKind } from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
 import type {
   ConnectedIntegration,
   IntegrationCatalogEntry,
@@ -8,16 +9,22 @@ import type {
 
 /**
  * Typed link to an integration's detail page. Slack and GitHub have their own
- * routes; the four dispatch kinds share the `$integrationKind` route.
+ * routes; the four dispatch kinds share the `$integrationKind` route — either
+ * the project-scoped one (this project's override) or, from Global integrations,
+ * the org-default edit page. Slack/GitHub have no Global-integrations-scoped
+ * page, so they always go to their project-scoped route regardless of
+ * `toGlobalIntegrations`.
  */
 function IntegrationDetailLink({
   entry,
   projectSlug,
+  toGlobalIntegrations = false,
   className,
   children,
 }: {
   readonly entry: IntegrationCatalogEntry
   readonly projectSlug: string
+  readonly toGlobalIntegrations?: boolean
   readonly className?: string
   readonly children: React.ReactNode
 }) {
@@ -47,6 +54,18 @@ function IntegrationDetailLink({
       </Link>
     )
   }
+  if (toGlobalIntegrations && isAgentDispatchKind(entry.key)) {
+    return (
+      <Link
+        to="/projects/$projectSlug/settings/global-integrations/$integrationKind"
+        params={{ projectSlug, integrationKind: entry.key }}
+        aria-label={label}
+        className={className}
+      >
+        {children}
+      </Link>
+    )
+  }
   return (
     <Link
       to="/projects/$projectSlug/settings/integrations/$integrationKind"
@@ -63,9 +82,12 @@ function IntegrationDetailLink({
 export function IntegrationRow({
   integration,
   projectSlug,
+  toGlobalIntegrations = false,
 }: {
   readonly integration: ConnectedIntegration
   readonly projectSlug: string
+  /** True when this row is rendered on Global integrations — links to the org-default edit page instead of this project's. */
+  readonly toGlobalIntegrations?: boolean
 }) {
   const { entry, identity, detail, needsAttention, attentionLabel } = integration
 
@@ -73,6 +95,7 @@ export function IntegrationRow({
     <IntegrationDetailLink
       entry={entry}
       projectSlug={projectSlug}
+      toGlobalIntegrations={toGlobalIntegrations}
       className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4 transition-colors hover:bg-muted/50"
     >
       <div className="flex min-w-0 flex-row items-center gap-3">

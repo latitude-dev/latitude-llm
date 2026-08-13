@@ -76,7 +76,7 @@ function SlackIntegrationDetails({ integration }: { readonly integration: SlackI
   const [disconnectOpen, setDisconnectOpen] = useState(false)
 
   return (
-    <div className="flex w-full flex-col gap-6 @[900px]:w-2/3">
+    <div className="flex w-full flex-col gap-6">
       {/* Should never appear while on-use refresh is healthy; when it does, the rotation
           chain is broken (refresh token revoked) and the workspace must be reconnected. */}
       {integration.needsReconnect ? (

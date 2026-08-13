@@ -167,7 +167,7 @@ function ProjectFlaggersSettingsPage() {
       }
       headerSticky={hasDirty}
     >
-      <div className="flex w-full max-w-2xl flex-col gap-8">
+      <div className="flex w-full flex-col gap-8">
         {isLoadingFlaggers ? null : flaggers.length === 0 ? (
           <Text.H5 color="foregroundMuted">No flaggers have been provisioned for this project yet</Text.H5>
         ) : (
