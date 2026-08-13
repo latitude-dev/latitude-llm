@@ -65,7 +65,11 @@ export const LIST_SELECT = `
   if(max(max_start_time) >= min(min_start_time),
      max(max_start_time),
      max(max_end_time))         AS last_activity_time,
-  sum(duration_ns)             AS duration_ns,
+  -- sessions_mv only sums empty-parent spans, so local roots nested under a never-exported parent (e.g. Vercel AI SDK under the app's HTTP span) store 0; fall back to wall-clock.
+  if(sum(duration_ns) > 0,
+     sum(duration_ns),
+     greatest(0, reinterpretAsInt64(max(max_end_time))
+                   - reinterpretAsInt64(min(min_start_time)))) AS duration_ns,
   if(
     min(time_of_first_token) < toDateTime64('2261-01-01', 9, 'UTC')
       AND min(time_of_first_token) > min(min_start_time),
