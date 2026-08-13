@@ -48,6 +48,8 @@ jobs:
         run: |
           cp -n .env.example .env.test || true
           pnpm --filter @domain/models exec vitest run --passWithNoTests src/registry.test.ts
+          pnpm --filter @platform/ai exec vitest run --passWithNoTests src/metering.test.ts
+          pnpm --filter @domain/evaluations exec vitest run --passWithNoTests src/runtime/evaluation-execution.test.ts
           pnpm --filter @platform/testkit chdb:build
           pnpm --filter @platform/db-clickhouse exec vitest run --passWithNoTests src/seeds/spans/cost-archetypes/archetypes.test.ts
 
@@ -63,7 +65,8 @@ jobs:
             Updates `packages/domain/models/src/data/models.dev.json`
             with the latest model information from the models.dev API.
 
-            Catalog-coupled unit and cost-archetype tests were run against the
+            Catalog-coupled unit tests (registry, AI metering, evaluation
+            execution) and the cost-archetype suite were run against the
             refreshed data before opening this PR.
           branch: chore/update-models-dev-data
           delete-branch: true
