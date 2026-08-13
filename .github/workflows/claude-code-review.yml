@@ -50,11 +50,11 @@ jobs:
 
             How to post the review:
             - Read the PR with `mcp__github__get_pull_request`, `mcp__github__get_pull_request_files`, and `mcp__github__get_pull_request_diff`.
-            - For line-specific findings, create a pending review with `mcp__github__create_pending_pull_request_review`, add each finding with `mcp__github__add_comment_to_pending_review`, then submit with `mcp__github__submit_pending_pull_request_review` using event `COMMENT`. Never `APPROVE` or `REQUEST_CHANGES`.
+            - For line-specific findings, create a pending review with `mcp__github__create_pending_pull_request_review`, add each finding with `mcp__github__add_comment_to_pending_review`, then submit with `mcp__github__submit_pending_pull_request_review` using event `COMMENT`. Never `APPROVE` or `REQUEST_CHANGES`. Leave the pending-review body empty; the summary goes in the PR-wide comment.
             - The add-comment tool is `mcp__github__add_comment_to_pending_review`. Do not call `add_comment_to_pending_pull_request_review` or `pull_request_review_write`; those names are not available on this server.
             - If GitHub MCP cannot attach a comment to a line, fall back to `mcp__github_inline_comment__create_inline_comment` (pass `confirmed: true`).
-            - Use `gh pr comment` only for findings that cannot be attached to a line, or if both inline paths fail. Keep that comment short.
-            - If there are no high-confidence issues, do not create or submit a review. If a pending review already exists, delete it with `mcp__github__delete_pending_pull_request_review`.
+            - Always finish by posting a PR-wide summary with `gh pr comment ${{ github.event.pull_request.number }}`. Do this even when there are no inline findings, including a clean bill of health. Cover what you reviewed, the main findings or that you found no high-confidence issues, and any notes that cannot attach to a line. Keep it concise.
+            - If there are no line-specific findings, do not create or submit a pending review. If a pending review already exists with no comments, delete it with `mcp__github__delete_pending_pull_request_review`, then still post the PR-wide summary.
             - Do not push commits or edit the branch.
             - Only post via these GitHub tools. Do not submit the review as assistant text.
           claude_args: |
