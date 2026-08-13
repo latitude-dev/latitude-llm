@@ -10,7 +10,6 @@ import {
   FACET_SCOPE_GLOBAL_TOOLTIP,
   FACET_SCOPE_WINDOWED_TOOLTIP,
 } from "../../../../../../domains/taxonomy/facet-scope-copy.ts"
-import { groupColorClassAt } from "../../../../../../domains/taxonomy/group-colors.ts"
 import { BehaviourBadge, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
 import { PreviewPlaceholder } from "./behaviour-catalog-card.tsx"
 
@@ -19,6 +18,26 @@ export const BEHAVIOUR_LIST_CLASS = "flex flex-col gap-2"
 
 const PANEL_CLASS =
   "flex flex-col overflow-hidden rounded-lg border border-border text-left transition-colors hover:border-foreground/20"
+
+/**
+ * Cycles through the design system's categorical palette (`bg-background-*`,
+ * defined in `globals.css` alongside `bg-background-code`/`bg-background-gray`)
+ * so a group keeps one color between the facet's share bar and its own row's
+ * color bar. Dark mode is automatic — each token flips in `.dark`, same as
+ * `bg-background`/`text-foreground` — so no `dark:` variant is needed here.
+ */
+const GROUP_COLOR_CLASSES = [
+  "bg-background-blue",
+  "bg-background-violet",
+  "bg-background-fuchsia",
+  "bg-background-teal",
+  "bg-background-amber",
+  "bg-background-red",
+  "bg-background-sky",
+  "bg-background-lime",
+] as const
+
+const groupColorClassAt = (index: number): string => GROUP_COLOR_CLASSES[index % GROUP_COLOR_CLASSES.length]
 
 function GroupRow({
   group,

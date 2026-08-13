@@ -8,8 +8,13 @@
  * the catalog's scope icon (the facet tree still shows the real date picker).
  * User-facing copy says "behavior group", never "facet" — that word only
  * appears here and in the domain layer (`TaxonomyFacet`, `facetId`).
+ *
+ * Both tooltips name the other side of the contrast, not just their own scope,
+ * since a user could land on either icon first and needs the same "Topics is
+ * the one built-in exception" takeaway either way.
  */
 export const FACET_SCOPE_GLOBAL_TOOLTIP =
-  "Topics tracks sessions across your project's entire history, from the very beginning."
+  "Unlike the behavior groups you create, Topics is built in by default, covering your project's entire history from day one."
 
-export const FACET_SCOPE_WINDOWED_TOOLTIP = "This behavior group only tracks sessions received since it was created."
+export const FACET_SCOPE_WINDOWED_TOOLTIP =
+  "Unlike Topics, this behavior group only tracks sessions received since it was created."
