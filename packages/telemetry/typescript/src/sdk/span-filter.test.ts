@@ -216,3 +216,41 @@ describe("ExportFilterSpanProcessor parent-chain promotion", () => {
     expect(names).toEqual(["http.request", "tcp.connect", "tls.connect"])
   })
 })
+
+describe("ExportFilterSpanProcessor blocked scopes", () => {
+  it("does not export a blocked ancestor even when a kept child promotes the chain", async () => {
+    const exporter = new InMemorySpanExporter()
+    const provider = new NodeTracerProvider({
+      spanProcessors: [
+        new ExportFilterSpanProcessor(
+          buildShouldExportSpan({
+            blockedInstrumentationScopes: ["opentelemetry.instrumentation.net"],
+          }),
+          new SimpleSpanProcessor(exporter),
+          { blockedInstrumentationScopes: ["opentelemetry.instrumentation.net"] },
+        ),
+      ],
+    })
+
+    const http = provider.getTracer("opentelemetry.instrumentation.http")
+    const net = provider.getTracer("opentelemetry.instrumentation.net")
+    const parent = http.startSpan("http.request")
+    const blocked = net.startSpan("tcp.connect", undefined, trace.setSpan(context.active(), parent))
+    const leaf = http.startSpan(
+      "genai.child",
+      { attributes: { "gen_ai.request.model": "gpt-4" } },
+      trace.setSpan(context.active(), blocked),
+    )
+    leaf.end()
+    blocked.end()
+    parent.end()
+    await provider.forceFlush()
+
+    const names = exporter
+      .getFinishedSpans()
+      .map((s) => s.name)
+      .sort()
+    expect(names).toEqual(["genai.child", "http.request"])
+    await provider.shutdown()
+  })
+})

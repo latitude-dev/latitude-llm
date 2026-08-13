@@ -2,8 +2,16 @@ import { type Context, isValidSpanId, trace } from "@opentelemetry/api"
 import type { ReadableSpan, Span, SpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { SCOPE_LATITUDE } from "../constants/scope.ts"
 
-/** Cap for ended-but-dropped spans held so a later child can still promote them. */
-const MAX_DROPPED_SPAN_BUFFER = 2048
+const MAX_TRACKED_SPANS = 2048
+
+type DroppedSpanEntry = {
+  span: ReadableSpan
+  recordedParentId: string | undefined
+}
+
+type ExportFilterSpanProcessorOptions = {
+  blockedInstrumentationScopes?: readonly string[]
+}
 
 function parentSpanIdOf(span: ReadableSpan | Span): string | undefined {
   const fromContext = (span as ReadableSpan).parentSpanContext?.spanId
@@ -18,6 +26,11 @@ function spanIdOf(span: ReadableSpan | Span): string | undefined {
   const spanId = spanContext?.spanId
   if (spanId && isValidSpanId(spanId)) return spanId
   return undefined
+}
+
+function evictOldestKey(map: Map<string, unknown>): void {
+  const oldest = map.keys().next().value
+  if (oldest !== undefined) map.delete(oldest)
 }
 
 /** OpenTelemetry GenAI semantic convention attribute prefix. */
@@ -165,16 +178,19 @@ export function buildShouldExportSpan(options: SmartFilterOptions): (span: Reada
 export class ExportFilterSpanProcessor implements SpanProcessor {
   private readonly shouldExport: (span: ReadableSpan) => boolean
   private readonly inner: SpanProcessor
-  /** In-flight span id → parent span id (when valid). */
+  private readonly blockedScopes: ReadonlySet<string>
   private readonly parentBySpanId = new Map<string, string | undefined>()
-  /** Span ids that must export even if they fail {@link shouldExport}. */
   private readonly forceExportIds = new Set<string>()
-  /** Recently dropped ended spans, keyed by span id, for late ancestor promotion. */
-  private readonly droppedBySpanId = new Map<string, ReadableSpan>()
+  private readonly droppedBySpanId = new Map<string, DroppedSpanEntry>()
 
-  constructor(shouldExport: (span: ReadableSpan) => boolean, inner: SpanProcessor) {
+  constructor(
+    shouldExport: (span: ReadableSpan) => boolean,
+    inner: SpanProcessor,
+    options?: ExportFilterSpanProcessorOptions,
+  ) {
     this.shouldExport = shouldExport
     this.inner = inner
+    this.blockedScopes = new Set(options?.blockedInstrumentationScopes ?? [])
   }
 
   onStart(span: Span, parentContext: Context): void {
@@ -185,6 +201,7 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
         const fromCtx = trace.getSpanContext(parentContext)?.spanId
         if (fromCtx && isValidSpanId(fromCtx)) parentId = fromCtx
       }
+      if (this.parentBySpanId.size >= MAX_TRACKED_SPANS) evictOldestKey(this.parentBySpanId)
       this.parentBySpanId.set(spanId, parentId)
     }
     this.inner.onStart(span, parentContext)
@@ -199,13 +216,19 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
       this.parentBySpanId.delete(spanId)
     }
 
+    if (this.isBlocked(span)) {
+      this.rememberDropped(span, recordedParentId)
+      if (forced) this.flushPromotedAncestors(span, recordedParentId)
+      return
+    }
+
     if (!forced && !this.shouldExport(span)) {
-      this.rememberDropped(span)
+      this.rememberDropped(span, recordedParentId)
       return
     }
 
     if (spanId) this.droppedBySpanId.delete(spanId)
-    this.promoteAncestors(span, recordedParentId)
+    this.flushPromotedAncestors(span, recordedParentId)
     this.inner.onEnd(span)
   }
 
@@ -220,17 +243,25 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
     return this.inner.shutdown()
   }
 
-  private rememberDropped(span: ReadableSpan): void {
-    const spanId = spanIdOf(span)
-    if (!spanId) return
-    if (this.droppedBySpanId.size >= MAX_DROPPED_SPAN_BUFFER) {
-      const oldest = this.droppedBySpanId.keys().next().value
-      if (oldest !== undefined) this.droppedBySpanId.delete(oldest)
-    }
-    this.droppedBySpanId.set(spanId, span)
+  private isBlocked(span: ReadableSpan): boolean {
+    return this.blockedScopes.has(instrumentationScopeName(span))
   }
 
-  private promoteAncestors(span: ReadableSpan, recordedParentId?: string): void {
+  private rememberDropped(span: ReadableSpan, recordedParentId: string | undefined): void {
+    const spanId = spanIdOf(span)
+    if (!spanId) return
+    if (this.droppedBySpanId.size >= MAX_TRACKED_SPANS) evictOldestKey(this.droppedBySpanId)
+    this.droppedBySpanId.set(spanId, { span, recordedParentId })
+  }
+
+  private flushPromotedAncestors(span: ReadableSpan, recordedParentId: string | undefined): void {
+    for (const ancestor of this.collectPromotedAncestors(span, recordedParentId)) {
+      this.inner.onEnd(ancestor)
+    }
+  }
+
+  private collectPromotedAncestors(span: ReadableSpan, recordedParentId: string | undefined): ReadableSpan[] {
+    const toExport: ReadableSpan[] = []
     let parentId = parentSpanIdOf(span) ?? recordedParentId
     const seen = new Set<string>()
 
@@ -240,13 +271,17 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
       const dropped = this.droppedBySpanId.get(parentId)
       if (dropped) {
         this.droppedBySpanId.delete(parentId)
-        this.promoteAncestors(dropped)
-        this.inner.onEnd(dropped)
-        parentId = parentSpanIdOf(dropped)
+        toExport.push(...this.collectPromotedAncestors(dropped.span, dropped.recordedParentId))
+        if (!this.isBlocked(dropped.span)) toExport.push(dropped.span)
+        parentId = parentSpanIdOf(dropped.span) ?? dropped.recordedParentId
         continue
       }
 
       if (this.parentBySpanId.has(parentId)) {
+        if (this.forceExportIds.size >= MAX_TRACKED_SPANS) {
+          const oldest = this.forceExportIds.values().next().value
+          if (oldest !== undefined) this.forceExportIds.delete(oldest)
+        }
         this.forceExportIds.add(parentId)
         parentId = this.parentBySpanId.get(parentId)
         continue
@@ -254,6 +289,8 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
 
       break
     }
+
+    return toExport
   }
 }
 

@@ -164,3 +164,39 @@ class TestExportFilterParentChainPromotion:
 
         names = sorted(span.name for span in self.exporter.get_finished_spans())
         assert names == ["http.request", "tcp.connect", "tls.connect"]
+
+
+class TestExportFilterBlockedScopes:
+    def setup_method(self) -> None:
+        self.exporter = InMemorySpanExporter()
+        self.provider = TracerProvider()
+        blocked = ("opentelemetry.instrumentation.net",)
+        self.provider.add_span_processor(
+            ExportFilterSpanProcessor(
+                build_should_export_span(blocked_instrumentation_scopes=blocked),
+                SimpleSpanProcessor(self.exporter),
+                blocked_instrumentation_scopes=blocked,
+            )
+        )
+
+    def teardown_method(self) -> None:
+        self.provider.shutdown()
+        self.exporter.clear()
+
+    def test_does_not_export_blocked_ancestor_of_kept_child(self) -> None:
+        http = self.provider.get_tracer("opentelemetry.instrumentation.http")
+        net = self.provider.get_tracer("opentelemetry.instrumentation.net")
+        parent = http.start_span("http.request")
+        blocked = net.start_span("tcp.connect", context=trace.set_span_in_context(parent))
+        leaf = http.start_span(
+            "genai.child",
+            context=trace.set_span_in_context(blocked),
+            attributes={"gen_ai.request.model": "gpt-4"},
+        )
+        leaf.end()
+        blocked.end()
+        parent.end()
+        self.provider.force_flush()
+
+        names = sorted(span.name for span in self.exporter.get_finished_spans())
+        assert names == ["genai.child", "http.request"]
