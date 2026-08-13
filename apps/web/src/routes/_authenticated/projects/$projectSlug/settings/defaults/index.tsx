@@ -6,32 +6,19 @@ import { createFileRoute } from "@tanstack/react-router"
 import { EyeOffIcon, type LucideProps } from "lucide-react"
 import { type ComponentType, useState } from "react"
 import {
-  type AgentDispatchIntegrationRecord,
-  getProjectDispatchSettings,
-  listAgentDispatchIntegrations,
-} from "../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
-import {
-  AGENT_DISPATCH_KIND_ICONS,
-  AGENT_DISPATCH_KIND_LABELS,
-  type AgentDispatchKindKey,
-} from "../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
-import { GITHUB_ORG_DEFAULTS_QUERY_KEY, getGithubOrgDefaults } from "../../../../../domains/github/github.functions.ts"
-import { integrationEntry } from "../../../../../domains/integrations/integration-catalog.ts"
-import { useIsOrganizationOwner } from "../../../../../domains/members/members.collection.ts"
-import { useOrganizationsCollection } from "../../../../../domains/organizations/organizations.collection.ts"
-import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
-import { useAuthenticatedOrganizationId, useAuthenticatedUser } from "../../../-route-data.ts"
-import { useRouteProject } from "../-route-data.ts"
-import {
-  AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
-  OrganizationDispatchModal,
-  projectDispatchSettingsQueryKey,
-} from "./-components/agent-dispatch-section.tsx"
-import { OrganizationGithubModal } from "./-components/github-manage.tsx"
-import { OrganizationRedactionModal } from "./-components/organization-redaction-modal.tsx"
-import { SettingsPage } from "./-components/settings-page.tsx"
+  GITHUB_ORG_DEFAULTS_QUERY_KEY,
+  getGithubOrgDefaults,
+} from "../../../../../../domains/github/github.functions.ts"
+import { integrationEntry } from "../../../../../../domains/integrations/integration-catalog.ts"
+import { useIsOrganizationOwner } from "../../../../../../domains/members/members.collection.ts"
+import { useOrganizationsCollection } from "../../../../../../domains/organizations/organizations.collection.ts"
+import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
+import { useAuthenticatedOrganizationId, useAuthenticatedUser } from "../../../../-route-data.ts"
+import { OrganizationGithubModal } from "../-components/github-manage.tsx"
+import { OrganizationRedactionModal } from "../-components/organization-redaction-modal.tsx"
+import { SettingsPage } from "../-components/settings-page.tsx"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/defaults")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/defaults/")({
   component: OrganizationDefaultsPage,
 })
 
@@ -41,7 +28,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
  * scope is the page's subject rather than a per-setting property.
  */
 function OrganizationDefaultsPage() {
-  const routeProject = useRouteProject()
   const organizationId = useAuthenticatedOrganizationId()
   const user = useAuthenticatedUser()
   const isOwner = useIsOrganizationOwner(user.id)
@@ -54,11 +40,6 @@ function OrganizationDefaultsPage() {
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
   )
-
-  const { data: dispatchIntegrations = [], isLoading: dispatchLoading } = useQuery({
-    queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
-    queryFn: () => listAgentDispatchIntegrations(),
-  })
 
   return (
     <SettingsPage
@@ -81,23 +62,6 @@ function OrganizationDefaultsPage() {
           />
 
           <GithubDefaultRow canEdit={isOwner} projectCount={projectCount} />
-
-          {dispatchLoading ? (
-            <div className="p-4">
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : (
-            dispatchIntegrations.map((integration: AgentDispatchIntegrationRecord) => (
-              <DispatchDefaultRow
-                key={integration.kind}
-                canEdit={isOwner}
-                kind={integration.kind}
-                integration={integration}
-                projectId={routeProject.id}
-                projectCount={projectCount}
-              />
-            ))
-          )}
         </div>
       </div>
     </SettingsPage>
@@ -244,72 +208,6 @@ function GithubDefaultRow({ projectCount, canEdit }: { readonly projectCount: nu
         <OrganizationGithubModal
           projectCount={projectCount}
           overrideCount={defaults.overrideCount}
-          onClose={() => setEditing(false)}
-        />
-      ) : null}
-    </>
-  )
-}
-
-function DispatchDefaultRow({
-  kind,
-  integration,
-  projectId,
-  projectCount,
-  canEdit,
-}: {
-  readonly canEdit: boolean
-  readonly kind: AgentDispatchKindKey
-  readonly integration: AgentDispatchIntegrationRecord
-  readonly projectId: string
-  readonly projectCount: number
-}) {
-  const [editing, setEditing] = useState(false)
-  const {
-    data: settings,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: projectDispatchSettingsQueryKey(projectId, kind),
-    queryFn: () => getProjectDispatchSettings({ data: { projectId, kind } }),
-  })
-
-  if (isLoading) {
-    return (
-      <div className="p-4">
-        <Skeleton className="h-10 w-full" />
-      </div>
-    )
-  }
-  if (isError) return <DefaultRowError title={`${AGENT_DISPATCH_KIND_LABELS[kind]} dispatch`} />
-
-  const config = settings?.defaultConfig ?? null
-  const triggerCount = config?.triggers.length ?? 0
-  const value =
-    config === null
-      ? "No default set"
-      : triggerCount === 0
-        ? "No triggers, so it never dispatches"
-        : `${triggerCount} ${triggerCount === 1 ? "trigger" : "triggers"} · ${config.guardrails.maxDispatchesPerDay} per day`
-
-  return (
-    <>
-      <DefaultRow
-        icon={AGENT_DISPATCH_KIND_ICONS[kind]}
-        title={`${AGENT_DISPATCH_KIND_LABELS[kind]} dispatch`}
-        value={value}
-        projectCount={projectCount}
-        overrideCount={settings?.overrideCount ?? 0}
-        canEdit={canEdit}
-        onEdit={() => setEditing(true)}
-      />
-      {editing ? (
-        <OrganizationDispatchModal
-          kind={kind}
-          integrationId={integration.id}
-          vendorAccountId={integration.vendorAccountId}
-          projectCount={projectCount}
-          overrideCount={settings?.overrideCount ?? 0}
           onClose={() => setEditing(false)}
         />
       ) : null}
