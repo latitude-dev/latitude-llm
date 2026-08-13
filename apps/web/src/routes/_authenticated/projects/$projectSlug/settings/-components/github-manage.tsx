@@ -80,7 +80,7 @@ export function GithubIntegrationManage({
 
   return (
     <div className="flex flex-col gap-10">
-      <div className="flex w-full flex-col gap-6 @[900px]:w-2/3">
+      <div className="flex w-full flex-col gap-6">
         {integration.suspendedAt ? (
           <Alert
             variant="warning"

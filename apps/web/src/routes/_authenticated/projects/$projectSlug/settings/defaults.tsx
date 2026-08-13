@@ -65,7 +65,7 @@ function OrganizationDefaultsPage() {
       title="Defaults"
       description="Organization-wide defaults that projects inherit unless they set their own."
     >
-      <div className="flex w-full flex-col gap-6 @[900px]:w-2/3">
+      <div className="flex w-full flex-col gap-6">
         <Text.H6 color="foregroundMuted">
           {isOwner
             ? "Each project can override these on its own settings pages. Changing a default here applies immediately to every project still inheriting it, and leaves projects that override it untouched."

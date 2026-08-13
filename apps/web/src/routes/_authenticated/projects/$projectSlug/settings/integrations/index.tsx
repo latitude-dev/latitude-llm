@@ -187,7 +187,7 @@ function IntegrationsSettingsPage() {
 
   return (
     <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
-      <div className="flex w-full flex-col gap-8 @[900px]:w-2/3">
+      <div className="flex w-full flex-col gap-8">
         {isLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : (

@@ -203,7 +203,7 @@ function DeleteOrganizationConfirmModal({
 function OrganizationSettingsPage() {
   return (
     <SettingsPage title="Organization" description="Manage your organization details">
-      <div className="flex w-full flex-col gap-6 @[800px]:w-1/2">
+      <div className="flex w-full flex-col gap-6">
         <OrganizationNameSection />
         <DeleteOrganizationSection />
       </div>

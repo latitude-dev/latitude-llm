@@ -259,7 +259,7 @@ export function AgentDispatchIntegrationDetails({
   }
 
   return (
-    <div className="flex w-full flex-col gap-6 @[900px]:w-2/3">
+    <div className="flex w-full flex-col gap-6">
       <DispatchConnectionSection kind={kind} integration={integration} projectId={projectId} />
       <DispatchBehaviorSection
         kind={kind}

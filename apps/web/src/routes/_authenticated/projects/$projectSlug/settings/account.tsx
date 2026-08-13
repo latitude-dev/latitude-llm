@@ -667,7 +667,7 @@ function AccountSettingsPage() {
   return (
     <SettingsPage title="Account" description="Manage your personal account">
       <form
-        className="flex w-full flex-col gap-3 @[800px]:w-1/2"
+        className="flex w-full flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault()
           void form.handleSubmit()
