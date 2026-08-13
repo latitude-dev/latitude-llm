@@ -103,7 +103,7 @@ function ProjectGeneralSettingsPage() {
       }
       headerSticky={hasDirty}
     >
-      <div className="flex w-full flex-col gap-3 @[800px]:w-1/2">
+      <div className="flex w-full flex-col gap-3">
         <Input
           type="text"
           label={
@@ -149,7 +149,7 @@ function TraceSamplingSection({
   onRateChange: (percent: number) => void
 }) {
   return (
-    <div className="flex w-full flex-col @[800px]:w-1/2">
+    <div className="flex w-full flex-col">
       <div className="flex w-full flex-col rounded-lg bg-muted/30">
         <div className="flex w-full flex-row items-start justify-between gap-4 p-4">
           <div className="flex flex-col gap-1">

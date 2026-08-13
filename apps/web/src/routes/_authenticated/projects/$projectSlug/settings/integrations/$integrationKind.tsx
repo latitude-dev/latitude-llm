@@ -30,10 +30,6 @@ function AgentDispatchIntegrationSettingsPage() {
   )
   const currentProject = project ?? routeProject
 
-  const { data: allProjects } = useProjectsCollection()
-  // The shared Showcase project is merged into this collection but isn't the org's.
-  const projectCount = (allProjects ?? []).filter((row) => !row.isShowcase).length
-
   return (
     <SettingsPage
       title={
@@ -57,12 +53,7 @@ function AgentDispatchIntegrationSettingsPage() {
       }
       description="Connection, dispatch behavior, and history for this integration."
     >
-      <AgentDispatchIntegrationDetails
-        projectId={currentProject.id}
-        projectSlug={currentProject.slug}
-        kind={kind}
-        projectCount={projectCount}
-      />
+      <AgentDispatchIntegrationDetails projectId={currentProject.id} projectSlug={currentProject.slug} kind={kind} />
     </SettingsPage>
   )
 }

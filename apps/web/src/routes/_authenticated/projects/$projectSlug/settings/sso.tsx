@@ -40,7 +40,7 @@ function SsoSettingsPage() {
 
   return (
     <SettingsPage title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
-      <div className="flex w-full flex-col gap-6 @[800px]:w-2/3">
+      <div className="flex w-full flex-col gap-6">
         <SsoProviderSection />
       </div>
     </SettingsPage>
@@ -49,7 +49,7 @@ function SsoSettingsPage() {
 
 function SsoUpsellCard() {
   return (
-    <div className="flex w-full flex-col gap-6 @[800px]:w-2/3">
+    <div className="flex w-full flex-col gap-6">
       <div className="flex flex-row flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/20 bg-primary/5 p-6">
         <div className="flex min-w-0 flex-row items-start gap-4">
           <Icon icon={ShieldCheck} size="md" color="primary" className="shrink-0 pt-0.5" />
