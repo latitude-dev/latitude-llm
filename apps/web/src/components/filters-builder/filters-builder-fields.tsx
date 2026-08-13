@@ -2,7 +2,7 @@ import { MOMENT_KINDS } from "@domain/conversation-intelligence"
 import type { FilterCondition, FilterSet, TraceFilterGroupId } from "@domain/shared"
 import { Button, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, SearchIcon, XIcon } from "lucide-react"
-import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useProjectMembersCollection } from "../../domains/members/members.collection.ts"
 import { isHasLlmActivityFilterOn } from "../../domains/sessions/sessions.collection.ts"
 import { useTopicFilterOptions } from "../../domains/taxonomy/taxonomy.collection.ts"
@@ -164,6 +164,19 @@ function DebouncedInput({
     setPendingChange(null)
   }, [value])
 
+  // Search-filtering unmounts non-matching sections before the debounce above
+  // fires, which would otherwise clear the pending timeout and silently drop
+  // the edit. Flush whatever's pending straight to the caller on unmount.
+  const pendingChangeRef = useRef(pendingChange)
+  pendingChangeRef.current = pendingChange
+  const onDebouncedChangeRef = useRef(onDebouncedChange)
+  onDebouncedChangeRef.current = onDebouncedChange
+  useEffect(() => {
+    return () => {
+      if (pendingChangeRef.current !== null) onDebouncedChangeRef.current(pendingChangeRef.current)
+    }
+  }, [])
+
   return (
     <div className="relative">
       <Input
@@ -243,6 +256,24 @@ function NumberRangeFilter({
     setLocalMax(maxValue?.toString() ?? "")
     setPendingMax(null)
   }, [maxValue])
+
+  // Search-filtering unmounts non-matching sections before the debounces above
+  // fire, which would otherwise clear the pending timeouts and silently drop
+  // the edits. Flush whatever's pending straight to the callers on unmount.
+  const pendingMinRef = useRef(pendingMin)
+  pendingMinRef.current = pendingMin
+  const pendingMaxRef = useRef(pendingMax)
+  pendingMaxRef.current = pendingMax
+  const onMinChangeRef = useRef(onMinChange)
+  onMinChangeRef.current = onMinChange
+  const onMaxChangeRef = useRef(onMaxChange)
+  onMaxChangeRef.current = onMaxChange
+  useEffect(() => {
+    return () => {
+      if (pendingMinRef.current !== null) onMinChangeRef.current(pendingMinRef.current)
+      if (pendingMaxRef.current !== null) onMaxChangeRef.current(pendingMaxRef.current)
+    }
+  }, [])
 
   const hasValue = minValue !== undefined || maxValue !== undefined
 
@@ -411,7 +442,6 @@ const MOMENT_FILTER_ITEMS: readonly StaticFilterItem[] = MOMENT_KINDS.map((kind)
   label: humanizeKind(kind),
 }))
 
-/** One rendered filter section, tagged with the group it renders under and the label the search box matches on. */
 interface FilterSectionEntry {
   readonly group: TraceFilterGroupId
   readonly label: string
