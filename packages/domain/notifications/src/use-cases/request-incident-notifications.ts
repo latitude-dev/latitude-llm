@@ -3,8 +3,8 @@ import { type Incident, IncidentRepository, isSignalEscalationEntrySignals } fro
 import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
-  type AlertSeverity,
   AlertIncidentId,
+  type AlertSeverity,
   type ChSqlClient,
   generateId,
   type IncidentNotificationKey,
