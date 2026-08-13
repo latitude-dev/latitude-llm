@@ -54,7 +54,7 @@ jobs:
 
       - name: Setup Python
         if: steps.check_version.outputs.should_publish == 'true'
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: "3.11"
 
