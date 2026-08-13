@@ -54,11 +54,17 @@ export const createFakeDestinationSourceStateRepository = (
     advanceCursor: ({ destinationId, source, expected, next }) =>
       Effect.sync(() => {
         const row = find(destinationId, source)
-        if (!row || row.watermark.getTime() !== expected.watermark.getTime() || row.watermarkId !== expected.id) {
+        if (
+          !row ||
+          row.watermark.getTime() !== expected.watermark.getTime() ||
+          row.watermarkId !== expected.id ||
+          row.watermarkTraceId !== (expected.traceId ?? "")
+        ) {
           return false
         }
         ;(row as { watermark: Date }).watermark = next.watermark
         ;(row as { watermarkId: string }).watermarkId = next.id
+        ;(row as { watermarkTraceId: string }).watermarkTraceId = next.traceId ?? ""
         return true
       }),
     updateRunState: ({ destinationId, source, consecutiveEmptyRuns, lastRunAt }) =>
@@ -75,6 +81,7 @@ export const createFakeDestinationSourceStateRepository = (
         if (!row) return
         ;(row as { watermark: Date }).watermark = watermark.watermark
         ;(row as { watermarkId: string }).watermarkId = watermark.id
+        ;(row as { watermarkTraceId: string }).watermarkTraceId = watermark.traceId ?? ""
       }),
     updateConfig: ({ destinationId, source, config, status }) =>
       Effect.sync(() => {

@@ -122,7 +122,7 @@ describe("mapSpansToPosthogEvents", () => {
     expect(event.name).toBe("$ai_generation")
     expect(event.distinctId).toBe("user-1")
     expect(event.timestamp).toEqual(span.endTime)
-    expect(event.sourceRecordId).toBe(span.spanId)
+    expect(event.sourceRecordId).toBe(`${span.traceId}:${span.spanId}`)
     expect(event.uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
     expect(event.properties).toMatchObject({
       $ai_trace_id: TRACE_ID,
@@ -312,7 +312,7 @@ describe("mapSpansToPosthogEvents", () => {
 
     expect(dropped).toBe(1)
     expect(events).toHaveLength(1)
-    expect(events[0].sourceRecordId).toBe(fine.spanId)
+    expect(events[0].sourceRecordId).toBe(`${fine.traceId}:${fine.spanId}`)
   })
 
   it("produces identical UUIDs across re-runs and distinct UUIDs per destination", async () => {
@@ -331,5 +331,31 @@ describe("mapSpansToPosthogEvents", () => {
       buildSpanUrl,
     })
     expect(otherDestination.events[0].uuid).not.toBe(first.events[0].uuid)
+  })
+
+  it("qualifies source grouping by trace id while preserving legacy UUID identity", async () => {
+    const firstTrace = stubSpanDetail({ parentSpanId: "" })
+    const secondTrace = stubSpanDetail({
+      parentSpanId: "",
+      traceId: TraceId("fedcba9876543210fedcba9876543210"),
+    })
+
+    const first = await map([firstTrace])
+    const second = await map([secondTrace])
+
+    expect(first.events.map((event) => event.sourceRecordId)).toEqual([
+      `${firstTrace.traceId}:${firstTrace.spanId}`,
+      `${firstTrace.traceId}:${firstTrace.spanId}`,
+    ])
+    expect(second.events.map((event) => event.sourceRecordId)).toEqual([
+      `${secondTrace.traceId}:${secondTrace.spanId}`,
+      `${secondTrace.traceId}:${secondTrace.spanId}`,
+    ])
+    // Keep legacy UUIDv5 identity until a versioned migration exists.
+    expect(first.events[0]?.uuid).toBe(second.events[0]?.uuid)
+    expect(first.events[0]?.uuid).not.toBe(first.events[1]?.uuid)
+
+    const rerun = await map([firstTrace])
+    expect(rerun.events.map((event) => event.uuid)).toEqual(first.events.map((event) => event.uuid))
   })
 })

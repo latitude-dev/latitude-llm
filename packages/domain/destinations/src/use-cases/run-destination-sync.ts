@@ -89,7 +89,8 @@ type Requirements =
 
 const isForward = (next: SourceCursor, current: SourceCursor): boolean =>
   next.watermark.getTime() > current.watermark.getTime() ||
-  (next.watermark.getTime() === current.watermark.getTime() && next.id > current.id)
+  (next.watermark.getTime() === current.watermark.getTime() &&
+    (next.id > current.id || (next.id === current.id && (next.traceId ?? "") > (current.traceId ?? ""))))
 
 const result = (
   params: Partial<RunDestinationSyncResult> & {
@@ -159,7 +160,7 @@ const handleEmptyWindow = (params: {
     const { destination, source, sourceState, startCursor, windowEnd, now } = params
     const sourceStates = yield* DestinationSourceStateRepository
 
-    const emptyTarget: SourceCursor = { watermark: windowEnd, id: "" }
+    const emptyTarget: SourceCursor = { watermark: windowEnd, id: "", traceId: "" }
     const advances = isForward(emptyTarget, startCursor)
     if (advances) {
       const claimed = yield* sourceStates.advanceCursor({
@@ -317,7 +318,13 @@ const handleDeliverySuccess = (params: {
       destinationId: destination.id,
       source,
       expected: startCursor,
-      next: next ? { watermark: next.watermark, id: next.id } : { watermark: windowEnd, id: "" },
+      next: next
+        ? {
+            watermark: next.watermark,
+            id: next.id,
+            ...(next.traceId === undefined ? {} : { traceId: next.traceId }),
+          }
+        : { watermark: windowEnd, id: "", traceId: "" },
     })
     if (!claimed) {
       return result({
@@ -398,6 +405,7 @@ export const runDestinationSyncUseCase = (input: RunDestinationSyncInput) =>
     const startCursor: SourceCursor = {
       watermark: sourceState.watermark,
       id: sourceState.watermarkId,
+      traceId: sourceState.watermarkTraceId,
     }
 
     const readers = yield* DestinationSourceReaders

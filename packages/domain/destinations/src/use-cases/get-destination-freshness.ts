@@ -110,7 +110,7 @@ export const getDestinationFreshnessUseCase = (input: GetDestinationFreshnessInp
         .listWindow({
           organizationId: destination.organizationId,
           projectId: destination.projectId,
-          cursor: { watermark: source.watermark, id: source.watermarkId },
+          cursor: { watermark: source.watermark, id: source.watermarkId, traceId: source.watermarkTraceId },
           windowEnd,
           limit: 1,
         })

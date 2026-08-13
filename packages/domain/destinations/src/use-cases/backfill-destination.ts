@@ -105,10 +105,19 @@ export const backfillSegments = (params: {
   ]
 }
 
-const firstWindowJob = (segments: readonly BackfillSegment[], coverageFloor: Date): BackfillWindowJob | null => {
+const firstWindowJob = (
+  segments: readonly BackfillSegment[],
+  coverageFloor: Date,
+  initialCursor?: SourceCursor,
+): BackfillWindowJob | null => {
   const [head, ...rest] = segments
   if (!head) return null
-  return { cursor: { watermark: head.start, id: "" }, segmentEnd: head.end, remainingSegments: rest, coverageFloor }
+  return {
+    cursor: initialCursor ?? { watermark: head.start, id: "", traceId: "" },
+    segmentEnd: head.end,
+    remainingSegments: rest,
+    coverageFloor,
+  }
 }
 
 /**
@@ -167,7 +176,9 @@ export const backfillDestinationUseCase = (input: BackfillDestinationInput) =>
       limit: DESTINATION_MAX_RECORDS_PER_BACKFILL,
     })
     const clampedStart =
-      capFloor && capFloor.getTime() > retentionClampedStart.getTime() ? capFloor : retentionClampedStart
+      capFloor && capFloor.watermark.getTime() > retentionClampedStart.getTime()
+        ? capFloor.watermark
+        : retentionClampedStart
 
     // Nothing before existing coverage → no work (e.g. a re-import of an already-covered range).
     if (clampedStart.getTime() >= end.getTime()) {
@@ -176,7 +187,11 @@ export const backfillDestinationUseCase = (input: BackfillDestinationInput) =>
 
     const deliverer = (yield* DestinationDeliverers)[destination.kind]
     const segments = backfillSegments({ clampedStart, end, boundaryMs: deliverer.historicalBoundaryMs, now })
-    const job = firstWindowJob(segments, clampedStart)
+    const job = firstWindowJob(
+      segments,
+      clampedStart,
+      capFloor && capFloor.watermark.getTime() >= retentionClampedStart.getTime() ? capFloor : undefined,
+    )
     if (!job) {
       return { outcome: "empty" as const, destinationId: destination.id, source, clampedStart, segmentsPlanned: 0 }
     }

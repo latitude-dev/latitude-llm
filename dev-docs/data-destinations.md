@@ -45,7 +45,7 @@ Delivery is **at-least-once with deterministic identity**, which the destination
 
 This is correct **only because the source is append-only and immutable** (spans are write-once). A mutable source would need version-aware identity instead — see the source contract below.
 
-The cursor is **compound** (an ingestion timestamp plus a tie-breaker id) because many records can share the same ingestion timestamp. The window reads strictly after the cursor pair, so a run that stops mid-batch (cap or chunk boundary) never skips same-timestamp siblings. Cursor writes are optimistic — a stale concurrent run can't move the cursor backward or double-advance.
+The cursor is **compound** (an ingestion timestamp plus deterministic tie-breakers) because many records can share the same ingestion timestamp. For spans, the key is `(ingested_at, span_id, trace_id)`: OpenTelemetry span ids are only unique within a trace. Window reads are strictly after the full cursor tuple, so a run that stops mid-batch (cap or chunk boundary) never skips same-timestamp siblings, including cross-trace span-id collisions. Cursor writes are optimistic — a stale concurrent run can't move the cursor backward or double-advance.
 
 ## PostHog destination
 

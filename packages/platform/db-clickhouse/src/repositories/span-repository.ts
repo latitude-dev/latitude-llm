@@ -886,26 +886,33 @@ export const SpanRepositoryLive = Layer.effect(
                                 ingested_at > {cursorIngestedAt:DateTime64(3, 'UTC')}
                                 OR (
                                   ingested_at = {cursorIngestedAt:DateTime64(3, 'UTC')}
-                                  AND span_id > toFixedString({cursorSpanId:String}, 16)
+                                  AND (
+                                    span_id > toFixedString({cursorSpanId:String}, 16)
+                                    OR (
+                                      span_id = toFixedString({cursorSpanId:String}, 16)
+                                      AND trace_id > {cursorTraceId:FixedString(32)}
+                                    )
+                                  )
                                 )
                               )
                               AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
                             ORDER BY trace_id, span_id, ingested_at DESC
                             LIMIT 1 BY trace_id, span_id
                           )
-                          ORDER BY ingested_at ASC, span_id ASC
+                          ORDER BY ingested_at ASC, span_id ASC, trace_id ASC
                           LIMIT {limit:UInt32}
                         )
                         AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
                       ORDER BY trace_id, span_id, ingested_at DESC
                       LIMIT 1 BY trace_id, span_id
                     )
-                    ORDER BY ingested_at ASC, span_id ASC`,
+                    ORDER BY ingested_at ASC, span_id ASC, trace_id ASC`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
                 cursorIngestedAt: formatCHDate(cursor.ingestedAt),
                 cursorSpanId: cursor.spanId as string,
+                cursorTraceId: cursor.traceId as string,
                 windowEnd: formatCHDate(windowEnd),
                 limit,
               },
@@ -923,7 +930,7 @@ export const SpanRepositoryLive = Layer.effect(
               const last = spans.at(-1)
               return {
                 spans,
-                nextCursor: last ? { ingestedAt: last.ingestedAt, spanId: last.spanId } : null,
+                nextCursor: last ? { ingestedAt: last.ingestedAt, spanId: last.spanId, traceId: last.traceId } : null,
               }
             }),
             Effect.mapError((error) => toRepositoryError(error, "listByIngestedAtWindow")),
@@ -982,7 +989,7 @@ export const SpanRepositoryLive = Layer.effect(
                         ORDER BY trace_id, span_id, ingested_at DESC
                         LIMIT 1 BY trace_id, span_id
                       )
-                      ORDER BY ingested_at DESC, span_id DESC
+                      ORDER BY ingested_at DESC, span_id DESC, trace_id DESC
                       LIMIT {limit:UInt32}`,
                 query_params: {
                   organizationId: organizationId as string,
@@ -1010,7 +1017,7 @@ export const SpanRepositoryLive = Layer.effect(
               // so on a 1M+ span project this is a one-shot full dedup scan — acceptable because it
               // runs once at backfill initiation, never per window.
               const result = await client.query({
-                query: `SELECT ingested_at
+                query: `SELECT ingested_at, span_id, trace_id
                       FROM (
                         SELECT trace_id, span_id, ingested_at
                         FROM spans
@@ -1020,7 +1027,7 @@ export const SpanRepositoryLive = Layer.effect(
                         ORDER BY trace_id, span_id, ingested_at DESC
                         LIMIT 1 BY trace_id, span_id
                       )
-                      ORDER BY ingested_at DESC, span_id DESC
+                      ORDER BY ingested_at DESC, span_id DESC, trace_id DESC
                       LIMIT 1 OFFSET {limit:UInt32}`,
                 query_params: {
                   organizationId: organizationId as string,
@@ -1030,12 +1037,18 @@ export const SpanRepositoryLive = Layer.effect(
                 },
                 format: "JSONEachRow",
               })
-              return result.json<{ ingested_at: string }>()
+              return result.json<{ ingested_at: string; span_id: string; trace_id: string }>()
             })
             .pipe(
               Effect.map((rows) => {
                 const floor = rows.at(0)
-                return floor ? parseCHDate(floor.ingested_at) : null
+                return floor
+                  ? {
+                      ingestedAt: parseCHDate(floor.ingested_at),
+                      spanId: SpanId(normalizeCHString(floor.span_id)),
+                      traceId: toTraceId(normalizeCHString(floor.trace_id)),
+                    }
+                  : null
               }),
               Effect.mapError((error) => toRepositoryError(error, "findIngestedAtFloorForRecentLimit")),
             )

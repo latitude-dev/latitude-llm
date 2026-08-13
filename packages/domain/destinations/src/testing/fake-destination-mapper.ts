@@ -20,7 +20,7 @@ export const createFakeDestinationMapper = (opts: { dropped?: number } = {}) => 
           name: "$ai_span",
           distinctId: span.traceId,
           timestamp: span.endTime,
-          sourceRecordId: span.spanId,
+          sourceRecordId: `${span.traceId}:${span.spanId}`,
           properties: {},
         }))
         return { events, dropped: opts.dropped ?? 0 }

@@ -149,6 +149,9 @@ const stripContentProperties = (params: {
 
 const textEncoder = new TextEncoder()
 
+/** Span ids are only unique within a trace; deliverer grouping therefore uses both ids. */
+const sourceRecordIdForSpan = (span: SpanDetail): string => `${span.traceId}:${span.spanId}`
+
 const eventByteSize = (event: DestinationEvent): number => textEncoder.encode(JSON.stringify(event)).length
 
 const applyOversizedPolicy = (params: {
@@ -185,16 +188,18 @@ export const mapSpansToPosthogEvents = async (
 
   for (const span of input.spans) {
     const distinctId = span.userId === "" ? span.traceId : span.userId
+    const sourceRecordId = sourceRecordIdForSpan(span)
     for (const draft of draftsForSpan(span, input)) {
       const event: DestinationEvent = {
         uuid: await uuidV5({
           namespace: DESTINATION_EVENT_UUID_NAMESPACE,
+          // Keep the established UUID input stable; changing it would re-identify historical events.
           name: `${input.destinationId}:${span.spanId}:${draft.name}`,
         }),
         name: draft.name,
         distinctId,
         timestamp: span.endTime,
-        sourceRecordId: span.spanId,
+        sourceRecordId,
         properties: stripContentProperties({
           properties: draft.properties,
           errorType: span.errorType,

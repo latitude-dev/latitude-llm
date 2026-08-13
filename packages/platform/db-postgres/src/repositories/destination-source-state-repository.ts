@@ -25,6 +25,7 @@ const toDomainSourceState = (row: SourceRow): DestinationSourceState =>
     config: row.config,
     watermark: row.watermark,
     watermarkId: row.watermarkId,
+    watermarkTraceId: row.watermarkTraceId,
     coverageStartAt: row.coverageStartAt,
     backfillStartedAt: row.backfillStartedAt,
     backfillProgressAt: row.backfillProgressAt,
@@ -42,6 +43,7 @@ const toInsertRow = (sourceState: DestinationSourceState) => ({
   config: sourceState.config,
   watermark: sourceState.watermark,
   watermarkId: sourceState.watermarkId,
+  watermarkTraceId: sourceState.watermarkTraceId,
   coverageStartAt: sourceState.coverageStartAt,
   backfillStartedAt: sourceState.backfillStartedAt,
   backfillProgressAt: sourceState.backfillProgressAt,
@@ -148,7 +150,12 @@ export const DestinationSourceStateRepositoryLive = Layer.effect(
             .query((db, organizationId) =>
               db
                 .update(destinationSources)
-                .set({ watermark: next.watermark, watermarkId: next.id, updatedAt: new Date() })
+                .set({
+                  watermark: next.watermark,
+                  watermarkId: next.id,
+                  watermarkTraceId: next.traceId ?? "",
+                  updatedAt: new Date(),
+                })
                 .where(
                   and(
                     eq(destinationSources.destinationId, destinationId),
@@ -156,6 +163,7 @@ export const DestinationSourceStateRepositoryLive = Layer.effect(
                     eq(destinationSources.organizationId, organizationId),
                     eq(destinationSources.watermark, expected.watermark),
                     eq(destinationSources.watermarkId, expected.id),
+                    eq(destinationSources.watermarkTraceId, expected.traceId ?? ""),
                   ),
                 )
                 .returning({ destinationId: destinationSources.destinationId }),
@@ -191,7 +199,12 @@ export const DestinationSourceStateRepositoryLive = Layer.effect(
             .query((db, organizationId) =>
               db
                 .update(destinationSources)
-                .set({ watermark: watermark.watermark, watermarkId: watermark.id, updatedAt: new Date() })
+                .set({
+                  watermark: watermark.watermark,
+                  watermarkId: watermark.id,
+                  watermarkTraceId: watermark.traceId ?? "",
+                  updatedAt: new Date(),
+                })
                 .where(
                   and(
                     eq(destinationSources.destinationId, destinationId),

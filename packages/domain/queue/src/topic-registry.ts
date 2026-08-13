@@ -859,6 +859,8 @@ const _registry = {
       readonly source: string
       readonly cursorWatermark: string
       readonly cursorId: string
+      /** Empty/omitted for jobs created before the trace-scoped span cursor was added. */
+      readonly cursorTraceId?: string
       readonly segmentEnd: string
       readonly remainingSegments: readonly { readonly start: string; readonly end: string }[]
       /** The chain's lower bound (ISO); coverage extends to it once the chain drains. */
