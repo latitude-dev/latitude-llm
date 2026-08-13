@@ -210,6 +210,40 @@ describe("requestIncidentNotificationsUseCase", () => {
     })
   })
 
+  it("uses the signal triage priority as notification severity for escalations", async () => {
+    const incident = makeIncident()
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: incident.id,
+        transition: "created",
+      }).pipe(Effect.provide(makeLayer({ incident, signal: makeSignal({ priority: "urgent" }) }))),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("expected ok")
+    expect(result.requests[0]?.payload).toMatchObject({
+      severity: "urgent",
+      priority: "urgent",
+    })
+  })
+
+  it("keeps the escalation severity floor when triage is below it", async () => {
+    const incident = makeIncident()
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: incident.id,
+        transition: "created",
+      }).pipe(Effect.provide(makeLayer({ incident, signal: makeSignal({ priority: "low" }) }))),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("expected ok")
+    expect(result.requests[0]?.payload).toMatchObject({
+      severity: "high",
+      priority: "low",
+    })
+  })
+
   it("sends signal escalation incidents only to the assignee when assigned", async () => {
     const incident = makeIncident()
     const assigneeId = UserId(cuid("u2"))
