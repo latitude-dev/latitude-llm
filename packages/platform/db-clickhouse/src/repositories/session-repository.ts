@@ -65,7 +65,15 @@ export const LIST_SELECT = `
   if(max(max_start_time) >= min(min_start_time),
      max(max_start_time),
      max(max_end_time))         AS last_activity_time,
-  sum(duration_ns)             AS duration_ns,
+  -- sessions_mv only counts spans with an empty parent as active-execution
+  -- time, so instrumentation whose local roots reference a parent span that
+  -- is never exported (e.g. Vercel AI SDK spans nested under the app's own
+  -- HTTP span) materializes 0. Fall back to the session's wall-clock window
+  -- rather than showing no duration at all.
+  if(sum(duration_ns) > 0,
+     sum(duration_ns),
+     greatest(0, reinterpretAsInt64(max(max_end_time))
+                   - reinterpretAsInt64(min(min_start_time)))) AS duration_ns,
   if(
     min(time_of_first_token) < toDateTime64('2261-01-01', 9, 'UTC')
       AND min(time_of_first_token) > min(min_start_time),
