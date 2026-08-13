@@ -16,9 +16,10 @@
  *      projection metadata does not round-trip through the workflow worker.
  *      The sample is deterministic (hash-ordered, no rand()) so a gardening
  *      pass replays identically under Temporal.
- *   2. Build the tree top-down with `buildStaticHierarchicalClusters` using the
- *      per-depth schedule. The schedule encodes broad-at-the-root,
- *      narrow-at-the-leaves without per-corpus tuning.
+ *   2. Build the tree top-down with exactly one builder — the node-relative
+ *      adaptive one when the organization is gated on, `buildStaticHierarchicalClusters`
+ *      on its per-depth schedule otherwise. The static schedule encodes
+ *      broad-at-the-root, narrow-at-the-leaves without per-corpus tuning.
  *   3. Persist clusters top-down so child rows always have a valid parent.
  *      Interior nodes get a `splitLinkThreshold` derived from the chosen K's
  *      tightest sibling-pair cosine so the online router has a per-level
@@ -65,6 +66,7 @@ import {
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_DEFAULT,
   type TaxonomyAdaptiveClusteringMode,
 } from "../adaptive-mode.ts"
+import { type TaxonomyBuildQualityMetrics, taxonomyBuildQualityMetrics } from "../build-quality.ts"
 import {
   buildRelativeHierarchicalClusters,
   buildStaticHierarchicalClusters,
@@ -72,6 +74,10 @@ import {
   type RelativeClusteringDiagnostics,
 } from "../clustering.ts"
 import {
+  TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
+  TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+  TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
+  TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
   TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
@@ -79,6 +85,7 @@ import {
   TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
+  TAXONOMY_KMEANS_ESCALATION_RESTARTS,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
@@ -107,7 +114,6 @@ import {
   TaxonomyObservationRepository,
   type TaxonomyScopedClusteringObservation,
 } from "../ports/taxonomy-observation-repository.ts"
-import { compareTaxonomyTrees, type TaxonomyShadowComparison } from "../shadow-comparison.ts"
 
 export interface BuildHierarchicalTaxonomyInput {
   readonly organizationId: OrganizationId
@@ -130,14 +136,16 @@ export interface BuildHierarchicalTaxonomyResult {
   readonly clustersDeprecated: number
   readonly leavesAssigned: number
   readonly maxDepthReached: number
+  /** Children of the single depth-0 root — the rows the Behaviours read hoists as its top-level list. */
+  readonly topLevelClustersBuilt: number
   readonly lineage: readonly TaxonomyClusterLineage[]
 }
 
 /**
  * Mode-tagged build request. The builder (worker or in-process) branches on
  * `mode` internally: `off` runs the static absolute-sibling-cosine builder,
- * `shadow`/`enforced` run the node-relative adaptive builder. Schedules and
- * k-means constants are resolved builder-side so the request stays slim.
+ * `enforced` runs the node-relative adaptive builder. Schedules and k-means
+ * constants are resolved builder-side so the request stays slim.
  */
 export interface TaxonomyClusterBuildRequest {
   readonly mode: TaxonomyAdaptiveClusteringMode
@@ -166,6 +174,13 @@ export const runTaxonomyClusterBuild = (input: TaxonomyClusterBuildRequest): Tax
       tolerance: TAXONOMY_KMEANS_TOLERANCE,
       seed: input.seed,
       globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+      escalation: {
+        restarts: TAXONOMY_KMEANS_ESCALATION_RESTARTS,
+        marginThreshold: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
+        marginFloor: TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+        searchWidth: TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
+        maxSearchWork: TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
+      },
     })
     return { root, diagnostics }
   }
@@ -183,15 +198,15 @@ export const runTaxonomyClusterBuild = (input: TaxonomyClusterBuildRequest): Tax
 export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomyInput {
   readonly clusterBuilder?: TaxonomyClusterBuilder
   /**
-   * A view is (scope × lens); scope and lens are resolved orthogonally.
+   * A view is (scope × facet); scope and facet are resolved orthogonally.
    *
    * SCOPE — `customBehaviorId` absent ⇒ whole-project; present ⇒ a cohort's
-   * FilterSet session slice (requires a non-empty `filterSet` on the topic lens).
+   * FilterSet session slice (requires a non-empty `filterSet` on the topic path).
    *
-   * LENS — `facetId` absent ⇒ the topic lens (cluster the sampled observation
-   * embeddings); present ⇒ a facet lens, where the caller has already sampled +
-   * extracted the facet projections and passes them as `lensObservations` (this
-   * use-case does not sample or extract on the facet path).
+   * FACET — `facetId` absent ⇒ the topic path (cluster the sampled observation
+   * embeddings); present ⇒ a facet-scoped path, where the caller has already
+   * sampled + extracted the facet projections and passes them as
+   * `facetObservations` (this use-case does not sample or extract on the facet path).
    *
    * WRITE TARGET — only (whole-project, topic) writes inline to
    * `taxonomy_observations.assigned_cluster_id`; every other combination writes
@@ -203,17 +218,17 @@ export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomy
   readonly facetId?: FacetId
   readonly filterSet?: FilterSet
   /**
-   * Facet-lens embeddings to cluster: the non-unclear facet projections the
+   * Facet-scoped embeddings to cluster: the non-unclear facet projections the
    * caller extracted for the sampled sessions (each carries the session's
    * `observationId`/`sessionId`/`startTime`). Required on the facet path, ignored
    * on the topic path.
    */
-  readonly lensObservations?: readonly TaxonomyScopedClusteringObservation[]
+  readonly facetObservations?: readonly TaxonomyScopedClusteringObservation[]
   /**
-   * Rollout mode, resolved in the planning activity. `off` (default) is a
-   * byte-identical no-op: static builder, sample-only reassignment, active
-   * clusters, centroid-similarity naming. `shadow`/`enforced` build the adaptive
-   * tree as `staging` clusters for the full-window reassignment + atomic swap.
+   * Which builder to persist, resolved in the planning activity. `off` (default)
+   * is a byte-identical no-op: static builder, sample-only reassignment, active
+   * clusters, centroid-similarity naming. `enforced` builds the adaptive tree as
+   * `staging` clusters for the full-window reassignment + atomic swap.
    */
   readonly mode?: TaxonomyAdaptiveClusteringMode
 }
@@ -222,6 +237,27 @@ export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomy
 export interface StagingLeafCluster {
   readonly clusterId: TaxonomyClusterId
   readonly centroid: readonly number[]
+}
+
+/** A leaf's sample member ids, the naming sample for a not-yet-assigned staging leaf. */
+export interface TaxonomyClusterNamingMembers {
+  readonly clusterId: TaxonomyClusterId
+  readonly observationIds: readonly string[]
+}
+
+/**
+ * What a reused (continuation) row looked like before the plan overwrote it, so a
+ * publish that fails before the swap can put the live tree back. Only the fields
+ * reads resolve a node through: centroid and counters are left as the run found
+ * them, because online routing mutates those concurrently.
+ */
+export interface TaxonomyContinuedRestore {
+  readonly clusterId: TaxonomyClusterId
+  readonly parentClusterId: TaxonomyClusterId | null
+  readonly path: string
+  readonly depth: number
+  readonly name: string
+  readonly description: string
 }
 
 export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResult {
@@ -237,10 +273,36 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
   readonly customAssignments: readonly TaxonomyViewAssignment[]
   /** Leaf id + centroid for adaptive full-window routing. Empty on the off path. */
   readonly leafClusters: readonly StagingLeafCluster[]
+  /**
+   * Whether this pass persists a freshly-built ADAPTIVE tree: every node gets a
+   * new id, so publication retires the whole prior tree rather than the ids no
+   * node continued. Distinct from having `leafClusters`, which says only that
+   * the assignment writes are deferred to a full-window routing pass — the two
+   * coincide today, and publication must keep reading this one.
+   */
+  readonly persistsAdaptiveTree: boolean
+  /**
+   * The clusters this plan saves as `staging` — what the atomic swap activates
+   * once they are named and ClickHouse points at them. Empty only when nothing
+   * fresh was staged (a view's off path, which upserts active rows in place).
+   */
+  readonly stagedClusterIds: readonly TaxonomyClusterId[]
+  /**
+   * Sample members per leaf, so a `staging` leaf can be named before the
+   * reassignment gives it any `assigned_cluster_id` rows. Bounded by the
+   * clustering sample cap.
+   */
+  readonly namingMembers: readonly TaxonomyClusterNamingMembers[]
+  /**
+   * Prior state of the rows this plan upserts in place (static continuations,
+   * which keep their id). Empty on the adaptive path, which never touches a live
+   * row. Cleanup restores these when a publish fails before the swap.
+   */
+  readonly continuedRestore: readonly TaxonomyContinuedRestore[]
   /** Non-null ⇒ the plan's scope is this cohort. */
   readonly customBehaviorId: CustomBehaviorId | null
-  /** Non-null ⇒ the plan's lens is this facet. Any non-null id here — or a non-null
-   * `customBehaviorId` — means the plan writes the `taxonomy_view_assignments` slice. */
+  /** Non-null ⇒ the plan's facet is this facet. Any non-null id here (or a non-null
+   * `customBehaviorId`) means the plan writes the `taxonomy_view_assignments` slice. */
   readonly facetId: FacetId | null
   /**
    * Death lineage targets — previously-active clusters no node continued. On the
@@ -257,18 +319,34 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
   readonly decisionMetadata: RelativeClusteringDiagnostics | null
   /**
    * Non-null ⇒ enforced planning rejected the adaptive tree and persisted static
-   * instead (structural or non-finite violation). Resolved before staging/writes,
-   * so downstream publish is the plain static path even under an `enforced` mode.
+   * instead (structural or non-finite violation, or a failed build). Resolved
+   * before staging/writes, so downstream publish is the plain static path even
+   * under an `enforced` mode.
    */
   readonly fallbackReason: TaxonomyAdaptiveFallbackReason | null
   /**
-   * Static-vs-adaptive shape counts + partition ARI on the shared sample.
-   * Populated whenever adaptive is computed (shadow/enforced); null on off.
+   * Wall-clock of whichever build ran; 0 for the one that did not. Exactly one
+   * builder runs per pass, so on an adaptive run `staticDurationMs` is 0 unless
+   * adaptive was rejected and static built the fallback.
+   *
+   * A FAILED adaptive build still reports the time it burned before failing —
+   * distinguishing a builder that threw immediately from one the worker deadline
+   * killed is the whole diagnosis, and reporting 0 for both hides it.
    */
-  readonly comparison: TaxonomyShadowComparison | null
-  /** Wall-clock of each build for the runtime telemetry panels; 0 when not built. */
   readonly adaptiveDurationMs: number
   readonly staticDurationMs: number
+  /**
+   * Message of the failure behind a `buildError`, for the span. The adaptive build
+   * is caught and degraded to a static fallback, so this is the only channel that
+   * carries WHY — `Effect.logError` does not reach Datadog from here.
+   */
+  readonly adaptiveBuildError: string | null
+  /**
+   * Quality of the partition this pass actually persists — measured off the
+   * build's own tree, never off a window of live assignments. Null when the
+   * sample fell below the gardening minimum and no tree was built.
+   */
+  readonly qualityMetrics: TaxonomyBuildQualityMetrics | null
 }
 
 const lookbackStart = (now: Date): Date =>
@@ -289,7 +367,7 @@ const buildPersistedCluster = (input: {
   readonly projectId: ProjectId
   /** NULL = whole-project scope; non-null scopes the row to a cohort's sub-tree. */
   readonly customBehaviorId?: CustomBehaviorId | null
-  /** NULL = topic lens; non-null scopes the row to a facet's tree. */
+  /** NULL = topic; non-null scopes the row to a facet's tree. */
   readonly facetId?: FacetId | null
   readonly dimension: TaxonomyDimensionType
   readonly parentId: string | null
@@ -442,6 +520,8 @@ interface ResolvedTaxonomyLineage {
   readonly oldById: ReadonlyMap<string, TaxonomyCluster>
   readonly decisionByTempId: ReadonlyMap<string, LineageDecision>
   readonly finalIdByTempId: ReadonlyMap<string, string>
+  /** Final ids that ARE a live active row (a static-persist continuation upserted in place). */
+  readonly reusedIds: ReadonlySet<string>
   /** Old ids a new node continued — the rest are deaths, in both modes. */
   readonly matchedOldIds: ReadonlySet<string>
 }
@@ -450,9 +530,9 @@ const resolveTaxonomyLineage = (input: {
   readonly descriptors: readonly NodeDescriptor[]
   readonly previouslyActive: readonly TaxonomyCluster[]
   /**
-   * Whether this run actually stages an adaptive tree. Off, shadow, and an
-   * enforced run that fell back to static all persist the static tree in place,
-   * so they reuse continued ids (byte-identical to the pre-change path); only a
+   * Whether this run actually stages an adaptive tree. Off and an adaptive run
+   * that fell back to static both persist the static tree in place, so they reuse
+   * continued ids (byte-identical to the pre-change path); only a
    * genuinely-persisted adaptive tree gives every node a fresh id and carries
    * continuity through the lineage rows.
    */
@@ -491,17 +571,20 @@ const resolveTaxonomyLineage = (input: {
   })
   const decisionByTempId = new Map(match.decisions.map((decision) => [decision.tempId, decision] as const))
   const finalIdByTempId = new Map<string, string>()
+  const reusedIds = new Set<string>()
   for (const node of input.descriptors) {
     const decision = decisionByTempId.get(node.tempId)
-    // Static-persist runs (off, shadow, enforced-fallback) reuse the continued id
+    // Static-persist runs (off, adaptive-fallback) reuse the continued id
     // in place (id-keyed trend continuity). A persisted adaptive tree stages a
     // fresh tree that atomically replaces the old one, so every staging node gets
     // a fresh id and continuity is carried by the lineage rows, not the literal id
     // — a live upsert onto a reused id would collapse the old tree before the swap.
     const reuse = decision?.transition === "continuation" && !input.persistAdaptive
-    finalIdByTempId.set(node.tempId, reuse ? decision.reuseId : generateId())
+    const finalId = reuse ? decision.reuseId : generateId()
+    if (reuse) reusedIds.add(finalId)
+    finalIdByTempId.set(node.tempId, finalId)
   }
-  return { oldById, decisionByTempId, finalIdByTempId, matchedOldIds: match.matchedOldIds }
+  return { oldById, decisionByTempId, finalIdByTempId, reusedIds, matchedOldIds: match.matchedOldIds }
 }
 
 export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyInput) =>
@@ -511,41 +594,45 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const now = input.now ?? new Date()
     const dimension = input.dimension ?? TaxonomyDimension.Topic
     const mode = input.mode ?? TAXONOMY_ADAPTIVE_CLUSTERING_MODE_DEFAULT
-    // `computeAdaptive` (shadow OR enforced) decides whether the adaptive tree is
-    // built at all; `persistAdaptive` (resolved after the build + fallback check)
-    // decides whether it is what we persist. Shadow always persists static.
-    const computeAdaptive = isAdaptiveModeActive(mode)
+    // `buildAdaptive` decides which builder this pass attempts; `persistAdaptive`
+    // (resolved after the build + fallback check) decides whether its output is
+    // what we persist, or whether static builds the fallback tree instead.
+    const buildAdaptive = isAdaptiveModeActive(mode)
     const embeddingConfig = yield* resolveEmbeddingConfig()
     const observationsRepo = yield* TaxonomyObservationRepository
     const clustersRepo = yield* TaxonomyClusterRepository
     const scopedBehaviorId = input.customBehaviorId ?? null
-    const facetLensId = input.facetId ?? null
-    const isFacetLens = facetLensId !== null
-    // Every view is a custom behavior, so a facet lens is always cohort-wrapped —
-    // its edges key on that behavior's id. A facet lens without a behavior would
-    // have nowhere to write (whole-project topic is the only behavior-less tree,
-    // and it is the inline online tree), so fail fast.
-    if (isFacetLens && scopedBehaviorId === null) {
+    const scopedFacetId = input.facetId ?? null
+    const isFacetScoped = scopedFacetId !== null
+    // Every view is a custom behavior, so a facet-scoped run is always
+    // cohort-wrapped: its edges key on that behavior's id. A facet-scoped run
+    // without a behavior would have nowhere to write (whole-project topic is the
+    // only behavior-less tree, and it is the inline online tree), so fail fast.
+    if (isFacetScoped && scopedBehaviorId === null) {
       return yield* Effect.die(
-        new Error(`planHierarchicalTaxonomy: facet lens ${facetLensId} requires a customBehaviorId`),
+        new Error(`planHierarchicalTaxonomy: facet ${scopedFacetId} requires a customBehaviorId`),
       )
     }
-    // A cohort on the TOPIC lens samples the observation window through its
+    // A cohort on the TOPIC path samples the observation window through its
     // filter, so it needs a non-empty filter (sampling the whole project yet
-    // tagging the cohort would be silently wrong). A facet lens samples +
+    // tagging the cohort would be silently wrong). A facet-scoped run samples +
     // extracts in the caller, so it needs no filter here even when cohort-scoped.
-    if (!isFacetLens && scopedBehaviorId !== null && (!input.filterSet || Object.keys(input.filterSet).length === 0)) {
+    if (
+      !isFacetScoped &&
+      scopedBehaviorId !== null &&
+      (!input.filterSet || Object.keys(input.filterSet).length === 0)
+    ) {
       return yield* Effect.die(
         new Error(`planHierarchicalTaxonomy: scoped run for ${scopedBehaviorId} requires a non-empty filterSet`),
       )
     }
     const since = lookbackStart(now)
-    // Lens picks the embeddings to cluster: the facet lens clusters the
-    // caller-supplied facet projections; the topic lens samples observation
-    // embeddings — scoped to the cohort's FilterSet session slice, or the whole
+    // The facet path picks the embeddings to cluster: a facet-scoped run clusters
+    // the caller-supplied facet projections; the topic path samples observation
+    // embeddings, scoped to the cohort's FilterSet session slice or the whole
     // project window. Scoped/facet rows carry sessionId for the view-slice write.
-    const observations: readonly TaxonomyClusteringObservation[] = isFacetLens
-      ? (input.lensObservations ?? [])
+    const observations: readonly TaxonomyClusteringObservation[] = isFacetScoped
+      ? (input.facetObservations ?? [])
       : scopedBehaviorId
         ? yield* observationsRepo.listForCustomBehaviorSample({
             organizationId: input.organizationId,
@@ -583,21 +670,27 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         clustersDeprecated: 0,
         leavesAssigned: 0,
         maxDepthReached: 0,
+        topLevelClustersBuilt: 0,
         lineage: [],
         clusters: [],
         observationAssignments: [],
         customAssignments: [],
         leafClusters: [],
+        persistsAdaptiveTree: false,
+        stagedClusterIds: [],
+        namingMembers: [],
+        continuedRestore: [],
         customBehaviorId: scopedBehaviorId,
-        facetId: facetLensId,
+        facetId: scopedFacetId,
         deprecatedClusterIds: [],
         supersededClusterIds: [],
         mode,
         decisionMetadata: null,
         fallbackReason: null,
-        comparison: null,
         adaptiveDurationMs: 0,
         staticDurationMs: 0,
+        adaptiveBuildError: null,
+        qualityMetrics: null,
       } satisfies HierarchicalTaxonomyPlan
     }
 
@@ -605,66 +698,64 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const clusterBuilder =
       input.clusterBuilder ??
       ((request: TaxonomyClusterBuildRequest) => Effect.sync(() => runTaxonomyClusterBuild(request)))
-    // Seed is deterministic per view (project × scope × lens) so a pass replays
+    // Seed is deterministic per view (project × scope × facet) so a pass replays
     // identically under Temporal and different views never share a seed.
     const seed = seedFromProjectId(
-      `${input.projectId}${scopedBehaviorId ? `:${scopedBehaviorId}` : ""}${facetLensId ? `:facet:${facetLensId}` : ""}`,
+      `${input.projectId}${scopedBehaviorId ? `:${scopedBehaviorId}` : ""}${scopedFacetId ? `:facet:${scopedFacetId}` : ""}`,
     )
 
-    // Static is always built: it is the tree we persist for off/shadow (and for an
-    // enforced run that falls back), and the comparison baseline for shadow.
-    const [staticElapsed, staticBuild] = yield* Effect.timed(
-      clusterBuilder({ mode: "off", embeddings: normalizedEmbeddings, seed }),
-    )
-    const staticDurationMs = Duration.toMillis(staticElapsed)
-
-    // Adaptive is built for shadow (comparison only) and enforced (candidate to
-    // persist). It runs in the same worker budget as static (see the worker).
     // The adaptive build is best-effort: a builder failure (worker crash,
     // timeout, thrown error) degrades to `null` rather than aborting the whole
-    // garden, so shadow stays a discardable comparison and enforced can still
-    // fall back to the static tree. A static build failure IS fatal (no tree to
-    // persist), so only the adaptive call is caught.
-    const adaptiveTimed = computeAdaptive
-      ? yield* Effect.timed(clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed })).pipe(
-          Effect.orElseSucceed(() => null),
+    // garden, so the run can still fall back to the static tree.
+    // Catch INSIDE the timing so a failure keeps its elapsed time: a build the
+    // worker deadline killed and one that threw on arrival are the same
+    // `buildError` otherwise, and telling them apart is the whole diagnosis.
+    const adaptiveTimed = buildAdaptive
+      ? yield* Effect.timed(
+          clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed }).pipe(
+            Effect.map((build) => ({ build, error: null as string | null })),
+            Effect.catch((error) => Effect.succeed({ build: null, error: error.message })),
+          ),
         )
       : null
-    const adaptiveBuild = adaptiveTimed?.[1] ?? null
+    const adaptiveBuild = adaptiveTimed?.[1].build ?? null
+    const adaptiveBuildError = adaptiveTimed?.[1].error ?? null
     const adaptiveDurationMs = adaptiveTimed ? Duration.toMillis(adaptiveTimed[0]) : 0
 
     // Fallback selection, here in the planning use case BEFORE any staging/writes:
-    // only enforced can persist adaptive, and only when a finite, structurally
-    // sane tree was actually built. A missing adaptive build (builder failure) is
-    // `buildError`. Shadow never persists adaptive; off never builds it.
-    const fallbackReason: TaxonomyAdaptiveFallbackReason | null =
-      mode === "enforced"
-        ? adaptiveBuild
-          ? adaptiveFallbackReason({
-              root: adaptiveBuild.root,
-              diagnostics: adaptiveBuild.diagnostics,
-              maxDepth: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length,
-              maxNodes: TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
-            })
-          : "buildError"
-        : null
-
-    const persistAdaptive = mode === "enforced" && adaptiveBuild !== null && fallbackReason === null
-    const adaptive = persistAdaptive
-    const clusterState: TaxonomyClusterState = adaptive ? "staging" : "active"
-    const persistBuild = persistAdaptive && adaptiveBuild ? adaptiveBuild : staticBuild
-    const tree = persistBuild.root
-
-    // Shape/ARI comparison on the shared sample — computed whenever adaptive ran,
-    // independent of which tree we persist. Bounded scalars only, no embeddings.
-    const comparison =
-      computeAdaptive && adaptiveBuild
-        ? compareTaxonomyTrees({
-            staticRoot: staticBuild.root,
-            adaptiveRoot: adaptiveBuild.root,
-            sampleSize: normalizedEmbeddings.length,
+    // adaptive is persisted only when a finite, structurally sane tree was
+    // actually built. A missing adaptive build (builder failure) is `buildError`.
+    const fallbackReason: TaxonomyAdaptiveFallbackReason | null = buildAdaptive
+      ? adaptiveBuild
+        ? adaptiveFallbackReason({
+            root: adaptiveBuild.root,
+            diagnostics: adaptiveBuild.diagnostics,
+            maxDepth: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE.length,
+            maxNodes: TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
           })
-        : null
+        : "buildError"
+      : null
+
+    const acceptedAdaptiveBuild = fallbackReason === null ? adaptiveBuild : null
+    const persistAdaptive = acceptedAdaptiveBuild !== null
+    // Exactly one tree per pass: static runs only when it is the tree we persist —
+    // the `off` path, or an adaptive run whose output was rejected. A static build
+    // failure IS fatal (nothing left to persist), so unlike adaptive it is uncaught.
+    const persisted = acceptedAdaptiveBuild
+      ? { build: acceptedAdaptiveBuild, staticDurationMs: 0 }
+      : yield* Effect.timed(clusterBuilder({ mode: "off", embeddings: normalizedEmbeddings, seed })).pipe(
+          Effect.map(([elapsed, build]) => ({ build, staticDurationMs: Duration.toMillis(elapsed) })),
+        )
+    const staticDurationMs = persisted.staticDurationMs
+    // On the whole-project topic tree a fresh id is born `staging`: it becomes
+    // visible to reads only in the swap, once it is named AND ClickHouse points
+    // at it. A reused id (a static-persist continuation) IS the live row, so it
+    // stays active and keeps serving its subtree across the rebuild. A view names
+    // from its assignment slice, which the reassignment writes after naming would
+    // run, so views keep publishing as before.
+    const isView = scopedBehaviorId !== null || scopedFacetId !== null
+    const freshClusterState: TaxonomyClusterState = persistAdaptive || !isView ? "staging" : "active"
+    const tree = persisted.build.root
 
     const descriptors: NodeDescriptor[] = []
     collectNodes(tree, null, { value: 0 }, descriptors)
@@ -675,7 +766,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
       ...(input.facetId ? { facetId: input.facetId } : {}),
     })
-    const { oldById, decisionByTempId, finalIdByTempId, matchedOldIds } = resolveTaxonomyLineage({
+    const { oldById, decisionByTempId, finalIdByTempId, reusedIds, matchedOldIds } = resolveTaxonomyLineage({
       descriptors,
       previouslyActive,
       persistAdaptive,
@@ -714,7 +805,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
         path,
         depth: node.depth,
         splitLinkThreshold: node.splitLinkThreshold,
-        state: clusterState,
+        state: reusedIds.has(finalId) ? "active" : freshClusterState,
         memberEmbeddings,
         memberStartTimes,
         memberCount: directCount,
@@ -777,7 +868,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // reassigns the FULL bounded live window in a later activity, routing every
     // window observation to these leaf centroids — so it publishes `leafClusters`
     // instead and leaves both sample-assignment arrays empty.
-    const leafClusters: StagingLeafCluster[] = adaptive
+    const leafClusters: StagingLeafCluster[] = persistAdaptive
       ? bornLeaves.map((leaf) => ({ clusterId: leaf.clusterId, centroid: [...leaf.centroid] }))
       : []
 
@@ -786,7 +877,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // view (cohort topic or facet) writes the `taxonomy_view_assignments` slice
     // (keyed by customBehaviorId × facetId, carrying sessionId), never the column.
     const observationAssignments: ReassignTaxonomyObservationByIdInput[] =
-      adaptive || scopedBehaviorId
+      persistAdaptive || scopedBehaviorId
         ? []
         : leafMembers.map(({ leaf, observation, confidence }) => ({
             observationId: observation.observationId,
@@ -797,7 +888,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
             indexedAt: now,
           }))
     const customAssignments: TaxonomyViewAssignment[] =
-      !adaptive && scopedBehaviorId
+      !persistAdaptive && scopedBehaviorId
         ? leafMembers.flatMap(({ leaf, observation, confidence }) => {
             // Scoped/facet samples carry a sessionId; guard at runtime (via a
             // widening cast, not an unchecked one) so a whole-project topic
@@ -809,7 +900,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
                 organizationId: input.organizationId,
                 projectId: input.projectId,
                 customBehaviorId: scopedBehaviorId,
-                facetId: facetLensId,
+                facetId: scopedFacetId,
                 observationId: observation.observationId,
                 sessionId,
                 assignedClusterId: leaf.clusterId,
@@ -852,20 +943,48 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       clustersDeprecated: deprecatedClusterIds.length,
       leavesAssigned: bornLeaves.reduce((sum, leaf) => sum + leaf.observationIndices.length, 0),
       maxDepthReached: maxDepth,
+      topLevelClustersBuilt: tree.children.length,
       lineage,
       clusters: bornClusters,
       observationAssignments,
       customAssignments,
       leafClusters,
+      persistsAdaptiveTree: persistAdaptive,
+      stagedClusterIds: bornClusters
+        .filter((cluster) => cluster.state === "staging")
+        .map((cluster) => cluster.id as TaxonomyClusterId),
+      namingMembers: bornLeaves.map((leaf) => ({
+        clusterId: leaf.clusterId as TaxonomyClusterId,
+        observationIds: leaf.observationIndices.flatMap((index) => {
+          const observationId = observations[index]?.observationId
+          return observationId === undefined ? [] : [observationId]
+        }),
+      })),
+      continuedRestore: [...reusedIds].flatMap((clusterId) => {
+        const previous = oldById.get(clusterId)
+        if (previous === undefined) return []
+        return [
+          {
+            clusterId: previous.id,
+            parentClusterId: previous.parentClusterId,
+            path: previous.path,
+            depth: previous.depth,
+            name: previous.name,
+            description: previous.description,
+          } satisfies TaxonomyContinuedRestore,
+        ]
+      }),
       customBehaviorId: scopedBehaviorId,
-      facetId: facetLensId,
+      facetId: scopedFacetId,
       deprecatedClusterIds,
-      supersededClusterIds: adaptive ? previouslyActive.map((cluster) => cluster.id) : [],
+      supersededClusterIds: persistAdaptive ? previouslyActive.map((cluster) => cluster.id) : [],
       mode,
       decisionMetadata: adaptiveBuild?.diagnostics ?? null,
       fallbackReason,
-      comparison,
       adaptiveDurationMs,
       staticDurationMs,
+      adaptiveBuildError,
+      // Measured on the tree this pass persists, which on a rejected adaptive run is the static fallback.
+      qualityMetrics: taxonomyBuildQualityMetrics({ root: tree, embeddings: normalizedEmbeddings }),
     } satisfies HierarchicalTaxonomyPlan
   }).pipe(Effect.withSpan("taxonomy.planHierarchicalTaxonomy"))

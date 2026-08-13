@@ -69,12 +69,13 @@ catalog:
   jose: 6.2.3
   js-tiktoken: 1.0.21
   mustache: 4.2.0
+  pdfjs-dist: 6.1.200
   pg: 8.16.0
   quickjs-emscripten: 0.32.0
   react: 19.2.5
   react-dom: 19.2.5
   rosetta-ai: 2.2.0
-  protobufjs: 8.6.0
+  protobufjs: 8.6.6
   tsdown: 0.21.9
   tsx: 4.21.0
   turbo: 2.9.18
@@ -85,6 +86,11 @@ catalog:
   voyageai: 0.2.1
   "@modelcontextprotocol/sdk": 1.29.0
   "@modelcontextprotocol/inspector": 0.21.2
+
+# pdfjs-dist pulls @napi-rs/canvas for its Node rasterization path, which we never take. It
+# reaches it through a runtime `createRequire`, so no bundler ever resolves the specifier.
+ignoredOptionalDependencies:
+  - "@napi-rs/canvas"
 
 ignoredBuiltDependencies:
   - "@prisma/engines"

@@ -47,12 +47,13 @@ import {
 } from "lucide-react"
 import { Fragment, type ReactNode, useRef, useState } from "react"
 import { FilterBuilder } from "../../../../../../components/filters-builder/filter-builder.tsx"
+import { TIME_PRESETS } from "../../../../../../components/time-filter-dropdown.tsx"
 import type {
   ExperimentVariantRecord,
   VariantPatch,
 } from "../../../../../../domains/experiments/experiments.collection.ts"
+import { topicBehaviourClusterLink } from "../../../../../../domains/taxonomy/topic-behaviour-link.ts"
 import { SearchInput } from "../../-components/search-input.tsx"
-import { TIME_PRESETS } from "../../-components/time-filter-dropdown.tsx"
 import { serializeFilters } from "../../-components/trace-page-state.ts"
 import { ENTITY_ICON, ENTITY_LABEL, formatMetricValue, MetricDelta } from "./metric-format.tsx"
 import {
@@ -686,6 +687,7 @@ function VariantTimeRangePicker({
       selectedPresetId={selectedPresetId}
       placeholder="Select range"
       clearLabel="Reset to default"
+      portalTarget="body"
       fullWidth
       onChange={({ range, source, presetId }) => {
         if (source === "clear" || !range) {
@@ -817,12 +819,7 @@ function TopListRow({
   }
   if (entity === "behaviours") {
     return (
-      <Link
-        to="/projects/$projectSlug/behaviours"
-        params={{ projectSlug }}
-        search={{ behaviourPath: item.key }}
-        className={className}
-      >
+      <Link {...topicBehaviourClusterLink(projectSlug, item.key)} className={className}>
         {children}
       </Link>
     )

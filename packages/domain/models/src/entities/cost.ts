@@ -35,6 +35,10 @@ export type ModelCostSpec = z.infer<typeof modelCostSpecSchema>
 export const costLookupResultSchema = z.object({
   cost: modelCostSpecSchema,
   costImplemented: z.boolean(),
+  /** Catalog provider the cost came from; empty when nothing matched. */
+  pricedProvider: z.string(),
+  /** Catalog model id the cost came from, which may be a base entry of the id asked for. */
+  pricedModel: z.string(),
 })
 export type CostLookupResult = z.infer<typeof costLookupResultSchema>
 

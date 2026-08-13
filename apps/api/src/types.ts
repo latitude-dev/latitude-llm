@@ -1,4 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import type { ImportSourceAdapterRegistry } from "@domain/imports"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
@@ -18,6 +19,7 @@ export interface ApiOptions {
   workflowStarter: WorkflowStarterShape
   workflowQuerier: WorkflowQuerierShape
   storageDisk: StorageDiskPort
+  importSourceAdapters: ImportSourceAdapterRegistry
   logTouchBuffer: boolean
   /** Override for tests that provide an in-memory admin Postgres client for auth lookups */
   adminDatabase?: PostgresClient

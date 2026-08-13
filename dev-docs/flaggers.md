@@ -151,14 +151,14 @@ Context compaction mirrors the moments stance: the analyzed window is the last r
 ## Billing
 
 - Deterministic screening is free.
-- LLM scans bill `flagger-scan = 30 credits` in `draftSessionFlaggerAnnotation`, **only after a confirmed match** — classify-only misses consume Latitude's model spend but are not billed. The anchor dedup runs **before** billing authorization, and the idempotency key is `flagger-scan:{org}:{slug}:{sessionId}:{contentHash}` — one charge per distinct flagged anchor. Out of credits ⇒ the scan is skipped (`NoCreditsRemainingError`).
+- LLM scans bill by actual AI usage, not a flat price: each classification authorizes one `llm-call` then meters every LLM call under a `flagger-classify` activity scope, and the fallback annotator in `draftSessionFlaggerAnnotation` meters its calls under a `flagger:{slug}:{sessionId}:{contentHash}` scope — the anchor dedup runs **before** its authorization so a re-detected issue is never charged. Per-call credits come from `creditsForLlmGenerationCost` (estimated provider cost × 1.3 margin, 1-credit floor). Out of credits ⇒ the scan is skipped (`NoCreditsRemainingError` / non-retryable activity failure). See [`./billing.md`](./billing.md).
 - Spend governors on the LLM path: the sampling default (10%) and the three rate-limit buckets.
 
 ## Self-observability (reflag)
 
 Every production flagger LLM call is traced into the `latitude-flaggers` dogfood project, and the flaggers run on that project too. To bound recursion to one level (`src/reflag.ts`): a flagger running on a flagger-generated session stamps its own LLM output with the no-reflag tag, and screening skips any session whose tags carry it. Session tags are the union of span tags, and flagger telemetry sessions are effectively per-trace, so the union semantics are safe.
 
-User/input-centric strategies (`classifiesAssistantResponseOnly: false` — today `frustration`, `jailbreaking`, and `nsfw`) are also dropped on first-level flagger-generated sessions (`isUserCentricReflagInapplicable`). Their evidence includes Latitude prompt scaffolding that embeds nested evaluated content from the original session, which looks like a true positive for those categories. Assistant-response-centric strategies still run so reflag can catch bad classifications.
+User/input-centric strategies (`classifiesAssistantResponseOnly: false` — today `frustration`, `jailbreaking`, and `nsfw`) are dropped when session tags mark the user-role text as nested conversation samples (`isUserCentricReflagInapplicable`): first-level flagger-generated sessions (`flagger:classify` / `flagger:draft`) and taxonomy dogfood traces (`taxonomy:propose-themes`, `taxonomy:name-cluster`, `taxonomy:facet-extract`). In those cases the "user" message is scaffolding that embeds other conversations, which looks like a true positive for user-centric categories. Assistant-response-centric strategies still run so reflag / taxonomy self-observability can catch bad model outputs.
 
 ## Quality tooling
 
@@ -180,4 +180,3 @@ User/input-centric strategies (`classifiesAssistantResponseOnly: false` — toda
 | `FLAGGER_PROMPT_MAX_HINTS` / `FLAGGER_HINT_EVIDENCE_MAX_CHARS` | 20 / 256 | classifier hint block caps |
 | `FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS` | 6,000 | verbatim vs extracted agent context |
 | `SESSION_END_DEBOUNCE_MS` (`spans`) | 5 min | session settle window upstream |
-| `flagger-scan` (`billing`) | 30 credits | LLM scan price |

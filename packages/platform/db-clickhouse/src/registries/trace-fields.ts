@@ -1,6 +1,11 @@
 import type { SessionOnlyFilterFieldName, TraceFilterFieldName } from "@domain/shared"
 import type { ChFieldRegistry } from "../filter-builder.ts"
-import { buildCacheHitRateClause, buildStatusClause, dateTime64BestEffortExpression } from "./helpers.ts"
+import {
+  buildCacheHitRateClause,
+  buildSessionMembershipClause,
+  buildStatusClause,
+  dateTime64BestEffortExpression,
+} from "./helpers.ts"
 
 type InternalField = "startTime" | "endTime"
 
@@ -13,7 +18,11 @@ export const TRACE_FIELD_REGISTRY: ChFieldRegistry<
   status: { kind: "synthetic", buildClause: buildStatusClause },
   name: { column: "root_span_name", chType: "String" },
   traceId: { column: "trace_id", chType: "String" },
-  sessionId: { column: "session_id", chType: "String" },
+  // Session membership, not raw equality on the column: `sessions list` reported a one-trace session
+  // for a trace with no conversation, and filtering traces on `session_id` — an empty string on that
+  // row — could never match it, so `listSessionTraces` returned an empty page for a session it had
+  // just listed. Resolved in HAVING, where `session_id` is the merged value and `trace_id` is in scope.
+  sessionId: { kind: "synthetic", buildClause: buildSessionMembershipClause },
   simulationId: { column: "simulation_id", chType: "String" },
   userId: { column: "user_id", chType: "String" },
   tags: { column: "tags", chType: "String", isArray: true, arrayContains: true },

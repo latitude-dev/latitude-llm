@@ -68,6 +68,7 @@ export const serializeSession = (session: Session) => ({
   costInputMicrocents: session.costInputMicrocents,
   costOutputMicrocents: session.costOutputMicrocents,
   costTotalMicrocents: session.costTotalMicrocents,
+  unpricedSpanCount: session.unpricedSpanCount,
   userId: session.userId,
   simulationId: session.simulationId,
   tags: session.tags,

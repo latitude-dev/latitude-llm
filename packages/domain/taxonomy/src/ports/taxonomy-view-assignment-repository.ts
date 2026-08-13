@@ -41,11 +41,18 @@ export interface TaxonomyViewAssignmentClusterTrendCount {
   readonly baselineDays: number
 }
 
+/** Assigned rows per UTC day, for the lens coverage scan. */
+export interface TaxonomyViewAssignmentDayCount {
+  readonly day: Date
+  readonly count: number
+}
+
 /**
  * ClickHouse-backed `taxonomy_view_assignments` slice — the shared edges table
  * for every non-online tree. It never touches global
- * `taxonomy_observations.assigned_cluster_id`. These reads target the topic slice
- * (`facet_id = ''`); the facet reads are wired in a later phase.
+ * `taxonomy_observations.assigned_cluster_id`. Each read is keyed by
+ * `(custom_behavior_id, facet_id)`: `facetId` omitted/null selects the view's
+ * topic slice (`facet_id = ''`), an id selects that facet's edges.
  */
 export interface TaxonomyViewAssignmentRepositoryShape {
   readonly upsertMany: (
@@ -61,6 +68,8 @@ export interface TaxonomyViewAssignmentRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly customBehaviorId: CustomBehaviorId
+    /** Omit/null = topic slice (`facet_id = ''`); an id reads that facet's edges. */
+    readonly facetId?: FacetId | null
     /** Optional window over `start_time`; omit for the whole retained slice. */
     readonly startTimeFrom?: Date
     readonly startTimeTo?: Date
@@ -77,30 +86,47 @@ export interface TaxonomyViewAssignmentRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly customBehaviorId: CustomBehaviorId
+    /** Omit/null = topic slice (`facet_id = ''`); an id reads that facet's edges. */
+    readonly facetId?: FacetId | null
     readonly clusterIds: readonly TaxonomyClusterId[]
     readonly currentSince: Date
     readonly baselineSince: Date
     readonly baselineDays: number
   }) => Effect.Effect<readonly TaxonomyViewAssignmentClusterTrendCount[], RepositoryError, ChSqlClient>
   /**
+   * Rows per UTC day pointing at one of `clusterIds` — the numerator of the lens
+   * coverage scan. Only currently-active ids count: a row left behind by an
+   * earlier pass whose cluster the rebuild deprecated is orphaned, and the day it
+   * sits on is under-covered even though the slice has rows for it.
+   */
+  readonly getAssignedCountsByDay: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly customBehaviorId: CustomBehaviorId
+    /** Omit/null = topic slice (`facet_id = ''`); an id reads that facet's edges. */
+    readonly facetId?: FacetId | null
+    readonly clusterIds: readonly TaxonomyClusterId[]
+    readonly since: Date
+  }) => Effect.Effect<readonly TaxonomyViewAssignmentDayCount[], RepositoryError, ChSqlClient>
+  /**
    * Member rows of one scoped cluster for the naming step, resolved by joining
-   * the view's assignment slice back to the projection source: the topic lens
-   * (`facetId` omitted/null) reads global `taxonomy_observations`; a facet lens
-   * reads `taxonomy_facet_projections`. Read-only on both source tables.
+   * the view's assignment slice back to the projection source: the topic path
+   * (`facetId` omitted/null) reads global `taxonomy_observations`; a facet-scoped
+   * path reads `taxonomy_facet_projections`. Read-only on both source tables.
    */
   readonly listClusterMemberObservations: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly customBehaviorId: CustomBehaviorId
-    /** Omit/null = topic lens (members from `taxonomy_observations`); an id reads `taxonomy_facet_projections`. */
+    /** Omit/null = topic (members from `taxonomy_observations`); an id reads `taxonomy_facet_projections`. */
     readonly facetId?: FacetId | null
     readonly clusterId: TaxonomyClusterId
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyClusterNamingMember[], RepositoryError, ChSqlClient>
   /**
    * Purge a scope's edges when the entity is deleted. `deleteByBehavior` drops
-   * every edge for a cohort across BOTH lenses — its topic slice AND each facet
-   * lens applied to it — so deleting a cohort never orphans facet-lens edges.
+   * every edge for a cohort across BOTH the topic slice AND each facet applied to
+   * it, so deleting a cohort never orphans facet-scoped edges.
    */
   readonly deleteByBehavior: (input: {
     readonly organizationId: OrganizationId

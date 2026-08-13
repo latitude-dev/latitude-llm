@@ -1,0 +1,77 @@
+---
+title: LangSmith
+description: Import historical runs from a LangSmith project, including conversation grouping.
+---
+
+## Overview
+
+This guide shows you how to import your **LangSmith** history into Latitude. Latitude reads
+the runs in a LangSmith project and maps them to Latitude traces and spans.
+
+<Check>
+  Importing only reads from LangSmith. Nothing is changed or deleted at the source.
+</Check>
+
+---
+
+## Requirements
+
+- A **LangSmith project** with the history you want to import
+- A LangSmith **API key** (`lsv2_pt_…`)
+- Your LangSmith **region** — GCP EU, GCP US, GCP APAC or AWS US
+- Your **workspace id**, if your account has more than one workspace
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Create an API key in LangSmith">
+    In LangSmith, open **Settings → API keys** and create a key. If your account has
+    several workspaces, also copy the id of the one you are importing from.
+  </Step>
+
+  <Step title="Connect">
+    In Latitude, go to **Project settings → Imports**, choose **LangSmith** and your
+    region, enter the API key (and workspace id, if you have one), then press
+    **Test connection**.
+  </Step>
+
+  <Step title="Preview and start">
+    Pick the LangSmith project, set the time range, trace limit and **session metadata
+    key** — see below — check the preview, then press **Start import**.
+  </Step>
+
+</Steps>
+
+---
+
+## Sessions need a metadata key
+
+In LangSmith, `session_id` identifies the **project**, not a conversation, so Latitude
+reads the conversation id from run metadata instead: it looks under `extra.metadata` for
+the key you name, defaulting to `thread_id`. If no run carries the key, each trace becomes
+its own session and turns will not group into conversations.
+
+<Check>
+  The preview tells you which key it used and warns you if no run in the sample carried
+  it — worth checking before a large import.
+</Check>
+
+---
+
+## LangSmith specifics
+
+- Your region is the host you sign in on: `smith.langchain.com` is GCP US,
+  `eu.smith.langchain.com` is GCP EU, and so on. Keys do not cross regions.
+- Runs are imported newest first, so a capped import keeps your most recent traces.
+- LangSmith's rate limits are the tightest of the three platforms, so a large import takes
+  a while — it is paced deliberately and runs in the background.
+
+---
+
+## Seeing your traces
+
+Once imported, traces appear in your project's **Traces** view like any live trace, marked
+with `import.*` metadata naming LangSmith and their original ids.

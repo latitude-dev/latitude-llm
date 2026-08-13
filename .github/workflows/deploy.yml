@@ -473,7 +473,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 25
           cache: pnpm
@@ -489,6 +489,7 @@ jobs:
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
           VITE_LAT_GTM_CONTAINER_ID: ${{ vars.VITE_LAT_GTM_CONTAINER_ID }}
+          VITE_LAT_CLARITY_PROJECT_ID: ${{ vars.VITE_LAT_CLARITY_PROJECT_ID }}
 
       - name: Upload sourcemaps to Datadog
         run: |
@@ -855,7 +856,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 25
           cache: pnpm
@@ -871,6 +872,7 @@ jobs:
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
           VITE_LAT_GTM_CONTAINER_ID: ${{ vars.VITE_LAT_GTM_CONTAINER_ID }}
+          VITE_LAT_CLARITY_PROJECT_ID: ${{ vars.VITE_LAT_CLARITY_PROJECT_ID }}
 
       - name: Upload sourcemaps to Datadog
         run: |

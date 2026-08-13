@@ -16,7 +16,8 @@ import {
   formatElapsed,
   formatPercent,
   formatRatio,
-  pickMemoryTrendBucketSeconds,
+  MEMORY_TREND_BUCKET_SECONDS,
+  resolveMemoryTrendWindow,
 } from "../../-components/memory-formatters.ts"
 import { recordDisplayLabel } from "../../-components/store-encoding.ts"
 import { StoreInsightList } from "./store-insight-list.tsx"
@@ -179,16 +180,21 @@ export function StoreHomeView({
     () => ({ fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso }),
     [tw.listRange, tw.trendRange],
   )
-  const bucketSeconds = useMemo(
-    () => pickMemoryTrendBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
-    [range],
-  )
+  // The activity chart spans the most recent trend window rather than all time: a bar per
+  // day of the store's whole life is unreadable, and it scans every one of those days.
+  const histogramRange = useMemo(() => {
+    const { fromMs } = resolveMemoryTrendWindow(Date.parse(range.fromIso), Date.parse(range.toIso))
+    return { fromIso: new Date(fromMs).toISOString(), toIso: range.toIso }
+  }, [range])
+  // One-day buckets everywhere. Sizing them from the range (as the trend sparklines do)
+  // asks for multi-day buckets on an all-time range, which the analytics reads reject.
+  const bucketSeconds = MEMORY_TREND_BUCKET_SECONDS
 
   const { data: overview, isLoading: overviewLoading } = useMemoryOverview({ projectId: project.id, storeId, range })
   const { data: histogram = [], isLoading: histogramLoading } = useMemoryActivityHistogram({
     projectId: project.id,
     storeId,
-    range,
+    range: histogramRange,
     bucketSeconds,
   })
   const { data: insights, isLoading: insightsLoading } = useStoreInsights({
@@ -250,8 +256,8 @@ export function StoreHomeView({
           tiles={tiles}
           histogram={histogram}
           bucketSeconds={bucketSeconds}
-          rangeFromIso={range.fromIso}
-          rangeToIso={range.toIso}
+          rangeFromIso={histogramRange.fromIso}
+          rangeToIso={histogramRange.toIso}
           isAllTime={tw.isAllTime}
           isLoading={overviewLoading || histogramLoading}
         />

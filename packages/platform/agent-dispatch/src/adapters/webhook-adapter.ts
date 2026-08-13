@@ -2,9 +2,104 @@ import { createHmac } from "node:crypto"
 import type { AgentDispatchAdapter } from "@domain/agent-dispatch"
 import { DispatchAdapterError } from "@domain/agent-dispatch"
 import { Effect } from "effect"
+import { z } from "zod"
 import { type HostLookup, resolvePublicWebhookUrl } from "../host-guard.ts"
 
 const signPayload = (secret: string, body: string): string => createHmac("sha256", secret).update(body).digest("hex")
+
+const WEBHOOK_ACK_MAX_BYTES = 64 * 1024
+const WEBHOOK_ACK_READ_TIMEOUT_MS = 1_000
+
+const httpUrlSchema = z
+  .string()
+  .trim()
+  .url()
+  .refine((value) => {
+    try {
+      const protocol = new URL(value).protocol
+      return protocol === "http:" || protocol === "https:"
+    } catch {
+      return false
+    }
+  })
+
+const webhookAcknowledgementSchema = z.object({
+  externalAgentId: z.string().trim().min(1).optional().catch(undefined),
+  externalRunId: z.string().trim().min(1).optional().catch(undefined),
+  deepLinkUrl: httpUrlSchema.optional().catch(undefined),
+})
+
+const parseWebhookAcknowledgement = (value: unknown) => {
+  const parsed = webhookAcknowledgementSchema.safeParse(value)
+  return parsed.success ? parsed.data : {}
+}
+
+const cancelReader = (reader: ReadableStreamDefaultReader<Uint8Array>): void => {
+  try {
+    void reader.cancel().catch(() => undefined)
+  } catch {}
+}
+
+const readWebhookAcknowledgement = (response: Response, signal: AbortSignal): Promise<unknown> => {
+  if (!response.body) return Promise.resolve(undefined)
+
+  const reader = response.body.getReader()
+  return new Promise((resolve, reject) => {
+    let settled = false
+    let bytesRead = 0
+    const chunks: Uint8Array[] = []
+
+    const removeAbortListener = () => signal.removeEventListener("abort", onAbort)
+    const fail = (cause: unknown) => {
+      if (settled) return
+      settled = true
+      removeAbortListener()
+      cancelReader(reader)
+      reject(cause)
+    }
+    const onAbort = () => fail(new Error("webhook acknowledgement read interrupted"))
+
+    signal.addEventListener("abort", onAbort, { once: true })
+    if (signal.aborted) {
+      onAbort()
+      return
+    }
+
+    void (async () => {
+      try {
+        while (!settled) {
+          const { done, value } = await reader.read()
+          if (done) {
+            if (settled) return
+            const payload = new Uint8Array(bytesRead)
+            let offset = 0
+            for (const chunk of chunks) {
+              payload.set(chunk, offset)
+              offset += chunk.byteLength
+            }
+            resolve(JSON.parse(new TextDecoder().decode(payload)))
+            settled = true
+            removeAbortListener()
+            return
+          }
+
+          bytesRead += value.byteLength
+          if (bytesRead > WEBHOOK_ACK_MAX_BYTES) {
+            fail(new Error("webhook acknowledgement body exceeded the size limit"))
+            return
+          }
+          chunks.push(value)
+        }
+      } catch (cause) {
+        fail(cause)
+      } finally {
+        try {
+          reader.releaseLock()
+        } catch {}
+      }
+    })()
+  })
+}
 
 export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdapter => ({
   kind: "webhook",
@@ -64,6 +159,20 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
         return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: detail || response.status }))
       }
 
-      return { status: "accepted" as const, deepLinkUrl: target.webhookUrl }
+      const responseBody = yield* Effect.tryPromise((signal) => readWebhookAcknowledgement(response, signal)).pipe(
+        Effect.timeoutOrElse({
+          duration: WEBHOOK_ACK_READ_TIMEOUT_MS,
+          orElse: () => Effect.succeed(undefined),
+        }),
+        Effect.orElseSucceed(() => undefined),
+      )
+      const acknowledgement = parseWebhookAcknowledgement(responseBody)
+
+      return {
+        status: "accepted" as const,
+        ...(acknowledgement.externalAgentId !== undefined ? { externalAgentId: acknowledgement.externalAgentId } : {}),
+        ...(acknowledgement.externalRunId !== undefined ? { externalRunId: acknowledgement.externalRunId } : {}),
+        deepLinkUrl: acknowledgement.deepLinkUrl ?? target.webhookUrl,
+      }
     }),
 })

@@ -64,6 +64,57 @@
                     "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
+                  "redaction": {
+                    "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                        "type": "string",
+                        "enum": [
+                          "off",
+                          "enforce"
+                        ]
+                      },
+                      "entities": {
+                        "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "maxItems": 7,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "email",
+                            "phone",
+                            "credit_card",
+                            "iban",
+                            "us_ssn",
+                            "ip_address",
+                            "secret"
+                          ]
+                        }
+                      },
+                      "scopes": {
+                        "description": "Which span fields to scan beyond message and tool content.",
+                        "type": "object",
+                        "properties": {
+                          "metadata": {
+                            "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "identities": {
+                        "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                        "type": "string",
+                        "enum": [
+                          "keep",
+                          "pseudonymize"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "notifications": {
                     "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                     "type": "object",
@@ -224,6 +275,57 @@
                         "keepMonitoring": {
                           "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                           "type": "boolean"
+                        },
+                        "redaction": {
+                          "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                              "type": "string",
+                              "enum": [
+                                "off",
+                                "enforce"
+                              ]
+                            },
+                            "entities": {
+                              "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                              "maxItems": 7,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "email",
+                                  "phone",
+                                  "credit_card",
+                                  "iban",
+                                  "us_ssn",
+                                  "ip_address",
+                                  "secret"
+                                ]
+                              }
+                            },
+                            "scopes": {
+                              "description": "Which span fields to scan beyond message and tool content.",
+                              "type": "object",
+                              "properties": {
+                                "metadata": {
+                                  "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                                  "type": "boolean"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "identities": {
+                              "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                              "type": "string",
+                              "enum": [
+                                "keep",
+                                "pseudonymize"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
                         },
                         "notifications": {
                           "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
@@ -414,6 +516,57 @@
                     "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
+                  "redaction": {
+                    "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                        "type": "string",
+                        "enum": [
+                          "off",
+                          "enforce"
+                        ]
+                      },
+                      "entities": {
+                        "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "maxItems": 7,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "email",
+                            "phone",
+                            "credit_card",
+                            "iban",
+                            "us_ssn",
+                            "ip_address",
+                            "secret"
+                          ]
+                        }
+                      },
+                      "scopes": {
+                        "description": "Which span fields to scan beyond message and tool content.",
+                        "type": "object",
+                        "properties": {
+                          "metadata": {
+                            "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "identities": {
+                        "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                        "type": "string",
+                        "enum": [
+                          "keep",
+                          "pseudonymize"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "notifications": {
                     "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
                     "type": "object",
@@ -549,12 +702,63 @@
             "minLength": 1
           },
           "settings": {
-            "description": "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
+            "description": "Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.",
             "type": "object",
             "properties": {
               "keepMonitoring": {
                 "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                 "type": "boolean"
+              },
+              "redaction": {
+                "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "enforce"
+                    ]
+                  },
+                  "entities": {
+                    "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                    "maxItems": 7,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "email",
+                        "phone",
+                        "credit_card",
+                        "iban",
+                        "us_ssn",
+                        "ip_address",
+                        "secret"
+                      ]
+                    }
+                  },
+                  "scopes": {
+                    "description": "Which span fields to scan beyond message and tool content.",
+                    "type": "object",
+                    "properties": {
+                      "metadata": {
+                        "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "identities": {
+                    "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                    "type": "string",
+                    "enum": [
+                      "keep",
+                      "pseudonymize"
+                    ]
+                  }
+                },
+                "additionalProperties": false
               },
               "notifications": {
                 "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
@@ -673,6 +877,57 @@
                   "keepMonitoring": {
                     "description": "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
+                  },
+                  "redaction": {
+                    "description": "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "description": "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
+                        "type": "string",
+                        "enum": [
+                          "off",
+                          "enforce"
+                        ]
+                      },
+                      "entities": {
+                        "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.",
+                        "maxItems": 7,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "email",
+                            "phone",
+                            "credit_card",
+                            "iban",
+                            "us_ssn",
+                            "ip_address",
+                            "secret"
+                          ]
+                        }
+                      },
+                      "scopes": {
+                        "description": "Which span fields to scan beyond message and tool content.",
+                        "type": "object",
+                        "properties": {
+                          "metadata": {
+                            "description": "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "identities": {
+                        "description": "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+                        "type": "string",
+                        "enum": [
+                          "keep",
+                          "pseudonymize"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
                   },
                   "notifications": {
                     "description": "Per-group project-level notification toggles (`incidents`, `destinations`).",
@@ -888,7 +1143,7 @@
                   },
                   "cost": {
                     "default": 0,
-                    "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores.",
+                    "description": "Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores.",
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 9007199254740991
@@ -1095,7 +1350,7 @@
                   },
                   "cost": {
                     "default": 0,
-                    "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores.",
+                    "description": "Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores.",
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 9007199254740991
@@ -1604,7 +1859,7 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991,
-            "description": "Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."
+            "description": "Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."
           },
           "draftedAt": {
             "anyOf": [
@@ -1943,15 +2198,15 @@
                 },
                 "costInputMicrocents": {
                   "type": "number",
-                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of input tokens in microcents (100,000,000 per USD)."
                 },
                 "costOutputMicrocents": {
                   "type": "number",
-                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of output tokens in microcents (100,000,000 per USD)."
                 },
                 "costTotalMicrocents": {
                   "type": "number",
-                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                  "description": "Total cost in microcents (100,000,000 per USD)."
                 },
                 "sessionId": {
                   "anyOf": [
@@ -2473,15 +2728,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "sessionId": {
             "anyOf": [
@@ -2872,15 +3127,15 @@
                 },
                 "costInputMicrocents": {
                   "type": "number",
-                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of input tokens in microcents (100,000,000 per USD)."
                 },
                 "costOutputMicrocents": {
                   "type": "number",
-                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of output tokens in microcents (100,000,000 per USD)."
                 },
                 "costTotalMicrocents": {
                   "type": "number",
-                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                  "description": "Total cost in microcents (100,000,000 per USD)."
                 },
                 "costIsEstimated": {
                   "type": "boolean",
@@ -3221,15 +3476,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "costIsEstimated": {
             "type": "boolean",
@@ -3667,7 +3922,7 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 9007199254740991,
-                  "description": "Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."
+                  "description": "Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."
                 },
                 "draftedAt": {
                   "anyOf": [
@@ -4000,7 +4255,7 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991,
-            "description": "Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."
+            "description": "Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."
           },
           "draftedAt": {
             "anyOf": [
@@ -7775,15 +8030,15 @@
                 },
                 "costInputMicrocents": {
                   "type": "number",
-                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of input tokens in microcents (100,000,000 per USD)."
                 },
                 "costOutputMicrocents": {
                   "type": "number",
-                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of output tokens in microcents (100,000,000 per USD)."
                 },
                 "costTotalMicrocents": {
                   "type": "number",
-                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                  "description": "Total cost in microcents (100,000,000 per USD)."
                 },
                 "sessionId": {
                   "anyOf": [
@@ -9773,15 +10028,15 @@
                 },
                 "costInputMicrocents": {
                   "type": "number",
-                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of input tokens in microcents (100,000,000 per USD)."
                 },
                 "costOutputMicrocents": {
                   "type": "number",
-                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of output tokens in microcents (100,000,000 per USD)."
                 },
                 "costTotalMicrocents": {
                   "type": "number",
-                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                  "description": "Total cost in microcents (100,000,000 per USD)."
                 },
                 "sessionId": {
                   "anyOf": [
@@ -10866,7 +11121,8 @@
               "enum": [
                 "low",
                 "medium",
-                "high"
+                "high",
+                "urgent"
               ]
             }
           }
@@ -10922,9 +11178,10 @@
                   "enum": [
                     "low",
                     "medium",
-                    "high"
+                    "high",
+                    "urgent"
                   ],
-                  "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+                  "description": "Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."
                 },
                 "startedAt": {
                   "type": "string",
@@ -11755,9 +12012,10 @@
             "enum": [
               "low",
               "medium",
-              "high"
+              "high",
+              "urgent"
             ],
-            "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+            "description": "Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."
           },
           "startedAt": {
             "type": "string",
@@ -17654,9 +17912,10 @@
                       "enum": [
                         "low",
                         "medium",
-                        "high"
+                        "high",
+                        "urgent"
                       ],
-                      "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                      "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
                     }
                   },
                   "required": [
@@ -18087,7 +18346,8 @@
                     "enum": [
                       "low",
                       "medium",
-                      "high"
+                      "high",
+                      "urgent"
                     ],
                     "description": "Severity assigned to incidents opened by this monitor."
                   },
@@ -18600,7 +18860,8 @@
                     "enum": [
                       "low",
                       "medium",
-                      "high"
+                      "high",
+                      "urgent"
                     ],
                     "description": "Severity assigned to incidents opened by this monitor."
                   },
@@ -19456,7 +19717,8 @@
                     "enum": [
                       "low",
                       "medium",
-                      "high"
+                      "high",
+                      "urgent"
                     ],
                     "description": "Severity assigned to incidents opened by this monitor."
                   },
@@ -21338,9 +21600,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -22826,9 +23089,10 @@
                       "enum": [
                         "low",
                         "medium",
-                        "high"
+                        "high",
+                        "urgent"
                       ],
-                      "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                      "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
                     }
                   },
                   "required": [
@@ -24246,9 +24510,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -24345,7 +24610,8 @@
             "enum": [
               "low",
               "medium",
-              "high"
+              "high",
+              "urgent"
             ]
           }
         },
@@ -25678,9 +25944,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -25853,9 +26120,10 @@
                   "enum": [
                     "low",
                     "medium",
-                    "high"
+                    "high",
+                    "urgent"
                   ],
-                  "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+                  "description": "Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."
                 },
                 "startedAt": {
                   "type": "string",
@@ -27988,9 +28256,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -29400,9 +29669,10 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
-                "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+                "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
               }
             },
             "required": [
@@ -31840,15 +32110,15 @@
                 },
                 "costInputMicrocents": {
                   "type": "number",
-                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of input tokens in microcents (100,000,000 per USD)."
                 },
                 "costOutputMicrocents": {
                   "type": "number",
-                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of output tokens in microcents (100,000,000 per USD)."
                 },
                 "costTotalMicrocents": {
                   "type": "number",
-                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                  "description": "Total cost in microcents (100,000,000 per USD)."
                 },
                 "costIsEstimated": {
                   "type": "boolean",
@@ -35379,15 +35649,15 @@
                 },
                 "costInputMicrocents": {
                   "type": "number",
-                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of input tokens in microcents (100,000,000 per USD)."
                 },
                 "costOutputMicrocents": {
                   "type": "number",
-                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of output tokens in microcents (100,000,000 per USD)."
                 },
                 "costTotalMicrocents": {
                   "type": "number",
-                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                  "description": "Total cost in microcents (100,000,000 per USD)."
                 },
                 "userId": {
                   "anyOf": [
@@ -35978,15 +36248,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "userId": {
             "anyOf": [
@@ -36297,15 +36567,15 @@
                 },
                 "costInputMicrocents": {
                   "type": "number",
-                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of input tokens in microcents (100,000,000 per USD)."
                 },
                 "costOutputMicrocents": {
                   "type": "number",
-                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                  "description": "Cost of output tokens in microcents (100,000,000 per USD)."
                 },
                 "costTotalMicrocents": {
                   "type": "number",
-                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                  "description": "Total cost in microcents (100,000,000 per USD)."
                 },
                 "sessionId": {
                   "anyOf": [
@@ -37933,6 +38203,1540 @@
       },
       "annotations": {
         "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "listImports",
+      "title": "List imports",
+      "description": "Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "imports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable import identifier."
+                },
+                "organizationId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Organization that owns this import."
+                },
+                "projectId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Latitude project the traces are imported into."
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "langfuse",
+                    "langsmith",
+                    "braintrust"
+                  ],
+                  "description": "Observability platform the import reads from."
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "created",
+                    "queued",
+                    "running",
+                    "succeeded",
+                    "capped",
+                    "cancelled",
+                    "failed"
+                  ],
+                  "description": "Lifecycle state. `created`/`queued`/`running` are in flight; `succeeded` finished cleanly; `capped` stopped at a ceiling with everything before it kept; `cancelled` and `failed` can be retried."
+                },
+                "config": {
+                  "type": "object",
+                  "properties": {
+                    "sourceProjectId": {
+                      "type": "string",
+                      "description": "Id of the project on the platform the import reads from."
+                    },
+                    "sourceProjectName": {
+                      "type": "string",
+                      "description": "Name of the platform project, as shown in Latitude."
+                    },
+                    "sourceRegion": {
+                      "type": "string",
+                      "description": "Platform region the import runs against."
+                    },
+                    "rangeFrom": {
+                      "type": "string",
+                      "description": "ISO-8601 start of the imported time range (inclusive)."
+                    },
+                    "rangeTo": {
+                      "type": "string",
+                      "description": "ISO-8601 end of the imported time range (exclusive)."
+                    },
+                    "maxTraces": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Most traces this import will bring in, newest first."
+                    },
+                    "sessionMetadataKey": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "LangSmith only: run metadata key that groups traces into sessions. `null` elsewhere."
+                    }
+                  },
+                  "required": [
+                    "sourceProjectId",
+                    "sourceProjectName",
+                    "sourceRegion",
+                    "rangeFrom",
+                    "rangeTo",
+                    "maxTraces",
+                    "sessionMetadataKey"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What the import was asked to bring in, snapshotted when it was created."
+                },
+                "stats": {
+                  "type": "object",
+                  "properties": {
+                    "recordsFetched": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Rows read from the platform, including spans later skipped."
+                    },
+                    "sessionsImported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Distinct sessions among the imported traces."
+                    },
+                    "tracesImported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Traces imported. One imported trace bills one credit."
+                    },
+                    "spansImported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Spans written across all imported traces."
+                    },
+                    "spansSkipped": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Spans skipped because they carried no usable trace or span id."
+                    }
+                  },
+                  "required": [
+                    "recordsFetched",
+                    "sessionsImported",
+                    "tracesImported",
+                    "spansImported",
+                    "spansSkipped"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What the import has brought in so far."
+                },
+                "error": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Why the import did not finish cleanly, or which ceiling stopped a `capped` one. `status` alone says whether it failed."
+                },
+                "cancelledAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which cancellation was requested, or `null`."
+                },
+                "startedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which a worker picked the import up, or `null`."
+                },
+                "finishedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the import ended, or `null` while in flight."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of creation."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "projectId",
+                "source",
+                "status",
+                "config",
+                "stats",
+                "error",
+                "cancelledAt",
+                "startedAt",
+                "finishedAt",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The project's imports, newest first."
+          }
+        },
+        "required": [
+          "imports"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "createImport",
+      "title": "Create import",
+      "description": "Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "credentials": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "langfuse",
+                    "description": "Marks these as Langfuse credentials."
+                  },
+                  "region": {
+                    "type": "string",
+                    "enum": [
+                      "eu",
+                      "us",
+                      "jp",
+                      "hipaa-us"
+                    ],
+                    "description": "Langfuse Cloud region the account lives in."
+                  },
+                  "publicKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Langfuse project public key (`pk-lf-…`)."
+                  },
+                  "secretKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Langfuse project secret key (`sk-lf-…`)."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "region",
+                  "publicKey",
+                  "secretKey"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "langsmith",
+                    "description": "Marks these as LangSmith credentials."
+                  },
+                  "region": {
+                    "type": "string",
+                    "enum": [
+                      "gcp-eu",
+                      "gcp-us",
+                      "gcp-apac",
+                      "aws-us"
+                    ],
+                    "description": "LangSmith region the account lives in."
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "LangSmith API key (`lsv2_pt_…`)."
+                  },
+                  "workspaceId": {
+                    "description": "Workspace to import from, for accounts with more than one. Omit to use the key's default workspace.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "region",
+                  "apiKey"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "braintrust",
+                    "description": "Marks these as Braintrust credentials."
+                  },
+                  "region": {
+                    "type": "string",
+                    "enum": [
+                      "eu",
+                      "us"
+                    ],
+                    "description": "Braintrust data plane the organization lives on."
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Braintrust API key with read access to the project."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "region",
+                  "apiKey"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Credentials for the platform to import from; `kind` names the platform. Not stored after the import ends."
+          },
+          "sourceProjectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Id of the project on the platform to read from."
+          },
+          "sourceProjectName": {
+            "description": "Name of the platform project, shown in Latitude. Defaults to `sourceProjectId`.",
+            "type": "string",
+            "minLength": 1
+          },
+          "rangeFrom": {
+            "description": "ISO-8601 start of the range to import. Defaults to 90 days before `rangeTo`, bounded by the plan's retention.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "rangeTo": {
+            "description": "ISO-8601 end of the range to import. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "maxTraces": {
+            "description": "Most traces to import, newest first. Each imported trace bills one credit. Defaults to the maximum, 100,000.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "sessionMetadataKey": {
+            "description": "LangSmith only: run metadata key that groups traces into sessions. Defaults to `thread_id`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectSlug",
+          "credentials",
+          "sourceProjectId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable import identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this import."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Latitude project the traces are imported into."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "langfuse",
+              "langsmith",
+              "braintrust"
+            ],
+            "description": "Observability platform the import reads from."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "queued",
+              "running",
+              "succeeded",
+              "capped",
+              "cancelled",
+              "failed"
+            ],
+            "description": "Lifecycle state. `created`/`queued`/`running` are in flight; `succeeded` finished cleanly; `capped` stopped at a ceiling with everything before it kept; `cancelled` and `failed` can be retried."
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "sourceProjectId": {
+                "type": "string",
+                "description": "Id of the project on the platform the import reads from."
+              },
+              "sourceProjectName": {
+                "type": "string",
+                "description": "Name of the platform project, as shown in Latitude."
+              },
+              "sourceRegion": {
+                "type": "string",
+                "description": "Platform region the import runs against."
+              },
+              "rangeFrom": {
+                "type": "string",
+                "description": "ISO-8601 start of the imported time range (inclusive)."
+              },
+              "rangeTo": {
+                "type": "string",
+                "description": "ISO-8601 end of the imported time range (exclusive)."
+              },
+              "maxTraces": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Most traces this import will bring in, newest first."
+              },
+              "sessionMetadataKey": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "LangSmith only: run metadata key that groups traces into sessions. `null` elsewhere."
+              }
+            },
+            "required": [
+              "sourceProjectId",
+              "sourceProjectName",
+              "sourceRegion",
+              "rangeFrom",
+              "rangeTo",
+              "maxTraces",
+              "sessionMetadataKey"
+            ],
+            "additionalProperties": false,
+            "description": "What the import was asked to bring in, snapshotted when it was created."
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "recordsFetched": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Rows read from the platform, including spans later skipped."
+              },
+              "sessionsImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Distinct sessions among the imported traces."
+              },
+              "tracesImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Traces imported. One imported trace bills one credit."
+              },
+              "spansImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Spans written across all imported traces."
+              },
+              "spansSkipped": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Spans skipped because they carried no usable trace or span id."
+              }
+            },
+            "required": [
+              "recordsFetched",
+              "sessionsImported",
+              "tracesImported",
+              "spansImported",
+              "spansSkipped"
+            ],
+            "additionalProperties": false,
+            "description": "What the import has brought in so far."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the import did not finish cleanly, or which ceiling stopped a `capped` one. `status` alone says whether it failed."
+          },
+          "cancelledAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which cancellation was requested, or `null`."
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which a worker picked the import up, or `null`."
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the import ended, or `null` while in flight."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "source",
+          "status",
+          "config",
+          "stats",
+          "error",
+          "cancelledAt",
+          "startedAt",
+          "finishedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "getImport",
+      "title": "Get import",
+      "description": "Returns a single import, including its recent run history.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "importId": {
+            "type": "string",
+            "description": "Import id."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "importId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable import identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this import."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Latitude project the traces are imported into."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "langfuse",
+              "langsmith",
+              "braintrust"
+            ],
+            "description": "Observability platform the import reads from."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "queued",
+              "running",
+              "succeeded",
+              "capped",
+              "cancelled",
+              "failed"
+            ],
+            "description": "Lifecycle state. `created`/`queued`/`running` are in flight; `succeeded` finished cleanly; `capped` stopped at a ceiling with everything before it kept; `cancelled` and `failed` can be retried."
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "sourceProjectId": {
+                "type": "string",
+                "description": "Id of the project on the platform the import reads from."
+              },
+              "sourceProjectName": {
+                "type": "string",
+                "description": "Name of the platform project, as shown in Latitude."
+              },
+              "sourceRegion": {
+                "type": "string",
+                "description": "Platform region the import runs against."
+              },
+              "rangeFrom": {
+                "type": "string",
+                "description": "ISO-8601 start of the imported time range (inclusive)."
+              },
+              "rangeTo": {
+                "type": "string",
+                "description": "ISO-8601 end of the imported time range (exclusive)."
+              },
+              "maxTraces": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Most traces this import will bring in, newest first."
+              },
+              "sessionMetadataKey": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "LangSmith only: run metadata key that groups traces into sessions. `null` elsewhere."
+              }
+            },
+            "required": [
+              "sourceProjectId",
+              "sourceProjectName",
+              "sourceRegion",
+              "rangeFrom",
+              "rangeTo",
+              "maxTraces",
+              "sessionMetadataKey"
+            ],
+            "additionalProperties": false,
+            "description": "What the import was asked to bring in, snapshotted when it was created."
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "recordsFetched": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Rows read from the platform, including spans later skipped."
+              },
+              "sessionsImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Distinct sessions among the imported traces."
+              },
+              "tracesImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Traces imported. One imported trace bills one credit."
+              },
+              "spansImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Spans written across all imported traces."
+              },
+              "spansSkipped": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Spans skipped because they carried no usable trace or span id."
+              }
+            },
+            "required": [
+              "recordsFetched",
+              "sessionsImported",
+              "tracesImported",
+              "spansImported",
+              "spansSkipped"
+            ],
+            "additionalProperties": false,
+            "description": "What the import has brought in so far."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the import did not finish cleanly, or which ceiling stopped a `capped` one. `status` alone says whether it failed."
+          },
+          "cancelledAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which cancellation was requested, or `null`."
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which a worker picked the import up, or `null`."
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the import ended, or `null` while in flight."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "succeeded",
+                    "failed"
+                  ],
+                  "description": "Whether this page of the import was written."
+                },
+                "stats": {
+                  "type": "object",
+                  "properties": {
+                    "recordsFetched": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Rows read from the platform, including spans later skipped."
+                    },
+                    "sessionsImported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Distinct sessions among the imported traces."
+                    },
+                    "tracesImported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Traces imported. One imported trace bills one credit."
+                    },
+                    "spansImported": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Spans written across all imported traces."
+                    },
+                    "spansSkipped": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Spans skipped because they carried no usable trace or span id."
+                    }
+                  },
+                  "required": [
+                    "recordsFetched",
+                    "sessionsImported",
+                    "tracesImported",
+                    "spansImported",
+                    "spansSkipped"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What this page alone brought in."
+                },
+                "error": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Why this page failed, or `null`."
+                },
+                "startedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the page started."
+                },
+                "finishedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the page ended."
+                }
+              },
+              "required": [
+                "status",
+                "stats",
+                "error",
+                "startedAt",
+                "finishedAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Recent pages the import processed, newest first. Bounded, so old pages fall off."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "source",
+          "status",
+          "config",
+          "stats",
+          "error",
+          "cancelledAt",
+          "startedAt",
+          "finishedAt",
+          "createdAt",
+          "updatedAt",
+          "runs"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "cancelImport",
+      "title": "Cancel import",
+      "description": "Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "importId": {
+            "type": "string",
+            "description": "Import id."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "importId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable import identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this import."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Latitude project the traces are imported into."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "langfuse",
+              "langsmith",
+              "braintrust"
+            ],
+            "description": "Observability platform the import reads from."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "queued",
+              "running",
+              "succeeded",
+              "capped",
+              "cancelled",
+              "failed"
+            ],
+            "description": "Lifecycle state. `created`/`queued`/`running` are in flight; `succeeded` finished cleanly; `capped` stopped at a ceiling with everything before it kept; `cancelled` and `failed` can be retried."
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "sourceProjectId": {
+                "type": "string",
+                "description": "Id of the project on the platform the import reads from."
+              },
+              "sourceProjectName": {
+                "type": "string",
+                "description": "Name of the platform project, as shown in Latitude."
+              },
+              "sourceRegion": {
+                "type": "string",
+                "description": "Platform region the import runs against."
+              },
+              "rangeFrom": {
+                "type": "string",
+                "description": "ISO-8601 start of the imported time range (inclusive)."
+              },
+              "rangeTo": {
+                "type": "string",
+                "description": "ISO-8601 end of the imported time range (exclusive)."
+              },
+              "maxTraces": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Most traces this import will bring in, newest first."
+              },
+              "sessionMetadataKey": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "LangSmith only: run metadata key that groups traces into sessions. `null` elsewhere."
+              }
+            },
+            "required": [
+              "sourceProjectId",
+              "sourceProjectName",
+              "sourceRegion",
+              "rangeFrom",
+              "rangeTo",
+              "maxTraces",
+              "sessionMetadataKey"
+            ],
+            "additionalProperties": false,
+            "description": "What the import was asked to bring in, snapshotted when it was created."
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "recordsFetched": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Rows read from the platform, including spans later skipped."
+              },
+              "sessionsImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Distinct sessions among the imported traces."
+              },
+              "tracesImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Traces imported. One imported trace bills one credit."
+              },
+              "spansImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Spans written across all imported traces."
+              },
+              "spansSkipped": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Spans skipped because they carried no usable trace or span id."
+              }
+            },
+            "required": [
+              "recordsFetched",
+              "sessionsImported",
+              "tracesImported",
+              "spansImported",
+              "spansSkipped"
+            ],
+            "additionalProperties": false,
+            "description": "What the import has brought in so far."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the import did not finish cleanly, or which ceiling stopped a `capped` one. `status` alone says whether it failed."
+          },
+          "cancelledAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which cancellation was requested, or `null`."
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which a worker picked the import up, or `null`."
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the import ended, or `null` while in flight."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "source",
+          "status",
+          "config",
+          "stats",
+          "error",
+          "cancelledAt",
+          "startedAt",
+          "finishedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    },
+    {
+      "name": "retryImport",
+      "title": "Retry import",
+      "description": "Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "importId": {
+            "type": "string",
+            "description": "Import id."
+          },
+          "credentials": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "langfuse",
+                    "description": "Marks these as Langfuse credentials."
+                  },
+                  "region": {
+                    "type": "string",
+                    "enum": [
+                      "eu",
+                      "us",
+                      "jp",
+                      "hipaa-us"
+                    ],
+                    "description": "Langfuse Cloud region the account lives in."
+                  },
+                  "publicKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Langfuse project public key (`pk-lf-…`)."
+                  },
+                  "secretKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Langfuse project secret key (`sk-lf-…`)."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "region",
+                  "publicKey",
+                  "secretKey"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "langsmith",
+                    "description": "Marks these as LangSmith credentials."
+                  },
+                  "region": {
+                    "type": "string",
+                    "enum": [
+                      "gcp-eu",
+                      "gcp-us",
+                      "gcp-apac",
+                      "aws-us"
+                    ],
+                    "description": "LangSmith region the account lives in."
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "LangSmith API key (`lsv2_pt_…`)."
+                  },
+                  "workspaceId": {
+                    "description": "Workspace to import from, for accounts with more than one. Omit to use the key's default workspace.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "region",
+                  "apiKey"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "braintrust",
+                    "description": "Marks these as Braintrust credentials."
+                  },
+                  "region": {
+                    "type": "string",
+                    "enum": [
+                      "eu",
+                      "us"
+                    ],
+                    "description": "Braintrust data plane the organization lives on."
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Braintrust API key with read access to the project."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "region",
+                  "apiKey"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "importId",
+          "credentials"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable import identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this import."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Latitude project the traces are imported into."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "langfuse",
+              "langsmith",
+              "braintrust"
+            ],
+            "description": "Observability platform the import reads from."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "queued",
+              "running",
+              "succeeded",
+              "capped",
+              "cancelled",
+              "failed"
+            ],
+            "description": "Lifecycle state. `created`/`queued`/`running` are in flight; `succeeded` finished cleanly; `capped` stopped at a ceiling with everything before it kept; `cancelled` and `failed` can be retried."
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "sourceProjectId": {
+                "type": "string",
+                "description": "Id of the project on the platform the import reads from."
+              },
+              "sourceProjectName": {
+                "type": "string",
+                "description": "Name of the platform project, as shown in Latitude."
+              },
+              "sourceRegion": {
+                "type": "string",
+                "description": "Platform region the import runs against."
+              },
+              "rangeFrom": {
+                "type": "string",
+                "description": "ISO-8601 start of the imported time range (inclusive)."
+              },
+              "rangeTo": {
+                "type": "string",
+                "description": "ISO-8601 end of the imported time range (exclusive)."
+              },
+              "maxTraces": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Most traces this import will bring in, newest first."
+              },
+              "sessionMetadataKey": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "LangSmith only: run metadata key that groups traces into sessions. `null` elsewhere."
+              }
+            },
+            "required": [
+              "sourceProjectId",
+              "sourceProjectName",
+              "sourceRegion",
+              "rangeFrom",
+              "rangeTo",
+              "maxTraces",
+              "sessionMetadataKey"
+            ],
+            "additionalProperties": false,
+            "description": "What the import was asked to bring in, snapshotted when it was created."
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "recordsFetched": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Rows read from the platform, including spans later skipped."
+              },
+              "sessionsImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Distinct sessions among the imported traces."
+              },
+              "tracesImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Traces imported. One imported trace bills one credit."
+              },
+              "spansImported": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Spans written across all imported traces."
+              },
+              "spansSkipped": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Spans skipped because they carried no usable trace or span id."
+              }
+            },
+            "required": [
+              "recordsFetched",
+              "sessionsImported",
+              "tracesImported",
+              "spansImported",
+              "spansSkipped"
+            ],
+            "additionalProperties": false,
+            "description": "What the import has brought in so far."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the import did not finish cleanly, or which ceiling stopped a `capped` one. `status` alone says whether it failed."
+          },
+          "cancelledAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which cancellation was requested, or `null`."
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which a worker picked the import up, or `null`."
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the import ended, or `null` while in flight."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "source",
+          "status",
+          "config",
+          "stats",
+          "error",
+          "cancelledAt",
+          "startedAt",
+          "finishedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
         "destructiveHint": false
       }
     }

@@ -19,6 +19,7 @@ import {
 import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import {
+  parseCHDay,
   type TaxonomyObservationRow,
   selectColumns as taxonomyObservationSelectColumns,
   toDomainObservation,
@@ -139,7 +140,14 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
-      getClusterAssignmentCounts: ({ organizationId, projectId, customBehaviorId, startTimeFrom, startTimeTo }) =>
+      getClusterAssignmentCounts: ({
+        organizationId,
+        projectId,
+        customBehaviorId,
+        facetId,
+        startTimeFrom,
+        startTimeTo,
+      }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -150,7 +158,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND custom_behavior_id = {customBehaviorId:String}
-                          AND facet_id = ''
+                          AND facet_id = {facetId:String}
                           AND assigned_cluster_id != ''
                           ${startTimeFrom ? "AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}" : ""}
                           ${startTimeTo ? "AND start_time < {startTimeTo:DateTime64(9, 'UTC')}" : ""}
@@ -160,6 +168,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   customBehaviorId: customBehaviorId as string,
+                  facetId: (facetId ?? "") as string,
                   ...(startTimeFrom ? { startTimeFrom: formatCHDate(startTimeFrom) } : {}),
                   ...(startTimeTo ? { startTimeTo: formatCHDate(startTimeTo) } : {}),
                 },
@@ -182,6 +191,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
         organizationId,
         projectId,
         customBehaviorId,
+        facetId,
         clusterIds,
         currentSince,
         baselineSince,
@@ -201,7 +211,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND custom_behavior_id = {customBehaviorId:String}
-                          AND facet_id = ''
+                          AND facet_id = {facetId:String}
                           AND assigned_cluster_id IN {clusterIds:Array(String)}
                           AND start_time >= {baselineSince:DateTime64(9, 'UTC')}
                         GROUP BY assigned_cluster_id`,
@@ -209,6 +219,7 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   customBehaviorId: customBehaviorId as string,
+                  facetId: (facetId ?? "") as string,
                   clusterIds: clusterIds as readonly string[],
                   currentSince: formatCHDate(currentSince),
                   baselineSince: formatCHDate(baselineSince),
@@ -238,9 +249,50 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
-      // Resolve a scoped cluster's members for the naming step. The topic lens
+      // Coverage numerator: rows per UTC day that still point at a live cluster.
+      // `assigned_cluster_id IN clusterIds` is the whole point — rows a rebuild
+      // orphaned are physically present but invisible to every other read, so
+      // counting them would advertise coverage the tree cannot show.
+      getAssignedCountsByDay: ({ organizationId, projectId, customBehaviorId, facetId, clusterIds, since }) =>
+        Effect.gen(function* () {
+          if (clusterIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT toDate(start_time) AS day, count() AS count
+                        FROM taxonomy_view_assignments FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND custom_behavior_id = {customBehaviorId:String}
+                          AND facet_id = {facetId:String}
+                          AND assigned_cluster_id IN {clusterIds:Array(String)}
+                          AND start_time >= {since:DateTime64(9, 'UTC')}
+                        GROUP BY day
+                        ORDER BY day ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  customBehaviorId: customBehaviorId as string,
+                  facetId: (facetId ?? "") as string,
+                  clusterIds: clusterIds as readonly string[],
+                  since: formatCHDate(since),
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<{ day: string; count: string | number }>()
+              return rows.map((row) => ({ day: parseCHDay(row.day), count: Number(row.count) }))
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyViewAssignmentRepository.getAssignedCountsByDay"),
+              ),
+            )
+        }),
+
+      // Resolve a scoped cluster's members for the naming step. The topic path
       // (facetId null) joins the slice back to `taxonomy_observations` for the
-      // transcript summaries; a facet lens joins to `taxonomy_facet_projections`
+      // transcript summaries; a facet-scoped path joins to `taxonomy_facet_projections`
       // for the extracted one-sentence answers. Read-only on both source tables.
       listClusterMemberObservations: ({ organizationId, projectId, customBehaviorId, facetId, clusterId, limit }) =>
         Effect.gen(function* () {
@@ -310,9 +362,9 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             )
         }),
 
-      // Purge a cohort's edges across BOTH lenses — its topic slice AND every
-      // facet-lens slice applied to it — so deleting a cohort never orphans
-      // facet-lens edges (no `facet_id = ''` filter here).
+      // Purge a cohort's edges across its topic slice AND every facet-scoped
+      // slice applied to it, so deleting a cohort never orphans facet-scoped
+      // edges (no `facet_id = ''` filter here).
       deleteByBehavior: ({ organizationId, projectId, customBehaviorId }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

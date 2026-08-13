@@ -31,15 +31,15 @@ import {
   type SendToDestinationRecord,
   sendSignalToIntegration,
   sendToDestinationsQueryKey,
-  setProjectDispatchRepo,
+  setDispatchRepo,
   signalAgentDispatchesQueryKey,
 } from "../../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
-import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import {
   AGENT_DISPATCH_KIND_ICONS,
   AGENT_DISPATCH_KIND_LABELS,
-  projectDispatchSettingsQueryKey,
-} from "../../../settings/-components/agent-dispatch-section.tsx"
+} from "../../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import { toUserMessage } from "../../../../../../../lib/errors.ts"
+import { projectDispatchSettingsQueryKey } from "../../../settings/-components/agent-dispatch-section.tsx"
 import { SignalDispatchHistory } from "./signal-dispatch-history.tsx"
 
 const MCP_DOCS_URL = "https://docs.latitude.so/getting-started/mcp"
@@ -309,7 +309,7 @@ function SendToCursorRepoModal({
   }))
 
   const saveMutation = useMutation({
-    mutationFn: () => setProjectDispatchRepo({ data: { projectId, kind: "cursor", repoUrl } }),
+    mutationFn: () => setDispatchRepo({ data: { kind: "cursor", repoUrl } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
       await queryClient.invalidateQueries({ queryKey: projectDispatchSettingsQueryKey(projectId, "cursor") })
@@ -324,7 +324,7 @@ function SendToCursorRepoModal({
       dismissible
       onOpenChange={(next) => (!next ? onClose() : undefined)}
       title="Choose a repository"
-      description="Cursor needs a repository for this project before it can dispatch. This is saved for future sends."
+      description="Cursor needs a repository before it can dispatch. This is saved for future sends across your organization."
       footer={
         <>
           <CloseTrigger />

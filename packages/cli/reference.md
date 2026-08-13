@@ -10,6 +10,7 @@ Full command reference for `latitude`.
 - [`latitude api-keys`](#latitude-api-keys)
 - [`latitude datasets`](#latitude-datasets)
 - [`latitude experiments`](#latitude-experiments)
+- [`latitude imports`](#latitude-imports)
 - [`latitude incidents`](#latitude-incidents)
 - [`latitude members`](#latitude-members)
 - [`latitude memory`](#latitude-memory)
@@ -406,6 +407,65 @@ Replaces an experiment's mutable fields. `variants`, when supplied, fully replac
 
 ---
 
+### `latitude imports`
+
+#### `latitude imports cancel`
+
+Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.
+
+`POST /v1/projects/{projectSlug}/imports/{importId}/cancel`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
+
+#### `latitude imports create`
+
+Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.
+
+`POST /v1/projects/{projectSlug}/imports`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+#### `latitude imports get`
+
+Returns a single import, including its recent run history.
+
+`GET /v1/projects/{projectSlug}/imports/{importId}`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
+
+#### `latitude imports list`
+
+Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.
+
+`GET /v1/projects/{projectSlug}/imports`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
+#### `latitude imports retry`
+
+Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.
+
+`POST /v1/projects/{projectSlug}/imports/{importId}/retry`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--import-id` | `string` | Yes | Import id. |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
+---
+
 ### `latitude incidents`
 
 #### `latitude incidents list`
@@ -421,7 +481,7 @@ Returns incidents in the project, ordered from oldest to newest. The time window
 | `--to-iso` | `string (date-time)` | No | Upper bound (inclusive) of the time window. Defaults to now. |
 | `--source-type` | `monitor | signal` | No | Restrict to incidents triggered by this source type: `monitor` or `signal`. |
 | `--source-id` | `string` | No | Restrict to incidents tied to one source entity id. |
-| `--severities` | `low | medium | high[]` | No | Restrict to incidents whose severity matches any value in this list. |
+| `--severities` | `low | medium | high | urgent[]` | No | Restrict to incidents whose severity matches any value in this list. |
 
 #### `latitude incidents resolve`
 

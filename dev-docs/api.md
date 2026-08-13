@@ -29,6 +29,10 @@ authenticate(c) → AuthContext | 401
 
 Both validators have a short negative-cache TTL (~5s), so an unknown bearer hits each underlying datastore at most once per cache window.
 
+The one exception is `/v1/mcp`, which admits OAuth bearers only — see [`mcp.md`](./mcp.md). It runs in the same protected ring; the transport handler rejects an `api-key` `AuthContext` with a 401 before it starts a session.
+
+Every 401 the error handler emits carries `WWW-Authenticate: Bearer resource_metadata="<LAT_API_URL>/.well-known/oauth-protected-resource"` (RFC 9728 §5.1), which is how a spec-following MCP client discovers the authorization server instead of guessing the well-known path. The GitHub webhook's signature 401 returns its response directly and is deliberately not a bearer challenge.
+
 ### `AuthContext` shape
 
 ```ts
@@ -70,7 +74,7 @@ attachSharedContext(db, redis, clickhouse, queue)   ← all routes
     createOrganizationContextMiddleware()
 
       /v1/...   ← all REST routes, with per-endpoint tier limiters
-      /v1/mcp   ← MCP transport, per-request McpServer
+      /v1/mcp   ← MCP transport, per-request McpServer (OAuth bearers only)
 ```
 
 Public routes are bodyless metadata documents — never product data. Everything that touches an organization runs under the protected ring.
@@ -127,6 +131,10 @@ The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full a
 | Manifest emitters | `apps/api/scripts/{emit-openapi,emit-mcp}.ts` |
 | API-key validator | `packages/platform/api-key-auth/` |
 | OAuth access-token validator | `packages/platform/oauth-token-auth/` |
+
+## Trace detail shape
+
+`GET /v1/projects/{projectId}/traces/{traceId}` returns `TraceDetail` with a `conversation` array (OpenTelemetry GenAI messages) instead of separate `system_instructions`, `input_messages`, and `output_messages`. The single field carries the full multi-turn history the domain stores in `TraceDetail.allMessages`. Span detail endpoints are unchanged — they still expose per-span `inputMessages` / `outputMessages`. See [`spans.md`](./spans.md) for how the canonical conversation is built and consumed internally.
 
 ## Related docs
 

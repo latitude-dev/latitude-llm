@@ -119,6 +119,12 @@ export interface TaxonomyObservationClusterAssignmentCount {
   readonly lastObservedAt: Date
 }
 
+/** Clusterable observations per UTC day, for the lens coverage scan. */
+export interface TaxonomyObservationDayCount {
+  readonly day: Date
+  readonly count: number
+}
+
 export interface TaxonomyObservationRepositoryShape {
   readonly upsert: (observation: TaxonomyMomentObservation) => Effect.Effect<void, RepositoryError, ChSqlClient>
   readonly upsertMany: (
@@ -243,6 +249,18 @@ export interface TaxonomyObservationRepositoryShape {
     readonly clusterId: TaxonomyClusterId
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Members by explicit observation id, for naming a cluster whose membership is
+   * not in `assigned_cluster_id` yet: a `staging` tree is named BEFORE the
+   * reassignment repoints ClickHouse at it, so its samples come from the staged
+   * plan's own member ids.
+   */
+  readonly listAllByObservationIds: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly observationIds: readonly string[]
+    readonly limit: number
+  }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
   readonly listBySession: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -285,6 +303,18 @@ export interface TaxonomyObservationRepositoryShape {
     readonly baselineSince: Date
     readonly baselineDays: number
   }) => Effect.Effect<readonly TaxonomyObservationClusterTrendCounts[], RepositoryError, ChSqlClient>
+  /**
+   * Observations a gardening pass could have clustered on each UTC day (same
+   * eligibility as the sampling reads: a valid id and a non-empty embedding) —
+   * the denominator of the lens coverage scan. Unscoped by design: coverage is
+   * judged against the lens's own rate, so a view's filter cancels out of the
+   * comparison and stays out of this query.
+   */
+  readonly getClusterableCountsByDay: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+  }) => Effect.Effect<readonly TaxonomyObservationDayCount[], RepositoryError, ChSqlClient>
 }
 
 export class TaxonomyObservationRepository extends Context.Service<

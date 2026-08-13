@@ -335,6 +335,24 @@ export const createFakeTaxonomyObservationRepository = (
           .slice(0, limit),
       ),
 
+    // Matches the live lookup: bounded by the requested ids, NOT by the newest-N
+    // window, so a naming sample drawn from the wider lookback resolves in full.
+    listAllByObservationIds: ({ organizationId, projectId, observationIds, limit }) =>
+      Effect.sync(() => {
+        const requested = new Set(observationIds)
+        return [...rows.values()]
+          .filter(
+            (observation) =>
+              observation.organizationId === organizationId &&
+              observation.projectId === projectId &&
+              requested.has(observation.observationId),
+          )
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .slice(0, limit)
+      }),
+
     listBySession: ({ organizationId, projectId, sessionId, analysisHash }) =>
       Effect.sync(() =>
         [...rows.values()]
@@ -462,6 +480,24 @@ export const createFakeTaxonomyObservationRepository = (
           return { clusterId, currentCount, baselineCount, baselineDays }
         }),
       ),
+
+    getClusterableCountsByDay: ({ organizationId, projectId, since }) =>
+      Effect.sync(() => {
+        const counts = new Map<number, number>()
+        for (const observation of rows.values()) {
+          if (observation.organizationId !== organizationId || observation.projectId !== projectId) continue
+          if (observation.embedding.length === 0 || observation.startTime < since) continue
+          const day = Date.UTC(
+            observation.startTime.getUTCFullYear(),
+            observation.startTime.getUTCMonth(),
+            observation.startTime.getUTCDate(),
+          )
+          counts.set(day, (counts.get(day) ?? 0) + 1)
+        }
+        return [...counts]
+          .sort(([left], [right]) => left - right)
+          .map(([day, count]) => ({ day: new Date(day), count }))
+      }),
 
     ...overrides,
   }

@@ -10,7 +10,7 @@ import {
   updateMonitorUseCase,
 } from "@domain/monitors"
 import { ProjectRepository } from "@domain/projects"
-import { AlertIncidentId, BadRequestError, OrganizationId } from "@domain/shared"
+import { ALERT_SEVERITIES, AlertIncidentId, BadRequestError, OrganizationId } from "@domain/shared"
 import { createRoute, z } from "@hono/zod-openapi"
 import {
   IncidentRepositoryLive,
@@ -61,7 +61,7 @@ const CreateMonitorBaseBodySchema = z.object({
   name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
   description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("Optional free-form description."),
   target: MonitorTargetSchema.describe("Entity or filter set watched by the monitor."),
-  severity: z.enum(["low", "medium", "high"]).describe("Severity assigned to incidents opened by this monitor."),
+  severity: z.enum(ALERT_SEVERITIES).describe("Severity assigned to incidents opened by this monitor."),
 })
 
 const CreateMonitorBodySchema = z
@@ -94,7 +94,7 @@ const UpdateMonitorBodySchema = z
       .optional()
       .describe("New name. Renaming may regenerate the slug — re-read the response or rely on `id`."),
     description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("New description."),
-    severity: z.enum(["low", "medium", "high"]).optional().describe("Replacement incident severity."),
+    severity: z.enum(ALERT_SEVERITIES).optional().describe("Replacement incident severity."),
   })
   .openapi("UpdateMonitorBody")
 

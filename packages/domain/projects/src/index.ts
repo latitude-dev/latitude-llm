@@ -32,3 +32,8 @@ export {
   type UpdateProjectInput,
   updateProjectUseCase,
 } from "./use-cases/update-project.ts"
+export {
+  type UpdateProjectRedactionError,
+  type UpdateProjectRedactionInput,
+  updateProjectRedactionUseCase,
+} from "./use-cases/update-project-redaction.ts"

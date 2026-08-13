@@ -15,7 +15,7 @@
 
 import { floatAttr, intAttr } from "../attributes.ts"
 import type { OtlpEvent, OtlpKeyValue } from "../types.ts"
-import { type Candidate, fromString } from "./utils.ts"
+import { type Candidate, first, fromString } from "./utils.ts"
 
 interface ResolvedPerformance {
   readonly timeToFirstTokenNs: number
@@ -24,6 +24,23 @@ interface ResolvedPerformance {
 
 /** Milliseconds to nanoseconds for `ai.response.msToFirstChunk`. */
 const NS_PER_MS = 1_000_000
+
+/**
+ * A TTFT longer than the span that measured it, discarded.
+ *
+ * It cannot be real, and it is the shape a unit mix-up takes: a duration read as seconds where the
+ * emitter meant milliseconds lands a thousand times too high rather than merely looking odd. Zero is
+ * how an unknown TTFT is already stored, so an implausible one reads as unknown instead of as fact.
+ */
+function plausibleTimeToFirstToken(timeToFirstTokenNs: number, spanDurationNs: number): number {
+  if (timeToFirstTokenNs <= 0) return 0
+  return spanDurationNs > 0 && timeToFirstTokenNs > spanDurationNs ? 0 : timeToFirstTokenNs
+}
+
+/** A measured TTFT means tokens arrived before the call finished, which is what streaming is. */
+function isStreamingFrom(reported: boolean | undefined, timeToFirstTokenNs: number): boolean {
+  return reported ?? timeToFirstTokenNs > 0
+}
 
 /**
  * Event names treated as “first output chunk” for timestamp-based TTFT.
@@ -99,14 +116,36 @@ function ttftFromEventTimestamps(events: readonly OtlpEvent[], startTimeUnixNano
   return diff > 0n ? Number(diff) : undefined
 }
 
+// Explicit streaming flags from span attributes (OTEL + Vercel AI).
+const streamingCandidates: Candidate<boolean>[] = [
+  {
+    resolve: (attrs) => {
+      const kv = attrs.find((a) => a.key === "gen_ai.request.stream")
+      if (!kv?.value) return undefined
+      if (kv.value.boolValue !== undefined) return kv.value.boolValue
+      if (kv.value.stringValue !== undefined) return kv.value.stringValue === "true"
+      return undefined
+    },
+  },
+  fromString("ai.settings.mode", (v) => (v === "stream" ? true : undefined)),
+]
+
+const spanDurationNs = (startTimeUnixNano: string, endTimeUnixNano: string): number => {
+  const start = BigInt(startTimeUnixNano || "0")
+  const end = BigInt(endTimeUnixNano || "0")
+  return start > 0n && end > start ? Number(end - start) : 0
+}
+
 export function resolvePerformance({
   spanAttrs,
   events,
   startTimeUnixNano,
+  endTimeUnixNano,
 }: {
   readonly spanAttrs: readonly OtlpKeyValue[]
   readonly events: readonly OtlpEvent[]
   readonly startTimeUnixNano: string
+  readonly endTimeUnixNano: string
 }): ResolvedPerformance {
   // TTFT: span attrs → event attrs → inferred from event timestamps. Skip later steps once set.
   const ttftAttr = ttftFromAttributes(spanAttrs)
@@ -115,35 +154,41 @@ export function resolvePerformance({
     ttftAttr === undefined && ttftEventAttr === undefined
       ? ttftFromEventTimestamps(events, startTimeUnixNano)
       : undefined
-  const timeToFirstTokenNs = ttftAttr ?? ttftEventAttr ?? ttftEventTimestamp ?? 0
+  const timeToFirstTokenNs = plausibleTimeToFirstToken(
+    ttftAttr ?? ttftEventAttr ?? ttftEventTimestamp ?? 0,
+    spanDurationNs(startTimeUnixNano, endTimeUnixNano),
+  )
 
-  // Explicit streaming flags from span attributes (OTEL + Vercel AI).
-  const streamingCandidates: Candidate<boolean>[] = [
-    {
-      resolve: (attrs) => {
-        const kv = attrs.find((a) => a.key === "gen_ai.request.stream")
-        if (!kv?.value) return undefined
-        if (kv.value.boolValue !== undefined) return kv.value.boolValue
-        if (kv.value.stringValue !== undefined) return kv.value.stringValue === "true"
-        return undefined
-      },
-    },
-    fromString("ai.settings.mode", (v) => (v === "stream" ? true : undefined)),
-  ]
+  const reported = first(streamingCandidates, spanAttrs)
 
-  let isStreaming = false
-  for (const c of streamingCandidates) {
-    const v = c.resolve(spanAttrs)
-    if (v !== undefined) {
-      isStreaming = v
-      break
-    }
-  }
+  return { timeToFirstTokenNs, isStreaming: isStreamingFrom(reported, timeToFirstTokenNs) }
+}
 
-  // If we derived a positive TTFT but no stream flag was set, treat the span as streaming.
-  if (!isStreaming && timeToFirstTokenNs > 0) {
-    isStreaming = true
-  }
+/**
+ * `resolvePerformance` for a span read out of a source's API, which reports TTFT as a field rather
+ * than leaving it to be discovered among attributes and events.
+ *
+ * Sources state it two ways — a timestamp for when the first token arrived (Langfuse
+ * `completionStartTime`, LangSmith `first_token_time`) or a duration already measured (Braintrust
+ * `metrics.time_to_first_token`) — so both are accepted, and both answer to the same plausibility
+ * check and the same streaming rule a live span does.
+ */
+export function resolveReportedPerformance({
+  timeToFirstTokenNs,
+  firstTokenAt,
+  startTime,
+  endTime,
+  isStreaming,
+}: {
+  readonly timeToFirstTokenNs?: number | undefined
+  readonly firstTokenAt?: Date | undefined
+  readonly startTime: Date
+  readonly endTime: Date
+  readonly isStreaming?: boolean | undefined
+}): ResolvedPerformance {
+  const fromTimestamp = firstTokenAt ? (firstTokenAt.getTime() - startTime.getTime()) * NS_PER_MS : 0
+  const reportedNs = timeToFirstTokenNs !== undefined && timeToFirstTokenNs > 0 ? timeToFirstTokenNs : fromTimestamp
+  const resolved = plausibleTimeToFirstToken(reportedNs, (endTime.getTime() - startTime.getTime()) * NS_PER_MS)
 
-  return { timeToFirstTokenNs, isStreaming }
+  return { timeToFirstTokenNs: resolved, isStreaming: isStreamingFrom(isStreaming, resolved) }
 }

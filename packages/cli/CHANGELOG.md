@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.9.0] - 2026-08-06
+
+### Changed
+
+- Severity gained an `urgent` tier, on top of `low`, `medium` and `high`. `latitude monitors` accepts it for a monitor's rule, and incidents can print as `urgent`.
+
+## [7.8.0] - 2026-08-05
+
+### Added
+
+- `latitude imports` — import historical traces from Langfuse, LangSmith, or Braintrust into a project: `list`, `create`, `get`, `cancel`, and `retry`. An import runs in the background, newest traces first; `retry` resumes a failed, cancelled, or capped import from where it stopped.
+
+## [7.7.1] - 2026-08-03
+
+### Changed
+
+- `latitude traces export` now surfaces the server's HTTP 429 rate-limit response instead of a generic error. The endpoint is now throttled to match `latitude datasets export-rows` and `latitude signals export`.
+
+## [7.7.0] - 2026-07-28
+
+### Added
+
+- `latitude projects update` accepts `settings.redaction`, configuring server-side PII redaction for spans ingested from then on.
+
+### Changed
+
+- `latitude projects update` now patches `settings` instead of replacing it, so omitted fields keep their stored values.
+
 ## [7.6.1] - 2026-07-24
 
 ### Changed

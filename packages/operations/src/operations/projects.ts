@@ -4,9 +4,16 @@ import {
   createProjectUseCase,
   type Project,
   ProjectRepository,
+  updateProjectRedactionUseCase,
   updateProjectUseCase,
 } from "@domain/projects"
-import type { INCIDENT_NOTIFICATION_KEYS } from "@domain/shared"
+import {
+  DEFAULT_REDACTION_ENTITIES,
+  type INCIDENT_NOTIFICATION_KEYS,
+  REDACTION_ENTITIES,
+  REDACTION_IDENTITY_HANDLINGS,
+  REDACTION_MODES,
+} from "@domain/shared"
 import { createRoute, z } from "@hono/zod-openapi"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
@@ -100,22 +107,64 @@ const EscalationSettingSchema = z
   })
   .openapi("EscalationSetting")
 
-const ProjectSettingsSchema = z
+const RedactionSettingSchema = z
   .object({
-    keepMonitoring: z
-      .boolean()
+    mode: z
+      .enum(REDACTION_MODES)
       .optional()
       .describe(
-        "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
+        "`enforce` scans span content as it is ingested and replaces matches with a labelled placeholder such as `[REDACTED_EMAIL]`; `off` scans nothing. Defaults to `off` when omitted. Applies only to spans ingested after the change, takes effect within a minute, and redacted content cannot be recovered.",
       ),
-    notifications: NotificationsSettingSchema.optional().describe(
-      "Per-group project-level notification toggles (`incidents`, `destinations`).",
-    ),
-    escalation: EscalationSettingSchema.optional().describe(
-      "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
-    ),
+    entities: z
+      .array(z.enum(REDACTION_ENTITIES))
+      .max(REDACTION_ENTITIES.length)
+      .optional()
+      .describe(
+        `Which categories to look for. Defaults to ${DEFAULT_REDACTION_ENTITIES.join(", ")} when omitted; \`ip_address\` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.`,
+      ),
+    scopes: z
+      .object({
+        metadata: z
+          .boolean()
+          .optional()
+          .describe(
+            "Also scan the metadata map and tags. Defaults to `false` when omitted, because metadata is usually operational and redacting it removes values you filter and group by.",
+          ),
+      })
+      .optional()
+      .describe("Which span fields to scan beyond message and tool content."),
+    identities: z
+      .enum(REDACTION_IDENTITY_HANDLINGS)
+      .optional()
+      .describe(
+        "How to handle `userId` and `userEmail`. `keep` stores them unchanged; `pseudonymize` replaces each with a stable per-organization pseudonym so filtering and grouping by user keep working. Defaults to `keep` when omitted. Deployments with no pseudonym secret configured remove the identifier entirely instead.",
+      ),
   })
-  .openapi("ProjectSettings")
+  .openapi("RedactionSetting")
+
+const projectSettingsShape = {
+  keepMonitoring: z
+    .boolean()
+    .optional()
+    .describe(
+      "When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted.",
+    ),
+  redaction: RedactionSettingSchema.optional().describe(
+    "Server-side PII redaction applied before spans are stored. An organization-wide policy can override this one; when the organization locks its policy, project values are ignored entirely rather than merged.",
+  ),
+  notifications: NotificationsSettingSchema.optional().describe(
+    "Per-group project-level notification toggles (`incidents`, `destinations`).",
+  ),
+  escalation: EscalationSettingSchema.optional().describe(
+    "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
+  ),
+}
+
+const ProjectSettingsSchema = z.object(projectSettingsShape).openapi("ProjectSettings")
+
+// Registered separately from the nullable response schema: sharing one component leaks `"type": ["object", "null"]`
+// into the request contract, advertising a `settings: null` that `.optional()` rejects at runtime.
+const ProjectSettingsPatchSchema = z.object(projectSettingsShape).openapi("ProjectSettingsPatch")
 
 const ResponseSchema = z
   .object({
@@ -155,8 +204,8 @@ const CreateRequestSchema = z
 const UpdateRequestSchema = z
   .object({
     name: z.string().min(1).optional().describe("New human-readable name. Renaming never changes the slug."),
-    settings: ProjectSettingsSchema.optional().describe(
-      "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
+    settings: ProjectSettingsPatchSchema.optional().describe(
+      "Patch the project's settings overrides. Only the fields you send are changed; omitted fields keep their stored values. To clear overrides entirely, edit via the web UI.",
     ),
     flaggers: z
       .partialRecord(z.enum(FLAGGER_STRATEGY_SLUGS), z.boolean())
@@ -293,11 +342,23 @@ const updateProject = projectEndpoint({
       const repo = yield* ProjectRepository
       const project = yield* repo.findBySlug(input.params.projectSlug)
 
-      const updated = yield* updateProjectUseCase({
+      let updated = yield* updateProjectUseCase({
         id: project.id,
         ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.settings !== undefined ? { settings: body.settings } : {}),
+        // Patch, not replace: this schema exposes a subset of the stored settings,
+        // so a replace would let one field's update silently clear the others.
+        ...(body.settings !== undefined ? { settingsPatch: body.settings } : {}),
       })
+
+      // `updateProjectUseCase` refuses to write `redaction`, so the policy goes through its
+      // own use case to pick up the audit event that an irreversible change needs.
+      if (body.settings?.redaction !== undefined) {
+        updated = yield* updateProjectRedactionUseCase({
+          projectId: project.id,
+          actorUserId: actorUserId ?? "",
+          redaction: body.settings.redaction,
+        })
+      }
 
       if (body.flaggers) {
         for (const [slug, enabled] of Object.entries(body.flaggers)) {

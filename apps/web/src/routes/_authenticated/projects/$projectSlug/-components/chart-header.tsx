@@ -1,4 +1,4 @@
-import { Icon, Text, Tooltip } from "@repo/ui"
+import { Icon, Text, type TextColor, Tooltip } from "@repo/ui"
 import { formatChartWindowCaption } from "@repo/utils"
 import { ClockIcon, InfoIcon } from "lucide-react"
 import type { ReactNode } from "react"
@@ -12,21 +12,42 @@ interface ChartHeaderProps {
   readonly isAllTime: boolean
   /** Right-aligned controls (e.g. the Incidents overlay toggle). */
   readonly actions?: ReactNode
+  /**
+   * Whether to caption the rendered window. Pass `false` where a visible picker
+   * already states the same range — repeating it on every panel is noise. Pages
+   * whose chart range can differ from the picker must keep it.
+   */
+  readonly showWindow?: boolean
+  readonly titleColor?: TextColor
 }
 
 /**
  * Header shown above a time-series chart: an optional title plus the rendered time window. Under the
  * All-time default the chart is a recent, latest-activity-anchored slice while the totals/list cover
  * the full range — the subtitle + tooltip make that explicit so the window isn't read as "all time".
+ *
+ * `min-h-11` is the row's own `pt-3` (12px) plus the tallest control ever passed as `actions` (a
+ * `size="sm"` bordered `Tabs` switch, `h-8`/32px) — 44px total. The padding lives inside this same
+ * box, so the floor has to cover it too: a bare `min-h-8` would only match the switch on its own
+ * and never bind on the row that already grows past it, leaving a shorter row's `min-height` cap
+ * with nothing forcing it up to the same total.
  */
-export function ChartHeader({ title, fromIso, toIso, isAllTime, actions }: ChartHeaderProps) {
-  const window = formatChartWindowCaption(fromIso, toIso)
+export function ChartHeader({
+  title,
+  fromIso,
+  toIso,
+  isAllTime,
+  actions,
+  showWindow = true,
+  titleColor = "foreground",
+}: ChartHeaderProps) {
+  const window = showWindow ? formatChartWindowCaption(fromIso, toIso) : ""
   if (!window && !title && !actions) return null
 
   return (
-    <div className="flex items-start justify-between gap-2 px-4 pt-3">
+    <div className="flex min-h-11 items-start justify-between gap-2 px-4 pt-3">
       <div className="flex min-w-0 flex-col gap-0.5">
-        {title ? <Text.H6 color="foreground">{title}</Text.H6> : null}
+        {title ? <Text.H6 color={titleColor}>{title}</Text.H6> : null}
         {window ? (
           <div className="flex items-center gap-1">
             <Icon icon={ClockIcon} size="sm" color="foregroundMuted" />

@@ -1,9 +1,11 @@
 import type { FlaggerConversation } from "../conversation.ts"
 import {
+  EXPLICIT_PROFANITY_PATTERN_SOURCE,
   extractTextOnlyMessages,
   MAX_SNIPPET_EXCERPT_LENGTH,
   MAX_STAGES_PER_PROMPT,
   MAX_SUSPICIOUS_SNIPPETS,
+  SLUR_PATTERN_SOURCE,
   type SuspiciousSnippet,
   truncateExcerpt,
 } from "./shared.ts"
@@ -91,8 +93,8 @@ export function extractNsfwSuspiciousSnippets(
 
   // Profanity/obscenity patterns
   const explicitPatterns = [
-    { pattern: /\b(?:fuck|shit|bitch|damn|asshole|cunt|dick|cock|pussy)\b/i, reason: "explicit profanity" },
-    { pattern: /\b(?:nigger|faggot|retard|kike|chink|spic|wetback)\b/i, reason: "hate speech/slur" },
+    { pattern: new RegExp(EXPLICIT_PROFANITY_PATTERN_SOURCE, "i"), reason: "explicit profanity" },
+    { pattern: new RegExp(SLUR_PATTERN_SOURCE, "i"), reason: "hate speech/slur" },
   ]
 
   // Sexual content patterns

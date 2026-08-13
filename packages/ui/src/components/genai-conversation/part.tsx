@@ -4,6 +4,7 @@ import { type ReactNode, use } from "react"
 import type { GenAIPart } from "rosetta-ai"
 import { cn } from "../../utils/cn.ts"
 import { CodeBlockControls } from "../code-block/code-block-controls.tsx"
+import { isPdfMime } from "../pdf/pdf-source.ts"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { CollapsibleBlock } from "./parts/collapsible-block.tsx"
@@ -11,6 +12,7 @@ import { FileCard } from "./parts/file-card.tsx"
 import { formatJson, getKnownField, renderMediaByModality } from "./parts/helpers.tsx"
 import { isLexicalSearchHighlight } from "./parts/highlight-segments.ts"
 import { MarkdownContent } from "./parts/lazy-markdown-content.tsx"
+import { PdfAttachment, PdfUriAttachment } from "./parts/pdf-attachment.tsx"
 import { SubagentCard } from "./parts/subagent-card.tsx"
 import { ToolCallBlock } from "./parts/tool-call-block.tsx"
 import type {
@@ -26,7 +28,6 @@ import type {
 } from "./parts/types.ts"
 import { TextSelectionContext } from "./text-selection.tsx"
 
-export { ReasoningGroup } from "./parts/reasoning-group.tsx"
 export type { SubagentToolCallInfo, ToolCallResult } from "./parts/types.ts"
 
 /** Last non-empty path segment of a URI, used as a file card's display name (undefined if none). */
@@ -69,6 +70,7 @@ export function Part({
   subagent,
   messageIndex,
   partIndex,
+  flat = false,
 }: {
   readonly part: GenAIPart
   readonly toolResult?: ToolCallResult | undefined
@@ -77,6 +79,8 @@ export function Part({
   readonly subagent?: SubagentToolCallInfo | undefined
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
+  /** Mutes rendered text color, for nested contexts like a subagent's inline conversation. */
+  readonly flat?: boolean
 }) {
   const selectionCtx = use(TextSelectionContext)
   const partHighlights =
@@ -107,7 +111,7 @@ export function Part({
       return (
         <>
           {refusalBadge}
-          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} />
+          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} flat={flat} />
         </>
       )
     }
@@ -120,6 +124,16 @@ export function Part({
       const dataUri = `data:${mimeType};base64,${p.content}`
       const media = renderMediaByModality({ modality, src: dataUri, mimeType })
       if (media) return media
+      if (isPdfMime(mimeType)) {
+        return (
+          <PdfAttachment
+            mimeType={p.mime_type ?? undefined}
+            sizeBytes={base64ByteLength(p.content)}
+            base64={p.content}
+            downloadDataUri={dataUri}
+          />
+        )
+      }
       return (
         <FileCard
           mimeType={p.mime_type ?? undefined}
@@ -147,6 +161,17 @@ export function Part({
       })
       if (media) return media
 
+      if (isPdfMime(p.mime_type)) {
+        return (
+          <PdfUriAttachment
+            key={p.uri}
+            fileName={fileNameFromUri(p.uri)}
+            mimeType={p.mime_type ?? undefined}
+            href={p.uri}
+          />
+        )
+      }
+
       return (
         <FileCard
           fileName={fileNameFromUri(p.uri)}
@@ -161,7 +186,7 @@ export function Part({
       const p = part as ReasoningPart
       return (
         <div className="text-muted-foreground italic">
-          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} />
+          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} flat={flat} />
         </div>
       )
     }

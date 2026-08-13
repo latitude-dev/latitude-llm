@@ -1,6 +1,7 @@
 import { generateId } from "@domain/shared"
 import { and, eq } from "@platform/db-postgres"
 import { flaggers as flaggersTable } from "@platform/db-postgres/schema/flaggers"
+import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
@@ -160,6 +161,108 @@ describe("Projects Routes Integration", () => {
     expect(body.name).toBe("Completely Different")
     expect(body.slug).toBe(project.slug)
     expect(body.settings).toEqual({ keepMonitoring: true })
+  })
+
+  // Redaction is irreversible, so an API-driven change has to leave the same audit trail a
+  // dashboard change does. The generic settings path emits no event, hence the separate route.
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug records an audit event when it changes redaction", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Audited Redaction")
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { redaction: { mode: "enforce", entities: ["email"] } } }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.settings?.redaction).toEqual({ mode: "enforce", entities: ["email"] })
+
+    const events = await database.db.select().from(outboxEvents)
+    const redactionEvent = events.find((row) => row.eventName === "ProjectRedactionPolicyChanged")
+    expect(redactionEvent).toBeDefined()
+    expect(redactionEvent?.payload).toMatchObject({
+      projectId: project.id,
+      fromRedaction: null,
+      toRedaction: { mode: "enforce", entities: ["email"] },
+    })
+  })
+
+  /**
+   * `RedactionSettingSchema` does not expose `rules`, and the redaction use case replaces the whole
+   * object, so this documented call deleted every dashboard-created rule and the next spans kept
+   * the identifiers those rules existed to remove.
+   */
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug keeps custom redaction rules it cannot express", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Rules Preserved")
+    const rules = [{ id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms" as const, terms: ["ACME-1234"] }]
+    await database.db
+      .update(projects)
+      .set({ settings: { redaction: { mode: "enforce", entities: ["email"], rules } } })
+      .where(eq(projects.id, project.id))
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { redaction: { mode: "off" } } }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.settings?.redaction).toEqual({ mode: "off", rules })
+  })
+
+  // `ProjectSettingsSchema` exposes a subset of what's stored, so a replace here would let
+  // a caller patching one field silently clear a compliance control it cannot even see.
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug patches settings without clearing fields it does not expose", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Patch Settings")
+
+    await database.db
+      .update(projects)
+      .set({
+        settings: {
+          redaction: { mode: "enforce", entities: ["email"] },
+          sampling: { enabled: true, rate: 0.25 },
+          onboardingCompleted: true,
+        },
+      })
+      .where(eq(projects.id, project.id))
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/projects/${project.slug}`, {
+        method: "PATCH",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { keepMonitoring: true } }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+
+    const [stored] = await database.db.select().from(projects).where(eq(projects.id, project.id))
+    expect(stored?.settings).toEqual({
+      keepMonitoring: true,
+      redaction: { mode: "enforce", entities: ["email"] },
+      sampling: { enabled: true, rate: 0.25 },
+      onboardingCompleted: true,
+    })
   })
 
   it<ApiTestContext>("PATCH /v1/projects/:projectSlug toggles flaggers when the body includes them", async ({

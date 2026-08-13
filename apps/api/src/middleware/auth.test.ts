@@ -98,6 +98,42 @@ describe("auth middleware dispatch", () => {
     expect(res.status).toBe(401)
   })
 
+  it<ApiTestContext>("points 401s at the protected-resource metadata document", async ({ app, database }) => {
+    await createTenantSetup(database)
+    const challenge = `Bearer resource_metadata="${process.env.LAT_API_URL}/.well-known/oauth-protected-resource"`
+
+    const noHeader = await app.fetch(new Request("http://localhost/v1/api-keys"))
+    expect(noHeader.headers.get("WWW-Authenticate")).toBe(challenge)
+
+    const unknownBearer = await app.fetch(
+      new Request("http://localhost/v1/api-keys", {
+        headers: { Authorization: `Bearer ${crypto.randomUUID()}` },
+      }),
+    )
+    expect(unknownBearer.headers.get("WWW-Authenticate")).toBe(challenge)
+  })
+
+  it<ApiTestContext>("leaves the challenge off non-401 responses", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const token = generateApiKeyToken()
+    await insertApiKey(database, tenant.organizationId, token)
+
+    const ok = await app.fetch(
+      new Request("http://localhost/v1/api-keys", { headers: { Authorization: `Bearer ${token}` } }),
+    )
+    expect(ok.status).toBe(200)
+    expect(ok.headers.get("WWW-Authenticate")).toBeNull()
+
+    const notFound = await app.fetch(
+      new Request("http://localhost/v1/api-keys/does-not-exist", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    )
+    expect(notFound.status).toBe(404)
+    expect(notFound.headers.get("WWW-Authenticate")).toBeNull()
+  })
+
   it<ApiTestContext>("rejects an OAuth token whose application has no organization binding", async ({
     app,
     database,

@@ -39,13 +39,25 @@ const {
     ...defaultActivityRetryPolicy,
     initialInterval: "1 minute",
     maximumInterval: "30 minutes",
-    // A staged plan lost from Redis (eviction, flush) cannot reappear; fail fast and let the next sweep rebuild.
-    nonRetryableErrorTypes: ["TaxonomyGardeningPlanMissingError"],
+    // Extends the default list rather than replacing it, so the default's
+    // `BadRequestError` keeps failing fast here too — that is what the AI metering
+    // gate raises when an organization is out of credits, and an hour of retries
+    // won't refill them. A staged plan lost from Redis (eviction, flush) likewise
+    // cannot reappear; fail fast and let the next sweep rebuild.
+    nonRetryableErrorTypes: [
+      ...(defaultActivityRetryPolicy.nonRetryableErrorTypes ?? []),
+      "TaxonomyGardeningPlanMissingError",
+    ],
   },
 })
 
+// One naming call can now cover a whole sibling set, so this must exceed the
+// domain-side worst case it wraps: a joint pair (180s) plus a collision retry
+// (180s) plus the per-child fallback's two attempts (60s each), plus the sibling
+// member reads and the locked write. Below that sum the fallback gets cancelled
+// and the cluster stays Pending.
 const { nameTaxonomyClusterActivity } = proxyActivities<typeof activities>({
-  startToCloseTimeout: "2 minutes",
+  startToCloseTimeout: "12 minutes",
   retry: {
     ...defaultActivityRetryPolicy,
     initialInterval: "30 seconds",
@@ -57,7 +69,8 @@ const { nameTaxonomyClusterActivity } = proxyActivities<typeof activities>({
 // already-named siblings to build the forbidden-name list its collision guard
 // enforces; siblings named concurrently each still see the other as "Pending"
 // and can collide, which the sibling-duplicate quality gate then rejects.
-// Sequential naming guarantees each sibling sees the ones named before it.
+// Sequential naming guarantees each sibling sees the ones named before it, and it
+// is what lets the first sibling of a set name the whole set in one call.
 const NAMING_ACTIVITY_CONCURRENCY = 1
 
 const runInBatches = async <A, B>(
@@ -95,12 +108,21 @@ export const gardenTaxonomyWorkflow = async (
   try {
     const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
     useStagingSwap = patched("taxonomy-gardening-staging-swap-v1")
+    // Fixed position, like the marker above: reads hide "Pending" names, so name before publishing.
+    const nameBeforePublish = patched("taxonomy-gardening-name-before-publish-v1")
+    // Same fixed position: the guard below skips the publish sequence, so a pre-change history must not take it.
+    const keepTreeOnDegenerateRebuild = patched("taxonomy-gardening-keep-tree-on-degenerate-rebuild-v1")
     const built = await planHierarchicalGardenTaxonomyActivity(started)
     // Scoped cold-start: the plan sampled below the gardening minimum and built
     // no tree, so complete the run empty and leave any prior scoped tree serving
     // (never reaching save/deprecate). Global stays on the full sequence — the
     // sweep gates it on the same minimum before it ever starts.
-    if (started.customBehaviorId !== undefined && built.clustersBorn === 0 && built.clustersContinued === 0) {
+    const scopedColdStart =
+      started.customBehaviorId !== undefined && built.clustersBorn === 0 && built.clustersContinued === 0
+    // A bare root has no behaviour to publish, and publishing it retires the tree that is serving.
+    // Gated before the persist branches, so it covers static (off/shadow) and adaptive (enforced) alike.
+    const builtNoBehaviours = keepTreeOnDegenerateRebuild && built.topLevelClustersBuilt === 0
+    if (scopedColdStart || builtNoBehaviours) {
       return await completeGardenTaxonomyRunActivity({
         ...started,
         observationsScanned: built.observationsScanned,
@@ -115,26 +137,53 @@ export const gardenTaxonomyWorkflow = async (
       })
     }
     await saveGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
+    const lineage: TaxonomyClusterLineage[] = [...built.lineage]
+    // Name depth by depth, deepest first, and sequentially within a depth
+    // (see NAMING_ACTIVITY_CONCURRENCY). We await all of a depth before naming
+    // the parents above it so each interior sees its children's final names.
+    const nameTree = async (namingPlan: activities.GardenTaxonomyNamingPlanResult) => {
+      // Contrastive naming samples a cluster's unnamed siblings too, so each activity
+      // gets its own sibling group's staged samples — not the whole plan, which spans
+      // the sampled window and would grow the history with project volume.
+      const samplesBySiblingGroup = new Map<string, Record<string, readonly string[]>>()
+      for (const [clusterId, ids] of Object.entries(namingPlan.memberObservationIdsByClusterId ?? {})) {
+        const parentClusterId = namingPlan.parentClusterIdByClusterId?.[clusterId]
+        if (parentClusterId === undefined || parentClusterId === null) continue
+        const group = samplesBySiblingGroup.get(parentClusterId) ?? {}
+        group[clusterId] = ids
+        samplesBySiblingGroup.set(parentClusterId, group)
+      }
+      for (const { clusterIds } of namingPlan.clusterIdsByDepth) {
+        await runInBatches(clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) => {
+          const memberObservationIds = namingPlan.memberObservationIdsByClusterId?.[clusterId]
+          const parentClusterId = namingPlan.parentClusterIdByClusterId?.[clusterId]
+          const siblingGroup = parentClusterId ? samplesBySiblingGroup.get(parentClusterId) : undefined
+          return nameTaxonomyClusterActivity({
+            organizationId: started.organizationId,
+            projectId: started.projectId,
+            clusterId,
+            namingPassId: started.runId,
+            ...(started.customBehaviorId ? { customBehaviorId: started.customBehaviorId } : {}),
+            ...(started.facetId ? { facetId: started.facetId } : {}),
+            ...(memberObservationIds ? { memberObservationIds } : {}),
+            ...(siblingGroup ? { memberObservationIdsByClusterId: siblingGroup } : {}),
+          })
+        })
+      }
+    }
+    // Only the topic tree can name first: a view's naming samples come from the slice the reassignment writes.
+    const namesBeforePublish =
+      nameBeforePublish && started.customBehaviorId === undefined && started.facetId === undefined
+    if (namesBeforePublish) {
+      await nameTree(await planGardenTaxonomyNamingActivity({ ...started, lineage, planKey: built.planKey }))
+    }
     // Mark before the call: a partial/failed reassignment may already have
     // repointed some observations onto staging, so cleanup must not delete it.
     reassignmentStarted = true
     await reassignGardenTaxonomyObservationsActivity({ ...started, planKey: built.planKey })
     await deprecateGardenTaxonomyClustersActivity({ ...started, planKey: built.planKey })
-    const lineage: TaxonomyClusterLineage[] = [...built.lineage]
-    const namingPlan = await planGardenTaxonomyNamingActivity({ ...started, lineage })
-    // Name depth by depth, deepest first, and sequentially within a depth
-    // (see NAMING_ACTIVITY_CONCURRENCY). We await all of a depth before naming
-    // the parents above it so each interior sees its children's final names.
-    for (const { clusterIds } of namingPlan.clusterIdsByDepth) {
-      await runInBatches(clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) =>
-        nameTaxonomyClusterActivity({
-          organizationId: started.organizationId,
-          projectId: started.projectId,
-          clusterId,
-          ...(started.customBehaviorId ? { customBehaviorId: started.customBehaviorId } : {}),
-          ...(started.facetId ? { facetId: started.facetId } : {}),
-        }),
-      )
+    if (!namesBeforePublish) {
+      await nameTree(await planGardenTaxonomyNamingActivity({ ...started, lineage }))
     }
     await assertGardenTaxonomyQualityActivity(started)
     await emitGardenTaxonomyLineageActivity({ ...started, lineage })
@@ -159,7 +208,7 @@ export const gardenTaxonomyWorkflow = async (
       // Clean up an orphaned staging tree ONLY when reassignment never ran, so no
       // observation can already point at a staging leaf we would delete. Once
       // reassignment has started, the staging tree is left for the swap retry /
-      // next pass. No-op on off runs (guarded to state='staging').
+      // next pass.
       if (useStagingSwap && !reassignmentStarted) {
         await cleanupGardenTaxonomyStagingActivity({ ...input, workflowRunId: workflowInfo().runId })
       }

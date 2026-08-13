@@ -1,5 +1,5 @@
-import type { LucideIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import type { LucideProps } from "lucide-react"
+import type { ComponentType, ReactNode } from "react"
 
 /**
  * Groups commands into ordered, labelled sections. `context` commands are contributed by
@@ -17,7 +17,8 @@ interface BasePaletteCommand {
    * — it remains the value used by the text matcher and any plain-text contexts.
    */
   readonly titleNode?: ReactNode
-  readonly icon: LucideIcon
+  /** Matches `@repo/ui`'s `Icon` prop so brand marks (Slack, Linear, …) work, not just lucide icons. */
+  readonly icon: ComponentType<LucideProps>
   readonly section: CommandSection
   /** Sub-heading for contextual commands (e.g. "Signal", "Trace"). */
   readonly group?: string

@@ -103,11 +103,11 @@ export function SlackRouteRow({
     // difference is the channel picker where email has a switch.
     <div className="flex w-full flex-col gap-3 rounded-lg bg-muted/30 p-4">
       <div className="flex w-full flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Text.H5M>{meta.label}</Text.H5M>
           <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
         </div>
-        <div className="w-52 max-w-full shrink-0">
+        <div className="ml-auto w-52 max-w-full shrink-0">
           <Combobox
             modal
             value={selected}
@@ -130,11 +130,17 @@ export function SlackRouteRow({
               disabled={mutation.isPending}
               className="w-full justify-between"
             >
-              <ComboboxTrigger ref={triggerRef}>
+              <ComboboxTrigger
+                ref={triggerRef}
+                className="min-w-0"
+                title={selected.id === "" ? undefined : `#${selected.name}`}
+              >
                 {selected.id === "" ? (
                   <Text.H5 color="foregroundMuted">Don't send</Text.H5>
                 ) : (
-                  <Text.H5>#{selected.name}</Text.H5>
+                  <Text.H5 ellipsis className="min-w-0">
+                    #{selected.name}
+                  </Text.H5>
                 )}
               </ComboboxTrigger>
             </Button>
@@ -163,7 +169,9 @@ export function SlackRouteRow({
       </div>
       {group === "incidents" && currentRoute ? (
         <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-muted/80 px-3 py-2">
-          <Text.H6 color="foregroundMuted">Severity · {minSeverityHint(currentRoute.minSeverity ?? "low")}</Text.H6>
+          <Text.H6 color="foregroundMuted" className="min-w-0 flex-1">
+            Severity · {minSeverityHint(currentRoute.minSeverity ?? "low")}
+          </Text.H6>
           <SeveritySelector
             variant="bordered"
             value={currentRoute.minSeverity ?? "low"}

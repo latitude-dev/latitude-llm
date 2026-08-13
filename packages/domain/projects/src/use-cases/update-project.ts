@@ -18,7 +18,10 @@ export interface UpdateProjectInput {
   readonly id: ProjectId
   readonly name?: string | undefined
   readonly slug?: string | undefined
+  /** Replaces `settings` wholesale. Use `settingsPatch` unless you mean to drop the keys you omit. */
   readonly settings?: ProjectSettings | undefined
+  /** Shallow-merged over the stored settings inside the transaction, so keys the caller doesn't know about survive. */
+  readonly settingsPatch?: ProjectSettings | undefined
 }
 
 export type UpdateProjectError =
@@ -30,6 +33,18 @@ export type UpdateProjectError =
   | InvalidProjectNameError
   | InvalidProjectSlugError
 
+// Pins `redaction`: this endpoint has no role gate and no audit event, so only
+// `updateProjectRedactionUseCase` may change it.
+const withStoredRedaction = (
+  stored: ProjectSettings | null | undefined,
+  next: ProjectSettings | undefined,
+): ProjectSettings | undefined => {
+  if (next === undefined) return undefined
+  const storedRedaction = stored?.redaction
+  const { redaction: _ignored, ...withoutRedaction } = next
+  return storedRedaction === undefined ? withoutRedaction : { ...withoutRedaction, redaction: storedRedaction }
+}
+
 export const updateProjectUseCase = Effect.fn("projects.updateProject")(function* (input: UpdateProjectInput) {
   yield* Effect.annotateCurrentSpan("project.id", input.id)
   const sqlClient = yield* SqlClient
@@ -39,7 +54,7 @@ export const updateProjectUseCase = Effect.fn("projects.updateProject")(function
     Effect.gen(function* () {
       const repo = yield* ProjectRepository
       const existingProject = yield* repo
-        .findById(input.id)
+        .findByIdForUpdate(input.id)
         .pipe(
           Effect.catchTag("NotFoundError", () =>
             Effect.fail(new ProjectNotFoundError({ id: input.id, organizationId })),
@@ -105,12 +120,19 @@ export const updateProjectUseCase = Effect.fn("projects.updateProject")(function
         }
       }
 
+      const nextSettings = withStoredRedaction(
+        existingProject.settings,
+        input.settingsPatch !== undefined
+          ? { ...(existingProject.settings ?? {}), ...input.settingsPatch }
+          : input.settings,
+      )
+
       const now = new Date()
       const updatedProject: Project = {
         ...existingProject,
         name: nextName,
         slug: nextSlug,
-        ...(input.settings !== undefined ? { settings: input.settings } : {}),
+        ...(nextSettings !== undefined ? { settings: nextSettings } : {}),
         lastEditedAt: now,
         updatedAt: now,
       }

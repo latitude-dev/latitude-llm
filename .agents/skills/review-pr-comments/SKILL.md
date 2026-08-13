@@ -29,7 +29,7 @@ Walk the **current** PR’s feedback in **order**, one **topic** at a time. Trea
 | Inline comments **plus** threads, resolve state | `gh api graphql` (`reviewThreads`) | Threads + `isResolved` + `thread.id` for mutations |
 | Flat list of inline comments only | `gh api repos/{owner}/{repo}/pulls/<n>/comments --paginate` | Simple; reply ids (`id`) for REST replies |
 | Post a **conversation** comment | `gh pr comment` | Correct for timeline |
-| Reply **under a line comment** | `gh api -X POST …/pulls/comments/<id>/replies` | `gh pr comment` does not thread on the diff |
+| Reply **under a line comment** | `gh api -X POST …/pulls/<n>/comments/<id>/replies` | `gh pr comment` does not thread on the diff |
 | Resolve a review thread | `gh api graphql` (`resolveReviewThread`) | Only API that exposes it |
 | Inspect the patch | `gh pr diff` | First-class diff |
 | Need UI context (complex thread) | `gh pr view --web` | When it helps—no ban |
@@ -107,7 +107,7 @@ query($owner: String!, $name: String!, $number: Int!) {
 
 If `pageInfo.hasNextPage` is true, follow with additional requests using `after:` cursors on `reviewThreads` (same pattern as standard GraphQL pagination).
 
-Use **`thread.id`** (Node id) for **§3.7 resolve**. Use each comment’s **`databaseId`** as the REST **`id`** when posting **`.../pulls/comments/{id}/replies`** (they are the same numeric id GitHub uses in the REST API).
+Use **`thread.id`** (Node id) for **§3.7 resolve**. Use each comment’s **`databaseId`** as the REST **`id`** when posting **`.../pulls/{n}/comments/{id}/replies`** (they are the same numeric id GitHub uses in the REST API).
 
 **B — REST:** flat list of every inline comment—minimal mental overhead; each node has `id` for **`.../replies`**.
 
@@ -173,10 +173,12 @@ gh pr comment [<PR_NUMBER>] --body '...'
 **Inline thread** — REST reply endpoint (only reliable way to nest under the line):
 
 ```bash
-gh api -X POST "repos/{owner}/{repo}/pulls/comments/<COMMENT_ID>/replies" -f body='...'
+gh api -X POST "repos/{owner}/{repo}/pulls/<PR_NUMBER>/comments/<COMMENT_ID>/replies" -f body='...'
 ```
 
 `<COMMENT_ID>` is the REST **`id`** / GraphQL **`databaseId`** of the comment you answer (from **§2.2**).
+
+The **PR number is required** on this path. `…/pulls/comments/<id>/replies` (no number) is a valid prefix for reading and editing a single comment, so it looks plausible, but it **404s** for `replies`.
 
 **Formal review summary** when it fits the workflow:
 

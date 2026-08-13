@@ -258,6 +258,43 @@ describe("TaxonomyObservationRepositoryLive", () => {
     })
   })
 
+  it("lists naming members by observation id, before any assignment points at the cluster", async () => {
+    // The publish sequence names a staging tree before the reassignment repoints
+    // ClickHouse at it, so naming reads its samples by id, not by cluster.
+    const first = makeObservation({
+      observationId: "n".repeat(24),
+      sessionId: SessionId("staged-naming-session"),
+      projectionMetadata: { summary: "first staged member" },
+    })
+    const second = makeObservation({
+      observationId: "m".repeat(24),
+      sessionId: SessionId("staged-naming-session"),
+      startTime: new Date("2026-05-24T13:00:00.000Z"),
+      endTime: new Date("2026-05-24T13:01:00.000Z"),
+      projectionMetadata: { summary: "second staged member" },
+    })
+
+    const rows = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        yield* repo.upsert(first)
+        yield* repo.upsert(second)
+        return yield* repo.listAllByObservationIds({
+          organizationId,
+          projectId,
+          observationIds: [first.observationId, second.observationId, "z".repeat(24)],
+          limit: 10,
+        })
+      }),
+    )
+
+    // Every requested id that exists comes back, newest first, with the summary
+    // the namer samples — and the rows are still unassigned.
+    expect(rows.map((row) => row.observationId)).toEqual([second.observationId, first.observationId])
+    expect(rows.every((row) => row.assignedClusterId === null)).toBe(true)
+    expect(rows[0]?.projectionMetadata).toEqual({ summary: "second staged member" })
+  })
+
   it("treats reassignment as one current observation", async () => {
     const observation = makeObservation({ observationId: "u".repeat(24), sessionId: SessionId("current-session") })
 
@@ -684,5 +721,69 @@ describe("TaxonomyObservationRepositoryLive.listForFacetSample", () => {
     expect(sample).toHaveLength(1)
     expect(sample[0]?.sessionObservationId).toBe("h".repeat(24))
     expect(sample[0]?.transcript).toBe("matched")
+  })
+
+  it("counts clusterable observations per UTC day, skipping ones no pass could have used", async () => {
+    const dayProjectId = ProjectId("cov".padEnd(24, "0"))
+    await ch.client.insert({
+      table: "taxonomy_observations",
+      values: [
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d1".padEnd(24, "0"),
+            startTime: new Date("2026-05-24T01:00:00.000Z"),
+          }),
+        ),
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d2".padEnd(24, "0"),
+            startTime: new Date("2026-05-24T23:30:00.000Z"),
+          }),
+        ),
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d3".padEnd(24, "0"),
+            startTime: new Date("2026-05-25T02:00:00.000Z"),
+          }),
+        ),
+        // No embedding: never sampleable, so it is not coverage the lens is missing.
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d4".padEnd(24, "0"),
+            embedding: [],
+            startTime: new Date("2026-05-25T03:00:00.000Z"),
+          }),
+        ),
+        // Before the scan horizon.
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d5".padEnd(24, "0"),
+            startTime: new Date("2026-05-01T03:00:00.000Z"),
+          }),
+        ),
+      ],
+      format: "JSONEachRow",
+    })
+
+    const counts = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        return yield* repo.getClusterableCountsByDay({
+          organizationId,
+          projectId: dayProjectId,
+          since: new Date("2026-05-20T00:00:00.000Z"),
+        })
+      }),
+    )
+
+    expect(counts).toEqual([
+      { day: new Date("2026-05-24T00:00:00.000Z"), count: 2 },
+      { day: new Date("2026-05-25T00:00:00.000Z"), count: 1 },
+    ])
   })
 })

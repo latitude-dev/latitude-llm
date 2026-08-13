@@ -113,3 +113,8 @@ export {
   type UpdateOrganizationInput,
   updateOrganizationUseCase,
 } from "./use-cases/update-organization.ts"
+export {
+  type UpdateOrganizationRedactionError,
+  type UpdateOrganizationRedactionInput,
+  updateOrganizationRedactionUseCase,
+} from "./use-cases/update-organization-redaction.ts"

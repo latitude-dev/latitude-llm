@@ -49,6 +49,7 @@ export function fixtureRowToTraceDetail(row: FixtureRow): TraceDetail {
     costInputMicrocents: 0,
     costOutputMicrocents: 0,
     costTotalMicrocents: 0,
+    unpricedSpanCount: 0,
     sessionId: SessionId(BENCHMARK_SESSION_ID),
     userId: ExternalUserId(BENCHMARK_USER_ID),
     userEmail: "",
