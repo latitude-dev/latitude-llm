@@ -316,8 +316,9 @@ describe("SessionRepository", () => {
       ])
 
       const session = nonNull(
-        (await runCh(repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options: { limit: 10 } })))
-          .items.find((s) => s.sessionId === sessionId),
+        (
+          await runCh(repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options: { limit: 10 } }))
+        ).items.find((s) => s.sessionId === sessionId),
       )
 
       // Wall-clock window: earliest start → latest end = 4s.
@@ -1490,9 +1491,7 @@ describe("SessionRepository", () => {
           name: "root",
         }),
       ])
-      await insertSearchDocs([
-        { traceId, text: "hydration miss needle", startTime: start, contentHashSuffix: "h1" },
-      ])
+      await insertSearchDocs([{ traceId, text: "hydration miss needle", startTime: start, contentHashSuffix: "h1" }])
       // Simulate a session row missing from `sessions` (legacy pre-00016 data
       // or an MV race): the search rollup still matches via `traces`, so the
       // synthesized fallback session must carry the rollup's duration.
