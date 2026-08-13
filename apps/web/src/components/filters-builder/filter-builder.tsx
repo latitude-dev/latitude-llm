@@ -1,11 +1,11 @@
 import { MOMENT_KINDS } from "@domain/conversation-intelligence"
 import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Icon, Input, Select, Tabs, Text } from "@repo/ui"
-import { ChevronDownIcon, ChevronRightIcon, PlusIcon, XIcon } from "lucide-react"
-import { type ComponentProps, type RefObject, useCallback, useEffect, useMemo, useState } from "react"
+import { Icon, Select, Tabs, Text } from "@repo/ui"
+import { ChevronDownIcon, ChevronRightIcon, PlusIcon } from "lucide-react"
+import { type RefObject, useCallback, useMemo, useState } from "react"
 import { useTopicFilterOptions } from "../../domains/taxonomy/taxonomy.collection.ts"
-import { useDebounce } from "../../lib/hooks/useDebounce.ts"
 import { getMultiSelectFieldsForMode, getTextFieldsForMode, NUMBER_RANGE_FIELDS, STATUS_FIELDS } from "./constants.ts"
+import { DebouncedInput } from "./debounced-input.tsx"
 import { FilterSection } from "./filter-section.tsx"
 import { MetadataFilter } from "./metadata-filter/metadata-filter.tsx"
 import { type FilterMode, MultiSelectFilter, type StaticFilterItem } from "./multi-select-filter.tsx"
@@ -43,59 +43,6 @@ interface FieldDescriptor {
   readonly percentile?: boolean
   readonly displayScale?: number
   readonly displayStep?: number
-}
-
-function DebouncedInput({
-  value,
-  onDebouncedChange,
-  ...props
-}: Omit<ComponentProps<typeof Input>, "onChange" | "value"> & {
-  readonly value: string
-  readonly onDebouncedChange: (value: string) => void
-}) {
-  const [local, setLocal] = useState(value)
-  const [pendingChange, setPendingChange] = useState<string | null>(null)
-
-  useDebounce(
-    () => {
-      if (pendingChange === null) return
-      onDebouncedChange(pendingChange)
-    },
-    300,
-    [pendingChange, onDebouncedChange],
-  )
-
-  // TODO(frontend-use-effect-policy): keep local input state in sync with externally-controlled filter updates.
-  useEffect(() => {
-    setLocal(value)
-    setPendingChange(null)
-  }, [value])
-
-  return (
-    <div className="relative">
-      <Input
-        {...props}
-        value={local}
-        onChange={(e) => {
-          setLocal(e.target.value)
-          setPendingChange(e.target.value)
-        }}
-      />
-      {local ? (
-        <button
-          type="button"
-          className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
-          onClick={() => {
-            setLocal("")
-            setPendingChange(null)
-            onDebouncedChange("")
-          }}
-        >
-          <XIcon className="h-3.5 w-3.5" />
-        </button>
-      ) : null}
-    </div>
-  )
 }
 
 /** Plain 0–100 input writing `gtePercentile` — the number-only percentile (no density graph). */
@@ -184,8 +131,7 @@ function NumberFilterControl({
         <NumberRangeFilter
           minValue={minValue}
           maxValue={maxValue}
-          onMinChange={(min) => onRangeChange(min, maxValue)}
-          onMaxChange={(max) => onRangeChange(minValue, max)}
+          onRangeChange={onRangeChange}
           {...(step !== undefined ? { step } : {})}
         />
       )}

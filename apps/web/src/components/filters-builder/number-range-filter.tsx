@@ -1,70 +1,60 @@
 import { Button } from "@repo/ui"
 import { XIcon } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import { useDebounce } from "../../lib/hooks/useDebounce.ts"
+import { useDebouncedCommit } from "../../lib/hooks/useDebouncedCommit.ts"
 
 interface NumberRangeFilterProps {
   readonly minValue: number | undefined
   readonly maxValue: number | undefined
-  readonly onMinChange: (v: number | undefined) => void
-  readonly onMaxChange: (v: number | undefined) => void
+  readonly onRangeChange: (min: number | undefined, max: number | undefined) => void
   readonly minPlaceholder?: string
   readonly maxPlaceholder?: string
   /** HTML `step` for both inputs; defaults to integer step when omitted. */
   readonly step?: number
 }
 
+interface PendingRange {
+  readonly min: number | undefined
+  readonly max: number | undefined
+}
+
+function parseInputValue(raw: string): number | undefined {
+  if (raw === "") return undefined
+  const parsed = Number(raw)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
 /** Debounced min/max numeric inputs emitting `gte`/`lte` values (via the parent). */
 export function NumberRangeFilter({
   minValue,
   maxValue,
-  onMinChange,
-  onMaxChange,
+  onRangeChange,
   minPlaceholder = "Min",
   maxPlaceholder = "Max",
   step,
 }: NumberRangeFilterProps) {
   const [localMin, setLocalMin] = useState(minValue?.toString() ?? "")
   const [localMax, setLocalMax] = useState(maxValue?.toString() ?? "")
-  const [pendingMin, setPendingMin] = useState<number | undefined | null>(null)
-  const [pendingMax, setPendingMax] = useState<number | undefined | null>(null)
+  // One pending range, not a pending min plus a pending max: both bounds share a filter key, so two
+  // independent commits landing in the same tick would each write the other's bound back to stale.
+  const [pending, setPending] = useState<PendingRange | null>(null)
 
-  useDebounce(
-    () => {
-      if (pendingMin === null) return
-      onMinChange(pendingMin)
-    },
-    400,
-    [pendingMin, onMinChange],
-  )
-
-  useDebounce(
-    () => {
-      if (pendingMax === null) return
-      onMaxChange(pendingMax)
-    },
-    400,
-    [pendingMax, onMaxChange],
-  )
+  const commitRange = useCallback((range: PendingRange) => onRangeChange(range.min, range.max), [onRangeChange])
+  useDebouncedCommit(pending, commitRange, 400)
 
   // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
   useEffect(() => {
     setLocalMin(minValue?.toString() ?? "")
-    setPendingMin(null)
-  }, [minValue])
-  // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
-  useEffect(() => {
     setLocalMax(maxValue?.toString() ?? "")
-    setPendingMax(null)
-  }, [maxValue])
+    setPending(null)
+  }, [minValue, maxValue])
 
   const hasValue = minValue !== undefined || maxValue !== undefined
 
   const handleClear = useCallback(() => {
     setLocalMin("")
     setLocalMax("")
-    setPendingMin(undefined)
-    setPendingMax(undefined)
+    setPending({ min: undefined, max: undefined })
   }, [])
 
   return (
@@ -76,9 +66,9 @@ export function NumberRangeFilter({
         placeholder={minPlaceholder}
         value={localMin}
         onChange={(e) => {
-          setLocalMin(e.target.value)
-          const n = e.target.value === "" ? undefined : Number(e.target.value)
-          setPendingMin(n !== undefined && !Number.isNaN(n) ? n : undefined)
+          const raw = e.target.value
+          setLocalMin(raw)
+          setPending({ min: parseInputValue(raw), max: parseInputValue(localMax) })
         }}
         className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
       />
@@ -90,9 +80,9 @@ export function NumberRangeFilter({
         placeholder={maxPlaceholder}
         value={localMax}
         onChange={(e) => {
-          setLocalMax(e.target.value)
-          const n = e.target.value === "" ? undefined : Number(e.target.value)
-          setPendingMax(n !== undefined && !Number.isNaN(n) ? n : undefined)
+          const raw = e.target.value
+          setLocalMax(raw)
+          setPending({ min: parseInputValue(localMin), max: parseInputValue(raw) })
         }}
         className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
       />

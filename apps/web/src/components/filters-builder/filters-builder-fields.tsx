@@ -1,13 +1,12 @@
 import { MOMENT_KINDS } from "@domain/conversation-intelligence"
 import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Button, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
-import { ChevronDown, ChevronUp, InfoIcon, XIcon } from "lucide-react"
-import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { Switch, Tabs, Text, Tooltip } from "@repo/ui"
+import { ChevronDown, ChevronUp, InfoIcon } from "lucide-react"
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useProjectMembersCollection } from "../../domains/members/members.collection.ts"
 import { isHasLlmActivityFilterOn } from "../../domains/sessions/sessions.collection.ts"
 import { useTopicFilterOptions } from "../../domains/taxonomy/taxonomy.collection.ts"
 import { authClient } from "../../lib/auth-client.ts"
-import { useDebounce } from "../../lib/hooks/useDebounce.ts"
 import {
   getMultiSelectFieldsForMode,
   getTextFieldsForMode,
@@ -15,8 +14,10 @@ import {
   type PercentileFieldName,
   STATUS_FIELDS,
 } from "./constants.ts"
+import { DebouncedInput } from "./debounced-input.tsx"
 import { MetadataFilter } from "./metadata-filter/metadata-filter.tsx"
 import { type FilterMode, MultiSelectFilter, type StaticFilterItem } from "./multi-select-filter.tsx"
+import { NumberRangeFilter } from "./number-range-filter.tsx"
 import { PercentileFilter } from "./percentile-filter.tsx"
 import { StatusFilter, type StatusFilterValue } from "./status-filter.tsx"
 import type { DistinctColumn } from "./types.ts"
@@ -137,167 +138,6 @@ function CollapsibleSection({
   )
 }
 
-function DebouncedInput({
-  value,
-  onDebouncedChange,
-  ...props
-}: Omit<ComponentProps<typeof Input>, "onChange" | "value"> & {
-  readonly value: string
-  readonly onDebouncedChange: (value: string) => void
-}) {
-  const [local, setLocal] = useState(value)
-  const [pendingChange, setPendingChange] = useState<string | null>(null)
-
-  useDebounce(
-    () => {
-      if (pendingChange === null) return
-      onDebouncedChange(pendingChange)
-    },
-    300,
-    [pendingChange, onDebouncedChange],
-  )
-
-  // TODO(frontend-use-effect-policy): keep local input state in sync with externally-controlled filter updates.
-  useEffect(() => {
-    setLocal(value)
-    setPendingChange(null)
-  }, [value])
-
-  return (
-    <div className="relative">
-      <Input
-        {...props}
-        value={local}
-        onChange={(e) => {
-          const nextValue = e.target.value
-          setLocal(nextValue)
-          setPendingChange(nextValue)
-        }}
-      />
-      {local && (
-        <button
-          type="button"
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-          onClick={() => {
-            setLocal("")
-            setPendingChange(null)
-            onDebouncedChange("")
-          }}
-        >
-          <XIcon className="h-3.5 w-3.5" />
-        </button>
-      )}
-    </div>
-  )
-}
-
-function NumberRangeFilter({
-  minValue,
-  maxValue,
-  onMinChange,
-  onMaxChange,
-  minPlaceholder = "Min",
-  maxPlaceholder = "Max",
-  step,
-}: {
-  readonly minValue: number | undefined
-  readonly maxValue: number | undefined
-  readonly onMinChange: (v: number | undefined) => void
-  readonly onMaxChange: (v: number | undefined) => void
-  readonly minPlaceholder?: string
-  readonly maxPlaceholder?: string
-  /** HTML `step` for both inputs; defaults to integer step when omitted. */
-  readonly step?: number
-}) {
-  const [localMin, setLocalMin] = useState(minValue?.toString() ?? "")
-  const [localMax, setLocalMax] = useState(maxValue?.toString() ?? "")
-  const [pendingMin, setPendingMin] = useState<number | undefined | null>(null)
-  const [pendingMax, setPendingMax] = useState<number | undefined | null>(null)
-
-  useDebounce(
-    () => {
-      if (pendingMin === null) return
-      onMinChange(pendingMin)
-    },
-    400,
-    [pendingMin, onMinChange],
-  )
-
-  useDebounce(
-    () => {
-      if (pendingMax === null) return
-      onMaxChange(pendingMax)
-    },
-    400,
-    [pendingMax, onMaxChange],
-  )
-
-  // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
-  useEffect(() => {
-    setLocalMin(minValue?.toString() ?? "")
-    setPendingMin(null)
-  }, [minValue])
-  // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
-  useEffect(() => {
-    setLocalMax(maxValue?.toString() ?? "")
-    setPendingMax(null)
-  }, [maxValue])
-
-  const hasValue = minValue !== undefined || maxValue !== undefined
-
-  const handleClear = useCallback(() => {
-    setLocalMin("")
-    setLocalMax("")
-    setPendingMin(undefined)
-    setPendingMax(undefined)
-  }, [])
-
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        type="number"
-        min={0}
-        step={step ?? 1}
-        placeholder={minPlaceholder}
-        value={localMin}
-        onChange={(e) => {
-          setLocalMin(e.target.value)
-          const n = e.target.value === "" ? undefined : Number(e.target.value)
-          setPendingMin(n !== undefined && !Number.isNaN(n) ? n : undefined)
-        }}
-        className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
-      />
-      <span className="text-xs text-muted-foreground">to</span>
-      <input
-        type="number"
-        min={0}
-        step={step ?? 1}
-        placeholder={maxPlaceholder}
-        value={localMax}
-        onChange={(e) => {
-          setLocalMax(e.target.value)
-          const n = e.target.value === "" ? undefined : Number(e.target.value)
-          setPendingMax(n !== undefined && !Number.isNaN(n) ? n : undefined)
-        }}
-        className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
-      />
-      {hasValue && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={handleClear}
-          className="h-7 w-7 shrink-0"
-          aria-label="Clear filter"
-          title="Clear filter"
-        >
-          <XIcon className="h-3.5 w-3.5" />
-        </Button>
-      )}
-    </div>
-  )
-}
-
 type NumberFilterMode = "range" | "percentile"
 
 interface NumberFilterSectionProps {
@@ -394,8 +234,7 @@ function NumberFilterSection({
         <NumberRangeFilter
           minValue={minValue}
           maxValue={maxValue}
-          onMinChange={(min) => onRangeChange(min, maxValue)}
-          onMaxChange={(max) => onRangeChange(minValue, max)}
+          onRangeChange={onRangeChange}
           {...(step !== undefined ? { step } : {})}
         />
       )}
