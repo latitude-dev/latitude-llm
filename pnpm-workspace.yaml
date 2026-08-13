@@ -51,9 +51,9 @@ catalog:
   "@typescript/native-preview": 7.0.0-dev.20260705.1
   "@vitejs/plugin-react": 6.0.1
   better-auth: 1.6.22
-  "@better-auth/core": 1.6.13
-  "@better-auth/sso": 1.6.13
-  "@better-auth/stripe": 1.6.21
+  "@better-auth/core": 1.6.22
+  "@better-auth/sso": 1.6.22
+  "@better-auth/stripe": 1.6.22
   "@bull-board/api": 6.12.1
   "@bull-board/hono": 6.12.1
   bullmq: 5.76.2
