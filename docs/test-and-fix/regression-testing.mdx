@@ -38,6 +38,11 @@ You can drive a regression test from a dataset in your own pipeline:
 - **Export** a [dataset](../datasets/overview) as CSV and replay its inputs in your own test harness.
 - Submit the results back as [scores](../scores/overview) through the Scores API, so regression results live alongside your production data, and gate the build on the outcome.
 
+## Multi-turn simulations
+
+If the case is a conversation rather than a single input/output pair, run a [local simulation](./simulations): pull the dataset with the SDK, let a user simulator talk to your agent, and send the sessions back to Latitude so [Experiments](../experiments/overview) can compare versions.
+
 ## Next step
 
+- [Simulate agents locally](./simulations): run the dataset as multi-turn conversations in TypeScript or Python.
 - [Datasets](../datasets/overview): turn the traces behind a signal into a reusable test set.
