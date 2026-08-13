@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+## v0.3.79 - 2026-08-13
+
+### Cost
+
+- Added cost-per-session analytics that decompose period-over-period spend into traces per session, LLM calls per trace, tokens per call, model mix, token mix, and prompt/completion pricing, with model-mix separated from rate changes (ref: #4324).
+- Revamped the cost dashboard with a Session section for that decomposition, a header pricing-coverage badge, and chart/table polish for long model names and over-time series (ref: #4389).
+- Fixed cost lookup when a provider reports a model version with different punctuation than the catalog key (for example `claude-opus-4.8` vs `claude-opus-4-8`) (ref: #4383).
+
+### Signals & notifications
+
+- Unified severity onto one `low` → `urgent` scale shared by signals, monitors, and incidents, and passed manually triaged signal priority on notification payloads so Slack routes and email minimum-severity settings can filter on it. Also added `urgent` as a first-class monitor/incident severity in the API, SDKs, CLI, and UI, and stopped the tool-call-errors detector from opening signals on tool errors the agent later recovered from (ref: #4362).
+- Fixed signal-escalation notifications so triage priority (including urgent-only routes) is respected without dropping below the escalation incident's high floor (ref: #4404).
+
+### Behaviors
+
+- Retired taxonomy shadow mode so each garden run builds one tree again, with adaptive clustering gated on the per-org `adaptiveTaxonomyClustering` flag (ref: #4388).
+- Flattened behavior-tree scaffolding so real groups are no longer buried under empty interior nodes, and renamed sibling clusters contrastively in one pass so branch labels distinguish each other instead of repeating the same vocabulary (ref: #4408, #4410).
+- Clipped custom-behavior facet date ranges to the sessions the lens actually covers, surfaced the coverage band in the picker, and disabled out-of-range calendar days. Also fixed facet gardening publication so facet plans no longer incorrectly retire the prior behavior tree (ref: #4411, #4416).
+- Refreshed the Behaviors catalog with scope tooltips (Topics = full history vs. other groups = since creation), a "Capturing data from …" indicator, accent-bar group colors, and populated behaviors sorted above empty/analyzing ones (ref: #4414).
+- Added per-build taxonomy quality telemetry (leaf balance, cohesion, duplicate and near-duplicate naming rates) for operator monitoring (ref: #4409, #4418).
+
+### Agent dispatch
+
+- Allowed webhook handlers to return optional `externalAgentId`, `externalRunId`, and `deepLinkUrl` on success; Latitude records them in dispatch history and uses the deep link for the external run (ref: #4369).
+
+### Flaggers
+
+- Masked profanity in extracted agent context so crude customer phrasing is not echoed into flagger telemetry or downstream classifier prompts (ref: #4406).
+- Updated flagger settings copy from a flat "30 credits per scan" to usage-based billing ("Billed by AI usage") (ref: #4413).
+
+### Sessions
+
+- Fixed sessions showing zero duration when instrumentation never exported a root span; duration now falls back to the session's wall-clock window (ref: #4429).
+
+### Experiments
+
+- Fixed the experiment period date picker and baseline filter dropdowns rendering behind sticky table columns (ref: #4377, #4430).
+
+### Analytics
+
+- Forwarded Reddit `rdt_cid` through signup attribution so paid-campaign click IDs are no longer dropped at the app boundary (ref: #4254).
+
 ## v0.3.78 - 2026-08-05
 
 ### Imports
