@@ -65,7 +65,8 @@ export const LIST_SELECT = `
   if(max(max_start_time) >= min(min_start_time),
      max(max_start_time),
      max(max_end_time))         AS last_activity_time,
-  sum(duration_ns)             AS duration_ns,
+  reinterpretAsInt64(max(max_end_time))
+    - reinterpretAsInt64(min(min_start_time)) AS duration_ns,
   if(
     min(time_of_first_token) < toDateTime64('2261-01-01', 9, 'UTC')
       AND min(time_of_first_token) > min(min_start_time),

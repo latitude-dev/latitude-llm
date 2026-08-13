@@ -16,10 +16,9 @@ import { z } from "zod"
  * interactions between a user and the system. Populated by a
  * ClickHouse materialized view on each insert into spans.
  *
- * `durationNs` is **active execution time** (sum of root-span durations across
- * the session's traces), not wall-clock. Wall-clock is recoverable as
- * `endTime - startTime` when needed. See specs/session-problems/1-parity-traces-sessions.md
- * "On `duration_ns` semantics" for the rationale.
+ * `durationNs` is wall-clock (`endTime - startTime`): last span end minus first
+ * span start over whatever spans exist. Same formula as traces — does not
+ * require a root span, so incomplete trees still get a non-zero duration.
  */
 export const sessionSchema = z.object({
   organizationId: organizationIdSchema,

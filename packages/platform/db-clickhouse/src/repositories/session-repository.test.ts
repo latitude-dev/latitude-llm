@@ -217,12 +217,12 @@ describe("SessionRepository", () => {
     })
   })
 
-  describe("active-execution duration_ns", () => {
-    it("sums root-span durations across concurrent traces independently of wall-clock", async () => {
+  describe("wall-clock duration_ns", () => {
+    it("is last end minus first start for concurrent overlapping traces", async () => {
       const sessionId = "concurrent-session"
       const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
-      // Two traces running in parallel: each root is 5s long, but they overlap.
-      // Wall-clock window = 5s. Active execution = 10s (sum of both roots).
+      // Two traces running in parallel: each root is 5s long and they overlap.
+      // Wall-clock window = 5s (same formula as traces).
       await insertSpans([
         makeSpanRow({
           traceId: "1".repeat(32),
@@ -249,16 +249,14 @@ describe("SessionRepository", () => {
       expect(page.items).toHaveLength(1)
       const session = nonNull(page.items[0])
       const wallClockNs = session.endTime.getTime() * 1_000_000 - session.startTime.getTime() * 1_000_000
-      // Active execution sums both roots: 10s in nanoseconds (10_000_000_000).
-      expect(session.durationNs).toBe(10_000_000_000)
-      // Wall-clock window is only 5s — diverges from active execution.
-      expect(session.durationNs).toBeGreaterThan(wallClockNs)
+      expect(session.durationNs).toBe(5_000_000_000)
+      expect(session.durationNs).toBe(wallClockNs)
     })
 
-    it("sums multiple root spans within a single trace", async () => {
+    it("uses the span envelope when multiple roots sit inside one session", async () => {
       const sessionId = "multi-root-session"
       const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
-      // Same trace, two root (parent_span_id = '') spans — both count toward duration_ns.
+      // Root A: [0, 3s], root B: [1s, 4s] → wall-clock = 4s.
       await insertSpans([
         makeSpanRow({
           traceId: "3".repeat(32),
@@ -283,8 +281,88 @@ describe("SessionRepository", () => {
           .items[0],
       )
 
-      // Two roots × 3s each = 6_000_000_000 ns. Children are absent so no double counting.
-      expect(session.durationNs).toBe(6_000_000_000)
+      expect(session.durationNs).toBe(4_000_000_000)
+    })
+
+    it("still reports wall-clock when every span has a non-empty parent (missing root)", async () => {
+      const sessionId = "orphan-tree-session"
+      const start = new Date(Date.UTC(2026, 0, 1, 4, 25, 23, 898))
+      const missingRootId = "950a2749637f18b4"
+      // Mirrors the broken tree from the defect: 7 child spans arrived, parent never did.
+      await insertSpans([
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "a".repeat(16),
+          parentSpanId: missingRootId,
+          sessionId,
+          startTime: start,
+          durationMs: 3_907,
+          name: "ai.generateText",
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "c".repeat(16),
+          parentSpanId: "a".repeat(16),
+          sessionId,
+          startTime: start,
+          durationMs: 3_906,
+          name: "ai.generateText.doGenerate",
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "d".repeat(16),
+          parentSpanId: missingRootId,
+          sessionId,
+          startTime: new Date(start.getTime() + 3),
+          durationMs: 3_903,
+          name: "POST",
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "e".repeat(16),
+          parentSpanId: missingRootId,
+          sessionId,
+          startTime: new Date(start.getTime() + 4),
+          durationMs: 9,
+          name: "tls.connect",
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "f".repeat(16),
+          parentSpanId: "e".repeat(16),
+          sessionId,
+          startTime: new Date(start.getTime() + 4),
+          durationMs: 6,
+          name: "tcp.connect",
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "1".repeat(16),
+          parentSpanId: missingRootId,
+          sessionId,
+          startTime: new Date(start.getTime() + 1),
+          durationMs: 0,
+          name: "tcp.connect",
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "2".repeat(16),
+          parentSpanId: missingRootId,
+          sessionId,
+          startTime: new Date(start.getTime() + 3_909),
+          durationMs: 0,
+          name: "tcp.connect",
+        }),
+      ])
+
+      const session = nonNull(
+        (await runCh(repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options: { limit: 10 } })))
+          .items[0],
+      )
+
+      // 04:25:27.807 − 04:25:23.898 = 3.909s — no root required.
+      expect(session.durationNs).toBe(3_909_000_000)
+      expect(session.rootSpanId).toBe("")
     })
   })
 
@@ -347,9 +425,9 @@ describe("SessionRepository", () => {
             session_id: sessionId,
             min_start_time: startTime,
             max_end_time: startTime,
-            duration_ns: 0,
             // Omitted columns (including time_of_first_token) default to their
             // SimpleAggregateFunction zero. For DateTime64 that is 1970-01-01.
+            // duration_ns is an ALIAS of max_end − min_start (wall-clock).
           },
         ],
         format: "JSONEachRow",
@@ -403,9 +481,9 @@ describe("SessionRepository", () => {
             session_id: sessionId,
             min_start_time: minStartTime,
             max_end_time: maxEndTime,
-            duration_ns: 5_000_000_000,
             // max_start_time omitted on purpose — falls back to the
             // SimpleAggregateFunction(max, DateTime64) zero (1970-01-01).
+            // duration_ns is an ALIAS of max_end − min_start (wall-clock).
           },
         ],
         format: "JSONEachRow",
@@ -2143,10 +2221,9 @@ describe("SessionRepository", () => {
       })
 
       // `sortBy="duration"` exercises a less-trafficked branch of
-      // SEARCH_SORT_AXES that requires the rollup to project
-      // `sum(duration_ns)` — confirms the SELECT-list extension wasn't
-      // dropped during refactors. Same fixture set as the cost test but
-      // sorted by duration instead.
+      // SEARCH_SORT_AXES that requires the rollup to project duration_ns —
+      // confirms the SELECT-list extension wasn't dropped during refactors.
+      // Same fixture set as the cost test but sorted by duration instead.
       it('sortBy="duration" orders by aggregated duration_ns DESC', async () => {
         const start = new Date(Date.UTC(2026, 1, 20, 10, 0, 0))
         const sessions = [

@@ -145,9 +145,10 @@ export function computeDurationBreakdown(spans: readonly SpanRecord[]): {
 /**
  * Session-level composition: the breakdown is computed **per trace** and then
  * summed, so the gaps *between* traces (user think-time between turns) are never
- * counted as idle — only the idle *within* each trace is. The total then equals
- * the sum of per-trace wall clocks, matching how `session.durationNs` is derived
- * (sum of root-span durations).
+ * counted as idle — only the idle *within* each trace is. That total is the sum
+ * of per-trace wall clocks; `session.durationNs` itself is session wall-clock
+ * (last end − first start across all spans), which can be larger when traces
+ * are spaced apart.
  */
 export function computeSessionDurationBreakdown(spans: readonly SpanRecord[]): {
   segments: DurationSegment[]
