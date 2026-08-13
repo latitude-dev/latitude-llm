@@ -1,6 +1,6 @@
 import { MOMENT_KINDS } from "@domain/conversation-intelligence"
 import type { FilterCondition, FilterSet, TraceFilterGroupId } from "@domain/shared"
-import { Button, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
+import { Button, Input, Switch, Tabs, Text, Tooltip, useMountEffect } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, SearchIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useProjectMembersCollection } from "../../domains/members/members.collection.ts"
@@ -153,6 +153,7 @@ function DebouncedInput({
     () => {
       if (pendingChange === null) return
       onDebouncedChange(pendingChange)
+      setPendingChange(null)
     },
     300,
     [pendingChange, onDebouncedChange],
@@ -166,16 +167,18 @@ function DebouncedInput({
 
   // Search-filtering unmounts non-matching sections before the debounce above
   // fires, which would otherwise clear the pending timeout and silently drop
-  // the edit. Flush whatever's pending straight to the caller on unmount.
+  // the edit. Flush whatever's still pending straight to the caller on unmount;
+  // `pendingChange` is reset to null as soon as the debounce delivers it, so a
+  // delivered value can't be flushed a second time here.
   const pendingChangeRef = useRef(pendingChange)
   pendingChangeRef.current = pendingChange
   const onDebouncedChangeRef = useRef(onDebouncedChange)
   onDebouncedChangeRef.current = onDebouncedChange
-  useEffect(() => {
+  useMountEffect(() => {
     return () => {
       if (pendingChangeRef.current !== null) onDebouncedChangeRef.current(pendingChangeRef.current)
     }
-  }, [])
+  })
 
   return (
     <div className="relative">
@@ -208,16 +211,14 @@ function DebouncedInput({
 function NumberRangeFilter({
   minValue,
   maxValue,
-  onMinChange,
-  onMaxChange,
+  onRangeChange,
   minPlaceholder = "Min",
   maxPlaceholder = "Max",
   step,
 }: {
   readonly minValue: number | undefined
   readonly maxValue: number | undefined
-  readonly onMinChange: (v: number | undefined) => void
-  readonly onMaxChange: (v: number | undefined) => void
+  readonly onRangeChange: (min: number | undefined, max: number | undefined) => void
   readonly minPlaceholder?: string
   readonly maxPlaceholder?: string
   /** HTML `step` for both inputs; defaults to integer step when omitted. */
@@ -231,19 +232,21 @@ function NumberRangeFilter({
   useDebounce(
     () => {
       if (pendingMin === null) return
-      onMinChange(pendingMin)
+      onRangeChange(pendingMin, maxValue)
+      setPendingMin(null)
     },
     400,
-    [pendingMin, onMinChange],
+    [pendingMin, maxValue, onRangeChange],
   )
 
   useDebounce(
     () => {
       if (pendingMax === null) return
-      onMaxChange(pendingMax)
+      onRangeChange(minValue, pendingMax)
+      setPendingMax(null)
     },
     400,
-    [pendingMax, onMaxChange],
+    [pendingMax, minValue, onRangeChange],
   )
 
   // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
@@ -259,21 +262,28 @@ function NumberRangeFilter({
 
   // Search-filtering unmounts non-matching sections before the debounces above
   // fire, which would otherwise clear the pending timeouts and silently drop
-  // the edits. Flush whatever's pending straight to the callers on unmount.
+  // the edits. Flush both endpoints in a single call on unmount — `onRangeChange`
+  // replaces both conditions at once, so two sequential calls would let the
+  // second overwrite the first. `pendingMin`/`pendingMax` are reset to null as
+  // soon as their debounce delivers, so a delivered value can't be re-flushed.
+  const minValueRef = useRef(minValue)
+  minValueRef.current = minValue
+  const maxValueRef = useRef(maxValue)
+  maxValueRef.current = maxValue
   const pendingMinRef = useRef(pendingMin)
   pendingMinRef.current = pendingMin
   const pendingMaxRef = useRef(pendingMax)
   pendingMaxRef.current = pendingMax
-  const onMinChangeRef = useRef(onMinChange)
-  onMinChangeRef.current = onMinChange
-  const onMaxChangeRef = useRef(onMaxChange)
-  onMaxChangeRef.current = onMaxChange
-  useEffect(() => {
+  const onRangeChangeRef = useRef(onRangeChange)
+  onRangeChangeRef.current = onRangeChange
+  useMountEffect(() => {
     return () => {
-      if (pendingMinRef.current !== null) onMinChangeRef.current(pendingMinRef.current)
-      if (pendingMaxRef.current !== null) onMaxChangeRef.current(pendingMaxRef.current)
+      if (pendingMinRef.current === null && pendingMaxRef.current === null) return
+      const min = pendingMinRef.current !== null ? pendingMinRef.current : minValueRef.current
+      const max = pendingMaxRef.current !== null ? pendingMaxRef.current : maxValueRef.current
+      onRangeChangeRef.current(min, max)
     }
-  }, [])
+  })
 
   const hasValue = minValue !== undefined || maxValue !== undefined
 
@@ -426,8 +436,7 @@ function NumberFilterSection({
         <NumberRangeFilter
           minValue={minValue}
           maxValue={maxValue}
-          onMinChange={(min) => onRangeChange(min, maxValue)}
-          onMaxChange={(max) => onRangeChange(minValue, max)}
+          onRangeChange={onRangeChange}
           {...(step !== undefined ? { step } : {})}
         />
       )}
