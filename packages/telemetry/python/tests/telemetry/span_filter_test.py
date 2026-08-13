@@ -2,8 +2,14 @@
 
 from unittest.mock import Mock
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
 from latitude_telemetry.constants import SCOPE_LATITUDE
 from latitude_telemetry.telemetry.span_filter import (
+    ExportFilterSpanProcessor,
     build_should_export_span,
     is_default_export_span,
     is_gen_ai_or_llm_attribute_span,
@@ -83,3 +89,78 @@ class TestBuildShouldExportSpan:
         )
         assert pred(_readable_span(scope_name="custom.scope"))
         assert not pred(_readable_span(scope_name="express"))
+
+
+class TestExportFilterParentChainPromotion:
+    def setup_method(self) -> None:
+        self.exporter = InMemorySpanExporter()
+        self.provider = TracerProvider()
+        self.provider.add_span_processor(
+            ExportFilterSpanProcessor(
+                build_should_export_span(),
+                SimpleSpanProcessor(self.exporter),
+            )
+        )
+
+    def teardown_method(self) -> None:
+        self.provider.shutdown()
+        self.exporter.clear()
+
+    def test_exports_unstamped_parent_when_kept_child_ends_first(self) -> None:
+        tracer = self.provider.get_tracer("opentelemetry.instrumentation.net")
+        parent = tracer.start_span("tcp.connect.parent")
+        child = tracer.start_span(
+            "tcp.connect",
+            context=trace.set_span_in_context(parent),
+            attributes={"latitude.tags": '["flagger"]'},
+        )
+        child.end()
+        parent.end()
+        self.provider.force_flush()
+
+        names = sorted(span.name for span in self.exporter.get_finished_spans())
+        assert names == ["tcp.connect", "tcp.connect.parent"]
+
+    def test_flushes_already_dropped_parent_when_child_kept(self) -> None:
+        tracer = self.provider.get_tracer("opentelemetry.instrumentation.net")
+        parent = tracer.start_span("http.request")
+        child_ctx = trace.set_span_in_context(parent)
+        parent.end()
+
+        child = tracer.start_span(
+            "tcp.connect",
+            context=child_ctx,
+            attributes={"latitude.capture.name": "flagger.draft"},
+        )
+        child.end()
+        self.provider.force_flush()
+
+        names = sorted(span.name for span in self.exporter.get_finished_spans())
+        assert names == ["http.request", "tcp.connect"]
+
+    def test_still_drops_spans_with_no_kept_descendant(self) -> None:
+        tracer = self.provider.get_tracer("opentelemetry.instrumentation.net")
+        parent = tracer.start_span("dns.lookup")
+        child = tracer.start_span("tcp.connect", context=trace.set_span_in_context(parent))
+        child.end()
+        parent.end()
+        self.provider.force_flush()
+
+        assert self.exporter.get_finished_spans() == ()
+
+    def test_promotes_multi_level_ancestor_chain(self) -> None:
+        tracer = self.provider.get_tracer("opentelemetry.instrumentation.net")
+        root = tracer.start_span("http.request")
+        mid = tracer.start_span("tls.connect", context=trace.set_span_in_context(root))
+        leaf = tracer.start_span(
+            "tcp.connect",
+            context=trace.set_span_in_context(mid),
+            attributes={"gen_ai.request.model": "gpt-4"},
+        )
+        leaf.end()
+        mid.end()
+        root.end()
+        self.provider.force_flush()
+
+        names = sorted(span.name for span in self.exporter.get_finished_spans())
+        assert names == ["http.request", "tcp.connect", "tls.connect"]

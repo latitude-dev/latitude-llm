@@ -1,6 +1,24 @@
-import type { Context } from "@opentelemetry/api"
+import { type Context, isValidSpanId, trace } from "@opentelemetry/api"
 import type { ReadableSpan, Span, SpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { SCOPE_LATITUDE } from "../constants/scope.ts"
+
+/** Cap for ended-but-dropped spans held so a later child can still promote them. */
+const MAX_DROPPED_SPAN_BUFFER = 2048
+
+function parentSpanIdOf(span: ReadableSpan | Span): string | undefined {
+  const fromContext = (span as ReadableSpan).parentSpanContext?.spanId
+  if (fromContext && isValidSpanId(fromContext)) return fromContext
+  const legacy = (span as { parentSpanId?: string }).parentSpanId
+  if (legacy && isValidSpanId(legacy)) return legacy
+  return undefined
+}
+
+function spanIdOf(span: ReadableSpan | Span): string | undefined {
+  const spanContext = span.spanContext?.()
+  const spanId = spanContext?.spanId
+  if (spanId && isValidSpanId(spanId)) return spanId
+  return undefined
+}
 
 /** OpenTelemetry GenAI semantic convention attribute prefix. */
 const GEN_AI_PREFIX = "gen_ai."
@@ -141,12 +159,18 @@ export function buildShouldExportSpan(options: SmartFilterOptions): (span: Reada
 }
 
 /**
- * Drops spans that fail the export predicate before passing them to the inner processor.
- * Inner processor should perform redaction and export.
+ * Drops spans that fail the export predicate; when a span is kept, also exports its ancestors
+ * so Latitude receives a connected tree.
  */
 export class ExportFilterSpanProcessor implements SpanProcessor {
   private readonly shouldExport: (span: ReadableSpan) => boolean
   private readonly inner: SpanProcessor
+  /** In-flight span id → parent span id (when valid). */
+  private readonly parentBySpanId = new Map<string, string | undefined>()
+  /** Span ids that must export even if they fail {@link shouldExport}. */
+  private readonly forceExportIds = new Set<string>()
+  /** Recently dropped ended spans, keyed by span id, for late ancestor promotion. */
+  private readonly droppedBySpanId = new Map<string, ReadableSpan>()
 
   constructor(shouldExport: (span: ReadableSpan) => boolean, inner: SpanProcessor) {
     this.shouldExport = shouldExport
@@ -154,11 +178,34 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
   }
 
   onStart(span: Span, parentContext: Context): void {
+    const spanId = spanIdOf(span)
+    if (spanId) {
+      let parentId = parentSpanIdOf(span)
+      if (!parentId) {
+        const fromCtx = trace.getSpanContext(parentContext)?.spanId
+        if (fromCtx && isValidSpanId(fromCtx)) parentId = fromCtx
+      }
+      this.parentBySpanId.set(spanId, parentId)
+    }
     this.inner.onStart(span, parentContext)
   }
 
   onEnd(span: ReadableSpan): void {
-    if (!this.shouldExport(span)) return
+    const spanId = spanIdOf(span)
+    const recordedParentId = spanId ? this.parentBySpanId.get(spanId) : undefined
+    const forced = spanId !== undefined && this.forceExportIds.has(spanId)
+    if (spanId) {
+      this.forceExportIds.delete(spanId)
+      this.parentBySpanId.delete(spanId)
+    }
+
+    if (!forced && !this.shouldExport(span)) {
+      this.rememberDropped(span)
+      return
+    }
+
+    if (spanId) this.droppedBySpanId.delete(spanId)
+    this.promoteAncestors(span, recordedParentId)
     this.inner.onEnd(span)
   }
 
@@ -167,7 +214,46 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
   }
 
   shutdown(): Promise<void> {
+    this.parentBySpanId.clear()
+    this.forceExportIds.clear()
+    this.droppedBySpanId.clear()
     return this.inner.shutdown()
+  }
+
+  private rememberDropped(span: ReadableSpan): void {
+    const spanId = spanIdOf(span)
+    if (!spanId) return
+    if (this.droppedBySpanId.size >= MAX_DROPPED_SPAN_BUFFER) {
+      const oldest = this.droppedBySpanId.keys().next().value
+      if (oldest !== undefined) this.droppedBySpanId.delete(oldest)
+    }
+    this.droppedBySpanId.set(spanId, span)
+  }
+
+  private promoteAncestors(span: ReadableSpan, recordedParentId?: string): void {
+    let parentId = parentSpanIdOf(span) ?? recordedParentId
+    const seen = new Set<string>()
+
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId)
+
+      const dropped = this.droppedBySpanId.get(parentId)
+      if (dropped) {
+        this.droppedBySpanId.delete(parentId)
+        this.promoteAncestors(dropped)
+        this.inner.onEnd(dropped)
+        parentId = parentSpanIdOf(dropped)
+        continue
+      }
+
+      if (this.parentBySpanId.has(parentId)) {
+        this.forceExportIds.add(parentId)
+        parentId = this.parentBySpanId.get(parentId)
+        continue
+      }
+
+      break
+    }
   }
 }
 

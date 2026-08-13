@@ -1,8 +1,16 @@
-import type { ReadableSpan } from "@opentelemetry/sdk-trace-node"
-import { describe, expect, it } from "vitest"
+import { context, trace } from "@opentelemetry/api"
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
+import {
+  InMemorySpanExporter,
+  NodeTracerProvider,
+  type ReadableSpan,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-node"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { SCOPE_LATITUDE } from "../constants/scope.ts"
 import {
   buildShouldExportSpan,
+  ExportFilterSpanProcessor,
   isDefaultExportSpan,
   isGenAiOrLlmAttributeSpan,
   isLatitudeInstrumentationSpan,
@@ -110,5 +118,101 @@ describe("buildShouldExportSpan", () => {
     })
     expect(pred(mockSpan({ scopeName: "my.custom.scope" }))).toBe(true)
     expect(pred(mockSpan({ scopeName: "express" }))).toBe(false)
+  })
+})
+
+describe("ExportFilterSpanProcessor parent-chain promotion", () => {
+  const exporter = new InMemorySpanExporter()
+  let provider: NodeTracerProvider
+  let previousProvider: ReturnType<typeof trace.getTracerProvider>
+
+  beforeAll(() => {
+    context.setGlobalContextManager(new AsyncLocalStorageContextManager())
+    previousProvider = trace.getTracerProvider()
+    provider = new NodeTracerProvider({
+      spanProcessors: [new ExportFilterSpanProcessor(buildShouldExportSpan({}), new SimpleSpanProcessor(exporter))],
+    })
+    trace.setGlobalTracerProvider(provider)
+  })
+
+  beforeEach(() => {
+    exporter.reset()
+  })
+
+  afterAll(async () => {
+    trace.setGlobalTracerProvider(previousProvider)
+    await provider.shutdown()
+  })
+
+  it("exports an unstamped parent when a kept child ends first", async () => {
+    const net = trace.getTracer("opentelemetry.instrumentation.net")
+    const parent = net.startSpan("tcp.connect.parent")
+    const child = net.startSpan(
+      "tcp.connect",
+      { attributes: { "latitude.tags": '["flagger"]' } },
+      trace.setSpan(context.active(), parent),
+    )
+    child.end()
+    parent.end()
+    await provider.forceFlush()
+
+    const names = exporter
+      .getFinishedSpans()
+      .map((s) => s.name)
+      .sort()
+    expect(names).toEqual(["tcp.connect", "tcp.connect.parent"])
+    const exportedChild = exporter.getFinishedSpans().find((s) => s.name === "tcp.connect")
+    const exportedParent = exporter.getFinishedSpans().find((s) => s.name === "tcp.connect.parent")
+    expect(exportedChild?.parentSpanContext?.spanId).toBe(exportedParent?.spanContext().spanId)
+  })
+
+  it("flushes an already-dropped parent when a later child is kept", async () => {
+    const net = trace.getTracer("opentelemetry.instrumentation.net")
+    const parent = net.startSpan("http.request")
+    const childCtx = trace.setSpan(context.active(), parent)
+    // End parent before the kept child — unusual but possible with async instrumentation.
+    parent.end()
+
+    const child = net.startSpan("tcp.connect", { attributes: { "latitude.capture.name": "flagger.draft" } }, childCtx)
+    child.end()
+    await provider.forceFlush()
+
+    const names = exporter
+      .getFinishedSpans()
+      .map((s) => s.name)
+      .sort()
+    expect(names).toEqual(["http.request", "tcp.connect"])
+  })
+
+  it("still drops spans with no kept descendant", async () => {
+    const net = trace.getTracer("opentelemetry.instrumentation.net")
+    const parent = net.startSpan("dns.lookup")
+    const child = net.startSpan("tcp.connect", undefined, trace.setSpan(context.active(), parent))
+    child.end()
+    parent.end()
+    await provider.forceFlush()
+
+    expect(exporter.getFinishedSpans()).toHaveLength(0)
+  })
+
+  it("promotes a multi-level ancestor chain", async () => {
+    const net = trace.getTracer("opentelemetry.instrumentation.net")
+    const root = net.startSpan("http.request")
+    const mid = net.startSpan("tls.connect", undefined, trace.setSpan(context.active(), root))
+    const leaf = net.startSpan(
+      "tcp.connect",
+      { attributes: { "gen_ai.request.model": "gpt-4" } },
+      trace.setSpan(context.active(), mid),
+    )
+    leaf.end()
+    mid.end()
+    root.end()
+    await provider.forceFlush()
+
+    const names = exporter
+      .getFinishedSpans()
+      .map((s) => s.name)
+      .sort()
+    expect(names).toEqual(["http.request", "tcp.connect", "tls.connect"])
   })
 })

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Smart filter now promotes ancestors of kept spans (including already-ended parents held briefly
+  after a drop) so exported traces stay connected when only a descendant independently passed the
+  filter — e.g. a stamped `tcp.connect` no longer ships without its parent.
+
 ## [3.7.0] - 2026-07-20
 
 ### Added

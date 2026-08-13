@@ -9,12 +9,16 @@ from dataclasses import dataclass
 
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
+from opentelemetry.trace import INVALID_SPAN_ID, format_span_id, get_current_span
 
 from latitude_telemetry.constants import SCOPE_LATITUDE
 
 GEN_AI_PREFIX = "gen_ai."
 LLM_PREFIX = "llm."
 OPENINFERENCE_KIND = "openinference.span.kind"
+
+# Cap for ended-but-dropped spans held so a later child can still promote them.
+_MAX_DROPPED_SPAN_BUFFER = 2048
 
 OTEL_LLM_INSTRUMENTATION_SCOPE_PREFIXES: tuple[str, ...] = (
     "opentelemetry.instrumentation.alephalpha",
@@ -54,6 +58,20 @@ def _instrumentation_scope_name(span: ReadableSpan) -> str:
     if scope is None:
         return ""
     return getattr(scope, "name", "") or ""
+
+
+def _span_id(span: ReadableSpan | Span) -> str:
+    return format_span_id(span.get_span_context().span_id)
+
+
+def _parent_span_id(span: ReadableSpan | Span) -> str | None:
+    parent = getattr(span, "parent", None)
+    if parent is None:
+        return None
+    span_id = getattr(parent, "span_id", None)
+    if span_id is None or span_id == INVALID_SPAN_ID:
+        return None
+    return format_span_id(span_id)
 
 
 def is_gen_ai_or_llm_attribute_span(span: ReadableSpan) -> bool:
@@ -130,7 +148,7 @@ def build_should_export_span(
 
 
 class ExportFilterSpanProcessor(SpanProcessor):
-    """Drops spans that fail the export predicate before passing them to the inner processor."""
+    """Drops filtered spans; when a span is kept, also exports its ancestors."""
 
     def __init__(
         self,
@@ -139,20 +157,69 @@ class ExportFilterSpanProcessor(SpanProcessor):
     ) -> None:
         self._should_export = should_export
         self._inner = inner
+        self._parent_by_span_id: dict[str, str | None] = {}
+        self._force_export_ids: set[str] = set()
+        self._dropped_by_span_id: dict[str, ReadableSpan] = {}
 
     def on_start(self, span: Span, parent_context: Context | None = None) -> None:
+        span_id = _span_id(span)
+        parent_id = _parent_span_id(span)
+        if parent_id is None and parent_context is not None:
+            parent_ctx = get_current_span(parent_context).get_span_context()
+            if parent_ctx.is_valid and parent_ctx.span_id != INVALID_SPAN_ID:
+                parent_id = format_span_id(parent_ctx.span_id)
+        self._parent_by_span_id[span_id] = parent_id
         self._inner.on_start(span, parent_context)
 
     def on_end(self, span: ReadableSpan) -> None:
-        if not self._should_export(span):
+        span_id = _span_id(span)
+        recorded_parent_id = self._parent_by_span_id.pop(span_id, None)
+        forced = span_id in self._force_export_ids
+        self._force_export_ids.discard(span_id)
+
+        if not forced and not self._should_export(span):
+            self._remember_dropped(span)
             return
+
+        self._dropped_by_span_id.pop(span_id, None)
+        self._promote_ancestors(span, recorded_parent_id)
         self._inner.on_end(span)
 
     def shutdown(self) -> None:
+        self._parent_by_span_id.clear()
+        self._force_export_ids.clear()
+        self._dropped_by_span_id.clear()
         self._inner.shutdown()
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         return self._inner.force_flush(timeout_millis)
+
+    def _remember_dropped(self, span: ReadableSpan) -> None:
+        if len(self._dropped_by_span_id) >= _MAX_DROPPED_SPAN_BUFFER:
+            oldest = next(iter(self._dropped_by_span_id))
+            del self._dropped_by_span_id[oldest]
+        self._dropped_by_span_id[_span_id(span)] = span
+
+    def _promote_ancestors(self, span: ReadableSpan, recorded_parent_id: str | None = None) -> None:
+        parent_id = _parent_span_id(span) or recorded_parent_id
+        seen: set[str] = set()
+
+        while parent_id and parent_id not in seen:
+            seen.add(parent_id)
+
+            dropped = self._dropped_by_span_id.pop(parent_id, None)
+            if dropped is not None:
+                self._promote_ancestors(dropped)
+                self._inner.on_end(dropped)
+                parent_id = _parent_span_id(dropped)
+                continue
+
+            if parent_id in self._parent_by_span_id:
+                self._force_export_ids.add(parent_id)
+                parent_id = self._parent_by_span_id.get(parent_id)
+                continue
+
+            break
 
 
 class RedactThenExportSpanProcessor(SpanProcessor):
