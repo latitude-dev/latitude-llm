@@ -6,6 +6,10 @@ on:
       - development
   workflow_call:
 
+concurrency:
+  group: knip-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

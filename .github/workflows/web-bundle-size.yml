@@ -5,6 +5,10 @@ on:
     branches:
       - development
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -19,13 +23,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 25
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

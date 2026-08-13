@@ -11,6 +11,10 @@ on:
         required: false
         type: string
 
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
