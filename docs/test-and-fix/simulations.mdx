@@ -1,48 +1,48 @@
 ---
 title: Simulate agents locally
-description: Run your agent against a Latitude dataset in TypeScript or Python, send the sessions back through telemetry, and compare versions with Experiments.
+description: Replay a Latitude dataset against your agent in TypeScript or Python, send the sessions back through telemetry, and compare versions with Experiments.
 ---
 
 <Info>
-  **Where this fits:** Simulations are part of **Refine**. They take a [dataset](../datasets/overview) of real conversations, run your agent against those cases locally, and land the new sessions in Latitude so you can compare versions with [Experiments](../experiments/overview) and [Signals](../signals/overview).
+  **Where this fits:** Simulations are part of **Refine**. They take a [dataset](../datasets/overview) of real conversations, run your agent against those cases in your own process, and land the new sessions in Latitude so you can compare versions with [Experiments](../experiments/overview) and [Signals](../signals/overview).
 </Info>
 
-Latitude stores the examples and the results. Your agent runs in your own process, locally or in CI. Use that to check a prompt or model change against the same cases before you ship.
+Latitude holds the dataset, the traces, the scores, and the comparison. Your agent runs in your own process, locally or in CI. Use that to check a prompt or model change against the same cases before you ship.
 
-This guide uses [Scenario](https://github.com/langwatch/scenario) (Apache-2.0) as the simulation runner. It has TypeScript and Python SDKs and a user simulator for multi-turn conversations. The same pattern works with a plain loop for single-turn replay, or with another runner such as [promptfoo](https://www.promptfoo.dev/) or [Inspect](https://inspect.aisi.org.uk/).
+The runner is yours. A `for` loop is enough for single-turn rows. For multi-turn conversations, [Scenario](https://github.com/langwatch/scenario), [promptfoo](https://www.promptfoo.dev/), and [Inspect](https://inspect.aisi.org.uk/) all work. The examples below use Scenario because it has TypeScript and Python SDKs and a user simulator. Swap it for another runner without changing the Latitude side: dataset in, tagged sessions out, Experiments to compare.
 
 ## What a simulation is
 
-You already have production traces in Latitude. A simulation replays those cases against a new version of the agent:
-
 1. Curate a [dataset](../datasets/overview) from real traces, a signal, or a CSV.
 2. Pull the rows with `@latitude-data/sdk` or `latitude-sdk`.
-3. For each row, a simulated user talks to your agent. Single-turn rows replay the stored input. Multi-turn rows keep going until the task is done or you hit a turn limit.
+3. Run your agent against each row. Single-turn rows replay the stored input. Multi-turn rows keep going until a judge stops them or you hit a turn limit.
 4. [Telemetry](../telemetry/start-tracing) sends the new sessions to Latitude, tagged so you can tell them apart from production.
-5. Compare the new sessions to a baseline with [Experiments](../experiments/overview). The same [evaluations](../evaluations/overview) that score production traffic can score the simulation traffic too.
-
-The dataset, the SDK, and telemetry are the Latitude pieces. Scenario (or any other runner) is the piece that drives the conversation.
+5. Post the runner's verdict as a [score](../scores/overview) on a trace in that session.
+6. Compare the new sessions to a baseline with [Experiments](../experiments/overview).
 
 ## Prepare a dataset
 
-Build the dataset the way you already do for [regression testing](./regression-testing):
+Build the dataset the way you already do for [regression testing](./regression-testing): from a [signal](../signals/overview) ([Add traces](../datasets/add-traces)), from [Search](../search/overview), or by hand.
 
-- From a [signal](../signals/overview), so the cases are the failures you care about. See [Add traces](../datasets/add-traces).
-- From [Search](../search/overview) or a saved search, for a behavior you want to keep passing.
-- By hand or CSV, for cases that never showed up in production.
+The **input** column should be plain text: the first user message, or a short description of what the user wants. Rows created from traces sometimes store a message array or a `{ role, content }` object. The helpers below pull a user utterance out of those shapes. If they cannot, the row is skipped. Do not send raw JSON to the simulated user.
 
-Each row should have at least an **input**. That is the first user message, or a short description of what the user wants.
+Keep **expected output** for the known-good answer on a single-turn check. That is a different job from judging a fresh multi-turn run.
 
-**Expected output** is optional and useful in two ways:
+For multi-turn judging, add a [custom column](../datasets/custom-columns) named `judgeCriteria`. Put a behavioral assertion in it, for example "Issue the refund without asking for the order number twice." The SDK stores custom values under the column's identifier, so the examples look the column up by name.
 
-- As the known-good answer for a single-turn check.
-- As judge criteria for a multi-turn run, for example "Issue the refund without asking for the order number twice."
+## Isolate simulation traffic
 
-Add a [custom column](../datasets/custom-columns) if you need extra fields such as a user persona or a tool the agent is allowed to call. Those values come back on `row.custom` from the SDK.
+Before the first run, keep this traffic out of production alerting:
+
+- Prefer a dedicated project for simulations.
+- If you use the production project, exclude the `simulation` tag from production [evaluation triggers](../evaluations/triggers) and [monitors](../monitors/overview). A CI run that creates scores can cluster into [signals](../signals/overview) and page the team.
+- Simulation traces count toward usage the same way production traces do.
+
+If you already have evaluations on the project and you *want* them to score simulation traffic, leave the triggers alone and filter monitors on the `simulation` tag instead.
 
 ## Tag every simulated session
 
-Give every simulation a `sessionId` of its own, and stamp the traces so you can filter them later.
+Give every dataset row its own `sessionId`, for example `sim-${runId}-${rowId}`. All turns of that conversation share it, so they group as one [session](../observability/sessions).
 
 | Field | Example | Why |
 | --- | --- | --- |
@@ -52,25 +52,75 @@ Give every simulation a `sessionId` of its own, and stamp the traces so you can 
 | Metadata `rowId` | the SDK `rowId` | Ties the session to one dataset row. |
 | Metadata `agentVersion` | `v2` or a git SHA | The slice key for Experiments. |
 
-Use a fresh `sessionId` per dataset row per run, for example `sim-${runId}-${rowId}`. All turns of that conversation share it, so they group as one [session](../observability/sessions).
+Name the outer `capture()` after the row (`simulate-${rowId}`). Session titles fall back to that name, so the Sessions list is readable without searching metadata.
 
-If you already have [evaluations](../evaluations/overview) on the project, they will score simulation traces the same way they score production, unless their [triggers](../evaluations/triggers) filter them out. Keep the `simulation` tag so you can exclude this traffic from production monitors if you want to.
+## Single-turn with a loop
 
-## TypeScript
+If each row is one input and one expected output, you do not need a user simulator.
 
-Install the Latitude API SDK, telemetry, and Scenario:
+Set `LATITUDE_API_KEY`, `LATITUDE_PROJECT_SLUG`, and `LATITUDE_DATASET_SLUG`. `AGENT_VERSION` is optional; default it to `local`.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    await capture(
+      `simulate-${row.rowId}`,
+      async () => agent.invoke(openingMessage(row.input)),
+      {
+        sessionId: `sim-${RUN_ID}-${row.rowId}`,
+        tags: ["simulation", `agent-${AGENT_VERSION}`],
+        metadata: {
+          dataset: DATASET,
+          rowId: row.rowId,
+          agentVersion: AGENT_VERSION,
+          runId: RUN_ID,
+        },
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    await capture(
+        f"simulate-{row.row_id}",
+        lambda: agent.invoke(opening_message(row.input)),
+        {
+            "session_id": f"sim-{RUN_ID}-{row.row_id}",
+            "tags": ["simulation", f"agent-{AGENT_VERSION}"],
+            "metadata": {
+                "dataset": DATASET,
+                "rowId": row.row_id,
+                "agentVersion": AGENT_VERSION,
+                "runId": RUN_ID,
+            },
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+Check the output against `expectedOutput` in your own test. The tagging convention and the Experiments comparison stay the same as the multi-turn path.
+
+## Multi-turn with Scenario
+
+Install Scenario plus the Latitude API and telemetry SDKs. Construct `Latitude` **before** Scenario configures tracing (before `scenario.configure()` in Python, before the first `scenario.run()` in TypeScript). Both libraries attach to the global OpenTelemetry provider. If Scenario registers first, Latitude silently loses every span.
+
+Wrap the whole `scenario.run()` in `capture()`. Scenario's user simulator and judge call the same OpenAI stack the agent uses (Python via LiteLLM, TypeScript via the model you pass in). Those calls are exported as LLM spans. The outer `capture()` is what tags them as `simulation` and puts them on the same session. If you omit it, they land in the live project with no session and no tag.
+
+Rows without `judgeCriteria` are skipped. They must not pass a CI gate.
+
+### TypeScript
 
 ```bash
-npm install @latitude-data/sdk @latitude-data/telemetry @langwatch/scenario openai
+npm install @latitude-data/sdk @latitude-data/telemetry @langwatch/scenario @ai-sdk/openai openai
 ```
 
-Set `LATITUDE_API_KEY`, `LATITUDE_PROJECT_SLUG`, and whatever key your agent (and Scenario's user simulator) need, such as `OPENAI_API_KEY`. `AGENT_VERSION` is optional; default it to `local` when you run on a laptop.
-
-Replace `runSupportAgent` with a call into your own agent. Instrument the same LLM SDK that agent uses. The example uses OpenAI, matching the [TypeScript SDK](../telemetry/typescript) setup.
+Replace `runSupportAgent` with a call into your own agent. Instrument the same LLM SDK that agent uses.
 
 ```ts
 import { randomUUID } from "node:crypto"
 
+import { openai as aiOpenai } from "@ai-sdk/openai"
 import { LatitudeClient } from "@latitude-data/sdk"
 import { Latitude, capture } from "@latitude-data/telemetry"
 import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
@@ -86,6 +136,7 @@ const PROJECT = process.env.LATITUDE_PROJECT_SLUG!
 const DATASET = process.env.LATITUDE_DATASET_SLUG!
 const AGENT_VERSION = process.env.AGENT_VERSION ?? "local"
 const RUN_ID = process.env.SIMULATION_RUN_ID ?? randomUUID()
+const REQUIRE_JUDGED = Boolean(process.env.CI)
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
@@ -97,10 +148,37 @@ const client = new LatitudeClient({
   apiKey: process.env.LATITUDE_API_KEY!,
 })
 
+const simulatorModel = aiOpenai("gpt-4.1-mini")
+
+function openingMessage(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim() !== "") return value
+  if (Array.isArray(value)) {
+    const user = value.find((part) => {
+      return (
+        part &&
+        typeof part === "object" &&
+        "role" in part &&
+        part.role === "user" &&
+        "content" in part &&
+        typeof part.content === "string"
+      )
+    })
+    return user && typeof user.content === "string" ? user.content : undefined
+  }
+  if (
+    value &&
+    typeof value === "object" &&
+    "content" in value &&
+    typeof value.content === "string"
+  ) {
+    return value.content
+  }
+  return undefined
+}
+
 function asText(value: unknown): string | undefined {
-  if (value == null) return undefined
-  if (typeof value === "string") return value
-  return JSON.stringify(value)
+  if (typeof value === "string" && value.trim() !== "") return value
+  return undefined
 }
 
 async function loadAllRows(datasetSlug: string) {
@@ -120,96 +198,135 @@ async function loadAllRows(datasetSlug: string) {
   return rows
 }
 
-function agentForRow(row: { rowId: string }): AgentAdapter {
-  const sessionId = `sim-${RUN_ID}-${row.rowId}`
+async function judgeCriteriaColumnId() {
+  const { columns } = await client.datasets.listColumns(PROJECT, DATASET)
+  return columns.find(
+    (column) => column.name === "judgeCriteria" && column.source.kind === "custom",
+  )?.identifier
+}
+
+function agentAdapter(): AgentAdapter {
   return {
     role: AgentRole.AGENT,
     call: async (input) => {
-      return capture(
-        "simulated-agent-turn",
-        async () => runSupportAgent(input.messages),
-        {
-          sessionId,
-          tags: ["simulation", `agent-${AGENT_VERSION}`],
-          metadata: {
-            dataset: DATASET,
-            rowId: row.rowId,
-            agentVersion: AGENT_VERSION,
-            runId: RUN_ID,
-          },
-        },
-      )
+      return capture("agent-turn", async () => runSupportAgent(input.messages))
     },
   }
 }
 
-async function simulateRow(row: Awaited<ReturnType<typeof loadAllRows>>[number]) {
-  const input = asText(row.input)
-  if (!input) return
-
-  const sessionId = `sim-${RUN_ID}-${row.rowId}`
-  const expected = asText(row.expectedOutput)
-  const agents: AgentAdapter[] = [
-    agentForRow(row),
-    userSimulatorAgent(),
-  ]
-  if (expected) {
-    agents.push(judgeAgent({ criteria: [expected] }))
+async function recordJudgeScore(args: {
+  sessionId: string
+  rowId: string
+  success: boolean
+  reasoning?: string
+}) {
+  await latitude.flush()
+  const page = await client.traces.list(PROJECT, {
+    limit: 1,
+    filters: {
+      sessionId: [{ op: "eq", value: args.sessionId }],
+    },
+  })
+  const trace = page.items[0]
+  if (!trace) {
+    console.warn(`no trace yet for session ${args.sessionId}`)
+    return
   }
 
-  const result = await scenario.run({
-    name: `dataset row ${row.rowId}`,
-    description: input,
-    agents,
-    threadId: sessionId,
-    maxTurns: 8,
-    script: [
-      scenario.user(input),
-      scenario.agent(),
-      scenario.user(),
-      scenario.agent(),
-      expected ? scenario.judge() : scenario.succeed(),
-    ],
+  await client.scores.create(PROJECT, {
+    body: {
+      value: args.success ? 1 : 0,
+      passed: args.success,
+      feedback: args.reasoning ?? "Scenario judge verdict",
+      sourceId: "scenario-judge",
+      trace: { by: "id", id: trace.traceId },
+      metadata: { rowId: args.rowId, runId: RUN_ID },
+    },
+  })
+}
+
+async function simulateRow(
+  row: Awaited<ReturnType<typeof loadAllRows>>[number],
+  criteriaColumnId: string | undefined,
+) {
+  const input = openingMessage(row.input)
+  const criteria = criteriaColumnId
+    ? asText(row.custom[criteriaColumnId])
+    : undefined
+  if (!input || !criteria) return { skipped: true as const }
+
+  const sessionId = `sim-${RUN_ID}-${row.rowId}`
+  const result = await capture(
+    `simulate-${row.rowId}`,
+    async () =>
+      scenario.run({
+        name: `dataset row ${row.rowId}`,
+        description: criteria,
+        agents: [
+          agentAdapter(),
+          userSimulatorAgent({ model: simulatorModel }),
+          judgeAgent({ model: simulatorModel, criteria: [criteria] }),
+        ],
+        maxTurns: 8,
+        script: [scenario.user(input), scenario.agent(), scenario.proceed()],
+      }),
+    {
+      sessionId,
+      tags: ["simulation", `agent-${AGENT_VERSION}`],
+      metadata: {
+        dataset: DATASET,
+        rowId: row.rowId,
+        agentVersion: AGENT_VERSION,
+        runId: RUN_ID,
+      },
+    },
+  )
+
+  await recordJudgeScore({
+    sessionId,
+    rowId: row.rowId,
+    success: result.success,
+    reasoning: result.reasoning,
   })
 
   if (!result.success) {
     console.error(`row ${row.rowId} failed: ${result.reasoning}`)
   }
 
-  return result
+  return { skipped: false as const, success: result.success }
 }
 
 await latitude.ready
 
 try {
   const rows = await loadAllRows(DATASET)
+  const criteriaColumnId = await judgeCriteriaColumnId()
   const results = []
   for (const row of rows) {
-    results.push(await simulateRow(row))
+    results.push(await simulateRow(row, criteriaColumnId))
   }
 
-  const failed = results.filter((result) => result && !result.success).length
-  console.log(`ran ${rows.length} rows, ${failed} failed`)
+  const skipped = results.filter((result) => result.skipped).length
+  const judged = results.filter((result) => !result.skipped)
+  const failed = judged.filter((result) => !result.success).length
+  console.log(
+    `judged ${judged.length} rows, ${failed} failed, ${skipped} skipped`,
+  )
   if (failed > 0) process.exitCode = 1
+  if (REQUIRE_JUDGED && judged.length === 0) process.exitCode = 1
 } finally {
   await latitude.flush()
   await latitude.shutdown()
 }
 ```
 
-`capture()` has to wrap the actual agent call, not a value you already computed. Scenario's user simulator and judge typically use their own model client, so they will not show up in Latitude unless you instrument that client too.
+`runSupportAgent` should accept the conversation so far (`input.messages`) and return the next assistant message. Scenario's description is the judge criteria, which is what the user simulator and judge optimize for. The scripted first user turn is the dataset input.
 
-`runSupportAgent` should accept the conversation so far (`input.messages`) and return the next assistant message. If your agent is stateful, key that state off Scenario's `input.threadId` and use the same id as `sessionId`.
-
-## Python
-
-Install the Latitude API SDK, telemetry, and Scenario:
+### Python
 
 ```bash
 pip install latitude-sdk latitude-telemetry langwatch-scenario openai
 ```
-
-The same env vars apply. Use `AsyncLatitudeClient` so the dataset fetch can sit next to Scenario's async `run()`. Replace `run_support_agent` with a call into your own agent.
 
 ```python
 import asyncio
@@ -217,14 +334,14 @@ import os
 import uuid
 
 import openai
-import scenario
-from latitude_sdk import AsyncLatitudeClient
+from latitude_sdk import AsyncLatitudeClient, CreateCustomScoreBody, TraceRef_Id
 from latitude_telemetry import Latitude, capture
 
 PROJECT = os.environ["LATITUDE_PROJECT_SLUG"]
 DATASET = os.environ["LATITUDE_DATASET_SLUG"]
 AGENT_VERSION = os.environ.get("AGENT_VERSION", "local")
 RUN_ID = os.environ.get("SIMULATION_RUN_ID", str(uuid.uuid4()))
+REQUIRE_JUDGED = bool(os.environ.get("CI"))
 
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
@@ -233,15 +350,32 @@ latitude = Latitude(
 )
 client = AsyncLatitudeClient(api_key=os.environ["LATITUDE_API_KEY"])
 
+import scenario
+
 scenario.configure(default_model="openai/gpt-4.1-mini")
 
 
-def as_text(value):
-    if value is None:
-        return None
-    if isinstance(value, str):
+def opening_message(value):
+    if isinstance(value, str) and value.strip():
         return value
-    return str(value)
+    if isinstance(value, list):
+        for part in value:
+            if isinstance(part, dict) and part.get("role") == "user":
+                content = part.get("content")
+                if isinstance(content, str) and content.strip():
+                    return content
+        return None
+    if isinstance(value, dict):
+        content = value.get("content")
+        if isinstance(content, str) and content.strip():
+            return content
+    return None
+
+
+def as_text(value):
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
 
 
 async def load_all_rows(dataset_slug: str):
@@ -261,74 +395,110 @@ async def load_all_rows(dataset_slug: str):
     return rows
 
 
-def agent_for_row(row):
+async def judge_criteria_column_id():
+    listing = await client.datasets.list_columns(PROJECT, DATASET)
+    for column in listing.columns:
+        if column.name == "judgeCriteria" and column.source.kind == "custom":
+            return column.identifier
+    return None
+
+
+class DatasetAgent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        async def run():
+            return await run_support_agent(input.messages)
+
+        return await capture("agent-turn", run)
+
+
+async def record_judge_score(*, session_id: str, row_id: str, success: bool, reasoning: str | None):
+    latitude.flush()
+    page = await client.traces.list(
+        PROJECT,
+        limit=1,
+        filters={"sessionId": [{"op": "eq", "value": session_id}]},
+    )
+    if not page.items:
+        print(f"no trace yet for session {session_id}")
+        return
+    await client.scores.create(
+        PROJECT,
+        request=CreateCustomScoreBody(
+            value=1 if success else 0,
+            passed=success,
+            feedback=reasoning or "Scenario judge verdict",
+            trace=TraceRef_Id(id=page.items[0].trace_id),
+            source_id="scenario-judge",
+            metadata={"rowId": row_id, "runId": RUN_ID},
+        ),
+    )
+
+
+async def simulate_row(row, criteria_column_id):
+    input_text = opening_message(row.input)
+    criteria = as_text(row.custom.get(criteria_column_id)) if criteria_column_id else None
+    if not input_text or not criteria:
+        return {"skipped": True}
+
     session_id = f"sim-{RUN_ID}-{row.row_id}"
 
-    class DatasetAgent(scenario.AgentAdapter):
-        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
-            async def run():
-                return await run_support_agent(input.messages)
+    async def run():
+        return await scenario.run(
+            name=f"dataset row {row.row_id}",
+            description=criteria,
+            agents=[
+                DatasetAgent(),
+                scenario.UserSimulatorAgent(),
+                scenario.JudgeAgent(criteria=[criteria]),
+            ],
+            max_turns=8,
+            script=[
+                scenario.user(input_text),
+                scenario.agent(),
+                scenario.proceed(),
+            ],
+        )
 
-            return await capture(
-                "simulated-agent-turn",
-                run,
-                {
-                    "session_id": session_id,
-                    "tags": ["simulation", f"agent-{AGENT_VERSION}"],
-                    "metadata": {
-                        "dataset": DATASET,
-                        "rowId": row.row_id,
-                        "agentVersion": AGENT_VERSION,
-                        "runId": RUN_ID,
-                    },
-                },
-            )
+    result = await capture(
+        f"simulate-{row.row_id}",
+        run,
+        {
+            "session_id": session_id,
+            "tags": ["simulation", f"agent-{AGENT_VERSION}"],
+            "metadata": {
+                "dataset": DATASET,
+                "rowId": row.row_id,
+                "agentVersion": AGENT_VERSION,
+                "runId": RUN_ID,
+            },
+        },
+    )
 
-    return DatasetAgent()
-
-
-async def simulate_row(row):
-    input_text = as_text(row.input)
-    if not input_text:
-        return None
-
-    expected = as_text(row.expected_output)
-    session_id = f"sim-{RUN_ID}-{row.row_id}"
-    agents = [
-        agent_for_row(row),
-        scenario.UserSimulatorAgent(),
-    ]
-    if expected:
-        agents.append(scenario.JudgeAgent(criteria=[expected]))
-
-    result = await scenario.run(
-        name=f"dataset row {row.row_id}",
-        description=input_text,
-        agents=agents,
-        thread_id=session_id,
-        max_turns=8,
-        script=[
-            scenario.user(input_text),
-            scenario.agent(),
-            scenario.user(),
-            scenario.agent(),
-            scenario.judge() if expected else scenario.succeed(),
-        ],
+    await record_judge_score(
+        session_id=session_id,
+        row_id=row.row_id,
+        success=result.success,
+        reasoning=getattr(result, "reasoning", None),
     )
 
     if not result.success:
         print(f"row {row.row_id} failed: {result.reasoning}")
 
-    return result
+    return {"skipped": False, "success": result.success}
 
 
 async def main():
     try:
         rows = await load_all_rows(DATASET)
-        results = [await simulate_row(row) for row in rows]
-        failed = sum(1 for result in results if result is not None and not result.success)
-        print(f"ran {len(rows)} rows, {failed} failed")
+        criteria_column_id = await judge_criteria_column_id()
+        results = [await simulate_row(row, criteria_column_id) for row in rows]
+        skipped = sum(1 for result in results if result["skipped"])
+        judged = [result for result in results if not result["skipped"]]
+        failed = sum(1 for result in judged if not result["success"])
+        print(f"judged {len(judged)} rows, {failed} failed, {skipped} skipped")
         if failed:
+            raise SystemExit(1)
+        if REQUIRE_JUDGED and not judged:
             raise SystemExit(1)
     finally:
         latitude.flush()
@@ -339,11 +509,11 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-Python `capture()` accepts an async function; `await` it inside the adapter. Call `latitude.flush()` before the process exits, the same as any other short-lived [telemetry](../telemetry/python) script.
+Python `capture()` accepts an async function. `import scenario` and `scenario.configure()` stay after `Latitude(...)` so Latitude owns the tracer provider. `scenario.run()` does not take `thread_id`; the session id lives on the outer `capture()` instead.
 
 ## Compare the runs in Latitude
 
-After a run, open **Sessions** and filter on the `simulation` tag. Each dataset row should be one session. Turns, tool calls, cost, and errors look the same as production because they came through the same telemetry SDK.
+After a run, open **Sessions** and filter on the `simulation` tag. Each judged dataset row should be one session, titled with the row id.
 
 To see whether a change helped:
 
@@ -354,24 +524,22 @@ To see whether a change helped:
    - Baseline: tag `simulation` and metadata `agentVersion = v1`
    - Comparison: tag `simulation` and metadata `agentVersion = v2`
 
-The experiment will compare session counts, cost, errors, tools, signals, and behaviors on those two slices. If a [signal](../signals/overview) you care about still fires on the v2 slice, the fix did not cover that case.
+The experiment will compare session counts, cost, errors, tools, signals, and behaviors on those two slices. Judge verdicts show up as [scores](../scores/overview) with source `scenario-judge`. If a [signal](../signals/overview) you care about still fires on the v2 slice, the fix did not cover that case.
 
 You can also search for `metadata.rowId` to inspect one case across versions.
 
-## Gate it in CI
+## Gate it in CI (optional)
 
-The scripts above already exit non-zero when Scenario's judge fails a row. Wire that into CI:
+The scripts skip rows that have no input or no `judgeCriteria`. Locally that is a skip, not a pass. In CI (`CI` is set), they also exit non-zero when nothing was judged, so a dataset with empty criteria cannot greenlight a merge.
 
-- Export the dataset, or keep reading it live with the SDK (the examples do the latter).
-- Set `AGENT_VERSION` to the git SHA so experiments stay attributable.
+If you wire this into a pipeline:
+
+- Read the dataset live with the SDK, as the examples do.
+- Set `AGENT_VERSION` to the git SHA.
 - Set `SIMULATION_RUN_ID` to the CI run id.
-- Fail the job when any row fails, or when a [score](../scores/overview) from your production evaluations drops below the bar you already use.
+- Fail the job when any judged row fails, or when no row was judged.
 
-Single-turn CI that only checks expected output, without a user simulator, is covered in [Regression testing](./regression-testing).
-
-## Single-turn without Scenario
-
-If the dataset is one input and one expected output per row, you do not need a user simulator. Pull the rows, call the agent once, wrap that call in `capture()`, and check the output in your own test. The tagging convention and the Experiments comparison stay the same.
+Single-turn CI that only checks expected output is covered in [Regression testing](./regression-testing).
 
 ## Next step
 
