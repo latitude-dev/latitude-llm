@@ -42,3 +42,7 @@ A semantic search query returns a ranked sample rather than an exact set, so any
 ## Creating an experiment
 
 From a project, open **Experiments** and create one with a name and optional description. A new experiment starts with two variants (a baseline and one comparison) so it's useful immediately; edit their filters, query, and time range, then read the comparison. "Import from search" seeds a Variant from a saved search's filters and query.
+
+## Compare simulation runs
+
+When you [simulate an agent locally](../test-and-fix/simulations) against a dataset, tag each run with a version (`agentVersion` in metadata, plus a `simulation` tag). Create an experiment whose baseline is `simulation` + `agentVersion = v1` and whose comparison is `simulation` + `agentVersion = v2`. The experiment then compares those two slices on every metric Latitude already tracks, including signals and behaviors.

@@ -25,7 +25,7 @@ Project
 └─ Refine
    ├─ Evaluations that score live traffic
    ├─ Monitors that alert on signals, searches, or raw traffic
-   └─ Datasets and regression tests that lock a fix in CI
+   └─ Datasets, local simulations, and regression tests that lock a fix in CI
 ```
 
 ## Projects
@@ -168,7 +168,7 @@ A **monitor** watches a target, such as a signal, a saved search, a tool, or you
 5. Annotations, flaggers, **evaluations**, and custom checks create **scores** on traces.
 6. Failed scores cluster into **signals** you can triage, monitor, and fix, and you can also define a signal yourself. **Experiments** measure whether a change moved the metrics.
 7. **Monitors** watch signals (and searches, tools, or raw traffic) and open incidents that alert you when something needs attention.
-8. **Datasets** built from real traces feed regression tests in CI, so a fix keeps passing the failures it fixed; if the failure returns in production anyway, the resolved signal reopens as regressed.
+8. **Datasets** built from real traces feed [local simulations](../test-and-fix/simulations) and [regression tests](../test-and-fix/regression-testing), so a fix is checked against the same cases before it ships; if the failure returns in production anyway, the resolved signal reopens as regressed.
 
 ## Next steps
 
@@ -177,3 +177,4 @@ A **monitor** watches a target, such as a signal, a saved search, a tool, or you
 - [Search](../search/overview) and [Behaviors](../behaviours/overview): find the traffic that matters.
 - [Signals](../signals/overview): understand how failed scores become tracked signals.
 - [Monitors](../monitors/overview): get alerted when something needs attention.
+- [Simulate agents locally](../test-and-fix/simulations): run a dataset against your agent in TypeScript or Python.
