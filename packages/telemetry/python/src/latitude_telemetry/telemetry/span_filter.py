@@ -60,8 +60,11 @@ def _instrumentation_scope_name(span: ReadableSpan) -> str:
     return getattr(scope, "name", "") or ""
 
 
-def _span_id(span: ReadableSpan | Span) -> str:
-    return format_span_id(span.get_span_context().span_id)
+def _span_id(span: ReadableSpan | Span) -> str | None:
+    ctx = span.get_span_context()
+    if ctx is None or ctx.span_id == INVALID_SPAN_ID:
+        return None
+    return format_span_id(ctx.span_id)
 
 
 def _parent_span_id(span: ReadableSpan | Span) -> str | None:
@@ -163,25 +166,28 @@ class ExportFilterSpanProcessor(SpanProcessor):
 
     def on_start(self, span: Span, parent_context: Context | None = None) -> None:
         span_id = _span_id(span)
-        parent_id = _parent_span_id(span)
-        if parent_id is None and parent_context is not None:
-            parent_ctx = get_current_span(parent_context).get_span_context()
-            if parent_ctx.is_valid and parent_ctx.span_id != INVALID_SPAN_ID:
-                parent_id = format_span_id(parent_ctx.span_id)
-        self._parent_by_span_id[span_id] = parent_id
+        if span_id is not None:
+            parent_id = _parent_span_id(span)
+            if parent_id is None and parent_context is not None:
+                parent_ctx = get_current_span(parent_context).get_span_context()
+                if parent_ctx.is_valid and parent_ctx.span_id != INVALID_SPAN_ID:
+                    parent_id = format_span_id(parent_ctx.span_id)
+            self._parent_by_span_id[span_id] = parent_id
         self._inner.on_start(span, parent_context)
 
     def on_end(self, span: ReadableSpan) -> None:
         span_id = _span_id(span)
-        recorded_parent_id = self._parent_by_span_id.pop(span_id, None)
-        forced = span_id in self._force_export_ids
-        self._force_export_ids.discard(span_id)
+        recorded_parent_id = self._parent_by_span_id.pop(span_id, None) if span_id is not None else None
+        forced = span_id is not None and span_id in self._force_export_ids
+        if span_id is not None:
+            self._force_export_ids.discard(span_id)
 
         if not forced and not self._should_export(span):
             self._remember_dropped(span)
             return
 
-        self._dropped_by_span_id.pop(span_id, None)
+        if span_id is not None:
+            self._dropped_by_span_id.pop(span_id, None)
         self._promote_ancestors(span, recorded_parent_id)
         self._inner.on_end(span)
 
@@ -195,10 +201,13 @@ class ExportFilterSpanProcessor(SpanProcessor):
         return self._inner.force_flush(timeout_millis)
 
     def _remember_dropped(self, span: ReadableSpan) -> None:
+        span_id = _span_id(span)
+        if span_id is None:
+            return
         if len(self._dropped_by_span_id) >= _MAX_DROPPED_SPAN_BUFFER:
             oldest = next(iter(self._dropped_by_span_id))
             del self._dropped_by_span_id[oldest]
-        self._dropped_by_span_id[_span_id(span)] = span
+        self._dropped_by_span_id[span_id] = span
 
     def _promote_ancestors(self, span: ReadableSpan, recorded_parent_id: str | None = None) -> None:
         parent_id = _parent_span_id(span) or recorded_parent_id
