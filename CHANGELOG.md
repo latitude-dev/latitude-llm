@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+## v0.3.79 - 2026-08-13
+
+### Cost
+
+- Added cost-per-session analysis. It compares equal time periods and shows how traces per session, LLM calls per trace, tokens per call, model selection, token mix, and prices changed the result. It requires at least 20 sessions in each period and shows the comparison window and pricing coverage (ref: #4324).
+- Improved the Cost dashboard with clearer panels, better empty states, model links, and pricing coverage indicators. Fixed cost lookup for model versions that use different version punctuation, and updated the bundled model and pricing catalog (ref: #4389, #4383, #4315, #4412, #4422).
+
+### Behaviors
+
+- Ended adaptive taxonomy shadow builds. Each organization now uses the adaptive builder only when its `adaptiveTaxonomyClustering` flag is active; other organizations use the static builder. Removed the environment-wide `LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE` setting (ref: #4388).
+- Improved behavior trees by removing empty grouping levels, preserving session totals, and naming sibling groups together so labels are easier to distinguish (ref: #4408, #4410).
+- Limited custom behavior counts and charts to the time range that has assignment data. The catalog now shows the data scope and start date for each behavior group (ref: #4411, #4414).
+
+### Signals and monitors
+
+- Unified signal priorities and monitor severities on one scale. Monitors and incidents now support `urgent` in the app, API, SDKs, and CLI. This is an additive API enum change, so strict clients must accept the new value (ref: #4362).
+- Fixed urgent signal escalation notifications for urgent-only Slack and email routes. Also stopped recovered tool errors from creating tool-error signals (ref: #4404, #4362).
+
+### Agent dispatch
+
+- Allowed agent-dispatch webhooks to return external agent IDs, run IDs, and a link to the external run (ref: #4369).
+
+### Sessions
+
+- Fixed session duration when instrumentation refers to root spans that were not exported. These sessions now use their wall-clock duration instead of zero (ref: #4429).
+
+### Telemetry
+
+- Fixed smart export filters that dropped the parent spans of retained spans. The TypeScript and Python telemetry SDKs now export the required ancestors so Latitude receives a connected span tree (ref: #4428).
+
+### Flaggers
+
+- Removed profanity from extracted agent context before Latitude stores it or sends it to downstream classifier prompts (ref: #4406).
+
+### Experiments
+
+- Fixed baseline filter menus that appeared behind sticky experiment table columns (ref: #4430).
+
 ## v0.3.78 - 2026-08-05
 
 ### Imports
