@@ -113,6 +113,7 @@ export type SelectProps<V = unknown> = Omit<FormFieldProps, "children"> &
     open?: boolean
     onOpenChange?: (open: boolean) => void
     footerAction?: SelectFooterAction
+    portalTarget?: "local" | "body"
   }
 
 export function Select<V = unknown>(selectProps: SelectProps<V>) {
@@ -155,9 +156,11 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
     footerAction,
+    portalTarget = "local",
   } = selectProps
   const [internalSelected, setInternalSelected] = useState<V | undefined>(defaultValue)
   const [internalIsOpen, setInternalIsOpen] = useState(false)
+  // Local portals stay within modal interaction scopes; body portals escape ancestor stacking and overflow contexts.
   const [popoverContainer, setPopoverContainer] = useState<HTMLDivElement | null>(null)
 
   const selectedValue = isControlled ? value : internalSelected
@@ -265,7 +268,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
             </PopoverTrigger>
             <PopoverContent
               data-slot="searchable-select-content"
-              container={popoverContainer ?? undefined}
+              container={portalTarget === "local" ? (popoverContainer ?? undefined) : undefined}
               align={align}
               side={side}
               {...(sideOffset !== undefined ? { sideOffset } : { sideOffset: 4 })}
