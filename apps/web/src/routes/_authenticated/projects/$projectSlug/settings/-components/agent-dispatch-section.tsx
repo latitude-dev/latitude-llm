@@ -25,7 +25,7 @@ import {
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { BookOpen, Copy, ExternalLink, FileText } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { z } from "zod"
@@ -285,6 +285,7 @@ export function DispatchConnectionSection({
 }) {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const disconnectMutation = useMutation({
@@ -296,6 +297,9 @@ export function DispatchConnectionSection({
       await queryClient.invalidateQueries({ queryKey: sendToDestinationsQueryKey(projectId) })
       toast({ description: `${KIND_LABELS[kind]} disconnected` })
       setConfirmOpen(false)
+      if (canDisconnect) {
+        await navigate({ to: "/projects/$projectSlug/settings/global-integrations", params: { projectSlug } })
+      }
     },
     onError: (error) => {
       setConfirmOpen(false)
@@ -377,7 +381,6 @@ function DispatchBehaviorSection({
 }) {
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  const [confirmingReset, setConfirmingReset] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
 
   const { data: settings, isLoading } = useQuery({
@@ -399,7 +402,6 @@ function DispatchBehaviorSection({
     setIsResetting(true)
     try {
       await resetProjectDispatchOverride({ data: { projectId, integrationId: integration.id } })
-      setConfirmingReset(false)
       await invalidate()
       toast({ description: "This project now follows the organization default" })
     } catch (error) {
@@ -422,27 +424,11 @@ function DispatchBehaviorSection({
           <Text.H6 color="foregroundMuted">When Latitude dispatches to this integration, and what it sends.</Text.H6>
         </div>
         {isOverridden ? (
-          <Button variant="outline" onClick={() => setConfirmingReset(true)} disabled={isResetting}>
+          <Button variant="outline" onClick={() => void applyReset()} isLoading={isResetting}>
             Reset to default
           </Button>
         ) : null}
       </div>
-
-      {confirmingReset ? (
-        <div className="flex flex-row flex-wrap items-center justify-between gap-4 border-border border-t bg-warning-muted/40 p-5">
-          <Text.H6 color="foregroundMuted">
-            This discards this project's custom dispatch behavior and goes back to following the organization default.
-          </Text.H6>
-          <div className="flex shrink-0 flex-row items-center gap-2">
-            <Button variant="outline" onClick={() => setConfirmingReset(false)} disabled={isResetting}>
-              Cancel
-            </Button>
-            <Button onClick={() => void applyReset()} isLoading={isResetting}>
-              Reset to default
-            </Button>
-          </div>
-        </div>
-      ) : null}
 
       {!isOverridden ? (
         <div className="border-border border-t p-5">
