@@ -188,4 +188,6 @@ export const nameQualitySpanAttributes = (
   // The collisions the sibling-scoped quality gate lets through.
   "taxonomy.quality.crossBranchDuplicateLeafCount": metrics.crossBranchDuplicateLeafCount,
   "taxonomy.quality.sharedSiblingWordShare": metrics.sharedSiblingWordShare,
+  "taxonomy.quality.nearDuplicateNameRate": metrics.nearDuplicateNameRate,
+  "taxonomy.quality.nearDuplicateNamePairCount": metrics.nearDuplicateNamePairCount,
 })

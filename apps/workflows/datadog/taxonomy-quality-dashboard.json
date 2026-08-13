@@ -425,6 +425,36 @@
               ]
             },
             "layout": { "width": 4, "height": 3 }
+          },
+          {
+            "definition": {
+              "type": "toplist",
+              "title": "max nearDuplicateNameRate by project — share of leaf-name pairs sharing most of their words",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "spans",
+                      "name": "near_dup_rate",
+                      "search": {
+                        "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.nameQuality $organization $project"
+                      },
+                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.nearDuplicateNameRate" },
+                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 15 }]
+                    }
+                  ],
+                  "formulas": [{ "formula": "near_dup_rate" }],
+                  "response_format": "scalar",
+                  "sort": { "order_by": [{ "type": "formula", "index": 0, "order": "desc" }], "count": 15 },
+                  "conditional_formats": [
+                    { "comparator": ">", "value": 0.2, "palette": "white_on_red" },
+                    { "comparator": ">", "value": 0.1, "palette": "white_on_yellow" },
+                    { "comparator": "<=", "value": 0.1, "palette": "white_on_green" }
+                  ]
+                }
+              ]
+            },
+            "layout": { "width": 4, "height": 3 }
           }
         ]
       },
