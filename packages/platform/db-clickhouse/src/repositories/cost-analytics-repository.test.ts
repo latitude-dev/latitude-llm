@@ -3,7 +3,7 @@ import type { CacheCadenceRow, CostAnalyticsRepositoryShape } from "@domain/span
 import { CACHE_CEILING_LIFETIME_SECONDS, CostAnalyticsRepository } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
-import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
 import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { insertJsonEachRow } from "../sql.ts"
@@ -111,7 +111,7 @@ const span = (n: number, startTime: Date, opts: SpanOpts = {}): CostSpanRow =>
     scope_version: "",
   }) satisfies CostSpanRow
 
-const ch = setupTestClickHouse()
+const ch = setupTestClickHouse({ truncateBetweenTests: false })
 
 const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
   Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
@@ -167,7 +167,8 @@ describe("CostAnalyticsRepositoryLive", () => {
     )
   })
 
-  beforeEach(async () => {
+  // Every test only reads, so the fixture is seeded once for the file.
+  beforeAll(async () => {
     await Effect.runPromise(
       insertJsonEachRow(ch.client, "spans", [
         // Trace 1: two billable spans, plus a tool span that must not count.

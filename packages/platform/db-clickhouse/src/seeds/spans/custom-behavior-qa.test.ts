@@ -12,17 +12,19 @@ import {
 } from "@domain/taxonomy"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { TaxonomyObservationRepositoryLive } from "../../repositories/taxonomy-observation-repository.ts"
 import { withClickHouse } from "../../with-clickhouse.ts"
 import { buildCustomBehaviorQaFixture } from "./custom-behavior-qa.ts"
 
-const ch = setupTestClickHouse()
+const ch = setupTestClickHouse({ truncateBetweenTests: false })
 
 const organizationId = bootstrapSeedScope.organizationId as OrganizationId
 const projectId = bootstrapSeedScope.projectId as ProjectId
 const NOW_MS = Date.parse("2026-07-14T12:00:00.000Z")
 const SINCE = new Date(NOW_MS - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
+
+const { spans, observations, analyses, momentLabels } = buildCustomBehaviorQaFixture(bootstrapSeedScope, NOW_MS)
 
 const cohortSize = (cohort: (typeof CUSTOM_BEHAVIOR_QA_COHORTS)["a"]) =>
   cohort.subTopics.reduce((sum, topic) => sum + topic.sessionCount, 0)
@@ -31,15 +33,12 @@ const runWithRepository = <A, E>(effect: Effect.Effect<A, E, TaxonomyObservation
   Effect.runPromise(effect.pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client, organizationId)))
 
 describe("customBehaviorQa fixture", () => {
-  beforeEach(async () => {
-    // Runs after the testkit's truncate-all beforeEach, so it re-seeds each test.
-    const { spans, observations } = buildCustomBehaviorQaFixture(bootstrapSeedScope, NOW_MS)
+  beforeAll(async () => {
     await ch.client.insert({ table: "spans", values: spans, format: "JSONEachRow" })
     await ch.client.insert({ table: "taxonomy_observations", values: observations, format: "JSONEachRow" })
   })
 
   it("builds clustered observations with non-empty embeddings and global cluster ids", () => {
-    const { observations } = buildCustomBehaviorQaFixture(bootstrapSeedScope, NOW_MS)
     const totalObservations = CUSTOM_BEHAVIOR_QA_COHORT_LIST.reduce((sum, cohort) => sum + cohortSize(cohort), 0)
     const totalSubTopics = CUSTOM_BEHAVIOR_QA_COHORT_LIST.reduce((sum, cohort) => sum + cohort.subTopics.length, 0)
     expect(observations).toHaveLength(totalObservations)
@@ -55,7 +54,6 @@ describe("customBehaviorQa fixture", () => {
   })
 
   it("emits an analysis and moment labels per session, joined by a shared analysis_hash", () => {
-    const { observations, analyses, momentLabels } = buildCustomBehaviorQaFixture(bootstrapSeedScope, NOW_MS)
     const totalSessions = CUSTOM_BEHAVIOR_QA_COHORT_LIST.reduce((sum, cohort) => sum + cohortSize(cohort), 0)
 
     expect(analyses).toHaveLength(totalSessions)

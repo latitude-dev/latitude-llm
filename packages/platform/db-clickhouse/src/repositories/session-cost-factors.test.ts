@@ -10,7 +10,7 @@ import {
 } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
-import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
 import { buildCohortsSpans, type CostCohort } from "../seeds/spans/cost-archetypes/cohorts.ts"
 import { GPT_5_MINI } from "../seeds/spans/cost-archetypes/models.ts"
@@ -76,7 +76,7 @@ const PARITY_COHORTS: readonly CostCohort[] = [
   },
 ]
 
-const ch = setupTestClickHouse()
+const ch = setupTestClickHouse({ truncateBetweenTests: false })
 
 const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient>) =>
   Effect.runPromise(effect.pipe(Effect.provide(ChSqlClientLive(ch.client, ORG_ID))))
@@ -102,16 +102,13 @@ const decompositionFor = async (projectId: ProjectId) =>
 
 let repo: CostAnalyticsRepositoryShape
 
+// Every test only reads, so the fixture is seeded once for the file.
 beforeAll(async () => {
   repo = await Effect.runPromise(
     Effect.gen(function* () {
       return yield* CostAnalyticsRepository
     }).pipe(Effect.provide(CostAnalyticsRepositoryLive)),
   )
-})
-
-// The testkit truncates between tests, so the fixtures are re-inserted per test.
-beforeEach(async () => {
   await Effect.runPromise(
     insertJsonEachRow(ch.client, "spans", [
       ...spansOf(REGRESSION_COHORTS, BLENDED_PROJECT_ID),
