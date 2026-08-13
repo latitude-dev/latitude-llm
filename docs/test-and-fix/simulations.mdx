@@ -169,7 +169,8 @@ function openingMessage(value: unknown): string | undefined {
     value &&
     typeof value === "object" &&
     "content" in value &&
-    typeof value.content === "string"
+    typeof value.content === "string" &&
+    (!("role" in value) || value.role === "user")
   ) {
     return value.content
   }
@@ -365,7 +366,7 @@ def opening_message(value):
                 if isinstance(content, str) and content.strip():
                     return content
         return None
-    if isinstance(value, dict):
+    if isinstance(value, dict) and value.get("role", "user") == "user":
         content = value.get("content")
         if isinstance(content, str) and content.strip():
             return content
