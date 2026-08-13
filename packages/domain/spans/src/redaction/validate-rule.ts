@@ -60,6 +60,9 @@ const PROBE_LENGTHS = [12, 16, 20, 24] as const
 /** Timing is noisy at this scale, and noise only ever adds, so the fastest run is the honest one. */
 const PROBE_ATTEMPTS = 3
 
+// Abort retries only after the fastest measurement exceeds PROBE_ABORT_MS (wide margin over budget).
+const PROBE_ABORT_MS = PROBE_BUDGET_MS * 10
+
 const MAX_QUANTIFIER_BOUND = 1_000
 
 /**
@@ -461,9 +464,10 @@ function probeAlphabet(source: string): string[] {
 /**
  * Fastest of several runs: a scheduler hiccup or a cold JIT can only ever make a run look slower.
  *
- * Retrying stops once a run is over budget. Repetition is here to keep noise from condemning a rule
- * that was only marginally slow, and a pattern already past the budget by a wide margin is not
- * marginal — re-running it just pays its cost again, which is the opposite of what this is for.
+ * Retrying stops once the fastest measurement is past the budget by a wide margin
+ * (`PROBE_ABORT_MS`). Repetition is here to keep noise from condemning a rule that was only
+ * marginally slow, and a pattern already past the budget by a wide margin is not marginal —
+ * re-running it just pays its cost again.
  */
 function timeAgainst(pattern: RegExp, run: string): number {
   const input = `${run}!`
@@ -475,7 +479,7 @@ function timeAgainst(pattern: RegExp, run: string): number {
     const started = performance.now()
     probe.test(input)
     fastest = Math.min(fastest, performance.now() - started)
-    if (fastest > PROBE_BUDGET_MS) return fastest
+    if (fastest > PROBE_ABORT_MS) return fastest
   }
 
   return fastest

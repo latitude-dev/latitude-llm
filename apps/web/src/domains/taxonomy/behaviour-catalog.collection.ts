@@ -7,8 +7,8 @@ const catalogKey = behaviourCatalogKey
 const EMPTY_CATALOG: readonly BehaviourCatalogEntryRecord[] = []
 
 /**
- * The Behaviors home grid. Polls while any behavior is still gardening so a
- * freshly created card fills in with its groups without a reload.
+ * The Behaviors home list. Polls while any behavior is still gardening so a
+ * freshly created panel fills in with its groups without a reload.
  */
 export function useBehaviourCatalog(projectId: string, { enabled = true } = {}) {
   const { data, isLoading } = useQuery({

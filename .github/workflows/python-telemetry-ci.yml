@@ -8,6 +8,10 @@ on:
       - packages/telemetry/python/**
   workflow_call:
 
+concurrency:
+  group: python-telemetry-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

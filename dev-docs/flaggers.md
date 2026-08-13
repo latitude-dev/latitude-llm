@@ -151,7 +151,7 @@ Context compaction mirrors the moments stance: the analyzed window is the last r
 ## Billing
 
 - Deterministic screening is free.
-- LLM scans bill `flagger-scan = 30 credits` in `draftSessionFlaggerAnnotation`, **only after a confirmed match** — classify-only misses consume Latitude's model spend but are not billed. The anchor dedup runs **before** billing authorization, and the idempotency key is `flagger-scan:{org}:{slug}:{sessionId}:{contentHash}` — one charge per distinct flagged anchor. Out of credits ⇒ the scan is skipped (`NoCreditsRemainingError`).
+- LLM scans bill by actual AI usage, not a flat price: each classification authorizes one `llm-call` then meters every LLM call under a `flagger-classify` activity scope, and the fallback annotator in `draftSessionFlaggerAnnotation` meters its calls under a `flagger:{slug}:{sessionId}:{contentHash}` scope — the anchor dedup runs **before** its authorization so a re-detected issue is never charged. Per-call credits come from `creditsForLlmGenerationCost` (estimated provider cost × 1.3 margin, 1-credit floor). Out of credits ⇒ the scan is skipped (`NoCreditsRemainingError` / non-retryable activity failure). See [`./billing.md`](./billing.md).
 - Spend governors on the LLM path: the sampling default (10%) and the three rate-limit buckets.
 
 ## Self-observability (reflag)
@@ -180,4 +180,3 @@ User/input-centric strategies (`classifiesAssistantResponseOnly: false` — toda
 | `FLAGGER_PROMPT_MAX_HINTS` / `FLAGGER_HINT_EVIDENCE_MAX_CHARS` | 20 / 256 | classifier hint block caps |
 | `FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS` | 6,000 | verbatim vs extracted agent context |
 | `SESSION_END_DEBOUNCE_MS` (`spans`) | 5 min | session settle window upstream |
-| `flagger-scan` (`billing`) | 30 credits | LLM scan price |
