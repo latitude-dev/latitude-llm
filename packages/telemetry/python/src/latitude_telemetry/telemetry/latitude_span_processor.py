@@ -137,7 +137,11 @@ class LatitudeSpanProcessor(SpanProcessor):
             blocked_instrumentation_scopes=options.blocked_instrumentation_scopes,
         )
         redact_then_export = RedactThenExportSpanProcessor(redact, batch_or_simple)
-        self._tail: SpanProcessor = ExportFilterSpanProcessor(should_export, redact_then_export)
+        self._tail: SpanProcessor = ExportFilterSpanProcessor(
+            should_export,
+            redact_then_export,
+            blocked_instrumentation_scopes=options.blocked_instrumentation_scopes,
+        )
 
     def on_start(self, span: Span, parent_context: Context | None = None) -> None:
         # Read Latitude context from OTel context and stamp onto span
