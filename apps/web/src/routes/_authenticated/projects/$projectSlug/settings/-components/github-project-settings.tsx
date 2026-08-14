@@ -105,7 +105,9 @@ function ProjectGithubSections({
   })
   const invalidate = () => queryClient.invalidateQueries({ queryKey: configKey })
 
-  if (isLoading || !config) return <Skeleton className="h-32 w-full" />
+  if (isLoading) return <Skeleton className="h-32 w-full" />
+  // Null means the integration went away mid-session; the parent renders the not-connected state once its own query catches up.
+  if (!config) return null
 
   return (
     <>
@@ -155,6 +157,17 @@ function RepositorySection({
   const storedScope: SettingScope = config.hasOverride ? "project" : "organization"
   const scope = stagedScope ?? storedScope
   const pendingRemoval = storedScope === "project" && scope === "organization"
+
+  // `config.repoId` is this project's own binding when it has one, so previewing what it
+  // would inherit needs the organization default on its own.
+  const { data: orgDefaults } = useQuery({
+    queryKey: GITHUB_ORG_DEFAULTS_QUERY_KEY,
+    queryFn: () => getGithubOrgDefaults(),
+  })
+  const inheritedRepo = orgDefaults?.defaultRepo ?? null
+  const previewsInherited = scope === "organization" && orgDefaults != null
+  const shownRepoId = previewsInherited ? (inheritedRepo?.repoId ?? null) : repoId
+  const shownBranch = previewsInherited ? (inheritedRepo?.branch ?? "") : branch
   // Taking ownership is itself a change worth saving, so an untouched snapshot still offers it.
   const canSave = storedScope === "organization" || repoId !== config.repoId || branch.trim() !== (config.branch ?? "")
 
@@ -255,7 +268,7 @@ function RepositorySection({
               loading={reposLoading}
               disabled={scope === "organization" || reposLoading}
               options={(repos ?? []).map((repo) => ({ label: repo.fullName, value: String(repo.id) }))}
-              value={repoId === null ? undefined : String(repoId)}
+              value={shownRepoId === null ? undefined : String(shownRepoId)}
               onChange={(value) => onSelectRepo(value == null ? undefined : String(value))}
             />
           </div>
@@ -264,8 +277,8 @@ function RepositorySection({
               label="Branch"
               placeholder="main"
               className="h-9"
-              disabled={scope === "organization" || repoId === null}
-              value={branch}
+              disabled={scope === "organization" || shownRepoId === null}
+              value={shownBranch}
               onChange={(event) => setBranch(event.target.value)}
             />
           </div>

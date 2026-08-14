@@ -1,12 +1,18 @@
-import { Button, Modal } from "@repo/ui"
+import { Button, Modal, useToast } from "@repo/ui"
 import { useState } from "react"
+import { toUserMessage } from "../../../../../../lib/errors.ts"
 
 /**
  * Confirms an organization-wide write in a modal before it lands. The deferred work is
  * kept as a thunk so each caller keeps its own values in its own closure, and a save
  * that moves no other project skips the modal entirely.
+ *
+ * Failures are reported here: once confirmed, the write runs from the modal's own button,
+ * detached from the caller's submit handler, so a rejection would otherwise surface nowhere.
+ * The modal stays open on failure so the save can be retried.
  */
 export function useOrgDefaultConfirm(otherAffected: number) {
+  const { toast } = useToast()
   const [pending, setPending] = useState<(() => Promise<void>) | null>(null)
   const [isApplying, setIsApplying] = useState(false)
 
@@ -15,6 +21,8 @@ export function useOrgDefaultConfirm(otherAffected: number) {
     try {
       await apply()
       setPending(null)
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
       setIsApplying(false)
     }

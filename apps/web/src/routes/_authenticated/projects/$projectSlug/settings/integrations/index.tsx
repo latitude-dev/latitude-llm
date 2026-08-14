@@ -59,7 +59,8 @@ function IntegrationsSettingsPage() {
   const scopeDetail = (key: ConnectedIntegration["entry"]["key"]): string | null => {
     if (key === "github") {
       if (!githubConfig) return null
-      return githubConfig.hasBehaviorOverride ? OVERRIDES_ORGANIZATION : FOLLOWS_ORGANIZATION
+      // A config row of its own is the repo binding, which is an override even when monitoring is inherited.
+      return githubConfig.hasOverride ? OVERRIDES_ORGANIZATION : FOLLOWS_ORGANIZATION
     }
     const index = dispatchKinds.indexOf(key as AgentDispatchKindKey)
     const settings = index === -1 ? undefined : dispatchSettings[index]?.data

@@ -226,7 +226,6 @@ function OrgRepositorySection({
   readonly projectCount: number
   readonly canEdit: boolean
 }) {
-  const { toast } = useToast()
   const onSaved = useOrgDefaultsSave()
   const { data: repos, isLoading: reposLoading } = useQuery({
     queryKey: GITHUB_REPOS_QUERY_KEY,
@@ -253,18 +252,14 @@ function OrgRepositorySection({
 
   const save = () =>
     confirm.request(async () => {
-      try {
-        await updateGithubOrgDefaults({
-          data: {
-            ...defaults.settings,
-            defaultRepoId: repoId,
-            defaultBranch: repoId === null ? null : branch.trim(),
-          },
-        })
-        await onSaved("Organization repository updated")
-      } catch (error) {
-        toast({ variant: "destructive", description: toUserMessage(error) })
-      }
+      await updateGithubOrgDefaults({
+        data: {
+          ...defaults.settings,
+          defaultRepoId: repoId,
+          defaultBranch: repoId === null ? null : branch.trim(),
+        },
+      })
+      await onSaved("Organization repository updated")
     })
 
   return (

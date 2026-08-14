@@ -98,11 +98,12 @@ function SlackNotificationsSection({ integration }: { readonly integration: Slac
     setIsSaving(true)
     try {
       for (const group of changed) await persistSlackRoute(group, draft[group] ?? null)
-      await queryClient.invalidateQueries({ queryKey: SLACK_INTEGRATION_QUERY_KEY })
       toast({ description: "Notification routing saved" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
+      // Groups are written one at a time, so a failure partway through still leaves earlier ones persisted.
+      await queryClient.invalidateQueries({ queryKey: SLACK_INTEGRATION_QUERY_KEY })
       setIsSaving(false)
     }
   }
