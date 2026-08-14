@@ -117,8 +117,6 @@ export function ModelUsagePanel({
           <Tabs
             variant="bordered"
             size="sm"
-            className="border-none bg-muted"
-            indicatorClassName="border-none"
             options={MEASURE_OPTIONS.map((option) => ({
               id: option.id,
               label: option.label,

@@ -735,8 +735,6 @@ export function CacheEconomicsPanel({
         <Tabs<CacheView>
           variant="bordered"
           size="sm"
-          className="border-none bg-muted"
-          indicatorClassName="border-none"
           options={CACHE_VIEW_OPTIONS.map((option) => ({
             id: option.key,
             label: option.label,
@@ -752,8 +750,6 @@ export function CacheEconomicsPanel({
           <Tabs
             variant="bordered"
             size="sm"
-            className="border-none bg-muted"
-            indicatorClassName="border-none"
             options={CACHE_LIFETIME_OPTIONS.map((option) => ({
               id: option === "documented" ? "documented" : String(option),
               label: lifetimeOptionLabel(option),

@@ -9,7 +9,7 @@ const tabsListVariants = cva("relative flex flex-row", {
   variants: {
     variant: {
       secondary: "",
-      bordered: "w-fit border border-border bg-secondary",
+      bordered: "w-fit bg-muted",
     },
     size: {
       md: "gap-2",
@@ -25,7 +25,7 @@ const tabsListVariants = cva("relative flex flex-row", {
   },
   compoundVariants: [
     { variant: "bordered", size: "md", className: "rounded-lg p-1" },
-    { variant: "bordered", size: "sm", className: "h-8 items-center rounded-md p-1" },
+    { variant: "bordered", size: "sm", className: "items-center rounded-md p-1" },
   ],
   defaultVariants: {
     variant: "secondary",
@@ -40,7 +40,7 @@ const tabTriggerVariants = cva(
     variants: {
       variant: {
         secondary: "text-xs leading-4 font-medium",
-        bordered: "border border-transparent bg-transparent",
+        bordered: "bg-transparent",
       },
       hideLabels: {
         true: "",
@@ -119,7 +119,7 @@ const tabIndicatorVariants = cva("pointer-events-none absolute left-0 top-0", {
   variants: {
     variant: {
       secondary: "rounded-md bg-muted",
-      bordered: "rounded border border-border bg-background",
+      bordered: "rounded bg-background",
     },
   },
   defaultVariants: {

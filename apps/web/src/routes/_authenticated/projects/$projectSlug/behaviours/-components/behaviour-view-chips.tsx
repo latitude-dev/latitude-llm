@@ -3,9 +3,9 @@ import { Link } from "@tanstack/react-router"
 import type { CustomBehaviorRecord } from "../../../../../../domains/taxonomy/custom-behaviors.functions.ts"
 
 const chipClass = (active: boolean) =>
-  cn("flex h-7 max-w-48 items-center rounded px-2 transition-colors", {
-    "border border-border bg-background": active,
-    "border border-transparent hover:bg-background/60": !active,
+  cn("flex h-6.5 max-w-48 items-center rounded px-2 transition-colors", {
+    "bg-background": active,
+    "bg-transparent hover:bg-background/60": !active,
   })
 
 /**
@@ -28,7 +28,7 @@ export function BehaviourViewChips({
   if (views.length === 0) return null
 
   return (
-    <div className="flex w-fit max-w-full flex-row flex-wrap items-center gap-1 rounded-lg border border-border bg-secondary p-1">
+    <div className="flex w-fit max-w-full flex-row flex-wrap items-center gap-1 rounded-md bg-muted p-1">
       <Link
         to="/projects/$projectSlug/behaviours/$behaviourSlug"
         params={{ projectSlug, behaviourSlug }}

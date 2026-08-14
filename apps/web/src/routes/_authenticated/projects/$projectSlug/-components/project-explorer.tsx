@@ -531,7 +531,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filters
-                  <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">F</kbd>
+                  <HotkeyBadge hotkey="F" />
                   {hasActiveFilters && (
                     <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
                       {Object.keys(filters).length}
@@ -600,8 +600,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             <Tabs
               variant="bordered"
               size="sm"
-              className="border-none bg-muted"
-              indicatorClassName="border-none"
               options={[
                 {
                   id: "sessions",
