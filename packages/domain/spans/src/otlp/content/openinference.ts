@@ -12,6 +12,11 @@
  *
  * Output messages follow the same pattern with llm.output_messages.{i}.
  *
+ * A part carrying no renderable payload is dropped rather than emitted as empty text, and a
+ * message left with nothing at all is dropped entirely — OpenAI reasoning items arrive as
+ * `message_content.type=reasoning` with the payload in an `encrypted_content` field we cannot
+ * decrypt, so a reasoning model produces one such part per assistant turn.
+ *
  * Tool definitions use:
  *   llm.tools.{i}.tool.json_schema — JSON string of tool schema
  *
@@ -36,11 +41,18 @@ interface ContentPartData {
   imageUrl?: string
 }
 
-type MessageContent = string | { type: string; text?: string; image_url?: { url: string } }[]
+// rosetta-ai passes a reasoning part through verbatim, so it must already carry the GenAI
+// `content` key here — a `text` key survives translation and then renders blank.
+type MessageContentPart =
+  | { type: "text"; text: string }
+  | { type: "reasoning"; content: string }
+  | { type: "image_url"; image_url: { url: string } }
+
+type MessageContent = string | MessageContentPart[]
 
 interface ReassembledMessage {
   role: string
-  content: MessageContent
+  content?: MessageContent | undefined
   tool_calls?: { id: string; type: string; function: { name: string; arguments: string } }[]
   tool_call_id?: string
 }
@@ -103,21 +115,24 @@ function collectContentPartField(
   else if (parsed.field === "message_content.image.image.url") part.imageUrl = value
 }
 
-/** Resolves content for a single message: multipart array if parts exist, otherwise plain string. */
+/** Resolves content for a single message, or undefined when it carries nothing renderable. */
 function buildMessageContent(
   parts: Map<number, ContentPartData> | undefined,
   plainContent: string | undefined,
-): MessageContent {
+): MessageContent | undefined {
   if (parts && parts.size > 0) {
     const sorted = [...parts.entries()].sort(([a], [b]) => a - b)
-    return sorted.map(([, part]) => {
+    const built = sorted.flatMap(([, part]): MessageContentPart[] => {
       if (part.type === "image" && part.imageUrl) {
-        return { type: "image_url" as const, image_url: { url: part.imageUrl } }
+        return [{ type: "image_url", image_url: { url: part.imageUrl } }]
       }
-      return { type: "text" as const, text: part.text ?? "" }
+      if (!part.text?.trim()) return []
+      if (part.type === "reasoning") return [{ type: "reasoning", content: part.text }]
+      return [{ type: "text", text: part.text }]
     })
+    if (built.length > 0) return built
   }
-  return plainContent ?? ""
+  return plainContent?.trim() ? plainContent : undefined
 }
 
 /** Resolves the id a tool result pairs with (explicit tool_call_id → name match → oldest pending), consuming it. */
@@ -158,9 +173,16 @@ function assembleMessages(
     const msgFields = fields.get(i)
     const role = msgFields?.get("role") ?? "user"
     const content = buildMessageContent(contentParts.get(i), msgFields?.get("content"))
+    const msgToolCalls = toolCalls.get(i)
+    const hasToolCalls = !!msgToolCalls && msgToolCalls.size > 0
+    const explicitId = msgFields?.get("tool_call_id")
+
+    // A turn left with nothing renderable — an undecryptable reasoning item, or a blank content
+    // string — would otherwise reach the conversation view as an empty bubble.
+    if (content === undefined && !hasToolCalls && role !== "tool" && explicitId === undefined) continue
+
     const msg: ReassembledMessage = { role, content }
 
-    const msgToolCalls = toolCalls.get(i)
     if (msgToolCalls && msgToolCalls.size > 0) {
       const sorted = [...msgToolCalls.entries()].sort(([a], [b]) => a - b)
       msg.tool_calls = sorted.map(([j, tc]) => {
@@ -170,20 +192,22 @@ function assembleMessages(
       })
     }
 
-    const explicitId = msgFields?.get("tool_call_id")
-    const hasToolCalls = !!msgToolCalls && msgToolCalls.size > 0
     // Gemini delivers function responses on a role:"user" turn tagged only with tool_call_id.
     // Extract those into their own role:"tool" message (mirrors hoistToolResults — don't relabel
     // the turn). Single-content only: a multi-part turn could mix in real text we can't split.
     const extractAsToolResult =
-      role !== "tool" && explicitId !== undefined && !hasToolCalls && typeof content === "string"
+      role !== "tool" &&
+      explicitId !== undefined &&
+      !hasToolCalls &&
+      (content === undefined || typeof content === "string")
 
     if (role === "tool") {
       const id = resolvePendingToolCallId(explicitId, msgFields?.get("name"), pendingToolCalls)
       if (id) msg.tool_call_id = id
+      msg.content = content ?? ""
       messages.push(msg)
     } else if (extractAsToolResult) {
-      const toolMsg: ReassembledMessage = { role: "tool", content }
+      const toolMsg: ReassembledMessage = { role: "tool", content: content ?? "" }
       const id = resolvePendingToolCallId(explicitId, msgFields?.get("name"), pendingToolCalls)
       if (id) toolMsg.tool_call_id = id
       messages.push(toolMsg)
