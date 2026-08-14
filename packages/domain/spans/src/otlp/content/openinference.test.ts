@@ -406,6 +406,24 @@ describe("parseContent (OpenInference)", () => {
       )
       expect((toolResult as { id: string }).id).toBe((toolCall as { id: string }).id)
     })
+
+    it("still extracts a Gemini-style tool result that carries no content at all", () => {
+      const result = parseContent([
+        str("llm.input_messages.0.message.role", "assistant"),
+        str("llm.input_messages.0.message.tool_calls.0.tool_call.id", "call_xyz"),
+        str("llm.input_messages.0.message.tool_calls.0.tool_call.function.name", "lookup"),
+        str("llm.input_messages.0.message.tool_calls.0.tool_call.function.arguments", "{}"),
+        str("llm.input_messages.1.message.role", "user"),
+        str("llm.input_messages.1.message.tool_call_id", "call_xyz"),
+      ])
+
+      const tool = result.inputMessages.find((m) => m.role === "tool")
+      expect(tool).toBeDefined()
+      const toolResult = (tool as { parts: { type: string; id?: string }[] }).parts.find(
+        (p) => p.type === "tool_call_response",
+      )
+      expect((toolResult as { id: string }).id).toBe("call_xyz")
+    })
   })
 
   describe("tool definitions", () => {
