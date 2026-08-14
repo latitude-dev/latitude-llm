@@ -155,6 +155,11 @@ export {
   SIGNAL_PREVIEW_RESULT_TTL_SECONDS,
   type SignalPreviewResult,
 } from "./runtime/signal-preview-result.ts"
+export {
+  attachEvaluationParentSignalsUseCase,
+  type ScoreListPageWithEvaluationSignals,
+  type ScoreWithEvaluationSignal,
+} from "./use-cases/attach-evaluation-parent-signals.ts"
 export { collectAlignmentExamplesUseCase } from "./use-cases/alignment/collect-alignment-examples.ts"
 export { evaluateBaselineDraftUseCase } from "./use-cases/alignment/evaluate-baseline-draft.ts"
 export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evaluate-draft-against-examples.ts"

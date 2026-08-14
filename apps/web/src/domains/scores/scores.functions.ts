@@ -1,9 +1,11 @@
-import { EvaluationRepository } from "@domain/evaluations"
+import {
+  attachEvaluationParentSignalsUseCase,
+  type ScoreListPageWithEvaluationSignals,
+  type ScoreWithEvaluationSignal,
+} from "@domain/evaluations"
 import {
   listScoresByTraceIdsUseCase,
   listTraceScoresUseCase,
-  type Score,
-  type ScoreListPage,
   type ScoreSourceType,
   scoreDraftModeSchema,
 } from "@domain/scores"
@@ -45,11 +47,7 @@ export interface ScoreRecord {
   readonly updatedAt: string
 }
 
-interface EvaluationLookup {
-  readonly signalId: string
-}
-
-const toRecord = (score: Score, evaluation: EvaluationLookup | undefined): ScoreRecord => ({
+const toRecord = (score: ScoreWithEvaluationSignal): ScoreRecord => ({
   id: score.id as string,
   organizationId: score.organizationId as string,
   projectId: score.projectId as string,
@@ -60,7 +58,7 @@ const toRecord = (score: Score, evaluation: EvaluationLookup | undefined): Score
   sourceId: score.sourceId,
   simulationId: score.simulationId ? (score.simulationId as string) : null,
   signalId: score.signalId ? (score.signalId as string) : null,
-  evaluationSignalId: score.sourceType === "evaluation" ? (evaluation?.signalId ?? null) : null,
+  evaluationSignalId: score.evaluationSignalId,
   value: score.value,
   passed: score.passed,
   feedback: score.feedback,
@@ -77,44 +75,14 @@ const toRecord = (score: Score, evaluation: EvaluationLookup | undefined): Score
   updatedAt: score.updatedAt.toISOString(),
 })
 
-const loadEvaluationsById = (sourceIds: readonly string[]) =>
-  Effect.gen(function* () {
-    const uniqueIds = [...new Set(sourceIds)]
-    if (uniqueIds.length === 0) return new Map<string, EvaluationLookup>()
-
-    const evaluationRepository = yield* EvaluationRepository
-    const found = yield* Effect.forEach(
-      uniqueIds,
-      (id) => evaluationRepository.findById(id).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
-      { concurrency: 8 },
-    )
-
-    const byId = new Map<string, EvaluationLookup>()
-    for (const evaluation of found) {
-      if (!evaluation) continue
-      byId.set(evaluation.id as string, { signalId: evaluation.signalId })
-    }
-    return byId
-  })
-
-const toListResult = (page: ScoreListPage, evaluationsById: ReadonlyMap<string, EvaluationLookup>) => ({
-  items: page.items.map((score) =>
-    toRecord(score, score.sourceType === "evaluation" ? evaluationsById.get(score.sourceId) : undefined),
-  ),
+const toListResult = (page: ScoreListPageWithEvaluationSignals) => ({
+  items: page.items.map(toRecord),
   hasMore: page.hasMore,
   limit: page.limit,
   offset: page.offset,
 })
 
 const scoresWithEvaluationsLayer = Layer.mergeAll(ScoreRepositoryLive, EvaluationRepositoryLive)
-
-const withEvaluationSignals = (page: ScoreListPage) =>
-  Effect.gen(function* () {
-    const evaluationsById = yield* loadEvaluationsById(
-      page.items.filter((score) => score.sourceType === "evaluation").map((score) => score.sourceId),
-    )
-    return toListResult(page, evaluationsById)
-  })
 
 type ScoreListResult = ReturnType<typeof toListResult>
 
@@ -140,7 +108,8 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
       }).pipe(
-        Effect.flatMap(withEvaluationSignals),
+        Effect.flatMap(attachEvaluationParentSignalsUseCase),
+        Effect.map(toListResult),
         withScopedPostgres(scoresWithEvaluationsLayer, client, organizationId),
         withTracing,
       ),
@@ -179,7 +148,8 @@ export const listScoresBySession = createServerFn({ method: "POST" })
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
       }).pipe(
-        Effect.flatMap(withEvaluationSignals),
+        Effect.flatMap(attachEvaluationParentSignalsUseCase),
+        Effect.map(toListResult),
         withScopedPostgres(scoresWithEvaluationsLayer, client, organizationId),
         withTracing,
       ),
