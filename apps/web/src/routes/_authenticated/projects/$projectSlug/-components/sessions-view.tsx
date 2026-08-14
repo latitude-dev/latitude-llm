@@ -14,7 +14,7 @@ import { formatCount, formatDuration, formatPercentage, relativeTime } from "@re
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
-import { type ReactNode, useCallback, useMemo, useState } from "react"
+import { type MouseEvent, type ReactNode, useCallback, useMemo, useState } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
 import { sandboxOrgIdForScope, useProjectScope } from "../../../../../domains/projects/project-scope.tsx"
 import {
@@ -30,7 +30,7 @@ import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
-import { isLargeSession } from "./session-detail-drawer/session-size.ts"
+import { isLargeSession, MAX_SESSION_ANALYSIS_TRACE_COUNT } from "./session-detail-drawer/session-size.ts"
 import { sessionTracePageQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
 import { SessionOutlierBadge } from "./session-outlier-badge.tsx"
 import { SessionsOrphanFragmentsBlankSlate } from "./sessions-orphan-fragments-blank-slate.tsx"
@@ -330,10 +330,6 @@ export function SessionsView({
     return "No sessions found"
   }, [hasOrphanFragmentSessions, hasUserAppliedFilters, onShowAllSessions, searchQuery])
 
-  // Fetch annotation counts for every trace that could show in the visible
-  // session rows (trace_ids on each session) so the Indicators column can
-  // surface positive / negative annotation badges. For multi-trace sessions
-  // the badge totals are the sum across the session's traces.
   const sessionRelevantTraceIds = useMemo(() => {
     const set = new Set<string>()
     for (const s of sessions) {
@@ -376,6 +372,23 @@ export function SessionsView({
     [annotationCountsPendingTraceIds],
   )
 
+  const [activeTraceTab, setActiveTraceTab] = useParamState("traceTab", "trace")
+  const [activeSessionTab, setActiveSessionTab] = useParamState("sessionTab", "session")
+
+  const openScoresForRow = useCallback(
+    (row: SessionTableRow, event: MouseEvent) => {
+      event.stopPropagation()
+      if (row.kind === "session") {
+        onOpenSession(row.session.sessionId)
+        setActiveSessionTab("scores")
+        return
+      }
+      onOpenSession(row.trace.sessionId, row.trace.traceId)
+      setActiveTraceTab("scores")
+    },
+    [onOpenSession, setActiveSessionTab, setActiveTraceTab],
+  )
+
   const allColumns = useMemo((): InfiniteTableColumn<SessionTableRow>[] => {
     return [
       {
@@ -392,6 +405,12 @@ export function SessionsView({
             errorCount={field(row, "errorCount")}
             annotationCounts={getRowAnnotationCounts(row)}
             annotationCountsPending={isRowAnnotationCountsPending(row)}
+            {...(annotationsEnabled &&
+            (row.kind === "trace" || row.session.traceIds.length <= MAX_SESSION_ANALYSIS_TRACE_COUNT)
+              ? {
+                  onAnnotationClick: (event: MouseEvent) => openScoresForRow(row, event),
+                }
+              : {})}
           />
         ),
       },
@@ -627,6 +646,8 @@ export function SessionsView({
     isRowAnnotationCountsPending,
     searchMatches,
     isRelevanceSort,
+    annotationsEnabled,
+    openScoresForRow,
   ])
 
   const columns = useMemo(() => {
@@ -721,8 +742,6 @@ export function SessionsView({
   // J/K navigate sessions, except when a spans tree is showing (it takes over
   // J/K, mirroring traces-view): the open trace's spans tab (`traceTab`), or a
   // single-trace session's own spans tab (`sessionTab`) when no trace is open.
-  const [activeTraceTab] = useParamState("traceTab", "trace")
-  const [activeSessionTab] = useParamState("sessionTab", "session")
   const spansTreeActive = activeTraceId
     ? activeTraceTab === "spans"
     : Boolean(activeSessionId) && activeSessionTab === "spans"

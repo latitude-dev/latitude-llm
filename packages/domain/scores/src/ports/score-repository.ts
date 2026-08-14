@@ -89,9 +89,11 @@ export interface ScoreRepositoryShape {
     readonly source?: ScoreSourceType
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
+  /** Per-trace +/- score counts. Omit `source` for all sources; pass `"annotation"` for the public API fields. */
   countAnnotationsByTraceIds(input: {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
+    readonly source?: ScoreSourceType
     readonly options?: Pick<ScoreListOptions, "draftMode">
   }): Effect.Effect<readonly TraceAnnotationCounts[], RepositoryError, SqlClient>
   listBySessionId(input: {

@@ -339,7 +339,7 @@ export function TraceDetailBody({
 
   function handleScoreClick(score: ScoreRecord) {
     if (score.source !== "annotation") return
-    const annotation = score as AnnotationRecord
+    const annotation = score as unknown as AnnotationRecord
     if (isGlobalAnnotation(annotation)) return
     scrollToAnnotation(annotation)
   }
