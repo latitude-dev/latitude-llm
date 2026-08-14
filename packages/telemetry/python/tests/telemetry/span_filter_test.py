@@ -165,6 +165,25 @@ class TestExportFilterParentChainPromotion:
         names = sorted(span.name for span in self.exporter.get_finished_spans())
         assert names == ["http.request", "tcp.connect", "tls.connect"]
 
+    def test_still_promotes_ancestors_after_dropped_span_buffer_fills(self) -> None:
+        tracer = self.provider.get_tracer("opentelemetry.instrumentation.net")
+        parent = tracer.start_span("http.request")
+        parent.end()
+
+        for i in range(2048):
+            tracer.start_span(f"noise-{i}").end()
+
+        child = tracer.start_span(
+            "tcp.connect",
+            context=trace.set_span_in_context(parent),
+            attributes={"gen_ai.request.model": "gpt-4"},
+        )
+        child.end()
+        self.provider.force_flush()
+
+        names = sorted(span.name for span in self.exporter.get_finished_spans())
+        assert names == ["http.request", "tcp.connect"]
+
 
 class TestExportFilterBlockedScopes:
     def setup_method(self) -> None:

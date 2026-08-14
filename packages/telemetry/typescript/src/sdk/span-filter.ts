@@ -3,6 +3,7 @@ import type { ReadableSpan, Span, SpanProcessor } from "@opentelemetry/sdk-trace
 import { SCOPE_LATITUDE } from "../constants/scope.ts"
 
 const MAX_TRACKED_SPANS = 2048
+const DROPPED_RETENTION_SLACK = 2048
 
 type DroppedSpanEntry = {
   span: ReadableSpan
@@ -31,6 +32,26 @@ function spanIdOf(span: ReadableSpan | Span): string | undefined {
 function evictOldestKey(map: Map<string, unknown>): void {
   const oldest = map.keys().next().value
   if (oldest !== undefined) map.delete(oldest)
+}
+
+function touchParentTracking(
+  parentId: string,
+  parentBySpanId: Map<string, string | undefined>,
+  droppedBySpanId: Map<string, DroppedSpanEntry>,
+  droppedEligibleAt: Map<string, number>,
+  dropGeneration: number,
+): void {
+  if (parentBySpanId.has(parentId)) {
+    const recorded = parentBySpanId.get(parentId)
+    parentBySpanId.delete(parentId)
+    parentBySpanId.set(parentId, recorded)
+  }
+  const dropped = droppedBySpanId.get(parentId)
+  if (dropped) {
+    droppedBySpanId.delete(parentId)
+    droppedBySpanId.set(parentId, dropped)
+    droppedEligibleAt.set(parentId, dropGeneration + DROPPED_RETENTION_SLACK)
+  }
 }
 
 /** OpenTelemetry GenAI semantic convention attribute prefix. */
@@ -182,6 +203,8 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
   private readonly parentBySpanId = new Map<string, string | undefined>()
   private readonly forceExportIds = new Set<string>()
   private readonly droppedBySpanId = new Map<string, DroppedSpanEntry>()
+  private readonly droppedEligibleAt = new Map<string, number>()
+  private dropGeneration = 0
 
   constructor(
     shouldExport: (span: ReadableSpan) => boolean,
@@ -200,6 +223,15 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
       if (!parentId) {
         const fromCtx = trace.getSpanContext(parentContext)?.spanId
         if (fromCtx && isValidSpanId(fromCtx)) parentId = fromCtx
+      }
+      if (parentId) {
+        touchParentTracking(
+          parentId,
+          this.parentBySpanId,
+          this.droppedBySpanId,
+          this.droppedEligibleAt,
+          this.dropGeneration,
+        )
       }
       if (this.parentBySpanId.size >= MAX_TRACKED_SPANS) evictOldestKey(this.parentBySpanId)
       this.parentBySpanId.set(spanId, parentId)
@@ -240,6 +272,7 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
     this.parentBySpanId.clear()
     this.forceExportIds.clear()
     this.droppedBySpanId.clear()
+    this.droppedEligibleAt.clear()
     return this.inner.shutdown()
   }
 
@@ -250,7 +283,18 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
   private rememberDropped(span: ReadableSpan, recordedParentId: string | undefined): void {
     const spanId = spanIdOf(span)
     if (!spanId) return
-    if (this.droppedBySpanId.size >= MAX_TRACKED_SPANS) evictOldestKey(this.droppedBySpanId)
+    this.dropGeneration += 1
+    this.droppedEligibleAt.set(spanId, this.dropGeneration + DROPPED_RETENTION_SLACK)
+    if (this.droppedBySpanId.size >= MAX_TRACKED_SPANS) {
+      for (const key of this.droppedBySpanId.keys()) {
+        const eligibleAt = this.droppedEligibleAt.get(key) ?? 0
+        if (this.dropGeneration > eligibleAt) {
+          this.droppedBySpanId.delete(key)
+          this.droppedEligibleAt.delete(key)
+          break
+        }
+      }
+    }
     this.droppedBySpanId.set(spanId, { span, recordedParentId })
   }
 

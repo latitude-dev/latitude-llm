@@ -19,6 +19,7 @@ LLM_PREFIX = "llm."
 OPENINFERENCE_KIND = "openinference.span.kind"
 
 _MAX_TRACKED_SPANS = 2048
+_DROPPED_RETENTION_SLACK = 2048
 
 OTEL_LLM_INSTRUMENTATION_SCOPE_PREFIXES: tuple[str, ...] = (
     "opentelemetry.instrumentation.alephalpha",
@@ -156,6 +157,23 @@ def build_should_export_span(
     return should_export
 
 
+def _touch_parent_tracking(
+    parent_id: str,
+    parent_by_span_id: dict[str, str | None],
+    dropped_by_span_id: dict[str, _DroppedSpanEntry],
+    dropped_eligible_at: dict[str, int],
+    drop_generation: int,
+) -> None:
+    if parent_id in parent_by_span_id:
+        recorded = parent_by_span_id.pop(parent_id)
+        parent_by_span_id[parent_id] = recorded
+    dropped = dropped_by_span_id.get(parent_id)
+    if dropped is not None:
+        dropped_by_span_id.pop(parent_id)
+        dropped_by_span_id[parent_id] = dropped
+        dropped_eligible_at[parent_id] = drop_generation + _DROPPED_RETENTION_SLACK
+
+
 class ExportFilterSpanProcessor(SpanProcessor):
     """Drops filtered spans; when a span is kept, also exports its ancestors."""
 
@@ -173,6 +191,8 @@ class ExportFilterSpanProcessor(SpanProcessor):
         self._parent_by_span_id: dict[str, str | None] = {}
         self._force_export_ids: set[str] = set()
         self._dropped_by_span_id: dict[str, _DroppedSpanEntry] = {}
+        self._dropped_eligible_at: dict[str, int] = {}
+        self._drop_generation = 0
 
     def on_start(self, span: Span, parent_context: Context | None = None) -> None:
         span_id = _span_id(span)
@@ -183,6 +203,14 @@ class ExportFilterSpanProcessor(SpanProcessor):
                 if parent_ctx.is_valid and parent_ctx.span_id != INVALID_SPAN_ID:
                     parent_id = format_span_id(parent_ctx.span_id)
             with self._lock:
+                if parent_id is not None:
+                    _touch_parent_tracking(
+                        parent_id,
+                        self._parent_by_span_id,
+                        self._dropped_by_span_id,
+                        self._dropped_eligible_at,
+                        self._drop_generation,
+                    )
                 if len(self._parent_by_span_id) >= _MAX_TRACKED_SPANS:
                     oldest = next(iter(self._parent_by_span_id))
                     del self._parent_by_span_id[oldest]
@@ -218,6 +246,7 @@ class ExportFilterSpanProcessor(SpanProcessor):
             self._parent_by_span_id.clear()
             self._force_export_ids.clear()
             self._dropped_by_span_id.clear()
+            self._dropped_eligible_at.clear()
         self._inner.shutdown()
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
@@ -230,9 +259,15 @@ class ExportFilterSpanProcessor(SpanProcessor):
         span_id = _span_id(span)
         if span_id is None:
             return
+        self._drop_generation += 1
+        self._dropped_eligible_at[span_id] = self._drop_generation + _DROPPED_RETENTION_SLACK
         if len(self._dropped_by_span_id) >= _MAX_TRACKED_SPANS:
-            oldest = next(iter(self._dropped_by_span_id))
-            del self._dropped_by_span_id[oldest]
+            for key in list(self._dropped_by_span_id):
+                eligible_at = self._dropped_eligible_at.get(key, 0)
+                if self._drop_generation > eligible_at:
+                    del self._dropped_by_span_id[key]
+                    self._dropped_eligible_at.pop(key, None)
+                    break
         self._dropped_by_span_id[span_id] = _DroppedSpanEntry(span=span, recorded_parent_id=recorded_parent_id)
 
     def _collect_promoted_ancestors(

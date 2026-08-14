@@ -215,6 +215,30 @@ describe("ExportFilterSpanProcessor parent-chain promotion", () => {
       .sort()
     expect(names).toEqual(["http.request", "tcp.connect", "tls.connect"])
   })
+
+  it("still promotes ancestors after the dropped-span buffer fills", async () => {
+    const net = trace.getTracer("opentelemetry.instrumentation.net")
+    const parent = net.startSpan("http.request")
+    parent.end()
+
+    for (let i = 0; i < 2048; i++) {
+      net.startSpan(`noise-${i}`).end()
+    }
+
+    const child = net.startSpan(
+      "tcp.connect",
+      { attributes: { "gen_ai.request.model": "gpt-4" } },
+      trace.setSpan(context.active(), parent),
+    )
+    child.end()
+    await provider.forceFlush()
+
+    const names = exporter
+      .getFinishedSpans()
+      .map((s) => s.name)
+      .sort()
+    expect(names).toEqual(["http.request", "tcp.connect"])
+  })
 })
 
 describe("ExportFilterSpanProcessor blocked scopes", () => {
