@@ -18,10 +18,63 @@ interface ScoreCardProps {
   readonly projectId: string
 }
 
+function ScoreSignalLink({
+  projectSlug,
+  signalId,
+  name,
+  slug,
+  description,
+}: {
+  readonly projectSlug: string | undefined
+  readonly signalId: string
+  readonly name: string
+  readonly slug: string | null
+  readonly description: string | undefined
+}) {
+  const isNavigable = Boolean(projectSlug && signalId)
+  const badge = (
+    <Badge
+      variant="outline"
+      size="small"
+      ellipsis
+      {...(isNavigable ? { className: "cursor-pointer hover:bg-muted" } : {})}
+      iconProps={{
+        icon: ShieldAlertIcon,
+        color: "foregroundMuted",
+        placement: "start",
+        className: "stroke-[2.5]",
+      }}
+    >
+      {name}
+    </Badge>
+  )
+  const trigger =
+    projectSlug && slug ? (
+      <Link
+        data-no-navigate
+        to="/projects/$projectSlug/signals/$signalSlug"
+        params={{ projectSlug, signalSlug: slug }}
+        aria-label={`Open signal ${name}`}
+        onClick={(event) => event.stopPropagation()}
+        className="inline-flex min-w-0"
+      >
+        {badge}
+      </Link>
+    ) : (
+      badge
+    )
+
+  if (!description) return trigger
+  return (
+    <Tooltip asChild trigger={trigger}>
+      <span className="block max-w-xs whitespace-pre-wrap text-left">{description}</span>
+    </Tooltip>
+  )
+}
+
 export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
   const { projectSlug } = useParams({ strict: false })
   const linkedSignalId = scoreCardLinkedSignalId(score)
-  const isOccurrence = score.signalId !== null
   const { data: linkedSignal } = useSignal({
     projectId,
     signalId: linkedSignalId ?? "",
@@ -35,6 +88,16 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
   const sourceTitle = scoreCardSourceTitle(score)
   const feedback = score.feedback?.trim()
   const evaluationVerdict = scoreCardEvaluationVerdict(score)
+  const signalLink =
+    linkedSignalId && linkedSignalName ? (
+      <ScoreSignalLink
+        projectSlug={projectSlug}
+        signalId={linkedSignalId}
+        name={linkedSignalName}
+        slug={linkedSignalSlug}
+        description={linkedSignalDescription}
+      />
+    ) : null
 
   return (
     <div data-score-card-id={score.id} tabIndex={-1} className="flex flex-col gap-1 m-1 p-1 rounded-lg outline-none">
@@ -42,9 +105,12 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
         <Badge variant="outline" size="small">
           {sourceLabel}
         </Badge>
-        <Text.H6 color="foregroundMuted" className="truncate">
-          {sourceTitle}
-        </Text.H6>
+        {score.source === "evaluation" ? signalLink : null}
+        {sourceTitle ? (
+          <Text.H6 color="foregroundMuted" className="truncate">
+            {sourceTitle}
+          </Text.H6>
+        ) : null}
         {evaluationVerdict ? (
           <Badge variant="secondary" size="small">
             {evaluationVerdict}
@@ -79,53 +145,8 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
 
       {feedback ? <Text.H5 className="whitespace-pre-wrap">{feedback}</Text.H5> : null}
 
-      {linkedSignalName ? (
-        <div className="flex items-center gap-2 pt-1">
-          {(() => {
-            const isNavigable = Boolean(projectSlug && linkedSignalId)
-            const badge = (
-              <Badge
-                variant="outline"
-                size="small"
-                ellipsis
-                {...(isNavigable ? { className: "cursor-pointer hover:bg-muted" } : {})}
-                iconProps={{
-                  icon: ShieldAlertIcon,
-                  color: "foregroundMuted",
-                  placement: "start",
-                  className: "stroke-[2.5]",
-                }}
-              >
-                {linkedSignalName}
-              </Badge>
-            )
-            const trigger =
-              projectSlug && linkedSignalSlug ? (
-                <Link
-                  data-no-navigate
-                  to="/projects/$projectSlug/signals/$signalSlug"
-                  params={{ projectSlug, signalSlug: linkedSignalSlug }}
-                  aria-label={`Open signal ${linkedSignalName}`}
-                  onClick={(event) => event.stopPropagation()}
-                  className="inline-flex min-w-0"
-                >
-                  {badge}
-                </Link>
-              ) : (
-                badge
-              )
-            const tooltip = isOccurrence
-              ? linkedSignalDescription
-              : `This evaluation monitors ${linkedSignalName}. This run did not record an occurrence.`
-            return tooltip ? (
-              <Tooltip asChild trigger={trigger}>
-                <span className="block max-w-xs whitespace-pre-wrap text-left">{tooltip}</span>
-              </Tooltip>
-            ) : (
-              trigger
-            )
-          })()}
-        </div>
+      {score.source !== "evaluation" && signalLink ? (
+        <div className="flex items-center gap-2 pt-1">{signalLink}</div>
       ) : null}
     </div>
   )

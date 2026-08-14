@@ -2,22 +2,12 @@ import { describe, expect, it } from "vitest"
 import { scoreCardEvaluationVerdict, scoreCardLinkedSignalId, scoreCardSourceTitle } from "./score-card-display.ts"
 
 describe("scoreCardSourceTitle", () => {
-  it("uses the evaluation name when present", () => {
-    expect(
-      scoreCardSourceTitle({
-        source: "evaluation",
-        sourceId: "eval-id",
-        evaluationName: "Incompletion detector",
-      }),
-    ).toBe("Incompletion detector")
-  })
-
-  it("falls back to the source id when the evaluation name is missing", () => {
-    expect(scoreCardSourceTitle({ source: "evaluation", sourceId: "eval-id", evaluationName: null })).toBe("eval-id")
+  it("does not surface evaluation identity", () => {
+    expect(scoreCardSourceTitle({ source: "evaluation", sourceId: "eval-id" })).toBeNull()
   })
 
   it("keeps custom source ids as the title", () => {
-    expect(scoreCardSourceTitle({ source: "custom", sourceId: "api-source", evaluationName: null })).toBe("api-source")
+    expect(scoreCardSourceTitle({ source: "custom", sourceId: "api-source" })).toBe("api-source")
   })
 })
 

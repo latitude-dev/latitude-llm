@@ -28,7 +28,6 @@ export interface ScoreRecord {
   readonly sourceId: string
   readonly simulationId: string | null
   readonly signalId: string | null
-  readonly evaluationName: string | null
   readonly evaluationSignalId: string | null
   readonly value: number
   readonly passed: boolean
@@ -47,7 +46,6 @@ export interface ScoreRecord {
 }
 
 interface EvaluationLookup {
-  readonly name: string
   readonly signalId: string
 }
 
@@ -62,7 +60,6 @@ const toRecord = (score: Score, evaluation: EvaluationLookup | undefined): Score
   sourceId: score.sourceId,
   simulationId: score.simulationId ? (score.simulationId as string) : null,
   signalId: score.signalId ? (score.signalId as string) : null,
-  evaluationName: score.sourceType === "evaluation" ? (evaluation?.name ?? null) : null,
   evaluationSignalId: score.sourceType === "evaluation" ? (evaluation?.signalId ?? null) : null,
   value: score.value,
   passed: score.passed,
@@ -95,7 +92,7 @@ const loadEvaluationsById = (sourceIds: readonly string[]) =>
     const byId = new Map<string, EvaluationLookup>()
     for (const evaluation of found) {
       if (!evaluation) continue
-      byId.set(evaluation.id as string, { name: evaluation.name, signalId: evaluation.signalId })
+      byId.set(evaluation.id as string, { signalId: evaluation.signalId })
     }
     return byId
   })

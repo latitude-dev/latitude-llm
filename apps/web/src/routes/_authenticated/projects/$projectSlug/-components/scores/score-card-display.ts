@@ -1,9 +1,9 @@
 export function scoreCardSourceTitle(score: {
   readonly source: string
   readonly sourceId: string
-  readonly evaluationName: string | null
-}): string {
-  return score.source === "evaluation" ? (score.evaluationName ?? score.sourceId) : score.sourceId
+}): string | null {
+  if (score.source === "evaluation") return null
+  return score.sourceId
 }
 
 export function scoreCardLinkedSignalId(score: {
