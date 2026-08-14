@@ -705,7 +705,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(countsByTraceId.has(TraceId("cccccccccccccccccccccccccccccccc"))).toBe(false)
   })
 
-  it("counts every score source by trace when source is omitted", async () => {
+  it("counts every score source by trace when source is omitted, except absent evaluations", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const mixedTraceId = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
 
@@ -759,7 +759,65 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    expect(counts).toEqual([expect.objectContaining({ traceId: mixedTraceId, positiveCount: 1, negativeCount: 2 })])
+    expect(counts).toEqual([expect.objectContaining({ traceId: mixedTraceId, positiveCount: 1, negativeCount: 1 })])
+  })
+
+  it("omits absent evaluation runs from listByTraceId when asked", async () => {
+    const organizationId = "ffffffffffffffffffffaaaa"
+    const traceId = TraceId("ffffffffffffffffffffffffffffffff")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "evaluation",
+        sourceId: evaluationSourceId,
+        traceId,
+        value: 0,
+        passed: false,
+        feedback: "No condition matched",
+        metadata: { evaluationHash: "eval-hash-absent" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "evaluation",
+        sourceId: "ffffffffffffffffffffffff",
+        traceId,
+        value: 1,
+        passed: true,
+        feedback: "Issue present",
+        metadata: { evaluationHash: "eval-hash-present" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "UI",
+        traceId,
+        value: 0,
+        passed: false,
+        feedback: "Human thumbs down",
+        metadata: { rawFeedback: "Human thumbs down" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const page = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listByTraceId({
+          projectId: annotationProjectId,
+          traceId,
+          options: { draftMode: "include", omitAbsentEvaluations: true },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(page.items.map((score) => score.sourceType).sort()).toEqual(["annotation", "evaluation"])
+    expect(page.items.find((score) => score.sourceType === "evaluation")?.passed).toBe(true)
   })
 
   it("findPublishedSystemAnnotationByTraceAndFeedback finds existing system annotation score", async () => {

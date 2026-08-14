@@ -87,6 +87,22 @@ describe("listTraceScoresUseCase", () => {
     expect(page.items).toHaveLength(3)
     expect(page.items.map((score) => score.sourceType).sort()).toEqual(["annotation", "custom", "evaluation"])
   })
+
+  it("forwards omitAbsentEvaluations to the repository", async () => {
+    let receivedOmitAbsentEvaluations: boolean | undefined
+    const { repository } = createFakeScoreRepository({
+      listByTraceId: ({ options }) => {
+        receivedOmitAbsentEvaluations = options?.omitAbsentEvaluations
+        return Effect.succeed({ items: [], hasMore: false, limit: 50, offset: 0 })
+      },
+    })
+
+    await Effect.runPromise(
+      listTraceScoresUseCase({ projectId, traceId, omitAbsentEvaluations: true }).pipe(provideTestServices(repository)),
+    )
+
+    expect(receivedOmitAbsentEvaluations).toBe(true)
+  })
 })
 
 describe("listScoresByTraceIdsUseCase", () => {

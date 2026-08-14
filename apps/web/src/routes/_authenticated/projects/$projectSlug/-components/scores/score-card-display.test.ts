@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { scoreCardEvaluationVerdict, scoreCardLinkedSignalId, scoreCardSourceTitle } from "./score-card-display.ts"
+import {
+  scoreCardEvaluationVerdict,
+  scoreCardIsAbsentEvaluation,
+  scoreCardLinkedSignalId,
+  scoreCardShouldShowFeedback,
+  scoreCardShouldShowValue,
+  scoreCardSignalLabel,
+  scoreCardSourceTitle,
+} from "./score-card-display.ts"
 
 describe("scoreCardSourceTitle", () => {
   it("does not surface evaluation identity", () => {
@@ -18,6 +26,66 @@ describe("scoreCardLinkedSignalId", () => {
 
   it("falls back to a stamped signal id when the evaluation has no parent", () => {
     expect(scoreCardLinkedSignalId({ signalId: "stamped", evaluationSignalId: null })).toBe("stamped")
+  })
+})
+
+describe("scoreCardSignalLabel", () => {
+  it("prefers the signal name, then the slug, and never a raw id", () => {
+    expect(scoreCardSignalLabel({ name: "Hallucination", slug: "LAT-ABCD" })).toBe("Hallucination")
+    expect(scoreCardSignalLabel({ name: null, slug: "LAT-ABCD" })).toBe("LAT-ABCD")
+    expect(scoreCardSignalLabel({ name: null, slug: null })).toBeNull()
+  })
+})
+
+describe("scoreCardIsAbsentEvaluation", () => {
+  it("treats a failed, non-errored evaluation as absent", () => {
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: false, passed: false })).toBe(true)
+  })
+
+  it("does not treat present, errored, or non-evaluation scores as absent", () => {
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: false, passed: true })).toBe(false)
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: true, passed: false })).toBe(false)
+    expect(scoreCardIsAbsentEvaluation({ source: "annotation", errored: false, passed: false })).toBe(false)
+  })
+})
+
+describe("scoreCardShouldShowValue", () => {
+  it("hides the 0% value on absent evaluation runs", () => {
+    expect(scoreCardShouldShowValue({ source: "evaluation", errored: false, passed: false })).toBe(false)
+    expect(scoreCardShouldShowValue({ source: "evaluation", errored: false, passed: true })).toBe(true)
+    expect(scoreCardShouldShowValue({ source: "custom", errored: false, passed: false })).toBe(true)
+  })
+})
+
+describe("scoreCardShouldShowFeedback", () => {
+  it("hides the default no-condition-matched copy on absent evaluations", () => {
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "evaluation",
+        errored: false,
+        passed: false,
+        feedback: "No condition matched",
+      }),
+    ).toBe(false)
+  })
+
+  it("keeps specific feedback and non-evaluation comments", () => {
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "evaluation",
+        errored: false,
+        passed: false,
+        feedback: "No tool call named search",
+      }),
+    ).toBe(true)
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "annotation",
+        errored: false,
+        passed: false,
+        feedback: "No condition matched",
+      }),
+    ).toBe(true)
   })
 })
 

@@ -107,6 +107,7 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
+        omitAbsentEvaluations: true,
       }).pipe(
         Effect.flatMap(attachEvaluationParentSignalsUseCase),
         Effect.map(toListResult),
@@ -147,6 +148,7 @@ export const listScoresBySession = createServerFn({ method: "POST" })
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
+        omitAbsentEvaluations: true,
       }).pipe(
         Effect.flatMap(attachEvaluationParentSignalsUseCase),
         Effect.map(toListResult),

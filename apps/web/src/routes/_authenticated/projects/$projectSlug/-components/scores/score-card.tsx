@@ -5,7 +5,14 @@ import { Link, useParams } from "@tanstack/react-router"
 import { AlertCircleIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import type { ScoreRecord } from "../../../../../../domains/scores/scores.functions.ts"
 import { useSignal } from "../../../../../../domains/signals/signals.collection.ts"
-import { scoreCardEvaluationVerdict, scoreCardLinkedSignalId, scoreCardSourceTitle } from "./score-card-display.ts"
+import {
+  scoreCardEvaluationVerdict,
+  scoreCardLinkedSignalId,
+  scoreCardShouldShowFeedback,
+  scoreCardShouldShowValue,
+  scoreCardSignalLabel,
+  scoreCardSourceTitle,
+} from "./score-card-display.ts"
 
 const SOURCE_LABELS: Record<ScoreSourceType, string> = {
   annotation: "Annotation",
@@ -31,7 +38,8 @@ function ScoreSignalLink({
   readonly slug: string | null
   readonly description: string | undefined
 }) {
-  const label = name ?? slug ?? signalId
+  const label = scoreCardSignalLabel({ name, slug })
+  if (!label) return null
   const signalSlug = slug ?? signalId
   const isNavigable = Boolean(projectSlug && signalSlug)
   const badge = (
@@ -89,6 +97,8 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
   const sourceLabel = SOURCE_LABELS[score.source]
   const sourceTitle = scoreCardSourceTitle(score)
   const feedback = score.feedback?.trim()
+  const showValue = scoreCardShouldShowValue(score)
+  const showFeedback = scoreCardShouldShowFeedback(score)
   const evaluationVerdict = scoreCardEvaluationVerdict(score)
   const signalLink = linkedSignalId ? (
     <ScoreSignalLink
@@ -130,7 +140,7 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
             >
               {score.error ?? "Score generation failed"}
             </Tooltip>
-          ) : (
+          ) : evaluationVerdict ? null : (
             <div className="flex h-8 w-8 items-center justify-center">
               <Icon
                 icon={score.passed ? ThumbsUpIcon : ThumbsDownIcon}
@@ -142,9 +152,9 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
         </div>
       </div>
 
-      <Text.H6 color="foregroundMuted">Value: {Math.round(score.value * 100)}%</Text.H6>
+      {showValue ? <Text.H6 color="foregroundMuted">Value: {Math.round(score.value * 100)}%</Text.H6> : null}
 
-      {feedback ? <Text.H5 className="whitespace-pre-wrap">{feedback}</Text.H5> : null}
+      {showFeedback && feedback ? <Text.H5 className="whitespace-pre-wrap">{feedback}</Text.H5> : null}
 
       {score.source !== "evaluation" && signalLink ? (
         <div className="flex items-center gap-2 pt-1">{signalLink}</div>
