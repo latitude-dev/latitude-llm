@@ -92,6 +92,11 @@ const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
   needsReconnect: row.reconnectRequiredAt !== null,
 })
 
+// Shared with the onboarding step so a save on either surface invalidates both.
+export const SLACK_INTEGRATION_QUERY_KEY = ["slack-integration"] as const
+export const SLACK_CHANNELS_QUERY_KEY = ["slack-channels"] as const
+export const SLACK_CONFIGURED_QUERY_KEY = ["slack-integration", "configured"] as const
+
 // Dynamic import keeps `@platform/slack` (and its `@slack/web-api` transitive dep) off the client bundle.
 export const isSlackConfigured = createServerFn({ method: "GET" }).handler(async (): Promise<boolean> => {
   await requireSession()

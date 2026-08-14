@@ -14,7 +14,7 @@ import { consumeSlackOAuthState } from "../../../../server/slack-oauth-state.ts"
  * exchanges the code, persists the integration, and bounces back to
  * the settings page with a flash status param.
  *
- * The settings tree is project-scoped (`/projects/$slug/settings/integrations`)
+ * The settings tree is project-scoped (`/projects/$slug/settings/organization/integrations`)
  * but the callback URL is not — we 302 to `/?next=integrations&installed=ok`
  * and let `_authenticated/index.tsx` resolve the user's current project
  * and re-redirect.

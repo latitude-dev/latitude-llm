@@ -314,6 +314,13 @@ const toEffectiveRecord = (effective: EffectiveAgentDispatchConfig, updatedAt: D
   updatedAt: updatedAt.toISOString(),
 })
 
+export const AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY = ["agent-dispatch-integrations"] as const
+
+export const orgDefaultConfigQueryKey = (kind: string) => ["agent-dispatch-config-default", kind] as const
+
+export const projectDispatchSettingsQueryKey = (projectId: string, kind: string) =>
+  ["agent-dispatch-project-settings", projectId, kind] as const
+
 export const listAgentDispatchIntegrations = createServerFn({ method: "GET" }).handler(async () => {
   const { organizationId } = await requireSession()
   const client = getPostgresClient()

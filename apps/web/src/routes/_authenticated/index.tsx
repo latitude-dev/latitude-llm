@@ -7,10 +7,10 @@ import { resolveDefaultProjectSlug } from "../../domains/projects/projects.funct
  * falling back to the first available) and redirects there.
  *
  * Accepts a `?next=…` hint so flows that finish outside the project
- * tree (today: the Slack OAuth callback) can hand off here without
- * needing to know a slug. When `next` is recognised, the resolved
- * slug is substituted into the matching nested route and any flash
- * params (`installed`, `error`) are forwarded.
+ * tree (today: the Slack and GitHub install callbacks) can hand off
+ * here without needing to know a slug. Connections are organization-wide,
+ * so `next=integrations` lands on the organization's Integrations tab with
+ * the flash params (`installed`, `error`) forwarded.
  */
 const searchSchema = z.object({
   next: z.literal("integrations").optional(),
@@ -37,7 +37,7 @@ export const Route = createFileRoute("/_authenticated/")({
 
     if (deps.next === "integrations") {
       throw redirect({
-        to: "/projects/$projectSlug/settings/integrations",
+        to: "/projects/$projectSlug/settings/organization/integrations",
         params: { projectSlug: slug },
         search: {
           ...(deps.installed ? { installed: deps.installed } : {}),

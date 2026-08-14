@@ -28,7 +28,7 @@ export function GithubMonitorSettingsForm({
   extraFields,
   submitDisabled = false,
   readOnly = false,
-  beforeSubmit,
+  submitWhenPristine = false,
 }: {
   initial: GithubMonitorSettings
   submitLabel: string
@@ -39,14 +39,18 @@ export function GithubMonitorSettingsForm({
   submitDisabled?: boolean
   /** Inherited values shown without the ability to edit them. */
   readOnly?: boolean
-  /** Returning false aborts the save, for a caller that needs to confirm first. */
-  beforeSubmit?: () => boolean
+  /** Offers the save with no edits, so inherited values can be snapshotted as-is. */
+  submitWhenPristine?: boolean
 }) {
   const { toast } = useToast()
   const fieldId = useId()
   const [draft, setDraft] = useState<GithubMonitorSettings>(initial)
   const [errors, setErrors] = useState<KeywordErrors>({})
   const [submitting, setSubmitting] = useState(false)
+
+  // Structural, not field-by-field, so a setting added later can't slip past the dirty check.
+  // The draft only ever derives from `initial` by spreading, so key order is stable.
+  const isDirty = JSON.stringify(draft) !== JSON.stringify(initial)
 
   const setRules = (key: KeywordListKey, next: string[]) =>
     setDraft((current) => ({ ...current, rules: { ...current.rules, [key]: next } }))
@@ -67,11 +71,10 @@ export function GithubMonitorSettingsForm({
       return
     }
     setErrors({})
-    if (beforeSubmit?.() === false) return
     setSubmitting(true)
     try {
+      // No success toast: a caller may defer the write behind a confirmation.
       await onSubmit(parsed.data)
-      toast({ description: "Settings saved" })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
@@ -83,7 +86,7 @@ export function GithubMonitorSettingsForm({
     <div className="flex flex-col gap-6">
       {extraFields}
       <div className="flex flex-col gap-3">
-        <Text.H5 weight="semibold">What to watch</Text.H5>
+        <Text.H5M>What to watch</Text.H5M>
         <ToggleRow
           label="Pull requests"
           description="Link and act on pull requests that target the configured branch."
@@ -101,7 +104,7 @@ export function GithubMonitorSettingsForm({
       </div>
 
       <div className="flex flex-col gap-3">
-        <Text.H5 weight="semibold">Where to look for references</Text.H5>
+        <Text.H5M>Where to look for references</Text.H5M>
         <div className="flex flex-row flex-wrap gap-x-6 gap-y-2">
           <SourceCheckbox
             id={`${fieldId}-commit-message`}
@@ -136,7 +139,7 @@ export function GithubMonitorSettingsForm({
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <Text.H5 weight="semibold">Magic words</Text.H5>
+          <Text.H5M>Magic words</Text.H5M>
           <Text.H6 color="foregroundMuted">
             A signal slug (e.g. LAT-XY9Z) next to one of these words in a watched source links the PR or commit, and on
             merge applies the action.
@@ -174,9 +177,11 @@ export function GithubMonitorSettingsForm({
         ) : null
       ) : (
         <div className="flex flex-row items-center gap-2">
-          <Button onClick={() => void handleSubmit()} isLoading={submitting} disabled={submitDisabled}>
-            {submitLabel}
-          </Button>
+          {isDirty || submitWhenPristine ? (
+            <Button onClick={() => void handleSubmit()} disabled={submitting || submitDisabled}>
+              {submitLabel}
+            </Button>
+          ) : null}
           {extraActions}
         </div>
       )}

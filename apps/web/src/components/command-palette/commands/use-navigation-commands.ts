@@ -6,6 +6,7 @@ import {
   AGENT_DISPATCH_KIND_LABELS,
   type AgentDispatchKindKey,
 } from "../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import { integrationSlug } from "../../../domains/integrations/integration-catalog.ts"
 import { useIsReadOnlyProjectScope } from "../../../domains/projects/project-scope.tsx"
 import {
   PROJECT_SETTINGS_SECTION,
@@ -14,10 +15,24 @@ import {
 } from "../../../domains/projects/project-sections.ts"
 import type { PaletteCommand } from "../types.ts"
 
-/** Integrations that live as sections on the Integrations page rather than their own route. */
-const INTEGRATION_PAGE_SECTIONS = [
-  { key: "slack", label: "Slack", icon: SlackIcon, keywords: "notifications channel workspace connect" },
-  { key: "github", label: "GitHub", icon: GithubIcon, keywords: "repository repo pull request connect" },
+/** The two integrations outside the dispatch set; Slack is only ever configured organization-wide. */
+const NAMED_INTEGRATIONS = [
+  {
+    key: "slack",
+    label: "Slack",
+    icon: SlackIcon,
+    keywords: "notifications channel workspace connect",
+    path: "organization/integrations",
+    group: "Organization",
+  },
+  {
+    key: "github",
+    label: "GitHub",
+    icon: GithubIcon,
+    keywords: "repository repo pull request connect",
+    path: "integrations",
+    group: "Project",
+  },
 ] as const
 
 const AGENT_DISPATCH_KEYWORDS: Record<AgentDispatchKindKey, string> = {
@@ -80,15 +95,15 @@ export function useNavigationCommands(): readonly PaletteCommand[] {
         }
       }
 
-      for (const integration of INTEGRATION_PAGE_SECTIONS) {
+      for (const integration of NAMED_INTEGRATIONS) {
         commands.push({
           id: `nav:integration:${integration.key}`,
           title: integration.label,
-          subtitle: "Settings → Integrations",
+          subtitle: `Settings → ${integration.group} → Integrations`,
           icon: integration.icon,
           section: "navigation",
           keywords: integration.keywords,
-          perform: () => navigate({ to: `/projects/${projectSlug}/settings/integrations` }),
+          perform: () => navigate({ to: `/projects/${projectSlug}/settings/${integration.path}/${integration.key}` }),
         })
       }
 
@@ -96,11 +111,11 @@ export function useNavigationCommands(): readonly PaletteCommand[] {
         commands.push({
           id: `nav:integration:${kind}`,
           title: label,
-          subtitle: "Settings → Integrations",
+          subtitle: "Settings → Project → Integrations",
           icon: AGENT_DISPATCH_KIND_ICONS[kind],
           section: "navigation",
           keywords: AGENT_DISPATCH_KEYWORDS[kind],
-          perform: () => navigate({ to: `/projects/${projectSlug}/settings/integrations/${kind}` }),
+          perform: () => navigate({ to: `/projects/${projectSlug}/settings/integrations/${integrationSlug(kind)}` }),
         })
       }
     }

@@ -4,18 +4,18 @@ import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
-import { useMembersCollection } from "../../../../../domains/members/members.collection.ts"
+import { useMembersCollection } from "../../../../../../domains/members/members.collection.ts"
 import {
   updateOrganizationMutation,
   useOrganizationsCollection,
-} from "../../../../../domains/organizations/organizations.collection.ts"
-import { deleteOrganization } from "../../../../../domains/organizations/organizations.functions.ts"
-import { toUserMessage } from "../../../../../lib/errors.ts"
-import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
-import { useAuthenticatedOrganizationId, useAuthenticatedUser } from "../../../-route-data.ts"
-import { SettingsPage } from "./-components/settings-page.tsx"
+} from "../../../../../../domains/organizations/organizations.collection.ts"
+import { deleteOrganization } from "../../../../../../domains/organizations/organizations.functions.ts"
+import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
+import { useAuthenticatedOrganizationId, useAuthenticatedUser } from "../../../../-route-data.ts"
+import { SettingsPage } from "../-components/settings-page.tsx"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/organization")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/organization/")({
   component: OrganizationSettingsPage,
 })
 

@@ -240,10 +240,10 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         path: (slug) => `/projects/${slug}/settings/defaults`,
       },
       {
-        key: "global-integrations",
-        label: "Global integrations",
+        key: "organization-integrations",
+        label: "Integrations",
         icon: Plug,
-        path: (slug) => `/projects/${slug}/settings/global-integrations`,
+        path: (slug) => `/projects/${slug}/settings/organization/integrations`,
       },
       {
         key: "sso",

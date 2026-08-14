@@ -5,7 +5,7 @@ import { updateOrganizationRedactionMutation } from "../../../../../../domains/o
 import { decodeEntities, encodeEntities } from "../../../../../../domains/projects/redaction-entities.ts"
 import { decodeRules, encodeRules } from "../../../../../../domains/projects/redaction-rule-drafts.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
-import { OrgDefaultBlastRadius, otherAffectedProjects, useOrgDefaultConfirm } from "./org-default-confirm.tsx"
+import { OrgDefaultBlastRadius, otherAffectedProjects, useInlineOrgDefaultConfirm } from "./org-default-confirm.tsx"
 import { RedactionCard, type RedactionCardValue } from "./redaction-card.tsx"
 
 /**
@@ -37,7 +37,7 @@ export function OrganizationRedactionModal({
   const [locked, setLocked] = useState(current?.locked ?? false)
 
   const otherAffected = otherAffectedProjects({ projectCount, overrideCount, currentProjectInherits })
-  const confirm = useOrgDefaultConfirm(otherAffected)
+  const confirm = useInlineOrgDefaultConfirm(otherAffected)
 
   const save = async () => {
     if (!confirm.gate()) return

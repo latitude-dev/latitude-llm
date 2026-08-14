@@ -217,6 +217,7 @@ function ProjectPrivacySettingsPage() {
           pendingChange={
             pendingRemoval
               ? {
+                  title: "Follow the organization redaction policy?",
                   description: `This project will follow the organization default${orgPolicy.mode === "off" ? ", which is off — it will stop redacting PII" : ""}. Its own policy is discarded. Existing spans are unaffected either way.`,
                   applyLabel: "Follow organization",
                   isApplying,
