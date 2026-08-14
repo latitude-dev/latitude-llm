@@ -202,10 +202,8 @@ export function buildHasLlmActivityClause(
 /**
  * Operations whose spans carry conversation messages.
  *
- * Every query that picks or renders a conversation must gate on this same set. Selecting a trace
- * on a wider predicate than the one that renders it lets a trace win selection and then render
- * empty — a wrapper (`invoke_agent`), a tool span, or an unrecognised vendor string mapped to
- * `unspecified` all store messages while contributing nothing to the rollups below.
+ * Selecting a conversation on a wider predicate than the one that renders it lets a trace win
+ * selection and then render empty, so both sides gate on this same set.
  */
 export const MESSAGE_OPERATION_FILTER = "operation IN ('chat', 'text_completion', 'generate_content')"
 
