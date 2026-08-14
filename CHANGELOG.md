@@ -9,9 +9,21 @@
 - Fixed the latest-output preview picking up spans that carry no assistant message, so trace and span lists now show the real last output (ref: #4439).
 - Stopped OpenInference reasoning items from rendering as empty message bubbles in the span detail view (ref: #4438).
 
+### Sessions
+
+- The Indicators column now counts every score source instead of only human and flagger annotations, so the badge matches the total shown in the Scores tab. Evaluation score cards drop the evaluation name and always link to their parent signal (ref: #4440).
+
+### Settings
+
+- Extended the organization-vs-project integration split to Slack and GitHub, which previously had no organization page. All six integrations now follow one rule: the organization tab owns the shared connection and the default projects inherit, and a project's tab owns that project's override (ref: #4442).
+
 ### Models
 
 - Updated the bundled model and pricing catalog (ref: #4436).
+
+### Docs
+
+- Added a Status link to the docs header pointing at status.latitude.so (ref: #4441).
 
 ## v0.3.80 - 2026-08-13
 
