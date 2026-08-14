@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.3.81 - 2026-08-14
+
+### Traces
+
+- Fixed the latest-output preview picking up spans that carry no assistant message, so trace and span lists now show the real last output (ref: #4439).
+- Stopped OpenInference reasoning items from rendering as empty message bubbles in the span detail view (ref: #4438).
+
+### Models
+
+- Updated the bundled model and pricing catalog (ref: #4436).
+
 ## v0.3.80 - 2026-08-13
 
 ### Settings
