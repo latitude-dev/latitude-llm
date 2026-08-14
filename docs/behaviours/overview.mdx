@@ -52,10 +52,10 @@ When you add a behavior, Latitude analyses a sample of your sessions through it 
 
 ## Inspect a behavior
 
-Open a behavior to see its groups as a hierarchy that emerges from your data. For each group the page shows:
+Open a behavior to see the meaningful groups that emerge from your data. Latitude hides structural-only parent groups, so the first rows show the groups that contain sessions rather than empty levels in the clustering tree. For each group the page shows:
 
 - a **trend**, for example new, spiking, rising, steady, cooling, or fading
-- the **number of sessions** in that group
+- the **number of sessions** in that group and its visible descendants
 - outcome metrics such as escalation rate, resolution rate, churn risk, and wins
 
 From a group you can review the underlying [traces](../observability/traces), [annotate](../annotations/overview) them, and let recurring failures flow into [Signals](../signals/overview).
@@ -67,6 +67,8 @@ From a group you can review the underlying [traces](../observability/traces), [a
 ## Narrow a behavior with views
 
 A **view** is a saved filtered slice of a behavior. Inside any behavior, click **+ View** to keep only the sessions that match a filter, for example one environment, one release, or a metadata value, and the behavior re-groups those sessions alone. Views are saved under their behavior, so you can return to "User goal, EU customers only" without rebuilding the filter each time.
+
+For question-based behaviors, the page shows the date range the current grouping covers. The date picker only offers that range, and counts and trends use the same covered window. The range grows as Latitude analyzes more sessions. If a group's earliest session sits at the start of that window, **First seen** reads **Before** that date because the group may be older than the available coverage.
 
 <Frame caption="Creating a view: filter a behavior down to a slice of sessions, saved under that behavior.">
   <img src="/images/behaviours/behavior-view.png" alt="The new-view modal filtering a behavior down to a subset of sessions" />
