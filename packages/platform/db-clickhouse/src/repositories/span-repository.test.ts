@@ -1292,6 +1292,72 @@ describe("SpanRepository", () => {
 
       expect(latestTraceId).toBeNull()
     })
+
+    it("skips a later trace whose output sits on an operation the conversation view cannot render", async () => {
+      const WRAPPER_TRACE = TraceId("cccccccccccccccccccccccccccccccc")
+      const CHAT_TRACE = TraceId("dddddddddddddddddddddddddddddddd")
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: CHAT_TRACE,
+            span_id: "chatspan00000001",
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"real answer"}]}]',
+            start_time: "2026-03-03 00:00:00.000000000",
+            end_time: "2026-03-03 00:00:01.000000000",
+            ingested_at: "2026-03-03 00:00:02.000",
+          }),
+          makeSpanRow({
+            trace_id: WRAPPER_TRACE,
+            span_id: "wrapspan00000001",
+            operation: "invoke_agent",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"wrapper echo"}]}]',
+            start_time: "2026-03-03 00:00:02.000000000",
+            end_time: "2026-03-03 00:00:03.000000000",
+            ingested_at: "2026-03-03 00:00:04.000",
+          }),
+        ]),
+      )
+
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [CHAT_TRACE, WRAPPER_TRACE],
+        }),
+      )
+
+      expect(latestTraceId).toBe(CHAT_TRACE)
+    })
+
+    it("returns null when no candidate trace carries output on a message operation", async () => {
+      const UNSPECIFIED_TRACE = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: UNSPECIFIED_TRACE,
+            span_id: "unspecspan000001",
+            operation: "unspecified",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"unrenderable"}]}]',
+            start_time: "2026-03-04 00:00:00.000000000",
+            end_time: "2026-03-04 00:00:01.000000000",
+            ingested_at: "2026-03-04 00:00:02.000",
+          }),
+        ]),
+      )
+
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [UNSPECIFIED_TRACE],
+        }),
+      )
+
+      expect(latestTraceId).toBeNull()
+    })
   })
 
   describe("listToolSpansBySessionId", () => {

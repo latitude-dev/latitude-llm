@@ -31,7 +31,7 @@ import { MEMORY_OPERATIONS, parseCostSource, SpanRepository, type SpanRepository
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
-import { sessionMembershipClause } from "../registries/helpers.ts"
+import { MESSAGE_OPERATION_FILTER, sessionMembershipClause } from "../registries/helpers.ts"
 import { buildSpanFilterClauses } from "../registries/span-fields.ts"
 
 const SPAN_KIND_TO_INT: Record<SpanKind, number> = {
@@ -1254,9 +1254,9 @@ export const SpanRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT argMaxIf(trace_id, end_time, output_messages != '') AS trace_id
+                query: `SELECT argMaxIf(trace_id, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS trace_id
                       FROM (
-                        SELECT trace_id, end_time, output_messages
+                        SELECT trace_id, end_time, output_messages, operation
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
