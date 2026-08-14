@@ -133,7 +133,7 @@ export const fetchTraceIndicators = (input: {
   Effect.gen(function* () {
     if (input.traceIds.length === 0) return new Map<string, TraceAnnotationCounts>()
     const scoreRepo = yield* ScoreRepository
-    const counts = yield* scoreRepo.countAnnotationsByTraceIds(input)
+    const counts = yield* scoreRepo.countAnnotationsByTraceIds({ ...input, source: "annotation" })
     return new Map(counts.map((entry) => [entry.traceId as string, entry] as const))
   })
 

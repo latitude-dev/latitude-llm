@@ -10,9 +10,8 @@ export interface IndicatorAnnotationCounts {
 
 /**
  * Inline cell that surfaces "needs-attention" signals at the row grain:
- * positive/negative annotations and an error count. Used by both the traces
- * and sessions list — sessions pass `annotationCounts: undefined` because
- * annotation rollups don't exist at the session grain.
+ * positive/negative scores (annotations, evaluations, custom) and an error
+ * count. Used by both the traces and sessions list.
  */
 export function IndicatorsCell({
   errorCount,
@@ -43,12 +42,12 @@ export function IndicatorsCell({
               indicator={<Icon icon={ThumbsUpIcon} size="xs" weight="L" />}
               label={showIconOnly ? "" : formatCount(positiveCount)}
               className={showIconOnly ? "gap-0 px-1.5" : onAnnotationClick ? "cursor-pointer" : undefined}
-              aria-label={`${positiveCount} positive ${positiveCount === 1 ? "annotation" : "annotations"}`}
+              aria-label={`${positiveCount} positive ${positiveCount === 1 ? "score" : "scores"}`}
               onClick={onAnnotationClick}
             />
           }
         >
-          {positiveCount} positive {positiveCount === 1 ? "annotation" : "annotations"}
+          {positiveCount} positive {positiveCount === 1 ? "score" : "scores"}
         </Tooltip>
       ) : null}
       {negativeCount > 0 ? (
@@ -60,12 +59,12 @@ export function IndicatorsCell({
               indicator={<Icon icon={ThumbsDownIcon} size="xs" weight="L" />}
               label={showIconOnly ? "" : formatCount(negativeCount)}
               className={showIconOnly ? "gap-0 px-1.5" : onAnnotationClick ? "cursor-pointer" : undefined}
-              aria-label={`${negativeCount} negative ${negativeCount === 1 ? "annotation" : "annotations"}`}
+              aria-label={`${negativeCount} negative ${negativeCount === 1 ? "score" : "scores"}`}
               onClick={onAnnotationClick}
             />
           }
         >
-          {negativeCount} negative {negativeCount === 1 ? "annotation" : "annotations"}
+          {negativeCount} negative {negativeCount === 1 ? "score" : "scores"}
         </Tooltip>
       ) : null}
       {errorCount > 0 ? (

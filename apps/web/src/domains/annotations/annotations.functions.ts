@@ -272,6 +272,12 @@ export const listAnnotationsBySession = createServerFn({ method: "POST" })
     return toListResult(result)
   })
 
+/**
+ * Positive/negative score counts per trace for the traces and sessions
+ * Indicators column. Counts every score source (annotation, evaluation,
+ * custom). The public API's `positiveAnnotationCount` still uses the
+ * annotation-only repository filter.
+ */
 export const listAnnotationCountsByTraceIds = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({

@@ -385,18 +385,21 @@ export const ScoreRepositoryLive = Layer.effect(
         })
       },
 
-      countAnnotationsByTraceIds: ({ projectId, traceIds, options }) =>
+      countAnnotationsByTraceIds: ({ projectId, traceIds, source, options }) =>
         Effect.gen(function* () {
           if (traceIds.length === 0) return []
 
           const sqlClient = yield* resolveSqlClient()
           const draftClause = applyDraftMode(options)
           const traceIdValues = traceIds.map((traceId) => String(traceId))
-          const baseWhere = and(
-            eq(scores.projectId, projectId),
-            eq(scores.sourceType, "annotation"),
-            inArray(scores.traceId, traceIdValues),
-          )
+          const baseWhere =
+            source !== undefined
+              ? and(
+                  eq(scores.projectId, projectId),
+                  eq(scores.sourceType, source),
+                  inArray(scores.traceId, traceIdValues),
+                )
+              : and(eq(scores.projectId, projectId), inArray(scores.traceId, traceIdValues))
           const whereClause = draftClause
             ? and(eq(scores.organizationId, sqlClient.organizationId), baseWhere, draftClause)
             : and(eq(scores.organizationId, sqlClient.organizationId), baseWhere)

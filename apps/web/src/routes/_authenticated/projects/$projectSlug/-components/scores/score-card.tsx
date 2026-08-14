@@ -5,6 +5,7 @@ import { Link, useParams } from "@tanstack/react-router"
 import { AlertCircleIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import type { ScoreRecord } from "../../../../../../domains/scores/scores.functions.ts"
 import { useSignal } from "../../../../../../domains/signals/signals.collection.ts"
+import { scoreCardEvaluationVerdict, scoreCardLinkedSignalId, scoreCardSourceTitle } from "./score-card-display.ts"
 
 const SOURCE_LABELS: Record<ScoreSourceType, string> = {
   annotation: "Annotation",
@@ -19,17 +20,21 @@ interface ScoreCardProps {
 
 export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
   const { projectSlug } = useParams({ strict: false })
+  const linkedSignalId = scoreCardLinkedSignalId(score)
+  const isOccurrence = score.signalId !== null
   const { data: linkedSignal } = useSignal({
     projectId,
-    signalId: score.signalId ?? "",
-    enabled: score.signalId !== null,
+    signalId: linkedSignalId ?? "",
+    enabled: linkedSignalId !== null,
   })
 
   const linkedSignalName = linkedSignal?.name ?? null
   const linkedSignalSlug = linkedSignal?.slug ?? null
   const linkedSignalDescription = linkedSignal?.description?.trim()
   const sourceLabel = SOURCE_LABELS[score.source]
+  const sourceTitle = scoreCardSourceTitle(score)
   const feedback = score.feedback?.trim()
+  const evaluationVerdict = scoreCardEvaluationVerdict(score)
 
   return (
     <div data-score-card-id={score.id} tabIndex={-1} className="flex flex-col gap-1 m-1 p-1 rounded-lg outline-none">
@@ -38,8 +43,13 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
           {sourceLabel}
         </Badge>
         <Text.H6 color="foregroundMuted" className="truncate">
-          {score.sourceId}
+          {sourceTitle}
         </Text.H6>
+        {evaluationVerdict ? (
+          <Badge variant="secondary" size="small">
+            {evaluationVerdict}
+          </Badge>
+        ) : null}
         <Text.H6 color="foregroundMuted">{relativeTime(new Date(score.createdAt))}</Text.H6>
         <div className="ml-auto flex items-center gap-x-1">
           {score.errored ? (
@@ -72,7 +82,7 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
       {linkedSignalName ? (
         <div className="flex items-center gap-2 pt-1">
           {(() => {
-            const isNavigable = Boolean(projectSlug && score.signalId)
+            const isNavigable = Boolean(projectSlug && linkedSignalId)
             const badge = (
               <Badge
                 variant="outline"
@@ -104,9 +114,12 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
               ) : (
                 badge
               )
-            return linkedSignalDescription ? (
+            const tooltip = isOccurrence
+              ? linkedSignalDescription
+              : `This evaluation monitors ${linkedSignalName}. This run did not record an occurrence.`
+            return tooltip ? (
               <Tooltip asChild trigger={trigger}>
-                <span className="block max-w-xs whitespace-pre-wrap text-left">{linkedSignalDescription}</span>
+                <span className="block max-w-xs whitespace-pre-wrap text-left">{tooltip}</span>
               </Tooltip>
             ) : (
               trigger

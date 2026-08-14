@@ -1,3 +1,4 @@
+import { EvaluationRepository } from "@domain/evaluations"
 import {
   listScoresByTraceIdsUseCase,
   listTraceScoresUseCase,
@@ -6,10 +7,10 @@ import {
   type ScoreSourceType,
   scoreDraftModeSchema,
 } from "@domain/scores"
-import { ScoreRepositoryLive } from "@platform/db-postgres"
+import { EvaluationRepositoryLive, ScoreRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { getPostgresClient } from "../../server/clients.ts"
 import { traceIdSchema } from "../../server/id-validation.ts"
@@ -27,6 +28,8 @@ export interface ScoreRecord {
   readonly sourceId: string
   readonly simulationId: string | null
   readonly signalId: string | null
+  readonly evaluationName: string | null
+  readonly evaluationSignalId: string | null
   readonly value: number
   readonly passed: boolean
   readonly feedback: string
@@ -43,7 +46,12 @@ export interface ScoreRecord {
   readonly updatedAt: string
 }
 
-const toRecord = (score: Score): ScoreRecord => ({
+interface EvaluationLookup {
+  readonly name: string
+  readonly signalId: string
+}
+
+const toRecord = (score: Score, evaluation: EvaluationLookup | undefined): ScoreRecord => ({
   id: score.id as string,
   organizationId: score.organizationId as string,
   projectId: score.projectId as string,
@@ -54,6 +62,8 @@ const toRecord = (score: Score): ScoreRecord => ({
   sourceId: score.sourceId,
   simulationId: score.simulationId ? (score.simulationId as string) : null,
   signalId: score.signalId ? (score.signalId as string) : null,
+  evaluationName: score.sourceType === "evaluation" ? (evaluation?.name ?? null) : null,
+  evaluationSignalId: score.sourceType === "evaluation" ? (evaluation?.signalId ?? null) : null,
   value: score.value,
   passed: score.passed,
   feedback: score.feedback,
@@ -70,12 +80,44 @@ const toRecord = (score: Score): ScoreRecord => ({
   updatedAt: score.updatedAt.toISOString(),
 })
 
-const toListResult = (page: ScoreListPage) => ({
-  items: page.items.map(toRecord),
+const loadEvaluationsById = (sourceIds: readonly string[]) =>
+  Effect.gen(function* () {
+    const uniqueIds = [...new Set(sourceIds)]
+    if (uniqueIds.length === 0) return new Map<string, EvaluationLookup>()
+
+    const evaluationRepository = yield* EvaluationRepository
+    const found = yield* Effect.forEach(
+      uniqueIds,
+      (id) => evaluationRepository.findById(id).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+      { concurrency: 8 },
+    )
+
+    const byId = new Map<string, EvaluationLookup>()
+    for (const evaluation of found) {
+      if (!evaluation) continue
+      byId.set(evaluation.id as string, { name: evaluation.name, signalId: evaluation.signalId })
+    }
+    return byId
+  })
+
+const toListResult = (page: ScoreListPage, evaluationsById: ReadonlyMap<string, EvaluationLookup>) => ({
+  items: page.items.map((score) =>
+    toRecord(score, score.sourceType === "evaluation" ? evaluationsById.get(score.sourceId) : undefined),
+  ),
   hasMore: page.hasMore,
   limit: page.limit,
   offset: page.offset,
 })
+
+const scoresWithEvaluationsLayer = Layer.mergeAll(ScoreRepositoryLive, EvaluationRepositoryLive)
+
+const withEvaluationNames = (page: ScoreListPage) =>
+  Effect.gen(function* () {
+    const evaluationsById = yield* loadEvaluationsById(
+      page.items.filter((score) => score.sourceType === "evaluation").map((score) => score.sourceId),
+    )
+    return toListResult(page, evaluationsById)
+  })
 
 type ScoreListResult = ReturnType<typeof toListResult>
 
@@ -93,17 +135,19 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
     const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
-    const result = await Effect.runPromise(
+    return await Effect.runPromise(
       listTraceScoresUseCase({
         projectId: data.projectId,
         traceId: data.traceId,
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
-      }).pipe(withScopedPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
+      }).pipe(
+        Effect.flatMap(withEvaluationNames),
+        withScopedPostgres(scoresWithEvaluationsLayer, client, organizationId),
+        withTracing,
+      ),
     )
-
-    return toListResult(result)
   })
 
 /**
@@ -130,15 +174,17 @@ export const listScoresBySession = createServerFn({ method: "POST" })
     const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
-    const result = await Effect.runPromise(
+    return await Effect.runPromise(
       listScoresByTraceIdsUseCase({
         projectId: data.projectId,
         traceIds: data.traceIds,
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
-      }).pipe(withScopedPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
+      }).pipe(
+        Effect.flatMap(withEvaluationNames),
+        withScopedPostgres(scoresWithEvaluationsLayer, client, organizationId),
+        withTracing,
+      ),
     )
-
-    return toListResult(result)
   })
