@@ -108,7 +108,7 @@ const toListResult = (page: ScoreListPage, evaluationsById: ReadonlyMap<string, 
 
 const scoresWithEvaluationsLayer = Layer.mergeAll(ScoreRepositoryLive, EvaluationRepositoryLive)
 
-const withEvaluationNames = (page: ScoreListPage) =>
+const withEvaluationSignals = (page: ScoreListPage) =>
   Effect.gen(function* () {
     const evaluationsById = yield* loadEvaluationsById(
       page.items.filter((score) => score.sourceType === "evaluation").map((score) => score.sourceId),
@@ -140,7 +140,7 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
       }).pipe(
-        Effect.flatMap(withEvaluationNames),
+        Effect.flatMap(withEvaluationSignals),
         withScopedPostgres(scoresWithEvaluationsLayer, client, organizationId),
         withTracing,
       ),
@@ -179,7 +179,7 @@ export const listScoresBySession = createServerFn({ method: "POST" })
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
       }).pipe(
-        Effect.flatMap(withEvaluationNames),
+        Effect.flatMap(withEvaluationSignals),
         withScopedPostgres(scoresWithEvaluationsLayer, client, organizationId),
         withTracing,
       ),

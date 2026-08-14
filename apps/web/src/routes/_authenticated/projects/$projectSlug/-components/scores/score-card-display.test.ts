@@ -12,12 +12,12 @@ describe("scoreCardSourceTitle", () => {
 })
 
 describe("scoreCardLinkedSignalId", () => {
-  it("prefers the occurrence signal id", () => {
-    expect(scoreCardLinkedSignalId({ signalId: "occurrence", evaluationSignalId: "detector" })).toBe("occurrence")
+  it("always uses the evaluation's parent signal when present", () => {
+    expect(scoreCardLinkedSignalId({ signalId: "occurrence", evaluationSignalId: "detector" })).toBe("detector")
   })
 
-  it("falls back to the evaluation's parent signal for absent runs", () => {
-    expect(scoreCardLinkedSignalId({ signalId: null, evaluationSignalId: "detector" })).toBe("detector")
+  it("falls back to a stamped signal id when the evaluation has no parent", () => {
+    expect(scoreCardLinkedSignalId({ signalId: "stamped", evaluationSignalId: null })).toBe("stamped")
   })
 })
 

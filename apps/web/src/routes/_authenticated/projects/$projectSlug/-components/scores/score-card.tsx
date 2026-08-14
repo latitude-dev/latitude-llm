@@ -27,11 +27,13 @@ function ScoreSignalLink({
 }: {
   readonly projectSlug: string | undefined
   readonly signalId: string
-  readonly name: string
+  readonly name: string | null
   readonly slug: string | null
   readonly description: string | undefined
 }) {
-  const isNavigable = Boolean(projectSlug && signalId)
+  const label = name ?? "Signal"
+  const signalSlug = slug ?? signalId
+  const isNavigable = Boolean(projectSlug && signalSlug)
   const badge = (
     <Badge
       variant="outline"
@@ -45,16 +47,16 @@ function ScoreSignalLink({
         className: "stroke-[2.5]",
       }}
     >
-      {name}
+      {label}
     </Badge>
   )
   const trigger =
-    projectSlug && slug ? (
+    projectSlug && signalSlug ? (
       <Link
         data-no-navigate
         to="/projects/$projectSlug/signals/$signalSlug"
-        params={{ projectSlug, signalSlug: slug }}
-        aria-label={`Open signal ${name}`}
+        params={{ projectSlug, signalSlug }}
+        aria-label={`Open signal ${label}`}
         onClick={(event) => event.stopPropagation()}
         className="inline-flex min-w-0"
       >
@@ -88,16 +90,15 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
   const sourceTitle = scoreCardSourceTitle(score)
   const feedback = score.feedback?.trim()
   const evaluationVerdict = scoreCardEvaluationVerdict(score)
-  const signalLink =
-    linkedSignalId && linkedSignalName ? (
-      <ScoreSignalLink
-        projectSlug={projectSlug}
-        signalId={linkedSignalId}
-        name={linkedSignalName}
-        slug={linkedSignalSlug}
-        description={linkedSignalDescription}
-      />
-    ) : null
+  const signalLink = linkedSignalId ? (
+    <ScoreSignalLink
+      projectSlug={projectSlug}
+      signalId={linkedSignalId}
+      name={linkedSignalName}
+      slug={linkedSignalSlug}
+      description={linkedSignalDescription}
+    />
+  ) : null
 
   return (
     <div data-score-card-id={score.id} tabIndex={-1} className="flex flex-col gap-1 m-1 p-1 rounded-lg outline-none">
