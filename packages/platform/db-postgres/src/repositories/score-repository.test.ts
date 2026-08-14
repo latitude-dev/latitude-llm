@@ -759,9 +759,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    expect(counts).toEqual([
-      expect.objectContaining({ traceId: mixedTraceId, positiveCount: 1, negativeCount: 2 }),
-    ])
+    expect(counts).toEqual([expect.objectContaining({ traceId: mixedTraceId, positiveCount: 1, negativeCount: 2 })])
   })
 
   it("findPublishedSystemAnnotationByTraceAndFeedback finds existing system annotation score", async () => {
