@@ -1,229 +1,121 @@
-import { Skeleton, Text, useMountEffect, useToast } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
-import { eq } from "@tanstack/react-db"
-import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { useState } from "react"
-import { z } from "zod"
+import { Button, Skeleton, Text } from "@repo/ui"
+import { useQueries, useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import {
-  type AgentDispatchIntegrationRecord,
-  listAgentDispatchIntegrations,
+  getProjectDispatchSettings,
+  projectDispatchSettingsQueryKey,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
 import {
   type AgentDispatchKindKey,
   isAgentDispatchKind,
 } from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
 import {
-  GITHUB_INTEGRATION_QUERY_KEY,
-  getActiveGithubIntegration,
-  isGithubIntegrationConfigured,
+  getGithubProjectConfig,
+  githubProjectConfigQueryKey,
 } from "../../../../../../domains/github/github.functions.ts"
+import { useConnectedIntegrations } from "../../../../../../domains/integrations/connected-integrations.ts"
 import {
   type ConnectedIntegration,
-  type IntegrationKey,
-  integrationEntry,
-  sortConnectedIntegrations,
+  hasProjectSettings,
 } from "../../../../../../domains/integrations/integration-catalog.ts"
-import {
-  getActiveSlackIntegration,
-  isSlackConfigured,
-} from "../../../../../../domains/integrations/integrations.functions.ts"
-import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { useRouteProject } from "../../-route-data.ts"
-import {
-  AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
-  ConnectAgentDispatchModal,
-} from "../-components/agent-dispatch-section.tsx"
-import { AvailableIntegrations } from "../-components/available-integrations.tsx"
 import { IntegrationRow } from "../-components/integration-row.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
-import { SLACK_INTEGRATION_QUERY_KEY } from "../-components/slack-route-row.tsx"
-
-const searchSchema = z.object({
-  installed: z.literal("ok").optional(),
-  error: z.string().optional(),
-  githubInstalled: z.literal("ok").optional(),
-  githubPending: z.literal("approval").optional(),
-  githubError: z.string().optional(),
-})
-
-const GITHUB_CONFIGURED_QUERY_KEY = ["github-integration", "configured"] as const
-const SLACK_CONFIGURED_QUERY_KEY = ["slack-integration", "configured"] as const
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations/")({
-  validateSearch: searchSchema,
   component: IntegrationsSettingsPage,
 })
 
+const FOLLOWS_ORGANIZATION = "Following the organization default"
+const OVERRIDES_ORGANIZATION = "Overrides the organization default"
+
+/**
+ * This project's half of the split: what each connected integration does *here*.
+ * Connecting and disconnecting are organization-wide and live on the organization's
+ * own Integrations tab, which is also why Slack — org-wide only — has no row.
+ */
 function IntegrationsSettingsPage() {
-  const { toast } = useToast()
-  const router = useRouter()
-  const search = Route.useSearch()
   const { projectSlug } = Route.useParams()
   const routeProject = useRouteProject()
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
-    [projectSlug],
-  )
-  const currentProject = project ?? routeProject
+  const { connected, isLoading } = useConnectedIntegrations()
 
-  const [connectingKind, setConnectingKind] = useState<AgentDispatchKindKey | null>(null)
+  const configurable = connected.filter((integration) => hasProjectSettings(integration.entry.key))
+  const dispatchKinds = configurable
+    .map((integration) => integration.entry.key)
+    .filter((key): key is AgentDispatchKindKey => isAgentDispatchKind(key))
 
-  useMountEffect(() => {
-    if (search.installed === "ok") {
-      toast({ description: "Slack connected" })
-    } else if (search.error === "workspace_taken") {
-      toast({
-        variant: "destructive",
-        description: "This Slack workspace is already connected to another Latitude organization.",
-      })
-    } else if (search.error === "oauth_failed") {
-      toast({
-        variant: "destructive",
-        description: "Couldn't complete the Slack install. Please try again.",
-      })
-    }
-    if (search.githubInstalled === "ok") {
-      toast({ description: "GitHub connected" })
-    } else if (search.githubPending === "approval") {
-      toast({
-        variant: "warning",
-        description:
-          "GitHub installation needs approval from an organization admin. Once approved, connect again to finish.",
-      })
-    } else if (search.githubError === "installation_taken") {
-      toast({
-        variant: "destructive",
-        description: "This GitHub installation is already connected to another Latitude organization.",
-      })
-    } else if (search.githubError === "verification_failed") {
-      toast({
-        variant: "destructive",
-        description: "Couldn't verify the GitHub installation. Please start the install from Latitude and try again.",
-      })
-    } else if (search.githubError === "oauth_failed") {
-      toast({ variant: "destructive", description: "Couldn't complete the GitHub install. Please try again." })
-    }
-    if (search.installed || search.error || search.githubInstalled || search.githubPending || search.githubError) {
-      void router.navigate({ to: Route.fullPath, search: {}, replace: true })
-    }
-  })
-
-  const { data: slackConfigured } = useQuery({
-    queryKey: SLACK_CONFIGURED_QUERY_KEY,
-    queryFn: () => isSlackConfigured(),
-  })
-  const { data: githubConfigured } = useQuery({
-    queryKey: GITHUB_CONFIGURED_QUERY_KEY,
-    queryFn: () => isGithubIntegrationConfigured(),
-  })
-
-  const { data: slack, isLoading: slackLoading } = useQuery({
-    queryKey: SLACK_INTEGRATION_QUERY_KEY,
-    queryFn: () => getActiveSlackIntegration(),
-    enabled: slackConfigured === true,
-  })
-  const { data: github, isLoading: githubLoading } = useQuery({
-    queryKey: GITHUB_INTEGRATION_QUERY_KEY,
-    queryFn: () => getActiveGithubIntegration(),
-    enabled: githubConfigured === true,
-  })
-  const { data: dispatchIntegrations = [], isLoading: dispatchLoading } = useQuery({
-    queryKey: AGENT_DISPATCH_INTEGRATIONS_QUERY_KEY,
-    queryFn: () => listAgentDispatchIntegrations(),
-  })
-
-  const isLoading =
-    slackConfigured === undefined || githubConfigured === undefined || slackLoading || githubLoading || dispatchLoading
-
-  // A deployment without the Slack or GitHub app configured can't connect them at all,
-  // so they are never offered.
-  const available: IntegrationKey[] = [
-    ...(slackConfigured === true ? (["slack"] as const) : []),
-    ...(githubConfigured === true ? (["github"] as const) : []),
-    "cursor",
-    "claude_code",
-    "linear",
-    "webhook",
-  ]
-
-  const connectedRows: ConnectedIntegration[] = [
-    ...(slack
-      ? [
-          {
-            entry: integrationEntry("slack"),
-            identity: slack.teamName,
-            detail: `Connected ${relativeTime(new Date(slack.installedAt))}`,
-            needsAttention: slack.needsReconnect,
-            attentionLabel: slack.needsReconnect ? "Reconnect needed" : undefined,
-          },
-        ]
-      : []),
-    ...(github
-      ? [
-          {
-            entry: integrationEntry("github"),
-            identity: github.accountLogin,
-            detail: `${github.repositorySelection === "all" ? "All repositories" : "Selected repositories"} · Connected ${relativeTime(new Date(github.installedAt))}`,
-            needsAttention: github.suspendedAt !== null,
-            attentionLabel: github.suspendedAt !== null ? "Suspended" : undefined,
-          },
-        ]
-      : []),
-    ...dispatchIntegrations.map((integration: AgentDispatchIntegrationRecord) => ({
-      entry: integrationEntry(integration.kind),
-      identity: integration.vendorAccountId,
-      detail: `Connected ${relativeTime(new Date(integration.installedAt))}`,
-      needsAttention: false,
+  const dispatchSettings = useQueries({
+    queries: dispatchKinds.map((kind) => ({
+      queryKey: projectDispatchSettingsQueryKey(routeProject.id, kind),
+      queryFn: () => getProjectDispatchSettings({ data: { projectId: routeProject.id, kind } }),
     })),
-  ]
+  })
+  const { data: githubConfig } = useQuery({
+    queryKey: githubProjectConfigQueryKey(routeProject.id),
+    queryFn: () => getGithubProjectConfig({ data: { projectId: routeProject.id } }),
+    enabled: configurable.some((integration) => integration.entry.key === "github"),
+  })
 
-  const connected = sortConnectedIntegrations(connectedRows)
-  const connectedKeys = new Set(connected.map((row) => row.entry.key))
-  const openConnect = (key: IntegrationKey) => {
-    if (!isAgentDispatchKind(key)) return
-    setConnectingKind(key)
+  const scopeDetail = (key: ConnectedIntegration["entry"]["key"]): string | null => {
+    if (key === "github") {
+      if (!githubConfig) return null
+      // A config row of its own is the repo binding, which is an override even when monitoring is inherited.
+      return githubConfig.hasOverride ? OVERRIDES_ORGANIZATION : FOLLOWS_ORGANIZATION
+    }
+    const index = dispatchKinds.indexOf(key as AgentDispatchKindKey)
+    const settings = index === -1 ? undefined : dispatchSettings[index]?.data
+    if (!settings) return null
+    return settings.override ? OVERRIDES_ORGANIZATION : FOLLOWS_ORGANIZATION
   }
+
+  const rows: ConnectedIntegration[] = configurable.map((integration) => ({
+    ...integration,
+    detail: scopeDetail(integration.entry.key) ?? integration.detail,
+  }))
 
   return (
     <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
       <div className="flex w-full flex-col gap-8">
         {isLoading ? (
           <Skeleton className="h-32 w-full" />
-        ) : (
-          <>
-            {connected.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                <Text.H6M color="foregroundMuted">Connected</Text.H6M>
-                <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
-                  {connected.map((integration) => (
-                    <IntegrationRow key={integration.entry.key} integration={integration} projectSlug={projectSlug} />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="flex flex-col gap-3">
-              <Text.H6M color="foregroundMuted">{connected.length > 0 ? "Available" : "Get started"}</Text.H6M>
-              <AvailableIntegrations
-                available={available}
-                connected={connectedKeys}
-                onConnectDispatchKind={openConnect}
-              />
+        ) : rows.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
+              {rows.map((integration) => (
+                <IntegrationRow
+                  key={integration.entry.key}
+                  integration={integration}
+                  projectSlug={projectSlug}
+                  scope="project"
+                />
+              ))}
             </div>
-          </>
+            <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <Text.H6 color="foregroundMuted">
+                Connections, and the defaults these settings inherit, are organization-wide.
+              </Text.H6>
+              <Button asChild variant="ghost">
+                <Link to="/projects/$projectSlug/settings/organization/integrations" params={{ projectSlug }}>
+                  Manage for the organization →
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-border p-6">
+            <Text.H5M>No integrations to configure yet</Text.H5M>
+            <Text.H6 color="foregroundMuted">
+              Integrations are connected once for the whole organization. Connect one, then come back to tune it for
+              this project.
+            </Text.H6>
+            <Button asChild variant="outline">
+              <Link to="/projects/$projectSlug/settings/organization/integrations" params={{ projectSlug }}>
+                Manage for the organization
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
-
-      {connectingKind ? (
-        <ConnectAgentDispatchModal
-          kind={connectingKind}
-          projectId={currentProject.id}
-          open
-          onClose={() => setConnectingKind(null)}
-          onWebhookSecret={() => undefined}
-        />
-      ) : null}
     </SettingsPage>
   )
 }

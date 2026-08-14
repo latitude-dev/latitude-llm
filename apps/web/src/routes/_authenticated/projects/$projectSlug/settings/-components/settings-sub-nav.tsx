@@ -8,6 +8,11 @@ export function SettingsSubNav({ projectSlug }: { projectSlug: string }) {
   const groups = useVisibleProjectSettingsGroups()
   // Mirrors the `md:` breakpoint that switches the nav to its icons-only rail.
   const collapsed = !useMediaQuery("(min-width: 48rem)")
+  // Longest match wins, so /organization/integrations highlights Integrations, not Organization → General.
+  const activePath = groups
+    .flatMap((group) => group.items.map((item) => item.path(projectSlug)))
+    .filter((to) => pathname === to || pathname.startsWith(`${to}/`))
+    .reduce((longest, to) => (to.length > longest.length ? to : longest), "")
 
   return (
     <nav className="flex w-fit shrink-0 flex-col gap-6 overflow-y-auto bg-secondary p-4 md:w-72">
@@ -18,7 +23,7 @@ export function SettingsSubNav({ projectSlug }: { projectSlug: string }) {
           </span>
           {group.items.map((item) => {
             const to = item.path(projectSlug)
-            const active = pathname === to || pathname.startsWith(`${to}/`)
+            const active = to === activePath
             const link = (
               <Link
                 key={item.key}

@@ -1,4 +1,4 @@
-import { Badge, Button, DotIndicator, Select, Text } from "@repo/ui"
+import { Badge, Button, DotIndicator, Modal, Select, Text } from "@repo/ui"
 import { LockIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
@@ -31,8 +31,9 @@ export type ScopeControl =
       readonly locked?: boolean
     }
 
-/** Held until applied, so flipping the selector to compare layers costs nothing. */
+/** Confirms the destructive direction of the selector — dropping this project's own values. */
 export interface PendingScopeChange {
+  readonly title: string
   readonly description: ReactNode
   readonly applyLabel: string
   readonly isApplying: boolean
@@ -63,61 +64,71 @@ export function ScopedSetting({
   readonly children: ReactNode
 }) {
   return (
-    <div className="flex w-full flex-col rounded-lg bg-muted/30">
-      <div className="flex w-full flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2 p-5">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex flex-row items-center gap-2">
-            <Text.H5M>{title}</Text.H5M>
-            {isDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
+    <>
+      <div className="flex w-full flex-col rounded-lg bg-muted/30">
+        <div className="flex w-full flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2 p-5">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-row items-center gap-2">
+              <Text.H5M>{title}</Text.H5M>
+              {isDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
+            </div>
+            {description ? <Text.H6 color="foregroundMuted">{description}</Text.H6> : null}
           </div>
-          {description ? <Text.H6 color="foregroundMuted">{description}</Text.H6> : null}
+          <div className="flex shrink-0 flex-row items-center gap-2">
+            <Text.H6 color="foregroundMuted">Set by</Text.H6>
+            {scope.kind === "selectable" && scope.locked ? (
+              <LockIcon className="h-3 w-3 text-muted-foreground" aria-label="Locked by the organization" />
+            ) : null}
+            {scope.kind === "fixed" ? (
+              <Badge variant="outlineMuted" size="normal">
+                {SCOPE_LABELS[scope.value]}
+              </Badge>
+            ) : (
+              <Select
+                name={`${idPrefix}-scope`}
+                aria-label="Set by"
+                options={SCOPE_OPTIONS}
+                value={scope.value}
+                size="small"
+                width="auto"
+                loading={scope.loading ?? false}
+                disabled={scope.disabled === true || scope.locked === true}
+                onChange={(next) => {
+                  if (next !== scope.value) scope.onChange(next)
+                }}
+              />
+            )}
+          </div>
         </div>
-        <div className="flex shrink-0 flex-row items-center gap-2">
-          <Text.H6 color="foregroundMuted">Set by</Text.H6>
-          {scope.kind === "selectable" && scope.locked ? (
-            <LockIcon className="h-3 w-3 text-muted-foreground" aria-label="Locked by the organization" />
-          ) : null}
-          {scope.kind === "fixed" ? (
-            <Badge variant="outlineMuted" size="normal">
-              {SCOPE_LABELS[scope.value]}
-            </Badge>
-          ) : (
-            <Select
-              name={`${idPrefix}-scope`}
-              aria-label="Set by"
-              options={SCOPE_OPTIONS}
-              value={scope.value}
-              size="small"
-              width="auto"
-              loading={scope.loading ?? false}
-              disabled={scope.disabled === true || scope.locked === true}
-              onChange={(next) => {
-                if (next !== scope.value) scope.onChange(next)
-              }}
-            />
-          )}
-        </div>
+
+        {notice ? <div className="border-border border-t p-5">{notice}</div> : null}
+
+        <div className="flex w-full flex-col border-border border-t p-5">{children}</div>
+
+        {footer ? <div className="border-border border-t p-5">{footer}</div> : null}
       </div>
 
       {pendingChange ? (
-        <div className="flex flex-row flex-wrap items-center justify-between gap-4 border-border border-t bg-warning-muted/40 p-5">
-          <Text.H6 color="foregroundMuted">{pendingChange.description}</Text.H6>
-          <div className="flex shrink-0 flex-row items-center gap-2">
-            <Button variant="outline" onClick={pendingChange.onDiscard} disabled={pendingChange.isApplying}>
-              Discard
-            </Button>
-            <Button onClick={pendingChange.onApply} isLoading={pendingChange.isApplying}>
-              {pendingChange.applyLabel}
-            </Button>
-          </div>
-        </div>
+        <Modal
+          open
+          dismissible
+          onOpenChange={(next) => {
+            if (!next && !pendingChange.isApplying) pendingChange.onDiscard()
+          }}
+          title={pendingChange.title}
+          description={pendingChange.description}
+          footer={
+            <div className="flex flex-row items-center gap-2">
+              <Button variant="outline" onClick={pendingChange.onDiscard} disabled={pendingChange.isApplying}>
+                Cancel
+              </Button>
+              <Button onClick={pendingChange.onApply} disabled={pendingChange.isApplying}>
+                {pendingChange.applyLabel}
+              </Button>
+            </div>
+          }
+        />
       ) : null}
-
-      {notice ? <div className="border-border border-t p-5">{notice}</div> : null}
-
-      <div className="flex w-full flex-col border-border border-t p-5">{children}</div>
-
-      {footer ? <div className="border-border border-t p-5">{footer}</div> : null}
-    </div>
+    </>
   )
 }

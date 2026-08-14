@@ -47,18 +47,12 @@ function ConnectAction({
  */
 export function AvailableIntegrations({
   available,
-  connected,
   onConnectDispatchKind,
 }: {
   readonly available: readonly IntegrationKey[]
-  readonly connected: ReadonlySet<IntegrationKey>
   readonly onConnectDispatchKind: (key: IntegrationKey) => void
 }) {
-  const entries = INTEGRATION_CATALOG.filter((entry) => available.includes(entry.key) && !connected.has(entry.key))
-
-  if (entries.length === 0) {
-    return <Text.H6 color="foregroundMuted">Every available integration is connected.</Text.H6>
-  }
+  const entries = INTEGRATION_CATALOG.filter((entry) => available.includes(entry.key))
 
   return (
     <div className="grid grid-cols-1 gap-3 @[640px]:grid-cols-2">

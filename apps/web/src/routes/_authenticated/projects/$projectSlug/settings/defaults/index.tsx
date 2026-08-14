@@ -2,9 +2,9 @@ import { hasRedactionField, resolveRedactionPolicy } from "@domain/shared"
 import { Button, Icon, Skeleton, Text } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { EyeOffIcon, type LucideProps } from "lucide-react"
-import { type ComponentType, useState } from "react"
+import { type ComponentType, type ReactNode, useState } from "react"
 import {
   GITHUB_ORG_DEFAULTS_QUERY_KEY,
   getGithubOrgDefaults,
@@ -14,7 +14,6 @@ import { useIsOrganizationOwner } from "../../../../../../domains/members/member
 import { useOrganizationsCollection } from "../../../../../../domains/organizations/organizations.collection.ts"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { useAuthenticatedOrganizationId, useAuthenticatedUser } from "../../../../-route-data.ts"
-import { OrganizationGithubModal } from "../-components/github-manage.tsx"
 import { OrganizationRedactionModal } from "../-components/organization-redaction-modal.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
 
@@ -28,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
  * scope is the page's subject rather than a per-setting property.
  */
 function OrganizationDefaultsPage() {
+  const { projectSlug } = Route.useParams()
   const organizationId = useAuthenticatedOrganizationId()
   const user = useAuthenticatedUser()
   const isOwner = useIsOrganizationOwner(user.id)
@@ -61,7 +61,7 @@ function OrganizationDefaultsPage() {
             overrideCount={projects.filter((row) => hasRedactionField(row.settings?.redaction)).length}
           />
 
-          <GithubDefaultRow canEdit={isOwner} projectCount={projectCount} />
+          <GithubDefaultRow projectSlug={projectSlug} projectCount={projectCount} />
         </div>
       </div>
     </SettingsPage>
@@ -74,16 +74,14 @@ function DefaultRow({
   value,
   projectCount,
   overrideCount,
-  canEdit,
-  onEdit,
+  action,
 }: {
   readonly icon: ComponentType<LucideProps>
   readonly title: string
   readonly value: string
   readonly projectCount: number
   readonly overrideCount: number
-  readonly canEdit: boolean
-  readonly onEdit: () => void
+  readonly action?: ReactNode
 }) {
   return (
     <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
@@ -102,11 +100,7 @@ function DefaultRow({
             ? `${projectCount - overrideCount} of ${projectCount} inherit · ${overrideCount} override`
             : `All ${projectCount} inherit`}
         </Text.H6>
-        {canEdit ? (
-          <Button variant="outline" onClick={onEdit}>
-            Edit default
-          </Button>
-        ) : null}
+        {action}
       </div>
     </div>
   )
@@ -150,8 +144,13 @@ function RedactionDefaultRow({
         value={value}
         projectCount={projectCount}
         overrideCount={overrideCount}
-        canEdit={canEdit}
-        onEdit={() => setEditing(true)}
+        action={
+          canEdit ? (
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              Edit default
+            </Button>
+          ) : undefined
+        }
       />
       {editing ? (
         <OrganizationRedactionModal
@@ -165,8 +164,13 @@ function RedactionDefaultRow({
   )
 }
 
-function GithubDefaultRow({ projectCount, canEdit }: { readonly projectCount: number; readonly canEdit: boolean }) {
-  const [editing, setEditing] = useState(false)
+function GithubDefaultRow({
+  projectSlug,
+  projectCount,
+}: {
+  readonly projectSlug: string
+  readonly projectCount: number
+}) {
   // The org default itself, not the route project's effective config — otherwise a project
   // that overrides monitoring would have its values displayed as the organization default.
   const {
@@ -194,23 +198,22 @@ function GithubDefaultRow({ projectCount, canEdit }: { readonly projectCount: nu
   ].filter(Boolean)
 
   return (
-    <>
-      <DefaultRow
-        icon={integrationEntry("github").icon}
-        title="GitHub monitoring"
-        value={watched.length > 0 ? `Watches ${watched.join(" and ")}` : "Nothing watched"}
-        projectCount={projectCount}
-        overrideCount={defaults.overrideCount}
-        canEdit={canEdit}
-        onEdit={() => setEditing(true)}
-      />
-      {editing ? (
-        <OrganizationGithubModal
-          projectCount={projectCount}
-          overrideCount={defaults.overrideCount}
-          onClose={() => setEditing(false)}
-        />
-      ) : null}
-    </>
+    <DefaultRow
+      icon={integrationEntry("github").icon}
+      title="GitHub monitoring"
+      value={watched.length > 0 ? `Watches ${watched.join(" and ")}` : "Nothing watched"}
+      projectCount={projectCount}
+      overrideCount={defaults.overrideCount}
+      action={
+        <Button asChild variant="outline">
+          <Link
+            to="/projects/$projectSlug/settings/organization/integrations/$integrationSlug"
+            params={{ projectSlug, integrationSlug: "github" }}
+          >
+            Edit default
+          </Link>
+        </Button>
+      }
+    />
   )
 }

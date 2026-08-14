@@ -1,12 +1,16 @@
-import { Button, Icon, SlackIcon, Text } from "@repo/ui"
+import type { SlackRoute } from "@domain/integrations"
+import type { NotificationGroup } from "@domain/shared"
+import { Button, Icon, SlackIcon, Text, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   getActiveSlackIntegration,
+  SLACK_INTEGRATION_QUERY_KEY,
   type SlackIntegrationRecord,
 } from "../../../../../../../domains/integrations/integrations.functions.ts"
+import { toUserMessage } from "../../../../../../../lib/errors.ts"
 import { IntegrationCard } from "../../../settings/-components/integration-card.tsx"
-import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../../../settings/-components/slack-route-row.tsx"
+import { persistSlackRoute, SlackRouteRow } from "../../../settings/-components/slack-route-row.tsx"
 import { MockSlackQueue } from "../mocks/mock-slack-queue.tsx"
 
 export function Left({
@@ -100,13 +104,39 @@ function SlackConnectedOnboardingCard({ integration }: { readonly integration: S
         </div>
 
         <div className="flex flex-col gap-3 border-t border-border p-4">
-          <SlackRouteRow group="incidents" integration={integration} />
-          {showWrapped ? <SlackRouteRow group="wrapped_reports" integration={integration} /> : null}
-          {showCustom ? <SlackRouteRow group="custom_messages" integration={integration} /> : null}
+          <SelfSavingSlackRouteRow group="incidents" integration={integration} />
+          {showWrapped ? <SelfSavingSlackRouteRow group="wrapped_reports" integration={integration} /> : null}
+          {showCustom ? <SelfSavingSlackRouteRow group="custom_messages" integration={integration} /> : null}
         </div>
       </div>
-      <Text.H6 color="foregroundMuted">You can change these anytime in Settings → Integrations.</Text.H6>
+      <Text.H6 color="foregroundMuted">You can change these anytime in Settings → Organization → Integrations.</Text.H6>
     </div>
+  )
+}
+
+/** Onboarding has no save step, so each pick persists straight away. */
+function SelfSavingSlackRouteRow({
+  group,
+  integration,
+}: {
+  readonly group: NotificationGroup
+  readonly integration: SlackIntegrationRecord
+}) {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: (route: SlackRoute | null) => persistSlackRoute(group, route),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: SLACK_INTEGRATION_QUERY_KEY }),
+    onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
+  })
+
+  return (
+    <SlackRouteRow
+      group={group}
+      route={integration.routes[group]?.[0] ?? null}
+      disabled={mutation.isPending}
+      onChange={(next) => mutation.mutate(next)}
+    />
   )
 }
 

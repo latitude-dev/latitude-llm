@@ -9,14 +9,15 @@ import { useState } from "react"
 export const otherAffectedProjects = (input: {
   readonly projectCount: number
   readonly overrideCount: number
-  readonly currentProjectInherits: boolean
+  readonly currentProjectInherits?: boolean
 }): number => Math.max(0, input.projectCount - input.overrideCount - (input.currentProjectInherits ? 1 : 0))
 
 /**
- * Two-step save for an organization default, so a change that moves other projects can't
- * land on one click. Stays in the same modal rather than nesting a dialog inside one.
+ * Two-step save for an organization default edited from inside a modal, where a
+ * confirmation dialog would have to nest. Everywhere else uses
+ * {@link useOrgDefaultConfirm} in `org-default-confirm-modal.tsx`.
  */
-export function useOrgDefaultConfirm(otherAffected: number) {
+export function useInlineOrgDefaultConfirm(otherAffected: number) {
   const [awaitingConfirm, setAwaitingConfirm] = useState(false)
 
   return {
