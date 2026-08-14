@@ -198,3 +198,15 @@ export function buildHasLlmActivityClause(
       throw new Error(`Unsupported hasLlmActivity filter operator: ${cond.op}`)
   }
 }
+
+/**
+ * Operations whose spans carry conversation messages.
+ *
+ * Selecting a conversation on a wider predicate than the one that renders it lets a trace win
+ * selection and then render empty, so both sides gate on this same set.
+ */
+export const MESSAGE_OPERATION_FILTER = "operation IN ('chat', 'text_completion', 'generate_content')"
+
+/** System instructions additionally live on the agent wrapper span, so it joins the message set. */
+export const SYSTEM_INSTRUCTION_OPERATION_FILTER =
+  "operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent')"

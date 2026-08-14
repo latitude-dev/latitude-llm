@@ -31,7 +31,7 @@ import { MEMORY_OPERATIONS, parseCostSource, SpanRepository, type SpanRepository
 import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
-import { sessionMembershipClause } from "../registries/helpers.ts"
+import { MESSAGE_OPERATION_FILTER, sessionMembershipClause } from "../registries/helpers.ts"
 import { buildSpanFilterClauses } from "../registries/span-fields.ts"
 
 const SPAN_KIND_TO_INT: Record<SpanKind, number> = {
@@ -1254,9 +1254,11 @@ export const SpanRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT argMaxIf(trace_id, end_time, output_messages != '') AS trace_id
+                query: `SELECT
+                        argMaxIf(trace_id, end_time, output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS renderable_trace_id,
+                        argMaxIf(trace_id, end_time, output_messages != '') AS any_output_trace_id
                       FROM (
-                        SELECT trace_id, end_time, output_messages
+                        SELECT trace_id, end_time, output_messages, operation
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
@@ -1271,11 +1273,15 @@ export const SpanRepositoryLive = Layer.effect(
                 },
                 format: "JSONEachRow",
               })
-              return result.json<{ trace_id: string }>()
+              return result.json<{ renderable_trace_id: string; any_output_trace_id: string }>()
             })
             .pipe(
               Effect.map((rows) => {
-                const raw = normalizeCHString(rows[0]?.trace_id ?? "")
+                // Rank on the gate the conversation view renders under, but keep any output-bearing
+                // trace as the answer when nothing passes it: this id also gates scoring, the
+                // timeline anchor and span navigation, which a null would switch off entirely.
+                const renderable = normalizeCHString(rows[0]?.renderable_trace_id ?? "")
+                const raw = renderable.length > 0 ? renderable : normalizeCHString(rows[0]?.any_output_trace_id ?? "")
                 return raw.length > 0 ? toTraceId(raw) : null
               }),
               Effect.mapError((error) => toRepositoryError(error, "findLatestOutputTraceId")),
