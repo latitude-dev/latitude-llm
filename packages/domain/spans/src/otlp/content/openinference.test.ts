@@ -66,10 +66,21 @@ describe("parseContent (OpenInference)", () => {
       expect(result.inputMessages).toEqual([{ role: "user", parts: [{ type: "text", content: "no role here" }] }])
     })
 
-    it("defaults missing content to an empty string", () => {
+    it("drops a message that carries no content", () => {
       const result = parseContent([str("llm.input_messages.0.message.role", "user")])
 
-      expect(result.inputMessages).toEqual([{ role: "user", parts: [{ type: "text", content: "" }] }])
+      expect(result.inputMessages).toEqual([])
+    })
+
+    it("drops a message whose content is blank", () => {
+      const result = parseContent([
+        str("llm.input_messages.0.message.role", "user"),
+        str("llm.input_messages.0.message.content", "hi"),
+        str("llm.input_messages.1.message.role", "assistant"),
+        str("llm.input_messages.1.message.content", "   "),
+      ])
+
+      expect(result.inputMessages).toEqual([{ role: "user", parts: [{ type: "text", content: "hi" }] }])
     })
 
     it("preserves message ordering by index", () => {
@@ -86,7 +97,7 @@ describe("parseContent (OpenInference)", () => {
       ])
     })
 
-    it("fills gaps in indices with default user messages", () => {
+    it("closes gaps in indices instead of emitting placeholder messages", () => {
       const result = parseContent([
         str("llm.input_messages.0.message.role", "user"),
         str("llm.input_messages.0.message.content", "zero"),
@@ -96,7 +107,6 @@ describe("parseContent (OpenInference)", () => {
 
       expect(result.inputMessages).toEqual([
         { role: "user", parts: [{ type: "text", content: "zero" }] },
-        { role: "user", parts: [{ type: "text", content: "" }] },
         { role: "user", parts: [{ type: "text", content: "two" }] },
       ])
     })
@@ -146,16 +156,24 @@ describe("parseContent (OpenInference)", () => {
       expect(parts.some((p) => p.type === "text" && p.content === "only text supplied")).toBe(true)
     })
 
-    it("falls back to an empty text part when an image part has no url", () => {
+    it("drops an image part that has no url rather than emitting an empty text part", () => {
+      const result = parseContent([
+        str("llm.input_messages.0.message.role", "user"),
+        str("llm.input_messages.0.message.contents.0.message_content.type", "image"),
+        str("llm.input_messages.0.message.contents.1.message_content.type", "text"),
+        str("llm.input_messages.0.message.contents.1.message_content.text", "look"),
+      ])
+
+      expect(result.inputMessages).toEqual([{ role: "user", parts: [{ type: "text", content: "look" }] }])
+    })
+
+    it("drops the whole message when an urlless image part is its only content", () => {
       const result = parseContent([
         str("llm.input_messages.0.message.role", "user"),
         str("llm.input_messages.0.message.contents.0.message_content.type", "image"),
       ])
 
-      const userMsg = result.inputMessages.find((m) => m.role === "user")
-      const parts = (userMsg as { parts: { type: string; content?: string }[] }).parts
-      expect(parts.some((p) => p.type === "text" && p.content === "")).toBe(true)
-      expect(parts.some((p) => p.type === "uri")).toBe(false)
+      expect(result.inputMessages).toEqual([])
     })
 
     it("prefers content parts over a plain content string when both are present", () => {
@@ -169,6 +187,63 @@ describe("parseContent (OpenInference)", () => {
       const userMsg = result.inputMessages.find((m) => m.role === "user")
       const parts = (userMsg as { parts: { type: string; content?: string }[] }).parts
       expect(parts.map((p) => p.content)).toEqual(["from parts"])
+    })
+  })
+
+  describe("reasoning parts", () => {
+    it("drops an assistant turn whose only reasoning part is encrypted", () => {
+      const result = parseContent([
+        str("llm.input_messages.0.message.role", "user"),
+        str("llm.input_messages.0.message.content", "hi"),
+        str("llm.input_messages.1.message.role", "assistant"),
+        str("llm.input_messages.1.message.contents.0.message_content.type", "reasoning"),
+        str("llm.input_messages.1.message.contents.0.message_content.encrypted_content", "gAAAAABqfn9xBE78"),
+      ])
+
+      expect(result.inputMessages).toEqual([{ role: "user", parts: [{ type: "text", content: "hi" }] }])
+    })
+
+    it("emits a reasoning part when the reasoning summary text is present", () => {
+      const result = parseContent([
+        str("llm.input_messages.0.message.role", "assistant"),
+        str("llm.input_messages.0.message.contents.0.message_content.type", "reasoning"),
+        str("llm.input_messages.0.message.contents.0.message_content.text", "Evaluating the Airtable issue"),
+      ])
+
+      expect(result.inputMessages).toEqual([
+        { role: "assistant", parts: [{ type: "reasoning", content: "Evaluating the Airtable issue" }] },
+      ])
+    })
+
+    it("keeps the readable half of a reasoning part that also carries encrypted content", () => {
+      const result = parseContent([
+        str("llm.input_messages.0.message.role", "assistant"),
+        str("llm.input_messages.0.message.contents.0.message_content.type", "reasoning"),
+        str("llm.input_messages.0.message.contents.0.message_content.encrypted_content", "gAAAAABqfn_k"),
+        str("llm.input_messages.0.message.contents.0.message_content.text", "Weighing the rollout"),
+      ])
+
+      expect(result.inputMessages).toEqual([
+        { role: "assistant", parts: [{ type: "reasoning", content: "Weighing the rollout" }] },
+      ])
+    })
+
+    it("keeps a tool call on a turn whose reasoning part is encrypted", () => {
+      const result = parseContent([
+        str("llm.input_messages.0.message.role", "assistant"),
+        str("llm.input_messages.0.message.contents.0.message_content.type", "reasoning"),
+        str("llm.input_messages.0.message.contents.0.message_content.encrypted_content", "gAAAAABqfn_k"),
+        str("llm.input_messages.0.message.tool_calls.0.tool_call.id", "call_IkYeKNxq"),
+        str("llm.input_messages.0.message.tool_calls.0.tool_call.function.name", "delegate_task"),
+        str("llm.input_messages.0.message.tool_calls.0.tool_call.function.arguments", '{"goal":"inventory"}'),
+      ])
+
+      expect(result.inputMessages).toEqual([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "call_IkYeKNxq", name: "delegate_task", arguments: { goal: "inventory" } }],
+        },
+      ])
     })
   })
 
