@@ -30,7 +30,7 @@ import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
-import { isLargeSession } from "./session-detail-drawer/session-size.ts"
+import { isLargeSession, MAX_SESSION_ANALYSIS_TRACE_COUNT } from "./session-detail-drawer/session-size.ts"
 import { sessionTracePageQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
 import { SessionOutlierBadge } from "./session-outlier-badge.tsx"
 import { SessionsOrphanFragmentsBlankSlate } from "./sessions-orphan-fragments-blank-slate.tsx"
@@ -330,11 +330,6 @@ export function SessionsView({
     return "No sessions found"
   }, [hasOrphanFragmentSessions, hasUserAppliedFilters, onShowAllSessions, searchQuery])
 
-  // Fetch score counts for every trace that could show in the visible
-  // session rows (trace_ids on each session) so the Indicators column can
-  // surface positive / negative score badges (annotations, evaluations,
-  // custom). For multi-trace sessions the badge totals are the sum across
-  // the session's traces.
   const sessionRelevantTraceIds = useMemo(() => {
     const set = new Set<string>()
     for (const s of sessions) {
@@ -410,7 +405,8 @@ export function SessionsView({
             errorCount={field(row, "errorCount")}
             annotationCounts={getRowAnnotationCounts(row)}
             annotationCountsPending={isRowAnnotationCountsPending(row)}
-            {...(annotationsEnabled
+            {...(annotationsEnabled &&
+            (row.kind === "trace" || row.session.traceIds.length <= MAX_SESSION_ANALYSIS_TRACE_COUNT)
               ? {
                   onAnnotationClick: (event: MouseEvent) => openScoresForRow(row, event),
                 }

@@ -8,11 +8,7 @@ export interface IndicatorAnnotationCounts {
   readonly negativeCount: number
 }
 
-/**
- * Inline cell that surfaces "needs-attention" signals at the row grain:
- * positive/negative scores (annotations, evaluations, custom) and an error
- * count. Used by both the traces and sessions list.
- */
+/** Row-level positive/negative score and error counts for traces and sessions lists. */
 export function IndicatorsCell({
   errorCount,
   annotationCounts,

@@ -31,7 +31,7 @@ function ScoreSignalLink({
   readonly slug: string | null
   readonly description: string | undefined
 }) {
-  const label = name ?? "Signal"
+  const label = name ?? slug ?? signalId
   const signalSlug = slug ?? signalId
   const isNavigable = Boolean(projectSlug && signalSlug)
   const badge = (

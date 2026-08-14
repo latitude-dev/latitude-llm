@@ -89,12 +89,7 @@ export interface ScoreRepositoryShape {
     readonly source?: ScoreSourceType
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
-  /**
-   * Positive/negative score counts per trace (errored rows excluded).
-   * When `source` is omitted, every score source is counted; pass
-   * `"annotation"` for the public trace `positiveAnnotationCount` /
-   * `negativeAnnotationCount` fields.
-   */
+  /** Per-trace +/- score counts. Omit `source` for all sources; pass `"annotation"` for the public API fields. */
   countAnnotationsByTraceIds(input: {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
