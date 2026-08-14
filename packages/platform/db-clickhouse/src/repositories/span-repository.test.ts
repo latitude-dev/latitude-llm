@@ -1331,7 +1331,7 @@ describe("SpanRepository", () => {
       expect(latestTraceId).toBe(CHAT_TRACE)
     })
 
-    it("returns null when no candidate trace carries output on a message operation", async () => {
+    it("falls back to an output-bearing trace when none carries output on a message operation", async () => {
       const UNSPECIFIED_TRACE = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
 
       await runCh(
@@ -1353,6 +1353,35 @@ describe("SpanRepository", () => {
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           traceIds: [UNSPECIFIED_TRACE],
+        }),
+      )
+
+      expect(latestTraceId).toBe(UNSPECIFIED_TRACE)
+    })
+
+    it("returns null when no candidate trace carries output at all", async () => {
+      const SILENT_TRACE = TraceId("ffffffffffffffffffffffffffffffff")
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: SILENT_TRACE,
+            span_id: "silentspan000001",
+            operation: "chat",
+            input_messages: '[{"role":"user","parts":[{"type":"text","content":"unanswered"}]}]',
+            output_messages: "",
+            start_time: "2026-03-05 00:00:00.000000000",
+            end_time: "2026-03-05 00:00:01.000000000",
+            ingested_at: "2026-03-05 00:00:02.000",
+          }),
+        ]),
+      )
+
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [SILENT_TRACE],
         }),
       )
 
