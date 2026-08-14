@@ -28,7 +28,7 @@ export function Left({
   })
   const connected = integration != null
   // CTA reflects routing, not just connection — no route = nothing gets delivered.
-  const incidentsConfigured = (integration?.routes.incidents?.length ?? 0) > 0
+  const signalsConfigured = (integration?.routes.signals?.length ?? 0) > 0
 
   const returnTo = `/projects/${projectSlug}/onboarding?step=slack`
   const connectHref = `/integrations/slack/install?return_to=${encodeURIComponent(returnTo)}`
@@ -68,7 +68,7 @@ export function Left({
           <Button variant="outline" onClick={onBack}>
             Back
           </Button>
-          {incidentsConfigured ? (
+          {signalsConfigured ? (
             <Button onClick={onContinue}>Continue</Button>
           ) : (
             <Button variant="ghost" onClick={onContinue}>
@@ -83,7 +83,8 @@ export function Left({
 
 function SlackConnectedOnboardingCard({ integration }: { readonly integration: SlackIntegrationRecord }) {
   const hasAnyRoute =
-    (integration.routes.incidents?.length ?? 0) > 0 ||
+    (integration.routes.signals?.length ?? 0) > 0 ||
+    (integration.routes.monitors?.length ?? 0) > 0 ||
     (integration.routes.wrapped_reports?.length ?? 0) > 0 ||
     (integration.routes.custom_messages?.length ?? 0) > 0
 
@@ -104,7 +105,7 @@ function SlackConnectedOnboardingCard({ integration }: { readonly integration: S
         </div>
 
         <div className="flex flex-col gap-3 border-t border-border p-4">
-          <SelfSavingSlackRouteRow group="incidents" integration={integration} />
+          <SelfSavingSlackRouteRow group="signals" integration={integration} />
           {showWrapped ? <SelfSavingSlackRouteRow group="wrapped_reports" integration={integration} /> : null}
           {showCustom ? <SelfSavingSlackRouteRow group="custom_messages" integration={integration} /> : null}
         </div>

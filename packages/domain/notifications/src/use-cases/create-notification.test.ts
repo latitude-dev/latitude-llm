@@ -68,7 +68,7 @@ function setup(opts: SetupOpts = {}) {
 }
 
 const incidentPayload = (alertIncidentId: string) => ({
-  incidentKind: "signal.discovered" as const,
+  incidentKind: "signal.escalating" as const,
   alertIncidentId,
 })
 
@@ -150,7 +150,7 @@ describe("createNotificationUseCase", () => {
   })
 
   it("respects per-group user email preferences", async () => {
-    const prefs: NotificationPreferences = { incidents: { email: false } }
+    const prefs: NotificationPreferences = { signals: { email: false } }
     const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
 
     const result = await Effect.runPromise(
@@ -169,8 +169,53 @@ describe("createNotificationUseCase", () => {
     expect(result.emailEligible).toBe(false)
   })
 
+  it("routes a monitor-sourced incident to the monitors group, so muting signals leaves it eligible", async () => {
+    const prefs: NotificationPreferences = { signals: { email: false } }
+    const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
+
+    const result = await Effect.runPromise(
+      createNotificationUseCase({
+        organizationId: orgId,
+        userId,
+        notificationId: NotificationId(generateId()),
+        kind: "incident.opened",
+        idempotencyKey: `incident.opened:${cuid("ai")}`,
+        projectId: null,
+        payload: { alertIncidentId: cuid("ai"), incidentKind: "monitor.threshold" },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.emailEligible).toBe(true)
+  })
+
+  it("gates email on the per-topic switch inside a group", async () => {
+    const prefs: NotificationPreferences = {
+      signals: { email: true, emailTopics: { "signal.discovered": false } },
+    }
+    const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
+
+    const eligibilityFor = async (kind: "signal.discovered" | "signal.regressed") => {
+      const result = await Effect.runPromise(
+        createNotificationUseCase({
+          organizationId: orgId,
+          userId,
+          notificationId: NotificationId(generateId()),
+          kind,
+          idempotencyKey: `${kind}:${cuid("s")}`,
+          projectId: null,
+          payload: { signalId: cuid("s"), discoveredAt: "2026-05-07T10:00:00.000Z" },
+        }).pipe(Effect.provide(layer)),
+      )
+      return result.emailEligible
+    }
+
+    expect(await eligibilityFor("signal.discovered")).toBe(false)
+    // Untouched topics in the same group keep delivering.
+    expect(await eligibilityFor("signal.regressed")).toBe(true)
+  })
+
   it("turning email off for one group leaves other groups eligible", async () => {
-    const prefs: NotificationPreferences = { incidents: { email: false } }
+    const prefs: NotificationPreferences = { signals: { email: false } }
     const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
 
     const result = await Effect.runPromise(
@@ -246,7 +291,7 @@ describe("createNotificationUseCase", () => {
   })
 
   it("gates email on the group's minimum severity (progressive: medium admits medium and high)", async () => {
-    const prefs: NotificationPreferences = { incidents: { email: true, emailMinSeverity: "medium" } }
+    const prefs: NotificationPreferences = { signals: { email: true, emailMinSeverity: "medium" } }
     const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
 
     const eligibilityFor = async (severity: "low" | "medium" | "high") => {
@@ -270,7 +315,7 @@ describe("createNotificationUseCase", () => {
   })
 
   it("still creates the in-app row when minimum severity suppresses the email", async () => {
-    const prefs: NotificationPreferences = { incidents: { email: true, emailMinSeverity: "high" } }
+    const prefs: NotificationPreferences = { signals: { email: true, emailMinSeverity: "high" } }
     const { orgId, userId, rows, layer } = setup({ user: { notificationPreferences: prefs } })
 
     const result = await Effect.runPromise(
@@ -291,7 +336,7 @@ describe("createNotificationUseCase", () => {
   })
 
   it("ignores the minimum severity for payloads without a severity", async () => {
-    const prefs: NotificationPreferences = { incidents: { email: true, emailMinSeverity: "high" } }
+    const prefs: NotificationPreferences = { signals: { email: true, emailMinSeverity: "high" } }
     const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
 
     const result = await Effect.runPromise(

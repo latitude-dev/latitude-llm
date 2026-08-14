@@ -5,7 +5,7 @@ Multi-tenant Slack OAuth + notification routing. One Latitude organization ↔ o
 ## What ships in v1
 
 - Per-org connect / disconnect flow under **Settings → Integrations** (`apps/web/src/routes/_authenticated/projects/$projectSlug/settings/integrations.tsx`). Phase 2.
-- Operator-configured channel routing per `NotificationGroup` (incidents, wrapped reports, custom messages). Phase 3.
+- Operator-configured channel routing per `NotificationGroup` (signals, monitors, wrapped reports, custom messages), each with an optional minimum severity and per-topic switches. Phase 3.
 - Worker fan-out: existing notification producers also publish `notification-slack:send` jobs per configured channel. The Slack worker renders + posts via `chat.postMessage`. Phase 3.
 
 What is **not** in v1: token refresh on rotation (Phase 4) and `@latitude` bot mentions (Phase 5).

@@ -2,9 +2,11 @@ import {
   alertIncidentConditionSchema,
   alertSeveritySchema,
   cuidSchema,
+  GROUP_FOR_INCIDENT_NOTIFICATION_KEY,
   incidentNotificationKeySchema,
   incidentSourceTypeSchema,
   type NotificationGroup,
+  type NotificationTopic,
   notificationIdSchema,
   organizationIdSchema,
   ProjectId,
@@ -244,6 +246,8 @@ export type SignalAssignedPayload = z.infer<typeof signalAssignedPayloadSchema>
 export const signalDiscoveredPayloadSchema = z.object({
   signalId: cuidSchema,
   discoveredAt: z.iso.datetime(),
+  /** The signal's triaged priority, absent until somebody sets one. Drives the severity thresholds. */
+  severity: alertSeveritySchema.optional(),
 })
 export type SignalDiscoveredPayload = z.infer<typeof signalDiscoveredPayloadSchema>
 
@@ -252,6 +256,7 @@ export const signalRegressedPayloadSchema = z.object({
   regressedAt: z.iso.datetime(),
   /** Occurrence that reopened the resolved signal; discriminates regression cycles. */
   triggerScoreId: cuidSchema,
+  severity: alertSeveritySchema.optional(),
 })
 export type SignalRegressedPayload = z.infer<typeof signalRegressedPayloadSchema>
 
@@ -294,48 +299,86 @@ export const billingLimitReachedPayloadSchema = z.object({
 export type BillingLimitReachedPayload = z.infer<typeof billingLimitReachedPayloadSchema>
 
 /**
- * Single source of truth for notification kinds. Every kind declares its
- * group (drives the user-visible preferences toggle) and its payload schema
- * (used to validate jsonb at read time). Adding a new kind = adding one
- * entry here; the registry shape forces the TS exhaustiveness checks at
- * each channel's renderer registry to fail until the new kind is handled.
+ * Where a notification lands in the user-facing preferences tree: the group
+ * that owns its toggle, and the sub-toggle inside it when the group has any.
+ */
+interface NotificationRoute {
+  readonly group: NotificationGroup
+  readonly topic: NotificationTopic | null
+}
+
+/**
+ * The three `incident.*` kinds fire for both signal escalations and monitors,
+ * which sit in different groups, so they route on the payload instead.
+ */
+const BY_INCIDENT_SOURCE = "by-incident-source" as const
+
+/**
+ * Single source of truth for notification kinds. Every kind declares how it
+ * routes to a preferences group (drives the user-visible toggle) and its
+ * payload schema (used to validate jsonb at read time). Adding a new kind =
+ * adding one entry here; the registry shape forces the TS exhaustiveness
+ * checks at each channel's renderer registry to fail until the new kind is
+ * handled.
  */
 export const NOTIFICATION_KIND_META = {
-  "incident.event": { group: "incidents", payload: incidentEventPayloadSchema },
+  "incident.event": { routing: BY_INCIDENT_SOURCE, payload: incidentEventPayloadSchema },
   "incident.opened": {
-    group: "incidents",
+    routing: BY_INCIDENT_SOURCE,
     payload: incidentOpenedPayloadSchema,
   },
   "incident.closed": {
-    group: "incidents",
+    routing: BY_INCIDENT_SOURCE,
     payload: incidentClosedPayloadSchema,
   },
   "wrapped.report": {
-    group: "wrapped_reports",
+    routing: { group: "wrapped_reports", topic: null },
     payload: wrappedReportPayloadSchema,
   },
   "custom.message": {
-    group: "custom_messages",
+    routing: { group: "custom_messages", topic: null },
     payload: customMessagePayloadSchema,
   },
-  "issue.assigned": { group: "personal", payload: signalAssignedPayloadSchema },
-  "signal.discovered": { group: "incidents", payload: signalDiscoveredPayloadSchema },
-  "signal.regressed": { group: "incidents", payload: signalRegressedPayloadSchema },
+  "issue.assigned": { routing: { group: "personal", topic: null }, payload: signalAssignedPayloadSchema },
+  "signal.discovered": {
+    routing: { group: "signals", topic: "signal.discovered" },
+    payload: signalDiscoveredPayloadSchema,
+  },
+  "signal.regressed": {
+    routing: { group: "signals", topic: "signal.regressed" },
+    payload: signalRegressedPayloadSchema,
+  },
   "destination.quarantined": {
-    group: "destinations",
+    routing: { group: "destinations", topic: null },
     payload: destinationQuarantinedPayloadSchema,
   },
   "billing.limit-reached": {
-    group: "billing",
+    routing: { group: "billing", topic: null },
     payload: billingLimitReachedPayloadSchema,
   },
-} as const satisfies Record<string, { readonly group: NotificationGroup; readonly payload: z.ZodTypeAny }>
+} as const satisfies Record<
+  string,
+  { readonly routing: NotificationRoute | typeof BY_INCIDENT_SOURCE; readonly payload: z.ZodTypeAny }
+>
 
 export type NotificationKind = keyof typeof NOTIFICATION_KIND_META
 export const NOTIFICATION_KINDS = Object.keys(NOTIFICATION_KIND_META) as readonly NotificationKind[]
 export const notificationKindSchema = z.enum(NOTIFICATION_KINDS as [NotificationKind, ...NotificationKind[]])
 
-export const groupOf = (kind: NotificationKind): NotificationGroup => NOTIFICATION_KIND_META[kind].group
+/**
+ * Resolves the group + topic a notification belongs to. Incident kinds read
+ * it off `incidentKind`, which every incident payload carries; a payload
+ * that somehow doesn't parse falls back to the monitors group, whose toggle
+ * has no sub-topic to get wrong.
+ */
+export const routeOf = (kind: NotificationKind, payload: Record<string, unknown>): NotificationRoute => {
+  const routing = NOTIFICATION_KIND_META[kind].routing
+  if (routing !== BY_INCIDENT_SOURCE) return routing
+  const incidentKind = incidentNotificationKeySchema.safeParse(payload.incidentKind)
+  if (!incidentKind.success) return { group: "monitors", topic: null }
+  const group = GROUP_FOR_INCIDENT_NOTIFICATION_KEY[incidentKind.data]
+  return group === "signals" ? { group, topic: "signal.escalating" } : { group, topic: null }
+}
 
 export const payloadSchemaFor = <K extends NotificationKind>(kind: K): (typeof NOTIFICATION_KIND_META)[K]["payload"] =>
   NOTIFICATION_KIND_META[kind].payload

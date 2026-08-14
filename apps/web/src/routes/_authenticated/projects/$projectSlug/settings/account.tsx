@@ -1,7 +1,15 @@
-import { NOTIFICATION_GROUP_META, NOTIFICATION_GROUPS, type NotificationPreferences } from "@domain/shared"
+import {
+  NOTIFICATION_GROUP_META,
+  NOTIFICATION_GROUPS,
+  NOTIFICATION_TOPIC_META,
+  type NotificationGroup,
+  type NotificationPreferences,
+  type NotificationTopic,
+} from "@domain/shared"
 import {
   Avatar,
   Button,
+  Checkbox,
   FormWrapper,
   GitHubIcon,
   GoogleIcon,
@@ -9,6 +17,7 @@ import {
   Input,
   Label,
   Modal,
+  Skeleton,
   Switch,
   Table,
   TableBody,
@@ -514,32 +523,35 @@ function NotificationsSection() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["notificationPreferences"],
     queryFn: () => getNotificationPreferences(),
   })
 
+  // Local prefs mirror server prefs; saves run in the background per change.
+  // Missing entries are treated as "email on" so a fresh user sees every
+  // toggle in the on position (matches the opt-out default). That default is
+  // only safe to render once the query lands — applied to an empty cache it
+  // would open every group's sub-toggles, then snap them shut on arrival.
+  const isLoaded = data !== undefined
+  const prefs: NotificationPreferences = data?.preferences ?? {}
+
   // Scroll the targeted toggle into view when the page is opened with a
   // `#notifications-<group>` hash. Email unsubscribe links go through the
   // `/settings/$section` redirect, which appends the hash so the user lands
-  // directly on the row they came to flip. Runs once `isLoading` flips false
-  // because the rows don't exist in the DOM until then.
+  // directly on the row they came to flip. Waits for the load so the rows are
+  // at their final height before scrolling.
   useEffect(() => {
-    if (isLoading) return
+    if (!isLoaded) return
     const hash = window.location.hash.slice(1)
     if (!hash.startsWith("notifications-")) return
     const el = document.getElementById(hash)
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
-  }, [isLoading])
-
-  // Local prefs mirror server prefs; saves run in the background per change.
-  // Missing entries are treated as "email on" so a fresh user sees every
-  // toggle in the on position (matches the opt-out default).
-  const prefs: NotificationPreferences = data?.preferences ?? {}
+  }, [isLoaded])
 
   const patchGroup = async (
-    group: (typeof NOTIFICATION_GROUPS)[number],
-    patch: Partial<NonNullable<NotificationPreferences[(typeof NOTIFICATION_GROUPS)[number]]>>,
+    group: NotificationGroup,
+    patch: Partial<NonNullable<NotificationPreferences[NotificationGroup]>>,
   ) => {
     const next: NotificationPreferences = {
       ...prefs,
@@ -560,8 +572,10 @@ function NotificationsSection() {
     }
   }
 
-  const setGroupEmail = (group: (typeof NOTIFICATION_GROUPS)[number], enabled: boolean) =>
-    patchGroup(group, { email: enabled })
+  const setGroupEmail = (group: NotificationGroup, enabled: boolean) => patchGroup(group, { email: enabled })
+
+  const setGroupTopic = (group: NotificationGroup, topic: NotificationTopic, enabled: boolean) =>
+    patchGroup(group, { emailTopics: { ...(prefs[group]?.emailTopics ?? {}), [topic]: enabled } })
 
   return (
     <section className="flex flex-col gap-4">
@@ -588,27 +602,51 @@ function NotificationsSection() {
                   <Label htmlFor={inputId}>{meta.label}</Label>
                   <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
                 </div>
-                <Switch
-                  id={inputId}
-                  checked={enabled}
-                  disabled={isLoading}
-                  onCheckedChange={(checked) => void setGroupEmail(group, checked)}
-                  aria-label={`Toggle email notifications for ${meta.label}`}
-                />
+                {isLoaded ? (
+                  <Switch
+                    id={inputId}
+                    checked={enabled}
+                    onCheckedChange={(checked) => void setGroupEmail(group, checked)}
+                    aria-label={`Toggle email notifications for ${meta.label}`}
+                  />
+                ) : (
+                  // Sized to the switch it stands in for, so the row doesn't move when it arrives.
+                  <Skeleton className="h-5 w-16 shrink-0 rounded-lg" />
+                )}
               </div>
-              {group === "incidents" && enabled ? (
+              {isLoaded && enabled && meta.topics.length > 0 ? (
+                <div className="flex flex-col gap-3 rounded-lg bg-muted/80 px-3 py-2.5">
+                  {meta.topics.map((topic) => {
+                    const topicMeta = NOTIFICATION_TOPIC_META[topic]
+                    const topicId = `${inputId}-${topic}`
+                    return (
+                      <div key={topic} className="flex flex-row items-start gap-3">
+                        <Checkbox
+                          id={topicId}
+                          checked={prefs[group]?.emailTopics?.[topic] ?? true}
+                          onCheckedChange={(checked) => void setGroupTopic(group, topic, checked === true)}
+                        />
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <Label htmlFor={topicId}>{topicMeta.label}</Label>
+                          <Text.H6 color="foregroundMuted">{topicMeta.description}</Text.H6>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : null}
+              {isLoaded && enabled && meta.severityFiltered ? (
                 <div className="flex flex-row items-center justify-between gap-4 rounded-lg bg-muted/80 px-3 py-2">
                   <div className="flex flex-row items-baseline gap-1.5">
                     <Text.H6M>Severity</Text.H6M>
                     <Text.H6 color="foregroundMuted">
-                      · {minSeverityHint(prefs.incidents?.emailMinSeverity ?? "low")}
+                      · {minSeverityHint(prefs[group]?.emailMinSeverity ?? "low")}
                     </Text.H6>
                   </div>
                   <SeveritySelector
                     variant="bordered"
-                    value={prefs.incidents?.emailMinSeverity ?? "low"}
-                    onSelect={(minSeverity) => void patchGroup("incidents", { emailMinSeverity: minSeverity })}
-                    disabled={isLoading}
+                    value={prefs[group]?.emailMinSeverity ?? "low"}
+                    onSelect={(minSeverity) => void patchGroup(group, { emailMinSeverity: minSeverity })}
                   />
                 </div>
               ) : null}
