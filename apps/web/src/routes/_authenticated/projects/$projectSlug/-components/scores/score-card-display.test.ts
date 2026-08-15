@@ -39,9 +39,9 @@ describe("scoreCardSignalLabel", () => {
 
 describe("scoreCardIsAbsentEvaluation", () => {
   it("treats a failed, non-errored, signal-less evaluation as absent", () => {
-    expect(
-      scoreCardIsAbsentEvaluation({ source: "evaluation", errored: false, passed: false, signalId: null }),
-    ).toBe(true)
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: false, passed: false, signalId: null })).toBe(
+      true,
+    )
   })
 
   it("does not treat signaled failures, present, errored, or non-evaluation scores as absent", () => {
@@ -53,23 +53,23 @@ describe("scoreCardIsAbsentEvaluation", () => {
         signalId: "iiiiiiiiiiiiiiiiiiiiiiii",
       }),
     ).toBe(false)
-    expect(
-      scoreCardIsAbsentEvaluation({ source: "evaluation", errored: false, passed: true, signalId: null }),
-    ).toBe(false)
-    expect(
-      scoreCardIsAbsentEvaluation({ source: "evaluation", errored: true, passed: false, signalId: null }),
-    ).toBe(false)
-    expect(
-      scoreCardIsAbsentEvaluation({ source: "annotation", errored: false, passed: false, signalId: null }),
-    ).toBe(false)
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: false, passed: true, signalId: null })).toBe(
+      false,
+    )
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: true, passed: false, signalId: null })).toBe(
+      false,
+    )
+    expect(scoreCardIsAbsentEvaluation({ source: "annotation", errored: false, passed: false, signalId: null })).toBe(
+      false,
+    )
   })
 })
 
 describe("scoreCardShouldShowValue", () => {
   it("hides the 0% value on signal-less absent evaluation runs", () => {
-    expect(
-      scoreCardShouldShowValue({ source: "evaluation", errored: false, passed: false, signalId: null }),
-    ).toBe(false)
+    expect(scoreCardShouldShowValue({ source: "evaluation", errored: false, passed: false, signalId: null })).toBe(
+      false,
+    )
     expect(
       scoreCardShouldShowValue({
         source: "evaluation",
@@ -78,9 +78,7 @@ describe("scoreCardShouldShowValue", () => {
         signalId: "iiiiiiiiiiiiiiiiiiiiiiii",
       }),
     ).toBe(true)
-    expect(
-      scoreCardShouldShowValue({ source: "evaluation", errored: false, passed: true, signalId: null }),
-    ).toBe(true)
+    expect(scoreCardShouldShowValue({ source: "evaluation", errored: false, passed: true, signalId: null })).toBe(true)
     expect(scoreCardShouldShowValue({ source: "custom", errored: false, passed: false, signalId: null })).toBe(true)
   })
 })
