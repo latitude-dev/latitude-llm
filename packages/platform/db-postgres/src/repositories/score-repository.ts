@@ -12,7 +12,7 @@ import {
   type TraceId,
 } from "@domain/shared"
 import { createLogger } from "@repo/observability"
-import { and, desc, eq, inArray, isNotNull, isNull, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { scores } from "../schema/scores.ts"
@@ -98,6 +98,16 @@ const applyDraftMode = (options: ScoreListOptions | undefined) => {
   return isNull(scores.draftedAt)
 }
 
+const applyAbsentEvaluationFilter = (options: ScoreListOptions | undefined) => {
+  if (!options?.omitAbsentEvaluations) return undefined
+  return or(
+    ne(scores.sourceType, "evaluation"),
+    eq(scores.passed, true),
+    eq(scores.errored, true),
+    isNotNull(scores.signalId),
+  )
+}
+
 export const ScoreRepositoryLive = Layer.effect(
   ScoreRepository,
   Effect.gen(function* () {
@@ -129,9 +139,13 @@ export const ScoreRepositoryLive = Layer.effect(
             const limit = input.options?.limit ?? 50
             const offset = input.options?.offset ?? 0
             const draftClause = applyDraftMode(input.options)
-            const whereClause = draftClause
-              ? and(eq(scores.organizationId, organizationId), input.baseWhere, draftClause)
-              : and(eq(scores.organizationId, organizationId), input.baseWhere)
+            const absentEvaluationClause = applyAbsentEvaluationFilter(input.options)
+            const whereClause = and(
+              eq(scores.organizationId, organizationId),
+              input.baseWhere,
+              draftClause,
+              absentEvaluationClause,
+            )
 
             return db
               .select()
@@ -410,7 +424,7 @@ export const ScoreRepositoryLive = Layer.effect(
                 .select({
                   traceId: scores.traceId,
                   positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false)::int`,
-                  negativeCount: sql<number>`count(*) filter (where ${scores.passed} = false and ${scores.errored} = false)::int`,
+                  negativeCount: sql<number>`count(*) filter (where ${scores.passed} = false and ${scores.errored} = false and not (${scores.sourceType} = 'evaluation' and ${scores.signalId} is null))::int`,
                 })
                 .from(scores)
                 .where(whereClause)

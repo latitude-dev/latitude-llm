@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { scoreCardEvaluationVerdict, scoreCardLinkedSignalId, scoreCardSourceTitle } from "./score-card-display.ts"
+import {
+  scoreCardEvaluationVerdict,
+  scoreCardIsAbsentEvaluation,
+  scoreCardLinkedSignalId,
+  scoreCardShouldShowFeedback,
+  scoreCardShouldShowValue,
+  scoreCardSignalLabel,
+  scoreCardSourceTitle,
+} from "./score-card-display.ts"
 
 describe("scoreCardSourceTitle", () => {
   it("does not surface evaluation identity", () => {
@@ -18,6 +26,113 @@ describe("scoreCardLinkedSignalId", () => {
 
   it("falls back to a stamped signal id when the evaluation has no parent", () => {
     expect(scoreCardLinkedSignalId({ signalId: "stamped", evaluationSignalId: null })).toBe("stamped")
+  })
+})
+
+describe("scoreCardSignalLabel", () => {
+  it("prefers the signal name, then the slug, and never a raw id", () => {
+    expect(scoreCardSignalLabel({ name: "Hallucination", slug: "LAT-ABCD" })).toBe("Hallucination")
+    expect(scoreCardSignalLabel({ name: null, slug: "LAT-ABCD" })).toBe("LAT-ABCD")
+    expect(scoreCardSignalLabel({ name: null, slug: null })).toBeNull()
+  })
+})
+
+describe("scoreCardIsAbsentEvaluation", () => {
+  it("treats a failed, non-errored, signal-less evaluation as absent", () => {
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: false, passed: false, signalId: null })).toBe(
+      true,
+    )
+  })
+
+  it("does not treat signaled failures, present, errored, or non-evaluation scores as absent", () => {
+    expect(
+      scoreCardIsAbsentEvaluation({
+        source: "evaluation",
+        errored: false,
+        passed: false,
+        signalId: "iiiiiiiiiiiiiiiiiiiiiiii",
+      }),
+    ).toBe(false)
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: false, passed: true, signalId: null })).toBe(
+      false,
+    )
+    expect(scoreCardIsAbsentEvaluation({ source: "evaluation", errored: true, passed: false, signalId: null })).toBe(
+      false,
+    )
+    expect(scoreCardIsAbsentEvaluation({ source: "annotation", errored: false, passed: false, signalId: null })).toBe(
+      false,
+    )
+  })
+})
+
+describe("scoreCardShouldShowValue", () => {
+  it("hides the 0% value on signal-less absent evaluation runs", () => {
+    expect(scoreCardShouldShowValue({ source: "evaluation", errored: false, passed: false, signalId: null })).toBe(
+      false,
+    )
+    expect(
+      scoreCardShouldShowValue({
+        source: "evaluation",
+        errored: false,
+        passed: false,
+        signalId: "iiiiiiiiiiiiiiiiiiiiiiii",
+      }),
+    ).toBe(true)
+    expect(scoreCardShouldShowValue({ source: "evaluation", errored: false, passed: true, signalId: null })).toBe(true)
+    expect(scoreCardShouldShowValue({ source: "custom", errored: false, passed: false, signalId: null })).toBe(true)
+  })
+})
+
+describe("scoreCardShouldShowFeedback", () => {
+  it("hides feedback on signal-less absent evaluations", () => {
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "evaluation",
+        errored: false,
+        passed: false,
+        signalId: null,
+        feedback: "No condition matched",
+      }),
+    ).toBe(false)
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "evaluation",
+        errored: false,
+        passed: false,
+        signalId: null,
+        feedback: "No tool call named search",
+      }),
+    ).toBe(false)
+  })
+
+  it("keeps feedback on signaled failures, present evaluations, and other sources", () => {
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "evaluation",
+        errored: false,
+        passed: false,
+        signalId: "iiiiiiiiiiiiiiiiiiiiiiii",
+        feedback: "Detector fired with a low score",
+      }),
+    ).toBe(true)
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "evaluation",
+        errored: false,
+        passed: true,
+        signalId: null,
+        feedback: "Tool call named search",
+      }),
+    ).toBe(true)
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "annotation",
+        errored: false,
+        passed: false,
+        signalId: null,
+        feedback: "Needs a better answer",
+      }),
+    ).toBe(true)
   })
 })
 

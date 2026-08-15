@@ -22,6 +22,7 @@ export const listTraceScoresInputSchema = z.object({
   limit: baseListScoresInputSchema.shape.limit,
   offset: baseListScoresInputSchema.shape.offset,
   draftMode: scoreDraftModeSchema.default("include"),
+  omitAbsentEvaluations: z.boolean().optional(),
 })
 export type ListTraceScoresInput = z.input<typeof listTraceScoresInputSchema>
 
@@ -31,6 +32,7 @@ export const listScoresByTraceIdsInputSchema = z.object({
   limit: baseListScoresInputSchema.shape.limit,
   offset: baseListScoresInputSchema.shape.offset,
   draftMode: scoreDraftModeSchema.default("include"),
+  omitAbsentEvaluations: z.boolean().optional(),
 })
 export type ListScoresByTraceIdsInput = z.input<typeof listScoresByTraceIdsInputSchema>
 
@@ -50,6 +52,7 @@ export const listTraceScoresUseCase = Effect.fn("scores.listTraceScores")(functi
       limit: parsed.limit,
       offset: parsed.offset,
       draftMode: parsed.draftMode,
+      ...(parsed.omitAbsentEvaluations ? { omitAbsentEvaluations: true } : {}),
     },
   })
 })
@@ -88,6 +91,7 @@ export const listScoresByTraceIdsUseCase = Effect.fn("scores.listScoresByTraceId
       limit: parsed.limit,
       offset: parsed.offset,
       draftMode: parsed.draftMode,
+      ...(parsed.omitAbsentEvaluations ? { omitAbsentEvaluations: true } : {}),
     },
   })
 })
