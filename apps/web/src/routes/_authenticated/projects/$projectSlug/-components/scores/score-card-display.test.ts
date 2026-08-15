@@ -58,7 +58,7 @@ describe("scoreCardShouldShowValue", () => {
 })
 
 describe("scoreCardShouldShowFeedback", () => {
-  it("hides the default no-condition-matched copy on absent evaluations", () => {
+  it("hides feedback on absent evaluations", () => {
     expect(
       scoreCardShouldShowFeedback({
         source: "evaluation",
@@ -67,9 +67,6 @@ describe("scoreCardShouldShowFeedback", () => {
         feedback: "No condition matched",
       }),
     ).toBe(false)
-  })
-
-  it("keeps specific feedback and non-evaluation comments", () => {
     expect(
       scoreCardShouldShowFeedback({
         source: "evaluation",
@@ -77,13 +74,24 @@ describe("scoreCardShouldShowFeedback", () => {
         passed: false,
         feedback: "No tool call named search",
       }),
+    ).toBe(false)
+  })
+
+  it("keeps feedback on present evaluations and other sources", () => {
+    expect(
+      scoreCardShouldShowFeedback({
+        source: "evaluation",
+        errored: false,
+        passed: true,
+        feedback: "Tool call named search",
+      }),
     ).toBe(true)
     expect(
       scoreCardShouldShowFeedback({
         source: "annotation",
         errored: false,
         passed: false,
-        feedback: "No condition matched",
+        feedback: "Needs a better answer",
       }),
     ).toBe(true)
   })

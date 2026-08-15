@@ -1,5 +1,3 @@
-const NO_CONDITION_MATCHED_FEEDBACK = "No condition matched"
-
 export function scoreCardSourceTitle(score: { readonly source: string; readonly sourceId: string }): string | null {
   if (score.source === "evaluation") return null
   return score.sourceId
@@ -41,10 +39,8 @@ export function scoreCardShouldShowFeedback(score: {
   readonly passed: boolean
   readonly feedback: string | null
 }): boolean {
-  const feedback = score.feedback?.trim()
-  if (!feedback) return false
-  if (scoreCardIsAbsentEvaluation(score) && feedback === NO_CONDITION_MATCHED_FEEDBACK) return false
-  return true
+  if (scoreCardIsAbsentEvaluation(score)) return false
+  return Boolean(score.feedback?.trim())
 }
 
 export function scoreCardEvaluationVerdict(score: {
