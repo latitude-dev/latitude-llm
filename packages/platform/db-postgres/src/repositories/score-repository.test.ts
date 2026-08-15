@@ -738,6 +738,20 @@ describe("ScoreRepositoryLive + score use cases", () => {
     await Effect.runPromise(
       writeScoreUseCase({
         projectId: annotationProjectId,
+        sourceType: "evaluation",
+        sourceId: "ffffffffffffffffffffffff",
+        signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
+        traceId: mixedTraceId,
+        value: 0,
+        passed: false,
+        feedback: "Failed evaluation already linked to a signal",
+        metadata: { evaluationHash: "eval-hash-signaled-fail" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
         sourceType: "custom",
         sourceId: "api-source",
         traceId: mixedTraceId,
@@ -759,7 +773,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    expect(counts).toEqual([expect.objectContaining({ traceId: mixedTraceId, positiveCount: 1, negativeCount: 1 })])
+    expect(counts).toEqual([expect.objectContaining({ traceId: mixedTraceId, positiveCount: 1, negativeCount: 2 })])
   })
 
   it("omits absent evaluation runs from listByTraceId when asked", async () => {
@@ -805,6 +819,20 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "evaluation",
+        sourceId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+        signalId: SignalId("iiiiiiiiiiiiiiiiiiiiiiii"),
+        traceId,
+        value: 0,
+        passed: false,
+        feedback: "Failed evaluation already linked to a signal",
+        metadata: { evaluationHash: "eval-hash-signaled-fail" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
     const page = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* ScoreRepository
@@ -816,8 +844,11 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    expect(page.items.map((score) => score.sourceType).sort()).toEqual(["annotation", "evaluation"])
-    expect(page.items.find((score) => score.sourceType === "evaluation")?.passed).toBe(true)
+    const evaluationScores = page.items.filter((score) => score.sourceType === "evaluation")
+    expect(page.items.map((score) => score.sourceType).sort()).toEqual(["annotation", "evaluation", "evaluation"])
+    expect(evaluationScores.some((score) => score.passed)).toBe(true)
+    expect(evaluationScores.some((score) => !score.passed && score.signalId !== null)).toBe(true)
+    expect(evaluationScores.every((score) => score.passed || score.signalId !== null)).toBe(true)
   })
 
   it("findPublishedSystemAnnotationByTraceAndFeedback finds existing system annotation score", async () => {

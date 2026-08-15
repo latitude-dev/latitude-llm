@@ -20,7 +20,7 @@ export interface ScoreListOptions {
   readonly limit?: number
   readonly offset?: number
   readonly draftMode?: ScoreDraftMode
-  /** Drop failed, non-errored evaluation runs (detector absents / "No condition matched"). */
+  /** Drop failed, non-errored evaluation runs that have no stamped signal (`signalId` is null). */
   readonly omitAbsentEvaluations?: boolean
 }
 
@@ -91,7 +91,7 @@ export interface ScoreRepositoryShape {
     readonly source?: ScoreSourceType
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
-  /** Per-trace +/- score counts. Omit `source` for all sources; pass `"annotation"` for the public API fields. Absent evaluation runs are excluded from the negative count. */
+  /** Per-trace +/- score counts. Omit `source` for all sources; pass `"annotation"` for the public API fields. Signal-less absent evaluation runs are excluded from the negative count. */
   countAnnotationsByTraceIds(input: {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]

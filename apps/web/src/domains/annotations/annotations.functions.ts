@@ -272,7 +272,7 @@ export const listAnnotationsBySession = createServerFn({ method: "POST" })
     return toListResult(result)
   })
 
-/** Positive/negative score counts per trace for Indicators. Includes every source except absent evaluation runs. */
+/** Positive/negative score counts per trace for Indicators. Includes every source except signal-less absent evaluation runs. */
 export const listAnnotationCountsByTraceIds = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({

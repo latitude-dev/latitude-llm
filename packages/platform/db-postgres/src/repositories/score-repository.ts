@@ -100,7 +100,12 @@ const applyDraftMode = (options: ScoreListOptions | undefined) => {
 
 const applyAbsentEvaluationFilter = (options: ScoreListOptions | undefined) => {
   if (!options?.omitAbsentEvaluations) return undefined
-  return or(ne(scores.sourceType, "evaluation"), eq(scores.passed, true), eq(scores.errored, true))
+  return or(
+    ne(scores.sourceType, "evaluation"),
+    eq(scores.passed, true),
+    eq(scores.errored, true),
+    isNotNull(scores.signalId),
+  )
 }
 
 export const ScoreRepositoryLive = Layer.effect(
@@ -419,7 +424,7 @@ export const ScoreRepositoryLive = Layer.effect(
                 .select({
                   traceId: scores.traceId,
                   positiveCount: sql<number>`count(*) filter (where ${scores.passed} = true and ${scores.errored} = false)::int`,
-                  negativeCount: sql<number>`count(*) filter (where ${scores.passed} = false and ${scores.errored} = false and ${scores.sourceType} <> 'evaluation')::int`,
+                  negativeCount: sql<number>`count(*) filter (where ${scores.passed} = false and ${scores.errored} = false and not (${scores.sourceType} = 'evaluation' and ${scores.signalId} is null))::int`,
                 })
                 .from(scores)
                 .where(whereClause)

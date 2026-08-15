@@ -21,14 +21,16 @@ export function scoreCardIsAbsentEvaluation(score: {
   readonly source: string
   readonly errored: boolean
   readonly passed: boolean
+  readonly signalId: string | null
 }): boolean {
-  return score.source === "evaluation" && !score.errored && !score.passed
+  return score.source === "evaluation" && !score.errored && !score.passed && score.signalId === null
 }
 
 export function scoreCardShouldShowValue(score: {
   readonly source: string
   readonly errored: boolean
   readonly passed: boolean
+  readonly signalId: string | null
 }): boolean {
   return !scoreCardIsAbsentEvaluation(score)
 }
@@ -37,6 +39,7 @@ export function scoreCardShouldShowFeedback(score: {
   readonly source: string
   readonly errored: boolean
   readonly passed: boolean
+  readonly signalId: string | null
   readonly feedback: string | null
 }): boolean {
   if (scoreCardIsAbsentEvaluation(score)) return false
