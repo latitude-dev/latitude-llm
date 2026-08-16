@@ -5,7 +5,12 @@ export const SIGNAL_NAME_MAX_LENGTH = 128
 
 export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
 
-export const SIGNAL_SOURCES = ["annotation", "flagger", "custom"] as const
+/**
+ * `cost` is the one source with no score behind it: a cache finding is measured from
+ * span token counts rather than clustered from feedback, so it carries no centroid and
+ * never participates in discovery matching.
+ */
+export const SIGNAL_SOURCES = ["annotation", "flagger", "custom", "cost"] as const
 
 /**
  * Manual triage priority levels, ascending in urgency. Null means "unset".
@@ -216,6 +221,32 @@ export const ESCALATION_SWEEPER_KEY = "issues:escalation-sweep"
  * the 72h timeout exit actually fire on long-silent rows.
  */
 export const ESCALATION_SWEEPER_PATTERN = "0 * * * *"
+
+// ---------------------------------------------------------------------------
+// Cache findings (cost signals)
+// ---------------------------------------------------------------------------
+
+/** BullMQ scheduler key for the daily cache-finding sweep. Idempotent across worker restarts. */
+export const CACHE_FINDING_SWEEP_KEY = "issues:cache-finding-sweep"
+
+/**
+ * Daily, off-peak. Daily rather than hourly because the finding it produces has to
+ * hold for `CACHE_SIGNAL_STABILITY_WINDOWS` weekly windows before it fires — running
+ * more often would cost ClickHouse scans without moving a verdict.
+ */
+export const CACHE_FINDING_SWEEP_PATTERN = "0 5 * * *"
+
+/**
+ * At most one sync per project per day. Throttle rather than debounce: a continuous
+ * publish stream must not starve the sync, and the upper bound on latency is what makes
+ * "resolve when the finding clears" a promise rather than a hope.
+ */
+export const CACHE_FINDING_SYNC_THROTTLE_MS = 20 * 60 * 60 * 1000
+
+export const cacheFindingSyncDedupeKey = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+}): string => `org:${input.organizationId}:cache-findings:sync:${input.projectId}`
 
 // ---------------------------------------------------------------------------
 // Centroid configuration

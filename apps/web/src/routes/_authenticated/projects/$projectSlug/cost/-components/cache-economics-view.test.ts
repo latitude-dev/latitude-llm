@@ -1,5 +1,5 @@
 import type { CacheModelJudgment, CacheState, CacheUrgency, CacheUsageMeasures } from "@domain/spans"
-import { CACHE_CEILING_LIFETIME_SECONDS } from "@domain/spans"
+import { CACHE_CEILING_LIFETIME_SECONDS, CACHE_SIGNAL_STATES, evaluateCacheFinding } from "@domain/spans"
 import { describe, expect, it } from "vitest"
 import type { CacheModelRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import {
@@ -312,5 +312,63 @@ describe("cacheStateIsActionable", () => {
   it("is true for exactly the three states that render a recommendation", () => {
     expect((["cacheIt", "stopCaching", "investigate"] as const).every(cacheStateIsActionable)).toBe(true)
     expect((["optimal", "correctlyOff", "notEnoughData"] as const).some(cacheStateIsActionable)).toBe(false)
+  })
+
+  it("is exactly the set the signal producer will fire on", () => {
+    // The panel's half of the drift check. If someone adds a fourth actionable state here
+    // the panel would raise a card the inbox never opens a signal for, or the reverse.
+    expect([...CACHE_SIGNAL_STATES].sort()).toEqual(
+      (["cacheIt", "stopCaching", "investigate", "optimal", "correctlyOff", "notEnoughData"] as const)
+        .filter(cacheStateIsActionable)
+        .sort(),
+    )
+  })
+})
+
+describe("the panel and the signal producer read the same judgment", () => {
+  /**
+   * The panel's half of the one-classifier rule. Both consumers read `documented` and
+   * nothing else, and the producer's extra gates only ever make it stricter — so it must
+   * never fire on a row the panel is showing as settled, and any row it does fire on must
+   * be showing the same state.
+   */
+  const documented = judgment({
+    state: "investigate",
+    urgency: "underusing",
+    cachingOn: true,
+    actualRate: 0.1,
+    ceilingRate: 0.86,
+    breakEvenRate: 0.217,
+    modeledSavingsMicrocents: 500_000_000,
+    savingsClearsFloor: true,
+  })
+  const finding = row({ model: "claude-haiku-4-5", calls: 4_000, documented })
+
+  it("agrees on the state whenever the producer fires", () => {
+    const evaluated = evaluateCacheFinding(finding)
+    expect(evaluated.fires).toBe(true)
+    if (!evaluated.fires) return
+    const view = resolveCacheRow(finding, "documented")
+    expect(view.judgment.state).toBe(evaluated.measures.state)
+    expect(cacheStateIsActionable(view.judgment.state)).toBe(true)
+    expect(view.judgment.modeledSavingsMicrocents).toBe(evaluated.measures.modeledSavingsMicrocents)
+  })
+
+  it("never fires on a row the panel groups as settled", () => {
+    for (const state of ["optimal", "correctlyOff", "notEnoughData"] as const) {
+      const settled = row({ model: "settled", calls: 4_000, documented: judgment({ ...documented, state }) })
+      expect(evaluateCacheFinding(settled).fires, state).toBe(false)
+    }
+  })
+
+  it("does not follow the reader's chosen lifetime, which the panel does", () => {
+    // The panel lets a reader explore; the producer is pinned to the documented reading.
+    // A row whose verdict moves between the two must never carry a signal.
+    const explored = row(
+      { model: "explored", calls: 4_000, documented, verdictDependsOnLifetime: true },
+      { 3600: judgment({ ...documented, state: "stopCaching" }) },
+    )
+    expect(resolveCacheRow(explored, 3_600).judgment.state).toBe("stopCaching")
+    expect(evaluateCacheFinding(explored).fires).toBe(false)
   })
 })

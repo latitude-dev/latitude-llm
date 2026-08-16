@@ -1,4 +1,4 @@
-import { CACHE_ECONOMICS_MIN_CALLS, CACHE_MIN_CACHEABLE_INPUT_TOKENS } from "@domain/spans"
+import { CACHE_ECONOMICS_MIN_CALLS, CACHE_MIN_CACHEABLE_INPUT_TOKENS, cacheFindingFingerprint } from "@domain/spans"
 import type { BadgeProps } from "@repo/ui"
 import {
   Badge,
@@ -17,6 +17,7 @@ import {
   useChartCssTheme,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPercentage, formatPrice } from "@repo/utils"
+import { Link } from "@tanstack/react-router"
 import {
   ArrowUpRightIcon,
   CircleCheckIcon,
@@ -25,12 +26,13 @@ import {
   ClockIcon,
   GaugeIcon,
   InfoIcon,
+  RadioTowerIcon,
   SearchIcon,
   TableIcon,
   TriangleAlertIcon,
 } from "lucide-react"
 import { useState } from "react"
-import type { CacheEconomicsRecord } from "../../../../../../domains/cost/cost.functions.ts"
+import type { CacheEconomicsRecord, CacheFindingSignalRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import {
   buildCacheSummary,
@@ -41,6 +43,7 @@ import {
   type CacheStateGroup,
   type CacheSummary,
   cacheGroupKeyForState,
+  cacheStateIsActionable,
   parseCacheLifetimeSelection,
   recoverableShare,
   resolveCacheRow,
@@ -281,22 +284,70 @@ function SavingsCell({ row }: { readonly row: CacheRowView }) {
   )
 }
 
-/** What to do about this row, standing on its own now that rows no longer sit under a heading. */
-function RecommendationCell({ row }: { readonly row: CacheRowView }) {
+/**
+ * The open cost signal for this row, or null.
+ *
+ * Matched on the fingerprint the producer wrote, computed here by the same shared
+ * function — so the panel never decides for itself which verdicts deserve escalating and
+ * cannot claim a signal exists that the inbox does not hold.
+ */
+function signalFor(
+  row: CacheRowView,
+  signals: ReadonlyMap<string, CacheFindingSignalRecord>,
+): CacheFindingSignalRecord | null {
+  if (!cacheStateIsActionable(row.judgment.state)) return null
+  // Only the documented lifetime can carry a signal; a lifetime the reader picked is their
+  // assumption, and pinning the inbox's badge to it would attribute it to us.
+  if (!row.isDocumented) return null
+  return (
+    signals.get(cacheFindingFingerprint({ provider: row.provider, model: row.model, state: row.judgment.state })) ??
+    null
+  )
+}
+
+/**
+ * What to do about this row, standing on its own now that rows no longer sit under a heading.
+ *
+ * An open signal rides beside the verdict rather than next to the model name: it is that
+ * recommendation escalated, and the model cell is deliberately just the model.
+ */
+function RecommendationCell({
+  row,
+  projectSlug,
+  signal,
+}: {
+  readonly row: CacheRowView
+  readonly projectSlug: string
+  readonly signal: CacheFindingSignalRecord | null
+}) {
   const meta = STATE_META[cacheGroupKeyForState(row.judgment.state)]
   return (
-    <Tooltip
-      asChild
-      trigger={
-        <span className="inline-flex cursor-default">
-          <Badge variant={meta.badgeVariant} iconProps={{ icon: meta.icon, placement: "start" }}>
-            {meta.label}
+    <div className="flex min-w-0 flex-row items-center gap-1.5">
+      <Tooltip
+        asChild
+        trigger={
+          <span className="inline-flex cursor-default">
+            <Badge variant={meta.badgeVariant} iconProps={{ icon: meta.icon, placement: "start" }}>
+              {meta.label}
+            </Badge>
+          </span>
+        }
+      >
+        {meta.body}
+      </Tooltip>
+      {signal ? (
+        <Link
+          to="/projects/$projectSlug/signals/$signalSlug"
+          params={{ projectSlug, signalSlug: signal.signalSlug }}
+          aria-label={`Open the ${signal.signalSlug} signal for ${row.model}`}
+          className="inline-flex shrink-0"
+        >
+          <Badge variant="secondary" iconProps={{ icon: RadioTowerIcon, placement: "start" }}>
+            {signal.signalSlug}
           </Badge>
-        </span>
-      }
-    >
-      {meta.body}
-    </Tooltip>
+        </Link>
+      ) : null}
+    </div>
   )
 }
 
@@ -304,10 +355,14 @@ function CacheRow({
   row,
   isDark,
   onModelClick,
+  projectSlug,
+  signal,
 }: {
   readonly row: CacheRowView
   readonly isDark: boolean
   readonly onModelClick: (model: string) => void
+  readonly projectSlug: string
+  readonly signal: CacheFindingSignalRecord | null
 }) {
   const spend = rollupCostDisplay({
     costTotalMicrocents: row.costMicrocents,
@@ -359,7 +414,7 @@ function CacheRow({
         <PositionBar row={row} isDark={isDark} />
       </TableCell>
       <TableCell>
-        <RecommendationCell row={row} />
+        <RecommendationCell row={row} projectSlug={projectSlug} signal={signal} />
       </TableCell>
       <TableCell align="right">
         <SavingsCell row={row} />
@@ -698,13 +753,16 @@ export function CacheEconomicsPanel({
   economics,
   projectSlug,
   isLoading,
+  findingSignals,
 }: {
   readonly economics: CacheEconomicsRecord | undefined
   readonly projectSlug: string
   readonly isLoading: boolean
+  readonly findingSignals: readonly CacheFindingSignalRecord[] | undefined
 }) {
   const { isDark } = useChartCssTheme()
   const goToModelSessions = useGoToModelSessions(projectSlug)
+  const signalsByFingerprint = new Map((findingSignals ?? []).map((signal) => [signal.fingerprint, signal]))
   const [selection, setSelection] = useState<CacheLifetimeSelection>("documented")
   const [view, setView] = useState<CacheView>("summary")
   const [sort, setSort] = useState<{ column: CacheSortColumn; direction: "asc" | "desc" }>({
@@ -811,6 +869,8 @@ export function CacheEconomicsPanel({
                 row={row}
                 isDark={isDark}
                 onModelClick={goToModelSessions}
+                projectSlug={projectSlug}
+                signal={signalFor(row, signalsByFingerprint)}
               />
             ))}
           </TableBody>

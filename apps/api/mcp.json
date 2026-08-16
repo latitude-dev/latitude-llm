@@ -8320,7 +8320,8 @@
                   "enum": [
                     "annotation",
                     "flagger",
-                    "custom"
+                    "custom",
+                    "cost"
                   ],
                   "description": "Where the signal originated from."
                 },
@@ -9423,7 +9424,8 @@
             "enum": [
               "annotation",
               "flagger",
-              "custom"
+              "custom",
+              "cost"
             ],
             "description": "Where the signal originated from."
           },
@@ -36804,7 +36806,8 @@
                   "enum": [
                     "annotation",
                     "flagger",
-                    "custom"
+                    "custom",
+                    "cost"
                   ],
                   "description": "Where the signal originated from."
                 },
@@ -37000,7 +37003,8 @@
             "enum": [
               "annotation",
               "flagger",
-              "custom"
+              "custom",
+              "cost"
             ],
             "description": "Where the signal originated from."
           },

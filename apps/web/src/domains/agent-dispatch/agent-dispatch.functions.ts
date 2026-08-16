@@ -42,6 +42,7 @@ import {
   AgentDispatchCredentialRepositoryLive,
   AgentDispatchIntegrationRepositoryLive,
   AgentDispatchRepositoryLive,
+  CacheFindingRepositoryLive,
   IncidentMonitorReaderLive,
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
@@ -784,6 +785,7 @@ const manualContextPgLayer = Layer.mergeAll(
   ProjectRepositoryLive,
   SignalRepositoryLive,
   ScoreRepositoryLive,
+  CacheFindingRepositoryLive,
 )
 
 const manualContextChLayer = Layer.mergeAll(

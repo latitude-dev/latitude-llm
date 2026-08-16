@@ -13,7 +13,7 @@ import {
   type SqlClient,
   TraceId,
 } from "@domain/shared"
-import { SignalRepository } from "@domain/signals"
+import { CACHE_SIGNAL_WINDOW_DAYS, CacheFindingRepository, SignalRepository } from "@domain/signals"
 import { Effect } from "effect"
 import {
   SAMPLE_CONVERSATIONS_LIMIT,
@@ -28,10 +28,41 @@ const TAGS_TOP_N = 5
 const TAGS_LOOKBACK_DAYS = 30
 const METRICS_WINDOW_HOURS = 24
 
-const mapSignalSource = (source: string): "flagger" | "annotation" | "custom" => {
-  if (source === "flagger" || source === "annotation" || source === "custom") return source
+const mapSignalSource = (source: string): "flagger" | "annotation" | "custom" | "cost" => {
+  if (source === "flagger" || source === "annotation" || source === "custom" || source === "cost") return source
   return "custom"
 }
+
+const MICROCENTS_PER_USD = 100_000_000
+
+/**
+ * The cache verdict behind a cost signal, or undefined for every other signal.
+ *
+ * Read from the persisted finding rather than recomputed: the numbers a dispatched agent
+ * receives have to be the ones the signal was opened on, not a fresh read that has moved
+ * since — an agent told to chase a gap that has already closed is the expensive failure
+ * this whole gate exists to avoid.
+ */
+const snapshotCacheFinding = (input: { readonly signalId: SignalId }) =>
+  Effect.gen(function* () {
+    const findings = yield* CacheFindingRepository
+    const finding = yield* findings.findBySignalId({ signalId: input.signalId })
+    if (finding === null) return undefined
+    const measures = finding.measures
+    return {
+      provider: measures.provider,
+      model: measures.model,
+      state: measures.state,
+      urgency: measures.urgency,
+      actualRate: measures.actualRate,
+      breakEvenRate: measures.breakEvenRate,
+      ceilingRate: measures.ceilingRate,
+      estimatedSavingsUsd: measures.modeledSavingsMicrocents / MICROCENTS_PER_USD,
+      calls: measures.calls,
+      cacheLifetimeSeconds: measures.cacheLifetimeSeconds,
+      windowDays: CACHE_SIGNAL_WINDOW_DAYS,
+    }
+  })
 
 const buildDeepLink = (input: {
   readonly webAppUrl: string
@@ -385,20 +416,29 @@ export const buildDispatchContextFromSignal = (input: {
       return yield* Effect.fail(new Error("Signal not found in this project"))
     }
 
-    const [tags, sampleExcerpt, sampleTraceIds, sampleConversations] = yield* Effect.all([
-      snapshotTags({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        signalId: input.signalId,
-      }),
-      snapshotSampleExcerpt({ projectId: input.projectId, signalId: input.signalId }),
-      snapshotSampleTraceIds({ projectId: input.projectId, signalId: input.signalId }),
-      snapshotSampleConversations({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        signalId: input.signalId,
-      }),
-    ])
+    // A cost signal has no scores, traces or tags behind it — it is measured from span
+    // token counts — so the score snapshots are four queries guaranteed to return
+    // nothing. Its evidence is the finding instead.
+    const cacheFinding =
+      signal.source === "cost" ? yield* snapshotCacheFinding({ signalId: input.signalId }) : undefined
+
+    const [tags, sampleExcerpt, sampleTraceIds, sampleConversations] =
+      cacheFinding === undefined
+        ? yield* Effect.all([
+            snapshotTags({
+              organizationId: input.organizationId,
+              projectId: input.projectId,
+              signalId: input.signalId,
+            }),
+            snapshotSampleExcerpt({ projectId: input.projectId, signalId: input.signalId }),
+            snapshotSampleTraceIds({ projectId: input.projectId, signalId: input.signalId }),
+            snapshotSampleConversations({
+              organizationId: input.organizationId,
+              projectId: input.projectId,
+              signalId: input.signalId,
+            }),
+          ])
+        : [undefined, undefined, undefined, undefined]
 
     return {
       trigger: input.trigger ?? "signal.discovered",
@@ -412,6 +452,7 @@ export const buildDispatchContextFromSignal = (input: {
         source: mapSignalSource(signal.source),
         priority: signal.priority,
       },
+      ...(cacheFinding ? { cacheFinding } : {}),
       ...(sampleExcerpt ? { sampleExcerpt } : {}),
       ...(tags ? { tags } : {}),
       deepLinkUrl: buildDeepLink({
@@ -433,6 +474,7 @@ export const buildDispatchContextFromSignal = (input: {
     | ScoreRepository
     | ScoreAnalyticsRepository
     | AgentDispatchTraceReader
+    | CacheFindingRepository
   >
 
 export const resolveIncidentTrigger = (incident: Incident): AgentDispatchTrigger | null => {

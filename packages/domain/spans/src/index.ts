@@ -105,6 +105,28 @@ export {
   cacheBreakEvenRate,
   classifyCacheState,
 } from "./helpers/cache-economics.ts"
+export type {
+  CacheFindingEvaluation,
+  CacheFindingMeasures,
+  CacheFindingReview,
+  CacheFindingSuppression,
+  CacheFindingWindow,
+  CacheSignalState,
+  StableCacheFinding,
+  SuppressedCacheFinding,
+} from "./helpers/cache-finding.ts"
+export {
+  CACHE_FINDING_FINGERPRINT_MAX_LENGTH,
+  CACHE_FINDING_SUPPRESSIONS,
+  CACHE_SIGNAL_MIN_CALLS,
+  CACHE_SIGNAL_STABILITY_WINDOWS,
+  CACHE_SIGNAL_STATES,
+  CACHE_SIGNAL_WINDOW_DAYS,
+  cacheFindingFingerprint,
+  cacheFindingWindows,
+  evaluateCacheFinding,
+  reviewCacheFindings,
+} from "./helpers/cache-finding.ts"
 export type { ClassifiedUnpricedPair, UnpricedCause, UnpricedUsageSummary } from "./helpers/classify-unpriced-cost.ts"
 export {
   classifyUnpricedPair,

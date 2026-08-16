@@ -2,4 +2,4 @@
 
 import typing
 
-SignalDetailSource = typing.Union[typing.Literal["annotation", "flagger", "custom"], typing.Any]
+SignalDetailSource = typing.Union[typing.Literal["annotation", "flagger", "custom", "cost"], typing.Any]

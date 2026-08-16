@@ -14,8 +14,30 @@ export const agentDispatchContextSchema = z.object({
       id: z.string(),
       slug: z.string(),
       name: z.string(),
-      source: z.enum(["flagger", "annotation", "custom"]),
+      source: z.enum(["flagger", "annotation", "custom", "cost"]),
       priority: z.string().nullable(),
+    })
+    .optional(),
+  /**
+   * The measured cache verdict behind a cost signal, structured rather than prose so a
+   * receiving agent does not have to parse numbers out of a sentence. Deliberately the
+   * same shape LAT-811 would expose, so publishing it stays a mapping — but this is an
+   * internal payload today, not an API contract.
+   */
+  cacheFinding: z
+    .object({
+      provider: z.string(),
+      model: z.string(),
+      state: z.enum(["cacheIt", "stopCaching", "investigate"]),
+      urgency: z.string().nullable(),
+      actualRate: z.number(),
+      breakEvenRate: z.number(),
+      ceilingRate: z.number(),
+      /** Modeled from tokens times registry prices; will not tie to recorded spend. */
+      estimatedSavingsUsd: z.number(),
+      calls: z.number(),
+      cacheLifetimeSeconds: z.number(),
+      windowDays: z.number(),
     })
     .optional(),
   incident: z

@@ -51,6 +51,7 @@ export namespace Signal {
         Annotation: "annotation",
         Flagger: "flagger",
         Custom: "custom",
+        Cost: "cost",
     } as const;
     export type Source = (typeof Source)[keyof typeof Source];
     export type States = States.Item[];

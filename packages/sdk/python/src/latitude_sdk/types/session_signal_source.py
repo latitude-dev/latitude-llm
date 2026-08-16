@@ -2,4 +2,4 @@
 
 import typing
 
-SessionSignalSource = typing.Union[typing.Literal["annotation", "flagger", "custom"], typing.Any]
+SessionSignalSource = typing.Union[typing.Literal["annotation", "flagger", "custom", "cost"], typing.Any]

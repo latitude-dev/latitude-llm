@@ -1,9 +1,17 @@
 // Re-exported so `@domain/monitors` can size its saved-search seasonal window
 // to the same history as the issue detector without depending on `@domain/scores`.
 export { SEASONAL_HISTORY_WEEKS } from "@domain/scores"
+// Same reason: `@domain/agent-dispatch` states the window a cache finding was measured
+// over in the brief it hands a coding agent, without depending on `@domain/spans`.
+export { CACHE_SIGNAL_WINDOW_DAYS } from "@domain/spans"
+export { type CacheFindingCopy, describeCacheFinding } from "./cache-finding-copy.ts"
 export {
+  CACHE_FINDING_SWEEP_KEY,
+  CACHE_FINDING_SWEEP_PATTERN,
+  CACHE_FINDING_SYNC_THROTTLE_MS,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  cacheFindingSyncDedupeKey,
   DEFAULT_ESCALATION_SENSITIVITY_K,
   ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR,
   ESCALATION_CHECK_THROTTLE_MS,
@@ -47,6 +55,11 @@ export {
   SIGNAL_UPDATE_LOCK_TTL_SECONDS,
 } from "./constants.ts"
 export { type DimensionPattern, rankDimensionValues } from "./dimension-patterns.ts"
+export {
+  type CacheFinding,
+  cacheFindingMeasuresSchema,
+  cacheFindingSchema,
+} from "./entities/cache-finding.ts"
 export {
   type Signal,
   type SignalCentroid,
@@ -96,6 +109,13 @@ export {
 } from "./helpers.ts"
 export { buildHistogramBucketScaffold, fillBuckets } from "./histogram-buckets.ts"
 export { type SignalDiscoveryLockInput, signalDiscoveryLockKey, withSignalDiscoveryLock } from "./locks.ts"
+export {
+  CACHE_FINDING_SIGNAL_STATUSES,
+  CacheFindingRepository,
+  type CacheFindingRepositoryShape,
+  type CacheFindingSignalStatus,
+  type CacheFindingWithSignal,
+} from "./ports/cache-finding-repository.ts"
 export {
   type ListSignalsRepositoryInput,
   type OrgSignalSearchHit,
