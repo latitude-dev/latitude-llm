@@ -3,10 +3,12 @@ import type { SpanDetail } from "@domain/spans"
 import { Context, type Effect } from "effect"
 import type { DestinationSource } from "../entities/destination-source.ts"
 
-/** Position in a source's monotonic change-ordered stream: high-water mark + tie-breaker within one watermark value. */
+/** Position in a source's monotonic change-ordered stream. */
 export interface SourceCursor {
   readonly watermark: Date
   readonly id: string
+  /** Optional second tie-breaker used by sources whose primary id is not globally unique. */
+  readonly traceId?: string
 }
 
 /**
@@ -20,9 +22,10 @@ export interface SourceRecordTypes {
 }
 
 /**
- * A settled window of source records, deduped and ordered by `(watermark, id)`
+ * A settled window of source records, deduped and ordered by the source's
+ * cursor tuple (at minimum `(watermark, id)`)
  * strictly after the cursor and up to `windowEnd`, capped at `limit`.
- * `nextCursor` is the last returned pair (null on an empty window) — resume from
+ * `nextCursor` is the last returned cursor tuple (null on an empty window) — resume from
  * it to continue a limit-truncated window without losing records.
  */
 export interface SourceWindow<TRecord> {
@@ -68,7 +71,7 @@ export interface DestinationSourceReader<TRecord> {
     readonly projectId: ProjectId
     readonly end: Date
     readonly limit: number
-  }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
+  }): Effect.Effect<SourceCursor | null, RepositoryError, ChSqlClient>
 }
 
 /** Per-source reader registry — each source's reader yields that source's record type. TS-enforced like the deliverer/mapper registries. */

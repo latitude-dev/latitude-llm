@@ -249,6 +249,7 @@ describe("DestinationSourceStateRepositoryLive", () => {
       const [row] = await pg.db.select().from(destinationSources)
       expect(row?.watermark).toEqual(next.watermark)
       expect(row?.watermarkId).toBe(next.id)
+      expect(row?.watermarkTraceId).toBe("")
     })
 
     it("rejects a stale expected pair and leaves the cursor untouched", async () => {
@@ -293,6 +294,47 @@ describe("DestinationSourceStateRepositoryLive", () => {
       const [row] = await pg.db.select().from(destinationSources)
       expect(row?.watermark).toEqual(second.watermark)
       expect(row?.watermarkId).toBe(second.id)
+      expect(row?.watermarkTraceId).toBe("")
+    })
+
+    it("persists the trace tie-breaker and includes it in the CAS", async () => {
+      await seedOrganizations()
+      const destination = makeDestination()
+      await saveDestination(destination)
+      const cursor = makeCursor(destination)
+      await createCursor(cursor, ORG_A)
+
+      const initial = { watermark: cursor.watermark, id: cursor.watermarkId, traceId: cursor.watermarkTraceId }
+      const next = {
+        watermark: new Date("2026-06-12T11:00:00.000Z"),
+        id: "abababababababab",
+        traceId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      }
+      const wrongExpected = { ...initial, traceId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
+
+      const results = await withCursorRepo(
+        Effect.gen(function* () {
+          const repo = yield* DestinationSourceStateRepository
+          const won = yield* repo.advanceCursor({
+            destinationId: destination.id,
+            source: SOURCE,
+            expected: initial,
+            next,
+          })
+          const rejected = yield* repo.advanceCursor({
+            destinationId: destination.id,
+            source: SOURCE,
+            expected: wrongExpected,
+            next: { ...next, id: "cdcdcdcdcdcdcdcd" },
+          })
+          return { won, rejected }
+        }),
+      )
+
+      expect(results).toEqual({ won: true, rejected: false })
+      const [row] = await pg.db.select().from(destinationSources)
+      expect(row?.watermarkTraceId).toBe(next.traceId)
+      expect(row?.watermarkId).toBe(next.id)
     })
   })
 

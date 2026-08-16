@@ -17,12 +17,12 @@ export interface FakeSourceWindowInput {
 /**
  * In-memory DestinationSourceReader. `windowFor` lets a test return whatever
  * window it needs for the cursor/limit it sees; the default reads from a fixed
- * record list ordered by `(ingestedAt, spanId)` strictly after the cursor.
+ * record list ordered by `(ingestedAt, spanId, traceId)` strictly after the cursor.
  */
 export const createFakeDestinationSourceReader = (
   windowFor: (input: FakeSourceWindowInput) => SourceWindow<SpanDetail>,
   sample: readonly SpanDetail[] = [],
-  recentLimitFloor: Date | null = null,
+  recentLimitFloor: SourceCursor | null = null,
 ): DestinationSourceReader<SpanDetail> => ({
   listWindow: ({ cursor, windowEnd, limit }) => Effect.succeed(windowFor({ cursor, windowEnd, limit })),
   sampleLatest: ({ limit }) => Effect.succeed(sample.slice(0, limit)),
@@ -40,7 +40,7 @@ export const fakeSourceReaderRegistry = (
 export const staticSourceReader = (window: {
   records: readonly SpanDetail[]
   nextCursor: SourceCursor | null
-  recentLimitFloor?: Date | null
+  recentLimitFloor?: SourceCursor | null
 }): DestinationSourceReader<SpanDetail> =>
   createFakeDestinationSourceReader(() => window, window.records, window.recentLimitFloor ?? null)
 

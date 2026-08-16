@@ -24,7 +24,11 @@ import { DestinationDeliverers } from "../ports/destination-deliverer.ts"
 import { DestinationMappers } from "../ports/destination-mapper.ts"
 import { DestinationRepository } from "../ports/destination-repository.ts"
 import { DestinationRetentionPolicy } from "../ports/destination-retention-policy.ts"
-import { type DestinationSourceReader, DestinationSourceReaders } from "../ports/destination-source-reader.ts"
+import {
+  type DestinationSourceReader,
+  DestinationSourceReaders,
+  type SourceCursor,
+} from "../ports/destination-source-reader.ts"
 import { DestinationSourceStateRepository } from "../ports/destination-source-state-repository.ts"
 import { DestinationSyncRunRepository } from "../ports/destination-sync-run-repository.ts"
 import { createFakeDestinationDeliverer } from "../testing/fake-destination-deliverer.ts"
@@ -153,7 +157,7 @@ const stubSpan = (spanId: string, ingestedAt: Date): SpanDetail => ({
 /** A reader that windows over a fixed record list exactly like the real spans reader (cursor exclusive, windowEnd inclusive). */
 const readerFromRecords = (
   records: readonly SpanDetail[],
-  recentLimitFloor: Date | null = null,
+  recentLimitFloor: SourceCursor | null = null,
 ): DestinationSourceReader<SpanDetail> =>
   createFakeDestinationSourceReader(
     ({ cursor, windowEnd, limit }) => {
@@ -161,12 +165,31 @@ const readerFromRecords = (
         .filter((r) => {
           const w = r.ingestedAt.getTime()
           const c = cursor.watermark.getTime()
-          return (w > c || (w === c && r.spanId > cursor.id)) && w <= windowEnd.getTime()
+          return (
+            (w > c ||
+              (w === c && (r.spanId > cursor.id || (r.spanId === cursor.id && r.traceId > (cursor.traceId ?? ""))))) &&
+            w <= windowEnd.getTime()
+          )
         })
-        .sort((a, b) => a.ingestedAt.getTime() - b.ingestedAt.getTime() || (a.spanId < b.spanId ? -1 : 1))
+        .sort(
+          (a, b) =>
+            a.ingestedAt.getTime() - b.ingestedAt.getTime() ||
+            (a.spanId < b.spanId
+              ? -1
+              : a.spanId > b.spanId
+                ? 1
+                : a.traceId < b.traceId
+                  ? -1
+                  : a.traceId > b.traceId
+                    ? 1
+                    : 0),
+        )
         .slice(0, limit)
       const last = page[page.length - 1]
-      return { records: page, nextCursor: last ? { watermark: last.ingestedAt, id: last.spanId } : null }
+      return {
+        records: page,
+        nextCursor: last ? { watermark: last.ingestedAt, id: last.spanId, traceId: last.traceId } : null,
+      }
     },
     records,
     recentLimitFloor,
@@ -179,7 +202,7 @@ interface SetupOpts {
   readonly state?: DestinationSourceState
   readonly deliveryFailure?: NonRetryableDeliveryError | RetryableDeliveryError
   /** Cap floor the reader reports — simulates "the most-recent-N records start here". */
-  readonly recentLimitFloor?: Date | null
+  readonly recentLimitFloor?: SourceCursor | null
 }
 
 const setup = (opts: SetupOpts) => {
@@ -305,7 +328,7 @@ describe("backfillDestinationUseCase (initiator)", () => {
     expect(res.outcome).toBe("enqueued")
     expect(res.segmentsPlanned).toBe(2)
     expect(jobs).toHaveLength(1)
-    expect(jobs[0]?.cursor).toEqual({ watermark: new Date("2026-05-01T00:00:00.000Z"), id: "" })
+    expect(jobs[0]?.cursor).toEqual({ watermark: new Date("2026-05-01T00:00:00.000Z"), id: "", traceId: "" })
     expect(jobs[0]?.segmentEnd.getTime()).toBe(BOUNDARY_INSTANT.getTime() - 1)
     expect(jobs[0]?.remainingSegments).toHaveLength(1)
     expect(stateRows[0]?.backfillStartedAt).toEqual(NOW) // in-flight marker set
@@ -353,7 +376,7 @@ describe("backfillDestinationUseCase (initiator)", () => {
 
   it("caps to the most recent records: raises the start to the reader's cap floor", async () => {
     // Reader reports the most-recent-N records begin here — newer than the retention floor.
-    const capFloor = new Date(NOW.getTime() - 3 * 24 * 60 * 60 * 1000) // 3 days back
+    const capFloor = { watermark: new Date(NOW.getTime() - 3 * 24 * 60 * 60 * 1000), id: "", traceId: "" }
     const { layer } = setup({ records: [], recentLimitFloor: capFloor })
     const jobs: BackfillWindowJob[] = []
 
@@ -369,8 +392,8 @@ describe("backfillDestinationUseCase (initiator)", () => {
     )
 
     expect(res.outcome).toBe("enqueued")
-    expect(res.clampedStart).toEqual(capFloor) // capped to most-recent window, not the 60-day floor
-    expect(jobs[0]?.cursor.watermark).toEqual(capFloor)
+    expect(res.clampedStart).toEqual(capFloor.watermark) // capped to most-recent window, not the 60-day floor
+    expect(jobs[0]?.cursor).toEqual(capFloor)
   })
 
   it("does not raise the start when the history already fits under the cap (reader floor null)", async () => {
@@ -393,7 +416,7 @@ describe("backfillDestinationUseCase (initiator)", () => {
   })
 
   it("ignores a cap floor older than the retention floor (retention still wins)", async () => {
-    const olderThanRetention = new Date(NOW.getTime() - 200 * 24 * 60 * 60 * 1000)
+    const olderThanRetention = { watermark: new Date(NOW.getTime() - 200 * 24 * 60 * 60 * 1000), id: "", traceId: "" }
     const { layer } = setup({ records: [], recentLimitFloor: olderThanRetention })
     const jobs: BackfillWindowJob[] = []
 

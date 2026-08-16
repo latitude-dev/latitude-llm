@@ -69,13 +69,14 @@ export interface MemoryOperationSpan {
 /**
  * Compound watermark for ingestion-ordered window reads. `ingested_at` is
  * stamped once per ingest request batch, so many spans share an identical
- * millisecond — `spanId` breaks ties so a limit-truncated read can resume
- * without skipping same-timestamp siblings. The initial cursor uses an empty
- * `spanId` sentinel.
+ * millisecond — `(spanId, traceId)` breaks ties so a limit-truncated read can
+ * resume without skipping same-timestamp siblings from different traces. The
+ * initial cursor uses empty `spanId` and `traceId` sentinels.
  */
 export interface SpanIngestionCursor {
   readonly ingestedAt: Date
   readonly spanId: SpanId
+  readonly traceId: TraceId
 }
 
 export interface SpanIngestedAtWindow {
@@ -232,10 +233,10 @@ export interface SpanRepositoryShape {
   }): Effect.Effect<TraceId | null, RepositoryError, ChSqlClient>
 
   /**
-   * Settled-row window read: deduped spans (`LIMIT 1 BY span_id`, newest
-   * `ingested_at` wins) ordered by `(ingested_at, span_id)`, strictly after
-   * the compound cursor and up to `windowEnd` inclusive, capped at `limit`.
-   * `nextCursor` is the last returned pair (null on an empty window) — resume
+   * Settled-row window read: deduped spans (`LIMIT 1 BY trace_id, span_id`, newest
+   * `ingested_at` wins) ordered by `(ingested_at, span_id, trace_id)`, strictly
+   * after the cursor and up to `windowEnd` inclusive, capped at `limit`.
+   * `nextCursor` is the last returned tuple (null on an empty window) — resume
    * from it to continue a limit-truncated window without losing spans.
    */
   listByIngestedAtWindow(input: {
@@ -248,8 +249,8 @@ export interface SpanRepositoryShape {
   }): Effect.Effect<SpanIngestedAtWindow, RepositoryError, ChSqlClient>
 
   /**
-   * The most recent settled spans for a project, deduped (`LIMIT 1 BY span_id`,
-   * newest `ingested_at` wins), newest first. A representative sample for
+   * The most recent settled spans for a project, deduped (`LIMIT 1 BY trace_id,
+   * span_id`, newest `ingested_at` wins), newest first. A representative sample for
    * previews — not a paged read; no cursor.
    */
   listRecentDetailsByProjectId(input: {
@@ -270,7 +271,7 @@ export interface SpanRepositoryShape {
     readonly projectId: ProjectId
     readonly windowEnd: Date
     readonly limit: number
-  }): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
+  }): Effect.Effect<SpanIngestionCursor | null, RepositoryError, ChSqlClient>
 }
 
 export type SpanListOrderField = "startTime" | "duration" | "cost"

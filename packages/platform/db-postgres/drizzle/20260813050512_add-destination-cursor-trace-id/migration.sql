@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."destination_sources" ADD COLUMN "watermark_trace_id" varchar(32) DEFAULT '' NOT NULL;

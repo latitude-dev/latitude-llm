@@ -226,6 +226,7 @@ export const createDestinationsWorker = ({
     ...base,
     cursorWatermark: job.cursor.watermark.toISOString(),
     cursorId: job.cursor.id,
+    cursorTraceId: job.cursor.traceId ?? "",
     segmentEnd: job.segmentEnd.toISOString(),
     remainingSegments: job.remainingSegments.map((s) => ({
       start: s.start.toISOString(),
@@ -515,7 +516,13 @@ export const createDestinationsWorker = ({
           const result = yield* runBackfillWindowUseCase({
             destinationId: DestinationId(payload.destinationId),
             source,
-            cursor: { watermark: new Date(payload.cursorWatermark), id: payload.cursorId },
+            cursor: {
+              watermark: new Date(payload.cursorWatermark),
+              id: payload.cursorId,
+              // Older queued jobs predate the trace tie-breaker; resume them from
+              // the empty sentinel rather than widening the cursor shape at runtime.
+              traceId: payload.cursorTraceId ?? "",
+            },
             segmentEnd: new Date(payload.segmentEnd),
             remainingSegments: payload.remainingSegments.map((s) => ({
               start: new Date(s.start),

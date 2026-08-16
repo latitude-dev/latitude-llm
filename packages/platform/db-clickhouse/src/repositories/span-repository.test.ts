@@ -832,7 +832,11 @@ describe("SpanRepository", () => {
 
   describe("listByIngestedAtWindow", () => {
     const WINDOW_END = new Date("2026-01-01T01:00:00.000Z")
-    const startCursor = { ingestedAt: new Date("2026-01-01T00:00:00.000Z"), spanId: SpanId("") }
+    const startCursor = {
+      ingestedAt: new Date("2026-01-01T00:00:00.000Z"),
+      spanId: SpanId(""),
+      traceId: TraceId(""),
+    }
 
     const listWindow = (cursor: typeof startCursor, limit: number) =>
       runCh(
@@ -863,6 +867,7 @@ describe("SpanRepository", () => {
       expect(window.nextCursor).toEqual({
         ingestedAt: new Date("2026-01-01T00:10:00.000Z"),
         spanId: "1111111111111111",
+        traceId: TRACE_ID,
       })
     })
 
@@ -888,6 +893,7 @@ describe("SpanRepository", () => {
       expect(first.nextCursor).toEqual({
         ingestedAt: new Date("2026-01-01T00:10:00.000Z"),
         spanId: "2222222222222222",
+        traceId: TRACE_ID,
       })
 
       const delivered: string[] = []
@@ -920,6 +926,72 @@ describe("SpanRepository", () => {
       expect(window.nextCursor).toEqual({
         ingestedAt: new Date("2026-01-01T00:20:00.000Z"),
         spanId: "1111111111111111",
+        traceId: TRACE_ID,
+      })
+    })
+
+    it("keeps colliding span ids from different traces while deduping each trace", async () => {
+      const traceA = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const traceB = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      const sharedSpanId = "abababababababab"
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: sharedSpanId,
+            name: "trace-a-older",
+            ingested_at: "2026-01-01 00:10:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: sharedSpanId,
+            name: "trace-a-newer",
+            ingested_at: "2026-01-01 00:20:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceB,
+            span_id: sharedSpanId,
+            name: "trace-b",
+            ingested_at: "2026-01-01 00:15:00.000",
+          }),
+        ]),
+      )
+
+      const window = await listWindow(startCursor, 10)
+
+      expect(window.spans.map((span) => span.name)).toEqual(["trace-b", "trace-a-newer"])
+      expect(window.spans.map((span) => span.traceId)).toEqual([traceB, traceA])
+    })
+
+    it("resumes colliding span ids from different traces in the same ingest batch", async () => {
+      const traceA = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const traceB = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      const sharedSpanId = "abababababababab"
+      const batchIngestedAt = "2026-01-01 00:10:00.000"
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ trace_id: traceA, span_id: sharedSpanId, ingested_at: batchIngestedAt }),
+          makeSpanRow({ trace_id: traceB, span_id: sharedSpanId, ingested_at: batchIngestedAt }),
+        ]),
+      )
+
+      const first = await listWindow(startCursor, 1)
+      expect(first.spans.map((span) => span.traceId)).toEqual([traceA])
+      expect(first.nextCursor).toEqual({
+        ingestedAt: new Date("2026-01-01T00:10:00.000Z"),
+        spanId: sharedSpanId,
+        traceId: traceA,
+      })
+
+      if (!first.nextCursor) throw new Error("expected a cursor after the first page")
+      const second = await listWindow(first.nextCursor, 1)
+      expect(second.spans.map((span) => span.traceId)).toEqual([traceB])
+      expect(second.nextCursor).toEqual({
+        ingestedAt: new Date("2026-01-01T00:10:00.000Z"),
+        spanId: sharedSpanId,
+        traceId: traceB,
       })
     })
 
@@ -941,11 +1013,16 @@ describe("SpanRepository", () => {
       expect(page1.nextCursor).toEqual({
         ingestedAt: new Date("2026-01-01T00:20:00.000Z"),
         spanId: "bbbbbbbbbbbbbbbb",
+        traceId: TRACE_ID,
       })
 
       // Resume: D (00:25) then C — which sorts last by its *newest* version (00:30), not 00:15.
       const page2 = await listWindow(
-        { ingestedAt: new Date("2026-01-01T00:20:00.000Z"), spanId: SpanId("bbbbbbbbbbbbbbbb") },
+        {
+          ingestedAt: new Date("2026-01-01T00:20:00.000Z"),
+          spanId: SpanId("bbbbbbbbbbbbbbbb"),
+          traceId: TRACE_ID,
+        },
         2,
       )
       expect(page2.spans.map((span) => span.spanId)).toEqual(["dddddddddddddddd", "cccccccccccccccc"])
@@ -953,10 +1030,15 @@ describe("SpanRepository", () => {
       expect(page2.nextCursor).toEqual({
         ingestedAt: new Date("2026-01-01T00:30:00.000Z"),
         spanId: "cccccccccccccccc",
+        traceId: TRACE_ID,
       })
 
       const page3 = await listWindow(
-        { ingestedAt: new Date("2026-01-01T00:30:00.000Z"), spanId: SpanId("cccccccccccccccc") },
+        {
+          ingestedAt: new Date("2026-01-01T00:30:00.000Z"),
+          spanId: SpanId("cccccccccccccccc"),
+          traceId: TRACE_ID,
+        },
         2,
       )
       expect(page3.spans).toHaveLength(0)
@@ -988,10 +1070,15 @@ describe("SpanRepository", () => {
       expect(window.nextCursor).toEqual({
         ingestedAt: new Date("2026-01-01T01:00:00.000Z"),
         spanId: "2222222222222222",
+        traceId: TRACE_ID,
       })
 
       const exhausted = await listWindow(
-        { ingestedAt: new Date("2026-01-01T01:00:00.000Z"), spanId: SpanId("2222222222222222") },
+        {
+          ingestedAt: new Date("2026-01-01T01:00:00.000Z"),
+          spanId: SpanId("2222222222222222"),
+          traceId: TRACE_ID,
+        },
         10,
       )
       expect(exhausted.spans).toHaveLength(0)
@@ -1051,7 +1138,7 @@ describe("SpanRepository", () => {
         ]),
       )
 
-    it("returns the (limit+1)-th most recent ingested_at as the exclusive floor", async () => {
+    it("returns the complete (limit+1)-th cursor as the exclusive floor", async () => {
       await insertFive()
 
       const floor = await runCh(
@@ -1064,7 +1151,11 @@ describe("SpanRepository", () => {
       )
 
       // The 2 most recent are 00:50 and 00:40; the floor (3rd most recent) is 00:30.
-      expect(floor).toEqual(new Date("2026-01-01T00:30:00.000Z"))
+      expect(floor).toEqual({
+        ingestedAt: new Date("2026-01-01T00:30:00.000Z"),
+        spanId: "3333333333333333",
+        traceId: TRACE_ID,
+      })
     })
 
     it("returns null when there are no more than `limit` records (no cap needed)", async () => {
@@ -1080,6 +1171,50 @@ describe("SpanRepository", () => {
       )
 
       expect(floor).toBeNull()
+    })
+
+    it("keeps same-timestamp siblings after the floor cursor", async () => {
+      const traceA = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const traceB = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      const traceC = TraceId("cccccccccccccccccccccccccccccccc")
+      const sharedSpanId = "abababababababab"
+      const batchIngestedAt = "2026-01-01 00:30:00.000"
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ trace_id: traceA, span_id: sharedSpanId, ingested_at: batchIngestedAt }),
+          makeSpanRow({ trace_id: traceB, span_id: sharedSpanId, ingested_at: batchIngestedAt }),
+          makeSpanRow({ trace_id: traceC, span_id: "cdcdcdcdcdcdcdcd", ingested_at: "2026-01-01 00:20:00.000" }),
+        ]),
+      )
+
+      const floor = await runCh(
+        repo.findIngestedAtFloorForRecentLimit({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          windowEnd: WINDOW_END,
+          limit: 1,
+        }),
+      )
+
+      expect(floor).toEqual({
+        ingestedAt: new Date(`${batchIngestedAt.replace(" ", "T")}Z`),
+        spanId: sharedSpanId,
+        traceId: traceA,
+      })
+
+      if (!floor) throw new Error("expected a floor cursor")
+      const resumed = await runCh(
+        repo.listByIngestedAtWindow({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          cursor: floor,
+          windowEnd: WINDOW_END,
+          limit: 10,
+          excludePayloads: false,
+        }),
+      )
+      expect(resumed.spans.map((span) => span.traceId)).toEqual([traceB])
     })
   })
 
@@ -1669,6 +1804,42 @@ describe("SpanRepository", () => {
       )
 
       expect(spans.map((span) => span.name)).toEqual(["span-4", "span-3"])
+    })
+
+    it("keeps colliding span ids from different traces in the recent sample", async () => {
+      const traceA = TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const traceB = TraceId("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+      const sharedSpanId = "abababababababab"
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: sharedSpanId,
+            name: "trace-a-older",
+            ingested_at: "2026-01-01 00:10:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceA,
+            span_id: sharedSpanId,
+            name: "trace-a-newer",
+            ingested_at: "2026-01-01 00:30:00.000",
+          }),
+          makeSpanRow({
+            trace_id: traceB,
+            span_id: sharedSpanId,
+            name: "trace-b",
+            ingested_at: "2026-01-01 00:20:00.000",
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listRecentDetailsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 2 }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["trace-a-newer", "trace-b"])
+      expect(spans.map((span) => span.traceId)).toEqual([traceA, traceB])
     })
   })
 })

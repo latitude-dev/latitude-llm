@@ -376,7 +376,7 @@ describe("runDestinationSyncUseCase", () => {
     )
 
     expect(res.outcome).toBe("delivered")
-    // Cursor lands on the last delivered (watermark, id) pair, not the window end.
+    // Cursor lands on the last delivered (watermark, id, traceId) tuple, not the window end.
     expect(cursorRows[0]?.watermark).toEqual(CURSOR_AT)
     expect(cursorRows[0]?.watermarkId).toBe("aaaaaaaaaaaaaaa1")
   })

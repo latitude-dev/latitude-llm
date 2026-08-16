@@ -14,8 +14,8 @@ import {
  * status, and sync state. Extracted off the `destinations` row so each source
  * carries its own settings and advances at its own rate. The watermark is a
  * monotonic high-water mark over the source's change-ordered stream (spans:
- * `ingested_at`); `watermarkId` is the tie-breaker within a single watermark
- * value (spans: `span_id`). Disabling sets `status='disabled'` and keeps the
+ * `ingested_at`); `watermarkId` and `watermarkTraceId` are the tie-breakers
+ * within a single watermark value (spans: `span_id` and `trace_id`). Disabling keeps the
  * cursor — the sweep skips it; re-enabling resumes from where it left off.
  * Quarantine and credentials stay destination-level — they are not here.
  */
@@ -28,8 +28,10 @@ export const destinationSourceStateSchema = z
     status: destinationSourceStatusSchema,
     config: destinationSourceConfigSchema,
     watermark: z.date(),
-    /** Tie-breaker within one watermark value; `""` before the first advance. */
+    /** Primary tie-breaker within one watermark value; `""` before the first advance. */
     watermarkId: z.string(),
+    /** Secondary tie-breaker for sources whose primary id is trace-scoped. */
+    watermarkTraceId: z.string().default(""),
     /** Earliest instant this source has taken responsibility for (live start, extended leftward by backfills); the upper bound for a historical backfill. */
     coverageStartAt: z.date(),
     backfillStartedAt: z.date().nullable(),
@@ -62,6 +64,7 @@ export const createDestinationSourceState = (params: {
     config: params.config,
     watermark: params.watermark,
     watermarkId: "",
+    watermarkTraceId: "",
     // Coverage begins where live begins; backfills extend it leftward.
     coverageStartAt: params.watermark,
     backfillStartedAt: null,

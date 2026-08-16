@@ -12,8 +12,9 @@ import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } 
  * - `config` is the source-discriminated non-secret shape (payload exclusion,
  *   per-run cap), validated by `destinationSourceConfigSchema` in
  *   `@domain/destinations`.
- * - `(watermark, watermark_id)` is the compound cursor (spans: `ingested_at` +
- *   `span_id`); advances only via the repository's optimistic CAS update.
+ * - `(watermark, watermark_id, watermark_trace_id)` is the compound cursor
+ *   (spans: `ingested_at` + `span_id` + `trace_id`); advances only via the
+ *   repository's optimistic CAS update.
  * - `last_run_at` + `consecutive_empty_runs` drive sweep due-selection with
  *   idle backoff.
  * - `organization_id` is denormalized for RLS. No FK on `destination_id`, per
@@ -29,6 +30,7 @@ export const destinationSources = latitudeSchema.table(
     config: jsonb("config").notNull().$type<DestinationSourceConfig>(),
     watermark: tzTimestamp("watermark").notNull(),
     watermarkId: varchar("watermark_id", { length: 32 }).notNull().default(""),
+    watermarkTraceId: varchar("watermark_trace_id", { length: 32 }).notNull().default(""),
     // Earliest instant this source has taken responsibility for; backfills extend it leftward, the historical-export upper bound.
     coverageStartAt: tzTimestamp("coverage_start_at").defaultNow().notNull(),
     backfillStartedAt: tzTimestamp("backfill_started_at"),

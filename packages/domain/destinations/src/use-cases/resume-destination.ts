@@ -104,7 +104,7 @@ export const resumeDestinationUseCase = (input: ResumeDestinationInput) =>
       yield* sourceStates.setWatermark({
         destinationId: current.id,
         source: state.source,
-        watermark: { watermark: input.now, id: "" },
+        watermark: { watermark: input.now, id: "", traceId: "" },
       })
       backfillsStarted += 1
     }
