@@ -40,6 +40,7 @@ import {
   listSignals,
   previewEvaluation,
   searchOrgSignals,
+  submitSignalFeedback,
   updateSignal,
   updateSignalEvaluation,
   updateSignalTriage,
@@ -558,6 +559,22 @@ export function useUpdateSignalEvaluation(projectId: string, signalId: string) {
           signalId,
           evaluation: input.evaluation,
           ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
+        },
+      }),
+    onSuccess: () => invalidateSignalQueries(projectId, signalId),
+  })
+}
+
+export function useSubmitSignalFeedback(projectId: string, signalId: string) {
+  return useMutation({
+    mutationFn: (input: { readonly passed: boolean; readonly feedback?: string; readonly ignore?: boolean }) =>
+      submitSignalFeedback({
+        data: {
+          projectId,
+          signalId,
+          passed: input.passed,
+          ...(input.feedback !== undefined ? { feedback: input.feedback } : {}),
+          ...(input.ignore !== undefined ? { ignore: input.ignore } : {}),
         },
       }),
     onSuccess: () => invalidateSignalQueries(projectId, signalId),
