@@ -21,9 +21,11 @@ import {
   getSignalTrendUseCase,
   listSignalsUseCase,
   listSignalTracesUseCase,
+  SIGNAL_FEEDBACK_MAX_LENGTH,
   SIGNAL_PRIORITIES,
   type SignalLifecycleCommand,
   SignalRepository,
+  submitSignalFeedbackUseCase,
   updateSignalUseCase,
 } from "@domain/signals"
 import { createRoute, z } from "@hono/zod-openapi"
@@ -54,6 +56,7 @@ import {
   PaginatedSignalsSchema,
   SignalDetailSchema,
   SignalHistogramSchema,
+  signalFeedbackFields,
   toSignalDetailResponse,
   toSignalHistogramResponse,
   toSignalResponse,
@@ -993,6 +996,89 @@ const updateSignal = signalEndpoint({
     ),
 })
 
+const SubmitSignalFeedbackBodySchema = z
+  .object({
+    passed: z
+      .boolean()
+      .describe("`true` when the signal is a real problem worth flagging; `false` when it is a false positive."),
+    feedback: z
+      .string()
+      .max(SIGNAL_FEEDBACK_MAX_LENGTH)
+      .optional()
+      .describe("Reason for the verdict. Required when `passed` is `false`."),
+    value: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe("Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`."),
+    ignore: z.boolean().optional().describe("Also archive the signal so new occurrences stop being reported."),
+  })
+  .openapi("SubmitSignalFeedbackBody")
+
+const SubmitSignalFeedbackResponseSchema = z
+  .object({
+    ...signalFeedbackFields,
+    ignored: z.boolean().describe("Whether the signal was archived as part of this call."),
+  })
+  .openapi("SubmitSignalFeedbackResponse")
+
+const submitSignalFeedback = signalEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/{signalSlug}/feedback",
+    name: "submitSignalFeedback",
+    tags: ["Signals"],
+    group: "signals",
+    sdkMethod: "submitFeedback",
+    summary: "Submit signal feedback",
+    description:
+      "Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.",
+    security: PROTECTED_SECURITY,
+    request: { params: SignalSlugParamsSchema, body: jsonBody(SubmitSignalFeedbackBodySchema) },
+    responses: typedResponses({
+      status: 201,
+      schema: SubmitSignalFeedbackResponseSchema,
+      description: "Feedback recorded",
+    }),
+  }),
+  access: "write",
+  rateLimitTier: "medium",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
+      const body = input.body
+
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+
+      const result = yield* submitSignalFeedbackUseCase({
+        projectId: project.id as string,
+        signalId: SignalId(signal.id as string),
+        passed: body.passed,
+        ...(body.feedback !== undefined ? { feedback: body.feedback } : {}),
+        ...(body.value !== undefined ? { value: body.value } : {}),
+        ...(body.ignore !== undefined ? { ignore: body.ignore } : {}),
+      })
+      return { status: 201, body: { ...result.feedback, ignored: result.ignored } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          SignalRepositoryLive,
+          EvaluationRepositoryLive,
+          OutboxEventWriterLive,
+          SettingsReaderLive,
+        ),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
+})
+
 const deleteSignal = signalEndpoint({
   route: createRoute({
     method: "delete",
@@ -1049,6 +1135,7 @@ export const signalsModule: OperationModule = {
     unmuteSignals,
     monitorSignal,
     unmonitorSignal,
+    submitSignalFeedback,
     exportSignals,
   ],
 }

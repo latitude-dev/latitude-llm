@@ -1412,6 +1412,100 @@ export class SignalsClient {
     }
 
     /**
+     * Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} signalSlug - Signal slug.
+     * @param {Latitude.SubmitSignalFeedbackBody} request
+     * @param {SignalsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.signals.submitFeedback("projectSlug", "signalSlug", {
+     *         passed: true
+     *     })
+     */
+    public submitFeedback(
+        projectSlug: string,
+        signalSlug: string,
+        request: Latitude.SubmitSignalFeedbackBody,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.SubmitSignalFeedbackResponse> {
+        return core.HttpResponsePromise.fromPromise(
+            this.__submitFeedback(projectSlug, signalSlug, request, requestOptions),
+        );
+    }
+
+    private async __submitFeedback(
+        projectSlug: string,
+        signalSlug: string,
+        request: Latitude.SubmitSignalFeedbackBody,
+        requestOptions?: SignalsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.SubmitSignalFeedbackResponse>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/signals/${core.url.encodePathParam(signalSlug)}/feedback`,
+            ),
+            method: "POST",
+            headers: _headers,
+            contentType: "application/json",
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            requestType: "json",
+            body: request,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return {
+                data: _response.body as Latitude.SubmitSignalFeedbackResponse,
+                rawResponse: _response.rawResponse,
+            };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "POST",
+            "/v1/projects/{projectSlug}/signals/{signalSlug}/feedback",
+        );
+    }
+
+    /**
      * Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)

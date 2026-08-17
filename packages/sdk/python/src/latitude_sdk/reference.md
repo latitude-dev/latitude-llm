@@ -5397,6 +5397,121 @@ client.signals.unmonitor(
 </dl>
 </details>
 
+<details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">submit_feedback</a>(...) -> SubmitSignalFeedbackResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.signals.submit_feedback(
+    project_slug="projectSlug",
+    signal_slug="signalSlug",
+    passed=True,
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**signal_slug:** `str` — Signal slug.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**passed:** `bool` — `true` when the signal is a real problem worth flagging; `false` when it is a false positive.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**feedback:** `typing.Optional[str]` — Reason for the verdict. Required when `passed` is `false`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**value:** `typing.Optional[float]` — Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**ignore:** `typing.Optional[bool]` — Also archive the signal so new occurrences stop being reported.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 <details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">export</a>(...) -> ExportSignalsResponse</code></summary>
 <dl>
 <dd>

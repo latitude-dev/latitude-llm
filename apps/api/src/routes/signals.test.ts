@@ -1,4 +1,6 @@
+import { SIGNAL_FEEDBACK_MAX_LENGTH } from "@domain/signals"
 import { projects } from "@platform/db-postgres/schema/projects"
+import { signals } from "@platform/db-postgres/schema/signals"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
 import {
@@ -20,6 +22,26 @@ const createProjectRecord = async (
     organizationId,
     name: `Project ${projectId}`,
     slug,
+  })
+  return slug
+}
+
+const createSignalRecord = async (
+  database: InMemoryPostgres,
+  organizationId: string,
+  projectId: string,
+  slug: string,
+): Promise<string> => {
+  await database.db.insert(signals).values({
+    id: slug.padEnd(24, "0").slice(0, 24),
+    organizationId,
+    projectId,
+    slug,
+    name: `Signal ${slug}`,
+    description: `Description for ${slug}`,
+    source: "flagger",
+    origin: "system",
+    promotedAt: new Date("2026-08-01T00:00:00.000Z"),
   })
   return slug
 }
@@ -301,6 +323,151 @@ describe("Signals Routes Integration", () => {
     )
 
     expect(res.status).toBe(404)
+  })
+
+  it<ApiTestContext>("POST /{signalSlug}/feedback records the verdict once and refuses the second attempt", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "aaaa000000000000aaaaaaaa"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    const signalSlug = await createSignalRecord(database, tenant.organizationId, projectId, "feedback-once")
+
+    const submit = (body: Record<string, unknown>) =>
+      app.fetch(
+        new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}/feedback`, {
+          method: "POST",
+          headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+      )
+
+    const created = await submit({ passed: true, feedback: "Caught a real regression" })
+    expect(created.status).toBe(201)
+    expect(await created.json()).toEqual({
+      value: 1,
+      passed: true,
+      feedback: "Caught a real regression",
+      ignored: false,
+    })
+
+    const repeat = await submit({ passed: false, feedback: "Changed my mind" })
+    expect(repeat.status).toBe(409)
+  })
+
+  it<ApiTestContext>("POST /{signalSlug}/feedback rejects a false positive with no reason", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "bbbb000000000000aaaaaaaa"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    const signalSlug = await createSignalRecord(database, tenant.organizationId, projectId, "feedback-reason")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}/feedback`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ passed: false, feedback: "   " }),
+      }),
+    )
+
+    expect(res.status).toBe(422)
+  })
+
+  it<ApiTestContext>("POST /{signalSlug}/feedback rejects a reason longer than the boundary limit", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "cccc000000000000aaaaaaaa"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    const signalSlug = await createSignalRecord(database, tenant.organizationId, projectId, "feedback-too-long")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}/feedback`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ passed: false, feedback: "x".repeat(SIGNAL_FEEDBACK_MAX_LENGTH + 1) }),
+      }),
+    )
+
+    expect(res.status).toBe(400)
+  })
+
+  it<ApiTestContext>("POST /{signalSlug}/feedback archives the signal when asked to ignore it", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "dddd000000000000aaaaaaaa"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    const signalSlug = await createSignalRecord(database, tenant.organizationId, projectId, "feedback-ignore")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}/feedback`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ passed: false, feedback: "False positive", ignore: true }),
+      }),
+    )
+
+    expect(res.status).toBe(201)
+    expect(await res.json()).toMatchObject({ passed: false, value: 0, ignored: true })
+
+    const rows = await database.db.select().from(signals)
+    expect(rows.find((row) => row.slug === signalSlug)?.ignoredAt).not.toBeNull()
+  })
+
+  it<ApiTestContext>("POST /{signalSlug}/feedback returns 404 for a signal in another project", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "eeee000000000000aaaaaaaa"
+    const otherProjectId = "ffff000000000000aaaaaaaa"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await createProjectRecord(database, tenant.organizationId, otherProjectId)
+    const signalSlug = await createSignalRecord(database, tenant.organizationId, otherProjectId, "feedback-elsewhere")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}/feedback`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ passed: true }),
+      }),
+    )
+
+    expect(res.status).toBe(404)
+  })
+
+  it<ApiTestContext>("GET /{signalSlug} exposes the verdict once submitted", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "1010000000000000aaaaaaaa"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    const signalSlug = await createSignalRecord(database, tenant.organizationId, projectId, "feedback-readback")
+
+    const read = async () => {
+      const res = await app.fetch(
+        new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}`, {
+          headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+        }),
+      )
+      return (await res.json()) as { feedback: unknown }
+    }
+
+    expect((await read()).feedback).toBeNull()
+
+    await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}/feedback`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ passed: true, feedback: "Worth flagging" }),
+      }),
+    )
+
+    expect((await read()).feedback).toEqual({ value: 1, passed: true, feedback: "Worth flagging" })
   })
 
   it<ApiTestContext>("GET /analytics rejects unauthenticated requests with 401", async ({ app }) => {

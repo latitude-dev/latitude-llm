@@ -9811,6 +9811,39 @@
               }
             ],
             "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Normalized score for the signal's usefulness, in `[0, 1]`."
+                  },
+                  "passed": {
+                    "type": "boolean",
+                    "description": "`true` when the signal is a real problem; `false` when it is a false positive."
+                  },
+                  "feedback": {
+                    "type": "string",
+                    "description": "Reason given for the verdict. Empty when none was provided."
+                  }
+                },
+                "required": [
+                  "value",
+                  "passed",
+                  "feedback"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The verdict submitted for this signal, or `null` when none has been submitted yet."
           }
         },
         "required": [
@@ -9835,7 +9868,8 @@
           "occurrences",
           "affectedSessionsPercent",
           "evaluations",
-          "monitoringState"
+          "monitoringState",
+          "feedback"
         ],
         "additionalProperties": false
       },
@@ -11005,6 +11039,85 @@
         "required": [
           "projectSlug",
           "signalSlug"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "submitSignalFeedback",
+      "title": "Submit signal feedback",
+      "description": "Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "signalSlug": {
+            "type": "string",
+            "description": "Signal slug."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "`true` when the signal is a real problem worth flagging; `false` when it is a false positive."
+          },
+          "feedback": {
+            "description": "Reason for the verdict. Required when `passed` is `false`.",
+            "type": "string",
+            "maxLength": 2000
+          },
+          "value": {
+            "description": "Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "ignore": {
+            "description": "Also archive the signal so new occurrences stop being reported.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "projectSlug",
+          "signalSlug",
+          "passed"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score for the signal's usefulness, in `[0, 1]`."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "`true` when the signal is a real problem; `false` when it is a false positive."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Reason given for the verdict. Empty when none was provided."
+          },
+          "ignored": {
+            "type": "boolean",
+            "description": "Whether the signal was archived as part of this call."
+          }
+        },
+        "required": [
+          "value",
+          "passed",
+          "feedback",
+          "ignored"
         ],
         "additionalProperties": false
       },

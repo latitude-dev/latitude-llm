@@ -28,6 +28,7 @@ from ..types.signal_analytics_response import SignalAnalyticsResponse
 from ..types.signal_detail import SignalDetail
 from ..types.signal_histogram import SignalHistogram
 from ..types.signals_lifecycle_response import SignalsLifecycleResponse
+from ..types.submit_signal_feedback_response import SubmitSignalFeedbackResponse
 from ..types.update_signal_response import UpdateSignalResponse
 from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
 from .types.create_signal_body_priority import CreateSignalBodyPriority
@@ -1441,6 +1442,115 @@ class RawSignalsClient:
         try:
             if 200 <= _response.status_code < 300:
                 return HttpResponse(response=_response, data=None)
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def submit_feedback(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        passed: bool,
+        feedback: typing.Optional[str] = OMIT,
+        value: typing.Optional[float] = OMIT,
+        ignore: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SubmitSignalFeedbackResponse]:
+        """
+        Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        passed : bool
+            `true` when the signal is a real problem worth flagging; `false` when it is a false positive.
+
+        feedback : typing.Optional[str]
+            Reason for the verdict. Required when `passed` is `false`.
+
+        value : typing.Optional[float]
+            Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.
+
+        ignore : typing.Optional[bool]
+            Also archive the signal so new occurrences stop being reported.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SubmitSignalFeedbackResponse]
+            Feedback recorded
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/feedback",
+            method="POST",
+            json={
+                "passed": passed,
+                "feedback": feedback,
+                "value": value,
+                "ignore": ignore,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SubmitSignalFeedbackResponse,
+                    parse_obj_as(
+                        type_=SubmitSignalFeedbackResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
@@ -2962,6 +3072,115 @@ class AsyncRawSignalsClient:
         try:
             if 200 <= _response.status_code < 300:
                 return AsyncHttpResponse(response=_response, data=None)
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def submit_feedback(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        passed: bool,
+        feedback: typing.Optional[str] = OMIT,
+        value: typing.Optional[float] = OMIT,
+        ignore: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SubmitSignalFeedbackResponse]:
+        """
+        Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        passed : bool
+            `true` when the signal is a real problem worth flagging; `false` when it is a false positive.
+
+        feedback : typing.Optional[str]
+            Reason for the verdict. Required when `passed` is `false`.
+
+        value : typing.Optional[float]
+            Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.
+
+        ignore : typing.Optional[bool]
+            Also archive the signal so new occurrences stop being reported.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SubmitSignalFeedbackResponse]
+            Feedback recorded
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/feedback",
+            method="POST",
+            json={
+                "passed": passed,
+                "feedback": feedback,
+                "value": value,
+                "ignore": ignore,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SubmitSignalFeedbackResponse,
+                    parse_obj_as(
+                        type_=SubmitSignalFeedbackResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)

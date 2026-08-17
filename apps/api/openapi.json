@@ -5272,6 +5272,9 @@
           },
           "monitoringState": {
             "$ref": "#/components/schemas/SignalMonitoringState"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/SignalFeedback"
           }
         },
         "required": [
@@ -5296,7 +5299,8 @@
           "occurrences",
           "affectedSessionsPercent",
           "evaluations",
-          "monitoringState"
+          "monitoringState",
+          "feedback"
         ]
       },
       "Evaluation": {
@@ -5534,6 +5538,34 @@
         ],
         "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
       },
+      "SignalFeedback": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score for the signal's usefulness, in `[0, 1]`."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "`true` when the signal is a real problem; `false` when it is a false positive."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Reason given for the verdict. Empty when none was provided."
+          }
+        },
+        "required": [
+          "value",
+          "passed",
+          "feedback"
+        ],
+        "description": "The verdict submitted for this signal, or `null` when none has been submitted yet."
+      },
       "SignalHistogram": {
         "type": "object",
         "properties": {
@@ -5700,6 +5732,62 @@
         "required": [
           "jobId",
           "evaluationId"
+        ]
+      },
+      "SubmitSignalFeedbackResponse": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score for the signal's usefulness, in `[0, 1]`."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "`true` when the signal is a real problem; `false` when it is a false positive."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Reason given for the verdict. Empty when none was provided."
+          },
+          "ignored": {
+            "type": "boolean",
+            "description": "Whether the signal was archived as part of this call."
+          }
+        },
+        "required": [
+          "value",
+          "passed",
+          "feedback",
+          "ignored"
+        ]
+      },
+      "SubmitSignalFeedbackBody": {
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "description": "`true` when the signal is a real problem worth flagging; `false` when it is a false positive."
+          },
+          "feedback": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Reason for the verdict. Required when `passed` is `false`."
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`."
+          },
+          "ignore": {
+            "type": "boolean",
+            "description": "Also archive the signal so new occurrences stop being reported."
+          }
+        },
+        "required": [
+          "passed"
         ]
       },
       "ExportSignalsResponse": {
@@ -18927,6 +19015,97 @@
         "responses": {
           "204": {
             "description": "Signal unmonitored"
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/signals/{signalSlug}/feedback": {
+      "post": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "submitFeedback",
+        "summary": "Submit signal feedback",
+        "description": "Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "submitSignalFeedback",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitSignalFeedbackBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Feedback recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitSignalFeedbackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }

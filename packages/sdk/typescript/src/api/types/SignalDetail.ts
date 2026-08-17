@@ -46,6 +46,7 @@ export interface SignalDetail {
     /** Active evaluations monitoring the signal. Archived and deleted evaluations are excluded. */
     evaluations: Latitude.Evaluation[];
     monitoringState: Latitude.SignalMonitoringState;
+    feedback: Latitude.SignalFeedback | null;
 }
 
 export namespace SignalDetail {
