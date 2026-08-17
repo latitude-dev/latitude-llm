@@ -38,6 +38,7 @@ import {
   TaxonomyClusterRepository,
   type TaxonomyDimension,
   type TaxonomyNameQualityMetrics,
+  type TaxonomyObservationAssignmentMethod,
   TaxonomyObservationRepository,
   type TaxonomyRun,
   TaxonomyRunRepository,
@@ -892,6 +893,13 @@ const routeProjectionWindowToStagingLeaves = (
     return { window, routed }
   })
 
+// Rows the fit floor rejected are written too (as `noise`), so the written count is
+// not the assigned count — report them apart or a coverage drop reads as a no-op.
+const reassignmentCounts = (rows: readonly { readonly assignmentMethod: TaxonomyObservationAssignmentMethod }[]) => ({
+  observationsReassigned: rows.filter((row) => row.assignmentMethod !== "noise").length,
+  observationsRejected: rows.filter((row) => row.assignmentMethod === "noise").length,
+})
+
 const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
     const observations = yield* TaxonomyObservationRepository
@@ -899,7 +907,7 @@ const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput
     const assignments: ReassignTaxonomyObservationByIdInput[] = routed.map((assignment) => ({
       observationId: assignment.observationId,
       assignedClusterId: assignment.assignedClusterId,
-      assignmentMethod: "gardening_reassign" as const,
+      assignmentMethod: assignment.method,
       assignmentConfidence: assignment.confidence,
       reassignmentRunId: TaxonomyRunId(input.runId),
       indexedAt: new Date(input.now),
@@ -927,7 +935,7 @@ const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput
         })
       }
     }
-    return { observationsReassigned: assignments.length, windowSize: window.length }
+    return { ...reassignmentCounts(assignments), windowSize: window.length }
   }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
 
 // The view slice's full-window writer. A cohort routes the observation window; a
@@ -960,7 +968,7 @@ const reassignFullWindowScoped = (
           sessionId: row.sessionId,
           assignedClusterId: routed.assignedClusterId,
           assignmentConfidence: routed.confidence,
-          assignmentMethod: "gardening_reassign" as const,
+          assignmentMethod: routed.method,
           reassignmentRunId: TaxonomyRunId(input.runId),
           startTime: row.startTime,
           retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
@@ -971,7 +979,7 @@ const reassignFullWindowScoped = (
     for (const batch of chunk(assignments, TAXONOMY_REASSIGNMENT_BATCH_SIZE)) {
       yield* assignmentsRepo.upsertMany(batch)
     }
-    return { observationsReassigned: assignments.length, windowSize: window.length }
+    return { ...reassignmentCounts(assignments), windowSize: window.length }
   }).pipe((effect) => withScopedReassignClickHouse(effect, input.organizationId))
 
 /**
@@ -1111,7 +1119,7 @@ const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: Stored
     const assignments: ReassignTaxonomyObservationByIdInput[] = routed.map((assignment) => ({
       observationId: assignment.observationId,
       assignedClusterId: assignment.assignedClusterId,
-      assignmentMethod: "gardening_reassign" as const,
+      assignmentMethod: assignment.method,
       assignmentConfidence: assignment.confidence,
       reassignmentRunId: TaxonomyRunId(input.runId),
       indexedAt: new Date(input.now),
@@ -1123,7 +1131,7 @@ const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: Stored
         assignments: batch,
       })
     }
-    return assignments.length
+    return reassignmentCounts(assignments).observationsReassigned
   }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
 
 // Confirm publication (a no-op when the reassign activity already swapped), then

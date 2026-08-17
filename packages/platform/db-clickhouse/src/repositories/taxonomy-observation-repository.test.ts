@@ -258,6 +258,45 @@ describe("TaxonomyObservationRepositoryLive", () => {
     })
   })
 
+  it("clears the assignment when reassignment rejects an observation on the fit floor", async () => {
+    const observation = makeObservation({
+      observationId: "j".repeat(24),
+      sessionId: SessionId("rejected-by-fit-floor-session"),
+      assignedClusterId: clusterId,
+      assignmentMethod: "centroid_online",
+    })
+
+    const rows = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        yield* repo.upsert(observation)
+        yield* repo.reassignManyById({
+          organizationId,
+          projectId,
+          assignments: [
+            {
+              observationId: observation.observationId,
+              assignedClusterId: null,
+              assignmentMethod: "noise",
+              assignmentConfidence: 0.567,
+              reassignmentRunId: runId,
+              indexedAt: new Date("2026-05-24T12:02:00.000Z"),
+            },
+          ],
+        })
+        return yield* repo.listBySession({ organizationId, projectId, sessionId: observation.sessionId })
+      }),
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      observationId: observation.observationId,
+      assignedClusterId: null,
+      assignmentMethod: "noise",
+      assignmentConfidence: 0.567,
+    })
+  })
+
   it("lists naming members by observation id, before any assignment points at the cluster", async () => {
     // The publish sequence names a staging tree before the reassignment repoints
     // ClickHouse at it, so naming reads its samples by id, not by cluster.

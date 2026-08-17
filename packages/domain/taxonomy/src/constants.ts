@@ -219,7 +219,27 @@ export const TAXONOMY_OBSERVATION_WEIGHT_SCHEME: TaxonomyObservationWeightScheme
 export const TAXONOMY_OBSERVATION_DEBOUNCE_MS = 5 * 60_000
 
 export const TAXONOMY_ASSIGN_TOPK = 10
-export const TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD = 0.65
+/**
+ * Minimum cosine to a cluster's centroid for an observation to join it. The one
+ * fit floor: the online gate, the floor under every per-node `splitLinkThreshold`
+ * the divisive build derives, and the floor on full-window reassignment all read
+ * this constant, so a session can never be admissible on one path and rejected on
+ * another.
+ *
+ * Calibrated against how far each cluster's own weakest genuine member sits from
+ * it: over the 1,803 production clusters with >=50 members, the per-cluster p10 of
+ * member-to-centroid similarity has median 0.813 (q05 0.671, q95 0.977). The
+ * previous 0.65 sat below the real floor of ~95% of those clusters, so 10.8% of
+ * online assignments landed below their own cluster's p10. A flat 0.81 rejects
+ * 13.0% of assignments against the 10.8% a per-cluster p10 would — most of the
+ * available precision without a per-cluster threshold to persist.
+ *
+ * Birth confidences are the clustering's own output, so a genuinely-belonging new
+ * session can legitimately score below every member that defined the centroid;
+ * treat 0.81 as slightly strict and re-derive it from live rejections rather than
+ * from births.
+ */
+export const TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD = 0.81
 export const TAXONOMY_ASSIGN_RELATIVE_MARGIN = 0.06
 export const TAXONOMY_ASSIGN_TEMPERATURE = 0.08
 
