@@ -95,12 +95,16 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
       return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckSignalEscalationResult
     }
 
-    // A candidate has no user-facing existence, so it cannot open an incident
-    // that would route around the promotion gate. Bailing before the engine also
-    // strands no open incident: the enforcement migration promoted every signal
-    // that existed, and the latch means one can never become unpromoted again.
-    if (signalWithLifecycle.promotedAt === null) {
-      return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckSignalEscalationResult
+    // A candidate has no user-facing existence, so it must not open an incident
+    // that would route around the promotion gate. It is only skipped while it is
+    // not already escalating: an unpromoted signal holding an open incident should
+    // be unreachable (the enforcement migration promoted everything that existed,
+    // and the latch is one-way), but returning early there would strand that
+    // incident forever, since even the duration timeout exits from inside the
+    // engine. Falling through cannot announce anything — `enter` requires
+    // `!wasEscalating` — so the only outcomes left are exit and none.
+    if (signalWithLifecycle.promotedAt === null && !wasEscalating) {
+      return { transition: "none", currentlyEscalating: false } satisfies CheckSignalEscalationResult
     }
 
     const [projectSettings, openIncident] = yield* Effect.all(

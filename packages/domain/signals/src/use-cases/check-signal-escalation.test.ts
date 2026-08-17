@@ -101,6 +101,23 @@ const createFakeIncidentRepository = (seed: readonly Incident[] = []) => {
   return { incidents, repository }
 }
 
+const ENTRY_SERIES = {
+  escalationSignalsBySignals: () =>
+    Effect.succeed([
+      {
+        signalId,
+        recent1h: 80,
+        recent6h: 360,
+        recent24h: 900,
+        expected1h: 5,
+        expected6hPerHour: 5,
+        stddev1h: 1,
+        stddev6hPerHour: 1,
+        samplesCount: 8,
+      },
+    ]),
+}
+
 const runUseCase = async (input: {
   readonly signal: Signal
   readonly isEscalating?: boolean
@@ -137,23 +154,6 @@ const runUseCase = async (input: {
   return { result, events: outbox.events, incidents: incidents.incidents, issues: signals.issues }
 }
 
-const ENTRY_SERIES = {
-  escalationSignalsBySignals: () =>
-    Effect.succeed([
-      {
-        signalId,
-        recent1h: 80,
-        recent6h: 360,
-        recent24h: 900,
-        expected1h: 5,
-        expected6hPerHour: 5,
-        stddev1h: 1,
-        stddev6hPerHour: 1,
-        samplesCount: 8,
-      },
-    ]),
-}
-
 describe("checkSignalEscalationUseCase", () => {
   it("does not read series or emit events for ignored signals", async () => {
     const { result, events } = await runUseCase({
@@ -179,6 +179,21 @@ describe("checkSignalEscalationUseCase", () => {
 
     expect(result).toEqual({ transition: "none", currentlyEscalating: false })
     expect(events).toEqual([])
+  })
+
+  it("still evaluates an unpromoted signal that is already escalating, so its incident can close", async () => {
+    // Should be unreachable, and that is exactly why it is not an early return:
+    // the duration timeout exits from inside the engine, so skipping here would
+    // strand the incident forever.
+    // Entry-shaped series, so if the fall-through could announce, it would.
+    const { result, events } = await runUseCase({
+      signal: makeSignal({ promotedAt: null }),
+      isEscalating: true,
+      series: ENTRY_SERIES,
+    })
+
+    expect(result.transition).not.toBe("entered")
+    expect(events.map((event) => event.eventName)).not.toContain("SignalEscalated")
   })
 
   it("still checks muted signals — mute gates notification fan-out, not incidents", async () => {
