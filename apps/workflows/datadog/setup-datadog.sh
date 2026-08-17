@@ -167,10 +167,15 @@ while IFS='|' read -r id path; do
   echo "-- ${id}"
   del "${DD}/metrics/${id}"
   post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"'"${id}"'","attributes":{"compute":{"aggregation_type":"distribution","include_percentiles":true,"path":"'"${path}"'"},"filter":{"query":"'"${COVERAGE_Q}"'"},"group_by":'"${COVERAGE_GRP}"'}}}'
+#
+# No `window_assigned` metric on purpose: it is exactly `sum(window_total) -
+# sum(window_noise)`, so generating it would pay for a third custom metric to carry
+# no extra information. The attribute is still on the span for Trace Explorer.
+# Datadog also rejected registering it ("Cannot register summary definition", HTTP
+# 500) while its identically-shaped siblings registered fine.
 done <<'METRICS'
 taxonomy.coverage.assigned_share|@taxonomy.coverage.assignedShare
 taxonomy.coverage.window_total|@taxonomy.coverage.windowTotal
-taxonomy.coverage.window_assigned|@taxonomy.coverage.windowAssigned
 taxonomy.coverage.window_noise|@taxonomy.coverage.windowNoise
 taxonomy.coverage.observations_rejected|@taxonomy.coverage.observationsRejected
 taxonomy.coverage.observations_reassigned|@taxonomy.coverage.observationsReassigned
