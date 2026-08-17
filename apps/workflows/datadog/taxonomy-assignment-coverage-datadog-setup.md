@@ -56,9 +56,20 @@ no embeddings, summaries or session ids, which is why it is committable where
 Its `wouldRejectAtFloor` column is the **per-project prediction** — the share of
 currently-assigned observations below the new floor. Checking `assigned_share`
 against it project by project is the actual verification, and read it that way
-rather than fleet-wide: at 0.75 the fleet pays 5.3% while the worst project pays
-48%, and it was exactly this spread that ruled out 0.81 (13.6% fleet-wide, but 88%
-for that project). A fleet average says nothing about who paid.
+rather than fleet-wide: at 0.75 the fleet pays 12.1% of online assignments while the
+worst project pays 48%, and it was exactly this spread that ruled out 0.81 (27.7%
+fleet-wide, but 88% for that project). A fleet average says nothing about who paid.
+
+Two things bound how closely the outcome can be expected to match the prediction, and
+both argue for trusting this span over the snapshot once data lands:
+
+- `wouldRejectAtFloor` is computed from stored `assignment_confidence`, which records
+  the similarity at the **deepest accepted node**. Online routing gates at depth 0
+  first, so the prediction understates rejections. Correcting for it moved the fleet
+  figure from 9.3% to 12.1% on the same rows; per-project ordering did not change.
+- Centroids drift after assignment (online updates them incrementally, gardening
+  rebuilds every ~6h). Measured at up to ±0.07 on one project, and ~37% of a week's
+  online rows already point at retired clusters.
 
 ## The two arms are two treatments, not control and test
 

@@ -220,34 +220,12 @@ export const TAXONOMY_OBSERVATION_DEBOUNCE_MS = 5 * 60_000
 
 export const TAXONOMY_ASSIGN_TOPK = 10
 /**
- * Minimum cosine to a cluster's centroid for an observation to join it. The one
- * fit floor: the online gate, the floor under every per-node `splitLinkThreshold`
- * the divisive build derives, and the floor on full-window reassignment all read
- * this constant, so a session can never be admissible on one path and rejected on
- * another.
- *
- * The previous 0.65 was too permissive nearly everywhere: over the 1,803 production
- * clusters with >=50 members, the per-cluster p10 of member-to-centroid similarity
- * — how far a cluster's own weakest genuine member sits from it — has median 0.813,
- * so 0.65 sat below the real floor of ~95% of them.
- *
- * That median is NOT this value, deliberately. Those floors span 0.671 (q05) to
- * 0.977 (q95), so no flat number fits every cluster, and the cost of picking one is
- * concentrated rather than spread. Measured per project on production: a flat 0.81
- * rejects 13.6% of assignments fleet-wide but only 6.3% for the median project,
- * against 72% at p90 and 88% at the worst — 2 of the 11 well-measured projects lose
- * more than half their assignments, one because 0.81 sits above its median
- * confidence. At 0.75 the fleet cost is 5.3% and no project loses more than half.
- *
- * So 0.75 is chosen to bound the collateral of being flat, not because it is any
- * cluster's own floor. Per-cluster thresholds are the actual fix; that spread is
- * the evidence for them.
- *
- * Do not re-derive this from birth confidences. They are the clustering's own
- * output — the members that defined each centroid, so the best-fitting population
- * by construction — which makes every floor read off them optimistically strict. A
- * genuinely-belonging new session can legitimately score below all of them.
- * Recalibrate from live rejections instead.
+ * Minimum cosine to a cluster's centroid for an observation to join it. Read by the
+ * online gate, as the floor under every per-node `splitLinkThreshold`, and by
+ * full-window reassignment. Note the paths apply it at different tree levels —
+ * online routing gates at depth 0 before any leaf is reachable, reassignment scores
+ * leaf centroids — so a shared value is not an identical test. Calibration and the
+ * measured cost of changing it: `dev-docs/taxonomy.md`.
  */
 export const TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD = 0.75
 export const TAXONOMY_ASSIGN_RELATIVE_MARGIN = 0.06

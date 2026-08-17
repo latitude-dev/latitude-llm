@@ -27,9 +27,10 @@
  */
 import { writeFileSync } from "node:fs"
 import { createClient } from "@clickhouse/client"
+import { TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD } from "@domain/taxonomy"
 
 const DEFAULT_OUT = "taxonomy-assignment-baseline.json"
-const DEFAULT_FLOOR = 0.75
+const DEFAULT_FLOOR = TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD
 /** The gardening sample window, so the snapshot is comparable to the per-run coverage span. */
 const DEFAULT_LOOKBACK_DAYS = 7
 
@@ -68,7 +69,7 @@ const query = `
            countIf(assigned_cluster_id != '' AND assignment_confidence < {floor:Float64})
            / nullIf(countIf(assigned_cluster_id != ''), 0),
          4)                                                      AS wouldRejectAtFloor
-  FROM latitude.taxonomy_observations FINAL
+  FROM taxonomy_observations FINAL
   WHERE length(observation_id) = 24
     AND start_time >= now() - INTERVAL {days:UInt32} DAY
   GROUP BY organization_id, project_id, assignment_method
