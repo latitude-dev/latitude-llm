@@ -12,7 +12,7 @@ import {
   type TraceId,
 } from "@domain/shared"
 import { createLogger } from "@repo/observability"
-import { and, desc, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { scores } from "../schema/scores.ts"
@@ -445,6 +445,32 @@ export const ScoreRepositoryLive = Layer.effect(
                 ),
               ),
             )
+        }),
+
+      countDistinctSessionsBySignalId: ({ projectId, signalId, since }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                // Sessions are the evidence unit; a score without one stands in for
+                // itself so non-session instrumentation still counts exactly once.
+                sessions: sql<number>`count(distinct coalesce(nullif(${scores.sessionId}, ''), nullif(${scores.traceId}, ''), ${scores.id}))::int`,
+              })
+              .from(scores)
+              .where(
+                and(
+                  eq(scores.organizationId, sqlClient.organizationId),
+                  eq(scores.projectId, projectId),
+                  eq(scores.signalId, String(signalId)),
+                  isNull(scores.draftedAt),
+                  gte(scores.createdAt, since),
+                ),
+              ),
+          )
+
+          return rows[0]?.sessions ?? 0
         }),
 
       listByTraceIds: ({

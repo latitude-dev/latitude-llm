@@ -93,6 +93,7 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     priority: row.priority,
     centroid: row.centroid,
     clusteredAt: row.clusteredAt,
+    promotedAt: row.promotedAt,
     resolvedAt: row.resolvedAt,
     ignoredAt: row.ignoredAt,
     regressedAt: row.regressedAt,
@@ -199,6 +200,7 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   centroid: issue.centroid,
   centroidEmbedding: centroidEmbedding === null ? null : [...centroidEmbedding],
   clusteredAt: issue.clusteredAt,
+  promotedAt: issue.promotedAt,
   resolvedAt: issue.resolvedAt,
   ignoredAt: issue.ignoredAt,
   regressedAt: issue.regressedAt,
@@ -696,6 +698,11 @@ const signalRepositoryCoreLive = Layer.effect(
                   centroid: row.centroid,
                   centroidEmbedding: row.centroidEmbedding,
                   clusteredAt: row.clusteredAt,
+                  // Promotion is a one-way latch, enforced here rather than trusted to
+                  // callers: `save` takes a whole `Signal`, so a writer holding a copy
+                  // read before promotion would otherwise clear it, and a signal that
+                  // silently becomes unpromoted disappears from the product.
+                  promotedAt: sql`coalesce(${signals.promotedAt}, ${row.promotedAt})`,
                   resolvedAt: row.resolvedAt,
                   ignoredAt: row.ignoredAt,
                   regressedAt: row.regressedAt,

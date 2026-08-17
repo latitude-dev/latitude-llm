@@ -322,6 +322,36 @@ export const SIGNAL_GENERATION_PROMPT_MAX_LENGTH = 2000
 export const SIGNAL_GENERATION_DISTINCT_VALUES_LIMIT = 50
 
 // ---------------------------------------------------------------------------
+// Promotion
+// ---------------------------------------------------------------------------
+
+/**
+ * Distinct sessions a discovered signal must reach before it is promoted. Floor of
+ * a volume-scaled threshold; see `promotionThreshold`.
+ */
+export const PROMOTION_MIN_SESSIONS = 2
+
+/** Volume-relative term of the promotion threshold: 0.05% of the window's sessions. */
+export const PROMOTION_RATE_FLOOR = 0.0005
+
+/**
+ * Ceiling on required evidence. Load-bearing rather than tidy: uncapped, the
+ * volume-relative term asks ~1,500 sessions of a 3M-session month, which switches
+ * discovery off for a large customer instead of making it stricter.
+ */
+export const PROMOTION_MAX_SESSIONS = 15
+
+/** Window the promotion threshold counts distinct sessions over. */
+export const PROMOTION_WINDOW_DAYS = 30
+
+/** TTL for the cached per-project session volume that scales the promotion threshold. */
+export const PROJECT_SESSION_VOLUME_CACHE_TTL_SECONDS = 6 * 60 * 60
+
+/** Cache key for the per-project session volume steering the promotion threshold. */
+export const PROJECT_SESSION_VOLUME_CACHE_KEY = (organizationId: string, projectId: string): string =>
+  `org:${organizationId}:projects:${projectId}:session-volume`
+
+// ---------------------------------------------------------------------------
 // Signal refresh throttle
 // ---------------------------------------------------------------------------
 

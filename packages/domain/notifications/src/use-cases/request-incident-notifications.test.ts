@@ -65,6 +65,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
     weights: { annotation: 1, custom: 0, evaluation: 0 },
   },
   clusteredAt: startedAt,
+  promotedAt: startedAt,
   resolvedAt: null,
   ignoredAt: null,
   regressedAt: null,

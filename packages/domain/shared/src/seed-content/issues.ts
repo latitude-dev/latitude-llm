@@ -49,6 +49,13 @@ export type SeedSignalFixture = {
   readonly ignoredDaysAgo: number | null
   readonly regressedDaysAgo: number | null
   readonly mutedDaysAgo: number | null
+  /**
+   * Seeds a signal that was discovered but never accumulated enough evidence to
+   * be promoted. Declared as the exception rather than as a per-fixture
+   * timestamp because every other fixture is promoted at creation, which is what
+   * a project whose signals all cleared the gate looks like.
+   */
+  readonly unpromoted?: true
 }
 
 const baseSignalFixtures: SeedSignalFixture[] = [
@@ -203,6 +210,21 @@ const baseSignalFixtures: SeedSignalFixture[] = [
 ]
 
 const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
+  {
+    name: "Agent misreads a single timezone abbreviation",
+    description:
+      "One session where the agent parsed a customer's local time as UTC and quoted a delivery window a day off. Seeded as the unpromoted case: a lone occurrence that never recurred, so it stays out of the announced set.",
+    createdDaysAgo: 4,
+    clusteredDaysAgo: 4,
+    updatedDaysAgo: 4,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
   {
     name: "Agent invents enterprise SLAs for standard support plans",
     description:

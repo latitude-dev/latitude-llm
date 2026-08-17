@@ -1,5 +1,6 @@
 import { OrganizationId, ProjectId, SignalId, type SqlClient } from "@domain/shared"
 import { SignalRepository } from "@domain/signals"
+import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { signals } from "../schema/signals.ts"
@@ -264,5 +265,81 @@ describe("SignalRepositoryLive.countBySlug organization-wide (D15)", () => {
     )
 
     expect(count).toBe(0)
+  })
+})
+
+describe("SignalRepositoryLive.save promotion latch", () => {
+  const PROMOTED_AT = new Date("2026-03-20T10:00:00.000Z")
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  const load = async (id: string) => {
+    const rows = await pg.db.select().from(signals).where(eq(signals.id, id))
+    return rows[0]
+  }
+
+  it("keeps a stored promotion when a caller saves a signal it read before promotion", async () => {
+    const id = "sig-latch".padEnd(24, "l")
+    await pg.db.insert(signals).values({
+      id,
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      slug: "LAT-LTCH",
+      name: "latched",
+      description: "latched description",
+      source: "flagger",
+      origin: "system",
+      promotedAt: PROMOTED_AT,
+      createdAt: WINDOW_FROM,
+      updatedAt: WINDOW_FROM,
+    })
+
+    const stale = await load(id)
+    if (!stale) throw new Error("seed row missing")
+
+    await run(
+      Effect.gen(function* () {
+        // The shape a writer that read the row before promotion would hand back.
+        yield* (yield* SignalRepository).save({
+          ...stale,
+          promotedAt: null,
+          name: "renamed by a stale writer",
+        } as never)
+      }),
+    )
+
+    const after = await load(id)
+    expect(after?.name).toBe("renamed by a stale writer")
+    expect(after?.promotedAt?.toISOString()).toBe(PROMOTED_AT.toISOString())
+  })
+
+  it("still stores the first promotion for a signal that has none", async () => {
+    const id = "sig-first".padEnd(24, "f")
+    await pg.db.insert(signals).values({
+      id,
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      slug: "LAT-FRST",
+      name: "unpromoted",
+      description: "unpromoted description",
+      source: "flagger",
+      origin: "system",
+      promotedAt: null,
+      createdAt: WINDOW_FROM,
+      updatedAt: WINDOW_FROM,
+    })
+
+    const row = await load(id)
+    if (!row) throw new Error("seed row missing")
+
+    await run(
+      Effect.gen(function* () {
+        yield* (yield* SignalRepository).save({ ...row, promotedAt: PROMOTED_AT } as never)
+      }),
+    )
+
+    expect((await load(id))?.promotedAt?.toISOString()).toBe(PROMOTED_AT.toISOString())
   })
 })

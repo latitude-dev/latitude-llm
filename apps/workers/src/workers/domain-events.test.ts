@@ -314,6 +314,25 @@ describe("domain-events dispatcher", () => {
     expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-signal:signal-1")
   })
 
+  it("accepts SignalPromoted without publishing anything while promotion is only being measured", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalPromoted", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+      promotedAt: "2026-05-07T10:00:00.000Z",
+      triggerScoreId: "score-1",
+    })
+
+    // Registration is the point: an unhandled event name dead-letters on
+    // `UnhandledEventError`, so this passing is what proves the event is safe to
+    // emit before its consumers exist.
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(0)
+  })
+
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {
     const { consumer, published } = setupDispatcher()
 

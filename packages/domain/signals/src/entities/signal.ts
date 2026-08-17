@@ -60,6 +60,7 @@ export const signalSchema = z.object({
   priority: signalPrioritySchema.nullable(), // manual triage priority; null when unset
   centroid: signalCentroidSchema.nullable(), // running weighted sum of clustered score feedback embeddings (discovered signals only); null for user-created evaluation-backed signals
   clusteredAt: z.date().nullable(), // last time the centroid/cluster state was refreshed (discovered signals only); authoritative decay anchor (not updatedAt)
+  promotedAt: z.date().nullable(), // one-way latch: when the signal accumulated enough evidence to become real. Null = discovered but not yet promoted. Never cleared; user-created signals are born promoted.
   resolvedAt: z.date().nullable(), // manual resolve; archived, detector keeps running unless keepMonitoring was declined
   ignoredAt: z.date().nullable(), // manual ignore; archived + auto-muted, detector archived
   regressedAt: z.date().nullable(), // set when a new occurrence reopens a resolved signal; cleared by resolve/ignore
