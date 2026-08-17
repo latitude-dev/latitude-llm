@@ -213,6 +213,31 @@ describe("requestAgentDispatchUseCase", () => {
     expect(result.requests[0]?.trigger).toBe("signal.discovered")
     expect(result.requests[0]?.sourceId).toBe(signalId)
     expect(result.requests[0]?.target).toEqual({ webhookUrl: "https://example.com/hook", kind: "webhook" })
+    // No date in the key: a signal is discovered once, so a redelivery on a
+    // later day must collide on the ledger rather than open a second PR.
+    expect(result.requests[0]?.idempotencyKey).toBe(`webhook:${configId}:signal.discovered:${signalId}:once`)
+  })
+
+  it("keeps recurring triggers day-scoped so a later occurrence can dispatch again", async () => {
+    const result = await Effect.runPromise(
+      requestAgentDispatchUseCase({
+        ...input,
+        source: { ...input.source, trigger: "signal.regressed" as const },
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            signal: makeSignal({ origin: "system" }),
+            configs: [makeConfig({ triggers: ["signal.regressed"] })],
+          }),
+        ),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
+    expect(result.requests[0]?.idempotencyKey).toMatch(
+      new RegExp(`^webhook:${configId}:signal\\.regressed:${signalId}:\\d{4}-\\d{2}-\\d{2}$`),
+    )
   })
 
   it("inherits an enabled org default when the project has no override", async () => {
