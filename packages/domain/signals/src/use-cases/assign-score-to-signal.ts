@@ -13,19 +13,14 @@ import {
 } from "@domain/shared"
 import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
-import {
-  PROMOTION_MIN_SESSIONS,
-  PROMOTION_WINDOW_DAYS,
-  SIGNAL_UPDATE_LOCK_KEY,
-  SIGNAL_UPDATE_LOCK_TTL_SECONDS,
-} from "../constants.ts"
+import { PROMOTION_WINDOW_DAYS, SIGNAL_UPDATE_LOCK_KEY, SIGNAL_UPDATE_LOCK_TTL_SECONDS } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import type { CheckEligibilityError, SignalDiscoveryLockUnavailableError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError, SignalNotFoundForAssignmentError } from "../errors.ts"
 import { updateSignalCentroid } from "../helpers.ts"
 import { withSignalDiscoveryLock } from "../locks.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
-import { promotionThreshold } from "../promotion.ts"
+import { promotionThresholdForVolume } from "../promotion.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
 
@@ -105,10 +100,7 @@ const resolvePromotionThreshold = (input: AssignScoreToSignalInput) =>
       projectId: ProjectId(input.projectId),
     })
 
-    return {
-      threshold: volume === null ? PROMOTION_MIN_SESSIONS : promotionThreshold(volume),
-      volume,
-    }
+    return { threshold: promotionThresholdForVolume(volume), volume }
   })
 
 const buildSignalWithAssignedScore = ({

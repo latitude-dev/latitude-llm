@@ -93,6 +93,10 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
+      // Creation evaluates the promotion gate too, so a first occurrence can be
+      // born promoted where the floor admits a single session.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,

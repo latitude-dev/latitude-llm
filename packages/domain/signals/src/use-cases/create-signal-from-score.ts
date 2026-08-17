@@ -2,17 +2,32 @@ import { resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
 import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { generateId, type NotFoundError, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import {
+  type CacheError,
+  type CacheStore,
+  type ChSqlClient,
+  generateId,
+  type NotFoundError,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  ScoreId,
+  SqlClient,
+} from "@domain/shared"
+import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
+import { PROMOTION_MIN_SESSIONS } from "../constants.ts"
 import type { Signal, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
 import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
+import { promotionThresholdForVolume } from "../promotion.ts"
 import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import type { GenerateSignalDetailsError } from "./generate-signal-details.ts"
 import { generateSignalDetailsUseCase } from "./generate-signal-details.ts"
+import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
 
 export interface CreateSignalFromScoreInput {
   readonly organizationId: string
@@ -27,6 +42,7 @@ export type CreateSignalFromScoreResult = {
 }
 
 export type CreateSignalFromScoreError =
+  | CacheError
   | CheckEligibilityError
   | GenerateSignalDetailsError
   | RepositoryError
@@ -78,6 +94,7 @@ const buildNewSignalFromScore = ({
   name,
   description,
   slug,
+  bornPromoted,
 }: {
   readonly score: Score
   readonly normalizedEmbedding: readonly number[]
@@ -86,6 +103,7 @@ const buildNewSignalFromScore = ({
   readonly name: string
   readonly description: string
   readonly slug: string
+  readonly bornPromoted: boolean
 }): Signal => {
   const centroid = updateSignalCentroid({
     centroid: {
@@ -117,9 +135,7 @@ const buildNewSignalFromScore = ({
     priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    // A discovered signal starts with one session, so it can never clear the
-    // promotion floor at creation; the assignment path promotes it later.
-    promotedAt: null,
+    promotedAt: bornPromoted ? assignedAt : null,
     resolvedAt: null,
     ignoredAt: null,
     regressedAt: null,
@@ -128,6 +144,31 @@ const buildNewSignalFromScore = ({
     updatedAt: assignedAt,
   }
 }
+
+/** The creating score is one session, and there is no way for a new signal to have more. */
+const SESSIONS_AT_CREATION = 1
+
+/**
+ * Whether a signal discovered now already clears the promotion gate.
+ *
+ * The threshold is clamped below by `PROMOTION_MIN_SESSIONS`, so one session can
+ * only ever clear it where that floor admits one — testing the constant first
+ * keeps the volume lookup (Redis, then ClickHouse) off the creation path in every
+ * configuration that cannot use it, including the default. Without this the floor
+ * is effectively 2 whatever it is configured to be, because promotion is
+ * otherwise only ever evaluated when a *second* score arrives.
+ */
+const resolveBornPromoted = (input: CreateSignalFromScoreInput) =>
+  Effect.gen(function* () {
+    if (PROMOTION_MIN_SESSIONS > SESSIONS_AT_CREATION) return false
+
+    const volume = yield* resolveProjectSessionVolumeUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+    })
+
+    return SESSIONS_AT_CREATION >= promotionThresholdForVolume(volume)
+  })
 
 export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) =>
   Effect.gen(function* () {
@@ -153,6 +194,9 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
       ],
     })
 
+    // Resolved before the transaction: it reads Redis and ClickHouse, neither of
+    // which belongs inside a Postgres transaction.
+    const bornPromoted = yield* resolveBornPromoted(input)
     const sqlClient = yield* SqlClient
 
     const assignment = yield* sqlClient.transaction(
@@ -189,6 +233,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           name: signalDetails.name,
           description: signalDetails.description,
           slug,
+          bornPromoted,
         })
 
         const claimed = yield* scoreRepository.assignSignalIfUnowned({
@@ -226,6 +271,22 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           },
         })
 
+        if (issue.promotedAt !== null) {
+          yield* outboxEventWriter.write({
+            eventName: "SignalPromoted",
+            aggregateType: "issue",
+            aggregateId: issue.id,
+            organizationId: issue.organizationId,
+            payload: {
+              organizationId: issue.organizationId,
+              projectId: issue.projectId,
+              signalId: issue.id,
+              promotedAt: issue.promotedAt.toISOString(),
+              triggerScoreId: score.id,
+            },
+          })
+        }
+
         return {
           action: "created",
           signalId: issue.id,
@@ -234,8 +295,12 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     )
 
     return assignment
+    // As in `assignScoreToSignalUseCase`: this package erases its requirements, so
+    // the promotion gate's cross-store needs are declared here or a caller that
+    // forgets a layer fails at runtime inside one activity instead of at compile
+    // time.
   }).pipe(Effect.withSpan("issues.createSignalFromScore")) as Effect.Effect<
     CreateSignalFromScoreResult,
     CreateSignalFromScoreError,
-    ProjectRepository
+    CacheStore | ChSqlClient | ProjectRepository | SessionRepository
   >
