@@ -73,11 +73,8 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
     ),
   )
 
-// No AI layer and no metering: a candidate is named deterministically from its
-// first occurrence, and the cluster summary is generated once at promotion. The
-// metering wrapper in particular has to go rather than sit idle — it fails the
-// activity outright when an organization is out of AI credits, which would now
-// stop discovery from recording evidence it no longer pays a model to process.
+// Metering must stay off this path: it fails the activity outright when an organization is out of
+// AI credits, which would stop a candidate recording the evidence that promotes it.
 export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =>
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
