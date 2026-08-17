@@ -138,8 +138,11 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
     if (input.signalId) {
       const signalRepository = yield* SignalRepository
       const scoreRepository = yield* ScoreRepository
+      // Unpromoted signals included: `signals:refresh` is scheduled off every
+      // score assignment, candidates included, so a default-deny read would turn
+      // each candidate's regeneration into a failing task.
       const issue = yield* signalRepository
-        .findById(SignalId(input.signalId))
+        .findById(SignalId(input.signalId), { includeUnpromoted: true })
         .pipe(
           Effect.catchTag("NotFoundError", () =>
             Effect.fail(new SignalNotFoundForDetailsGenerationError({ signalId: String(input.signalId) })),

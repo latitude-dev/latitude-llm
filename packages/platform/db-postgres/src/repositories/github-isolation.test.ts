@@ -72,6 +72,7 @@ const seedOrg = async (input: {
     description: `${input.slug} description`,
     source: "custom",
     origin: "user",
+    promotedAt: new Date(),
   })
   const integration = await inOrg(
     input.org,

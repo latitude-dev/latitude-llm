@@ -7,7 +7,7 @@ See also: [`agent-data-access.md`](agent-data-access.md) (the inbound counterpar
 ## Architecture
 
 ```
-SignalCreated / SignalRegressed / IncidentCreated (domain-events worker)
+SignalPromoted / SignalRegressed / IncidentCreated (domain-events worker)
    ├──→ notifications:* (email / in-app / Slack)
    └──→ agent-dispatch:request
             │  config lookup, trigger/mute/guardrail gates, prompt snapshot
@@ -49,7 +49,7 @@ Settings → Integrations:
 2. Per-project dispatch config: enable, triggers, target mapping, guardrails
 3. Dispatch history audit log
 
-The settings UI exposes `signal.discovered` (new signal), `incident.opened` (escalating signal), `signal.regressed` (a resolved signal started occurring again), and `monitor.incident` (threshold or escalating monitor) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `signal.discovered` fires only for `origin = 'system'` signals (auto-discovered); hand-built `origin = 'user'` signals are skipped on creation — humans already chose to create them. Once the promotion gate is enforced it fires on `SignalPromoted` rather than on creation, so an agent is never dispatched for a signal that never accumulated evidence (`dev-docs/signals.md` § Denoising: promotion); existing dispatch configs and trigger names are unaffected by that move. Runtime conditions dispatch for any signal origin: `incident.opened` when the signal opens an incident, `signal.regressed` when a `SignalRegressed` claim reopens it. Muted, ignored, or resolved signals (and muted monitors) suppress dispatch (same as notifications) — resolved matters because a delayed request can land after the user archived the signal.
+The settings UI exposes `signal.discovered` (new signal), `incident.opened` (escalating signal), `signal.regressed` (a resolved signal started occurring again), and `monitor.incident` (threshold or escalating monitor) for hosted agent/webhook targets. Linear only exposes `signal.discovered` so it creates follow-up issues for new signals rather than every escalation. `signal.discovered` fires only for `origin = 'system'` signals (auto-discovered); hand-built `origin = 'user'` signals are skipped on creation — humans already chose to create them. It fires on `SignalPromoted` rather than on creation, so an agent is never dispatched for a signal that never accumulated evidence (`dev-docs/signals.md` § Denoising: promotion) — the most expensive symptom of discovery noise was an un-evidenced false positive opening a pull request. Existing dispatch configs and trigger names were unaffected by that move. Runtime conditions dispatch for any signal origin: `incident.opened` when the signal opens an incident, `signal.regressed` when a `SignalRegressed` claim reopens it. Muted, ignored, or resolved signals (and muted monitors) suppress dispatch (same as notifications) — resolved matters because a delayed request can land after the user archived the signal.
 
 ## Manual sends ("Send to")
 

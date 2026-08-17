@@ -12,3 +12,11 @@ export const promotionThreshold = (sessionsInWindow: number): number => {
   const volumeRelative = Math.ceil(Math.max(0, sessionsInWindow) * PROMOTION_RATE_FLOOR)
   return Math.min(PROMOTION_MAX_SESSIONS, Math.max(PROMOTION_MIN_SESSIONS, volumeRelative))
 }
+
+/**
+ * Threshold to apply when the project's volume may be unavailable. A degraded
+ * lookup falls back to the floor, so both promotion paths — creation and score
+ * assignment — resolve the same number from the same input and cannot drift.
+ */
+export const promotionThresholdForVolume = (sessionsInWindow: number | null): number =>
+  sessionsInWindow === null ? PROMOTION_MIN_SESSIONS : promotionThreshold(sessionsInWindow)

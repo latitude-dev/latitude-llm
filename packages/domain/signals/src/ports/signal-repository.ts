@@ -79,22 +79,55 @@ export interface SignalTableRowsPage extends SignalListPage {
   readonly totalCount: number
 }
 
+/**
+ * Reads exclude unpromoted signals by default. A signal whose `promoted_at` is
+ * null has not accumulated enough evidence to exist for the product, so every
+ * read method below is either **default-deny** — it filters unpromoted rows the
+ * way it filters soft-deleted ones — or explicitly documented as seeing them.
+ * The asymmetry is the design: discovery is the one place a candidate stays
+ * visible, because that is how it accumulates the evidence that promotes it.
+ *
+ * Default-deny with an `includeUnpromoted` opt-in: `findById`, `hybridSearch`.
+ * Default-deny with no opt-in: `findByIds`, `findBySlug`, `findSimilarByCentroid`,
+ * `searchOrgWide`, `list`, `listTableRows`, `listIdsCreatedInTimeRange`.
+ * Never filtered: every write path, plus the two slug-uniqueness reads.
+ */
 export interface SignalRepositoryShape {
-  findById(id: SignalId): Effect.Effect<SignalWithLifecycle, NotFoundError | RepositoryError, SqlClient>
+  /** Default-deny: pass `includeUnpromoted` on discovery paths that must resolve a candidate. */
+  findById(
+    id: SignalId,
+    options?: { readonly includeUnpromoted?: boolean },
+  ): Effect.Effect<SignalWithLifecycle, NotFoundError | RepositoryError, SqlClient>
   /**
    * Locking read used by lifecycle write paths (resolve, ignore, etc.).
    * Returns plain `Signal` — lifecycle flags would require an extra JOIN
    * that callers in this path don't need.
+   *
+   * Unpromoted signals are **included**: this is a write path, and the score
+   * assignment that promotes a candidate reads it through here.
    */
   findByIdForUpdate(id: SignalId): Effect.Effect<Signal, NotFoundError | RepositoryError, SqlClient>
+  /**
+   * Batch hydration for read surfaces whose candidate ids come from ClickHouse
+   * (list, related, session, user, experiments). Unpromoted signals are omitted
+   * from the result; every caller already tolerates a missing id, so dropping a
+   * candidate here removes it from the items, the counts, and the histogram at
+   * once.
+   */
   findByIds(input: {
     readonly projectId: ProjectId
     readonly signalIds: readonly SignalId[]
   }): Effect.Effect<readonly SignalWithLifecycle[], RepositoryError, SqlClient>
+  /**
+   * Serves two callers with opposite needs. Discovery passes
+   * `includeUnpromoted: true` so a new score can cluster into a candidate; the
+   * signals-list search box does not, so a candidate never surfaces as a hit.
+   */
   hybridSearch(input: {
     readonly projectId: ProjectId
     readonly query: string
     readonly normalizedEmbedding: readonly number[]
+    readonly includeUnpromoted?: boolean
   }): Effect.Effect<readonly SignalSearchCandidate[], RepositoryError, SqlClient>
   /**
    * Semantic neighbors for the Related-issues list: the project's other issues
@@ -106,6 +139,10 @@ export interface SignalRepositoryShape {
    * failing the whole Related read. Resolved/ignored issues are **included**:
    * "a similar issue was already resolved" is the most actionable neighbor.
    * No similarity floor here; gating lives in the domain scorer.
+   *
+   * Unpromoted issues are excluded, on both sides — the source read and the
+   * neighbor scan. Candidate consolidation will need an opt-in here, since it
+   * matches candidates against each other.
    */
   findSimilarByCentroid(input: {
     readonly projectId: ProjectId
@@ -121,9 +158,9 @@ export interface SignalRepositoryShape {
    * - **Semantic** (embedding present): the hybrid vector + lexical relevance blend, surfacing
    *   related issues whose names don't literally contain the query.
    *
-   * Each hit carries lifecycle flags and the owning project's slug/name. Resolved/ignored issues
-   * and issues in soft-deleted projects are excluded. The caller merges the two tiers (lexical
-   * first) and caps the result.
+   * Each hit carries lifecycle flags and the owning project's slug/name. Resolved/ignored issues,
+   * unpromoted issues, and issues in soft-deleted projects are excluded. The caller merges the two
+   * tiers (lexical first) and caps the result.
    * When `preferProjectId` is set, that project's issues rank first *within each tier* (so a
    * current-project lexical hit still beats an other-project semantic hit) — the palette passes the
    * current project so local results lead.
@@ -137,13 +174,18 @@ export interface SignalRepositoryShape {
   /**
    * Point-lookup by `(projectId, slug)`. Slugs are org-unique (D15), so a slug
    * lives in at most one project; resolution stays project-scoped so a match is
-   * only ever the caller's own project's signal.
+   * only ever the caller's own project's signal. This is how every API and web
+   * read resolves a signal, so an unpromoted slug resolves to `NotFoundError`.
    */
   findBySlug(input: {
     readonly projectId: ProjectId
     readonly slug: string
   }): Effect.Effect<SignalWithLifecycle, NotFoundError | RepositoryError, SqlClient>
-  /** Cheap existence check for slug uniqueness paths. */
+  /**
+   * Cheap existence check for slug uniqueness paths. Counts unpromoted signals:
+   * a candidate holds its slug for real, and skipping it would hand the same
+   * slug out twice and collide with `signals_unique_slug_per_org_idx`.
+   */
   existsBySlug(input: {
     readonly projectId: ProjectId
     readonly slug: string
@@ -152,6 +194,7 @@ export interface SignalRepositoryShape {
    * Returns the number of non-deleted signals with this slug in the active
    * organization — org-wide, spanning every project (D15). Powers the `count`
    * callback of `generateSignalSlug`; a soft-deleted signal frees its slug.
+   * Unpromoted signals count, for the same reason as `existsBySlug`.
    */
   countBySlug(input: {
     readonly slug: string
@@ -173,15 +216,21 @@ export interface SignalRepositoryShape {
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /** Soft-delete: stamps `deleted_at` so the signal is excluded read-side and frees its slug. No-op if already deleted. */
   softDelete(id: SignalId): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Every promoted, non-deleted signal in the project. Also the "does this
+   * project have any signals at all" probe behind the list's empty state, so a
+   * project holding nothing but candidates reads as empty — which is what a
+   * candidate having no user-facing existence means.
+   */
   list(input: ListSignalsRepositoryInput): Effect.Effect<SignalListPage, RepositoryError, SqlClient>
   listTableRows(
     input: ListSignalTableRowsRepositoryInput,
   ): Effect.Effect<SignalTableRowsPage, RepositoryError, SqlClient>
   /**
-   * Ids of non-deleted signals created within the window. The analytics path
-   * seeds its candidate set from ClickHouse activity metrics, which never
-   * include zero-occurrence signals; feeding these ids in keeps the counts,
-   * public API list, and export consistent with the table (which lists a
+   * Ids of promoted, non-deleted signals created within the window. The
+   * analytics path seeds its candidate set from ClickHouse activity metrics,
+   * which never include zero-occurrence signals; feeding these ids in keeps the
+   * counts, public API list, and export consistent with the table (which lists a
    * signal that fired in OR was created in the window).
    */
   listIdsCreatedInTimeRange(input: {

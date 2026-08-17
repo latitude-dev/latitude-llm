@@ -3,6 +3,7 @@ import { type Incident, IncidentRepository, type IncidentRepositoryShape } from 
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
+  AlertIncidentId,
   ChSqlClient,
   OrganizationId,
   ProjectId,
@@ -101,11 +102,45 @@ const createFakeIncidentRepository = (seed: readonly Incident[] = []) => {
   return { incidents, repository }
 }
 
+const makeOpenIncident = (overrides: Partial<Incident> = {}): Incident => ({
+  id: AlertIncidentId("aaaaaaaaaaaaaaaaaaaaaaaa"),
+  organizationId,
+  projectId,
+  sourceType: "signal",
+  sourceId: signalId,
+  severity: "high",
+  startedAt: new Date("2026-05-01T10:00:00.000Z"),
+  endedAt: null,
+  createdAt: new Date("2026-05-01T10:00:00.000Z"),
+  entrySignals: null,
+  exitEligibleSince: null,
+  condition: null,
+  ...overrides,
+})
+
+const ENTRY_SERIES = {
+  escalationSignalsBySignals: () =>
+    Effect.succeed([
+      {
+        signalId,
+        recent1h: 80,
+        recent6h: 360,
+        recent24h: 900,
+        expected1h: 5,
+        expected6hPerHour: 5,
+        stddev1h: 1,
+        stddev6hPerHour: 1,
+        samplesCount: 8,
+      },
+    ]),
+}
+
 const runUseCase = async (input: {
   readonly signal: Signal
   readonly isEscalating?: boolean
   readonly projectSettings?: ProjectSettings | null
   readonly series?: Parameters<typeof createFakeScoreAnalyticsRepository>[0]
+  readonly openIncidents?: readonly Incident[]
 }) => {
   const outbox = createFakeOutboxEventWriter()
   const signals = createFakeSignalRepository(
@@ -114,7 +149,7 @@ const runUseCase = async (input: {
     { lifecycle: new Map([[input.signal.id, { isEscalating: input.isEscalating ?? false }]]) },
   )
   const scoreAnalytics = createFakeScoreAnalyticsRepository(input.series)
-  const incidents = createFakeIncidentRepository()
+  const incidents = createFakeIncidentRepository(input.openIncidents ?? [])
   const settingsReader = SettingsReader.of({
     getProjectSettings: () => Effect.succeed(input.projectSettings ?? null),
     getOrganizationSettings: () => Effect.succeed(null),
@@ -137,23 +172,6 @@ const runUseCase = async (input: {
   return { result, events: outbox.events, incidents: incidents.incidents, issues: signals.issues }
 }
 
-const ENTRY_SERIES = {
-  escalationSignalsBySignals: () =>
-    Effect.succeed([
-      {
-        signalId,
-        recent1h: 80,
-        recent6h: 360,
-        recent24h: 900,
-        expected1h: 5,
-        expected6hPerHour: 5,
-        stddev1h: 1,
-        stddev6hPerHour: 1,
-        samplesCount: 8,
-      },
-    ]),
-}
-
 describe("checkSignalEscalationUseCase", () => {
   it("does not read series or emit events for ignored signals", async () => {
     const { result, events } = await runUseCase({
@@ -165,6 +183,41 @@ describe("checkSignalEscalationUseCase", () => {
 
     expect(result).toEqual({ transition: "none", currentlyEscalating: false })
     expect(events).toEqual([])
+  })
+
+  it("does not read series or open an incident for an unpromoted signal", async () => {
+    const { result, events } = await runUseCase({
+      // Entry-tripping series on purpose: an incident here would announce a
+      // signal the promotion gate has not released yet.
+      signal: makeSignal({ promotedAt: null }),
+      series: {
+        escalationSignalsBySignals: () => Effect.die("candidate should not read analytics"),
+      },
+    })
+
+    expect(result).toEqual({ transition: "none", currentlyEscalating: false })
+    expect(events).toEqual([])
+  })
+
+  it("still evaluates an unpromoted signal that is already escalating, so its incident can close", async () => {
+    // The state should be unreachable, and that is exactly why this is not an
+    // early return: every exit path lives inside the detector, so skipping it
+    // would strand the incident with nothing left to close it. Driven through the
+    // duration timeout, which the detector checks before any series math, so an
+    // early return here fails this test rather than quietly passing it.
+    const { result, events } = await runUseCase({
+      signal: makeSignal({ promotedAt: null }),
+      isEscalating: true,
+      openIncidents: [makeOpenIncident({ startedAt: new Date(Date.now() - 100 * 60 * 60 * 1000) })],
+      series: ENTRY_SERIES,
+    })
+
+    expect(result).toEqual({ transition: "exited", currentlyEscalating: false })
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({
+      eventName: "SignalEscalationEnded",
+      payload: { signalId, reason: "timeout" },
+    })
   })
 
   it("still checks muted signals — mute gates notification fan-out, not incidents", async () => {

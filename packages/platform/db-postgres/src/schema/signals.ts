@@ -48,15 +48,14 @@ export const signals = latitudeSchema.table(
   },
   (t) => [
     organizationRLSPolicy("signals"),
-    // project-scoped lifecycle filtering and management actions.
-    index("signals_project_lifecycle_idx").on(
-      t.organizationId,
-      t.projectId,
-      t.ignoredAt,
-      t.resolvedAt,
-      t.mutedAt,
-      t.createdAt,
-    ),
+    // project-scoped lifecycle filtering and management actions. Partial on the
+    // visibility rule every user-facing read carries (`userVisibleSignal` in the
+    // repository), which shrinks the index rather than widening it — the
+    // discovery and write paths that must see candidates go through the primary
+    // key or an exact vector scan anyway.
+    index("signals_project_lifecycle_idx")
+      .on(t.organizationId, t.projectId, t.ignoredAt, t.resolvedAt, t.mutedAt, t.createdAt)
+      .where(sql`${t.deletedAt} IS NULL AND ${t.promotedAt} IS NOT NULL`),
     index("signals_search_document_idx").using("gin", t.searchDocument),
     // Organization-unique (D15), spanning projects. Soft-delete-aware: a deleted signal frees its slug for reuse.
     uniqueIndex("signals_unique_slug_per_org_idx").on(t.organizationId, t.slug).where(sql`${t.deletedAt} IS NULL`),

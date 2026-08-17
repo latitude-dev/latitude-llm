@@ -58,7 +58,8 @@ export interface EventPayloads {
   }
   /**
    * Emitted by `createSignalFromScoreUseCase` after the signal row is saved.
-   * Drives discovery notifications.
+   * An audit fact with no consumers — a discovered signal is announced when it
+   * is promoted, not when its row appears (see `SignalPromoted`).
    */
   SignalCreated: {
     readonly organizationId: string
@@ -72,9 +73,9 @@ export interface EventPayloads {
    * same transaction that stamps `promoted_at`, and the latch makes it
    * exactly-once per signal.
    *
-   * The handler is deliberately inert for now: promotion is being observed
-   * against live traffic before the discovery notification and agent dispatch
-   * move onto it from `SignalCreated`.
+   * Carries the `signal.discovered` notification and the `signal.discovered`
+   * agent dispatch. It is internal: not a notification kind and not a dispatch
+   * trigger, it exists only so those two fire on the fact they actually mean.
    */
   SignalPromoted: {
     readonly organizationId: string

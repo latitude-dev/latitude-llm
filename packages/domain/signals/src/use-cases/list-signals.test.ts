@@ -36,7 +36,6 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   priority: null,
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
-  promotedAt: new Date("2026-03-01T00:00:00.000Z"),
   resolvedAt: null,
   ignoredAt: null,
   regressedAt: null,
@@ -44,6 +43,9 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   deletedAt: null,
   createdAt: new Date("2026-03-01T00:00:00.000Z"),
   updatedAt: new Date("2026-03-01T00:00:00.000Z"),
+  // Tracks `createdAt` so a fixture that ages a signal ages the timestamp the
+  // "new" state actually derives from. Overridable, including to null.
+  promotedAt: overrides.createdAt ?? new Date("2026-03-01T00:00:00.000Z"),
   ...overrides,
 })
 
@@ -1619,6 +1621,83 @@ describe("listSignalsUseCase", () => {
 
       expect(result.items.map((item) => item.id)).toEqual([activeAssigned.id])
       expect(result.assigneeCounts).toEqual({ [userA]: 1 })
+    })
+  })
+
+  describe("promotion gate", () => {
+    const now = new Date("2026-04-10T00:00:00.000Z")
+    const promoted = makeSignal({ id: SignalId("a".repeat(24)), name: "Promoted signal" })
+    const candidate = makeSignal({
+      id: SignalId("b".repeat(24)),
+      name: "Unpromoted candidate",
+      slug: "candidate",
+      promotedAt: null,
+    })
+
+    const runList = async (seeded: readonly Signal[]) => {
+      const { repository: signalRepository } = createFakeSignalRepository(seeded)
+      const { repository: evaluationRepository } = createEvaluationRepository()
+      const histogramInputs: Array<readonly string[]> = []
+      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+        // ClickHouse has no notion of promotion, so it keeps reporting the
+        // candidate's activity. Postgres hydration is what has to drop it.
+        listSignalWindowMetrics: () =>
+          Effect.succeed(
+            seeded.map((issue, index) =>
+              makeWindowMetric({ signalId: SignalId(issue.id), occurrences: (index + 1) * 10 }),
+            ),
+          ),
+        aggregateBySignals: aggregateOccurrences(
+          seeded.map((issue) => makeOccurrence({ signalId: SignalId(issue.id) })),
+        ),
+        histogramBySignals: (input) =>
+          Effect.sync(() => {
+            histogramInputs.push(input.signalIds)
+            return []
+          }),
+      })
+      sessionCount = 100
+
+      const result = await Effect.runPromise(
+        listSignalsUseCase({ organizationId, projectId, now }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(SignalRepository, signalRepository),
+              Layer.succeed(EvaluationRepository, evaluationRepository),
+              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              provideSessionRepository,
+            ),
+          ),
+        ),
+      )
+
+      return { result, histogramInputs }
+    }
+
+    it("drops a candidate from the items, the counts, and the histogram at once", async () => {
+      const { result, histogramInputs } = await runList([promoted, candidate])
+
+      expect(result.items.map((item) => item.id)).toEqual([promoted.id])
+      expect(result.totalCount).toBe(1)
+      expect(result.analytics.counts.ongoingSignals).toBe(1)
+      expect(result.analytics.counts.seenOccurrences).toBe(10)
+      expect(result.occurrencesSum).toBe(10)
+      expect(result.priorityCounts.none).toBe(1)
+      expect(histogramInputs).toEqual([[promoted.id]])
+    })
+
+    it("reads as an empty project when every signal is still a candidate", async () => {
+      const { result, histogramInputs } = await runList([candidate])
+
+      expect(result.items).toEqual([])
+      expect(result.totalCount).toBe(0)
+      // The empty-state gate: a project holding nothing but candidates has to
+      // show onboarding, not an empty table.
+      expect(result.hasAnySignals).toBe(false)
+      expect(result.analytics.counts.seenOccurrences).toBe(0)
+      expect(histogramInputs).toEqual([])
     })
   })
 })

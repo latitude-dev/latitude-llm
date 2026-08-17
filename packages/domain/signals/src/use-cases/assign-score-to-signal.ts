@@ -13,19 +13,14 @@ import {
 } from "@domain/shared"
 import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
-import {
-  PROMOTION_MIN_SESSIONS,
-  PROMOTION_WINDOW_DAYS,
-  SIGNAL_UPDATE_LOCK_KEY,
-  SIGNAL_UPDATE_LOCK_TTL_SECONDS,
-} from "../constants.ts"
+import { PROMOTION_WINDOW_DAYS, SIGNAL_UPDATE_LOCK_KEY, SIGNAL_UPDATE_LOCK_TTL_SECONDS } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import type { CheckEligibilityError, SignalDiscoveryLockUnavailableError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError, SignalNotFoundForAssignmentError } from "../errors.ts"
 import { updateSignalCentroid } from "../helpers.ts"
 import { withSignalDiscoveryLock } from "../locks.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
-import { promotionThreshold } from "../promotion.ts"
+import { promotionThresholdForVolume } from "../promotion.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
 
@@ -105,10 +100,7 @@ const resolvePromotionThreshold = (input: AssignScoreToSignalInput) =>
       projectId: ProjectId(input.projectId),
     })
 
-    return {
-      threshold: volume === null ? PROMOTION_MIN_SESSIONS : promotionThreshold(volume),
-      volume,
-    }
+    return { threshold: promotionThresholdForVolume(volume), volume }
   })
 
 const buildSignalWithAssignedScore = ({
@@ -164,6 +156,9 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
 
     const score = scoreResult.score
 
+    // `includeUnpromoted` is load-bearing: a default-deny lookup would report every
+    // candidate as already promoted and the latch would never fire.
+    //
     // Resolved before the lock: promotion needs the project's session volume,
     // which lives in ClickHouse behind a Redis cache, and neither belongs inside
     // the Postgres transaction below. The extra unlocked read buys that
@@ -172,7 +167,7 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
     // harmless direction — the transaction re-checks it under the row lock.
     const signals = yield* SignalRepository
     const unpromotedBeforeAssignment = yield* signals
-      .findById(SignalId(input.signalId))
+      .findById(SignalId(input.signalId), { includeUnpromoted: true })
       .pipe(Effect.map((signal) => signal.promotedAt === null))
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(false)))
     const promotion = unpromotedBeforeAssignment ? yield* resolvePromotionThreshold(input) : null

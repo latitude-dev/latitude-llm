@@ -120,9 +120,15 @@ export const getEscalationExitThreshold = (baselineAvgOccurrences: number): numb
  * detection — their `baselineAvgOccurrences` window (days 1–8 ago) hasn't
  * filled in yet, so any volume above the floor would falsely trip the
  * threshold.
+ *
+ * Callers pass `signalFirstVisibleAt`, not `createdAt`.
  */
 export const isSignalNew = (firstSeenAt: Date, now: Date = new Date()): boolean =>
   firstSeenAt.getTime() > now.getTime() - NEW_SIGNAL_AGE_DAYS * MILLISECONDS_PER_DAY
+
+/** When the signal started existing for a user: its promotion, or its creation if it predates the gate. */
+export const signalFirstVisibleAt = (issue: Pick<Signal, "promotedAt" | "createdAt">): Date =>
+  issue.promotedAt ?? issue.createdAt
 
 export type SeasonalEscalationDecisionInput = EscalationDecisionInput
 export type SeasonalEscalationTransition = EscalationTransition
@@ -136,7 +142,7 @@ export const deriveSignalLifecycleStates = ({
 }: DeriveSignalLifecycleStatesInput): readonly SignalStateValue[] => {
   const states = new Set<SignalStateValue>()
 
-  if (isSignalNew(issue.createdAt, now)) {
+  if (isSignalNew(signalFirstVisibleAt(issue), now)) {
     states.add(SignalState.New)
   }
 
