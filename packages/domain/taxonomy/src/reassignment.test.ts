@@ -58,7 +58,6 @@ describe("routeObservationsToLeaves", () => {
         onlyLeaf,
       )
       expect(routed[0]).toMatchObject({ observationId: "o1", method: "noise", assignedClusterId: null })
-      // The measured similarity is still reported, so a rejection is diagnosable.
       expect(routed[0]?.confidence).toBeCloseTo(TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD - 0.05, 4)
     })
 
@@ -74,9 +73,8 @@ describe("routeObservationsToLeaves", () => {
       expect(routed.every((assignment) => assignment.assignedClusterId === "a".repeat(24))).toBe(true)
     })
 
-    // LAT-862 QA: a topic that vanished from the new tree had all 14 of its sessions
-    // filed into the nearest surviving cluster at 0.567, where genuine members sat at
-    // 0.78-0.92. Unassigned is the correct answer for those sessions.
+    // The LAT-862 case: 14 sessions of a retired topic filed at 0.567 into a cluster
+    // whose genuine members sat at 0.78-0.92.
     it("leaves the sessions of a behaviour that was not rebuilt unassigned", () => {
       const orphaned = Array.from({ length: 14 }, (_, index) => ({
         observationId: `o${index}`,

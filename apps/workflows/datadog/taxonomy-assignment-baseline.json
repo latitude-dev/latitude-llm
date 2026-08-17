@@ -38,7 +38,7 @@
     }
   },
   "perProjectImpact": {
-    "_comment": "Over the 11 projects with >=50 assignments on a gated path. The fleet number is a tail, not a level: the median project barely moves while the worst loses seven eighths of its assignments.",
+    "_comment": "Over the 11 projects with >=50 assignments on a gated path, measured from stored assignment_confidence. The fleet number is a tail, not a level: the median project barely moves while the worst loses seven eighths of its assignments. See rootGateCorrection for why these understate the online path.",
     "projects": 11,
     "gatedAssignments": 16355,
     "fleetRejectAt081": 0.1363,
@@ -93,5 +93,42 @@
       "rejectedShareAt081": 0.0465,
       "rejectedShareAt075": 0.0197
     }
-  ]
+  ],
+  "rootGateCorrection": {
+    "_comment": "Stored assignment_confidence is the similarity at the DEEPEST accepted node, but routeToDeepestClusterUseCase gates at depth 0 first (one root per project), so the figures above understate online rejections. Corrected by estimating root similarity as confidence * cosine(assigned cluster centroid, root centroid), with the per-cluster cosine read from Postgres. Validated against 47 true cosines computed from the real root centroid: mean error +0.0032, mean |error| 0.0145, 1 of 47 decisions flipped at the 0.75 boundary. The 0.65 control lands at 0.1%, which is the check that the method holds at all -- every centroid_online row cleared 0.65 when it was assigned.",
+    "onlineRowsMeasured": 9829,
+    "rejectedShare": {
+      "at065": 0.001,
+      "at070": 0.039,
+      "at075": 0.121,
+      "at081": 0.277
+    },
+    "uncorrectedForComparison": {
+      "at075": 0.093,
+      "at081": 0.239
+    },
+    "byAssignedDepth": {
+      "_comment": "Rejections concentrate at depth 0, where stored confidence IS the root similarity and no estimate is involved. Deep assignments are nearly untouched because reaching depth 3 already required clearing the root and every split_link_threshold on the way down, so they are self-selected for high root similarity.",
+      "depth0": {
+        "observations": 3840,
+        "rejectedAt075": 0.236
+      },
+      "depth1": {
+        "observations": 3348,
+        "rejectedAt075": 0.048
+      },
+      "depth2": {
+        "observations": 454,
+        "rejectedAt075": 0.256
+      },
+      "depth3": {
+        "observations": 2187,
+        "rejectedAt075": 0.002
+      }
+    },
+    "limitations": [
+      "27 of 162 clusters holding online rows (5,836 of 15,665, ~37%) are no longer active and are excluded entirely -- gardening retires the tree every ~6h.",
+      "Centroid drift measured at up to +/-0.07 on vmw7k4ro1ecianfmyx7gww3f, so a per-row verdict near the boundary is unreliable; aggregate shares stay roughly unbiased because the error is near-symmetric (mean +0.003)."
+    ]
+  }
 }

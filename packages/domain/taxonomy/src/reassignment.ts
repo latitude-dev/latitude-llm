@@ -4,10 +4,9 @@
  * The adaptive publish path stages the whole new tree, then routes the *complete*
  * bounded live window (not just the ≤1,500 clustering sample) to the staging
  * leaves before the atomic swap, so no active read is left pointing at a
- * soon-to-deprecate cluster. Routing is an argmax of each observation's embedding
- * against the leaf centroids, gated by the same fit floor as online assignment —
- * the leaves partition the space, so nearest-leaf matches the deepest-fit descent
- * that built them, and it is deterministic for Temporal replay.
+ * soon-to-deprecate cluster. Routing is a fit-floor-gated argmax over the LEAF
+ * centroids: the leaves partition the space, so nearest-leaf matches the deepest-fit
+ * descent that built them, and it is deterministic for Temporal replay.
  */
 
 import type { TaxonomyClusterId } from "@domain/shared"
@@ -25,11 +24,7 @@ export interface ReassignmentSourceObservation {
   readonly embedding: readonly number[]
 }
 
-/**
- * Nearest leaf and how well it fits, or an explicit rejection. A rejection is a
- * write, not a skip: leaving the row alone would keep it pointing at a cluster the
- * swap is about to deprecate.
- */
+/** A rejection must be WRITTEN, not skipped: an untouched row keeps pointing at a cluster the swap deprecates. */
 export type RoutedLeafAssignment =
   | {
       readonly observationId: string
@@ -72,14 +67,7 @@ const routeOne = (
   return { observationId, method: "gardening_reassign", assignedClusterId: best.clusterId, confidence }
 }
 
-/**
- * Route each observation to its nearest staging leaf, or reject it as `noise` when
- * even that leaf is further away than `absoluteThreshold` — the same fit floor
- * online assignment applies, so a behaviour that existed last pass but was not
- * rebuilt this pass leaves its sessions unassigned instead of dumping them into
- * whatever cluster happens to be closest. Observations with an empty embedding or
- * no candidate leaf are dropped.
- */
+/** Nearest staging leaf per observation, `noise` below `absoluteThreshold`. Empty embedding or no leaf is dropped. */
 export const routeObservationsToLeaves = (
   observations: readonly ReassignmentSourceObservation[],
   leaves: readonly ReassignmentLeaf[],

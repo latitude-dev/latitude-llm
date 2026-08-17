@@ -36,12 +36,7 @@ const cluster = (id: string): TaxonomyCluster => ({
 const match = (id: string, cosine: number): NearestClusterMatch => ({ cluster: cluster(id), cosine })
 
 describe("decideClusterAssignment fit floor", () => {
-  /**
-   * A calibration guard, not a tautology. Measured per project on production, this
-   * is the flat floor at which no project loses more than half its assignments —
-   * 0.81, the median cluster's own p10, costs 2 of 11 projects exactly that.
-   * Changing it should be a deliberate recalibration that updates this test.
-   */
+  // Pins the calibrated value so a change is deliberate; rationale in dev-docs/taxonomy.md.
   it("is calibrated to the flat floor that spares the worst-hit projects", () => {
     expect(TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD).toBe(0.75)
   })
@@ -56,18 +51,16 @@ describe("decideClusterAssignment fit floor", () => {
     })
   })
 
-  // The band the old 0.65 admitted and this floor no longer does — 5.3% of
-  // production assignments sit in it. The gate bottomed out at exactly 0.6505 there,
-  // so 0.65 is the real lower edge rather than a round number.
+  // 0.65 rather than a round number: the old gate bottomed out at exactly 0.6505.
   it("rejects the band the previous 0.65 gate admitted", () => {
     for (const cosine of [0.65, 0.7, 0.74]) {
       expect(decideClusterAssignment([match("a", cosine)]).method).toBe("noise")
     }
   })
 
-  // One floor, both paths: different values would make a session's membership depend
-  // on whether online routing or a gardening reassignment last touched it.
-  it("gates online assignment and full-window reassignment at the same similarity", () => {
+  // Both paths read one constant, so neither can drift; it is NOT a claim that they
+  // gate equivalently — online routing applies it at depth 0, reassignment at a leaf.
+  it("reads the same constant on the online and full-window reassignment paths", () => {
     const belowFloor = TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD - 0.02
     const leaves = [{ clusterId: TaxonomyClusterId("a".repeat(24)), centroid: [1, 0] }]
     const embedding = [belowFloor, Math.sqrt(1 - belowFloor ** 2)]

@@ -897,8 +897,7 @@ const routeProjectionWindowToStagingLeaves = (
     return { window, routed }
   })
 
-// Rows the fit floor rejected are written too (as `noise`), so the written count is
-// not the assigned count — report them apart or a coverage drop reads as a no-op.
+// Rejected rows are written too, so rows-written is not rows-assigned.
 const reassignmentCounts = (rows: readonly { readonly assignmentMethod: TaxonomyObservationAssignmentMethod }[]) => ({
   observationsReassigned: rows.filter((row) => row.assignmentMethod !== "noise").length,
   observationsRejected: rows.filter((row) => row.assignmentMethod === "noise").length,

@@ -166,17 +166,19 @@ export const buildQualitySpanAttributes = (
 }
 
 /**
- * What the fit floor costs, per garden run. Emitted for EVERY mode, unlike the
- * adaptive events: the two arms measure different treatments rather than acting as
- * control and test, so excluding `off` would isolate nothing.
+ * What the fit floor costs, per garden run of the whole-project topic tree. Emitted
+ * for every MODE (unlike the adaptive events) but only for a global target: the
+ * window counts come from `taxonomy_observations`, which a view's assignments never
+ * touch, so emitting it for a view would tag the project's coverage with that view's
+ * id. Views have `TAXONOMY_LENS_COVERAGE_*`.
  *
- * `routedFullWindow` is the arm, and it is deliberately the plan's SHAPE rather
- * than its mode — an enforced run that fell back to static also takes the
- * sample-only path, and grouping it with adaptive would blend the two treatments:
+ * `routedFullWindow` is the arm, and deliberately the plan's SHAPE rather than its
+ * mode — an enforced run that fell back to static also takes the sample-only path,
+ * and grouping it with adaptive would blend two different treatments:
  *
- * - `routedFullWindow:0` — sample-only reassignment. Only the online gate moved
- *   this project, and only for sessions analyzed since the last pass, so coverage
- *   ramps down across the trailing window as it turns over.
+ * - `routedFullWindow:0` — sample-only. Only the online gate moved this project, and
+ *   only for sessions analyzed since the last pass, so coverage ramps down across the
+ *   trailing window as it turns over.
  * - `routedFullWindow:1` — full-window routing. Both the online gate and the
  *   reassignment floor moved it, and the whole window is re-gated every pass, so
  *   coverage steps rather than ramps.
