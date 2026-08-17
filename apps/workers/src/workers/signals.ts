@@ -183,23 +183,36 @@ export const createSignalsWorker = async ({
     // is what stops that placeholder becoming the stabilization baseline for
     // the summary that replaces it.
     //
-    // Generation failure must not swallow the announcement: a signal announced
-    // under its placeholder is recoverable by the throttled refresh, a signal
-    // never announced is not. The publishes therefore sit after a catch, and
-    // carry the same dedupe keys the `SignalPromoted` fan-out used before, so a
-    // retried job cannot notify or dispatch twice.
+    // Nothing in the naming stage may swallow the announcement: a signal
+    // announced under its placeholder is recoverable by the throttled refresh, a
+    // signal never announced is not. The whole stage is therefore caught — not
+    // just the generation, because `authorizeBillableAction` and
+    // `makeAIMeteringScope` fail on their own infrastructure (plan resolution,
+    // usage-period lookup, the Redis spend reservation) rather than reporting it
+    // through `allowed`, and this task publishes with a bare dedupe key, so
+    // BullMQ gives it one attempt and a transient billing error would drop the
+    // announcement for good. The publishes carry the same dedupe keys the
+    // `SignalPromoted` fan-out used, so a retried job cannot notify or dispatch
+    // twice.
     nameOnPromotion: (payload) =>
       Effect.gen(function* () {
-        const organizationId = OrganizationId(payload.organizationId)
-        const keyParts = ["signal-name-on-promotion", payload.signalId]
-        const authorization = yield* authorizeBillableAction({
-          organizationId,
-          action: "llm-call",
-          skipIfBlocked: true,
-          idempotencyKey: buildBillingIdempotencyKey("llm-call", [payload.organizationId, ...keyParts, "authorize"]),
-        })
+        yield* Effect.gen(function* () {
+          const organizationId = OrganizationId(payload.organizationId)
+          const keyParts = ["signal-name-on-promotion", payload.signalId]
+          const authorization = yield* authorizeBillableAction({
+            organizationId,
+            action: "llm-call",
+            skipIfBlocked: true,
+            idempotencyKey: buildBillingIdempotencyKey("llm-call", [payload.organizationId, ...keyParts, "authorize"]),
+          })
 
-        if (authorization.allowed) {
+          if (!authorization.allowed) {
+            logger.info(
+              `Naming a promoted signal skipped for ${payload.projectId}/${payload.signalId} — billing blocked`,
+            )
+            return
+          }
+
           const meteringScope = yield* makeAIMeteringScope({
             organizationId,
             projectId: ProjectId(payload.projectId),
@@ -211,21 +224,18 @@ export const createSignalsWorker = async ({
             projectId: payload.projectId,
             signalId: payload.signalId,
             ignorePreviousDetails: true,
-          }).pipe(
-            provideAIMeteringScope(meteringScope),
-            Effect.tapError((error) =>
-              Effect.sync(() =>
-                logger.error(
-                  `Naming a promoted signal failed for ${payload.projectId}/${payload.signalId}; announcing with its placeholder`,
-                  error,
-                ),
+          }).pipe(provideAIMeteringScope(meteringScope))
+        }).pipe(
+          Effect.tapError((error) =>
+            Effect.sync(() =>
+              logger.error(
+                `Naming a promoted signal failed for ${payload.projectId}/${payload.signalId}; announcing with its placeholder`,
+                error,
               ),
             ),
-            Effect.ignore,
-          )
-        } else {
-          logger.info(`Naming a promoted signal skipped for ${payload.projectId}/${payload.signalId} — billing blocked`)
-        }
+          ),
+          Effect.ignore,
+        )
 
         yield* Effect.all(
           [
