@@ -10,6 +10,12 @@ export interface RefreshSignalDetailsInput {
   readonly organizationId: string
   readonly signalId: string
   readonly projectId: string
+  /**
+   * Generate without the signal's current details as the stabilization baseline.
+   * Set by the promotion path, where those details are still the deterministic
+   * placeholder built from one occurrence.
+   */
+  readonly ignorePreviousDetails?: boolean
 }
 
 export type RefreshSignalDetailsResult =
@@ -76,6 +82,7 @@ export const refreshSignalDetailsUseCase = (input: RefreshSignalDetailsInput) =>
       organizationId: input.organizationId,
       projectId: input.projectId,
       signalId: input.signalId,
+      ...(input.ignorePreviousDetails ? { ignorePreviousDetails: true } : {}),
     }).pipe(
       Effect.map((details) => ({ action: "ready", details }) as const),
       Effect.catchTag("SignalNotFoundForDetailsGenerationError", () =>

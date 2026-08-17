@@ -297,7 +297,7 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(0)
   })
 
-  it("routes SignalPromoted to the discovery notification and agent dispatch", async () => {
+  it("routes SignalPromoted to naming, which announces once the summary exists", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SignalPromoted", {
@@ -310,29 +310,24 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(2)
+    // Exactly one publish, and specifically not the announcements: the signal
+    // still carries the placeholder it was created with, and agent dispatch
+    // builds its prompt from the name and description. `issues:nameOnPromotion`
+    // generates the real summary and publishes both afterwards.
+    expect(published).toHaveLength(1)
 
-    const notifications = published.find((p) => p.queue === "notifications")
-    expect(notifications?.task).toBe("request-signal-discovered-notifications")
-    expect(notifications?.payload).toEqual({
+    const naming = published[0]
+    expect(naming?.queue).toBe("issues")
+    expect(naming?.task).toBe("nameOnPromotion")
+    expect(naming?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       signalId: "signal-1",
       // Promotion time, so the notification does not announce a signal as
       // discovered weeks ago.
-      discoveredAt: "2026-05-21T10:00:00.000Z",
+      promotedAt: "2026-05-21T10:00:00.000Z",
     })
-    expect(notifications?.options?.dedupeKey).toBe("notifications:request-signal-discovered:signal-1")
-
-    const agentDispatch = published.find((p) => p.queue === "agent-dispatch")
-    expect(agentDispatch?.task).toBe("request")
-    expect(agentDispatch?.payload).toEqual({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      signalId: "signal-1",
-      source: "signal",
-    })
-    expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-signal:signal-1")
+    expect(naming?.options?.dedupeKey).toBe("issues:name-on-promotion:signal-1")
   })
 
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {

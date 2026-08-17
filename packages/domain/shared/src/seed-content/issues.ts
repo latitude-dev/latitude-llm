@@ -210,10 +210,16 @@ const baseSignalFixtures: SeedSignalFixture[] = [
 ]
 
 const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
+  // The two unpromoted fixtures read as one occurrence's own words rather than
+  // as a summary, because that is what the product writes: a candidate is named
+  // deterministically from its first occurrence's feedback, and the generated
+  // cluster summary only arrives at promotion. The older of the two is there
+  // because a candidate sitting invisible for weeks looks no different to a
+  // user than one from yesterday.
   {
-    name: "Agent misreads a single timezone abbreviation",
+    name: "The agent read the customer's local time as UTC and quoted a delivery window a day early",
     description:
-      "One session where the agent parsed a customer's local time as UTC and quoted a delivery window a day off. Seeded as the unpromoted case: a lone occurrence that never recurred, so it stays out of the announced set.",
+      "The agent read the customer's local time as UTC and quoted a delivery window a day early. The customer gave a time with no timezone and the agent never asked which one it was.",
     createdDaysAgo: 4,
     clusteredDaysAgo: 4,
     updatedDaysAgo: 4,
@@ -226,9 +232,9 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     source: "flagger",
   },
   {
-    name: "Laziness flagger fires on a deliberately terse reply",
+    name: "A one-line answer was flagged as lazy when brevity was the right call",
     description:
-      "The flagger called a one-line answer lazy when brevity was the right call. Seeded as the second unpromoted case, and an older one: a candidate that has been sitting invisible for weeks looks no different to a user than one from yesterday.",
+      "A one-line answer was flagged as lazy when brevity was the right call. The question had a yes or no answer and the reply gave it.",
     createdDaysAgo: 23,
     clusteredDaysAgo: 23,
     updatedDaysAgo: 23,

@@ -14,7 +14,7 @@ import {
   isEligibilityError,
   SignalDiscoveryLockUnavailableError,
 } from "@domain/signals"
-import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
+import { AIEmbedLive, AIRerankLive, withAi } from "@platform/ai"
 import {
   RedisBillingSpendReservationLive,
   RedisCacheStoreLive,
@@ -73,14 +73,14 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
     ),
   )
 
+// No AI layer and no metering: a candidate is named deterministically from its
+// first occurrence, and the cluster summary is generated once at promotion. The
+// metering wrapper in particular has to go rather than sit idle — it fails the
+// activity outright when an organization is out of AI credits, which would now
+// stop discovery from recording evidence it no longer pays a model to process.
 export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =>
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
-      withActivityAIMetering({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        label: "signal-create",
-      }),
       withPostgres(
         Layer.mergeAll(
           ProjectRepositoryLive,
@@ -88,7 +88,6 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
           SignalRepositoryLive,
           OutboxEventWriterLive,
           EvaluationRepositoryLive,
-          billingMeteringRepositoriesLive,
         ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
@@ -97,8 +96,6 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
       // born promoted where the floor admits a single session.
       withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisCacheStoreLive(getRedisClient())),
-      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
-      withAi(AIGenerateLive, getRedisClient()),
       withTracing,
     ),
   )
@@ -131,7 +128,7 @@ export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
       Effect.provide(RedisCacheStoreLive(getRedisClient())),
       // TODO(signal-discovery-rerank): drop AIRerankLive when assignOrCreateSignal
       // relies on Postgres pgvector hybrid search directly.
-      withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
+      withAi(AIRerankLive, getRedisClient()),
       withTracing,
       Effect.match({
         onFailure: (error) => {

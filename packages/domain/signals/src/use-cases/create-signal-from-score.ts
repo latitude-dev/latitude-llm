@@ -1,4 +1,4 @@
-import { resolveEmbeddingConfig } from "@domain/ai"
+import { type AIError, resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
 import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
@@ -16,6 +16,7 @@ import {
 } from "@domain/shared"
 import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
+import { buildCandidatePlaceholder } from "../candidate-naming.ts"
 import { PROMOTION_MIN_SESSIONS } from "../constants.ts"
 import type { Signal, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
@@ -25,8 +26,6 @@ import { SignalRepository } from "../ports/signal-repository.ts"
 import { promotionThresholdForVolume } from "../promotion.ts"
 import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
-import type { GenerateSignalDetailsError } from "./generate-signal-details.ts"
-import { generateSignalDetailsUseCase } from "./generate-signal-details.ts"
 import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
 
 export interface CreateSignalFromScoreInput {
@@ -42,9 +41,9 @@ export type CreateSignalFromScoreResult = {
 }
 
 export type CreateSignalFromScoreError =
+  | AIError
   | CacheError
   | CheckEligibilityError
-  | GenerateSignalDetailsError
   | RepositoryError
   | NotFoundError
   | SignalSlugGenerationError
@@ -184,17 +183,6 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
       } satisfies CreateSignalFromScoreResult
     }
 
-    const signalDetails = yield* generateSignalDetailsUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      occurrences: [
-        {
-          sourceType: initialScoreResult.score.sourceType,
-          feedback: initialScoreResult.score.feedback,
-        },
-      ],
-    })
-
     // Resolved before the transaction: it reads Redis and ClickHouse, neither of
     // which belongs inside a Postgres transaction.
     const bornPromoted = yield* resolveBornPromoted(input)
@@ -226,13 +214,14 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           projectSlug: project.slug,
           count: (slug) => signalRepository.countBySlug({ slug }),
         })
+        const placeholder = buildCandidatePlaceholder(score.feedback)
         const issue = buildNewSignalFromScore({
           score,
           normalizedEmbedding: input.normalizedEmbedding,
           embeddingModel: embeddingConfig.model,
           assignedAt,
-          name: signalDetails.name,
-          description: signalDetails.description,
+          name: placeholder.name,
+          description: placeholder.description,
           slug,
           bornPromoted,
         })

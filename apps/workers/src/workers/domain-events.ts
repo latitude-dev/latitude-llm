@@ -195,42 +195,26 @@ export const createDomainEventsWorker = ({
     // `UnhandledEventError`.
     SignalCreated: () => Effect.void,
 
-    // Where a discovered signal becomes real. Same notification kind and same
-    // dispatch trigger as before, fired once the signal has the evidence to
-    // deserve them. `discoveredAt` carries the promotion time so the
-    // announcement does not date itself to a creation weeks earlier.
+    // Where a discovered signal becomes real. Deliberately one publish and not
+    // the two announcements themselves: the signal still carries the
+    // placeholder name it was created with, so `issues:nameOnPromotion`
+    // generates the real summary from the whole cluster and announces
+    // afterwards. Same notification kind and same dispatch trigger as before,
+    // fired once the signal has the evidence to deserve them.
     SignalPromoted: (event) =>
-      Effect.all(
-        [
-          pub.publish(
-            "notifications",
-            "request-signal-discovered-notifications",
-            {
-              organizationId: event.payload.organizationId,
-              projectId: event.payload.projectId,
-              signalId: event.payload.signalId,
-              discoveredAt: event.payload.promotedAt,
-            },
-            {
-              dedupeKey: `notifications:request-signal-discovered:${event.payload.signalId}`,
-            },
-          ),
-          pub.publish(
-            "agent-dispatch",
-            "request",
-            {
-              organizationId: event.payload.organizationId,
-              projectId: event.payload.projectId,
-              signalId: event.payload.signalId,
-              source: "signal",
-            },
-            {
-              dedupeKey: `agent-dispatch:request-signal:${event.payload.signalId}`,
-            },
-          ),
-        ],
-        { concurrency: "unbounded" },
-      ).pipe(Effect.asVoid),
+      pub.publish(
+        "issues",
+        "nameOnPromotion",
+        {
+          organizationId: event.payload.organizationId,
+          projectId: event.payload.projectId,
+          signalId: event.payload.signalId,
+          promotedAt: event.payload.promotedAt,
+        },
+        {
+          dedupeKey: `issues:name-on-promotion:${event.payload.signalId}`,
+        },
+      ),
 
     SignalEscalated: (event) =>
       pub.publish("alert-incidents", "signal-escalated", event.payload, {

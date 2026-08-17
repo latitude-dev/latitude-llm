@@ -174,6 +174,116 @@ export const createSignalsWorker = async ({
         ),
         Effect.asVoid,
       ),
+    // Name a freshly promoted signal from its whole cluster, then announce it.
+    //
+    // The ordering is the point. A candidate carries a placeholder built from
+    // one occurrence, and agent dispatch composes its prompt from the signal's
+    // name and description — announcing first would hand an agent one raw
+    // feedback sentence to open a pull request against. `ignorePreviousDetails`
+    // is what stops that placeholder becoming the stabilization baseline for
+    // the summary that replaces it.
+    //
+    // Generation failure must not swallow the announcement: a signal announced
+    // under its placeholder is recoverable by the throttled refresh, a signal
+    // never announced is not. The publishes therefore sit after a catch, and
+    // carry the same dedupe keys the `SignalPromoted` fan-out used before, so a
+    // retried job cannot notify or dispatch twice.
+    nameOnPromotion: (payload) =>
+      Effect.gen(function* () {
+        const organizationId = OrganizationId(payload.organizationId)
+        const keyParts = ["signal-name-on-promotion", payload.signalId]
+        const authorization = yield* authorizeBillableAction({
+          organizationId,
+          action: "llm-call",
+          skipIfBlocked: true,
+          idempotencyKey: buildBillingIdempotencyKey("llm-call", [payload.organizationId, ...keyParts, "authorize"]),
+        })
+
+        if (authorization.allowed) {
+          const meteringScope = yield* makeAIMeteringScope({
+            organizationId,
+            projectId: ProjectId(payload.projectId),
+            keyParts,
+            context: authorization.context,
+          })
+          yield* refreshSignalDetailsUseCase({
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            signalId: payload.signalId,
+            ignorePreviousDetails: true,
+          }).pipe(
+            provideAIMeteringScope(meteringScope),
+            Effect.tapError((error) =>
+              Effect.sync(() =>
+                logger.error(
+                  `Naming a promoted signal failed for ${payload.projectId}/${payload.signalId}; announcing with its placeholder`,
+                  error,
+                ),
+              ),
+            ),
+            Effect.ignore,
+          )
+        } else {
+          logger.info(`Naming a promoted signal skipped for ${payload.projectId}/${payload.signalId} — billing blocked`)
+        }
+
+        yield* Effect.all(
+          [
+            publisher.publish(
+              "notifications",
+              "request-signal-discovered-notifications",
+              {
+                organizationId: payload.organizationId,
+                projectId: payload.projectId,
+                signalId: payload.signalId,
+                discoveredAt: payload.promotedAt,
+              },
+              { dedupeKey: `notifications:request-signal-discovered:${payload.signalId}` },
+            ),
+            publisher.publish(
+              "agent-dispatch",
+              "request",
+              {
+                organizationId: payload.organizationId,
+                projectId: payload.projectId,
+                signalId: payload.signalId,
+                source: "signal",
+              },
+              { dedupeKey: `agent-dispatch:request-signal:${payload.signalId}` },
+            ),
+          ],
+          { concurrency: "unbounded" },
+        )
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(
+            EvaluationRepositoryLive,
+            SignalRepositoryLive,
+            ScoreRepositoryLive,
+            BillingOverrideRepositoryLive,
+            BillingUsageEventRepositoryLive,
+            BillingUsagePeriodRepositoryLive,
+            OutboxEventWriterLive,
+            SettingsReaderLive,
+            StripeSubscriptionLookupLive,
+          ),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
+        Effect.provide(RedisBillingSpendReservationLive(rdClient)),
+        withAi(AIGenerateLive, rdClient),
+        withTracing,
+        Effect.provide(Layer.succeed(QueuePublisher, publisher)),
+        Effect.tap(() =>
+          Effect.sync(() => logger.info(`Announced promoted signal ${payload.projectId}/${payload.signalId}`)),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`Announcing promoted signal failed for ${payload.projectId}/${payload.signalId}`, error),
+          ),
+        ),
+        Effect.asVoid,
+      ),
     // Evaluate escalation state from the analytics aggregate + the current
     // `alert_incidents`-derived `lifecycle.isEscalating` flag, and emit the
     // matching transition event. The use case does not write the signal —

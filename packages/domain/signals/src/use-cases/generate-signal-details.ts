@@ -11,6 +11,7 @@ import { ScoreRepository, type ScoreSourceType } from "@domain/scores"
 import { LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
+import { collapseWhitespace, truncateSignalName } from "../candidate-naming.ts"
 import {
   SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL,
   SIGNAL_DETAILS_MAX_OCCURRENCES,
@@ -21,17 +22,6 @@ import {
   SignalNotFoundForDetailsGenerationError,
 } from "../errors.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
-
-const collapseWhitespace = (text: string) => text.replace(/\s+/g, " ").trim()
-
-const truncateSignalName = (name: string) => {
-  const collapsed = collapseWhitespace(name)
-  if (collapsed.length <= 128) {
-    return collapsed
-  }
-
-  return `${collapsed.slice(0, 125).trimEnd()}...`
-}
 
 const signalDetailsSchema = z.object({
   name: z
@@ -62,6 +52,17 @@ export interface GenerateSignalDetailsInput {
   readonly projectId: string
   readonly signalId?: string | null
   readonly occurrences?: readonly SignalOccurrenceInput[]
+  /**
+   * Drop the signal's current name/description as the stabilization baseline.
+   *
+   * Set at promotion, where the row still carries the deterministic placeholder
+   * built from one occurrence. Passing that as "keep this unchanged when it
+   * already captures the pattern" anchors the first real summary to the phrasing
+   * of a single member, which is the failure generating at promotion exists to
+   * avoid. The refresh path leaves it off, because there the previous details
+   * are a genuine summary worth stabilizing against.
+   */
+  readonly ignorePreviousDetails?: boolean
 }
 
 export type GenerateSignalDetailsError =
@@ -149,8 +150,10 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
           ),
         )
 
-      previousName = issue.name
-      previousDescription = issue.description
+      if (!input.ignorePreviousDetails) {
+        previousName = issue.name
+        previousDescription = issue.description
+      }
 
       const recentScores = yield* scoreRepository.listBySignalId({
         projectId: ProjectId(input.projectId),
