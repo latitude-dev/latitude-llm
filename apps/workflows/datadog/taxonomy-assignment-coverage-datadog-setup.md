@@ -26,7 +26,16 @@ DD_APP_KEY=xxx DD_API_KEY=yyy ./apps/workflows/datadog/setup-datadog.sh
 
 Then move the `Taxonomy assignment coverage spans` filter **above** any broad
 `service:workflows` or catch-all filter (APM → Retention Filters). Filters are
-evaluated top-down and the first match decides; the script cannot set ordering.
+evaluated top-down and the first match decides; the script cannot set ordering. There
+are now three taxonomy filters to keep above any catch-all: adaptive shadow, quality,
+and this one.
+
+`window_assigned` has a span attribute but deliberately **no span metric** — it is
+exactly `sum(window_total) - sum(window_noise)`, so a third metric would cost money to
+carry no extra information. Datadog also refused to register it ("Cannot register
+summary definition", HTTP 500) while its identically-shaped siblings registered
+cleanly, which is worth knowing if a future metric hits the same error: the script is
+idempotent, so re-running is the first thing to try.
 
 The dashboard widgets live in the **tree-quality** dashboard
 (`taxonomy-quality-dashboard.json`, group "Assignment coverage"), not a dashboard
