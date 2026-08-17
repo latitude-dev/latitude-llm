@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## v0.3.82 - 2026-08-17
+
+### Signals
+
+- Discovered signals now have to earn their place before anyone sees them. A signal opened by discovery stays hidden until distinct sessions back it up, against a threshold that scales with the project's session volume (floor of 2, capped at 15). Until it is promoted it stays out of lists, search, analytics and escalation, sends no notification and dispatches no agent. Promotion is one-way and every signal that already existed was backfilled as promoted, so nothing currently visible disappears (ref: #4407, #4465).
+- The `signal.discovered` notification and agent dispatch moved from creation to promotion, and the dispatch is now idempotent for the lifetime of the signal rather than per day, so a discovery can no longer open a second pull request (ref: #4465).
+
+### Notifications
+
+- Split the Monitors notification group into separate Signals and Monitors groups. Signals carries a checkbox per lifecycle event (discovered, escalating, regressed), Monitors stays a single switch, and both now offer the minimum-severity selector in email and Slack. Existing preferences and Slack routes were copied into both new groups, so delivery is unchanged until you edit them (ref: #4466).
+- Fixed Slack route topic checkboxes silently saving nothing, unsubscribe links in already-delivered emails failing on the retired `incidents` group, and two quick preference toggles landing out of order (ref: #4466).
+
+### Behaviors
+
+- Facet lenses now accumulate coverage across gardening passes instead of labelling only the sampled window. Each pass routes the facet's cached projections against its staged leaf centroids, so widening the date range on a facet view keeps adding sessions, with no extra LLM calls per pass (ref: #4419).
+
+### Scores
+
+- Hid failed live evaluations that matched no condition from the Scores tab and the negative Indicators count, where they were showing up as unlabeled thumbs-down. A failed evaluation that already owns a signal stays visible (ref: #4443).
+
 ## v0.3.81 - 2026-08-14
 
 ### Traces
