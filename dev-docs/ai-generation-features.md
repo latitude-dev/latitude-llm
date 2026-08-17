@@ -19,6 +19,14 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 | Taxonomy Naming (propose themes / name cluster) | `latitude-taxonomy` |
 | Conversation Intelligence Moment Classification | `latitude-conversation-intelligence` |
 
+## Knowing which trace a generation landed in
+
+`GenerateResult.telemetryTraceId` carries the Latitude trace a captured generation was exported into, so a feature can store the way back from its output to the decision behind it. `runWithAiTelemetry` (`@platform/ai-latitude`) reads it inside the `capture` callback and hands it to the adapter's execute function; reading it after the effect returns would pick up the host's own Datadog trace instead, since the capture span has already ended.
+
+Two absences are deliberate, not gaps: an uncaptured call (no `telemetry` option) has no Latitude trace, and the value is **excluded from the AI cache** (`withAICache`) because a cache hit creates no span — a persisted id would name whichever caller first produced that generation.
+
+Today one feature stores it: flagger classifications keep it as `metadata.flaggerTraceId` on the annotation score, which is what lets a customer's verdict on a signal be written back onto Latitude's own flagger trace in `latitude-flaggers` (`recordSignalFlaggerReviewUseCase`, in-process against the dogfood organization). See [`./flaggers.md`](./flaggers.md#grading-a-flaggers-own-decisions).
+
 ## Issues
 
 > **Signal Discovery Details**
