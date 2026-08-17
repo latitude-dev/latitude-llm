@@ -1,0 +1,90 @@
+{
+  "_comment": "Pre-change assignment baseline for LAT-866, captured from Latitude V2 PRODUCTION ClickHouse. taxonomy_observations is retained 30 days, so these rows no longer exist after 2026-09-16 — this file is the only surviving record of what the 0.65 floor admitted. Reproduce the shape with scripts/taxonomy/snapshot-assignment-baseline.ts.",
+  "capturedAt": "2026-08-17",
+  "service": "Latitude V2 PRODUCTION",
+  "window": "start_time >= now() - INTERVAL 7 DAY",
+  "floorBefore": 0.65,
+  "byAssignmentMethod": {
+    "_comment": "gated = the paths this change adds a floor to. gardening_birth is NOT gated by it (build path, out of scope) yet is the largest population and bottoms lowest — the dominant unfloored hole after this PR.",
+    "centroid_online": {
+      "gatedByThisChange": true,
+      "observations": 17008,
+      "confidenceMin": 0.6505,
+      "confidenceP10": 0.7793,
+      "confidenceP50": 0.9313,
+      "shareBelow081": 0.1516
+    },
+    "gardening_birth": {
+      "gatedByThisChange": false,
+      "observations": 14582,
+      "confidenceMin": 0.3068,
+      "confidenceP10": 0.773,
+      "confidenceP50": 0.9194,
+      "shareBelow081": 0.159
+    },
+    "gardening_reassign": {
+      "gatedByThisChange": true,
+      "observations": 154,
+      "confidenceMin": 0.4719,
+      "confidenceP10": 0.7729,
+      "confidenceP50": 0.8575,
+      "shareBelow081": 0.2208
+    },
+    "noise": { "gatedByThisChange": false, "observations": 2283 }
+  },
+  "perProjectImpact": {
+    "_comment": "Over the 11 projects with >=50 assignments on a gated path. The fleet number is a tail, not a level: the median project barely moves while the worst loses seven eighths of its assignments.",
+    "projects": 11,
+    "gatedAssignments": 16355,
+    "fleetRejectAt081": 0.1363,
+    "fleetRejectAt075": 0.0531,
+    "perProjectP50At081": 0.0633,
+    "perProjectP90At081": 0.7241,
+    "perProjectMaxAt081": 0.8814,
+    "projectsLosingOver50PctAt081": 2,
+    "projectsLosingOver50PctAt075": 0
+  },
+  "arms": {
+    "_comment": "Exactly one project is on the full-window reassignment path, so change 2's blast radius today is 154 observations/week. Every other project is affected only by the online gate.",
+    "fullWindowRouting": {
+      "projectId": "jwa2e9v5qsp3mvdxfjoy2hju",
+      "organizationId": "j8yphi3sk014dijo2x9cnwd3",
+      "note": "the narrow-domain ads-analytics pilot, the only adaptive project",
+      "observations": 193,
+      "gardeningReassign": 154,
+      "centroidOnline": 38,
+      "rejectedShareOfWindowAt081": 0.2124
+    },
+    "sampleOnly": { "note": "every other project; gardening_birth + centroid_online only" }
+  },
+  "worstHitProjects": [
+    {
+      "projectId": "vmw7k4ro1ecianfmyx7gww3f",
+      "onlineRows": 776,
+      "confidenceP50": 0.7525,
+      "rejectedShareAt081": 0.8814,
+      "rejectedShareAt075": 0.4768
+    },
+    {
+      "projectId": "nvthbdhgrge0cu2vjp4kgt1h",
+      "onlineRows": 395,
+      "confidenceP50": 0.779,
+      "rejectedShareAt081": 0.7241,
+      "rejectedShareAt075": 0.3063
+    },
+    {
+      "projectId": "a8ljmnyjr7qbz18tb9cixyf5",
+      "onlineRows": 3212,
+      "confidenceP50": 0.8506,
+      "rejectedShareAt081": 0.2463,
+      "rejectedShareAt075": 0.0576
+    },
+    {
+      "projectId": "osp0irqwqjlfkq9uwztqwzhj",
+      "onlineRows": 8257,
+      "confidenceP50": 0.9434,
+      "rejectedShareAt081": 0.0465,
+      "rejectedShareAt075": 0.0197
+    }
+  ]
+}

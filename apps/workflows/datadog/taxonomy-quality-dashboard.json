@@ -1,16 +1,26 @@
 {
   "title": "Taxonomy tree quality (LAT-861)",
-  "description": "Reads the APM spans `taxonomy.gardenTaxonomyWorkflow.buildQuality` and `.nameQuality` emitted by the workflows service: one pair per garden run, for every project and every view, in every clustering mode. Unlike the adaptive rollout dashboard this is not flag-gated. Every share is measured on the partition that one build produced — never on live assigned_cluster_id across a window, which mixes in deprecated clusters and biases the number down badly. The app ships logs to CloudWatch only, so this uses the APM spans channel. Requires the 'Taxonomy quality spans' retention filter and the taxonomy.quality.* span metrics from apps/workflows/datadog/setup-datadog.sh. Apply with the Datadog MCP upsert_datadog_dashboard (title/description/template_variables/widgets).",
+  "description": "Reads the APM spans `taxonomy.gardenTaxonomyWorkflow.buildQuality` and `.nameQuality` emitted by the workflows service: one pair per garden run, for every project and every view, in every clustering mode. Unlike the adaptive rollout dashboard this is not flag-gated. Every share is measured on the partition that one build produced \u2014 never on live assigned_cluster_id across a window, which mixes in deprecated clusters and biases the number down badly. The app ships logs to CloudWatch only, so this uses the APM spans channel. Requires the 'Taxonomy quality spans' retention filter and the taxonomy.quality.* span metrics from apps/workflows/datadog/setup-datadog.sh. Apply with the Datadog MCP upsert_datadog_dashboard (title/description/template_variables/widgets).",
   "layout_type": "ordered",
   "template_variables": [
-    { "name": "organization", "prefix": "@taxonomy.organizationId", "available_values": [], "default": "*" },
-    { "name": "project", "prefix": "@taxonomy.projectId", "available_values": [], "default": "*" }
+    {
+      "name": "organization",
+      "prefix": "@taxonomy.organizationId",
+      "available_values": [],
+      "default": "*"
+    },
+    {
+      "name": "project",
+      "prefix": "@taxonomy.projectId",
+      "available_values": [],
+      "default": "*"
+    }
   ],
   "widgets": [
     {
       "definition": {
         "type": "note",
-        "content": "## Taxonomy tree quality\n\nOne `buildQuality` span per garden run (the partition the build persisted) and one `nameQuality` span per run (the names it published), for **every** project and view in **every** mode — this is not gated on the adaptive flag.\n\n**Watch first:** `largestLeafShare`. A project whose biggest leaf holds a majority of its window has a tree that is technically fine and useless to read.\n\n**Read the two shares together.** A change that improves `largestLeafShare` while cutting `topLevelRowCount` has buried the good groups deeper — better on the tracked metric, worse for the user. That is a measured regression, not a hypothetical, which is why they share a chart.\n\n**`topLevelRowCount` is the promoted row list**, not the root's child count. Until the de-nesting read ships it describes a screen the customer does not see yet.\n\n**`leafSizes` is a string tag, not a metric** — read it per run in Trace Explorer: `service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality`. The vector is what makes a regression legible at a glance.\n\n**Centered cohesion below ~0.35 means residue** — a leaf holding unrelated traffic that raw cohesion cannot distinguish from a real cluster. It is emitted per leaf; the minimum is the one to rank on, because residue is not confined to the biggest leaf.\n\n> Spans are indexed for 15 days. Anything longer — the before/after for de-nesting, merging and naming — reads the `taxonomy.quality.*` span metrics in the last group.",
+        "content": "## Taxonomy tree quality\n\nOne `buildQuality` span per garden run (the partition the build persisted) and one `nameQuality` span per run (the names it published), for **every** project and view in **every** mode \u2014 this is not gated on the adaptive flag.\n\n**Watch first:** `largestLeafShare`. A project whose biggest leaf holds a majority of its window has a tree that is technically fine and useless to read.\n\n**Read the two shares together.** A change that improves `largestLeafShare` while cutting `topLevelRowCount` has buried the good groups deeper \u2014 better on the tracked metric, worse for the user. That is a measured regression, not a hypothetical, which is why they share a chart.\n\n**`topLevelRowCount` is the promoted row list**, not the root's child count. Until the de-nesting read ships it describes a screen the customer does not see yet.\n\n**`leafSizes` is a string tag, not a metric** \u2014 read it per run in Trace Explorer: `service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality`. The vector is what makes a regression legible at a glance.\n\n**Centered cohesion below ~0.35 means residue** \u2014 a leaf holding unrelated traffic that raw cohesion cannot distinguish from a real cluster. It is emitted per leaf; the minimum is the one to rank on, because residue is not confined to the biggest leaf.\n\n> Spans are indexed for 15 days. Anything longer \u2014 the before/after for de-nesting, merging and naming \u2014 reads the `taxonomy.quality.*` span metrics in the last group.",
         "background_color": "yellow",
         "font_size": "14",
         "text_align": "left",
@@ -20,13 +30,16 @@
         "tick_pos": "50%",
         "tick_edge": "left"
       },
-      "layout": { "width": 12, "height": 4 }
+      "layout": {
+        "width": 12,
+        "height": 4
+      }
     },
     {
       "definition": {
         "type": "group",
         "layout_type": "ordered",
-        "title": "Fleet triage — which projects have an unreadable tree",
+        "title": "Fleet triage \u2014 which projects have an unreadable tree",
         "show_title": true,
         "widgets": [
           {
@@ -44,20 +57,38 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality @taxonomy.quality.largestLeafShare:>0.5 $organization $project"
                       },
-                      "compute": { "aggregation": "cardinality", "metric": "@taxonomy.projectId" }
+                      "compute": {
+                        "aggregation": "cardinality",
+                        "metric": "@taxonomy.projectId"
+                      }
                     }
                   ],
-                  "formulas": [{ "formula": "concentrated" }],
+                  "formulas": [
+                    {
+                      "formula": "concentrated"
+                    }
+                  ],
                   "response_format": "scalar",
                   "aggregator": "max",
                   "conditional_formats": [
-                    { "comparator": ">", "value": 0, "palette": "white_on_yellow" },
-                    { "comparator": "<=", "value": 0, "palette": "white_on_green" }
+                    {
+                      "comparator": ">",
+                      "value": 0,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": "<=",
+                      "value": 0,
+                      "palette": "white_on_green"
+                    }
                   ]
                 }
               ]
             },
-            "layout": { "width": 4, "height": 3 }
+            "layout": {
+              "width": 4,
+              "height": 3
+            }
           },
           {
             "definition": {
@@ -74,21 +105,31 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "cardinality", "metric": "@taxonomy.projectId" }
+                      "compute": {
+                        "aggregation": "cardinality",
+                        "metric": "@taxonomy.projectId"
+                      }
                     }
                   ],
-                  "formulas": [{ "formula": "projects" }],
+                  "formulas": [
+                    {
+                      "formula": "projects"
+                    }
+                  ],
                   "response_format": "scalar",
                   "aggregator": "max"
                 }
               ]
             },
-            "layout": { "width": 4, "height": 3 }
+            "layout": {
+              "width": 4,
+              "height": 3
+            }
           },
           {
             "definition": {
               "type": "query_value",
-              "title": "Widest tree (max topLevelRowCount) — the row-count guard",
+              "title": "Widest tree (max topLevelRowCount) \u2014 the row-count guard",
               "autoscale": true,
               "precision": 0,
               "requests": [
@@ -100,26 +141,48 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.topLevelRowCount" }
+                      "compute": {
+                        "aggregation": "max",
+                        "metric": "@taxonomy.quality.topLevelRowCount"
+                      }
                     }
                   ],
-                  "formulas": [{ "formula": "widest" }],
+                  "formulas": [
+                    {
+                      "formula": "widest"
+                    }
+                  ],
                   "response_format": "scalar",
                   "aggregator": "max",
                   "conditional_formats": [
-                    { "comparator": ">", "value": 30, "palette": "white_on_red" },
-                    { "comparator": ">", "value": 20, "palette": "white_on_yellow" },
-                    { "comparator": "<=", "value": 20, "palette": "white_on_green" }
+                    {
+                      "comparator": ">",
+                      "value": 30,
+                      "palette": "white_on_red"
+                    },
+                    {
+                      "comparator": ">",
+                      "value": 20,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": "<=",
+                      "value": 20,
+                      "palette": "white_on_green"
+                    }
                   ]
                 }
               ]
             },
-            "layout": { "width": 4, "height": 3 }
+            "layout": {
+              "width": 4,
+              "height": 3
+            }
           },
           {
             "definition": {
               "type": "query_table",
-              "title": "Per-project tree shape — concentration, rows, worst leaf",
+              "title": "Per-project tree shape \u2014 concentration, rows, worst leaf",
               "requests": [
                 {
                   "queries": [
@@ -129,8 +192,16 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.largestLeafShare" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 40 }]
+                      "compute": {
+                        "aggregation": "max",
+                        "metric": "@taxonomy.quality.largestLeafShare"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 40
+                        }
+                      ]
                     },
                     {
                       "data_source": "spans",
@@ -138,8 +209,16 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.largestTopLevelShare" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 40 }]
+                      "compute": {
+                        "aggregation": "max",
+                        "metric": "@taxonomy.quality.largestTopLevelShare"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 40
+                        }
+                      ]
                     },
                     {
                       "data_source": "spans",
@@ -147,8 +226,16 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.topLevelRowCount" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 40 }]
+                      "compute": {
+                        "aggregation": "max",
+                        "metric": "@taxonomy.quality.topLevelRowCount"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 40
+                        }
+                      ]
                     },
                     {
                       "data_source": "spans",
@@ -156,8 +243,16 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "min", "metric": "@taxonomy.quality.centeredCohesion.min" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 40 }]
+                      "compute": {
+                        "aggregation": "min",
+                        "metric": "@taxonomy.quality.centeredCohesion.min"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 40
+                        }
+                      ]
                     },
                     {
                       "data_source": "spans",
@@ -165,8 +260,16 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.membersClustered" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 40 }]
+                      "compute": {
+                        "aggregation": "max",
+                        "metric": "@taxonomy.quality.membersClustered"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 40
+                        }
+                      ]
                     }
                   ],
                   "formulas": [
@@ -174,53 +277,106 @@
                       "formula": "largest_leaf",
                       "alias": "largestLeafShare",
                       "conditional_formats": [
-                        { "comparator": ">", "value": 0.7, "palette": "white_on_red" },
-                        { "comparator": ">", "value": 0.5, "palette": "white_on_yellow" },
-                        { "comparator": "<=", "value": 0.5, "palette": "white_on_green" }
+                        {
+                          "comparator": ">",
+                          "value": 0.7,
+                          "palette": "white_on_red"
+                        },
+                        {
+                          "comparator": ">",
+                          "value": 0.5,
+                          "palette": "white_on_yellow"
+                        },
+                        {
+                          "comparator": "<=",
+                          "value": 0.5,
+                          "palette": "white_on_green"
+                        }
                       ]
                     },
-                    { "formula": "largest_top_level", "alias": "largestTopLevelShare" },
+                    {
+                      "formula": "largest_top_level",
+                      "alias": "largestTopLevelShare"
+                    },
                     {
                       "formula": "rows",
                       "alias": "topLevelRowCount",
                       "conditional_formats": [
-                        { "comparator": "<=", "value": 2, "palette": "white_on_yellow" },
-                        { "comparator": ">", "value": 2, "palette": "white_on_green" }
+                        {
+                          "comparator": "<=",
+                          "value": 2,
+                          "palette": "white_on_yellow"
+                        },
+                        {
+                          "comparator": ">",
+                          "value": 2,
+                          "palette": "white_on_green"
+                        }
                       ]
                     },
                     {
                       "formula": "worst_leaf_cohesion",
                       "alias": "worst leaf centeredCohesion",
                       "conditional_formats": [
-                        { "comparator": "<", "value": 0.35, "palette": "white_on_red" },
-                        { "comparator": "<", "value": 0.45, "palette": "white_on_yellow" },
-                        { "comparator": ">=", "value": 0.45, "palette": "white_on_green" }
+                        {
+                          "comparator": "<",
+                          "value": 0.35,
+                          "palette": "white_on_red"
+                        },
+                        {
+                          "comparator": "<",
+                          "value": 0.45,
+                          "palette": "white_on_yellow"
+                        },
+                        {
+                          "comparator": ">=",
+                          "value": 0.45,
+                          "palette": "white_on_green"
+                        }
                       ]
                     },
-                    { "formula": "members", "alias": "membersClustered" }
+                    {
+                      "formula": "members",
+                      "alias": "membersClustered"
+                    }
                   ],
                   "response_format": "scalar",
-                  "sort": { "order_by": [{ "type": "formula", "index": 0, "order": "desc" }], "count": 40 }
+                  "sort": {
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ],
+                    "count": 40
+                  }
                 }
               ]
             },
-            "layout": { "width": 12, "height": 6 }
+            "layout": {
+              "width": 12,
+              "height": 6
+            }
           }
         ]
       },
-      "layout": { "width": 12, "height": 14 }
+      "layout": {
+        "width": 12,
+        "height": 14
+      }
     },
     {
       "definition": {
         "type": "group",
         "layout_type": "ordered",
-        "title": "Concentration vs shape — the pair that catches a false win",
+        "title": "Concentration vs shape \u2014 the pair that catches a false win",
         "show_title": true,
         "widgets": [
           {
             "definition": {
               "type": "timeseries",
-              "title": "avg largestLeafShare and largestTopLevelShare — a drop in one with a drop in rows is a regression",
+              "title": "avg largestLeafShare and largestTopLevelShare \u2014 a drop in one with a drop in rows is a regression",
               "show_legend": true,
               "legend_layout": "auto",
               "requests": [
@@ -232,7 +388,10 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.quality.largestLeafShare" }
+                      "compute": {
+                        "aggregation": "avg",
+                        "metric": "@taxonomy.quality.largestLeafShare"
+                      }
                     },
                     {
                       "data_source": "spans",
@@ -240,25 +399,41 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.quality.largestTopLevelShare" }
+                      "compute": {
+                        "aggregation": "avg",
+                        "metric": "@taxonomy.quality.largestTopLevelShare"
+                      }
                     }
                   ],
                   "formulas": [
-                    { "formula": "leaf_share", "alias": "avg largestLeafShare" },
-                    { "formula": "top_share", "alias": "avg largestTopLevelShare" }
+                    {
+                      "formula": "leaf_share",
+                      "alias": "avg largestLeafShare"
+                    },
+                    {
+                      "formula": "top_share",
+                      "alias": "avg largestTopLevelShare"
+                    }
                   ],
                   "response_format": "timeseries",
                   "display_type": "line",
-                  "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
                 }
               ]
             },
-            "layout": { "width": 6, "height": 4 }
+            "layout": {
+              "width": 6,
+              "height": 4
+            }
           },
           {
             "definition": {
               "type": "timeseries",
-              "title": "avg topLevelRowCount and leafCount — rows must never fall when de-nesting lands",
+              "title": "avg topLevelRowCount and leafCount \u2014 rows must never fall when de-nesting lands",
               "show_legend": true,
               "legend_layout": "auto",
               "requests": [
@@ -270,7 +445,10 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.quality.topLevelRowCount" }
+                      "compute": {
+                        "aggregation": "avg",
+                        "metric": "@taxonomy.quality.topLevelRowCount"
+                      }
                     },
                     {
                       "data_source": "spans",
@@ -278,25 +456,41 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "avg", "metric": "@taxonomy.quality.leafCount" }
+                      "compute": {
+                        "aggregation": "avg",
+                        "metric": "@taxonomy.quality.leafCount"
+                      }
                     }
                   ],
                   "formulas": [
-                    { "formula": "rows", "alias": "avg topLevelRowCount" },
-                    { "formula": "leaves", "alias": "avg leafCount" }
+                    {
+                      "formula": "rows",
+                      "alias": "avg topLevelRowCount"
+                    },
+                    {
+                      "formula": "leaves",
+                      "alias": "avg leafCount"
+                    }
                   ],
                   "response_format": "timeseries",
                   "display_type": "line",
-                  "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
                 }
               ]
             },
-            "layout": { "width": 6, "height": 4 }
+            "layout": {
+              "width": 6,
+              "height": 4
+            }
           },
           {
             "definition": {
               "type": "toplist",
-              "title": "min centeredCohesion by project — worst leaf first, below 0.35 is residue",
+              "title": "min centeredCohesion by project \u2014 worst leaf first, below 0.35 is residue",
               "requests": [
                 {
                   "queries": [
@@ -306,38 +500,77 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality $organization $project"
                       },
-                      "compute": { "aggregation": "min", "metric": "@taxonomy.quality.centeredCohesion.min" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 20 }]
+                      "compute": {
+                        "aggregation": "min",
+                        "metric": "@taxonomy.quality.centeredCohesion.min"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 20
+                        }
+                      ]
                     }
                   ],
-                  "formulas": [{ "formula": "cohesion" }],
+                  "formulas": [
+                    {
+                      "formula": "cohesion"
+                    }
+                  ],
                   "response_format": "scalar",
-                  "sort": { "order_by": [{ "type": "formula", "index": 0, "order": "asc" }], "count": 20 },
+                  "sort": {
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "asc"
+                      }
+                    ],
+                    "count": 20
+                  },
                   "conditional_formats": [
-                    { "comparator": "<", "value": 0.35, "palette": "white_on_red" },
-                    { "comparator": "<", "value": 0.45, "palette": "white_on_yellow" },
-                    { "comparator": ">=", "value": 0.45, "palette": "white_on_green" }
+                    {
+                      "comparator": "<",
+                      "value": 0.35,
+                      "palette": "white_on_red"
+                    },
+                    {
+                      "comparator": "<",
+                      "value": 0.45,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": ">=",
+                      "value": 0.45,
+                      "palette": "white_on_green"
+                    }
                   ]
                 }
               ]
             },
-            "layout": { "width": 12, "height": 4 }
+            "layout": {
+              "width": 12,
+              "height": 4
+            }
           }
         ]
       },
-      "layout": { "width": 12, "height": 13 }
+      "layout": {
+        "width": 12,
+        "height": 13
+      }
     },
     {
       "definition": {
         "type": "group",
         "layout_type": "ordered",
-        "title": "Naming — collisions and shared-domain labels",
+        "title": "Naming \u2014 collisions and shared-domain labels",
         "show_title": true,
         "widgets": [
           {
             "definition": {
               "type": "query_value",
-              "title": "Cross-branch duplicate leaf names — the collisions the quality gate cannot see (target 0)",
+              "title": "Cross-branch duplicate leaf names \u2014 the collisions the quality gate cannot see (target 0)",
               "autoscale": true,
               "precision": 0,
               "requests": [
@@ -355,17 +588,32 @@
                       }
                     }
                   ],
-                  "formulas": [{ "formula": "cross_branch" }],
+                  "formulas": [
+                    {
+                      "formula": "cross_branch"
+                    }
+                  ],
                   "response_format": "scalar",
                   "aggregator": "max",
                   "conditional_formats": [
-                    { "comparator": ">", "value": 0, "palette": "white_on_red" },
-                    { "comparator": "<=", "value": 0, "palette": "white_on_green" }
+                    {
+                      "comparator": ">",
+                      "value": 0,
+                      "palette": "white_on_red"
+                    },
+                    {
+                      "comparator": "<=",
+                      "value": 0,
+                      "palette": "white_on_green"
+                    }
                   ]
                 }
               ]
             },
-            "layout": { "width": 4, "height": 3 }
+            "layout": {
+              "width": 4,
+              "height": 3
+            }
           },
           {
             "definition": {
@@ -380,26 +628,58 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.nameQuality $organization $project"
                       },
-                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.duplicateNameRate" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 15 }]
+                      "compute": {
+                        "aggregation": "max",
+                        "metric": "@taxonomy.quality.duplicateNameRate"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 15
+                        }
+                      ]
                     }
                   ],
-                  "formulas": [{ "formula": "dup_rate" }],
+                  "formulas": [
+                    {
+                      "formula": "dup_rate"
+                    }
+                  ],
                   "response_format": "scalar",
-                  "sort": { "order_by": [{ "type": "formula", "index": 0, "order": "desc" }], "count": 15 },
+                  "sort": {
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ],
+                    "count": 15
+                  },
                   "conditional_formats": [
-                    { "comparator": ">", "value": 0, "palette": "white_on_yellow" },
-                    { "comparator": "<=", "value": 0, "palette": "white_on_green" }
+                    {
+                      "comparator": ">",
+                      "value": 0,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": "<=",
+                      "value": 0,
+                      "palette": "white_on_green"
+                    }
                   ]
                 }
               ]
             },
-            "layout": { "width": 4, "height": 3 }
+            "layout": {
+              "width": 4,
+              "height": 3
+            }
           },
           {
             "definition": {
               "type": "toplist",
-              "title": "max sharedSiblingWordShare by project — high means the namer described the domain, not the split",
+              "title": "max sharedSiblingWordShare by project \u2014 high means the namer described the domain, not the split",
               "requests": [
                 {
                   "queries": [
@@ -409,27 +689,63 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.nameQuality $organization $project"
                       },
-                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.sharedSiblingWordShare" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 15 }]
+                      "compute": {
+                        "aggregation": "max",
+                        "metric": "@taxonomy.quality.sharedSiblingWordShare"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 15
+                        }
+                      ]
                     }
                   ],
-                  "formulas": [{ "formula": "shared_words" }],
+                  "formulas": [
+                    {
+                      "formula": "shared_words"
+                    }
+                  ],
                   "response_format": "scalar",
-                  "sort": { "order_by": [{ "type": "formula", "index": 0, "order": "desc" }], "count": 15 },
+                  "sort": {
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ],
+                    "count": 15
+                  },
                   "conditional_formats": [
-                    { "comparator": ">", "value": 0.6, "palette": "white_on_red" },
-                    { "comparator": ">", "value": 0.4, "palette": "white_on_yellow" },
-                    { "comparator": "<=", "value": 0.4, "palette": "white_on_green" }
+                    {
+                      "comparator": ">",
+                      "value": 0.6,
+                      "palette": "white_on_red"
+                    },
+                    {
+                      "comparator": ">",
+                      "value": 0.4,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": "<=",
+                      "value": 0.4,
+                      "palette": "white_on_green"
+                    }
                   ]
                 }
               ]
             },
-            "layout": { "width": 4, "height": 3 }
+            "layout": {
+              "width": 4,
+              "height": 3
+            }
           },
           {
             "definition": {
               "type": "toplist",
-              "title": "max nearDuplicateNameRate by project — share of leaf-name pairs sharing most of their words",
+              "title": "max nearDuplicateNameRate by project \u2014 share of leaf-name pairs sharing most of their words",
               "requests": [
                 {
                   "queries": [
@@ -439,38 +755,77 @@
                       "search": {
                         "query": "service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.nameQuality $organization $project"
                       },
-                      "compute": { "aggregation": "max", "metric": "@taxonomy.quality.nearDuplicateNameRate" },
-                      "group_by": [{ "facet": "@taxonomy.projectId", "limit": 15 }]
+                      "compute": {
+                        "aggregation": "max",
+                        "metric": "@taxonomy.quality.nearDuplicateNameRate"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@taxonomy.projectId",
+                          "limit": 15
+                        }
+                      ]
                     }
                   ],
-                  "formulas": [{ "formula": "near_dup_rate" }],
+                  "formulas": [
+                    {
+                      "formula": "near_dup_rate"
+                    }
+                  ],
                   "response_format": "scalar",
-                  "sort": { "order_by": [{ "type": "formula", "index": 0, "order": "desc" }], "count": 15 },
+                  "sort": {
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ],
+                    "count": 15
+                  },
                   "conditional_formats": [
-                    { "comparator": ">", "value": 0.2, "palette": "white_on_red" },
-                    { "comparator": ">", "value": 0.1, "palette": "white_on_yellow" },
-                    { "comparator": "<=", "value": 0.1, "palette": "white_on_green" }
+                    {
+                      "comparator": ">",
+                      "value": 0.2,
+                      "palette": "white_on_red"
+                    },
+                    {
+                      "comparator": ">",
+                      "value": 0.1,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": "<=",
+                      "value": 0.1,
+                      "palette": "white_on_green"
+                    }
                   ]
                 }
               ]
             },
-            "layout": { "width": 4, "height": 3 }
+            "layout": {
+              "width": 4,
+              "height": 3
+            }
           }
         ]
       },
-      "layout": { "width": 12, "height": 5 }
+      "layout": {
+        "width": 12,
+        "height": 5
+      }
     },
     {
       "definition": {
         "type": "group",
         "layout_type": "ordered",
-        "title": "Durable history — span metrics, 15 months, for the before/after across builds",
+        "title": "Durable history \u2014 span metrics, 15 months, for the before/after across builds",
         "show_title": true,
         "widgets": [
           {
             "definition": {
               "type": "timeseries",
-              "title": "taxonomy.quality.largest_leaf_share p50 and p90 — spans expire at 15 days, this does not",
+              "title": "taxonomy.quality.largest_leaf_share p50 and p90 \u2014 spans expire at 15 days, this does not",
               "show_legend": true,
               "legend_layout": "auto",
               "requests": [
@@ -488,16 +843,29 @@
                     }
                   ],
                   "formulas": [
-                    { "formula": "p50", "alias": "p50 largestLeafShare" },
-                    { "formula": "p90", "alias": "p90 largestLeafShare" }
+                    {
+                      "formula": "p50",
+                      "alias": "p50 largestLeafShare"
+                    },
+                    {
+                      "formula": "p90",
+                      "alias": "p90 largestLeafShare"
+                    }
                   ],
                   "response_format": "timeseries",
                   "display_type": "line",
-                  "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
                 }
               ]
             },
-            "layout": { "width": 6, "height": 4 }
+            "layout": {
+              "width": 6,
+              "height": 4
+            }
           },
           {
             "definition": {
@@ -520,20 +888,232 @@
                     }
                   ],
                   "formulas": [
-                    { "formula": "rows_avg", "alias": "avg topLevelRowCount" },
-                    { "formula": "rows_p90", "alias": "p90 topLevelRowCount" }
+                    {
+                      "formula": "rows_avg",
+                      "alias": "avg topLevelRowCount"
+                    },
+                    {
+                      "formula": "rows_p90",
+                      "alias": "p90 topLevelRowCount"
+                    }
                   ],
                   "response_format": "timeseries",
                   "display_type": "line",
-                  "style": { "palette": "dog_classic", "line_type": "solid", "line_width": "normal" }
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
                 }
               ]
             },
-            "layout": { "width": 6, "height": 4 }
+            "layout": {
+              "width": 6,
+              "height": 4
+            }
           }
         ]
       },
-      "layout": { "width": 12, "height": 5 }
+      "layout": {
+        "width": 12,
+        "height": 5
+      }
+    },
+    {
+      "definition": {
+        "type": "group",
+        "layout_type": "ordered",
+        "title": "Assignment coverage \u2014 what the fit floor costs (LAT-866)",
+        "show_title": true,
+        "widgets": [
+          {
+            "definition": {
+              "type": "note",
+              "content": "The two series are different TREATMENTS, not control and test.\n\n`routed_full_window:0` \u2014 sample-only reassignment. Only the online gate moved these projects, and only for sessions analyzed since the last pass, so coverage RAMPS down across the trailing 7-day window as it turns over. The first spans after the deploy are approximately the baseline.\n\n`routed_full_window:1` \u2014 full-window routing (adaptive). The online gate AND the reassignment floor moved these, and the whole window is re-gated every pass, so coverage STEPS on the first pass.\n\nIt is the plan's shape, not its mode: an enforced run that fell back to static takes the sample-only path. Do not read a gap between the arms as an effect of the clustering mode.\n\nExact pre-change numbers are not here \u2014 the observation rows behind them expire on the 30-day retention horizon. They live in the committed ClickHouse baseline (`scripts/taxonomy/snapshot-assignment-baseline.ts`), whose `wouldRejectAtFloor` column is the per-project prediction to check `assigned_share` against.",
+              "background_color": "yellow",
+              "font_size": "14",
+              "text_align": "left",
+              "vertical_align": "top",
+              "show_tick": false,
+              "tick_pos": "50%",
+              "tick_edge": "left",
+              "has_padding": true
+            },
+            "layout": {
+              "width": 12,
+              "height": 4
+            }
+          },
+          {
+            "definition": {
+              "type": "timeseries",
+              "title": "assigned_share p50 by arm \u2014 the headline coverage number",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "full_window",
+                      "query": "p50:taxonomy.coverage.assigned_share{organization_id:$organization.value,project_id:$project.value,routed_full_window:1}"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "sample_only",
+                      "query": "p50:taxonomy.coverage.assigned_share{organization_id:$organization.value,project_id:$project.value,routed_full_window:0}"
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "full_window",
+                      "alias": "full-window routing (online gate + reassignment floor)"
+                    },
+                    {
+                      "formula": "sample_only",
+                      "alias": "sample-only (online gate only)"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ]
+            },
+            "layout": {
+              "width": 6,
+              "height": 4
+            }
+          },
+          {
+            "definition": {
+              "type": "timeseries",
+              "title": "Rejections per pass \u2014 observations the floor sent to noise",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "rejected",
+                      "query": "sum:taxonomy.coverage.observations_rejected{organization_id:$organization.value,project_id:$project.value}"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "reassigned",
+                      "query": "sum:taxonomy.coverage.observations_reassigned{organization_id:$organization.value,project_id:$project.value}"
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "rejected",
+                      "alias": "rejected (noise)"
+                    },
+                    {
+                      "formula": "reassigned",
+                      "alias": "assigned"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "display_type": "bars",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ]
+            },
+            "layout": {
+              "width": 6,
+              "height": 4
+            }
+          },
+          {
+            "definition": {
+              "type": "toplist",
+              "title": "Lowest coverage by project \u2014 who actually paid the 13%",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "share",
+                      "query": "p50:taxonomy.coverage.assigned_share{organization_id:$organization.value,project_id:$project.value} by {project_id}"
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "share",
+                      "alias": "p50 assignedShare"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "sort": {
+                    "count": 25,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "asc"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "layout": {
+              "width": 6,
+              "height": 4
+            }
+          },
+          {
+            "definition": {
+              "type": "timeseries",
+              "title": "Window size \u2014 context, so a coverage move is not just traffic",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "total",
+                      "query": "sum:taxonomy.coverage.window_total{organization_id:$organization.value,project_id:$project.value}"
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "total",
+                      "alias": "observations in window"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "display_type": "line",
+                  "style": {
+                    "palette": "dog_classic",
+                    "line_type": "solid",
+                    "line_width": "normal"
+                  }
+                }
+              ]
+            },
+            "layout": {
+              "width": 6,
+              "height": 4
+            }
+          }
+        ]
+      },
+      "layout": {
+        "width": 12,
+        "height": 9
+      }
     }
   ]
 }

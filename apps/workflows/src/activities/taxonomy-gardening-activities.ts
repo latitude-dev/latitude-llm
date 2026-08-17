@@ -25,6 +25,7 @@ import {
   type ReassignTaxonomyObservationByIdInput,
   routeObservationsToLeaves,
   type StagingLeafCluster,
+  TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
@@ -68,8 +69,11 @@ import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clien
 import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
 import {
+  type AssignmentCoverageMetrics,
   adaptiveGardenRunFields,
   adaptiveSpanAttributes,
+  assignmentCoverageFields,
+  assignmentCoverageSpanAttributes,
   buildQualityFields,
   buildQualitySpanAttributes,
   nameQualityFields,
@@ -1012,6 +1016,60 @@ const reassignmentTarget = (plan: StoredGardenTaxonomyPlan): ReassignmentTarget 
     : { kind: "fullWindowScoped", customBehaviorId: CustomBehaviorId(plan.customBehaviorId) }
 }
 
+// `getCounts` reads `taxonomy_observations`, which is the whole-project topic tree
+// only — a view's assignments live in the `taxonomy_view_assignments` slice. So this
+// is only meaningful for a global target; emitting it for a view would report the
+// project's coverage tagged with that view's id. Views have their own measure
+// (`TAXONOMY_LENS_COVERAGE_*`).
+const targetIsGlobal = (target: ReassignmentTarget): boolean =>
+  target.kind === "fullWindowGlobal" || target.kind === "sampleGlobal"
+
+const readWindowCoverage = (input: GardenTaxonomyReassignObservationsInput) =>
+  Effect.gen(function* () {
+    const observations = yield* TaxonomyObservationRepository
+    return yield* observations.getCounts({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      since: new Date(new Date(input.now).getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60_000),
+    })
+  }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
+
+// Measured AFTER this run's writes and before the catch-up pass, which can still
+// move the tail indexed during reassignment.
+const emitAssignmentCoverageTelemetry = (
+  input: GardenTaxonomyReassignObservationsInput,
+  plan: StoredGardenTaxonomyPlan,
+  reassigned: { readonly observationsReassigned: number; readonly observationsRejected?: number },
+) =>
+  Effect.gen(function* () {
+    const counts = yield* readWindowCoverage(input)
+    const metrics: AssignmentCoverageMetrics = {
+      mode: plan.mode ?? "off",
+      fitFloor: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+      routedFullWindow: planHasStagingLeaves(plan),
+      windowTotal: counts.total,
+      windowAssigned: counts.assigned,
+      windowNoise: counts.noise,
+      assignedShare: counts.total === 0 ? 0 : counts.assigned / counts.total,
+      observationsReassigned: reassigned.observationsReassigned,
+      observationsRejected: reassigned.observationsRejected ?? 0,
+    }
+    yield* Effect.sync(() =>
+      logger.info("Taxonomy assignment coverage", {
+        metric: "taxonomy.gardenTaxonomyWorkflow.assignmentCoverage",
+        ...assignmentCoverageFields(input, metrics),
+      }),
+    )
+    yield* Effect.gen(function* () {
+      // Same reason as the quality spans: APM sampling drops these low-volume traces otherwise.
+      yield* Effect.annotateCurrentSpan("manual.keep", true)
+      for (const [key, value] of Object.entries(assignmentCoverageSpanAttributes(input, metrics))) {
+        yield* Effect.annotateCurrentSpan(key, value)
+      }
+      // Renaming this span orphans its retention filter and span metrics, silently.
+    }).pipe(Effect.withSpan("taxonomy.gardenTaxonomyWorkflow.assignmentCoverage"))
+  })
+
 export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomyReassignObservationsInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow reassign observations",
@@ -1033,6 +1091,10 @@ export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomy
       // between it and the swap is a window where neither tree is visible. The
       // staged tree is already named by now, so activating it is safe.
       yield* publishStagedTree(input, plan)
+      // Best-effort: a coverage read that fails must not fail the publish it measures.
+      if (targetIsGlobal(target)) {
+        yield* emitAssignmentCoverageTelemetry(input, plan, reassigned).pipe(Effect.ignore)
+      }
       return reassigned
     }),
   )

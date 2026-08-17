@@ -51,7 +51,7 @@ export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "enforced"] as const
  * by the policy that produced a run. Bump it whenever the relative schedule or
  * routing constants change so old and new calibrations are separable in Logs.
  */
-export const TAXONOMY_ADAPTIVE_POLICY_VERSION = "relative-v1"
+export const TAXONOMY_ADAPTIVE_POLICY_VERSION = "relative-v2"
 
 /**
  * Structural node-count ceiling used as a fallback guardrail: an adaptive tree
