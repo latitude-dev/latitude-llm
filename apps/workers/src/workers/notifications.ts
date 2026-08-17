@@ -11,9 +11,18 @@ import {
   requestSignalDiscoveredNotificationsUseCase,
   requestSignalRegressedNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
+  routeOf,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { NOTIFICATION_GROUP_META, OrganizationId, ProjectId, ScoreId, SignalId, type SqlClient } from "@domain/shared"
+import {
+  admitsTopic,
+  NOTIFICATION_GROUP_META,
+  OrganizationId,
+  ProjectId,
+  ScoreId,
+  SignalId,
+  type SqlClient,
+} from "@domain/shared"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
@@ -93,14 +102,17 @@ const fanOutSlackRoutes = (
     if (!integration) return
 
     const kind = first.kind as NotificationKind
-    const group = NOTIFICATION_KIND_META[kind]?.group
-    if (!group) return
+    if (!NOTIFICATION_KIND_META[kind]) return
+    const { group, topic } = routeOf(kind, first.payload)
     // Personal kinds target a single user — never broadcast them to a
     // shared channel, even if a stale route were somehow configured.
     if (!NOTIFICATION_GROUP_META[group].slackRoutable) return
-    // Routes can set a minimum incident severity; incidents below it never
-    // reach the channel (payloads without a severity always pass).
-    const routes = (integration.routes[group] ?? []).filter((route) => routeAdmitsPayload(route, first.payload))
+    // A route can mute individual topics within its group, and set a minimum
+    // incident severity below which nothing reaches the channel (payloads
+    // without a topic or a severity always pass).
+    const routes = (integration.routes[group] ?? []).filter(
+      (route) => routeAdmitsPayload(route, first.payload) && admitsTopic(route.topics, topic),
+    )
     if (routes.length === 0) return
 
     yield* Effect.all(
