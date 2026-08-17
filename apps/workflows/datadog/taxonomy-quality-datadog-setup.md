@@ -26,10 +26,11 @@ whole enabler is wasted. Order:
    creates the `Taxonomy quality spans` retention filter and the `taxonomy.quality.*`
    span metrics (alongside the adaptive-rollout objects it already managed).
    Idempotent: every object is deleted and recreated, so re-running repairs drift.
-2. Move the new filter **above** any broad `service:workflows` or catch-all filter
-   (APM → Retention Filters). Filters are evaluated top-down and the first match
-   decides, so a broad filter above this one samples the quality spans out before it
-   runs. The script cannot set ordering.
+2. Nothing to reorder by hand — the script promotes every taxonomy filter above the
+   rest of the account on each run. Filters are evaluated top-down and the first match
+   decides, so a broad filter above these would sample the quality spans out before
+   they are indexed; and since recreating a filter by name gives it a new id at the
+   bottom, the order has to be re-asserted on every run rather than dragged once.
 3. Apply `taxonomy-quality-dashboard.json` with the Datadog MCP
    `upsert_datadog_dashboard`.
 4. Deploy Build 4, then confirm in Trace Explorer:

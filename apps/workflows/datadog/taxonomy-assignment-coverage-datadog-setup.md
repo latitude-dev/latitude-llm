@@ -24,11 +24,16 @@ one run sets up all three:
 DD_APP_KEY=xxx DD_API_KEY=yyy ./apps/workflows/datadog/setup-datadog.sh
 ```
 
-Then move the `Taxonomy assignment coverage spans` filter **above** any broad
-`service:workflows` or catch-all filter (APM → Retention Filters). Filters are
-evaluated top-down and the first match decides; the script cannot set ordering. There
-are now three taxonomy filters to keep above any catch-all: adaptive shadow, quality,
-and this one.
+The script also asserts the **execution order**, promoting all three taxonomy filters
+(adaptive shadow, quality, coverage) above everything else. Filters are evaluated
+top-down and the first match decides, so a broad `service:workflows` or catch-all
+filter above ours would sample the garden spans out before they are indexed. This used
+to be a manual drag in APM → Retention Filters, and it silently came undone on every
+run: recreating a filter by name gives it a new id at the bottom of the order.
+
+The reorder endpoint replaces the whole order, so the payload carries every filter in
+the account. Filters the script does not name keep their current relative position,
+Datadog's own intelligent retention filter included.
 
 `window_assigned` has a span attribute but deliberately **no span metric** — it is
 exactly `sum(window_total) - sum(window_noise)`, so a third metric would cost money to
@@ -88,12 +93,19 @@ path, so grouping by mode would pool two treatments.
 
 | arm | what moved it | shape of the change |
 | --- | --- | --- |
-| `routed_full_window:0` (sample-only, most projects) | the online gate only, and only for sessions analyzed since the last pass | **ramps** down over ~7 days as the window turns over; the first post-deploy spans are approximately the baseline |
+| `routed_full_window:0` (sample-only, most projects) | the online gate only, and only for sessions analyzed since the last pass | **ramps** down over ~7 days as the window turns over — but expect barely any movement on small projects, see below |
 | `routed_full_window:1` (full-window routing, adaptive) | the online gate **and** the reassignment floor, re-gating the whole window every pass | **steps** on the first pass |
 
 So a gap between the arms is a difference in treatment, not evidence about the
 clustering mode. `fit_floor` is also a grouping tag, so a later recalibration is
 separable from a traffic change on the same chart.
+
+**A flat sample-only arm is not the floor behaving well.** The build path re-assigns
+every sampled member with no fit floor, and 41 of 45 measured projects have a whole
+7-day window that fits inside the 1,500 sample cap — so gardening overwrites the online
+decision every ~6h and coverage returns to where it was. On those projects the floor
+governs only the hours between a session being analyzed and the next pass. Tracked in
+#4470; `routed_full_window:1` is the only arm where the floor is not overwritten.
 
 ## Interpreting the metrics
 
