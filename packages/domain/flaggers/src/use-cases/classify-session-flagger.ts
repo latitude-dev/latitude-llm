@@ -27,6 +27,8 @@ export type ClassifySessionFlaggerResult =
       readonly matched: true
       readonly feedback?: string | undefined
       readonly messageIndex?: number | undefined
+      /** Latitude trace of the classification generation, so the saved annotation can point back at the decision. */
+      readonly flaggerTraceId?: string | undefined
       readonly contentHash: string
       readonly latestTraceId: string
       readonly sessionStartedAt: string
@@ -134,6 +136,7 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     matched: true,
     feedback: result.feedback,
     messageIndex: result.messageIndex,
+    flaggerTraceId: result.flaggerTraceId,
     contentHash,
     latestTraceId: context.latestTraceId,
     sessionStartedAt: session.startTime.toISOString(),

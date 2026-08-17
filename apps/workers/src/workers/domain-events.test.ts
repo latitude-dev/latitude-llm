@@ -417,6 +417,28 @@ describe("domain-events dispatcher", () => {
     expect(job?.options?.dedupeKey).toBe("notifications:request-signal-assigned:issue-1:2026-05-07T10:00:00.000Z")
   })
 
+  it("routes SignalFeedbackSubmitted to the flagger-occurrence review fan-out", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalFeedbackSubmitted", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "issue-1",
+      value: 0,
+      passed: false,
+      feedback: "Never a problem",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(1)
+    const job = published[0]
+    expect(job?.queue).toBe("issues")
+    expect(job?.task).toBe("reviewFlaggerOccurrences")
+    expect(job?.payload).toEqual({ organizationId: "org-1", projectId: "proj-1", signalId: "issue-1" })
+    expect(job?.options?.dedupeKey).toBe("issues:feedback-review:issue-1")
+  })
+
   it("skips SignalAssigneeChanged for cleared assignments and self-assignments", async () => {
     const { consumer, published } = setupDispatcher()
 

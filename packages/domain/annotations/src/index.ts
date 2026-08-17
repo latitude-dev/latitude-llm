@@ -64,3 +64,4 @@ export {
   type WriteDraftAnnotationInput as PersistDraftAnnotationInput,
   writeDraftAnnotationUseCase,
 } from "./use-cases/write-draft-annotation.ts"
+export { writePublishedAnnotationUseCase } from "./use-cases/write-published-annotation.ts"

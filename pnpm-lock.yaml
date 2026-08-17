@@ -1778,9 +1778,21 @@ importers:
 
   packages/domain/product-feedback:
     dependencies:
+      '@domain/annotations':
+        specifier: workspace:*
+        version: link:../annotations
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../projects
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
@@ -2302,6 +2314,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.16(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/platform/ai-latitude:
     dependencies:
@@ -2311,10 +2326,10 @@ importers:
       '@latitude-data/telemetry':
         specifier: workspace:*
         version: link:../../telemetry/typescript
-    devDependencies:
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
+    devDependencies:
       '@opentelemetry/context-async-hooks':
         specifier: 2.7.1
         version: 2.7.1(@opentelemetry/api@1.9.1)
