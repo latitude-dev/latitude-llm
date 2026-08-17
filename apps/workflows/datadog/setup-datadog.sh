@@ -61,6 +61,18 @@ post() { # <url> <json>  — create; prints body + status; non-2xx records a fai
   esac
 }
 
+put() { # <url> <json>  — replace; prints body + status; non-2xx records a failure
+  local response status body
+  response="$(curl -sS -X PUT "$1" "${HDR[@]}" -d "$2" -w $'\n%{http_code}')"
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+  printf '%s\n-> HTTP %s\n' "${body}" "${status}"
+  case "${status}" in
+    2*) ;;
+    *) FAILED=$((FAILED + 1)) ;;
+  esac
+}
+
 del() { # <url>  — delete; 2xx or 404 (nothing to delete) ok, else records a failure
   local status
   status="$(curl -sS -o /dev/null -X DELETE "$1" "${HDR[@]}" -w '%{http_code}')"
@@ -86,6 +98,28 @@ for f in json.load(sys.stdin).get("data", []):
     del "${DD}/retention-filters/${fid}"
   done
   post "${DD}/retention-filters" '{"data":{"type":"apm_retention_filter","attributes":{"name":"'"$1"'","filter_type":"spans-sampling-processor","filter":{"query":"'"$2"'"},"rate":1.0,"enabled":true}}}'
+}
+
+promote_retention_filters() { # <name...>  — move the named filters to the FRONT of the execution order
+  # Filters are evaluated top-down and the first match decides, so a broad
+  # `service:workflows` or catch-all filter sitting above ours samples the garden spans
+  # out before they are indexed — silently emptying the dashboards. Recreating a filter
+  # (which this script does on every run, by name) puts it back at the bottom with a
+  # NEW id, so ordering has to be re-asserted here or it is lost each run.
+  #
+  # The endpoint replaces the WHOLE order, so the payload must carry every filter that
+  # exists, not just ours. A stable sort keeps every filter we do not name in its
+  # current relative position, including Datadog's own intelligent retention filter.
+  local payload
+  payload="$(curl -sS "${DD}/retention-filters" "${HDR[@]}" | python3 -c '
+import sys, json
+names = sys.argv[1:]
+data = json.load(sys.stdin).get("data", [])
+rank = lambda f: names.index(f.get("attributes", {}).get("name")) if f.get("attributes", {}).get("name") in names else len(names)
+ordered = sorted(data, key=rank)
+print(json.dumps({"data": [{"id": f["id"], "type": "apm_retention_filter"} for f in ordered]}))
+' "$@")"
+  put "${DD}/retention-filters-execution-order" "${payload}"
 }
 
 echo "== retention filter (adaptive) =="
@@ -180,6 +214,13 @@ taxonomy.coverage.window_noise|@taxonomy.coverage.windowNoise
 taxonomy.coverage.observations_rejected|@taxonomy.coverage.observationsRejected
 taxonomy.coverage.observations_reassigned|@taxonomy.coverage.observationsReassigned
 METRICS
+
+# Last, so every filter this script owns already exists and carries its final id.
+echo "== retention filter execution order =="
+promote_retention_filters \
+  "${RETENTION_FILTER_NAME}" \
+  "${QUALITY_RETENTION_FILTER_NAME}" \
+  "${COVERAGE_RETENTION_FILTER_NAME}"
 
 echo "== retired shadow-comparison metrics =="
 # The paired static-vs-adaptive attributes are no longer emitted (LAT-774), so these
