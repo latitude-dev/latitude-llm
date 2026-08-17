@@ -156,9 +156,8 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
 
     const score = scoreResult.score
 
-    // Reads through the promotion gate on purpose: an unpromoted signal is
-    // exactly the case this pre-read exists for, so a default-deny lookup would
-    // report every candidate as already promoted and the latch would never fire.
+    // `includeUnpromoted` is load-bearing: a default-deny lookup would report every
+    // candidate as already promoted and the latch would never fire.
     //
     // Resolved before the lock: promotion needs the project's session volume,
     // which lives in ClickHouse behind a Redis cache, and neither belongs inside

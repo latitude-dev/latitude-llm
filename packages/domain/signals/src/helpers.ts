@@ -126,13 +126,7 @@ export const getEscalationExitThreshold = (baselineAvgOccurrences: number): numb
 export const isSignalNew = (firstSeenAt: Date, now: Date = new Date()): boolean =>
   firstSeenAt.getTime() > now.getTime() - NEW_SIGNAL_AGE_DAYS * MILLISECONDS_PER_DAY
 
-/**
- * When the signal started existing for a user: promotion for a discovered
- * signal, creation for one somebody built by hand (born promoted) and for any
- * row predating the promotion gate. A signal discovered on day 0 and promoted on
- * day 20 is new on day 20, which is also when its escalation baseline is warm
- * rather than cold-started.
- */
+/** When the signal started existing for a user: its promotion, or its creation if it predates the gate. */
 export const signalFirstVisibleAt = (issue: Pick<Signal, "promotedAt" | "createdAt">): Date =>
   issue.promotedAt ?? issue.createdAt
 

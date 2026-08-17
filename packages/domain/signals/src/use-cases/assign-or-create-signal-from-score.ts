@@ -60,9 +60,8 @@ const findAssignedSignalId = (
 ) =>
   Effect.gen(function* () {
     const signalRepository = yield* SignalRepository
-    // The one read that must see unpromoted signals: matching into a candidate is
-    // how it accumulates the evidence that promotes it. The signals-list search
-    // box calls the same method without the opt-in.
+    // Must see unpromoted signals: matching into a candidate is how it accumulates
+    // the evidence that promotes it.
     const candidates = yield* signalRepository.hybridSearch({
       projectId: ProjectId(input.projectId),
       query: search.feedback,
