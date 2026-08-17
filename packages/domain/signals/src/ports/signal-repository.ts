@@ -1,6 +1,6 @@
 import type { NotFoundError, ProjectId, RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Signal } from "../entities/signal.ts"
+import type { Signal, SignalFeedback } from "../entities/signal.ts"
 
 /**
  * Lifecycle flags derived from `alert_incidents` rows joined onto an issue
@@ -212,6 +212,18 @@ export interface SignalRepositoryShape {
   claimReopenOnOccurrence(input: {
     readonly signalId: SignalId
     readonly occurredAt: Date
+    readonly now: Date
+  }): Effect.Effect<boolean, RepositoryError, SqlClient>
+  /**
+   * Atomic one-shot feedback claim: writes the customer's verdict in a single
+   * conditional UPDATE guarded on `feedback IS NULL`. Returns whether THIS call
+   * performed the write, so two concurrent submissions (two tabs, a UI click
+   * racing an MCP call) resolve to exactly one recorded verdict with no
+   * read-modify-write window.
+   */
+  claimFeedback(input: {
+    readonly signalId: SignalId
+    readonly feedback: SignalFeedback
     readonly now: Date
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /** Soft-delete: stamps `deleted_at` so the signal is excluded read-side and frees its slug. No-op if already deleted. */

@@ -59,6 +59,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   ignoredAt: null,
   regressedAt: null,
   mutedAt: null,
+  feedback: null,
   deletedAt: null,
   createdAt: assignedAt,
   updatedAt: assignedAt,

@@ -105,6 +105,7 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     ignoredAt: row.ignoredAt,
     regressedAt: row.regressedAt,
     mutedAt: row.mutedAt,
+    feedback: row.feedback,
     deletedAt: row.deletedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -212,6 +213,7 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   ignoredAt: issue.ignoredAt,
   regressedAt: issue.regressedAt,
   mutedAt: issue.mutedAt,
+  feedback: issue.feedback,
   deletedAt: issue.deletedAt,
   createdAt: issue.createdAt,
   updatedAt: issue.updatedAt,
@@ -718,6 +720,8 @@ const signalRepositoryCoreLive = Layer.effect(
                   ignoredAt: row.ignoredAt,
                   regressedAt: row.regressedAt,
                   mutedAt: row.mutedAt,
+                  // `feedback` is absent on purpose: only `claimFeedback` writes it, so a caller
+                  // holding a copy read before the verdict landed cannot clear the latch.
                   deletedAt: row.deletedAt,
                   updatedAt: row.updatedAt,
                 },
@@ -740,6 +744,26 @@ const signalRepositoryCoreLive = Layer.effect(
                   isNotNull(signals.resolvedAt),
                   isNull(signals.ignoredAt),
                   lt(signals.resolvedAt, occurredAt),
+                ),
+              )
+              .returning({ id: signals.id }),
+          )
+          return rows.length > 0
+        }),
+
+      claimFeedback: ({ signalId, feedback, now }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(signals)
+              .set({ feedback, updatedAt: now })
+              .where(
+                and(
+                  eq(signals.organizationId, organizationId),
+                  eq(signals.id, signalId),
+                  isNull(signals.deletedAt),
+                  isNull(signals.feedback),
                 ),
               )
               .returning({ id: signals.id }),

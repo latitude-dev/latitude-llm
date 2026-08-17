@@ -1,6 +1,6 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { FilterSet, SignalOrigin } from "@domain/shared"
-import type { SignalCentroid, SignalPriority, SignalSource } from "@domain/signals"
+import type { SignalCentroid, SignalFeedback, SignalPriority, SignalSource } from "@domain/signals"
 import { sql } from "drizzle-orm"
 import { customType, index, jsonb, text, uniqueIndex, uuid, varchar, vector } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
@@ -43,6 +43,7 @@ export const signals = latitudeSchema.table(
     ignoredAt: tzTimestamp("ignored_at"), // manual ignore; archived + auto-muted, detector archived
     regressedAt: tzTimestamp("regressed_at"), // set when a new occurrence reopens a resolved signal; cleared by resolve/ignore
     mutedAt: tzTimestamp("muted_at"), // notification barrier only; incidents still open while muted
+    feedback: jsonb("feedback").$type<SignalFeedback>(), // nullable; the customer's one-shot verdict on this signal. Non-null is a one-way latch: feedback is never edited or cleared.
     deletedAt: tzTimestamp("deleted_at"), // soft-delete: signals are soft-deleted by the delete flow; excluded read-side
     ...timestamps(),
   },

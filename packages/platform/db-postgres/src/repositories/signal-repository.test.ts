@@ -3,6 +3,7 @@ import { OrganizationId, ProjectId, SignalId, type SqlClient } from "@domain/sha
 import {
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  type SignalFeedback,
   SignalRepository,
   type SignalRepositoryShape,
 } from "@domain/signals"
@@ -208,6 +209,66 @@ describe("SignalRepositoryLive.claimReopenOnOccurrence", () => {
     await pg.db.delete(signals)
     await seedSignal(SIGNAL)
     await expect(claim(OCCURRED_AFTER)).resolves.toBe(false)
+  })
+})
+
+describe("SignalRepositoryLive.claimFeedback", () => {
+  const NOW = new Date("2026-08-17T12:00:00.000Z")
+  const SIGNAL = { id: "sig-verdict".padEnd(24, "d"), slug: "verdict", createdAt: new Date("2026-01-01T00:00:00.000Z") }
+  const CONFIRMED = { value: 1, passed: true, feedback: "Real problem" }
+
+  const claim = (feedback: SignalFeedback) =>
+    run(
+      Effect.gen(function* () {
+        const repo = yield* SignalRepository
+        return yield* repo.claimFeedback({ signalId: SignalId(SIGNAL.id), feedback, now: NOW })
+      }),
+    )
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("writes the verdict once and refuses every later claim", async () => {
+    await seedSignal(SIGNAL)
+
+    await expect(claim(CONFIRMED)).resolves.toBe(true)
+
+    const [row] = await pg.db.select().from(signals)
+    expect(row?.feedback).toEqual(CONFIRMED)
+    expect(row?.updatedAt).toEqual(NOW)
+
+    await expect(claim({ value: 0, passed: false, feedback: "Changed my mind" })).resolves.toBe(false)
+    const [unchanged] = await pg.db.select().from(signals)
+    expect(unchanged?.feedback).toEqual(CONFIRMED)
+  })
+
+  it("does not grade a soft-deleted signal", async () => {
+    await seedSignal({ ...SIGNAL, deletedAt: NOW })
+
+    await expect(claim(CONFIRMED)).resolves.toBe(false)
+  })
+
+  it("survives a save that carries a stale copy of the row", async () => {
+    await seedSignal(SIGNAL)
+    const stale = await run(
+      Effect.gen(function* () {
+        const repo = yield* SignalRepository
+        return yield* repo.findByIdForUpdate(SignalId(SIGNAL.id))
+      }),
+    )
+
+    await expect(claim(CONFIRMED)).resolves.toBe(true)
+    await run(
+      Effect.gen(function* () {
+        const repo = yield* SignalRepository
+        yield* repo.save({ ...stale, name: "renamed" })
+      }),
+    )
+
+    const [row] = await pg.db.select().from(signals)
+    expect(row?.name).toBe("renamed")
+    expect(row?.feedback).toEqual(CONFIRMED)
   })
 })
 

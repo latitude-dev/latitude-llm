@@ -94,6 +94,20 @@ export class SignalNotFoundForEscalationCheckError extends Data.TaggedError("Sig
   readonly httpMessage = "Signal not found for escalation check"
 }
 
+export class SignalFeedbackAlreadySubmittedError extends Data.TaggedError("SignalFeedbackAlreadySubmittedError")<{
+  readonly signalId: string
+}> {
+  readonly httpStatus = 409
+  readonly httpMessage = "Signal feedback has already been submitted and cannot be changed"
+}
+
+export class SignalFeedbackReasonRequiredError extends Data.TaggedError("SignalFeedbackReasonRequiredError")<{
+  readonly signalId: string
+}> {
+  readonly httpStatus = 422
+  readonly httpMessage = "A reason is required when reporting a signal as a false positive"
+}
+
 export class SignalDiscoveryLockUnavailableError extends Data.TaggedError("SignalDiscoveryLockUnavailableError")<{
   readonly projectId: string
   readonly lockKey: string

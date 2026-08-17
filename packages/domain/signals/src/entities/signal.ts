@@ -1,4 +1,4 @@
-import { scoreSourceTypeSchema } from "@domain/scores"
+import { scoreSourceTypeSchema, scoreValueSchema } from "@domain/scores"
 import { cuidSchema, filterSetSchema, SLUG_MAX_LENGTH, signalIdSchema, signalOriginSchema } from "@domain/shared"
 import { z } from "zod"
 import { SIGNAL_NAME_MAX_LENGTH, SIGNAL_PRIORITIES, SIGNAL_SOURCES, SIGNAL_STATES } from "../constants.ts"
@@ -46,6 +46,18 @@ export const signalCentroidSchema = z.object({
 
 export type SignalCentroid = z.infer<typeof signalCentroidSchema>
 
+// ---------------------------------------------------------------------------
+// SignalFeedback
+// ---------------------------------------------------------------------------
+
+export const signalFeedbackSchema = z.object({
+  value: scoreValueSchema, // normalized [0, 1]; 1 for a confirmed signal, 0 for a false positive
+  passed: z.boolean(), // whether the signal is a real problem worth flagging
+  feedback: z.string(), // the customer's reason; empty when a confirmation was saved bare
+})
+
+export type SignalFeedback = z.infer<typeof signalFeedbackSchema>
+
 export const signalSchema = z.object({
   id: signalIdSchema, // CUID issue identifier
   organizationId: cuidSchema, // owning organization
@@ -65,6 +77,7 @@ export const signalSchema = z.object({
   ignoredAt: z.date().nullable(), // manual ignore; archived + auto-muted, detector archived
   regressedAt: z.date().nullable(), // set when a new occurrence reopens a resolved signal; cleared by resolve/ignore
   mutedAt: z.date().nullable(), // notification barrier only; incidents still open while muted
+  feedback: signalFeedbackSchema.nullable(), // the customer's one-shot verdict on whether this signal was worth raising; one-way latch, never edited or cleared
   deletedAt: z.date().nullish(), // soft-delete timestamp; deleted signals are excluded read-side
   createdAt: z.date(), // issue creation time
   updatedAt: z.date(), // issue update time

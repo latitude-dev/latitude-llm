@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."signals" ADD COLUMN "feedback" jsonb;

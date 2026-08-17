@@ -175,6 +175,14 @@ export const createFakeSignalRepository = (
         return true
       }),
 
+    claimFeedback: ({ signalId, feedback, now }) =>
+      Effect.sync(() => {
+        const issue = issues.get(signalId)
+        if (!issue || issue.deletedAt != null || issue.feedback != null) return false
+        issues.set(signalId, { ...issue, feedback, updatedAt: now })
+        return true
+      }),
+
     softDelete: (id) =>
       Effect.sync(() => {
         const issue = issues.get(id)
