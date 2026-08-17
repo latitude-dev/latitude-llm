@@ -42,7 +42,9 @@
   },
   "pnpm": {
     "overrides": {
-      "consolidate": "1.0.4"
+      "consolidate": "1.0.4",
+      "@ai-sdk/provider": "2.0.3",
+      "@ai-sdk/provider-utils": "3.0.32"
     },
     "peerDependencyRules": {
       "allowedVersions": {
