@@ -11,6 +11,12 @@
 #      emitted for EVERY garden run of every project regardless of mode. Run this
 #      BEFORE the Build 4 deploy, and before Builds 1-3 land, or their before/after
 #      has no "before".
+#   3. Assignment coverage (LAT-866) — the .assignmentCoverage span, also emitted
+#      for every garden run in every mode. Run this BEFORE the fit-floor deploy.
+#      The floor's cost is a coverage drop, so without this the change ships
+#      unmeasured; the exact pre-change baseline comes from ClickHouse instead
+#      (scripts/taxonomy/snapshot-assignment-baseline.ts), because the observation
+#      rows behind it expire on the 30-day retention horizon.
 #
 # Neither retention filters nor span metrics are retroactive, which is why the
 # ordering above matters. Each span name is load-bearing: the retention filter,
@@ -34,10 +40,12 @@ DD=https://api.datadoghq.eu/api/v2/apm/config
 Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow'
 BUILD_Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality'
 NAME_Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.nameQuality'
+COVERAGE_Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.assignmentCoverage'
 # Also the keys this script converges on, so renaming one would leave the deployed
 # filter behind and create a duplicate.
 RETENTION_FILTER_NAME='Taxonomy adaptive shadow spans'
 QUALITY_RETENTION_FILTER_NAME='Taxonomy quality spans'
+COVERAGE_RETENTION_FILTER_NAME='Taxonomy assignment coverage spans'
 HDR=(-H "DD-API-KEY: ${DD_API_KEY}" -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" -H 'Content-Type: application/json')
 
 FAILED=0
@@ -142,6 +150,30 @@ taxonomy.quality.duplicate_name_rate|@taxonomy.quality.duplicateNameRate
 taxonomy.quality.cross_branch_duplicates|@taxonomy.quality.crossBranchDuplicateLeafCount
 taxonomy.quality.shared_sibling_word_share|@taxonomy.quality.sharedSiblingWordShare
 taxonomy.quality.near_duplicate_name_rate|@taxonomy.quality.nearDuplicateNameRate
+METRICS
+
+echo "== retention filter (assignment coverage) =="
+retention_filter "${COVERAGE_RETENTION_FILTER_NAME}" "${COVERAGE_Q}"
+
+# Grouped by the arm as well as the scope: `routed_full_window` separates the
+# projects the reassignment floor moved from the ones only the online gate moved,
+# which `mode` does NOT — an enforced run that fell back to static takes the
+# sample-only path and would otherwise be pooled with adaptive.
+COVERAGE_GRP='[{"path":"@taxonomy.projectId","tag_name":"project_id"},{"path":"@taxonomy.organizationId","tag_name":"organization_id"},{"path":"@taxonomy.coverage.routedFullWindow","tag_name":"routed_full_window"},{"path":"@taxonomy.coverage.fitFloor","tag_name":"fit_floor"}]'
+
+echo "== assignment coverage span metrics =="
+while IFS='|' read -r id path; do
+  [ -z "${id}" ] && continue
+  echo "-- ${id}"
+  del "${DD}/metrics/${id}"
+  post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"'"${id}"'","attributes":{"compute":{"aggregation_type":"distribution","include_percentiles":true,"path":"'"${path}"'"},"filter":{"query":"'"${COVERAGE_Q}"'"},"group_by":'"${COVERAGE_GRP}"'}}}'
+done <<'METRICS'
+taxonomy.coverage.assigned_share|@taxonomy.coverage.assignedShare
+taxonomy.coverage.window_total|@taxonomy.coverage.windowTotal
+taxonomy.coverage.window_assigned|@taxonomy.coverage.windowAssigned
+taxonomy.coverage.window_noise|@taxonomy.coverage.windowNoise
+taxonomy.coverage.observations_rejected|@taxonomy.coverage.observationsRejected
+taxonomy.coverage.observations_reassigned|@taxonomy.coverage.observationsReassigned
 METRICS
 
 echo "== retired shadow-comparison metrics =="
