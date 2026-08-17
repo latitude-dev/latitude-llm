@@ -36,7 +36,7 @@ import { useForm } from "@tanstack/react-form"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { Loader2, LogOut, type LucideIcon, Monitor, TabletSmartphone, Tv } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { z } from "zod"
 import { minSeverityHint, SeveritySelector } from "../../../../../domains/alerts/severity-selector.tsx"
 import {
@@ -519,12 +519,18 @@ function SessionsSection() {
   )
 }
 
+const PREFERENCES_QUERY_KEY = ["notificationPreferences"]
+
 function NotificationsSection() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  // A save replaces the whole preferences object, so saves have to reach the
+  // server in the order they were made — a slower earlier one would otherwise
+  // land last and undo a later toggle. Each is queued behind the previous.
+  const queued = useRef<Promise<void>>(Promise.resolve())
 
   const { data } = useQuery({
-    queryKey: ["notificationPreferences"],
+    queryKey: PREFERENCES_QUERY_KEY,
     queryFn: () => getNotificationPreferences(),
   })
 
@@ -549,33 +555,38 @@ function NotificationsSection() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
   }, [isLoaded])
 
-  const patchGroup = async (
+  const cachedPreferences = (): NotificationPreferences =>
+    queryClient.getQueryData<{ readonly preferences: NotificationPreferences | null }>(PREFERENCES_QUERY_KEY)
+      ?.preferences ?? {}
+
+  const patchGroup = (
     group: NotificationGroup,
     patch: Partial<NonNullable<NotificationPreferences[NotificationGroup]>>,
   ) => {
-    const next: NotificationPreferences = {
-      ...prefs,
-      [group]: { ...(prefs[group] ?? {}), ...patch },
-    }
+    // Read the cache rather than this render's `prefs`: a second toggle clicked
+    // before React re-renders would otherwise be built on the pre-first-toggle value.
+    const current = cachedPreferences()
     // Optimistic update so the controls never lag behind the user's intent.
-    queryClient.setQueryData(["notificationPreferences"], {
-      preferences: next,
+    queryClient.setQueryData(PREFERENCES_QUERY_KEY, {
+      preferences: { ...current, [group]: { ...(current[group] ?? {}), ...patch } },
     })
-    try {
-      await updateNotificationPreferences({ data: { preferences: next } })
-    } catch (error) {
-      // Roll back on failure.
-      queryClient.setQueryData(["notificationPreferences"], {
-        preferences: prefs,
-      })
-      toast({ variant: "destructive", description: toUserMessage(error) })
-    }
+    queued.current = queued.current.then(async () => {
+      try {
+        // Re-read at send time so this carries every change made while it waited.
+        await updateNotificationPreferences({ data: { preferences: cachedPreferences() } })
+      } catch (error) {
+        toast({ variant: "destructive", description: toUserMessage(error) })
+        // Refetch rather than restoring a snapshot, which by now may be behind
+        // toggles that saved fine.
+        await queryClient.invalidateQueries({ queryKey: PREFERENCES_QUERY_KEY })
+      }
+    })
   }
 
   const setGroupEmail = (group: NotificationGroup, enabled: boolean) => patchGroup(group, { email: enabled })
 
   const setGroupTopic = (group: NotificationGroup, topic: NotificationTopic, enabled: boolean) =>
-    patchGroup(group, { emailTopics: { ...(prefs[group]?.emailTopics ?? {}), [topic]: enabled } })
+    patchGroup(group, { emailTopics: { ...(cachedPreferences()[group]?.emailTopics ?? {}), [topic]: enabled } })
 
   return (
     <section className="flex flex-col gap-4">
@@ -606,7 +617,7 @@ function NotificationsSection() {
                   <Switch
                     id={inputId}
                     checked={enabled}
-                    onCheckedChange={(checked) => void setGroupEmail(group, checked)}
+                    onCheckedChange={(checked) => setGroupEmail(group, checked)}
                     aria-label={`Toggle email notifications for ${meta.label}`}
                   />
                 ) : (
@@ -624,7 +635,7 @@ function NotificationsSection() {
                         <Checkbox
                           id={topicId}
                           checked={prefs[group]?.emailTopics?.[topic] ?? true}
-                          onCheckedChange={(checked) => void setGroupTopic(group, topic, checked === true)}
+                          onCheckedChange={(checked) => setGroupTopic(group, topic, checked === true)}
                         />
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <Label htmlFor={topicId}>{topicMeta.label}</Label>
@@ -646,7 +657,7 @@ function NotificationsSection() {
                   <SeveritySelector
                     variant="bordered"
                     value={prefs[group]?.emailMinSeverity ?? "low"}
-                    onSelect={(minSeverity) => void patchGroup(group, { emailMinSeverity: minSeverity })}
+                    onSelect={(minSeverity) => patchGroup(group, { emailMinSeverity: minSeverity })}
                   />
                 </div>
               ) : null}

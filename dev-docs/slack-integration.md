@@ -33,11 +33,16 @@ The cross-org claim ("one workspace, one Latitude org") is enforced by a partial
 ### `routes` shape
 
 ```ts
-type SlackRoute = { channelId: string; channelName: string }
+type SlackRoute = {
+  channelId: string
+  channelName: string
+  minSeverity?: AlertSeverity
+  topics?: Partial<Record<NotificationTopic, boolean>>
+}
 type SlackRoutes = Partial<Record<NotificationGroup, SlackRoute[]>>
 ```
 
-Updated per-group with `jsonb_set` so concurrent writes to different groups don't clobber each other. `channelName` is a best-effort label cached at configure-time; `channelId` is the source of truth.
+Updated per-group with `jsonb_set` so concurrent writes to different groups don't clobber each other. `channelName` is a best-effort label cached at configure-time; `channelId` is the source of truth. `minSeverity` and `topics` are the delivery filters the worker applies before posting (`routeAdmitsPayload` + `admitsTopic`); both absent means everything in the group reaches the channel. The route schema is defined once in `@domain/integrations` and reused by the server fn that writes it — a copy would silently drop new fields, since Zod strips unknown keys.
 
 ### Idempotency ledger
 
