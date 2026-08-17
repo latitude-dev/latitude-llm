@@ -7,7 +7,7 @@ See also: [`agent-data-access.md`](agent-data-access.md) (the inbound counterpar
 ## Architecture
 
 ```
-SignalCreated / SignalRegressed / IncidentCreated (domain-events worker)
+SignalPromoted / SignalRegressed / IncidentCreated (domain-events worker)
    ├──→ notifications:* (email / in-app / Slack)
    └──→ agent-dispatch:request
             │  config lookup, trigger/mute/guardrail gates, prompt snapshot
