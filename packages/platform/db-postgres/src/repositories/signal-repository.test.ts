@@ -35,6 +35,7 @@ const seedSignal = (input: {
   readonly regressedAt?: Date | null
   /** Omitted means promoted at creation, which is what every read expects to see. */
   readonly promotedAt?: Date | null
+  readonly deletedAt?: Date
   readonly centroidEmbedding?: readonly number[]
 }) =>
   pg.db.insert(signals).values({
@@ -50,6 +51,7 @@ const seedSignal = (input: {
     ignoredAt: input.ignoredAt ?? null,
     regressedAt: input.regressedAt ?? null,
     promotedAt: input.promotedAt === undefined ? input.createdAt : input.promotedAt,
+    deletedAt: input.deletedAt ?? null,
     // `signals_centroid_embedding_consistency_check` requires a materialized
     // embedding to be backed by a model-stamped centroid with positive mass.
     ...(input.centroidEmbedding
@@ -400,6 +402,32 @@ describe("SignalRepositoryLive promotion gate", () => {
     // with `signals_unique_slug_per_org_idx`.
     expect(count).toBe(1)
     expect(exists).toBe(true)
+  })
+
+  it("keeps a soft-deleted signal hidden even from the discovery opt-in", async () => {
+    const deleted = {
+      id: "sig-gate-deleted".padEnd(24, "d"),
+      slug: "gate-deleted",
+      createdAt: new Date("2026-03-04T00:00:00.000Z"),
+      promotedAt: null,
+      deletedAt: new Date("2026-03-08T00:00:00.000Z"),
+      centroidEmbedding: EMBEDDING,
+    }
+    await seedSignal(deleted)
+
+    // `includeUnpromoted` relaxes the promotion half of the rule only. A deleted
+    // signal must not come back through the door discovery uses.
+    await expect(withRepo((repo) => repo.findById(SignalId(deleted.id), { includeUnpromoted: true }))).rejects.toThrow()
+
+    const discovery = await withRepo((repo) =>
+      repo.hybridSearch({
+        projectId: PROJECT_ID,
+        query: "gate",
+        normalizedEmbedding: EMBEDDING,
+        includeUnpromoted: true,
+      }),
+    )
+    expect(discovery.map((candidate) => candidate.signalId)).not.toContain(SignalId(deleted.id))
   })
 
   it("returns nothing from findSimilarByCentroid when the source itself is a candidate", async () => {

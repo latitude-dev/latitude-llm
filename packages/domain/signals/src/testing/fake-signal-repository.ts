@@ -38,18 +38,23 @@ export const createFakeSignalRepository = (
   const withLifecycle = (issue: Signal): SignalWithLifecycle =>
     Object.assign({}, issue, { lifecycle: lifecycleFor(issue.id) })
 
-  // Mirrors the adapter's `userVisibleSignal`. Fidelity matters here: a domain
-  // test whose fake still returns candidates would pass while the real read
-  // leaks one. Loose comparisons on purpose — Postgres hands back null, but
-  // hand-built fixtures leave an unset timestamp `undefined`.
-  const isUserVisible = (issue: Signal): boolean => issue.deletedAt == null && issue.promotedAt != null
+  // Mirrors the adapter's predicates, kept as two so `includeUnpromoted` relaxes
+  // only the promotion half — the adapter never stops filtering soft-deletes.
+  // Fidelity matters here: a domain test whose fake still returns a candidate (or
+  // a deleted signal) would pass while the real read leaks one. Loose comparisons
+  // on purpose — Postgres hands back null, but hand-built fixtures leave an unset
+  // timestamp `undefined`.
+  const isLive = (issue: Signal): boolean => issue.deletedAt == null
+  const isUserVisible = (issue: Signal): boolean => isLive(issue) && issue.promotedAt != null
+  const isReadable = (issue: Signal, includeUnpromoted?: boolean): boolean =>
+    includeUnpromoted ? isLive(issue) : isUserVisible(issue)
 
   const repository: SignalRepositoryShape = {
     findById: (id, options) =>
       Effect.gen(function* () {
         const issue = issues.get(id)
         if (!issue) return yield* new NotFoundError({ entity: "Signal", id })
-        if (!options?.includeUnpromoted && !isUserVisible(issue)) {
+        if (!isReadable(issue, options?.includeUnpromoted)) {
           return yield* new NotFoundError({ entity: "Signal", id })
         }
         return withLifecycle(issue)
@@ -75,7 +80,7 @@ export const createFakeSignalRepository = (
     hybridSearch: ({ projectId, includeUnpromoted }) =>
       Effect.sync(() =>
         [...issues.values()]
-          .filter((issue) => issue.projectId === projectId && (includeUnpromoted || isUserVisible(issue)))
+          .filter((issue) => issue.projectId === projectId && isReadable(issue, includeUnpromoted))
           .map((issue) => ({
             signalId: issue.id,
             name: issue.name,
