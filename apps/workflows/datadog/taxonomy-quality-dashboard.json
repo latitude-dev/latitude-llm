@@ -1037,7 +1037,7 @@
           {
             "definition": {
               "type": "toplist",
-              "title": "Lowest coverage by project \u2014 who actually paid the 13%",
+              "title": "Lowest coverage by project \u2014 who actually paid for the floor",
               "requests": [
                 {
                   "queries": [

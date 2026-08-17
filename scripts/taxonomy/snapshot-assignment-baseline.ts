@@ -29,7 +29,7 @@ import { writeFileSync } from "node:fs"
 import { createClient } from "@clickhouse/client"
 
 const DEFAULT_OUT = "taxonomy-assignment-baseline.json"
-const DEFAULT_FLOOR = 0.81
+const DEFAULT_FLOOR = 0.75
 /** The gardening sample window, so the snapshot is comparable to the per-run coverage span. */
 const DEFAULT_LOOKBACK_DAYS = 7
 

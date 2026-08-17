@@ -55,8 +55,10 @@ no embeddings, summaries or session ids, which is why it is committable where
 
 Its `wouldRejectAtFloor` column is the **per-project prediction** — the share of
 currently-assigned observations below the new floor. Checking `assigned_share`
-against it project by project is the actual verification; a fleet-wide 13% says
-nothing about which projects paid it.
+against it project by project is the actual verification, and read it that way
+rather than fleet-wide: at 0.75 the fleet pays 5.3% while the worst project pays
+48%, and it was exactly this spread that ruled out 0.81 (13.6% fleet-wide, but 88%
+for that project). A fleet average says nothing about who paid.
 
 ## The two arms are two treatments, not control and test
 

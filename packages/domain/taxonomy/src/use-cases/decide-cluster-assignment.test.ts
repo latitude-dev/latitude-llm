@@ -37,13 +37,13 @@ const match = (id: string, cosine: number): NearestClusterMatch => ({ cluster: c
 
 describe("decideClusterAssignment fit floor", () => {
   /**
-   * A calibration guard, not a tautology. The value is derived from production:
-   * the median cluster's own p10 member-to-centroid similarity is 0.813, so this is
-   * where a flat floor sits closest to per-cluster floors. Changing it should be a
-   * deliberate recalibration that updates this test, not a drift.
+   * A calibration guard, not a tautology. Measured per project on production, this
+   * is the flat floor at which no project loses more than half its assignments —
+   * 0.81, the median cluster's own p10, costs 2 of 11 projects exactly that.
+   * Changing it should be a deliberate recalibration that updates this test.
    */
-  it("is calibrated to the median cluster's own weakest-member floor", () => {
-    expect(TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD).toBe(0.81)
+  it("is calibrated to the flat floor that spares the worst-hit projects", () => {
+    expect(TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD).toBe(0.75)
   })
 
   it("rejects a lone candidate below the floor and admits one at it", () => {
@@ -56,10 +56,11 @@ describe("decideClusterAssignment fit floor", () => {
     })
   })
 
-  // The band the old 0.65 admitted: 10.8% of production assignments landed below
-  // their own cluster's weakest genuine member.
+  // The band the old 0.65 admitted and this floor no longer does — 5.3% of
+  // production assignments sit in it. The gate bottomed out at exactly 0.6505 there,
+  // so 0.65 is the real lower edge rather than a round number.
   it("rejects the band the previous 0.65 gate admitted", () => {
-    for (const cosine of [0.65, 0.7, 0.75, 0.8]) {
+    for (const cosine of [0.65, 0.7, 0.74]) {
       expect(decideClusterAssignment([match("a", cosine)]).method).toBe("noise")
     }
   })
