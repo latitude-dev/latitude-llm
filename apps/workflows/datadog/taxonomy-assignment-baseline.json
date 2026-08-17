@@ -1,11 +1,13 @@
 {
-  "_comment": "Pre-change assignment baseline for LAT-866, captured from Latitude V2 PRODUCTION ClickHouse. taxonomy_observations is retained 30 days, so these rows no longer exist after 2026-09-16 — this file is the only surviving record of what the 0.65 floor admitted. Reproduce the shape with scripts/taxonomy/snapshot-assignment-baseline.ts.",
+  "_comment": "Pre-change assignment baseline for LAT-866, captured from Latitude V2 PRODUCTION ClickHouse. taxonomy_observations is retained 30 days, so these rows no longer exist after 2026-09-16 \u2014 this file is the only surviving record of what the 0.65 floor admitted. Reproduce the shape with scripts/taxonomy/snapshot-assignment-baseline.ts.",
   "capturedAt": "2026-08-17",
   "service": "Latitude V2 PRODUCTION",
   "window": "start_time >= now() - INTERVAL 7 DAY",
   "floorBefore": 0.65,
+  "floorAfter": 0.75,
+  "_floorDecision": "0.81 is the median cluster's own p10 and was the first candidate; the perProjectImpact block below ruled it out. The at-0.81 figures are kept as that evidence, not as the shipped calibration.",
   "byAssignmentMethod": {
-    "_comment": "gated = the paths this change adds a floor to. gardening_birth is NOT gated by it (build path, out of scope) yet is the largest population and bottoms lowest — the dominant unfloored hole after this PR.",
+    "_comment": "gated = the paths this change adds a floor to. gardening_birth is NOT gated by it (build path, out of scope) yet is the largest population and bottoms lowest \u2014 the dominant unfloored hole after this PR.",
     "centroid_online": {
       "gatedByThisChange": true,
       "observations": 17008,
@@ -30,7 +32,10 @@
       "confidenceP50": 0.8575,
       "shareBelow081": 0.2208
     },
-    "noise": { "gatedByThisChange": false, "observations": 2283 }
+    "noise": {
+      "gatedByThisChange": false,
+      "observations": 2283
+    }
   },
   "perProjectImpact": {
     "_comment": "Over the 11 projects with >=50 assignments on a gated path. The fleet number is a tail, not a level: the median project barely moves while the worst loses seven eighths of its assignments.",
@@ -55,7 +60,9 @@
       "centroidOnline": 38,
       "rejectedShareOfWindowAt081": 0.2124
     },
-    "sampleOnly": { "note": "every other project; gardening_birth + centroid_online only" }
+    "sampleOnly": {
+      "note": "every other project; gardening_birth + centroid_online only"
+    }
   },
   "worstHitProjects": [
     {
