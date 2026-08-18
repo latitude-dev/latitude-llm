@@ -160,6 +160,11 @@ export const applySignalLifecycleCommandUseCase = (
               message: `Signal ${signal.id} does not belong to project ${parsed.projectId}`,
             })
           }
+          if (signal.promotedAt === null) {
+            return yield* new BadRequestError({
+              message: `Signal ${signal.id} is not yet visible and cannot be ${parsed.command}d`,
+            })
+          }
 
           const { nextSignal, changed } = applyCommandToSignal({ signal, command: parsed.command, now })
 

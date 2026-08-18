@@ -152,4 +152,27 @@ describe("requestSignalDiscoveredNotificationsUseCase", () => {
 
     expect(result).toEqual({ status: "skipped", reason: "user-origin-signal" })
   })
+
+  it("skips ignored, resolved, and muted signals", async () => {
+    const ignored = await Effect.runPromise(
+      requestSignalDiscoveredNotificationsUseCase(input).pipe(
+        Effect.provide(makeLayer({ signal: makeSignal({ ignoredAt: new Date("2026-06-16T00:00:00.000Z") }) })),
+      ),
+    )
+    expect(ignored).toEqual({ status: "skipped", reason: "signal-ignored" })
+
+    const resolved = await Effect.runPromise(
+      requestSignalDiscoveredNotificationsUseCase(input).pipe(
+        Effect.provide(makeLayer({ signal: makeSignal({ resolvedAt: new Date("2026-06-16T00:00:00.000Z") }) })),
+      ),
+    )
+    expect(resolved).toEqual({ status: "skipped", reason: "signal-resolved" })
+
+    const muted = await Effect.runPromise(
+      requestSignalDiscoveredNotificationsUseCase(input).pipe(
+        Effect.provide(makeLayer({ signal: makeSignal({ mutedAt: new Date("2026-06-16T00:00:00.000Z") }) })),
+      ),
+    )
+    expect(muted).toEqual({ status: "skipped", reason: "signal-muted" })
+  })
 })

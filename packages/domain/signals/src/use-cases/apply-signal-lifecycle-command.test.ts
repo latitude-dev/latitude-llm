@@ -43,7 +43,7 @@ const makeSignal = (id: string, overrides: Partial<Signal> = {}): Signal => ({
   priority: null,
   centroid: null,
   clusteredAt: null,
-  promotedAt: null,
+  promotedAt: earlier,
   resolvedAt: null,
   ignoredAt: null,
   regressedAt: null,
@@ -343,6 +343,14 @@ describe("applySignalLifecycleCommandUseCase", () => {
 
       expect(result.items).toHaveLength(1)
       expect(events).toHaveLength(1)
+    })
+
+    it("rejects lifecycle commands on unpromoted candidates", async () => {
+      const candidate = makeSignal("c".repeat(24), { promotedAt: null })
+      const { effect, issues } = run({ signals: [candidate], command: "ignore" })
+
+      await expect(Effect.runPromise(effect)).rejects.toMatchObject({ _tag: "BadRequestError" })
+      expect(issues.get(candidate.id)?.ignoredAt).toBeNull()
     })
   })
 })
