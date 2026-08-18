@@ -439,20 +439,17 @@ const _registry = {
       readonly signalId: string
     }
     /**
-     * Name a newly promoted signal from its whole cluster, then announce it.
+     * Name a qualified signal from its whole cluster and stamp `promoted_at`.
      *
-     * The announcement publishes live here rather than in the `SignalPromoted`
-     * fan-out because they have to happen in this order: agent dispatch builds
-     * its prompt from the signal's name and description, and until this task
-     * runs those are the deterministic placeholder taken from one occurrence.
-     * A fan-out would race a reasoning-model call against consumers that pick up
-     * in milliseconds, which is not a race — it is a loss.
+     * Promotion lives out here rather than in the transaction that observed the
+     * evidence because the signal has to be named before it exists for anyone,
+     * and that is a model call. Emits `SignalPromoted`, which is what the
+     * announcements hang off.
      */
-    nameOnPromotion: {
+    promoteSignal: {
       readonly organizationId: string
       readonly projectId: string
       readonly signalId: string
-      readonly promotedAt: string
     }
     checkEscalation: {
       readonly organizationId: string

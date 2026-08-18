@@ -68,21 +68,40 @@ export interface EventPayloads {
     readonly createdAt: string
   }
   /**
-   * Emitted by `assignScoreToSignalUseCase` when a discovered signal
-   * accumulates enough distinct sessions to be promoted. Written inside the
-   * same transaction that stamps `promoted_at`, and the latch makes it
-   * exactly-once per signal.
+   * Emitted when a discovered signal accumulates enough distinct sessions to
+   * deserve promotion, from the transaction that observed the evidence. It says
+   * the gate passed, nothing more: `promoted_at` is still null and the signal is
+   * still invisible.
    *
-   * Carries the `signal.discovered` notification and the `signal.discovered`
-   * agent dispatch. It is internal: not a notification kind and not a dispatch
-   * trigger, it exists only so those two fire on the fact they actually mean.
+   * Promotion itself happens downstream, in `issues:promoteSignal`, because the
+   * signal has to be named from its whole cluster before it exists for anyone —
+   * and that is a model call, which cannot run inside this transaction. Until
+   * the latch is stamped, every further score re-qualifies and re-emits this;
+   * the consumer's leading throttle collapses those.
+   */
+  SignalQualifiedForPromotion: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly signalId: string
+    readonly qualifiedAt: string
+    readonly triggerScoreId: string
+  }
+  /**
+   * Emitted by `promoteSignalUseCase` from the transaction that stamps
+   * `promoted_at`, by which point the signal carries its generated name and
+   * description. The latch makes it exactly-once per signal.
+   *
+   * This is the fact the product acts on: the signal now exists for users, is
+   * fully formed, and is ready to be announced. It carries the
+   * `signal.discovered` notification and the `signal.discovered` agent dispatch.
+   * It is internal: not a notification kind and not a dispatch trigger, it
+   * exists only so those two fire on the fact they actually mean.
    */
   SignalPromoted: {
     readonly organizationId: string
     readonly projectId: string
     readonly signalId: string
     readonly promotedAt: string
-    readonly triggerScoreId: string
   }
   /**
    * Emitted by `updateSignalTriageUseCase` whenever the signal's assignee

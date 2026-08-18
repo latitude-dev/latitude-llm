@@ -93,7 +93,6 @@ const buildNewSignalFromScore = ({
   name,
   description,
   slug,
-  bornPromoted,
 }: {
   readonly score: Score
   readonly normalizedEmbedding: readonly number[]
@@ -102,7 +101,6 @@ const buildNewSignalFromScore = ({
   readonly name: string
   readonly description: string
   readonly slug: string
-  readonly bornPromoted: boolean
 }): Signal => {
   const centroid = updateSignalCentroid({
     centroid: {
@@ -134,7 +132,7 @@ const buildNewSignalFromScore = ({
     priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    promotedAt: bornPromoted ? assignedAt : null,
+    promotedAt: null,
     resolvedAt: null,
     ignoredAt: null,
     regressedAt: null,
@@ -155,10 +153,14 @@ const SESSIONS_AT_CREATION = 1
  * only ever clear it where that floor admits one — testing the constant first
  * keeps the volume lookup (Redis, then ClickHouse) off the creation path in every
  * configuration that cannot use it, including the default. Without this the floor
- * is effectively 2 whatever it is configured to be, because promotion is
- * otherwise only ever evaluated when a *second* score arrives.
+ * is effectively 2 whatever it is configured to be, because the gate is otherwise
+ * only ever evaluated when a *second* score arrives.
+ *
+ * Qualifying here still does not create a promoted signal: the row is written
+ * unpromoted either way, and `promoteSignalUseCase` stamps the latch once the
+ * signal has a name drawn from its cluster.
  */
-const resolveBornPromoted = (input: CreateSignalFromScoreInput) =>
+const resolveQualifiesAtCreation = (input: CreateSignalFromScoreInput) =>
   Effect.gen(function* () {
     if (PROMOTION_MIN_SESSIONS > SESSIONS_AT_CREATION) return false
 
@@ -185,7 +187,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
 
     // Resolved before the transaction: it reads Redis and ClickHouse, neither of
     // which belongs inside a Postgres transaction.
-    const bornPromoted = yield* resolveBornPromoted(input)
+    const qualifiesAtCreation = yield* resolveQualifiesAtCreation(input)
     const sqlClient = yield* SqlClient
 
     const assignment = yield* sqlClient.transaction(
@@ -223,7 +225,6 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           name: placeholder.name,
           description: placeholder.description,
           slug,
-          bornPromoted,
         })
 
         const claimed = yield* scoreRepository.assignSignalIfUnowned({
@@ -261,9 +262,9 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           },
         })
 
-        if (issue.promotedAt !== null) {
+        if (qualifiesAtCreation) {
           yield* outboxEventWriter.write({
-            eventName: "SignalPromoted",
+            eventName: "SignalQualifiedForPromotion",
             aggregateType: "issue",
             aggregateId: issue.id,
             organizationId: issue.organizationId,
@@ -271,7 +272,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
               organizationId: issue.organizationId,
               projectId: issue.projectId,
               signalId: issue.id,
-              promotedAt: issue.promotedAt.toISOString(),
+              qualifiedAt: issue.createdAt.toISOString(),
               triggerScoreId: score.id,
             },
           })

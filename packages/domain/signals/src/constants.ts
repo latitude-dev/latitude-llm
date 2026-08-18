@@ -357,6 +357,18 @@ export const PROJECT_SESSION_VOLUME_CACHE_TTL_SECONDS = 6 * 60 * 60
 export const PROJECT_SESSION_VOLUME_CACHE_KEY = (organizationId: string, projectId: string): string =>
   `org:${organizationId}:projects:${projectId}:session-volume`
 
+/**
+ * Leading-throttle window for `issues:promoteSignal`, which fires immediately
+ * and drops re-publishes for this long.
+ *
+ * A window rather than a bare dedupe key, because a bare key becomes a BullMQ
+ * `jobId` and failed jobs are retained (`removeOnFail: { count: 1000 }`) — a
+ * permanently failed promotion would shadow every later publish and the signal
+ * would never promote at all. The marker expires instead, so the next score to
+ * re-qualify the signal retries it. Sized well above one generation.
+ */
+export const SIGNAL_PROMOTION_THROTTLE_MS = 10 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // Signal refresh throttle
 // ---------------------------------------------------------------------------

@@ -35,6 +35,7 @@ export {
   SIGNAL_PRIORITIES,
   SIGNAL_PRIORITY_GROUPS,
   SIGNAL_PRIORITY_ORDER,
+  SIGNAL_PROMOTION_THROTTLE_MS,
   SIGNAL_REFRESH_THROTTLE_MS,
   SIGNAL_RELATED_CANDIDATE_LIMIT,
   SIGNAL_RELATED_COOCCURRENCE_WINDOW_DAYS,
@@ -265,6 +266,12 @@ export {
   listUserSignalsUseCase,
   type UserSignalItem,
 } from "./use-cases/list-user-signals.ts"
+export {
+  type PromoteSignalError,
+  type PromoteSignalInput,
+  type PromoteSignalResult,
+  promoteSignalUseCase,
+} from "./use-cases/promote-signal.ts"
 export {
   type RefreshSignalDetailsError,
   type RefreshSignalDetailsInput,

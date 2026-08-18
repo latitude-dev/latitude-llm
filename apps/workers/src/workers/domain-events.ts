@@ -2,7 +2,7 @@ import { BILLING_OVERAGE_SYNC_THROTTLE_MS, buildBillingOverageDedupeKey } from "
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
-import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
+import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_PROMOTION_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { isPostHogTracked } from "@platform/analytics-posthog"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
@@ -195,26 +195,61 @@ export const createDomainEventsWorker = ({
     // `UnhandledEventError`.
     SignalCreated: () => Effect.void,
 
-    // Where a discovered signal becomes real. Deliberately one publish and not
-    // the two announcements themselves: the signal still carries the
-    // placeholder name it was created with, so `issues:nameOnPromotion`
-    // generates the real summary from the whole cluster and announces
-    // afterwards. Same notification kind and same dispatch trigger as before,
-    // fired once the signal has the evidence to deserve them.
-    SignalPromoted: (event) =>
+    // The gate passed; the signal is not promoted yet. `issues:promoteSignal`
+    // names it from its cluster and stamps the latch, then emits
+    // `SignalPromoted` for the announcements below.
+    //
+    // Leading throttle rather than a bare dedupe key: a bare key becomes a
+    // BullMQ jobId, failed jobs are retained, and a permanently failed promotion
+    // would shadow every later publish so the signal could never promote. The
+    // marker expires instead, so the next score to re-qualify it retries.
+    SignalQualifiedForPromotion: (event) =>
       pub.publish(
         "issues",
-        "nameOnPromotion",
+        "promoteSignal",
         {
           organizationId: event.payload.organizationId,
           projectId: event.payload.projectId,
           signalId: event.payload.signalId,
-          promotedAt: event.payload.promotedAt,
         },
         {
-          dedupeKey: `org:${event.payload.organizationId}:issues:name-on-promotion:${event.payload.signalId}`,
+          dedupeKey: `org:${event.payload.organizationId}:issues:promote-signal:${event.payload.signalId}`,
+          leadingThrottleMs: SIGNAL_PROMOTION_THROTTLE_MS,
         },
       ),
+
+    // Where a discovered signal becomes real, and by now it is fully formed —
+    // `promoted_at` is stamped and the name is its cluster's, not the raw
+    // feedback sentence it was created from. Same notification kind and same
+    // dispatch trigger as before, fired once the signal earned them.
+    SignalPromoted: (event) =>
+      Effect.all(
+        [
+          pub.publish(
+            "notifications",
+            "request-signal-discovered-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              discoveredAt: event.payload.promotedAt,
+            },
+            { dedupeKey: `notifications:request-signal-discovered:${event.payload.signalId}` },
+          ),
+          pub.publish(
+            "agent-dispatch",
+            "request",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              signalId: event.payload.signalId,
+              source: "signal",
+            },
+            { dedupeKey: `agent-dispatch:request-signal:${event.payload.signalId}` },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
 
     SignalEscalated: (event) =>
       pub.publish("alert-incidents", "signal-escalated", event.payload, {

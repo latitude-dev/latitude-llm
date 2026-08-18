@@ -2,7 +2,7 @@ import { BILLING_OVERAGE_SYNC_THROTTLE_MS } from "@domain/billing"
 import type { EventEnvelope } from "@domain/events"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
-import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
+import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_PROMOTION_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
 import { hash } from "@repo/utils"
@@ -297,7 +297,38 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(0)
   })
 
-  it("routes SignalPromoted to naming, which announces once the summary exists", async () => {
+  it("routes SignalQualifiedForPromotion to promotion, announcing nothing yet", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalQualifiedForPromotion", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+      qualifiedAt: "2026-05-21T10:00:00.000Z",
+      triggerScoreId: "score-1",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    // Passing the gate announces nothing: the signal is not promoted yet and
+    // still carries the placeholder it was created from.
+    expect(published).toHaveLength(1)
+
+    const promotion = published[0]
+    expect(promotion?.queue).toBe("issues")
+    expect(promotion?.task).toBe("promoteSignal")
+    expect(promotion?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+    })
+    expect(promotion?.options?.dedupeKey).toBe("org:org-1:issues:promote-signal:signal-1")
+    // A leading throttle rather than a bare dedupe key, or a permanently failed
+    // promotion would keep its retained jobId and shadow every later publish.
+    expect(promotion?.options?.leadingThrottleMs).toBe(SIGNAL_PROMOTION_THROTTLE_MS)
+  })
+
+  it("routes SignalPromoted to the discovery notification and agent dispatch", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SignalPromoted", {
@@ -305,29 +336,34 @@ describe("domain-events dispatcher", () => {
       projectId: "proj-1",
       signalId: "signal-1",
       promotedAt: "2026-05-21T10:00:00.000Z",
-      triggerScoreId: "score-1",
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    // Exactly one publish, and specifically not the announcements: the signal
-    // still carries the placeholder it was created with, and agent dispatch
-    // builds its prompt from the name and description. `issues:nameOnPromotion`
-    // generates the real summary and publishes both afterwards.
-    expect(published).toHaveLength(1)
+    // By now the signal is stamped and named, so both consumers can read it.
+    expect(published).toHaveLength(2)
 
-    const naming = published[0]
-    expect(naming?.queue).toBe("issues")
-    expect(naming?.task).toBe("nameOnPromotion")
-    expect(naming?.payload).toEqual({
+    const notifications = published.find((p) => p.queue === "notifications")
+    expect(notifications?.task).toBe("request-signal-discovered-notifications")
+    expect(notifications?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       signalId: "signal-1",
       // Promotion time, so the notification does not announce a signal as
       // discovered weeks ago.
-      promotedAt: "2026-05-21T10:00:00.000Z",
+      discoveredAt: "2026-05-21T10:00:00.000Z",
     })
-    expect(naming?.options?.dedupeKey).toBe("org:org-1:issues:name-on-promotion:signal-1")
+    expect(notifications?.options?.dedupeKey).toBe("notifications:request-signal-discovered:signal-1")
+
+    const agentDispatch = published.find((p) => p.queue === "agent-dispatch")
+    expect(agentDispatch?.task).toBe("request")
+    expect(agentDispatch?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+      source: "signal",
+    })
+    expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-signal:signal-1")
   })
 
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {

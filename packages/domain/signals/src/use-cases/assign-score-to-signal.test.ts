@@ -172,8 +172,8 @@ const run = ({
   }))
 }
 
-const promotedEvents = (events: readonly OutboxWriteEvent[]) =>
-  events.filter((event) => event.eventName === "SignalPromoted")
+const qualifiedEvents = (events: readonly OutboxWriteEvent[]) =>
+  events.filter((event) => event.eventName === "SignalQualifiedForPromotion")
 
 /**
  * Two occurrences arriving one after the other against shared repository state,
@@ -227,29 +227,36 @@ const runTwice = async (sessionsPerCall: readonly [number, number]) => {
 }
 
 describe("assignScoreToSignalUseCase promotion", () => {
-  it("promotes and emits once when distinct sessions reach the threshold", async () => {
+  it("qualifies the signal when distinct sessions reach the threshold, without stamping the latch", async () => {
     const { promoted, outbox } = await run({ signal: makeSignal(), sessions: PROMOTION_MIN_SESSIONS })
 
-    expect(promoted).not.toBeNull()
-    expect(promotedEvents(outbox.events)).toHaveLength(1)
-    expect(promotedEvents(outbox.events)[0]?.payload).toMatchObject({
+    // Passing the gate is not promotion. The signal has to be named from its
+    // whole cluster before it exists for anyone, which is a model call and
+    // cannot happen in this transaction, so `promoteSignalUseCase` stamps the
+    // latch downstream and this only records that the evidence was reached.
+    expect(promoted).toBeNull()
+    expect(qualifiedEvents(outbox.events)).toHaveLength(1)
+    expect(qualifiedEvents(outbox.events)[0]?.payload).toMatchObject({
       signalId: signalId as string,
       triggerScoreId: "ssssssssssssssssssssssss",
     })
   })
 
-  it("promotes exactly once when further occurrences keep arriving", async () => {
+  it("keeps re-qualifying while the latch is unstamped", async () => {
     const { promoted, outbox } = await runTwice([PROMOTION_MIN_SESSIONS, PROMOTION_MIN_SESSIONS + 5])
 
-    expect(promoted).not.toBeNull()
-    expect(promotedEvents(outbox.events)).toHaveLength(1)
+    // Deliberate, and the reason the consumer publishes under a leading throttle
+    // rather than a bare dedupe key: until promotion lands, every further score
+    // re-qualifies. Collapsing those is the queue's job, not this transaction's.
+    expect(promoted).toBeNull()
+    expect(qualifiedEvents(outbox.events)).toHaveLength(2)
   })
 
-  it("leaves the signal unpromoted below the threshold and emits nothing", async () => {
+  it("emits nothing below the threshold", async () => {
     const { promoted, outbox } = await run({ signal: makeSignal(), sessions: PROMOTION_MIN_SESSIONS - 1 })
 
     expect(promoted).toBeNull()
-    expect(promotedEvents(outbox.events)).toHaveLength(0)
+    expect(qualifiedEvents(outbox.events)).toHaveLength(0)
   })
 
   it("never counts sessions for an already-promoted signal", async () => {
@@ -264,7 +271,7 @@ describe("assignScoreToSignalUseCase promotion", () => {
     // signal can hold hundreds of thousands of scores.
     expect(countDistinctSessionsBySignalId).not.toHaveBeenCalled()
     expect(promoted).toEqual(assignedAt)
-    expect(promotedEvents(outbox.events)).toHaveLength(0)
+    expect(qualifiedEvents(outbox.events)).toHaveLength(0)
   })
 
   it("requires more evidence in a high-traffic project than in a low-traffic one", async () => {
@@ -273,26 +280,26 @@ describe("assignScoreToSignalUseCase promotion", () => {
       sessions: PROMOTION_MAX_SESSIONS - 1,
       projectSessions: 3_000_000,
     })
-    expect(highTraffic.promoted).toBeNull()
+    expect(qualifiedEvents(highTraffic.outbox.events)).toHaveLength(0)
 
     const lowTraffic = await run({
       signal: makeSignal(),
       sessions: PROMOTION_MAX_SESSIONS - 1,
       projectSessions: 500,
     })
-    expect(lowTraffic.promoted).not.toBeNull()
+    expect(qualifiedEvents(lowTraffic.outbox.events)).toHaveLength(1)
   })
 
   it("falls back to the floor when the volume lookup is unavailable", async () => {
     // A high-traffic project would normally demand PROMOTION_MAX_SESSIONS, but an
     // unresolvable volume must make promotion easier rather than suppress a signal.
-    const { promoted } = await run({
+    const { outbox } = await run({
       signal: makeSignal(),
       sessions: PROMOTION_MIN_SESSIONS,
       projectSessions: 3_000_000,
       volumeUnavailable: true,
     })
 
-    expect(promoted).not.toBeNull()
+    expect(qualifiedEvents(outbox.events)).toHaveLength(1)
   })
 })

@@ -19,6 +19,7 @@ import {
   checkSignalEscalationUseCase,
   type DiscoverSignalResult,
   discoverSignalUseCase,
+  promoteSignalUseCase,
   refreshSignalDetailsUseCase,
   removeScoreFromSignalUseCase,
   reviewSignalFlaggerOccurrencesUseCase,
@@ -174,96 +175,47 @@ export const createSignalsWorker = async ({
         ),
         Effect.asVoid,
       ),
-    // Name a freshly promoted signal from its whole cluster, then announce it.
+    // Turn a qualified signal into a promoted one: name it from its cluster,
+    // stamp `promoted_at`, emit `SignalPromoted`. The announcements hang off
+    // that event, so nothing is published from here.
     //
-    // The ordering is the point. A candidate carries a placeholder built from
-    // one occurrence, and agent dispatch composes its prompt from the signal's
-    // name and description — announcing first would hand an agent one raw
-    // feedback sentence to open a pull request against. `ignorePreviousDetails`
-    // is what stops that placeholder becoming the stabilization baseline for
-    // the summary that replaces it.
-    //
-    // Nothing in the naming stage may swallow the announcement: a signal
-    // announced under its placeholder is recoverable by the throttled refresh, a
-    // signal never announced is not. The whole stage is therefore caught — not
-    // just the generation, because `authorizeBillableAction` and
-    // `makeAIMeteringScope` fail on their own infrastructure (plan resolution,
-    // usage-period lookup, the Redis spend reservation) rather than reporting it
-    // through `allowed`, and this task publishes with a bare dedupe key, so
-    // BullMQ gives it one attempt and a transient billing error would drop the
-    // announcement for good. The publishes carry the same dedupe keys the
-    // `SignalPromoted` fan-out used, so a retried job cannot notify or dispatch
-    // twice.
-    nameOnPromotion: (payload) =>
+    // Billing blocking must not block promotion. The authorization only decides
+    // whether a model call is affordable, and `promoteSignalUseCase` already
+    // promotes under the placeholder when generation yields nothing — a signal
+    // held back because an organization ran out of credits would stay invisible
+    // with nothing scheduled to retry it.
+    promoteSignal: (payload) =>
       Effect.gen(function* () {
-        yield* Effect.gen(function* () {
-          const organizationId = OrganizationId(payload.organizationId)
-          const keyParts = ["signal-name-on-promotion", payload.signalId]
-          const authorization = yield* authorizeBillableAction({
-            organizationId,
-            action: "llm-call",
-            skipIfBlocked: true,
-            idempotencyKey: buildBillingIdempotencyKey("llm-call", [payload.organizationId, ...keyParts, "authorize"]),
-          })
+        const organizationId = OrganizationId(payload.organizationId)
+        const keyParts = ["signal-promotion", payload.signalId]
+        const authorization = yield* authorizeBillableAction({
+          organizationId,
+          action: "llm-call",
+          skipIfBlocked: true,
+          idempotencyKey: buildBillingIdempotencyKey("llm-call", [payload.organizationId, ...keyParts, "authorize"]),
+        }).pipe(Effect.catch(() => Effect.succeed(null)))
 
-          if (!authorization.allowed) {
-            logger.info(
-              `Naming a promoted signal skipped for ${payload.projectId}/${payload.signalId} — billing blocked`,
-            )
-            return
-          }
+        const meteringScope =
+          authorization?.allowed === true
+            ? yield* makeAIMeteringScope({
+                organizationId,
+                projectId: ProjectId(payload.projectId),
+                keyParts,
+                context: authorization.context,
+              }).pipe(Effect.catch(() => Effect.succeed(null)))
+            : null
 
-          const meteringScope = yield* makeAIMeteringScope({
-            organizationId,
-            projectId: ProjectId(payload.projectId),
-            keyParts,
-            context: authorization.context,
-          })
-          yield* refreshSignalDetailsUseCase({
-            organizationId: payload.organizationId,
-            projectId: payload.projectId,
-            signalId: payload.signalId,
-            ignorePreviousDetails: true,
-          }).pipe(provideAIMeteringScope(meteringScope))
-        }).pipe(
-          Effect.tapError((error) =>
-            Effect.sync(() =>
-              logger.error(
-                `Naming a promoted signal failed for ${payload.projectId}/${payload.signalId}; announcing with its placeholder`,
-                error,
-              ),
-            ),
-          ),
-          Effect.ignore,
-        )
+        if (meteringScope === null) {
+          logger.info(
+            `Promoting ${payload.projectId}/${payload.signalId} without a generated name — AI unavailable or billing blocked`,
+          )
+        }
 
-        yield* Effect.all(
-          [
-            publisher.publish(
-              "notifications",
-              "request-signal-discovered-notifications",
-              {
-                organizationId: payload.organizationId,
-                projectId: payload.projectId,
-                signalId: payload.signalId,
-                discoveredAt: payload.promotedAt,
-              },
-              { dedupeKey: `notifications:request-signal-discovered:${payload.signalId}` },
-            ),
-            publisher.publish(
-              "agent-dispatch",
-              "request",
-              {
-                organizationId: payload.organizationId,
-                projectId: payload.projectId,
-                signalId: payload.signalId,
-                source: "signal",
-              },
-              { dedupeKey: `agent-dispatch:request-signal:${payload.signalId}` },
-            ),
-          ],
-          { concurrency: "unbounded" },
-        )
+        return yield* promoteSignalUseCase({
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          signalId: payload.signalId,
+        }).pipe(meteringScope === null ? (effect) => effect : provideAIMeteringScope(meteringScope))
       }).pipe(
         withPostgres(
           Layer.mergeAll(
@@ -283,14 +235,11 @@ export const createSignalsWorker = async ({
         Effect.provide(RedisBillingSpendReservationLive(rdClient)),
         withAi(AIGenerateLive, rdClient),
         withTracing,
-        Effect.provide(Layer.succeed(QueuePublisher, publisher)),
-        Effect.tap(() =>
-          Effect.sync(() => logger.info(`Announced promoted signal ${payload.projectId}/${payload.signalId}`)),
+        Effect.tap((result) =>
+          Effect.sync(() => logger.info(`Promotion for ${payload.projectId}/${payload.signalId}: ${result.action}`)),
         ),
         Effect.tapError((error) =>
-          Effect.sync(() =>
-            logger.error(`Announcing promoted signal failed for ${payload.projectId}/${payload.signalId}`, error),
-          ),
+          Effect.sync(() => logger.error(`Promotion failed for ${payload.projectId}/${payload.signalId}`, error)),
         ),
         Effect.asVoid,
       ),
