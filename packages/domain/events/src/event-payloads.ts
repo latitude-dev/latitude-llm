@@ -123,6 +123,33 @@ export interface EventPayloads {
     readonly assignedAt: string
   }
   /**
+   * Emitted by `updateSignalTriageUseCase` when a triage edit moves a signal
+   * *up* the priority scale. Deliberately narrower than its name: an unset
+   * priority ranks below `low`, so setting a first priority emits, while a
+   * downgrade, a clear, and a no-op re-save do not — reprioritizing downwards
+   * is not news anyone asked for, and the cheapest place to decide that is
+   * before the outbox row exists. Widening this to every change means
+   * revisiting the `signal.reprioritized` notification, whose topic copy
+   * promises escalations only.
+   *
+   * `reprioritizedAt` is the triage transaction's `now`, frozen into the
+   * outbox payload; it is the idempotency anchor for downstream notification
+   * dedupe, so each edit is a distinct event while outbox/queue redelivery of
+   * the same event replays identical data.
+   */
+  SignalReprioritized: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly signalId: string
+    /** The raised-to priority. Never null — clearing a priority is a decrease. */
+    readonly priority: string
+    /** `null` when the signal had no priority before the edit. */
+    readonly previousPriority: string | null
+    /** User who performed the triage edit (never notified about their own edit). */
+    readonly actorUserId: string
+    readonly reprioritizedAt: string
+  }
+  /**
    * Emitted by `submitSignalFeedbackUseCase` from the transaction that claims
    * the signal's verdict. The claim is guarded on `feedback IS NULL`, so a
    * signal is graded at most once ever and the signal id is a sound idempotency

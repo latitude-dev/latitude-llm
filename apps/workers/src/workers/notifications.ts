@@ -10,6 +10,7 @@ import {
   requestSignalAssignedNotificationsUseCase,
   requestSignalDiscoveredNotificationsUseCase,
   requestSignalRegressedNotificationsUseCase,
+  requestSignalReprioritizedNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
   routeOf,
 } from "@domain/notifications"
@@ -23,6 +24,7 @@ import {
   SignalId,
   type SqlClient,
 } from "@domain/shared"
+import type { SignalPriority } from "@domain/signals"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
@@ -410,6 +412,59 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         Effect.tapError((error) =>
           Effect.sync(() =>
             logger.error(`notifications.request-signal-regressed failed signalId=${payload.signalId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "request-signal-reprioritized-notifications": (payload) =>
+      requestSignalReprioritizedNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        signalId: SignalId(payload.signalId),
+        priority: payload.priority as SignalPriority,
+        previousPriority: payload.previousPriority as SignalPriority | null,
+        actorUserId: payload.actorUserId,
+        reprioritizedAt: payload.reprioritizedAt,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-signal-reprioritized skipped signalId=${payload.signalId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.request-signal-reprioritized failed signalId=${payload.signalId}`, error),
           ),
         ),
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),

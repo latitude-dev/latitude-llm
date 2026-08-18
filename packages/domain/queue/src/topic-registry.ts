@@ -197,6 +197,26 @@ const _registry = {
       readonly triggerScoreId: string
     }
     /**
+     * Producer step for a priority increase. Fired by the domain-events router
+     * on `SignalReprioritized`, which only fires on increases in the first
+     * place; the consumer re-checks that rule, skips muted signals, drops the
+     * actor from the org-member fan-out, and emits one `create-notification`
+     * task per remaining recipient. The priorities ride on the task rather
+     * than being re-read, so a burst of edits announces each transition
+     * instead of the newest value N times.
+     */
+    "request-signal-reprioritized-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      /** The raised-to priority. Never null — clearing a priority is a decrease. */
+      readonly priority: string
+      readonly previousPriority: string | null
+      readonly actorUserId: string
+      /** ISO timestamp frozen by the triage transaction; idempotency anchor. */
+      readonly reprioritizedAt: string
+    }
+    /**
      * Producer step for destination quarantine. Fired directly by the
      * destinations worker when a `(destination, source)` sync flip
      * quarantines the destination (5 consecutive terminal failures). The

@@ -38,6 +38,10 @@ const PRIORITY_EMOJI: Record<SignalPriority, string> = {
   low: "\u{1F7E2}", // green circle
 }
 
+/** "🟠 High" — emoji + capitalized priority, shared by every renderer that shows one. */
+export const priorityLabel = (priority: SignalPriority): string =>
+  `${PRIORITY_EMOJI[priority]} ${priority.charAt(0).toUpperCase()}${priority.slice(1)}`
+
 /**
  * " · 🟠 High · Assigned to Anna" suffix for the incident context line.
  * Empty string when the payload carries no triage snapshot (legacy rows,
@@ -49,8 +53,7 @@ export const triageContextSuffix = (input: {
 }): string => {
   const parts: string[] = []
   if (input.priority) {
-    const label = input.priority.charAt(0).toUpperCase() + input.priority.slice(1)
-    parts.push(`${PRIORITY_EMOJI[input.priority]} ${label}`)
+    parts.push(priorityLabel(input.priority))
   }
   if (input.assigneeName) {
     parts.push(`Assigned to ${input.assigneeName}`)

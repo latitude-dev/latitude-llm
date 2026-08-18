@@ -27,25 +27,47 @@ export const notificationGroupSchema = z.enum(NOTIFICATION_GROUPS)
  * that one switch is too coarse. A topic is only ever offered under the
  * group that declares it in `NOTIFICATION_GROUP_META`.
  */
-export const NOTIFICATION_TOPICS = ["signal.discovered", "signal.escalating", "signal.regressed"] as const
+export const NOTIFICATION_TOPICS = [
+  "signal.discovered",
+  "signal.escalating",
+  "signal.regressed",
+  "signal.reprioritized",
+] as const
 export type NotificationTopic = (typeof NOTIFICATION_TOPICS)[number]
 export const notificationTopicSchema = z.enum(NOTIFICATION_TOPICS)
 
 export const NOTIFICATION_TOPIC_META: Record<
   NotificationTopic,
-  { readonly label: string; readonly description: string }
+  {
+    readonly label: string
+    readonly description: string
+    /**
+     * Whether a recipient who never touched the topic's switch receives it.
+     * Low-signal topics ship off so enabling them is a deliberate opt-in;
+     * the stored preference always wins over this default.
+     */
+    readonly defaultEnabled: boolean
+  }
 > = {
   "signal.discovered": {
     label: "New signals",
     description: "A signal not seen before shows up for the first time.",
+    defaultEnabled: true,
   },
   "signal.escalating": {
     label: "Escalating signals",
     description: "An existing signal escalates into an incident.",
+    defaultEnabled: true,
   },
   "signal.regressed": {
     label: "Regressed signals",
     description: "A signal you already resolved starts happening again.",
+    defaultEnabled: true,
+  },
+  "signal.reprioritized": {
+    label: "Reprioritized signals",
+    description: "An existing signal is promoted to a higher priority.",
+    defaultEnabled: false,
   },
 }
 
@@ -92,10 +114,10 @@ export const NOTIFICATION_GROUP_META: Record<
   },
   signals: {
     label: "Signals",
-    description: "Get notified when signals are discovered, escalated and regressed.",
+    description: "Get notified when signals are discovered, escalated, regressed and raised in priority.",
     slackRoutable: true,
     severityFiltered: true,
-    topics: ["signal.discovered", "signal.escalating", "signal.regressed"],
+    topics: ["signal.discovered", "signal.escalating", "signal.regressed", "signal.reprioritized"],
   },
   monitors: {
     label: "Monitors",
@@ -140,15 +162,16 @@ export const SLACK_ROUTABLE_NOTIFICATION_GROUPS = NOTIFICATION_GROUPS.filter(
 )
 
 /**
- * Per-topic switches on a group's delivery config. Absent topics follow the
- * group toggle, so a user who never opens the settings gets everything.
+ * Per-topic switches on a group's delivery config. Absent topics fall back to
+ * the topic's `defaultEnabled`, so a user who never opens the settings gets
+ * every opt-out topic and none of the opt-in ones.
  */
 export const topicPreferencesSchema = z.partialRecord(notificationTopicSchema, z.boolean())
 export type TopicPreferences = z.infer<typeof topicPreferencesSchema>
 
 /** Whether a topic passes a topic filter. Notifications with no topic are never filtered. */
 export const admitsTopic = (topics: TopicPreferences | undefined, topic: NotificationTopic | null): boolean =>
-  topic === null || (topics?.[topic] ?? true)
+  topic === null || (topics?.[topic] ?? NOTIFICATION_TOPIC_META[topic].defaultEnabled)
 
 /**
  * Per-channel switches inside a group's preferences. Today only `email`

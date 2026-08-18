@@ -214,6 +214,66 @@ describe("createNotificationUseCase", () => {
     expect(await eligibilityFor("signal.regressed")).toBe(true)
   })
 
+  it("holds an opt-in topic back until the user asks for it", async () => {
+    const reprioritized = (prefs: NotificationPreferences | null) => {
+      const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
+      return Effect.runPromise(
+        createNotificationUseCase({
+          organizationId: orgId,
+          userId,
+          notificationId: NotificationId(generateId()),
+          kind: "signal.reprioritized",
+          idempotencyKey: `signal.reprioritized:${cuid("s")}:${generateId()}`,
+          projectId: null,
+          payload: {
+            signalId: cuid("s"),
+            actorUserId: cuid("a"),
+            reprioritizedAt: "2026-07-01T10:00:00.000Z",
+            priority: "urgent",
+            previousPriority: "medium",
+            severity: "urgent",
+          },
+        }).pipe(Effect.provide(layer)),
+      ).then((result) => result.emailEligible)
+    }
+
+    expect(await reprioritized(null)).toBe(false)
+    expect(await reprioritized({ signals: { email: true } })).toBe(false)
+    expect(await reprioritized({ signals: { email: true, emailTopics: { "signal.reprioritized": true } } })).toBe(true)
+    // The group switch still wins over an opted-in topic.
+    expect(await reprioritized({ signals: { email: false, emailTopics: { "signal.reprioritized": true } } })).toBe(
+      false,
+    )
+  })
+
+  it("still severity-filters an opted-in topic", async () => {
+    const prefs: NotificationPreferences = {
+      signals: { email: true, emailMinSeverity: "high", emailTopics: { "signal.reprioritized": true } },
+    }
+    const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
+
+    const result = await Effect.runPromise(
+      createNotificationUseCase({
+        organizationId: orgId,
+        userId,
+        notificationId: NotificationId(generateId()),
+        kind: "signal.reprioritized",
+        idempotencyKey: `signal.reprioritized:${cuid("s")}:1`,
+        projectId: null,
+        payload: {
+          signalId: cuid("s"),
+          actorUserId: cuid("a"),
+          reprioritizedAt: "2026-07-01T10:00:00.000Z",
+          priority: "low",
+          previousPriority: null,
+          severity: "low",
+        },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.emailEligible).toBe(false)
+  })
+
   it("turning email off for one group leaves other groups eligible", async () => {
     const prefs: NotificationPreferences = { signals: { email: false } }
     const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })

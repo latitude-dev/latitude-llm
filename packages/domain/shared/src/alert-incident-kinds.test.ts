@@ -3,6 +3,7 @@ import { alertIncidentConditionSchema } from "./alert-incident-condition.ts"
 import {
   INCIDENT_NOTIFICATION_KEYS,
   INCIDENT_SOURCE_TYPES,
+  isSeverityIncrease,
   MONITOR_TARGET_TYPES,
   MONITOR_TRIGGERS,
 } from "./alert-incident-kinds.ts"
@@ -55,5 +56,25 @@ describe("monitor conditions", () => {
     })
 
     expect(result.success).toBe(false)
+  })
+})
+
+describe("isSeverityIncrease", () => {
+  it("is true only for a step up the scale", () => {
+    expect(isSeverityIncrease("medium", "high")).toBe(true)
+    expect(isSeverityIncrease("low", "urgent")).toBe(true)
+    expect(isSeverityIncrease("high", "medium")).toBe(false)
+    expect(isSeverityIncrease("high", "high")).toBe(false)
+  })
+
+  it("ranks unset below every tier, so a first value is an increase", () => {
+    expect(isSeverityIncrease(null, "low")).toBe(true)
+    expect(isSeverityIncrease(null, "urgent")).toBe(true)
+  })
+
+  it("never counts clearing a value as an increase", () => {
+    expect(isSeverityIncrease("urgent", null)).toBe(false)
+    expect(isSeverityIncrease("low", null)).toBe(false)
+    expect(isSeverityIncrease(null, null)).toBe(false)
   })
 })

@@ -11,15 +11,16 @@ Always read [dev-docs/notifications.md](../../../dev-docs/notifications.md) for 
 
 ## Vocabulary (and what NOT to confuse)
 
-Three orthogonal axes — keep them straight:
+Four orthogonal axes — keep them straight:
 
 | Axis | Type | Examples | Lives in |
 | --- | --- | --- | --- |
 | **Kind** | flat enum (event-type) | `incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message` | `NOTIFICATION_KIND_META` in `@domain/notifications` |
-| **Group** | user-visible category | `incidents`, `wrapped_reports`, `custom_messages` | `NOTIFICATION_GROUPS` in `@domain/shared` |
-| **Channel** | delivery surface | `email`, (later: `slack`, ...) | per-channel worker + registry |
+| **Group** | user-visible category | `signals`, `monitors`, `wrapped_reports`, `custom_messages`, `personal`, `destinations`, `billing` | `NOTIFICATION_GROUPS` in `@domain/shared` |
+| **Topic** | sub-toggle inside a group | `signal.discovered`, `signal.escalating`, `signal.regressed`, `signal.reprioritized` | `NOTIFICATION_TOPICS` in `@domain/shared` |
+| **Channel** | delivery surface | `email`, `slack` | per-channel worker + registry |
 
-`AlertIncidentKind` (`issue.new` / `issue.regressed` / `issue.escalating`) is a **fourth** axis — it lives inside the `incident.*` payload and gates the producer step at the project level. It is **not** a `NotificationKind`. The mapping today: `issue.new` and `issue.regressed` → `incident.event` (one-shot, `endedAt = startedAt`); `issue.escalating` → `incident.opened` + later `incident.closed` (sustained, `endedAt` transitions from null). The producer derives the notification kind from `incident.endedAt`, so adding a new sustained or eventful alert kind is purely a `@domain/alerts` change.
+`AlertIncidentKind` (`issue.new` / `issue.regressed` / `issue.escalating`) is a **fifth** axis — it lives inside the `incident.*` payload and gates the producer step at the project level. It is **not** a `NotificationKind`. The mapping today: `issue.new` and `issue.regressed` → `incident.event` (one-shot, `endedAt = startedAt`); `issue.escalating` → `incident.opened` + later `incident.closed` (sustained, `endedAt` transitions from null). The producer derives the notification kind from `incident.endedAt`, so adding a new sustained or eventful alert kind is purely a `@domain/alerts` change.
 
 ## Pipeline at a glance
 
@@ -38,7 +39,7 @@ Producers compute everything; consumers act idempotently. See dev-doc for detail
 
 1. Add the kind to `NOTIFICATION_KIND_META` (`packages/domain/notifications/src/entities/notification.ts`) with `{ group, payload }`.
 2. Define the payload schema in the same file. Keep it flat — no nested `event` discriminator.
-3. Extend `buildIdempotencyKey` (`helpers/idempotency-key.ts`) with the new kind. Pattern: `${kind}:${naturalEntityId}` if there is one, else `${kind}:${generateId()}`.
+3. Extend `buildIdempotencyKey` (`helpers/idempotency-key.ts`) with the new kind. Pattern: `${kind}:${naturalEntityId}` if there is one, `${kind}:${entityId}:${eventTimestamp}` when the same entity can legitimately fire again (the unique index is permanent), else `${kind}:${generateId()}`.
 4. Add per-channel renderers (TS will fail the build until each is present):
    - In-app: `apps/web/src/routes/_authenticated/-components/notifications/renderers/<kind>.tsx` + entry in `notification-item.tsx`'s dispatch.
    - Email: `packages/domain/email/src/templates/notifications/<kind>/index.tsx` + entry in `registry.ts`. The renderer is an `Effect` — it can `yield*` any services it needs (e.g. `WrappedReportRepository` for `wrapped.report`). If the renderer needs services beyond `SqlClient`, wire the matching `*Live` layer into the email worker's `rendererLayer` in `apps/workers/src/workers/notification-emailer.ts`. Renderers that only need payload + context use `Effect.tryPromise(() => buildHtml(...))`.
@@ -52,12 +53,22 @@ Producers compute everything; consumers act idempotently. See dev-doc for detail
 
 **No user-preferences UI change needed.** The new kind inherits the group's existing toggle.
 
+## Adding a new topic (sub-toggle inside a group)
+
+Reach for a topic when a group's existing switch is too coarse — the recipient wants this group but not this slice of it. A topic is one entry in `NOTIFICATION_TOPICS` + `NOTIFICATION_TOPIC_META` and one entry in the owning group's `topics` list (all in `packages/domain/shared/src/notification-preferences.ts`); both settings UIs render it from that meta with no further edits.
+
+- `defaultEnabled: true` is the normal case — the topic behaves opt-out, matching every other default in the system.
+- `defaultEnabled: false` makes it **opt-in on both channels at once**. `admitsTopic` is the single resolver behind `shouldSendEmail` and the worker's Slack fan-out, so one flag covers email, Slack, and both settings screens. Use it for topics that fire on routine activity a busy project would read as spam (`signal.reprioritized` fires on every priority increase).
+- Read `checked` in the UIs through `admitsTopic(...)`, never `?? true` — a hardcoded fallback silently shows an opt-in topic as on.
+- A topic only filters delivery. The in-app bell row is always written, so a muted topic still shows up in the feed.
+- A topic filter is the *last* line of defence, not the first. If a whole class of source events is never worth announcing, guard the outbox write instead — `updateSignalTriageUseCase` only emits `SignalReprioritized` for priority *increases*, so a downgrade costs no outbox row, no queue hop, and no producer run. Filtering downstream would burn all three to reach the same silence.
+
 ## Adding a new group
 
 A new group adds a new user-visible preferences toggle and (optionally) a new project-level gate.
 
-1. Add the group to `NOTIFICATION_GROUPS` and `NOTIFICATION_GROUP_META` in `packages/domain/shared/src/notification-preferences.ts` (groups today: `incidents`, `wrapped_reports`, `custom_messages`, `personal`). `notificationPreferencesSchema` is built from `NOTIFICATION_GROUPS` and auto-extends. Set `slackRoutable` on the meta: non-routable groups (e.g. `personal` — single-recipient kinds) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out; the Slack renderer registry still needs a (stub) entry because it is exhaustive.
-2. The user-prefs settings page (`apps/web/src/routes/_authenticated/settings/account.tsx`) iterates `NOTIFICATION_GROUPS` to render toggles — the new group appears **automatically** with its label/description from the meta.
+1. Add the group to `NOTIFICATION_GROUPS` and `NOTIFICATION_GROUP_META` in `packages/domain/shared/src/notification-preferences.ts` (groups today: `signals`, `monitors`, `wrapped_reports`, `custom_messages`, `personal`, `destinations`, `billing`). `notificationPreferencesSchema` is built from `NOTIFICATION_GROUPS` and auto-extends. Set `slackRoutable` on the meta: non-routable groups (e.g. `personal` — single-recipient kinds) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out; the Slack renderer registry still needs a (stub) entry because it is exhaustive.
+2. The user-prefs settings page (`apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx`) iterates `NOTIFICATION_GROUPS` to render toggles — the new group appears **automatically** with its label/description from the meta.
 3. Add at least one kind to the new group (use the "Adding a new kind" steps).
 4. **Project-level gate (optional)** — only if the new group should be opt-out-able per project:
    - Add a slot to `notificationsSettingSchema` in `packages/domain/shared/src/settings.ts`.
@@ -80,7 +91,7 @@ Group keys are persisted in `users.notification_preferences` jsonb — picking a
 3. Extend `channelPreferencesSchema` in `@domain/shared/notification-preferences.ts` with the new channel key (jsonb — no migration).
 4. Update the creator step in `apps/workers/src/workers/notifications.ts` to also publish the new channel's `send` task when `prefs[group].<channel>` is true. Add a `shouldSend<Channel>(prefs, kind)` helper alongside `shouldSendEmail` if it grows non-trivial.
 5. New worker file mirroring `notification-emailer.ts`. Register it in `apps/workers/src/server.ts`.
-6. Settings UI in `apps/web/src/routes/_authenticated/settings/account.tsx`: extend the per-group block to show one switch per channel.
+6. Settings UI in `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx`: extend the per-group block to show one switch per channel.
 
 Source events, the producer step, the in-app feed, and the kind registry are all unchanged.
 
