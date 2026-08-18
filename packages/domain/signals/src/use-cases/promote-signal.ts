@@ -8,6 +8,14 @@ export interface PromoteSignalInput {
   readonly organizationId: string
   readonly projectId: string
   readonly signalId: string
+  /**
+   * Whether to generate the cluster summary before stamping. The caller clears
+   * it when billing refused the call or the metering scope could not be built:
+   * the AI layer resolves that scope through `Effect.serviceOption`, so
+   * generating without one runs the model unmetered. Promotion still happens,
+   * under the placeholder.
+   */
+  readonly generateDetails?: boolean
 }
 
 export type PromoteSignalResult = {
@@ -55,18 +63,21 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
     // `generateSignalDetailsUseCase` rather than through `refreshSignalDetails`:
     // that one returns early for an unpromoted signal, which is every signal
     // reaching this point.
-    const details = yield* generateSignalDetailsUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      signalId: input.signalId,
-      ignorePreviousDetails: true,
-    }).pipe(
-      Effect.map((generated) => ({ name: generated.name, description: generated.description })),
-      // `catchCause`, not `catch`: a provider that throws surfaces as a defect
-      // rather than an `AIError`, and a defect must not hold promotion back any
-      // more than a typed failure does.
-      Effect.catchCause(() => Effect.succeed(null)),
-    )
+    const details =
+      input.generateDetails === false
+        ? null
+        : yield* generateSignalDetailsUseCase({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            signalId: input.signalId,
+            ignorePreviousDetails: true,
+          }).pipe(
+            Effect.map((generated) => ({ name: generated.name, description: generated.description })),
+            // `catchCause`, not `catch`: a provider that throws surfaces as a
+            // defect rather than an `AIError`, and a defect must not hold
+            // promotion back any more than a typed failure does.
+            Effect.catchCause(() => Effect.succeed(null)),
+          )
 
     const sqlClient = yield* SqlClient
 

@@ -126,6 +126,41 @@ describe("promoteSignalUseCase", () => {
     expect(outbox.events.filter((event) => event.eventName === "SignalPromoted")).toHaveLength(1)
   })
 
+  it("does not call the model when generation is switched off", async () => {
+    // The worker clears the flag when billing refuses the call or the metering
+    // scope cannot be built. The AI layer resolves that scope with
+    // `serviceOption`, so generating anyway would run the model unmetered.
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: generated("Should never be requested", "Nor this."),
+    })
+    const { repository: signalRepository, issues } = createFakeSignalRepository([makeSignal()])
+    const { repository: scoreRepository } = createFakeScoreRepository()
+    const outbox: { events: OutboxWriteEvent[] } = { events: [] }
+
+    const result = await Effect.runPromise(
+      promoteSignalUseCase({ organizationId, projectId, signalId, generateDetails: false }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(
+          OutboxEventWriter,
+          OutboxEventWriter.of({
+            write: (event) =>
+              Effect.sync(() => {
+                outbox.events.push(event)
+              }),
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("promoted")
+    expect(calls.generate).toHaveLength(0)
+    expect(issues.get(signalId)?.name).toBe(PLACEHOLDER_NAME)
+    expect(issues.get(signalId)?.promotedAt).not.toBeNull()
+  })
+
   it("is idempotent for an already-promoted signal", async () => {
     const promotedAt = new Date("2026-07-01T00:00:00Z")
     const { result, outbox, stored } = await run({

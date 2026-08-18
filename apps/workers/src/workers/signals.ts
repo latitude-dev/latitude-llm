@@ -211,10 +211,14 @@ export const createSignalsWorker = async ({
           )
         }
 
+        // `generateDetails` has to follow the scope, not just the layer: the AI
+        // layer resolves `AIMeteringScope` through `Effect.serviceOption`, so
+        // generating without one runs the model and bills nobody.
         return yield* promoteSignalUseCase({
           organizationId: payload.organizationId,
           projectId: payload.projectId,
           signalId: payload.signalId,
+          generateDetails: meteringScope !== null,
         }).pipe(meteringScope === null ? (effect) => effect : provideAIMeteringScope(meteringScope))
       }).pipe(
         withPostgres(
