@@ -95,10 +95,7 @@ export const updateSignalTriageUseCase = (input: UpdateSignalTriageInput) =>
         }
         yield* signalRepository.save(nextSignal)
 
-        // Assignee changes (set / reassign / clear) and priority *increases*
-        // each emit a domain event from the same transaction. `assignedAt` /
-        // `reprioritizedAt` are frozen here as the per-edit idempotency
-        // anchors downstream.
+        // `assignedAt` / `reprioritizedAt` are frozen here as the per-edit idempotency anchors downstream.
         const outboxEventWriter = yield* OutboxEventWriter
 
         if (nextAssigneeId !== issue.assigneeId) {
@@ -119,9 +116,6 @@ export const updateSignalTriageUseCase = (input: UpdateSignalTriageInput) =>
           })
         }
 
-        // Only an increase is worth announcing, and an unset priority ranks
-        // below `low` — so a first priority fires, a downgrade or a clear
-        // stays out of the outbox entirely rather than being filtered later.
         if (isSeverityIncrease(issue.priority, nextPriority)) {
           yield* outboxEventWriter.write({
             eventName: "SignalReprioritized",
