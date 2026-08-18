@@ -6,6 +6,7 @@ import {
   OpenAIWebSearchTool,
 } from '@latitude-data/constants/latitudePromptSchema'
 import { Providers } from '@latitude-data/constants'
+import { asSchema } from 'ai'
 
 describe('lookupProviderTools', () => {
   describe('when no tools are provided', () => {
@@ -275,9 +276,6 @@ describe('lookupProviderTools', () => {
       expect(result.ok).toBe(true)
       const manifest = result.value!['web_search']
       expect(manifest).toMatchObject({
-        definition: {
-          inputSchema: expect.any(Object),
-        },
         sourceData: {
           source: ToolSource.ProviderTool,
           provider: Providers.OpenAI,
@@ -291,6 +289,9 @@ describe('lookupProviderTools', () => {
           },
         },
       })
+      expect(
+        asSchema(manifest!.definition.inputSchema).jsonSchema,
+      ).toMatchObject({ type: 'object' })
     })
 
     it('includes outputSchema when available', () => {

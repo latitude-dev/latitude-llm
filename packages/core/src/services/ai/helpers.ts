@@ -33,6 +33,14 @@ export { type PartialPromptConfig as PartialConfig } from '@latitude-data/consta
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
 
+/**
+ * `@ai-sdk/azure` defaulted to the `preview` api version until 2.0.x, when it
+ * switched the default to the GA `v1`. We pin the previous default so bumping
+ * the adapter doesn't silently move every Azure prompt off the preview surface.
+ * Prompts can still override it through the `azure` config block.
+ */
+const AZURE_DEFAULT_API_VERSION = 'preview'
+
 function createAmazonBedrockProvider(
   config: AmazonBedrockConfiguration,
   name: string,
@@ -150,6 +158,7 @@ export function createProvider({
         createAzure({
           fetch: instrumentedFetch(),
           apiKey,
+          apiVersion: AZURE_DEFAULT_API_VERSION,
           ...(config?.azure ?? {}),
         }),
       )
