@@ -24,6 +24,10 @@ export type RefreshSignalDetailsResult =
       readonly signalId: string
     }
   | {
+      readonly action: "unpromoted"
+      readonly signalId: string
+    }
+  | {
       readonly action: "unchanged"
       readonly signalId: string
     }
@@ -78,6 +82,23 @@ export const refreshSignalDetailsUseCase = (input: RefreshSignalDetailsInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("signalId", input.signalId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    // An unpromoted signal keeps its placeholder. `ScoreAssignedToSignal`
+    // schedules this task for candidates too, and generating there would spend a
+    // model call to make matching worse: the placeholder is the occurrence's own
+    // feedback, which is the better rerank and lexical document for a cluster
+    // this thin, and the summary that replaced it would be drawn from the same
+    // one or two members that make the task ill-posed. The promotion task passes
+    // through here after `promoted_at` is stamped, so it is unaffected.
+    const signals = yield* SignalRepository
+    const unpromoted = yield* signals
+      .findById(SignalId(input.signalId), { includeUnpromoted: true })
+      .pipe(Effect.map((signal) => signal.promotedAt === null))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(false)))
+
+    if (unpromoted) {
+      return { action: "unpromoted", signalId: input.signalId } satisfies RefreshSignalDetailsResult
+    }
+
     const generatedDetailsResult = yield* generateSignalDetailsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
