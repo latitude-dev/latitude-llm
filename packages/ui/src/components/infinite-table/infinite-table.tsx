@@ -128,6 +128,7 @@ export function InfiniteTable<T>({
   const [containerWidth, setContainerWidth] = useState(0)
   const [theadHeight, setTheadHeight] = useState(0)
   const [scrollTop, setScrollTop] = useState(0)
+  const [isHeaderCoveringRows, setIsHeaderCoveringRows] = useState(false)
 
   useLayoutEffect(() => {
     if (!hasGrouping) return
@@ -214,6 +215,13 @@ export function InfiniteTable<T>({
       // group-header overlay re-evaluates on every scroll tick, not only
       // when the virtual window shifts.
       if (hasGrouping) setScrollTop(target.scrollTop)
+      // Compare rects rather than a precomputed scroll offset: the thead is "covering"
+      // rows exactly when it's pinned flush against the container's top edge, which is
+      // true regardless of how much (if any) content sits above the table in flow.
+      const thead = theadRef.current
+      if (thead) {
+        setIsHeaderCoveringRows(thead.getBoundingClientRect().top <= target.getBoundingClientRect().top + 0.5)
+      }
       if (!infiniteScroll || !hasMore || infiniteScroll.isLoadingMore) return
       const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
       if (distanceToBottom < ROW_HEIGHT * 5) {
@@ -350,9 +358,16 @@ export function InfiniteTable<T>({
             ref={tableRef}
             className={cn("min-w-full border-separate border-spacing-y-1", { "table-fixed": layoutFixed })}
           >
-            <thead ref={theadRef} className="sticky top-0 z-10 border-b border-border bg-background">
+            <thead ref={theadRef} className="sticky top-0 z-10 bg-background">
               <tr>
-                {hasExpansion && <HeaderCell resizable={false} className="w-8" showSubheaderSlot={hasSubheaderRow} />}
+                {hasExpansion && (
+                  <HeaderCell
+                    resizable={false}
+                    className="w-8"
+                    showSubheaderSlot={hasSubheaderRow}
+                    bottomBorder={isHeaderCoveringRows}
+                  />
+                )}
                 {selection && (
                   <HeaderCell
                     resizable={false}
@@ -360,6 +375,7 @@ export function InfiniteTable<T>({
                     minWidth={SELECTION_COLUMN_WIDTH}
                     maxWidth={SELECTION_COLUMN_WIDTH}
                     showSubheaderSlot={hasSubheaderRow}
+                    bottomBorder={isHeaderCoveringRows}
                   >
                     <Checkbox checked={selection.headerState} onCheckedChange={() => selection.toggleAll()} />
                   </HeaderCell>
@@ -382,6 +398,7 @@ export function InfiniteTable<T>({
                       {...(col.width !== undefined ? { width: col.width } : {})}
                       {...(col.maxWidth !== undefined ? { maxWidth: col.maxWidth } : {})}
                       showSubheaderSlot={hasSubheaderRow}
+                      bottomBorder={isHeaderCoveringRows}
                       {...(hasSubheaderRow ? { subheader: col.renderSubheader?.(col, i) } : {})}
                       {...(sortDir ? { sortDirection: sortDir } : {})}
                       {...(isSortable && col.sortKey

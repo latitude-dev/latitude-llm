@@ -36,6 +36,7 @@ export function HeaderCell({
   onSortClick,
   subheader,
   showSubheaderSlot = false,
+  bottomBorder = false,
 }: {
   children?: ReactNode
   align?: "start" | "end"
@@ -53,6 +54,8 @@ export function HeaderCell({
   subheader?: ReactNode
   /** When true, reserve a bottom row so all header cells align when only some have `subheader`. */
   showSubheaderSlot?: boolean
+  /** Shown once the sticky header is pinned over scrolled rows. Cell border, not `<thead>`'s — row groups don't paint borders under `border-separate`. */
+  bottomBorder?: boolean
 }) {
   const TextComp = sortable ? "button" : "div"
   const textProps = sortable ? { type: "button" as const, onClick: onSortClick } : {}
@@ -142,7 +145,8 @@ export function HeaderCell({
     <th
       ref={thRef}
       className={cn(
-        "relative overflow-hidden",
+        "relative overflow-hidden border-b",
+        bottomBorder ? "border-border" : "border-transparent",
         resizable ? RESIZABLE_HEADER_PADDING : "px-4",
         showSubheaderSlot ? "py-1.5 align-top" : "h-12 align-middle",
         className,
