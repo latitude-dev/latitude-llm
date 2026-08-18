@@ -18,7 +18,7 @@ export const azureConfig = z.object({
   apiVersion: z
     .string()
     .optional()
-    .describe('Sets a custom api version. Defaults to 2024-10-01-preview.'),
+    .describe('Sets a custom api version. Defaults to preview.'),
   baseUrl: z
     .string()
     .optional()
