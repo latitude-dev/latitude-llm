@@ -10,6 +10,7 @@ import {
   requestSignalAssignedNotificationsUseCase,
   requestSignalDiscoveredNotificationsUseCase,
   requestSignalRegressedNotificationsUseCase,
+  requestSignalReprioritizedNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
   routeOf,
 } from "@domain/notifications"
@@ -23,6 +24,7 @@ import {
   SignalId,
   type SqlClient,
 } from "@domain/shared"
+import { signalPrioritySchema } from "@domain/signals"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
@@ -83,8 +85,9 @@ interface ProducerRequest {
   readonly projectId: string | null
   readonly payload: Record<string, unknown>
   /** One per-recipient notification ID (all share the same idempotencyKey).
-   *  The first one is passed to Slack jobs for chart URL generation. */
-  readonly notificationId: string
+   *  The first one is passed to Slack jobs for chart URL generation; null when
+   *  the occurrence wrote no in-app row to deep-link. */
+  readonly notificationId: string | null
   readonly slackEligible?: boolean
 }
 
@@ -416,6 +419,74 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         Effect.asVoid,
         withTracing,
       ),
+
+    "request-signal-reprioritized-notifications": (payload) => {
+      // Queue payloads are untyped strings, and an unrecognised priority ranks
+      // as `undefined`, which would look like "not an increase" and drop the
+      // notification without a trace.
+      const priority = signalPrioritySchema.safeParse(payload.priority)
+      const previousPriority = signalPrioritySchema.nullable().safeParse(payload.previousPriority)
+      if (!priority.success || !previousPriority.success) {
+        logger.error(
+          `notifications.request-signal-reprioritized unparseable priority signalId=${payload.signalId} priority=${payload.priority} previousPriority=${payload.previousPriority}`,
+        )
+        return Effect.void
+      }
+
+      return requestSignalReprioritizedNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        signalId: SignalId(payload.signalId),
+        priority: priority.data,
+        previousPriority: previousPriority.data,
+        actorUserId: payload.actorUserId,
+        reprioritizedAt: payload.reprioritizedAt,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-signal-reprioritized skipped signalId=${payload.signalId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              // The occurrence, not `result.requests`: Slack is channel-scoped,
+              // and the actor-filtered recipient list is empty in a solo org.
+              fanOutSlackRoutes([result.slackOccurrence], publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.request-signal-reprioritized failed signalId=${payload.signalId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      )
+    },
 
     "request-destination-quarantined-notifications": (payload) =>
       requestDestinationQuarantinedNotificationsUseCase({

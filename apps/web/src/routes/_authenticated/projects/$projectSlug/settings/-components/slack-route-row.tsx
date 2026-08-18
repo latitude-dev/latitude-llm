@@ -1,5 +1,5 @@
 import type { SlackRoute } from "@domain/integrations"
-import { NOTIFICATION_GROUP_META, NOTIFICATION_TOPIC_META, type NotificationGroup } from "@domain/shared"
+import { admitsTopic, NOTIFICATION_GROUP_META, NOTIFICATION_TOPIC_META, type NotificationGroup } from "@domain/shared"
 import {
   Button,
   Checkbox,
@@ -148,7 +148,7 @@ export function SlackRouteRow({
               <div key={topic} className="flex flex-row items-start gap-3">
                 <Checkbox
                   id={topicId}
-                  checked={route.topics?.[topic] ?? true}
+                  checked={admitsTopic(route.topics, topic)}
                   disabled={disabled}
                   onCheckedChange={(checked) =>
                     onChange({ ...route, topics: { ...(route.topics ?? {}), [topic]: checked === true } })

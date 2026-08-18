@@ -369,6 +369,11 @@ export const createDomainEventsWorker = ({
             },
           ),
 
+    SignalReprioritized: (event) =>
+      pub.publish("notifications", "request-signal-reprioritized-notifications", event.payload, {
+        dedupeKey: `notifications:request-signal-reprioritized:${event.payload.signalId}:${event.payload.reprioritizedAt}`,
+      }),
+
     IncidentClosed: (event) =>
       // Manual lifecycle closes (the user resolved or ignored the issue) close
       // the escalation silently — the recovery notification is meant for

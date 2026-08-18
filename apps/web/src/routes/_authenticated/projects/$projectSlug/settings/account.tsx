@@ -1,4 +1,5 @@
 import {
+  admitsTopic,
   NOTIFICATION_GROUP_META,
   NOTIFICATION_GROUPS,
   NOTIFICATION_TOPIC_META,
@@ -634,7 +635,7 @@ function NotificationsSection() {
                       <div key={topic} className="flex flex-row items-start gap-3">
                         <Checkbox
                           id={topicId}
-                          checked={prefs[group]?.emailTopics?.[topic] ?? true}
+                          checked={admitsTopic(prefs[group]?.emailTopics, topic)}
                           onCheckedChange={(checked) => setGroupTopic(group, topic, checked === true)}
                         />
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">

@@ -448,6 +448,60 @@ describe("domain-events dispatcher", () => {
     expect(job?.options?.dedupeKey).toBe("notifications:request-signal-assigned:issue-1:2026-05-07T10:00:00.000Z")
   })
 
+  it("routes SignalReprioritized to notifications:request-signal-reprioritized-notifications", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalReprioritized", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "issue-1",
+      priority: "urgent",
+      previousPriority: "medium",
+      actorUserId: "user-a",
+      reprioritizedAt: "2026-05-07T10:00:00.000Z",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(1)
+    const job = published[0]
+    expect(job?.queue).toBe("notifications")
+    expect(job?.task).toBe("request-signal-reprioritized-notifications")
+    expect(job?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "issue-1",
+      priority: "urgent",
+      previousPriority: "medium",
+      actorUserId: "user-a",
+      reprioritizedAt: "2026-05-07T10:00:00.000Z",
+    })
+    expect(job?.options?.dedupeKey).toBe("notifications:request-signal-reprioritized:issue-1:2026-05-07T10:00:00.000Z")
+  })
+
+  it("forwards a first-priority increase, which carries a null previousPriority", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    await consumer.dispatchTask(
+      "domain-events",
+      "dispatch",
+      envelopeToDispatchPayload(
+        makeEnvelope("SignalReprioritized", {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          signalId: "issue-1",
+          priority: "low",
+          previousPriority: null,
+          actorUserId: "user-a",
+          reprioritizedAt: "2026-05-07T10:00:00.000Z",
+        }),
+      ),
+    )
+
+    expect(published).toHaveLength(1)
+    expect(published[0]?.payload).toMatchObject({ priority: "low", previousPriority: null })
+  })
+
   it("routes SignalFeedbackSubmitted to the flagger-occurrence review fan-out", async () => {
     const { consumer, published } = setupDispatcher()
 

@@ -261,6 +261,26 @@ export const signalRegressedPayloadSchema = z.object({
 export type SignalRegressedPayload = z.infer<typeof signalRegressedPayloadSchema>
 
 /**
+ * A triage edit moved a signal up the priority scale. Only increases reach
+ * this payload — `SignalReprioritized` is not emitted for a downgrade or a
+ * clear — so `priority` is always set and `severity` mirrors it as the field
+ * both channels' severity filters read. `previousPriority` is null when the
+ * signal had no priority before. `reprioritizedAt` is the per-edit
+ * idempotency anchor: a later increase re-notifies, outbox redelivery of the
+ * same edit does not. The actor's display name is NOT snapshotted; renderers
+ * resolve it live from the id.
+ */
+export const signalReprioritizedPayloadSchema = z.object({
+  signalId: cuidSchema,
+  actorUserId: cuidSchema,
+  reprioritizedAt: z.iso.datetime(),
+  priority: signalPrioritySchema,
+  previousPriority: signalPrioritySchema.nullable(),
+  severity: alertSeveritySchema,
+})
+export type SignalReprioritizedPayload = z.infer<typeof signalReprioritizedPayloadSchema>
+
+/**
  * A data destination flipped to `quarantined` (5 consecutive terminal sync
  * failures) and stopped exporting. Fans out to org members so someone
  * reconnects it. Unlike issue/project display data, a destination has no live
@@ -347,6 +367,10 @@ export const NOTIFICATION_KIND_META = {
   "signal.regressed": {
     routing: { group: "signals", topic: "signal.regressed" },
     payload: signalRegressedPayloadSchema,
+  },
+  "signal.reprioritized": {
+    routing: { group: "signals", topic: "signal.reprioritized" },
+    payload: signalReprioritizedPayloadSchema,
   },
   "destination.quarantined": {
     routing: { group: "destinations", topic: null },
