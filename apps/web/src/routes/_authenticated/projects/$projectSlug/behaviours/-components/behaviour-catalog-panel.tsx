@@ -1,4 +1,4 @@
-import { cn, Icon, Text, Tooltip } from "@repo/ui"
+import { Badge, cn, Icon, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { ClockArrowUpIcon, GlobeIcon } from "lucide-react"
@@ -10,7 +10,7 @@ import {
   FACET_SCOPE_GLOBAL_TOOLTIP,
   FACET_SCOPE_WINDOWED_TOOLTIP,
 } from "../../../../../../domains/taxonomy/facet-scope-copy.ts"
-import { BehaviourBadge, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
+import { trendBadgeVariant, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
 import { PreviewPlaceholder } from "./behaviour-catalog-card.tsx"
 
 /** The Behaviors home: a full-width panel per behavior, stacked top to bottom. */
@@ -70,7 +70,9 @@ function GroupRow({
             {`${formatCount(group.sessionCount)} sessions`}
           </Text.H5>
         </div>
-        <BehaviourBadge label={trendLabel(group.trend)} icon={trendIcon(group.trend)} />
+        <Badge variant={trendBadgeVariant(group.trend)} ellipsis iconProps={{ icon: trendIcon(group.trend), placement: "start" }}>
+          {trendLabel(group.trend)}
+        </Badge>
       </div>
     </div>
   )

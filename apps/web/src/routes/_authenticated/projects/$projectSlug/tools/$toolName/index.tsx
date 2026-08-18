@@ -113,22 +113,25 @@ function ToolDetailPageContent() {
       <Layout.Content>
         <Layout.Header
           title={
-            <div className="flex min-w-0 flex-row items-center gap-3">
+            <div className="flex min-w-0 flex-col gap-3">
               <Tooltip
                 asChild
                 side="bottom"
                 trigger={
-                  <Button asChild variant="ghost" className="h-8 w-8 p-0" aria-label="Back to tools">
+                  <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to tools">
                     <Link to="/projects/$projectSlug/tools" params={{ projectSlug }}>
-                      <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                      <Icon icon={ArrowLeftIcon} size="sm" />
+                      Back
                     </Link>
                   </Button>
                 }
               >
                 Back to tools
               </Tooltip>
-              <WrenchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <Text.H4M className="min-w-0 truncate font-mono">{notFound ? "Tool not found" : toolName}</Text.H4M>
+              <div className="flex min-w-0 items-center gap-3">
+                <WrenchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Text.H4M className="min-w-0 truncate font-mono">{notFound ? "Tool not found" : toolName}</Text.H4M>
+              </div>
             </div>
           }
           actions={

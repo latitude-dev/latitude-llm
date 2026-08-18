@@ -17,7 +17,15 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { createFileRoute, getRouteApi, Link, useNavigate } from "@tanstack/react-router"
-import { ArrowLeftIcon, BellIcon, BellOffIcon, EllipsisVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  BellIcon,
+  BellOffIcon,
+  EllipsisVerticalIcon,
+  ExternalLinkIcon,
+  PencilIcon,
+  Trash2Icon,
+} from "lucide-react"
 import { type ReactNode, useMemo, useRef, useState } from "react"
 import { SeverityStatus } from "../../../../../../domains/alerts/severity-selector.tsx"
 import { describeMonitorTarget, targetToSessionFilters } from "../../../../../../domains/monitors/monitor-target.ts"
@@ -26,6 +34,7 @@ import type { MonitorRuleRecord } from "../../../../../../domains/monitors/monit
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
+import { SectionHeader } from "../../-components/section-header.tsx"
 import { serializeFilters } from "../../-components/trace-page-state.ts"
 import { useRouteProject } from "../../-route-data.ts"
 import { MonitorDeleteConfirmModal } from "../-components/monitor-delete-confirm-modal.tsx"
@@ -165,14 +174,15 @@ function MonitorDetailPage() {
       <Layout.Content>
         <Layout.Header
           title={
-            <div className="flex min-w-0 flex-row items-center gap-3">
+            <div className="flex min-w-0 flex-col gap-3">
               <Tooltip
                 asChild
                 side="bottom"
                 trigger={
-                  <Button asChild variant="ghost" className="h-8 w-8 p-0" aria-label="Back to monitors">
+                  <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to monitors">
                     <Link to="/projects/$projectSlug/monitors/search" params={{ projectSlug }}>
-                      <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                      <Icon icon={ArrowLeftIcon} size="sm" />
+                      Back
                     </Link>
                   </Button>
                 }
@@ -182,14 +192,14 @@ function MonitorDetailPage() {
               {isLoading ? (
                 <Skeleton className="h-7 w-56" />
               ) : (
-                <>
-                  <Text.H4M className="min-w-0 truncate">{monitor?.name}</Text.H4M>
-                  {monitor?.system ? <SystemTag /> : null}
-                </>
+                <SectionHeader
+                  title={monitor?.name ?? ""}
+                  badge={monitor?.system ? <SystemTag /> : undefined}
+                  description={rule?.summary ?? undefined}
+                />
               )}
             </div>
           }
-          description={rule?.summary ?? undefined}
           actions={
             monitor ? (
               <>
@@ -259,18 +269,24 @@ function MonitorDetailPage() {
                             to="/projects/$projectSlug"
                             params={{ projectSlug }}
                             search={{ tab: "sessions", savedSearch: savedSearchTarget.slug }}
-                            className="hover:underline"
+                            className="group inline-flex min-w-0 items-center gap-1"
                           >
-                            <Text.H5 color="primary">{savedSearchTarget.name}</Text.H5>
+                            <Text.H5 color="foreground" className="min-w-0 group-hover:underline">
+                              {savedSearchTarget.name}
+                            </Text.H5>
+                            <Icon icon={ExternalLinkIcon} size="xs" color="foregroundMuted" className="shrink-0" />
                           </Link>
                         ) : sessionTargetSearch ? (
                           <Link
                             to="/projects/$projectSlug"
                             params={{ projectSlug }}
                             search={sessionTargetSearch}
-                            className="hover:underline"
+                            className="group inline-flex min-w-0 items-center gap-1"
                           >
-                            <Text.H5 color="primary">{description?.label ?? savedSearchTarget?.name}</Text.H5>
+                            <Text.H5 color="foreground" className="min-w-0 group-hover:underline">
+                              {description?.label ?? savedSearchTarget?.name}
+                            </Text.H5>
+                            <Icon icon={ExternalLinkIcon} size="xs" color="foregroundMuted" className="shrink-0" />
                           </Link>
                         ) : (
                           <Text.H5 color="foreground">{description?.label ?? savedSearchTarget?.name}</Text.H5>
@@ -279,17 +295,18 @@ function MonitorDetailPage() {
                     ) : null}
                     {rule ? (
                       <ConfigField label="Trigger">
-                        <div className="flex items-center gap-2">
-                          <Text.H5 color="foreground">{INCIDENT_NOTIFICATION_KEY_LABEL[rule.kind]}</Text.H5>
-                          <SeverityStatus severity={rule.severity} />
-                        </div>
+                        <Text.H5 color="foreground">{INCIDENT_NOTIFICATION_KEY_LABEL[rule.kind]}</Text.H5>
+                      </ConfigField>
+                    ) : null}
+                    {rule ? (
+                      <ConfigField label="Severity">
+                        <SeverityStatus severity={rule.severity} />
                       </ConfigField>
                     ) : null}
                     <ConfigField label="Incidents">
                       <Text.H5 color="foreground">{incidentStats ? formatCount(incidentStats.total) : "—"}</Text.H5>
                     </ConfigField>
                   </div>
-                  {monitor.description ? <Text.H6 color="foregroundMuted">{monitor.description}</Text.H6> : null}
                 </div>
 
                 {target ? (

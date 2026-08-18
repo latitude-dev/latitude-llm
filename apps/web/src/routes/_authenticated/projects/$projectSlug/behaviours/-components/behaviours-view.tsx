@@ -1,5 +1,6 @@
 import { MOMENT_KINDS, type MomentKind } from "@domain/conversation-intelligence"
 import {
+  Badge,
   BarChart,
   Button,
   cn,
@@ -38,7 +39,7 @@ import type {
   BehaviourTimeRangeRecord,
   BehaviourTrajectoryMetric,
 } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
-import { BehaviourBadge, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
+import { trendBadgeVariant, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import {
   EMPTY_SELECTION,
@@ -327,11 +328,29 @@ export function BehaviourDetailDrawer({
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              {parentName ? <BehaviourBadge label={parentName} icon={TagIcon} /> : null}
-              <BehaviourBadge label={`${formatCount(node.subtreeSessionCount)} sessions`} icon={TagIcon} />
-              <BehaviourBadge label={trendLabel(node.trend.status)} icon={trendIcon(node.trend.status)} />
+              {parentName ? (
+                <Badge variant="muted" ellipsis iconProps={{ icon: TagIcon, placement: "start" }}>
+                  {parentName}
+                </Badge>
+              ) : null}
+              <Badge variant="muted" ellipsis iconProps={{ icon: TagIcon, placement: "start" }}>
+                {`${formatCount(node.subtreeSessionCount)} sessions`}
+              </Badge>
+              <Badge
+                variant={trendBadgeVariant(node.trend.status)}
+                ellipsis
+                iconProps={{ icon: trendIcon(node.trend.status), placement: "start" }}
+              >
+                {trendLabel(node.trend.status)}
+              </Badge>
               {node.firstSeenLabel === "older" || node.firstSeenLabel === "unknown" ? null : (
-                <BehaviourBadge label={`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`} icon={SparklesIcon} />
+                <Badge
+                  variant="muted"
+                  ellipsis
+                  iconProps={{ icon: SparklesIcon, placement: "start" }}
+                >
+                  {`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`}
+                </Badge>
               )}
             </div>
             <Text.H6 color="foregroundMuted">
@@ -1015,7 +1034,11 @@ export function BehavioursView({
       width: 130,
       render: (row) => {
         const status = row.hasChildren ? subtreeTrendStatus(row.node) : row.node.trend.status
-        return <BehaviourBadge label={trendLabel(status)} icon={trendIcon(status)} />
+        return (
+          <Badge variant={trendBadgeVariant(status)} ellipsis iconProps={{ icon: trendIcon(status), placement: "start" }}>
+            {trendLabel(status)}
+          </Badge>
+        )
       },
     },
     {
@@ -1059,7 +1082,11 @@ export function BehavioursView({
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
             {timeFilter}
-            {momentRange ? <BehaviourBadge label={selectedMomentRangeLabel(momentRange)} icon={TagIcon} /> : null}
+            {momentRange ? (
+              <Badge variant="muted" ellipsis iconProps={{ icon: TagIcon, placement: "start" }}>
+                {selectedMomentRangeLabel(momentRange)}
+              </Badge>
+            ) : null}
           </Layout.ActionRowItem>
           {onSegmentChange ? (
             <Layout.ActionRowItem>
