@@ -25,6 +25,7 @@ const makeSignal = (promotedAt: Date | null): Signal => ({
   priority: null,
   centroid: null,
   clusteredAt: null,
+  feedback: null,
   promotedAt,
   resolvedAt: null,
   ignoredAt: null,
