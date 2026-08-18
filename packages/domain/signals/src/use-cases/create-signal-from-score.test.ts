@@ -139,7 +139,7 @@ const createGenerateSignalDetails =
     })
 
 describe("createSignalFromScoreUseCase", () => {
-  it("generates details, creates a new issue, and claims score ownership", async () => {
+  it("names from the occurrence, creates a new issue, and claims score ownership", async () => {
     const { layer: aiLayer, calls } = createFakeAI({
       generate: createGenerateSignalDetails(
         "Token leakage in assistant responses",
@@ -172,10 +172,13 @@ describe("createSignalFromScoreUseCase", () => {
     expect(result.action).toBe("created")
     expect(result.signalId).toHaveLength(24)
     expect(scores.get(score.id)?.signalId).toBe(result.signalId)
-    expect(issues.get(result.signalId)?.name).toBe("Token leakage in assistant responses")
-    expect(issues.get(result.signalId)?.description).toBe("The assistant exposes secrets or tokens in its replies.")
+    // The placeholder, not the model's answer: summarizing a cluster from its
+    // one member is not a well-posed task, so the real summary waits for
+    // promotion and the model is never called here at all.
+    expect(issues.get(result.signalId)?.name).toBe("The assistant leaks API tokens in its response")
+    expect(issues.get(result.signalId)?.description).toBe("The assistant leaks API tokens in its response.")
     expect(issues.get(result.signalId)?.centroid?.mass).toBeGreaterThan(0)
-    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate).toHaveLength(0)
 
     expect(outbox.events).toHaveLength(1)
     expect(outbox.events[0]).toMatchObject({
@@ -303,7 +306,7 @@ describe("createSignalFromScoreUseCase", () => {
       signalId: winningSignalId,
     })
     expect(issues.size).toBe(0)
-    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate).toHaveLength(0)
   })
 
   describe("issue.source mapping", () => {

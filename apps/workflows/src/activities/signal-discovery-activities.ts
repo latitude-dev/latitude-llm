@@ -14,7 +14,7 @@ import {
   isEligibilityError,
   SignalDiscoveryLockUnavailableError,
 } from "@domain/signals"
-import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
+import { AIEmbedLive, AIRerankLive, withAi } from "@platform/ai"
 import {
   RedisBillingSpendReservationLive,
   RedisCacheStoreLive,
@@ -73,14 +73,11 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
     ),
   )
 
+// Metering must stay off this path: it fails the activity outright when an organization is out of
+// AI credits, which would stop a candidate recording the evidence that promotes it.
 export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =>
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
-      withActivityAIMetering({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        label: "signal-create",
-      }),
       withPostgres(
         Layer.mergeAll(
           ProjectRepositoryLive,
@@ -88,7 +85,6 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
           SignalRepositoryLive,
           OutboxEventWriterLive,
           EvaluationRepositoryLive,
-          billingMeteringRepositoriesLive,
         ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
@@ -97,8 +93,6 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
       // born promoted where the floor admits a single session.
       withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisCacheStoreLive(getRedisClient())),
-      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
-      withAi(AIGenerateLive, getRedisClient()),
       withTracing,
     ),
   )
@@ -131,7 +125,7 @@ export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
       Effect.provide(RedisCacheStoreLive(getRedisClient())),
       // TODO(signal-discovery-rerank): drop AIRerankLive when assignOrCreateSignal
       // relies on Postgres pgvector hybrid search directly.
-      withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
+      withAi(AIRerankLive, getRedisClient()),
       withTracing,
       Effect.match({
         onFailure: (error) => {

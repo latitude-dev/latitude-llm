@@ -19,6 +19,7 @@ import {
   checkSignalEscalationUseCase,
   type DiscoverSignalResult,
   discoverSignalUseCase,
+  promoteSignalUseCase,
   refreshSignalDetailsUseCase,
   removeScoreFromSignalUseCase,
   reviewSignalFlaggerOccurrencesUseCase,
@@ -171,6 +172,78 @@ export const createSignalsWorker = async ({
         ),
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Signal refresh failed for ${payload.projectId}/${payload.signalId}`, error)),
+        ),
+        Effect.asVoid,
+      ),
+    // Turn a qualified signal into a promoted one: name it from its cluster,
+    // stamp `promoted_at`, emit `SignalPromoted`. The announcements hang off
+    // that event, so nothing is published from here.
+    //
+    // Billing blocking must not block promotion. The authorization only decides
+    // whether a model call is affordable, and `promoteSignalUseCase` already
+    // promotes under the placeholder when generation yields nothing — a signal
+    // held back because an organization ran out of credits would stay invisible
+    // with nothing scheduled to retry it.
+    promoteSignal: (payload) =>
+      Effect.gen(function* () {
+        const organizationId = OrganizationId(payload.organizationId)
+        const keyParts = ["signal-promotion", payload.signalId]
+        const authorization = yield* authorizeBillableAction({
+          organizationId,
+          action: "llm-call",
+          skipIfBlocked: true,
+          idempotencyKey: buildBillingIdempotencyKey("llm-call", [payload.organizationId, ...keyParts, "authorize"]),
+        }).pipe(Effect.catch(() => Effect.succeed(null)))
+
+        const meteringScope =
+          authorization?.allowed === true
+            ? yield* makeAIMeteringScope({
+                organizationId,
+                projectId: ProjectId(payload.projectId),
+                keyParts,
+                context: authorization.context,
+              }).pipe(Effect.catch(() => Effect.succeed(null)))
+            : null
+
+        if (meteringScope === null) {
+          logger.info(
+            `Promoting ${payload.projectId}/${payload.signalId} without a generated name — AI unavailable or billing blocked`,
+          )
+        }
+
+        // `generateDetails` has to follow the scope, not just the layer: the AI
+        // layer resolves `AIMeteringScope` through `Effect.serviceOption`, so
+        // generating without one runs the model and bills nobody.
+        return yield* promoteSignalUseCase({
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          signalId: payload.signalId,
+          generateDetails: meteringScope !== null,
+        }).pipe(meteringScope === null ? (effect) => effect : provideAIMeteringScope(meteringScope))
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(
+            EvaluationRepositoryLive,
+            SignalRepositoryLive,
+            ScoreRepositoryLive,
+            BillingOverrideRepositoryLive,
+            BillingUsageEventRepositoryLive,
+            BillingUsagePeriodRepositoryLive,
+            OutboxEventWriterLive,
+            SettingsReaderLive,
+            StripeSubscriptionLookupLive,
+          ),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
+        Effect.provide(RedisBillingSpendReservationLive(rdClient)),
+        withAi(AIGenerateLive, rdClient),
+        withTracing,
+        Effect.tap((result) =>
+          Effect.sync(() => logger.info(`Promotion for ${payload.projectId}/${payload.signalId}: ${result.action}`)),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() => logger.error(`Promotion failed for ${payload.projectId}/${payload.signalId}`, error)),
         ),
         Effect.asVoid,
       ),

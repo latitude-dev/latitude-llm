@@ -226,7 +226,7 @@ Signal discovery should follow the original proposal closely:
 13. write `scores.issue_id` in Postgres
 14. if the score was added to an existing signal, write `ScoreAssignedToSignal` transactionally so later signal-details regeneration can debounce safely
 15. after the transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
-16. refresh signal name/description asynchronously on debounce only for the existing-signal path that requested `ScoreAssignedToSignal`, reusing the shared signal-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
+16. refresh signal name/description asynchronously on debounce only for the existing-signal path that requested `ScoreAssignedToSignal`, reusing the shared signal-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline; the refresh returns early while the signal is unpromoted, and the promotion-time generation is the one call that drops that baseline
 
 Execution rules:
 
@@ -237,7 +237,7 @@ Execution rules:
 - `signals:refresh` runs after the configured throttle window elapses for an existing signal
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, do feedback embedding first and then enter locked serialization; annotation scores may carry both enriched and raw feedback embeddings, and the search/rerank/create-or-assign decision runs under the Redis serialization gates
-- the brand-new signal path must generate its first name/description before the signal row is first persisted, and that synchronous generation step must reuse the same shared signal-details generation use case that later debounced refreshes call
+- the brand-new signal path must **not** generate a name/description; it writes a deterministic placeholder built from the creating occurrence's feedback, and the first generated summary is produced at promotion through the same shared signal-details generation use case that later debounced refreshes call (see § Denoising: promotion)
 - the debounced `signals:refresh` path must re-lock and re-read the canonical signal row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
 - after `signals:refresh` persists changed details, no explicit search sync is required because Postgres derives `search_document` from canonical signal text
 - rerank results already carry canonical signal ids from Postgres search, so there is no projection UUID resolution step
@@ -385,6 +385,14 @@ Four reads sit on the discovery side and pass `includeUnpromoted`. Three of them
 
 Enforcement landed as a straight cutover with no feature flag: a flag would put a branch on every read path and leave a dozen places to un-branch later. The **constants are the kill switch** — `PROMOTION_MIN_SESSIONS = 1` with `PROMOTION_RATE_FLOOR = 0` reproduces the pre-gate behaviour as a config change rather than a revert. For that to be true the gate is evaluated at *creation* as well as on assignment: a creating score is one session, so a signal is born promoted wherever the floor admits one. Without that, promotion would only ever be evaluated when a second score arrived and the floor would effectively be 2 whatever it was set to. Testing the constant before resolving volume keeps the extra lookup off the creation path in every configuration that cannot use it, including the default. Both the migration that added `promoted_at` and the one that enforced it backfill `promoted_at = created_at`, so the gate only ever applied to signals discovered after enforcement shipped. The consequence to communicate: a complaining customer's existing list does not get cleaner on deploy, it stops getting worse. Cleaning the backlog is a separate bulk resolve/ignore.
 
+**Naming follows the same line.** A candidate is named deterministically from its first occurrence — the truncated first sentence of the feedback as the name, the feedback itself as the description — with no model call on the creation path at all. Summarizing a cluster from its single first member is not a well-posed task, and asking a model to do it produced exactly that answer in production: signals titled `description`, and one whose description was the model explaining that one occurrence is not enough to identify a shared pattern. The real summary is generated once, over the whole cluster, when the signal is promoted.
+
+The placeholder survives until then, because `refreshSignalDetailsUseCase` returns early while `promoted_at` is null. `ScoreAssignedToSignal` schedules the throttled `signals:refresh` for candidates too, and without that guard a candidate picking up a second score is renamed by a model eight hours later — spending a call to make matching worse, since it swaps the occurrence's own feedback for a generalization drawn from the one or two members that make the summary ill-posed.
+
+**Passing the gate and being promoted are two different facts, and two different events.** The transaction that observes the evidence emits `SignalQualifiedForPromotion` and stops there: `promoted_at` stays null, so the signal stays invisible. `issues:promoteSignal` then generates the summary from the whole cluster, stamps the latch and emits `SignalPromoted` in one transaction, and the announcements hang off *that*. So a signal is never visible carrying the raw feedback sentence it was created from, and `SignalPromoted` is fully formed for everything downstream — which matters because agent dispatch builds its Cursor prompt from the name and description, and Slack renders once at send time. (The in-app renderer and the email are safe either way: the payload carries no name, so they resolve it live.) Splitting the two facts is what lets promotion wait on a model call that cannot run inside the gate's transaction. The generation is asked to ignore the signal's current details, since using the placeholder as the stabilization baseline would anchor the first real summary to one member's phrasing.
+
+Two consequences worth knowing. Until the latch is stamped every further score re-qualifies and re-emits, so the consumer publishes under a **leading throttle** rather than a bare dedupe key — a bare key becomes a BullMQ job id, failed jobs are retained, and a permanently failed promotion would shadow every later publish so the signal could never promote at all. And generation failure never blocks promotion: `promoteSignalUseCase` promotes under the placeholder and lets the now-unblocked refresh correct the name, because a signal held back by a failed model call is invisible with nothing scheduled to retry it.
+
 Two mechanisms complete the model and are specified but not yet built. **Consolidation** merges near-duplicate unpromoted signals; until it lands, enforcement knowingly leaves one gap open — a real problem fragmented across several one-session signals stays hidden, because no fragment reaches the threshold alone (candidate-to-candidate only, on a looser threshold than live matching, as a real merge with no "merged" state; the v1 merge/merged-state system stays retired). **Expiry** sweeps unpromoted signals that stop accumulating, which is the first thing that lets discovery's row corpus shrink rather than grow forever.
 
 Full design, decisions, and open parameters: `specs/signal-promotion.md`.
@@ -409,7 +417,7 @@ Required Postgres storage on the signal row:
 - no IVFFlat/HNSW index on `centroid_embedding`: signals per project are expected in the hundreds to low thousands, and an exact project-scoped sequential scan outperforms an approximate index at that scale
 - do not add JSONB indexes on `centroid`; centroid search is served by derived pgvector state maintained by `SignalRepository.save`
 
-Names/descriptions are generated from occurrences and refreshed on debounce.
+Names/descriptions are generated from occurrences and refreshed on debounce, but not from the first one and not at creation — a candidate carries a deterministic placeholder until it is promoted, and generation starts there. See § Denoising: promotion.
 
 They may use:
 

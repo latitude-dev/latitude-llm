@@ -1,4 +1,4 @@
-import { resolveEmbeddingConfig } from "@domain/ai"
+import { type AIError, resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
 import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
@@ -16,6 +16,7 @@ import {
 } from "@domain/shared"
 import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
+import { buildCandidatePlaceholder } from "../candidate-naming.ts"
 import { PROMOTION_MIN_SESSIONS } from "../constants.ts"
 import type { Signal, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
@@ -25,8 +26,6 @@ import { SignalRepository } from "../ports/signal-repository.ts"
 import { promotionThresholdForVolume } from "../promotion.ts"
 import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
-import type { GenerateSignalDetailsError } from "./generate-signal-details.ts"
-import { generateSignalDetailsUseCase } from "./generate-signal-details.ts"
 import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
 
 export interface CreateSignalFromScoreInput {
@@ -42,9 +41,9 @@ export type CreateSignalFromScoreResult = {
 }
 
 export type CreateSignalFromScoreError =
+  | AIError
   | CacheError
   | CheckEligibilityError
-  | GenerateSignalDetailsError
   | RepositoryError
   | NotFoundError
   | SignalSlugGenerationError
@@ -94,7 +93,6 @@ const buildNewSignalFromScore = ({
   name,
   description,
   slug,
-  bornPromoted,
 }: {
   readonly score: Score
   readonly normalizedEmbedding: readonly number[]
@@ -103,7 +101,6 @@ const buildNewSignalFromScore = ({
   readonly name: string
   readonly description: string
   readonly slug: string
-  readonly bornPromoted: boolean
 }): Signal => {
   const centroid = updateSignalCentroid({
     centroid: {
@@ -135,7 +132,7 @@ const buildNewSignalFromScore = ({
     priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
-    promotedAt: bornPromoted ? assignedAt : null,
+    promotedAt: null,
     resolvedAt: null,
     ignoredAt: null,
     regressedAt: null,
@@ -156,10 +153,14 @@ const SESSIONS_AT_CREATION = 1
  * only ever clear it where that floor admits one — testing the constant first
  * keeps the volume lookup (Redis, then ClickHouse) off the creation path in every
  * configuration that cannot use it, including the default. Without this the floor
- * is effectively 2 whatever it is configured to be, because promotion is
- * otherwise only ever evaluated when a *second* score arrives.
+ * is effectively 2 whatever it is configured to be, because the gate is otherwise
+ * only ever evaluated when a *second* score arrives.
+ *
+ * Qualifying here still does not create a promoted signal: the row is written
+ * unpromoted either way, and `promoteSignalUseCase` stamps the latch once the
+ * signal has a name drawn from its cluster.
  */
-const resolveBornPromoted = (input: CreateSignalFromScoreInput) =>
+const resolveQualifiesAtCreation = (input: CreateSignalFromScoreInput) =>
   Effect.gen(function* () {
     if (PROMOTION_MIN_SESSIONS > SESSIONS_AT_CREATION) return false
 
@@ -184,20 +185,9 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
       } satisfies CreateSignalFromScoreResult
     }
 
-    const signalDetails = yield* generateSignalDetailsUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      occurrences: [
-        {
-          sourceType: initialScoreResult.score.sourceType,
-          feedback: initialScoreResult.score.feedback,
-        },
-      ],
-    })
-
     // Resolved before the transaction: it reads Redis and ClickHouse, neither of
     // which belongs inside a Postgres transaction.
-    const bornPromoted = yield* resolveBornPromoted(input)
+    const qualifiesAtCreation = yield* resolveQualifiesAtCreation(input)
     const sqlClient = yield* SqlClient
 
     const assignment = yield* sqlClient.transaction(
@@ -226,15 +216,15 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           projectSlug: project.slug,
           count: (slug) => signalRepository.countBySlug({ slug }),
         })
+        const placeholder = buildCandidatePlaceholder(score.feedback)
         const issue = buildNewSignalFromScore({
           score,
           normalizedEmbedding: input.normalizedEmbedding,
           embeddingModel: embeddingConfig.model,
           assignedAt,
-          name: signalDetails.name,
-          description: signalDetails.description,
+          name: placeholder.name,
+          description: placeholder.description,
           slug,
-          bornPromoted,
         })
 
         const claimed = yield* scoreRepository.assignSignalIfUnowned({
@@ -272,9 +262,9 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           },
         })
 
-        if (issue.promotedAt !== null) {
+        if (qualifiesAtCreation) {
           yield* outboxEventWriter.write({
-            eventName: "SignalPromoted",
+            eventName: "SignalQualifiedForPromotion",
             aggregateType: "issue",
             aggregateId: issue.id,
             organizationId: issue.organizationId,
@@ -282,7 +272,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
               organizationId: issue.organizationId,
               projectId: issue.projectId,
               signalId: issue.id,
-              promotedAt: issue.promotedAt.toISOString(),
+              qualifiedAt: issue.createdAt.toISOString(),
               triggerScoreId: score.id,
             },
           })

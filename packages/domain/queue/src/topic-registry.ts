@@ -438,6 +438,19 @@ const _registry = {
       readonly projectId: string
       readonly signalId: string
     }
+    /**
+     * Name a qualified signal from its whole cluster and stamp `promoted_at`.
+     *
+     * Promotion lives out here rather than in the transaction that observed the
+     * evidence because the signal has to be named before it exists for anyone,
+     * and that is a model call. Emits `SignalPromoted`, which is what the
+     * announcements hang off.
+     */
+    promoteSignal: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
     checkEscalation: {
       readonly organizationId: string
       readonly projectId: string

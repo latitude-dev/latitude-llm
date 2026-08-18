@@ -234,14 +234,21 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
               return yield* new ScoreAlreadyOwnedBySignalError({ scoreId: score.id })
             }
 
-            // Promotion, in the one order that is cheap: the latch is re-checked
+            // The gate, in the one order that is cheap: the latch is re-checked
             // under the row lock before anything is counted, because a promoted
             // signal can hold hundreds of thousands of scores and
             // `scores_signal_lookup_idx` does not cover `session_id`. An
             // unpromoted signal holds at most the threshold, so counting it is
             // trivial. Counted after the claim so the score just assigned counts.
-            const promotedAt = yield* Effect.gen(function* () {
-              if (issue.promotedAt !== null || promotion === null) return null
+            //
+            // Qualifying does not stamp `promoted_at`. A signal has to be named
+            // from its whole cluster before it exists for anyone, that is a model
+            // call, and a model call cannot run in here — so the latch is stamped
+            // downstream by `promoteSignalUseCase` and this only records that the
+            // gate passed. Until then every further score re-qualifies and
+            // re-emits; the consumer's leading throttle collapses those.
+            const qualified = yield* Effect.gen(function* () {
+              if (issue.promotedAt !== null || promotion === null) return false
 
               const sessions = yield* scoreRepository.countDistinctSessionsBySignalId({
                 projectId: ProjectId(issue.projectId),
@@ -253,12 +260,12 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
               yield* Effect.annotateCurrentSpan("promotion.threshold", promotion.threshold)
               yield* Effect.annotateCurrentSpan("promotion.volume", promotion.volume ?? -1)
               yield* Effect.annotateCurrentSpan("promotion.volumeDegraded", promotion.volume === null)
-              yield* Effect.annotateCurrentSpan("promotion.promoted", sessions >= promotion.threshold)
+              yield* Effect.annotateCurrentSpan("promotion.qualified", sessions >= promotion.threshold)
 
-              return sessions >= promotion.threshold ? assignedAt : null
+              return sessions >= promotion.threshold
             })
 
-            yield* signalRepository.save(promotedAt === null ? updatedSignal : { ...updatedSignal, promotedAt })
+            yield* signalRepository.save(updatedSignal)
             yield* outboxEventWriter.write({
               eventName: "ScoreAssignedToSignal",
               aggregateType: "score",
@@ -271,9 +278,9 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
               },
             })
 
-            if (promotedAt !== null) {
+            if (qualified) {
               yield* outboxEventWriter.write({
-                eventName: "SignalPromoted",
+                eventName: "SignalQualifiedForPromotion",
                 aggregateType: "issue",
                 aggregateId: issue.id,
                 organizationId: issue.organizationId,
@@ -281,7 +288,7 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
                   organizationId: issue.organizationId,
                   projectId: issue.projectId,
                   signalId: issue.id,
-                  promotedAt: promotedAt.toISOString(),
+                  qualifiedAt: assignedAt.toISOString(),
                   triggerScoreId: score.id,
                 },
               })

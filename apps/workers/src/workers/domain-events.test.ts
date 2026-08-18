@@ -2,7 +2,7 @@ import { BILLING_OVERAGE_SYNC_THROTTLE_MS } from "@domain/billing"
 import type { EventEnvelope } from "@domain/events"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
-import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
+import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_PROMOTION_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
 import { hash } from "@repo/utils"
@@ -297,6 +297,37 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(0)
   })
 
+  it("routes SignalQualifiedForPromotion to promotion, announcing nothing yet", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalQualifiedForPromotion", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+      qualifiedAt: "2026-05-21T10:00:00.000Z",
+      triggerScoreId: "score-1",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    // Passing the gate announces nothing: the signal is not promoted yet and
+    // still carries the placeholder it was created from.
+    expect(published).toHaveLength(1)
+
+    const promotion = published[0]
+    expect(promotion?.queue).toBe("issues")
+    expect(promotion?.task).toBe("promoteSignal")
+    expect(promotion?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "signal-1",
+    })
+    expect(promotion?.options?.dedupeKey).toBe("org:org-1:issues:promote-signal:signal-1")
+    // A leading throttle rather than a bare dedupe key, or a permanently failed
+    // promotion would keep its retained jobId and shadow every later publish.
+    expect(promotion?.options?.leadingThrottleMs).toBe(SIGNAL_PROMOTION_THROTTLE_MS)
+  })
+
   it("routes SignalPromoted to the discovery notification and agent dispatch", async () => {
     const { consumer, published } = setupDispatcher()
 
@@ -305,11 +336,11 @@ describe("domain-events dispatcher", () => {
       projectId: "proj-1",
       signalId: "signal-1",
       promotedAt: "2026-05-21T10:00:00.000Z",
-      triggerScoreId: "score-1",
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
+    // By now the signal is stamped and named, so both consumers can read it.
     expect(published).toHaveLength(2)
 
     const notifications = published.find((p) => p.queue === "notifications")
