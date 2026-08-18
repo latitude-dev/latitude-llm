@@ -226,7 +226,7 @@ Signal discovery should follow the original proposal closely:
 13. write `scores.issue_id` in Postgres
 14. if the score was added to an existing signal, write `ScoreAssignedToSignal` transactionally so later signal-details regeneration can debounce safely
 15. after the transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
-16. refresh signal name/description asynchronously on debounce only for the existing-signal path that requested `ScoreAssignedToSignal`, reusing the shared signal-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
+16. refresh signal name/description asynchronously on debounce only for the existing-signal path that requested `ScoreAssignedToSignal`, reusing the shared signal-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline; the refresh returns early while the signal is unpromoted, and the promotion-time generation is the one call that drops that baseline
 
 Execution rules:
 
@@ -237,7 +237,7 @@ Execution rules:
 - `signals:refresh` runs after the configured throttle window elapses for an existing signal
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, do feedback embedding first and then enter locked serialization; annotation scores may carry both enriched and raw feedback embeddings, and the search/rerank/create-or-assign decision runs under the Redis serialization gates
-- the brand-new signal path must generate its first name/description before the signal row is first persisted, and that synchronous generation step must reuse the same shared signal-details generation use case that later debounced refreshes call
+- the brand-new signal path must **not** generate a name/description; it writes a deterministic placeholder built from the creating occurrence's feedback, and the first generated summary is produced at promotion through the same shared signal-details generation use case that later debounced refreshes call (see § Denoising: promotion)
 - the debounced `signals:refresh` path must re-lock and re-read the canonical signal row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
 - after `signals:refresh` persists changed details, no explicit search sync is required because Postgres derives `search_document` from canonical signal text
 - rerank results already carry canonical signal ids from Postgres search, so there is no projection UUID resolution step
