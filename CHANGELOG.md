@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.3.83 - 2026-08-18
+
+### Signals
+
+- Signals that a flagger detected can now be graded. The detail header carries a one-shot thumbs-up/thumbs-down control; a thumbs-down requires a reason and offers `Save and ignore` to archive the signal in the same click. The verdict is recorded once and cannot be changed afterwards, and the control only appears on Latitude's own detections — a hand-written signal has no decision of ours behind it to grade (ref: #4472).
+- That verdict now travels back to the generations that produced the detection. Flagger scores record the trace of the classify call behind them, so submitting feedback annotates those exact generations inside the `latitude-flaggers` project, which then cluster into signals about a flagger that keeps mis-firing. Deterministic detections and cached generations carry no trace and are skipped (ref: #4472).
+- Discovered signals are no longer named by a model at creation. A candidate carries a deterministic placeholder built from its first occurrence's own words, and the real name and description are generated once at promotion, over the whole cluster. This fixes signals reaching production titled `description`, or described as the model explaining that one occurrence is not enough to identify a shared pattern (ref: #4471).
+- Promotion is now two steps: passing the evidence gate records the qualification, and promotion itself generates the summary before the signal becomes visible. A signal is therefore never visible carrying the raw sentence it was created from, and everything downstream, agent dispatch and Slack included, sees a fully named signal. A failed generation still promotes under the placeholder rather than leaving the signal invisible with nothing to retry it (ref: #4471).
+
+### Notifications
+
+- Raising a signal's priority now notifies the organization in-app, by email, and over Slack, with the person who made the edit excluded. Setting a priority for the first time counts as an increase; downgrades and clears never notify. The topic ships opt-in, because it fires on routine triage activity, so enable it under the Signals group to receive it (ref: #4474).
+- Notification topics can now declare their own default, which is what lets an opt-in topic stay silent across both email and Slack until it is enabled. Existing topics keep delivering by default (ref: #4474).
+
+### API and SDKs
+
+- Added `submitSignalFeedback` across the REST API, MCP, the TypeScript and Python SDKs, and the CLI (`latitude signals submit-feedback`), and `signals.get` now returns the submitted verdict. Published as SDK 9.10.0 and CLI 7.10.0 (ref: #4472).
+
 ## v0.3.82 - 2026-08-17
 
 ### Signals
