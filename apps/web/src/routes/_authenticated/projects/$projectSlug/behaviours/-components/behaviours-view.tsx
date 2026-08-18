@@ -344,11 +344,7 @@ export function BehaviourDetailDrawer({
                 {trendLabel(node.trend.status)}
               </Badge>
               {node.firstSeenLabel === "older" || node.firstSeenLabel === "unknown" ? null : (
-                <Badge
-                  variant="muted"
-                  ellipsis
-                  iconProps={{ icon: SparklesIcon, placement: "start" }}
-                >
+                <Badge variant="muted" ellipsis iconProps={{ icon: SparklesIcon, placement: "start" }}>
                   {`First seen ${node.firstSeenLabel.replaceAll("_", " ")}`}
                 </Badge>
               )}
@@ -1035,7 +1031,11 @@ export function BehavioursView({
       render: (row) => {
         const status = row.hasChildren ? subtreeTrendStatus(row.node) : row.node.trend.status
         return (
-          <Badge variant={trendBadgeVariant(status)} ellipsis iconProps={{ icon: trendIcon(status), placement: "start" }}>
+          <Badge
+            variant={trendBadgeVariant(status)}
+            ellipsis
+            iconProps={{ icon: trendIcon(status), placement: "start" }}
+          >
             {trendLabel(status)}
           </Badge>
         )

@@ -70,7 +70,11 @@ function GroupRow({
             {`${formatCount(group.sessionCount)} sessions`}
           </Text.H5>
         </div>
-        <Badge variant={trendBadgeVariant(group.trend)} ellipsis iconProps={{ icon: trendIcon(group.trend), placement: "start" }}>
+        <Badge
+          variant={trendBadgeVariant(group.trend)}
+          ellipsis
+          iconProps={{ icon: trendIcon(group.trend), placement: "start" }}
+        >
           {trendLabel(group.trend)}
         </Badge>
       </div>
