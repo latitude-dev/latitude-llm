@@ -216,6 +216,11 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   // Ref to the ordered list of trace IDs from the currently loaded table page
   const traceIdsRef = useRef<string[]>([])
 
+  // Shared scroll container for both tabs: holds the aggregations chart and the
+  // table together, so scrolling moves them as one and the table's header sticks
+  // once it reaches the top instead of the table scrolling alone in its own small box.
+  const sessionsScrollAreaRef = useRef<HTMLDivElement>(null)
+
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
   // Sessions/Traces date filter: default is "All time"; a picked range lives in `filters.startTime`,
   // and the histogram stays clamped (anchored to latest activity when All time). See the hook.
@@ -490,6 +495,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     onFiltersClose: () => setFiltersOpen(false),
     onActiveTraceChange,
     traceIdsRef,
+    scrollContainerRef: sessionsScrollAreaRef,
   }
 
   return (
@@ -647,59 +653,65 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         </Layout.ActionsRow>
       </Layout.Actions>
 
-      {selectedCount > 0 && (
-        <div className="flex items-center gap-2 px-6">
-          <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
-            <Icon icon={DownloadIcon} size="sm" />
-            Export Traces ({selectedCount.toLocaleString()})
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
-            <Icon icon={DatabaseIcon} size="sm" />
-            Add to Dataset ({selectedCount})
-          </Button>
+      <div ref={sessionsScrollAreaRef} className="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto">
+        {selectedCount > 0 && (
+          <div className="sticky left-0 z-[1] flex items-center gap-2 bg-background px-6">
+            <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
+              <Icon icon={DownloadIcon} size="sm" />
+              Export Traces ({selectedCount.toLocaleString()})
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+              <Icon icon={DatabaseIcon} size="sm" />
+              Add to Dataset ({selectedCount})
+            </Button>
+          </div>
+        )}
+
+        {/* `sticky left-0`: this section doesn't need the horizontal scroll that only the
+            wide table (below) triggers on the shared container — pin it to the viewport's
+            left edge instead of letting it slide away with the table's columns. */}
+        <div className="sticky left-0 z-[1] bg-background px-6">
+          <TraceAggregationsPanel
+            projectId={currentProject.id}
+            projectSlug={currentProject.slug}
+            filters={filtersWithDefaultTime}
+            mode={activeTab}
+            onTimeRangeSelect={onTimeRangeSelect}
+            {...(histogramRangeOverride ? { histogramRangeOverride } : {})}
+          />
         </div>
-      )}
 
-      <div className="px-6">
-        <TraceAggregationsPanel
-          projectId={currentProject.id}
-          projectSlug={currentProject.slug}
-          filters={filtersWithDefaultTime}
-          mode={activeTab}
-          onTimeRangeSelect={onTimeRangeSelect}
-          {...(histogramRangeOverride ? { histogramRangeOverride } : {})}
-        />
+        {isSessions ? (
+          <SessionsView
+            projectId={currentProject.id}
+            filters={filtersWithDefaultTime}
+            filtersOpen={filtersOpen}
+            activeSessionId={activeSessionId || undefined}
+            activeTraceId={activeTraceId || undefined}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            selectionState={selectionState}
+            onSelectionChange={setSelectionState}
+            totalTraceCount={totalTraceCount}
+            onFiltersChange={onFiltersChange}
+            onShowAllSessions={onShowAllSessions}
+            onFiltersClose={() => setFiltersOpen(false)}
+            onOpenSession={onOpenSession}
+            onCloseSession={closeSessionPanel}
+            visibleColumnIds={sessionColumnSettings.visibleColumnIds}
+            isSearching={hasSearchQuery}
+            hasUserAppliedFilters={hasActiveFilters}
+            scrollContainerRef={sessionsScrollAreaRef}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
+          />
+        ) : (
+          <TracesView
+            {...sharedViewProps}
+            visibleColumnIds={traceColumnSettings.visibleColumnIds}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
+          />
+        )}
       </div>
-
-      {isSessions ? (
-        <SessionsView
-          projectId={currentProject.id}
-          filters={filtersWithDefaultTime}
-          filtersOpen={filtersOpen}
-          activeSessionId={activeSessionId || undefined}
-          activeTraceId={activeTraceId || undefined}
-          sorting={sorting}
-          onSortingChange={onSortingChange}
-          selectionState={selectionState}
-          onSelectionChange={setSelectionState}
-          totalTraceCount={totalTraceCount}
-          onFiltersChange={onFiltersChange}
-          onShowAllSessions={onShowAllSessions}
-          onFiltersClose={() => setFiltersOpen(false)}
-          onOpenSession={onOpenSession}
-          onCloseSession={closeSessionPanel}
-          visibleColumnIds={sessionColumnSettings.visibleColumnIds}
-          isSearching={hasSearchQuery}
-          hasUserAppliedFilters={hasActiveFilters}
-          {...(hasSearchQuery ? { searchQuery: query } : {})}
-        />
-      ) : (
-        <TracesView
-          {...sharedViewProps}
-          visibleColumnIds={traceColumnSettings.visibleColumnIds}
-          {...(hasSearchQuery ? { searchQuery: query } : {})}
-        />
-      )}
 
       {!isSessions && activeTraceId ? (
         <Layout.Aside>

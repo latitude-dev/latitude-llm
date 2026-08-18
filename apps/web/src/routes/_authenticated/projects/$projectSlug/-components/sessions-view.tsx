@@ -14,7 +14,7 @@ import { formatCount, formatDuration, formatPercentage, relativeTime } from "@re
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
-import { type MouseEvent, type ReactNode, useCallback, useMemo, useState } from "react"
+import { type MouseEvent, type ReactNode, type RefObject, useCallback, useMemo, useState } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
 import { sandboxOrgIdForScope, useProjectScope } from "../../../../../domains/projects/project-scope.tsx"
 import {
@@ -170,6 +170,13 @@ interface SessionsViewProps {
   readonly searchQuery?: string
   /** Filter fields to hide in the built-in sidebar (e.g. `topics`). */
   readonly excludeFilterFields?: readonly string[]
+  /**
+   * The ancestor scroll container to virtualize against — shared with whatever else
+   * the caller stacks above it (e.g. an aggregations chart), so the page scrolls as
+   * one and the table's header sticks once it reaches the top. When omitted the
+   * table falls back to scrolling within its own bounded box, as before.
+   */
+  readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
 }
 
 export function SessionsView({
@@ -194,6 +201,7 @@ export function SessionsView({
   searchQuery,
   selectable = true,
   excludeFilterFields,
+  scrollContainerRef,
 }: SessionsViewProps) {
   // Annotations are an LLM-feedback feature — off under a sandbox scope. Skip
   // the counts fetch so the Indicators column shows errors only (mirrors the
@@ -844,8 +852,15 @@ export function SessionsView({
     return paginateTraces(entry.data, row.session.traceCount)
   }
 
+  const hasExternalScrollArea = scrollContainerRef !== undefined
+
   return (
-    <Layout.Body>
+    // `flex-none overflow-visible`: the default `flex-1 min-h-0 overflow-hidden` bounds
+    // and clips this to the visible viewport, which is right when the table scrolls
+    // itself — but with an external scroll container the table grows to its full row
+    // count and that ancestor (shared with content stacked above it, e.g. an
+    // aggregations chart) scrolls for it instead, so nothing here should clip.
+    <Layout.Body {...(hasExternalScrollArea ? { className: "flex-none overflow-visible" } : {})}>
       {filtersOpen && (
         <FiltersSidebar
           mode="sessions"
@@ -858,7 +873,9 @@ export function SessionsView({
       )}
       <Layout.List>
         <InfiniteTable
-          {...listingLayoutIntrinsicScroll.infiniteTable}
+          {...(hasExternalScrollArea
+            ? { scrollAreaLayout: "external" as const, scrollContainerRef }
+            : listingLayoutIntrinsicScroll.infiniteTable)}
           data={tableData}
           isLoading={isLoading}
           columns={columns}

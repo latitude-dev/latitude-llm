@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { InfoIcon } from "lucide-react"
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { cn } from "../../utils/cn.ts"
 import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import { Checkbox } from "../checkbox/checkbox.tsx"
@@ -88,6 +88,7 @@ export function InfiniteTable<T>({
   onSortChange,
   blankSlate,
   scrollAreaLayout = "fill",
+  scrollContainerRef: externalScrollContainerRef,
   className,
   expandedRowKeys,
   getExpandedRows,
@@ -111,8 +112,13 @@ export function InfiniteTable<T>({
 
   const totalVirtualRows = displayRows.length + (hasMore || (isLoading && data.length === 0) ? SKELETON_ROW_COUNT : 0)
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const isExternalScrollArea = scrollAreaLayout === "external"
+  const ownScrollContainerRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef =
+    isExternalScrollArea && externalScrollContainerRef ? externalScrollContainerRef : ownScrollContainerRef
+  const tableWrapperRef = useRef<HTMLDivElement>(null)
   const theadRef = useRef<HTMLTableSectionElement>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
 
   // Group headers are pinned to the visible viewport on both axes: in-flow
   // header rows get an explicit `clientWidth` + sticky-left wrapper (so they
@@ -138,6 +144,27 @@ export function InfiniteTable<T>({
     if (theadRef.current) resizeObserver.observe(theadRef.current)
     return () => resizeObserver.disconnect()
   }, [hasGrouping])
+
+  // The virtualizer's row math is relative to the scroll container's own top, but in
+  // external mode that container also holds content above the table (e.g. a chart).
+  // scrollMargin tells it how far down the table's own start actually sits.
+  useLayoutEffect(() => {
+    if (!isExternalScrollArea) return
+    const container = scrollContainerRef.current
+    const wrapper = tableWrapperRef.current
+    if (!container || !wrapper) return
+
+    const measure = () => {
+      const wrapperRect = wrapper.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      setScrollMargin(wrapperRect.top - containerRect.top + container.scrollTop)
+    }
+    measure()
+    const resizeObserver = new ResizeObserver(measure)
+    resizeObserver.observe(container)
+    resizeObserver.observe(wrapper)
+    return () => resizeObserver.disconnect()
+  }, [isExternalScrollArea, scrollContainerRef])
 
   const handleSortClick = useCallback(
     (sortKey: string) => {
@@ -178,11 +205,11 @@ export function InfiniteTable<T>({
       return displayRow.kind === "group" ? `group-${displayRow.groupKey}` : `row-${rowKeys[displayRow.dataIndex]}`
     },
     overscan: 10,
+    ...(isExternalScrollArea ? { scrollMargin } : {}),
   })
 
-  const handleScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      const target = e.currentTarget
+  const handleScrollElement = useCallback(
+    (target: HTMLDivElement) => {
       // Tracked in state (not read from the virtualizer) so the sticky
       // group-header overlay re-evaluates on every scroll tick, not only
       // when the virtual window shifts.
@@ -195,6 +222,22 @@ export function InfiniteTable<T>({
     },
     [infiniteScroll, hasMore, hasGrouping],
   )
+
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => handleScrollElement(e.currentTarget),
+    [handleScrollElement],
+  )
+
+  // In external mode the scroll container belongs to the caller, so there's no
+  // owned element to attach the `onScroll` JSX prop to — listen natively instead.
+  useEffect(() => {
+    if (!isExternalScrollArea) return
+    const container = scrollContainerRef.current
+    if (!container) return
+    const listener = () => handleScrollElement(container)
+    container.addEventListener("scroll", listener, { passive: true })
+    return () => container.removeEventListener("scroll", listener)
+  }, [isExternalScrollArea, handleScrollElement, scrollContainerRef])
 
   const virtualRows = virtualizer.getVirtualItems()
 
@@ -253,9 +296,20 @@ export function InfiniteTable<T>({
     return () => cancelAnimationFrame(rafId)
   }, [activeRowAutoScroll, activeRowIndex, virtualizer])
 
-  const paddingTop = virtualRows[0]?.start ?? 0
+  // In external mode `virtualRow.start`/`.end` are measured from the scroll
+  // container's own origin, so they already bake in `scrollMargin` (the space the
+  // table's preceding in-flow siblings occupy there). The `paddingTop` spacer lives
+  // inside the table itself though, which is already positioned past that content by
+  // normal document flow — so `scrollMargin` must be subtracted back out, or that
+  // offset gets counted twice, opening a gap above the first row equal to its size.
+  const paddingTop = (virtualRows[0]?.start ?? 0) - (isExternalScrollArea ? scrollMargin : 0)
   const lastRow = virtualRows[virtualRows.length - 1]
-  const paddingBottom = lastRow ? virtualizer.getTotalSize() - lastRow.end : 0
+  // `getTotalSize()` subtracts `scrollMargin` back out internally (it describes the
+  // list's own size, not its offset within the scroll container), while `lastRow.end`
+  // still includes it — add it back so the two are comparable, mirroring `paddingTop`.
+  const paddingBottom = lastRow
+    ? virtualizer.getTotalSize() + (isExternalScrollArea ? scrollMargin : 0) - lastRow.end
+    : 0
   const showBlankSlate = !isLoading && data.length === 0
   const blankSlateContent =
     showBlankSlate && blankSlate !== undefined
@@ -269,13 +323,17 @@ export function InfiniteTable<T>({
         blankSlateContent
       ) : (
         <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          className={cn(
-            scrollAreaLayout === "fill" ? "min-h-0 flex-1" : "min-h-0 w-full max-w-full",
-            "overflow-auto",
-            className,
-          )}
+          ref={isExternalScrollArea ? tableWrapperRef : scrollContainerRef}
+          {...(isExternalScrollArea ? {} : { onScroll: handleScroll })}
+          className={
+            isExternalScrollArea
+              ? cn("w-full max-w-full", className)
+              : cn(
+                  scrollAreaLayout === "fill" ? "min-h-0 flex-1" : "min-h-0 w-full max-w-full",
+                  "overflow-auto",
+                  className,
+                )
+          }
         >
           {/* Sticky mirror of the active group's header. A zero-height sticky
               box pinned below the thead (and to the container's left edge, so

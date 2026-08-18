@@ -49,6 +49,7 @@ export function ProjectBreadcrumbSegment() {
   const navigate = useNavigate()
   const routeProject = useRouteProject()
   const [createOpen, setCreateOpen] = useState(false)
+  const [comboboxOpen, setComboboxOpen] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const triggerRef = useRef<HTMLButtonElement>(null)
 
@@ -87,6 +88,8 @@ export function ProjectBreadcrumbSegment() {
         <Combobox
           autoHighlight
           modal
+          open={comboboxOpen}
+          onOpenChange={(open) => setComboboxOpen(open)}
           value={selectedOption}
           onValueChange={(picked: ProjectOption | null) => {
             setInputValue("")
@@ -118,7 +121,13 @@ export function ProjectBreadcrumbSegment() {
             <ComboboxFooterAction
               label="Create new"
               icon={<Icon icon={Plus} size="sm" color="foregroundMuted" />}
-              onClick={() => setCreateOpen(true)}
+              onClick={() => {
+                // The button lives inside the combobox's own floating popup, so Base UI's
+                // outside-click dismissal never treats clicking it as "outside" — it has to
+                // be closed explicitly, or it stays open (and painting above the modal) after.
+                setComboboxOpen(false)
+                setCreateOpen(true)
+              }}
             />
           </ComboboxContent>
         </Combobox>

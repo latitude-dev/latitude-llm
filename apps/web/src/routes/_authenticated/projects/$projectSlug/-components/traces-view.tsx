@@ -31,6 +31,13 @@ interface TracesViewProps {
   readonly visibleColumnIds: readonly TraceColumnId[]
   readonly searchQuery?: string
   readonly selectable?: boolean
+  /**
+   * The ancestor scroll container to virtualize against — shared with whatever else
+   * the caller stacks above it (e.g. an aggregations chart), so the page scrolls as
+   * one and the table's header sticks once it reaches the top. When omitted the
+   * table falls back to scrolling within its own bounded box, as before.
+   */
+  readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
 }
 
 export function TracesView({
@@ -51,6 +58,7 @@ export function TracesView({
   visibleColumnIds,
   searchQuery,
   selectable = true,
+  scrollContainerRef,
 }: TracesViewProps) {
   const hasActiveFilters = Object.keys(filters).length > 0
   const hasSearchQuery = !!searchQuery && searchQuery.length > 0
@@ -147,8 +155,10 @@ export function TracesView({
     },
   ])
 
+  const hasExternalScrollArea = scrollContainerRef !== undefined
+
   return (
-    <Layout.Body>
+    <Layout.Body {...(hasExternalScrollArea ? { className: "flex-none overflow-visible" } : {})}>
       {filtersOpen && (
         <FiltersSidebar
           mode="traces"
@@ -160,7 +170,9 @@ export function TracesView({
       )}
       <Layout.List>
         <ProjectTracesTable
-          {...listingLayoutIntrinsicScroll.projectTracesTable}
+          {...(hasExternalScrollArea
+            ? { scrollAreaLayout: "external" as const, scrollContainerRef }
+            : listingLayoutIntrinsicScroll.projectTracesTable)}
           projectId={projectId}
           data={traces}
           isLoading={isLoading}

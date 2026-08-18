@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, RefObject } from "react"
 import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import type { CheckedState } from "../checkbox/checkbox.tsx"
 
@@ -81,8 +81,17 @@ export interface InfiniteTableSharedProps<T> {
   defaultSorting?: InfiniteTableSorting
   onSortChange?: (sorting: InfiniteTableSorting) => void
   blankSlate?: ReactNode | string
-  /** `fill` (default) stretches in a fixed parent; `intrinsic` sizes to content up to scroll `className` max-height. */
-  scrollAreaLayout?: "fill" | "intrinsic"
+  /**
+   * `fill` (default) stretches in a fixed parent; `intrinsic` sizes to content up to
+   * scroll `className` max-height; `external` delegates scrolling and row
+   * virtualization to an ancestor element supplied via `scrollContainerRef` — e.g. a
+   * shared scroll area that also holds content above the table, so the page scrolls
+   * as one and the table's sticky header pins against that shared container once it
+   * reaches the top, instead of confining the table to its own bounded box.
+   */
+  scrollAreaLayout?: "fill" | "intrinsic" | "external"
+  /** The ancestor scroll container to virtualize against. Required when `scrollAreaLayout` is `"external"`. */
+  scrollContainerRef?: RefObject<HTMLDivElement | null>
   className?: string
   expandedRowKeys?: ReadonlySet<string>
   getExpandedRows?: (row: T) => ExpandedRows<T>

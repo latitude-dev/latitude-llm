@@ -11,7 +11,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPercentage, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { type MouseEvent, type ReactNode, useCallback, useMemo } from "react"
+import { type MouseEvent, type ReactNode, type RefObject, useCallback, useMemo } from "react"
 import { rollupCostDisplay } from "../../../../../domains/spans/cost-display.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { CacheHitRateSubheader } from "./table/cache-hit-rate-subheader.tsx"
@@ -68,8 +68,10 @@ interface ProjectTracesTableProps {
   readonly metricsLoading?: boolean | undefined
   readonly annotationCounts?: ReadonlyMap<string, TraceAnnotationCounts> | undefined
   readonly annotationCountsPendingTraceIds?: ReadonlySet<string> | undefined
-  readonly scrollAreaLayout?: "fill" | "intrinsic"
+  readonly scrollAreaLayout?: "fill" | "intrinsic" | "external"
   readonly scrollContainerClassName?: string
+  /** Required when `scrollAreaLayout` is `"external"` — see `InfiniteTable`. */
+  readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
   readonly onErrorClick?: (trace: TraceRecord) => void
   readonly onAnnotationClick?: (trace: TraceRecord) => void
 }
@@ -98,6 +100,7 @@ export function ProjectTracesTable({
   annotationCountsPendingTraceIds,
   scrollAreaLayout,
   scrollContainerClassName,
+  scrollContainerRef,
   onErrorClick,
   onAnnotationClick,
 }: ProjectTracesTableProps) {
@@ -391,6 +394,7 @@ export function ProjectTracesTable({
       {...(isLoading !== undefined ? { isLoading } : {})}
       {...(scrollAreaLayout !== undefined ? { scrollAreaLayout } : {})}
       {...(scrollContainerClassName !== undefined ? { className: scrollContainerClassName } : {})}
+      {...(scrollContainerRef !== undefined ? { scrollContainerRef } : {})}
       columns={columns}
       getRowKey={(trace) => trace.traceId}
       {...(onTraceClick
