@@ -91,7 +91,7 @@ Group keys are persisted in `users.notification_preferences` jsonb — picking a
 3. Extend `channelPreferencesSchema` in `@domain/shared/notification-preferences.ts` with the new channel key (jsonb — no migration).
 4. Update the creator step in `apps/workers/src/workers/notifications.ts` to also publish the new channel's `send` task when `prefs[group].<channel>` is true. Add a `shouldSend<Channel>(prefs, kind)` helper alongside `shouldSendEmail` if it grows non-trivial.
 5. New worker file mirroring `notification-emailer.ts`. Register it in `apps/workers/src/server.ts`.
-6. Settings UI in `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx`: extend the per-group block to show one switch per channel.
+6. Settings UI — which surface depends on how the channel is addressed. A **per-user** channel (email, SMS) is a switch on the per-group block in `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx`, driven by `channelPreferencesSchema`. An **org-level routed** channel (Slack) is not a user preference at all: it lives in `settings/-components/slack-org-settings.tsx` + `slack-route-row.tsx`, keyed on `NOTIFICATION_GROUP_META[group].slackRoutable`, and skips steps 3–4 entirely.
 
 Source events, the producer step, the in-app feed, and the kind registry are all unchanged.
 

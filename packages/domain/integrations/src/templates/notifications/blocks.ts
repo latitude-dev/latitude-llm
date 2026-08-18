@@ -8,6 +8,13 @@ export const header = (text: string): HeaderBlock => ({
   text: { type: "plain_text", text: text.slice(0, 150), emoji: true },
 })
 
+/**
+ * Slack mrkdwn reserves `&`, `<` and `>`; an unescaped `>` inside a `<url|label>`
+ * closes the link early. Apply to any value a user can name.
+ */
+export const escapeMrkdwn = (text: string): string =>
+  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+
 export const sectionMarkdown = (text: string): SectionBlock => ({
   type: "section",
   text: { type: "mrkdwn", text },

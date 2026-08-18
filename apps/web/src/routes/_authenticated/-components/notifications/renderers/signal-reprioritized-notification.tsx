@@ -14,7 +14,10 @@ export function SignalReprioritizedNotification({ notification }: { readonly not
   const parsed = signalReprioritizedPayloadSchema.safeParse(notification.payload)
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
-  const target = { projectId: notification.projectId, sourceId: parsed.success ? parsed.data.signalId : "" }
+  // A null projectId disables the summary query; an unparseable payload has no signal to look up.
+  const target = parsed.success
+    ? { projectId: notification.projectId, sourceId: parsed.data.signalId }
+    : { projectId: null, sourceId: "" }
   const live = useLiveSignalSummary(target)
   const url = useSignalUrl(target)
 

@@ -24,7 +24,7 @@ import {
   SignalId,
   type SqlClient,
 } from "@domain/shared"
-import type { SignalPriority } from "@domain/signals"
+import { signalPrioritySchema } from "@domain/signals"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
@@ -420,13 +420,25 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         withTracing,
       ),
 
-    "request-signal-reprioritized-notifications": (payload) =>
-      requestSignalReprioritizedNotificationsUseCase({
+    "request-signal-reprioritized-notifications": (payload) => {
+      // Queue payloads are untyped strings, and an unrecognised priority ranks
+      // as `undefined`, which would look like "not an increase" and drop the
+      // notification without a trace.
+      const priority = signalPrioritySchema.safeParse(payload.priority)
+      const previousPriority = signalPrioritySchema.nullable().safeParse(payload.previousPriority)
+      if (!priority.success || !previousPriority.success) {
+        logger.error(
+          `notifications.request-signal-reprioritized unparseable priority signalId=${payload.signalId} priority=${payload.priority} previousPriority=${payload.previousPriority}`,
+        )
+        return Effect.void
+      }
+
+      return requestSignalReprioritizedNotificationsUseCase({
         organizationId: OrganizationId(payload.organizationId),
         projectId: ProjectId(payload.projectId),
         signalId: SignalId(payload.signalId),
-        priority: payload.priority as SignalPriority,
-        previousPriority: payload.previousPriority as SignalPriority | null,
+        priority: priority.data,
+        previousPriority: previousPriority.data,
         actorUserId: payload.actorUserId,
         reprioritizedAt: payload.reprioritizedAt,
       }).pipe(
@@ -473,7 +485,8 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
         Effect.asVoid,
         withTracing,
-      ),
+      )
+    },
 
     "request-destination-quarantined-notifications": (payload) =>
       requestDestinationQuarantinedNotificationsUseCase({

@@ -107,7 +107,7 @@ const customMessagePayload = {
   link: "https://docs.example.com",
 }
 
-const makeSignal = (): Signal => {
+const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
   const now = new Date("2026-06-17T10:00:00.000Z")
   return {
     id: SIGNAL,
@@ -136,6 +136,7 @@ const makeSignal = (): Signal => {
     feedback: null,
     createdAt: now,
     updatedAt: now,
+    ...overrides,
   }
 }
 
@@ -284,6 +285,50 @@ describe("dispatchSlackNotificationUseCase", () => {
         }),
       ]),
     })
+  })
+
+  it("escapes mrkdwn in the signal name so a `>` cannot close the link early", async () => {
+    const messenger = fakeMessenger()
+    const layer = InMemorySlackDeliveryRepositoryLive()
+    const { repository } = createFakeSignalRepository([makeSignal({ name: "Tool <output> breaks & retries" })])
+
+    await Effect.runPromise(
+      dispatchSlackNotificationUseCase({
+        integrationId: INTEGRATION,
+        botToken: "xoxb-test",
+        channelId: "C123",
+        kind: "signal.reprioritized",
+        payload: {
+          signalId: SIGNAL,
+          actorUserId: "uuuuuuuuuuuuuuuuuuuuuuuu",
+          reprioritizedAt: "2026-06-17T10:00:00.000Z",
+          priority: "urgent",
+          previousPriority: "medium",
+          severity: "urgent",
+        },
+        idempotencyKey: `signal.reprioritized:${SIGNAL}:escaped`,
+        context: ctx,
+        messenger,
+      }).pipe(
+        Effect.provide(layer),
+        Effect.provide(Layer.succeed(SignalRepository, repository)),
+        Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopUserRepository),
+        Effect.provide(NoopSqlClient),
+        Effect.provide(LiveOrg),
+      ),
+    )
+
+    expect(messenger.calls[0]).toMatchObject({
+      blocks: expect.arrayContaining([
+        expect.objectContaining({
+          text: expect.objectContaining({
+            text: expect.stringContaining("Tool &lt;output&gt; breaks &amp; retries"),
+          }),
+        }),
+      ]),
+    })
+    expect(JSON.stringify(messenger.calls[0])).not.toContain("<output>")
   })
 
   it("short-circuits on second dispatch with the same idempotency + channel", async () => {

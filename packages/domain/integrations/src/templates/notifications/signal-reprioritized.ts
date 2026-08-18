@@ -4,6 +4,7 @@ import { Effect } from "effect"
 import {
   actionsLink,
   contextLine,
+  escapeMrkdwn,
   priorityLabel,
   projectOrOrgContext,
   sectionMarkdown,
@@ -21,8 +22,8 @@ export const signalReprioritizedRenderer: SlackNotificationRenderer<"signal.repr
       Effect.catchTag("RepositoryError", () => Effect.succeed(null)),
     )
 
-    const projectName = ctx.project?.name ?? ctx.organization.name
-    const signalName = signal?.name ?? "A signal"
+    const projectName = escapeMrkdwn(ctx.project?.name ?? ctx.organization.name)
+    const signalName = escapeMrkdwn(signal?.name ?? "A signal")
     const signalUrl = ctx.project
       ? signal
         ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/signals/${encodeURIComponent(signal.slug)}`
@@ -34,7 +35,7 @@ export const signalReprioritizedRenderer: SlackNotificationRenderer<"signal.repr
       text: `Priority raised on ${signalName} in ${projectName}.`,
       blocks: [
         sectionMarkdown(`Priority raised on *<${signalUrl}|${signalName}>*: ${transition}.`),
-        ...(signal?.description ? [sectionMarkdown(signal.description)] : []),
+        ...(signal?.description ? [sectionMarkdown(escapeMrkdwn(signal.description))] : []),
         contextLine(`signal · ${projectOrOrgContext(ctx.organization, ctx.project)}`),
         actionsLink("View signal", signalUrl),
       ],
