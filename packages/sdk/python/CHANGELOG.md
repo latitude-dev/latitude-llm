@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.10.0] - 2026-08-18
+
+### Added
+
+- `client.signals.submit_feedback` — record a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason, and optionally archive the signal in the same call. Only signals a flagger detected accept feedback, and the verdict cannot be changed once submitted.
+- `client.signals.get` now returns `feedback` with the verdict submitted for the signal (`value`, `passed`, `feedback`), or `None` when none has been submitted yet.
+
 ## [9.9.0] - 2026-08-06
 
 ### Changed
