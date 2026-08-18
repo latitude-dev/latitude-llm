@@ -210,12 +210,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
 ]
 
 const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
-  // The two unpromoted fixtures read as one occurrence's own words rather than
-  // as a summary, because that is what the product writes: a candidate is named
-  // deterministically from its first occurrence's feedback, and the generated
-  // cluster summary only arrives at promotion. The older of the two is there
-  // because a candidate sitting invisible for weeks looks no different to a
-  // user than one from yesterday.
+  // Unpromoted fixtures read as one occurrence's words, not a summary: that is what a candidate is named from.
   {
     name: "The agent read the customer's local time as UTC and quoted a delivery window a day early",
     description:
