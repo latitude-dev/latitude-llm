@@ -94,7 +94,6 @@ describe("requestSignalReprioritizedNotificationsUseCase", () => {
     for (const request of result.requests) {
       expect(request.kind).toBe("signal.reprioritized")
       expect(request.projectId).toBe(projectId)
-      expect(request.slackEligible).toBe(true)
       expect(request.idempotencyKey).toBe(`signal.reprioritized:${signalId}:${reprioritizedAt}`)
     }
   })
@@ -138,9 +137,37 @@ describe("requestSignalReprioritizedNotificationsUseCase", () => {
   })
 
   it("never notifies the teammate who made the edit", async () => {
+    const result = await run({}, { signal: makeSignal(), members: [member("u1"), member("u2")] })
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
+    expect(result.requests.map((r) => r.userId)).toEqual([UserId(cuid("u2"))])
+  })
+
+  it("still hands Slack an occurrence when the actor is the only member", async () => {
+    // Slack routes are channel-scoped, not per-recipient: a solo org that
+    // opted the topic in still wants the message, even though the only
+    // person to notify in-app is the one who made the edit.
     const result = await run({}, { signal: makeSignal(), members: [member("u1")] })
 
-    expect(result).toEqual({ status: "skipped", reason: "no-recipients" })
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
+    expect(result.requests).toEqual([])
+    expect(result.slackOccurrence).toMatchObject({
+      kind: "signal.reprioritized",
+      projectId,
+      idempotencyKey: `signal.reprioritized:${signalId}:${reprioritizedAt}`,
+      notificationId: null,
+      payload: { priority: "urgent", previousPriority: "medium", severity: "urgent" },
+    })
+  })
+
+  it("points the Slack occurrence at a real in-app row when there is one", async () => {
+    const result = await run()
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
+    expect(result.slackOccurrence.notificationId).toBe(result.requests[0]?.notificationId)
   })
 
   it("skips a muted signal", async () => {

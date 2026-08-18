@@ -34,15 +34,34 @@ export interface SignalReprioritizedNotificationRequest {
   readonly payload: SignalReprioritizedPayload
   readonly notificationId: NotificationId
   readonly projectId: ProjectId
-  readonly slackEligible: boolean
+}
+
+/**
+ * Channel-scoped view of the same occurrence. Slack posts once per
+ * `(occurrence, route)` regardless of recipient count, so it must not ride on
+ * `requests`: the actor is filtered out of those, and in a single-member
+ * organization that leaves none while the channel still wants the message.
+ * `notificationId` is null when no in-app row was written for it to deep-link.
+ */
+export interface SignalReprioritizedSlackOccurrence {
+  readonly organizationId: OrganizationId
+  readonly kind: "signal.reprioritized"
+  readonly idempotencyKey: string
+  readonly payload: SignalReprioritizedPayload
+  readonly projectId: ProjectId
+  readonly notificationId: NotificationId | null
 }
 
 export type RequestSignalReprioritizedNotificationsResult =
   | {
       readonly status: "skipped"
-      readonly reason: "signal-not-found" | "muted" | "not-an-increase" | "no-recipients"
+      readonly reason: "signal-not-found" | "muted" | "not-an-increase"
     }
-  | { readonly status: "ok"; readonly requests: readonly SignalReprioritizedNotificationRequest[] }
+  | {
+      readonly status: "ok"
+      readonly requests: readonly SignalReprioritizedNotificationRequest[]
+      readonly slackOccurrence: SignalReprioritizedSlackOccurrence
+    }
 
 export type RequestSignalReprioritizedNotificationsError = RepositoryError
 
@@ -54,7 +73,8 @@ export type RequestSignalReprioritizedNotificationsError = RepositoryError
  * signal's current values — a later edit is its own event, so re-reading the
  * row would make a burst of edits all announce the newest value. Mute is the
  * notification barrier, as with regression. The actor is dropped from the
- * fan-out: they just made the edit.
+ * recipient fan-out — they just made the edit — but never from the Slack
+ * occurrence, which is channel-scoped rather than per-recipient.
  */
 export const requestSignalReprioritizedNotificationsUseCase = (input: RequestSignalReprioritizedNotificationsInput) =>
   Effect.gen(function* () {
@@ -84,9 +104,6 @@ export const requestSignalReprioritizedNotificationsUseCase = (input: RequestSig
       kind: "signal.reprioritized",
     })
     const recipients = members.filter((userId) => userId !== input.actorUserId)
-    if (recipients.length === 0) {
-      return { status: "skipped", reason: "no-recipients" } as const
-    }
 
     const payload: SignalReprioritizedPayload = {
       signalId: input.signalId,
@@ -106,11 +123,21 @@ export const requestSignalReprioritizedNotificationsUseCase = (input: RequestSig
         payload,
         notificationId: NotificationId(generateId()),
         projectId: input.projectId,
-        slackEligible: true,
       }),
     )
 
-    return { status: "ok", requests } as const
+    return {
+      status: "ok",
+      requests,
+      slackOccurrence: {
+        organizationId: input.organizationId,
+        kind: "signal.reprioritized",
+        idempotencyKey,
+        payload,
+        projectId: input.projectId,
+        notificationId: requests[0]?.notificationId ?? null,
+      },
+    } as const
   }).pipe(Effect.withSpan("notifications.requestSignalReprioritizedNotifications")) as Effect.Effect<
     RequestSignalReprioritizedNotificationsResult,
     RequestSignalReprioritizedNotificationsError,

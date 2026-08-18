@@ -148,6 +148,7 @@ export type {
   RequestSignalReprioritizedNotificationsInput,
   RequestSignalReprioritizedNotificationsResult,
   SignalReprioritizedNotificationRequest,
+  SignalReprioritizedSlackOccurrence,
 } from "./use-cases/request-signal-reprioritized-notifications.ts"
 export { requestSignalReprioritizedNotificationsUseCase } from "./use-cases/request-signal-reprioritized-notifications.ts"
 export type {

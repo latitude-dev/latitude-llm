@@ -52,7 +52,10 @@ notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered
        producer both skip cleared assignments and self-assignments
      – signal-reprioritized: increases only (the event is not emitted for a
        downgrade or a clear); org-member fan-out minus the actor, carrying the
-       transition off the event rather than re-reading the row
+       transition off the event rather than re-reading the row. Returns a
+       separate `slackOccurrence` because the actor filter can empty the
+       recipient list in a single-member org while the channel still wants
+       the message
      – snapshot trend window (signal-sourced sustained kinds: 14d ending at the
        transition, UTC-aligned 12h buckets, both occurrence counts and
        per-bucket escalation thresholds via ScoreAnalyticsRepository)

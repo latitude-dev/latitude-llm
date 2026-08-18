@@ -85,8 +85,9 @@ interface ProducerRequest {
   readonly projectId: string | null
   readonly payload: Record<string, unknown>
   /** One per-recipient notification ID (all share the same idempotencyKey).
-   *  The first one is passed to Slack jobs for chart URL generation. */
-  readonly notificationId: string
+   *  The first one is passed to Slack jobs for chart URL generation; null when
+   *  the occurrence wrote no in-app row to deep-link. */
+  readonly notificationId: string | null
   readonly slackEligible?: boolean
 }
 
@@ -457,7 +458,9 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
                 ),
                 { concurrency: "unbounded" },
               ),
-              fanOutSlackRoutes(result.requests, publisher),
+              // The occurrence, not `result.requests`: Slack is channel-scoped,
+              // and the actor-filtered recipient list is empty in a solo org.
+              fanOutSlackRoutes([result.slackOccurrence], publisher),
             ],
             { concurrency: "unbounded" },
           ).pipe(Effect.asVoid)
