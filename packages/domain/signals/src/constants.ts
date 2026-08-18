@@ -4,7 +4,7 @@ import { ALERT_SEVERITIES, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared
 export const SIGNAL_NAME_MAX_LENGTH = 128
 
 /** Boundary guard on the reason accompanying a signal feedback verdict, so a pasted transcript cannot land in the row. */
-export const SIGNAL_FEEDBACK_MAX_LENGTH = 2_000
+export const SIGNAL_FEEDBACK_MAX_LENGTH = 1024
 
 /** Newest occurrences inspected when fanning a signal's verdict out onto the flagger generations that detected it. */
 export const SIGNAL_FEEDBACK_OCCURRENCE_SAMPLE_LIMIT = 25

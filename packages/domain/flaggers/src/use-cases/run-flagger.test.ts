@@ -290,7 +290,7 @@ describe("runFlaggerUseCase", () => {
           tokens: 20,
           duration: 90_000_000,
           // Only the classification call is graded; the review is a separate trace.
-          ...(isAnnotationReview ? {} : { telemetryTraceId: flaggerTraceId }),
+          ...(isAnnotationReview ? {} : { traceId: flaggerTraceId }),
         })
       },
     })
@@ -344,7 +344,7 @@ describe("runFlaggerUseCase", () => {
       ),
     )
 
-    expect(result).not.toHaveProperty("flaggerTraceId")
+    expect(result.flaggerTraceId).toBeUndefined()
   })
 
   it("surfaces short inspected system prompts verbatim in classifier and annotation-review prompts", async () => {

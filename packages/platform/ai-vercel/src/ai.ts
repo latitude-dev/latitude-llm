@@ -376,7 +376,7 @@ export const AIGenerateLive = Layer.effect(
           const generateWithModel = async (
             model: ProviderModel,
             servedBy: { readonly provider: string; readonly model: string },
-            telemetryTraceId: string | undefined,
+            traceId: string | undefined,
           ) => {
             const providerOptions = normalizeProviderOptions(input.providerOptions)
 
@@ -408,7 +408,7 @@ export const AIGenerateLive = Layer.effect(
               object: result.output,
               tokens: usage?.totalTokens ?? 0,
               servedBy,
-              ...(telemetryTraceId !== undefined ? { telemetryTraceId } : {}),
+              ...(traceId !== undefined ? { traceId } : {}),
               tokenUsage: {
                 input: usage?.inputTokens ?? 0,
                 output: usage?.outputTokens ?? 0,
@@ -419,13 +419,13 @@ export const AIGenerateLive = Layer.effect(
             } satisfies GenerateResult<T>
           }
 
-          const execute = async (telemetryTraceId?: string) => {
+          const execute = async (traceId?: string) => {
             try {
               return {
                 result: await generateWithModel(
                   providerModel,
                   { provider: input.provider, model: input.model },
-                  telemetryTraceId,
+                  traceId,
                 ),
                 fallback: null,
               }
@@ -436,7 +436,7 @@ export const AIGenerateLive = Layer.effect(
 
               try {
                 return {
-                  result: await generateWithModel(fallbackProviderModel, fallback, telemetryTraceId),
+                  result: await generateWithModel(fallbackProviderModel, fallback, traceId),
                   fallback: {
                     model: `${fallback.provider}/${fallback.model}`,
                     primaryError: formatGenerateError(primaryError),

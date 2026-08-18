@@ -21,7 +21,7 @@ Each feature is dogfooded into its own Latitude project (one project per AI feat
 
 ## Knowing which trace a generation landed in
 
-`GenerateResult.telemetryTraceId` carries the Latitude trace a captured generation was exported into, so a feature can store the way back from its output to the decision behind it. `runWithAiTelemetry` (`@platform/ai-latitude`) reads it inside the `capture` callback and hands it to the adapter's execute function; reading it after the effect returns would pick up the host's own Datadog trace instead, since the capture span has already ended.
+`GenerateResult.traceId` carries the Latitude trace a captured generation was exported into, so a feature can store the way back from its output to the decision behind it. `runWithAiTelemetry` (`@platform/ai-latitude`) reads it inside the `capture` callback and hands it to the adapter's execute function; reading it after the effect returns would pick up the host's own Datadog trace instead, since the capture span has already ended.
 
 Two absences are deliberate, not gaps: an uncaptured call (no `telemetry` option) has no Latitude trace, and the value is **excluded from the AI cache** (`withAICache`) because a cache hit creates no span — a persisted id would name whichever caller first produced that generation.
 

@@ -11070,7 +11070,7 @@
           "feedback": {
             "description": "Reason for the verdict. Required when `passed` is `false`.",
             "type": "string",
-            "maxLength": 2000
+            "maxLength": 1024
           },
           "value": {
             "description": "Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.",

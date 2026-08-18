@@ -1,3 +1,4 @@
+import { ApiKeyRepository } from "@domain/api-keys"
 import {
   authorizeBillableAction,
   buildBillingIdempotencyKey,
@@ -33,6 +34,7 @@ import {
   withClickHouse,
 } from "@platform/db-clickhouse"
 import {
+  ApiKeyRepositoryLive,
   BillingOverrideRepositoryLive,
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
@@ -48,10 +50,11 @@ import {
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnvOptional } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
+import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { getAdminPostgresClient, getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
-import { resolveDogfoodOrganizationId } from "../services/dogfood-organization.ts"
 
 const logger = createLogger("issues")
 
@@ -267,13 +270,21 @@ export const createSignalsWorker = async ({
     // to the dogfood organization. The customer's project is never written to.
     reviewFlaggerOccurrence: (payload) =>
       Effect.gen(function* () {
-        const dogfoodOrganizationId = yield* resolveDogfoodOrganizationId(adminPgClient)
-        if (dogfoodOrganizationId === null) {
+        // The telemetry credential is the only permitted source of the dogfood
+        // organization: resolving `latitude-flaggers` by slug across organizations
+        // could match a customer project of the same name. Deployments that do not
+        // dogfood (self-hosted, local dev, CI) carry no key and skip.
+        const telemetryApiKey = yield* parseEnvOptional("LAT_LATITUDE_TELEMETRY_API_KEY", "string")
+        if (!telemetryApiKey) {
           yield* Effect.sync(() =>
-            logger.info(`Feedback review skipped for ${payload.signalId} — no dogfood organization`),
+            logger.info(`Flagger review skipped for ${payload.signalId} — no telemetry API key configured`),
           )
           return
         }
+
+        const apiKeyRepository = yield* ApiKeyRepository
+        const key = yield* apiKeyRepository.findByTokenHash(yield* hash(telemetryApiKey))
+        const dogfoodOrganizationId = key.organizationId
 
         const result = yield* recordSignalFlaggerReviewUseCase({
           organizationId: dogfoodOrganizationId,
@@ -302,6 +313,9 @@ export const createSignalsWorker = async ({
           ),
         )
       }).pipe(
+        // Cross-organization lookup: the key names its own tenant, so it runs on the
+        // admin client with no organization scope to resolve.
+        withPostgres(ApiKeyRepositoryLive, adminPgClient),
         Effect.tapError((error) =>
           Effect.sync(() =>
             logger.error(`Flagger review failed for ${payload.signalId} on ${payload.flaggerTraceId}`, error),

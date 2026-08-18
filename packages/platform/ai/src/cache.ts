@@ -101,10 +101,10 @@ const invalidGenerateResult = (source: "cached" | "provider", cause: unknown) =>
     cause,
   })
 
-type GenerateResultForValidation = Omit<GenerateResult<unknown>, "tokenUsage" | "servedBy" | "telemetryTraceId"> & {
+type GenerateResultForValidation = Omit<GenerateResult<unknown>, "tokenUsage" | "servedBy" | "traceId"> & {
   readonly tokenUsage?: GenerateResult<unknown>["tokenUsage"] | undefined
   readonly servedBy?: GenerateResult<unknown>["servedBy"] | undefined
-  readonly telemetryTraceId?: string | undefined
+  readonly traceId?: string | undefined
 }
 
 const validateGenerateResult = <T>(
@@ -120,7 +120,7 @@ const validateGenerateResult = <T>(
         duration: result.duration,
         ...(result.servedBy === undefined ? {} : { servedBy: result.servedBy }),
         ...(result.tokenUsage === undefined ? {} : { tokenUsage: result.tokenUsage }),
-        ...(result.telemetryTraceId === undefined ? {} : { telemetryTraceId: result.telemetryTraceId }),
+        ...(result.traceId === undefined ? {} : { traceId: result.traceId }),
       } satisfies GenerateResult<T>)
     : Effect.fail(invalidGenerateResult(source, parsed.error))
 }
@@ -169,7 +169,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape, options?: AICac
       // The Latitude trace id is deliberately not stored: a cache hit creates no
       // span, so a persisted id would point at the trace of whichever call first
       // produced this result. No trace for a call that did not happen.
-      const { telemetryTraceId: _uncacheable, ...cacheable } = result
+      const { traceId: _uncacheable, ...cacheable } = result
       const encoded = yield* Effect.try({
         try: () => Schema.encodeSync(generateResultFromJsonStringSchema)(cacheable as GenerateResult<unknown>),
         catch: toAIError("write"),

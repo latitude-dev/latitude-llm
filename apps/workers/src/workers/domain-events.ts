@@ -278,20 +278,9 @@ export const createDomainEventsWorker = ({
       }),
 
     SignalFeedbackSubmitted: (event) =>
-      // The feedback latch makes a signal gradable once, ever, so its id is the
-      // whole idempotency key — there is no second verdict to discriminate.
-      pub.publish(
-        "issues",
-        "reviewFlaggerOccurrences",
-        {
-          organizationId: event.payload.organizationId,
-          projectId: event.payload.projectId,
-          signalId: event.payload.signalId,
-        },
-        {
-          dedupeKey: `issues:feedback-review:${event.payload.signalId}`,
-        },
-      ),
+      pub.publish("issues", "reviewFlaggerOccurrences", event.payload, {
+        dedupeKey: `issues:feedback-review:${event.payload.signalId}`,
+      }),
 
     SavedSearchDeleted: (event) =>
       pub.publish(

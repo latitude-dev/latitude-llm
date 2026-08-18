@@ -435,7 +435,9 @@ describe("domain-events dispatcher", () => {
     const job = published[0]
     expect(job?.queue).toBe("issues")
     expect(job?.task).toBe("reviewFlaggerOccurrences")
-    expect(job?.payload).toEqual({ organizationId: "org-1", projectId: "proj-1", signalId: "issue-1" })
+    // The event is forwarded whole; the selection pass reads the verdict off the
+    // signal row, so the payload's copy of it is never the source of truth.
+    expect(job?.payload).toMatchObject({ organizationId: "org-1", projectId: "proj-1", signalId: "issue-1" })
     expect(job?.options?.dedupeKey).toBe("issues:feedback-review:issue-1")
   })
 

@@ -38,7 +38,7 @@ export interface RunFlaggerResult {
   readonly matched: boolean
   readonly feedback?: string | undefined
   readonly messageIndex?: number | undefined
-  /** Latitude trace of the classification generation behind this decision; absent for cached or unclassifiable calls. */
+  /** Latitude trace of the classification generation behind this decision, matched or not; absent for uncaptured and cached calls. */
   readonly flaggerTraceId?: string | undefined
 }
 
@@ -852,16 +852,16 @@ const parseFlaggerOutput = (input: unknown, flaggerTraceId: string | undefined):
   const parsed = flaggerOutputSchema.safeParse(input)
   if (!parsed.success) {
     return Effect.annotateCurrentSpan("flagger.malformedClassifierOutput", true).pipe(
-      Effect.as({ matched: false } satisfies RunFlaggerResult),
+      Effect.as({ flaggerTraceId, matched: false } satisfies RunFlaggerResult),
     )
   }
 
   const messageIndex = parseMessageIndex(parsed.data.messageIndex)
   return Effect.succeed({
+    flaggerTraceId,
     matched: parsed.data.matched,
     ...(parsed.data.matched && parsed.data.feedback ? { feedback: parsed.data.feedback.trim() } : {}),
     ...(parsed.data.matched && messageIndex !== undefined ? { messageIndex } : {}),
-    ...(parsed.data.matched && flaggerTraceId !== undefined ? { flaggerTraceId } : {}),
   })
 }
 
@@ -940,7 +940,7 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
       },
     })
     .pipe(
-      Effect.flatMap((result) => parseFlaggerOutput(result.object, result.telemetryTraceId)),
+      Effect.flatMap((result) => parseFlaggerOutput(result.object, result.traceId)),
       Effect.catchIf(
         (error): error is AIError => error instanceof AIError && isUnclassifiableModelFailureCause(error.cause),
         () =>

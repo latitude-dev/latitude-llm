@@ -19,7 +19,7 @@ const activeTraceId = (): string | undefined => {
  */
 export async function runWithAiTelemetry<T>(
   telemetry: GenerateTelemetryCapture | undefined,
-  execute: (telemetryTraceId?: string) => Promise<T>,
+  execute: (traceId?: string) => Promise<T>,
 ): Promise<T> {
   if (telemetry === undefined) {
     return execute()

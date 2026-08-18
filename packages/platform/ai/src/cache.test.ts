@@ -41,11 +41,11 @@ const generateInput: GenerateInput<z.infer<typeof schema>> = {
 describe("withAICache generate", () => {
   it("passes the provider's telemetry trace id through on a miss", async () => {
     const { store } = createCacheStore()
-    const { ai } = createAi({ object: { matched: true }, tokens: 1, duration: 1, telemetryTraceId: "a".repeat(32) })
+    const { ai } = createAi({ object: { matched: true }, tokens: 1, duration: 1, traceId: "a".repeat(32) })
 
     const result = await Effect.runPromise(withAICache(ai, store).generate(generateInput))
 
-    expect(result.telemetryTraceId).toBe("a".repeat(32))
+    expect(result.traceId).toBe("a".repeat(32))
   })
 
   it("never serves a trace id from the cache", async () => {
@@ -54,7 +54,7 @@ describe("withAICache generate", () => {
       object: { matched: true },
       tokens: 1,
       duration: 1,
-      telemetryTraceId: "a".repeat(32),
+      traceId: "a".repeat(32),
     })
     const cached = withAICache(ai, store)
 
@@ -64,7 +64,7 @@ describe("withAICache generate", () => {
     // A cache hit creates no span, so a stored id would point at the first
     // caller's trace and the verdict would land on an unrelated generation.
     expect(callCount()).toBe(1)
-    expect(hit.telemetryTraceId).toBeUndefined()
+    expect(hit.traceId).toBeUndefined()
     expect([...entries.values()].join()).not.toContain("a".repeat(32))
   })
 })

@@ -5772,7 +5772,7 @@
           },
           "feedback": {
             "type": "string",
-            "maxLength": 2000,
+            "maxLength": 1024,
             "description": "Reason for the verdict. Required when `passed` is `false`."
           },
           "value": {

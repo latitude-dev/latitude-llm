@@ -83,7 +83,7 @@ export interface GenerateResult<T> {
   /** Provider/model that actually served the call, the requested pair unless a fallback answered; price against this, not the input. */
   readonly servedBy?: { readonly provider: string; readonly model: string }
   /** Latitude trace the generation was captured into; absent when the call was not captured or was served from the cache. */
-  readonly telemetryTraceId?: string
+  readonly traceId?: string
   readonly tokenUsage?: {
     readonly input: number
     readonly output: number
