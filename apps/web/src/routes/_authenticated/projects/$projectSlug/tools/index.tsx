@@ -1,7 +1,7 @@
 import { Input, Tabs, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { CircleSlashIcon, LayoutGridIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import { allToolsMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
@@ -70,6 +70,10 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/tool
 
 function ToolsPageContent() {
   const project = useRouteProject()
+  // Shared scroll container: holds the analytics panel and the table together, so
+  // scrolling moves them as one and the table's header sticks once it reaches the
+  // top instead of the table scrolling alone in its own small box.
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
   const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
   const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })
   const tw = useAnalyticsTimeWindow({
@@ -216,7 +220,7 @@ function ToolsPageContent() {
       {showEmptyState ? (
         <ToolsEmptyState isLoading={isLoading} />
       ) : (
-        <>
+        <div ref={scrollAreaRef} className="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto">
           {hasOnlyDefinedTools ? (
             <div className="px-6 pb-2">
               <ToolsDiscoveryBanner projectId={project.id} />
@@ -246,8 +250,9 @@ function ToolsPageContent() {
             trendBucketSeconds={trendBucketSeconds}
             focusedToolName={focusedToolName}
             onFocusedToolChange={setFocusedToolName}
+            scrollContainerRef={scrollAreaRef}
           />
-        </>
+        </div>
       )}
     </Layout>
   )

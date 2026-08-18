@@ -19,7 +19,7 @@ import {
 import { formatCount, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { BrainIcon, ChevronRightIcon, DatabaseIcon, SparklesIcon, TagIcon, XIcon } from "lucide-react"
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   addClusterSessionsToDatasetFunction,
   type ClusterSource,
@@ -39,10 +39,7 @@ import type {
   BehaviourTrajectoryMetric,
 } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
 import { BehaviourBadge, trendIcon, trendLabel } from "../../../../../../domains/taxonomy/trend-display.tsx"
-import {
-  ListingLayout as Layout,
-  listingLayoutIntrinsicScroll,
-} from "../../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import {
   EMPTY_SELECTION,
   type SelectionState,
@@ -838,6 +835,10 @@ export function BehavioursView({
   readonly onMomentRangeChange: (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => void
 }) {
   const activeBehaviourId = behaviourPath.at(-1)
+  // Shared scroll container: holds the trajectory chart and the table together, so
+  // scrolling moves them as one and the table's header sticks once it reaches the top
+  // instead of the table scrolling alone in its own small box.
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
   const expandableKeys = useMemo(() => {
     const keys = new Set<string>()
     const walk = (nodes: readonly BehaviourNodeRecord[]) => {
@@ -1074,7 +1075,7 @@ export function BehavioursView({
         </Layout.ActionsRow>
       </Layout.Actions>
       <Layout.Body>
-        <Layout.List className="gap-3">
+        <Layout.List ref={scrollAreaRef} className="gap-3 overflow-y-auto">
           {isLoading ? (
             <div className="flex flex-col gap-2 p-6">
               <Skeleton className="h-12 rounded-xl" />
@@ -1094,7 +1095,8 @@ export function BehavioursView({
                 onSelectPoint={handleDotChartPointSelect}
               />
               <InfiniteTable
-                {...listingLayoutIntrinsicScroll.infiniteTable}
+                scrollAreaLayout="external"
+                scrollContainerRef={scrollAreaRef}
                 data={rows}
                 isLoading={false}
                 columns={columns}

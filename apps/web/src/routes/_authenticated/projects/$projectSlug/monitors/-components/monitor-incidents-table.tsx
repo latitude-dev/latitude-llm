@@ -1,7 +1,7 @@
 import { InfiniteTable, type InfiniteTableColumn, Status, Text } from "@repo/ui"
 import { formatDuration } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { type ReactNode, useCallback, useState } from "react"
+import { type ReactNode, type RefObject, useCallback, useState } from "react"
 import {
   type MonitorIncidentRecord,
   useMonitorIncidents,
@@ -106,13 +106,22 @@ export function MonitorIncidentsTable({
   projectId,
   projectSlug,
   monitorId,
+  scrollContainerRef,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly monitorId: string
+  /**
+   * The ancestor scroll container to virtualize against — shared with whatever else
+   * the caller stacks above it (e.g. the monitor's config card and metric chart), so
+   * the page scrolls as one and the table's header sticks once it reaches the top.
+   * When omitted the table falls back to scrolling within its own bounded box.
+   */
+  readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
 }) {
   const { incidents, isLoading, infiniteScroll } = useMonitorIncidents({ projectId, monitorId })
   const [resolveTarget, setResolveTarget] = useState<string | null>(null)
+  const hasExternalScrollArea = scrollContainerRef !== undefined
 
   // Rows whose producer was deleted (or can't be deep-linked) return null and aren't navigable.
   const renderRowLink = useCallback(
@@ -135,7 +144,9 @@ export function MonitorIncidentsTable({
   return (
     <>
       <InfiniteTable
-        {...listingLayoutIntrinsicScroll.infiniteTable}
+        {...(hasExternalScrollArea
+          ? { scrollAreaLayout: "external" as const, scrollContainerRef }
+          : listingLayoutIntrinsicScroll.infiniteTable)}
         data={incidents}
         isLoading={isLoading}
         columns={incidentColumns(setResolveTarget)}

@@ -18,7 +18,7 @@ import {
 import { formatCount } from "@repo/utils"
 import { createFileRoute, getRouteApi, Link, useNavigate } from "@tanstack/react-router"
 import { ArrowLeftIcon, BellIcon, BellOffIcon, EllipsisVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react"
-import { type ReactNode, useMemo, useState } from "react"
+import { type ReactNode, useMemo, useRef, useState } from "react"
 import { SeverityStatus } from "../../../../../../domains/alerts/severity-selector.tsx"
 import { describeMonitorTarget, targetToSessionFilters } from "../../../../../../domains/monitors/monitor-target.ts"
 import { useMonitor, useMonitorIncidentStats } from "../../../../../../domains/monitors/monitors.collection.ts"
@@ -107,6 +107,10 @@ function MonitorDetailPage() {
   const [muteConfirmOpen, setMuteConfirmOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [ruleModal, setRuleModal] = useState<MonitorRuleRecord | null>(null)
+  // Shared scroll container: holds the config card, metric chart, and incidents table
+  // together, so scrolling moves them as one and the table's header sticks once it
+  // reaches the top instead of the table scrolling alone in its own small box.
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   const window = useMemo(() => {
     const spec = RANGE_SPEC[range]
@@ -234,7 +238,7 @@ function MonitorDetailPage() {
           }
         />
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div ref={scrollAreaRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           {isLoading || !monitor ? (
             <div className="p-6 pt-2">
               <Skeleton className="h-48 w-full" />
@@ -300,9 +304,14 @@ function MonitorDetailPage() {
                 ) : null}
               </div>
 
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-6 pb-6">
+              <div className="flex min-w-0 flex-col gap-3 px-6 pb-6">
                 <Text.H6 color="foregroundMuted">Incidents</Text.H6>
-                <MonitorIncidentsTable projectId={project.id} projectSlug={projectSlug} monitorId={monitor.id} />
+                <MonitorIncidentsTable
+                  projectId={project.id}
+                  projectSlug={projectSlug}
+                  monitorId={monitor.id}
+                  scrollContainerRef={scrollAreaRef}
+                />
               </div>
 
               {target ? (
