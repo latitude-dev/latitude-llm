@@ -327,7 +327,7 @@ describe("domain-events dispatcher", () => {
       // discovered weeks ago.
       promotedAt: "2026-05-21T10:00:00.000Z",
     })
-    expect(naming?.options?.dedupeKey).toBe("issues:name-on-promotion:signal-1")
+    expect(naming?.options?.dedupeKey).toBe("org:org-1:issues:name-on-promotion:signal-1")
   })
 
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {

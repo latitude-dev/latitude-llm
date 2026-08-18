@@ -212,7 +212,7 @@ export const createDomainEventsWorker = ({
           promotedAt: event.payload.promotedAt,
         },
         {
-          dedupeKey: `issues:name-on-promotion:${event.payload.signalId}`,
+          dedupeKey: `org:${event.payload.organizationId}:issues:name-on-promotion:${event.payload.signalId}`,
         },
       ),
 
