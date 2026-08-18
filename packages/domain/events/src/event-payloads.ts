@@ -104,6 +104,23 @@ export interface EventPayloads {
     readonly assignedAt: string
   }
   /**
+   * Emitted by `submitSignalFeedbackUseCase` from the transaction that claims
+   * the signal's verdict. The claim is guarded on `feedback IS NULL`, so a
+   * signal is graded at most once ever and the signal id is a sound idempotency
+   * key for the fan-out that labels the flagger generations behind it.
+   *
+   * Carries the verdict's score triple verbatim: the value the customer gave a
+   * signal is the value the flagger's generation is graded with.
+   */
+  SignalFeedbackSubmitted: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly signalId: string
+    readonly value: number
+    readonly passed: boolean
+    readonly feedback: string
+  }
+  /**
    * Emitted when a new occurrence reopens a manually resolved signal: the
    * reopen claim clears `resolved_at` and stamps `regressed_at`, and exactly
    * one writer per regression cycle emits this (the conditional claim

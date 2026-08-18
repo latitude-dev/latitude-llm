@@ -140,4 +140,33 @@ describe("runWithAiTelemetry metadata propagation (e2e)", () => {
 
     expect(exporter.getFinishedSpans()).toHaveLength(0)
   })
+
+  it("hands the callback the trace the generation is exported into", async () => {
+    let observedTraceId: string | undefined
+
+    await runWithAiTelemetry(
+      { spanName: "flagger.classify", metadata: { flaggerSlug: "refusal" } },
+      async (traceId) => {
+        observedTraceId = traceId
+        return undefined
+      },
+    )
+
+    await provider.forceFlush()
+
+    const [exported] = exporter.getFinishedSpans()
+    expect(observedTraceId).toBeDefined()
+    expect(observedTraceId).toBe(exported?.spanContext().traceId)
+  })
+
+  it("hands the callback no trace id when the call is not captured", async () => {
+    let observedTraceId: string | undefined = "sentinel"
+
+    await runWithAiTelemetry(undefined, async (traceId) => {
+      observedTraceId = traceId
+      return undefined
+    })
+
+    expect(observedTraceId).toBeUndefined()
+  })
 })

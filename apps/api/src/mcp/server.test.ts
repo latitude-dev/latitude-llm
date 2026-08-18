@@ -2,6 +2,7 @@ import { generateApiKeyToken } from "@domain/api-keys"
 import { generateId } from "@domain/shared"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { projects } from "@platform/db-postgres/schema/projects"
+import { signals } from "@platform/db-postgres/schema/signals"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { encrypt, hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -390,6 +391,50 @@ describe("/v1/mcp", () => {
     expect(created.organizationId).toBe(tenant.organizationId)
     expect(typeof created.token).toBe("string")
     expect(created.token.length).toBeGreaterThan(0)
+  })
+
+  it<ApiTestContext>("tools/call grades a signal once through submitSignalFeedback", async ({ app, database }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const project = await insertProject(database, tenant.organizationId)
+    await database.db.insert(signals).values({
+      id: generateId(),
+      organizationId: tenant.organizationId,
+      projectId: project.id,
+      slug: "mcp-graded-signal",
+      name: "MCP graded signal",
+      description: "Graded through the MCP transport",
+      source: "flagger",
+      origin: "system",
+      promotedAt: new Date("2026-08-01T00:00:00.000Z"),
+    })
+
+    const grade = () =>
+      sendMcpRequest(app, tenant.oauthAccessToken, {
+        jsonrpc: "2.0",
+        id: 27,
+        method: "tools/call",
+        params: {
+          name: "submitSignalFeedback",
+          arguments: {
+            projectSlug: project.slug,
+            signalSlug: "mcp-graded-signal",
+            passed: false,
+            feedback: "The flagger misread the transcript",
+          },
+        },
+      })
+
+    const first = await grade()
+    expect(first.status).toBe(200)
+    const payload = (await readSseJsonRpc(first)) as {
+      result?: { structuredContent?: { passed?: boolean; value?: number; ignored?: boolean }; isError?: boolean }
+    }
+    expect(payload.result?.isError).toBeFalsy()
+    expect(payload.result?.structuredContent).toMatchObject({ passed: false, value: 0, ignored: false })
+
+    const second = await grade()
+    const repeatPayload = (await readSseJsonRpc(second)) as { result?: { isError?: boolean } }
+    expect(repeatPayload.result?.isError).toBe(true)
   })
 
   it<ApiTestContext>("tools/call surfaces inner-route errors as isError content (404 from cross-tenant id)", async ({

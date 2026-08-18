@@ -460,6 +460,31 @@ const _registry = {
       readonly source: string
       readonly createdAt: string
     }
+    /**
+     * Fired by the domain-events router on `SignalFeedbackSubmitted`. Scans the
+     * signal's newest occurrences for flagger-authored rows and fans out one
+     * `reviewFlaggerOccurrence` per distinct flagger trace behind them.
+     */
+    reviewFlaggerOccurrences: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
+    /**
+     * Grades one flagger generation with the customer's verdict on the signal it
+     * detected. The annotation lands on Latitude's own flagger trace, in the
+     * dogfood organization — never in the customer's project.
+     */
+    reviewFlaggerOccurrence: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      readonly flaggerTraceId: string
+      readonly flaggerSlug: string
+      readonly value: number
+      readonly passed: boolean
+      readonly feedback: string
+    }
   }>(),
 
   monitors: payloads<{

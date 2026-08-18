@@ -1,9 +1,11 @@
+import { ApiKeyRepository } from "@domain/api-keys"
 import {
   authorizeBillableAction,
   buildBillingIdempotencyKey,
   makeAIMeteringScope,
   provideAIMeteringScope,
 } from "@domain/billing"
+import { recordSignalFlaggerReviewUseCase } from "@domain/product-feedback"
 import {
   type QueueConsumer,
   QueuePublisher,
@@ -19,13 +21,20 @@ import {
   discoverSignalUseCase,
   refreshSignalDetailsUseCase,
   removeScoreFromSignalUseCase,
+  reviewSignalFlaggerOccurrencesUseCase,
   sweepEscalatingSignalsUseCase,
 } from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
+  ScoreAnalyticsRepositoryLive,
+  SpanRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
+import {
+  ApiKeyRepositoryLive,
   BillingOverrideRepositoryLive,
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
@@ -34,13 +43,16 @@ import {
   MonitorRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
+  ProjectRepositoryLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
   SignalRepositoryLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnvOptional } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
+import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { getAdminPostgresClient, getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
@@ -222,6 +234,93 @@ export const createSignalsWorker = async ({
           ),
         ),
         Effect.tapError((error) => Effect.sync(() => logger.error("Escalation sweep failed", error))),
+        withTracing,
+        Effect.asVoid,
+      ),
+    // Selection half of the signal-feedback fan-out: the customer's verdict on a
+    // signal becomes one grading job per flagger generation that detected it.
+    reviewFlaggerOccurrences: (payload) =>
+      reviewSignalFlaggerOccurrencesUseCase(payload).pipe(
+        withPostgres(
+          Layer.mergeAll(SignalRepositoryLive, ScoreRepositoryLive),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
+        Effect.provide(Layer.succeed(QueuePublisher, publisher)),
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            if (result.action === "skipped") {
+              logger.info(`Feedback review skipped for ${payload.projectId}/${payload.signalId}: ${result.reason}`)
+              return
+            }
+            logger.info(
+              `Feedback review for ${payload.projectId}/${payload.signalId}: scanned=${result.scanned} flaggerRows=${result.flaggerRows} withoutFlaggerTrace=${result.withoutFlaggerTrace} published=${result.published}`,
+            )
+          }),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`Feedback review fan-out failed for ${payload.projectId}/${payload.signalId}`, error),
+          ),
+        ),
+        withTracing,
+        Effect.asVoid,
+      ),
+    // Writes the verdict onto Latitude's own flagger trace, under a scope pinned
+    // to the dogfood organization. The customer's project is never written to.
+    reviewFlaggerOccurrence: (payload) =>
+      Effect.gen(function* () {
+        // The telemetry credential is the only permitted source of the dogfood
+        // organization: resolving `latitude-flaggers` by slug across organizations
+        // could match a customer project of the same name. Deployments that do not
+        // dogfood (self-hosted, local dev, CI) carry no key and skip.
+        const telemetryApiKey = yield* parseEnvOptional("LAT_LATITUDE_TELEMETRY_API_KEY", "string")
+        if (!telemetryApiKey) {
+          yield* Effect.sync(() =>
+            logger.info(`Flagger review skipped for ${payload.signalId} — no telemetry API key configured`),
+          )
+          return
+        }
+
+        const apiKeyRepository = yield* ApiKeyRepository
+        const key = yield* apiKeyRepository.findByTokenHash(yield* hash(telemetryApiKey))
+        const dogfoodOrganizationId = key.organizationId
+
+        const result = yield* recordSignalFlaggerReviewUseCase({
+          organizationId: dogfoodOrganizationId,
+          signalId: payload.signalId,
+          flaggerSlug: payload.flaggerSlug,
+          flaggerTraceId: payload.flaggerTraceId,
+          value: payload.value,
+          passed: payload.passed,
+          feedback: payload.feedback,
+        }).pipe(
+          withPostgres(
+            Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
+            pgClient,
+            OrganizationId(dogfoodOrganizationId),
+          ),
+          withClickHouse(
+            Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
+            chClient,
+            OrganizationId(dogfoodOrganizationId),
+          ),
+        )
+
+        yield* Effect.sync(() =>
+          logger.info(
+            `Flagger review for ${payload.signalId}/${payload.flaggerSlug} on ${payload.flaggerTraceId}: ${result.action === "written" ? `written:${result.scoreId}` : `skipped:${result.reason}`}`,
+          ),
+        )
+      }).pipe(
+        // Cross-organization lookup: the key names its own tenant, so it runs on the
+        // admin client with no organization scope to resolve.
+        withPostgres(ApiKeyRepositoryLive, adminPgClient),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`Flagger review failed for ${payload.signalId} on ${payload.flaggerTraceId}`, error),
+          ),
+        ),
         withTracing,
         Effect.asVoid,
       ),

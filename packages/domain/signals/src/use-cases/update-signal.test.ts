@@ -40,6 +40,7 @@ const makeUserSignal = (): Signal => ({
   ignoredAt: null,
   regressedAt: null,
   mutedAt: null,
+  feedback: null,
   deletedAt: null,
   createdAt: new Date("2026-06-01T00:00:00Z"),
   updatedAt: new Date("2026-06-01T00:00:00Z"),

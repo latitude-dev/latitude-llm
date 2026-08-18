@@ -277,6 +277,11 @@ export const createDomainEventsWorker = ({
         dedupeKey: `alert-incidents:signal.escalation-ended:${event.payload.signalId}:${event.payload.endedAt}`,
       }),
 
+    SignalFeedbackSubmitted: (event) =>
+      pub.publish("issues", "reviewFlaggerOccurrences", event.payload, {
+        dedupeKey: `issues:feedback-review:${event.payload.signalId}`,
+      }),
+
     SavedSearchDeleted: (event) =>
       pub.publish(
         "monitors",

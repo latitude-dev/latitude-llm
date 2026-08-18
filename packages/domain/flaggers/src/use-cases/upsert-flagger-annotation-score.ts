@@ -13,6 +13,8 @@ interface UpsertFlaggerAnnotationScoreInput {
   readonly flaggerSlug: string
   readonly messageIndex?: number | undefined
   readonly contentHash?: string | undefined
+  /** Absent for deterministic detections and cached generations — neither leaves a trace to grade. */
+  readonly flaggerTraceId?: string | undefined
 }
 
 type UpsertFlaggerAnnotationScoreResult =
@@ -94,6 +96,7 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
         flaggerSlug: input.flaggerSlug,
         ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
         ...(input.contentHash !== undefined ? { contentHash: input.contentHash } : {}),
+        ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
       },
       error: null,
       draftedAt: null,

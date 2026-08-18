@@ -1,6 +1,6 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { FilterSet, SignalOrigin } from "@domain/shared"
-import type { SignalCentroid, SignalPriority, SignalSource } from "@domain/signals"
+import type { SignalCentroid, SignalFeedback, SignalPriority, SignalSource } from "@domain/signals"
 import { sql } from "drizzle-orm"
 import { customType, index, jsonb, text, uniqueIndex, uuid, varchar, vector } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
@@ -37,6 +37,7 @@ export const signals = latitudeSchema.table(
         `,
       )
       .notNull(),
+    feedback: jsonb("feedback").$type<SignalFeedback>(), // nullable; the customer's one-shot verdict on this signal. Non-null is a one-way latch: feedback is never edited or cleared.
     clusteredAt: tzTimestamp("clustered_at"), // nullable; last time the centroid/cluster state was refreshed (discovered signals only). Authoritative decay anchor (not updatedAt).
     promotedAt: tzTimestamp("promoted_at"), // one-way latch stamped once the signal accumulated enough distinct sessions; null = discovered but not promoted. Backfilled to created_at for pre-existing rows.
     resolvedAt: tzTimestamp("resolved_at"), // manual resolve; archived, detector keeps running unless keepMonitoring was declined

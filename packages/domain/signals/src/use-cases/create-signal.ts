@@ -90,6 +90,7 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           ignoredAt: null,
           regressedAt: null,
           mutedAt: null,
+          feedback: null,
           deletedAt: null,
           createdAt: now,
           updatedAt: now,

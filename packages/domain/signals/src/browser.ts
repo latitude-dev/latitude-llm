@@ -26,6 +26,8 @@ export {
   SIGNAL_DISCOVERY_RERANK_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_RATIO,
+  SIGNAL_FEEDBACK_MAX_LENGTH,
+  SIGNAL_FEEDBACK_OCCURRENCE_SAMPLE_LIMIT,
   SIGNAL_GENERATION_DEADLINE_MS,
   SIGNAL_GENERATION_DEFAULT_MODEL,
   SIGNAL_GENERATION_MAX_STEPS,
@@ -50,10 +52,12 @@ export { type DimensionPattern, rankDimensionValues } from "./dimension-patterns
 export {
   type Signal,
   type SignalCentroid,
+  type SignalFeedback,
   SignalPriority,
   type SignalSource,
   type SignalState,
   signalCentroidSchema,
+  signalFeedbackSchema,
   signalPrioritySchema,
   signalSchema,
   signalSourceSchema,
@@ -72,6 +76,9 @@ export {
   ScoreDiscoveryProjectMismatchError,
   ScoreNotFoundForDiscoveryError,
   SignalDiscoveryLockUnavailableError,
+  SignalFeedbackAlreadySubmittedError,
+  SignalFeedbackNotSupportedError,
+  SignalFeedbackReasonRequiredError,
   SignalNotFoundForAssignmentError,
   SignalNotFoundForDetailsGenerationError,
   SignalNotFoundForEscalationCheckError,
@@ -276,10 +283,22 @@ export {
   rerankSignalCandidatesUseCase,
 } from "./use-cases/rerank-signal-candidates.ts"
 export {
+  type ReviewSignalFlaggerOccurrencesError,
+  type ReviewSignalFlaggerOccurrencesInput,
+  type ReviewSignalFlaggerOccurrencesResult,
+  reviewSignalFlaggerOccurrencesUseCase,
+} from "./use-cases/review-signal-flagger-occurrences.ts"
+export {
   type OrgSignalSearchItem,
   type SearchOrgSignalsInput,
   searchOrgSignalsUseCase,
 } from "./use-cases/search-org-signals.ts"
+export {
+  type SubmitSignalFeedbackError,
+  type SubmitSignalFeedbackInput,
+  type SubmitSignalFeedbackResult,
+  submitSignalFeedbackUseCase,
+} from "./use-cases/submit-signal-feedback.ts"
 export {
   type SweepEscalatingSignalsPublish,
   type SweepEscalatingSignalsResult,

@@ -130,6 +130,7 @@ Source-specific metadata stays intentionally lightweight:
 
 - evaluation scores store `evaluationHash`
 - annotation scores store raw or drafted feedback plus the minimal GenAI anchor fields needed to reopen either the whole-conversation annotation or the exact selected message/text range
+- flagger-authored annotation rows (`sourceId: "SYSTEM"`) add `flaggerSlug`, the content anchor `contentHash`, and `flaggerTraceId` — the Latitude trace of the generation that made the call, so a detection can be traced back to the decision behind it and graded (see [`./flaggers.md`](./flaggers.md#grading-a-flaggers-own-decisions)). `flaggerTraceId` is absent on deterministic detections, cached generations, and rows predating it.
 - custom scores store arbitrary user-defined metadata
 
 The metadata field is not intended for heavy analytical querying.

@@ -140,6 +140,7 @@ const buildNewSignalFromScore = ({
     ignoredAt: null,
     regressedAt: null,
     mutedAt: null,
+    feedback: null,
     createdAt: assignedAt,
     updatedAt: assignedAt,
   }

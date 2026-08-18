@@ -9,6 +9,7 @@ export type { ListTracesSignalsRequest } from "./ListTracesSignalsRequest.js";
 export type { MonitorSignalsRequest } from "./MonitorSignalsRequest.js";
 export type { MuteSignalsRequest } from "./MuteSignalsRequest.js";
 export type { ResolveSignalsBody } from "./ResolveSignalsBody.js";
+export type { SubmitSignalFeedbackBody } from "./SubmitSignalFeedbackBody.js";
 export type { TrendSignalsRequest } from "./TrendSignalsRequest.js";
 export type { UnignoreSignalsRequest } from "./UnignoreSignalsRequest.js";
 export type { UnmonitorSignalsRequest } from "./UnmonitorSignalsRequest.js";

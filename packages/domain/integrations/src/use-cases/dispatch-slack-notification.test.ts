@@ -133,6 +133,7 @@ const makeSignal = (): Signal => {
     ignoredAt: null,
     regressedAt: null,
     mutedAt: null,
+    feedback: null,
     createdAt: now,
     updatedAt: now,
   }

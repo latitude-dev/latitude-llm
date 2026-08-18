@@ -101,6 +101,25 @@ Important state timestamps:
 - `regressedAt`: last occurrence-driven reopen, or `null`
 - `mutedAt`: manual notification mute timestamp, or `null`
 
+## Feedback: was this signal worth raising?
+
+Nothing else in the product asks the customer whether a signal was a real problem — resolve/ignore rates and the reviewer LLM's own rejections are proxies. `signals.feedback` is the direct question, answered once per signal.
+
+The column is a single nullable JSONB holding the core of a Latitude score, because a verdict on a signal **is** a score: `{ value, passed, feedback }`. 👍 is `passed: true, value: 1`; 👎 is `passed: false, value: 0`; the reason is `feedback` (empty when a 👍 was saved bare). `null` is the whole "not graded yet" state, and it doubles as the immutability latch. Nothing records who graded it or when: no consumer reads either, so the row does not carry them.
+
+`submitSignalFeedbackUseCase` (`@domain/signals`) is the one seam, called by the web server fn and by the `submitSignalFeedback` operation (REST + MCP + SDK + CLI):
+
+1. Read the signal through the default-deny visibility filter, so an unpromoted or deleted signal cannot be graded, and reject a cross-project id.
+2. Refuse a signal no flagger detected (`SignalFeedbackNotSupportedError`, 422) — the verdict measures how well Latitude flags, so only Latitude's own detections are gradable.
+3. Reject a `passed: false` submission whose trimmed reason is empty (`SignalFeedbackReasonRequiredError`, 422). A false positive without a reason cannot be acted on; a confirmation without one is still useful.
+4. `SignalRepository.claimFeedback` — one conditional `UPDATE … WHERE id = ? AND feedback IS NULL`, returning whether **this** call wrote. `false` ⇒ `SignalFeedbackAlreadySubmittedError` (409). The claim is what makes immutability true under concurrency (two tabs, a UI click racing an MCP call) rather than merely usually true; `save` deliberately omits `feedback` from its upsert set so a writer holding a pre-verdict copy cannot clear the latch.
+5. `SignalFeedbackSubmitted` goes to the outbox in the same transaction. Feedback is one-shot, so if the fan-out were a publish from the request path and Redis blinked, there would be no way to ask again.
+6. `ignore: true` then runs `applySignalLifecycleCommandUseCase("ignore")` — the `Save and ignore` shortcut, so a 👎 is also the fastest path to a clean list. The verdict is claimed **before** the archive: a lifecycle failure surfaces as an error with the verdict standing, and ignoring is one more click from the header.
+
+Downstream, `SignalFeedbackSubmitted` fans the verdict out as human annotations onto Latitude's own flagger generations in `latitude-flaggers` — never onto the customer's traces. See [`./flaggers.md`](./flaggers.md#grading-a-flaggers-own-decisions).
+
+**Surface.** The signal detail header carries two thumb buttons, right-aligned under the action row (`ListingLayout.Header`'s `titleAside` slot). Clicking one opens a popover with a reason textarea; 👎 requires a reason and offers `Save and ignore` (primary) plus `Save`, 👍 offers `Save` alone. After saving, the control collapses to the chosen thumb — filled, disabled, with the reason as its tooltip — for every viewer and every later session. The control renders only on signals a flagger detected (`source: "flagger"`), and the use-case refuses anything else (`SignalFeedbackNotSupportedError`, 422). A hand-written or annotation-born signal has no decision of ours behind it, so there is nothing for the verdict to grade.
+
 ## Signal Source
 
 The `source` field records the provenance of the **first score** that created the signal. It is immutable for the lifetime of the signal.
@@ -470,6 +489,7 @@ Signal page behavior:
 - the dedicated route (`/projects/<slug>/signals/<signalId>`) is the single signal surface; it replaced the former right-side drawer. The list row click navigates here, and the legacy `?signalId=` deep link redirects to it
 - page-level time range and search controls do not apply on the page; signal reads use full history
 - the header shows the signal name + canonical status, the resolve/ignore actions and mute toggle, the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list), and a copyable slug; the description and tags sit in a full-width row below
+- the header's far right, below the action row, carries the one-shot 👍/👎 feedback control (see [Feedback](#feedback-was-this-signal-worth-raising))
 - the command palette gains contextual `Assign to…` (Me / Unassigned / org members) and `Set priority…` drill-down commands while the page is open, running the same `updateSignalTriage` mutation as the pickers
 - triage fields are functional beyond the page: the signals list groups by priority and filters by assignee, incident notification payloads snapshot `assigneeId`/`priority` for email/Slack/in-app rendering, and changing the assignee emits `SignalAssigneeChanged` which notifies the new assignee (`issue.assigned`, in-app + email; see `dev-docs/notifications.md`)
 - the report body includes the impact summary band (occurrences, affected traces/sessions/users, cost), the Patterns section, a 14-day trend histogram, the linked-evaluations section, an Examples carousel (`H`/`L` cycling), and an infinitely paginated traces table; clicking a trace opens it in an overlay sheet on top of the page
