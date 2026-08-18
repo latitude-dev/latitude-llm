@@ -1412,7 +1412,7 @@ export class SignalsClient {
     }
 
     /**
-     * Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.
+     * Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} signalSlug - Signal slug.

@@ -77,6 +77,7 @@ export {
   ScoreNotFoundForDiscoveryError,
   SignalDiscoveryLockUnavailableError,
   SignalFeedbackAlreadySubmittedError,
+  SignalFeedbackNotSupportedError,
   SignalFeedbackReasonRequiredError,
   SignalNotFoundForAssignmentError,
   SignalNotFoundForDetailsGenerationError,

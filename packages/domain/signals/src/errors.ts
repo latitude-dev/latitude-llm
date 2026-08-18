@@ -101,6 +101,13 @@ export class SignalFeedbackAlreadySubmittedError extends Data.TaggedError("Signa
   readonly httpMessage = "Signal feedback has already been submitted and cannot be changed"
 }
 
+export class SignalFeedbackNotSupportedError extends Data.TaggedError("SignalFeedbackNotSupportedError")<{
+  readonly signalId: string
+}> {
+  readonly httpStatus = 422
+  readonly httpMessage = "Only signals detected by a flagger can receive feedback"
+}
+
 export class SignalFeedbackReasonRequiredError extends Data.TaggedError("SignalFeedbackReasonRequiredError")<{
   readonly signalId: string
 }> {

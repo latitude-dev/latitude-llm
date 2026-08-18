@@ -1033,7 +1033,7 @@ const submitSignalFeedback = signalEndpoint({
     sdkMethod: "submitFeedback",
     summary: "Submit signal feedback",
     description:
-      "Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.",
+      "Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema, body: jsonBody(SubmitSignalFeedbackBodySchema) },
     responses: typedResponses({

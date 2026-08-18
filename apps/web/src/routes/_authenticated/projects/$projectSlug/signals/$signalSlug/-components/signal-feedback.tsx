@@ -38,7 +38,7 @@ export function SignalFeedback({ projectId, signalId, feedback, disabled }: Sign
         trigger={
           <span className="flex">
             {/* One-shot verdict: the filled thumb is a read-out, not a control. */}
-            <ThumbButton selected variant={feedback.passed ? "up" : "down"} disabled onClick={() => undefined} />
+            <ThumbButton selected variant={feedback.passed ? "up" : "down"} readOnly onClick={() => undefined} />
           </span>
         }
       >
@@ -125,35 +125,43 @@ export function SignalFeedback({ projectId, signalId, feedback, disabled }: Sign
       </PopoverAnchor>
       <PopoverContent side="bottom" align="end" className="w-96 max-w-[calc(100vw-2rem)]">
         <div className="flex flex-col gap-2">
-          <Text.H6 color="foregroundMuted">Your feedback helps us improve how we detect signals.</Text.H6>
           <Textarea
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             onKeyDown={handleTextareaKeyDown}
-            placeholder={
-              passed === false ? "What made this a false positive?" : "Optional: what made this signal useful?"
-            }
+            placeholder={passed === false ? "What made this a false positive?" : "What made this signal useful?"}
             minRows={3}
             maxRows={6}
             autoFocus
           />
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <Text.H6 color="foregroundMuted" className="min-w-0">
+              Feedback helps us improve how we detect signals.
+            </Text.H6>
             {passed === false ? (
-              <>
-                <Button size="sm" onClick={() => submit(true)} disabled={isReasonMissing || submitMutation.isPending}>
-                  Save and ignore
-                </Button>
+              <div className="flex shrink-0 gap-1">
                 <Button
-                  size="sm"
                   variant="outline"
+                  className="whitespace-nowrap"
                   onClick={() => submit(false)}
                   disabled={isReasonMissing || submitMutation.isPending}
                 >
                   Save
                 </Button>
-              </>
+                <Button
+                  className="whitespace-nowrap"
+                  onClick={() => submit(true)}
+                  disabled={isReasonMissing || submitMutation.isPending}
+                >
+                  Save and ignore
+                </Button>
+              </div>
             ) : (
-              <Button size="sm" onClick={() => submit(false)} disabled={submitMutation.isPending}>
+              <Button
+                className="shrink-0 whitespace-nowrap"
+                onClick={() => submit(false)}
+                disabled={submitMutation.isPending}
+              >
                 Save
               </Button>
             )}

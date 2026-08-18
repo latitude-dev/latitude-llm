@@ -15,7 +15,11 @@ import {
 import { Effect } from "effect"
 import { z } from "zod"
 import type { SignalFeedback } from "../entities/signal.ts"
-import { SignalFeedbackAlreadySubmittedError, SignalFeedbackReasonRequiredError } from "../errors.ts"
+import {
+  SignalFeedbackAlreadySubmittedError,
+  SignalFeedbackNotSupportedError,
+  SignalFeedbackReasonRequiredError,
+} from "../errors.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { applySignalLifecycleCommandUseCase } from "./apply-signal-lifecycle-command.ts"
 
@@ -45,6 +49,7 @@ export type SubmitSignalFeedbackError =
   | NotFoundError
   | RepositoryError
   | SignalFeedbackAlreadySubmittedError
+  | SignalFeedbackNotSupportedError
   | SignalFeedbackReasonRequiredError
 
 export const submitSignalFeedbackUseCase = (
@@ -67,6 +72,13 @@ export const submitSignalFeedbackUseCase = (
       return yield* new BadRequestError({
         message: `Signal ${signal.id} does not belong to project ${parsed.projectId}`,
       })
+    }
+
+    // Only a flagger's own detections can be graded: the verdict exists to measure
+    // how well Latitude flags, and there is no generation of ours behind a signal
+    // somebody wrote by hand or one born from a human annotation.
+    if (signal.source !== "flagger") {
+      return yield* new SignalFeedbackNotSupportedError({ signalId: signal.id })
     }
 
     const reason = parsed.feedback?.trim() ?? ""

@@ -162,12 +162,16 @@ function SignalDetailPage() {
             </>
           }
           titleAside={
-            <SignalFeedback
-              projectId={project.id}
-              signalId={signalId}
-              feedback={signal?.feedback ?? null}
-              disabled={isLoading || !signal}
-            />
+            // Only a flagger's own detections are gradable — nothing of ours decided
+            // to raise a hand-written or annotation-born signal.
+            signal?.source === "flagger" ? (
+              <SignalFeedback
+                projectId={project.id}
+                signalId={signalId}
+                feedback={signal.feedback}
+                disabled={isLoading}
+              />
+            ) : undefined
           }
         />
         <SignalDetailBody

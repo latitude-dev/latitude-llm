@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `latitude signals submit-feedback` — record a one-time verdict on whether a signal is a real problem, with an optional reason, and optionally archive it in the same call.
+- `latitude signals submit-feedback` — record a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason, and optionally archive it in the same call.
 
 ## [7.9.0] - 2026-08-06
 

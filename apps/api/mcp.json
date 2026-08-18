@@ -11050,7 +11050,7 @@
     {
       "name": "submitSignalFeedback",
       "title": "Submit signal feedback",
-      "description": "Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.",
+      "description": "Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

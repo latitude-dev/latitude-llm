@@ -31,6 +31,7 @@ const createSignalRecord = async (
   organizationId: string,
   projectId: string,
   slug: string,
+  source: "flagger" | "annotation" | "custom" = "flagger",
 ): Promise<string> => {
   await database.db.insert(signals).values({
     id: slug.padEnd(24, "0").slice(0, 24),
@@ -39,8 +40,8 @@ const createSignalRecord = async (
     slug,
     name: `Signal ${slug}`,
     description: `Description for ${slug}`,
-    source: "flagger",
-    origin: "system",
+    source,
+    origin: source === "custom" ? "user" : "system",
     promotedAt: new Date("2026-08-01T00:00:00.000Z"),
   })
   return slug
@@ -418,6 +419,23 @@ describe("Signals Routes Integration", () => {
 
     const rows = await database.db.select().from(signals)
     expect(rows.find((row) => row.slug === signalSlug)?.ignoredAt).not.toBeNull()
+  })
+
+  it<ApiTestContext>("POST /{signalSlug}/feedback refuses a signal no flagger detected", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "2020000000000000aaaaaaaa"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    const signalSlug = await createSignalRecord(database, tenant.organizationId, projectId, "feedback-custom", "custom")
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}/feedback`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ passed: true }),
+      }),
+    )
+
+    expect(res.status).toBe(422)
   })
 
   it<ApiTestContext>("POST /{signalSlug}/feedback returns 404 for a signal in another project", async ({

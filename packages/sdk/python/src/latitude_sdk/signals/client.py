@@ -816,7 +816,7 @@ class SignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SubmitSignalFeedbackResponse:
         """
-        Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.
+        Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
 
         Parameters
         ----------
@@ -1845,7 +1845,7 @@ class AsyncSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SubmitSignalFeedbackResponse:
         """
-        Records a one-time verdict on whether the signal is a real problem, with an optional reason. Feedback cannot be changed once submitted.
+        Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
 
         Parameters
         ----------

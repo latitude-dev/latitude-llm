@@ -198,6 +198,18 @@ describe("submitSignalFeedbackUseCase", () => {
     expect(issues.get(signalId)?.feedback).toBeNull()
   })
 
+  it("refuses a signal that no flagger detected", async () => {
+    for (const source of ["annotation", "custom"] as const) {
+      const { submit, issues, events } = run({ signals: [makeSignal({ source })] })
+
+      const error = await Effect.runPromise(Effect.flip(submit({ passed: true, feedback: "Useful" })))
+
+      expect(error._tag).toBe("SignalFeedbackNotSupportedError")
+      expect(issues.get(signalId)?.feedback).toBeNull()
+      expect(events).toEqual([])
+    }
+  })
+
   it("rejects an unpromoted signal", async () => {
     const { submit } = run({ signals: [makeSignal({ promotedAt: null })] })
 
