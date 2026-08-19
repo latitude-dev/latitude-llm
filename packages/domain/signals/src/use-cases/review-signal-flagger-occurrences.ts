@@ -2,7 +2,7 @@ import { type QueuePublishError, QueuePublisher } from "@domain/queue"
 import { type AnnotationScore, ScoreRepository } from "@domain/scores"
 import { ProjectId, type RepositoryError, SignalId, type SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { SIGNAL_FEEDBACK_OCCURRENCE_SAMPLE_LIMIT } from "../constants.ts"
+import { SIGNAL_FEEDBACK_OCCURRENCE_SAMPLE_LIMIT, SIGNAL_FEEDBACK_THROTTLE_MS } from "../constants.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 
 export interface ReviewSignalFlaggerOccurrencesInput {
@@ -104,7 +104,10 @@ export const reviewSignalFlaggerOccurrencesUseCase = (
             passed: verdict.passed,
             feedback: verdict.feedback,
           },
-          { dedupeKey: `issues:feedback-review:${input.signalId}:${target.flaggerTraceId}` },
+          {
+            dedupeKey: `org:${input.organizationId}:issues:feedback-review:${input.signalId}:${target.flaggerTraceId}`,
+            leadingThrottleMs: SIGNAL_FEEDBACK_THROTTLE_MS,
+          },
         ),
       { concurrency: "unbounded", discard: true },
     )

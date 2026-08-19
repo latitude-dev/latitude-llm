@@ -5,6 +5,7 @@ import { createFakeScoreRepository } from "@domain/scores/testing"
 import { OrganizationId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { SIGNAL_FEEDBACK_THROTTLE_MS } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
@@ -155,7 +156,10 @@ describe("reviewSignalFlaggerOccurrencesUseCase", () => {
       passed: false,
       feedback: "Never a problem",
     })
-    expect(published[0]?.options?.dedupeKey).toBe(`issues:feedback-review:${signalId}:${flaggerTraceId}`)
+    expect(published[0]?.options?.dedupeKey).toBe(
+      `org:${organizationId}:issues:feedback-review:${signalId}:${flaggerTraceId}`,
+    )
+    expect(published[0]?.options?.leadingThrottleMs).toBe(SIGNAL_FEEDBACK_THROTTLE_MS)
     expect(published[1]?.payload).toMatchObject({ flaggerSlug: "laziness", flaggerTraceId: "e".repeat(32) })
   })
 
