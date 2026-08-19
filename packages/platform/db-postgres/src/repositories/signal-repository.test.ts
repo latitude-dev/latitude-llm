@@ -40,6 +40,9 @@ const seedSignal = (input: {
   readonly clusteredAt?: Date
   readonly centroidEmbedding?: readonly number[]
 }) =>
+  // Provenance follows the latch rather than being a parameter: only discovery
+  // creates an unpromoted signal, so a user-created candidate is a state the
+  // product cannot reach and a fixture should not be able to write.
   pg.db.insert(signals).values({
     id: input.id,
     organizationId: ORG_ID,
@@ -47,8 +50,8 @@ const seedSignal = (input: {
     slug: input.slug,
     name: input.slug,
     description: `${input.slug} description`,
-    source: "custom",
-    origin: "user",
+    source: input.promotedAt === null ? "flagger" : "custom",
+    origin: input.promotedAt === null ? "system" : "user",
     resolvedAt: input.resolvedAt ?? null,
     ignoredAt: input.ignoredAt ?? null,
     regressedAt: input.regressedAt ?? null,
