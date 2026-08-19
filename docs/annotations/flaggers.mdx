@@ -9,16 +9,6 @@ Flaggers are Latitude's built-in automatic annotators. They inspect completed se
 
 Use flaggers when you want project-wide coverage of failure patterns you already know about, without reviewing every conversation by hand. They are useful for cases that are easy to miss in manual review: low-volume safety failures, recurring frustration, or behavior that only becomes visible across a long session.
 
-## How a flagger runs
-
-Every project starts with all flaggers provisioned. Detection happens in two passes.
-
-**Screening** runs on 100% of sessions and costs nothing. It gathers cheap evidence from the session (tool errors, error spans, repeated tool loops, latency and cost outliers, conversation moments, text patterns) and runs the checks that need no model. Deterministic matches are written straight away.
-
-**LLM classification** runs for one session and one flagger at a time. A classifier reads the conversation together with the screening evidence, and a second model pass reviews the proposed annotation before it is saved. This pass is billed by AI usage.
-
-Latitude waits for a session to settle before screening it. Sessions re-screen as new turns arrive, and at most one annotation is published per flagger per distinct piece of flagged content, so a growing conversation does not accumulate copies of the same finding.
-
 ## Available flaggers
 
 The settings page groups flaggers the same way this page does. The first two groups are deterministic, free, and always run on every eligible session. The last two use an LLM and are sampled.
@@ -95,6 +85,16 @@ LLM checks on failure modes in your agent's own output.
   </Accordion>
 </AccordionGroup>
 
+### Cost and efficiency
+
+Deterministic checks on token waste. Free, and run on every eligible session.
+
+<AccordionGroup>
+  <Accordion title="Low cache hit rate">
+    Large multi-turn sessions where prompt caching is active but fewer than 30% of input tokens were served from cache, which usually means caching is broken.
+  </Accordion>
+</AccordionGroup>
+
 ### Response validity
 
 Deterministic checks on the shape of the response. Free, and run on every eligible session.
@@ -113,15 +113,15 @@ Deterministic checks on the shape of the response. Free, and run on every eligib
   </Accordion>
 </AccordionGroup>
 
-### Cost and efficiency
+## How a flagger runs
 
-Deterministic checks on token waste. Free, and run on every eligible session.
+Every project starts with all flaggers provisioned. Detection happens in two passes.
 
-<AccordionGroup>
-  <Accordion title="Low cache hit rate">
-    Large multi-turn sessions where prompt caching is active but fewer than 30% of input tokens were served from cache, which usually means caching is broken.
-  </Accordion>
-</AccordionGroup>
+**Screening** runs on 100% of sessions and costs nothing. It gathers cheap evidence from the session (tool errors, error spans, repeated tool loops, latency and cost outliers, conversation moments, text patterns) and runs the checks that need no model. Deterministic matches are written straight away.
+
+**LLM classification** runs for one session and one flagger at a time. A classifier reads the conversation together with the screening evidence, and a second model pass reviews the proposed annotation before it is saved. This pass is billed by AI usage.
+
+Latitude waits for a session to settle before screening it. Sessions re-screen as new turns arrive, and at most one annotation is published per flagger per distinct piece of flagged content, so a growing conversation does not accumulate copies of the same finding.
 
 ## Sampling
 
@@ -130,15 +130,6 @@ Sampling applies only to the LLM flaggers, and it defaults to 10%. Deterministic
 Sampling is not the whole story on coverage. When screening finds evidence pointing at a specific category, that flagger's LLM pass runs regardless of the sampling rate. Sampling governs the sessions where nothing in particular stood out. This is why lowering sampling reduces volume but does not silence a flagger that keeps matching on real evidence.
 
 Sampling never affects search, filtering, or manual investigation. Every session stays fully queryable.
-
-## Suppression
-
-Some categories overlap, and a match on one makes another misleading. Latitude skips the second flagger in those cases:
-
-- **Refusal** is skipped when jailbreaking or NSFW fired, because refusing an adversarial or toxic request is the correct behavior.
-- **Laziness** is skipped when thrashing found a tool loop, because being stuck in a loop is a different failure from punting work back to the user.
-
-A suppressed flagger produces no annotation for that session, which explains gaps you might otherwise read as a miss.
 
 ## Configure flaggers
 
@@ -159,6 +150,16 @@ Run a project for a week with the defaults before changing anything, then look a
 - If a flagger's matches are mostly wrong for your domain, lower its sampling.
 - If you keep annotating cases by hand that a flagger should have caught, raise its sampling.
 - If a flagger is wrong for your product right now, for example NSFW on a creative-writing assistant, turn it off and revisit when the product changes.
+
+## Suppression
+
+Some categories overlap, and a match on one makes another misleading. Latitude skips the second flagger in those cases:
+
+- **Refusal** is skipped when jailbreaking or NSFW fired, because refusing an adversarial or toxic request is the correct behavior.
+- **Laziness** is skipped when thrashing found a tool loop, because being stuck in a loop is a different failure from punting work back to the user.
+
+A suppressed flagger produces no annotation for that session, which explains gaps you might otherwise read as a miss.
+
 
 ## Flaggers, search, and manual annotations
 
