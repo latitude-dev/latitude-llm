@@ -68,13 +68,20 @@ interface ProjectTracesTableProps {
   readonly metricsLoading?: boolean | undefined
   readonly annotationCounts?: ReadonlyMap<string, TraceAnnotationCounts> | undefined
   readonly annotationCountsPendingTraceIds?: ReadonlySet<string> | undefined
-  readonly scrollAreaLayout?: "fill" | "intrinsic" | "external"
   readonly scrollContainerClassName?: string
-  /** Required when `scrollAreaLayout` is `"external"` — see `InfiniteTable`. */
-  readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
   readonly onErrorClick?: (trace: TraceRecord) => void
   readonly onAnnotationClick?: (trace: TraceRecord) => void
 }
+
+type ProjectTracesTableScrollProps =
+  | {
+      readonly scrollAreaLayout: "external"
+      readonly scrollContainerRef: RefObject<HTMLDivElement | null>
+    }
+  | {
+      readonly scrollAreaLayout?: "fill" | "intrinsic"
+      readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
+    }
 
 export function ProjectTracesTable({
   projectId,
@@ -103,7 +110,7 @@ export function ProjectTracesTable({
   scrollContainerRef,
   onErrorClick,
   onAnnotationClick,
-}: ProjectTracesTableProps) {
+}: ProjectTracesTableProps & ProjectTracesTableScrollProps) {
   const showMetricSubheaders = traceMetrics !== undefined || metricsLoading !== undefined
   const isRelevanceSort = sorting?.column === RELEVANCE_SORT_COLUMN
 
@@ -388,13 +395,20 @@ export function ProjectTracesTable({
     return `View trace ${shortName}`
   }, [])
 
+  const scrollAreaProps =
+    scrollAreaLayout === "external"
+      ? ({ scrollAreaLayout: "external", scrollContainerRef } as const)
+      : {
+          ...(scrollAreaLayout !== undefined ? { scrollAreaLayout } : {}),
+          ...(scrollContainerRef !== undefined ? { scrollContainerRef } : {}),
+        }
+
   return (
     <InfiniteTable
       data={data}
       {...(isLoading !== undefined ? { isLoading } : {})}
-      {...(scrollAreaLayout !== undefined ? { scrollAreaLayout } : {})}
+      {...scrollAreaProps}
       {...(scrollContainerClassName !== undefined ? { className: scrollContainerClassName } : {})}
-      {...(scrollContainerRef !== undefined ? { scrollContainerRef } : {})}
       columns={columns}
       getRowKey={(trace) => trace.traceId}
       {...(onTraceClick

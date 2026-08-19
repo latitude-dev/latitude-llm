@@ -70,9 +70,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/tool
 
 function ToolsPageContent() {
   const project = useRouteProject()
-  // Shared scroll container: holds the analytics panel and the table together, so
-  // scrolling moves them as one and the table's header sticks once it reaches the
-  // top instead of the table scrolling alone in its own small box.
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
   const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })

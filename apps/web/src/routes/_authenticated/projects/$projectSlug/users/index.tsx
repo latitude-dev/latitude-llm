@@ -89,9 +89,6 @@ function UsersPage() {
   })
   const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
   const [focusedUserId, setFocusedUserId] = useState<string | undefined>()
-  // Shared scroll container: holds the analytics panel and the table together, so
-  // scrolling moves them as one and the table's header sticks once it reaches the
-  // top instead of the table scrolling alone in its own small box.
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useDebounce(

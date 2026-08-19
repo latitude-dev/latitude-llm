@@ -122,9 +122,7 @@ export function ProjectBreadcrumbSegment() {
               label="Create new"
               icon={<Icon icon={Plus} size="sm" color="foregroundMuted" />}
               onClick={() => {
-                // The button lives inside the combobox's own floating popup, so Base UI's
-                // outside-click dismissal never treats clicking it as "outside" — it has to
-                // be closed explicitly, or it stays open (and painting above the modal) after.
+                // Explicitly close the combobox because this footer action lives inside its popup.
                 setComboboxOpen(false)
                 setCreateOpen(true)
               }}

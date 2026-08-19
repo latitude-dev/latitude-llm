@@ -88,11 +88,7 @@ export function ToolsView({
   readonly focusedToolName?: string | undefined
   readonly onFocusedToolChange?: (toolName: string | undefined) => void
   readonly keyboardNavEnabled?: boolean
-  /**
-   * The ancestor scroll container to virtualize against — shared with the
-   * analytics panel stacked above it, so the page scrolls as one and the
-   * table's header sticks once it reaches the top.
-   */
+  /** Shared ancestor scroll container for page-level scrolling + sticky headers. */
   readonly scrollContainerRef: RefObject<HTMLDivElement | null>
 }) {
   const navigate = useNavigate()

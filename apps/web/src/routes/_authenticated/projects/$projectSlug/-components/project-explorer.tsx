@@ -216,9 +216,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   // Ref to the ordered list of trace IDs from the currently loaded table page
   const traceIdsRef = useRef<string[]>([])
 
-  // Shared scroll container for both tabs: holds the aggregations chart and the
-  // table together, so scrolling moves them as one and the table's header sticks
-  // once it reaches the top instead of the table scrolling alone in its own small box.
   const sessionsScrollAreaRef = useRef<HTMLDivElement>(null)
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
@@ -667,9 +664,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
           </div>
         )}
 
-        {/* `sticky left-0`: this section doesn't need the horizontal scroll that only the
-            wide table (below) triggers on the shared container — pin it to the viewport's
-            left edge instead of letting it slide away with the table's columns. */}
         <div className="sticky left-0 z-[1] bg-background px-6">
           <TraceAggregationsPanel
             projectId={currentProject.id}

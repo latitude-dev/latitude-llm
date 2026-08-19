@@ -170,12 +170,7 @@ interface SessionsViewProps {
   readonly searchQuery?: string
   /** Filter fields to hide in the built-in sidebar (e.g. `topics`). */
   readonly excludeFilterFields?: readonly string[]
-  /**
-   * The ancestor scroll container to virtualize against — shared with whatever else
-   * the caller stacks above it (e.g. an aggregations chart), so the page scrolls as
-   * one and the table's header sticks once it reaches the top. When omitted the
-   * table falls back to scrolling within its own bounded box, as before.
-   */
+  /** Optional shared ancestor scroll container for page-level scrolling + sticky headers. */
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
 }
 

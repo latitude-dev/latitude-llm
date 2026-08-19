@@ -116,9 +116,6 @@ function MonitorDetailPage() {
   const [muteConfirmOpen, setMuteConfirmOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [ruleModal, setRuleModal] = useState<MonitorRuleRecord | null>(null)
-  // Shared scroll container: holds the config card, metric chart, and incidents table
-  // together, so scrolling moves them as one and the table's header sticks once it
-  // reaches the top instead of the table scrolling alone in its own small box.
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   const window = useMemo(() => {
@@ -195,7 +192,7 @@ function MonitorDetailPage() {
                 <SectionHeader
                   title={monitor?.name ?? ""}
                   badge={monitor?.system ? <SystemTag /> : undefined}
-                  description={rule?.summary ?? undefined}
+                  description={monitor?.description ?? rule?.summary ?? undefined}
                 />
               )}
             </div>

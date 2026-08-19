@@ -54,7 +54,7 @@ export function HeaderCell({
   subheader?: ReactNode
   /** When true, reserve a bottom row so all header cells align when only some have `subheader`. */
   showSubheaderSlot?: boolean
-  /** Shown once the sticky header is pinned over scrolled rows. Cell border, not `<thead>`'s — row groups don't paint borders under `border-separate`. */
+  /** Paint the sticky-header bottom border on each cell because grouped rows use `border-separate`. */
   bottomBorder?: boolean
 }) {
   const TextComp = sortable ? "button" : "div"

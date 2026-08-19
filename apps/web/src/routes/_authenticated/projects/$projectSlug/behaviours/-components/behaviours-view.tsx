@@ -850,9 +850,6 @@ export function BehavioursView({
   readonly onMomentRangeChange: (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => void
 }) {
   const activeBehaviourId = behaviourPath.at(-1)
-  // Shared scroll container: holds the trajectory chart and the table together, so
-  // scrolling moves them as one and the table's header sticks once it reaches the top
-  // instead of the table scrolling alone in its own small box.
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const expandableKeys = useMemo(() => {
     const keys = new Set<string>()

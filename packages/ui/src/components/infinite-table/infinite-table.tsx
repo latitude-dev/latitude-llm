@@ -23,6 +23,23 @@ const SELECTION_COLUMN_WIDTH = 48
 const EXPANDED_SKELETON_CELL_CLASS =
   "px-4 py-2 first:rounded-l-lg last:rounded-r-lg overflow-hidden align-middle text-sm leading-5"
 
+export function externalScrollMargin(input: {
+  readonly containerTop: number
+  readonly containerScrollTop: number
+  readonly wrapperTop: number
+}) {
+  const { containerTop, containerScrollTop, wrapperTop } = input
+  return wrapperTop - containerTop + containerScrollTop
+}
+
+export function distanceToTableBottom(input: {
+  readonly containerBottom: number
+  readonly tableBottom: number
+}) {
+  const { containerBottom, tableBottom } = input
+  return tableBottom - containerBottom
+}
+
 function renderExpandedSkeletonRows<T>(
   columns: readonly InfiniteTableColumn<T>[],
   hasExpansion: boolean,
@@ -146,9 +163,6 @@ export function InfiniteTable<T>({
     return () => resizeObserver.disconnect()
   }, [hasGrouping])
 
-  // The virtualizer's row math is relative to the scroll container's own top, but in
-  // external mode that container also holds content above the table (e.g. a chart).
-  // scrollMargin tells it how far down the table's own start actually sits.
   useLayoutEffect(() => {
     if (!isExternalScrollArea) return
     const container = scrollContainerRef.current
@@ -158,13 +172,25 @@ export function InfiniteTable<T>({
     const measure = () => {
       const wrapperRect = wrapper.getBoundingClientRect()
       const containerRect = container.getBoundingClientRect()
-      setScrollMargin(wrapperRect.top - containerRect.top + container.scrollTop)
+      setScrollMargin(
+        externalScrollMargin({
+          wrapperTop: wrapperRect.top,
+          containerTop: containerRect.top,
+          containerScrollTop: container.scrollTop,
+        }),
+      )
     }
     measure()
     const resizeObserver = new ResizeObserver(measure)
     resizeObserver.observe(container)
     resizeObserver.observe(wrapper)
-    return () => resizeObserver.disconnect()
+    const mutationObserver =
+      typeof MutationObserver === "undefined" ? null : new MutationObserver(() => measure())
+    mutationObserver?.observe(container, { childList: true, subtree: true })
+    return () => {
+      resizeObserver.disconnect()
+      mutationObserver?.disconnect()
+    }
   }, [isExternalScrollArea, scrollContainerRef])
 
   const handleSortClick = useCallback(
@@ -223,12 +249,17 @@ export function InfiniteTable<T>({
         setIsHeaderCoveringRows(thead.getBoundingClientRect().top <= target.getBoundingClientRect().top + 0.5)
       }
       if (!infiniteScroll || !hasMore || infiniteScroll.isLoadingMore) return
-      const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
+      const distanceToBottom = isExternalScrollArea
+        ? distanceToTableBottom({
+            containerBottom: target.getBoundingClientRect().bottom,
+            tableBottom: tableWrapperRef.current?.getBoundingClientRect().bottom ?? target.getBoundingClientRect().bottom,
+          })
+        : target.scrollHeight - target.scrollTop - target.clientHeight
       if (distanceToBottom < ROW_HEIGHT * 5) {
         infiniteScroll.onLoadMore()
       }
     },
-    [infiniteScroll, hasMore, hasGrouping],
+    [infiniteScroll, hasMore, hasGrouping, isExternalScrollArea],
   )
 
   const handleScroll = useCallback(
@@ -236,8 +267,6 @@ export function InfiniteTable<T>({
     [handleScrollElement],
   )
 
-  // In external mode the scroll container belongs to the caller, so there's no
-  // owned element to attach the `onScroll` JSX prop to — listen natively instead.
   useEffect(() => {
     if (!isExternalScrollArea) return
     const container = scrollContainerRef.current
