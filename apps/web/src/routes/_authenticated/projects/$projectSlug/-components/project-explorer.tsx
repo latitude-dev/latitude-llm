@@ -84,6 +84,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
+  const [, setFocusScoreId] = useParamState("scoreId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
@@ -335,13 +336,15 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     setActiveTraceId("")
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-  }, [setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
+    setFocusScoreId("")
+  }, [setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId, setFocusScoreId])
 
   const onActiveTraceChange = (traceId: string | undefined) => {
     if (!traceId) {
       closeTraceDrawer()
       return
     }
+    setFocusScoreId("")
     setActiveTraceId(traceId)
   }
 
@@ -354,8 +357,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       setActiveTraceId(traceId ?? "")
       setSelectedSpanId("")
       setSelectedSpanTraceId("")
+      setFocusScoreId("")
     },
-    [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId],
+    [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId, setFocusScoreId],
   )
 
   const closeSessionPanel = useCallback(() => {
@@ -363,7 +367,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     setActiveTraceId("")
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
+    setFocusScoreId("")
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId, setFocusScoreId])
 
   // Submitting a new query invalidates any open drawer context against the new result set.
   // The `savedSearch` slug is intentionally kept so the Save button can surface drift.
@@ -424,9 +429,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       if (ids.length === 0) return
       const idx = ids.indexOf(activeTraceId)
       const target = idx < 0 ? ids[0] : ids[idx + delta]
-      if (target) setActiveTraceId(target)
+      if (target) onActiveTraceChange(target)
     },
-    [activeTraceId],
+    [activeTraceId, onActiveTraceChange],
   )
 
   const onNextTrace = useCallback(() => navigateTrace(1), [navigateTrace])

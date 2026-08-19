@@ -1,8 +1,8 @@
 import { EvaluationId, ScoreId, SignalId } from "@domain/shared"
+import { buildSeedAnchoredAnnotations } from "@domain/shared/seed-content/anchored-annotations"
 import {
-  classifyTau2SeedTrajectory,
-  TAU2_SEED_SIGNAL_FAMILIES,
   TAU2_SEED_TRAJECTORIES,
+  tau2TrajectoryIndexForSignalOccurrence,
 } from "@domain/shared/seed-content/tau2-trajectories"
 import { SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { Effect } from "effect"
@@ -36,37 +36,15 @@ function createdAtForTau2Signal(scope: SeedScope, signalIndex: number, occurrenc
   )
 }
 
-function buildFailedTrajectoryIndexesByFamily(maxTrajectories = TAU2_SEED_TRAJECTORIES.length) {
-  const byFamily = new Map<(typeof TAU2_SEED_SIGNAL_FAMILIES)[number]["key"], number[]>()
-
-  TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories).forEach((trajectory, trajectoryIndex) => {
-    const family = classifyTau2SeedTrajectory(trajectory)
-    if (family === null) return
-
-    const indexes = byFamily.get(family) ?? []
-    indexes.push(trajectoryIndex)
-    byFamily.set(family, indexes)
-  })
-
-  return byFamily
-}
-
 function buildTau2SignalAnalyticsRows(scope: SeedScope, maxTrajectories = TAU2_SEED_TRAJECTORIES.length) {
   const orgId = scope.organizationId
   const projectId = scope.projectId
-  const familyKeys = TAU2_SEED_SIGNAL_FAMILIES.map((family) => family.key)
-  const failedByFamily = buildFailedTrajectoryIndexesByFamily(maxTrajectories)
-  const allFailedTrajectoryIndexes = TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories).flatMap((trajectory, index) =>
-    trajectory.outcome === "failure" || trajectory.reward < 1 ? [index] : [],
-  )
 
   return SEED_SIGNAL_FIXTURES.flatMap((_, signalIndex) => {
-    const family = familyKeys[signalIndex % familyKeys.length]!
-    const candidateIndexes = failedByFamily.get(family) ?? allFailedTrajectoryIndexes
     const occurrenceCount = signalIndex < 8 ? 12 : 3
 
     return Array.from({ length: occurrenceCount }, (_, occurrenceIndex) => {
-      const trajectoryIndex = candidateIndexes[(signalIndex + occurrenceIndex) % candidateIndexes.length] ?? 0
+      const trajectoryIndex = tau2TrajectoryIndexForSignalOccurrence({ signalIndex, occurrenceIndex, maxTrajectories })
       const traceId = scope.traceHex("tau2-trajectory", trajectoryIndex)
       return {
         id: ScoreId(scope.cuid(`score:tau2-issue:${signalIndex}:${occurrenceIndex}`)),
@@ -180,6 +158,40 @@ export function buildLifecycleAnalyticsRows(scope: SeedScope) {
   ]
 }
 
+/**
+ * Analytics mirror of the seeded flagger annotations. The anchor itself only
+ * exists in Postgres (ClickHouse scores carry no metadata); these rows are what
+ * put their sessions under the signal in the Sessions list.
+ */
+function buildAnchoredAnnotationAnalyticsRows(scope: SeedScope, maxTrajectories?: number) {
+  const orgId = scope.organizationId
+  const projectId = scope.projectId
+
+  return buildSeedAnchoredAnnotations(maxTrajectories).map((annotation) => {
+    const traceId = scope.traceHex("tau2-trajectory", annotation.trajectoryIndex)
+
+    return {
+      id: ScoreId(scope.cuid(`score:tau2-annotation:${annotation.key}`)),
+      organization_id: orgId,
+      project_id: projectId,
+      session_id: traceId,
+      trace_id: traceId,
+      span_id: "",
+      source: "annotation",
+      source_id: "SYSTEM",
+      simulation_id: "",
+      signal_id: scopedSignalIdByFixtureIndex(scope, annotation.signalIndex),
+      value: 0,
+      passed: false,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      created_at: scope.timestampDaysAgo(annotation.daysAgo, annotation.hour, annotation.minute),
+    }
+  })
+}
+
 function buildAllAnalyticsRows(scope: SeedScope, maxTau2Trajectories?: number) {
   const lifecycleAnalyticsRows = buildLifecycleAnalyticsRows(scope)
   const tau2SignalAnalyticsRows = buildTau2SignalAnalyticsRows(scope, maxTau2Trajectories)
@@ -212,4 +224,24 @@ const seedScores: Seeder = {
     }),
 }
 
-export const scoreSeeders: readonly Seeder[] = [seedScores]
+// Separate seeder (and sentinel) from `seedScores`: `scores` has no row-level
+// dedup, so a database seeded before the annotations existed must be able to
+// pick them up without re-inserting every tau2 occurrence row.
+const seedAnchoredAnnotations: Seeder = {
+  name: "scores/tau2-flagger-annotations",
+  run: (ctx) =>
+    Effect.gen(function* () {
+      const rows = buildAnchoredAnnotationAnalyticsRows(ctx.scope, ctx.maxTau2Trajectories)
+      const sentinel = rows[0]?.id
+      if (sentinel === undefined) return
+      const present = yield* isSentinelPresent(ctx.client, "scores", "id = {sentinel:String}", { sentinel })
+      if (present) {
+        if (!ctx.quiet) console.log("  -> scores/tau2-flagger-annotations: already seeded, skipping")
+        return
+      }
+      yield* insertJsonEachRow(ctx.client, "scores", rows)
+      if (!ctx.quiet) console.log(`  -> scores: ${rows.length} flagger annotation analytics rows`)
+    }),
+}
+
+export const scoreSeeders: readonly Seeder[] = [seedScores, seedAnchoredAnnotations]

@@ -477,11 +477,13 @@ export const ScoreRepositoryLive = Layer.effect(
         projectId,
         traceIds,
         source,
+        signalId,
         options,
       }: {
         readonly projectId: ProjectId
         readonly traceIds: readonly TraceId[]
         readonly source?: ScoreSourceType
+        readonly signalId?: SignalId
         readonly options?: ScoreListOptions
       }) => {
         if (traceIds.length === 0) {
@@ -493,14 +495,12 @@ export const ScoreRepositoryLive = Layer.effect(
           })
         }
         const traceIdValues = traceIds.map((traceId) => String(traceId))
-        const combined =
-          source !== undefined
-            ? and(
-                eq(scores.projectId, projectId),
-                inArray(scores.traceId, traceIdValues),
-                eq(scores.sourceType, source),
-              )
-            : and(eq(scores.projectId, projectId), inArray(scores.traceId, traceIdValues))
+        const combined = and(
+          eq(scores.projectId, projectId),
+          inArray(scores.traceId, traceIdValues),
+          ...(source !== undefined ? [eq(scores.sourceType, source)] : []),
+          ...(signalId !== undefined ? [eq(scores.signalId, signalId)] : []),
+        )
         return list({
           baseWhere: combined ?? eq(scores.projectId, projectId),
           options,

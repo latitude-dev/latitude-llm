@@ -5,6 +5,12 @@ import type { TextSelectionPopoverControls } from "./use-annotation-popover.ts"
 const HIGHLIGHT_BOX_SHADOW = "0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5)"
 const HIGHLIGHT_DURATION_MS = 4000
 const POPOVER_VIEWPORT_PADDING = 24
+/** How often the conversation's scroll height is sampled while waiting for it to settle. */
+const SETTLE_POLL_MS = 50
+/** How long that height must hold steady before the conversation counts as laid out. */
+export const SETTLE_QUIET_MS = 200
+/** Upper bound on the wait, so a conversation that never settles still scrolls. */
+const SETTLE_TIMEOUT_MS = 5000
 /**
  * `scrollend` does not bubble — it fires only on the element whose scroll offset changed.
  * `scrollIntoView` may scroll an ancestor of `container`, so we walk up from the target.
@@ -60,6 +66,14 @@ export function useAnnotationNavigation({
   const currentPopoverCardRef = useRef<HTMLElement | null>(null)
   const observerRef = useRef<MutationObserver | null>(null)
   const observerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const cancelSettle = useCallback(() => {
+    if (settleTimeoutRef.current) {
+      clearTimeout(settleTimeoutRef.current)
+      settleTimeoutRef.current = null
+    }
+  }, [])
 
   const clearObserver = useCallback(() => {
     if (observerRef.current) {
@@ -98,7 +112,8 @@ export function useAnnotationNavigation({
     clearHighlight()
     clearPopoverCardHighlight()
     clearObserver()
-  }, [clearHighlight, clearPopoverCardHighlight, clearObserver])
+    cancelSettle()
+  }, [clearHighlight, clearPopoverCardHighlight, clearObserver, cancelSettle])
 
   useEffect(() => () => clearAll(), [clearAll])
 
@@ -292,59 +307,69 @@ export function useAnnotationNavigation({
 
   const findAndScrollToAnnotation = useCallback(
     (annotation: AnnotationRecord) => {
-      clearObserver()
+      cancelSettle()
 
       const container = scrollContainerRef.current
-      if (!container) return false
+      if (!container) return
 
       const { messageIndex, partIndex, startOffset, endOffset } = annotation.metadata
-      if (messageIndex === undefined) return false
+      if (messageIndex === undefined) return
 
       const isTextSelection = partIndex !== undefined && startOffset !== undefined && endOffset !== undefined
 
-      // Try to resolve the target element now; returns true once it scrolls.
-      // Both branches may run before the conversation DOM mounts (e.g. sliding
-      // into a freshly opened trace), so the caller falls back to an observer.
-      const tryScroll = (): boolean => {
+      const resolveTarget = (): ScrollToElementOptions | null => {
         if (isTextSelection) {
           const textElement = container.querySelector<HTMLElement>(`[data-annotation-id="${annotation.id}"]`)
-          if (!textElement) return false
-          scrollToElement({
+          if (!textElement) return null
+          return {
             element: textElement,
             clickTarget: textElement,
             annotation,
             openTextSelectionPopoverImmediately: true,
-          })
-          return true
+          }
         }
 
         const messageElement = container.querySelector<HTMLElement>(`[data-message-index="${messageIndex}"]`)
-        if (!messageElement) return false
+        if (!messageElement) return null
         const triggerElement = container.querySelector<HTMLElement>(
           `[data-message-annotation-trigger="${messageIndex}"]`,
         )
-        scrollToElement({ element: messageElement, clickTarget: triggerElement, annotation })
-        return true
+        return { element: messageElement, clickTarget: triggerElement, annotation }
       }
 
-      if (tryScroll()) return true
+      // The target renders asynchronously (the conversation chunk has to land and,
+      // for a substring anchor, its highlight spans have to be painted), and even
+      // once it exists the messages above it keep laying out, pushing it further
+      // down — scrolling before that settles lands short of the anchor. Sampling
+      // the scroll height covers node insertions and pure reflows alike; scroll
+      // once it holds steady.
+      let elapsed = 0
+      let quietFor = 0
+      let lastScrollHeight = -1
 
-      const observer = new MutationObserver((_, obs) => {
-        if (tryScroll()) {
-          obs.disconnect()
-          observerRef.current = null
+      const scrollWhenSettled = () => {
+        settleTimeoutRef.current = null
+        elapsed += SETTLE_POLL_MS
+        if (container.scrollHeight === lastScrollHeight) {
+          quietFor += SETTLE_POLL_MS
+        } else {
+          lastScrollHeight = container.scrollHeight
+          quietFor = 0
         }
-      })
-      observerRef.current = observer
-      observer.observe(container, { childList: true, subtree: true })
-      observerTimeoutRef.current = setTimeout(() => {
-        observer.disconnect()
-        observerRef.current = null
-        observerTimeoutRef.current = null
-      }, 5000)
-      return false
+
+        const timedOut = elapsed >= SETTLE_TIMEOUT_MS
+        const target = resolveTarget()
+        if (target && (quietFor >= SETTLE_QUIET_MS || timedOut)) {
+          scrollToElement(target)
+          return
+        }
+        if (timedOut) return
+        settleTimeoutRef.current = setTimeout(scrollWhenSettled, SETTLE_POLL_MS)
+      }
+
+      settleTimeoutRef.current = setTimeout(scrollWhenSettled, SETTLE_POLL_MS)
     },
-    [scrollContainerRef, scrollToElement, clearObserver],
+    [scrollContainerRef, scrollToElement, cancelSettle],
   )
 
   const scrollToAnnotation = useCallback(

@@ -18,11 +18,37 @@ import {
 import { SignalSlot } from "./session-detail-drawer/signal-slot.tsx"
 import { type DetailSlotKind, SlotTransition } from "./session-detail-drawer/slot-transition.tsx"
 import { isTraceDetailTab, type TraceDetailTabId, TraceSlot } from "./session-detail-drawer/trace-slot.tsx"
+import { useFocusSignalScore } from "./session-detail-drawer/use-focus-signal-score.ts"
 import { useSessionTraces } from "./session-detail-drawer/use-session-traces.ts"
 
+/**
+ * Clears every search param the session panel owns. A caller that reuses the
+ * panel for another session (or closes it) runs this so the previous session's
+ * tab, focused score, or open trace can't leak into the next one.
+ */
+export function useSessionPanelParamReset() {
+  const [, setTraceId] = useParamState("traceId", "")
+  const [, setSignalId] = useParamState("signalId", "")
+  const [, setSessionTab] = useParamState("sessionTab", "")
+  const [, setTraceTab] = useParamState("traceTab", "")
+  const [, setFocusScoreId] = useParamState("scoreId", "")
+  const [, setSelectedSpanId] = useParamState("spanId", "")
+  const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
+
+  return () => {
+    setTraceId("")
+    setSignalId("")
+    setSessionTab("")
+    setTraceTab("")
+    setFocusScoreId("")
+    setSelectedSpanId("")
+    setSelectedSpanTraceId("")
+  }
+}
+
 export type OpenTraceOptions = {
-  /** Focuses an inline annotation after the trace slot mounts. Implies `conversation` as the default tab. */
-  readonly focusAnnotationId?: string
+  /** Focuses a score's anchor after the trace slot mounts. Implies `conversation` as the default tab. */
+  readonly focusScoreId?: string
   /** Overrides which tab the trace slot lands on. Defaults: `conversation` with focus, otherwise `trace`. */
   readonly targetTab?: TraceDetailTabId
 }
@@ -37,6 +63,7 @@ export function SessionDetailDrawer({
   focusMomentKind,
   focusMomentId,
   focusSpan,
+  focusSignalId,
   defaultTab,
 }: {
   readonly projectId: string
@@ -51,28 +78,34 @@ export function SessionDetailDrawer({
   readonly focusMomentId?: string | undefined
   /** Lands on the Spans tab with this span selected. Remount (re-key) to focus a different span. */
   readonly focusSpan?: { readonly spanId: string; readonly traceId: string } | undefined
+  /** Lands on the anchor of the score this signal recorded in the session, when it has one. */
+  readonly focusSignalId?: string | undefined
   /** Overrides which tab the drawer lands on when no URL param is set. */
   readonly defaultTab?: SessionTabId | undefined
 }) {
   const [traceId, setTraceId] = useParamState("traceId", "")
   const [signalId, setSignalId] = useParamState("signalId", "")
-  const [, setFocusAnnotationId] = useParamState("annotationId", "")
+  const [focusScoreId, setFocusScoreId] = useParamState("scoreId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const [q] = useParamState("q", "")
-  // Land on the conversation tab when arriving from an active search, so the
-  // conversation tab's search-match autoscroll/highlight has something to scroll to.
+  // Land on the conversation tab when arriving from an active search (so the
+  // conversation tab's search-match autoscroll/highlight has something to scroll
+  // to) or with a focused score, whose anchor only that tab can show.
   const defaultSessionTab =
     defaultTab ??
-    (focusSpan ? "spans" : (searchQuery?.length ?? q.length) > 0 || focusMomentKind ? "conversation" : "session")
+    (focusSpan
+      ? "spans"
+      : (searchQuery?.length ?? q.length) > 0 || focusMomentKind || focusScoreId
+        ? "conversation"
+        : "session")
   const [rawActiveTab, setActiveTab] = useParamState("sessionTab", defaultSessionTab, {
     validate: isSessionTab,
   })
   const activeTab = normalizeSessionTab(rawActiveTab)
   // Owned by `TraceSlot` once it mounts, but written here when sliding into a
-  // trace so the slot lands on the requested tab (Signals → "trace",
-  // Annotations → "conversation"). Kept distinct from `sessionTab` so the two
-  // never collide.
+  // trace so the slot lands on the requested tab (Signals → "trace", Scores →
+  // "conversation"). Kept distinct from `sessionTab` so the two never collide.
   const [, setTraceTab] = useParamState<TraceDetailTabId>("traceTab", "trace", { validate: isTraceDetailTab })
 
   // Seed the span selection when a caller opens the drawer focused on a span.
@@ -135,31 +168,38 @@ export function SessionDetailDrawer({
   const showDetail = detailKind !== null && !isSessionMissing
 
   const openTrace = (nextTraceId: string, options: OpenTraceOptions = {}) => {
-    const { focusAnnotationId, targetTab } = options
+    const { focusScoreId: nextFocusScoreId, targetTab } = options
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setFocusAnnotationId(focusAnnotationId ?? "")
-    setTraceTab(targetTab ?? (focusAnnotationId ? "conversation" : "trace"))
+    setFocusScoreId(nextFocusScoreId ?? "")
+    setTraceTab(targetTab ?? (nextFocusScoreId ? "conversation" : "trace"))
     setTraceId(nextTraceId)
   }
 
   const openSignal = (nextSignalId: string) => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setFocusAnnotationId("")
+    setFocusScoreId("")
     setTraceId("")
     setSignalId(nextSignalId)
   }
 
-  const focusAnnotationInConversation = (annotationId: string) => {
-    setFocusAnnotationId(annotationId)
+  const focusScoreInConversation = (scoreId: string) => {
+    setFocusScoreId(scoreId)
     setActiveTab("conversation")
+  }
+
+  // A focused score only makes sense while the Conversation tab is showing it,
+  // so any other tab drops the `scoreId` param rather than stranding it there.
+  const selectTab = (tab: SessionTabId) => {
+    if (tab !== "conversation") setFocusScoreId("")
+    setActiveTab(tab)
   }
 
   const backToSession = () => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setFocusAnnotationId("")
+    setFocusScoreId("")
     setTraceId("")
     setSignalId("")
   }
@@ -167,11 +207,24 @@ export function SessionDetailDrawer({
   const handleClose = () => {
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-    setFocusAnnotationId("")
+    setFocusScoreId("")
     setTraceId("")
     setSignalId("")
     onClose()
   }
+
+  useFocusSignalScore({
+    projectId,
+    signalId: focusSignalId,
+    traceIds: session?.traceIds ?? [],
+    canFocus: !showDetail,
+    onFocus: (score) => {
+      const scoreTraceId = score.traceId ?? ""
+      if (!scoreTraceId) return
+      if (scoreTraceId === session?.latestTraceId) focusScoreInConversation(score.id)
+      else openTrace(scoreTraceId, { focusScoreId: score.id })
+    },
+  })
 
   useHotkeys([
     {
@@ -228,11 +281,11 @@ export function SessionDetailDrawer({
               traces={traces}
               latestTraceId={session.latestTraceId}
               activeTab={activeTab}
-              onActiveTabChange={setActiveTab}
+              onActiveTabChange={selectTab}
               isActive={!showDetail}
               onOpenTrace={openTrace}
               onOpenSignal={openSignal}
-              onOpenInConversation={focusAnnotationInConversation}
+              onOpenInConversation={focusScoreInConversation}
               focusMomentKind={focusMomentKind}
               focusMomentId={focusMomentId}
               {...(searchQuery ? { searchQuery } : {})}

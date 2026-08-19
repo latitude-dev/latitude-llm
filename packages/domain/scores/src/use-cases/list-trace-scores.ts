@@ -1,4 +1,12 @@
-import { BadRequestError, cuidSchema, ProjectId, type RepositoryError, TraceId, traceIdSchema } from "@domain/shared"
+import {
+  BadRequestError,
+  cuidSchema,
+  ProjectId,
+  type RepositoryError,
+  SignalId,
+  TraceId,
+  traceIdSchema,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import { ScoreRepository, scoreDraftModeSchema } from "../ports/score-repository.ts"
@@ -29,6 +37,7 @@ export type ListTraceScoresInput = z.input<typeof listTraceScoresInputSchema>
 export const listScoresByTraceIdsInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   traceIds: z.array(traceIdSchema.transform(TraceId)).max(500),
+  signalId: cuidSchema.transform(SignalId).optional(),
   limit: baseListScoresInputSchema.shape.limit,
   offset: baseListScoresInputSchema.shape.offset,
   draftMode: scoreDraftModeSchema.default("include"),
@@ -87,6 +96,7 @@ export const listScoresByTraceIdsUseCase = Effect.fn("scores.listScoresByTraceId
   return yield* scoreRepository.listByTraceIds({
     projectId: parsed.projectId,
     traceIds: parsed.traceIds,
+    ...(parsed.signalId ? { signalId: parsed.signalId } : {}),
     options: {
       limit: parsed.limit,
       offset: parsed.offset,

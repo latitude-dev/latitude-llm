@@ -89,6 +89,8 @@ export interface ScoreRepositoryShape {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
     readonly source?: ScoreSourceType
+    /** Narrows to one signal's scores, so a session with more scores than fit a page still yields them. */
+    readonly signalId?: SignalId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   /** Per-trace +/- score counts. Omit `source` for all sources; pass `"annotation"` for the public API fields. Signal-less absent evaluation runs are excluded from the negative count. */
