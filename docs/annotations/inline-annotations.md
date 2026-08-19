@@ -1,11 +1,11 @@
 ---
 title: Inline Annotations
-description: Annotate any session directly from its detail view
+description: Annotate any trace directly from the session detail view
 ---
 
 # Inline Annotations
 
-Inline annotations are the main way to leave human feedback on a session. Any session you can open has an annotation panel, whether you reached it from the Sessions page, Signals, or a saved search. A single trace opened on its own has the same panel, scoped to that trace.
+Inline annotations are the main way to leave human feedback on a trace. You open the session, read the whole conversation, and annotate the trace that shows the behavior you want to call out. Any session you can open has an annotation panel, whether you reached it from the Sessions page, Signals, or a saved search, and a trace opened on its own has the same panel.
 
 ## How Inline Annotations Work
 
@@ -41,7 +41,7 @@ Use inline annotations for:
 - Ad-hoc spot checks while browsing sessions
 - Signal investigation
 - Team review and coaching
-- Extra context on sessions that already have scores or flagger annotations
+- Extra context on traces that already have scores or flagger annotations
 
 If you want detection without human review for a fixed set of known failure categories, use [flaggers](./flaggers).
 

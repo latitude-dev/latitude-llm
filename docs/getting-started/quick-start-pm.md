@@ -73,11 +73,11 @@ Some failure categories are common enough that Latitude detects them for you. Ev
 
 - **Low cache hit rate**: Caching is on but most input tokens are missing the cache
 
-When a flagger matches, it writes an annotation on the session. That annotation feeds into [signal discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. Under **Project Settings** you can toggle each flagger, apply a use-case preset, and set how aggressively the LLM ones sample. See [Flaggers](../annotations/flaggers) for what each one detects.
+When a flagger matches, it annotates the trace inside the session where the issue appeared. That annotation feeds into [signal discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. Under **Project Settings** you can toggle each flagger, apply a use-case preset, and set how aggressively the LLM ones sample. See [Flaggers](../annotations/flaggers) for what each one detects.
 
 ## Reviewing Sessions
 
-To leave human feedback on a session, open it from any list (Sessions, Search, a signal's logs) and use the annotation panel on the right:
+To leave human feedback, open a session from any list (Sessions, Search, a signal's logs) and use the annotation panel on the right. Your verdict attaches to the trace you are looking at:
 
 - Click anywhere in the conversation to create a message-level annotation, or use the button for a conversation-level one.
 - Mark it as positive (thumbs up) or negative (thumbs down).

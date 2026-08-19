@@ -5,11 +5,11 @@ description: Built-in automatic annotators that surface common failure categorie
 
 # Flaggers
 
-Flaggers are Latitude's built-in automatic annotators. They inspect completed sessions for common failure categories and write an annotation when they find one. Those annotations are attributed to Latitude rather than to a person, and they feed signal discovery, evaluation alignment, and score analytics exactly like human feedback.
+Flaggers are Latitude's built-in automatic annotators. They inspect completed sessions for common failure categories and annotate the trace where the problem shows up when they find one. Those annotations are attributed to Latitude rather than to a person, and they feed signal discovery, evaluation alignment, and score analytics exactly like human feedback.
 
 Use flaggers when you want project-wide coverage of failure patterns you already know about, without reviewing every conversation by hand. They are useful for cases that are easy to miss in manual review: low-volume safety failures, recurring frustration, or behavior that only becomes visible across a long session.
 
-Flaggers work on [sessions](../getting-started/concepts#sessions), the unit Latitude reviews: the whole conversation your agent had, across every trace it produced. A trace that arrives without a session id becomes a single-trace session, so nothing goes unscreened.
+Detection is session-wide. A flagger reads the whole [session](../getting-started/concepts#sessions), the conversation your agent had across every trace it produced, because most of these failures only make sense in the context of the turns around them. The annotation itself lands on one trace inside that session, anchored to the message that shows the issue, so it appears in trace-level views and analytics like any other annotation. A trace that arrives without a session id becomes a single-trace session, so nothing goes unscreened.
 
 ## Available flaggers
 
@@ -168,13 +168,13 @@ Suppression happens during screening, so it does not wait for the suppressing fl
 | --- | --- |
 | **Flaggers** | Automatic detection of known failure categories across a project. |
 | **[Search](../search/overview)** | Investigating custom cohorts or patterns no built-in flagger covers. |
-| **[Inline annotations](./inline-annotations)** | Adding human judgment to specific sessions. |
+| **[Inline annotations](./inline-annotations)** | Adding human judgment to a specific trace. |
 
 These work together: flaggers generate signal automatically, search scopes investigation, and manual annotations add the judgment neither can produce.
 
 ## Related
 
 - [Annotations Overview](./overview): How annotations connect to scores, signals, and evaluations
-- [Inline Annotations](./inline-annotations): Leave human feedback on sessions
+- [Inline Annotations](./inline-annotations): Leave human feedback on a trace
 - [Search](../search/overview): Investigate patterns flaggers do not cover
 - [Signals](../signals/overview): How annotations become trackable failure patterns

@@ -5,7 +5,7 @@ description: Review your agent's interactions and provide human feedback
 
 # Annotations
 
-Annotations are verdicts on a session, the conversation your agent had from start to finish. A human reviewer, a Latitude flagger, or an external system can attach a thumbs-up or thumbs-down verdict with feedback to the whole conversation, one message, or a text range inside it.
+Annotations are verdicts on a trace. You read the session it belongs to, the full conversation, and attach a thumbs-up or thumbs-down verdict with feedback to the trace where the behavior happened, scoped to the whole conversation, one message, or a text range inside it. A human reviewer, a Latitude flagger, or an external system can all create one.
 
 Finalized annotations become scores. They feed analytics, signal discovery, and evaluation alignment the same way regardless of where they came from.
 
@@ -14,8 +14,8 @@ Finalized annotations become scores. They feed analytics, signal discovery, and 
 Annotations can come from:
 
 1. **Inline review** from any session detail view. See [Inline Annotations](./inline-annotations).
-2. **Flaggers** when a completed session matches a known failure category such as _jailbreaking_, _frustration_, _incompletion_, or _tool call errors_. See [Flaggers](./flaggers).
-3. **Your own systems** through the [Annotations API](../scores/api), which pins the annotation to one trace inside the session.
+2. **Flaggers** when a completed session matches a known failure category such as _jailbreaking_, _frustration_, _incompletion_, or _tool call errors_. The flagger reads the session and annotates the trace where the issue appeared. See [Flaggers](./flaggers).
+3. **Your own systems** through the [Annotations API](../scores/api), which targets the trace by id or by a filter set matching exactly one.
 
 ## How to Annotate
 
