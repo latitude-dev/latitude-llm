@@ -1,92 +1,180 @@
 ---
 title: Flaggers
-description: Automatic annotators that surface common failure categories on every trace
+description: Built-in automatic annotators that surface common failure categories in every session
 ---
 
 # Flaggers
 
-Flaggers are Latitude's built-in automatic annotators. They check completed traces for common failure categories and add annotations when they find a match.
+Flaggers are Latitude's built-in automatic annotators. They inspect completed sessions for common failure categories and annotate the trace where the problem shows up when they find one. Those annotations are attributed to Latitude rather than to a person, and they feed signal discovery, evaluation alignment, and score analytics exactly like human feedback.
 
-Use flaggers when you want project-wide coverage for known failure patterns without manually reviewing every trace. Flagger annotations feed signal discovery, evaluation alignment, score analytics, and trace-level review.
+Use flaggers when you want project-wide coverage of failure patterns you already know about, without reviewing every conversation by hand. They are useful for cases that are easy to miss in manual review: low-volume safety failures, recurring frustration, or behavior that only becomes visible across a long session.
+
+Detection is session-wide. A flagger reads the whole [session](../getting-started/concepts#sessions), the conversation your agent had across every trace it produced, because most of these failures only make sense in the context of the turns around them. The annotation itself lands on one trace inside that session, anchored to the message that shows the issue, so it appears in trace-level views and analytics like any other annotation. A trace that arrives without a session id becomes a single-trace session, so nothing goes unscreened.
 
 ## Available flaggers
 
-Each project starts with flaggers for common reliability and safety categories:
+Flaggers come in four groups, the same ones the settings page uses. **User-side signals** and **Agent behavior** use an LLM, so they are sampled and billed by AI usage. **Cost and efficiency** and **Response validity** are deterministic: they cost nothing and run on every eligible session while they are enabled.
+
+### User-side signals
+
+LLM checks on what the person on the other side of the conversation is doing.
 
 <AccordionGroup>
+  <Accordion title="Frustration">
+    The user shows annoyance, disappointment, loss of trust, or has to restate themselves because the agent is not helping.
+
+    Not flagged: neutral clarifying questions, or an isolated terse reply with no other evidence of frustration.
+  </Accordion>
+
   <Accordion title="Jailbreaking">
-    Attempts to bypass safety constraints, system instructions, tool boundaries, or the assistant's intended role.
+    Prompt injection, instruction-hierarchy attacks, policy evasion, tool abuse aimed at bypassing guardrails, role escape attempts, or the agent actually following one of those attempts.
+
+    Not flagged: harmless roleplay, or an ordinary unsafe request that the agent correctly refuses.
   </Accordion>
 
   <Accordion title="NSFW">
-    Sexual or otherwise not-safe-for-work content that should be reviewed.
-  </Accordion>
+    Workplace-inappropriate or toxic content: explicit profanity, sexual content, abusive harassment, hate speech, identity-based slurs, or graphic violent language.
 
-  <Accordion title="Refusal">
-    Cases where the assistant refuses, deflects, or over-restricts a request it should be able to handle.
-  </Accordion>
-
-  <Accordion title="Frustration">
-    Clear user dissatisfaction, repeated correction, annoyance, or loss of trust.
-  </Accordion>
-
-  <Accordion title="Forgetting">
-    Cases where the assistant loses relevant earlier context from the same conversation.
-  </Accordion>
-
-  <Accordion title="Laziness">
-    Cases where the assistant avoids doing the requested work, gives a shallow answer, or pushes work back to the user without a good reason.
-  </Accordion>
-
-  <Accordion title="Thrashing">
-    Agent behavior that cycles through tools or repeated actions without making progress.
-  </Accordion>
-
-  <Accordion title="Tool Call Errors">
-    Failed or errored tool invocations visible in the trace.
-  </Accordion>
-
-  <Accordion title="Output Schema Validation">
-    Structured-output responses that do not conform to the declared schema.
-  </Accordion>
-
-  <Accordion title="Empty Response">
-    Empty, whitespace-only, or otherwise degenerate assistant responses when a substantive answer was expected.
+    Not flagged: benign anatomy or health discussion, mild romance, neutral policy discussion about unsafe content, or colloquial language with no real toxicity.
   </Accordion>
 </AccordionGroup>
 
-## How flaggers appear in Latitude
+### Agent behavior
 
-When a flagger matches a trace, Latitude adds an annotation to that trace. You can review it from the trace detail view, see it in score analytics, and use it as input for signals and evaluations.
+LLM checks on failure modes in your agent's own output.
 
-Flaggers are especially useful for patterns that are easy to miss in manual review, such as low-volume safety failures, recurring frustration, or behavior that appears only across long sessions.
+<AccordionGroup>
+  <Accordion title="Refusal">
+    The agent declines, deflects, or over-restricts a request that is allowed and answerable within its policy and capabilities.
+
+    Not flagged: a correct refusal, where the request is unsafe, unsupported, or missing context the agent needs.
+  </Accordion>
+
+  <Accordion title="Laziness">
+    The agent gives a shallow partial answer, stops early without justification, skips context it was handed, or pushes work back onto the user that it should have done itself.
+
+    Not flagged: work genuinely blocked by missing access, missing context, or policy.
+  </Accordion>
+
+  <Accordion title="Forgetting">
+    The agent loses relevant context from earlier in the same conversation: it repeats settled questions, contradicts established facts, or ignores constraints the user already gave.
+
+    Not flagged: ambiguity that was never resolved, or context the user never provided.
+  </Accordion>
+
+  <Accordion title="Incompletion">
+    A task the user or the system prompt assigned was not completed, and the user's later messages show it by demanding a retry, repeating the request, or pointing at what is missing.
+
+    Only closed episodes are judged. The agent's latest response is not flaggable until the user has reacted to it, so this flagger fires on a later screening pass rather than immediately.
+  </Accordion>
+
+  <Accordion title="Thrashing">
+    The agent cycles through the same tools or tool sequences, oscillates between states, or piles up tool calls without moving toward the goal. Three or more identical calls match deterministically for free; the ambiguous cases go to the LLM pass.
+
+    Not flagged: legitimate retries after a transient error, or iterative refinement that is visibly converging.
+  </Accordion>
+
+  <Accordion title="Bluffing">
+    The agent ignores a failed tool call and confidently continues, presenting results the call never returned, narrating the action as done, or answering from fabricated data.
+
+    Not flagged: acknowledging the failure, retrying, hedging, or answering from other evidence actually present in the conversation.
+  </Accordion>
+
+  <Accordion title="PII leakage">
+    The agent's output exposes personal identifiers (emails, phone numbers, card or government numbers, personal records) belonging to a third party or that the user never supplied.
+
+    Not flagged: the user's own data echoed back, placeholder or fictional examples, masked identifiers, or public business contact details.
+  </Accordion>
+</AccordionGroup>
+
+### Cost and efficiency
+
+Deterministic checks on token waste. Free, and run on every eligible session while enabled.
+
+<AccordionGroup>
+  <Accordion title="Low cache hit rate">
+    Large multi-turn sessions where prompt caching is active but fewer than 30% of input tokens were served from cache, which usually means caching is broken.
+  </Accordion>
+</AccordionGroup>
+
+### Response validity
+
+Deterministic checks on the shape of the response. Free, and run on every eligible session while enabled.
+
+<AccordionGroup>
+  <Accordion title="Empty response">
+    Empty, whitespace-only, or otherwise degenerate assistant responses where a substantive answer was expected.
+  </Accordion>
+
+  <Accordion title="Tool call errors">
+    Tool responses that are malformed, duplicated, explicitly failed, or that call a tool the agent never declared.
+  </Accordion>
+
+  <Accordion title="Output schema validation">
+    Structured output that is truncated or cannot be parsed as JSON.
+  </Accordion>
+</AccordionGroup>
+
+## How a flagger runs
+
+Every project starts with all flaggers provisioned. Detection happens in two passes.
+
+**Screening** runs on 100% of sessions and costs nothing. It gathers cheap evidence from the session (tool errors, error spans, repeated tool loops, latency and cost outliers, conversation moments, text patterns) and runs every enabled check that needs no model. Deterministic matches are written straight away.
+
+**LLM classification** runs for one session and one flagger at a time. A classifier reads the conversation together with the screening evidence, and a second model pass reviews the proposed annotation before it is saved. This pass is billed by AI usage.
+
+Latitude waits for a session to settle before screening it. Sessions re-screen as new turns arrive, and at most one annotation is published per flagger per distinct piece of flagged content, so a growing conversation does not accumulate copies of the same finding.
+
+## Sampling
+
+Sampling applies only to the LLM flaggers, and it defaults to 10%. Deterministic flaggers have no sampling control: they are free, so an enabled one runs on every eligible session. Turning a flagger off stops it either way.
+
+Sampling is not the whole story on coverage. When screening finds evidence pointing at a specific category, that flagger's LLM pass runs regardless of the sampling rate. Sampling governs the sessions where nothing in particular stood out. This is why lowering sampling reduces volume but does not silence a flagger that keeps matching on real evidence.
+
+Sampling never affects search, filtering, or manual investigation. Every session stays fully queryable.
 
 ## Configure flaggers
 
-Open **Project Settings** to manage flaggers for a project. For each flagger you can adjust:
+Open **Project Settings → Flaggers** to manage a project. Each row has an on/off switch, and LLM rows also have a sampling slider showing whether they are free or billed by AI usage.
 
-- **Enabled**: Turn the flagger on or off.
-- **Sampling**: Control how aggressively Latitude checks traces for that category.
+**Use-case presets** turn on a sensible set in one click. They cover support agents, coding agents, sales agents, tool workflow agents, knowledge-base agents, structured extraction, and safety-sensitive agents. Picking a preset replaces the current selection and leaves sampling rates alone. The same presets appear during project onboarding.
 
-Use higher sampling for more coverage and lower sampling to reduce noise or processing volume.
+You can also toggle flaggers through the API with `PATCH /v1/projects/{projectSlug}`, passing flagger slugs to booleans in the `flaggers` field. The API controls enablement only; sampling is set from the settings page.
 
 <Note>
-  Flagger categories are defined by Latitude. You can configure whether each flagger runs and how aggressively it samples, but not the underlying category definition.
+  Flagger categories are defined by Latitude. You choose which ones run and how aggressively the LLM ones sample, not the underlying category definition. To detect something specific to your product, use an [evaluation](../evaluations/overview) or a [saved search](../search/saved-searches) instead.
 </Note>
+
+## Tuning advice
+
+Run a project for a week with the defaults before changing anything, then look at what each flagger actually caught.
+
+- If a flagger's matches are mostly wrong for your domain, lower its sampling.
+- If you keep annotating cases by hand that a flagger should have caught, raise its sampling.
+- If a flagger is wrong for your product right now, for example NSFW on a creative-writing assistant, turn it off and revisit when the product changes.
+
+## Suppression
+
+Some categories overlap, and one of them firing makes the other misleading. Latitude skips the second flagger in those cases:
+
+- **Refusal** is skipped when jailbreaking or NSFW is in play, because refusing an adversarial or toxic request is the correct behavior.
+- **Laziness** is skipped when thrashing found a tool loop, because being stuck in a loop is a different failure from punting work back to the user.
+
+Suppression happens during screening, so it does not wait for the suppressing flagger to confirm a match. Evidence pointing at jailbreaking is enough to skip refusal for that session, even if the jailbreaking classifier later decides there was nothing there. A suppressed flagger writes no annotation, which explains gaps you might otherwise read as a miss.
 
 ## Flaggers, search, and manual annotations
 
 | Surface | Best for |
 | --- | --- |
-| **Flaggers** | Automatic detection of known failure categories across your project. |
-| **[Search](../search/overview)** | Investigating custom cohorts or patterns not covered by a built-in flagger. |
-| **[Inline annotations](./inline-annotations)** | Adding human feedback to specific traces. |
+| **Flaggers** | Automatic detection of known failure categories across a project. |
+| **[Search](../search/overview)** | Investigating custom cohorts or patterns no built-in flagger covers. |
+| **[Inline annotations](./inline-annotations)** | Adding human judgment to a specific trace. |
 
-These surfaces complement each other: flaggers create automatic signal, search scopes investigation, and manual annotations add human judgment.
+These work together: flaggers generate signal automatically, search scopes investigation, and manual annotations add the judgment neither can produce.
 
 ## Related
 
 - [Annotations Overview](./overview): How annotations connect to scores, signals, and evaluations
-- [Inline Annotations](./inline-annotations): Leave human feedback on traces
-- [Search](../search/overview): Investigate patterns that flaggers do not cover
+- [Inline Annotations](./inline-annotations): Leave human feedback on a trace
+- [Search](../search/overview): Investigate patterns flaggers do not cover
 - [Signals](../signals/overview): How annotations become trackable failure patterns

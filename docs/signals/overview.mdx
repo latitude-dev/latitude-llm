@@ -36,7 +36,7 @@ Your telemetry sends real user and agent interactions into Latitude as traces. T
 Latitude uses several signal sources to decide whether a trace represents good or bad behavior:
 
 - **Annotations**: Human feedback left on traces during review.
-- **Flaggers**: Built-in automatic annotators for categories such as frustration, refusal, jailbreaking, tool errors, and empty responses.
+- **Flaggers**: Built-in automatic annotators for categories such as frustration, refusal, jailbreaking, incompletion, bluffing, PII leakage, tool call errors, and empty responses.
 - **Evaluations**: Automated monitors that track signal patterns across incoming traces.
 - **Custom scores**: Domain-specific verdicts you submit from your own systems.
 
