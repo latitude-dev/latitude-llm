@@ -32,10 +32,7 @@ export function externalScrollMargin(input: {
   return wrapperTop - containerTop + containerScrollTop
 }
 
-export function distanceToTableBottom(input: {
-  readonly containerBottom: number
-  readonly tableBottom: number
-}) {
+export function distanceToTableBottom(input: { readonly containerBottom: number; readonly tableBottom: number }) {
   const { containerBottom, tableBottom } = input
   return tableBottom - containerBottom
 }
@@ -184,8 +181,7 @@ export function InfiniteTable<T>({
     const resizeObserver = new ResizeObserver(measure)
     resizeObserver.observe(container)
     resizeObserver.observe(wrapper)
-    const mutationObserver =
-      typeof MutationObserver === "undefined" ? null : new MutationObserver(() => measure())
+    const mutationObserver = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => measure())
     mutationObserver?.observe(container, { childList: true, subtree: true })
     return () => {
       resizeObserver.disconnect()
@@ -252,7 +248,8 @@ export function InfiniteTable<T>({
       const distanceToBottom = isExternalScrollArea
         ? distanceToTableBottom({
             containerBottom: target.getBoundingClientRect().bottom,
-            tableBottom: tableWrapperRef.current?.getBoundingClientRect().bottom ?? target.getBoundingClientRect().bottom,
+            tableBottom:
+              tableWrapperRef.current?.getBoundingClientRect().bottom ?? target.getBoundingClientRect().bottom,
           })
         : target.scrollHeight - target.scrollTop - target.clientHeight
       if (distanceToBottom < ROW_HEIGHT * 5) {
