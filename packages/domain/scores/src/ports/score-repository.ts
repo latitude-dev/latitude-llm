@@ -45,6 +45,24 @@ export interface ScoreRepositoryShape {
     readonly signalId: SignalId
     readonly updatedAt: Date
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
+  /**
+   * Bulk move of every score owned by the given signals onto one survivor, for
+   * candidate consolidation. Unconditional, unlike `assignSignalIfUnowned` —
+   * these scores are already owned, and moving them is the point.
+   *
+   * `earliestCreatedAt` is the oldest `created_at` among the rows actually
+   * moved, and it is what bounds the matching ClickHouse mutation. It cannot be
+   * derived from the signals instead: a replayed annotation is older than the
+   * signal it was later assigned to, so a bound taken from the loser's own
+   * `created_at` would skip those rows and leave the survivor's occurrence count
+   * permanently short.
+   */
+  reassignSignal(input: {
+    readonly projectId: ProjectId
+    readonly fromSignalIds: readonly SignalId[]
+    readonly toSignalId: SignalId
+    readonly updatedAt: Date
+  }): Effect.Effect<{ readonly count: number; readonly earliestCreatedAt: Date | null }, RepositoryError, SqlClient>
   delete(id: ScoreId): Effect.Effect<void, RepositoryError, SqlClient>
   /**
    * Checks whether a canonical persisted evaluation score already exists in the

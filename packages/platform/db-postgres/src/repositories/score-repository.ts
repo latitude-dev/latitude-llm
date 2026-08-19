@@ -307,6 +307,34 @@ export const ScoreRepositoryLive = Layer.effect(
             .pipe(Effect.map((rows) => rows.length > 0))
         }),
 
+      reassignSignal: ({ projectId, fromSignalIds, toSignalId, updatedAt }) =>
+        Effect.gen(function* () {
+          if (fromSignalIds.length === 0) return { count: 0, earliestCreatedAt: null }
+          const sqlClient = yield* resolveSqlClient()
+          // `created_at` is returned rather than aggregated in SQL because the row
+          // set is bounded by what a *candidate* can hold — a signal thin enough
+          // to still be below the promotion threshold.
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(scores)
+              .set({ signalId: toSignalId, updatedAt })
+              .where(
+                and(
+                  eq(scores.organizationId, organizationId),
+                  eq(scores.projectId, projectId),
+                  inArray(scores.signalId, [...fromSignalIds]),
+                ),
+              )
+              .returning({ createdAt: scores.createdAt }),
+          )
+
+          const earliest = rows.reduce<Date | null>(
+            (oldest, row) => (oldest === null || row.createdAt < oldest ? row.createdAt : oldest),
+            null,
+          )
+          return { count: rows.length, earliestCreatedAt: earliest }
+        }),
+
       delete: (id: ScoreId) =>
         Effect.gen(function* () {
           const sqlClient = yield* resolveSqlClient()

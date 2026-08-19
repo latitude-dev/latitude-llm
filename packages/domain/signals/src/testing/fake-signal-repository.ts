@@ -46,6 +46,7 @@ export const createFakeSignalRepository = (
   // timestamp `undefined`.
   const isLive = (issue: Signal): boolean => issue.deletedAt == null
   const isUserVisible = (issue: Signal): boolean => isLive(issue) && issue.promotedAt != null
+  const isCandidate = (issue: Signal): boolean => isLive(issue) && issue.promotedAt == null
   const isReadable = (issue: Signal, includeUnpromoted?: boolean): boolean =>
     includeUnpromoted ? isLive(issue) : isUserVisible(issue)
 
@@ -89,16 +90,18 @@ export const createFakeSignalRepository = (
           })),
       ),
 
-    findSimilarByCentroid: ({ projectId, signalId, limit }) =>
+    findSimilarByCentroid: ({ projectId, signalId, limit, unpromotedOnly }) =>
       Effect.sync(() => {
         // Mirrors the real adapter: cosine over normalized centroid bases,
         // empty when the source is missing or has a zero-mass centroid,
-        // zero-mass neighbors skipped, self excluded, project-scoped.
+        // zero-mass neighbors skipped, self excluded, project-scoped, and the
+        // same visibility predicate applied to both sides.
+        const isVisible = unpromotedOnly ? isCandidate : isUserVisible
         const source = issues.get(signalId)
         if (
           !source ||
           source.projectId !== projectId ||
-          !isUserVisible(source) ||
+          !isVisible(source) ||
           source.centroid === null ||
           source.centroid.mass <= 0
         )
@@ -110,7 +113,7 @@ export const createFakeSignalRepository = (
             (issue) =>
               issue.projectId === projectId &&
               issue.id !== signalId &&
-              isUserVisible(issue) &&
+              isVisible(issue) &&
               (issue.centroid?.mass ?? 0) > 0,
           )
           .flatMap((issue) => {

@@ -37,6 +37,7 @@ const seedSignal = (input: {
   /** Omitted means promoted at creation, which is what every read expects to see. */
   readonly promotedAt?: Date | null
   readonly deletedAt?: Date
+  readonly clusteredAt?: Date
   readonly centroidEmbedding?: readonly number[]
 }) =>
   pg.db.insert(signals).values({
@@ -53,6 +54,7 @@ const seedSignal = (input: {
     regressedAt: input.regressedAt ?? null,
     promotedAt: input.promotedAt === undefined ? input.createdAt : input.promotedAt,
     deletedAt: input.deletedAt ?? null,
+    ...(input.clusteredAt ? { clusteredAt: input.clusteredAt } : {}),
     // `signals_centroid_embedding_consistency_check` requires a materialized
     // embedding to be backed by a model-stamped centroid with positive mass.
     ...(input.centroidEmbedding
@@ -500,7 +502,56 @@ describe("SignalRepositoryLive promotion gate", () => {
 
     expect(neighbors).toEqual([])
   })
+
+  it("inverts findSimilarByCentroid for consolidation instead of relaxing it", async () => {
+    const otherCandidate = {
+      id: "sig-gate-candidate-2".padEnd(24, "m"),
+      slug: "gate-candidate-2",
+      createdAt: new Date("2026-03-09T00:00:00.000Z"),
+      promotedAt: null,
+      centroidEmbedding: EMBEDDING,
+    }
+    await seedSignal(otherCandidate)
+
+    const neighbors = await withRepo((repo) =>
+      repo.findSimilarByCentroid({
+        projectId: PROJECT_ID,
+        signalId: SignalId(CANDIDATE.id),
+        limit: 25,
+        unpromotedOnly: true,
+      }),
+    )
+
+    // Only the other candidate: a candidate may never absorb a promoted signal,
+    // and this is where that becomes a property of the read rather than a rule
+    // the use case has to remember.
+    expect(neighbors.map((neighbor) => neighbor.signalId)).toEqual([SignalId(otherCandidate.id)])
+  })
+
+  it("hides a soft-deleted candidate from the consolidation scan too", async () => {
+    const deletedCandidate = {
+      id: "sig-gate-candidate-3".padEnd(24, "k"),
+      slug: "gate-candidate-3",
+      createdAt: new Date("2026-03-09T00:00:00.000Z"),
+      promotedAt: null,
+      deletedAt: new Date("2026-03-10T00:00:00.000Z"),
+      centroidEmbedding: EMBEDDING,
+    }
+    await seedSignal(deletedCandidate)
+
+    const neighbors = await withRepo((repo) =>
+      repo.findSimilarByCentroid({
+        projectId: PROJECT_ID,
+        signalId: SignalId(CANDIDATE.id),
+        limit: 25,
+        unpromotedOnly: true,
+      }),
+    )
+
+    expect(neighbors).toEqual([])
+  })
 })
+
 
 describe("SignalRepositoryLive.save promotion latch", () => {
   const PROMOTED_AT = new Date("2026-03-20T10:00:00.000Z")

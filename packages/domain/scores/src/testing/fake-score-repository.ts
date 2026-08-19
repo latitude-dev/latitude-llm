@@ -34,6 +34,20 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
       })
       return Effect.succeed(true)
     },
+    reassignSignal: ({ projectId, fromSignalIds, toSignalId, updatedAt }) => {
+      const from = new Set<string>(fromSignalIds)
+      const moving = [...scores.values()].filter(
+        (score) => score.projectId === projectId && score.signalId !== null && from.has(score.signalId),
+      )
+      for (const score of moving) {
+        scores.set(score.id, { ...score, signalId: toSignalId, updatedAt })
+      }
+      const earliest = moving.reduce<Date | null>(
+        (oldest, score) => (oldest === null || score.createdAt < oldest ? score.createdAt : oldest),
+        null,
+      )
+      return Effect.succeed({ count: moving.length, earliestCreatedAt: earliest })
+    },
     delete: (id: ScoreId) => {
       scores.delete(id)
       return Effect.void

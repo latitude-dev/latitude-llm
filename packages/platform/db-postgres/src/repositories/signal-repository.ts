@@ -76,6 +76,10 @@ const isEscalatingExpr = sql<boolean>`exists (
 // and the discovery opt-ins deliberately sit outside it — see the port docs.
 const userVisibleSignal = and(isNull(signals.deletedAt), isNotNull(signals.promotedAt))
 
+// The exact complement, for the two paths that work on candidates: the
+// consolidation neighbor scan and the expiry sweep.
+const candidateSignal = and(isNull(signals.deletedAt), isNull(signals.promotedAt))
+
 const signalColumnsWithLifecycle = {
   ...getTableColumns(signals),
   isEscalating: isEscalatingExpr,
@@ -547,9 +551,10 @@ const signalRepositoryCoreLive = Layer.effect(
           }))
         }),
 
-      findSimilarByCentroid: ({ projectId, signalId, limit }) =>
+      findSimilarByCentroid: ({ projectId, signalId, limit, unpromotedOnly }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const visibility = unpromotedOnly ? candidateSignal : userVisibleSignal
 
           // Two round-trips instead of a self-join: the source embedding is read
           // first so the second query can inline it as a pgvector literal (the
@@ -564,7 +569,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   eq(signals.id, signalId),
-                  userVisibleSignal,
+                  visibility,
                 ),
               )
               .limit(1),
@@ -579,7 +584,8 @@ const signalRepositoryCoreLive = Layer.effect(
 
           // Exact cosine scan over the project's other signals — no ANN index by
           // design (see the schema comment on `centroidEmbedding`). Resolved and
-          // ignored signals are deliberately included; unpromoted ones are not.
+          // ignored signals are deliberately included; unpromoted ones are not,
+          // unless the caller asked for candidates, in which case only those are.
           // `save()` only persists embeddings for the configured embedding model,
           // so every non-null row is in the same embedding space by construction.
           const similarity = sql<number>`(1::double precision - (${signals.centroidEmbedding} <=> ${queryVector}))`
@@ -592,7 +598,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   ne(signals.id, signalId),
-                  userVisibleSignal,
+                  visibility,
                   isNotNull(signals.centroidEmbedding),
                 ),
               )

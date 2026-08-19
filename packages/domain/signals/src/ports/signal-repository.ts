@@ -88,8 +88,9 @@ export interface SignalTableRowsPage extends SignalListPage {
  * visible, because that is how it accumulates the evidence that promotes it.
  *
  * Default-deny with an `includeUnpromoted` opt-in: `findById`, `hybridSearch`.
- * Default-deny with no opt-in: `findByIds`, `findBySlug`, `findSimilarByCentroid`,
- * `searchOrgWide`, `list`, `listTableRows`, `listIdsCreatedInTimeRange`.
+ * Default-deny with an `unpromotedOnly` opt-in: `findSimilarByCentroid`.
+ * Default-deny with no opt-in: `findByIds`, `findBySlug`, `searchOrgWide`,
+ * `list`, `listTableRows`, `listIdsCreatedInTimeRange`.
  * Never filtered: every write path, plus the two slug-uniqueness reads.
  */
 export interface SignalRepositoryShape {
@@ -140,14 +141,17 @@ export interface SignalRepositoryShape {
    * "a similar issue was already resolved" is the most actionable neighbor.
    * No similarity floor here; gating lives in the domain scorer.
    *
-   * Unpromoted issues are excluded, on both sides — the source read and the
-   * neighbor scan. Candidate consolidation will need an opt-in here, since it
-   * matches candidates against each other.
+   * Unpromoted issues are excluded on both sides — the source read and the
+   * neighbor scan — and `unpromotedOnly` inverts that on both sides rather than
+   * relaxing it. Consolidation is the caller that needs it, and it may only ever
+   * merge candidates into candidates, so restricting the scan is what makes that
+   * a guarantee of this method rather than discipline in the use case.
    */
   findSimilarByCentroid(input: {
     readonly projectId: ProjectId
     readonly signalId: SignalId
     readonly limit: number
+    readonly unpromotedOnly?: boolean
   }): Effect.Effect<readonly SignalCentroidNeighbor[], RepositoryError, SqlClient>
   /**
    * Org-wide issue search across every project in the organization (RLS-scoped to the caller's
