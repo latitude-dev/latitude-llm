@@ -427,9 +427,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       if (ids.length === 0) return
       const idx = ids.indexOf(activeTraceId)
       const target = idx < 0 ? ids[0] : ids[idx + delta]
-      if (target) setActiveTraceId(target)
+      if (target) onActiveTraceChange(target)
     },
-    [activeTraceId],
+    [activeTraceId, onActiveTraceChange],
   )
 
   const onNextTrace = useCallback(() => navigateTrace(1), [navigateTrace])

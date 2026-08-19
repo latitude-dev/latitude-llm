@@ -48,16 +48,23 @@ export function useFocusSignalScore({
   readonly canFocus: boolean
   readonly onFocus: (score: ScoreRecord) => void
 }): void {
-  const { data } = useScoresBySession({ projectId, traceIds, enabled: signalId !== undefined })
+  // Scoped to the signal: a session can hold more scores than one page returns,
+  // and the anchored one is often not among the newest.
+  const { data } = useScoresBySession({
+    projectId,
+    traceIds,
+    ...(signalId ? { signalId } : {}),
+    enabled: signalId !== undefined,
+  })
   const onFocusRef = useRef(onFocus)
   onFocusRef.current = onFocus
-  const focusedRef = useRef(false)
+  const focusedSignalIdRef = useRef<string | null>(null)
 
   // TODO(frontend-use-effect-policy): the session's scores arrive asynchronously,
   // long after the drawer mounted, and there is no event at the arrival site.
   useEffect(() => {
-    if (!signalId || focusedRef.current || !data) return
-    focusedRef.current = true
+    if (!signalId || focusedSignalIdRef.current === signalId || !data) return
+    focusedSignalIdRef.current = signalId
     if (!canFocus) return
     const score = findAnchoredSignalScore({ scores: data.items, signalId })
     if (score) onFocusRef.current(score)

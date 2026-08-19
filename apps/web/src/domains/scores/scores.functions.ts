@@ -128,6 +128,7 @@ export const listScoresBySession = createServerFn({ method: "POST" })
     z.object({
       projectId: z.string(),
       traceIds: z.array(traceIdSchema).max(500),
+      signalId: z.string().optional(),
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
@@ -145,6 +146,7 @@ export const listScoresBySession = createServerFn({ method: "POST" })
       listScoresByTraceIdsUseCase({
         projectId: data.projectId,
         traceIds: data.traceIds,
+        ...(data.signalId ? { signalId: data.signalId } : {}),
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",

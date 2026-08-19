@@ -11,7 +11,6 @@ import {
   TagList,
   Text,
   Tooltip,
-  useMountEffect,
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, CheckIcon, DatabaseIcon, TextAlignStartIcon } from "lucide-react"
@@ -201,13 +200,19 @@ export function SignalDetailBody({
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
 
-  useMountEffect(() => {
-    if (sessionSheetSessionId.length > 0) onOverlayActiveChange?.(true)
-  })
-
   useEffect(() => {
     setSelectionState(EMPTY_SELECTION)
   }, [signalId])
+
+  // TODO(frontend-use-effect-policy): `useParamState` also tracks history
+  // navigation, so the sheet follows the session id rather than only seeding from
+  // it — otherwise Back leaves an empty sheet open. Our own close sets the open
+  // flag first and clears the id in `onClosed`, so the exit animation still runs.
+  useEffect(() => {
+    const open = sessionSheetSessionId.length > 0
+    setSessionSheetOpen(open)
+    onOverlayActiveChange?.(open)
+  }, [sessionSheetSessionId, onOverlayActiveChange])
 
   const scrolledToDeepLinkRef = useRef(false)
   // TODO(frontend-use-effect-policy): a shared link lands at the top of the page;
@@ -272,8 +277,6 @@ export function SignalDetailBody({
   const openSessionSheet = (sessionId: string) => {
     resetSessionPanelParams()
     setSessionSheetSessionId(sessionId)
-    setSessionSheetOpen(true)
-    onOverlayActiveChange?.(true)
   }
 
   const closeSessionSheet = () => {

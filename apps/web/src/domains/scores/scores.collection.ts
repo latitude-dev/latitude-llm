@@ -14,10 +14,11 @@ const scoresByTraceQueryKey = (
 const scoresBySessionQueryKey = (
   projectId: string,
   traceIds: readonly string[],
+  signalId: string | undefined,
   limit?: number,
   offset?: number,
   draftMode: "exclude" | "include" | "only" = DEFAULT_TRACE_DRAFT_MODE,
-) => ["scores", "session", projectId, [...traceIds].sort(), limit, offset, draftMode] as const
+) => ["scores", "session", projectId, [...traceIds].sort(), signalId ?? null, limit, offset, draftMode] as const
 
 export function useScoresByTrace({
   projectId,
@@ -49,6 +50,7 @@ export function useScoresByTrace({
 export function useScoresBySession({
   projectId,
   traceIds,
+  signalId,
   limit,
   offset,
   draftMode,
@@ -56,6 +58,8 @@ export function useScoresBySession({
 }: {
   readonly projectId: string
   readonly traceIds: readonly string[]
+  /** Narrows to one signal's scores, so the page limit can't hide them behind a busy session. */
+  readonly signalId?: string
   readonly limit?: number
   readonly offset?: number
   readonly draftMode?: "exclude" | "include" | "only"
@@ -64,10 +68,17 @@ export function useScoresBySession({
   const effectiveDraftMode = draftMode ?? DEFAULT_TRACE_DRAFT_MODE
 
   return useQuery({
-    queryKey: scoresBySessionQueryKey(projectId, traceIds, limit, offset, effectiveDraftMode),
+    queryKey: scoresBySessionQueryKey(projectId, traceIds, signalId, limit, offset, effectiveDraftMode),
     queryFn: () =>
       listScoresBySession({
-        data: { projectId, traceIds: [...traceIds], limit, offset, draftMode: effectiveDraftMode },
+        data: {
+          projectId,
+          traceIds: [...traceIds],
+          ...(signalId ? { signalId } : {}),
+          limit,
+          offset,
+          draftMode: effectiveDraftMode,
+        },
       }),
     enabled: enabled && projectId.length > 0 && traceIds.length > 0,
   })
