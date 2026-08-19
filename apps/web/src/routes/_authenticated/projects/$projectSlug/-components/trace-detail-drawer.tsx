@@ -149,9 +149,7 @@ function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSy
   const [focusScoreId, setFocusScoreId] = useParamState("scoreId", "")
   // Shared with the session panel via the `detailTab` URL param so Conversation
   // / Annotations carry over when switching between trace and session views.
-  // Default to Conversation when arriving from an active search (so the
-  // search-match autoscroll/highlight lands on a hit instead of the trace tab)
-  // or with a focused score, whose anchor only the Conversation tab can show.
+  // Default to Conversation when a search match or a focused score needs that tab to scroll to something.
   const defaultTab = (props.searchQuery?.length ?? 0) > 0 || focusScoreId ? "conversation" : "trace"
   const [rawActiveTab, setActiveTab] = useParamState("detailTab", defaultTab, {
     validate: isTraceDetailTab,
@@ -295,8 +293,7 @@ export function TraceDetailBody({
   // Stable so the palette contributor's command memo doesn't re-register each render.
   const handleSetActiveTab = useCallback(
     (tab: TabId) => {
-      // The focused score is only meaningful on the Conversation tab, so leaving
-      // it drops the `scoreId` param instead of stranding it in the URL.
+      // The focused score only means anything on the Conversation tab, so leaving it drops the param.
       if (tab !== "conversation") onFocusScoreIdChange("")
       onActiveTabChange(tab)
       setVisitedTabs((prev) => new Set([...prev, tab]))
@@ -348,8 +345,7 @@ export function TraceDetailBody({
     setVisitedTabs((prev) => new Set([...prev, activeTab]))
   }, [activeTab])
 
-  // `ScoreList` only makes anchored annotations clickable; focusing one is a URL
-  // write so the conversation position is shareable.
+  // `ScoreList` only makes anchored annotations clickable; the URL write is what makes the position shareable.
   function handleScoreClick(score: ScoreRecord) {
     onFocusScoreIdChange(score.id)
     handleSetActiveTab("conversation")

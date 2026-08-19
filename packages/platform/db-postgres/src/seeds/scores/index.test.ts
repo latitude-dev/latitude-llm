@@ -13,8 +13,7 @@ const scope = createSeedScope({
 describe("buildAnchoredAnnotationScoreRows", () => {
   const rows = buildAnchoredAnnotationScoreRows(scope)
 
-  // The repository parses every row it reads back through `scoreSchema`, so a
-  // seeded annotation missing `rawFeedback` would only fail once the UI asks for it.
+  // The repository parses every row through `scoreSchema`, so a missing `rawFeedback` only fails in the UI.
   it("writes rows the score repository can read back", () => {
     for (const row of rows) {
       const parsed = scoreSchema.safeParse({ ...row, sessionId: row.sessionId ?? null })

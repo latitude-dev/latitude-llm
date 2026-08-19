@@ -182,15 +182,12 @@ export function SignalDetailBody({
     enabled: issue !== null,
   })
   const totalSessionCount = useSignalSessionsCount({ projectId, signalId, enabled: issue !== null })
-  // Only the full-page view owns the URL: the drawer variant renders inside the
-  // session panel's issue slot, whose own params live one level up.
+  // Only the full-page view owns the URL; the drawer variant's params live one level up.
   const urlSyncedSessionSheet = variant === "page"
   const [sessionSheetSessionId, setSessionSheetSessionId] = useSignalSessionSheetId(urlSyncedSessionSheet)
   const [sessionSheetOpen, setSessionSheetOpen] = useState(() => sessionSheetSessionId.length > 0)
   const resetPanelParams = useSessionPanelParamReset()
-  // Nested in the session panel's issue slot those params belong to the panel
-  // above — clearing `signalId` there would close the very slot we render in —
-  // so only the URL-owning page resets them.
+  // Nested, clearing `signalId` would close the very slot we render in, so only the URL-owning page resets.
   const resetSessionPanelParams = () => {
     if (urlSyncedSessionSheet) resetPanelParams()
   }
@@ -204,10 +201,7 @@ export function SignalDetailBody({
     setSelectionState(EMPTY_SELECTION)
   }, [signalId])
 
-  // TODO(frontend-use-effect-policy): `useParamState` also tracks history
-  // navigation, so the sheet follows the session id rather than only seeding from
-  // it — otherwise Back leaves an empty sheet open. Our own close sets the open
-  // flag first and clears the id in `onClosed`, so the exit animation still runs.
+  // TODO(frontend-use-effect-policy): follows the param so history navigation can't leave an empty sheet open.
   useEffect(() => {
     const open = sessionSheetSessionId.length > 0
     setSessionSheetOpen(open)
@@ -215,9 +209,7 @@ export function SignalDetailBody({
   }, [sessionSheetSessionId, onOverlayActiveChange])
 
   const scrolledToDeepLinkRef = useRef(false)
-  // TODO(frontend-use-effect-policy): a shared link lands at the top of the page;
-  // the Sessions section can only be scrolled to once its rows have rendered,
-  // which happens when the sessions query resolves.
+  // TODO(frontend-use-effect-policy): the section can only be scrolled to once the sessions query resolves.
   useEffect(() => {
     if (deepLinkedSessionId.length === 0 || scrolledToDeepLinkRef.current || sessionsLoading) return
     scrolledToDeepLinkRef.current = true

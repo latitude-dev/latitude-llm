@@ -224,9 +224,7 @@ const seedScores: Seeder = {
     }),
 }
 
-// Separate seeder (and sentinel) from `seedScores`: `scores` has no row-level
-// dedup, so a database seeded before the annotations existed must be able to
-// pick them up without re-inserting every tau2 occurrence row.
+// Own sentinel: `scores` has no row-level dedup, so picking these up must not re-insert the tau2 rows.
 const seedAnchoredAnnotations: Seeder = {
   name: "scores/tau2-flagger-annotations",
   run: (ctx) =>
