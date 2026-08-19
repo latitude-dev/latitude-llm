@@ -235,7 +235,7 @@ export function SignalsAnalyticsPanel({
                             variant="ghost"
                             size="sm"
                             onClick={() => setShowIncidents((prev) => !prev)}
-                            aria-pressed={showIncidents}
+                            pressed={showIncidents}
                           >
                             <Icon icon={showIncidents ? ShieldAlertIcon : ShieldOffIcon} size="sm" />
                             Incidents

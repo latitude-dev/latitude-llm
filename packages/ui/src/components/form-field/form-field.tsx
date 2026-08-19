@@ -7,7 +7,6 @@ import { Text } from "../text/text.tsx"
 export interface FormFieldProps {
   children: ReactNode
   label?: ReactNode
-  htmlFor?: string | undefined
   description?: ReactNode
   info?: string | undefined
   inline?: boolean | undefined
@@ -20,7 +19,6 @@ export interface FormFieldProps {
 function FormField({
   children,
   label,
-  htmlFor,
   description,
   info,
   inline = false,
@@ -73,7 +71,7 @@ function FormField({
   const labelBlock = label && (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <Label htmlFor={htmlFor ?? id}>{label}</Label>
+        <Label htmlFor={id}>{label}</Label>
         {info && <Text.H6 color="foregroundMuted">{info}</Text.H6>}
       </div>
     </div>

@@ -9,14 +9,9 @@ const meta = {
     placeholder: "support-agent-prod",
     description: "Used across breadcrumbs, URLs, and internal monitors.",
     background: "background",
-    variant: "default",
     size: "default",
   },
   argTypes: {
-    variant: {
-      control: "select",
-      options: ["default", "floating"],
-    },
     background: {
       control: "select",
       options: ["transparent", "background"],
@@ -47,23 +42,5 @@ export const InlineField: Story = {
     label: "Date range",
     description: "Controls the comparison window in monitor charts.",
     placeholder: "Last 24 hours",
-  },
-}
-
-export const FloatingLabel: Story = {
-  args: {
-    variant: "floating",
-    label: "Project name",
-    description: "Used across breadcrumbs, URLs, and internal monitors.",
-    value: "support-agent-prod",
-  },
-}
-
-export const FloatingLabelError: Story = {
-  args: {
-    variant: "floating",
-    label: "Workspace slug",
-    value: "Acme Sandbox",
-    errors: ["Use lowercase letters, numbers, and hyphens only."],
   },
 }

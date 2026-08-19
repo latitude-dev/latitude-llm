@@ -82,7 +82,7 @@ export function PdfViewerToolbar({
         <Button type="button" variant="ghost" size="icon" onClick={onZoomIn} disabled={!canZoomIn} aria-label="Zoom in">
           <Icon icon={ZoomInIcon} size="sm" />
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onFitWidth} aria-pressed={isFitWidth}>
+        <Button type="button" variant="ghost" size="sm" onClick={onFitWidth} pressed={isFitWidth}>
           Fit width
         </Button>
         {openHref ? (

@@ -266,18 +266,23 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
               asChild
               trigger={
                 <Button
-                  variant={filtersOpen ? "outline" : "ghost"}
+                  variant="ghost"
                   size="default"
                   onClick={() => setFiltersOpen(!filtersOpen)}
+                  pressed={filtersOpen || hasActiveFilters}
+                  icon={FilterIcon}
+                  trailingAccessory={
+                    <>
+                      <HotkeyBadge hotkey="F" />
+                      {hasActiveFilters ? (
+                        <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-medium leading-4 text-primary-foreground">
+                          {Object.keys(filters).length}
+                        </span>
+                      ) : null}
+                    </>
+                  }
                 >
-                  <FilterIcon className="h-4 w-4" />
                   Filters
-                  <HotkeyBadge hotkey="F" />
-                  {hasActiveFilters ? (
-                    <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-medium leading-4 text-primary-foreground">
-                      {Object.keys(filters).length}
-                    </span>
-                  ) : null}
                 </Button>
               }
             >

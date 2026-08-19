@@ -533,9 +533,10 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
               asChild
               trigger={
                 <Button
-                  variant={filtersOpen ? "outline" : "ghost"}
+                  variant="ghost"
                   size="default"
                   onClick={() => setFiltersOpen(!filtersOpen)}
+                  pressed={filtersOpen || hasActiveFilters}
                   icon={FilterIcon}
                   trailingAccessory={
                     <>

@@ -47,6 +47,33 @@ describe("Button", () => {
 
     expect(markup).toMatch(/<button[^>]*class="[^"]*\bw-full\b/)
   })
+
+  it("sets aria-pressed when pressed is true", () => {
+    const markup = renderToStaticMarkup(<Button pressed>Filters</Button>)
+
+    expect(markup).toContain('aria-pressed="true"')
+  })
+
+  it("applies persistent pressed styling for ghost buttons", () => {
+    const markup = renderToStaticMarkup(
+      <Button variant="ghost" pressed>
+        Filters
+      </Button>,
+    )
+
+    expect(markup).toMatch(/\bbg-muted\b/)
+  })
+
+  it("applies persistent pressed styling for outline buttons", () => {
+    const markup = renderToStaticMarkup(
+      <Button variant="outline" pressed>
+        Filters
+      </Button>,
+    )
+
+    expect(markup).toMatch(/\bbg-secondary\b/)
+    expect(markup).toMatch(/\bborder-input\b/)
+  })
 })
 
 /** `max-w-full` contains `w-full` as a substring, so width assertions need whole classes. */

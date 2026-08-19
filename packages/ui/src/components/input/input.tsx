@@ -1,10 +1,9 @@
 import { cva, type VariantProps } from "class-variance-authority"
-import { forwardRef, type InputHTMLAttributes, useId } from "react"
+import { forwardRef, type InputHTMLAttributes } from "react"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
 import { FormField } from "../form-field/form-field.tsx"
-import { Text } from "../text/text.tsx"
 
 const inputVariants = cva(
   cn(
@@ -13,14 +12,10 @@ const inputVariants = cva(
   ),
   {
     variants: {
-      variant: {
-        default: "",
-        floating: "",
-      },
       size: {
-        default: "",
-        sm: "",
-        lg: "",
+        default: "h-8",
+        sm: "h-8 px-2",
+        lg: "h-10 px-4",
       },
       background: {
         transparent: "bg-transparent",
@@ -28,42 +23,9 @@ const inputVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
       size: "default",
       background: "transparent",
     },
-    compoundVariants: [
-      {
-        variant: "default",
-        size: "default",
-        className: "h-8",
-      },
-      {
-        variant: "default",
-        size: "sm",
-        className: "h-8 px-2",
-      },
-      {
-        variant: "default",
-        size: "lg",
-        className: "h-10 px-4",
-      },
-      {
-        variant: "floating",
-        size: "default",
-        className: "h-8 px-3 py-1",
-      },
-      {
-        variant: "floating",
-        size: "sm",
-        className: "h-8 px-2 py-1",
-      },
-      {
-        variant: "floating",
-        size: "lg",
-        className: "h-10 px-4 py-2",
-      },
-    ],
   },
 )
 
@@ -81,71 +43,22 @@ export interface InputProps
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, description, info, errors, inline, size, background, variant, type, id, ...props }, ref) => {
-    const generatedId = useId()
-    const inputId = id ?? generatedId
-    const hasError = Boolean(errors && errors.length > 0)
-    const useFloatingLabel = variant === "floating" && !inline && Boolean(label)
-
+  ({ className, label, description, info, errors, inline, size, background, type, ...props }, ref) => {
     const input = (
       <input
-        id={inputId}
         type={type}
         className={cn(
-          inputVariants({ size, background, variant, className }),
-          hasError && "border-destructive focus-visible:ring-destructive/30",
-          useFloatingLabel && "peer placeholder:text-transparent",
+          inputVariants({ size, background, className }),
+          errors && errors.length > 0 && "border-destructive",
         )}
         ref={ref}
-        placeholder={useFloatingLabel ? " " : props.placeholder}
         {...props}
       />
     )
 
-    if (useFloatingLabel) {
-      return (
-        <div className="flex flex-col gap-1">
-          <div className="relative">
-            {input}
-            <label
-              htmlFor={inputId}
-              className={cn(
-                "pointer-events-none absolute left-2 z-1 inline-flex max-w-[calc(100%-1rem)] bg-background px-1 text-muted-foreground transition-all duration-150 ease-out",
-                "top-1/2 -translate-y-1/2 text-sm",
-                "peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[10px] peer-focus:font-medium",
-                "peer-[&:not(:placeholder-shown)]:top-0 peer-[&:not(:placeholder-shown)]:-translate-y-1/2 peer-[&:not(:placeholder-shown)]:text-[10px] peer-[&:not(:placeholder-shown)]:font-medium",
-                hasError && "text-destructive peer-focus:text-destructive peer-[&:not(:placeholder-shown)]:text-destructive",
-              )}
-            >
-              {label}
-            </label>
-          </div>
-          {description ? (
-            <Text.H6 className="px-1" color="foregroundMuted">
-              {description}
-            </Text.H6>
-          ) : null}
-          {info ? (
-            <Text.H6 className="px-1" color="foregroundMuted">
-              {info}
-            </Text.H6>
-          ) : null}
-          {hasError ? (
-            <div role="alert" className="flex flex-col gap-1 px-1">
-              {errors?.map((error) => (
-                <Text.H6 key={error} color="destructive">
-                  {error}
-                </Text.H6>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      )
-    }
-
     if (label || description || errors) {
       return (
-        <FormField label={label} htmlFor={inputId} description={description} info={info} errors={errors} inline={inline}>
+        <FormField label={label} description={description} info={info} errors={errors} inline={inline}>
           {input}
         </FormField>
       )
