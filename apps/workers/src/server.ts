@@ -353,11 +353,7 @@ const bootstrap = async () => {
         .pipe(withTracing),
     )
 
-    // Daily candidate expiry sweep. Soft-deletes unpromoted signals that
-    // stopped accumulating evidence, so the exact-scan corpus discovery walks
-    // stays bounded. Promoted signals are never touched, and an expired
-    // candidate keeps its scores attached so the sweep cannot feed the same
-    // annotations back into discovery.
+    // Daily candidate expiry sweep, bounding the corpus discovery scans exactly.
     await Effect.runPromise(
       queuePublisher
         .scheduleRepeatable(

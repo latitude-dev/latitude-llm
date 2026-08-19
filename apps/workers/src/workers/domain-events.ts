@@ -52,9 +52,7 @@ export const createDomainEventsWorker = ({
     input: { organizationId: string; projectId: string; traceId: string },
   ) => `${prefix}:${input.organizationId}:${input.projectId}:${input.traceId}`
 
-  // Trailing throttle: the pass wants a settled centroid, and the delay is also
-  // what keeps a candidate that qualified in the same transaction from being
-  // consolidated out from under its own promotion.
+  // Trailing throttle: a pass that ran immediately could absorb a candidate that qualified in the same transaction.
   const publishConsolidate = (payload: { organizationId: string; projectId: string; signalId: string }) =>
     pub.publish(
       "issues",
@@ -204,17 +202,12 @@ export const createDomainEventsWorker = ({
             dedupeKey: `issues:check-escalation:${event.payload.signalId}`,
             throttleMs: ESCALATION_CHECK_THROTTLE_MS,
           }),
-          // Only candidates consolidate, and the assignment already told us
-          // which this was. Publishing unconditionally would enqueue a job per
-          // promoted signal per window for a handler that could only return.
           ...(event.payload.unpromoted === true ? [publishConsolidate(event.payload)] : []),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    // No announcement hangs off this — a discovered signal earns those at
-    // promotion — but it is the first of a candidate's two centroid-change
-    // triggers, and the row it announces is always a candidate.
+    // Announces nothing: a discovered signal earns that at promotion. A new row is always a candidate.
     SignalCreated: (event) => publishConsolidate(event.payload),
 
     SignalsConsolidated: (event) =>
@@ -229,9 +222,7 @@ export const createDomainEventsWorker = ({
           scoresMoved: event.payload.scoresMoved,
           scoresCreatedFrom: event.payload.scoresCreatedFrom,
         },
-        // A bare key, unlike the coalescing publishes above: it identifies this
-        // one merge, so BullMQ's own retries drive redelivery and no later merge
-        // is ever shadowed.
+        // Bare key, unlike the coalescing publishes above: it names one merge, so a later merge is never shadowed.
         {
           dedupeKey: `org:${event.payload.organizationId}:issues:reconcile-consolidation:${event.payload.survivorId}:${event.payload.consolidatedAt}`,
         },
