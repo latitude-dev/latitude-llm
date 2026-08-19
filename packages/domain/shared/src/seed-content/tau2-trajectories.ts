@@ -163,8 +163,7 @@ function failedTrajectoryIndexesByFamily(maxTrajectories: number): ReadonlyMap<s
   if (cached) return cached
 
   const considered = TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories)
-  // Same exclusion `classifyTau2SeedTrajectory` applies, so the fallback can't
-  // hand a family a trajectory the classifier would have rejected.
+  // Same exclusion `classifyTau2SeedTrajectory` applies, so the fallback can't contradict it.
   const allFailed = considered.flatMap((trajectory, index) =>
     trajectory.outcome === "failure" && trajectory.reward < 1 ? [index] : [],
   )

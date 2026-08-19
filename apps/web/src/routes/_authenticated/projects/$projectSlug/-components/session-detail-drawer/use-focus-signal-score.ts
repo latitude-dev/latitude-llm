@@ -48,11 +48,9 @@ export function useFocusSignalScore({
   readonly canFocus: boolean
   readonly onFocus: (score: ScoreRecord) => void
 }): void {
-  // Callers resolve a signal slug to an id and pass "" until it lands, so an empty
-  // id means "no signal yet" rather than "every signal".
+  // An empty id is a slug still resolving, not a request for every signal's scores.
   const activeSignalId = signalId !== undefined && signalId.length > 0 ? signalId : undefined
-  // Scoped to the signal: a session can hold more scores than one page returns,
-  // and the anchored one is often not among the newest.
+  // Scoped to the signal: the newest page of a busy session can omit the anchored score.
   const { data } = useScoresBySession({
     projectId,
     traceIds,
@@ -63,8 +61,7 @@ export function useFocusSignalScore({
   onFocusRef.current = onFocus
   const focusedSignalIdRef = useRef<string | null>(null)
 
-  // TODO(frontend-use-effect-policy): the session's scores arrive asynchronously,
-  // long after the drawer mounted, and there is no event at the arrival site.
+  // TODO(frontend-use-effect-policy): the scores land asynchronously, with no event at the arrival site.
   useEffect(() => {
     if (!activeSignalId || focusedSignalIdRef.current === activeSignalId || !data) return
     focusedSignalIdRef.current = activeSignalId

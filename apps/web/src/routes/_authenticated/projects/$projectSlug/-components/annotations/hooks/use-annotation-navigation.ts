@@ -337,12 +337,7 @@ export function useAnnotationNavigation({
         return { element: messageElement, clickTarget: triggerElement, annotation }
       }
 
-      // The target renders asynchronously (the conversation chunk has to land and,
-      // for a substring anchor, its highlight spans have to be painted), and even
-      // once it exists the messages above it keep laying out, pushing it further
-      // down — scrolling before that settles lands short of the anchor. Sampling
-      // the scroll height covers node insertions and pure reflows alike; scroll
-      // once it holds steady.
+      // The anchor renders late and keeps moving while messages lay out; a steady scroll height covers reflows too.
       let elapsed = 0
       let quietFor = 0
       let lastScrollHeight = -1
