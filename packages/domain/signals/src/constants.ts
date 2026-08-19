@@ -381,6 +381,77 @@ export const SIGNAL_PROMOTION_THROTTLE_MS = 10 * 60 * 1000
 export const SIGNAL_FEEDBACK_THROTTLE_MS = 10 * 60 * 1000
 
 // ---------------------------------------------------------------------------
+// Candidate consolidation
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimum centroid cosine similarity for two candidates to be merged.
+ *
+ * Deliberately below live matching's `SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY`,
+ * but "looser" needs care: this compares two *averages*, so noise cancels on
+ * both sides and a numerically equal floor would be effectively stricter than
+ * the score-to-centroid comparison discovery makes. The repo's own calibration
+ * agrees on the shape — `SIGNAL_RELATED_SEMANTIC_CEILING` already marks 0.85 as
+ * the point where two signals are duplicate clusters.
+ *
+ * Provisional: merging is irreversible, so this is the constant to tune against
+ * real candidate populations before widening.
+ */
+export const CONSOLIDATION_MIN_SIMILARITY = 0.7
+
+/**
+ * Hard cap on losers absorbed in one pass, logged when it binds.
+ *
+ * The one irreversible failure mode in the promotion effort: a mis-set
+ * threshold with no cap collapses a project's candidate pool into a single
+ * meaningless signal, and there is no demerge. The common case is one loser, so
+ * the cap only binds where a candidate bridges several existing fragments —
+ * exactly where a ceiling earns its keep.
+ */
+export const CONSOLIDATION_MAX_MERGES_PER_PASS = 5
+
+/** Neighbors fetched per pass, before the similarity floor and the merge cap. */
+export const CONSOLIDATION_NEIGHBOR_LIMIT = 25
+
+/**
+ * Throttle window for `issues:consolidate`, published whenever a candidate's
+ * centroid changes. Trailing rather than leading: the pass wants a settled
+ * centroid, and the delay also means a candidate that qualified in the same
+ * transaction is already promoted by the time its pass runs, so consolidation
+ * skips it instead of racing promotion.
+ */
+export const CONSOLIDATION_THROTTLE_MS = 15 * 60 * 1000
+
+// ---------------------------------------------------------------------------
+// Candidate expiry
+// ---------------------------------------------------------------------------
+
+/**
+ * Idle days after which an unpromoted signal is swept. Keyed on
+ * `coalesce(clustered_at, created_at)` — the centroid anchor is literally "last
+ * score folded in", where `updated_at` is also bumped by throttled refreshes.
+ *
+ * Must stay at or above `PROMOTION_WINDOW_DAYS`: promotion is only ever
+ * evaluated on score assignment, so a candidate idle for a full window is
+ * provably dead. The grace past that preserves the revival path — a score
+ * arriving on day 35 still clusters into the existing candidate rather than
+ * starting a fresh one.
+ */
+export const CANDIDATE_EXPIRY_IDLE_DAYS = 45
+
+/** Candidates expired per sweep tick. Bounds one statement; the next tick takes the rest. */
+export const CANDIDATE_EXPIRY_SWEEP_LIMIT = 1000
+
+/**
+ * BullMQ scheduler key for the daily candidate expiry sweep. Idempotent across
+ * worker restarts — re-registering with the same key replaces the schedule.
+ */
+export const CANDIDATE_SWEEPER_KEY = "issues:candidate-sweep"
+
+/** Cron pattern for the candidate expiry sweep — daily, off the hour so it misses the escalation sweep, UTC. */
+export const CANDIDATE_SWEEPER_PATTERN = "30 3 * * *"
+
+// ---------------------------------------------------------------------------
 // Signal refresh throttle
 // ---------------------------------------------------------------------------
 
