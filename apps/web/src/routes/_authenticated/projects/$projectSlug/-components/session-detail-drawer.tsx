@@ -21,6 +21,31 @@ import { isTraceDetailTab, type TraceDetailTabId, TraceSlot } from "./session-de
 import { useFocusSignalScore } from "./session-detail-drawer/use-focus-signal-score.ts"
 import { useSessionTraces } from "./session-detail-drawer/use-session-traces.ts"
 
+/**
+ * Clears every search param the session panel owns. A caller that reuses the
+ * panel for another session (or closes it) runs this so the previous session's
+ * tab, focused score, or open trace can't leak into the next one.
+ */
+export function useSessionPanelParamReset() {
+  const [, setTraceId] = useParamState("traceId", "")
+  const [, setSignalId] = useParamState("signalId", "")
+  const [, setSessionTab] = useParamState("sessionTab", "")
+  const [, setTraceTab] = useParamState("traceTab", "")
+  const [, setFocusScoreId] = useParamState("scoreId", "")
+  const [, setSelectedSpanId] = useParamState("spanId", "")
+  const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
+
+  return () => {
+    setTraceId("")
+    setSignalId("")
+    setSessionTab("")
+    setTraceTab("")
+    setFocusScoreId("")
+    setSelectedSpanId("")
+    setSelectedSpanTraceId("")
+  }
+}
+
 export type OpenTraceOptions = {
   /** Focuses a score's anchor after the trace slot mounts. Implies `conversation` as the default tab. */
   readonly focusScoreId?: string

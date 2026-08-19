@@ -11,10 +11,11 @@ import {
   TagList,
   Text,
   Tooltip,
+  useMountEffect,
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, CheckIcon, DatabaseIcon, TextAlignStartIcon } from "lucide-react"
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import {
@@ -27,6 +28,7 @@ import {
   useSignalSessionsCount,
   useSignalSessionsInfiniteScroll,
 } from "../../../../../../domains/signals/signals.collection.ts"
+import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import {
   type BulkSelection,
   EMPTY_SELECTION,
@@ -34,7 +36,7 @@ import {
   useSelectableRows,
 } from "../../../../../../lib/hooks/useSelectableRows.ts"
 import { AddToDatasetModal } from "../../-components/add-to-dataset-modal.tsx"
-import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
+import { SessionDetailDrawer, useSessionPanelParamReset } from "../../-components/session-detail-drawer.tsx"
 import { SignalDrawerEvaluations } from "./signal-drawer-evaluations.tsx"
 import { formatSeenAgeParts, formatSignalAgeAgoLabel } from "./signal-formatters.ts"
 import { SignalLifecycleStatuses } from "./signal-lifecycle-statuses.tsx"
@@ -47,6 +49,17 @@ import { SignalTrendBar } from "./signal-trend-bar.tsx"
 const SIGNAL_PAGE_PANEL_HEIGHT = "h-72"
 /** Trend chart height inside that panel (leaves room for the panel header + padding). */
 const SIGNAL_PAGE_TREND_CHART_HEIGHT = 200
+
+/**
+ * Which session the Sessions sheet shows. URL-synced on the full-page signal
+ * view so a row is sharable; local state inside the session panel's issue slot,
+ * where `sessionId` already belongs to the panel one level up.
+ */
+function useSignalSessionSheetId(urlSynced: boolean) {
+  const [param, setParam] = useParamState("sessionId", "")
+  const [local, setLocal] = useState("")
+  return urlSynced ? ([param, setParam] as const) : ([local, setLocal] as const)
+}
 
 function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
@@ -170,14 +183,41 @@ export function SignalDetailBody({
     enabled: issue !== null,
   })
   const totalSessionCount = useSignalSessionsCount({ projectId, signalId, enabled: issue !== null })
-  const [sessionSheetSessionId, setSessionSheetSessionId] = useState<string | null>(null)
-  const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
+  // Only the full-page view owns the URL: the drawer variant renders inside the
+  // session panel's issue slot, whose own params live one level up.
+  const urlSyncedSessionSheet = variant === "page"
+  const [sessionSheetSessionId, setSessionSheetSessionId] = useSignalSessionSheetId(urlSyncedSessionSheet)
+  const [sessionSheetOpen, setSessionSheetOpen] = useState(() => sessionSheetSessionId.length > 0)
+  const resetPanelParams = useSessionPanelParamReset()
+  // Nested in the session panel's issue slot those params belong to the panel
+  // above — clearing `signalId` there would close the very slot we render in —
+  // so only the URL-owning page resets them.
+  const resetSessionPanelParams = () => {
+    if (urlSyncedSessionSheet) resetPanelParams()
+  }
+  const sessionsSectionRef = useRef<HTMLDivElement>(null)
+  // Captured at mount so opening a row later never re-triggers the deep-link scroll.
+  const [deepLinkedSessionId] = useState(() => sessionSheetSessionId)
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
+
+  useMountEffect(() => {
+    if (sessionSheetSessionId.length > 0) onOverlayActiveChange?.(true)
+  })
 
   useEffect(() => {
     setSelectionState(EMPTY_SELECTION)
   }, [signalId])
+
+  const scrolledToDeepLinkRef = useRef(false)
+  // TODO(frontend-use-effect-policy): a shared link lands at the top of the page;
+  // the Sessions section can only be scrolled to once its rows have rendered,
+  // which happens when the sessions query resolves.
+  useEffect(() => {
+    if (deepLinkedSessionId.length === 0 || scrolledToDeepLinkRef.current || sessionsLoading) return
+    scrolledToDeepLinkRef.current = true
+    sessionsSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" })
+  }, [deepLinkedSessionId, sessionsLoading])
 
   const sessionIds = useMemo(() => sessions.map((session) => session.sessionId), [sessions])
   const sessionSelection = useSelectableRows<string>({
@@ -230,6 +270,7 @@ export function SignalDetailBody({
     enabled: incidentsFlagEnabled && trendIncidentRange !== null,
   })
   const openSessionSheet = (sessionId: string) => {
+    resetSessionPanelParams()
     setSessionSheetSessionId(sessionId)
     setSessionSheetOpen(true)
     onOverlayActiveChange?.(true)
@@ -457,35 +498,37 @@ export function SignalDetailBody({
 
           {beforeTraces}
 
-          <DetailSection
-            icon={<Icon icon={TextAlignStartIcon} size="sm" />}
-            label="Sessions"
-            defaultOpen
-            className="gap-1"
-            contentClassName="pl-0 pt-0 max-h-none overflow-hidden flex flex-col"
-          >
-            {sessionSelection.selectedCount > 0 ? (
-              <div className="flex items-center gap-2 pb-2">
-                <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
-                  <Icon icon={DatabaseIcon} size="xs" />
-                  Add to dataset ({sessionSelection.selectedCount.toLocaleString()})
-                </Button>
-              </div>
-            ) : null}
-            <InfiniteTable
-              data={sessions}
-              isLoading={sessionsLoading}
-              columns={sessionColumns}
-              getRowKey={(session) => session.sessionId}
-              selection={sessionSelection}
-              onRowClick={(session) => openSessionSheet(session.sessionId)}
-              getRowAriaLabel={(session) => `Open session ${session.sessionId}`}
-              infiniteScroll={infiniteScroll}
-              blankSlate="This issue hasn't shown up on any sessions yet."
-              scrollAreaLayout="intrinsic"
-              className="max-h-[min(28rem,50vh)]"
-            />
-          </DetailSection>
+          <div ref={sessionsSectionRef} className="flex min-w-0 flex-col">
+            <DetailSection
+              icon={<Icon icon={TextAlignStartIcon} size="sm" />}
+              label="Sessions"
+              defaultOpen
+              className="gap-1"
+              contentClassName="pl-0 pt-0 max-h-none overflow-hidden flex flex-col"
+            >
+              {sessionSelection.selectedCount > 0 ? (
+                <div className="flex items-center gap-2 pb-2">
+                  <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+                    <Icon icon={DatabaseIcon} size="xs" />
+                    Add to dataset ({sessionSelection.selectedCount.toLocaleString()})
+                  </Button>
+                </div>
+              ) : null}
+              <InfiniteTable
+                data={sessions}
+                isLoading={sessionsLoading}
+                columns={sessionColumns}
+                getRowKey={(session) => session.sessionId}
+                selection={sessionSelection}
+                onRowClick={(session) => openSessionSheet(session.sessionId)}
+                getRowAriaLabel={(session) => `Open session ${session.sessionId}`}
+                infiniteScroll={infiniteScroll}
+                blankSlate="This issue hasn't shown up on any sessions yet."
+                scrollAreaLayout="intrinsic"
+                className="max-h-[min(28rem,50vh)]"
+              />
+            </DetailSection>
+          </div>
 
           {append}
         </div>
@@ -494,10 +537,13 @@ export function SignalDetailBody({
       <Sheet
         open={sessionSheetOpen}
         onClose={closeSessionSheet}
-        onClosed={() => setSessionSheetSessionId(null)}
+        onClosed={() => {
+          setSessionSheetSessionId("")
+          resetSessionPanelParams()
+        }}
         closeAriaLabel="Close session panel"
       >
-        {sessionSheetSessionId ? (
+        {sessionSheetSessionId.length > 0 ? (
           <SessionDetailDrawer
             key={sessionSheetSessionId}
             projectId={projectId}

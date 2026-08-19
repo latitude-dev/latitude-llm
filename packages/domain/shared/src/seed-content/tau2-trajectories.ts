@@ -149,3 +149,56 @@ export function classifyTau2SeedTrajectory(trajectory: Tau2SeedTrajectory): Tau2
 
   return "tool-result-grounding"
 }
+
+/**
+ * Failed-trajectory indexes per signal family, memoized per `maxTrajectories`
+ * because classification runs regexes over every trajectory and the seeders ask
+ * for hundreds of occurrences per run. A family with no failed trajectory of its
+ * own falls back to every failed trajectory.
+ */
+const failedTrajectoryIndexesByFamilyCache = new Map<number, ReadonlyMap<string, readonly number[]>>()
+
+function failedTrajectoryIndexesByFamily(maxTrajectories: number): ReadonlyMap<string, readonly number[]> {
+  const cached = failedTrajectoryIndexesByFamilyCache.get(maxTrajectories)
+  if (cached) return cached
+
+  const considered = TAU2_SEED_TRAJECTORIES.slice(0, maxTrajectories)
+  const allFailed = considered.flatMap((trajectory, index) =>
+    trajectory.outcome === "failure" || trajectory.reward < 1 ? [index] : [],
+  )
+  const matched = new Map<string, number[]>()
+  considered.forEach((trajectory, index) => {
+    const family = classifyTau2SeedTrajectory(trajectory)
+    if (family === null) return
+    const indexes = matched.get(family) ?? []
+    indexes.push(index)
+    matched.set(family, indexes)
+  })
+
+  const resolved = new Map<string, readonly number[]>(
+    TAU2_SEED_SIGNAL_FAMILIES.map((family) => [family.key, matched.get(family.key) ?? allFailed]),
+  )
+  failedTrajectoryIndexesByFamilyCache.set(maxTrajectories, resolved)
+  return resolved
+}
+
+/**
+ * Trajectory the seeded occurrence `(signalIndex, occurrenceIndex)` lands on.
+ * Signals cycle through the tau2 signal families and each occurrence walks that
+ * family's failed trajectories, so every session listed under a signal fails the
+ * way the signal describes.
+ */
+export function tau2TrajectoryIndexForSignalOccurrence({
+  signalIndex,
+  occurrenceIndex,
+  maxTrajectories = TAU2_SEED_TRAJECTORIES.length,
+}: {
+  readonly signalIndex: number
+  readonly occurrenceIndex: number
+  readonly maxTrajectories?: number
+}): number {
+  const family = TAU2_SEED_SIGNAL_FAMILIES[signalIndex % TAU2_SEED_SIGNAL_FAMILIES.length]
+  const candidates = (family && failedTrajectoryIndexesByFamily(maxTrajectories).get(family.key)) ?? []
+  if (candidates.length === 0) return 0
+  return candidates[(signalIndex + occurrenceIndex) % candidates.length] ?? 0
+}

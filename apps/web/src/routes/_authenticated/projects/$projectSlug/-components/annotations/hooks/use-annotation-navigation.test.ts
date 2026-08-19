@@ -3,7 +3,7 @@ import { TraceId } from "@domain/shared"
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { AnnotationRecord } from "../../../../../../../domains/annotations/annotations.functions.ts"
-import { useAnnotationNavigation } from "./use-annotation-navigation.ts"
+import { SETTLE_QUIET_MS, useAnnotationNavigation } from "./use-annotation-navigation.ts"
 import type { TextSelectionPopoverControls } from "./use-annotation-popover.ts"
 
 function createRect(left: number, bottom: number): DOMRect {
@@ -114,6 +114,14 @@ describe("useAnnotationNavigation", () => {
       result.current.scrollToAnnotation(annotation)
     })
 
+    // The conversation is still laying out right after the request, so the scroll
+    // waits for it to settle instead of landing short of the anchor.
+    expect(textElement.scrollIntoView).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(SETTLE_QUIET_MS * 2)
+    })
+
     expect(textElement.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" })
     expect(openExistingAnnotationPopover).not.toHaveBeenCalled()
     expect(updateTextSelectionPopoverPosition).not.toHaveBeenCalled()
@@ -128,5 +136,39 @@ describe("useAnnotationNavigation", () => {
     expect(openExistingAnnotationPopover).toHaveBeenCalledWith(annotation, { x: 72, y: 220 })
     expect(updateTextSelectionPopoverPosition).not.toHaveBeenCalled()
     expect(clickSpy).not.toHaveBeenCalled()
+  })
+
+  it("holds the scroll while the conversation is still growing", () => {
+    const container = document.createElement("div")
+    const messageElement = document.createElement("div")
+    messageElement.setAttribute("data-message-index", "1")
+    messageElement.scrollIntoView = vi.fn()
+    container.appendChild(messageElement)
+    document.body.appendChild(container)
+
+    let scrollHeight = 500
+    Object.defineProperty(container, "scrollHeight", { get: () => scrollHeight })
+
+    const annotation = { ...createAnnotationRecord(), metadata: { rawFeedback: "Looks good", messageIndex: 1 } }
+    const { result } = renderHook(() => useAnnotationNavigation({ scrollContainerRef: { current: container } }))
+
+    act(() => {
+      result.current.scrollToAnnotation(annotation)
+    })
+
+    // Messages laying out above the anchor keep pushing it down, so each change
+    // restarts the wait rather than scrolling against a stale layout.
+    for (let step = 0; step < 6; step++) {
+      scrollHeight += 100
+      act(() => {
+        vi.advanceTimersByTime(SETTLE_QUIET_MS)
+      })
+    }
+    expect(messageElement.scrollIntoView).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(SETTLE_QUIET_MS * 2)
+    })
+    expect(messageElement.scrollIntoView).toHaveBeenCalledTimes(1)
   })
 })
