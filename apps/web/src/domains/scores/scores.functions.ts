@@ -146,7 +146,7 @@ export const listScoresBySession = createServerFn({ method: "POST" })
       listScoresByTraceIdsUseCase({
         projectId: data.projectId,
         traceIds: data.traceIds,
-        ...(data.signalId ? { signalId: data.signalId } : {}),
+        ...(data.signalId !== undefined ? { signalId: data.signalId } : {}),
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",

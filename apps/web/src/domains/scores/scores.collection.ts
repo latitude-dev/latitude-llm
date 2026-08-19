@@ -74,7 +74,7 @@ export function useScoresBySession({
         data: {
           projectId,
           traceIds: [...traceIds],
-          ...(signalId ? { signalId } : {}),
+          ...(signalId !== undefined ? { signalId } : {}),
           limit,
           offset,
           draftMode: effectiveDraftMode,

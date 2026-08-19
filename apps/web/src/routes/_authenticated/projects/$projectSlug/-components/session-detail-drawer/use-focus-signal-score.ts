@@ -48,13 +48,16 @@ export function useFocusSignalScore({
   readonly canFocus: boolean
   readonly onFocus: (score: ScoreRecord) => void
 }): void {
+  // Callers resolve a signal slug to an id and pass "" until it lands, so an empty
+  // id means "no signal yet" rather than "every signal".
+  const activeSignalId = signalId !== undefined && signalId.length > 0 ? signalId : undefined
   // Scoped to the signal: a session can hold more scores than one page returns,
   // and the anchored one is often not among the newest.
   const { data } = useScoresBySession({
     projectId,
     traceIds,
-    ...(signalId ? { signalId } : {}),
-    enabled: signalId !== undefined,
+    ...(activeSignalId !== undefined ? { signalId: activeSignalId } : {}),
+    enabled: activeSignalId !== undefined,
   })
   const onFocusRef = useRef(onFocus)
   onFocusRef.current = onFocus
@@ -63,10 +66,10 @@ export function useFocusSignalScore({
   // TODO(frontend-use-effect-policy): the session's scores arrive asynchronously,
   // long after the drawer mounted, and there is no event at the arrival site.
   useEffect(() => {
-    if (!signalId || focusedSignalIdRef.current === signalId || !data) return
-    focusedSignalIdRef.current = signalId
+    if (!activeSignalId || focusedSignalIdRef.current === activeSignalId || !data) return
+    focusedSignalIdRef.current = activeSignalId
     if (!canFocus) return
-    const score = findAnchoredSignalScore({ scores: data.items, signalId })
+    const score = findAnchoredSignalScore({ scores: data.items, signalId: activeSignalId })
     if (score) onFocusRef.current(score)
-  }, [canFocus, data, signalId])
+  }, [canFocus, data, activeSignalId])
 }
