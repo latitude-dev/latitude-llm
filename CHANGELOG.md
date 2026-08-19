@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## v0.3.84 - 2026-08-19
+
+### Web
+
+- List pages that sit under a chart or summary panel no longer scroll the table inside its own short box. `InfiniteTable` gained an opt-in external scroll mode where rows virtualize against a scroll container the page owns, so the panel and the table scroll as one section and the table header pins to the top once it reaches it. Rolled out to Sessions, Traces, Behaviors topics, Monitor incidents, and the Tools and Users lists, with the panel above pinned in place when the table scrolls sideways (ref: #4476).
+- Reworked the project detail page headers and controls into a shared section header, and cleaned up the surrounding chrome: the bordered `Tabs` variant no longer overflows its container at the small size, behavior view chips and hotkey badges follow the same sizing, and each key of a shortcut renders in its own square (ref: #4476).
+- Fixed the project switcher staying open, and painting over the modal, after clicking `Create new` (ref: #4476).
+
+### Signals
+
+- Flagger feedback now recovers from a transient job failure. Submitting a verdict published its fan-out with a permanent dedupe key, so one failed job silently shadowed every later publish and flaggers stopped being graded even though customer verdicts were stored. The fan-out and per-trace review jobs now use an expiring throttle, letting outbox redelivery retry them (ref: #4477).
+
+### Documentation
+
+- Rewrote the flagger documentation to match what ships: the four flagger groups, which ones use an LLM and which are deterministic, what each one does and does not flag, and that detection reads the whole session while the annotation lands on the trace where the problem appears. Refreshed the annotation overview, the effective-annotation guide, sampling, and the PM quick start alongside it (ref: #4481).
+
 ## v0.3.83 - 2026-08-18
 
 ### Signals
