@@ -3,6 +3,7 @@ import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import {
+  CONSOLIDATION_THROTTLE_MS,
   ESCALATION_CHECK_THROTTLE_MS,
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
@@ -50,6 +51,20 @@ export const createDomainEventsWorker = ({
     prefix: string,
     input: { organizationId: string; projectId: string; traceId: string },
   ) => `${prefix}:${input.organizationId}:${input.projectId}:${input.traceId}`
+
+  // Trailing throttle: the pass wants a settled centroid, and the delay is also
+  // what keeps a candidate that qualified in the same transaction from being
+  // consolidated out from under its own promotion.
+  const publishConsolidate = (payload: { organizationId: string; projectId: string; signalId: string }) =>
+    pub.publish(
+      "issues",
+      "consolidate",
+      { organizationId: payload.organizationId, projectId: payload.projectId, signalId: payload.signalId },
+      {
+        dedupeKey: `org:${payload.organizationId}:issues:consolidate:${payload.signalId}`,
+        throttleMs: CONSOLIDATION_THROTTLE_MS,
+      },
+    )
 
   const publishScoreCreatedFanOut = (payload: EventPayloads["ScoreCreated"]) =>
     Effect.all(
@@ -189,16 +204,18 @@ export const createDomainEventsWorker = ({
             dedupeKey: `issues:check-escalation:${event.payload.signalId}`,
             throttleMs: ESCALATION_CHECK_THROTTLE_MS,
           }),
+          // Only candidates consolidate, and the assignment already told us
+          // which this was. Publishing unconditionally would enqueue a job per
+          // promoted signal per window for a handler that could only return.
+          ...(event.payload.unpromoted === true ? [publishConsolidate(event.payload)] : []),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    // An audit fact with no consumers: discovery creates the row long before the
-    // signal earns an announcement, so both publishes live on `SignalPromoted`.
-    // The registration has to stay — `EventHandlerMap` is exhaustive over
-    // `EventPayloads`, and an unregistered name dead-letters on
-    // `UnhandledEventError`.
-    SignalCreated: () => Effect.void,
+    // No announcement hangs off this — a discovered signal earns those at
+    // promotion — but it is the first of a candidate's two centroid-change
+    // triggers, and the row it announces is always a candidate.
+    SignalCreated: (event) => publishConsolidate(event.payload),
 
     SignalsConsolidated: (event) =>
       pub.publish(

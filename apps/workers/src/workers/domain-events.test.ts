@@ -3,6 +3,7 @@ import type { EventEnvelope } from "@domain/events"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import {
+  CONSOLIDATION_THROTTLE_MS,
   ESCALATION_CHECK_THROTTLE_MS,
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
@@ -282,9 +283,35 @@ describe("domain-events dispatcher", () => {
     expect(throttled?.options?.dedupeKey).toBe("issues:check-escalation:issue-42")
     expect(throttled?.options?.throttleMs).toBe(ESCALATION_CHECK_THROTTLE_MS)
     expect(throttled?.options?.debounceMs).toBeUndefined()
+    // A promoted signal's assignment schedules no consolidation pass: only a
+    // candidate can be merged, and at volume this is almost every assignment.
+    expect(published.some((p) => p.task === "consolidate")).toBe(false)
   })
 
-  it("announces nothing when discovery creates the signal row", async () => {
+  it("schedules a consolidation pass when the score landed on a candidate", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("ScoreAssignedToSignal", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "issue-42",
+      unpromoted: true,
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    const consolidate = published.find((p) => p.task === "consolidate")
+    expect(consolidate?.queue).toBe("issues")
+    expect(consolidate?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "issue-42",
+    })
+    expect(consolidate?.options?.dedupeKey).toBe("org:org-1:issues:consolidate:issue-42")
+    expect(consolidate?.options?.throttleMs).toBe(CONSOLIDATION_THROTTLE_MS)
+  })
+
+  it("announces nothing when discovery creates the signal row, but does look for fragments to merge", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SignalCreated", {
@@ -296,10 +323,11 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    // Still registered, and that is the point: an unhandled event name
-    // dead-letters on `UnhandledEventError`, so the audit event has to stay
-    // routable even with no consumers.
-    expect(published).toHaveLength(0)
+    // A brand-new row is always a candidate, and nothing about it is announced:
+    // the one publish is the consolidation pass its new centroid earns.
+    expect(published).toHaveLength(1)
+    expect(published[0]?.task).toBe("consolidate")
+    expect(published[0]?.options?.throttleMs).toBe(CONSOLIDATION_THROTTLE_MS)
   })
 
   it("routes SignalsConsolidated to the ClickHouse reconciliation under a per-merge key", async () => {

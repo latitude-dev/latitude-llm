@@ -55,6 +55,16 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly signalId: string
+    /**
+     * Whether the signal was still a candidate when the score landed, read under
+     * the row lock. Carried so the router can route consolidation without a
+     * lookup: only a candidate's centroid change is worth a pass, and at volume
+     * almost every assignment is to a promoted signal.
+     *
+     * Absent on events written before this field existed, including any still
+     * under the legacy `ScoreAssignedToIssue` name.
+     */
+    readonly unpromoted?: boolean
   }
   /**
    * Emitted by `createSignalFromScoreUseCase` after the signal row is saved.

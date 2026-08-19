@@ -246,6 +246,7 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
                 organizationId: score.organizationId,
                 projectId: score.projectId,
                 signalId: issue.id,
+                unpromoted: issue.promotedAt === null,
               },
             })
 
