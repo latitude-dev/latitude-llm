@@ -57,6 +57,13 @@ export const signals = latitudeSchema.table(
     index("signals_project_lifecycle_idx")
       .on(t.organizationId, t.projectId, t.ignoredAt, t.resolvedAt, t.mutedAt, t.createdAt)
       .where(sql`${t.deletedAt} IS NULL AND ${t.promotedAt} IS NOT NULL`),
+    // The expiry sweep's whole predicate, and the exact complement of the
+    // lifecycle index above — which is why that one cannot serve this scan. The
+    // sweep runs cross-organization, so it is unprefixed; it stays small because
+    // it only ever indexes the bounded candidate population.
+    index("signals_candidate_idle_idx")
+      .on(sql`coalesce(${t.clusteredAt}, ${t.createdAt})`)
+      .where(sql`${t.deletedAt} IS NULL AND ${t.promotedAt} IS NULL`),
     index("signals_search_document_idx").using("gin", t.searchDocument),
     // Organization-unique (D15), spanning projects. Soft-delete-aware: a deleted signal frees its slug for reuse.
     uniqueIndex("signals_unique_slug_per_org_idx").on(t.organizationId, t.slug).where(sql`${t.deletedAt} IS NULL`),
