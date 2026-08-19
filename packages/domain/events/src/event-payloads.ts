@@ -84,7 +84,8 @@ export interface EventPayloads {
     readonly projectId: string
     readonly signalId: string
     readonly qualifiedAt: string
-    readonly triggerScoreId: string
+    /** The score whose assignment reached the threshold; null when a consolidation merge did. */
+    readonly triggerScoreId: string | null
   }
   /**
    * Emitted by `promoteSignalUseCase` from the transaction that stamps
