@@ -1,5 +1,10 @@
 import { z } from "zod"
-import { isPercentileTraceFilterField, PERCENTILE_TRACE_FILTER_FIELDS } from "./trace-filter-fields.ts"
+import {
+  isPercentileSessionFilterField,
+  isPercentileTraceFilterField,
+  PERCENTILE_SESSION_FILTER_FIELDS,
+  PERCENTILE_TRACE_FILTER_FIELDS,
+} from "./trace-filter-fields.ts"
 
 // ---------------------------------------------------------------------------
 // Operators
@@ -171,3 +176,42 @@ export const traceFilterSetSchema: z.ZodType<FilterSet> = filterSetSchema.superR
     })
   }
 })
+
+export const sessionFilterGtePercentileMessage = (field: string): string =>
+  `gtePercentile is only supported on ${PERCENTILE_SESSION_FILTER_FIELDS.join("/")}; not on '${field}'. Use absolute gte/lte thresholds instead.`
+
+/** Session filters allow `gtePercentile` only on duration/ttft/cost — other fields would reach the filter builder unresolved and 500. */
+export const sessionFilterSetSchema: z.ZodType<FilterSet> = filterSetSchema.superRefine((filters, ctx) => {
+  for (const [field, conditions] of Object.entries(filters)) {
+    if (isPercentileSessionFilterField(field)) continue
+    conditions.forEach((cond, index) => {
+      if (cond.op === "gtePercentile") {
+        ctx.addIssue({
+          code: "custom",
+          message: sessionFilterGtePercentileMessage(field),
+          path: [field, index, "op"],
+        })
+      }
+    })
+  }
+})
+
+/**
+ * Streams whose filter builder never resolves `gtePercentile` into an absolute threshold (scores,
+ * behaviors, moments) must reject the operator outright at the boundary — same rationale as
+ * `spanRowFilterSetSchema`, generalized so each stream gets an accurate error message.
+ */
+export const rejectGtePercentileFilterSetSchema = (streamLabel: string): z.ZodType<FilterSet> =>
+  filterSetSchema.superRefine((filters, ctx) => {
+    for (const [field, conditions] of Object.entries(filters)) {
+      conditions.forEach((cond, index) => {
+        if (cond.op === "gtePercentile") {
+          ctx.addIssue({
+            code: "custom",
+            message: `gtePercentile is not supported on ${streamLabel} filters; not on '${field}'. Use absolute gte/lte thresholds instead.`,
+            path: [field, index, "op"],
+          })
+        }
+      })
+    }
+  })
