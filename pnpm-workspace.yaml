@@ -14,56 +14,39 @@ packages:
   - infra
   - tools/*
 
-publicHoistPattern:
-  - "@temporalio/*"
-  - "@grpc/*"
-  - protobufjs
-  - "@protobufjs/*"
-  - long
-
-# Refuse to install npm versions published less than 7 days ago.
-# Buys time for the registry / community to yank malicious releases
-# before they land in our lockfile (e.g. GHSA-g7cv-rxg3-hmpx, May 2026).
-minimumReleaseAge: 10080
-minimumReleaseAgeExclude:
-  - "@temporalio/*"
-
-# Disable npm `pre*` / `post*` lifecycle scripts (defense in depth on top of
-# pnpm-workspace.yaml `onlyBuiltDependencies` allowlist). Mini Shai-Hulud
-# used a `prepare` hook on a malicious git-ref optionalDependency.
-enablePrePostScripts: false
-
 catalog:
+  "@better-auth/core": 1.6.22
+  "@better-auth/sso": 1.6.22
+  "@better-auth/stripe": 1.6.22
   "@biomejs/biome": 2.4.6
+  "@bull-board/api": 6.12.1
+  "@bull-board/hono": 6.12.1
   "@clickhouse/client": 1.21.0
+  "@effect/opentelemetry": 4.0.0-beta.57
   "@hono/node-server": 1.19.13
+  "@modelcontextprotocol/inspector": 0.21.2
+  "@modelcontextprotocol/sdk": 1.29.0
   "@opentelemetry/api": 1.9.1
   "@paralleldrive/cuid2": 3.3.0
   "@temporalio/activity": 1.17.5
   "@temporalio/client": 1.17.5
   "@temporalio/worker": 1.17.5
   "@temporalio/workflow": 1.17.5
-  "@types/node": 22.14.1
   "@types/mustache": 4.2.6
+  "@types/node": 22.14.1
   "@types/pg": 8.16.0
   "@types/react": 19.2.14
   "@types/react-dom": 19.2.3
   "@typescript/native-preview": 7.0.0-dev.20260705.1
   "@vitejs/plugin-react": 6.0.1
   better-auth: 1.6.22
-  "@better-auth/core": 1.6.22
-  "@better-auth/sso": 1.6.22
-  "@better-auth/stripe": 1.6.22
-  "@bull-board/api": 6.12.1
-  "@bull-board/hono": 6.12.1
   bullmq: 5.76.2
   diff: 8.0.4
   dotenv: 17.3.1
   drizzle-kit: 1.0.0-beta.15-859cf75
   drizzle-orm: 1.0.0-rc.4-273829f
-  fast-json-stable-stringify: 2.1.0
-  "@effect/opentelemetry": 4.0.0-beta.57
   effect: 4.0.0-beta.57
+  fast-json-stable-stringify: 2.1.0
   hono: 4.12.34
   ioredis: 5.10.1
   jose: 6.2.3
@@ -71,26 +54,24 @@ catalog:
   mustache: 4.2.0
   pdfjs-dist: 6.2.108
   pg: 8.16.0
+  protobufjs: 8.6.6
   quickjs-emscripten: 0.32.0
   react: 19.2.5
   react-dom: 19.2.5
   rosetta-ai: 2.2.0
-  protobufjs: 8.6.6
   tsdown: 0.21.9
   tsx: 4.21.0
   turbo: 2.9.18
   typescript: 6.0.3
   vite: 8.0.16
   vitest: 4.1.8
-  zod: 4.3.6
   voyageai: 0.2.1
-  "@modelcontextprotocol/sdk": 1.29.0
-  "@modelcontextprotocol/inspector": 0.21.2
+  zod: 4.3.6
 
-# pdfjs-dist pulls @napi-rs/canvas for its Node rasterization path, which we never take. It
-# reaches it through a runtime `createRequire`, so no bundler ever resolves the specifier.
-ignoredOptionalDependencies:
-  - "@napi-rs/canvas"
+# Disable npm `pre*` / `post*` lifecycle scripts (defense in depth on top of
+# pnpm-workspace.yaml `onlyBuiltDependencies` allowlist). Mini Shai-Hulud
+# used a `prepare` hook on a malicious git-ref optionalDependency.
+enablePrePostScripts: false
 
 ignoredBuiltDependencies:
   - "@prisma/engines"
@@ -99,6 +80,29 @@ ignoredBuiltDependencies:
   - prisma
   - protobufjs
 
+# pdfjs-dist pulls @napi-rs/canvas for its Node rasterization path, which we never take. It
+# reaches it through a runtime `createRequire`, so no bundler ever resolves the specifier.
+ignoredOptionalDependencies:
+  - "@napi-rs/canvas"
+
+# Refuse to install npm versions published less than 7 days ago.
+# Buys time for the registry / community to yank malicious releases
+# before they land in our lockfile (e.g. GHSA-g7cv-rxg3-hmpx, May 2026).
+minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - "@temporalio/*"
+  - storybook
+  - '@storybook/*'
+  - eslint-plugin-storybook
+  - '@chromatic-com/storybook'
+
 onlyBuiltDependencies:
   - "@biomejs/biome"
   - esbuild
+
+publicHoistPattern:
+  - "@temporalio/*"
+  - "@grpc/*"
+  - protobufjs
+  - "@protobufjs/*"
+  - long

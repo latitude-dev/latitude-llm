@@ -536,23 +536,26 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                   variant={filtersOpen ? "outline" : "ghost"}
                   size="default"
                   onClick={() => setFiltersOpen(!filtersOpen)}
+                  icon={FilterIcon}
+                  trailingAccessory={
+                    <>
+                      <HotkeyBadge hotkey="F" />
+                      {hasActiveFilters && (
+                        <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
+                          {Object.keys(filters).length}
+                        </span>
+                      )}
+                    </>
+                  }
                 >
-                  <FilterIcon className="h-4 w-4" />
                   Filters
-                  <HotkeyBadge hotkey="F" />
-                  {hasActiveFilters && (
-                    <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
-                      {Object.keys(filters).length}
-                    </span>
-                  )}
                 </Button>
               }
             >
               Toggle filters <HotkeyBadge hotkey="F" />
             </Tooltip>
             {(hasActiveFilters || hasSearchQuery || hasSelectedSavedSearch) && (
-              <Button variant="ghost" size="sm" onClick={clearAll}>
-                <Icon icon={XIcon} size="sm" />
+              <Button variant="ghost" size="sm" onClick={clearAll} icon={XIcon}>
                 Clear all
               </Button>
             )}

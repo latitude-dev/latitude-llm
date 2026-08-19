@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
@@ -14,6 +15,37 @@ describe("Button", () => {
     const markup = renderToStaticMarkup(<Button type="submit">Submit</Button>)
 
     expect(markup).toContain('type="submit"')
+  })
+
+  it("renders a structured leading icon", () => {
+    const markup = renderToStaticMarkup(<Button icon={Plus}>Create</Button>)
+
+    expect(markup).toMatch(/\bh-4\b/)
+    expect(markup).toContain("Create")
+  })
+
+  it("renders trailing accessory content", () => {
+    const markup = renderToStaticMarkup(<Button trailingAccessory={<span>F</span>}>Filters</Button>)
+
+    expect(markup).toContain("Filters")
+    expect(markup).toMatch(/\bml-auto\b/)
+  })
+
+  it("hides the structured icon while loading", () => {
+    const markup = renderToStaticMarkup(
+      <Button icon={Plus} isLoading>
+        Create
+      </Button>,
+    )
+
+    expect(markup).not.toContain("lucide-plus")
+    expect(markup).toMatch(/animate-spin/)
+  })
+
+  it("applies explicit full width to the outer button shell", () => {
+    const markup = renderToStaticMarkup(<Button className="w-full">Search</Button>)
+
+    expect(markup).toMatch(/<button[^>]*class="[^"]*\bw-full\b/)
   })
 })
 

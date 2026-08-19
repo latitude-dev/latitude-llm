@@ -1,4 +1,4 @@
-import { Button, Icon } from "@repo/ui"
+import { Button } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { Sparkles } from "lucide-react"
 import type { ComponentProps } from "react"
@@ -42,11 +42,10 @@ function ButtonPage() {
       <UsageSection description="Import Button from @repo/ui. Do not wrap labels in Text — Button sets typography internally.">
         <UsageCode
           lines={[
-            'import { Button, Icon } from "@repo/ui"',
+            'import { Button } from "@repo/ui"',
             'import { Plus } from "lucide-react"',
             "",
-            '<Button variant="outline" size="sm">',
-            '  <Icon icon={Plus} size="sm" />',
+            '<Button variant="outline" size="sm" icon={Plus}>',
             "  Add item",
             "</Button>",
           ]}
@@ -55,8 +54,7 @@ function ButtonPage() {
 
       {VARIANTS.map(({ value, label, description }) => (
         <ComponentDemoSection key={value} title={label} description={description}>
-          <Button variant={value}>
-            <Icon icon={Sparkles} size="sm" />
+          <Button variant={value} icon={Sparkles}>
             Set up
           </Button>
         </ComponentDemoSection>

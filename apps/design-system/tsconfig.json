@@ -8,5 +8,5 @@
     "declaration": false,
     "declarationMap": false
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", ".storybook/**/*.ts", ".storybook/**/*.tsx", "vite.config.ts"]
 }

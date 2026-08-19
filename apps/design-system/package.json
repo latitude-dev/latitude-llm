@@ -7,9 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "biome check src",
-    "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsgo -p tsconfig.json --noEmit"
+    "check": "biome check src .storybook",
+    "format": "biome format --write src .storybook && biome check --fix src .storybook",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
@@ -24,6 +26,10 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "@storybook/react-vite": "^10.5.9",
+    "@storybook/addon-a11y": "^10.5.9",
+    "@storybook/addon-docs": "^10.5.9",
+    "storybook": "^10.5.9",
     "vite": "catalog:"
   }
 }

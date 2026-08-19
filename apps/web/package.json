@@ -96,6 +96,8 @@
     "rosetta-ai": "catalog:",
     "satori": "0.26.0",
     "voyageai": "catalog:",
+    "youch": "^4.1.0",
+    "youch-core": "^0.3.3",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -1,9 +1,17 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { type ButtonHTMLAttributes, Children, isValidElement, type ReactNode, type Ref } from "react"
-
+import {
+  type ButtonHTMLAttributes,
+  Children,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from "react"
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
+import { Icon, type IconProps } from "../icons/icons.tsx"
 
 const outerElevation = "border-0 shadow-sm transition-shadow duration-200 hover:shadow-lg"
 
@@ -124,7 +132,21 @@ export interface ButtonProps
   ref?: Ref<HTMLButtonElement>
   asChild?: boolean
   isLoading?: boolean
+  icon?: IconProps["icon"]
+  iconProps?: Omit<IconProps, "icon" | "size">
+  trailingIcon?: IconProps["icon"]
+  trailingIconProps?: Omit<IconProps, "icon" | "size">
+  trailingAccessory?: ReactNode
 }
+
+const buttonIconSizes = {
+  default: "sm",
+  sm: "xs",
+  lg: "default",
+  icon: "sm",
+  "icon-xs": "xs",
+  full: "sm",
+} as const satisfies Record<NonNullable<ButtonProps["size"]>, NonNullable<IconProps["size"]>>
 
 function getElementDisplayName(type: unknown): string {
   if (typeof type === "string") {
@@ -177,6 +199,50 @@ function stripLeadingIconChild(children: ReactNode): ReactNode {
   return childArray.filter((_, index) => index !== firstMeaningfulChildIndex)
 }
 
+function buttonIconSize(size: ButtonProps["size"]) {
+  return buttonIconSizes[size ?? "default"]
+}
+
+function hasUtilityClassToken(className: string | undefined, token: string) {
+  return className?.split(/\s+/).includes(token) ?? false
+}
+
+function renderButtonContent({
+  children,
+  isLoading,
+  size,
+  icon,
+  iconProps,
+  trailingIcon,
+  trailingIconProps,
+  trailingAccessory,
+}: {
+  readonly children: ReactNode
+  readonly isLoading: boolean
+  readonly size: ButtonProps["size"]
+  readonly icon?: ButtonProps["icon"]
+  readonly iconProps?: ButtonProps["iconProps"]
+  readonly trailingIcon?: ButtonProps["trailingIcon"]
+  readonly trailingIconProps?: ButtonProps["trailingIconProps"]
+  readonly trailingAccessory?: ButtonProps["trailingAccessory"]
+}) {
+  const resolvedIconSize = buttonIconSize(size)
+
+  return (
+    <>
+      {isLoading && (
+        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      )}
+      {!isLoading && icon ? <Icon icon={icon} size={resolvedIconSize} {...iconProps} /> : null}
+      {children}
+      {!isLoading && trailingIcon ? <Icon icon={trailingIcon} size={resolvedIconSize} {...trailingIconProps} /> : null}
+      {trailingAccessory ? (
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1">{trailingAccessory}</span>
+      ) : null}
+    </>
+  )
+}
+
 function Button({
   className,
   variant,
@@ -185,12 +251,23 @@ function Button({
   isLoading = false,
   children,
   disabled,
+  icon,
+  iconProps,
+  trailingIcon,
+  trailingIconProps,
+  trailingAccessory,
   ref,
   ...props
 }: ButtonProps) {
   const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
+  const fillsWidth = hasUtilityClassToken(className, "w-full")
 
   if (asChild) {
+    const slotChild = isValidElement<{ children?: ReactNode }>(visibleChildren)
+      ? (visibleChildren as ReactElement<{ children?: ReactNode }>)
+      : null
+    const slotChildChildren = slotChild?.props.children
+
     return (
       <Slot
         ref={ref}
@@ -206,7 +283,22 @@ function Button({
         )}
         {...props}
       >
-        {visibleChildren}
+        {slotChild
+          ? cloneElement(
+              slotChild,
+              undefined,
+              renderButtonContent({
+                children: isLoading ? stripLeadingIconChild(slotChildChildren) : slotChildChildren,
+                isLoading,
+                size,
+                icon,
+                iconProps,
+                trailingIcon,
+                trailingIconProps,
+                trailingAccessory,
+              }),
+            )
+          : visibleChildren}
       </Slot>
     )
   }
@@ -215,16 +307,22 @@ function Button({
     <button
       ref={ref}
       {...props}
-      className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
+      className={cn(buttonContainerVariants({ variant }), fillsWidth && "w-full", isLoading && "animate-pulse")}
       disabled={disabled || isLoading}
       aria-busy={isLoading ? "true" : undefined}
     >
       <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-1", className)}>
         <div className="relative z-1 flex max-w-full flex-row items-center gap-x-1.5">
-          {isLoading && (
-            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          )}
-          {visibleChildren}
+          {renderButtonContent({
+            children: visibleChildren,
+            isLoading,
+            size,
+            icon,
+            iconProps,
+            trailingIcon,
+            trailingIconProps,
+            trailingAccessory,
+          })}
         </div>
       </div>
     </button>

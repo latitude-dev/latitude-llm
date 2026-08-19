@@ -55,6 +55,8 @@
       "ignoreDependencies": [
         "@temporalio/client",
         "quickjs-emscripten",
+        "youch",
+        "youch-core",
         "voyageai"
       ]
     },
