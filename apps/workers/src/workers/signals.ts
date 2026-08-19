@@ -20,6 +20,7 @@ import {
   consolidateSignalCandidatesUseCase,
   type DiscoverSignalResult,
   discoverSignalUseCase,
+  expireIdleCandidatesUseCase,
   promoteSignalUseCase,
   reconcileConsolidatedScoresUseCase,
   refreshSignalDetailsUseCase,
@@ -368,6 +369,18 @@ export const createSignalsWorker = async ({
           ),
         ),
         Effect.tapError((error) => Effect.sync(() => logger.error("Escalation sweep failed", error))),
+        withTracing,
+        Effect.asVoid,
+      ),
+    // Fired by the daily cron. Soft-deletes candidates that stopped
+    // accumulating, across organizations via admin Postgres. One capped
+    // statement, no fan-out: nothing was ever announced for a candidate, so
+    // there are no consequences to unwind.
+    sweepCandidates: () =>
+      expireIdleCandidatesUseCase().pipe(
+        withPostgres(SignalRepositoryLive, adminPgClient),
+        Effect.tap((result) => Effect.sync(() => logger.info(`Candidate expiry sweep: expired=${result.expired}`))),
+        Effect.tapError((error) => Effect.sync(() => logger.error("Candidate expiry sweep failed", error))),
         withTracing,
         Effect.asVoid,
       ),

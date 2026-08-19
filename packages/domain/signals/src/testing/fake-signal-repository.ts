@@ -192,6 +192,19 @@ export const createFakeSignalRepository = (
         if (issue) issues.set(id, { ...issue, deletedAt: new Date(), updatedAt: new Date() })
       }),
 
+    expireIdleCandidates: ({ idleBefore, now, limit }) =>
+      Effect.sync(() => {
+        const stale = [...issues.values()]
+          .filter(
+            (issue) => isCandidate(issue) && (issue.clusteredAt ?? issue.createdAt).getTime() < idleBefore.getTime(),
+          )
+          .slice(0, limit)
+        for (const issue of stale) {
+          issues.set(issue.id, { ...issue, deletedAt: now, updatedAt: now })
+        }
+        return stale.length
+      }),
+
     countBySlug: ({ slug, excludeSignalId }) =>
       Effect.sync(
         () =>

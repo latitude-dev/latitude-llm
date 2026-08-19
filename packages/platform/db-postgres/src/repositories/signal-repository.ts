@@ -788,6 +788,34 @@ const signalRepositoryCoreLive = Layer.effect(
           )
         }),
 
+      expireIdleCandidates: ({ idleBefore, now, limit }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // Unscoped by organization on purpose — this runs on the admin client.
+          // The subselect is what bounds the statement: Postgres has no LIMIT on
+          // UPDATE. Both halves are served by `signals_candidate_idle_idx`, whose
+          // predicate is exactly this one.
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .update(signals)
+              .set({ deletedAt: now, updatedAt: now })
+              .where(
+                inArray(
+                  signals.id,
+                  db
+                    .select({ id: signals.id })
+                    .from(signals)
+                    .where(
+                      and(candidateSignal, sql`coalesce(${signals.clusteredAt}, ${signals.createdAt}) < ${idleBefore}`),
+                    )
+                    .limit(limit),
+                ),
+              )
+              .returning({ id: signals.id }),
+          )
+          return rows.length
+        }),
+
       countBySlug: (input) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

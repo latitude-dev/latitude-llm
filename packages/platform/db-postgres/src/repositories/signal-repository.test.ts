@@ -552,6 +552,65 @@ describe("SignalRepositoryLive promotion gate", () => {
   })
 })
 
+describe("SignalRepositoryLive.expireIdleCandidates", () => {
+  const NOW = new Date("2026-04-01T00:00:00.000Z")
+  const LONG_AGO = new Date("2026-01-01T00:00:00.000Z")
+  const IDLE_BEFORE = new Date("2026-02-15T00:00:00.000Z")
+
+  const withRepo = <A, E>(f: (repo: SignalRepositoryShape) => Effect.Effect<A, E, SignalRepository | SqlClient>) =>
+    run(
+      Effect.gen(function* () {
+        return yield* f(yield* SignalRepository)
+      }),
+    )
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("sweeps idle candidates and leaves everything else standing", async () => {
+    const idle = { id: "sig-idle".padEnd(24, "1"), slug: "idle", createdAt: LONG_AGO, promotedAt: null }
+    // Created long ago but still clustering: `clustered_at` is the anchor, so
+    // this one is alive.
+    const active = {
+      id: "sig-active".padEnd(24, "2"),
+      slug: "active",
+      createdAt: LONG_AGO,
+      clusteredAt: new Date("2026-03-25T00:00:00.000Z"),
+      promotedAt: null,
+    }
+    const promoted = { id: "sig-promoted".padEnd(24, "3"), slug: "promoted-idle", createdAt: LONG_AGO }
+    await Promise.all([seedSignal(idle), seedSignal(active), seedSignal(promoted)])
+
+    const expired = await withRepo((repo) =>
+      repo.expireIdleCandidates({ idleBefore: IDLE_BEFORE, now: NOW, limit: 50 }),
+    )
+
+    expect(expired).toBe(1)
+    const rows = await pg.db.select().from(signals)
+    const deletedIds = rows.filter((row) => row.deletedAt !== null).map((row) => row.id)
+    expect(deletedIds).toEqual([idle.id])
+  })
+
+  it("respects the per-tick cap and is safe to re-run", async () => {
+    await Promise.all(
+      [0, 1, 2].map((index) =>
+        seedSignal({
+          id: `sig-batch-${index}`.padEnd(24, "9"),
+          slug: `batch-${index}`,
+          createdAt: LONG_AGO,
+          promotedAt: null,
+        }),
+      ),
+    )
+
+    const first = await withRepo((repo) => repo.expireIdleCandidates({ idleBefore: IDLE_BEFORE, now: NOW, limit: 2 }))
+    const second = await withRepo((repo) => repo.expireIdleCandidates({ idleBefore: IDLE_BEFORE, now: NOW, limit: 2 }))
+    const third = await withRepo((repo) => repo.expireIdleCandidates({ idleBefore: IDLE_BEFORE, now: NOW, limit: 2 }))
+
+    expect([first, second, third]).toEqual([2, 1, 0])
+  })
+})
 
 describe("SignalRepositoryLive.save promotion latch", () => {
   const PROMOTED_AT = new Date("2026-03-20T10:00:00.000Z")

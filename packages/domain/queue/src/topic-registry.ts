@@ -496,6 +496,13 @@ const _registry = {
       readonly scoresMoved: number
       readonly scoresCreatedFrom: string | null
     }
+    /**
+     * Fired by the daily cron — soft-deletes candidates that stopped
+     * accumulating. Platform-wide and capped, with no per-signal fan-out: an
+     * expired candidate has no consequences to unwind, since nothing was ever
+     * announced for it.
+     */
+    sweepCandidates: Record<string, never>
     checkEscalation: {
       readonly organizationId: string
       readonly projectId: string

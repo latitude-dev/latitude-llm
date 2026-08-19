@@ -201,6 +201,7 @@ export {
   type EmbedSignalSearchQueryResult,
   embedSignalSearchQueryUseCase,
 } from "./use-cases/embed-signal-search-query.ts"
+export { type ExpireIdleCandidatesResult, expireIdleCandidatesUseCase } from "./use-cases/expire-idle-candidates.ts"
 export {
   type GeneratedSignalDetails,
   type GenerateSignalDetailsError,

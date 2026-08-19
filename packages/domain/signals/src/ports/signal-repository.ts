@@ -233,6 +233,26 @@ export interface SignalRepositoryShape {
   /** Soft-delete: stamps `deleted_at` so the signal is excluded read-side and frees its slug. No-op if already deleted. */
   softDelete(id: SignalId): Effect.Effect<void, RepositoryError, SqlClient>
   /**
+   * Soft-deletes candidates whose last clustered score is older than
+   * `idleBefore`, returning how many this call took. Promoted signals are never
+   * touched.
+   *
+   * Platform-wide and **unscoped by organization** — the sweep behind it runs on
+   * the admin client, like the escalation sweep's open-incident read. Capped so
+   * one tick is one bounded statement; the next tick takes the rest.
+   *
+   * Safe to do bluntly because an expired candidate has no consequences to
+   * unwind: nothing was announced, assigned, escalated or linked, and its scores
+   * stay attached on purpose — `check-eligibility` rejects a score that already
+   * carries a `signal_id`, which is what stops the sweep feeding the same
+   * annotations back into discovery forever.
+   */
+  expireIdleCandidates(input: {
+    readonly idleBefore: Date
+    readonly now: Date
+    readonly limit: number
+  }): Effect.Effect<number, RepositoryError, SqlClient>
+  /**
    * Every promoted, non-deleted signal in the project. Also the "does this
    * project have any signals at all" probe behind the list's empty state, so a
    * project holding nothing but candidates reads as empty — which is what a
