@@ -51,15 +51,7 @@ function ScoreVerdictReadout({
     )
   }
 
-  return (
-    <ThumbButton
-      selected
-      readOnly
-      variant={passed ? "up" : "down"}
-      appearance="icon"
-      onClick={() => undefined}
-    />
-  )
+  return <ThumbButton selected readOnly variant={passed ? "up" : "down"} appearance="icon" onClick={() => undefined} />
 }
 
 function ScoreSignalLink({
@@ -160,11 +152,7 @@ export function ReadOnlyScoreCard({ score, projectId, className }: ScoreCardProp
         }
         title={
           <>
-            {sourceTitle ? (
-              <Text.H5M className="min-w-0 max-w-full truncate">
-                {sourceTitle}
-              </Text.H5M>
-            ) : null}
+            {sourceTitle ? <Text.H5M className="min-w-0 max-w-full truncate">{sourceTitle}</Text.H5M> : null}
             {evaluationVerdict ? (
               <Badge variant="secondary" size="small">
                 {evaluationVerdict}

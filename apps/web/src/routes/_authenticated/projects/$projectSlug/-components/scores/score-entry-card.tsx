@@ -1,5 +1,5 @@
-import type { ReactNode } from "react"
 import { cn } from "@repo/ui"
+import type { ReactNode } from "react"
 
 interface ScoreEntryCardProps {
   readonly dataAttributeName: string

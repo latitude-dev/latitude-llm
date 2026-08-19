@@ -1,5 +1,16 @@
 import { canUpdateAnnotation, getAnnotationProvenance } from "@domain/annotations"
-import { Avatar, Badge, Button, DropdownMenu, Icon, LatitudeLogo, ThumbButton, type MenuOption, Text, Tooltip } from "@repo/ui"
+import {
+  Avatar,
+  Badge,
+  Button,
+  DropdownMenu,
+  Icon,
+  LatitudeLogo,
+  type MenuOption,
+  Text,
+  ThumbButton,
+  Tooltip,
+} from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { Link, useParams } from "@tanstack/react-router"
 import { EllipsisIcon, GlobeIcon, ShieldAlertIcon } from "lucide-react"
@@ -10,7 +21,12 @@ import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/m
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
 import { useSignal } from "../../../../../../domains/signals/signals.collection.ts"
 import { FlaggerBadge } from "../flaggers/flagger-badge.tsx"
-import { ScoreEntryCard, ScoreEntryCardBody, ScoreEntryCardHeader, ScoreEntryCardSection } from "../scores/score-entry-card.tsx"
+import {
+  ScoreEntryCard,
+  ScoreEntryCardBody,
+  ScoreEntryCardHeader,
+  ScoreEntryCardSection,
+} from "../scores/score-entry-card.tsx"
 import { AnnotationApprovalPopover } from "./annotation-approval-popover.tsx"
 import { AnnotationInput } from "./annotation-input.tsx"
 import { EnrichmentPopover } from "./enrichment-popover.tsx"
@@ -211,9 +227,7 @@ export function AnnotationCard({
         supporting={
           flaggerSlug || linkedSignalBadge ? (
             <div className="flex flex-wrap items-center gap-2">
-              {flaggerSlug ? (
-                <FlaggerBadge projectId={projectId} projectSlug={projectSlug} slug={flaggerSlug} />
-              ) : null}
+              {flaggerSlug ? <FlaggerBadge projectId={projectId} projectSlug={projectSlug} slug={flaggerSlug} /> : null}
               {linkedSignalBadge}
             </div>
           ) : null

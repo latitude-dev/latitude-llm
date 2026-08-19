@@ -90,9 +90,7 @@ export function ScoreList({
                 <div
                   key={`${score.id}:${score.draftedAt !== null ? "draft" : "pub"}`}
                   data-annotation-navigation={clickable ? "true" : undefined}
-                  className={cn(
-                    clickable ? "cursor-pointer" : undefined,
-                  )}
+                  className={cn(clickable ? "cursor-pointer" : undefined)}
                   onClick={onClickScoreCard({ score, clickable })}
                   onKeyDown={onClickScoreCard({ score, clickable })}
                   role={clickable ? "button" : undefined}
