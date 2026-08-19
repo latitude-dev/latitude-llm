@@ -91,10 +91,6 @@ ignoredOptionalDependencies:
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "@temporalio/*"
-  - storybook
-  - '@storybook/*'
-  - eslint-plugin-storybook
-  - '@chromatic-com/storybook'
 
 onlyBuiltDependencies:
   - "@biomejs/biome"

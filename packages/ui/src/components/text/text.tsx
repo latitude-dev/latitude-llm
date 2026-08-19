@@ -136,152 +136,136 @@ const TextAtom = memo(
   }),
 )
 
-const H1 = forwardRef<HTMLHeadingElement, Common>(function H1(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h1" {...props} />
-})
-H1.displayName = "Text.H1"
+namespace Text {
+  export const H1 = forwardRef<HTMLHeadingElement, Common>(function H1(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h1" {...props} />
+  })
+  H1.displayName = "Text.H1"
 
-const H2 = forwardRef<HTMLHeadingElement, Common>(function H2(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h2" {...props} />
-})
-H2.displayName = "Text.H2"
+  export const H2 = forwardRef<HTMLHeadingElement, Common>(function H2(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h2" {...props} />
+  })
+  H2.displayName = "Text.H2"
 
-const H3 = forwardRef<HTMLHeadingElement, Common>(function H3(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h3" {...props} />
-})
-H3.displayName = "Text.H3"
+  export const H3 = forwardRef<HTMLHeadingElement, Common>(function H3(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h3" {...props} />
+  })
+  H3.displayName = "Text.H3"
+  export const H3M = forwardRef<HTMLHeadingElement, Common>(function H3M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h3" weight="medium" {...props} />
+  })
+  H3M.displayName = "Text.H3M"
 
-const H3M = forwardRef<HTMLHeadingElement, Common>(function H3M(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h3" weight="medium" {...props} />
-})
-H3M.displayName = "Text.H3M"
+  export const H4 = forwardRef<HTMLHeadingElement, Common>(function H4(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" {...props} />
+  })
+  H4.displayName = "Text.H4"
 
-const H4 = forwardRef<HTMLHeadingElement, Common>(function H4(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" {...props} />
-})
-H4.displayName = "Text.H4"
+  export const H4M = forwardRef<HTMLHeadingElement, Common>(function H4M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" weight="medium" {...props} />
+  })
+  H4M.displayName = "Text.H4M"
 
-const H4M = forwardRef<HTMLHeadingElement, Common>(function H4M(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" weight="medium" {...props} />
-})
-H4M.displayName = "Text.H4M"
+  export const H4B = forwardRef<HTMLHeadingElement, Common>(function H4B(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" weight="bold" {...props} />
+  })
+  H4B.displayName = "Text.H4B"
 
-const H4B = forwardRef<HTMLHeadingElement, Common>(function H4B(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" weight="bold" {...props} />
-})
-H4B.displayName = "Text.H4B"
+  export const H5 = forwardRef<HTMLHeadingElement, Common>(function H5(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h5" {...props} />
+  })
+  H5.displayName = "Text.H5"
 
-const H5 = forwardRef<HTMLHeadingElement, Common>(function H5(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h5" {...props} />
-})
-H5.displayName = "Text.H5"
+  export const H5M = forwardRef<HTMLHeadingElement, Common>(function H5M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h5" weight="medium" {...props} />
+  })
+  H5M.displayName = "Text.H5M"
 
-const H5M = forwardRef<HTMLHeadingElement, Common>(function H5M(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h5" weight="medium" {...props} />
-})
-H5M.displayName = "Text.H5M"
+  export const H6 = forwardRef<HTMLHeadingElement, Common>(function H6(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" {...props} />
+  })
+  H6.displayName = "Text.H6"
 
-const H6 = forwardRef<HTMLHeadingElement, Common>(function H6(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" {...props} />
-})
-H6.displayName = "Text.H6"
+  export const H6M = forwardRef<HTMLHeadingElement, Common>(function H6M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" weight="medium" {...props} />
+  })
+  H6M.displayName = "Text.H6M"
 
-const H6M = forwardRef<HTMLHeadingElement, Common>(function H6M(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" weight="medium" {...props} />
-})
-H6M.displayName = "Text.H6M"
+  export const H6B = forwardRef<HTMLHeadingElement, Common>(function H6B(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" weight="bold" {...props} />
+  })
+  H6B.displayName = "Text.H6B"
 
-const H6B = forwardRef<HTMLHeadingElement, Common>(function H6B(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" weight="bold" {...props} />
-})
-H6B.displayName = "Text.H6B"
+  export const H7 = forwardRef<HTMLHeadingElement, Common>(function H7(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h7" {...props} />
+  })
+  H7.displayName = "Text.H7"
 
-const H7 = forwardRef<HTMLHeadingElement, Common>(function H7(props, ref) {
-  return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h7" {...props} />
-})
-H7.displayName = "Text.H7"
+  export type MonoProps = {
+    children: ReactNode
+    color?: TextColor
+    weight?: Extract<FontWeight, "normal" | "semibold" | "bold">
+    userSelect?: boolean
+    overflow?: Overflow
+    ellipsis?: boolean
+    display?: Display
+    underline?: boolean
+    lineThrough?: boolean
+    size?: FontSize
+    textTransform?: "none" | "uppercase" | "lowercase"
+    whiteSpace?: WhiteSpace
+    wordBreak?: WordBreak
+    asChild?: boolean
+  }
 
-type MonoProps = {
-  children: ReactNode
-  color?: TextColor
-  weight?: Extract<FontWeight, "normal" | "semibold" | "bold">
-  userSelect?: boolean
-  overflow?: Overflow
-  ellipsis?: boolean
-  display?: Display
-  underline?: boolean
-  lineThrough?: boolean
-  size?: FontSize
-  textTransform?: "none" | "uppercase" | "lowercase"
-  whiteSpace?: WhiteSpace
-  wordBreak?: WordBreak
-  asChild?: boolean
+  export const Mono = forwardRef<HTMLSpanElement, MonoProps>(function MonoFont(
+    {
+      children,
+      color = "foreground",
+      overflow = "auto",
+      whiteSpace = "pre",
+      wordBreak = "normal",
+      underline = false,
+      lineThrough = false,
+      size = "h6",
+      textTransform = "none",
+      userSelect = true,
+      weight = "normal",
+      ellipsis = false,
+      display = "inline",
+      asChild = false,
+    },
+    ref,
+  ) {
+    const sizeClass = font.size[size]
+    const Comp = asChild ? Slot : "span"
+
+    return (
+      <Comp
+        ref={ref}
+        className={cn(
+          sizeClass,
+          font.family.mono,
+          font.weight[weight],
+          colors.textColors[color],
+          overflowOptions[overflow],
+          wordBreakOptions[wordBreak],
+          {
+            [display]: !ellipsis,
+            [whiteSpaceOptions[whiteSpace]]: !!whiteSpace,
+            "block truncate": ellipsis,
+            "select-none": !userSelect,
+            "line-through": lineThrough,
+            underline: underline,
+            [textTransform]: textTransform !== "none",
+          },
+        )}
+      >
+        {children}
+      </Comp>
+    )
+  })
+  Mono.displayName = "Text.Mono"
 }
-
-const Mono = forwardRef<HTMLSpanElement, MonoProps>(function MonoFont(
-  {
-    children,
-    color = "foreground",
-    overflow = "auto",
-    whiteSpace = "pre",
-    wordBreak = "normal",
-    underline = false,
-    lineThrough = false,
-    size = "h6",
-    textTransform = "none",
-    userSelect = true,
-    weight = "normal",
-    ellipsis = false,
-    display = "inline",
-    asChild = false,
-  },
-  ref,
-) {
-  const sizeClass = font.size[size]
-  const Comp = asChild ? Slot : "span"
-
-  return (
-    <Comp
-      ref={ref}
-      className={cn(
-        sizeClass,
-        font.family.mono,
-        font.weight[weight],
-        colors.textColors[color],
-        overflowOptions[overflow],
-        wordBreakOptions[wordBreak],
-        {
-          [display]: !ellipsis,
-          [whiteSpaceOptions[whiteSpace]]: !!whiteSpace,
-          "block truncate": ellipsis,
-          "select-none": !userSelect,
-          "line-through": lineThrough,
-          underline: underline,
-          [textTransform]: textTransform !== "none",
-        },
-      )}
-    >
-      {children}
-    </Comp>
-  )
-})
-Mono.displayName = "Text.Mono"
-
-const Text = Object.assign(TextAtom, {
-  H1,
-  H2,
-  H3,
-  H3M,
-  H4,
-  H4M,
-  H4B,
-  H5,
-  H5M,
-  H6,
-  H6M,
-  H6B,
-  H7,
-  Mono,
-})
 
 export { Text, TextAtom }

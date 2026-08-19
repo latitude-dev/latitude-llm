@@ -341,7 +341,14 @@ function Button({
       aria-busy={isLoading ? "true" : undefined}
       {...(pressed !== undefined ? { "aria-pressed": pressed } : {})}
     >
-      <div className={cn(buttonVariantsConfig({ variant, size }), pressed && pressedVariantClasses(variant), "relative z-1", className)}>
+      <div
+        className={cn(
+          buttonVariantsConfig({ variant, size }),
+          pressed && pressedVariantClasses(variant),
+          "relative z-1",
+          className,
+        )}
+      >
         <div className="relative z-1 flex max-w-full flex-row items-center gap-x-1.5">
           {renderButtonContent({
             children: visibleChildren,
