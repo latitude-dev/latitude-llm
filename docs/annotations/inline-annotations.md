@@ -1,17 +1,17 @@
 ---
 title: Inline Annotations
-description: Annotate any trace directly from its detail view
+description: Annotate any session directly from its detail view
 ---
 
 # Inline Annotations
 
-Inline annotations are the main way to leave human feedback on a trace. Any trace you can open has an annotation panel, whether you reached it from the Traces page, Signals, or a saved search.
+Inline annotations are the main way to leave human feedback on a session. Any session you can open has an annotation panel, whether you reached it from the Sessions page, Signals, or a saved search. A single trace opened on its own has the same panel, scoped to that trace.
 
 ## How Inline Annotations Work
 
-When viewing a trace:
+When viewing a session:
 
-1. Open the trace detail view.
+1. Open the session detail view.
 2. Use the annotation panel on the right.
 3. Choose a scope:
    - **Conversation-level**: assess the whole interaction.
@@ -27,8 +27,8 @@ Annotations save as drafts while you edit. Once finalized, they feed analytics, 
 For batch review, start from [search](../search/overview) or a [saved search](../search/saved-searches):
 
 1. Run or open a search for the cohort you want to review, such as _"failed payments last week"_ or _"checkout flows over 5 steps"_.
-2. Open a matching trace.
-3. Read the conversation, annotate it, and move to the next trace.
+2. Open a matching session.
+3. Read the conversation, annotate it, and move to the next session.
 4. Reopen the saved search from the **Saved searches** dropdown whenever you want to pick the cohort back up.
 
 For shared review work, saved searches are visible to everyone in the project, so a teammate can open the same cohort from the **Saved searches** dropdown.
@@ -37,11 +37,11 @@ For shared review work, saved searches are visible to everyone in the project, s
 
 Use inline annotations for:
 
-- Systematic review of a trace cohort
-- Ad-hoc spot checks while browsing traces
+- Systematic review of a session cohort
+- Ad-hoc spot checks while browsing sessions
 - Signal investigation
 - Team review and coaching
-- Extra context on traces that already have scores or flagger annotations
+- Extra context on sessions that already have scores or flagger annotations
 
 If you want detection without human review for a fixed set of known failure categories, use [flaggers](./flaggers).
 
@@ -57,5 +57,5 @@ Message-level and text-range annotations leave highlights in the conversation vi
 
 - [Annotations Overview](./overview): How the annotation system works
 - [Flaggers](./flaggers): Automatic annotators for common failure categories
-- [Search](../search/overview): Find traces to annotate
+- [Search](../search/overview): Find sessions to annotate
 - [Signals](../signals/overview): How annotations connect to signal tracking

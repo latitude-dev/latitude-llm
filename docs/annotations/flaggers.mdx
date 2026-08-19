@@ -1,17 +1,19 @@
 ---
 title: Flaggers
-description: Built-in automatic annotators that inspect every session for known failure categories
+description: Built-in automatic annotators that surface common failure categories in every session
 ---
 
 # Flaggers
 
-Flaggers are Latitude's built-in automatic annotators. They inspect completed sessions for known failure categories and write an annotation when they find one. Those annotations are attributed to Latitude rather than to a person, and they feed signal discovery, evaluation alignment, and score analytics exactly like human feedback.
+Flaggers are Latitude's built-in automatic annotators. They inspect completed sessions for common failure categories and write an annotation when they find one. Those annotations are attributed to Latitude rather than to a person, and they feed signal discovery, evaluation alignment, and score analytics exactly like human feedback.
 
 Use flaggers when you want project-wide coverage of failure patterns you already know about, without reviewing every conversation by hand. They are useful for cases that are easy to miss in manual review: low-volume safety failures, recurring frustration, or behavior that only becomes visible across a long session.
 
+Flaggers work on [sessions](../getting-started/concepts#sessions), the unit Latitude reviews: the whole conversation your agent had, across every trace it produced. A trace that arrives without a session id becomes a single-trace session, so nothing goes unscreened.
+
 ## Available flaggers
 
-The settings page groups flaggers the same way this page does. The first two groups are deterministic, free, and always run on every eligible session. The last two use an LLM and are sampled.
+Flaggers come in four groups, the same ones the settings page uses. **User-side signals** and **Agent behavior** use an LLM, so they are sampled and billed by AI usage. **Cost and efficiency** and **Response validity** are deterministic: they cost nothing and run on every eligible session while they are enabled.
 
 ### User-side signals
 
@@ -87,7 +89,7 @@ LLM checks on failure modes in your agent's own output.
 
 ### Cost and efficiency
 
-Deterministic checks on token waste. Free, and run on every eligible session.
+Deterministic checks on token waste. Free, and run on every eligible session while enabled.
 
 <AccordionGroup>
   <Accordion title="Low cache hit rate">
@@ -97,7 +99,7 @@ Deterministic checks on token waste. Free, and run on every eligible session.
 
 ### Response validity
 
-Deterministic checks on the shape of the response. Free, and run on every eligible session.
+Deterministic checks on the shape of the response. Free, and run on every eligible session while enabled.
 
 <AccordionGroup>
   <Accordion title="Empty response">
@@ -117,7 +119,7 @@ Deterministic checks on the shape of the response. Free, and run on every eligib
 
 Every project starts with all flaggers provisioned. Detection happens in two passes.
 
-**Screening** runs on 100% of sessions and costs nothing. It gathers cheap evidence from the session (tool errors, error spans, repeated tool loops, latency and cost outliers, conversation moments, text patterns) and runs the checks that need no model. Deterministic matches are written straight away.
+**Screening** runs on 100% of sessions and costs nothing. It gathers cheap evidence from the session (tool errors, error spans, repeated tool loops, latency and cost outliers, conversation moments, text patterns) and runs every enabled check that needs no model. Deterministic matches are written straight away.
 
 **LLM classification** runs for one session and one flagger at a time. A classifier reads the conversation together with the screening evidence, and a second model pass reviews the proposed annotation before it is saved. This pass is billed by AI usage.
 
@@ -125,7 +127,7 @@ Latitude waits for a session to settle before screening it. Sessions re-screen a
 
 ## Sampling
 
-Sampling applies only to the LLM flaggers, and it defaults to 10%. Deterministic flaggers have no sampling control: they are free, so they always run.
+Sampling applies only to the LLM flaggers, and it defaults to 10%. Deterministic flaggers have no sampling control: they are free, so an enabled one runs on every eligible session. Turning a flagger off stops it either way.
 
 Sampling is not the whole story on coverage. When screening finds evidence pointing at a specific category, that flagger's LLM pass runs regardless of the sampling rate. Sampling governs the sessions where nothing in particular stood out. This is why lowering sampling reduces volume but does not silence a flagger that keeps matching on real evidence.
 
@@ -137,7 +139,7 @@ Open **Project Settings → Flaggers** to manage a project. Each row has an on/o
 
 **Use-case presets** turn on a sensible set in one click. They cover support agents, coding agents, sales agents, tool workflow agents, knowledge-base agents, structured extraction, and safety-sensitive agents. Picking a preset replaces the current selection and leaves sampling rates alone. The same presets appear during project onboarding.
 
-You can also toggle flaggers through the API with `PATCH /projects/{id}`, passing flagger slugs to booleans in the `flaggers` field. The API controls enablement only; sampling is set from the settings page.
+You can also toggle flaggers through the API with `PATCH /v1/projects/{projectSlug}`, passing flagger slugs to booleans in the `flaggers` field. The API controls enablement only; sampling is set from the settings page.
 
 <Note>
   Flagger categories are defined by Latitude. You choose which ones run and how aggressively the LLM ones sample, not the underlying category definition. To detect something specific to your product, use an [evaluation](../evaluations/overview) or a [saved search](../search/saved-searches) instead.
@@ -153,13 +155,12 @@ Run a project for a week with the defaults before changing anything, then look a
 
 ## Suppression
 
-Some categories overlap, and a match on one makes another misleading. Latitude skips the second flagger in those cases:
+Some categories overlap, and one of them firing makes the other misleading. Latitude skips the second flagger in those cases:
 
-- **Refusal** is skipped when jailbreaking or NSFW fired, because refusing an adversarial or toxic request is the correct behavior.
+- **Refusal** is skipped when jailbreaking or NSFW is in play, because refusing an adversarial or toxic request is the correct behavior.
 - **Laziness** is skipped when thrashing found a tool loop, because being stuck in a loop is a different failure from punting work back to the user.
 
-A suppressed flagger produces no annotation for that session, which explains gaps you might otherwise read as a miss.
-
+Suppression happens during screening, so it does not wait for the suppressing flagger to confirm a match. Evidence pointing at jailbreaking is enough to skip refusal for that session, even if the jailbreaking classifier later decides there was nothing there. A suppressed flagger writes no annotation, which explains gaps you might otherwise read as a miss.
 
 ## Flaggers, search, and manual annotations
 
@@ -167,13 +168,13 @@ A suppressed flagger produces no annotation for that session, which explains gap
 | --- | --- |
 | **Flaggers** | Automatic detection of known failure categories across a project. |
 | **[Search](../search/overview)** | Investigating custom cohorts or patterns no built-in flagger covers. |
-| **[Inline annotations](./inline-annotations)** | Adding human judgment to specific traces. |
+| **[Inline annotations](./inline-annotations)** | Adding human judgment to specific sessions. |
 
 These work together: flaggers generate signal automatically, search scopes investigation, and manual annotations add the judgment neither can produce.
 
 ## Related
 
 - [Annotations Overview](./overview): How annotations connect to scores, signals, and evaluations
-- [Inline Annotations](./inline-annotations): Leave human feedback on traces
+- [Inline Annotations](./inline-annotations): Leave human feedback on sessions
 - [Search](../search/overview): Investigate patterns flaggers do not cover
 - [Signals](../signals/overview): How annotations become trackable failure patterns

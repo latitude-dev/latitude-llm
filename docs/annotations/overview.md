@@ -5,7 +5,7 @@ description: Review your agent's interactions and provide human feedback
 
 # Annotations
 
-Annotations are verdicts on individual traces. A human reviewer, a Latitude flagger, or an external system can attach a thumbs-up or thumbs-down verdict with feedback to a conversation, message, or text range.
+Annotations are verdicts on a session, the conversation your agent had from start to finish. A human reviewer, a Latitude flagger, or an external system can attach a thumbs-up or thumbs-down verdict with feedback to the whole conversation, one message, or a text range inside it.
 
 Finalized annotations become scores. They feed analytics, signal discovery, and evaluation alignment the same way regardless of where they came from.
 
@@ -13,9 +13,9 @@ Finalized annotations become scores. They feed analytics, signal discovery, and 
 
 Annotations can come from:
 
-1. **Inline review** from any trace detail view. See [Inline Annotations](./inline-annotations).
-2. **Flaggers** when a session matches a known failure category such as _jailbreaking_, _frustration_, _incompletion_, or _tool call errors_. See [Flaggers](./flaggers).
-3. **Your own systems** through the [Annotations API](../scores/api).
+1. **Inline review** from any session detail view. See [Inline Annotations](./inline-annotations).
+2. **Flaggers** when a completed session matches a known failure category such as _jailbreaking_, _frustration_, _incompletion_, or _tool call errors_. See [Flaggers](./flaggers).
+3. **Your own systems** through the [Annotations API](../scores/api), which pins the annotation to one trace inside the session.
 
 ## How to Annotate
 
@@ -30,7 +30,7 @@ Human annotations save as drafts while you edit. Once finalized, they become par
 
 ## Where to Annotate
 
-Open any trace detail view—from Traces, Search, Signals, or Sessions—and use the annotation panel on the right. For batch review, start with a [saved search](../search/saved-searches), then work through the matching traces one at a time.
+Open any session, whether you got there from Sessions, Search, or Signals, and use the annotation panel on the right. For batch review, start with a [saved search](../search/saved-searches), then work through the matching sessions one at a time.
 
 If you want automatic coverage for known failure categories, use [flaggers](./flaggers). If you are building your own feedback UI, submit annotations through the [Annotations API](../scores/api).
 
@@ -49,12 +49,12 @@ Annotations are the foundation of Latitude's reliability loop. They help you:
 | **[Scores](../scores/overview)** | Each finalized annotation becomes a score for analytics and dashboards. |
 | **[Signals](../signals/overview)** | Failed annotations can cluster into trackable signals. |
 | **[Evaluations](../evaluations/overview)** | Annotations provide ground truth for measuring evaluation accuracy. |
-| **[Search](../search/overview)** | Search and saved searches help you find trace cohorts to review. |
+| **[Search](../search/overview)** | Search and saved searches help you find session cohorts to review. |
 | **[Flaggers](./flaggers)** | Flaggers create automatic annotations for common failure categories. |
 
 ## Next Steps
 
-- [Inline Annotations](./inline-annotations): Annotate directly from trace views
+- [Inline Annotations](./inline-annotations): Annotate directly from session views
 - [Flaggers](./flaggers): Automatic annotators for common failure categories
 - [Search](../search/overview): Build cohorts to annotate
 - [Evaluation Alignment](../evaluations/alignment): See how annotations calibrate evaluations

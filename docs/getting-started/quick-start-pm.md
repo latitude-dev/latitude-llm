@@ -45,7 +45,7 @@ When a search is one you'll come back to, click **Save search** and give it a na
 
 ## Automatic Detection with Flaggers
 
-Some failure categories are common enough that Latitude detects them for you. Every project starts with a set of built-in **flaggers** that inspect completed sessions. They come in four groups:
+Some failure categories are common enough that Latitude detects them for you. Every project starts with a set of built-in **flaggers** that inspect every completed session. They come in four groups:
 
 **User-side signals** (LLM-based)
 
@@ -63,28 +63,28 @@ Some failure categories are common enough that Latitude detects them for you. Ev
 - **Bluffing**: The agent continues past a failed tool call as if it succeeded
 - **PII leakage**: The agent's output exposes personal data it should not have surfaced
 
-**Response validity** (deterministic, free, runs on everything)
+**Response validity** (deterministic, free, runs on every session while enabled)
 
 - **Empty response**: The agent returned an empty or degenerate response
 - **Tool call errors**: Malformed, duplicated, failed, or undeclared tool calls
 - **Output schema validation**: Structured output was truncated or unparseable
 
-**Cost and efficiency** (deterministic, free, runs on everything)
+**Cost and efficiency** (deterministic, free, runs on every session while enabled)
 
 - **Low cache hit rate**: Caching is on but most input tokens are missing the cache
 
-When a flagger matches, it writes an annotation on the session's trace. That annotation feeds into [signal discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. Under **Project Settings** you can toggle each flagger, apply a use-case preset, and set how aggressively the LLM ones sample. See [Flaggers](../annotations/flaggers) for what each one detects.
+When a flagger matches, it writes an annotation on the session. That annotation feeds into [signal discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. Under **Project Settings** you can toggle each flagger, apply a use-case preset, and set how aggressively the LLM ones sample. See [Flaggers](../annotations/flaggers) for what each one detects.
 
-## Reviewing Traces
+## Reviewing Sessions
 
-To leave human feedback on a trace, open it from any list (Search, Traces, a signal's logs) and use the annotation panel on the right:
+To leave human feedback on a session, open it from any list (Sessions, Search, a signal's logs) and use the annotation panel on the right:
 
 - Click anywhere in the conversation to create a message-level annotation, or use the button for a conversation-level one.
 - Mark it as positive (thumbs up) or negative (thumbs down).
 - Write feedback describing what you observed.
 - Optionally link it to an existing signal, or leave the assignment automatic.
 
-A typical review session combines saved searches and inline annotations: open the saved search you're responsible for, click the first trace, annotate, move on. The saved search's Annotated count goes up as you work.
+A typical review slot combines saved searches and inline annotations: open the saved search you're responsible for, click the first session, annotate, move on. The saved search's Annotated count goes up as you work.
 
 ## Understanding Signals
 
