@@ -233,7 +233,7 @@ export const createDomainEventsWorker = ({
         // one merge, so BullMQ's own retries drive redelivery and no later merge
         // is ever shadowed.
         {
-          dedupeKey: `issues:reconcile-consolidation:${event.payload.survivorId}:${event.payload.consolidatedAt}`,
+          dedupeKey: `org:${event.payload.organizationId}:issues:reconcile-consolidation:${event.payload.survivorId}:${event.payload.consolidatedAt}`,
         },
       ),
 

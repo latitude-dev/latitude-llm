@@ -359,7 +359,9 @@ describe("domain-events dispatcher", () => {
     })
     // Keyed to this merge, so redelivery of the same event is idempotent while a
     // later merge on the same survivor is never shadowed.
-    expect(reconcile?.options?.dedupeKey).toBe("issues:reconcile-consolidation:signal-1:2026-05-21T10:00:00.000Z")
+    expect(reconcile?.options?.dedupeKey).toBe(
+      "org:org-1:issues:reconcile-consolidation:signal-1:2026-05-21T10:00:00.000Z",
+    )
     expect(reconcile?.options?.throttleMs).toBeUndefined()
   })
 
