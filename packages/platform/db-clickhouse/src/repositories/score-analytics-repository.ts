@@ -811,7 +811,59 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           .pipe(Effect.asVoid)
       })
 
+    const reassignSignal = ({
+      projectId,
+      fromSignalIds,
+      toSignalId,
+      createdFrom,
+    }: {
+      readonly projectId: ProjectId
+      readonly fromSignalIds: readonly string[]
+      readonly toSignalId: string
+      readonly createdFrom: Date
+    }) =>
+      Effect.gen(function* () {
+        if (fromSignalIds.length === 0) return
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client, organizationId) => {
+            // `issue_id` moves with `signal_id` — it is still dual-written on
+            // insert, so leaving it behind would split one score's ownership
+            // across the two columns.
+            //
+            // `mutations_sync = 0`: an awaited mutation holds the HTTP request
+            // open with no data flowing until the parts are rewritten, which
+            // trips the client's request timeout. The count is briefly stale
+            // instead, which is what §4.8 of the promotion spec accepts.
+            //
+            // `scores_hourly_buckets` is NOT reconciled, and must not be: it is
+            // an AggregatingMergeTree fed by a materialized view, so the only
+            // mechanism available is an additive INSERT … SELECT, which
+            // double-counts on retry and cannot be compensated by a negative on
+            // a SimpleAggregateFunction(sum, UInt64). The cost is confined to
+            // seasonal escalation baselines and self-heals as new scores land.
+            await client.command({
+              query: `ALTER TABLE scores
+                UPDATE signal_id = {toSignalId:String}, issue_id = {toSignalId:String}
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                  AND signal_id IN {fromSignalIds:Array(String)}
+                  AND created_at >= toDateTime64({createdFrom:String}, 3, 'UTC')`,
+              query_params: {
+                toSignalId,
+                organizationId,
+                projectId,
+                fromSignalIds: [...fromSignalIds],
+                createdFrom: toClickHouseDateTime64(createdFrom),
+              },
+              clickhouse_settings: { mutations_sync: "0" },
+            })
+          })
+          .pipe(Effect.asVoid)
+      })
+
     return {
+      reassignSignal,
       // -- existsById --------------------------------------------------------
       existsById: (id: ScoreId) =>
         Effect.gen(function* () {

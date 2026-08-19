@@ -294,12 +294,45 @@ describe("domain-events dispatcher", () => {
       createdAt: "2026-05-07T10:00:00.000Z",
     })
 
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
     // Still registered, and that is the point: an unhandled event name
     // dead-letters on `UnhandledEventError`, so the audit event has to stay
     // routable even with no consumers.
+    expect(published).toHaveLength(0)
+  })
+
+  it("routes SignalsConsolidated to the ClickHouse reconciliation under a per-merge key", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalsConsolidated", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      survivorId: "signal-1",
+      loserIds: ["signal-2", "signal-3"],
+      consolidatedAt: "2026-05-21T10:00:00.000Z",
+      scoresMoved: 4,
+      scoresCreatedFrom: "2026-04-01T10:00:00.000Z",
+    })
+
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(0)
+    expect(published).toHaveLength(1)
+    const reconcile = published[0]
+    expect(reconcile?.queue).toBe("issues")
+    expect(reconcile?.task).toBe("reconcileConsolidation")
+    expect(reconcile?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      survivorId: "signal-1",
+      loserIds: ["signal-2", "signal-3"],
+      scoresMoved: 4,
+      scoresCreatedFrom: "2026-04-01T10:00:00.000Z",
+    })
+    // Keyed to this merge, so redelivery of the same event is idempotent while a
+    // later merge on the same survivor is never shadowed.
+    expect(reconcile?.options?.dedupeKey).toBe("issues:reconcile-consolidation:signal-1:2026-05-21T10:00:00.000Z")
+    expect(reconcile?.options?.throttleMs).toBeUndefined()
   })
 
   it("routes SignalQualifiedForPromotion to promotion, announcing nothing yet", async () => {

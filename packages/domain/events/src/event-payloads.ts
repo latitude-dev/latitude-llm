@@ -88,6 +88,32 @@ export interface EventPayloads {
     readonly triggerScoreId: string | null
   }
   /**
+   * Emitted by `consolidateSignalCandidatesUseCase` from the merge transaction
+   * itself, because it is what drives the ClickHouse half of the reassignment.
+   *
+   * It cannot be a call placed after the commit: the merge is idempotent
+   * precisely because a re-run finds the losers soft-deleted and no-ops, so a
+   * crash between the two stores would leave the loser's ClickHouse rows under a
+   * deleted id forever and the survivor's occurrence count permanently short.
+   * At-least-once delivery of this event plus an idempotent mutation is what
+   * closes that window.
+   *
+   * `scoresCreatedFrom` is the oldest `created_at` among the rows Postgres
+   * actually moved — the partition bound for the mutation, and the only sound
+   * one (a replayed annotation is older than the signal it was assigned to).
+   * Null when the merge moved no scores, in which case there is nothing to
+   * reconcile.
+   */
+  SignalsConsolidated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly survivorId: string
+    readonly loserIds: readonly string[]
+    readonly consolidatedAt: string
+    readonly scoresMoved: number
+    readonly scoresCreatedFrom: string | null
+  }
+  /**
    * Emitted by `promoteSignalUseCase` from the transaction that stamps
    * `promoted_at`, by which point the signal carries its generated name and
    * description. The latch makes it exactly-once per signal.

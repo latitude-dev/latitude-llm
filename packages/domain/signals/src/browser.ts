@@ -173,6 +173,12 @@ export {
   checkSignalEscalationUseCase,
 } from "./use-cases/check-signal-escalation.ts"
 export {
+  type ConsolidateSignalCandidatesError,
+  type ConsolidateSignalCandidatesInput,
+  type ConsolidateSignalCandidatesResult,
+  consolidateSignalCandidatesUseCase,
+} from "./use-cases/consolidate-signal-candidates.ts"
+export {
   type CreateSignalFromScoreError,
   type CreateSignalFromScoreInput,
   type CreateSignalFromScoreResult,
@@ -281,6 +287,11 @@ export {
   type PromoteSignalResult,
   promoteSignalUseCase,
 } from "./use-cases/promote-signal.ts"
+export {
+  type ReconcileConsolidatedScoresInput,
+  type ReconcileConsolidatedScoresResult,
+  reconcileConsolidatedScoresUseCase,
+} from "./use-cases/reconcile-consolidated-scores.ts"
 export {
   type RefreshSignalDetailsError,
   type RefreshSignalDetailsInput,

@@ -17,19 +17,27 @@ import type { ScoreSourceType } from "@domain/scores"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import {
   checkSignalEscalationUseCase,
+  consolidateSignalCandidatesUseCase,
   type DiscoverSignalResult,
   discoverSignalUseCase,
   promoteSignalUseCase,
+  reconcileConsolidatedScoresUseCase,
   refreshSignalDetailsUseCase,
   removeScoreFromSignalUseCase,
   reviewSignalFlaggerOccurrencesUseCase,
   sweepEscalatingSignalsUseCase,
 } from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
-import { RedisBillingSpendReservationLive, type RedisClient } from "@platform/cache-redis"
+import {
+  RedisBillingSpendReservationLive,
+  RedisCacheStoreLive,
+  type RedisClient,
+  RedisDistributedLockRepositoryLive,
+} from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import {
   ScoreAnalyticsRepositoryLive,
+  SessionRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
   withClickHouse,
@@ -244,6 +252,59 @@ export const createSignalsWorker = async ({
         ),
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Promotion failed for ${payload.projectId}/${payload.signalId}`, error)),
+        ),
+        Effect.asVoid,
+      ),
+    // Merge a candidate with its near-duplicate candidates. Published throttled
+    // from the two centroid-change sites, so a pass usually finds either nothing
+    // to merge or one fragment to absorb.
+    consolidate: (payload) =>
+      consolidateSignalCandidatesUseCase(payload).pipe(
+        withPostgres(
+          Layer.mergeAll(SignalRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
+        Effect.provide(RedisDistributedLockRepositoryLive(rdClient)),
+        // Re-qualifying the survivor sizes its threshold from the project's
+        // session volume, read from ClickHouse through a Redis cache.
+        withClickHouse(SessionRepositoryLive, chClient, OrganizationId(payload.organizationId)),
+        Effect.provide(RedisCacheStoreLive(rdClient)),
+        withTracing,
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            if (result.action === "skipped") {
+              logger.info(`Consolidation skipped for ${payload.projectId}/${payload.signalId}: ${result.reason}`)
+              return
+            }
+            logger.info(
+              `Consolidated ${result.loserIds.length} candidate(s) into ${payload.projectId}/${result.survivorId}: qualified=${result.qualified}${result.capBound ? " (merge cap bound)" : ""}`,
+            )
+          }),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() => logger.error(`Consolidation failed for ${payload.projectId}/${payload.signalId}`, error)),
+        ),
+        Effect.asVoid,
+      ),
+    // ClickHouse half of a consolidation. Split off the merge deliberately: the
+    // merge's own retry no-ops on the soft-deleted losers, so a call placed
+    // after its commit would never run again after a crash.
+    reconcileConsolidation: (payload) =>
+      reconcileConsolidatedScoresUseCase(payload).pipe(
+        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
+        withTracing,
+        Effect.tap((result) =>
+          Effect.sync(() =>
+            logger.info(
+              `Consolidation reconciliation for ${payload.projectId}/${payload.survivorId}: ${result.action} (${payload.scoresMoved} scores)`,
+            ),
+          ),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`Consolidation reconciliation failed for ${payload.projectId}/${payload.survivorId}`, error),
+          ),
         ),
         Effect.asVoid,
       ),

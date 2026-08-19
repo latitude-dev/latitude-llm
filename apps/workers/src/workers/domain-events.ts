@@ -200,6 +200,26 @@ export const createDomainEventsWorker = ({
     // `UnhandledEventError`.
     SignalCreated: () => Effect.void,
 
+    SignalsConsolidated: (event) =>
+      pub.publish(
+        "issues",
+        "reconcileConsolidation",
+        {
+          organizationId: event.payload.organizationId,
+          projectId: event.payload.projectId,
+          survivorId: event.payload.survivorId,
+          loserIds: event.payload.loserIds,
+          scoresMoved: event.payload.scoresMoved,
+          scoresCreatedFrom: event.payload.scoresCreatedFrom,
+        },
+        // A bare key, unlike the coalescing publishes above: it identifies this
+        // one merge, so BullMQ's own retries drive redelivery and no later merge
+        // is ever shadowed.
+        {
+          dedupeKey: `issues:reconcile-consolidation:${event.payload.survivorId}:${event.payload.consolidatedAt}`,
+        },
+      ),
+
     // The gate passed; the signal is not promoted yet. `issues:promoteSignal`
     // names it from its cluster and stamps the latch, then emits
     // `SignalPromoted` for the announcements below.
