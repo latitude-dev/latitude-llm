@@ -66,8 +66,8 @@ A [saved search](../../search/saved-searches) is a query plus filters that defin
 [Flaggers](../flaggers) add annotations automatically for common failure categories. Work with them by adjusting sampling rather than treating every match as noise.
 
 - **Start with defaults.** Run a project for a week with flaggers on. Look at what each flagger catches before changing anything.
-- **Lower sampling when noisy.** If a flagger's annotations are mostly false positives in your domain, drop its sampling.
-- **Raise sampling when missing real cases.** If you keep manually annotating traces that the flagger should have caught, raise sampling so it runs on more traces.
+- **Lower sampling when noisy.** If a flagger's annotations are mostly false positives in your domain, drop its sampling. This applies to the LLM-based flaggers only; the deterministic ones are free and always run.
+- **Raise sampling when missing real cases.** If you keep manually annotating cases that the flagger should have caught, raise sampling so it runs on more sessions.
 - **Disable temporarily, never permanently.** If a flagger is wrong for your product right now (e.g. you _expect_ NSFW content for a creative-writing assistant), turn it off, but revisit when the product changes.
 
 Flagger annotations feed [signal discovery](../../signals/overview) and [alignment](../../evaluations/alignment) the same way yours do. If a flagger already annotated a trace, you can usually skip it.

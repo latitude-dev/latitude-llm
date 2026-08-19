@@ -14,7 +14,7 @@ Finalized annotations become scores. They feed analytics, signal discovery, and 
 Annotations can come from:
 
 1. **Inline review** from any trace detail view. See [Inline Annotations](./inline-annotations).
-2. **Flaggers** when a trace matches a known failure category such as _jailbreaking_, _frustration_, or _tool call errors_. See [Flaggers](./flaggers).
+2. **Flaggers** when a session matches a known failure category such as _jailbreaking_, _frustration_, _incompletion_, or _tool call errors_. See [Flaggers](./flaggers).
 3. **Your own systems** through the [Annotations API](../scores/api).
 
 ## How to Annotate

@@ -23,7 +23,9 @@ A sampling rate of `0%` pauses the evaluation.
 
 ### Flagger sampling
 
-Flaggers can sample how aggressively Latitude runs additional automated checks for a category. This balances detection coverage with processing volume.
+The LLM-based flaggers sample how aggressively Latitude runs their model-backed checks, which balances detection coverage against AI usage. The deterministic flaggers (empty response, tool call errors, output schema validation, low cache hit rate) have no sampling control: they are free and always run.
+
+When screening finds evidence pointing at a specific category, that flagger runs regardless of its sampling rate. Sampling governs the sessions where nothing stood out.
 
 Flagger sampling does not remove traces from search, filtering, or manual signal investigation.
 
