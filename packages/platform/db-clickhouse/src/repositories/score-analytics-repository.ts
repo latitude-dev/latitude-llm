@@ -827,21 +827,17 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client, organizationId) => {
-            // `issue_id` moves with `signal_id` — it is still dual-written on
-            // insert, so leaving it behind would split one score's ownership
-            // across the two columns.
+            // `issue_id` is still dual-written on insert, so it has to move too.
             //
-            // `mutations_sync = 0`: an awaited mutation holds the HTTP request
-            // open with no data flowing until the parts are rewritten, which
-            // trips the client's request timeout. The count is briefly stale
-            // instead, which is what §4.8 of the promotion spec accepts.
+            // `mutations_sync = 0`: an awaited mutation holds the request open
+            // until the parts are rewritten and trips the client timeout. It also
+            // means a failed rewrite goes unnoticed, and that two merges in a
+            // chain can apply out of order. See P4-13 in specs/signal-promotion.md.
             //
-            // `scores_hourly_buckets` is NOT reconciled, and must not be: it is
-            // an AggregatingMergeTree fed by a materialized view, so the only
+            // `scores_hourly_buckets` is NOT reconciled, and must not be: the only
             // mechanism available is an additive INSERT … SELECT, which
-            // double-counts on retry and cannot be compensated by a negative on
-            // a SimpleAggregateFunction(sum, UInt64). The cost is confined to
-            // seasonal escalation baselines and self-heals as new scores land.
+            // double-counts on retry and cannot be compensated on a
+            // SimpleAggregateFunction(sum, UInt64).
             await client.command({
               query: `ALTER TABLE scores
                 UPDATE signal_id = {toSignalId:String}, issue_id = {toSignalId:String}

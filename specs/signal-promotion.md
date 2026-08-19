@@ -412,6 +412,11 @@ The debt PR1's skipped shadow window left. None of it blocks PR3 except M-3, and
 - [x] **P4-10**: The funnel beyond PR1's minimum (§4.7), kept to span attributes and the sweep's own count: neighbors considered, merges applied, cap-bound, expiries per tick. Promotion latency and the population gauge are already derivable from Appendix A and the sweep count — no dashboard, no bespoke log event (the taxonomy `shadowComparison` precedent was retired in #4388).
 - [x] **P4-11**: Seeds carry a near-duplicate candidate pair and an idle candidate; docs updated to the end-state model.
 - [ ] **P4-12**: Calibrate `CONSOLIDATION_MIN_SIMILARITY` (Q2) once PR3 has been in production about a week, against M-1 plus a pairwise centroid-similarity distribution over the live candidate population. It ships at the provisional `0.70` with the merge cap and per-pass similarity logging as the safety net.
+- [ ] **P4-13**: Repair path for the ClickHouse reconciliation. Two review findings on the PR turn out to be one gap: the mutation is fire-and-forget, so nothing notices when it fails during the part rewrite, and two merges in a chain (`B → A`, then `A → C`) can have their mutations applied out of order, in which case the `B → A` mutation strands B's rows on a soft-deleted A.
+
+  Both leave the same residue: ClickHouse rows under a dead `signal_id`, Postgres correct, and the survivor's displayed occurrence count short until new scores land. Promotion, escalation and the gate are unaffected, since all of those count through Postgres. Neither is fixed by ordering the tasks, because BullMQ gives no ordering between two queued jobs.
+
+  The fix that covers both is one repair pass driven by Postgres truth: for survivors consolidated in the last N days, re-stamp `signal_id` in ClickHouse from the scores Postgres says they own, and check `system.mutations` for a failed rewrite on `scores`. That needs a record of recent survivors and a way to bound the rewrite, so it is its own change rather than a line in this one.
 
 **Exit gate**: N fragments of one problem merge into one that announces when the union crosses the gate; a merged signal's occurrence count matches its evidence in the UI, not just in Postgres; the unpromoted population is bounded and the row corpus trends down.
 
