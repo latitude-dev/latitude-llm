@@ -271,6 +271,7 @@ export function SignalDetailBody({
     setSessionSheetSessionId(sessionId)
   }
 
+  // Drops the flag here and clears the id in `onClosed`, so the exit animation runs before the sync effect sees it.
   const closeSessionSheet = () => {
     setSessionSheetOpen(false)
     onOverlayActiveChange?.(false)

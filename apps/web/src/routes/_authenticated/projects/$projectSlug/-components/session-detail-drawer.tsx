@@ -89,7 +89,7 @@ export function SessionDetailDrawer({
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const [q] = useParamState("q", "")
-  // Land on Conversation when a search match or a focused score needs that tab to scroll to something.
+  // Land on Conversation when a search match, moment label, or score needs that tab to scroll to something.
   const defaultSessionTab =
     defaultTab ??
     (focusSpan
