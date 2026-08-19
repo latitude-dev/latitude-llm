@@ -792,23 +792,23 @@ const signalRepositoryCoreLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           // Unscoped by organization on purpose — this runs on the admin client.
-          // The subselect is what bounds the statement: Postgres has no LIMIT on
-          // UPDATE. Both halves are served by `signals_candidate_idle_idx`, whose
-          // predicate is exactly this one.
+          const idle = sql`coalesce(${signals.clusteredAt}, ${signals.createdAt}) < ${idleBefore}`
           const rows = yield* sqlClient.query((db) =>
             db
               .update(signals)
               .set({ deletedAt: now, updatedAt: now })
               .where(
-                inArray(
-                  signals.id,
-                  db
-                    .select({ id: signals.id })
-                    .from(signals)
-                    .where(
-                      and(candidateSignal, sql`coalesce(${signals.clusteredAt}, ${signals.createdAt}) < ${idleBefore}`),
-                    )
-                    .limit(limit),
+                // The subselect only bounds the batch (Postgres has no LIMIT on
+                // UPDATE); the predicates are repeated out here because a row can
+                // be promoted or absorbed between the select and the row lock,
+                // and matching on id alone would then delete a live signal.
+                and(
+                  candidateSignal,
+                  idle,
+                  inArray(
+                    signals.id,
+                    db.select({ id: signals.id }).from(signals).where(and(candidateSignal, idle)).limit(limit),
+                  ),
                 ),
               )
               .returning({ id: signals.id }),
