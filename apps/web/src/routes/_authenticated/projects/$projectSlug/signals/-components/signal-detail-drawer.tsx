@@ -504,6 +504,7 @@ export function SignalDetailBody({
             sessionId={sessionSheetSessionId}
             onClose={closeSessionSheet}
             defaultTab="conversation"
+            focusSignalId={signalId}
           />
         ) : null}
       </Sheet>
