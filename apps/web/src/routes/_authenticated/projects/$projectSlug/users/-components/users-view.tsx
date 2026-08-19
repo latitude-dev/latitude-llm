@@ -8,12 +8,9 @@ import {
 } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
 import { Link, useNavigate } from "@tanstack/react-router"
-import { useCallback, useMemo, useState } from "react"
+import { type RefObject, useCallback, useMemo, useState } from "react"
 import type { ProjectUserRecord } from "../../../../../../domains/end-users/end-users.functions.ts"
-import {
-  ListingLayout as Layout,
-  listingLayoutIntrinsicScroll,
-} from "../../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import { UserActivityBar } from "./user-activity-bar.tsx"
 import {
@@ -137,6 +134,7 @@ export function UsersView({
   focusedUserId,
   onFocusedUserChange,
   keyboardNavEnabled = true,
+  scrollContainerRef,
 }: {
   readonly users: readonly ProjectUserRecord[]
   readonly isLoading: boolean
@@ -151,6 +149,8 @@ export function UsersView({
   readonly focusedUserId?: string | undefined
   readonly onFocusedUserChange?: (userId: string | undefined) => void
   readonly keyboardNavEnabled?: boolean
+  /** Shared ancestor scroll container for page-level scrolling + sticky headers. */
+  readonly scrollContainerRef: RefObject<HTMLDivElement | null>
 }) {
   const navigate = useNavigate()
   const userIds = useMemo(() => users.map((user) => user.userId), [users])
@@ -305,10 +305,11 @@ export function UsersView({
   })
 
   return (
-    <Layout.Body>
+    <Layout.Body className="flex-none overflow-visible">
       <Layout.List>
         <InfiniteTable
-          {...listingLayoutIntrinsicScroll.infiniteTable}
+          scrollAreaLayout="external"
+          scrollContainerRef={scrollContainerRef}
           data={users}
           isLoading={isLoading}
           columns={columns}

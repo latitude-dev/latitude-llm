@@ -371,8 +371,6 @@ export function CostBreakdownPanel({
         <Tabs
           variant="bordered"
           size="sm"
-          className="border-none bg-muted"
-          indicatorClassName="border-none"
           options={COST_BREAKDOWN_DIMENSIONS.map((value) => ({
             id: value,
             label: DIMENSION_META[value].label,

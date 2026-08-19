@@ -1,9 +1,10 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, Icon, Skeleton, Text } from "@repo/ui"
+import { Button, Icon, Skeleton } from "@repo/ui"
 import { PlusIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useBehaviourCatalog } from "../../../../../../domains/taxonomy/behaviour-catalog.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { SectionHeader } from "../../-components/section-header.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
 import { BEHAVIOUR_LIST_CLASS, BehaviourCatalogPanel } from "./behaviour-catalog-panel.tsx"
 import { BehaviourFormModal } from "./behaviour-form-modal.tsx"
@@ -54,12 +55,11 @@ export function BehavioursCatalogPage({
         <Layout.Content>
           {showEmpty ? null : (
             <Layout.Header
-              title="Behaviors"
-              description={
-                <Text.H5 color="foregroundMuted" className="max-w-[400px]">
-                  Each behavior groups your sessions by a different question: what they were about, what the user
-                  wanted, how they ended. Open one to explore its groups.
-                </Text.H5>
+              title={
+                <SectionHeader
+                  title="Behaviors"
+                  description="Each behavior groups your sessions by a different question: what they were about, what the user wanted, how they ended. Open one to explore its groups."
+                />
               }
               actions={
                 <Button onClick={() => setNewBehaviorOpen(true)}>

@@ -1,5 +1,5 @@
 import { cn, Text } from "@repo/ui"
-import { Children, isValidElement, type ReactElement, type ReactNode } from "react"
+import { Children, forwardRef, isValidElement, type ReactElement, type ReactNode } from "react"
 
 interface ListingLayoutProps {
   readonly children: ReactNode
@@ -132,9 +132,13 @@ interface ListProps {
   readonly className?: string
 }
 
-function List({ children, className }: ListProps) {
-  return <div className={cn("min-h-0 min-w-0 grow p-6 pt-0 flex flex-col", className)}>{children}</div>
-}
+const List = forwardRef<HTMLDivElement, ListProps>(function List({ children, className }, ref) {
+  return (
+    <div ref={ref} className={cn("min-h-0 min-w-0 grow p-6 pt-0 flex flex-col", className)}>
+      {children}
+    </div>
+  )
+})
 
 function Body({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
   return (

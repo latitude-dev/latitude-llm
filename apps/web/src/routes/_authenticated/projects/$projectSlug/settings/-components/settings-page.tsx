@@ -1,12 +1,13 @@
-import { cn, Text } from "@repo/ui"
+import { cn } from "@repo/ui"
 import type { ReactNode } from "react"
+import { SectionHeader } from "../../-components/section-header.tsx"
 
 interface SettingsPageTitleProps {
   readonly children: ReactNode
 }
 
 export function SettingsPageTitle({ children }: SettingsPageTitleProps) {
-  return <Text.H3M>{children}</Text.H3M>
+  return <SectionHeader title={children} variant="xl" />
 }
 
 interface SettingsPageProps {
@@ -26,12 +27,7 @@ export function SettingsPage({
   headerSticky = false,
   fillHeight = false,
 }: SettingsPageProps) {
-  const header = (
-    <div className="flex min-w-48 flex-1 flex-col gap-1">
-      {typeof title === "string" ? <SettingsPageTitle>{title}</SettingsPageTitle> : title}
-      {description ? <Text.H6M color="foregroundMuted">{description}</Text.H6M> : null}
-    </div>
-  )
+  const header = <SectionHeader title={title} description={description} variant="xl" className="min-w-48" />
 
   return (
     <>

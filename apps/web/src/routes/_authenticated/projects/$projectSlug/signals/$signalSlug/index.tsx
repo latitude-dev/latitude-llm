@@ -81,21 +81,21 @@ function SignalDetailPage() {
         <Layout.Header
           title={
             <div className="flex min-w-0 flex-col gap-1.5">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <Tooltip
                   asChild
                   side="bottom"
                   trigger={
-                    <Button asChild variant="ghost" className="h-7 w-7 p-0" aria-label="Back to signals">
+                    <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to signals">
                       <Link to="/projects/$projectSlug/signals" params={{ projectSlug }}>
-                        <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                        <Icon icon={ArrowLeftIcon} size="sm" />
+                        Back
                       </Link>
                     </Button>
                   }
                 >
                   Back to signals
                 </Tooltip>
-                <div className="h-4 w-px bg-border" />
                 <SignalNeighborNav
                   projectId={project.id}
                   projectSlug={projectSlug}

@@ -1,4 +1,4 @@
-import { Alert, Button, Icon, Text, Tooltip } from "@repo/ui"
+import { Alert, Button, Icon, Text } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import { ArrowLeftIcon } from "lucide-react"
 import type { IntegrationCatalogEntry } from "../../../../../../domains/integrations/integration-catalog.ts"
@@ -41,28 +41,24 @@ export function IntegrationDetailHeader({
   const label = scope === "organization" ? "Back to organization integrations" : "Back to integrations"
 
   return (
-    <div className="flex min-w-0 flex-row items-center gap-2">
-      <Tooltip
-        asChild
-        side="bottom"
-        trigger={
-          <Button asChild variant="ghost" className="h-7 w-7 p-0" aria-label={label}>
-            {scope === "organization" ? (
-              <Link to="/projects/$projectSlug/settings/organization/integrations" params={{ projectSlug }}>
-                <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
-              </Link>
-            ) : (
-              <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
-                <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
-              </Link>
-            )}
-          </Button>
-        }
-      >
-        {label}
-      </Tooltip>
-      <Icon icon={entry.icon} />
-      <Text.H3M>{entry.label}</Text.H3M>
+    <div className="flex min-w-0 flex-col gap-3">
+      <Button asChild variant="ghost" size="sm" className="w-fit" aria-label={label}>
+        {scope === "organization" ? (
+          <Link to="/projects/$projectSlug/settings/organization/integrations" params={{ projectSlug }}>
+            <Icon icon={ArrowLeftIcon} size="sm" />
+            Back
+          </Link>
+        ) : (
+          <Link to="/projects/$projectSlug/settings/integrations" params={{ projectSlug }}>
+            <Icon icon={ArrowLeftIcon} size="sm" />
+            Back
+          </Link>
+        )}
+      </Button>
+      <div className="flex min-w-0 items-center gap-2">
+        <Icon icon={entry.icon} />
+        <Text.H3M>{entry.label}</Text.H3M>
+      </div>
     </div>
   )
 }
