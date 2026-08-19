@@ -2,7 +2,12 @@ import { BILLING_OVERAGE_SYNC_THROTTLE_MS } from "@domain/billing"
 import type { EventEnvelope } from "@domain/events"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
-import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_PROMOTION_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
+import {
+  ESCALATION_CHECK_THROTTLE_MS,
+  SIGNAL_FEEDBACK_THROTTLE_MS,
+  SIGNAL_PROMOTION_THROTTLE_MS,
+  SIGNAL_REFRESH_THROTTLE_MS,
+} from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
 import { hash } from "@repo/utils"
@@ -523,7 +528,8 @@ describe("domain-events dispatcher", () => {
     // The event is forwarded whole; the selection pass reads the verdict off the
     // signal row, so the payload's copy of it is never the source of truth.
     expect(job?.payload).toMatchObject({ organizationId: "org-1", projectId: "proj-1", signalId: "issue-1" })
-    expect(job?.options?.dedupeKey).toBe("issues:feedback-review:issue-1")
+    expect(job?.options?.dedupeKey).toBe("org:org-1:issues:feedback-review:issue-1")
+    expect(job?.options?.leadingThrottleMs).toBe(SIGNAL_FEEDBACK_THROTTLE_MS)
   })
 
   it("skips SignalAssigneeChanged for cleared assignments and self-assignments", async () => {

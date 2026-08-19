@@ -2,7 +2,12 @@ import { BILLING_OVERAGE_SYNC_THROTTLE_MS, buildBillingOverageDedupeKey } from "
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
-import { ESCALATION_CHECK_THROTTLE_MS, SIGNAL_PROMOTION_THROTTLE_MS, SIGNAL_REFRESH_THROTTLE_MS } from "@domain/signals"
+import {
+  ESCALATION_CHECK_THROTTLE_MS,
+  SIGNAL_FEEDBACK_THROTTLE_MS,
+  SIGNAL_PROMOTION_THROTTLE_MS,
+  SIGNAL_REFRESH_THROTTLE_MS,
+} from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { isPostHogTracked } from "@platform/analytics-posthog"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
@@ -298,7 +303,8 @@ export const createDomainEventsWorker = ({
 
     SignalFeedbackSubmitted: (event) =>
       pub.publish("issues", "reviewFlaggerOccurrences", event.payload, {
-        dedupeKey: `issues:feedback-review:${event.payload.signalId}`,
+        dedupeKey: `org:${event.payload.organizationId}:issues:feedback-review:${event.payload.signalId}`,
+        leadingThrottleMs: SIGNAL_FEEDBACK_THROTTLE_MS,
       }),
 
     SavedSearchDeleted: (event) =>

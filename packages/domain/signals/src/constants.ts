@@ -369,6 +369,17 @@ export const PROJECT_SESSION_VOLUME_CACHE_KEY = (organizationId: string, project
  */
 export const SIGNAL_PROMOTION_THROTTLE_MS = 10 * 60 * 1000
 
+/**
+ * Leading-throttle window for `issues:reviewFlaggerOccurrences` and per-trace
+ * `issues:reviewFlaggerOccurrence` jobs.
+ *
+ * Feedback is one-shot on the signal row, so a bare dedupe key would make a
+ * permanently failed fan-out or grading job shadow every later publish and the
+ * flagger would never be graded. The marker expires instead, so outbox
+ * redelivery can retry.
+ */
+export const SIGNAL_FEEDBACK_THROTTLE_MS = 10 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // Signal refresh throttle
 // ---------------------------------------------------------------------------
