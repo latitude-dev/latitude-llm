@@ -4,6 +4,7 @@ import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import {
   ESCALATION_CHECK_THROTTLE_MS,
+  SIGNAL_DISCOVERED_ANNOUNCEMENT_THROTTLE_MS,
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
   SIGNAL_REFRESH_THROTTLE_MS,
@@ -227,6 +228,12 @@ export const createDomainEventsWorker = ({
     // `promoted_at` is stamped and the name is its cluster's, not the raw
     // feedback sentence it was created from. Same notification kind and same
     // dispatch trigger as before, fired once the signal earned them.
+    //
+    // Leading throttle rather than a bare dedupe key: a bare key becomes a
+    // BullMQ jobId, failed jobs are retained, and a permanently failed
+    // announcement would shadow every later publish so the org would never
+    // hear the signal was discovered. The marker expires instead, so outbox
+    // redelivery can retry.
     SignalPromoted: (event) =>
       Effect.all(
         [
@@ -239,7 +246,10 @@ export const createDomainEventsWorker = ({
               signalId: event.payload.signalId,
               discoveredAt: event.payload.promotedAt,
             },
-            { dedupeKey: `notifications:request-signal-discovered:${event.payload.signalId}` },
+            {
+              dedupeKey: `org:${event.payload.organizationId}:notifications:request-signal-discovered:${event.payload.signalId}`,
+              leadingThrottleMs: SIGNAL_DISCOVERED_ANNOUNCEMENT_THROTTLE_MS,
+            },
           ),
           pub.publish(
             "agent-dispatch",
@@ -250,7 +260,10 @@ export const createDomainEventsWorker = ({
               signalId: event.payload.signalId,
               source: "signal",
             },
-            { dedupeKey: `agent-dispatch:request-signal:${event.payload.signalId}` },
+            {
+              dedupeKey: `org:${event.payload.organizationId}:agent-dispatch:request-signal:${event.payload.signalId}`,
+              leadingThrottleMs: SIGNAL_DISCOVERED_ANNOUNCEMENT_THROTTLE_MS,
+            },
           ),
         ],
         { concurrency: "unbounded" },

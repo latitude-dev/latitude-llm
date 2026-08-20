@@ -380,6 +380,18 @@ export const SIGNAL_PROMOTION_THROTTLE_MS = 10 * 60 * 1000
  */
 export const SIGNAL_FEEDBACK_THROTTLE_MS = 10 * 60 * 1000
 
+/**
+ * Leading-throttle window for `SignalPromoted` announcement fan-out
+ * (`notifications:request-signal-discovered-notifications`,
+ * `agent-dispatch:request`).
+ *
+ * Promotion is one-shot per signal, so a bare dedupe key would make a
+ * permanently failed notification or dispatch job shadow every later publish
+ * and the org would never hear the signal was discovered. The marker expires
+ * instead, so outbox redelivery can retry.
+ */
+export const SIGNAL_DISCOVERED_ANNOUNCEMENT_THROTTLE_MS = 10 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // Signal refresh throttle
 // ---------------------------------------------------------------------------

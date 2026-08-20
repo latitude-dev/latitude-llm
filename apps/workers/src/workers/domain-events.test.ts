@@ -4,6 +4,7 @@ import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import {
   ESCALATION_CHECK_THROTTLE_MS,
+  SIGNAL_DISCOVERED_ANNOUNCEMENT_THROTTLE_MS,
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
   SIGNAL_REFRESH_THROTTLE_MS,
@@ -358,7 +359,10 @@ describe("domain-events dispatcher", () => {
       // discovered weeks ago.
       discoveredAt: "2026-05-21T10:00:00.000Z",
     })
-    expect(notifications?.options?.dedupeKey).toBe("notifications:request-signal-discovered:signal-1")
+    expect(notifications?.options?.dedupeKey).toBe(
+      "org:org-1:notifications:request-signal-discovered:signal-1",
+    )
+    expect(notifications?.options?.leadingThrottleMs).toBe(SIGNAL_DISCOVERED_ANNOUNCEMENT_THROTTLE_MS)
 
     const agentDispatch = published.find((p) => p.queue === "agent-dispatch")
     expect(agentDispatch?.task).toBe("request")
@@ -368,7 +372,8 @@ describe("domain-events dispatcher", () => {
       signalId: "signal-1",
       source: "signal",
     })
-    expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-signal:signal-1")
+    expect(agentDispatch?.options?.dedupeKey).toBe("org:org-1:agent-dispatch:request-signal:signal-1")
+    expect(agentDispatch?.options?.leadingThrottleMs).toBe(SIGNAL_DISCOVERED_ANNOUNCEMENT_THROTTLE_MS)
   })
 
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {
