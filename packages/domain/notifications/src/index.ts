@@ -1,3 +1,5 @@
+export { NOTIFICATION_REQUEST_THROTTLE_MS } from "./constants.ts"
+
 // Entities
 
 export type {

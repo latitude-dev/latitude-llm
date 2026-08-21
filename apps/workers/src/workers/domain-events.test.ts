@@ -1,5 +1,6 @@
 import { BILLING_OVERAGE_SYNC_THROTTLE_MS } from "@domain/billing"
 import type { EventEnvelope } from "@domain/events"
+import { NOTIFICATION_REQUEST_THROTTLE_MS } from "@domain/notifications"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import {
@@ -482,6 +483,7 @@ describe("domain-events dispatcher", () => {
       reprioritizedAt: "2026-05-07T10:00:00.000Z",
     })
     expect(job?.options?.dedupeKey).toBe("notifications:request-signal-reprioritized:issue-1:2026-05-07T10:00:00.000Z")
+    expect(job?.options?.leadingThrottleMs).toBe(NOTIFICATION_REQUEST_THROTTLE_MS)
   })
 
   it("forwards a first-priority increase, which carries a null previousPriority", async () => {

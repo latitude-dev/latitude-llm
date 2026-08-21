@@ -1,4 +1,5 @@
 import { BILLING_OVERAGE_SYNC_THROTTLE_MS, buildBillingOverageDedupeKey } from "@domain/billing"
+import { NOTIFICATION_REQUEST_THROTTLE_MS } from "@domain/notifications"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
@@ -378,6 +379,7 @@ export const createDomainEventsWorker = ({
     SignalReprioritized: (event) =>
       pub.publish("notifications", "request-signal-reprioritized-notifications", event.payload, {
         dedupeKey: `notifications:request-signal-reprioritized:${event.payload.signalId}:${event.payload.reprioritizedAt}`,
+        leadingThrottleMs: NOTIFICATION_REQUEST_THROTTLE_MS,
       }),
 
     IncidentClosed: (event) =>
