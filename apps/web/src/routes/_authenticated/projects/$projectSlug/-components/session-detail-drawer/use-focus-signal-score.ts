@@ -66,10 +66,9 @@ export function useFocusSignalScore({
   // TODO(frontend-use-effect-policy): the session's scores arrive asynchronously,
   // long after the drawer mounted, and there is no event at the arrival site.
   useEffect(() => {
-    if (!activeSignalId || focusedSignalIdRef.current === activeSignalId || !data) return
-    focusedSignalIdRef.current = activeSignalId
-    if (!canFocus) return
+    if (!activeSignalId || focusedSignalIdRef.current === activeSignalId || !data || !canFocus) return
     const score = findAnchoredSignalScore({ scores: data.items, signalId: activeSignalId })
+    focusedSignalIdRef.current = activeSignalId
     if (score) onFocusRef.current(score)
   }, [canFocus, data, activeSignalId])
 }

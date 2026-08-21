@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest"
+import { renderHook } from "@testing-library/react"
+import { describe, expect, it, vi } from "vitest"
 import type { ScoreRecord } from "../../../../../../domains/scores/scores.functions.ts"
-import { findAnchoredSignalScore } from "./use-focus-signal-score.ts"
+import { findAnchoredSignalScore, useFocusSignalScore } from "./use-focus-signal-score.ts"
+
+const mockUseScoresBySession = vi.fn()
+
+vi.mock("../../../../../../domains/scores/scores.collection.ts", () => ({
+  useScoresBySession: (...args: unknown[]) => mockUseScoresBySession(...args),
+}))
 
 function score(overrides: Partial<ScoreRecord> & { readonly id: string }): ScoreRecord {
   return {
@@ -66,5 +73,32 @@ describe("findAnchoredSignalScore", () => {
         signalId: "signal-1",
       }),
     ).toBeNull()
+  })
+})
+
+describe("useFocusSignalScore", () => {
+  it("focuses once canFocus becomes true after scores arrive", () => {
+    const anchored = score({ id: "anchored", createdAt: "2026-08-01T11:00:00.000Z" })
+    mockUseScoresBySession.mockReturnValue({ data: { items: [anchored] } })
+    const onFocus = vi.fn()
+
+    const { rerender } = renderHook(
+      ({ canFocus }) =>
+        useFocusSignalScore({
+          projectId: "project-1",
+          signalId: "signal-1",
+          traceIds: ["trace-1"],
+          canFocus,
+          onFocus,
+        }),
+      { initialProps: { canFocus: false } },
+    )
+
+    expect(onFocus).not.toHaveBeenCalled()
+
+    rerender({ canFocus: true })
+
+    expect(onFocus).toHaveBeenCalledTimes(1)
+    expect(onFocus).toHaveBeenCalledWith(anchored)
   })
 })
