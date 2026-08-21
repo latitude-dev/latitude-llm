@@ -17,10 +17,10 @@ Latitude connects one Slack workspace per organization. If Slack reports that th
 
 ## Configure notification routes
 
-After Slack is connected, the integration card shows a **Notifications** section. Each notification group can be routed to a Slack channel.
+After Slack is connected, the integration card shows a **Notifications** section. Each [notification group](./notifications) can be routed to a Slack channel.
 
-- Choose a channel for each notification group you want Slack to receive.
-- Leave a notification group unconfigured to keep those notifications out of Slack.
+- Choose a channel for each notification group you want Slack to receive, or leave it on **Don't send**.
+- The Signals group has per-topic checkboxes (new, escalating, regressed, and reprioritized signals), and the Signals and Monitors routes each carry a minimum severity, so a channel can receive only high and urgent alerts.
 - Update routes any time from **Settings → Integrations**.
 
 Latitude sends Slack notifications at the organization level. Slack routing is independent from each user's in-app and email preferences.

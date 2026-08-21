@@ -1,0 +1,50 @@
+---
+title: Notifications
+description: Choose which Latitude events reach you, on which channel, and above which severity.
+---
+
+# Notifications
+
+Latitude notifies you when something needs attention: a new signal, an escalation, a monitor firing, a report, or a billing threshold. Every notification appears in the in-app bell. Beyond that, you choose per group whether it also reaches you by email, and your organization can route groups to Slack channels.
+
+## Notification groups
+
+| Group | What it covers |
+| --- | --- |
+| **Signals** | A signal is discovered, escalates, regresses, or is raised in priority |
+| **Monitors** | One of your monitors fires |
+| **Assigned to you** | Notifications addressed directly to you, such as being assigned to a signal |
+| **Wrapped reports** | Weekly Claude Code Wrapped reports for your projects |
+| **Announcements** | Product announcements and admin messages |
+| **Data destinations** | A data destination stops syncing, for example after repeated failures |
+| **Billing** | Your organization exhausts included credits, enters overage, or hits a spend limit |
+
+## Signal topics
+
+The Signals group breaks down into topics you can toggle individually:
+
+| Topic | Fires when | Default |
+| --- | --- | --- |
+| **New signals** | A signal not seen before shows up for the first time | On |
+| **Escalating signals** | An existing signal escalates into an incident | On |
+| **Regressed signals** | A signal you already resolved starts happening again | On |
+| **Reprioritized signals** | A teammate raises an existing signal to a higher priority | Off |
+
+Discovered signals only notify once they pass the [promotion gate](../signals/overview#4-candidates-are-promoted-once-they-have-evidence), so a one-off failure never pings anyone.
+
+## Severity filtering
+
+The Signals and Monitors groups carry a minimum-severity filter on the shared **low, medium, high, urgent** scale. A monitor alert's severity is set on its alert card; a signal's severity is its triage priority, and its escalation notifications use the higher of the incident's severity and the signal's priority.
+
+A notification is delivered when its group is on, its topic is on, and its severity clears your minimum. One caveat: a signal has no priority until someone triages it, and notifications without a severity pass every threshold, so minimum-severity filters only start biting once your team sets priorities.
+
+## Where to configure
+
+- **Email**: **Settings → Account → Email notifications**. One card per group with its toggle, the signal topics, and the severity selector. In-app notifications always appear in the bell regardless of these settings.
+- **Slack**: the [Slack integration](./slack) card under **Settings → Integrations**. Each routable group gets a channel (or **Don't send**), the same topic checkboxes, and its own minimum severity. Slack routing is organization-wide and independent from personal email preferences.
+
+## Related
+
+- [Signals](../signals/overview): The lifecycle behind signal notifications
+- [Monitors](../monitors/overview): Alerts, incidents, and severities
+- [Slack integration](./slack): Connect and route groups to channels
