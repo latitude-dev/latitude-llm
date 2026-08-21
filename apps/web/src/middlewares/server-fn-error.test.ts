@@ -66,6 +66,32 @@ describe("recordServerFnError", () => {
     expect(info.status).toBe(500)
   })
 
+  it("does NOT report a rejected inputValidator (zod) request as 500", () => {
+    // What TanStack's `execValidator` throws when a Standard Schema
+    // `inputValidator` rejects the input: `new Error(JSON.stringify(issues))`.
+    const validationError = new Error(
+      JSON.stringify([{ code: "too_small", minimum: 1, path: ["organizationName"], message: "Please enter a name" }]),
+    )
+    const span = fakeSpan()
+    const info = recordServerFnError(span, validationError)
+
+    expect(span.recordException).not.toHaveBeenCalled()
+    expect(span.setStatus).not.toHaveBeenCalled()
+    expect(info.isClientError).toBe(true)
+    expect(info.status).toBe(400)
+    // The message must stay the raw issues array so `extractFieldErrors` on the client can still parse it.
+    expect(JSON.parse(JSON.parse(info.error.message).message)).toEqual(JSON.parse(validationError.message))
+  })
+
+  it("still reports a JSON-array error message that isn't a validator issues shape", () => {
+    const span = fakeSpan()
+    const info = recordServerFnError(span, new Error(JSON.stringify([{ unrelated: "shape" }])))
+
+    expect(span.recordException).toHaveBeenCalledTimes(1)
+    expect(info.isClientError).toBe(false)
+    expect(info.status).toBe(500)
+  })
+
   it("re-throwable error carries the serialized payload and original stack", () => {
     const original = new UnauthorizedError({ message: "No user in session" })
     const info = recordServerFnError(fakeSpan(), original)
