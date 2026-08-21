@@ -1,5 +1,5 @@
 import { COST_PER_CALL_MIN_SAMPLE_CALLS, type CostBreakdown } from "@domain/spans"
-import { Badge, Icon, Skeleton, Text, Tooltip, useChartCssTheme } from "@repo/ui"
+import { Badge, EmptyState, Icon, Skeleton, Text, Tooltip, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPercentage } from "@repo/utils"
 import { ArrowUpRightIcon, CircleDollarSignIcon } from "lucide-react"
 import { ChartHeader } from "../../-components/chart-header.tsx"
@@ -12,7 +12,6 @@ import {
   splitBreakdownRows,
 } from "./cost-formatters.ts"
 import { callsSeriesColor, otherSeriesColor, trendColor } from "./cost-series-colors.ts"
-import { EmptyState } from "./empty-state.tsx"
 import { useGoToModelSessions } from "./use-go-to-model-sessions.ts"
 
 // Models charted individually. Past this the paired bars stop being scannable, and

@@ -1,4 +1,4 @@
-import { Chart, type ChartSeries, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
+import { Chart, type ChartSeries, EmptyState, HistogramSkeleton, Tabs, useChartCssTheme } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
 import { CircleDollarSignIcon, HashIcon } from "lucide-react"
 import type { ModelUsageSeriesRecord } from "../../../../../../domains/cost/cost.functions.ts"
@@ -12,7 +12,6 @@ import {
   microcentsToUsd,
 } from "./cost-formatters.ts"
 import { modelColorAt, otherSeriesColor } from "./cost-series-colors.ts"
-import { EmptyState } from "./empty-state.tsx"
 
 const CHART_HEIGHT = 260
 
