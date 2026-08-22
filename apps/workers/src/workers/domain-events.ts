@@ -7,6 +7,7 @@ import {
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
   SIGNAL_REFRESH_THROTTLE_MS,
+  SIGNAL_REGRESSED_THROTTLE_MS,
 } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { isPostHogTracked } from "@platform/analytics-posthog"
@@ -276,6 +277,7 @@ export const createDomainEventsWorker = ({
             },
             {
               dedupeKey: `notifications:request-signal-regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
+              leadingThrottleMs: SIGNAL_REGRESSED_THROTTLE_MS,
             },
           ),
           pub.publish(
@@ -290,6 +292,7 @@ export const createDomainEventsWorker = ({
             },
             {
               dedupeKey: `agent-dispatch:request-signal-regressed:${event.payload.signalId}:${event.payload.triggerScoreId}`,
+              leadingThrottleMs: SIGNAL_REGRESSED_THROTTLE_MS,
             },
           ),
         ],

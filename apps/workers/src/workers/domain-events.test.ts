@@ -7,6 +7,7 @@ import {
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
   SIGNAL_REFRESH_THROTTLE_MS,
+  SIGNAL_REGRESSED_THROTTLE_MS,
 } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
@@ -369,6 +370,46 @@ describe("domain-events dispatcher", () => {
       source: "signal",
     })
     expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-signal:signal-1")
+  })
+
+  it("routes SignalRegressed to notification and agent-dispatch with leading throttle", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("SignalRegressed", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "issue-1",
+      regressedAt: "2026-05-07T10:00:00.000Z",
+      triggerScoreId: "score-1",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(2)
+
+    const notifications = published.find((p) => p.queue === "notifications")
+    expect(notifications?.task).toBe("request-signal-regressed-notifications")
+    expect(notifications?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "issue-1",
+      regressedAt: "2026-05-07T10:00:00.000Z",
+      triggerScoreId: "score-1",
+    })
+    expect(notifications?.options?.dedupeKey).toBe("notifications:request-signal-regressed:issue-1:score-1")
+    expect(notifications?.options?.leadingThrottleMs).toBe(SIGNAL_REGRESSED_THROTTLE_MS)
+
+    const agentDispatch = published.find((p) => p.queue === "agent-dispatch")
+    expect(agentDispatch?.task).toBe("request")
+    expect(agentDispatch?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      signalId: "issue-1",
+      source: "signal",
+      trigger: "signal.regressed",
+    })
+    expect(agentDispatch?.options?.dedupeKey).toBe("agent-dispatch:request-signal-regressed:issue-1:score-1")
+    expect(agentDispatch?.options?.leadingThrottleMs).toBe(SIGNAL_REGRESSED_THROTTLE_MS)
   })
 
   it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {

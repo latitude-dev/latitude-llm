@@ -380,6 +380,17 @@ export const SIGNAL_PROMOTION_THROTTLE_MS = 10 * 60 * 1000
  */
 export const SIGNAL_FEEDBACK_THROTTLE_MS = 10 * 60 * 1000
 
+/**
+ * Leading-throttle window for `SignalRegressed` notification and agent-dispatch
+ * fan-out jobs.
+ *
+ * A bare dedupe key becomes a BullMQ `jobId` and failed jobs are retained
+ * (`removeOnFail: { count: 1000 }`), so a permanently failed regression alert
+ * or dispatch would shadow every later publish and the user would never be
+ * notified. The marker expires instead, so outbox redelivery can retry.
+ */
+export const SIGNAL_REGRESSED_THROTTLE_MS = 10 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // Signal refresh throttle
 // ---------------------------------------------------------------------------
