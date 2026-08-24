@@ -108,8 +108,7 @@ function anchoredAnnotation(signalIndex: number, maxTrajectories: number): SeedA
   const turn = turns[turns.length - 1]
   if (!turn) return null
 
-  // Odd signals pinpoint a substring so the text-selection highlight is covered
-  // too; even ones anchor the whole turn.
+  // Odd signals pinpoint a substring so the text-selection highlight is covered too.
   const offsets = signalIndex % 2 === 1 ? openingClaimOffsets(turn.text) : null
   const rawFeedback = offsets
     ? "This exact claim is not backed by the tool results."
@@ -134,8 +133,7 @@ function conversationLevelAnnotation(signalIndex: number, maxTrajectories: numbe
   const trajectoryIndex = tau2TrajectoryIndexForSignalOccurrence({ signalIndex, occurrenceIndex: 1, maxTrajectories })
   const trajectory = TAU2_SEED_TRAJECTORIES[trajectoryIndex]
   if (!signal || !trajectory) return null
-  // Same trajectory as the anchored occurrence would put both annotations on one
-  // session, hiding the difference between them.
+  // One session carrying both annotations would hide the difference between them.
   if (
     trajectoryIndex === tau2TrajectoryIndexForSignalOccurrence({ signalIndex, occurrenceIndex: 0, maxTrajectories })
   ) {

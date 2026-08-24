@@ -89,9 +89,7 @@ export function SessionDetailDrawer({
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const [q] = useParamState("q", "")
-  // Land on the conversation tab when arriving from an active search (so the
-  // conversation tab's search-match autoscroll/highlight has something to scroll
-  // to) or with a focused score, whose anchor only that tab can show.
+  // Land on Conversation when a search match, moment label, or score needs that tab to scroll to something.
   const defaultSessionTab =
     defaultTab ??
     (focusSpan
@@ -189,8 +187,7 @@ export function SessionDetailDrawer({
     setActiveTab("conversation")
   }
 
-  // A focused score only makes sense while the Conversation tab is showing it,
-  // so any other tab drops the `scoreId` param rather than stranding it there.
+  // A focused score only means anything on the Conversation tab, so any other tab drops the param.
   const selectTab = (tab: SessionTabId) => {
     if (tab !== "conversation") setFocusScoreId("")
     setActiveTab(tab)

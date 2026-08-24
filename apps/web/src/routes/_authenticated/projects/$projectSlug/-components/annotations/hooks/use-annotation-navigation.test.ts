@@ -114,8 +114,7 @@ describe("useAnnotationNavigation", () => {
       result.current.scrollToAnnotation(annotation)
     })
 
-    // The conversation is still laying out right after the request, so the scroll
-    // waits for it to settle instead of landing short of the anchor.
+    // Still laying out right after the request, so the scroll waits instead of landing short of the anchor.
     expect(textElement.scrollIntoView).not.toHaveBeenCalled()
 
     act(() => {
@@ -156,8 +155,7 @@ describe("useAnnotationNavigation", () => {
       result.current.scrollToAnnotation(annotation)
     })
 
-    // Messages laying out above the anchor keep pushing it down, so each change
-    // restarts the wait rather than scrolling against a stale layout.
+    // Messages above the anchor keep pushing it down, so each change restarts the wait.
     for (let step = 0; step < 6; step++) {
       scrollHeight += 100
       act(() => {
