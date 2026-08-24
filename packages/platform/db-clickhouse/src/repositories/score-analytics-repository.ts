@@ -811,7 +811,55 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           .pipe(Effect.asVoid)
       })
 
+    const reassignSignal = ({
+      projectId,
+      fromSignalIds,
+      toSignalId,
+      createdFrom,
+    }: {
+      readonly projectId: ProjectId
+      readonly fromSignalIds: readonly string[]
+      readonly toSignalId: string
+      readonly createdFrom: Date
+    }) =>
+      Effect.gen(function* () {
+        if (fromSignalIds.length === 0) return
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        return yield* chSqlClient
+          .query(async (client, organizationId) => {
+            // `issue_id` is still dual-written on insert, so it has to move too.
+            //
+            // `mutations_sync = 0`: an awaited mutation holds the request open
+            // until the parts are rewritten and trips the client timeout. It also
+            // means a failed rewrite goes unnoticed, and that two merges in a
+            // chain can apply out of order. See P4-13 in specs/signal-promotion.md.
+            //
+            // `scores_hourly_buckets` is NOT reconciled, and must not be: the only
+            // mechanism available is an additive INSERT … SELECT, which
+            // double-counts on retry and cannot be compensated on a
+            // SimpleAggregateFunction(sum, UInt64).
+            await client.command({
+              query: `ALTER TABLE scores
+                UPDATE signal_id = {toSignalId:String}, issue_id = {toSignalId:String}
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                  AND signal_id IN {fromSignalIds:Array(String)}
+                  AND created_at >= toDateTime64({createdFrom:String}, 3, 'UTC')`,
+              query_params: {
+                toSignalId,
+                organizationId,
+                projectId,
+                fromSignalIds: [...fromSignalIds],
+                createdFrom: toClickHouseDateTime64(createdFrom),
+              },
+              clickhouse_settings: { mutations_sync: "0" },
+            })
+          })
+          .pipe(Effect.asVoid)
+      })
+
     return {
+      reassignSignal,
       // -- existsById --------------------------------------------------------
       existsById: (id: ScoreId) =>
         Effect.gen(function* () {

@@ -1,4 +1,4 @@
-import { NotFoundError } from "@domain/shared"
+import { NotFoundError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
@@ -32,6 +32,8 @@ export const createFakeSignalRepository = (
 ) => {
   const issues = new Map<string, Signal>(seed.map((issue) => [issue.id, issue] as const))
   const lifecycleOverlay = new Map<string, SignalLifecycleFlags>(options.lifecycle ?? [])
+  // loser id -> survivor id, the fake's stand-in for `merged_into_signal_id`.
+  const mergedInto = new Map<string, string>()
 
   const lifecycleFor = (signalId: string): SignalLifecycleFlags => lifecycleOverlay.get(signalId) ?? DEFAULT_LIFECYCLE
 
@@ -46,6 +48,7 @@ export const createFakeSignalRepository = (
   // timestamp `undefined`.
   const isLive = (issue: Signal): boolean => issue.deletedAt == null
   const isUserVisible = (issue: Signal): boolean => isLive(issue) && issue.promotedAt != null
+  const isCandidate = (issue: Signal): boolean => isLive(issue) && issue.promotedAt == null
   const isReadable = (issue: Signal, includeUnpromoted?: boolean): boolean =>
     includeUnpromoted ? isLive(issue) : isUserVisible(issue)
 
@@ -89,16 +92,18 @@ export const createFakeSignalRepository = (
           })),
       ),
 
-    findSimilarByCentroid: ({ projectId, signalId, limit }) =>
+    findSimilarByCentroid: ({ projectId, signalId, limit, unpromotedOnly }) =>
       Effect.sync(() => {
         // Mirrors the real adapter: cosine over normalized centroid bases,
         // empty when the source is missing or has a zero-mass centroid,
-        // zero-mass neighbors skipped, self excluded, project-scoped.
+        // zero-mass neighbors skipped, self excluded, project-scoped, and the
+        // same visibility predicate applied to both sides.
+        const isVisible = unpromotedOnly ? isCandidate : isUserVisible
         const source = issues.get(signalId)
         if (
           !source ||
           source.projectId !== projectId ||
-          !isUserVisible(source) ||
+          !isVisible(source) ||
           source.centroid === null ||
           source.centroid.mass <= 0
         )
@@ -110,7 +115,7 @@ export const createFakeSignalRepository = (
             (issue) =>
               issue.projectId === projectId &&
               issue.id !== signalId &&
-              isUserVisible(issue) &&
+              isVisible(issue) &&
               (issue.centroid?.mass ?? 0) > 0,
           )
           .flatMap((issue) => {
@@ -187,6 +192,44 @@ export const createFakeSignalRepository = (
       Effect.sync(() => {
         const issue = issues.get(id)
         if (issue) issues.set(id, { ...issue, deletedAt: new Date(), updatedAt: new Date() })
+      }),
+
+    markMerged: ({ survivorId, loserIds, now }) =>
+      Effect.sync(() => {
+        for (const loserId of loserIds) {
+          const issue = issues.get(loserId)
+          if (!issue || issue.deletedAt != null) continue
+          mergedInto.set(loserId, survivorId)
+          issues.set(loserId, { ...issue, deletedAt: now, updatedAt: now })
+        }
+      }),
+
+    findAbsorbedLineage: ({ survivorId, maxDepth }) =>
+      Effect.sync(() => {
+        const absorbed: SignalId[] = []
+        let frontier = [survivorId as string]
+        for (let depth = 0; depth < maxDepth && frontier.length > 0; depth++) {
+          const next = [...mergedInto.entries()]
+            .filter(([, target]) => frontier.includes(target))
+            .map(([loserId]) => loserId)
+            .filter((loserId) => !absorbed.includes(SignalId(loserId)))
+          absorbed.push(...next.map((loserId) => SignalId(loserId)))
+          frontier = next
+        }
+        return absorbed
+      }),
+
+    expireIdleCandidates: ({ idleBefore, now, limit }) =>
+      Effect.sync(() => {
+        const stale = [...issues.values()]
+          .filter(
+            (issue) => isCandidate(issue) && (issue.clusteredAt ?? issue.createdAt).getTime() < idleBefore.getTime(),
+          )
+          .slice(0, limit)
+        for (const issue of stale) {
+          issues.set(issue.id, { ...issue, deletedAt: now, updatedAt: now })
+        }
+        return stale.length
       }),
 
     countBySlug: ({ slug, excludeSignalId }) =>

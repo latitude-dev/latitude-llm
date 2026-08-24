@@ -55,11 +55,23 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly signalId: string
+    /**
+     * Whether the signal was still a candidate when the score landed, read under
+     * the row lock. Carried so the router can route consolidation without a
+     * lookup: only a candidate's centroid change is worth a pass, and at volume
+     * almost every assignment is to a promoted signal.
+     *
+     * Absent on events written before this field existed, including any still
+     * under the legacy `ScoreAssignedToIssue` name.
+     */
+    readonly unpromoted?: boolean
   }
   /**
    * Emitted by `createSignalFromScoreUseCase` after the signal row is saved.
-   * An audit fact with no consumers — a discovered signal is announced when it
-   * is promoted, not when its row appears (see `SignalPromoted`).
+   * Announces nothing: a discovered signal is announced when it is promoted, not
+   * when its row appears (see `SignalPromoted`). Its one consumer schedules
+   * `issues:consolidate`, since a new row is always a candidate and its centroid
+   * is the first of the two changes a consolidation pass looks for.
    */
   SignalCreated: {
     readonly organizationId: string
@@ -84,7 +96,32 @@ export interface EventPayloads {
     readonly projectId: string
     readonly signalId: string
     readonly qualifiedAt: string
-    readonly triggerScoreId: string
+    /** The score whose assignment reached the threshold; null when a consolidation merge did. */
+    readonly triggerScoreId: string | null
+  }
+  /**
+   * Emitted by `consolidateSignalCandidatesUseCase` from the merge transaction
+   * itself, because it is what drives the ClickHouse half of the reassignment.
+   *
+   * It cannot be a call placed after the commit: the merge is idempotent
+   * precisely because a re-run finds the losers soft-deleted and no-ops, so a
+   * crash between the two stores would leave the loser's ClickHouse rows under a
+   * deleted id forever and the survivor's occurrence count permanently short.
+   * At-least-once delivery of this event plus an idempotent mutation is what
+   * closes that window.
+   *
+   * Carries identity only. The consumer derives what to sweep from Postgres at
+   * execution time, walking `signals.merged_into_signal_id`, so a merge that
+   * absorbs a former survivor also sweeps that survivor's own absorbed ids. That
+   * is what makes two chained merges converge whichever order their jobs run in.
+   */
+  SignalsConsolidated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly survivorId: string
+    /** Absorbed in this merge only; the consumer resolves the full lineage itself. */
+    readonly loserIds: readonly string[]
+    readonly consolidatedAt: string
   }
   /**
    * Emitted by `promoteSignalUseCase` from the transaction that stamps

@@ -34,9 +34,10 @@ const seedSignal = (input: {
   readonly resolvedAt?: Date | null
   readonly ignoredAt?: Date | null
   readonly regressedAt?: Date | null
-  /** Omitted means promoted at creation, which is what every read expects to see. */
+  /** Omitted means promoted at creation, which is what every read expects to see. Null makes the row a discovered candidate, provenance included. */
   readonly promotedAt?: Date | null
   readonly deletedAt?: Date
+  readonly clusteredAt?: Date
   readonly centroidEmbedding?: readonly number[]
 }) =>
   pg.db.insert(signals).values({
@@ -46,13 +47,14 @@ const seedSignal = (input: {
     slug: input.slug,
     name: input.slug,
     description: `${input.slug} description`,
-    source: "custom",
-    origin: "user",
+    source: input.promotedAt === null ? "flagger" : "custom",
+    origin: input.promotedAt === null ? "system" : "user",
     resolvedAt: input.resolvedAt ?? null,
     ignoredAt: input.ignoredAt ?? null,
     regressedAt: input.regressedAt ?? null,
     promotedAt: input.promotedAt === undefined ? input.createdAt : input.promotedAt,
     deletedAt: input.deletedAt ?? null,
+    ...(input.clusteredAt ? { clusteredAt: input.clusteredAt } : {}),
     // `signals_centroid_embedding_consistency_check` requires a materialized
     // embedding to be backed by a model-stamped centroid with positive mass.
     ...(input.centroidEmbedding
@@ -499,6 +501,175 @@ describe("SignalRepositoryLive promotion gate", () => {
     )
 
     expect(neighbors).toEqual([])
+  })
+
+  it("inverts findSimilarByCentroid for consolidation instead of relaxing it", async () => {
+    const otherCandidate = {
+      id: "sig-gate-candidate-2".padEnd(24, "m"),
+      slug: "gate-candidate-2",
+      createdAt: new Date("2026-03-09T00:00:00.000Z"),
+      promotedAt: null,
+      centroidEmbedding: EMBEDDING,
+    }
+    await seedSignal(otherCandidate)
+
+    const neighbors = await withRepo((repo) =>
+      repo.findSimilarByCentroid({
+        projectId: PROJECT_ID,
+        signalId: SignalId(CANDIDATE.id),
+        limit: 25,
+        unpromotedOnly: true,
+      }),
+    )
+
+    // Only the other candidate: a candidate may never absorb a promoted signal,
+    // and this is where that becomes a property of the read rather than a rule
+    // the use case has to remember.
+    expect(neighbors.map((neighbor) => neighbor.signalId)).toEqual([SignalId(otherCandidate.id)])
+  })
+
+  it("hides a soft-deleted candidate from the consolidation scan too", async () => {
+    const deletedCandidate = {
+      id: "sig-gate-candidate-3".padEnd(24, "k"),
+      slug: "gate-candidate-3",
+      createdAt: new Date("2026-03-09T00:00:00.000Z"),
+      promotedAt: null,
+      deletedAt: new Date("2026-03-10T00:00:00.000Z"),
+      centroidEmbedding: EMBEDDING,
+    }
+    await seedSignal(deletedCandidate)
+
+    const neighbors = await withRepo((repo) =>
+      repo.findSimilarByCentroid({
+        projectId: PROJECT_ID,
+        signalId: SignalId(CANDIDATE.id),
+        limit: 25,
+        unpromotedOnly: true,
+      }),
+    )
+
+    expect(neighbors).toEqual([])
+  })
+})
+
+describe("SignalRepositoryLive merge lineage", () => {
+  const NOW = new Date("2026-04-01T00:00:00.000Z")
+  const CREATED = new Date("2026-03-01T00:00:00.000Z")
+
+  const withRepo = <A, E>(f: (repo: SignalRepositoryShape) => Effect.Effect<A, E, SignalRepository | SqlClient>) =>
+    run(
+      Effect.gen(function* () {
+        return yield* f(yield* SignalRepository)
+      }),
+    )
+
+  const candidate = (id: string) => ({
+    id: id.padEnd(24, "z"),
+    slug: `lineage-${id}`,
+    createdAt: CREATED,
+    promotedAt: null,
+  })
+
+  const A = candidate("lin-a")
+  const B = candidate("lin-b")
+  const C = candidate("lin-c")
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+    await Promise.all([seedSignal(A), seedSignal(B), seedSignal(C)])
+  })
+
+  it("soft-deletes the absorbed candidates and points them at the survivor", async () => {
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(A.id), loserIds: [SignalId(B.id)], now: NOW }))
+
+    const rows = await pg.db.select().from(signals).where(eq(signals.id, B.id))
+    expect(rows[0]?.deletedAt).not.toBeNull()
+    expect(rows[0]?.mergedIntoSignalId).toBe(A.id)
+    const survivor = await pg.db.select().from(signals).where(eq(signals.id, A.id))
+    expect(survivor[0]?.deletedAt).toBeNull()
+  })
+
+  it("walks a chain transitively, so a later merge sweeps what an earlier one absorbed", async () => {
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(A.id), loserIds: [SignalId(B.id)], now: NOW }))
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(C.id), loserIds: [SignalId(A.id)], now: NOW }))
+
+    const lineage = await withRepo((repo) => repo.findAbsorbedLineage({ survivorId: SignalId(C.id), maxDepth: 10 }))
+
+    expect([...lineage].sort()).toEqual([SignalId(A.id), SignalId(B.id)].sort())
+  })
+
+  it("stops at the depth cap instead of recursing without bound", async () => {
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(A.id), loserIds: [SignalId(B.id)], now: NOW }))
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(C.id), loserIds: [SignalId(A.id)], now: NOW }))
+
+    const lineage = await withRepo((repo) => repo.findAbsorbedLineage({ survivorId: SignalId(C.id), maxDepth: 1 }))
+
+    expect(lineage).toEqual([SignalId(A.id)])
+  })
+
+  it("returns nothing for a signal that absorbed nothing", async () => {
+    const lineage = await withRepo((repo) => repo.findAbsorbedLineage({ survivorId: SignalId(A.id), maxDepth: 10 }))
+    expect(lineage).toEqual([])
+  })
+})
+
+describe("SignalRepositoryLive.expireIdleCandidates", () => {
+  const NOW = new Date("2026-04-01T00:00:00.000Z")
+  const LONG_AGO = new Date("2026-01-01T00:00:00.000Z")
+  const IDLE_BEFORE = new Date("2026-02-15T00:00:00.000Z")
+
+  const withRepo = <A, E>(f: (repo: SignalRepositoryShape) => Effect.Effect<A, E, SignalRepository | SqlClient>) =>
+    run(
+      Effect.gen(function* () {
+        return yield* f(yield* SignalRepository)
+      }),
+    )
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("sweeps idle candidates and leaves everything else standing", async () => {
+    const idle = { id: "sig-idle".padEnd(24, "1"), slug: "idle", createdAt: LONG_AGO, promotedAt: null }
+    // Created long ago but still clustering: `clustered_at` is the anchor, so
+    // this one is alive.
+    const active = {
+      id: "sig-active".padEnd(24, "2"),
+      slug: "active",
+      createdAt: LONG_AGO,
+      clusteredAt: new Date("2026-03-25T00:00:00.000Z"),
+      promotedAt: null,
+    }
+    const promoted = { id: "sig-promoted".padEnd(24, "3"), slug: "promoted-idle", createdAt: LONG_AGO }
+    await Promise.all([seedSignal(idle), seedSignal(active), seedSignal(promoted)])
+
+    const expired = await withRepo((repo) =>
+      repo.expireIdleCandidates({ idleBefore: IDLE_BEFORE, now: NOW, limit: 50 }),
+    )
+
+    expect(expired).toBe(1)
+    const rows = await pg.db.select().from(signals)
+    const deletedIds = rows.filter((row) => row.deletedAt !== null).map((row) => row.id)
+    expect(deletedIds).toEqual([idle.id])
+  })
+
+  it("respects the per-tick cap and is safe to re-run", async () => {
+    await Promise.all(
+      [0, 1, 2].map((index) =>
+        seedSignal({
+          id: `sig-batch-${index}`.padEnd(24, "9"),
+          slug: `batch-${index}`,
+          createdAt: LONG_AGO,
+          promotedAt: null,
+        }),
+      ),
+    )
+
+    const first = await withRepo((repo) => repo.expireIdleCandidates({ idleBefore: IDLE_BEFORE, now: NOW, limit: 2 }))
+    const second = await withRepo((repo) => repo.expireIdleCandidates({ idleBefore: IDLE_BEFORE, now: NOW, limit: 2 }))
+    const third = await withRepo((repo) => repo.expireIdleCandidates({ idleBefore: IDLE_BEFORE, now: NOW, limit: 2 }))
+
+    expect([first, second, third]).toEqual([2, 1, 0])
   })
 })
 

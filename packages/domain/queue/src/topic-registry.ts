@@ -471,6 +471,35 @@ const _registry = {
       readonly projectId: string
       readonly signalId: string
     }
+    /**
+     * Merge a candidate with its near-duplicate candidates, so a problem split
+     * across several one-session signals can reach the gate none of its
+     * fragments could reach alone. Published throttled whenever a candidate's
+     * centroid changes — at creation, and on an assignment that left it
+     * unpromoted.
+     */
+    consolidate: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
+    /**
+     * ClickHouse half of a consolidation, fired from `SignalsConsolidated`
+     * rather than by the merge, whose own retry no-ops on the soft-deleted
+     * losers and would never reach it.
+     */
+    reconcileConsolidation: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly survivorId: string
+    }
+    /**
+     * Fired by the daily cron — soft-deletes candidates that stopped
+     * accumulating. Platform-wide and capped, with no per-signal fan-out: an
+     * expired candidate has no consequences to unwind, since nothing was ever
+     * announced for it.
+     */
+    sweepCandidates: Record<string, never>
     checkEscalation: {
       readonly organizationId: string
       readonly projectId: string

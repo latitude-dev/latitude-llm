@@ -3,6 +3,7 @@ import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import {
+  CONSOLIDATION_THROTTLE_MS,
   ESCALATION_CHECK_THROTTLE_MS,
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
@@ -50,6 +51,18 @@ export const createDomainEventsWorker = ({
     prefix: string,
     input: { organizationId: string; projectId: string; traceId: string },
   ) => `${prefix}:${input.organizationId}:${input.projectId}:${input.traceId}`
+
+  // Trailing throttle: a pass that ran immediately could absorb a candidate that qualified in the same transaction.
+  const publishConsolidate = (payload: { organizationId: string; projectId: string; signalId: string }) =>
+    pub.publish(
+      "issues",
+      "consolidate",
+      { organizationId: payload.organizationId, projectId: payload.projectId, signalId: payload.signalId },
+      {
+        dedupeKey: `org:${payload.organizationId}:issues:consolidate:${payload.signalId}`,
+        throttleMs: CONSOLIDATION_THROTTLE_MS,
+      },
+    )
 
   const publishScoreCreatedFanOut = (payload: EventPayloads["ScoreCreated"]) =>
     Effect.all(
@@ -189,16 +202,28 @@ export const createDomainEventsWorker = ({
             dedupeKey: `issues:check-escalation:${event.payload.signalId}`,
             throttleMs: ESCALATION_CHECK_THROTTLE_MS,
           }),
+          ...(event.payload.unpromoted === true ? [publishConsolidate(event.payload)] : []),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    // An audit fact with no consumers: discovery creates the row long before the
-    // signal earns an announcement, so both publishes live on `SignalPromoted`.
-    // The registration has to stay — `EventHandlerMap` is exhaustive over
-    // `EventPayloads`, and an unregistered name dead-letters on
-    // `UnhandledEventError`.
-    SignalCreated: () => Effect.void,
+    // Announces nothing: a discovered signal earns that at promotion. A new row is always a candidate.
+    SignalCreated: (event) => publishConsolidate(event.payload),
+
+    SignalsConsolidated: (event) =>
+      pub.publish(
+        "issues",
+        "reconcileConsolidation",
+        {
+          organizationId: event.payload.organizationId,
+          projectId: event.payload.projectId,
+          survivorId: event.payload.survivorId,
+        },
+        // Bare key, unlike the coalescing publishes above: it names one merge, so a later merge is never shadowed.
+        {
+          dedupeKey: `org:${event.payload.organizationId}:issues:reconcile-consolidation:${event.payload.survivorId}:${event.payload.consolidatedAt}`,
+        },
+      ),
 
     // The gate passed; the signal is not promoted yet. `issues:promoteSignal`
     // names it from its cluster and stamps the latch, then emits

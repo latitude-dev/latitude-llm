@@ -241,6 +241,56 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     unpromoted: true,
     source: "flagger",
   },
+  // The fragmentation case, in two halves: one problem that failed to match
+  // itself, so neither half can reach the gate alone. Consolidation is what
+  // turns this pair into one promotable signal.
+  {
+    name: "The agent quoted a restocking fee that does not exist for opened electronics",
+    description:
+      "The agent quoted a restocking fee that does not exist for opened electronics. The customer asked what returning an opened speaker would cost and the agent named a percentage from nowhere.",
+    createdDaysAgo: 6,
+    clusteredDaysAgo: 6,
+    updatedDaysAgo: 6,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
+  {
+    name: "The agent made up a restocking charge for an opened item",
+    description:
+      "The agent made up a restocking charge for an opened item. It told the customer a flat fee applied to opened boxes, which is not in any returns policy.",
+    createdDaysAgo: 5,
+    clusteredDaysAgo: 5,
+    updatedDaysAgo: 5,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
+  // Past the expiry window with nothing since: what the candidate sweep exists
+  // to remove. `clusteredDaysAgo` is the anchor, so it is what ages it out.
+  {
+    name: "The agent replied in Portuguese to a message written in Spanish",
+    description:
+      "The agent replied in Portuguese to a message written in Spanish. The customer wrote in Spanish throughout and the reply switched language halfway.",
+    createdDaysAgo: 60,
+    clusteredDaysAgo: 60,
+    updatedDaysAgo: 60,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
   {
     name: "Agent invents enterprise SLAs for standard support plans",
     description:
