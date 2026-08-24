@@ -6,7 +6,7 @@
 >
 > **Prior art in the repo** — `dev-docs/signals.md` § Denoising already describes this feature as the unbuilt "stronger buffered/provisional workflow" (persist candidates immediately, keep them hidden until promotion rules pass, promote on accumulated evidence / annotation evidence / explicit user action, keep the core signal entity shape unchanged). This spec is that design, made precise. It also honors that section's prohibition: **do not bring back the v1 merge/merged-state system.**
 >
-> **Status** — design settled; **all four PRs built**. PR1 (promotion computed and observed, #4407) and PR2 (the gate enforced: candidates invisible everywhere, announcements moved to `SignalPromoted`, escalation gated, `isSignalNew` re-anchored, #4465) are **released to production**. PR3 (naming at promotion, #4471) is merged to `development` but **not yet in a release tag**, which is what the remaining calibration waits on. PR4 (consolidation + expiry) is built; its one open item is P4-12, the `CONSOLIDATION_MIN_SIMILARITY` value. Decisions in §5 cover the volume-scaled threshold and its constants (D3b, D3c), uniform promotion with no bypasses (D6), placeholder-then-promote naming (D2), the full `promoted_at = created_at` backfill (D13), straight cutover with the constants as the kill switch (D14), and default-deny at the repository (D15). PR2 dropped the re-evaluation pass D16 rode on and extended D13's backfill to the enforcement boundary instead — see P2-1 in §8 for why, and treat that as the current reading of D16.
+> **Status** — design settled; **all four PRs built**. PR1 (promotion computed and observed, #4407) and PR2 (the gate enforced: candidates invisible everywhere, announcements moved to `SignalPromoted`, escalation gated, `isSignalNew` re-anchored, #4465) are **released to production**. PR3 (naming at promotion, #4471) reached production in `v0.3.83`, tagged 2026-08-18. PR4 (consolidation + expiry) is built, and the Q2 calibration ran against production on 2026-08-24 (P4-12): `CONSOLIDATION_MIN_SIMILARITY` stays at `0.70`. What remains is P4-13, the ClickHouse reconciliation repair path, and M-4, the calibration rerun on a larger population. Decisions in §5 cover the volume-scaled threshold and its constants (D3b, D3c), uniform promotion with no bypasses (D6), placeholder-then-promote naming (D2), the full `promoted_at = created_at` backfill (D13), straight cutover with the constants as the kill switch (D14), and default-deny at the repository (D15). PR2 dropped the re-evaluation pass D16 rode on and extended D13's backfill to the enforcement boundary instead — see P2-1 in §8 for why, and treat that as the current reading of D16.
 >
 > **PR1's shadow window did not happen.** The plan below time-boxed it at about a week of live data before enforcement; PR1 and PR2 merged 2h24m apart. So PR2 enforced the *guessed* constants, not tuned ones, and Q1 is exactly as open as when this spec was written. The production release is what finally makes Appendix A answerable — run it about a week in, and tune before the remaining work fixes its parameters against the wrong baseline.
 >
@@ -289,8 +289,10 @@ Only `scores_hourly_buckets` is left holding rows under the loser's id, and thos
 
   *Cap*: `CONSOLIDATION_MAX_MERGES_PER_PASS = 5`, logged when it binds. This is the one irreversible failure mode in the whole effort — a mis-set threshold with no cap collapses a project's candidate pool into one meaningless signal, and there is no demerge. The common case is one loser (the new candidate is newest and lowest-evidence, so it is usually the one absorbed); the cap binds only when a candidate bridges several existing fragments, which is exactly where a ceiling earns its keep.
 
-  Still genuinely open: whether `0.70` is right. Calibrate against Appendix A data and against post-naming matching behaviour (D18), not before.
+  ~~Still genuinely open: whether `0.70` is right.~~ **Measured against production on 2026-08-24 and kept** — see P4-12 in §8 for the numbers and the caveats. The population was too small to confirm the value, large enough to show that `0.75` merges nothing and `0.60` collapses a real project's pool. M-4 repeats it.
 - **Q3 — Expiry window. Answered.** `CANDIDATE_EXPIRY_IDLE_DAYS = 45`, keyed on `coalesce(clustered_at, created_at)` — the centroid decay anchor is literally "last score folded in", whereas `updated_at` is also bumped by throttled refreshes. It must be at least `PROMOTION_WINDOW_DAYS`: promotion is only ever evaluated on score assignment, so a candidate idle for a full window is provably dead. The 15-day grace past that is what preserves the revival path — a score arriving on day 35 still clusters into the existing candidate instead of starting a fresh one. A genuinely quarterly problem is still swept, which §4.5 already accepts as self-correcting.
+
+  **The first production tick has no blast radius.** On 2026-08-24 all 118 candidates sat in the `<30d` idle bucket, so nothing can reach 45 days idle before roughly 2026-10-01. Whatever the sweep does before then, it deletes nothing.
 - **Q4 — Validating the naming change (D2). Retargeted; the drafted replay tested the wrong population.** The replay as specced swaps *every* signal's rerank document for feedback text and compares match decisions. That world does not exist in the end state: only **candidates** carry the placeholder, because promotion generates a real summary (§4.6). Worse, the historical data it would replay predates the gate, so every signal in it is promoted-equivalent — it would measure matching against LLM-named signals, which is the thing that does not change.
 
   What actually needs validating is narrower: is feedback text a better rerank document than an LLM summary **for a one-to-three-occurrence cluster**? The prior is strong and already evidenced — §2.1 has production cases where the model refused the task and the "summary" was the string `description`, or a sentence explaining that one occurrence is not enough to summarize. Comparing an incoming annotation against *that* is the baseline being replaced.
@@ -365,9 +367,14 @@ Q7 (k-NN over member score embeddings) stays out: it is the root fix for the fra
 
 The debt PR1's skipped shadow window left. None of it blocks PR3 except M-3, and M-1 is what every remaining constant should be calibrated against.
 
-- [ ] **M-1**: Run Appendix A against production Postgres about a week after the release carrying the gate. This is the first data that has ever existed for Q1.
+- [x] **M-1**: Run Appendix A against production Postgres about a week after the release carrying the gate. This is the first data that has ever existed for Q1.
+
+  **Answered 2026-08-24, seven days after the gate reached production in `v0.3.82`.** 111 signals discovered since, 102 of them still unpromoted: **91.9% suppressed**. The 8% that clear the gate take 7 to 79 hours to do it. `would_be_hidden_mature` reads 0 in every row and has to, because the window is narrower than that column's own 7-day cutoff; it becomes meaningful at the M-4 rerun.
 - [ ] **M-2**: Run Appendix B against production ClickHouse (needs a grant the ClickHouse Cloud MCP does not have) for the distinct-sessions distribution and the first-to-second-occurrence quantiles.
 - [ ] **M-3**: The narrow offline naming check (Q4), time-boxed. Gates P3-1/P3-2's rerank-document claim, not the rest of PR3.
+
+  Partly overtaken by production. Over the five busiest projects, signal creation fell from 180 in the 14 days before naming to 22 in the 5.85 days after (12.9/day to 3.8/day), and the near-miss rate above `0.75` halved, 26.1% to 13.6%. Traffic is not controlled for, so treat the size as indicative rather than measured. The `0.70-0.75` band rose over the same cohorts, 41.1% to 54.5%, which puts the residual fragmentation exactly in the band `0.70` sweeps and `0.75` does not.
+- [ ] **M-4**: Rerun the calibration on **2026-09-03** with the fixed queries (`.context/q2-consolidation-calibration.sql`). Both go/no-go bars should be met by then: the population accrued 79 usable candidates in 5.85 days, so 13.5/day org-wide against a 200 bar, and `buildr-kit` is already at 10 against a 30 bar. Re-answer Q2 on that data and re-check M-1 with a `would_be_hidden_mature` that is no longer tautological.
 
 ### PR3 — Naming at promotion
 
@@ -411,7 +418,20 @@ The debt PR1's skipped shadow window left. None of it blocks PR3 except M-3, and
   `ScoreAssignedToSignal` gained an optional `unpromoted`, written under the row lock, so the router can gate the second trigger. Without it every assignment to every *promoted* signal — almost all of them at volume — would enqueue a pass that could only return. The trailing `throttleMs` is also what keeps a candidate that qualified in the same transaction from being consolidated out from under its own promotion; `throttleMs` uses BullMQ's TTL dedup marker rather than a jobId, so P3-4's retained-failed-job trap does not apply here.
 - [x] **P4-10**: The funnel beyond PR1's minimum (§4.7), kept to span attributes and the sweep's own count: neighbors considered, merges applied, cap-bound, expiries per tick. Promotion latency and the population gauge are already derivable from Appendix A and the sweep count — no dashboard, no bespoke log event (the taxonomy `shadowComparison` precedent was retired in #4388).
 - [x] **P4-11**: Seeds carry a near-duplicate candidate pair and an idle candidate; docs updated to the end-state model.
-- [ ] **P4-12**: Calibrate `CONSOLIDATION_MIN_SIMILARITY` (Q2) once PR3 has been in production about a week, against M-1 plus a pairwise centroid-similarity distribution over the live candidate population. It ships at the provisional `0.70` with the merge cap and per-pass similarity logging as the safety net.
+- [x] **P4-12**: Calibrate `CONSOLIDATION_MIN_SIMILARITY` (Q2) once PR3 has been in production about a week, against M-1 plus a pairwise centroid-similarity distribution over the live candidate population.
+
+  **Ran 2026-08-24 against production, six days after #4471 shipped in `v0.3.83`. The value stays at `0.70`.** Runbook and output: `.context/q2-consolidation-calibration.sql`, `.context/q2-out.txt`.
+
+  The population is under-powered: 79 usable candidates over 18 projects, largest pool 10, against the runbook's own bars of ~200 org-wide and ~30 in one project. So the recorded rationale is *nothing argues for moving it*, not *`0.70` is validated*:
+
+  - **Collapse.** At `0.70` the largest connected component in all of production is 2 candidates. At `0.60`, `buildr-kit` collapses 7 of its 10 into one component. The hazard the merge cap guards is real, observed, and lives below `0.65`.
+  - **Benefit.** At `0.70` three merges cross the promotion gate that no member reached alone; at `0.75`, none do. This inverts the runbook's assumed fallback: `0.75` is the no-op, not `0.70`.
+  - **Precision by eye.** Of the six pairs above `0.70`, four describe one problem. The highest-similarity pair is one of the two that do not, so similarity carries no precision ordering at this n — which is the reason not to fine-tune on this data.
+  - **Band shape.** 44 / 8 / 3 / 5 / 1 pairs from `0.50` up. The one local minimum is `0.65-0.70`, so `0.70` sits at the bottom of the only valley present. Weak at these counts, but not an argument against.
+  - **Same-flagger agreement** runs 80-100% at `0.65` and above, against a 59.6% base rate.
+  - **Do not cite the separation check.** Its "background" p99 of `0.735` is unusable: with pools of 2-10 the neighbour limit never binds, so the background pairs and the pairs under test are the same pairs. The test compared the distribution to itself.
+
+  `CONSOLIDATION_NEIGHBOR_LIMIT` and `CONSOLIDATION_MAX_MERGES_PER_PASS` are both non-binding at this scale; leave them. Re-tuning from here should use the `consolidation.appliedSimilarities` span attribute rather than another production dig. M-4 repeats the measurement on 2026-09-03.
 - [ ] **P4-13**: Repair path for the ClickHouse reconciliation. Two review findings on the PR turn out to be one gap: the mutation is fire-and-forget, so nothing notices when it fails during the part rewrite, and two merges in a chain (`B → A`, then `A → C`) can have their mutations applied out of order, in which case the `B → A` mutation strands B's rows on a soft-deleted A.
 
   Both leave the same residue: ClickHouse rows under a dead `signal_id`, Postgres correct, and the survivor's displayed occurrence count short until new scores land. Promotion, escalation and the gate are unaffected, since all of those count through Postgres. Neither is fixed by ordering the tasks, because BullMQ gives no ordering between two queued jobs.
@@ -425,8 +445,11 @@ The debt PR1's skipped shadow window left. None of it blocks PR3 except M-3, and
 Run against Postgres after PR1 has been live for a few days. The backfill (D13) makes it exact: the only `promoted_at IS NULL` rows are genuinely unpromoted signals discovered since the migration, i.e. exactly what enforcement would hide.
 
 ```sql
+-- Grouped on the project id, not the slug: `projects.slug` is unique per
+-- organization (`projects_unique_slug_per_organization_idx`), so grouping by
+-- slug sums same-named projects from different tenants into one row.
 SELECT
-  p.slug                                              AS project,
+  min(p.slug)                                         AS project,
   count(*)                                            AS discovered,
   count(*) FILTER (WHERE s.promoted_at IS NULL)        AS would_be_hidden,
   round(100.0 * count(*) FILTER (WHERE s.promoted_at IS NULL) / count(*), 1) AS pct_hidden,
@@ -436,7 +459,7 @@ JOIN latitude.projects p ON p.id = s.project_id
 WHERE s.origin = 'system'
   AND s.deleted_at IS NULL
   AND s.created_at > :migration_deployed_at
-GROUP BY p.slug
+GROUP BY s.organization_id, s.project_id
 ORDER BY discovered DESC;
 ```
 
