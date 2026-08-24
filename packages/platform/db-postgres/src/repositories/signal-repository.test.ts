@@ -34,15 +34,12 @@ const seedSignal = (input: {
   readonly resolvedAt?: Date | null
   readonly ignoredAt?: Date | null
   readonly regressedAt?: Date | null
-  /** Omitted means promoted at creation, which is what every read expects to see. */
+  /** Omitted means promoted at creation, which is what every read expects to see. Null makes the row a discovered candidate, provenance included. */
   readonly promotedAt?: Date | null
   readonly deletedAt?: Date
   readonly clusteredAt?: Date
   readonly centroidEmbedding?: readonly number[]
 }) =>
-  // Provenance follows the latch rather than being a parameter: only discovery
-  // creates an unpromoted signal, so a user-created candidate is a state the
-  // product cannot reach and a fixture should not be able to write.
   pg.db.insert(signals).values({
     id: input.id,
     organizationId: ORG_ID,

@@ -798,10 +798,7 @@ const signalRepositoryCoreLive = Layer.effect(
               .update(signals)
               .set({ deletedAt: now, updatedAt: now })
               .where(
-                // The subselect only bounds the batch (Postgres has no LIMIT on
-                // UPDATE); the predicates are repeated out here because a row can
-                // be promoted or absorbed between the select and the row lock,
-                // and matching on id alone would then delete a live signal.
+                // Repeated outside the subselect on purpose: a row can be promoted or absorbed before the lock.
                 and(
                   candidateSignal,
                   idle,
