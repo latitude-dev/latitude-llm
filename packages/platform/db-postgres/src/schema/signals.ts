@@ -45,6 +45,7 @@ export const signals = latitudeSchema.table(
     regressedAt: tzTimestamp("regressed_at"), // set when a new occurrence reopens a resolved signal; cleared by resolve/ignore
     mutedAt: tzTimestamp("muted_at"), // notification barrier only; incidents still open while muted
     deletedAt: tzTimestamp("deleted_at"), // soft-delete: signals are soft-deleted by the delete flow; excluded read-side
+    mergedIntoSignalId: cuid("merged_into_signal_id", { default: false }), // nullable; set when consolidation absorbs this candidate, pointing at the survivor. Written only by the merge, never cleared; same shape as `taxonomy_clusters.merged_into_cluster_id`.
     ...timestamps(),
   },
   (t) => [
@@ -64,6 +65,11 @@ export const signals = latitudeSchema.table(
     index("signals_candidate_idle_idx")
       .on(sql`coalesce(${t.clusteredAt}, ${t.createdAt})`)
       .where(sql`${t.deletedAt} IS NULL AND ${t.promotedAt} IS NULL`),
+    // Walks the absorbed-candidate chain when reconciling ClickHouse after a
+    // merge. Partial because only absorbed candidates carry a pointer.
+    index("signals_merged_into_idx")
+      .on(t.organizationId, t.mergedIntoSignalId)
+      .where(sql`${t.mergedIntoSignalId} IS NOT NULL`),
     index("signals_search_document_idx").using("gin", t.searchDocument),
     // Organization-unique (D15), spanning projects. Soft-delete-aware: a deleted signal frees its slug for reuse.
     uniqueIndex("signals_unique_slug_per_org_idx").on(t.organizationId, t.slug).where(sql`${t.deletedAt} IS NULL`),
