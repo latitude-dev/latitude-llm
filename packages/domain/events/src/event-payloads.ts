@@ -68,8 +68,10 @@ export interface EventPayloads {
   }
   /**
    * Emitted by `createSignalFromScoreUseCase` after the signal row is saved.
-   * An audit fact with no consumers — a discovered signal is announced when it
-   * is promoted, not when its row appears (see `SignalPromoted`).
+   * Announces nothing: a discovered signal is announced when it is promoted, not
+   * when its row appears (see `SignalPromoted`). Its one consumer schedules
+   * `issues:consolidate`, since a new row is always a candidate and its centroid
+   * is the first of the two changes a consolidation pass looks for.
    */
   SignalCreated: {
     readonly organizationId: string
