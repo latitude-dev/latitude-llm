@@ -163,6 +163,7 @@ export const consolidateSignalCandidatesUseCase = (input: ConsolidateSignalCandi
     const admitted = neighbors.filter((neighbor) => neighbor.similarity >= CONSOLIDATION_MIN_SIMILARITY)
     const merging = admitted.slice(0, CONSOLIDATION_MAX_MERGES_PER_PASS)
     const capBound = admitted.length > merging.length
+    const similarityBySignalId = new Map(merging.map((neighbor) => [neighbor.signalId as string, neighbor.similarity]))
 
     yield* Effect.annotateCurrentSpan("consolidation.neighbors", neighbors.length)
     yield* Effect.annotateCurrentSpan("consolidation.admitted", admitted.length)
@@ -265,9 +266,23 @@ export const consolidateSignalCandidatesUseCase = (input: ConsolidateSignalCandi
             triggerScoreId: null,
           })
 
+          // The similarity that admitted each merge the pass applied, which is what
+          // makes `CONSOLIDATION_MIN_SIMILARITY` re-tunable from telemetry rather
+          // than from another production dig. Every pair is measured from the
+          // source candidate, so a source that is itself absorbed takes the
+          // survivor's entry (cosine is symmetric).
+          const appliedSimilarities = losers.map(
+            (loser) => similarityBySignalId.get(loser.id) ?? similarityBySignalId.get(survivor.id) ?? 0,
+          )
+
           yield* Effect.annotateCurrentSpan("consolidation.survivorId", survivor.id)
           yield* Effect.annotateCurrentSpan("consolidation.merges", losers.length)
           yield* Effect.annotateCurrentSpan("consolidation.scoresMoved", reassigned.count)
+          yield* Effect.annotateCurrentSpan(
+            "consolidation.appliedSimilarities",
+            appliedSimilarities.map((similarity) => similarity.toFixed(3)).join(","),
+          )
+          yield* Effect.annotateCurrentSpan("consolidation.minAppliedSimilarity", Math.min(...appliedSimilarities))
 
           return {
             action: "merged",
