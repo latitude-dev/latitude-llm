@@ -19,6 +19,13 @@ import { scores } from "../schema/scores.ts"
 
 const logger = createLogger("db-postgres/score-repository")
 
+type ReassignSignalQueryResult = {
+  readonly rows?: ReadonlyArray<{
+    readonly moved_count?: number
+    readonly earliest_created_at?: string | Date | null
+  }>
+}
+
 type RlsOrganizationQueryResult = {
   readonly rows?: ReadonlyArray<{
     readonly organization_id?: string | null
@@ -311,28 +318,32 @@ export const ScoreRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           if (fromSignalIds.length === 0) return { count: 0, earliestCreatedAt: null }
           const sqlClient = yield* resolveSqlClient()
-          // `created_at` is returned rather than aggregated in SQL because the row
-          // set is bounded by what a *candidate* can hold — a signal thin enough
-          // to still be below the promotion threshold.
-          const rows = yield* sqlClient.query((db, organizationId) =>
-            db
-              .update(scores)
-              .set({ signalId: toSignalId, updatedAt })
-              .where(
-                and(
+          // Aggregated in a data-modifying CTE rather than through `RETURNING`:
+          // the promotion gate counts distinct sessions, but nothing caps the
+          // scores one session can carry, so a candidate thin enough to still be
+          // unpromoted can hold thousands of rows.
+          const result = yield* sqlClient.query((db, organizationId) =>
+            db.execute(sql`
+              WITH moved AS (
+                UPDATE ${scores}
+                SET signal_id = ${toSignalId}, updated_at = ${updatedAt}
+                WHERE ${and(
                   eq(scores.organizationId, organizationId),
                   eq(scores.projectId, projectId),
                   inArray(scores.signalId, [...fromSignalIds]),
-                ),
+                )}
+                RETURNING created_at
               )
-              .returning({ createdAt: scores.createdAt }),
+              SELECT count(*)::int AS moved_count, min(created_at) AS earliest_created_at FROM moved
+            `),
           )
 
-          const earliest = rows.reduce<Date | null>(
-            (oldest, row) => (oldest === null || row.createdAt < oldest ? row.createdAt : oldest),
-            null,
-          )
-          return { count: rows.length, earliestCreatedAt: earliest }
+          const row = (result as ReassignSignalQueryResult).rows?.[0]
+          const earliest = row?.earliest_created_at
+          return {
+            count: row?.moved_count ?? 0,
+            earliestCreatedAt: earliest == null ? null : new Date(earliest),
+          }
         }),
 
       delete: (id: ScoreId) =>
