@@ -26,10 +26,11 @@ import {
   sweepEscalatingSignalsUseCase,
 } from "@domain/signals"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
-import { RedisBillingSpendReservationLive, type RedisClient } from "@platform/cache-redis"
+import { RedisBillingSpendReservationLive, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import {
   ScoreAnalyticsRepositoryLive,
+  SessionRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
   withClickHouse,
@@ -236,6 +237,8 @@ export const createSignalsWorker = async ({
           pgClient,
           OrganizationId(payload.organizationId),
         ),
+        withClickHouse(SessionRepositoryLive, chClient, OrganizationId(payload.organizationId)),
+        Effect.provide(RedisCacheStoreLive(rdClient)),
         Effect.provide(RedisBillingSpendReservationLive(rdClient)),
         withAi(AIGenerateLive, rdClient),
         withTracing,

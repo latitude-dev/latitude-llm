@@ -1,8 +1,17 @@
 import { OutboxEventWriter } from "@domain/events"
-import { type RepositoryError, SignalId, SqlClient } from "@domain/shared"
+import {
+  type CacheError,
+  type CacheStore,
+  type ChSqlClient,
+  type RepositoryError,
+  SignalId,
+  SqlClient,
+} from "@domain/shared"
+import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { type GenerateSignalDetailsError, generateSignalDetailsUseCase } from "./generate-signal-details.ts"
+import { meetsPromotionThresholdUseCase } from "./meets-promotion-threshold.ts"
 
 export interface PromoteSignalInput {
   readonly organizationId: string
@@ -20,7 +29,7 @@ export interface PromoteSignalInput {
 
 export type PromoteSignalResult = {
   readonly signalId: string
-  readonly action: "promoted" | "already-promoted" | "not-found"
+  readonly action: "promoted" | "already-promoted" | "not-qualified" | "not-found"
 }
 
 export type PromoteSignalError = RepositoryError | GenerateSignalDetailsError
@@ -57,6 +66,15 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
     }
     if (existing.signal.promotedAt !== null) {
       return { action: "already-promoted", signalId: input.signalId } satisfies PromoteSignalResult
+    }
+
+    const gate = yield* meetsPromotionThresholdUseCase({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      signalId: input.signalId,
+    })
+    if (!gate.meets) {
+      return { action: "not-qualified", signalId: input.signalId } satisfies PromoteSignalResult
     }
 
     // Generated before the transaction opens, and read straight from
@@ -98,6 +116,15 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
           return { action: "already-promoted", signalId: input.signalId } satisfies PromoteSignalResult
         }
 
+        const lockedGate = yield* meetsPromotionThresholdUseCase({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          signalId: input.signalId,
+        })
+        if (!lockedGate.meets) {
+          return { action: "not-qualified", signalId: input.signalId } satisfies PromoteSignalResult
+        }
+
         const promotedAt = new Date()
         yield* signalRepository.save({
           ...locked.signal,
@@ -123,4 +150,8 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
         return { action: "promoted", signalId: locked.signal.id } satisfies PromoteSignalResult
       }),
     )
-  }).pipe(Effect.withSpan("issues.promoteSignal")) as Effect.Effect<PromoteSignalResult, PromoteSignalError>
+  }).pipe(Effect.withSpan("issues.promoteSignal")) as Effect.Effect<
+    PromoteSignalResult,
+    PromoteSignalError | CacheError,
+    CacheStore | ChSqlClient | SessionRepository
+  >
