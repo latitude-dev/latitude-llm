@@ -338,12 +338,32 @@ export const ScoreRepositoryLive = Layer.effect(
             `),
           )
 
-          const row = (result as ReassignSignalQueryResult).rows?.[0]
+          const row = (result as unknown as ReassignSignalQueryResult).rows?.[0]
           const earliest = row?.earliest_created_at
           return {
             count: row?.moved_count ?? 0,
             earliestCreatedAt: earliest == null ? null : new Date(earliest),
           }
+        }),
+
+      findEarliestCreatedAtBySignalId: ({ projectId, signalId }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select({ createdAt: scores.createdAt })
+              .from(scores)
+              .where(
+                and(
+                  eq(scores.organizationId, organizationId),
+                  eq(scores.projectId, projectId),
+                  eq(scores.signalId, signalId),
+                ),
+              )
+              .orderBy(scores.createdAt)
+              .limit(1),
+          )
+          return rows[0]?.createdAt ?? null
         }),
 
       delete: (id: ScoreId) =>

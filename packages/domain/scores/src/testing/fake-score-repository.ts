@@ -48,6 +48,15 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
       )
       return Effect.succeed({ count: moving.length, earliestCreatedAt: earliest })
     },
+    findEarliestCreatedAtBySignalId: ({ projectId, signalId }) =>
+      Effect.succeed(
+        [...scores.values()]
+          .filter((score) => score.projectId === projectId && score.signalId === signalId)
+          .reduce<Date | null>(
+            (oldest, score) => (oldest === null || score.createdAt < oldest ? score.createdAt : oldest),
+            null,
+          ),
+      ),
     delete: (id: ScoreId) => {
       scores.delete(id)
       return Effect.void

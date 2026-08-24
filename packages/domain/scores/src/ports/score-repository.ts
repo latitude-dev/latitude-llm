@@ -63,6 +63,18 @@ export interface ScoreRepositoryShape {
     readonly toSignalId: SignalId
     readonly updatedAt: Date
   }): Effect.Effect<{ readonly count: number; readonly earliestCreatedAt: Date | null }, RepositoryError, SqlClient>
+  /**
+   * Oldest `created_at` among the signal's scores, or null when it owns none.
+   *
+   * Bounds the partition range the ClickHouse reconciliation has to walk. Taken
+   * from the survivor's own scores because Postgres already holds the merged
+   * set, and because a replayed annotation can be older than any signal in the
+   * merge.
+   */
+  findEarliestCreatedAtBySignalId(input: {
+    readonly projectId: ProjectId
+    readonly signalId: SignalId
+  }): Effect.Effect<Date | null, RepositoryError, SqlClient>
   delete(id: ScoreId): Effect.Effect<void, RepositoryError, SqlClient>
   /**
    * Checks whether a canonical persisted evaluation score already exists in the

@@ -414,6 +414,14 @@ export const CONSOLIDATION_MAX_MERGES_PER_PASS = 5
 export const CONSOLIDATION_NEIGHBOR_LIMIT = 25
 
 /**
+ * Depth cap on the absorbed-candidate walk when reconciling ClickHouse. Merges
+ * chain one level at a time and a chain that long would already be a sign the
+ * threshold is wrong, so this bounds the recursion rather than expressing a real
+ * expectation. Mirrors taxonomy's `MAX_MERGE_REDIRECTS`.
+ */
+export const CONSOLIDATION_MAX_LINEAGE_DEPTH = 10
+
+/**
  * Throttle window for `issues:consolidate`, published whenever a candidate's
  * centroid changes. Trailing rather than leading: the pass wants a settled
  * centroid, and the delay also means a candidate that qualified in the same

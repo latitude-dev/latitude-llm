@@ -1,4 +1,4 @@
-import { NotFoundError } from "@domain/shared"
+import { NotFoundError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
@@ -32,6 +32,8 @@ export const createFakeSignalRepository = (
 ) => {
   const issues = new Map<string, Signal>(seed.map((issue) => [issue.id, issue] as const))
   const lifecycleOverlay = new Map<string, SignalLifecycleFlags>(options.lifecycle ?? [])
+  // loser id -> survivor id, the fake's stand-in for `merged_into_signal_id`.
+  const mergedInto = new Map<string, string>()
 
   const lifecycleFor = (signalId: string): SignalLifecycleFlags => lifecycleOverlay.get(signalId) ?? DEFAULT_LIFECYCLE
 
@@ -190,6 +192,31 @@ export const createFakeSignalRepository = (
       Effect.sync(() => {
         const issue = issues.get(id)
         if (issue) issues.set(id, { ...issue, deletedAt: new Date(), updatedAt: new Date() })
+      }),
+
+    markMerged: ({ survivorId, loserIds, now }) =>
+      Effect.sync(() => {
+        for (const loserId of loserIds) {
+          const issue = issues.get(loserId)
+          if (!issue || issue.deletedAt != null) continue
+          mergedInto.set(loserId, survivorId)
+          issues.set(loserId, { ...issue, deletedAt: now, updatedAt: now })
+        }
+      }),
+
+    findAbsorbedLineage: ({ survivorId, maxDepth }) =>
+      Effect.sync(() => {
+        const absorbed: SignalId[] = []
+        let frontier = [survivorId as string]
+        for (let depth = 0; depth < maxDepth && frontier.length > 0; depth++) {
+          const next = [...mergedInto.entries()]
+            .filter(([, target]) => frontier.includes(target))
+            .map(([loserId]) => loserId)
+            .filter((loserId) => !absorbed.includes(SignalId(loserId)))
+          absorbed.push(...next.map((loserId) => SignalId(loserId)))
+          frontier = next
+        }
+        return absorbed
       }),
 
     expireIdleCandidates: ({ idleBefore, now, limit }) =>

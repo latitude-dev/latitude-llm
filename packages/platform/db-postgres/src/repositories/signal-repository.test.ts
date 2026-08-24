@@ -552,6 +552,67 @@ describe("SignalRepositoryLive promotion gate", () => {
   })
 })
 
+describe("SignalRepositoryLive merge lineage", () => {
+  const NOW = new Date("2026-04-01T00:00:00.000Z")
+  const CREATED = new Date("2026-03-01T00:00:00.000Z")
+
+  const withRepo = <A, E>(f: (repo: SignalRepositoryShape) => Effect.Effect<A, E, SignalRepository | SqlClient>) =>
+    run(
+      Effect.gen(function* () {
+        return yield* f(yield* SignalRepository)
+      }),
+    )
+
+  const candidate = (id: string) => ({
+    id: id.padEnd(24, "z"),
+    slug: `lineage-${id}`,
+    createdAt: CREATED,
+    promotedAt: null,
+  })
+
+  const A = candidate("lin-a")
+  const B = candidate("lin-b")
+  const C = candidate("lin-c")
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+    await Promise.all([seedSignal(A), seedSignal(B), seedSignal(C)])
+  })
+
+  it("soft-deletes the absorbed candidates and points them at the survivor", async () => {
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(A.id), loserIds: [SignalId(B.id)], now: NOW }))
+
+    const rows = await pg.db.select().from(signals).where(eq(signals.id, B.id))
+    expect(rows[0]?.deletedAt).not.toBeNull()
+    expect(rows[0]?.mergedIntoSignalId).toBe(A.id)
+    const survivor = await pg.db.select().from(signals).where(eq(signals.id, A.id))
+    expect(survivor[0]?.deletedAt).toBeNull()
+  })
+
+  it("walks a chain transitively, so a later merge sweeps what an earlier one absorbed", async () => {
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(A.id), loserIds: [SignalId(B.id)], now: NOW }))
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(C.id), loserIds: [SignalId(A.id)], now: NOW }))
+
+    const lineage = await withRepo((repo) => repo.findAbsorbedLineage({ survivorId: SignalId(C.id), maxDepth: 10 }))
+
+    expect([...lineage].sort()).toEqual([SignalId(A.id), SignalId(B.id)].sort())
+  })
+
+  it("stops at the depth cap instead of recursing without bound", async () => {
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(A.id), loserIds: [SignalId(B.id)], now: NOW }))
+    await withRepo((repo) => repo.markMerged({ survivorId: SignalId(C.id), loserIds: [SignalId(A.id)], now: NOW }))
+
+    const lineage = await withRepo((repo) => repo.findAbsorbedLineage({ survivorId: SignalId(C.id), maxDepth: 1 }))
+
+    expect(lineage).toEqual([SignalId(A.id)])
+  })
+
+  it("returns nothing for a signal that absorbed nothing", async () => {
+    const lineage = await withRepo((repo) => repo.findAbsorbedLineage({ survivorId: SignalId(A.id), maxDepth: 10 }))
+    expect(lineage).toEqual([])
+  })
+})
+
 describe("SignalRepositoryLive.expireIdleCandidates", () => {
   const NOW = new Date("2026-04-01T00:00:00.000Z")
   const LONG_AGO = new Date("2026-01-01T00:00:00.000Z")

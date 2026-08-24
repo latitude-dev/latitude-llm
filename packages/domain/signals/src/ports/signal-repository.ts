@@ -91,7 +91,8 @@ export interface SignalTableRowsPage extends SignalListPage {
  * Default-deny with an `unpromotedOnly` opt-in: `findSimilarByCentroid`.
  * Default-deny with no opt-in: `findByIds`, `findBySlug`, `searchOrgWide`,
  * `list`, `listTableRows`, `listIdsCreatedInTimeRange`.
- * Never filtered: every write path, plus the two slug-uniqueness reads.
+ * Never filtered: every write path, plus the two slug-uniqueness reads and
+ * `findAbsorbedLineage`, which reads soft-deleted rows by definition.
  */
 export interface SignalRepositoryShape {
   /** Default-deny: pass `includeUnpromoted` on discovery paths that must resolve a candidate. */
@@ -232,6 +233,29 @@ export interface SignalRepositoryShape {
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /** Soft-delete: stamps `deleted_at` so the signal is excluded read-side and frees its slug. No-op if already deleted. */
   softDelete(id: SignalId): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Soft-deletes the absorbed candidates of a consolidation and points each at
+   * its survivor, in one statement. The pointer is what lets a later merge find
+   * everything that ever flowed into a signal; see `findAbsorbedLineage`.
+   */
+  markMerged(input: {
+    readonly survivorId: SignalId
+    readonly loserIds: readonly SignalId[]
+    readonly now: Date
+  }): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Every signal that was absorbed into this one, transitively, walking
+   * `merged_into_signal_id` up to a bounded depth. Excludes the survivor.
+   *
+   * This is what makes ClickHouse reconciliation independent of the order two
+   * chained merges execute in: a merge that absorbs a former survivor sweeps
+   * that survivor's own absorbed ids too, so rows a not-yet-applied earlier
+   * mutation would have moved are covered either way.
+   */
+  findAbsorbedLineage(input: {
+    readonly survivorId: SignalId
+    readonly maxDepth: number
+  }): Effect.Effect<readonly SignalId[], RepositoryError, SqlClient>
   /**
    * Soft-deletes candidates whose last clustered score is older than
    * `idleBefore`, returning how many this call took. Promoted signals are never

@@ -69,6 +69,11 @@ const isEscalatingExpr = sql<boolean>`exists (
     and ${incidents.endedAt} is null
 )`
 
+// `db.execute` is typed as a bare row array here, but the driver returns a
+// node-postgres result; the same cast is used for the RLS probe in
+// `score-repository.ts`.
+type AbsorbedLineageQueryResult = { readonly rows?: ReadonlyArray<{ readonly id: string }> }
+
 // Both halves of "this signal exists for the product": not soft-deleted, and
 // promoted. Shared rather than inlined per clause because the visibility rule is
 // repeated across a dozen `and(...)`s, and the next read added here has to
@@ -786,6 +791,45 @@ const signalRepositoryCoreLive = Layer.effect(
               .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
               .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id), isNull(signals.deletedAt))),
           )
+        }),
+
+      markMerged: ({ survivorId, loserIds, now }) =>
+        Effect.gen(function* () {
+          if (loserIds.length === 0) return
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(signals)
+              .set({ deletedAt: now, updatedAt: now, mergedIntoSignalId: survivorId })
+              .where(
+                and(
+                  eq(signals.organizationId, organizationId),
+                  inArray(signals.id, [...loserIds]),
+                  isNull(signals.deletedAt),
+                ),
+              ),
+          )
+        }),
+
+      findAbsorbedLineage: ({ survivorId, maxDepth }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db.execute(sql`
+              WITH RECURSIVE absorbed(id, depth) AS (
+                SELECT ${signals.id}, 1
+                FROM ${signals}
+                WHERE ${and(eq(signals.organizationId, organizationId), eq(signals.mergedIntoSignalId, survivorId))}
+                UNION ALL
+                SELECT s.id, a.depth + 1
+                FROM ${signals} s
+                JOIN absorbed a ON s.merged_into_signal_id = a.id
+                WHERE s.organization_id = ${organizationId} AND a.depth < ${maxDepth}
+              )
+              SELECT DISTINCT id FROM absorbed
+            `),
+          )
+          return ((rows as unknown as AbsorbedLineageQueryResult).rows ?? []).map((row) => SignalId(row.id))
         }),
 
       expireIdleCandidates: ({ idleBefore, now, limit }) =>
