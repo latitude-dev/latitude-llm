@@ -218,9 +218,6 @@ export const createDomainEventsWorker = ({
           organizationId: event.payload.organizationId,
           projectId: event.payload.projectId,
           survivorId: event.payload.survivorId,
-          loserIds: event.payload.loserIds,
-          scoresMoved: event.payload.scoresMoved,
-          scoresCreatedFrom: event.payload.scoresCreatedFrom,
         },
         // Bare key, unlike the coalescing publishes above: it names one merge, so a later merge is never shadowed.
         {

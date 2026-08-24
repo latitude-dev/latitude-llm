@@ -267,27 +267,23 @@ describe("consolidateSignalCandidatesUseCase", () => {
     expect(qualified[0]?.payload).toMatchObject({ signalId: result.survivorId, triggerScoreId: null })
   })
 
-  it("emits the ClickHouse reconciliation intent with the oldest moved score", async () => {
+  it("emits the reconciliation intent and points the losers at their survivor", async () => {
     const survivor = makeCandidate({ id: "survivor" })
     const loser = makeCandidate({ id: "loser", angle: 0.1 })
-    // Older than the signal it belongs to: a replayed annotation, which is why
-    // the mutation bound cannot be taken from the signal's own `created_at`.
-    const replayedAt = new Date(createdAt.getTime() - 90 * 24 * 60 * 60 * 1000)
     const scores = [
       makeScore({ id: "sc-a", signalId: survivor.id, sessionId: SessionId("session-1") }),
-      makeScore({ id: "sc-b", signalId: loser.id, sessionId: SessionId("session-2"), createdAt: replayedAt }),
+      makeScore({ id: "sc-b", signalId: survivor.id, sessionId: SessionId("session-2") }),
+      makeScore({ id: "sc-c", signalId: loser.id, sessionId: SessionId("session-3") }),
     ]
 
-    const { outbox } = await run({ signals: [survivor, loser], scores, triggerId: "loser" })
+    const { outbox, issues } = await run({ signals: [survivor, loser], scores, triggerId: "loser" })
 
     const consolidated = eventsNamed(outbox.events, "SignalsConsolidated")
     expect(consolidated).toHaveLength(1)
-    expect(consolidated[0]?.payload).toMatchObject({
-      survivorId: survivor.id,
-      loserIds: [loser.id],
-      scoresMoved: 1,
-      scoresCreatedFrom: replayedAt.toISOString(),
-    })
+    expect(consolidated[0]?.payload).toMatchObject({ survivorId: survivor.id, loserIds: [loser.id] })
+    // The event carries identity only; what the mutation sweeps is resolved from
+    // the pointer the merge just wrote, so a later merge can find it too.
+    expect(issues.get(loser.id)?.deletedAt).not.toBeNull()
   })
 
   it("is a no-op on a re-run, because the losers are already gone", async () => {

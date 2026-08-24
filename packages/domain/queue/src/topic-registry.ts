@@ -492,9 +492,6 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly survivorId: string
-      readonly loserIds: readonly string[]
-      readonly scoresMoved: number
-      readonly scoresCreatedFrom: string | null
     }
     /**
      * Fired by the daily cron — soft-deletes candidates that stopped

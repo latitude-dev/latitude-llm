@@ -110,20 +110,18 @@ export interface EventPayloads {
    * At-least-once delivery of this event plus an idempotent mutation is what
    * closes that window.
    *
-   * `scoresCreatedFrom` is the oldest `created_at` among the rows Postgres
-   * actually moved — the partition bound for the mutation, and the only sound
-   * one (a replayed annotation is older than the signal it was assigned to).
-   * Null when the merge moved no scores, in which case there is nothing to
-   * reconcile.
+   * Carries identity only. The consumer derives what to sweep from Postgres at
+   * execution time, walking `signals.merged_into_signal_id`, so a merge that
+   * absorbs a former survivor also sweeps that survivor's own absorbed ids. That
+   * is what makes two chained merges converge whichever order their jobs run in.
    */
   SignalsConsolidated: {
     readonly organizationId: string
     readonly projectId: string
     readonly survivorId: string
+    /** Absorbed in this merge only; the consumer resolves the full lineage itself. */
     readonly loserIds: readonly string[]
     readonly consolidatedAt: string
-    readonly scoresMoved: number
-    readonly scoresCreatedFrom: string | null
   }
   /**
    * Emitted by `promoteSignalUseCase` from the transaction that stamps

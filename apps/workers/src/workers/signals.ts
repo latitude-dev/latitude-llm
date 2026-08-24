@@ -293,12 +293,19 @@ export const createSignalsWorker = async ({
     // after its commit would never run again after a crash.
     reconcileConsolidation: (payload) =>
       reconcileConsolidatedScoresUseCase(payload).pipe(
+        // Postgres owns the lineage the mutation sweeps, so this handler reads
+        // both stores.
+        withPostgres(
+          Layer.mergeAll(SignalRepositoryLive, ScoreRepositoryLive),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
         withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
         withTracing,
         Effect.tap((result) =>
           Effect.sync(() =>
             logger.info(
-              `Consolidation reconciliation for ${payload.projectId}/${payload.survivorId}: ${result.action} (${payload.scoresMoved} scores)`,
+              `Consolidation reconciliation for ${payload.projectId}/${payload.survivorId}: ${result.action} (${result.absorbed} absorbed)`,
             ),
           ),
         ),

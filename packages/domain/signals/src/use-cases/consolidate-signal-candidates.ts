@@ -237,7 +237,11 @@ export const consolidateSignalCandidatesUseCase = (input: ConsolidateSignalCandi
 
           const merged = foldLoserCentroids({ survivor, losers, mergedAt })
           yield* signalRepository.save(merged)
-          yield* Effect.forEach(losers, (loser) => signalRepository.softDelete(loser.id), { discard: true })
+          yield* signalRepository.markMerged({
+            survivorId: survivor.id,
+            loserIds: losers.map((loser) => loser.id),
+            now: mergedAt,
+          })
 
           yield* outboxEventWriter.write({
             eventName: "SignalsConsolidated",
@@ -250,8 +254,6 @@ export const consolidateSignalCandidatesUseCase = (input: ConsolidateSignalCandi
               survivorId: survivor.id,
               loserIds: losers.map((loser) => loser.id),
               consolidatedAt: mergedAt.toISOString(),
-              scoresMoved: reassigned.count,
-              scoresCreatedFrom: reassigned.earliestCreatedAt?.toISOString() ?? null,
             },
           })
 

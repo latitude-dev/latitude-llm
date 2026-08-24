@@ -339,8 +339,6 @@ describe("domain-events dispatcher", () => {
       survivorId: "signal-1",
       loserIds: ["signal-2", "signal-3"],
       consolidatedAt: "2026-05-21T10:00:00.000Z",
-      scoresMoved: 4,
-      scoresCreatedFrom: "2026-04-01T10:00:00.000Z",
     })
 
     await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
@@ -349,13 +347,12 @@ describe("domain-events dispatcher", () => {
     const reconcile = published[0]
     expect(reconcile?.queue).toBe("issues")
     expect(reconcile?.task).toBe("reconcileConsolidation")
+    // Identity only: the consumer resolves the sweep set from Postgres, so a
+    // chained merge sweeps what an earlier merge absorbed too.
     expect(reconcile?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       survivorId: "signal-1",
-      loserIds: ["signal-2", "signal-3"],
-      scoresMoved: 4,
-      scoresCreatedFrom: "2026-04-01T10:00:00.000Z",
     })
     // Keyed to this merge, so redelivery of the same event is idempotent while a
     // later merge on the same survivor is never shadowed.
