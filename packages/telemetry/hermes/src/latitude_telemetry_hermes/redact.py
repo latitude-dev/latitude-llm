@@ -42,9 +42,7 @@ def _resolve_redactor() -> Optional[Callable[[str], str]]:
         # never return raw secrets, whatever the user's logging preference is.
         return lambda text: redact_sensitive_text(text, force=True, redact_url_credentials=True)
     except Exception as exc:
-        logger.warning(
-            "Latitude tracing: Hermes secret redactor unavailable (%s); exporting content unredacted", exc
-        )
+        logger.warning("Latitude tracing: Hermes secret redactor unavailable (%s); exporting content unredacted", exc)
         return None
 
 

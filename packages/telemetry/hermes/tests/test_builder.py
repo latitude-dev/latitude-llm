@@ -119,9 +119,7 @@ def test_the_snapshot_is_used_whatever_the_calls_tool_count(monkeypatch):
 
 
 def test_the_request_payload_wins_over_the_snapshot(monkeypatch):
-    monkeypatch.setattr(
-        "latitude_telemetry_hermes.tools.tool_definitions_snapshot", lambda: [{"name": "stale"}]
-    )
+    monkeypatch.setattr("latitude_telemetry_hermes.tools.tool_definitions_snapshot", lambda: [{"name": "stale"}])
     b = _Builder()
     b.on_pre_api_request(**_turn())
     call = span_attrs(b.on_post_api_request(**_post()), "llm_request")
@@ -131,9 +129,7 @@ def test_the_request_payload_wins_over_the_snapshot(monkeypatch):
 
 
 def test_a_snapshot_never_overwrites_a_request_sourced_list(monkeypatch):
-    monkeypatch.setattr(
-        "latitude_telemetry_hermes.tools.tool_definitions_snapshot", lambda: [{"name": "stale"}]
-    )
+    monkeypatch.setattr("latitude_telemetry_hermes.tools.tool_definitions_snapshot", lambda: [{"name": "stale"}])
     b = _Builder()
     b.on_pre_api_request(**_turn())
     b.on_post_api_request(**_post())
@@ -158,8 +154,14 @@ def test_tool_definitions_disabled_by_config(monkeypatch):
 def test_a_failed_tool_call_exports_the_real_status_and_message():
     b = _Builder()
     b.on_pre_api_request(**_turn())
-    b.on_pre_tool_call(session_id="sess-1", task_id="task-1", turn_id="turn-1", tool_name="terminal", args={"cmd": "x"},
-                       tool_call_id="c1")
+    b.on_pre_tool_call(
+        session_id="sess-1",
+        task_id="task-1",
+        turn_id="turn-1",
+        tool_name="terminal",
+        args={"cmd": "x"},
+        tool_call_id="c1",
+    )
     spans = b.on_post_tool_call(
         session_id="sess-1",
         task_id="task-1",
@@ -187,8 +189,14 @@ def test_a_successful_tool_call_is_not_reported_as_an_error():
     b.on_pre_api_request(**_turn())
     b.on_pre_tool_call(session_id="sess-1", task_id="task-1", turn_id="turn-1", tool_name="terminal", tool_call_id="c1")
     spans = b.on_post_tool_call(
-        session_id="sess-1", task_id="task-1", turn_id="turn-1", tool_name="terminal", tool_call_id="c1",
-        result="README.md", status="ok", duration_ms=7,
+        session_id="sess-1",
+        task_id="task-1",
+        turn_id="turn-1",
+        tool_name="terminal",
+        tool_call_id="c1",
+        result="README.md",
+        status="ok",
+        duration_ms=7,
     )
     attrs = span_attrs(spans, "tool_call:terminal")
     assert attrs["tool.is_error"] is False
@@ -247,9 +255,7 @@ def test_an_interrupted_turn_produces_no_error_span():
 def test_a_failed_turn_keeps_an_error_status():
     b = _Builder()
     b.on_pre_api_request(**_turn())
-    spans = b.finish_scoped(
-        session_id="sess-1", completed=False, failed=True, turn_exit_reason="max_iterations"
-    )
+    spans = b.finish_scoped(session_id="sess-1", completed=False, failed=True, turn_exit_reason="max_iterations")
     root = by_name(spans)["interaction"]
     assert root.outcome == "error"
     assert root.attrs["error.type"] == "turn_failed"
@@ -314,7 +320,10 @@ def test_a_self_referential_parent_session_is_not_recorded():
     recording it as lineage is noise."""
     b = _Builder()
     b.on_pre_llm_call(
-        session_id="sess-1", task_id="task-1", turn_id="turn-1", user_message="hi",
+        session_id="sess-1",
+        task_id="task-1",
+        turn_id="turn-1",
+        user_message="hi",
         parent_session_id="sess-1",
     )
     b.on_pre_api_request(**_turn())
@@ -326,8 +335,9 @@ def test_an_email_shaped_sender_id_is_also_exported_as_an_email():
     """Some Hermes platforms use the address as the user id; Latitude has a field
     for it, and an address reads better than a raw handle."""
     b = _Builder()
-    b.on_pre_llm_call(session_id="sess-1", task_id="task-1", turn_id="turn-1", user_message="hi",
-                      sender_id="alex@latitude.so")
+    b.on_pre_llm_call(
+        session_id="sess-1", task_id="task-1", turn_id="turn-1", user_message="hi", sender_id="alex@latitude.so"
+    )
     b.on_pre_api_request(**_turn())
     attrs = span_attrs(b.on_post_api_request(**_post()), "llm_request")
     assert attrs["user.id"] == "alex@latitude.so"
@@ -336,8 +346,9 @@ def test_an_email_shaped_sender_id_is_also_exported_as_an_email():
 
 def test_a_platform_handle_is_not_mistaken_for_an_email():
     b = _Builder()
-    b.on_pre_llm_call(session_id="sess-1", task_id="task-1", turn_id="turn-1", user_message="hi",
-                      sender_id="U07UYTQP04Q")
+    b.on_pre_llm_call(
+        session_id="sess-1", task_id="task-1", turn_id="turn-1", user_message="hi", sender_id="U07UYTQP04Q"
+    )
     b.on_pre_api_request(**_turn())
     attrs = span_attrs(b.on_post_api_request(**_post()), "llm_request")
     assert attrs["user.id"] == "U07UYTQP04Q"
@@ -347,8 +358,14 @@ def test_a_platform_handle_is_not_mistaken_for_an_email():
 def test_sender_id_becomes_the_latitude_user_id():
     b = _Builder()
     b.on_pre_llm_call(
-        session_id="sess-1", task_id="task-1", turn_id="turn-1", user_message="hi", model="gpt-5.6-sol",
-        platform="slack", sender_id="U07UYTQP04Q", parent_session_id="parent-1",
+        session_id="sess-1",
+        task_id="task-1",
+        turn_id="turn-1",
+        user_message="hi",
+        model="gpt-5.6-sol",
+        platform="slack",
+        sender_id="U07UYTQP04Q",
+        parent_session_id="parent-1",
     )
     b.on_pre_api_request(**_turn(platform="slack"))
     attrs = span_attrs(b.on_post_api_request(**_post()), "llm_request")
@@ -357,8 +374,13 @@ def test_sender_id_becomes_the_latitude_user_id():
 
 
 def test_cost_is_only_exported_when_hermes_reports_an_actual_figure(monkeypatch):
-    included = {"amount": 0.0, "status": "included", "label": "included",
-                "billing_mode": "subscription_included", "provider": "openai-codex"}
+    included = {
+        "amount": 0.0,
+        "status": "included",
+        "label": "included",
+        "billing_mode": "subscription_included",
+        "provider": "openai-codex",
+    }
     monkeypatch.setattr(builder_module, "estimate_cost", lambda *a, **k: included)
     b = _Builder()
     b.on_pre_api_request(**_turn())
@@ -382,7 +404,11 @@ def test_cost_is_only_exported_when_hermes_reports_an_actual_figure(monkeypatch)
 def _delegating_turn(b: _Builder) -> List[_Span]:
     b.on_pre_api_request(**_turn())
     b.on_pre_tool_call(
-        session_id="sess-1", task_id="task-1", turn_id="turn-1", tool_name="delegate", tool_call_id="d1",
+        session_id="sess-1",
+        task_id="task-1",
+        turn_id="turn-1",
+        tool_name="delegate",
+        tool_call_id="d1",
         args={"goal": "research"},
     )
     b.on_subagent_start(
@@ -401,9 +427,7 @@ def _delegating_turn(b: _Builder) -> List[_Span]:
 def test_a_delegated_child_joins_the_parent_trace_and_session():
     b = _Builder()
     _delegating_turn(b)
-    child = b._runs[
-        next(k for k, run in b._runs.items() if run.session_id == "child-1")
-    ]
+    child = b._runs[next(k for k, run in b._runs.items() if run.session_id == "child-1")]
     parent = b._runs[next(k for k, run in b._runs.items() if run.session_id == "sess-1")]
 
     assert child.trace_id == parent.trace_id, "one delegation is one trace tree"

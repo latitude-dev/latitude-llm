@@ -169,9 +169,7 @@ def _build_payload(encoded_spans: Sequence[Dict[str, Any]], service_name: Option
         "resourceSpans": [
             {
                 "resource": {"attributes": _resource_attrs(service_name)},
-                "scopeSpans": [
-                    {"scope": {"name": SCOPE_NAME, "version": PKG_VERSION}, "spans": list(encoded_spans)}
-                ],
+                "scopeSpans": [{"scope": {"name": SCOPE_NAME, "version": PKG_VERSION}, "spans": list(encoded_spans)}],
             }
         ]
     }

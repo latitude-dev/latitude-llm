@@ -211,9 +211,9 @@ def test_a_subagents_auxiliary_calls_are_reconciled_into_the_parent_session(ledg
 
     tasks = {s.attrs.get("hermes.aux.task") for s in spans}
     assert "approval" in tasks
-    assert all(
-        s.attrs["session.id"] == "sess-1" for s in spans
-    ), "the child's auxiliary usage belongs to the parent's session"
+    assert all(s.attrs["session.id"] == "sess-1" for s in spans), (
+        "the child's auxiliary usage belongs to the parent's session"
+    )
     child_approval = [s for s in spans if s.attrs.get("hermes.aux.api_calls") == 1]
     assert any(s.attrs.get("gen_ai.usage.input_tokens") == 404 for s in child_approval)
 

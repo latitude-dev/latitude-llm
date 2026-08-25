@@ -50,8 +50,13 @@ def _tool_call(**overrides: Any) -> Dict[str, Any]:
         "tool_name": "memory",
         "tool_call_id": "m1",
         "args": {"target": "memory", "action": "add", "content": "alex prefers terse output"},
-        "result": {"success": True, "done": True, "target": "memory",
-                   "usage": "12% — 264/2,200 chars", "entry_count": 2},
+        "result": {
+            "success": True,
+            "done": True,
+            "target": "memory",
+            "usage": "12% — 264/2,200 chars",
+            "entry_count": 2,
+        },
         "status": "ok",
         "duration_ms": 3,
     }
@@ -198,8 +203,13 @@ def test_a_non_memory_tool_emits_no_memory_span(memories: Path):
     b.on_pre_api_request(**_TURN)
     b.on_pre_tool_call(session_id="sess-1", task_id="task-1", turn_id="turn-1", tool_name="terminal", tool_call_id="t1")
     spans = b.on_post_tool_call(
-        session_id="sess-1", task_id="task-1", turn_id="turn-1", tool_name="terminal", tool_call_id="t1",
-        result="ok", status="ok",
+        session_id="sess-1",
+        task_id="task-1",
+        turn_id="turn-1",
+        tool_name="terminal",
+        tool_call_id="t1",
+        result="ok",
+        status="ok",
     )
     assert [s.name for s in spans] == ["tool_call:terminal"]
 
