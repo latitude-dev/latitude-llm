@@ -34,7 +34,8 @@
 - **no tool definitions**, so the project's `definedTools` rollup is empty and the Tools page never learns what the agent was offered;
 - **the conversation loses every tool call and tool result**, and every assistant turn in the replayed history renders as a JSON blob (`{"type": "output_text", "text": "…"}`) instead of text;
 - **no memory telemetry at all**, so the Memory page, the per-session memory footprint, and the memory ledger see nothing even though Hermes has a first-class persistent-memory system;
-- **no TTFT**, **no streaming flag**, **no failed-API-call detail** (retries and interruptions surface as opaque `abandoned` error spans), **no tool error status**, **no user identity**, **no subagent linkage**.
+- **no TTFT**, **no streaming flag**, **no failed-API-call detail** (retries and interruptions surface as opaque `abandoned` error spans), **no tool error status**, **no user identity**, **no subagent linkage**;
+- **one constant tag** (`hermes`) and a two-key metadata map, with no way for the operator to add their own — so several Hermes agents reporting into one project are indistinguishable, and comparing two versions of the same agent is impossible.
 
 The root cause of the content loss is a single wrong assumption in `messages.py`: it normalizes only the **OpenAI Chat Completions** message shape (`{role, content, tool_calls}`). Hermes's Codex/Responses path sends **Responses API items** — `{"type":"message","role":"assistant","content":[{"type":"output_text","text":…}]}`, `{"type":"function_call",…}`, `{"type":"function_call_output",…}`, `{"type":"reasoning",…}` — where the tool items carry **no `role` key at all**, so they are dropped, and `output_text` blocks fall through to the JSON-dump branch. Everything else is a missed opportunity: the hooks already carry the data (including the system prompt, the tool definitions, tool error status and duration, stream deltas, subagent identity) and the plugin never reads it.
 
@@ -219,6 +220,8 @@ Ordered by user impact. Each maps to a milestone in [Tasks](#tasks).
 
 **F18 — No per-attribute redaction control.** Both sibling emitters let a user say "never send this attribute": claude-code has `LATITUDE_REDACT_ATTRIBUTES`, openclaw has `redaction.attributes` (`packages/telemetry/openclaw/src/redaction.ts`, exact key or `/regex/flags`, whole value replaced by a mask). Hermes has neither, so a user who wants to keep, say, `gen_ai.memory.records` or `gen_ai.tool.call.result` local has only the all-or-nothing `LATITUDE_NO_CONTENT` switch.
 
+**F19 — One constant tag, and no way for a user to add their own.** Every span ships `latitude.tags = ["hermes"]` and a two-key `latitude.metadata`. Nothing distinguishes a Slack gateway turn from a CLI turn or a cron scout, and there is no configuration surface for the user's own tags or metadata — so an operator running several Hermes agents into one project cannot tell them apart, let alone compare two versions of the same agent. The siblings all do more: openclaw derives tags from the agent id, channel id and trigger (`cron:<jobId>`) and namespaces every context field under `openclaw.*` metadata (`packages/telemetry/openclaw/src/span-builder.ts` `latitudeAttrs`); claude-code tags the workspace name and carries git branch/commit/repo, harness version and host user as metadata (`src/context.ts`); pi is the precedent for **user-defined** `tags` / `metadata` read from its config file (`src/config.ts`). Hermes has richer context available than any of them (platform, profile, api mode, cron job id, subagent role) and uses none of it.
+
 **F17 — Small correctness/parity nits.**
 (a) `service.instance.id` is set on child spans but not on the root.
 (b) The root's `user_prompt` is recovered by scanning history (`_last_user_text`) when `user_message` is handed to us directly.
@@ -261,8 +264,9 @@ Common to every span (`_context`):
 | `session.id`, `gen_ai.session.id` | Hermes session id (parent session id for subagent spans) |
 | `service.instance.id` | session id (now on the root too) |
 | `user.id` | `sender_id` when non-empty |
-| `latitude.tags` | `["hermes"]`, plus the platform when it is not `cli` |
-| `latitude.metadata` | JSON: `hermes.session.id`, `hermes.task_id`, `hermes.turn_id`, `hermes.platform`, `hermes.profile`, `hermes.version`, `hermes.api_mode`, `hermes.provider`, `hermes.base_url`, and where known `hermes.parent_session_id`, `hermes.subagent.id`, `hermes.subagent.role` |
+| `latitude.tags` | derived tags + the user's own — see [8.9](#89-contextpy--tags-and-metadata-f11-f19) |
+| `latitude.metadata` | derived `hermes.*` keys + the user's own — see [8.9](#89-contextpy--tags-and-metadata-f11-f19) |
+| `gen_ai.agent.name` | the configured agent name on main-agent spans; the subagent role on subagent spans (more specific wins) |
 | `latitude.captured.content` | bool, as today |
 
 `interaction` root:
@@ -328,7 +332,7 @@ Memory span (`kind: 3`, name = the operation):
 
 ## 8. Design, module by module
 
-Current layout (all under `packages/telemetry/hermes/src/latitude_telemetry_hermes/`): `__init__.py`, `config.py`, `hooks.py`, `builder.py`, `messages.py`, `model.py`, `otlp.py`, `transport.py`, `util.py`. Keep the shape; add `memory.py`, `tools.py`, `redact.py`, `hermes.py` (the guarded in-process bridge to Hermes internals).
+Current layout (all under `packages/telemetry/hermes/src/latitude_telemetry_hermes/`): `__init__.py`, `config.py`, `hooks.py`, `builder.py`, `messages.py`, `model.py`, `otlp.py`, `transport.py`, `util.py`. Keep the shape; add `memory.py`, `tools.py`, `redact.py`, `context.py` (tags/metadata) and `hermes.py` (the guarded in-process bridge to Hermes internals).
 
 ### 8.1 `messages.py` — the normalizer rewrite (F1, F17d)
 
@@ -424,6 +428,56 @@ The second, blunter control is a port of openclaw's `redactAttributes`: `LATITUD
 
 Registered set becomes: `pre_api_request`, `post_api_request`, `api_request_error`, `pre_llm_call`, `post_llm_call`, `pre_tool_call`, `post_tool_call`, `on_stream_start`, `on_stream_delta`, `on_stream_end`, `on_session_start`, `on_session_end`, `on_session_finalize`, `on_session_reset`, `subagent_start`, `subagent_stop`. Every handler stays gated on config and fail-open. `on_stream_delta` must return in O(1) — a lock, a dict probe and possibly one timestamp write — because Hermes builds and enqueues a payload per delta once any callback is registered; `LATITUDE_HERMES_STREAM_TTFT=0` skips the delta registration entirely for users who would rather not pay it.
 
+### 8.9 `context.py` — tags and metadata (F11, F19)
+
+One `SessionContext`, built once per session and frozen, holding the `latitude.tags` array and the `latitude.metadata` object that every span of that session carries. Per-turn fields (`turn_id`, `finish_reason`, `turn_exit_reason`) are merged in at span build time on top of it.
+
+**Derived tags.** Capped, low-cardinality, and chosen so each one is worth a pivot — `tag` is one of the few breakdown dimensions `queryAnalytics` accepts for traces and sessions (the full list is `model`, `provider`, `service`, `tool`, `tag`, `name`, `userId`, `status`), and it is a session filter, which is what makes it usable as an **experiment variant** selector.
+
+| Tag | Source | Example |
+| --- | --- | --- |
+| `hermes` | constant — keeps Hermes traces identifiable in a project that also receives claude-code or pi traces | `hermes` |
+| the platform | `platform` kwarg, defaulting to `cli` when empty. A bounded set (`hermes_cli/platforms.py` `PLATFORMS`: cli, slack, discord, telegram, matrix, email, webhook, api_server, cron, …) plus any plugin-registered platform | `slack` |
+| the agent name | configured `agent.name`, else the profile name when it is not `default` | `alescript` |
+| `<agent>@<version>` | configured `agent.version` (with `agent.name`, else the profile name, else `hermes`) | `alescript@2.1.0` |
+| `cron:<job id>` | only when the session id has Hermes's cron shape `cron_<job id>_<YYYYmmdd_HHMMSS>` (`cron/scheduler.py` ~5430); absent if that format ever changes | `cron:ai-news` |
+| `subagent:<role>` | on a trace that delegated, from `subagent_start.child_role` | `subagent:researcher` |
+
+**Derived metadata**, namespaced `hermes.*` so it cannot collide with a user key or another emitter's: `hermes.session.id`, `hermes.task_id`, `hermes.turn_id`, `hermes.platform`, `hermes.profile`, `hermes.version` (from `hermes_cli.__version__`, falling back to `importlib.metadata.version("hermes-agent")`), `hermes.api_mode`, `hermes.provider`, `hermes.base_url`, `hermes.plugin.version`, and where known `hermes.agent.name`, `hermes.agent.version`, `hermes.parent_session_id`, `hermes.subagent.id`, `hermes.subagent.role`, `hermes.cron.job.id`.
+
+**User-defined tags and metadata.** Two sources, env winning over `config.yaml`:
+
+```yaml
+# ~/.hermes/config.yaml  (per profile — so per-agent config comes free)
+plugins:
+  enabled: [latitude]
+  entries:
+    latitude:
+      settings:
+        api_key: lat_xxx
+        project: my-project
+        service_name: alescript        # optional; default "hermes-agent"
+        agent:
+          name: alescript
+          version: 2.1.0
+        tags: [prod, eu-west]
+        metadata:
+          deployment: staging
+          owner: platform-team
+```
+
+- `ctx.get_config` accepts dotted plugin-relative keys (`agent.name`), rejects global/traversal paths by raising `ValueError` (catch it), and reads `plugins.entries.latitude.settings.*` from the **profile's** `config.yaml` — `get_config_path()` is `get_hermes_home()/config.yaml`, and `.env` sits beside it, so an operator who gives each agent its own profile gets per-agent credentials, tags and metadata with no env juggling.
+- `LATITUDE_HERMES_TAGS` / `LATITUDE_TAGS`: comma-separated (`prod,eu-west`) or a JSON array. `LATITUDE_HERMES_METADATA` / `LATITUDE_METADATA`: a JSON object, or `k=v` pairs (`deployment=staging,owner=platform-team`). `LATITUDE_HERMES_AGENT_NAME`, `LATITUDE_HERMES_AGENT_VERSION`, `LATITUDE_HERMES_SERVICE_NAME`.
+- **Merge, never replace.** User tags append to the derived ones (pi replaces its `["pi"]` default; that is the wrong default here because `hermes` is how a mixed project stays legible). Duplicates collapse, order is preserved, and derived-first ordering keeps the UI's first chip meaningful.
+- **User metadata keys are verbatim** — the user needs `metadata.deployment` to work as a filter key, so they are not namespaced. Derived `hermes.*` keys are applied **after** the user's, so a user cannot overwrite `hermes.version` with a fiction. A user key that starts with `hermes.` is dropped, with a one-time debug log.
+- Sanitization: trim, drop empties, cap a tag at 64 chars and the tag list at 32 entries (the rollup is a `groupUniqArrayArray` over every span of the session), stringify non-scalar metadata values, cap a metadata value at 1 024 chars and the map at 64 entries. Over-cap entries are dropped, not truncated silently — the drop is logged once.
+
+**`service.name`.** Default stays `hermes-agent`. `service_name` overrides it, which is the other axis an operator can pivot on: `service` is both a breakdown dimension and the `serviceNames` filter. Recommended recipe for several agents in one project: distinct profile per agent (so sessions, memory and credentials are already isolated), `agent.name` + `agent.version` in each profile's config, and `service_name` only if they want the Service column to read as the agent rather than the harness.
+
+**Why both tags and metadata, for the "compare agent versions" case.** A tag is the only user-controlled *breakdown* dimension, so `queryAnalytics { stream: sessions, metric: {kind:"avg",field:"cost"}, breakdown: "tag" }` gives one row per `alescript@2.1.0` / `alescript@2.2.0` in a single query, and an **experiment** variant is a session `filterSet`, so `tags contains alescript@2.2.0` versus the baseline `alescript@2.1.0` is a two-variant experiment with score comparison. Metadata is the filter-only, higher-cardinality half: `metadata.hermes.agent.version` (dotted keys are addressable — the filter builder slices everything after the first `metadata.`) stays clean when there are dozens of versions and nobody wants dozens of tags. So the version goes in both, deliberately, and the docs must say which surface answers which question.
+
+The root span name stays `interaction` (it is the `name` breakdown dimension and the traces-list label; renaming it per agent would fragment that dimension across deployments while the tag and service axes already answer the question).
+
 ---
 
 ## 9. Configuration surface
@@ -442,8 +496,13 @@ New:
 | `LATITUDE_HERMES_TOOL_DEFINITIONS` | `1` | Emit `gen_ai.tool.definitions` |
 | `LATITUDE_HERMES_REDACT_ATTRIBUTES` | — | Comma-separated attribute keys, or `/regex/flags`, whose value is replaced by `LATITUDE_HERMES_REDACT_MASK` |
 | `LATITUDE_HERMES_REDACT_MASK` | `******` | Replacement for a redacted attribute value |
+| `LATITUDE_HERMES_TAGS` / `LATITUDE_TAGS` | — | Extra tags, comma-separated or a JSON array; appended to the derived ones |
+| `LATITUDE_HERMES_METADATA` / `LATITUDE_METADATA` | — | Extra metadata, a JSON object or `k=v` pairs |
+| `LATITUDE_HERMES_AGENT_NAME` | profile name when not `default` | Agent identity: a tag, `gen_ai.agent.name`, and `hermes.agent.name` metadata |
+| `LATITUDE_HERMES_AGENT_VERSION` | — | Adds the `<agent>@<version>` tag and `hermes.agent.version` metadata |
+| `LATITUDE_HERMES_SERVICE_NAME` | `hermes-agent` | OTLP `service.name`, i.e. the `service` breakdown/filter axis |
 
-Every key is also readable from `config.yaml` under `plugins.entries.latitude.settings.<snake_case_key>` (`api_key`, `project`, `base_url`, `no_content`, `memory`, `redact_secrets`, …), env taking precedence.
+Every key is also readable from the profile's `config.yaml` under `plugins.entries.latitude.settings.<snake_case_key>` (`api_key`, `project`, `base_url`, `no_content`, `memory`, `redact_secrets`, `tags`, `metadata`, `agent.name`, `agent.version`, `service_name`, …), env taking precedence. See [8.9](#89-contextpy--tags-and-metadata-f11-f19) for the worked example and the multi-agent recipe.
 
 ---
 
@@ -515,6 +574,8 @@ Every key is also readable from `config.yaml` under `plugins.entries.latitude.se
 | Memory | `listMemoryStores`, `getSessionMemory`, `getMemoryStoreDiff` | store `hermes/<profile>` with records `MEMORY.md`/`USER.md`; session footprint shows read tokens and a write diff; the diff view shows the entry added |
 | Identity | `listSessions` | `userId` set for a gateway/Slack session |
 | Subagent | `listTraceSpans` on the delegating trace | the child's `interaction` is nested under `tool_call:delegate`; `agentNames` non-empty |
+| Tags + metadata | `listSessions`, then `queryAnalytics {stream:"sessions", metric:{kind:"count"}, breakdown:"tag"}` | derived tags (`hermes`, the platform, the agent name, `<agent>@<version>`) and the configured extras are present on the session, and the breakdown returns one row per version tag |
+| Multi-agent split | run two profiles with different `agent.name`, then filter `tags` / `serviceNames` | each agent's sessions are selectable, and a two-variant experiment on `tags contains <agent>@<version>` populates both variants |
 | Payload health | `LATITUDE_DEBUG=1` stderr | every POST logs `HTTP 202`; no `413`/`429` retries exhausted; no dropped batches |
 
 **Regression guard**: re-run the largest turn shape from the evidence session (110 spans) and confirm no single request exceeds 4 MiB and the turn ships completely.
@@ -562,7 +623,7 @@ Every key is also readable from `config.yaml` under `plugins.entries.latitude.se
 
 - [ ] **M4-1**: `StreamWatch` + `on_stream_start` / `on_stream_delta` registrations behind `LATITUDE_HERMES_STREAM_TTFT`; emit `gen_ai.server.time_to_first_token` (ns) and `gen_ai.request.stream`; discard TTFT above the span duration.
 - [ ] **M4-2**: Capture `sender_id` / `parent_session_id` at `pre_llm_call`; emit `user.id`; add `hermes.parent_session_id` to metadata.
-- [ ] **M4-3**: Enrich `latitude.metadata` per [7.2](#72-attributes) (platform, profile, Hermes version, api_mode, provider, base_url, turn id, finish/exit reasons) and add the platform tag when it is not `cli`.
+- [ ] **M4-3**: Add the derived `hermes.*` metadata available from the api hooks (platform, api_mode, provider, base_url, turn id, finish/exit reasons) as a plain dict on the run. [M9](#milestone-9--tags-and-metadata-f11-f19) refactors this into the frozen `SessionContext` and adds the tag axis — do not build two competing context paths.
 - [ ] **M4-4**: `service.instance.id` on the interaction root; `interaction.duration_ms`.
 - [ ] **M4-5**: Optional cost: guarded `agent.usage_pricing.estimate_usage_cost`; emit `gen_ai.usage.cost` only when `status == "actual"`; always record `hermes.cost.status` / `hermes.cost.label`.
 - [ ] **M4-6**: Tests: TTFT computed from a synthetic delta; TTFT dropped when implausible; `user.id` present when `sender_id` is set; cost emitted only for `actual`.
@@ -611,14 +672,27 @@ Every key is also readable from `config.yaml` under `plugins.entries.latitude.se
 
 **Exit gate**: a fixture turn containing an `sk-`-shaped token exports it masked; the registered hook set matches [8.8](#88-hookspy--registrations).
 
-### Milestone 9 — Docs, version, QA (repo hygiene)
+### Milestone 9 — Tags and metadata (F11, F19)
 
-- [ ] **M9-1**: New `dev-docs/hermes-telemetry.md`: hook contract table, trace shape, attribute tables, memory model, export path, config surface, privacy, package layout — written as the final intended system (sibling in depth to `dev-docs/pi-telemetry.md`).
-- [ ] **M9-2**: Update `packages/telemetry/hermes/README.md` and `docs/telemetry/hermes.md`: new env vars, memory section, privacy section (secret redaction on by default, what is still exported), trace-shape diagram, subagent nesting.
-- [ ] **M9-3**: Bump `pyproject.toml` + `PKG_VERSION` to **0.2.0** and write the `CHANGELOG.md` entry (Added / Fixed / Changed) — required for any published `packages/telemetry/*` change.
-- [ ] **M9-4**: Refresh the `hermes` entry in `apps/web/.../onboarding-integration-snippets.ts` only if the install/enable steps changed (they should not).
-- [ ] **M9-5**: Update `specs/telemetry-qa.md` row **59** with what was verified live, and flip the status to ✅ **only after the user approves the dogfood run**.
-- [ ] **M9-6**: File the platform-side follow-ups below as GitHub issues; do not fix them here.
+- [ ] **M9-1**: `context.py` with a frozen per-session `SessionContext` (tags array + metadata dict), replacing the ad-hoc dicts in `_context` / `_start_run` / M4-3. Per-turn fields merge on top at span build time.
+- [ ] **M9-2**: Derived tags per the table in [8.9](#89-contextpy--tags-and-metadata-f11-f19): `hermes`, the platform (default `cli`), the agent name, `<agent>@<version>`, `cron:<job id>` parsed from the `cron_<job>_<ts>` session id, `subagent:<role>`.
+- [ ] **M9-3**: Derived `hermes.*` metadata including `hermes.version` from `hermes_cli.__version__` (guarded, `importlib.metadata` fallback), `hermes.profile`, `hermes.plugin.version`, `hermes.agent.*`, `hermes.cron.job.id`.
+- [ ] **M9-4**: User-defined `tags` / `metadata` / `agent.name` / `agent.version` / `service_name` from env and from `plugins.entries.latitude.settings.*`, env winning; catch the `ValueError` `ctx.get_config` raises on a rejected key.
+- [ ] **M9-5**: Merge rules: user tags **append** to derived (never replace), duplicates collapse, order preserved; user metadata keys verbatim but applied **before** the derived `hermes.*` keys, and a user key starting with `hermes.` is dropped with a one-time debug log.
+- [ ] **M9-6**: Sanitization + caps: trim/drop empties, tag ≤ 64 chars and ≤ 32 tags, metadata value ≤ 1 024 chars and ≤ 64 keys, non-scalar values stringified; every drop logged once.
+- [ ] **M9-7**: `service.name` from `service_name`, default `hermes-agent`; `gen_ai.agent.name` = configured agent name on main-agent spans, subagent role on subagent spans.
+- [ ] **M9-8**: Tests: derived tag set per platform/profile/cron-session-id; user tags appended and deduped; a `hermes.`-prefixed user metadata key dropped; caps enforced; `service.name` override reaching the resource attributes; env beating `config.yaml`; a rejected config key not raising out of the hook.
+
+**Exit gate**: a fixture Slack session on profile `alescriptslack` with `agent: {name: alescript, version: 2.1.0}` and `tags: [prod]` exports `["hermes","slack","alescript","alescript@2.1.0","prod"]` and metadata carrying both the derived `hermes.*` keys and `deployment`/`owner`.
+
+### Milestone 10 — Docs, version, QA (repo hygiene)
+
+- [ ] **M10-1**: New `dev-docs/hermes-telemetry.md`: hook contract table, trace shape, attribute tables, memory model, export path, config surface, privacy, package layout — written as the final intended system (sibling in depth to `dev-docs/pi-telemetry.md`).
+- [ ] **M10-2**: Update `packages/telemetry/hermes/README.md` and `docs/telemetry/hermes.md`: new env vars, the `config.yaml` settings block, memory section, privacy section (secret redaction on by default, what is still exported), trace-shape diagram, subagent nesting, and a **"several agents in one project"** section with the derived-tag table plus the worked version-comparison recipe (tag → `breakdown: "tag"` analytics; tag → experiment variant `filterSet`; `metadata.hermes.agent.version` for many versions; `service_name` for the Service axis).
+- [ ] **M10-3**: Bump `pyproject.toml` + `PKG_VERSION` to **0.2.0** and write the `CHANGELOG.md` entry (Added / Fixed / Changed) — required for any published `packages/telemetry/*` change.
+- [ ] **M10-4**: Refresh the `hermes` entry in `apps/web/.../onboarding-integration-snippets.ts` only if the install/enable steps changed (they should not).
+- [ ] **M10-5**: Update `specs/telemetry-qa.md` row **59** with what was verified live, and flip the status to ✅ **only after the user approves the dogfood run**.
+- [ ] **M10-6**: File the platform-side follow-ups below as GitHub issues; do not fix them here.
 
 **Exit gate**: `uv run pytest` and `uv run ruff check .` green; docs describe the shipped behaviour; version and changelog bumped; QA row updated.
 
