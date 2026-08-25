@@ -3,6 +3,8 @@
 > **Documentation** — durable homes after this ships: a new `dev-docs/hermes-telemetry.md` (sibling of `dev-docs/claude-code-telemetry.md` and `dev-docs/pi-telemetry.md`), the public page `docs/telemetry/hermes.md`, and `packages/telemetry/hermes/README.md`. Related current docs: `dev-docs/spans.md` (OTLP attribute resolution, trace/session conversation assembly), `specs/memory-observability.md` (the `gen_ai.memory.*` contract this adopts), `specs/telemetry-qa.md` row **59** (Hermes QA status).
 >
 > **Scope**: one PR, on branch `hermes/telemetry-fidelity` (based on `development`). Milestones below are commit boundaries inside that single PR, not separate PRs.
+>
+> **Merging publishes.** `.github/workflows/publish-packages.yml` runs on every push to `development` and calls `publish-hermes-telemetry.yml`, which publishes `latitude-telemetry-hermes` to PyPI whenever the version in `pyproject.toml` is not already there. There is no separate release step for this package, so **the dogfood validation in [M12](#milestone-12--dogfood-validation-gate-pre-merge) is a hard gate before merge**: after merge, a mistake can only be corrected by another version bump.
 
 ---
 
@@ -619,7 +621,7 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 
 **Unit (pytest, `uv run pytest` in `packages/telemetry/hermes`)** — every milestone lands its own tests. Fixtures must include a **real Responses-API item list** (message + `function_call` + `function_call_output` + `reasoning`), a Chat Completions list, and an Anthropic block list, all through one normalizer.
 
-**Live dogfood** on the Hermes VM (Hermes 0.20.5, project `alescript`):
+**Live dogfood** on the Hermes VM (Hermes 0.20.5, project `alescript`) — the implementer has no access to that VM, so this runs as the hand-off loop in [M12](#milestone-12--dogfood-validation-gate-pre-merge), which owns the install steps, the session script and the per-finding review checklist. In outline:
 
 1. Build and install the branch into Hermes's venv:
    `~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python <path-or-wheel>`
@@ -772,7 +774,7 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 - [ ] **M10-5**: Document the `/usage` reconciliation in both docs, using the worked table from [5.1](#51-usage-accounting-latitude-versus-hermes-usage--reconciled): Latitude = main loop + `background_review`; Latitude's output excludes reasoning while Hermes's includes it; `/usage` reads one `Agent`'s counters, so background-review forks (and, on a route change, everything before the rebuild) are missing from it; `session_model_usage` in `state.db` is the arbiter; auxiliary calls are absent unless [M11](#milestone-11--auxiliary-llm-accounting-f22-f23) ships; a `subscription_included` route shows catalog cost, not what was paid.
 - [ ] **M10-6**: Bump `pyproject.toml` + `PKG_VERSION` to **0.2.0** and write the `CHANGELOG.md` entry (Added / Fixed / Changed) — required for any published `packages/telemetry/*` change.
 - [ ] **M10-7**: Refresh the `hermes` entry in `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/onboarding-integration-snippets.ts` (and `onboarding/steps/telemetry-instructions.tsx`) only if the install/enable steps changed — they should not, but the snippet is the first thing a new user copies.
-- [ ] **M10-8**: Update `specs/telemetry-qa.md` row **59** with what was verified live, and flip the status to ✅ **only after the user approves the dogfood run**.
+- [ ] **M10-8**: Update `specs/telemetry-qa.md` row **59** with what [M12](#milestone-12--dogfood-validation-gate-pre-merge) verified live, and flip the status to ✅ **only after the user approves the dogfood run**.
 - [ ] **M10-9**: File the platform-side follow-ups below as GitHub issues; do not fix them here.
 
 **Exit gate**: `uv run pytest` and `uv run ruff check .` green; the public page documents every settable key on both surfaces and no longer claims env-only configuration; version and changelog bumped.
@@ -790,6 +792,84 @@ Lowest priority of the plan, and the only milestone that reads Hermes's SQLite s
 - [ ] **M11-7**: Open an upstream Hermes issue asking for `pre_api_request` / `post_api_request` (or a dedicated `aux_api_request`) to fire for `auxiliary_client` calls with the `task` label — that would retire this whole milestone.
 
 **Exit gate**: for a session with a compaction, Latitude's session token totals equal `SUM(session_model_usage)` for that session id, and the compaction call is visible as its own span.
+
+### Milestone 12 — Dogfood validation gate (pre-merge)
+
+Every fix in this plan was derived from one real Hermes session, and none of it can be verified from this repo: the agent runs on the user's VM, which the implementer has **no access to**. So the last step is a hand-off loop — the implementer produces install steps, the user runs a session, and the implementer reviews that session through the `latitude-production` MCP. **Nothing merges or publishes until the user approves the review** (see the publish note in the header).
+
+- [ ] **M12-1**: Hand the user the install steps for the branch build. PyPI will not have `0.2.0` until merge, so it has to be a local wheel or a git ref. Both paths, ready to paste:
+
+  **A — local wheel (no push required)**
+
+  ```bash
+  # on the dev machine
+  cd packages/telemetry/hermes && uv build          # → dist/latitude_telemetry_hermes-0.2.0-py3-none-any.whl
+  scp dist/latitude_telemetry_hermes-0.2.0-py3-none-any.whl <vm>:~/
+  ```
+
+  ```bash
+  # on the VM — must land in the venv that runs Hermes, not the shell's python
+  ~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python \
+    --force-reinstall --no-cache-dir ~/latitude_telemetry_hermes-0.2.0-py3-none-any.whl
+  ~/.hermes/hermes-agent/venv/bin/python -c \
+    "from latitude_telemetry_hermes.config import PKG_VERSION; print(PKG_VERSION)"   # → 0.2.0
+  ```
+
+  **B — straight from the branch** (only once `hermes/telemetry-fidelity` is pushed)
+
+  ```bash
+  ~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python \
+    --force-reinstall --no-cache-dir \
+    "git+https://github.com/latitude-dev/latitude-llm@hermes/telemetry-fidelity#subdirectory=packages/telemetry/hermes"
+  ```
+
+  `--force-reinstall --no-cache-dir` matters for the **iteration** loop: a second build of the same version would otherwise be skipped as already-satisfied. Then restart so the plugin reloads — a fresh `hermes` for the CLI, and `<profile> gateway stop && <profile> gateway start` for a gateway profile. Ask the user to also set, for the run:
+
+  ```yaml
+  # ~/.hermes/config.yaml — exercises the M9 surface
+  plugins:
+    enabled: [latitude]
+    entries:
+      latitude:
+        settings:
+          agent: { name: alescript, version: 0.2.0-dogfood }
+          tags: [dogfood]
+          metadata: { deployment: vm }
+  ```
+
+  ```bash
+  # ~/.hermes/.env — so the export path is auditable in agent.log
+  LATITUDE_DEBUG=true
+  ```
+
+- [ ] **M12-2**: Give the user a session script that makes every fix observable, and the session id to report back. It must include: a turn with **several tool calls**; a **failing** tool call (`cat /nonexistent-file`) for F5; a **memory write** ("remember that …") for F4; an **interrupted** turn (ESC mid-run) for F7; a **delegated subagent** for F10; a long enough conversation that a **background review** fires for F23; and `/usage` plus the `state.db` queries from [5.1](#51-usage-accounting-latitude-versus-hermes-usage--reconciled) before quitting, for F20/F22. A gateway/Slack turn as well if that profile is up, for the platform tag and `user.id` (F9).
+- [ ] **M12-3**: Review that session through the `latitude-production` MCP against this checklist — one row per finding, each with the query that proves it:
+
+  | Finding | Query | Passes when |
+  | --- | --- | --- |
+  | F1 conversation | `getTrace` / `getSession` | `tool_call` + `tool_call_response` parts present; **no** `output_text` part anywhere; assistant text is text, not JSON |
+  | F2 system prompt | `getSession` | first message is `role: "system"` with the real prompt |
+  | F3 tool definitions | `listSessions`, `listTools` | `definedTools` non-empty; offered-but-uncalled tools listed |
+  | F4 memory | `listMemoryStores`, `getSessionMemory`, `getMemoryStoreDiff` | store `hermes/<profile>` with `MEMORY.md`; read + write events; diff shows the new entry |
+  | F5 tool errors | `querySpans {toolName, status: error}` | the failing call is `statusCode: error` with the message |
+  | F6/F7 errors | `querySpans {status: error}` | no `errorType: "abandoned"`; the interrupted turn is **not** an error |
+  | F8 TTFT | `listTraceSpans` | `timeToFirstTokenNs > 0`, `isStreaming: true` |
+  | F9 identity | `listSessions` | `userId` set on a gateway turn |
+  | F10 subagent | `listTraceSpans` | child `interaction` nested under `tool_call:delegate`; `agentNames` non-empty |
+  | F11/F19 tags | `listSessions`, `queryAnalytics {breakdown: "tag"}` | `["hermes","cli"/"slack","alescript","alescript@0.2.0-dogfood","dogfood"]`; metadata carries `hermes.*` + `deployment` |
+  | F12 response model | `listTraceSpans` | `responseModel` populated |
+  | F13/F14 export | `agent.log` (`LATITUDE_DEBUG`) | every POST `202`; no `413`; no dropped batches; turn end not visibly delayed |
+  | F15/F18 privacy | `getTraceSpan` on a tool span | a secret-shaped token is masked; a `redact_attributes` key is masked but present |
+  | F20 unreported usage | `querySpans {operation: chat}` | the interrupted call carries `hermes.usage.state = "unreported"`, not a silent zero |
+  | F21 cost | `listSessions` | `hermes.cost.status` / `hermes.billing.mode` explain the catalog figure |
+  | F22 aux | `getSession` vs `SUM(session_model_usage)` | totals match once M11 ships; `aux:compression` span present |
+  | F23 background | `listTraceSpans` | review traces carry `interaction.kind = "background"` |
+  | Usage | `getSession` vs `/usage` + `state.db` | reconciles per [5.1](#51-usage-accounting-latitude-versus-hermes-usage--reconciled) |
+
+- [ ] **M12-4**: Iterate on anything that fails — fix on the branch, rebuild, reinstall with `--force-reinstall`, new session, re-review. **Do not** bump the version per iteration; `0.2.0` stays until it is approved.
+- [ ] **M12-5**: On the user's explicit approval: record the evidence in `specs/telemetry-qa.md` row 59 ([M10-8](#milestone-10--docs-version-qa-repo-hygiene)), then open/merge the PR. Merge publishes `0.2.0` to PyPI automatically.
+
+**Exit gate**: the user has approved a reviewed session in which every row above passes or is explicitly waived, and the waiver is written into the QA row.
 
 ## Platform-side follow-ups (out of scope)
 
