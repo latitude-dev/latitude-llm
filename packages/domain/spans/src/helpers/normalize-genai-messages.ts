@@ -8,12 +8,14 @@
  * `binary`, or carries a tool result under `result`.
  *
  * Some instrumentations emit those names anyway — Pydantic AI writes `thinking`, `binary` and
- * `result` into `gen_ai.{input,output}.messages`. The convention's part schemas are
- * `additionalProperties: true`, so an unknown `type` is passed through rather than rejected, and the
- * wrong vocabulary reaches storage silently. Every consumer keys off the canonical names, so a
- * `thinking` part is absent from the lexical search index, wrongly included in the embedding, and
- * rendered through the UI's unknown-part fallback; a tool result under `result` is invisible to the
- * indexer, which reads `response`.
+ * `result` into `gen_ai.{input,output}.messages`, and an emitter wrapping OpenAI's Responses API can
+ * pass its *items* through as parts (`output_text`, `function_call`, `function_call_output`). The
+ * convention's part schemas are `additionalProperties: true`, so an unknown `type` is passed through
+ * rather than rejected, and the wrong vocabulary reaches storage silently. Every consumer keys off
+ * the canonical names, so a `thinking` part is absent from the lexical search index, wrongly included
+ * in the embedding, and rendered through the UI's unknown-part fallback; a tool result under `result`
+ * is invisible to the indexer, which reads `response`; and a conversation of Responses items renders
+ * as JSON blobs with every tool call missing.
  *
  * Rewriting them here, on the way in, is what keeps the rest of the product free of vendor
  * spellings — no consumer should have to know a non-conformant type exists.
@@ -35,6 +37,23 @@ const withKnownField = (part: Part, field: string, value: unknown): Part => {
     ...part,
     _provider_metadata: { ...metadata, _known_fields: { ...known, [field]: value } },
   }
+}
+
+/** A Responses `function_call` carries its arguments as a JSON string; consumers expect the value. */
+const parsedArguments = (value: unknown): unknown => {
+  if (typeof value !== "string") return value
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
+// A Responses item pairs a call to its output by `call_id`; `id` is the item's own identity, so it is
+// only a fallback.
+const pairingId = (part: Part): Record<string, unknown> => {
+  const id = typeof part.call_id === "string" && part.call_id ? part.call_id : part.id
+  return id === undefined ? {} : { id }
 }
 
 const normalizePart = (part: unknown): unknown => {
@@ -60,6 +79,26 @@ const normalizePart = (part: unknown): unknown => {
       ...(mime ? { mime_type: mime } : {}),
       modality: resolveContentModality(typeof part.modality === "string" ? part.modality : "", mime),
     }
+  }
+
+  // OpenAI's Responses API names its text blocks by direction. Both are plain text.
+  if (part.type === "output_text" || part.type === "input_text") {
+    const content = typeof part.content === "string" ? part.content : part.text
+    if (typeof content !== "string" || !content) return part
+    const { text: _text, content: _content, type: _type, ...rest } = part
+    return { ...rest, type: "text", content }
+  }
+
+  if (part.type === "function_call") {
+    const name = typeof part.name === "string" ? part.name : ""
+    if (!name) return part
+    const { call_id: _callId, id: _id, arguments: args, name: _name, type: _type, ...rest } = part
+    return { ...rest, type: "tool_call", ...pairingId(part), name, arguments: parsedArguments(args) }
+  }
+
+  if (part.type === "function_call_output" || part.type === "custom_tool_call_output") {
+    const { call_id: _callId, id: _id, output, type: _type, ...rest } = part
+    return { ...rest, type: "tool_call_response", ...pairingId(part), response: output }
   }
 
   if (part.type === "tool_call_response") {

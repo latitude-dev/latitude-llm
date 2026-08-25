@@ -26,6 +26,75 @@ describe("normalizeGenAIMessages", () => {
     expect(message?.parts).toEqual([{ type: "reasoning", content: "deliberating" }])
   })
 
+  it("rewrites the Responses API's directional text blocks as text", () => {
+    const [message] = normalizeGenAIMessages([
+      {
+        role: "assistant",
+        parts: [
+          { type: "output_text", text: "one file: README.md" },
+          { type: "input_text", text: "list the repo" },
+        ],
+      },
+    ] as never)
+
+    expect(message?.parts).toEqual([
+      { type: "text", content: "one file: README.md" },
+      { type: "text", content: "list the repo" },
+    ])
+  })
+
+  it("rewrites a Responses `function_call`, pairing on call_id and parsing its arguments", () => {
+    const [message] = normalizeGenAIMessages([
+      {
+        role: "assistant",
+        parts: [{ type: "function_call", id: "fc_1", call_id: "call_1", name: "terminal", arguments: '{"cmd":"ls"}' }],
+      },
+    ] as never)
+
+    expect(message?.parts).toEqual([{ type: "tool_call", id: "call_1", name: "terminal", arguments: { cmd: "ls" } }])
+  })
+
+  it("keeps unparseable arguments as the string they arrived as", () => {
+    const [message] = normalizeGenAIMessages([
+      { role: "assistant", parts: [{ type: "function_call", call_id: "c", name: "t", arguments: "not json" }] },
+    ] as never)
+
+    expect(message?.parts?.[0]).toMatchObject({ arguments: "not json" })
+  })
+
+  it("rewrites a Responses `function_call_output` and hoists it into a tool message", () => {
+    const messages = normalizeGenAIMessages([
+      {
+        role: "assistant",
+        parts: [
+          { type: "output_text", text: "checking" },
+          { type: "function_call_output", call_id: "call_1", output: "README.md" },
+        ],
+      },
+    ] as never)
+
+    expect(messages).toEqual([
+      { role: "tool", parts: [{ type: "tool_call_response", id: "call_1", response: "README.md" }] },
+      { role: "assistant", parts: [{ type: "text", content: "checking" }] },
+    ])
+  })
+
+  it("falls back to the item id when a Responses item carries no call_id", () => {
+    const [message] = normalizeGenAIMessages([
+      { role: "tool", parts: [{ type: "function_call_output", id: "fc_9", output: "ok" }] },
+    ] as never)
+
+    expect(message?.parts).toEqual([{ type: "tool_call_response", id: "fc_9", response: "ok" }])
+  })
+
+  it("leaves an empty Responses text block alone rather than emitting an empty part", () => {
+    const [message] = normalizeGenAIMessages([
+      { role: "assistant", parts: [{ type: "output_text", text: "" }] },
+    ] as never)
+
+    expect(message?.parts).toEqual([{ type: "output_text", text: "" }])
+  })
+
   it("moves a tool result's payload from `result` to `response`", () => {
     const [message] = normalizeGenAIMessages([
       { role: "tool", parts: [{ type: "tool_call_response", id: "c1", result: { ok: true } }] },
