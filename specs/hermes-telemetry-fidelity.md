@@ -182,6 +182,34 @@ Session `conversation` (`getSession`) is the last `llm_request`'s input plus its
 
 ---
 
+### 5.1 Usage accounting: Latitude versus Hermes `/usage`
+
+`/usage` at the end of the same session (2026-08-25, run at ~12:15 — after the last trace at 12:06:38) against the Latitude session rollup:
+
+| Hermes `/usage` | | Latitude session | | Note |
+| --- | --- | --- | --- | --- |
+| Input tokens | 668,303 | `tokensInput` | 744,969 | both exclude cache; comparable |
+| Output tokens | 81,784 | `tokensOutput` + `tokensReasoning` | 64,568 + 35,583 = 100,151 | **different definitions** — see (1) |
+| ↳ Reasoning (subset) | 31,529 | `tokensReasoning` | 35,583 | |
+| Prompt tokens (total) | 27,395,983 | `tokensInput` + `tokensCacheRead` | 744,969 + 31,593,088 = 32,338,057 | |
+| Total tokens | 27,477,767 | `tokensTotal` | 32,438,208 | |
+| API calls | 205 | `chat` spans with tokens | 236 (244 including 8 token-less error spans) | **different denominators** — see (2)/(3) |
+| — | | `costTotalMicrocents` | 2,252,591,900 (≈ **$225.26**) | the user paid **$0** — see (4) |
+
+**What is verified correct.** The per-span mapping is exact: on span `9e1b96f61ab0f67a933b27a8ca05fb3a` / `d170280710796d89` the raw attributes are `input 1356`, `output 634`, `cache_read 166528`, `reasoning 549`, `total 168518`, and Latitude resolved `tokensInput 1356`, `tokensOutput 85` (= 634 − 549), `tokensCacheRead 166528` — the additive-input/inclusive-output inference lands because the plugin sends `total_tokens` as the arithmetic proof. The plugin also does not duplicate spans: on trace `be969da7f589dcca55d20d35f520d72b` the root reports `hermes.llm_calls: 48` / `hermes.tool_calls: 75` and the trace holds exactly 48 `llm_request` and 75 `tool_call:*` spans, each with a distinct prompt size and monotonically growing cache read (81,408 → 151,040). Across the session, `chat` = 244 = 236 with tokens + 8 error spans, error spans sum to **0** tokens, span-level `tokens` by operation (809,537) equals the session rollup (744,969 + 64,568), and `spanCount` 616 = 349 + 244 + 23 by operation. So the session rollup is consistent with the spans, and the spans are consistent with the hook payloads.
+
+**(1) Reasoning is presented differently, and this is the one difference we must document rather than change.** Hermes's "Output tokens" is *inclusive* of reasoning; Latitude stores `tokensOutput` *exclusive* with `tokensReasoning` beside it. `gen_ai.usage.output_tokens` must keep carrying the inclusive figure — Latitude's resolver subtracts reasoning itself, and sending the exclusive value would double-subtract.
+
+**(2) "API calls" do not mean the same thing.** `pre_api_request` and the `/usage` accumulator both live **inside** the retry loop (`agent/conversation_loop.py:2888`, accumulator at 4236–4252, gated on `hasattr(response,'usage') and response.usage`), while `post_api_request` fires **after** that loop (6754–6796, a sibling of the `while`). At least eight `break` paths leave the retry loop after a response has arrived but before the accounting line — fallback activation (3403, 3477, 3655, 3891), invalid response (3536), content filter (3655), length-truncation give-up (3965), redirect crossing (3263) — so the two counters cannot be expected to agree by construction. Conversely three post-loop paths skip `post_api_request` entirely (`restart_with_redirected_messages` → `continue` at 6670, `interrupted` → `break` at 6675, `restart_with_compressed_messages` at 6677), which is [F20](#6-findings).
+
+**(3) `/usage` counts per Agent instance, not per session — and this is the most likely cause of the 205-vs-236 gap.** `init_agent` zeroes every `session_*` counter (`agent/agent_init.py:2951–2963`), and the CLI drops the agent whenever the turn route changes: `if turn_route["signature"] != self._active_agent_route_signature: self.agent = None` (`cli.py:16305`, again at 21524), with the signature being `(model, provider, requested_provider, base_url, api_mode, command, args)` (`hermes_cli/cli_agent_setup_mixin.py:313–325`). A `/model` switch, a credential/provider rotation, an api-mode change or a provider **fallback** therefore silently restarts the token counters mid-session while `self.session_id` — and so the Latitude session — continues. The other `/usage` lines corroborate: "Session duration 2h 16m" and "Messages: 203" come from CLI-level state (`self.session_start`, `self.conversation_history`) and cover the whole session, so a rebuilt agent shows a full duration next to partial token counts.
+
+**Settling (2) versus (3) costs one command on the VM.** Hermes logs `API call #%d: model=… in=… out=… total=…` at INFO from the accumulator itself (`conversation_loop.py` ~4260). Count those lines for one session and compare against our `chat`-span count: if the log has as many lines as we have spans but `/usage` reports fewer, it is the counter reset (3); if the log matches `/usage` and we have more spans, it is the denominator paths (2). Either way the emitter needs no change — but the docs do, and after [M3](#milestone-3--error-interruption-and-retry-semantics-f6-f7-f12-f17c) lands, `hermes.retry_count` and the real error types make the same question answerable from Latitude alone.
+
+**(4) Cost.** The session ran on an OAuth Codex subscription, which Hermes classifies as `subscription_included` → its own verdict is `$0`. Latitude priced it from the catalog at ≈ $225.26, which is defensible as list-price equivalent but is not what the user paid, and nothing on the span says so. [M4-5](#milestone-4--performance-and-identity-signals-f8-f9-f11-f17a) records `hermes.cost.status` / `hermes.cost.label` so the number is at least explainable; making it *correct* needs an ingest-side hint, which is a [platform follow-up](#platform-side-follow-ups-out-of-scope).
+
+---
+
 ## 6. Findings
 
 Ordered by user impact. Each maps to a milestone in [Tasks](#tasks).
@@ -221,6 +249,10 @@ Ordered by user impact. Each maps to a milestone in [Tasks](#tasks).
 **F18 — No per-attribute redaction control.** Both sibling emitters let a user say "never send this attribute": claude-code has `LATITUDE_REDACT_ATTRIBUTES`, openclaw has `redaction.attributes` (`packages/telemetry/openclaw/src/redaction.ts`, exact key or `/regex/flags`, whole value replaced by a mask). Hermes has neither, so a user who wants to keep, say, `gen_ai.memory.records` or `gen_ai.tool.call.result` local has only the all-or-nothing `LATITUDE_NO_CONTENT` switch.
 
 **F19 — One constant tag, and no way for a user to add their own.** Every span ships `latitude.tags = ["hermes"]` and a two-key `latitude.metadata`. Nothing distinguishes a Slack gateway turn from a CLI turn or a cron scout, and there is no configuration surface for the user's own tags or metadata — so an operator running several Hermes agents into one project cannot tell them apart, let alone compare two versions of the same agent. The siblings all do more: openclaw derives tags from the agent id, channel id and trigger (`cron:<jobId>`) and namespaces every context field under `openclaw.*` metadata (`packages/telemetry/openclaw/src/span-builder.ts` `latitudeAttrs`); claude-code tags the workspace name and carries git branch/commit/repo, harness version and host user as metadata (`src/context.ts`); pi is the precedent for **user-defined** `tags` / `metadata` read from its config file (`src/config.ts`). Hermes has richer context available than any of them (platform, profile, api mode, cron job id, subagent role) and uses none of it.
+
+**F20 — A call whose `post_api_request` never fires reports zero tokens.** Usage is only attached in `on_post_api_request`, and three post-retry-loop paths skip that hook: a redirect that crossed the response (`continue`, `conversation_loop.py:6670`), an interrupted call (`break`, 6675), and a compression restart (6677). The provider may well have billed those calls. The span still exists (the plugin counts the `pre_api_request` fire in `hermes.llm_calls`) but carries no usage, and nothing marks it as *unknown* rather than *free*.
+
+**F21 — Cost is silently list-price on subscription routes.** Hermes classifies the OAuth Codex route as `subscription_included` and reports `$0`; Latitude priced this session at ≈ $225.26 from its catalog. Neither number is wrong, but the span says nothing about which regime it is in, so the UI cannot explain the difference. See [5.1](#51-usage-accounting-latitude-versus-hermes-usage) (4).
 
 **F17 — Small correctness/parity nits.**
 (a) `service.instance.id` is set on child spans but not on the root.
@@ -576,6 +608,7 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 | Subagent | `listTraceSpans` on the delegating trace | the child's `interaction` is nested under `tool_call:delegate`; `agentNames` non-empty |
 | Tags + metadata | `listSessions`, then `queryAnalytics {stream:"sessions", metric:{kind:"count"}, breakdown:"tag"}` | derived tags (`hermes`, the platform, the agent name, `<agent>@<version>`) and the configured extras are present on the session, and the breakdown returns one row per version tag |
 | Multi-agent split | run two profiles with different `agent.name`, then filter `tags` / `serviceNames` | each agent's sessions are selectable, and a two-variant experiment on `tags contains <agent>@<version>` populates both variants |
+| Usage vs `/usage` | run `/usage`, then compare with `getSession` per [5.1](#51-usage-accounting-latitude-versus-hermes-usage); count Hermes's own `API call #N` INFO lines for the session | input/cache reconcile; output reconciles once reasoning is added back; any remaining call-count gap is explained by the `API call #N` count (reset vs denominator) |
 | Payload health | `LATITUDE_DEBUG=1` stderr | every POST logs `HTTP 202`; no `413`/`429` retries exhausted; no dropped batches |
 
 **Regression guard**: re-run the largest turn shape from the evidence session (110 spans) and confirm no single request exceeds 4 MiB and the turn ships completely.
@@ -615,6 +648,7 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 - [ ] **M3-3**: Thread `completed` / `failed` / `interrupted` / `turn_exit_reason` from `on_session_end` into `finish_scoped`; close interrupted turns as OK with `hermes.turn.outcome=interrupted` and `hermes.span.closed_reason`; keep `abandoned` only for genuinely unexplained leftovers.
 - [ ] **M3-4**: `gen_ai.response.model` from `response_model`; drop the dead `completion_tokens` mapping; add `hermes.retry_count`, `hermes.approx_input_tokens`, `hermes.message_count`.
 - [ ] **M3-5**: Register `on_stream_end` and attach `hermes.stream.error` when a stream ends unfinished.
+- [ ] **M3-7**: F20: mark a generation span closed without a `post_api_request` as `hermes.usage.state = "unreported"` (redirect-crossed, interrupted, compression restart), so a token-less call reads as *unknown* rather than *free*, and count it in the root's `hermes.llm_calls_unreported`.
 - [ ] **M3-6**: Tests: a retried attempt produces two spans, the first with a real error type; an interrupted turn produces no error span.
 
 **Exit gate**: no span exports `error.type=abandoned` for a retry or an interruption.
@@ -625,7 +659,7 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 - [ ] **M4-2**: Capture `sender_id` / `parent_session_id` at `pre_llm_call`; emit `user.id`; add `hermes.parent_session_id` to metadata.
 - [ ] **M4-3**: Add the derived `hermes.*` metadata available from the api hooks (platform, api_mode, provider, base_url, turn id, finish/exit reasons) as a plain dict on the run. [M9](#milestone-9--tags-and-metadata-f11-f19) refactors this into the frozen `SessionContext` and adds the tag axis — do not build two competing context paths.
 - [ ] **M4-4**: `service.instance.id` on the interaction root; `interaction.duration_ms`.
-- [ ] **M4-5**: Optional cost: guarded `agent.usage_pricing.estimate_usage_cost`; emit `gen_ai.usage.cost` only when `status == "actual"`; always record `hermes.cost.status` / `hermes.cost.label`.
+- [ ] **M4-5**: Optional cost (F21): guarded `agent.usage_pricing.estimate_usage_cost` + `resolve_billing_route`; emit `gen_ai.usage.cost` only when `status == "actual"`; always record `hermes.cost.status`, `hermes.cost.label` and `hermes.billing.mode` so a catalog estimate on a `subscription_included` route is explainable instead of mysterious.
 - [ ] **M4-6**: Tests: TTFT computed from a synthetic delta; TTFT dropped when implausible; `user.id` present when `sender_id` is set; cost emitted only for `actual`.
 
 **Exit gate**: a fixture streaming turn reports a positive TTFT and `isStreaming`; metadata carries platform/profile/version.
@@ -689,10 +723,11 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 
 - [ ] **M10-1**: New `dev-docs/hermes-telemetry.md`: hook contract table, trace shape, attribute tables, memory model, export path, config surface, privacy, package layout — written as the final intended system (sibling in depth to `dev-docs/pi-telemetry.md`).
 - [ ] **M10-2**: Update `packages/telemetry/hermes/README.md` and `docs/telemetry/hermes.md`: new env vars, the `config.yaml` settings block, memory section, privacy section (secret redaction on by default, what is still exported), trace-shape diagram, subagent nesting, and a **"several agents in one project"** section with the derived-tag table plus the worked version-comparison recipe (tag → `breakdown: "tag"` analytics; tag → experiment variant `filterSet`; `metadata.hermes.agent.version` for many versions; `service_name` for the Service axis).
-- [ ] **M10-3**: Bump `pyproject.toml` + `PKG_VERSION` to **0.2.0** and write the `CHANGELOG.md` entry (Added / Fixed / Changed) — required for any published `packages/telemetry/*` change.
-- [ ] **M10-4**: Refresh the `hermes` entry in `apps/web/.../onboarding-integration-snippets.ts` only if the install/enable steps changed (they should not).
-- [ ] **M10-5**: Update `specs/telemetry-qa.md` row **59** with what was verified live, and flip the status to ✅ **only after the user approves the dogfood run**.
-- [ ] **M10-6**: File the platform-side follow-ups below as GitHub issues; do not fix them here.
+- [ ] **M10-3**: Document the `/usage` reconciliation in `docs/telemetry/hermes.md` and `dev-docs/hermes-telemetry.md`: the field-by-field mapping from [5.1](#51-usage-accounting-latitude-versus-hermes-usage), that Latitude's output excludes reasoning while Hermes's includes it, that `/usage` counts per Agent instance (a `/model` switch or provider fallback restarts its counters mid-session) while Latitude counts per session, and that a subscription route shows catalog cost.
+- [ ] **M10-4**: Bump `pyproject.toml` + `PKG_VERSION` to **0.2.0** and write the `CHANGELOG.md` entry (Added / Fixed / Changed) — required for any published `packages/telemetry/*` change.
+- [ ] **M10-5**: Refresh the `hermes` entry in `apps/web/.../onboarding-integration-snippets.ts` only if the install/enable steps changed (they should not).
+- [ ] **M10-6**: Update `specs/telemetry-qa.md` row **59** with what was verified live, and flip the status to ✅ **only after the user approves the dogfood run**.
+- [ ] **M10-7**: File the platform-side follow-ups below as GitHub issues; do not fix them here.
 
 **Exit gate**: `uv run pytest` and `uv run ruff check .` green; docs describe the shipped behaviour; version and changelog bumped; QA row updated.
 
@@ -702,6 +737,8 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 
 Found while investigating; **not** emitter bugs, do not fix in this PR.
 
-1. **Session rollup lags behind its traces.** For session `20260825_095742_7b42ec`, `listSessions`/`getSession` report `traceCount: 12`, `spanCount: 234`, `endTime: 11:07:06`, while `listSessionTraces` returns **17** traces summing **356** spans and running to `11:21:58`. The five missing traces (`33a95fe2…`, `1fe1f5df…`, `04145812…`, `35eee3bc…`, `88fce1eb…`) all carry the same `session_id` in their own rows, so `sessions_mv` stopped absorbing that session's later inserts. Worth a look at the session materialization; it makes session-level cost and token numbers under-report.
-2. **Unknown message part types render raw.** An `output_text` part reached storage and the conversation UI showed the JSON blob. `normalizeGenAIMessages` already rewrites vendor spellings (`thinking`, `binary`, `result`); adding the Responses vocabulary (`output_text` / `input_text` → `text`, `function_call` → `tool_call`, `function_call_output` → `tool_call_response`) would make **any** Responses-dialect emitter render correctly, not just this plugin. Emitter-side normalization (M1) is still the right fix for us; this is defence in depth.
-3. **Cost on subscription-included routes.** Latitude priced this session at ≈ $83 of catalog value although the user paid nothing (OAuth Codex subscription). The number is defensible as list-price equivalent, but there is no way for an emitter to say "this route is included". A `gen_ai.usage.cost.status`-style hint (or accepting an explicit zero as authoritative) would let harnesses report reality.
+1. **Session rollup lag (observed, then self-healed — probably not a bug).** A first read of session `20260825_095742_7b42ec` reported `traceCount: 12` / `spanCount: 234` / `endTime: 11:07:06` while `listSessionTraces` already returned **17** traces summing 356 spans up to `11:21:58`. A later read of the same session reported 23 traces / 616 spans, matching the span data exactly (349 `execute_tool` + 244 `chat` + 23 `invoke_agent` = 616). So `sessions_mv` was behind, not lossy. Worth knowing the lag exists — a dashboard read straight after a turn can under-report — but there is nothing to fix unless it is shown to persist.
+
+2. **`queryAnalytics` returns three different sums for the same population.** Over the same range and the same `spans` stream, `metric: {kind:"sum", field:"tokens"}` gives **809,537** with `breakdown: "operation"` (the `chat` row, which matches the session rollup exactly), **893,861** with `filters: {operation: chat}` and no breakdown, and **916,899** with that filter plus `breakdown: "status"` (all of it under `success`, `error` = 0). A subset cannot exceed its superset, so at least two of the three paths are wrong — it smells like a join fan-out in the filtered path. Counts are unaffected and coherent (244 = 236 + 8), which is why the analysis in [5.1](#51-usage-accounting-latitude-versus-hermes-usage) leans on counts and on the rollup rather than on these sums.
+3. **Unknown message part types render raw.** An `output_text` part reached storage and the conversation UI showed the JSON blob. `normalizeGenAIMessages` already rewrites vendor spellings (`thinking`, `binary`, `result`); adding the Responses vocabulary (`output_text` / `input_text` → `text`, `function_call` → `tool_call`, `function_call_output` → `tool_call_response`) would make **any** Responses-dialect emitter render correctly, not just this plugin. Emitter-side normalization (M1) is still the right fix for us; this is defence in depth.
+4. **Cost on subscription-included routes.** Latitude priced this session at ≈ **$225.26** of catalog value although the user paid nothing (OAuth Codex subscription, which Hermes classifies `subscription_included` and prices at $0). The number is defensible as list-price equivalent, but there is no way for an emitter to say "this route is included". A `gen_ai.usage.cost.status`-style hint (or accepting an explicit zero as authoritative) would let harnesses report reality.
