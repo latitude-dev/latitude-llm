@@ -7,6 +7,7 @@ import {
   ESCALATION_CHECK_THROTTLE_MS,
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
+  SIGNAL_RECONCILE_CONSOLIDATION_THROTTLE_MS,
   SIGNAL_REFRESH_THROTTLE_MS,
 } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -355,11 +356,13 @@ describe("domain-events dispatcher", () => {
       survivorId: "signal-1",
     })
     // Keyed to this merge, so redelivery of the same event is idempotent while a
-    // later merge on the same survivor is never shadowed.
+    // later merge on the same survivor is never shadowed. A leading throttle rather
+    // than a bare dedupe key, or a permanently failed reconciliation would keep its
+    // retained jobId and shadow outbox redelivery.
     expect(reconcile?.options?.dedupeKey).toBe(
       "org:org-1:issues:reconcile-consolidation:signal-1:2026-05-21T10:00:00.000Z",
     )
-    expect(reconcile?.options?.throttleMs).toBeUndefined()
+    expect(reconcile?.options?.leadingThrottleMs).toBe(SIGNAL_RECONCILE_CONSOLIDATION_THROTTLE_MS)
   })
 
   it("routes SignalQualifiedForPromotion to promotion, announcing nothing yet", async () => {
