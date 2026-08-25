@@ -77,7 +77,14 @@ Files that matter (paths relative to that tree):
 | Reference observability plugin | `plugins/observability/langfuse/__init__.py` (consumes `system_prompt`, imports `agent.usage_pricing` for cost) |
 | Secret redaction | `agent/redact.py` `redact_sensitive_text` (774) |
 
-**Precedent inside this repo**: `packages/telemetry/claude-code/src/memory.ts` + `otlp.ts` (`buildMemorySpan`) is the reference for emitting `gen_ai.memory.*` from a harness plugin, including reading a file off disk to recover the post-state body. `packages/telemetry/pi` is the reference for the `interaction`/`llm_request`/`tool_call:*` span tree and the `:gated` content mechanism.
+### Precedent inside this repo
+
+| Reference | What to take from it |
+| --- | --- |
+| `packages/telemetry/python/src/latitude_telemetry/sdk/memory.py` (`create_memory_telemetry`) + `constants/attributes.py` (`MEMORY_ATTRIBUTES`) | The **canonical** `gen_ai.memory.*` emitter, in Python. Attribute names, span name = the operation, `SpanKind.CLIENT`, `record_count` defaulting to `len(records)`, `query.text` gated as content, `records` as a JSON string, and a per-call `redact(records, {operation, store_id})` seam. The Hermes plugin cannot *depend* on `latitude-telemetry` (it is stdlib-only by design) but its emitted attributes must be byte-identical to this. Its TypeScript twin is `packages/telemetry/typescript/src/sdk/memory.ts`. |
+| `packages/telemetry/claude-code/src/memory.ts` + `otlp.ts` (`buildMemorySpan`) | The only **harness-plugin** memory emitter today: classify a tool call into a memory op, recover the post-state body by reading the file off disk, cap the body (`MEMORY_RECORDS_CAP = 64 KiB`) rather than the serialized array, emit the memory span as a **child of the tool span**, keep the span when content capture is off (structure only), and inject `readFile` so tests never touch the real disk. Env flags `LATITUDE_CLAUDE_CODE_MEMORY` / `_MEMORY_CONTENT` are the naming precedent. |
+| `packages/telemetry/openclaw/src/redaction.ts` | Attribute-key redaction: a small pure `redactAttributes(attrs, {attributes, mask})` applied at encode time, where each pattern is an exact key or `/regex/flags`. **openclaw has no memory telemetry** — this is what it contributes instead, and it is worth porting ([M8-6](#milestone-8--privacy-and-configuration-f15-f16-f18)). |
+| `packages/telemetry/pi` | The `interaction` / `llm_request` / `tool_call:*` span tree and the `:gated` content mechanism. |
 
 ---
 
@@ -206,9 +213,11 @@ Ordered by user impact. Each maps to a milestone in [Tasks](#tasks).
 
 **F14 — `_flush()` blocks every turn.** `on_session_end` fires at each turn finalization and joins the exporter threads for up to 10 s, on the user's critical path.
 
-**F15 — Content is exported with no secret redaction.** `request_messages`, `conversation_history`, tool args and tool results are raw passthroughs; Hermes redacts secrets in its own logs/transcripts (`agent/redact.py`) but not in hook payloads, so a token echoed by a terminal tool ships to Latitude verbatim. There is no per-attribute redaction option (claude-code has `LATITUDE_REDACT_ATTRIBUTES`).
+**F15 — Content is exported with no secret redaction.** `request_messages`, `conversation_history`, tool args and tool results are raw passthroughs; Hermes redacts secrets in its own logs/transcripts (`agent/redact.py`) but not in hook payloads, so a token echoed by a terminal tool ships to Latitude verbatim.
 
 **F16 — Config is env-only, and the plugin ignores `ctx`.** `register(ctx)` uses `ctx` only for `register_hook`, so the documented plugin config surface (`plugins.entries.latitude.settings.*` via `ctx.get_config`) and `ctx.profile_name` are unavailable. Config is also cached process-wide on first read, so a credential added to `~/.hermes/.env` after import never takes effect.
+
+**F18 — No per-attribute redaction control.** Both sibling emitters let a user say "never send this attribute": claude-code has `LATITUDE_REDACT_ATTRIBUTES`, openclaw has `redaction.attributes` (`packages/telemetry/openclaw/src/redaction.ts`, exact key or `/regex/flags`, whole value replaced by a mask). Hermes has neither, so a user who wants to keep, say, `gen_ai.memory.records` or `gen_ai.tool.call.result` local has only the all-or-nothing `LATITUDE_NO_CONTENT` switch.
 
 **F17 — Small correctness/parity nits.**
 (a) `service.instance.id` is set on child spans but not on the root.
@@ -367,7 +376,10 @@ classify_write(args, result)      -> {record_id, operation, action, entry_count,
 - Paths from `tools.memory_tool.get_memory_dir()` (guarded import; deliberately a function, not a constant, so `HERMES_HOME` and profile switches after import are respected), falling back to `${HERMES_HOME:-~/.hermes}/memories`.
 - `entry_count` = `len(body.split("\n§\n"))` on a non-empty body (`ENTRY_DELIMITER = "\n§\n"`, `tools/memory_tool.py:78` — inline the literal rather than importing it); `chars` = file length; `limit` from the tool result's `usage` string (`"67% — 1,474/2,200 chars"`) when present.
 - `store_id` uses `ctx.profile_name`, which is a **property**, not a method (`hermes_cli/plugins.py:1621`); it returns `"default"`, the profile id under `~/.hermes/profiles/<name>`, or `"custom"` for an unrecognized `HERMES_HOME`. Fallback when `ctx` is unavailable: `hermes_cli.profiles.get_active_profile_name()`, then `"default"`.
-- Bodies are capped (`MEMORY_RECORDS_MAX_CHARS`, default 32 768 — both stores are ≤ 2 200/1 375 chars, so the cap is pure insurance) and the cap is applied to the **body**, not the serialized array, so the attribute stays parseable JSON for the materializer.
+- Bodies are capped at `MEMORY_RECORDS_CAP = 64 * 1024` chars (same constant as the claude-code emitter; both Hermes stores are ≤ 2 200/1 375 chars, so the cap is pure insurance) and the cap is applied to the **body**, not the serialized array, so the attribute stays parseable JSON for the materializer.
+- `read_snapshot` takes an injectable `read_file` callable defaulting to a guarded `Path.read_text`, mirroring claude-code's `readFile` seam, so tests never touch a real home directory.
+- `gen_ai.memory.record.count` is `len(records)` — i.e. 1 — matching the SDK helper's default. **Never emit an empty `gen_ai.memory.record.id`**: an omitted record id is the OTEL signal for a *whole-store wipe*, which the ledger turns into a tombstone for every live record in the store. Hermes only ever touches one named file, so the record id is always present, including on `delete_memory`.
+- `gen_ai.memory.query.text` is never emitted: the session-start read is an unconditional full-store snapshot, not a query. (It is content-gated in the SDK helper, so if a future external-provider path ever has a query, it must go behind the content gate.)
 - Disabled by `LATITUDE_HERMES_MEMORY=0`; bodies suppressed by `LATITUDE_HERMES_MEMORY_CONTENT=0` or by the global no-content switch.
 - External provider check: `hermes_cli.config.load_config_readonly().get("memory", {}).get("provider")` — when set to anything other than the built-in default, skip.
 
@@ -392,13 +404,15 @@ Replace thread-per-payload with a single daemon exporter:
 - Per-span content budget `LATITUDE_HERMES_MAX_CONTENT_CHARS` (default **262 144** per attribute): middle-out truncation of the message array with an explicit omission marker message, so a pathological turn cannot produce an unshippable span.
 - `_flush(timeout)` waits for an empty queue and no in-flight request. `on_session_end` → 2 s (off the turn's critical path), `on_session_finalize` → 10 s, plus an `atexit` hook at 10 s so one-shot `hermes -z` runs still land ([D7](#11-decisions)).
 
-### 8.6 `redact.py` — secret redaction (F15)
+### 8.6 `redact.py` — secret redaction and attribute redaction (F15, F18)
 
 `redact(text) -> str` wrapping `agent.redact.redact_sensitive_text(text, force=True, redact_url_credentials=True)`, applied to every gated string on the way into the span (messages, system instructions, tool args/results, memory bodies, subagent summaries).
 
 - `force=True` because a telemetry egress is exactly the "safety boundary that must never return raw secrets" the Hermes docstring describes — it must not depend on the user's `security.redact_secrets` logging preference.
 - Bounded memo dict keyed by string hash (`REDACT_CACHE_MAX`, default 4 096) so re-exporting the same replayed history on every span costs one pass, not one per span.
 - Default **on** (`LATITUDE_HERMES_REDACT_SECRETS=0` to disable). If the guarded import fails (Hermes internals moved), export continues unredacted, `hermes.redaction.applied=false` goes on the span, and a one-time `logger.warning` fires — visible degradation rather than a silent privacy claim.
+
+The second, blunter control is a port of openclaw's `redactAttributes`: `LATITUDE_HERMES_REDACT_ATTRIBUTES` is a comma-separated list of attribute keys, each an exact match or `/regex/flags`, whose **whole value** is replaced by `LATITUDE_HERMES_REDACT_MASK` (default `******`) inside `_encode_attrs`. Two rules, both borrowed: patterns that fail to compile fall back to exact-key matching rather than throwing, and a redacted key is **kept** rather than dropped — the same reasoning as `dev-docs/spans.md`'s "redaction never deletes an attribute", so the Attributes panel keeps showing what the emitter actually sent. The two controls are complementary: the secret redactor masks secret-shaped values *inside* content it still exports; this one blanks a whole attribute the user never wants to leave the machine.
 
 ### 8.7 `config.py` — configuration (F16)
 
@@ -426,6 +440,8 @@ New:
 | `LATITUDE_HERMES_STREAM_TTFT` | `1` | Subscribe to stream deltas to measure TTFT |
 | `LATITUDE_HERMES_MAX_CONTENT_CHARS` | `262144` | Per-attribute content budget before middle-out truncation |
 | `LATITUDE_HERMES_TOOL_DEFINITIONS` | `1` | Emit `gen_ai.tool.definitions` |
+| `LATITUDE_HERMES_REDACT_ATTRIBUTES` | — | Comma-separated attribute keys, or `/regex/flags`, whose value is replaced by `LATITUDE_HERMES_REDACT_MASK` |
+| `LATITUDE_HERMES_REDACT_MASK` | `******` | Replacement for a redacted attribute value |
 
 Every key is also readable from `config.yaml` under `plugins.entries.latitude.settings.<snake_case_key>` (`api_key`, `project`, `base_url`, `no_content`, `memory`, `redact_secrets`, …), env taking precedence.
 
@@ -437,7 +453,6 @@ Every key is also readable from `config.yaml` under `plugins.entries.latitude.se
 - **`session_search`, skills, kanban, gateway platform events, slash commands, approvals.** Interesting, none of it maps to a Latitude entity today. (Approval waits on a tool span are the most tempting; deliberately deferred.)
 - **Emitting cost for subscription-included routes.** Hermes reports `status="included"` / `$0` for OAuth Codex; a zero is treated as absent by Latitude anyway, and the catalog estimate is the more useful number. See [D6](#11-decisions).
 - **Gzip / protobuf OTLP.** `apps/ingest` decodes neither for this path; payload control is by construction.
-- **Per-attribute redaction allowlists** (claude-code's `LATITUDE_REDACT_ATTRIBUTES`). The secret redactor plus the no-content switch cover the dogfood need; revisit if asked.
 - **Changing Latitude's ingest, resolvers or schema.** This PR is emitter-side only. Platform gaps found on the way are listed in [Platform-side follow-ups](#platform-side-follow-ups-out-of-scope).
 
 ---
@@ -556,7 +571,7 @@ Every key is also readable from `config.yaml` under `plugins.entries.latitude.se
 
 ### Milestone 5 — Memory telemetry (F4)
 
-- [ ] **M5-1**: `memory.py`: store/record resolution via guarded `get_memory_dir()` with an env fallback, `store_id = "hermes/<profile>"`, `§`-entry counting, body cap, external-provider detection.
+- [ ] **M5-1**: `memory.py`: store/record resolution via guarded `get_memory_dir()` with an env fallback, `store_id = "hermes/<profile>"` from the `ctx.profile_name` **property**, `§`-entry counting, 64 KiB body cap, injectable `read_file`, external-provider detection. Attribute names and span shape must match `packages/telemetry/python/src/latitude_telemetry/sdk/memory.py` exactly (span name = the operation, `kind: 3`, `record.count = len(records)`, `records` as a JSON string, never an empty `record.id`).
 - [ ] **M5-2**: Session-start read: one `search_memory` span per non-empty store on the first `pre_api_request` of a session, child of the interaction root, `records` from disk; latch reset on `on_session_start` / `on_session_reset`.
 - [ ] **M5-3**: Writes: on `post_tool_call` for `tool_name == "memory"` with `status == "ok"`, emit `upsert_memory` (or `delete_memory` when the store is now empty) as a **child of the tool span**, body read back from disk, with `hermes.memory.*` counters and the entry-count mismatch guard from [D4](#11-decisions).
 - [ ] **M5-4**: Honour `LATITUDE_HERMES_MEMORY` / `LATITUDE_HERMES_MEMORY_CONTENT` and the global no-content switch (structure-only spans keep `store.id`/`record.id`/`record.count`).
@@ -585,13 +600,14 @@ Every key is also readable from `config.yaml` under `plugins.entries.latitude.se
 
 **Exit gate**: the replayed 110-span turn ships completely, no request over 4 MiB, no duplicate span ids.
 
-### Milestone 8 — Privacy and configuration (F15, F16)
+### Milestone 8 — Privacy and configuration (F15, F16, F18)
 
 - [ ] **M8-1**: `redact.py` with `force=True`, URL-credential redaction, bounded memo cache, `hermes.redaction.applied` attribute and the one-time warning on import failure.
 - [ ] **M8-2**: Apply redaction to every gated string (messages, system instructions, tool args/results, memory bodies, subagent summaries).
 - [ ] **M8-3**: `config.py`: env → `ctx.get_config` → default; capture `ctx.profile_name`; re-read config on `on_session_start`; test that `PKG_VERSION` matches `pyproject.toml`.
 - [ ] **M8-4**: Register the full hook set in `hooks.py` and update the exact-set assertion in `tests/test_plugin.py`.
-- [ ] **M8-5**: Tests: a secret-shaped token in a tool result is masked in the exported span; redaction disabled by env leaves it; `config.yaml` settings are read when the env is empty.
+- [ ] **M8-5**: Port openclaw's attribute-key redaction (`packages/telemetry/openclaw/src/redaction.ts`) as a pure function applied in `_encode_attrs`: each pattern is an exact key or `/regex/flags`, a match replaces the whole value with the mask, and a redacted key is **kept** (never dropped) so the Attributes panel still shows what the emitter sent.
+- [ ] **M8-6**: Tests: a secret-shaped token in a tool result is masked in the exported span; redaction disabled by env leaves it; a `LATITUDE_HERMES_REDACT_ATTRIBUTES` key and a `/regex/` both mask their value and keep their key; `config.yaml` settings are read when the env is empty.
 
 **Exit gate**: a fixture turn containing an `sk-`-shaped token exports it masked; the registered hook set matches [8.8](#88-hookspy--registrations).
 
