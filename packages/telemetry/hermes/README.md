@@ -117,7 +117,8 @@ live in [`dev-docs/hermes-telemetry.md`](../../../dev-docs/hermes-telemetry.md).
 Every setting is readable from **two** places, the environment winning: the env var below,
 or `plugins.entries.latitude.settings.<key>` in the active profile's `config.yaml`. Both
 `config.yaml` and `.env` are profile-scoped, so one profile per agent gives each agent its
-own credentials, tags and metadata.
+own credentials, tags and metadata. The `~/.hermes/…` paths here are the **default**
+profile's; a named profile keeps its own pair under `~/.hermes/profiles/<name>/`.
 
 ```yaml
 # ~/.hermes/config.yaml
@@ -143,7 +144,7 @@ plugins:
 | `LATITUDE_HERMES_NO_CONTENT` / `LATITUDE_NO_CONTENT` | `no_content` | `false` | Structure and timing only |
 | `LATITUDE_HERMES_MAX_CONTENT_CHARS` | `max_content_chars` | `262144` | Per-attribute content budget; larger values are truncated from the middle |
 | `LATITUDE_HERMES_REDACT_SECRETS` | `redact_secrets` | `true` | Run exported content through Hermes's secret redactor |
-| `LATITUDE_HERMES_REDACT_ATTRIBUTES` | `redact_attributes` | — | Attribute keys never to send; exact key or `/regex/flags` |
+| `LATITUDE_HERMES_REDACT_ATTRIBUTES` | `redact_attributes` | — | Attributes whose **value** never leaves the machine; the key is still sent, masked. Exact key or `/regex/flags` |
 | `LATITUDE_HERMES_REDACT_MASK` | `redact_mask` | `******` | Replacement for a redacted attribute value |
 | `LATITUDE_HERMES_MEMORY` | `memory` | `true` | Emit memory spans for the built-in stores |
 | `LATITUDE_HERMES_MEMORY_CONTENT` | `memory_content` | `true` | Include memory record bodies |

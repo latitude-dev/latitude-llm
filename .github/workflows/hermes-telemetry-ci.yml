@@ -6,6 +6,9 @@ on:
       - development
     paths:
       - packages/telemetry/hermes/**
+      # Without this, a PR that only edits this file skips the workflow — which
+      # leaves the check pending forever once it is required.
+      - .github/workflows/hermes-telemetry-ci.yml
   workflow_call:
 
 concurrency:
@@ -23,6 +26,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
+        with:
+          # The steps below run pull-request-controlled code; nothing here needs git
+          # auth after checkout, so do not leave a token in the local git config.
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v7.0.0

@@ -110,7 +110,7 @@ Every setting can be given in **two** places, and the environment wins:
 - an environment variable — in your shell or in `~/.hermes/.env`;
 - a key under `plugins.entries.latitude.settings` in `~/.hermes/config.yaml`.
 
-Both files are **per profile** (`~/.hermes/profiles/<name>/`), so if you give each agent its own Hermes profile, each one gets its own credentials, tags and metadata with no environment juggling.
+Both files are **per profile**, so if you give each agent its own Hermes profile, each one gets its own credentials, tags and metadata with no environment juggling. The paths on this page (`~/.hermes/config.yaml`, `~/.hermes/.env`) are the **default** profile's; a named profile keeps its own pair under `~/.hermes/profiles/<name>/`, and that is the one to edit when a profile is active.
 
 ```yaml
 # ~/.hermes/config.yaml

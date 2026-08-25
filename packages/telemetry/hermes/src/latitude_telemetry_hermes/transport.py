@@ -26,7 +26,13 @@ from .config import (
 from .model import _Span
 from .otlp import _build_payload, _encode_options, _encode_span
 
-_RETRY_STATUS = {408, 425, 429, 500, 502, 503, 504}
+# Only statuses where ingest has *told* us it refused the batch. A 5xx or a lost
+# connection is ambiguous — the insert may have committed before the response was
+# lost — and `traces_mv`/`sessions_mv` are additive per insert, so resending an
+# ambiguous batch inflates span counts, tokens and cost. Dropping it costs one
+# debug line instead. `apps/ingest` signals refusal explicitly: 429 for a rate
+# limit, 503 with Retry-After for admission exhaustion.
+_RETRY_STATUS = {408, 425, 429, 503}
 
 _QUEUE: Queue[List[_Span]] = Queue(maxsize=EXPORT_QUEUE_MAX)
 _LOCK = threading.Lock()
@@ -145,8 +151,10 @@ def _attempt_post(url: str, data: bytes, cfg: Dict[str, Any], attempt: int) -> O
         _debug(f"ingest HTTP {exc.code}, retrying (attempt {attempt})")
         return _backoff(attempt, exc.headers.get("Retry-After") if exc.headers else None)
     except Exception as exc:
-        _debug(f"ingest failed: {exc} (attempt {attempt})")
-        return _backoff(attempt, None)
+        # Ambiguous: the request may have been committed before the connection
+        # broke. Every span id ships exactly once, so this batch is dropped.
+        _debug(f"ingest failed, dropping {len(data)} bytes rather than risk a double insert: {exc}")
+        return None
 
 
 def _backoff(attempt: int, retry_after: Any) -> float:
@@ -170,5 +178,5 @@ def _flush(timeout: float = 10.0) -> None:
 def _flush_at_exit() -> None:
     try:
         _flush(10.0)
-    except Exception:
+    except Exception:  # interpreter teardown can break logging itself, so stay silent
         pass

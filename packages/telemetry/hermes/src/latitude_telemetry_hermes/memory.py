@@ -113,8 +113,14 @@ def classify_write(args: Any, result: Any, read_file: Optional[ReadFile] = None)
 
     snapshot = read_snapshot(record_id, read_file)
     body, entries, chars = snapshot if snapshot else ("", 0, 0)
+    reported = _reported_entry_count(result)
+    # Only the tool's own count may classify a store as emptied. `read_snapshot`
+    # returns None for an unreadable file as well as an empty one, and mistaking
+    # the first for the second publishes a deletion the ledger turns into a
+    # tombstone for a record the agent had just written to.
+    emptied = reported == 0
     op = {
-        "operation": "delete_memory" if not body else "upsert_memory",
+        "operation": "delete_memory" if emptied else "upsert_memory",
         "record_id": record_id,
         "body": body,
         "entry_count": entries,
@@ -122,9 +128,8 @@ def classify_write(args: Any, result: Any, read_file: Optional[ReadFile] = None)
         "action": action,
         "limit": _limit_from_result(result),
     }
-    reported = _reported_entry_count(result)
     # A disagreement means a sister session wrote between the tool's flush and
-    # our read: keep the span, drop a body we cannot vouch for.
+    # our read, or the read failed: keep the span, drop a body we cannot vouch for.
     if reported is not None and reported != entries:
         _debug(f"memory entry count mismatch for {record_id}: {reported} reported, {entries} on disk")
         op["body"] = ""

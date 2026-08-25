@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from .config import _config, _debug
 from .hermes import state_db_path

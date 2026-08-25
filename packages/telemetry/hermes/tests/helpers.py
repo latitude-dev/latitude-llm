@@ -31,11 +31,22 @@ def encoded_spans(spans: List[_Span]) -> List[Dict[str, Any]]:
 
 
 def span_attrs(spans: List[_Span], name: str) -> Dict[str, Any]:
-    for span in encoded_spans(spans):
-        if span["name"] == name:
-            return attr_map(span["attributes"])
-    raise AssertionError(f"no {name!r} span in {[s['name'] for s in encoded_spans(spans)]}")
+    """The one span with this name.
+
+    A finish can close several `llm_request` or `tool_call:<name>` spans at once, so
+    silently taking the first would let a test assert against a span it did not mean.
+    """
+    matches = [span for span in encoded_spans(spans) if span["name"] == name]
+    if len(matches) != 1:
+        raise AssertionError(f"expected exactly one {name!r} span, got {len(matches)} in {_names(spans)}")
+    return attr_map(matches[0]["attributes"])
+
+
+def _names(spans: List[_Span]) -> List[str]:
+    return [span["name"] for span in encoded_spans(spans)]
 
 
 def by_name(spans: List[_Span]) -> Dict[str, _Span]:
+    """Keyed by span name; a repeated name keeps the last. Use `span_attrs` when
+    the test depends on there being exactly one."""
     return {span.name: span for span in spans}

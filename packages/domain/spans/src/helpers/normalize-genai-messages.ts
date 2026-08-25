@@ -89,11 +89,18 @@ const normalizePart = (part: unknown): unknown => {
     return { ...rest, type: "text", content }
   }
 
-  if (part.type === "function_call") {
+  if (part.type === "function_call" || part.type === "custom_tool_call") {
     const name = typeof part.name === "string" ? part.name : ""
     if (!name) return part
-    const { call_id: _callId, id: _id, arguments: args, name: _name, type: _type, ...rest } = part
-    return { ...rest, type: "tool_call", ...pairingId(part), name, arguments: parsedArguments(args) }
+    // A custom tool call carries a free-form `input` where a function call carries `arguments`.
+    const { call_id: _callId, id: _id, arguments: args, input, name: _name, type: _type, ...rest } = part
+    return {
+      ...rest,
+      type: "tool_call",
+      ...pairingId(part),
+      name,
+      arguments: parsedArguments(args === undefined ? input : args),
+    }
   }
 
   if (part.type === "function_call_output" || part.type === "custom_tool_call_output") {

@@ -105,9 +105,6 @@ def test_a_503_is_retried_then_lands(monkeypatch):
 def test_a_400_is_never_retried(monkeypatch):
     calls: List[str] = []
 
-    class FakeResponse:
-        status = 202
-
     def fake_urlopen(req, timeout=0, context=None):
         calls.append("post")
         raise urlerr.HTTPError(req.full_url, 400, "Bad Request", {}, None)
@@ -115,6 +112,55 @@ def test_a_400_is_never_retried(monkeypatch):
     monkeypatch.setattr(transport._urlreq, "urlopen", fake_urlopen)
     transport._post_traces({"resourceSpans": []})
     assert calls == ["post"], "a malformed payload will not become valid on a retry"
+
+
+def test_an_ambiguous_failure_drops_the_batch_rather_than_resending_it(monkeypatch):
+    """A lost connection or a 5xx may have been committed before the response was
+    lost. `traces_mv`/`sessions_mv` are additive per insert, so resending would
+    inflate span counts, tokens and cost — worse than losing the batch."""
+    for failure in (
+        ConnectionResetError("reset"),
+        TimeoutError("read timed out"),
+        urlerr.HTTPError("http://x", 500, "Server Error", {}, None),
+        urlerr.HTTPError("http://x", 502, "Bad Gateway", {}, None),
+    ):
+        calls: List[str] = []
+
+        def fake_urlopen(req, timeout=0, context=None, _f=failure, _calls=calls):
+            _calls.append("post")
+            raise _f
+
+        monkeypatch.setattr(transport._urlreq, "urlopen", fake_urlopen)
+        transport._post_traces({"resourceSpans": []})
+        assert calls == ["post"], f"{type(failure).__name__} must not be retried"
+
+
+def test_an_explicit_refusal_is_retried(monkeypatch):
+    """429 and 503 are ingest telling us it did not accept the batch, so a resend
+    cannot double-insert."""
+    for code in (429, 503):
+        calls: List[str] = []
+
+        def fake_urlopen(req, timeout=0, context=None, _c=code, _calls=calls):
+            _calls.append("post")
+            if len(_calls) == 1:
+                raise urlerr.HTTPError("http://x", _c, "Refused", {}, None)
+
+            class Resp:
+                status = 200
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *a):
+                    return False
+
+            return Resp()
+
+        monkeypatch.setattr(transport._urlreq, "urlopen", fake_urlopen)
+        monkeypatch.setattr(transport.time, "sleep", lambda _s: None)
+        transport._post_traces({"resourceSpans": []})
+        assert len(calls) == 2, f"HTTP {code} must be retried"
 
 
 def test_retry_after_is_honoured():

@@ -54,6 +54,23 @@ describe("normalizeGenAIMessages", () => {
     expect(message?.parts).toEqual([{ type: "tool_call", id: "call_1", name: "terminal", arguments: { cmd: "ls" } }])
   })
 
+  it("rewrites a Responses `custom_tool_call`, whose payload arrives under input", () => {
+    const messages = normalizeGenAIMessages([
+      {
+        role: "assistant",
+        parts: [
+          { type: "custom_tool_call", call_id: "c_1", name: "run_sql", input: "select 1" },
+          { type: "custom_tool_call_output", call_id: "c_1", output: "1 row" },
+        ],
+      },
+    ] as never)
+
+    expect(messages).toEqual([
+      { role: "tool", parts: [{ type: "tool_call_response", id: "c_1", response: "1 row" }] },
+      { role: "assistant", parts: [{ type: "tool_call", id: "c_1", name: "run_sql", arguments: "select 1" }] },
+    ])
+  })
+
   it("keeps unparseable arguments as the string they arrived as", () => {
     const [message] = normalizeGenAIMessages([
       { role: "assistant", parts: [{ type: "function_call", call_id: "c", name: "t", arguments: "not json" }] },

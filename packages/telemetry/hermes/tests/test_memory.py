@@ -14,7 +14,7 @@ from helpers import by_name, span_attrs
 
 import latitude_telemetry_hermes.memory as memory_store
 from latitude_telemetry_hermes.builder import _Builder
-from latitude_telemetry_hermes.config import reset_config
+from latitude_telemetry_hermes.config import reset_config, set_plugin_context
 
 _ENTRY_DELIMITER = "\n§\n"
 
@@ -114,9 +114,7 @@ def test_the_store_id_follows_the_profile(monkeypatch):
         def get_config(self, key, default=None):
             return default
 
-    import latitude_telemetry_hermes.config as config
-
-    config.set_plugin_context(Ctx())
+    set_plugin_context(Ctx())
     assert memory_store.store_id() == "hermes/alescriptslack"
 
 
@@ -195,6 +193,30 @@ def test_a_concurrent_sister_write_drops_the_body_but_keeps_the_span(memories: P
     attrs = span_attrs(spans, "upsert_memory")
     assert "gen_ai.memory.records" not in attrs, "a body we cannot vouch for is not exported"
     assert attrs["gen_ai.memory.record.id"] == "MEMORY.md"
+
+
+def test_an_unreadable_store_is_not_reported_as_a_deletion(memories: Path):
+    """`read_snapshot` returns None for an unreadable file as well as an empty one.
+    Classifying on the read alone published a successful write as a deletion, which
+    the ledger turns into a tombstone for the record just written."""
+    op = memory_store.classify_write(
+        {"target": "memory", "action": "add", "content": "kept"},
+        {"success": True, "target": "memory", "usage": "1% — 30/2,200 chars", "entry_count": 2},
+        read_file=lambda _path: None,  # a permission change, an encoding error, a concurrent truncate
+    )
+    assert op is not None
+    assert op["operation"] == "upsert_memory"
+    assert op["body"] == "", "a body we could not read is not exported"
+    assert op["stale"] is True
+
+
+def test_a_store_the_tool_reports_as_emptied_is_a_deletion(memories: Path):
+    op = memory_store.classify_write(
+        {"target": "memory", "action": "remove", "old_text": "x"},
+        {"success": True, "target": "memory", "usage": "0% — 0/2,200 chars", "entry_count": 0},
+        read_file=lambda _path: None,
+    )
+    assert op is not None and op["operation"] == "delete_memory"
 
 
 def test_a_non_memory_tool_emits_no_memory_span(memories: Path):

@@ -34,7 +34,7 @@ def _resolve_version() -> Optional[str]:
         version = getattr(hermes_cli, "__version__", None)
         if isinstance(version, str) and version:
             return version
-    except Exception:
+    except Exception:  # not importable outside a Hermes install; the metadata lookup follows
         pass
     try:
         from importlib.metadata import version
@@ -51,7 +51,7 @@ def profile_name() -> str:
         name = get_active_profile_name()
         if isinstance(name, str) and name:
             return name
-    except Exception:
+    except Exception:  # profiles are optional; the default profile is the right answer
         pass
     return "default"
 

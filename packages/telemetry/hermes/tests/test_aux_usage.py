@@ -14,7 +14,9 @@ from typing import Any, Dict, List
 import pytest
 from helpers import attr_map, span_attrs
 
+import latitude_telemetry_hermes.hooks as hooks
 from latitude_telemetry_hermes.aux_usage import aux_spans
+from latitude_telemetry_hermes.builder import _Builder
 from latitude_telemetry_hermes.config import reset_config
 from latitude_telemetry_hermes.hermes import state_db_path
 from latitude_telemetry_hermes.otlp import _build_otlp
@@ -177,11 +179,6 @@ def test_a_subagents_auxiliary_calls_are_reconciled_into_the_parent_session(ledg
     """A child records its usage under its own session id and never gets a
     finalize of its own, so only the parent's teardown can reach those rows —
     and they belong to the parent's session, where its spans already are."""
-    import sqlite3
-
-    import latitude_telemetry_hermes.hooks as hooks
-    from latitude_telemetry_hermes.builder import _Builder
-
     connection = sqlite3.connect(ledger)
     connection.execute(
         """INSERT INTO session_model_usage

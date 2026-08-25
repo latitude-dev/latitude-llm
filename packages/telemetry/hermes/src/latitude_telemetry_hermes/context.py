@@ -52,24 +52,20 @@ def build_session_context(kw: Mapping[str, Any], cfg: Mapping[str, Any], session
         tags.append(f"cron:{cron_job}")
     tags.extend(cfg.get("tags") or [])
 
-    metadata: Dict[str, Any] = dict(_user_metadata(cfg))
-    # Derived keys are applied last, so a user key can never overwrite them.
-    metadata.update(
-        {
-            "hermes.session.id": session_id,
-            "hermes.platform": platform,
-            "hermes.profile": profile,
-            "hermes.version": hermes_version(),
-            "hermes.plugin.version": PKG_VERSION,
-            "hermes.agent.name": agent_name or None,
-            "hermes.agent.version": agent_version or None,
-            "hermes.cron.job.id": cron_job,
-        }
-    )
+    derived: Dict[str, Any] = {
+        "hermes.session.id": session_id,
+        "hermes.platform": platform,
+        "hermes.profile": profile,
+        "hermes.version": hermes_version(),
+        "hermes.plugin.version": PKG_VERSION,
+        "hermes.agent.name": agent_name or None,
+        "hermes.agent.version": agent_version or None,
+        "hermes.cron.job.id": cron_job,
+    }
 
     return SessionContext(
         tags=_sanitize_tags(tags),
-        metadata=_sanitize_metadata(metadata),
+        metadata=_sanitize_metadata(derived, _user_metadata(cfg)),
         agent_name=agent_name,
         service_name=str(cfg.get("service_name") or "hermes-agent"),
     )
@@ -116,17 +112,24 @@ def _sanitize_tags(raw: List[str]) -> Tuple[str, ...]:
     return tuple(out)
 
 
-def _sanitize_metadata(raw: Mapping[str, Any]) -> Mapping[str, str]:
+def _sanitize_metadata(derived: Mapping[str, Any], user: Mapping[str, Any]) -> Mapping[str, str]:
+    """Derived keys are placed first so the key cap can only ever evict a user's.
+
+    Filling from the user's map first would let a 64-key config push out
+    `hermes.session.id` and every other derived key — the same harm as an
+    overwrite, reached by eviction instead.
+    """
     out: Dict[str, str] = {}
     dropped = 0
-    for key, value in raw.items():
-        if value is None or value == "":
-            continue
-        text = value if isinstance(value, str) else _stringify(value)
-        if len(text) > MAX_METADATA_VALUE_CHARS or len(out) >= MAX_METADATA_KEYS:
-            dropped += 1
-            continue
-        out[str(key)] = text
+    for source in (derived, user):
+        for key, value in source.items():
+            if value is None or value == "" or str(key) in out:
+                continue
+            text = value if isinstance(value, str) else _stringify(value)
+            if len(text) > MAX_METADATA_VALUE_CHARS or len(out) >= MAX_METADATA_KEYS:
+                dropped += 1
+                continue
+            out[str(key)] = text
     if dropped:
         _debug(f"dropped {dropped} metadata entr(ies) over the {MAX_METADATA_KEYS}-key / value-length limit")
     return out

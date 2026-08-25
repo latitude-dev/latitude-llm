@@ -6,8 +6,8 @@ from typing import Any, Dict, List
 
 from helpers import by_name, span_attrs
 
-import latitude_telemetry_hermes.builder as builder_module
 from latitude_telemetry_hermes.builder import _Builder
+from latitude_telemetry_hermes.config import reset_config
 from latitude_telemetry_hermes.model import _Span
 
 _MESSAGES = [
@@ -142,7 +142,7 @@ def test_a_snapshot_never_overwrites_a_request_sourced_list(monkeypatch):
 
 def test_tool_definitions_disabled_by_config(monkeypatch):
     monkeypatch.setenv("LATITUDE_HERMES_TOOL_DEFINITIONS", "0")
-    builder_module._config.__globals__["reset_config"]()
+    reset_config()
     b = _Builder()
     b.on_pre_api_request(**_turn())
     assert "gen_ai.tool.definitions" not in span_attrs(b.on_post_api_request(**_post()), "llm_request")
@@ -381,7 +381,7 @@ def test_cost_is_only_exported_when_hermes_reports_an_actual_figure(monkeypatch)
         "billing_mode": "subscription_included",
         "provider": "openai-codex",
     }
-    monkeypatch.setattr(builder_module, "estimate_cost", lambda *a, **k: included)
+    monkeypatch.setattr("latitude_telemetry_hermes.builder.estimate_cost", lambda *a, **k: included)
     b = _Builder()
     b.on_pre_api_request(**_turn())
     attrs = span_attrs(b.on_post_api_request(**_post()), "llm_request")
@@ -391,7 +391,7 @@ def test_cost_is_only_exported_when_hermes_reports_an_actual_figure(monkeypatch)
     assert attrs["hermes.provider.raw"] == "openai-codex", "the raw route, which resolveProviderName folds away"
 
     actual = {"amount": 1.25, "status": "actual", "label": "$1.25", "billing_mode": "api_key", "provider": "openai"}
-    monkeypatch.setattr(builder_module, "estimate_cost", lambda *a, **k: actual)
+    monkeypatch.setattr("latitude_telemetry_hermes.builder.estimate_cost", lambda *a, **k: actual)
     b2 = _Builder()
     b2.on_pre_api_request(**_turn(session_id="sess-2"))
     attrs2 = span_attrs(b2.on_post_api_request(**_post(session_id="sess-2")), "llm_request")
@@ -484,7 +484,7 @@ def test_subagent_stop_records_the_outcome_and_clears_the_registry():
 
 
 def test_eviction_ships_the_evicted_run_instead_of_dropping_it(monkeypatch):
-    monkeypatch.setattr(builder_module, "_MAX_RUNS", 2)
+    monkeypatch.setattr("latitude_telemetry_hermes.builder._MAX_RUNS", 2)
     b = _Builder()
     b.on_pre_api_request(**_turn(session_id="a", turn_id="ta"))
     b.on_pre_api_request(**_turn(session_id="b", turn_id="tb"))
