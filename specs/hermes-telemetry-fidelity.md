@@ -184,7 +184,24 @@ Session `conversation` (`getSession`) is the last `llm_request`'s input plus its
 
 ### 5.1 Usage accounting: Latitude versus Hermes `/usage` — reconciled
 
-`/usage` at the end of the session reported 205 API calls, 668,303 input, 81,784 output (31,529 reasoning), 27,395,983 prompt total, 27,477,767 total. Latitude reported 236 token-bearing `chat` spans, `tokensInput` 744,969, `tokensOutput` 64,568, `tokensReasoning` 35,583, `tokensCacheRead` 31,593,088. A read-only audit of `<hermes_home>/state.db` (`scripts/usage-audit.sh`) closes the gap exactly.
+`/usage` at the end of the session reported 205 API calls, 668,303 input, 81,784 output (31,529 reasoning), 27,395,983 prompt total, 27,477,767 total. Latitude reported 236 token-bearing `chat` spans, `tokensInput` 744,969, `tokensOutput` 64,568, `tokensReasoning` 35,583, `tokensCacheRead` 31,593,088. A read-only audit of `<hermes_home>/state.db` closes the gap exactly. To reproduce on the agent host — read-only, never run the agent:
+
+```bash
+# main loop vs auxiliary, per task. task='' IS the main agent loop.
+sqlite3 "file:$HOME/.hermes/state.db?mode=ro" \
+  "SELECT task, model, billing_mode, api_call_count, input_tokens, output_tokens,
+          cache_read_tokens, reasoning_tokens, cost_status, estimated_cost_usd
+     FROM session_model_usage WHERE session_id='<session-id>' ORDER BY (task<>''), api_call_count DESC;"
+# the persisted per-session totals, immune to the /usage counter reset
+sqlite3 "file:$HOME/.hermes/state.db?mode=ro" \
+  "SELECT api_call_count, input_tokens, output_tokens, cache_read_tokens, reasoning_tokens,
+          billing_mode, cost_status, estimated_cost_usd FROM sessions WHERE id='<session-id>';"
+# the accumulator's own log line: count them, and watch for the counter going backwards
+grep -h "\[<session-id>\]" ~/.hermes/logs/agent.log* | grep -o "API call #[0-9]*" | grep -o "[0-9]*" \
+  | awk '{n++; if (NR>1 && $1<=prev) r++; if ($1>max) max=$1; prev=$1} END {print "lines="n, "max="max, "restarts="r+0}'
+```
+
+`<hermes_home>` is profile-scoped (`~/.hermes/profiles/<name>` under a non-default profile), and the DB is written by a background flusher, so read it after the turn finishes. `agent.log` rotates at 5 MB × 3 backups; `state.db` does not.
 
 `session_model_usage` for the session, which is keyed by `task` — `''` is the main agent loop, anything else is an auxiliary call recorded through `agent/aux_accounting.py`:
 
@@ -622,7 +639,7 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 | Subagent | `listTraceSpans` on the delegating trace | the child's `interaction` is nested under `tool_call:delegate`; `agentNames` non-empty |
 | Tags + metadata | `listSessions`, then `queryAnalytics {stream:"sessions", metric:{kind:"count"}, breakdown:"tag"}` | derived tags (`hermes`, the platform, the agent name, `<agent>@<version>`) and the configured extras are present on the session, and the breakdown returns one row per version tag |
 | Multi-agent split | run two profiles with different `agent.name`, then filter `tags` / `serviceNames` | each agent's sessions are selectable, and a two-variant experiment on `tags contains <agent>@<version>` populates both variants |
-| Usage vs `/usage` | run `/usage`, then `scripts/usage-audit.sh <session-id>` on the VM, then compare with `getSession` per [5.1](#51-usage-accounting-latitude-versus-hermes-usage--reconciled) | Latitude equals main loop + `background_review` on calls, input, output+reasoning, reasoning and cache read; after M11, Latitude equals `SUM(session_model_usage)` for the session |
+| Usage vs `/usage` | run `/usage`, then the `state.db` queries in [5.1](#51-usage-accounting-latitude-versus-hermes-usage--reconciled), then compare with `getSession` | Latitude equals main loop + `background_review` on calls, input, output+reasoning, reasoning and cache read; after M11, Latitude equals `SUM(session_model_usage)` for the session |
 | Payload health | `LATITUDE_DEBUG=1` stderr | every POST logs `HTTP 202`; no `413`/`429` retries exhausted; no dropped batches |
 
 **Regression guard**: re-run the largest turn shape from the evidence session (110 spans) and confirm no single request exceeds 4 MiB and the turn ships completely.
@@ -735,17 +752,30 @@ Every key is also readable from the profile's `config.yaml` under `plugins.entri
 
 ### Milestone 10 — Docs, version, QA (repo hygiene)
 
-- [ ] **M10-1**: New `dev-docs/hermes-telemetry.md`: hook contract table, trace shape, attribute tables, memory model, export path, config surface, privacy, package layout — written as the final intended system (sibling in depth to `dev-docs/pi-telemetry.md`).
-- [ ] **M10-2**: Update `packages/telemetry/hermes/README.md` and `docs/telemetry/hermes.md`: new env vars, the `config.yaml` settings block, memory section, privacy section (secret redaction on by default, what is still exported), trace-shape diagram, subagent nesting, and a **"several agents in one project"** section with the derived-tag table plus the worked version-comparison recipe (tag → `breakdown: "tag"` analytics; tag → experiment variant `filterSet`; `metadata.hermes.agent.version` for many versions; `service_name` for the Service axis).
-- [ ] **M10-3**: Document the `/usage` reconciliation in `docs/telemetry/hermes.md` and `dev-docs/hermes-telemetry.md`, using the worked table from [5.1](#51-usage-accounting-latitude-versus-hermes-usage--reconciled): Latitude = main loop + `background_review`; Latitude's output excludes reasoning while Hermes's includes it; `/usage` reads one `Agent`'s counters so background-review forks (and, on a route change, everything before the rebuild) are absent from it; `session_model_usage` in `state.db` is the arbiter; auxiliary calls (`approval`, `compression`, `title_generation`) are absent from Latitude unless [M11](#milestone-11--auxiliary-llm-accounting-f22-f23) ships; and a `subscription_included` route shows catalog cost, not what was paid. Point at `scripts/usage-audit.sh`.
-- [ ] **M10-4**: Bump `pyproject.toml` + `PKG_VERSION` to **0.2.0** and write the `CHANGELOG.md` entry (Added / Fixed / Changed) — required for any published `packages/telemetry/*` change.
-- [ ] **M10-5**: Refresh the `hermes` entry in `apps/web/.../onboarding-integration-snippets.ts` only if the install/enable steps changed (they should not).
-- [ ] **M10-6**: Update `specs/telemetry-qa.md` row **59** with what was verified live, and flip the status to ✅ **only after the user approves the dogfood run**.
-- [ ] **M10-7**: File the platform-side follow-ups below as GitHub issues; do not fix them here.
+- [ ] **M10-1**: New `dev-docs/hermes-telemetry.md` (internal): hook contract table, trace shape, attribute tables, memory model, subagent graph, export path, config surface, privacy, package layout — written as the final intended system, sibling in depth to `dev-docs/pi-telemetry.md`.
+- [ ] **M10-2**: **Public docs — complete configuration reference.** Rewrite the Configuration section of `docs/telemetry/hermes.md`: it currently opens "All configuration is read from environment variables" and lists six keys, which is wrong on both counts once this ships. It must document **both** surfaces (env var **and** `plugins.entries.latitude.settings.*` in the profile's `config.yaml`), state the precedence (env wins), note that both `config.yaml` and `.env` are **profile-scoped** so per-agent config comes free, carry the worked YAML example from [8.9](#89-contextpy--tags-and-metadata-f11-f19), and give one row per settable key with its default:
+  - credentials/transport — `LATITUDE_API_KEY` (`api_key`), `LATITUDE_PROJECT` / `LATITUDE_PROJECT_SLUG` (`project`), `LATITUDE_BASE_URL` (`base_url`)
+  - switches — `LATITUDE_HERMES_TELEMETRY_ENABLED` / `LATITUDE_TELEMETRY_ENABLED` (`enabled`), `LATITUDE_DEBUG` (`debug`)
+  - content — `LATITUDE_HERMES_NO_CONTENT` / `LATITUDE_NO_CONTENT` (`no_content`), `LATITUDE_HERMES_MAX_CONTENT_CHARS` (`max_content_chars`)
+  - privacy — `LATITUDE_HERMES_REDACT_SECRETS` (`redact_secrets`), `LATITUDE_HERMES_REDACT_ATTRIBUTES` (`redact_attributes`), `LATITUDE_HERMES_REDACT_MASK` (`redact_mask`)
+  - features — `LATITUDE_HERMES_MEMORY` (`memory`), `LATITUDE_HERMES_MEMORY_CONTENT` (`memory_content`), `LATITUDE_HERMES_TOOL_DEFINITIONS` (`tool_definitions`), `LATITUDE_HERMES_STREAM_TTFT` (`stream_ttft`), `LATITUDE_HERMES_AUX_USAGE` (`aux_usage`)
+  - identity/grouping — `LATITUDE_HERMES_AGENT_NAME` (`agent.name`), `LATITUDE_HERMES_AGENT_VERSION` (`agent.version`), `LATITUDE_HERMES_SERVICE_NAME` (`service_name`), `LATITUDE_HERMES_TAGS` / `LATITUDE_TAGS` (`tags`), `LATITUDE_HERMES_METADATA` / `LATITUDE_METADATA` (`metadata`)
+- [ ] **M10-3**: **Public docs — new and corrected sections** in `docs/telemetry/hermes.md`:
+  - *What gets captured*: the trace-shape diagram from [7.1](#71-trace-shape) including memory, subagent and auxiliary spans; system prompt and tool definitions now present.
+  - *Several agents in one project*: the derived-tag table from [8.9](#89-contextpy--tags-and-metadata-f11-f19) plus the version-comparison recipe — tag → `breakdown: "tag"` analytics, tag → experiment variant `filterSet`, `metadata.hermes.agent.version` when there are too many versions to tag, `service_name` for the Service axis.
+  - *Memory*: what a memory span is, that store id is `hermes/<profile>` with `MEMORY.md` / `USER.md` records, that bodies are read off disk after a successful `memory` tool call, and the two env switches. Note that an external `memory.provider` disables it.
+  - *Privacy*: rewrite — secret redaction is **on by default** (what it masks, and that it is Hermes's own redactor), attribute redaction for whole values, memory bodies and tool I/O ride by default, `no_content` for structure only.
+  - *Hooks list* in "How it works": the full registered set from [8.8](#88-hookspy--registrations), not the six it names today.
+  - *Troubleshooting*: fix the contradiction — the first bullet says to confirm the plugin with `hermes plugins list`, which the install note on the same page correctly says never works for a pip plugin. Replace with `LATITUDE_DEBUG=true` plus the `config.yaml` check.
+  - Confirm the page is still reachable in `docs/docs.json` (`telemetry/hermes`, line ~166) and that no heading anchor other pages link to disappeared.
+- [ ] **M10-4**: Bring `packages/telemetry/hermes/README.md` to parity with the public page (it carries its own config table and hook list) without duplicating prose the docs own — link out where the docs are the better home.
+- [ ] **M10-5**: Document the `/usage` reconciliation in both docs, using the worked table from [5.1](#51-usage-accounting-latitude-versus-hermes-usage--reconciled): Latitude = main loop + `background_review`; Latitude's output excludes reasoning while Hermes's includes it; `/usage` reads one `Agent`'s counters, so background-review forks (and, on a route change, everything before the rebuild) are missing from it; `session_model_usage` in `state.db` is the arbiter; auxiliary calls are absent unless [M11](#milestone-11--auxiliary-llm-accounting-f22-f23) ships; a `subscription_included` route shows catalog cost, not what was paid.
+- [ ] **M10-6**: Bump `pyproject.toml` + `PKG_VERSION` to **0.2.0** and write the `CHANGELOG.md` entry (Added / Fixed / Changed) — required for any published `packages/telemetry/*` change.
+- [ ] **M10-7**: Refresh the `hermes` entry in `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/onboarding-integration-snippets.ts` (and `onboarding/steps/telemetry-instructions.tsx`) only if the install/enable steps changed — they should not, but the snippet is the first thing a new user copies.
+- [ ] **M10-8**: Update `specs/telemetry-qa.md` row **59** with what was verified live, and flip the status to ✅ **only after the user approves the dogfood run**.
+- [ ] **M10-9**: File the platform-side follow-ups below as GitHub issues; do not fix them here.
 
-**Exit gate**: `uv run pytest` and `uv run ruff check .` green; docs describe the shipped behaviour; version and changelog bumped; QA row updated.
-
----
+**Exit gate**: `uv run pytest` and `uv run ruff check .` green; the public page documents every settable key on both surfaces and no longer claims env-only configuration; version and changelog bumped.
 
 ### Milestone 11 — Auxiliary LLM accounting (F22, F23)
 
