@@ -394,6 +394,16 @@ export function extractJailbreakSuspiciousSnippets(
     },
     {
       pattern:
+        /(?:pretend|assume|act as if).{0,40}(?:safety |your |the ){0,3}(?:rules?|guidelines?|policies|restrictions?|guardrails?).{0,20}(?:do not|don't|dont) apply/i,
+      reason: "safety-rule override",
+    },
+    {
+      pattern:
+        /(?:safety |your )?(?:rules?|guidelines?|policies|restrictions?) (?:do not|don't|dont) apply (?:to you|anymore|here)/i,
+      reason: "safety-rule override",
+    },
+    {
+      pattern:
         /(?:disable|turn off|bypass|ignore) (?:your |the )?(?:safety|guardrails?|restrictions?|limitations?|constraints?)/i,
       reason: "safety bypass attempt",
     },
@@ -414,8 +424,12 @@ export function extractJailbreakSuspiciousSnippets(
     },
     { pattern: /jailbreak|prompt injection/i, reason: "explicit manipulation reference" },
     {
-      pattern: /(?:leak|print|output|show|echo).{0,50}(?:hidden|secret|system|internal)/i,
+      pattern: /(?:leak|print|output|show|echo|dump).{0,50}(?:hidden|secret|system|internal)/i,
       reason: "information extraction",
+    },
+    {
+      pattern: /(?:dump|exfiltrate|export).{0,40}(?:every|all|the entire).{0,40}(?:memor(?:y|ies)|database|records?)/i,
+      reason: "bulk record dump",
     },
     { pattern: /\b(?:devtools?|developer tool|inspector|debug console)\b/i, reason: "tool abuse attempt" },
     {
