@@ -27,6 +27,7 @@ publicHoistPattern:
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "@temporalio/*"
+  - "rosetta-ai"
 
 # Disable npm `pre*` / `post*` lifecycle scripts (defense in depth on top of
 # pnpm-workspace.yaml `onlyBuiltDependencies` allowlist). Mini Shai-Hulud
@@ -74,7 +75,7 @@ catalog:
   quickjs-emscripten: 0.32.0
   react: 19.2.5
   react-dom: 19.2.5
-  rosetta-ai: 2.2.0
+  rosetta-ai: 2.3.0
   protobufjs: 8.6.6
   tsdown: 0.21.9
   tsx: 4.21.0
