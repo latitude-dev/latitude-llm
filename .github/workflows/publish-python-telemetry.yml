@@ -63,6 +63,24 @@ jobs:
           uv venv
           uv sync --all-extras --all-groups
 
+      - name: Run Ruff linter
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv run ruff check .
+
+      - name: Run Ruff format check
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv run ruff format --check .
+
+      - name: Run Pyright type check
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv run pyright src/
+
       - name: Run tests
         if: steps.check_version.outputs.should_publish == 'true'
         run: |
