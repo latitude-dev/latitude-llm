@@ -124,8 +124,8 @@ catalogs:
       specifier: 19.2.5
       version: 19.2.5
     rosetta-ai:
-      specifier: 2.2.0
-      version: 2.2.0
+      specifier: 2.3.0
+      version: 2.3.0
     tsdown:
       specifier: 0.21.9
       version: 0.21.9
@@ -664,7 +664,7 @@ importers:
         version: 19.2.5(react@19.2.5)
       rosetta-ai:
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.3.0
       satori:
         specifier: 0.26.0
         version: 0.26.0
@@ -1140,7 +1140,7 @@ importers:
         version: 4.0.0-beta.57
       rosetta-ai:
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.3.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1173,7 +1173,7 @@ importers:
         version: 4.0.0-beta.57
       rosetta-ai:
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.3.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1488,7 +1488,7 @@ importers:
         version: 4.0.0-beta.57
       rosetta-ai:
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.3.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2051,7 +2051,7 @@ importers:
         version: 8.6.0
       rosetta-ai:
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.3.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2576,7 +2576,7 @@ importers:
         version: 4.0.0-beta.57
       rosetta-ai:
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.3.0
     devDependencies:
       '@platform/testkit':
         specifier: workspace:*
@@ -3527,7 +3527,7 @@ importers:
         version: 19.2.5(react@19.2.5)
       rosetta-ai:
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.3.0
       tailwindcss:
         specifier: 4.2.4
         version: 4.2.4
@@ -12974,8 +12974,8 @@ packages:
       rollup:
         optional: true
 
-  rosetta-ai@2.2.0:
-    resolution: {integrity: sha512-tJzXJWc5KBmTdYs6D9nAZfmqutWNUK61nrkVY+x//j+HUobL34juK88SYiYiLZhwuo2tYyQsdoQtgqJz+uBIgQ==}
+  rosetta-ai@2.3.0:
+    resolution: {integrity: sha512-xaR2TC0nS2f+WUKrD1EMlp2lhLJ5lVkdvAHEuZH2SSgnxlaJZ0oZtq7Q7TM97Ah3bNq1XoPHJ10bnwTTJkDFVw==}
     engines: {node: '>=20.0.0'}
 
   rou3@0.7.12:
@@ -25661,7 +25661,7 @@ snapshots:
     optionalDependencies:
       rolldown: 1.0.3
 
-  rosetta-ai@2.2.0:
+  rosetta-ai@2.3.0:
     dependencies:
       zod: 4.4.3
 
