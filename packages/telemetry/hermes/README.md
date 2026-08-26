@@ -74,24 +74,38 @@ out, so a token echoed by a terminal tool is masked before it leaves the machine
 
 ## Upgrade
 
+Upgrade with the same tool you installed with, into the interpreter that runs Hermes. The official
+installer's venv ships **without `pip`** (`pip install -U` fails there with `No module named pip`),
+so it needs the `uv` form:
+
 ```bash
+# official installer
 ~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python -U latitude-telemetry-hermes
+
+# an environment you manage yourself
+pip install -U latitude-telemetry-hermes
+```
+
+Name a version instead of `-U` to pin or to roll back. One environment serves every profile, so one
+upgrade covers all of them. What is on disk, in any environment:
+
+```bash
+~/.hermes/hermes-agent/venv/bin/python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
 ```
 
 Then **restart Hermes.** Python resolves entry-point plugins once at process start, so a running
-Hermes keeps executing the version it loaded — the upgraded files sit on disk unread. A CLI session
-picks the new version up on its next run; a long-running process never does.
-
-The gateway is that long-running process, and it is normally supervised, so it will not restart
-itself. On macOS the installer registers it with launchd:
+Hermes keeps executing the version it loaded. A CLI session picks the new version up on its next
+run; a long-running process never does. The gateway is that process, it is normally supervised, and
+the cron ticker lives inside it — so scheduled agents are affected too:
 
 ```bash
 launchctl list | grep -i hermes
 launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway
 ```
 
-Spans exported before the restart keep the shape the old version gave them — nothing is rewritten
-retroactively, so judge an upgrade on a new session.
+For the version actually *running*, read `hermes.plugin.version` off a new span rather than trusting
+the disk. Spans exported before the restart keep the shape the old version gave them — nothing is
+rewritten retroactively, so judge an upgrade on a new session.
 
 ## How it works
 

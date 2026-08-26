@@ -71,19 +71,49 @@ LATITUDE_PROJECT=your-project-slug
 
 ## Upgrade
 
-Upgrade in the same interpreter the plugin was installed into:
+Upgrade with the same tool the plugin was installed with, into the same interpreter that runs
+Hermes:
 
-```bash
+<CodeGroup>
+```bash Official installer
 ~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python -U latitude-telemetry-hermes
 ```
 
-Then **restart Hermes**. Python resolves entry-point plugins once, when the process starts, so a
-running Hermes goes on executing the version it loaded and the new files sit on disk unread. A CLI
-session picks the new version up on its next run. A long-running process never does.
+```bash Your own environment
+pip install -U latitude-telemetry-hermes
+```
+</CodeGroup>
 
-The **gateway** (Slack, Discord, …) is exactly that long-running process, and it is usually
-supervised, so it will not restart on its own. On macOS the official installer registers it with
-launchd — find the label, then restart it:
+<Note>
+  The official installer's venv ships **without `pip`**, so `pip install -U` fails there with
+  `No module named pip` — use the `uv` form. The plain `pip` form applies when you installed
+  Hermes yourself into an environment you manage.
+</Note>
+
+To move to a specific version, or to roll back after a bad release, name the version instead of
+passing `-U`:
+
+```bash
+~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes==0.1.2
+```
+
+One environment serves every Hermes profile, so a single upgrade covers all of them even though
+`config.yaml` and `.env` are per-profile. Check what is now on disk — this one-liner works in any
+environment, unlike `pip show`:
+
+```bash
+~/.hermes/hermes-agent/venv/bin/python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
+```
+
+### Restart Hermes
+
+Python resolves entry-point plugins once, when the process starts. A running Hermes goes on
+executing the version it loaded, and the upgraded files sit on disk unread. A CLI session picks the
+new version up on its next run. A long-running process never does.
+
+The **gateway** (Slack, Discord, …) is that long-running process, and it is usually supervised, so
+it will not restart on its own. On macOS the official installer registers it with launchd — find the
+label, then restart it:
 
 ```bash
 launchctl list | grep -i hermes
@@ -94,11 +124,18 @@ launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway
 `KeepAlive`, so it does come back, but `ThrottleInterval` holds it down for 30 seconds first. Under
 any other supervisor, restart the service however you normally would.
 
-Confirm the process really is new, rather than the one that was already running:
+<Note>
+  **Scheduled agents run inside the gateway.** The cron ticker is part of that process rather than a
+  separate scheduler, so cron-driven sessions keep using the plugin version the gateway loaded. If
+  your agent only ever runs on a schedule, you still need the gateway restart.
+</Note>
 
-```bash
-ps -o lstart=,pid= -p $(pgrep -f "hermes_cli.main gateway")
-```
+### Confirm the new version is the one running
+
+The installed-version check above reads the disk, which is what was already misleading if a stale
+process is the problem. For the running answer, send a message and open the new trace: every span
+carries `hermes.plugin.version` in its metadata, and the resource carries `service.version`. Those
+come from the code that is executing, so they are the authoritative check.
 
 <Warning>
   Spans exported before the restart keep the shape the old version gave them. Nothing is rewritten
