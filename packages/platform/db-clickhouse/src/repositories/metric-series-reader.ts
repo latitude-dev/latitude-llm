@@ -3,11 +3,13 @@ import {
   type MetricSeriesBucketInput,
   MetricSeriesReader,
   type MetricSeriesReaderShape,
+  type MetricSeriesTarget,
   type MetricSeriesWindowInput,
 } from "@domain/monitors"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { streamFor } from "../metric-sql/index.ts"
+import type { StreamDescriptor } from "../metric-sql/types.ts"
 
 const toSqlInput = (input: MetricSeriesWindowInput) => ({
   organizationId: input.organizationId,
@@ -17,7 +19,12 @@ const toSqlInput = (input: MetricSeriesWindowInput) => ({
   metric: input.target.metric,
   from: input.from,
   to: input.to,
+  timeAxis: input.target.timeAxis,
 })
+
+/** The inner column the target's axis windows on — also the one the event times and buckets read. */
+const axisColumn = (descriptor: StreamDescriptor, target: MetricSeriesTarget): string =>
+  target.timeAxis === "completion" ? descriptor.completionTimeColumn : descriptor.timeColumn
 
 const make = (): MetricSeriesReaderShape => ({
   valueInWindow: (input) =>
@@ -51,7 +58,7 @@ const make = (): MetricSeriesReaderShape => ({
           const result = await client.query({
             // `count()` guards the empty case — `min()` over zero rows returns the
             // epoch, not NULL, so we'd otherwise report a bogus 1970 first event.
-            query: `SELECT toString(min(start_time)) AS first_at, count() AS matches FROM (${inner.sql})`,
+            query: `SELECT toString(min(${axisColumn(descriptor, input.target)})) AS first_at, count() AS matches FROM (${inner.sql})`,
             query_params: inner.params,
             ...(inner.clickhouseSettings ? { clickhouse_settings: inner.clickhouseSettings } : {}),
             format: "JSONEachRow",
@@ -78,7 +85,7 @@ const make = (): MetricSeriesReaderShape => ({
           const result = await client.query({
             // `count()` guards the empty case — `max()` over zero rows returns the
             // epoch, not NULL, so we'd otherwise report a bogus 1970 last event.
-            query: `SELECT toString(max(start_time)) AS last_at, count() AS matches FROM (${inner.sql})`,
+            query: `SELECT toString(max(${axisColumn(descriptor, input.target)})) AS last_at, count() AS matches FROM (${inner.sql})`,
             query_params: inner.params,
             ...(inner.clickhouseSettings ? { clickhouse_settings: inner.clickhouseSettings } : {}),
             format: "JSONEachRow",
@@ -102,7 +109,7 @@ const make = (): MetricSeriesReaderShape => ({
       const inner = yield* descriptor.buildInner(toSqlInput(input))
       const aggregate = descriptor.aggregate(input.target.metric)
       const bucketCount = Math.max(0, Math.floor((input.to.getTime() - input.from.getTime()) / input.bucketMs))
-      // Bucket each matching trace by how far its `start_time` sits before `to`,
+      // Bucket each matching row by how far its axis time sits before `to`,
       // in `bucketNs` (= bucketMs) steps — index 0 is the bucket ending at `to`.
       // ClickHouse only returns non-empty buckets, so we densify to `bucketCount`
       // zero-filled entries in code.
@@ -111,7 +118,7 @@ const make = (): MetricSeriesReaderShape => ({
           const result = await client.query({
             query: `SELECT
                       intDiv(
-                        reinterpretAsInt64(toDateTime64({windowTo:String}, 9, 'UTC')) - reinterpretAsInt64(start_time),
+                        reinterpretAsInt64(toDateTime64({windowTo:String}, 9, 'UTC')) - reinterpretAsInt64(${axisColumn(descriptor, input.target)}),
                         {bucketNs:Int64}
                       ) AS bucket_index,
                       ${aggregate} AS value

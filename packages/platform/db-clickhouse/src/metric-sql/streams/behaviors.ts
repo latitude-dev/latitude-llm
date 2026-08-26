@@ -44,4 +44,5 @@ export const behaviorsDescriptor: StreamDescriptor<"behaviors"> = {
   aggregate: (metric) => behaviorAggregate(metric),
   breakdowns: BREAKDOWN,
   timeColumn: "start_time",
+  completionTimeColumn: "start_time",
 }

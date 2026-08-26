@@ -3,6 +3,7 @@ import { IncidentRepository, resolveIncidentUseCase } from "@domain/incidents"
 import {
   createMonitorUseCase,
   deleteMonitorUseCase,
+  evaluationTimeAxis,
   formatHumanReadableAlert,
   getMonitorBySlugUseCase,
   getMonitorIncidentsUseCase,
@@ -302,7 +303,7 @@ interface MonitorMetricSeriesRecord {
   readonly bucketMs: number
 }
 
-/** Resolve a monitor's persisted target to the metric reader's `(stream, filterSet, query, metric)`. */
+/** Resolve a monitor's persisted target to the metric reader's `(stream, filterSet, query, metric, timeAxis)`, on the axis the monitor fires on. */
 const resolveMetricTarget = (monitor: Monitor) =>
   Effect.gen(function* () {
     const target = normalizedMonitorTarget(monitor)
@@ -316,6 +317,7 @@ const resolveMetricTarget = (monitor: Monitor) =>
         filterSet: search.filterSet,
         query: search.query,
         metric: target.metric,
+        timeAxis: evaluationTimeAxis(monitor.rule.trigger, target.metric),
       } satisfies MetricSeriesTarget
     }
     return {
@@ -323,6 +325,7 @@ const resolveMetricTarget = (monitor: Monitor) =>
       filterSet: target.filterSet ?? {},
       query: target.query ?? null,
       metric: target.metric,
+      timeAxis: evaluationTimeAxis(monitor.rule.trigger, target.metric),
     } satisfies MetricSeriesTarget
   })
 

@@ -5,9 +5,12 @@ import {
   cuidSchema,
   type FilterSet,
   filterSetSchema,
+  type MetricTimeAxis,
   type MonitorConfig,
+  type MonitorMetric,
   type MonitorStream,
   type MonitorTargetType,
+  type MonitorTrigger,
   monitorConfigSchema,
   monitorIdSchema,
   monitorMetricSchema,
@@ -22,6 +25,10 @@ import { z } from "zod"
 
 export const monitorStreamForTargetType = (type: MonitorTargetType): MonitorStream =>
   type === "tool" ? "spans" : type === "session" ? "sessions" : "traces"
+
+/** Which timestamp a monitor's windows measure against: completion for `match` and for metrics that only settle once a run ends, start for counts. */
+export const evaluationTimeAxis = (trigger: MonitorTrigger, metric: MonitorMetric): MetricTimeAxis =>
+  trigger === "match" || metric.kind !== "count" ? "completion" : "start"
 
 const validateSpanStreamFilterSet = (
   stream: MonitorStream,

@@ -97,4 +97,5 @@ export const scoresDescriptor: StreamDescriptor<"scores"> = {
   aggregate: (metric) => scoreAggregate(metric),
   breakdowns: BREAKDOWN,
   timeColumn: "created_at",
+  completionTimeColumn: "created_at",
 }

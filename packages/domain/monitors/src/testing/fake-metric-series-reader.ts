@@ -5,14 +5,24 @@ import {
   type MetricSeriesWindowInput,
 } from "../ports/metric-series-reader.ts"
 
-/**
- * In-memory `MetricSeriesReader` for unit tests: seed matching-event
- * `start_time`s, and the methods window them by `[from, to)` as a `count` metric.
- */
-export const createFakeMetricSeriesReader = (matchTimestamps: readonly Date[] = []) => {
+/** A seeded matching entity. A bare `Date` is an instant event — it starts and completes at once. */
+export type FakeMatch = Date | { readonly startedAt: Date; readonly completedAt: Date }
+
+const startOf = (match: FakeMatch): Date => (match instanceof Date ? match : match.startedAt)
+const completionOf = (match: FakeMatch): Date => (match instanceof Date ? match : match.completedAt)
+
+/** In-memory `MetricSeriesReader` for unit tests: seed matching entities, and the methods window and report them on the target's axis as a `count` metric. */
+export const createFakeMetricSeriesReader = (matches: readonly FakeMatch[] = []) => {
   const calls: Array<MetricSeriesWindowInput | MetricSeriesBucketInput> = []
+  const axisTimeOf = (input: MetricSeriesWindowInput, match: FakeMatch): Date =>
+    input.target.timeAxis === "completion" ? completionOf(match) : startOf(match)
   const inWindow = (input: MetricSeriesWindowInput) =>
-    matchTimestamps.filter((at) => at.getTime() >= input.from.getTime() && at.getTime() < input.to.getTime())
+    matches
+      .filter((match) => {
+        const at = axisTimeOf(input, match).getTime()
+        return at >= input.from.getTime() && at < input.to.getTime()
+      })
+      .map((match) => axisTimeOf(input, match))
 
   // Mirror the ClickHouse impl: `N = floor((to - from) / bucketMs)` buckets
   // aligned to `to`, newest-first (index 0 ends at `to`), zero-filled.

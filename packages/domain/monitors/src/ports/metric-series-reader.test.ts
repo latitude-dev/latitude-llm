@@ -16,6 +16,7 @@ const target: MetricSeriesTarget = {
   filterSet: {},
   query: null,
   metric: { kind: "count" },
+  timeAxis: "start",
 }
 
 const hours = (from: Date, to: Date) => (to.getTime() - from.getTime()) / (60 * 60 * 1000)

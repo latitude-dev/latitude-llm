@@ -70,4 +70,5 @@ export const momentsDescriptor: StreamDescriptor<"moments"> = {
   aggregate: (metric) => momentAggregate(metric),
   breakdowns: BREAKDOWN,
   timeColumn: "start_time",
+  completionTimeColumn: "start_time",
 }

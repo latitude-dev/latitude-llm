@@ -3,6 +3,7 @@ import type {
   BehaviorMetric,
   ChSqlClient,
   FilterSet,
+  MetricTimeAxis,
   MomentMetric,
   MonitorMetric,
   OrganizationId,
@@ -49,6 +50,8 @@ export interface MetricSqlInput<S extends AnalyticsStream = AnalyticsStream> {
   readonly from: Date
   /** Exclusive upper bound. */
   readonly to: Date
+  /** Which timestamp `[from, to)` applies to. Defaults to `start`, which is what every analytics read wants. */
+  readonly timeAxis?: MetricTimeAxis
 }
 
 export type InnerQuery = {
@@ -83,4 +86,6 @@ export interface StreamDescriptor<S extends AnalyticsStream = AnalyticsStream> {
   readonly breakdowns: Record<string, BreakdownExpr>
   /** The inner column to bucket on for time series. */
   readonly timeColumn: string
+  /** The inner column carrying the completion time. Point-event streams have no separate completion and repeat {@link timeColumn}. */
+  readonly completionTimeColumn: string
 }

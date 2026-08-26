@@ -29,7 +29,7 @@ import { SEASONAL_HISTORY_WEEKS } from "@domain/signals"
 import { Effect } from "effect"
 import { SAVED_SEARCH_CURRENT_WINDOW_MS, THRESHOLD_EXIT_DWELL_MS } from "../constants.ts"
 import type { Monitor } from "../entities/monitor.ts"
-import { monitorConfigCondition } from "../entities/monitor.ts"
+import { evaluationTimeAxis, monitorConfigCondition } from "../entities/monitor.ts"
 import type { MetricSeriesReaderShape, MetricSeriesTarget } from "../ports/metric-series-reader.ts"
 import { MetricSeriesReader, makeMetricSeriesReaderSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
@@ -102,6 +102,7 @@ const inlineMonitorTarget = (monitor: Monitor, metric: MonitorMetric = monitor.t
   filterSet: monitor.target.filterSet ?? {},
   query: monitor.target.query,
   metric,
+  timeAxis: evaluationTimeAxis(monitor.rule.trigger, metric),
 })
 
 interface ResolvedMonitorTarget {
@@ -133,12 +134,14 @@ const resolveMonitorTargets = (monitors: readonly Monitor[]) =>
         }
         if (predicate === null) return null
 
-        return {
+        const resolved: MetricSeriesTarget = {
           stream: monitor.target.stream,
           filterSet: predicate.filterSet,
           query: predicate.query,
           metric,
-        } satisfies MetricSeriesTarget
+          timeAxis: evaluationTimeAxis(monitor.rule.trigger, metric),
+        }
+        return resolved
       })
 
     const resolved = yield* Effect.forEach(
@@ -161,6 +164,7 @@ type ThresholdCondition = Extract<AlertIncidentCondition, { trigger: "threshold"
 const thresholdMetricTarget = (target: MetricSeriesTarget, condition: ThresholdCondition): MetricSeriesTarget => ({
   ...target,
   metric: condition.metric,
+  timeAxis: evaluationTimeAxis("threshold", condition.metric),
 })
 
 const evaluateMatchPoint = (

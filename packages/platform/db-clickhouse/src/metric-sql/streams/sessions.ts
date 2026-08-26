@@ -8,7 +8,7 @@ import {
   LIST_SELECT,
   resolvePercentileFilters,
 } from "../../repositories/session-repository.ts"
-import { type TraceFamilyColumns, traceFamilyAggregate, windowParams } from "../helpers.ts"
+import { type TraceFamilyColumns, traceFamilyAggregate, windowClauses, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
 
 // Sessions share the trace rollup columns; each inner row is already one session,
@@ -38,7 +38,7 @@ const BREAKDOWN = {
 
 /**
  * The grouped per-session subquery. The window is a `HAVING` on the aggregated
- * `start_time`, combined with the target's filters and (optionally) a semantic
+ * start or completion time, combined with the target's filters and (optionally) a semantic
  * query: the trace-grained search plan resolves to its sessions via the `traces`
  * rollup, restricting the session set with `session_id IN (…)`.
  */
@@ -72,8 +72,12 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Repository
 
     const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
     const having = [
-      "start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')",
-      "start_time < toDateTime64({windowTo:String}, 9, 'UTC')",
+      ...windowClauses({
+        axis: input.timeAxis ?? "start",
+        startColumn: "start_time",
+        completionColumn: "end_time",
+        precision: 9,
+      }),
       ...havingClauses,
     ].join(" AND ")
 
@@ -105,4 +109,5 @@ export const sessionsDescriptor: StreamDescriptor<"sessions"> = {
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,
   timeColumn: "start_time",
+  completionTimeColumn: "end_time",
 }

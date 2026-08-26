@@ -2,6 +2,7 @@ import { type SeriesReaderShape, seasonalAnomalyThreshold } from "@domain/incide
 import type {
   ChSqlClient,
   FilterSet,
+  MetricTimeAxis,
   MonitorMetric,
   MonitorStream,
   OrganizationId,
@@ -24,6 +25,8 @@ export interface MetricSeriesTarget {
   /** Semantic search query — `traces` stream only; `null` otherwise. */
   readonly query: string | null
   readonly metric: MonitorMetric
+  /** Which timestamp every window on this target measures against. Required, not defaulted: the wrong axis under-reports silently. */
+  readonly timeAxis: MetricTimeAxis
 }
 
 export interface MetricSeriesWindowInput {
@@ -50,11 +53,11 @@ export interface MetricSeriesBucketInput extends MetricSeriesWindowInput {
 export interface MetricSeriesReaderShape {
   /** The metric over rows whose time axis falls in `[from, to)`. */
   valueInWindow(input: MetricSeriesWindowInput): Effect.Effect<number, RepositoryError | ValidationError, ChSqlClient>
-  /** Earliest matching-row time in `[from, to)`, or `null` when none match. Backs the incident's backtraced `started_at`. */
+  /** Earliest matching-row time in `[from, to)` on the target's axis, or `null` when none match. Backs the incident's backtraced `started_at`. */
   firstEventAt(
     input: MetricSeriesWindowInput,
   ): Effect.Effect<Date | null, RepositoryError | ValidationError, ChSqlClient>
-  /** Latest matching-row time in `[from, to)`, or `null` when none match. Backs the sustained incident's backtraced `ended_at`. */
+  /** Latest matching-row time in `[from, to)` on the target's axis, or `null` when none match. Backs the sustained incident's backtraced `ended_at`. */
   lastEventAt(
     input: MetricSeriesWindowInput,
   ): Effect.Effect<Date | null, RepositoryError | ValidationError, ChSqlClient>

@@ -4,7 +4,7 @@ import { Effect } from "effect"
 import { runFilterBuild } from "../../filter-builder.ts"
 import { isActiveSearch, planSearch } from "../../repositories/search-plan.ts"
 import { buildTraceFilterClauses, LIST_SELECT, resolvePercentileFilters } from "../../repositories/trace-repository.ts"
-import { type TraceFamilyColumns, traceFamilyAggregate, windowParams } from "../helpers.ts"
+import { type TraceFamilyColumns, traceFamilyAggregate, windowClauses, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
 
 const COLUMNS: TraceFamilyColumns = {
@@ -31,7 +31,7 @@ const BREAKDOWN = {
 
 /**
  * The grouped per-trace subquery: filters + percentile resolution + an optional
- * semantic-query prefilter, windowed on the aggregated `start_time`.
+ * semantic-query prefilter, windowed on the aggregated start or completion time.
  */
 const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError | ValidationError, ChSqlClient> =>
   Effect.gen(function* () {
@@ -55,8 +55,12 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Repository
     }
 
     const having = [
-      "start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')",
-      "start_time < toDateTime64({windowTo:String}, 9, 'UTC')",
+      ...windowClauses({
+        axis: input.timeAxis ?? "start",
+        startColumn: "start_time",
+        completionColumn: "end_time",
+        precision: 9,
+      }),
       ...havingClauses,
     ].join(" AND ")
 
@@ -88,4 +92,5 @@ export const tracesDescriptor: StreamDescriptor<"traces"> = {
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,
   timeColumn: "start_time",
+  completionTimeColumn: "end_time",
 }
