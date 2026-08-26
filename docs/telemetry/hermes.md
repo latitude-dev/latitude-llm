@@ -69,6 +69,42 @@ LATITUDE_PROJECT=your-project-slug
   to that same instance.
 </Note>
 
+## Upgrade
+
+Upgrade in the same interpreter the plugin was installed into:
+
+```bash
+~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python -U latitude-telemetry-hermes
+```
+
+Then **restart Hermes**. Python resolves entry-point plugins once, when the process starts, so a
+running Hermes goes on executing the version it loaded and the new files sit on disk unread. A CLI
+session picks the new version up on its next run. A long-running process never does.
+
+The **gateway** (Slack, Discord, …) is exactly that long-running process, and it is usually
+supervised, so it will not restart on its own. On macOS the official installer registers it with
+launchd — find the label, then restart it:
+
+```bash
+launchctl list | grep -i hermes
+launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway
+```
+
+`kickstart -k` stops the running instance first. Don't use `launchctl stop` on its own: the job sets
+`KeepAlive`, so it does come back, but `ThrottleInterval` holds it down for 30 seconds first. Under
+any other supervisor, restart the service however you normally would.
+
+Confirm the process really is new, rather than the one that was already running:
+
+```bash
+ps -o lstart=,pid= -p $(pgrep -f "hermes_cli.main gateway")
+```
+
+<Warning>
+  Spans exported before the restart keep the shape the old version gave them. Nothing is rewritten
+  retroactively, so judge an upgrade on a **new** session instead of reopening an existing trace.
+</Warning>
+
 ## Verify
 
 Run Hermes and send a message to your agent, then open your Latitude project and go to **Traces**. The new trace should appear within a few seconds.
@@ -279,6 +315,12 @@ Telemetry runs for each turn until disabled or uninstalled. Disable it before wo
 ## Troubleshooting
 
 **No traces appear.** Confirm `latitude` is in `plugins.enabled` in `~/.hermes/config.yaml` (`hermes plugins list` never shows a pip-installed plugin — see the install note), check that the API key and project slug are correct, then set `LATITUDE_DEBUG=true` and send a new message: the plugin logs each export and its HTTP status.
+
+**Traces arrive, but they look like an older version of the plugin.** The running Hermes is still
+executing the plugin version it loaded at startup — upgrading the package does not affect a live
+process. Restart Hermes, and the gateway specifically if you run one; see [Upgrade](#upgrade).
+`LATITUDE_DEBUG` will not reveal this: the old version keeps exporting successfully, so the log
+shows `200`s throughout.
 
 **Need more diagnostics.** Set `LATITUDE_DEBUG=true` in `~/.hermes/.env` and trigger another run.
 

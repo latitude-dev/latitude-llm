@@ -10,6 +10,7 @@ Hermes discovers pip plugins through the `hermes_agent.plugins` entry point and 
 
 - The plugin must land in **Hermes's own venv** (`~/.hermes/hermes-agent/venv`), not the shell's Python. The official installer isolates Hermes, so a plain `pip install` from another interpreter is never discovered.
 - `hermes plugins list/enable/disable` only scans bundled and `~/.hermes/plugins/` directory plugins, so it reports a working pip plugin as "not installed or bundled" ([hermes-agent#23802](https://github.com/NousResearch/hermes-agent/issues/23802)). Enablement is the `plugins.enabled` list in `config.yaml`; verification is `LATITUDE_DEBUG=true`.
+- Entry points are resolved **once, at process start**. Upgrading the package under a running Hermes changes nothing until the process restarts, and the gateway is both long-lived and supervised (`KeepAlive`), so it never restarts on its own. The failure mode is the expensive one: the old emitter keeps exporting `200`s, so the traces are merely the wrong *shape* and `LATITUDE_DEBUG` looks healthy. Any report of "the fix didn't land" starts by checking the gateway's start time against the install time.
 
 Both `config.yaml` and `.env` are **profile-scoped** (`~/.hermes/profiles/<name>/`), which is what makes "one profile per agent" the recommended multi-agent layout: credentials, tags, metadata, sessions and memory are all already isolated.
 

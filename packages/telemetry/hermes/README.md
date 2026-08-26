@@ -72,6 +72,27 @@ out, so a token echoed by a terminal tool is masked before it leaves the machine
 > for a local dev stack — without the `/v1/traces` suffix (the plugin appends it).
 > Your `LATITUDE_API_KEY` and `LATITUDE_PROJECT` must come from that same instance.
 
+## Upgrade
+
+```bash
+~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python -U latitude-telemetry-hermes
+```
+
+Then **restart Hermes.** Python resolves entry-point plugins once at process start, so a running
+Hermes keeps executing the version it loaded — the upgraded files sit on disk unread. A CLI session
+picks the new version up on its next run; a long-running process never does.
+
+The gateway is that long-running process, and it is normally supervised, so it will not restart
+itself. On macOS the installer registers it with launchd:
+
+```bash
+launchctl list | grep -i hermes
+launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway
+```
+
+Spans exported before the restart keep the shape the old version gave them — nothing is rewritten
+retroactively, so judge an upgrade on a new session.
+
 ## How it works
 
 Hermes loads pip-installed plugins via the `hermes_agent.plugins` entry point and calls
