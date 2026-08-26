@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isPublicUnicastIp, resolvePublicWebhookUrl } from "./host-guard.ts"
+import { isPublicUnicastIp, resolvePublicWebhookTarget, resolvePublicWebhookUrl } from "./host-guard.ts"
 
 describe("isPublicUnicastIp", () => {
   it.each(["8.8.8.8", "1.1.1.1", "2001:4860:4860::8888"])("accepts public address %s", (ip) => {
@@ -26,5 +26,15 @@ describe("resolvePublicWebhookUrl", () => {
     await expect(resolvePublicWebhookUrl("https://hooks.example.com/run", async () => ["127.0.0.1"])).rejects.toThrow(
       "webhook_host_resolved_to_non_public_ip",
     )
+  })
+})
+
+describe("resolvePublicWebhookTarget", () => {
+  it("returns the first public address to pin the connection", async () => {
+    await expect(resolvePublicWebhookTarget("https://hooks.example.com/run", async () => ["8.8.8.8", "1.1.1.1"])).resolves
+      .toEqual({
+        url: new URL("https://hooks.example.com/run"),
+        address: "8.8.8.8",
+      })
   })
 })

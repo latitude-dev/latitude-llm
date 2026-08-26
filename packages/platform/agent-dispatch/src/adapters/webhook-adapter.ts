@@ -3,7 +3,7 @@ import type { AgentDispatchAdapter } from "@domain/agent-dispatch"
 import { DispatchAdapterError } from "@domain/agent-dispatch"
 import { Effect } from "effect"
 import { z } from "zod"
-import { type HostLookup, resolvePublicWebhookUrl } from "../host-guard.ts"
+import { type HostLookup, postPinnedHttps, resolvePublicWebhookTarget } from "../host-guard.ts"
 
 const signPayload = (secret: string, body: string): string => createHmac("sha256", secret).update(body).digest("hex")
 
@@ -40,7 +40,10 @@ const cancelReader = (reader: ReadableStreamDefaultReader<Uint8Array>): void => 
   } catch {}
 }
 
-const readWebhookAcknowledgement = (response: Response, signal: AbortSignal): Promise<unknown> => {
+const readWebhookAcknowledgement = (
+  response: { readonly body: ReadableStream<Uint8Array> | null },
+  signal: AbortSignal,
+): Promise<unknown> => {
   if (!response.body) return Promise.resolve(undefined)
 
   const reader = response.body.getReader()
@@ -101,18 +104,21 @@ const readWebhookAcknowledgement = (response: Response, signal: AbortSignal): Pr
   })
 }
 
-export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdapter => ({
+export const createWebhookAdapter = (
+  lookupHost?: HostLookup,
+  postHttps: typeof postPinnedHttps = postPinnedHttps,
+): AgentDispatchAdapter => ({
   kind: "webhook",
   dispatch: ({ idempotencyKey, prompt, context, config, credential }) =>
     Effect.gen(function* () {
-      const target = config as { webhookUrl: string }
+      const webhookTarget = config as { webhookUrl: string }
       const secret = credential.webhookSecret
       if (!secret) {
         return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: "missing webhook secret" }))
       }
 
-      const url = yield* Effect.tryPromise({
-        try: () => resolvePublicWebhookUrl(target.webhookUrl, lookupHost),
+      const pinnedTarget = yield* Effect.tryPromise({
+        try: () => resolvePublicWebhookTarget(webhookTarget.webhookUrl, lookupHost),
         catch: (cause) =>
           new DispatchAdapterError({
             reason: cause instanceof Error && cause.message.startsWith("webhook_") ? "config" : "transport",
@@ -125,9 +131,7 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
 
       const response = yield* Effect.tryPromise({
         try: () =>
-          fetch(url, {
-            method: "POST",
-            redirect: "error",
+          postHttps(pinnedTarget, {
             headers: {
               "Content-Type": "application/json",
               "X-Latitude-Signature": `sha256=${signature}`,
@@ -172,7 +176,7 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
         status: "accepted" as const,
         ...(acknowledgement.externalAgentId !== undefined ? { externalAgentId: acknowledgement.externalAgentId } : {}),
         ...(acknowledgement.externalRunId !== undefined ? { externalRunId: acknowledgement.externalRunId } : {}),
-        deepLinkUrl: acknowledgement.deepLinkUrl ?? target.webhookUrl,
+        deepLinkUrl: acknowledgement.deepLinkUrl ?? webhookTarget.webhookUrl,
       }
     }),
 })

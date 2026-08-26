@@ -1,4 +1,5 @@
 import { lookup } from "node:dns/promises"
+import https from "node:https"
 import { isIP } from "node:net"
 
 export type HostLookup = (hostname: string) => Promise<readonly string[]>
@@ -44,10 +45,16 @@ export const isPublicUnicastIp = (ip: string): boolean => {
   return false
 }
 
-export const resolvePublicWebhookUrl = async (
+export interface ResolvedPublicWebhookTarget {
+  readonly url: URL
+  /** Public address to connect to; `fetch` would re-resolve the hostname and reopen DNS-rebinding. */
+  readonly address: string
+}
+
+export const resolvePublicWebhookTarget = async (
   webhookUrl: string,
   lookupHost: HostLookup = defaultHostLookup,
-): Promise<URL> => {
+): Promise<ResolvedPublicWebhookTarget> => {
   let url: URL
   try {
     url = new URL(webhookUrl)
@@ -61,8 +68,74 @@ export const resolvePublicWebhookUrl = async (
   if (addresses.length === 0) {
     throw new Error("dns_resolution_failed")
   }
-  if (addresses.some((address) => !isPublicUnicastIp(address))) {
+  const address = addresses.find((candidate) => isPublicUnicastIp(candidate))
+  if (address === undefined) {
     throw new Error("webhook_host_resolved_to_non_public_ip")
   }
-  return url
+  return { url, address }
 }
+
+export const resolvePublicWebhookUrl = async (
+  webhookUrl: string,
+  lookupHost: HostLookup = defaultHostLookup,
+): Promise<URL> => (await resolvePublicWebhookTarget(webhookUrl, lookupHost)).url
+
+export interface PinnedHttpsResponse {
+  readonly status: number
+  readonly headers: Headers
+  readonly body: ReadableStream<Uint8Array> | null
+  text(): Promise<string>
+}
+
+export const postPinnedHttps = (
+  target: ResolvedPublicWebhookTarget,
+  init: { readonly headers: Record<string, string>; readonly body: string },
+): Promise<PinnedHttpsResponse> =>
+  new Promise((resolve, reject) => {
+    const port = target.url.port ? Number(target.url.port) : 443
+    const req = https.request(
+      {
+        host: target.address,
+        port,
+        path: `${target.url.pathname}${target.url.search}`,
+        method: "POST",
+        headers: {
+          ...init.headers,
+          Host: target.url.hostname,
+          "Content-Length": Buffer.byteLength(init.body, "utf8"),
+        },
+        servername: target.url.hostname,
+        rejectUnauthorized: true,
+      },
+      (res) => {
+        const chunks: Buffer[] = []
+        res.on("data", (chunk) => chunks.push(chunk))
+        res.on("end", () => {
+          const bytes = Buffer.concat(chunks)
+          const headers = new Headers()
+          for (const [key, value] of Object.entries(res.headers)) {
+            if (value === undefined) continue
+            headers.set(key, Array.isArray(value) ? value.join(", ") : value)
+          }
+          const body =
+            bytes.length === 0
+              ? null
+              : new ReadableStream<Uint8Array>({
+                  start(controller) {
+                    controller.enqueue(new Uint8Array(bytes))
+                    controller.close()
+                  },
+                })
+          resolve({
+            status: res.statusCode ?? 0,
+            headers,
+            body,
+            text: async () => bytes.toString("utf8"),
+          })
+        })
+      },
+    )
+    req.on("error", reject)
+    req.write(init.body)
+    req.end()
+  })
