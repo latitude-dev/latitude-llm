@@ -1,7 +1,7 @@
 name: Publish PyPI Package
 description: >-
-  Compare the repo version against PyPI and, if absent, install/lint/typecheck/test,
-  build, publish, and cut a GitHub Release. No-ops when the version is already
+  Compare the repo version against PyPI and, if absent, verify the lockfile then
+  install/lint/typecheck/test, build, publish, and cut a GitHub Release. No-ops when the version is already
   published. Assumes the repository has already been checked out by the caller, and
   that the package declares `pytest` in its dev dependency group.
 
@@ -92,6 +92,14 @@ runs:
       with:
         enable-cache: true
 
+    - name: Check the lockfile is up to date
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      # Before `uv sync`, which would silently re-resolve a stale lock and publish
+      # dependencies the committed lockfile never described. Two packages had drifted
+      # this way — a manifest bumped without re-locking — and nothing caught it.
+      run: uv lock --check
     - name: Install dependencies
       if: steps.check_version.outputs.should_publish == 'true'
       shell: bash
