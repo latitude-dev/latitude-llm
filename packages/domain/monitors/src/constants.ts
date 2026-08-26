@@ -5,6 +5,9 @@
  */
 export const SAVED_SEARCH_CURRENT_WINDOW_MS = 5 * 60 * 1000
 
+/** How far back a `match` evaluation may resume from, bounding the replay when its watermark has fallen behind. */
+export const MATCH_MAX_CATCHUP_MS = 60 * 60 * 1000
+
 /**
  * Leading-edge throttle window for the per-project `checkSavedSearchMonitors` publish:
  * the first publish runs immediately, then at most one run per 5 min per project. Leading

@@ -16,6 +16,7 @@ import {
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { MATCH_MAX_CATCHUP_MS } from "../constants.ts"
 import type { Monitor } from "../entities/monitor.ts"
 import { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
@@ -52,6 +53,7 @@ const monitor = ({ id, rule, ...edits }: Partial<Monitor> & Pick<Monitor, "id" |
     metric: { kind: "count" },
   },
   rule,
+  lastEvaluatedAt: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-06-20T00:00:00.000Z"),
@@ -224,6 +226,102 @@ describe("checkMonitorsUseCase", () => {
     await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
 
     expect(incidents).toHaveLength(0)
+  })
+
+  it("resumes a match window from the watermark, covering the gap a dropped check left", async () => {
+    // Last check ran 12 min ago; a run finished 8 min ago, outside a fixed 5-min window.
+    const completedAt = new Date("2026-06-23T11:52:00.000Z")
+    const { incidents, metricCalls, layer } = layersFor(
+      [
+        monitor({
+          id: MonitorId(cuid("m-gap")),
+          rule: { trigger: "match", config: {}, severity: "low" },
+          lastEvaluatedAt: new Date("2026-06-23T11:48:00.000Z"),
+        }),
+      ],
+      [{ startedAt: new Date("2026-06-23T11:30:00.000Z"), completedAt }],
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(metricCalls[0]?.from).toEqual(new Date("2026-06-23T11:48:00.000Z"))
+    expect(incidents).toHaveLength(1)
+    expect(incidents[0]).toMatchObject({ startedAt: completedAt })
+  })
+
+  it("floors a stale watermark at the catch-up bound", async () => {
+    const { metricCalls, layer } = layersFor(
+      [
+        monitor({
+          id: MonitorId(cuid("m-stale")),
+          rule: { trigger: "match", config: {}, severity: "low" },
+          lastEvaluatedAt: new Date("2026-06-20T00:00:00.000Z"),
+        }),
+      ],
+      [],
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(metricCalls[0]?.from).toEqual(new Date(now.getTime() - MATCH_MAX_CATCHUP_MS))
+  })
+
+  it("advances the watermark even when nothing matched, so the next window does not grow", async () => {
+    const monitors = [
+      monitor({
+        id: MonitorId(cuid("m-quiet")),
+        rule: { trigger: "match", config: {}, severity: "low" },
+        lastEvaluatedAt: new Date("2026-06-23T11:50:00.000Z"),
+      }),
+    ]
+    const { layer } = layersFor(monitors, [])
+    const repo = await Effect.runPromise(
+      Effect.gen(function* () {
+        return yield* MonitorRepository
+      }).pipe(Effect.provide(layer)),
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    const [stored] = await Effect.runPromise(
+      repo.listActiveMonitors({ projectId }).pipe(Effect.provide(layer)) as Effect.Effect<readonly Monitor[]>,
+    )
+    expect(stored?.lastEvaluatedAt).toEqual(now)
+  })
+
+  it("leaves the watermark untouched when the monitor read fails, so nothing is skipped", async () => {
+    const failingReader = Layer.succeed(MetricSeriesReader, {
+      valueInWindow: () => Effect.fail(new RepositoryError({ operation: "valueInWindow", cause: "boom" })),
+      firstEventAt: () => Effect.succeed(null),
+      lastEventAt: () => Effect.succeed(null),
+      seriesPerBucket: () => Effect.succeed([]),
+    })
+    const watermark = new Date("2026-06-23T11:50:00.000Z")
+    const { layer } = layersFor(
+      [
+        monitor({
+          id: MonitorId(cuid("m-fail")),
+          rule: { trigger: "match", config: {}, severity: "low" },
+          lastEvaluatedAt: watermark,
+        }),
+      ],
+      [],
+      undefined,
+      failingReader,
+    )
+    const repo = await Effect.runPromise(
+      Effect.gen(function* () {
+        return yield* MonitorRepository
+      }).pipe(Effect.provide(layer)),
+    )
+
+    const result = await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(result.failed).toBe(1)
+    const [stored] = await Effect.runPromise(
+      repo.listActiveMonitors({ projectId }).pipe(Effect.provide(layer)) as Effect.Effect<readonly Monitor[]>,
+    )
+    expect(stored?.lastEvaluatedAt).toEqual(watermark)
   })
 
   it("reads counts on the start axis so a threshold monitor still measures arrival rate", async () => {

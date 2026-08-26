@@ -76,6 +76,7 @@ describe("resetSystemMonitorsUseCase", () => {
         metric: { kind: "count" },
       },
       rule: { trigger: "match", config: {}, severity: "medium" },
+      lastEvaluatedAt: null,
       mutedAt: null,
       deletedAt: null,
       system: false,

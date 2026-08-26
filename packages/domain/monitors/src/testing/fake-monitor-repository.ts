@@ -77,6 +77,12 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         replace(id, { ...monitor, mutedAt, updatedAt: new Date() })
         return Effect.void
       }),
+    setLastEvaluatedAt: ({ id, lastEvaluatedAt }) =>
+      Effect.suspend(() => {
+        const monitor = liveById(id)
+        if (monitor) replace(id, { ...monitor, lastEvaluatedAt })
+        return Effect.void
+      }),
     softDelete: (id) =>
       Effect.suspend(() => {
         const monitor = liveById(id)

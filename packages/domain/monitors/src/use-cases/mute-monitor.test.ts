@@ -30,6 +30,7 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   system: overrides.system ?? false,
   target: overrides.target ?? target,
   rule: overrides.rule ?? { trigger: "match", config: {}, severity: "low" },
+  lastEvaluatedAt: null,
   mutedAt: overrides.mutedAt ?? null,
   deletedAt: null,
   createdAt: at,

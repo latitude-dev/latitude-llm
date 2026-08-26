@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."monitors" ADD COLUMN "last_evaluated_at" timestamp with time zone;

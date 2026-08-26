@@ -36,6 +36,7 @@ type Monitor = {
   system: boolean
   target: MonitorTarget
   rule: MonitorRule
+  lastEvaluatedAt: Date | null
   mutedAt: Date | null
   deletedAt: Date | null
   createdAt: Date
@@ -163,6 +164,12 @@ On the completion axis the query still bounds `start_time` by `MAX_EVALUABLE_RUN
 A completion-axis `traces` read additionally requires the trace's root span to have been ingested. `end_time` is `max(max_end_time)` over the rollup, so it advances every time a child span lands — on its own it would treat a still-running trace as finished, evaluate partial totals, and match the same trace again in each later window as more children arrive. A span is exported when it ends and the root outlives its children, so the root's arrival is the immutable "finished" signal. Traces that never produce a root span (`parent_span_id = ''`) therefore do not fire completion-axis monitors. `sessions` has no equivalent signal — a session is never complete — so a completion-axis session metric can still read a session mid-flight.
 
 `firstEventAt` / `lastEventAt` report times on the same axis, which keeps a backdated `started_at` inside the window that produced it.
+
+### Window bounds
+
+`threshold` and `escalating` evaluate a fixed `SAVED_SEARCH_CURRENT_WINDOW_MS` window ending at `now`. They are level-triggered — each check re-reads current state — so a check that is delayed or dropped only delays the verdict, and the window width has to stay fixed because the configured threshold is calibrated for it.
+
+`match` is edge-triggered: a match seen by no window is lost, not deferred. It therefore evaluates `[lastEvaluatedAt, now)`, persisting the watermark on `monitors.last_evaluated_at` after each successful check, so consecutive windows abut instead of leaving the holes a fixed window opens whenever the leading-edge throttle drops a check. The resume point is floored at `MATCH_MAX_CATCHUP_MS` (1h) to bound the burst after an outage, and the watermark advances only on success — inside the same transaction as any incident it produced — so a failed check re-reads its interval rather than skipping it.
 
 Before reading ClickHouse, saved-search monitor targets resolve their current saved-search `filterSet` and `query`; if the saved search has been deleted, that monitor is skipped until the delete cascade removes it. Escalating rules adapt `MetricSeriesReader` into the incidents package's generic `SeriesReader` and then call `EscalationEngine`. The engine owns the sustained state machine, including seasonal expected-mode thresholds, entry snapshots, dwell exits, and hard timeouts. This is the same engine used for signal escalation; the reader decides which source produces the bucket series.
 

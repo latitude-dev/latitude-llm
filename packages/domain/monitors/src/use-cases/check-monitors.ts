@@ -27,7 +27,7 @@ import {
 } from "@domain/shared"
 import { SEASONAL_HISTORY_WEEKS } from "@domain/signals"
 import { Effect } from "effect"
-import { SAVED_SEARCH_CURRENT_WINDOW_MS, THRESHOLD_EXIT_DWELL_MS } from "../constants.ts"
+import { MATCH_MAX_CATCHUP_MS, SAVED_SEARCH_CURRENT_WINDOW_MS, THRESHOLD_EXIT_DWELL_MS } from "../constants.ts"
 import type { Monitor } from "../entities/monitor.ts"
 import { evaluationTimeAxis, monitorConfigCondition } from "../entities/monitor.ts"
 import type { MetricSeriesReaderShape, MetricSeriesTarget } from "../ports/metric-series-reader.ts"
@@ -167,14 +167,21 @@ const thresholdMetricTarget = (target: MetricSeriesTarget, condition: ThresholdC
   timeAxis: evaluationTimeAxis("threshold", condition.metric),
 })
 
+/** Where a `match` evaluation resumes from: its watermark, floored at {@link MATCH_MAX_CATCHUP_MS}, so consecutive windows abut whatever the check cadence. */
+const matchWindowFrom = (monitor: Monitor, now: Date): Date => {
+  const watermark = monitor.lastEvaluatedAt ?? new Date(now.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS)
+  const earliest = new Date(now.getTime() - MATCH_MAX_CATCHUP_MS)
+  return watermark.getTime() < earliest.getTime() ? earliest : watermark
+}
+
 const evaluateMatchPoint = (
   monitor: Monitor,
   target: MetricSeriesTarget,
   metricReader: MetricSeriesReaderShape,
+  from: Date,
   now: Date,
 ) =>
   Effect.gen(function* () {
-    const from = new Date(now.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS)
     const matchTarget = { ...target, metric: { kind: "count" as const } }
     const value = yield* metricReader.valueInWindow({
       organizationId: monitor.organizationId,
@@ -290,8 +297,11 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
 
     const checkMatchMonitor = (monitor: Monitor, target: MetricSeriesTarget) =>
       Effect.gen(function* () {
-        const point = yield* evaluateMatchPoint(monitor, target, metricReader, now)
-        if (point === null) return
+        const point = yield* evaluateMatchPoint(monitor, target, metricReader, matchWindowFrom(monitor, now), now)
+        if (point === null) {
+          yield* monitorRepository.setLastEvaluatedAt({ id: monitor.id, lastEvaluatedAt: now })
+          return
+        }
         yield* sqlClient.transaction(
           Effect.gen(function* () {
             const createdAt = new Date()
@@ -323,6 +333,8 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
                 sourceId: monitor.id,
               },
             })
+            // Same transaction as the incident: a crash between the two would advance the watermark past a match never recorded.
+            yield* monitorRepository.setLastEvaluatedAt({ id: monitor.id, lastEvaluatedAt: now })
           }),
         )
       })
