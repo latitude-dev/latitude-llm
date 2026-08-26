@@ -93,17 +93,29 @@ pip install -U latitude-telemetry-hermes
 To move to a specific version, or to roll back after a bad release, name the version instead of
 passing `-U`:
 
-```bash
+<CodeGroup>
+```bash Official installer
 ~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes==0.1.2
 ```
 
-One environment serves every Hermes profile, so a single upgrade covers all of them even though
-`config.yaml` and `.env` are per-profile. Check what is now on disk — this one-liner works in any
-environment, unlike `pip show`:
+```bash Your own environment
+pip install latitude-telemetry-hermes==0.1.2
+```
+</CodeGroup>
 
-```bash
+One environment serves every Hermes profile, so a single upgrade covers all of them even though
+`config.yaml` and `.env` are per-profile. To read the version now on disk, ask the interpreter that
+runs Hermes — `importlib.metadata` is always available, whereas `pip show` is not:
+
+<CodeGroup>
+```bash Official installer
 ~/.hermes/hermes-agent/venv/bin/python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
 ```
+
+```bash Your own environment
+python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
+```
+</CodeGroup>
 
 ### Restart Hermes
 
@@ -132,10 +144,10 @@ any other supervisor, restart the service however you normally would.
 
 ### Confirm the new version is the one running
 
-The installed-version check above reads the disk, which is what was already misleading if a stale
-process is the problem. For the running answer, send a message and open the new trace: every span
-carries `hermes.plugin.version` in its metadata, and the resource carries `service.version`. Those
-come from the code that is executing, so they are the authoritative check.
+The check above reads the disk, and a stale process is precisely the case where the disk and the
+running code disagree. For the running answer, send a message and open the new trace: every span
+carries `hermes.plugin.version` in its metadata, and the resource carries `service.version`. Both
+come from the code that is executing, so they settle it.
 
 <Warning>
   Spans exported before the restart keep the shape the old version gave them. Nothing is rewritten

@@ -87,10 +87,15 @@ pip install -U latitude-telemetry-hermes
 ```
 
 Name a version instead of `-U` to pin or to roll back. One environment serves every profile, so one
-upgrade covers all of them. What is on disk, in any environment:
+upgrade covers all of them. To read the version on disk, ask the interpreter that runs Hermes —
+`importlib.metadata` is always available, `pip show` is not:
 
 ```bash
+# official installer
 ~/.hermes/hermes-agent/venv/bin/python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
+
+# an environment you manage yourself
+python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
 ```
 
 Then **restart Hermes.** Python resolves entry-point plugins once at process start, so a running
