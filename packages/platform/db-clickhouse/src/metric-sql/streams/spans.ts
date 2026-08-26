@@ -2,7 +2,7 @@ import type { SpanBreakdownField, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
 import { runFilterBuild } from "../../filter-builder.ts"
 import { buildSpanFilterClauses } from "../../registries/span-fields.ts"
-import { type TraceFamilyColumns, traceFamilyAggregate, usageGated, windowParams } from "../helpers.ts"
+import { type TraceFamilyColumns, traceFamilyAggregate, usageGated, windowClauses, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
 
 // Spans are row-grained; cost/tokens are gated to billable operations (NULL
@@ -32,7 +32,7 @@ const BREAKDOWN = {
 } satisfies Record<SpanBreakdownField, BreakdownExpr>
 
 /**
- * Per-span subquery: one row per span, windowed on the span's own `start_time`
+ * Per-span subquery: one row per span, windowed on the span's own start or end time
  * (plain WHERE — no aggregation), filtered by the row-local span predicate. The
  * outer metric then aggregates these rows (no dedup — same convention as
  * tool-analytics over `execute_tool` spans).
@@ -41,13 +41,18 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Validation
   Effect.gen(function* () {
     const { whereClauses, params: filterParams } = yield* runFilterBuild(() => buildSpanFilterClauses(input.filterSet))
     const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+    const window = windowClauses({
+      axis: input.timeAxis ?? "start",
+      startColumn: "start_time",
+      completionColumn: "end_time",
+      precision: 9,
+    })
     return {
-      sql: `SELECT span_id, start_time, status_code, operation, model, provider, service_name, tool_name, tags, duration_ns, cost_total_microcents, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create
+      sql: `SELECT span_id, start_time, end_time, status_code, operation, model, provider, service_name, tool_name, tags, duration_ns, cost_total_microcents, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create
           FROM spans
           WHERE organization_id = {organizationId:String}
             AND project_id = {projectId:String}
-            AND start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')
-            AND start_time < toDateTime64({windowTo:String}, 9, 'UTC')
+            AND ${window.join(" AND ")}
             ${extraWhere}`,
       params: {
         ...windowParams({
@@ -66,4 +71,5 @@ export const spansDescriptor: StreamDescriptor<"spans"> = {
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,
   timeColumn: "start_time",
+  completionTimeColumn: "end_time",
 }

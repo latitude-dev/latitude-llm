@@ -1,16 +1,43 @@
-import type { BehaviorMetric, MomentMetric, MonitorMetric, ScoreMetric } from "@domain/shared"
+import {
+  type BehaviorMetric,
+  MAX_EVALUABLE_RUN_MS,
+  type MetricTimeAxis,
+  type MomentMetric,
+  type MonitorMetric,
+  type ScoreMetric,
+} from "@domain/shared"
 import { USAGE_OPERATIONS } from "@domain/spans"
 
 /** ClickHouse `DateTime64` params take a space-separated, zone-naive string (UTC). */
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
 
-/** Standard windowing clauses shared by every inner subquery (`[from, to)` on the time axis). */
+/** Standard windowing params shared by every inner subquery (`[from, to)` on the time axis), plus the `windowGuardFrom` the completion axis needs. */
 export const windowParams = (input: { organizationId: string; projectId: string; from: Date; to: Date }) => ({
   organizationId: input.organizationId,
   projectId: input.projectId,
   windowFrom: toClickHouseDateTime64(input.from),
   windowTo: toClickHouseDateTime64(input.to),
+  windowGuardFrom: toClickHouseDateTime64(new Date(input.from.getTime() - MAX_EVALUABLE_RUN_MS)),
 })
+
+/** The `[from, to)` clauses for an axis. The completion axis also bounds the start: neither partition pruning nor the `min_start_time` index survives a predicate on the end time alone. */
+export const windowClauses = (input: {
+  axis: MetricTimeAxis
+  startColumn: string
+  completionColumn: string
+  precision: 3 | 9
+}): readonly string[] => {
+  const { axis, startColumn, completionColumn, precision } = input
+  const at = (param: string) => `toDateTime64({${param}:String}, ${precision}, 'UTC')`
+  if (axis === "start" || completionColumn === startColumn) {
+    return [`${startColumn} >= ${at("windowFrom")}`, `${startColumn} < ${at("windowTo")}`]
+  }
+  return [
+    `${completionColumn} >= ${at("windowFrom")}`,
+    `${completionColumn} < ${at("windowTo")}`,
+    `${startColumn} >= ${at("windowGuardFrom")}`,
+  ]
+}
 
 /**
  * Metric → SQL aggregate for the `scores` stream (the signal grain). `count`

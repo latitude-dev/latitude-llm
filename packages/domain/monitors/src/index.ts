@@ -14,6 +14,7 @@ export {
 } from "./constants.ts"
 export type { Monitor, MonitorRule, MonitorTarget } from "./entities/monitor.ts"
 export {
+  evaluationTimeAxis,
   monitorConfigCondition,
   monitorConfigFilterSet,
   monitorRuleSchema,

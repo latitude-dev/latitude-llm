@@ -23,6 +23,7 @@ import {
   createFakeAlertIncidentStore,
   createFakeMetricSeriesReader,
   createFakeMonitorRepository,
+  type FakeMatch,
 } from "../testing/index.ts"
 import { checkMonitorsUseCase } from "./check-monitors.ts"
 
@@ -94,7 +95,7 @@ const twoMatches = [new Date("2026-06-23T11:57:00.000Z"), new Date("2026-06-23T1
 
 const layersFor = (
   monitors: readonly Monitor[],
-  matches: readonly Date[],
+  matches: readonly FakeMatch[],
   savedSearch: { readonly query: string | null; readonly filterSet: FilterSet } = { query: null, filterSet: {} },
   metricReaderLayer?: Layer.Layer<MetricSeriesReader>,
   seedIncidents: readonly Incident[] = [],
@@ -188,6 +189,71 @@ describe("checkMonitorsUseCase", () => {
         sourceId: MonitorId(cuid("m1")),
       },
     })
+  })
+
+  it("fires a match monitor for a run that finished in the window but started long before it", async () => {
+    const completedAt = new Date("2026-06-23T11:59:30.000Z")
+    const { incidents, layer } = layersFor(
+      [
+        monitor({
+          id: MonitorId(cuid("m-long")),
+          rule: { trigger: "match", config: {}, severity: "low" },
+        }),
+      ],
+      [{ startedAt: new Date("2026-06-23T11:20:00.000Z"), completedAt }],
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(incidents).toHaveLength(1)
+    // The completion sits inside the evaluated window; the 40-minutes-ago start would not.
+    expect(incidents[0]).toMatchObject({ startedAt: completedAt, endedAt: completedAt })
+  })
+
+  it("does not fire a match monitor for a run that finished before the window", async () => {
+    const { incidents, layer } = layersFor(
+      [
+        monitor({
+          id: MonitorId(cuid("m-old")),
+          rule: { trigger: "match", config: {}, severity: "low" },
+        }),
+      ],
+      [{ startedAt: new Date("2026-06-23T11:20:00.000Z"), completedAt: new Date("2026-06-23T11:50:00.000Z") }],
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(incidents).toHaveLength(0)
+  })
+
+  it("reads counts on the start axis so a threshold monitor still measures arrival rate", async () => {
+    const { metricCalls, layer } = layersFor([thresholdMonitor()], [new Date("2026-06-23T11:58:00.000Z")])
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(metricCalls[0]?.target.timeAxis).toBe("start")
+  })
+
+  it("reads a completion-only threshold metric on the completion axis", async () => {
+    const condition = {
+      trigger: "threshold" as const,
+      metric: { kind: "avg" as const, field: "duration" as const },
+      threshold: { mode: "absolute" as const, value: 1 },
+      direction: "above" as const,
+    }
+    const { metricCalls, layer } = layersFor(
+      [
+        monitor({
+          id: MonitorId(cuid("m-dur")),
+          rule: { trigger: "threshold", config: { condition }, severity: "low" },
+        }),
+      ],
+      [],
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(metricCalls[0]?.target.timeAxis).toBe("completion")
   })
 
   it("resolves saved-search targets from the live saved search", async () => {

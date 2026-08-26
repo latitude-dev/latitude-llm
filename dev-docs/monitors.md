@@ -149,9 +149,22 @@ Point rules use `MetricSeriesReader` directly:
 - `match` fires when any matching row exists in the lookback window, backdating the incident's `started_at` to the first event.
 - `threshold` computes the configured metric value over the window and compares it to the configured threshold (absolute, multiplier-over-baseline, or seasonal/expected).
 
+### Time axis
+
+`evaluationTimeAxis(trigger, metric)` decides which timestamp the lookback window measures against, and every window on a target — current, baseline, and seasonal history — uses that one axis.
+
+| Axis | Applies to | Why |
+| --- | --- | --- |
+| `start` | `count` metrics on `threshold` and `escalating` | A count exists as soon as a run's first span lands, so windowing by start measures arrival rate and surfaces a surge while it is happening. |
+| `completion` | every `match` monitor, and every non-`count` metric | Error status, totals, and duration only exist once the run has finished. On the start axis a run longer than the window has aged out of it before the value being measured exists, so the monitor could never see it. |
+
+On the completion axis the query still bounds `start_time` by `MAX_EVALUABLE_RUN_MS` (24h) so ClickHouse keeps pruning partitions and using the `min_start_time` minmax index. That bound is also a ceiling: a run lasting longer than it is invisible to monitors.
+
+`firstEventAt` / `lastEventAt` report times on the same axis, which keeps a backdated `started_at` inside the window that produced it.
+
 Before reading ClickHouse, saved-search monitor targets resolve their current saved-search `filterSet` and `query`; if the saved search has been deleted, that monitor is skipped until the delete cascade removes it. Escalating rules adapt `MetricSeriesReader` into the incidents package's generic `SeriesReader` and then call `EscalationEngine`. The engine owns the sustained state machine, including seasonal expected-mode thresholds, entry snapshots, dwell exits, and hard timeouts. This is the same engine used for signal escalation; the reader decides which source produces the bucket series.
 
-The ClickHouse adapter is `MetricSeriesReaderLive` in `@platform/db-clickhouse`. It turns a target's `(stream, filterSet, query, metric)` into per-stream ClickHouse queries (over `traces`, `spans`, or `sessions`) and returns:
+The ClickHouse adapter is `MetricSeriesReaderLive` in `@platform/db-clickhouse`. It turns a target's `(stream, filterSet, query, metric, timeAxis)` into per-stream ClickHouse queries (over `traces`, `spans`, or `sessions`) and returns:
 
 - point/window values for threshold checks
 - first/last event timestamps for point incidents

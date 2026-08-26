@@ -1,5 +1,5 @@
 import { MetricSeriesReader, type MetricSeriesReaderShape, type MetricSeriesTarget } from "@domain/monitors"
-import { type ChSqlClient, type FilterSet, OrganizationId, ProjectId } from "@domain/shared"
+import { type ChSqlClient, type FilterSet, type MetricTimeAxis, OrganizationId, ProjectId } from "@domain/shared"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -106,35 +106,53 @@ const cacheSpan = (
 })
 
 /** A `traces` + `count` target — the saved-search/match shape this reader supersedes. */
-const countTarget = (filterSet: FilterSet = {}, query: string | null = null): MetricSeriesTarget => ({
+const countTarget = (
+  filterSet: FilterSet = {},
+  query: string | null = null,
+  timeAxis: MetricTimeAxis = "start",
+): MetricSeriesTarget => ({
   stream: "traces",
   filterSet,
   query,
   metric: { kind: "count" },
+  timeAxis,
 })
 
 /** A `traces` target carrying an arbitrary metric (no filter / no query). */
-const metricTarget = (metric: MetricSeriesTarget["metric"]): MetricSeriesTarget => ({
+const metricTarget = (
+  metric: MetricSeriesTarget["metric"],
+  timeAxis: MetricTimeAxis = "start",
+): MetricSeriesTarget => ({
   stream: "traces",
   filterSet: {},
   query: null,
   metric,
+  timeAxis,
 })
 
 /** A `spans` target carrying a metric + row-local filter (the tool-monitor shape). */
-const spanTarget = (metric: MetricSeriesTarget["metric"], filterSet: FilterSet): MetricSeriesTarget => ({
+const spanTarget = (
+  metric: MetricSeriesTarget["metric"],
+  filterSet: FilterSet,
+  timeAxis: MetricTimeAxis = "start",
+): MetricSeriesTarget => ({
   stream: "spans",
   filterSet,
   query: null,
   metric,
+  timeAxis,
 })
 
 /** A `sessions` target carrying an arbitrary metric (no filter / no query). */
-const sessionTarget = (metric: MetricSeriesTarget["metric"]): MetricSeriesTarget => ({
+const sessionTarget = (
+  metric: MetricSeriesTarget["metric"],
+  timeAxis: MetricTimeAxis = "start",
+): MetricSeriesTarget => ({
   stream: "sessions",
   filterSet: {},
   query: null,
   metric,
+  timeAxis,
 })
 
 // span() defaults to status_code 0 / 1s; override duration via its arg and status inline.
@@ -500,5 +518,103 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
       }),
     )
     expect(counts).toEqual([1, 1])
+  })
+})
+
+describe("MetricSeriesReaderLive (completion axis)", () => {
+  let reader: MetricSeriesReaderShape
+
+  // Own tag + day so the long runs can't perturb the start-axis suites above.
+  const LONG_TAG = "ms-longrun"
+  const d0 = new Date("2026-06-02T10:00:00.000Z")
+  const windowFrom = new Date("2026-06-02T11:00:00.000Z")
+  const windowTo = new Date("2026-06-02T11:05:00.000Z")
+  const longTarget = (timeAxis: MetricTimeAxis) =>
+    countTarget({ tags: [{ op: "in", value: [LONG_TAG] }] }, null, timeAxis)
+
+  beforeAll(async () => {
+    reader = await Effect.runPromise(
+      Effect.gen(function* () {
+        return yield* MetricSeriesReader
+      }).pipe(Effect.provide(MetricSeriesReaderLive)),
+    )
+  })
+
+  beforeEach(async () => {
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        // Starts 62 min before the window and ends 2 min inside it.
+        span(90, d0, [LONG_TAG], 62 * 60 * 1000),
+        // Starts and ends before the window entirely.
+        span(91, d0, [LONG_TAG], 30 * 60 * 1000),
+      ]),
+    )
+  })
+
+  it("counts a run that finishes in the window but started long before it", async () => {
+    const count = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: longTarget("completion"),
+        from: windowFrom,
+        to: windowTo,
+      }),
+    )
+    expect(count).toBe(1)
+  })
+
+  it("misses that same run on the start axis — the defect the completion axis fixes", async () => {
+    const count = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: longTarget("start"),
+        from: windowFrom,
+        to: windowTo,
+      }),
+    )
+    expect(count).toBe(0)
+  })
+
+  it("excludes a run that finished before the window", async () => {
+    const count = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: longTarget("completion"),
+        from: new Date("2026-06-02T11:10:00.000Z"),
+        to: new Date("2026-06-02T11:15:00.000Z"),
+      }),
+    )
+    expect(count).toBe(0)
+  })
+
+  it("reports the completion time as the first event, so started_at lands inside the window", async () => {
+    const first = await runCh(
+      reader.firstEventAt({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: longTarget("completion"),
+        from: windowFrom,
+        to: windowTo,
+      }),
+    )
+    expect(first).toEqual(new Date("2026-06-02T11:02:00.000Z"))
+  })
+
+  it("buckets on the completion time", async () => {
+    // [11:00, 11:05) into 5×1-min buckets aligned to 11:05, newest-first: the run ends at 11:02 ⇒ index 3.
+    const counts = await runCh(
+      reader.seriesPerBucket({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: longTarget("completion"),
+        from: windowFrom,
+        to: windowTo,
+        bucketMs: 60 * 1000,
+      }),
+    )
+    expect(counts).toEqual([0, 0, 0, 1, 0])
   })
 })
