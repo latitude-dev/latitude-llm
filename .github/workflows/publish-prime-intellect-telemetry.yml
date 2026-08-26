@@ -27,103 +27,13 @@ jobs:
         uses: actions/checkout@v7.0.0
         with:
           ref: ${{ inputs.ref || github.sha }}
-          persist-credentials: false
 
-      - name: Get current version
-        id: get_version
-        run: |
-          CURRENT_VERSION=$(grep -m1 '^version' packages/telemetry/prime-intellect/pyproject.toml | sed -E 's/version *= *"([^"]+)"/\1/')
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Check version on PyPI
-        id: check_version
-        env:
-          CURRENT_VERSION: ${{ steps.get_version.outputs.version }}
-        run: |
-          HTTP_CODE=$(curl -s -o /tmp/pypi.json -w "%{http_code}" \
-            "https://pypi.org/pypi/latitude-telemetry-prime-intellect/${CURRENT_VERSION}/json")
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "should_publish=false" >> $GITHUB_OUTPUT
-          elif [ "$HTTP_CODE" = "404" ]; then
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-          else
-            echo "Unexpected PyPI response HTTP ${HTTP_CODE} for version ${CURRENT_VERSION}"
-            cat /tmp/pypi.json || true
-            exit 1
-          fi
-
-      - name: Setup Python
-        if: steps.check_version.outputs.should_publish == 'true'
-        uses: actions/setup-python@v7.0.0
+      - name: Publish
+        uses: ./.github/actions/publish-pypi-package
         with:
-          python-version: "3.11"
-
-      - name: Install uv
-        if: steps.check_version.outputs.should_publish == 'true'
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          enable-cache: true
-
-      - name: Install dependencies
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/telemetry/prime-intellect
-          uv venv
-          uv sync --all-extras --all-groups
-
-      - name: Run tests
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/telemetry/prime-intellect
-          uv run pytest tests/ -x
-
-      - name: Build package
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/telemetry/prime-intellect
-          uv build
-
-      - name: Extract changelog
-        if: steps.check_version.outputs.should_publish == 'true'
-        id: changelog
-        env:
-          VERSION: ${{ steps.get_version.outputs.version }}
-        run: |
-          CHANGELOG="packages/telemetry/prime-intellect/CHANGELOG.md"
-          if [ ! -f "$CHANGELOG" ]; then
-            echo "Missing changelog: ${CHANGELOG}"
-            exit 1
-          fi
-
-          awk -v ver="$VERSION" '
-            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
-            found { print }
-          ' "$CHANGELOG" > release_notes.md
-
-          if [ ! -s release_notes.md ]; then
-            echo "Missing changelog entry for version ${VERSION} in ${CHANGELOG}"
-            exit 1
-          fi
-
-          {
-            echo "body<<EOF"
-            cat release_notes.md
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
-      - name: Publish to PyPI
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/telemetry/prime-intellect
-          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
-
-      - name: Create GitHub Release
-        if: steps.check_version.outputs.should_publish == 'true'
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: prime-intellect-telemetry-${{ steps.get_version.outputs.version }}
-          name: Prime Intellect Telemetry v${{ steps.get_version.outputs.version }}
-          body: ${{ steps.changelog.outputs.body }}
+          package_path: packages/telemetry/prime-intellect
+          pypi_package: latitude-telemetry-prime-intellect
+          tag_prefix: prime-intellect-telemetry
+          release_name: Prime Intellect Telemetry
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
           target_commitish: ${{ inputs.ref || github.sha }}
-          draft: false
-          prerelease: ${{ contains(steps.get_version.outputs.version, 'a') || contains(steps.get_version.outputs.version, 'b') || contains(steps.get_version.outputs.version, 'rc') }}

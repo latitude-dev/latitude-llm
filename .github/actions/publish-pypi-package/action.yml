@@ -1,0 +1,186 @@
+name: Publish PyPI Package
+description: >-
+  Compare the repo version against PyPI and, if absent, verify the lockfile then
+  install/lint/typecheck/test, build, publish, and cut a GitHub Release. No-ops when the version is already
+  published. Assumes the repository has already been checked out by the caller, and
+  that the package declares `pytest` in its dev dependency group.
+
+inputs:
+  package_path:
+    description: Path to the package directory (e.g. packages/telemetry/hermes).
+    required: true
+  pypi_package:
+    description: Distribution name on PyPI (e.g. latitude-telemetry-hermes).
+    required: true
+  tag_prefix:
+    description: GitHub release tag prefix (e.g. hermes-telemetry).
+    required: true
+  release_name:
+    description: GitHub release name prefix (e.g. Hermes Telemetry).
+    required: true
+  pypi_token:
+    description: PyPI API token. Composite actions cannot read secrets, so the caller passes it in.
+    required: true
+  target_commitish:
+    description: Commit SHA or branch that the GitHub release tag should point at.
+    required: false
+    default: ""
+  test_path:
+    description: Path passed to pytest, relative to the package.
+    required: false
+    default: tests/
+  pyright_paths:
+    description: Paths to type-check with Pyright. Empty skips the step, for packages without it.
+    required: false
+    default: ""
+  run_ruff:
+    description: >-
+      Lint and format-check with Ruff. Set false for generated packages, where a
+      format pass would rewrite thousands of files that regeneration reverts.
+    required: false
+    default: "true"
+  python_version:
+    description: Python version to build and test against.
+    required: false
+    default: "3.11"
+
+runs:
+  using: composite
+  steps:
+    - name: Get package version
+      id: get_version
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: |
+        CURRENT_VERSION=$(grep -m1 '^version' pyproject.toml | sed -E 's/version *= *"([^"]+)"/\1/')
+        if [ -z "$CURRENT_VERSION" ]; then
+          echo "Could not read a version from ${{ inputs.package_path }}/pyproject.toml"
+          exit 1
+        fi
+        echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Check version on PyPI
+      id: check_version
+      shell: bash
+      env:
+        CURRENT_VERSION: ${{ steps.get_version.outputs.version }}
+        PYPI_PACKAGE: ${{ inputs.pypi_package }}
+      run: |
+        # Distinguish 404 from a transient failure: treating "PyPI did not answer"
+        # as "not published" would attempt a publish on any blip.
+        HTTP_CODE=$(curl -s -o /tmp/pypi.json -w "%{http_code}" \
+          "https://pypi.org/pypi/${PYPI_PACKAGE}/${CURRENT_VERSION}/json")
+        if [ "$HTTP_CODE" = "200" ]; then
+          echo "should_publish=false" >> $GITHUB_OUTPUT
+        elif [ "$HTTP_CODE" = "404" ]; then
+          echo "should_publish=true" >> $GITHUB_OUTPUT
+        else
+          echo "Unexpected PyPI response HTTP ${HTTP_CODE} for ${PYPI_PACKAGE} ${CURRENT_VERSION}"
+          cat /tmp/pypi.json || true
+          exit 1
+        fi
+
+    - name: Setup Python
+      if: steps.check_version.outputs.should_publish == 'true'
+      uses: actions/setup-python@v7.0.0
+      with:
+        python-version: ${{ inputs.python_version }}
+
+    - name: Install uv
+      if: steps.check_version.outputs.should_publish == 'true'
+      uses: astral-sh/setup-uv@v8.3.2
+      with:
+        enable-cache: true
+
+    - name: Check the lockfile is up to date
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      # Before `uv sync`, which would silently re-resolve a stale lock and publish
+      # dependencies the committed lockfile never described. Two packages had drifted
+      # this way — a manifest bumped without re-locking — and nothing caught it.
+      run: uv lock --check
+    - name: Install dependencies
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: |
+        uv venv
+        uv sync --all-extras --all-groups
+
+    - name: Run Ruff linter
+      if: steps.check_version.outputs.should_publish == 'true' && inputs.run_ruff == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: uv run ruff check .
+
+    - name: Run Ruff format check
+      if: steps.check_version.outputs.should_publish == 'true' && inputs.run_ruff == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: uv run ruff format --check .
+
+    - name: Run Pyright type check
+      if: steps.check_version.outputs.should_publish == 'true' && inputs.pyright_paths != ''
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: uv run pyright ${{ inputs.pyright_paths }}
+
+    - name: Run tests
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: uv run pytest ${{ inputs.test_path }} -x
+
+    - name: Build package
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: uv build
+
+    - name: Extract changelog
+      if: steps.check_version.outputs.should_publish == 'true'
+      id: changelog
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: |
+        VERSION="${{ steps.get_version.outputs.version }}"
+        if [ ! -f CHANGELOG.md ]; then
+          echo "Missing changelog: ${{ inputs.package_path }}/CHANGELOG.md"
+          exit 1
+        fi
+
+        awk -v ver="$VERSION" '
+          /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
+          found { print }
+        ' CHANGELOG.md > /tmp/release_notes.md
+
+        if [ ! -s /tmp/release_notes.md ]; then
+          echo "Missing changelog entry for version ${VERSION} in ${{ inputs.package_path }}/CHANGELOG.md"
+          exit 1
+        fi
+
+        {
+          echo "body<<EOF"
+          cat /tmp/release_notes.md
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+
+    - name: Publish to PyPI
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      working-directory: ${{ inputs.package_path }}
+      run: uv publish --username __token__ --password "$PYPI_TOKEN"
+      env:
+        PYPI_TOKEN: ${{ inputs.pypi_token }}
+
+    - name: Create GitHub Release
+      if: steps.check_version.outputs.should_publish == 'true'
+      uses: softprops/action-gh-release@v3
+      with:
+        tag_name: ${{ inputs.tag_prefix }}-${{ steps.get_version.outputs.version }}
+        name: ${{ inputs.release_name }} v${{ steps.get_version.outputs.version }}
+        body: ${{ steps.changelog.outputs.body }}
+        target_commitish: ${{ inputs.target_commitish }}
+        draft: false
+        prerelease: ${{ contains(steps.get_version.outputs.version, 'a') || contains(steps.get_version.outputs.version, 'b') || contains(steps.get_version.outputs.version, 'rc') }}
