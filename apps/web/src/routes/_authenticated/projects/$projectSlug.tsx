@@ -1,7 +1,7 @@
 import { ProjectRepository } from "@domain/projects"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
-import { ClaudeCodeIcon, cn, Icon, Text, Tooltip, useMountEffect } from "@repo/ui"
+import { Button, ClaudeCodeIcon, cn, Text, Tooltip, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, getRouteApi, Outlet, redirect, useRouterState } from "@tanstack/react-router"
@@ -91,30 +91,19 @@ function SidebarSearchButton({ collapsed }: { collapsed: boolean }) {
   const commandPalette = useCommandPalette()
 
   const button = (
-    <button
-      type="button"
+    <Button
       onClick={() => commandPalette.setOpen(true)}
       aria-label="Search"
-      className={cn(
-        "flex cursor-pointer items-center rounded-lg bg-secondary transition-colors hover:bg-secondary/80",
-        {
-          "h-10 w-10 justify-center": collapsed,
-          "w-full gap-2 px-2 py-2": !collapsed,
-        },
-      )}
+      icon={SearchIcon}
+      trailingAccessory={!collapsed ? <HotkeyBadge hotkey="Mod+K" /> : undefined}
+      variant="secondary-soft"
+      className={cn("transition-colors", {
+        "h-10 w-10 justify-center": collapsed,
+        "w-full px-2 py-2 text-muted-foreground": !collapsed,
+      })}
     >
-      <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
-      {!collapsed ? (
-        <>
-          <Text.H5 color="foregroundMuted" className="min-w-0 flex-1 text-left">
-            Search
-          </Text.H5>
-          <span className="text-muted-foreground">
-            <HotkeyBadge hotkey="Mod+K" />
-          </span>
-        </>
-      ) : null}
-    </button>
+      {!collapsed ? "Search" : null}
+    </Button>
   )
 
   if (!collapsed) return button

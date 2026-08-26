@@ -90,11 +90,7 @@ export function ScoreList({
                 <div
                   key={`${score.id}:${score.draftedAt !== null ? "draft" : "pub"}`}
                   data-annotation-navigation={clickable ? "true" : undefined}
-                  className={cn(
-                    "rounded-lg",
-                    clickable ? "cursor-pointer hover:bg-secondary" : undefined,
-                    isSelected && "bg-secondary ring-2 ring-primary/50 ring-offset-2",
-                  )}
+                  className={cn(clickable ? "cursor-pointer" : undefined)}
                   onClick={onClickScoreCard({ score, clickable })}
                   onKeyDown={onClickScoreCard({ score, clickable })}
                   role={clickable ? "button" : undefined}
@@ -108,9 +104,20 @@ export function ScoreList({
                       isGlobal={isGlobal}
                       isUpdateLoading={updatePending}
                       onUpdate={(data) => onUpdate(annotation, data)}
+                      className={cn(
+                        clickable && "hover:bg-secondary/60",
+                        isSelected && "bg-secondary ring-2 ring-primary/50 ring-offset-2",
+                      )}
                     />
                   ) : (
-                    <ReadOnlyScoreCard score={score} projectId={projectId} />
+                    <ReadOnlyScoreCard
+                      score={score}
+                      projectId={projectId}
+                      className={cn(
+                        clickable && "hover:bg-secondary/60",
+                        isSelected && "bg-secondary ring-2 ring-primary/50 ring-offset-2",
+                      )}
+                    />
                   )}
                 </div>
               )

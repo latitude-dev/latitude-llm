@@ -1,9 +1,17 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { type ButtonHTMLAttributes, Children, isValidElement, type ReactNode, type Ref } from "react"
-
+import {
+  type ButtonHTMLAttributes,
+  Children,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from "react"
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
+import { Icon, type IconProps } from "../icons/icons.tsx"
 
 const outerElevation = "border-0 shadow-sm transition-shadow duration-200 hover:shadow-lg"
 
@@ -44,12 +52,12 @@ const buttonVariantsConfig = cva(
         default: "border-0 bg-transparent text-primary-foreground disabled:cursor-default",
         destructive: "border-0 bg-transparent text-destructive-foreground",
         outline:
-          "border border-input bg-background shadow-none group-hover:bg-secondary group-hover:text-secondary-foreground/80 group-hover:shadow-none",
+          "border border-input bg-background shadow-none group-hover:bg-secondary group-hover:text-secondary-foreground/80 group-hover:shadow-none group-active:bg-secondary group-active:text-secondary-foreground group-active:shadow-none",
         "destructive-outline":
-          "border border-destructive bg-background text-destructive shadow-none group-hover:bg-destructive-muted/40 group-hover:border-destructive-muted-foreground/40 group-hover:shadow-none [&_svg]:text-destructive-muted-foreground/85",
+          "border border-destructive bg-background text-destructive shadow-none group-hover:bg-destructive-muted/40 group-hover:border-destructive-muted-foreground/40 group-hover:shadow-none group-active:bg-destructive-muted/40 group-active:border-destructive-muted-foreground/40 group-active:shadow-none [&_svg]:text-destructive-muted-foreground/85",
         secondary: "border-0 bg-transparent text-secondary-foreground [&_svg]:text-muted-foreground",
         ghost:
-          "border-0 border-transparent bg-transparent text-muted-foreground shadow-none group-hover:bg-muted group-hover:shadow-none",
+          "border-0 border-transparent bg-transparent text-muted-foreground shadow-none group-hover:bg-muted group-hover:shadow-none group-active:bg-muted group-active:text-secondary-foreground group-active:shadow-none",
         link: "border-0 bg-transparent text-accent-foreground shadow-none underline-offset-4 group-hover:underline group-hover:shadow-none",
         "default-soft":
           "border-0 bg-primary-muted text-primary shadow-none group-hover:bg-primary-muted-hover group-hover:shadow-none group-active:bg-primary-muted group-hover:group-active:bg-primary-muted [&_svg]:text-primary/70",
@@ -124,7 +132,22 @@ export interface ButtonProps
   ref?: Ref<HTMLButtonElement>
   asChild?: boolean
   isLoading?: boolean
+  pressed?: boolean | undefined
+  icon?: IconProps["icon"]
+  iconProps?: Omit<IconProps, "icon" | "size">
+  trailingIcon?: IconProps["icon"]
+  trailingIconProps?: Omit<IconProps, "icon" | "size">
+  trailingAccessory?: ReactNode
 }
+
+const buttonIconSizes = {
+  default: "sm",
+  sm: "xs",
+  lg: "default",
+  icon: "sm",
+  "icon-xs": "xs",
+  full: "sm",
+} as const satisfies Record<NonNullable<ButtonProps["size"]>, NonNullable<IconProps["size"]>>
 
 function getElementDisplayName(type: unknown): string {
   if (typeof type === "string") {
@@ -177,20 +200,101 @@ function stripLeadingIconChild(children: ReactNode): ReactNode {
   return childArray.filter((_, index) => index !== firstMeaningfulChildIndex)
 }
 
+function buttonIconSize(size: ButtonProps["size"]) {
+  return buttonIconSizes[size ?? "default"]
+}
+
+function hasUtilityClassToken(className: string | undefined, token: string) {
+  return className?.split(/\s+/).includes(token) ?? false
+}
+
+function pressedVariantClasses(variant: ButtonProps["variant"]) {
+  switch (variant) {
+    case "ghost":
+      return "bg-muted text-secondary-foreground shadow-none [&_svg]:text-muted-foreground"
+    case "outline":
+      return "border-input bg-secondary text-secondary-foreground shadow-none [&_svg]:text-muted-foreground"
+    case "destructive-outline":
+      return "border-destructive bg-destructive-muted/40 text-destructive [&_svg]:text-destructive-muted-foreground/85"
+    case "secondary-soft":
+      return "bg-secondary-muted text-secondary-foreground shadow-none [&_svg]:text-muted-foreground"
+    case "default-soft":
+      return "bg-primary-muted text-primary shadow-none [&_svg]:text-primary/70"
+    case "destructive-soft":
+      return "bg-destructive-muted text-destructive-muted-foreground shadow-none [&_svg]:text-destructive-muted-foreground/85"
+    case "secondary":
+      return "text-secondary-foreground [&_svg]:text-muted-foreground"
+    case "default":
+      return "text-primary-foreground"
+    case "destructive":
+      return "text-destructive-foreground"
+    default:
+      return ""
+  }
+}
+
+function renderButtonContent({
+  children,
+  isLoading,
+  size,
+  icon,
+  iconProps,
+  trailingIcon,
+  trailingIconProps,
+  trailingAccessory,
+}: {
+  readonly children: ReactNode
+  readonly isLoading: boolean
+  readonly size: ButtonProps["size"]
+  readonly icon?: ButtonProps["icon"]
+  readonly iconProps?: ButtonProps["iconProps"]
+  readonly trailingIcon?: ButtonProps["trailingIcon"]
+  readonly trailingIconProps?: ButtonProps["trailingIconProps"]
+  readonly trailingAccessory?: ButtonProps["trailingAccessory"]
+}) {
+  const resolvedIconSize = buttonIconSize(size)
+
+  return (
+    <>
+      {isLoading && (
+        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      )}
+      {!isLoading && icon ? <Icon icon={icon} size={resolvedIconSize} {...iconProps} /> : null}
+      {children}
+      {!isLoading && trailingIcon ? <Icon icon={trailingIcon} size={resolvedIconSize} {...trailingIconProps} /> : null}
+      {trailingAccessory ? (
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1">{trailingAccessory}</span>
+      ) : null}
+    </>
+  )
+}
+
 function Button({
   className,
   variant,
   size,
   asChild = false,
   isLoading = false,
+  pressed,
   children,
   disabled,
+  icon,
+  iconProps,
+  trailingIcon,
+  trailingIconProps,
+  trailingAccessory,
   ref,
   ...props
 }: ButtonProps) {
   const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
+  const fillsWidth = hasUtilityClassToken(className, "w-full")
 
   if (asChild) {
+    const slotChild = isValidElement<{ children?: ReactNode }>(visibleChildren)
+      ? (visibleChildren as ReactElement<{ children?: ReactNode }>)
+      : null
+    const slotChildChildren = slotChild?.props.children
+
     return (
       <Slot
         ref={ref}
@@ -201,12 +305,29 @@ function Button({
           // That wrapper is also what the base `w-full` fills; merged onto one element it would
           // stretch to the parent instead, so shrink to content unless the size sets its own width.
           { "w-auto": size !== "full" && size !== "icon" && size !== "icon-xs" },
+          pressed && pressedVariantClasses(variant),
           className,
           isLoading && "animate-pulse",
         )}
+        {...(pressed !== undefined ? { "aria-pressed": pressed } : {})}
         {...props}
       >
-        {visibleChildren}
+        {slotChild
+          ? cloneElement(
+              slotChild,
+              undefined,
+              renderButtonContent({
+                children: isLoading ? stripLeadingIconChild(slotChildChildren) : slotChildChildren,
+                isLoading,
+                size,
+                icon,
+                iconProps,
+                trailingIcon,
+                trailingIconProps,
+                trailingAccessory,
+              }),
+            )
+          : visibleChildren}
       </Slot>
     )
   }
@@ -215,16 +336,30 @@ function Button({
     <button
       ref={ref}
       {...props}
-      className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
+      className={cn(buttonContainerVariants({ variant }), fillsWidth && "w-full", isLoading && "animate-pulse")}
       disabled={disabled || isLoading}
       aria-busy={isLoading ? "true" : undefined}
+      {...(pressed !== undefined ? { "aria-pressed": pressed } : {})}
     >
-      <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-1", className)}>
+      <div
+        className={cn(
+          buttonVariantsConfig({ variant, size }),
+          pressed && pressedVariantClasses(variant),
+          "relative z-1",
+          className,
+        )}
+      >
         <div className="relative z-1 flex max-w-full flex-row items-center gap-x-1.5">
-          {isLoading && (
-            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          )}
-          {visibleChildren}
+          {renderButtonContent({
+            children: visibleChildren,
+            isLoading,
+            size,
+            icon,
+            iconProps,
+            trailingIcon,
+            trailingIconProps,
+            trailingAccessory,
+          })}
         </div>
       </div>
     </button>

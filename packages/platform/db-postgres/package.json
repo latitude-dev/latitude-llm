@@ -21,6 +21,7 @@
     "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
     "pg:seed": "node --import tsx src/seeds/run.ts",
     "pg:seed:integrations": "node --import tsx src/seeds/dev-integrations.ts",
+    "pg:seed:fake-latitude-annotation": "node --import tsx scripts/fake-latitude-annotation.ts",
     "billing:usage-events:maintain": "node --import tsx scripts/maintain-billing-usage-events.ts",
     "pg:reset": "bash ../../../docker/reset-postgres.sh",
     "auth:generate-schema-reference": "pnpm dlx @better-auth/cli@1.4.22 generate --config ./auth.cli.ts --output ./better-auth.schema.reference.ts --yes",

@@ -1,8 +1,8 @@
 import type { ScoreSourceType } from "@domain/scores"
-import { Badge, Icon, Text, Tooltip } from "@repo/ui"
+import { Badge, Icon, Text, ThumbButton, Tooltip } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { Link, useParams } from "@tanstack/react-router"
-import { AlertCircleIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
+import { AlertCircleIcon, ShieldAlertIcon } from "lucide-react"
 import type { ScoreRecord } from "../../../../../../domains/scores/scores.functions.ts"
 import { useSignal } from "../../../../../../domains/signals/signals.collection.ts"
 import {
@@ -13,6 +13,7 @@ import {
   scoreCardSignalLabel,
   scoreCardSourceTitle,
 } from "./score-card-display.ts"
+import { ScoreEntryCard, ScoreEntryCardBody, ScoreEntryCardHeader } from "./score-entry-card.tsx"
 
 const SOURCE_LABELS: Record<ScoreSourceType, string> = {
   annotation: "Annotation",
@@ -23,6 +24,34 @@ const SOURCE_LABELS: Record<ScoreSourceType, string> = {
 interface ScoreCardProps {
   readonly score: ScoreRecord
   readonly projectId: string
+  readonly className?: string
+}
+
+function ScoreVerdictReadout({
+  passed,
+  errored,
+  error,
+}: {
+  readonly passed: boolean
+  readonly errored: boolean
+  readonly error: string | null
+}) {
+  if (errored) {
+    return (
+      <Tooltip
+        asChild
+        trigger={
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg">
+            <Icon icon={AlertCircleIcon} size="xs" color="destructiveMutedForeground" />
+          </div>
+        }
+      >
+        {error ?? "Score generation failed"}
+      </Tooltip>
+    )
+  }
+
+  return <ThumbButton selected readOnly variant={passed ? "up" : "down"} appearance="icon" onClick={() => undefined} />
 }
 
 function ScoreSignalLink({
@@ -82,7 +111,7 @@ function ScoreSignalLink({
   )
 }
 
-export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
+export function ReadOnlyScoreCard({ score, projectId, className }: ScoreCardProps) {
   const { projectSlug } = useParams({ strict: false })
   const linkedSignalId = scoreCardLinkedSignalId(score)
   const { data: linkedSignal } = useSignal({
@@ -111,54 +140,50 @@ export function ReadOnlyScoreCard({ score, projectId }: ScoreCardProps) {
   ) : null
 
   return (
-    <div data-score-card-id={score.id} tabIndex={-1} className="flex flex-col gap-1 m-1 p-1 rounded-lg outline-none">
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" size="small">
-          {sourceLabel}
-        </Badge>
-        {score.source === "evaluation" ? signalLink : null}
-        {sourceTitle ? (
-          <Text.H6 color="foregroundMuted" className="truncate">
-            {sourceTitle}
-          </Text.H6>
-        ) : null}
-        {evaluationVerdict ? (
-          <Badge variant="secondary" size="small">
-            {evaluationVerdict}
-          </Badge>
-        ) : null}
-        <Text.H6 color="foregroundMuted">{relativeTime(new Date(score.createdAt))}</Text.H6>
-        <div className="ml-auto flex items-center gap-x-1">
-          {score.errored ? (
-            <Tooltip
-              asChild
-              trigger={
-                <div className="flex h-8 w-8 items-center justify-center">
-                  <Icon icon={AlertCircleIcon} size="xs" color="destructiveMutedForeground" />
-                </div>
-              }
-            >
-              {score.error ?? "Score generation failed"}
-            </Tooltip>
-          ) : evaluationVerdict ? null : (
-            <div className="flex h-8 w-8 items-center justify-center">
-              <Icon
-                icon={score.passed ? ThumbsUpIcon : ThumbsDownIcon}
-                size="xs"
-                color={score.passed ? "successMutedForeground" : "destructiveMutedForeground"}
-              />
-            </div>
-          )}
-        </div>
-      </div>
+    <ScoreEntryCard dataAttributeName="data-score-card-id" id={score.id} className={className}>
+      <ScoreEntryCardHeader
+        meta={
+          <>
+            <Badge variant="outline" size="small">
+              {sourceLabel}
+            </Badge>
+            <Text.H6 color="foregroundMuted">{relativeTime(new Date(score.createdAt))}</Text.H6>
+          </>
+        }
+        title={
+          <>
+            {sourceTitle ? <Text.H5M className="min-w-0 max-w-full truncate">{sourceTitle}</Text.H5M> : null}
+            {evaluationVerdict ? (
+              <Badge variant="secondary" size="small">
+                {evaluationVerdict}
+              </Badge>
+            ) : null}
+          </>
+        }
+        supporting={score.source === "evaluation" ? signalLink : null}
+        trailing={
+          evaluationVerdict ? null : (
+            <ScoreVerdictReadout passed={score.passed} errored={score.errored} error={score.error} />
+          )
+        }
+      />
 
-      {showValue ? <Text.H6 color="foregroundMuted">Value: {Math.round(score.value * 100)}%</Text.H6> : null}
-
-      {showFeedback && feedback ? <Text.H5 className="whitespace-pre-wrap">{feedback}</Text.H5> : null}
-
-      {score.source !== "evaluation" && signalLink ? (
-        <div className="flex items-center gap-2 pt-1">{signalLink}</div>
+      {showFeedback && feedback ? (
+        <ScoreEntryCardBody>
+          <Text.H5 className="whitespace-pre-wrap break-words leading-relaxed">{feedback}</Text.H5>
+        </ScoreEntryCardBody>
       ) : null}
-    </div>
+
+      {showValue || (score.source !== "evaluation" && signalLink) ? (
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {showValue ? (
+            <Badge variant="accent" size="small">
+              Value {Math.round(score.value * 100)}%
+            </Badge>
+          ) : null}
+          {score.source !== "evaluation" ? signalLink : null}
+        </div>
+      ) : null}
+    </ScoreEntryCard>
   )
 }
