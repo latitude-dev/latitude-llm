@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## v0.3.85 - 2026-08-26
+
+### Signals
+
+- Near-duplicate candidates now merge into one promotable signal. Discovery could split a real problem across several one-session candidates, none of which reached the promotion gate alone; a pass runs whenever a candidate's centroid moves, merges the neighbours above the similarity floor, and re-qualifies the survivor, so the union faces the gate its fragments could not. A promoted signal is never absorbed nor picked as survivor, and each pass is capped, because there is no demerge (ref: #4482).
+- Candidates that stop accumulating evidence are now swept. Every signal row carries a 2048-dimension centroid that hybrid search scans exactly, so this is the first mechanism that lets the corpus shrink rather than only grow; a candidate idle past the promotion window is provably something nobody has seen. Their scores stay attached, which is what keeps the sweep from feeding the same annotations back into discovery (ref: #4482).
+- An absorbed candidate now records the signal that took it over, and the ClickHouse pass that moves its scores resolves the sweep set from Postgres at execution time. Two merges in a chain publish independent jobs with no ordering between them, which could strand rows on a soft-deleted signal and leave the survivor's occurrence count permanently short (ref: #4482).
+
+### Web
+
+- A score's conversation anchor is now shareable. Clicking an anchored score already scrolled the Conversation tab to the message it points at, but the position was wiped from the URL the moment it landed; the focus now lives in a `scoreId` search param that survives, so the link reproduces the scroll and highlight on load. Opening a session from a signal lands on the anchor of the score that signal recorded there, and that first scroll now actually reaches it, waiting for the conversation to render and its layout to settle (ref: #4478, #4483).
+
+### Telemetry
+
+- The Hermes telemetry plugin now recovers the conversation, memory, tools, and usage a session was losing, published as `latitude-telemetry-hermes` 0.2.0. It normalized only the OpenAI Chat Completions message shape, so on Hermes's Codex/Responses path every tool call and result was dropped from the conversation and assistant text arrived as a JSON blob. Everything else in the hook payloads is now read too: system instructions, tool definitions, tool error status and duration, the real response model, time to first token, end-user identity, and the delegating subagent. Added alongside it are memory telemetry for the built-in stores, derived and user-defined tags and metadata, `config.yaml` as a second configuration surface, secret and attribute redaction, and accounting for the auxiliary calls Hermes makes through a client that fires no hooks at all. The export path was rebuilt so every span id ships exactly once, and the per-turn flush budget dropped from 10s to 2s (ref: #4499).
+- Ingest now normalizes OpenAI Responses items into the GenAI vocabulary, so `output_text`, `function_call`, and `function_call_output` from any Responses-dialect instrumentation pair and render like every other conversation instead of reaching storage as unknown part types (ref: #4499).
+
+### Docs
+
+- Rewrote the Hermes telemetry page around the settings that changed: every option is now readable from the profile's `config.yaml` as well as the environment, time to first token requires `plugins.stream_reasoning_deltas`, and secret redaction is on by default. Added sections for running several agents in one project, memory, usage and cost, and privacy, and fixed the troubleshooting step that told you to confirm the plugin with `hermes plugins list`, which never works for a pip plugin (ref: #4499).
+
 ## v0.3.84 - 2026-08-19
 
 ### Web
