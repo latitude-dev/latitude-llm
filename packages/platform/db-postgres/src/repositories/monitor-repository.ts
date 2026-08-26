@@ -69,6 +69,7 @@ const toMonitor = (row: typeof monitors.$inferSelect): Monitor => {
       config,
       severity: row.severity,
     },
+    lastEvaluatedAt: row.lastEvaluatedAt,
     mutedAt: row.mutedAt,
     deletedAt: row.deletedAt,
     createdAt: row.createdAt,
@@ -102,6 +103,7 @@ const toMonitorRow = (monitor: Monitor): typeof monitors.$inferInsert => ({
     ...(monitor.target.query === null ? {} : { query: monitor.target.query }),
   }),
   severity: monitor.rule.severity,
+  lastEvaluatedAt: monitor.lastEvaluatedAt,
   mutedAt: monitor.mutedAt,
   deletedAt: monitor.deletedAt,
   createdAt: monitor.createdAt,
@@ -326,6 +328,23 @@ export const MonitorRepositoryLive = Layer.effect(
               .returning({ id: monitors.id }),
           )
           if (updated.length === 0) return yield* new NotFoundError({ entity: "Monitor", id })
+        }),
+      setLastEvaluatedAt: ({ id, lastEvaluatedAt }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db) =>
+            db
+              .update(monitors)
+              // Self-assigning `updatedAt` suppresses the schema's `$onUpdateFn`, which would restamp every match monitor each sweep.
+              .set({ lastEvaluatedAt, updatedAt: sql`${monitors.updatedAt}` })
+              .where(
+                and(
+                  eq(monitors.organizationId, sqlClient.organizationId),
+                  eq(monitors.id, id),
+                  isNull(monitors.deletedAt),
+                ),
+              ),
+          )
         }),
       softDelete: (id) =>
         Effect.gen(function* () {

@@ -95,6 +95,11 @@ export interface MonitorRepositoryShape {
     readonly id: MonitorId
     readonly mutedAt: Date | null
   }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
+  /** Advance a `match` monitor's evaluation watermark, leaving `updatedAt` alone. Silent on a missing row — the monitor may have been deleted mid-check. */
+  setLastEvaluatedAt(input: {
+    readonly id: MonitorId
+    readonly lastEvaluatedAt: Date
+  }): Effect.Effect<void, RepositoryError, SqlClient>
   softDelete(id: MonitorId): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
   updateMetadata(input: {
     readonly id: MonitorId

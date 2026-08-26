@@ -26,6 +26,7 @@ const makeMonitor = (id: string, target: Monitor["target"], rule?: Monitor["rule
   system: false,
   target,
   rule: rule ?? { trigger: "match", config: {}, severity: "low" },
+  lastEvaluatedAt: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: at,
@@ -128,5 +129,49 @@ describe("MonitorRepositoryLive target round-trip", () => {
 
     const loaded = await findById("metric")
     expect(loaded.target.metric).toEqual({ kind: "sum", field: "cost" })
+  })
+})
+
+describe("MonitorRepositoryLive evaluation watermark", () => {
+  beforeEach(async () => {
+    await pg.db.delete(monitors)
+  })
+
+  const target: Monitor["target"] = {
+    type: "user",
+    id: null,
+    kind: "user",
+    stream: "traces",
+    query: null,
+    savedSearchId: null,
+    metric: { kind: "count" },
+  }
+
+  it("round-trips the watermark without touching updatedAt", async () => {
+    const id = "mon-watermark"
+    const evaluatedAt = new Date("2026-06-01T11:30:00.000Z")
+    await create(makeMonitor(id, target))
+
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* MonitorRepository
+        yield* repo.setLastEvaluatedAt({ id: MonitorId(id.padEnd(24, "x").slice(0, 24)), lastEvaluatedAt: evaluatedAt })
+      }),
+    )
+
+    const stored = await findById(id)
+    expect(stored.lastEvaluatedAt).toEqual(evaluatedAt)
+    expect(stored.updatedAt).toEqual(at)
+  })
+
+  it("does not fail when the monitor is gone", async () => {
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* MonitorRepository
+          yield* repo.setLastEvaluatedAt({ id: MonitorId("mon-missing".padEnd(24, "x")), lastEvaluatedAt: at })
+        }),
+      ),
+    ).resolves.toBeUndefined()
   })
 })

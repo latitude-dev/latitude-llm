@@ -32,6 +32,8 @@ export const monitors = latitudeSchema.table(
       }>()
       .notNull(),
     severity: varchar("severity", { length: 16 }).$type<AlertSeverity>().notNull(),
+    /** Upper bound of the last window a `match` evaluation completed, so the next one resumes from it. */
+    lastEvaluatedAt: tzTimestamp("last_evaluated_at"),
     mutedAt: tzTimestamp("muted_at"),
     deletedAt: tzTimestamp("deleted_at"),
     ...timestamps(),

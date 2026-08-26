@@ -30,6 +30,7 @@ const makeMonitor = (id: string, projectId: ProjectId, name: string, overrides: 
   system: false,
   target,
   rule: { trigger: "match", config: {}, severity: "low" },
+  lastEvaluatedAt: null,
   mutedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),

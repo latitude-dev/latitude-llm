@@ -152,6 +152,7 @@ export const createMonitorUseCase = (
             metric: input.rule.config.metric ?? { kind: "count" },
           },
           rule: input.rule,
+          lastEvaluatedAt: null,
           mutedAt: null,
           deletedAt: null,
           createdAt: now,

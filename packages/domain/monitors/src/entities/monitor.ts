@@ -111,6 +111,8 @@ export const monitorSchema = z.object({
   system: z.boolean(),
   target: monitorTargetSchema,
   rule: monitorRuleSchema,
+  /** Upper bound of the last completed `match` evaluation window; `null` until one runs. */
+  lastEvaluatedAt: z.date().nullable().default(null),
   mutedAt: z.date().nullable(),
   deletedAt: z.date().nullable(),
   createdAt: z.date(),

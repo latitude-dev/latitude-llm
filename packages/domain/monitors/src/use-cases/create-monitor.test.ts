@@ -93,6 +93,7 @@ describe("createMonitorUseCase", () => {
         trigger: "threshold",
         severity: "high",
       },
+      lastEvaluatedAt: null,
       mutedAt: null,
       deletedAt: null,
     })
