@@ -322,6 +322,55 @@ describe("transformOtlpToSpans per-span project resolution", () => {
   })
 })
 
+describe("transformOtlpToSpans parent span ID normalization", () => {
+  const ctx = {
+    ...baseContext,
+    defaultProjectId: "proj-default",
+    projectIdBySlug: new Map<string, string>(),
+  }
+
+  const transformWithParent = (parentSpanId: string | undefined) =>
+    transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: [str("service.name", "test")] },
+            scopeSpans: [
+              {
+                scope: { name: "scope", version: "1" },
+                spans: [
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "p1",
+                    ...(parentSpanId === undefined ? {} : { parentSpanId }),
+                    name: "p1",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      ctx,
+    ).spans
+
+  it("stores an all-zero parent span ID as empty, so the rollup sees a root span", () => {
+    expect(transformWithParent("0000000000000000")[0]?.parentSpanId).toBe("")
+  })
+
+  it("stores an absent parent span ID as empty", () => {
+    expect(transformWithParent(undefined)[0]?.parentSpanId).toBe("")
+  })
+
+  it("keeps a real parent span ID", () => {
+    expect(transformWithParent("00f067aa0ba902b7")[0]?.parentSpanId).toBe("00f067aa0ba902b7")
+  })
+})
+
 describe("transformOtlpToSpans trace ID normalization", () => {
   const ctx = {
     ...baseContext,

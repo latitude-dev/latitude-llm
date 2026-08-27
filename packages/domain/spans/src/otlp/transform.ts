@@ -143,7 +143,7 @@ function hasValidIdLengths(normalizedTraceId: string, spanId: string): boolean {
   return normalizedTraceId.length <= TRACE_ID_LENGTH && spanId.length <= SPAN_ID_LENGTH
 }
 
-function hasParentSpan(parentSpanId: string | undefined): boolean {
+function hasParentSpan(parentSpanId: string | undefined): parentSpanId is string {
   return !!parentSpanId && !/^0+$/.test(parentSpanId)
 }
 
@@ -222,7 +222,8 @@ function transformSpan({
     userEmail: resolved.userEmail,
     traceId: TraceId(traceId),
     spanId: SpanId(span.spanId),
-    parentSpanId: span.parentSpanId ?? "",
+    // Exporters signal "no parent" as absent or all-zero bytes; store one form so the rollup's `parent_span_id = ''` root test sees both.
+    parentSpanId: hasParentSpan(span.parentSpanId) ? span.parentSpanId : "",
     apiKeyId: context.apiKeyId,
     simulationId: SimulationId(""),
     startTime: nanosToDate(span.startTimeUnixNano),
