@@ -8,12 +8,6 @@ interface BlankSlateAction {
   readonly onClick: () => void
 }
 
-/**
- * Centered empty-state for a list the user can populate: an icon tile, title,
- * description, a required primary action, and an optional "Read the docs" link.
- * Render it only when the list is empty and not loading — it owns no loading
- * state of its own.
- */
 export function BlankSlate({
   icon,
   title,
