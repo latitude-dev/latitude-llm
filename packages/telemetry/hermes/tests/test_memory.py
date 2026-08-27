@@ -210,6 +210,18 @@ def test_an_unreadable_store_is_not_reported_as_a_deletion(memories: Path):
     assert op["stale"] is True
 
 
+def test_a_concurrent_repopulation_is_not_reported_as_a_deletion(memories: Path):
+    _write(memories, "MEMORY.md", ["repopulated"])
+    op = memory_store.classify_write(
+        {"target": "memory", "action": "remove", "old_text": "x"},
+        {"success": True, "target": "memory", "entry_count": 0},
+    )
+    assert op is not None
+    assert op["operation"] == "upsert_memory"
+    assert op["body"] == ""
+    assert op["stale"] is True
+
+
 def test_a_store_the_tool_reports_as_emptied_is_a_deletion(memories: Path):
     op = memory_store.classify_write(
         {"target": "memory", "action": "remove", "old_text": "x"},
