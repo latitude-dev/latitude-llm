@@ -72,6 +72,46 @@ out, so a token echoed by a terminal tool is masked before it leaves the machine
 > for a local dev stack — without the `/v1/traces` suffix (the plugin appends it).
 > Your `LATITUDE_API_KEY` and `LATITUDE_PROJECT` must come from that same instance.
 
+## Upgrade
+
+Upgrade with the same tool you installed with, into the interpreter that runs Hermes. The official
+installer's venv ships **without `pip`** (`pip install -U` fails there with `No module named pip`),
+so it needs the `uv` form:
+
+```bash
+# official installer
+~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python -U latitude-telemetry-hermes
+
+# an environment you manage yourself
+pip install -U latitude-telemetry-hermes
+```
+
+Name a version instead of `-U` to pin or to roll back. One environment serves every profile, so one
+upgrade covers all of them. To read the version on disk, ask the interpreter that runs Hermes —
+`importlib.metadata` is always available, `pip show` is not:
+
+```bash
+# official installer
+~/.hermes/hermes-agent/venv/bin/python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
+
+# an environment you manage yourself
+python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
+```
+
+Then **restart Hermes.** Python resolves entry-point plugins once at process start, so a running
+Hermes keeps executing the version it loaded. A CLI session picks the new version up on its next
+run; a long-running process never does. The gateway is that process, it is normally supervised, and
+the cron ticker lives inside it — so scheduled agents are affected too:
+
+```bash
+launchctl list | grep -i hermes
+launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway
+```
+
+For the version actually *running*, read `hermes.plugin.version` off a new span rather than trusting
+the disk. Spans exported before the restart keep the shape the old version gave them — nothing is
+rewritten retroactively, so judge an upgrade on a new session.
+
 ## How it works
 
 Hermes loads pip-installed plugins via the `hermes_agent.plugins` entry point and calls

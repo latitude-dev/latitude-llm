@@ -69,6 +69,91 @@ LATITUDE_PROJECT=your-project-slug
   to that same instance.
 </Note>
 
+## Upgrade
+
+Upgrade with the same tool the plugin was installed with, into the same interpreter that runs
+Hermes:
+
+<CodeGroup>
+```bash Official installer
+~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python -U latitude-telemetry-hermes
+```
+
+```bash Your own environment
+pip install -U latitude-telemetry-hermes
+```
+</CodeGroup>
+
+<Note>
+  The official installer's venv ships **without `pip`**, so `pip install -U` fails there with
+  `No module named pip` — use the `uv` form. The plain `pip` form applies when you installed
+  Hermes yourself into an environment you manage.
+</Note>
+
+To move to a specific version, or to roll back after a bad release, name the version instead of
+passing `-U`:
+
+<CodeGroup>
+```bash Official installer
+~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes==0.1.2
+```
+
+```bash Your own environment
+pip install latitude-telemetry-hermes==0.1.2
+```
+</CodeGroup>
+
+One environment serves every Hermes profile, so a single upgrade covers all of them even though
+`config.yaml` and `.env` are per-profile. To read the version now on disk, ask the interpreter that
+runs Hermes — `importlib.metadata` is always available, whereas `pip show` is not:
+
+<CodeGroup>
+```bash Official installer
+~/.hermes/hermes-agent/venv/bin/python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
+```
+
+```bash Your own environment
+python -c "import importlib.metadata as m; print(m.version('latitude-telemetry-hermes'))"
+```
+</CodeGroup>
+
+### Restart Hermes
+
+Python resolves entry-point plugins once, when the process starts. A running Hermes goes on
+executing the version it loaded, and the upgraded files sit on disk unread. A CLI session picks the
+new version up on its next run. A long-running process never does.
+
+The **gateway** (Slack, Discord, …) is that long-running process, and it is usually supervised, so
+it will not restart on its own. On macOS the official installer registers it with launchd — find the
+label, then restart it:
+
+```bash
+launchctl list | grep -i hermes
+launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway
+```
+
+`kickstart -k` stops the running instance first. Don't use `launchctl stop` on its own: the job sets
+`KeepAlive`, so it does come back, but `ThrottleInterval` holds it down for 30 seconds first. Under
+any other supervisor, restart the service however you normally would.
+
+<Note>
+  **Scheduled agents run inside the gateway.** The cron ticker is part of that process rather than a
+  separate scheduler, so cron-driven sessions keep using the plugin version the gateway loaded. If
+  your agent only ever runs on a schedule, you still need the gateway restart.
+</Note>
+
+### Confirm the new version is the one running
+
+The check above reads the disk, and a stale process is precisely the case where the disk and the
+running code disagree. For the running answer, send a message and open the new trace: every span
+carries `hermes.plugin.version` in its metadata, and the resource carries `service.version`. Both
+come from the code that is executing, so they settle it.
+
+<Warning>
+  Spans exported before the restart keep the shape the old version gave them. Nothing is rewritten
+  retroactively, so judge an upgrade on a **new** session instead of reopening an existing trace.
+</Warning>
+
 ## Verify
 
 Run Hermes and send a message to your agent, then open your Latitude project and go to **Traces**. The new trace should appear within a few seconds.
@@ -279,6 +364,12 @@ Telemetry runs for each turn until disabled or uninstalled. Disable it before wo
 ## Troubleshooting
 
 **No traces appear.** Confirm `latitude` is in `plugins.enabled` in `~/.hermes/config.yaml` (`hermes plugins list` never shows a pip-installed plugin — see the install note), check that the API key and project slug are correct, then set `LATITUDE_DEBUG=true` and send a new message: the plugin logs each export and its HTTP status.
+
+**Traces arrive, but they look like an older version of the plugin.** The running Hermes is still
+executing the plugin version it loaded at startup — upgrading the package does not affect a live
+process. Restart Hermes, and the gateway specifically if you run one; see [Upgrade](#upgrade).
+`LATITUDE_DEBUG` will not reveal this: the old version keeps exporting successfully, so the log
+shows `200`s throughout.
 
 **Need more diagnostics.** Set `LATITUDE_DEBUG=true` in `~/.hermes/.env` and trigger another run.
 
