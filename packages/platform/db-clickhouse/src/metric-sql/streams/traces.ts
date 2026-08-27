@@ -29,6 +29,10 @@ const BREAKDOWN = {
   status: { expr: "if(error_count > 0, 'error', 'success')", isArray: false },
 } satisfies Record<TraceBreakdownField, BreakdownExpr>
 
+// A span is exported when it ends and the root outlives its children, so the root's arrival is
+// the only immutable "trace finished" signal: `end_time` alone advances with every child that lands.
+const ROOT_SPAN_INGESTED = "notEmpty(replaceRegexpAll(toString(root_span_id), '\\0', ''))"
+
 /**
  * The grouped per-trace subquery: filters + percentile resolution + an optional
  * semantic-query prefilter, windowed on the aggregated start or completion time.
@@ -54,13 +58,10 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Repository
       clickhouseSettings = plan.clickhouseSettings
     }
 
+    const axis = input.timeAxis ?? "start"
     const having = [
-      ...windowClauses({
-        axis: input.timeAxis ?? "start",
-        startColumn: "start_time",
-        completionColumn: "end_time",
-        precision: 9,
-      }),
+      ...windowClauses({ axis, startColumn: "start_time", completionColumn: "end_time", precision: 9 }),
+      ...(axis === "completion" ? [ROOT_SPAN_INGESTED] : []),
       ...havingClauses,
     ].join(" AND ")
 

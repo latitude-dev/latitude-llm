@@ -577,6 +577,58 @@ describe("MetricSeriesReaderLive (completion axis)", () => {
     expect(count).toBe(0)
   })
 
+  it("ignores a trace whose root span has not landed, so an in-flight run cannot match", async () => {
+    // Only a child span: `end_time` already sits in the window, but the run has not finished.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        { ...span(92, d0, [LONG_TAG], 62 * 60 * 1000), parent_span_id: spanId(999) },
+      ]),
+    )
+
+    const count = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: longTarget("completion"),
+        from: windowFrom,
+        to: windowTo,
+      }),
+    )
+    // Only the seeded root-bearing run at 11:02, not the in-flight one.
+    expect(count).toBe(1)
+  })
+
+  it("counts the run once its root span lands, in the window holding the root's end", async () => {
+    const child = { ...span(93, d0, [LONG_TAG], 20 * 60 * 1000), parent_span_id: spanId(94) }
+    const root = span(94, d0, [LONG_TAG], 63 * 60 * 1000)
+    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [child]))
+
+    const beforeRoot = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: longTarget("completion"),
+        from: new Date("2026-06-02T10:15:00.000Z"),
+        to: new Date("2026-06-02T10:25:00.000Z"),
+      }),
+    )
+    expect(beforeRoot).toBe(0)
+
+    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [root]))
+
+    const afterRoot = await runCh(
+      reader.valueInWindow({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: longTarget("completion"),
+        from: windowFrom,
+        to: windowTo,
+      }),
+    )
+    // The root ends at 11:03, inside [11:00, 11:05), alongside the seeded run at 11:02.
+    expect(afterRoot).toBe(2)
+  })
+
   it("excludes a run that finished before the window", async () => {
     const count = await runCh(
       reader.valueInWindow({

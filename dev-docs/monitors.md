@@ -158,7 +158,9 @@ Point rules use `MetricSeriesReader` directly:
 | `start` | `count` metrics on `threshold` and `escalating` | A count exists as soon as a run's first span lands, so windowing by start measures arrival rate and surfaces a surge while it is happening. |
 | `completion` | every `match` monitor, and every non-`count` metric | Error status, totals, and duration only exist once the run has finished. On the start axis a run longer than the window has aged out of it before the value being measured exists, so the monitor could never see it. |
 
-On the completion axis the query still bounds `start_time` by `MAX_EVALUABLE_RUN_MS` (24h) so ClickHouse keeps pruning partitions and using the `min_start_time` minmax index. That bound is also a ceiling: a run lasting longer than it is invisible to monitors.
+On the completion axis the query still bounds `start_time` by `MAX_EVALUABLE_RUN_MS` (24h) so ClickHouse keeps pruning partitions and using the `min_start_time` minmax index. The bound is on how far back a run may have *started*, not on how long it ran: a run is evaluable as long as it started within 24h of the window's lower bound.
+
+A completion-axis `traces` read additionally requires the trace's root span to have been ingested. `end_time` is `max(max_end_time)` over the rollup, so it advances every time a child span lands — on its own it would treat a still-running trace as finished, evaluate partial totals, and match the same trace again in each later window as more children arrive. A span is exported when it ends and the root outlives its children, so the root's arrival is the immutable "finished" signal. Traces that never produce a root span (`parent_span_id = ''`) therefore do not fire completion-axis monitors. `sessions` has no equivalent signal — a session is never complete — so a completion-axis session metric can still read a session mid-flight.
 
 `firstEventAt` / `lastEventAt` report times on the same axis, which keeps a backdated `started_at` inside the window that produced it.
 
