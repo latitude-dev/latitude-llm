@@ -112,6 +112,27 @@ def test_it_gives_up_rather_than_risk_double_counting(ledger: Path):
     assert aux_spans("sess-1", _exported(calls=999), {}) == []
 
 
+def test_aux_is_emitted_once_the_hook_visible_ledger_catches_up(ledger: Path, monkeypatch):
+    """The ledger flusher can land auxiliary rows before hook-visible ones."""
+    import latitude_telemetry_hermes.aux_usage as aux_usage_module
+
+    reads = {"count": 0}
+    original_query = aux_usage_module._query
+
+    def lagging_query(session_id: str) -> List[Dict[str, Any]]:
+        reads["count"] += 1
+        rows = original_query(session_id)
+        if reads["count"] <= 3:
+            return [row for row in rows if str(row.get("task") or "") not in {"", "background_review"}]
+        return rows
+
+    monkeypatch.setattr(aux_usage_module, "_query", lagging_query)
+    monkeypatch.setattr(aux_usage_module.time, "sleep", lambda _: None)
+
+    spans = aux_spans("sess-1", _exported(), {"session.id": "sess-1"})
+    assert _names(spans) == ["aux:approval", "aux:compression", "aux:title_generation", "interaction"]
+
+
 def test_an_aux_span_is_priced_on_the_ledgers_own_route(ledger: Path):
     span = next(s for s in aux_spans("sess-1", _exported(), {}) if s.name == "aux:compression")
     assert span.attrs["gen_ai.provider.name"] == "openai-codex"

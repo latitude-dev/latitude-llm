@@ -40,7 +40,9 @@ _TOKEN_COLUMNS = (
     ("reasoning_tokens", "gen_ai.usage.reasoning_tokens"),
 )
 
-_READ_RETRIES = 2
+# Session finalize already waits up to 10s for export delivery; match that window
+# so a lagging hook-visible ledger flush does not skip auxiliary reconciliation.
+_READ_RETRIES = 39
 _READ_RETRY_DELAY = 0.25
 
 
