@@ -528,8 +528,13 @@ class _Builder:
         session = self._sessions.get(session_id)
         if session is None:
             if len(self._sessions) >= MAX_SESSIONS:
-                oldest = min(self._sessions, key=lambda k: self._sessions[k].updated_at)
-                self._sessions.pop(oldest, None)
+                # Only finalized sessions are evictable: `on_session_finalize` reads
+                # `exported` and `child_sessions` off this entry for auxiliary
+                # usage reconciliation, and popping an active session drops both.
+                evictable = [key for key, entry in self._sessions.items() if entry.aux_emitted]
+                if evictable:
+                    oldest = min(evictable, key=lambda key: self._sessions[key].updated_at)
+                    self._sessions.pop(oldest, None)
             session = _Session(session_id=session_id)
             self._sessions[session_id] = session
         if session.context is None:
