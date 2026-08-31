@@ -138,6 +138,10 @@ kubectl scale deploy/latitude-api -n latitude --replicas=3
 
 Every service ships with resource **requests** (HPA-ready); add limits and `HorizontalPodAutoscaler`s to taste. The bundled stateful services stay single-instance by design — for HA move them to managed equivalents ([Bring your own infrastructure](#bring-your-own-infrastructure)).
 
+## Retention
+
+Telemetry is kept for `config.telemetryRetentionDays` (default `3650`, ten years), stamped on each row as it is ingested. Nothing is metered: `LAT_BILLING_ENABLED` stays off unless you are running Latitude Cloud. Changing the value applies to newly ingested data — see [widening retention on existing data](/deployment/single-host#retention).
+
 ## Backups
 
 Persistent state lives in the PVCs of `postgres`, `clickhouse`, `redis-bullmq`, and `seaweedfs`. Use your storage provider's volume snapshots, plus:

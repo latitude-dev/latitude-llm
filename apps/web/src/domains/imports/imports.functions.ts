@@ -168,7 +168,7 @@ const toRunRecord = (run: ImportRun): ImportRunRecord => ({
 })
 
 export interface ImportLimitsRecord {
-  readonly planSlug: "free" | "pro" | "enterprise"
+  readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
   readonly retentionDays: number
   /** When this period's usage resets, which is when an import paused on usage can carry on. */
   readonly periodEnd: string

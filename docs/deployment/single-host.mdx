@@ -111,6 +111,22 @@ Every provider and model is selectable per feature through environment variables
 
 The bundled stateful services (Postgres, ClickHouse, Redis, Temporal, SeaweedFS) stay single-instance — for HA, point them at managed/external instances ([Bring your own infrastructure](#bring-your-own-infrastructure)) or move to the Cluster deployment. On plain Compose (one host), the services with no published ports — `workers` and `workflows` — can still scale directly: `docker compose -f docker-stack.yml up -d --scale workers=3`.
 
+## Retention
+
+A self-hosted deployment keeps telemetry for `LAT_TELEMETRY_RETENTION_DAYS` (default `3650`, ten years). Nothing is metered and no ingest request is ever rejected for billing: `LAT_BILLING_ENABLED` stays `false` unless you are running Latitude Cloud.
+
+Retention is stamped on each row as it is ingested, so lowering or raising the value applies to new data only. To widen the window on data you have already ingested, update the stamp in ClickHouse:
+
+```sql
+ALTER TABLE spans UPDATE retention_days = 3650 WHERE retention_days < 3650;
+ALTER TABLE traces UPDATE retention_days = 3650 WHERE retention_days < 3650;
+ALTER TABLE sessions UPDATE retention_days = 3650 WHERE retention_days < 3650;
+ALTER TABLE trace_search_documents UPDATE retention_days = 3650 WHERE retention_days < 3650;
+ALTER TABLE trace_message_occurrences UPDATE retention_days = 3650 WHERE retention_days < 3650;
+```
+
+ClickHouse deletes a row `retention_days + 30` days after its start time, so the extra month is your window to notice and correct a retention setting before anything is removed.
+
 ## Backups
 
 Persisted state lives in the `postgres_data`, `clickhouse_data`, `seaweedfs_data`, and `redis_bullmq_data` volumes. Back them up regularly:

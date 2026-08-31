@@ -101,7 +101,7 @@ export const createSpanIngestionWorker = ({
                   traceUsage: {
                     context: {
                       planSlug: orgPlan.plan.slug,
-                      planSource: orgPlan.source as "override" | "subscription" | "free-fallback",
+                      planSource: orgPlan.source as "override" | "subscription" | "free-fallback" | "self-hosted",
                       periodStart: orgPlan.periodStart,
                       periodEnd: orgPlan.periodEnd,
                       includedCredits: orgPlan.plan.includedCredits,

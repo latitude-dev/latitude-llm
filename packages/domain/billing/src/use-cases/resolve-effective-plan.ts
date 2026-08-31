@@ -1,6 +1,12 @@
 import { type OrganizationId, SettingsReader } from "@domain/shared"
 import { Effect } from "effect"
-import { PLAN_CONFIGS, type PlanSlug, SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME } from "../constants.ts"
+import { billingEnforcementEnabled, selfHostedRetentionDays } from "../config.ts"
+import {
+  PLAN_CONFIGS,
+  type PlanSlug,
+  SELF_HOSTED_PLAN_CONFIG,
+  SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME,
+} from "../constants.ts"
 import type { BillingOverride } from "../entities/billing-override.ts"
 import { UnknownStripePlanError } from "../errors.ts"
 import { BillingOverrideRepository } from "../ports/billing-override-repository.ts"
@@ -58,6 +64,30 @@ const resolveOverridePlan = (input: {
       spanQuotaPerPeriod: plan.spanQuotaPerPeriod,
     }),
     source: "override",
+    periodStart: currentMonth.start,
+    periodEnd: currentMonth.end,
+  }
+}
+
+const resolveSelfHostedPlan = (input: {
+  readonly organizationId: OrganizationId
+  readonly retentionDays: number
+}): EffectivePlanResolution => {
+  const currentMonth = buildCurrentUtcMonthPeriod()
+
+  return {
+    organizationId: input.organizationId,
+    plan: buildResolvedPlan({
+      slug: SELF_HOSTED_PLAN_CONFIG.slug,
+      includedCredits: SELF_HOSTED_PLAN_CONFIG.includedCredits,
+      retentionDays: input.retentionDays,
+      overageAllowed: SELF_HOSTED_PLAN_CONFIG.overageAllowed,
+      hardCapped: SELF_HOSTED_PLAN_CONFIG.hardCapped,
+      priceCents: SELF_HOSTED_PLAN_CONFIG.priceCents,
+      spendingLimitCents: null,
+      spanQuotaPerPeriod: SELF_HOSTED_PLAN_CONFIG.spanQuotaPerPeriod,
+    }),
+    source: "self-hosted",
     periodStart: currentMonth.start,
     periodEnd: currentMonth.end,
   }
@@ -149,7 +179,7 @@ export interface EffectivePlanResolution {
     readonly spanQuotaPerPeriod: number
     readonly sandboxActiveCap: number
   }
-  readonly source: "override" | "subscription" | "free-fallback"
+  readonly source: "override" | "subscription" | "free-fallback" | "self-hosted"
   readonly periodStart: Date
   readonly periodEnd: Date
 }
@@ -171,6 +201,10 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
       override,
       spendingLimitCents,
     })
+  }
+
+  if (!(yield* billingEnforcementEnabled)) {
+    return resolveSelfHostedPlan({ organizationId, retentionDays: yield* selfHostedRetentionDays })
   }
 
   const subLookup = yield* StripeSubscriptionLookup

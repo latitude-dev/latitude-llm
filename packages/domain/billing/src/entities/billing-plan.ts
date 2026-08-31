@@ -22,7 +22,7 @@ export type BillingPlan = z.infer<typeof billingPlanSchema>
 export const billingOrganizationPlanSchema = z.object({
   organizationId: organizationIdSchema,
   plan: billingPlanSchema,
-  source: z.enum(["override", "subscription", "free-fallback"]),
+  source: z.enum(["override", "subscription", "free-fallback", "self-hosted"]),
   periodStart: z.date(),
   periodEnd: z.date(),
 })

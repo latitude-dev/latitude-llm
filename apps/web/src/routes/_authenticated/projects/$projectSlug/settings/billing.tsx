@@ -1,4 +1,4 @@
-import { PRO_PLAN_CONFIG } from "@domain/billing"
+import { type PlanSlug, PRO_PLAN_CONFIG } from "@domain/billing"
 import { Badge, Button, Icon, Input, Text, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
@@ -47,6 +47,15 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 })
 
+const PLAN_LABELS: Record<PlanSlug, string> = {
+  free: "Free",
+  pro: "Pro",
+  enterprise: "Enterprise",
+  "self-hosted": "Self-hosted",
+}
+
+const planLabel = (slug: PlanSlug): string => PLAN_LABELS[slug]
+
 const formatCredits = (value: number) => (Number.isFinite(value) ? numberFormatter.format(value) : "Custom contract")
 
 const formatCurrency = (dollars: number) => currencyFormatter.format(dollars)
@@ -69,7 +78,7 @@ function BillingOverviewCards() {
   const cards = [
     {
       label: "Current plan",
-      value: overview.planSlug === "enterprise" ? "Enterprise" : overview.planSlug === "pro" ? "Pro" : "Free",
+      value: planLabel(overview.planSlug),
       detail:
         overview.planSource === "subscription"
           ? "Managed through Stripe"
@@ -153,6 +162,23 @@ function BillingActionsSection() {
     }
   }
 
+  const selfHostedState = (
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6">
+      <div className="flex flex-col gap-2">
+        <Text.H4 weight="bold">Self-hosted deployment</Text.H4>
+        <Text.H5 color="foregroundMuted">
+          Billing enforcement is off on this deployment, so ingestion is never capped and telemetry is kept for{" "}
+          {numberFormatter.format(overview.retentionDays)} days. Both are configured by the operator through
+          LAT_BILLING_ENABLED and LAT_TELEMETRY_RETENTION_DAYS.
+        </Text.H5>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="secondary">Unmetered</Badge>
+        <Badge variant="secondary">Operator-managed retention</Badge>
+      </div>
+    </div>
+  )
+
   const freeState = (
     <div className="flex flex-col gap-4 rounded-lg border border-primary/30 bg-primary/5 p-6">
       <div className="flex flex-col gap-2">
@@ -206,6 +232,7 @@ function BillingActionsSection() {
     </div>
   )
 
+  if (overview.planSlug === "self-hosted") return selfHostedState
   if (overview.planSlug === "enterprise") return enterpriseState
   if (overview.planSlug === "pro") return proState
   return freeState

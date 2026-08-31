@@ -13,12 +13,14 @@ Current plan slugs:
 - `free`
 - `pro`
 - `enterprise`
+- `self-hosted`
 
 Plan semantics:
 
 - `free`: hard capped, `20,000` included credits, `30` entitlement retention days
 - `pro`: overage allowed, `100,000` included credits, `90` entitlement retention days, optional customer-managed period spending cap
 - `enterprise`: manual-only, override-driven included credits and retention by contract
+- `self-hosted`: unmetered, unbounded credits, retention from `LAT_TELEMETRY_RETENTION_DAYS`. Not a contract and not selectable as an override — it is what every organization resolves to on a deployment that does not enforce billing (`OVERRIDABLE_PLAN_SLUGS` is the subset an operator may pin)
 
 Chargeable actions:
 
@@ -75,10 +77,13 @@ One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credit
 Every organization resolves to one effective billing plan in this order:
 
 1. manual organization billing override
-2. active or trialing Stripe self-serve subscription mapped by explicit plan slug
-3. fallback to `free`
+2. `self-hosted` when `LAT_BILLING_ENABLED` is not `true`
+3. active or trialing Stripe self-serve subscription mapped by explicit plan slug
+4. fallback to `free`
 
 Unknown Stripe plan names fail closed through `UnknownStripePlanError`. The billing domain must never infer `paid => pro`.
+
+**Enforcement is opt-in (`LAT_BILLING_ENABLED`, default `false`).** The published images meter nobody until a deployment asks for it, so a self-hoster is never rejected at ingest or aged out by a plan's retention; **Latitude Cloud sets `LAT_BILLING_ENABLED=true` on every service**, and the plan source reads `self-hosted` in the backoffice wherever it does not. A malformed value in either config var dies as a `BillingConfigurationError` defect rather than falling back, because both silent outcomes — metering a self-hoster, not metering Cloud — are worse than a crash. The override is checked first so an operator can still pin an organization on an unmetered deployment.
 
 ## Persistence Model
 
@@ -274,6 +279,8 @@ Retention is stamped at write time, not recomputed retroactively. If an organiza
 
 - rows written while the org was on Pro keep `90` stamped retention days
 - rows written after the downgrade get `30` stamped retention days
+
+The same applies to `LAT_TELEMETRY_RETENTION_DAYS` (default and maximum `3650`): changing it moves new rows only, and widening it on existing data is an operator-run `ALTER TABLE ... UPDATE retention_days` documented in `docs/deployment/single-host.mdx`. The ceiling exists because the TTL expression casts `start_time` to `DateTime`, whose range ends in 2106.
 
 ## Product Surfaces
 
