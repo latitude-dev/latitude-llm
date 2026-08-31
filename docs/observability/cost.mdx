@@ -3,7 +3,7 @@ title: Cost
 description: See where your agent's spend goes, what caching saves, and which change moved your cost per session.
 ---
 
-The **Cost** dashboard breaks down what your agent spends and where to recover money: spend over time, cost per session with the factors that moved it, per-model economics, and cache recommendations computed from your own traffic. Everything is derived from the telemetry you already send; there is nothing extra to instrument.
+The **Cost** dashboard breaks down what your agent spends and where to recover money: spend over time, cost per session with the factors that moved it, per-model economics, and cache recommendations computed from your own traffic. Everything is derived from the telemetry you already send.
 
 <Frame caption="The Cost dashboard: pricing coverage, spend KPIs, cost over time, and the session cost decomposition.">
   <img src="/images/observability/cost-dashboard.png" alt="Cost dashboard showing total spend, average per day and per trace, top spend model, a cost-over-time chart, and the cost-per-session section" />
@@ -11,7 +11,7 @@ The **Cost** dashboard breaks down what your agent spends and where to recover m
 
 ## The dashboard
 
-The page opens with four KPIs for the selected time range: **Total spend** on billable LLM calls, **Avg per day** over completed days, **Avg per trace** across traces that contain at least one billable call, and the **Top spend model** with its share of spend. The **Cost over time** chart below stacks spend by model, with **Total**, **Average**, and **p95** tabs, so you can separate a traffic increase from an expensive tail.
+The page opens with four KPIs for the selected time range: **Total spend** on billable LLM calls, **Avg per day** over completed days, **Avg per trace** across traces that contain at least one billable call, and the **Top spend model** with its share of spend. The **Cost over time** chart below shows spend per bucket, stacked by model on the **Total** tab, while the **Average** and **p95** tabs plot per-trace cost, so you can separate a traffic increase from an expensive tail.
 
 A badge next to the title reports pricing coverage, such as **100% priced**. When some usage recorded no cost because a model has no known pricing, the badge and the affected table rows say so, so a low total is never silently mistaken for a cheap week.
 
@@ -25,19 +25,19 @@ The **Session** section divides spend by sessions and compares the result agains
 
 ## Cache economics
 
-The **Cache** section judges caching model by model from your traffic's own timing and gives each model one of three actionable verdicts, summed into recommendation cards with an estimated saving:
+The **Cache** section judges caching model by model from your traffic's own timing and flags three actionable situations, summed into a **Recommendations** card with an estimated saving:
 
 - **Cache it**: caching is off on calls where turning it on looks like it would pay for itself.
 - **Stop caching**: these calls pay to write a cache that expires before anything reads it.
 - **Investigate**: the calls arrive close enough together to reuse a cached prompt and miss anyway, so the prompt is where to look next.
 
-Models that are caching well, or where no cache would pay off, are left alone. Each model's bar shows its actual cache hit rate against the **achievable ceiling**, the highest rate this traffic's call cadence could ever reach, with a marker at the **break-even** rate where caching starts paying for itself on that model's prices. A **Cache lifetime** control replays the analysis under what-if lifetimes, from one minute to a day, since a verdict can flip when entries live longer.
+Models that are caching well, where no cache would pay off, or with too few calls to judge get no recommendation. Each model's bar shows its actual cache hit rate, with a pale extension marking the highest rate this traffic's own call cadence could have reached and a marker at the break-even rate where caching starts paying for itself on that model's prices. A **Cache lifetime** control replays the analysis under what-if lifetimes, from the provider-documented default up to a day, since a verdict can flip when entries live longer.
 
 Savings figures are estimates for the selected window, modeled from your token counts and each model's list prices, so they will not tie exactly to recorded spend.
 
 ## Cost breakdown
 
-The **Cost breakdown** table splits spend by **Model**, **Provider**, **Operation**, or **Service**, with input, output, and cache costs, each dimension's share of the total, and its average per trace. Long tails collapse into an **Other** row you can expand.
+The **Cost breakdown** table splits spend by **Model**, **Provider**, **Operation**, or **Service**, with input, output, and cache-and-other costs, each dimension's share of the total, and its average per trace. Long tails collapse into an **Other** row, with a **Show all** control to list every dimension.
 
 ## Related
 

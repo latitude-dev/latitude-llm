@@ -3,7 +3,7 @@ title: Notifications
 description: Choose which Latitude events reach you, on which channel, and above which severity.
 ---
 
-Latitude notifies you when something needs attention: a new signal, an escalation, a monitor firing, a report, or a billing threshold. Every notification appears in the in-app bell. Beyond that, you choose per group whether it also reaches you by email, and your organization can route groups to Slack channels.
+Latitude notifies you when something needs attention: a new signal, an escalation, a monitor firing, a report, or a billing threshold. Notifications you receive always appear in the in-app bell; the settings below control email and Slack delivery on top of that. Some notifications choose their audience: a triaged signal notifies its assignee, and billing alerts go to owners and admins. Projects can also switch incident notifications off entirely in project settings.
 
 ## Notification groups
 
@@ -11,9 +11,9 @@ Latitude notifies you when something needs attention: a new signal, an escalatio
 | --- | --- |
 | **Signals** | A signal is discovered, escalates, regresses, or is raised in priority |
 | **Monitors** | One of your monitors fires |
-| **Assigned to you** | Notifications addressed directly to you, such as being assigned to a signal |
 | **Wrapped reports** | Weekly Claude Code Wrapped reports for your projects |
 | **Announcements** | Product announcements and admin messages |
+| **Assigned to you** | Notifications addressed directly to you, such as being assigned to a signal |
 | **Data destinations** | A data destination stops syncing, for example after repeated failures |
 | **Billing** | Your organization exhausts included credits, enters overage, or hits a spend limit |
 
@@ -24,7 +24,7 @@ The Signals group breaks down into topics you can toggle individually:
 | Topic | Fires when | Default |
 | --- | --- | --- |
 | **New signals** | A signal not seen before shows up for the first time | On |
-| **Escalating signals** | An existing signal escalates into an incident | On |
+| **Escalating signals** | An existing signal escalates into an incident, including that incident's updates and recovery | On |
 | **Regressed signals** | A signal you already resolved starts happening again | On |
 | **Reprioritized signals** | A teammate raises an existing signal to a higher priority | Off |
 
@@ -34,12 +34,12 @@ Discovered signals only notify once they pass the [promotion gate](../signals/ov
 
 The Signals and Monitors groups carry a minimum-severity filter on the shared **low, medium, high, urgent** scale. A monitor alert's severity is set on its alert card; a signal's severity is its triage priority, and its escalation notifications use the higher of the incident's severity and the signal's priority.
 
-A notification is delivered when its group is on, its topic is on, and its severity clears your minimum. One caveat: a signal has no priority until someone triages it, and notifications without a severity pass every threshold, so minimum-severity filters only start biting once your team sets priorities.
+An email is delivered when its group is on, its topic is on, and its severity clears your minimum. One caveat: new-signal and regressed notifications carry no severity until the signal is triaged, and a notification without a severity passes every threshold, so a minimum severity mainly filters escalations and monitor alerts.
 
 ## Where to configure
 
-- **Email**: **Settings → Account → Email notifications**. One card per group with its toggle, the signal topics, and the severity selector. In-app notifications always appear in the bell regardless of these settings.
-- **Slack**: the [Slack integration](./slack) card under **Settings → Integrations**. Each routable group gets a channel, or **Don't send**. The Signals route also carries the topic checkboxes, and the Signals and Monitors routes each carry their own minimum severity. Slack routing is organization-wide and independent from personal email preferences.
+- **Email**: **Settings → Personal → Account → Email notifications**, inside any project. One card per group with its toggle and, where they apply, the signal topics and the severity selector. Preferences are per user and cover all your projects; in-app notifications appear in the bell regardless.
+- **Slack**: the [Slack integration](./slack) card under **Settings → Organization → Integrations**. Each routable group gets a channel, or **Don't send**; Assigned to you and Billing are not routable to Slack. The Signals route also carries the topic checkboxes, and the Signals and Monitors routes each carry their own minimum severity, shown once a channel is picked. Slack routing is organization-wide and independent from personal email preferences.
 
 ## Related
 

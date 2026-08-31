@@ -53,11 +53,11 @@ You do not need to predefine every failure category. Latitude learns signal clus
 
 ### 4. Candidates are promoted once they have evidence
 
-A discovered candidate stays invisible until the same pattern has appeared in enough distinct sessions, so one-off failures never clutter your Signals page. The threshold scales with your project's traffic: at least 2 sessions in a quiet project, up to 15 in a high-volume one, counted over the last 30 days. At promotion Latitude generates the signal's real name and description from the whole cluster of occurrences, the signal appears on the Signals page, and the new-signal notification and any [agent dispatch](../agent-dispatch/overview) fire.
+A discovered candidate stays invisible until the same pattern has appeared in enough distinct sessions, so one-off failures never clutter your Signals page. The threshold scales with your project's traffic: at least 2 sessions in a quiet project, up to 15 in a high-volume one, counted over the last 30 days. At promotion Latitude generates the signal's real name and description from its recent occurrences, the signal appears on the Signals page, and the new-signal notification and any [agent dispatch](../agent-dispatch/overview) fire.
 
 Two things happen to candidates while they wait:
 
-- **Near-duplicates are merged.** When discovery splits one real problem into several near-identical candidates, Latitude combines them and counts their evidence together, so a problem can reach the threshold that none of its fragments would have reached alone. The promoted signal's name, description, and occurrence count come from the whole merged cluster.
+- **Near-duplicates are merged.** When discovery splits one real problem into several near-identical candidates, Latitude combines them and counts their evidence together, so a problem can reach the threshold that none of its fragments would have reached alone. The promoted signal's name and description are generated from the merged evidence.
 - **Idle candidates are dropped.** A candidate that stops accumulating occurrences for 45 days is discarded, so a genuine one-off never lingers. If the pattern recurs later, it starts over as a new candidate.
 
 Both happen below the visibility line: nothing about a merge or a discard appears on the Signals page, in notifications, or in the API. The only visible effect is a signal arriving with enough evidence behind it.

@@ -22,13 +22,13 @@ Record bodies, diffs, and token counts appear when your instrumentation captures
 
 ## The Memory page
 
-The **Memory** page lists every store, one row per store, with its record count, total tokens, when it was last updated and last read, the number of sessions that wrote to it, and the number of distinct users who accessed it.
+The **Memory** page lists every store, one row per store, with its record count, write and read activity, and when it was last active.
 
 <Frame>
   <img src="/images/observability/memory-overview.png" alt="The Memory page listing every store with its record count, tokens, last updated and last read times, sessions, and users" />
 </Frame>
 
-A collapsible **Memory statistics** panel above the list charts memory activity over time, created, updated, and deleted records per bucket against records retrieved. The list itself carries health columns beyond the basics: a per-store **Trend** sparkline of writes, **Read:write** (records read for every record written), **Dead %** (the share of records not read in roughly the last 120 days), and **Zero-hit %** (the share of searches that returned nothing), with more columns such as **Rewrites** and **Net growth** available from the column selector. A store that is written but never read, or searched but never hit, stands out at a glance.
+A collapsible **Memory statistics** panel above the list charts memory activity over time, created, updated, and deleted records per bucket against records retrieved. The list itself carries health columns beyond the basics: a per-store **Trend** sparkline of writes, **Read:write** (records read for every record written), **Dead %** (the share of live records never read), and **Zero-hit %** (the share of searches that returned nothing), with more columns (total tokens, sessions, users, **Rewrites**, and **Net growth**) available from the column selector. A store that is written but never read, or searched but never hit, stands out at a glance.
 
 Open a store to browse it like a repository. The left sidebar shows its records as a tree, with record ids split on `/` to form folders, the center pane shows the selected record's current body, rendered as JSON when it parses as JSON, and the header lists the users who accessed the store, each linking to their user page.
 

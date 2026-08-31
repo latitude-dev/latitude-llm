@@ -27,7 +27,7 @@ This guide runs the whole path in order. Budget an afternoon for a single servic
 
     <Tabs>
       <Tab title="Already exporting OTLP">
-        Langfuse, and any setup built directly on OpenTelemetry, exports OTLP. Latitude's ingestion endpoint speaks standard OTLP over HTTP, so you can add it as an exporter target without touching your instrumentation:
+        Latitude's ingestion endpoint speaks standard OTLP over HTTP. If your instrumentation already emits OpenTelemetry GenAI or OpenInference span attributes, which OpenLLMetry- and OpenInference-based setups pointed at Langfuse do, you can add Latitude as an exporter target without touching your instrumentation:
 
         | | Value |
         |---|---|
@@ -35,7 +35,7 @@ This guide runs the whole path in order. Budget an afternoon for a single servic
         | **`Authorization`** | `Bearer <your-api-key>` |
         | **`X-Latitude-Project`** | `<your-project-slug>` |
 
-        Keep your existing exporter in place and add Latitude as a second one if you want an overlap period. See the [OpenTelemetry exporter](../otel-exporter) page for a curl check that returns `202` when the endpoint accepts your payload.
+        Latitude maps Langfuse's session, user, tag, and metadata attributes, but not its `langfuse.observation.*` LLM attributes, so model, token, and cost data must come from GenAI or OpenInference attributes on the spans; the verification step below shows the gap if there is one. Langfuse SDK v2 setups are not OpenTelemetry-based, so use the SDK tabs instead. Keep your existing exporter in place and add Latitude as a second one if you want an overlap period. See the [OpenTelemetry exporter](../otel-exporter) page for a curl check that returns `202` when the endpoint accepts your payload.
       </Tab>
       <Tab title="TypeScript">
         Install `@latitude-data/telemetry` and initialize it once at startup, before you create any LLM clients:
@@ -89,7 +89,7 @@ This guide runs the whole path in order. Budget an afternoon for a single servic
     | Session, thread, or conversation id | `sessionId`, which groups turns into [sessions](../../observability/sessions) |
     | End-user id | `userId`, which powers the [Users](../../observability/users) view |
     | Tags and custom attributes | Tags and [metadata](../../observability/features/metadata), both filterable |
-    | Environment or release labels | [Environments](../../observability/features/environments) and [releases](../../observability/features/releases-versioning) |
+    | Environment or release labels | [Environments](../../observability/features/environments) and [releases](../../observability/features/releases-versioning), expressed as tags or metadata |
     | Scores or feedback you wrote from code | The [Scores API](../../scores/api) |
 
     If your agent keeps persistent memory, instrument it too, see [Memory tracing](../memory), since memory operations are their own span type here.

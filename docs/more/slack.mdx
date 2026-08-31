@@ -7,7 +7,7 @@ The Slack integration sends Latitude notifications to channels in your Slack wor
 
 ## Connect Slack
 
-1. In Latitude, open a project and go to **Settings → Integrations**.
+1. In Latitude, go to **Settings → Organization → Integrations**.
 2. Find **Slack** and click **Connect**.
 3. Review the Slack install screen and choose the workspace Latitude should notify.
 4. Approve the installation.
@@ -17,11 +17,11 @@ Latitude connects one Slack workspace per organization. If Slack reports that th
 
 ## Configure notification routes
 
-After Slack is connected, the integration card shows a **Notifications** section. Each [notification group](./notifications) can be routed to a Slack channel.
+After Slack is connected, the integration card shows a **Notifications** section. Each routable [notification group](./notifications) can be sent to a Slack channel; Assigned to you and Billing stay on email and in-app only.
 
 - Choose a channel for each notification group you want Slack to receive, or leave it on **Don't send**.
 - The Signals group has per-topic checkboxes (new, escalating, regressed, and reprioritized signals), and the Signals and Monitors routes each carry a minimum severity, so a channel can receive only high and urgent alerts.
-- Update routes any time from **Settings → Integrations**.
+- Click **Save default** to apply route changes, and update them any time from **Settings → Organization → Integrations**.
 
 Latitude sends Slack notifications at the organization level. Slack routing is independent from each user's in-app and email preferences.
 
