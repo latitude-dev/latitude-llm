@@ -3,7 +3,12 @@ import { Effect } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { PostHogClientShape } from "../client.ts"
 import { isOssTelemetryEnabled, loadOssTelemetryConfig } from "./config.ts"
-import { OSS_TELEMETRY_EVENT, ossTelemetryHeartbeatKey } from "./constants.ts"
+import {
+  BUNDLED_OSS_TELEMETRY_POSTHOG_API_KEY,
+  OSS_TELEMETRY_EVENT,
+  OSS_TELEMETRY_POSTHOG_HOST,
+  ossTelemetryHeartbeatKey,
+} from "./constants.ts"
 import { deriveDeploymentId } from "./deployment-id.ts"
 import { reportOssDeploymentHeartbeat } from "./report.ts"
 
@@ -67,12 +72,15 @@ describe("loadOssTelemetryConfig", () => {
     expect(Effect.runSync(loadOssTelemetryConfig)).toBeUndefined()
   })
 
-  it("returns undefined in production while the bundled PostHog key is still the placeholder", () => {
+  it("uses the bundled PostHog key in production", () => {
     process.env.NODE_ENV = "production"
-    expect(Effect.runSync(loadOssTelemetryConfig)).toBeUndefined()
+    expect(Effect.runSync(loadOssTelemetryConfig)).toEqual({
+      apiKey: BUNDLED_OSS_TELEMETRY_POSTHOG_API_KEY,
+      host: OSS_TELEMETRY_POSTHOG_HOST,
+    })
   })
 
-  it("returns config when enabled and a PostHog key is configured", () => {
+  it("lets LAT_OSS_TELEMETRY_POSTHOG_API_KEY override the bundled key", () => {
     process.env.NODE_ENV = "production"
     process.env.LAT_OSS_TELEMETRY_POSTHOG_API_KEY = "phc_test_key"
     process.env.LAT_OSS_TELEMETRY_POSTHOG_HOST = "https://eu.i.posthog.com"
