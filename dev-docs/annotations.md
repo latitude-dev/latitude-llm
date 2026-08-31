@@ -128,6 +128,12 @@ Anchor coordinates must use the raw persisted conversation structure:
 
 Do not store redundant quoted text when the selection can be reconstructed from the conversation plus these indices and offsets.
 
+## Shareable deep links
+
+Anchored scores are shareable through the `scoreId` URL search param on trace and session routes. Clicking an anchored score in the score list sets the param; it is not cleared after scroll, so reloading or pasting the URL reproduces the scroll, flash, and open popover. The wiring lives in `useConversationAnnotationFocus` (shared by the trace drawer and session Conversation tab) and waits for the conversation to mount before navigating, so a cold load does not no-op.
+
+Signal → session navigation passes the occurrence score's id the same way, so opening a session from a signal lands on the evidence message. See [`./scores.md`](./scores.md#shareable-conversation-anchors).
+
 ## Enrichment
 
 User annotations are often too short or vague to cluster well.
