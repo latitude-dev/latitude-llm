@@ -123,6 +123,7 @@
               "telemetry/providers/amazon-bedrock",
               "telemetry/providers/google-ai-platform",
               "telemetry/providers/vertex-ai",
+              "telemetry/providers/openrouter",
               "telemetry/providers/groq",
               "telemetry/providers/mistral",
               "telemetry/providers/ollama",
