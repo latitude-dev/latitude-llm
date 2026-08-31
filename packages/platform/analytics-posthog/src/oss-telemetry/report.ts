@@ -1,6 +1,6 @@
 import { parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
-import { createPostHogClient } from "../client.ts"
+import { createPostHogClient, type PostHogClientShape } from "../client.ts"
 import { loadOssTelemetryConfig } from "./config.ts"
 import { OSS_TELEMETRY_EVENT, OSS_TELEMETRY_HEARTBEAT_TTL_SECONDS, ossTelemetryHeartbeatKey } from "./constants.ts"
 import { deriveDeploymentId } from "./deployment-id.ts"
@@ -10,6 +10,7 @@ interface ReportOssDeploymentHeartbeatInput {
   readonly redis?: {
     set(key: string, value: string, mode: "EX", ttl: number, nx: "NX"): Promise<string | null>
   }
+  readonly posthog?: PostHogClientShape
 }
 
 const readHostname = (rawUrl: string | undefined): string | undefined => {
@@ -46,19 +47,19 @@ const shouldSendHeartbeat = async (
 }
 
 export const reportOssDeploymentHeartbeat = async (input: ReportOssDeploymentHeartbeatInput): Promise<void> => {
-  const config = Effect.runSync(loadOssTelemetryConfig)
-  if (!config) return
-
-  const deploymentId = deriveDeploymentId()
-  if (!deploymentId) return
-
-  if (!(await shouldSendHeartbeat(input.redis, deploymentId))) return
-
-  const webHost = readHostname(Effect.runSync(parseEnvOptional("LAT_WEB_URL", "string")))
-  const version = readVersion()
-
-  const client = createPostHogClient(config)
   try {
+    const config = Effect.runSync(loadOssTelemetryConfig)
+    if (!config) return
+
+    const deploymentId = deriveDeploymentId()
+    if (!deploymentId) return
+
+    if (!(await shouldSendHeartbeat(input.redis, deploymentId))) return
+
+    const webHost = readHostname(Effect.runSync(parseEnvOptional("LAT_WEB_URL", "string")))
+    const version = readVersion()
+
+    const client = input.posthog ?? createPostHogClient(config)
     await client.capture({
       distinctId: `deployment_${deploymentId}`,
       event: OSS_TELEMETRY_EVENT,
