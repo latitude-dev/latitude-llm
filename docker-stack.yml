@@ -12,8 +12,6 @@ x-app: &app
   env_file:
     - .env.production
   environment:
-    # env_file can leave NODE_ENV=development after `cp .env.example .env.production`.
-    NODE_ENV: production
     LAT_IMAGE_TAG: ${LAT_IMAGE_TAG:-latest}
   logging: *logging
   depends_on:
