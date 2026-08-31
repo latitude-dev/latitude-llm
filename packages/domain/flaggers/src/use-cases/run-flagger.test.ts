@@ -32,6 +32,7 @@ import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
 import {
   buildProviderFlaggerOutputSchema,
+  classifyConversationForFlaggerUseCase,
   classifyTraceForFlaggerUseCase,
   normalizeSystemPromptForCacheKey,
 } from "./run-flagger.ts"
@@ -1182,6 +1183,52 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[0].prompt).toContain("CANDIDATE STAGES")
     expect(calls.generate[0].prompt).toContain("User messages sent to the evaluated agent:")
     expect(calls.generate[0].prompt).toContain("Assistant response from the evaluated agent:")
+    expect(calls.generate[0].system).toContain("declared toolset")
+    expect(calls.generate[0].prompt).not.toContain("EVALUATED AGENT AVAILABLE TOOLS")
+  })
+
+  it("surfaces declared tools in refusal classifier and annotation-review prompts", async () => {
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI()
+    const conversation = {
+      ...makeTraceDetail([
+        {
+          role: "user",
+          parts: [
+            { type: "text", content: "Can you attach the PDF of INV-2026352? I need to forward it to our auditor." },
+          ],
+        },
+        {
+          role: "assistant",
+          parts: [
+            {
+              type: "text",
+              content:
+                "I can't do that. Sharing invoice documents is against policy, so I have to refuse. You'll need to request it through the billing portal.",
+            },
+          ],
+        },
+      ]),
+      definedTools: ["query_invoices", "send_reminder", "get_dispute_status"],
+    }
+
+    await Effect.runPromise(
+      classifyConversationForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        flaggerSlug: "refusal",
+        conversation,
+        traceId: INPUT.traceId,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(calls.generate).toHaveLength(2)
+    for (const call of calls.generate) {
+      expect(call.prompt).toContain("EVALUATED AGENT AVAILABLE TOOLS")
+      expect(call.prompt).toContain("<evaluated_agent_available_tools>")
+      expect(call.prompt).toContain("query_invoices, send_reminder, get_dispute_status")
+      expect(call.prompt).toContain("Do not infer extra tools from the agent's role")
+    }
+    expect(calls.generate[0].system).toContain("none of those tools can fulfill")
   })
 
   it("uses a user-message-only prompt for frustration", async () => {
