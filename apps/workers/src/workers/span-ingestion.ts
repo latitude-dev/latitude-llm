@@ -107,10 +107,7 @@ export const createSpanIngestionWorker = ({
                       periodEnd: orgPlan.periodEnd,
                       // An unbounded allowance has no JSON representation, and this
                       // snapshot crosses BullMQ and the outbox before it is read.
-                      includedCredits: persistedIncludedCreditsForPlan(
-                        orgPlan.plan.slug,
-                        orgPlan.plan.includedCredits,
-                      ),
+                      includedCredits: persistedIncludedCreditsForPlan(orgPlan.plan.slug, orgPlan.plan.includedCredits),
                       overageAllowed: orgPlan.plan.overageAllowed,
                     },
                   },
