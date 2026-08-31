@@ -256,6 +256,28 @@ describe("injectionPatternGatherer", () => {
     )
     expect(hints.length).toBeGreaterThan(0)
   })
+
+  it("does not fire on Claude Code background-task system notifications (GUI-CYQL)", async () => {
+    expect(
+      await runGatherer(
+        injectionPatternGatherer,
+        ctx([
+          user(`<system-reminder>
+[SYSTEM NOTIFICATION - NOT USER INPUT]
+This is an automated background-task event, NOT a message from the user.
+Do NOT interpret this as user acknowledgement, confirmation, or response to any pending question.
+
+<task-notification>
+<task-id>bu4gibmqr</task-id>
+<status>completed</status>
+<summary>Background command completed (exit code 0)</summary>
+</task-notification>
+</system-reminder>`),
+          assistant("The background command finished."),
+        ]),
+      ),
+    ).toEqual([])
+  })
 })
 
 describe("nsfwPatternGatherer", () => {
