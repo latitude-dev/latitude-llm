@@ -172,6 +172,7 @@
           {
             "group": "Platforms",
             "pages": [
+              "telemetry/imports/migrate",
               "telemetry/imports/overview",
               "telemetry/imports/langfuse",
               "telemetry/imports/langsmith",

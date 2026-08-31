@@ -1,0 +1,160 @@
+---
+title: Migrate to Latitude
+description: Move from Langfuse, LangSmith, or Braintrust to Latitude end to end: send live traces, import your history, verify both, and retire the old platform.
+---
+
+# Migrate to Latitude
+
+Migrating has two halves. **Live tracing** is the one that matters: it is what feeds search, flaggers, evaluations, signals, and monitors, so nothing in Latitude works until your traces arrive here. **Importing** backfills the history you already collected elsewhere, so your new project does not start empty.
+
+This guide runs the whole path in order. Budget an afternoon for a single service, and expect the code change to be small: if you already export OpenTelemetry, it can be one endpoint.
+
+<Steps>
+  <Step title="Create the project and an API key">
+    Create a Latitude project for the service you are migrating, one project per agent or application, and generate an API key in project settings. Keep the project slug handy; both the SDKs and the raw OTLP endpoint need it.
+
+    If you are moving several services, migrate one first and repeat the sequence. Do not point two services at one project to save setup time; project scope is what keeps signals, evaluations, and cost attribution meaningful.
+  </Step>
+
+  <Step title="Send live traces to Latitude">
+    Add Latitude instrumentation alongside whatever you have today. Do not remove the old platform's tracing yet, that happens at cutover, once you have confirmed data is landing here.
+
+    The fastest route is to let your coding agent do it:
+
+    ```text
+    Install the `latitude-setup` skill from `github.com/latitude-dev/skills`, and use it to add Latitude tracing to this app following best practices.
+    ```
+
+    The skill inspects your codebase, finds your providers and any existing OpenTelemetry setup, installs the right SDK, and verifies traces arrive. To wire it by hand instead, pick the path that matches how you trace today:
+
+    <Tabs>
+      <Tab title="Already exporting OTLP">
+        Langfuse, and any setup built directly on OpenTelemetry, exports OTLP. Latitude's ingestion endpoint speaks standard OTLP over HTTP, so you can add it as an exporter target without touching your instrumentation:
+
+        | | Value |
+        |---|---|
+        | **URL** | `https://ingest.latitude.so/v1/traces` |
+        | **`Authorization`** | `Bearer <your-api-key>` |
+        | **`X-Latitude-Project`** | `<your-project-slug>` |
+
+        Keep your existing exporter in place and add Latitude as a second one if you want an overlap period. See the [OpenTelemetry exporter](../otel-exporter) page for a curl check that returns `202` when the endpoint accepts your payload.
+      </Tab>
+      <Tab title="TypeScript">
+        Install `@latitude-data/telemetry` and initialize it once at startup, before you create any LLM clients:
+
+        ```ts
+        import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
+        import { Latitude } from "@latitude-data/telemetry"
+        import OpenAI from "openai"
+
+        const latitude = new Latitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          project: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: [createOpenAIInstrumentation(OpenAI)],
+        })
+
+        await latitude.ready
+        const client = new OpenAI()
+        ```
+
+        Auto-instrumentation covers the LLM calls themselves. See the [TypeScript SDK](../typescript) for the full instrumentation list.
+      </Tab>
+      <Tab title="Python">
+        Install `latitude-telemetry` and initialize it at startup. See the [Python SDK](../python) for the instrumentation list and framework specifics.
+      </Tab>
+      <Tab title="Another language">
+        Use your language's OpenTelemetry SDK against the OTLP endpoint above. See the [OpenTelemetry exporter](../otel-exporter).
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Port the context your old platform carried">
+    This is the step teams skip, and the one that decides whether Latitude feels complete on day one. Whatever grouping and identity you were attaching elsewhere, sessions, users, tags, metadata, has an equivalent here, and Latitude's session, user, tool, and cost views are only as good as the context you send.
+
+    Wrap each request, conversation turn, or agent run in `capture()` and pass a `sessionId` and `userId`:
+
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "support-agent-turn",
+      async () => agent.run(userMessage),
+      { sessionId: conversation.id, userId: user.id },
+    )
+    ```
+
+    Map your old concepts across as follows:
+
+    | What you had | Where it goes in Latitude |
+    | --- | --- |
+    | Trace or run name | The `capture()` name, which becomes the root span name |
+    | Session, thread, or conversation id | `sessionId`, which groups turns into [sessions](../../observability/sessions) |
+    | End-user id | `userId`, which powers the [Users](../../observability/users) view |
+    | Tags and custom attributes | Tags and [metadata](../../observability/features/metadata), both filterable |
+    | Environment or release labels | [Environments](../../observability/features/environments) and [releases](../../observability/features/releases-versioning) |
+    | Scores or feedback you wrote from code | The [Scores API](../../scores/api) |
+
+    If your agent keeps persistent memory, instrument it too, see [Memory tracing](../memory), since memory operations are their own span type here.
+  </Step>
+
+  <Step title="Verify live traces">
+    Trigger one real request, then open **Traces** in your project. The trace should appear within a few seconds. Before moving on, confirm:
+
+    - the span tree matches what your agent actually did, including tool calls
+    - token counts and cost are populated on LLM spans
+    - your `sessionId` groups multi-turn conversations on the Sessions tab
+    - your `userId` shows up in the Users view
+
+    Any gap here is an instrumentation gap, and it is much cheaper to fix now than after you have imported history and turned the old platform off.
+  </Step>
+
+  <Step title="Import your history">
+    With live tracing confirmed, backfill the past from **Project settings → Imports**. Latitude connects to your old platform's cloud API, previews a sample so you can see what will land, and runs the import in the background.
+
+    <CardGroup cols={3}>
+      <Card title="Langfuse" href="/telemetry/imports/langfuse">
+        Using your public and secret keys.
+      </Card>
+      <Card title="LangSmith" href="/telemetry/imports/langsmith">
+        Runs from a project, with configurable session grouping.
+      </Card>
+      <Card title="Braintrust" href="/telemetry/imports/braintrust">
+        Project logs, queried through BTQL.
+      </Card>
+    </CardGroup>
+
+    Traces come in newest first, so an import that hits your trace limit keeps the most recent history rather than an arbitrary slice, and imports are idempotent, so running one twice updates the same spans instead of duplicating them. Imported spans carry `import.*` metadata, so you can always tell backfilled history from live telemetry. See [Imports](./overview) for limits, billing, and retries.
+
+    Two things do not come across, because they are Latitude's own primitives rather than portable data: **scores and annotations**, and **datasets and evaluations**. Plan to rebuild those, which is usually less work than it sounds, since Latitude's [flaggers](../../annotations/flaggers) annotate common failure categories automatically and [signals](../../signals/overview) are discovered from the resulting scores. Point flaggers at your imported history and you get a first pass of failure patterns without hand-labeling anything.
+  </Step>
+
+  <Step title="Reconcile the two platforms">
+    Before you retire anything, check the same window in both tools and compare trace counts, total cost, and error rate. Small differences are normal and usually explainable: the two platforms may disagree on what counts as one trace, and cost depends on each platform's pricing tables.
+
+    A large gap is worth chasing down. The usual causes are an instrumentation path that is not covered yet, such as a background job or a second service, sampling left enabled on one side, or traces landing in a different project than the one you are looking at.
+  </Step>
+
+  <Step title="Cut over">
+    Once live traces and history both look right, remove the old platform's tracing: its SDK wrappers or decorators, its initialization, and its environment variables and API keys. Leaving them in place costs you double ingestion and invites confusion about which tool is authoritative.
+
+    You can also keep both running for a while, sending traces to Latitude and your old platform at once, then compare and switch off. It costs double ingestion for that period, but some teams want the overlap before trusting a new pipeline with production visibility. Either way, decide a date; an indefinite overlap is the state where nobody trusts either dashboard.
+  </Step>
+
+  <Step title="Turn on the reliability loop">
+    Migration is done when Latitude is not just receiving traces but working on them. The fastest path to value:
+
+    1. Let [flaggers](../../annotations/flaggers) annotate your traffic, including the history you imported.
+    2. Watch the [Signals](../../signals/overview) page for the failure patterns Latitude groups from those scores.
+    3. Add [monitors](../../monitors/overview) for anything you cannot afford to miss, and [notification](../../more/notifications) routing so it reaches your team.
+    4. Turn your worst signal's traces into a [dataset](../../datasets/overview) and a [regression test](../../test-and-fix/regression-testing).
+
+    See [How to use Latitude](../../getting-started/how-to-use-latitude) for the full loop.
+  </Step>
+</Steps>
+
+## Related
+
+- [Imports](./overview): Import mechanics, limits, billing, and retries
+- [Start tracing](../start-tracing): Live instrumentation from scratch
+- [OpenTelemetry exporter](../otel-exporter): The OTLP endpoint for any language
+- [Core concepts](../../getting-started/concepts): The vocabulary Latitude uses
