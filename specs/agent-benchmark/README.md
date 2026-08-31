@@ -114,7 +114,6 @@ Read them in this order. Each one assumes only the documents above it.
 | [`signals.md`](signals.md) | How a signal gets its dimensions, and which signals count |
 | [`flaggers.md`](flaggers.md) | What must change in flaggers before some metrics can be read correctly |
 | [`page.md`](page.md) | What the page shows |
-| [`plan.md`](plan.md) | The phases, in order, with exit gates |
 
 ## What changes outside this feature
 

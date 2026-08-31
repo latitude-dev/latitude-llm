@@ -226,9 +226,13 @@ cares more about one can read that dimension directly.
 Safety is smallest as a weight and does not depend on the weight for its bite, because a confirmed
 failure also caps the composite.
 
-The values are subject to the calibration phase. They live in one place with the scoring version, so
-changing them is one edit and one version bump, and the version marks the discontinuity on the trend
-chart.
+The values above are starting points, not settled numbers. They live in one place with the scoring
+version, so changing them is one edit and one version bump, and the version marks the discontinuity on
+the trend chart.
+
+The standard they have to reach is this: once the score has run across real traffic, no weight and no
+control point should remain a judgement call. Each one should have a measured figure behind it, and the
+method should be published. Until then every value here is explicitly provisional.
 
 There is one way to derive these rather than choose them. Human annotations are the only ground truth
 in the platform: a thumbs-down with feedback is a person saying a session was bad. The weights could be
