@@ -135,7 +135,7 @@ These wire Latitude to its datastores, depending on your chosen [deployment opti
 | `LAT_WEB_PORT`, `LAT_API_PORT`, `LAT_INGEST_PORT` | Host bind ports (default `3000` / `3001` / `3002`). |
 | `LAT_WORKERS_HEALTH_PORT`, `LAT_WORKFLOWS_HEALTH_PORT` | Health-check ports for the background workers (default `9090` / `9091`). |
 | `LAT_IMAGE_TAG` | Image tag the stack pulls (default `latest`; pin `X.Y.Z` in production). |
-| `LAT_OSS_TELEMETRY_ENABLED` | Anonymous OSS deployment heartbeat sent to Latitude's PostHog project (default `true` in production, `false` in development). Set `false` to opt out. |
+| `LAT_OSS_TELEMETRY_ENABLED` | Anonymous OSS deployment heartbeat sent to Latitude's PostHog project when the API starts (default `true` in production, `false` in development). Set `false` to opt out. Optional overrides: `LAT_OSS_TELEMETRY_POSTHOG_API_KEY`, `LAT_OSS_TELEMETRY_POSTHOG_HOST`. |
 | `LAT_TELEMETRY_RETENTION_DAYS` | How long spans, traces, and search rows are kept, in days (default `3650`, max `3650`). Stamped on each row at ingest, so a change applies to new data only. Ignored when `LAT_BILLING_ENABLED=true`, and for any organization given a manual billing override, where the plan sets retention. |
 | `LAT_BILLING_ENABLED` | Enforce Latitude Cloud's credit plans and plan retention (default `false`). Self-hosted deployments leave it off: ingestion is never capped and retention comes from `LAT_TELEMETRY_RETENTION_DAYS`, unless an organization carries a manual billing override, which takes precedence either way. |
 | `LAT_EXPORT_RATE_LIMIT_*`, `LAT_INGEST_TRACE_RATE_LIMIT_*` | Rate-limit tuning for exports and per-organization/API-key trace ingestion. |
