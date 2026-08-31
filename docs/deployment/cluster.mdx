@@ -140,7 +140,7 @@ Every service ships with resource **requests** (HPA-ready); add limits and `Hori
 
 ## Retention
 
-Telemetry is kept for `config.telemetryRetentionDays` (default `3650`, ten years), stamped on each row as it is ingested. Nothing is metered: `LAT_BILLING_ENABLED` stays off unless you are running Latitude Cloud. Changing the value applies to newly ingested data — see [widening retention on existing data](/deployment/single-host#retention).
+Telemetry is kept for `config.telemetryRetentionDays` (default `3650`, ten years), stamped on each row as it is ingested. With `LAT_BILLING_ENABLED` off, nothing is enforced: ingestion is never rejected for billing and no plan shortens retention, though per-organization usage is still counted. Changing the value applies to newly ingested data — see [widening retention on existing data](/deployment/single-host#retention).
 
 ## Backups
 

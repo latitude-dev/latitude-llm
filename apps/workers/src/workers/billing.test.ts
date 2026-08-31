@@ -26,7 +26,7 @@ import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { setupTestPostgres } from "@platform/testkit"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createBillingWorker, TRACE_USAGE_BATCH_FLUSH_MS } from "./billing.ts"
 
@@ -65,6 +65,14 @@ const BILLING_PERIOD_START = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCM
 const BILLING_PERIOD_END = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth() + 1, 1))
 
 describe("billing runtime integration", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("prefers a manual override over an active Stripe subscription", async () => {
     vi.useFakeTimers()
     try {

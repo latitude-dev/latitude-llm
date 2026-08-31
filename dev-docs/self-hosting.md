@@ -56,7 +56,7 @@ The blessed default configuration, verified per tier. Defaults match Latitude Cl
 - **Object storage** — `fs` (Tier 1) / bundled SeaweedFS behind `s3` (Tier 2/3) / BYO managed S3.
 - **Email** — Mailpit (dev) or any SMTP / Mailgun / SendGrid (prod). With no transport reachable, magic-link/invite email won't send, so one is effectively required to sign in.
 
-**Billing and retention:** the plan catalog ships in the OSS build but enforces nothing unless `LAT_BILLING_ENABLED=true` (Latitude Cloud sets it on every service). Without it every organization resolves to the `self-hosted` plan: no credit cap, no ingest `402`, and telemetry retention taken from `LAT_TELEMETRY_RETENTION_DAYS` (default and maximum `3650`). See [`./billing.md`](./billing.md) for the resolution order and why a bad value dies rather than falling back.
+**Billing and retention:** the plan catalog ships in the OSS build but enforces nothing unless `LAT_BILLING_ENABLED=true` (Latitude Cloud sets it on every service). Without it every organization with no manual billing override resolves to the `self-hosted` plan: no credit cap, no ingest `402`, and telemetry retention taken from `LAT_TELEMETRY_RETENTION_DAYS` (default and maximum `3650`). An override still wins, so an operator can pin one organization to a capped plan on an otherwise unenforced deployment. See [`./billing.md`](./billing.md) for the resolution order and why a bad value dies rather than falling back.
 
 **AI providers (pluggable, env-configurable; defaults = Latitude Cloud):**
 

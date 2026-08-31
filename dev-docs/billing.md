@@ -20,7 +20,7 @@ Plan semantics:
 - `free`: hard capped, `20,000` included credits, `30` entitlement retention days
 - `pro`: overage allowed, `100,000` included credits, `90` entitlement retention days, optional customer-managed period spending cap
 - `enterprise`: manual-only, override-driven included credits and retention by contract
-- `self-hosted`: unmetered, unbounded credits, retention from `LAT_TELEMETRY_RETENTION_DAYS`. Not a contract and not selectable as an override — it is what every organization resolves to on a deployment that does not enforce billing (`OVERRIDABLE_PLAN_SLUGS` is the subset an operator may pin)
+- `self-hosted`: unenforced, unbounded credits, retention from `LAT_TELEMETRY_RETENTION_DAYS`. Not a contract and not selectable as an override — it is what an organization with no override resolves to on a deployment that does not enforce billing (`OVERRIDABLE_PLAN_SLUGS` is the subset an operator may pin). Usage events are still recorded; nothing enforces them
 
 Chargeable actions:
 
@@ -83,7 +83,7 @@ Every organization resolves to one effective billing plan in this order:
 
 Unknown Stripe plan names fail closed through `UnknownStripePlanError`. The billing domain must never infer `paid => pro`.
 
-**Enforcement is opt-in (`LAT_BILLING_ENABLED`, default `false`).** The published images meter nobody until a deployment asks for it, so a self-hoster is never rejected at ingest or aged out by a plan's retention; **Latitude Cloud sets `LAT_BILLING_ENABLED=true` on every service**, and the plan source reads `self-hosted` in the backoffice wherever it does not. A malformed value in either config var dies as a `BillingConfigurationError` defect rather than falling back, because both silent outcomes — metering a self-hoster, not metering Cloud — are worse than a crash. The override is checked first so an operator can still pin an organization on an unmetered deployment.
+**Enforcement is opt-in (`LAT_BILLING_ENABLED`, default `false`).** The published images enforce nothing until a deployment asks for it, so a self-hoster is never rejected at ingest or aged out by a plan's retention (usage events are still recorded, they just gate nothing); **Latitude Cloud sets `LAT_BILLING_ENABLED=true` on every service**, and the plan source reads `self-hosted` in the backoffice wherever it does not. A malformed value in either config var dies as a `BillingConfigurationError` defect rather than falling back, because both silent outcomes — metering a self-hoster, not metering Cloud — are worse than a crash. The override is checked first so an operator can still pin an organization on an unmetered deployment.
 
 ## Persistence Model
 

@@ -84,7 +84,9 @@ function BillingOverviewCards() {
           ? "Managed through Stripe"
           : overview.planSource === "override"
             ? "Manual contract / override"
-            : "Internal free plan",
+            : overview.planSource === "self-hosted"
+              ? "Unmetered self-hosted deployment"
+              : "Internal free plan",
     },
     {
       label: "Credits used this period",

@@ -113,7 +113,7 @@ The bundled stateful services (Postgres, ClickHouse, Redis, Temporal, SeaweedFS)
 
 ## Retention
 
-A self-hosted deployment keeps telemetry for `LAT_TELEMETRY_RETENTION_DAYS` (default `3650`, ten years). Nothing is metered and no ingest request is ever rejected for billing: `LAT_BILLING_ENABLED` stays `false` unless you are running Latitude Cloud.
+A self-hosted deployment keeps telemetry for `LAT_TELEMETRY_RETENTION_DAYS` (default `3650`, ten years). With `LAT_BILLING_ENABLED` off, no ingest request is ever rejected for billing and no plan shortens retention. Usage is still counted per organization, so the credit figures on the billing page stay populated; nothing enforces them.
 
 Retention is stamped on each row as it is ingested, so lowering or raising the value applies to new data only. To widen the window on data you have already ingested, update the stamp in ClickHouse:
 

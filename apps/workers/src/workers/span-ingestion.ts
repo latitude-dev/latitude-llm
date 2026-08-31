@@ -1,3 +1,4 @@
+import { persistedIncludedCreditsForPlan } from "@domain/billing"
 import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
 import { OrganizationId, type StorageDiskPort } from "@domain/shared"
@@ -94,8 +95,8 @@ export const createSpanIngestionWorker = ({
             ...(pseudonymSecret ? { pseudonymSecret } : {}),
             ...(orgPlan ? { retentionDays: orgPlan.plan.retentionDays } : {}),
             // Emit the full event (plan snapshot + the `isSandbox` bit). Whether to
-            // bill is the consumer's call — `domain-events` skips the billing fan-out
-            // for sandbox events. See the `TracesIngested` handler there.
+            // bill is the consumer's call — the `billing` worker drops sandbox usage
+            // rather than batching it.
             ...(orgPlan
               ? {
                   traceUsage: {
@@ -104,7 +105,12 @@ export const createSpanIngestionWorker = ({
                       planSource: orgPlan.source as "override" | "subscription" | "free-fallback" | "self-hosted",
                       periodStart: orgPlan.periodStart,
                       periodEnd: orgPlan.periodEnd,
-                      includedCredits: orgPlan.plan.includedCredits,
+                      // An unbounded allowance has no JSON representation, and this
+                      // snapshot crosses BullMQ and the outbox before it is read.
+                      includedCredits: persistedIncludedCreditsForPlan(
+                        orgPlan.plan.slug,
+                        orgPlan.plan.includedCredits,
+                      ),
                       overageAllowed: orgPlan.plan.overageAllowed,
                     },
                   },
