@@ -1,8 +1,14 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "redirects": [
-    { "source": "/issues/:slug*", "destination": "/signals/:slug*" },
-    { "source": "/search/behaviours", "destination": "/behaviours/overview" },
+    {
+      "source": "/issues/:slug*",
+      "destination": "/signals/:slug*"
+    },
+    {
+      "source": "/search/behaviours",
+      "destination": "/behaviours/overview"
+    },
     {
       "source": "/more/data-destinations",
       "destination": "/more/data-destinations/overview"
@@ -106,6 +112,16 @@
           "telemetry/start-tracing",
           "telemetry/memory",
           {
+            "group": "Migrate from another platform",
+            "pages": [
+              "telemetry/imports/migrate",
+              "telemetry/imports/overview",
+              "telemetry/imports/langfuse",
+              "telemetry/imports/langsmith",
+              "telemetry/imports/braintrust"
+            ]
+          },
+          {
             "group": "SDKs",
             "pages": [
               "telemetry/typescript",
@@ -167,16 +183,6 @@
               "telemetry/openclaw",
               "telemetry/pi-coding-agent",
               "telemetry/prime-intellect"
-            ]
-          },
-          {
-            "group": "Platforms",
-            "pages": [
-              "telemetry/imports/migrate",
-              "telemetry/imports/overview",
-              "telemetry/imports/langfuse",
-              "telemetry/imports/langsmith",
-              "telemetry/imports/braintrust"
             ]
           }
         ]
