@@ -13,18 +13,39 @@ const BILLING_EFFECTIVE_PLAN_CACHE_TTL_SECONDS = 60
 
 const buildCacheKey = (organizationId: string) => `org:${organizationId}:billing:effective-plan`
 
+// JSON has no `Infinity`, so an unbounded allowance is cached as null and read
+// back as `Infinity`. Without this the enterprise and self-hosted plans fail to
+// parse and every resolution is a cache miss.
 const cachedPlanSchema = z.object({
   organizationId: organizationIdSchema,
-  plan: billingPlanSchema,
-  source: z.enum(["override", "subscription", "free-fallback"]),
+  plan: billingPlanSchema.extend({
+    includedCredits: z.number().int().nonnegative().nullable(),
+    spanQuotaPerPeriod: z.number().nullable(),
+  }),
+  source: z.enum(["override", "subscription", "free-fallback", "self-hosted"]),
   periodStart: z.coerce.date(),
   periodEnd: z.coerce.date(),
 })
 
+const asCached = (value: number): number | null => (Number.isFinite(value) ? value : null)
+
+const asResolved = (value: number | null): number => value ?? Number.POSITIVE_INFINITY
+
 const parseCachedPlan = (json: string): EffectivePlanResolution | null => {
   try {
     const result = cachedPlanSchema.safeParse(JSON.parse(json))
-    return result.success ? result.data : null
+    if (!result.success) return null
+
+    const { plan, ...rest } = result.data
+
+    return {
+      ...rest,
+      plan: {
+        ...plan,
+        includedCredits: asResolved(plan.includedCredits),
+        spanQuotaPerPeriod: asResolved(plan.spanQuotaPerPeriod),
+      },
+    }
   } catch {
     return null
   }
@@ -34,7 +55,11 @@ const encodeCachedPlan = (plan: EffectivePlanResolution) =>
   JSON.stringify({
     organizationId: plan.organizationId,
     source: plan.source,
-    plan: plan.plan,
+    plan: {
+      ...plan.plan,
+      includedCredits: asCached(plan.plan.includedCredits),
+      spanQuotaPerPeriod: asCached(plan.plan.spanQuotaPerPeriod),
+    },
     periodStart: plan.periodStart.toISOString(),
     periodEnd: plan.periodEnd.toISOString(),
   })

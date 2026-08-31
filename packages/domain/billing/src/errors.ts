@@ -60,3 +60,12 @@ export class InvalidBillingIdempotencyKeyError extends Data.TaggedError("Invalid
     return `Invalid billing idempotency key for action "${this.action}": ${this.reason}`
   }
 }
+
+export class BillingConfigurationError extends Data.TaggedError("BillingConfigurationError")<{
+  readonly reason: string
+}> {
+  readonly httpStatus = 500
+  get httpMessage() {
+    return `Invalid billing configuration: ${this.reason}`
+  }
+}

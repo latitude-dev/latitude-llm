@@ -36,8 +36,8 @@ export interface EventPayloads {
      */
     readonly isSandbox?: boolean
     readonly billing?: {
-      readonly planSlug: "free" | "pro" | "enterprise"
-      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+      readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
       readonly periodStart: string
       readonly periodEnd: string
       readonly includedCredits: number
@@ -548,7 +548,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly periodStart: string
     readonly periodEnd: string
-    readonly planSource: "override" | "subscription" | "free-fallback"
+    readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
     readonly overageAllowed: boolean
     readonly includedCredits: number
     readonly consumedCredits: number
