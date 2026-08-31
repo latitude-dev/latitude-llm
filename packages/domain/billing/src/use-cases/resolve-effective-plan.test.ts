@@ -124,4 +124,26 @@ describe("resolveEffectivePlan", () => {
       expect(result.failure).toBeInstanceOf(UnknownStripePlanError)
     }
   })
+
+  it("still resolves a subscription whose mirrored period has already ended", async () => {
+    const { layer, subscriptionsByOrganizationId } = createTestLayer()
+
+    subscriptionsByOrganizationId.set(String(ORGANIZATION_ID), {
+      plan: "pro",
+      status: "active",
+      periodStart: new Date("2026-06-29T08:40:14.000Z"),
+      periodEnd: new Date("2026-07-29T08:40:14.000Z"),
+      stripeCustomerId: "cus_123",
+      stripeSubscriptionId: "sub_123",
+    })
+
+    const result = await Effect.runPromise(resolveEffectivePlan(ORGANIZATION_ID).pipe(Effect.provide(layer)))
+
+    expect(result).toMatchObject({
+      source: "subscription",
+      periodStart: new Date("2026-06-29T08:40:14.000Z"),
+      periodEnd: new Date("2026-07-29T08:40:14.000Z"),
+      plan: { slug: "pro" },
+    })
+  })
 })

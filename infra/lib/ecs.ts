@@ -571,6 +571,8 @@ function createTaskDefinition(
           { name: "LAT_STRIPE_PRO_OVERAGE_METER_EVENT_NAME", valueFrom: stripeProOverageMeterEventNameArn },
         ]
 
+        const stripePeriodRefreshSecret = { name: "LAT_STRIPE_SECRET_KEY", valueFrom: stripeSecretKeyArn }
+
         const bullBoardSecrets = [
           { name: "LAT_BULL_BOARD_USERNAME", valueFrom: bullBoardUsernameArn },
           { name: "LAT_BULL_BOARD_PASSWORD", valueFrom: bullBoardPasswordArn },
@@ -583,9 +585,10 @@ function createTaskDefinition(
 
         const serviceSpecificSecrets: Record<string, { name: string; valueFrom: string }[]> = {
           api: [temporalSecret, ...githubAppSecrets],
+          ingest: [stripePeriodRefreshSecret],
           web: [...oauthSecrets, ...stripeSelfServeSecrets, temporalSecret, ...supportSecrets, ...githubAppSecrets],
           workflows: [temporalSecret, ...stripeOverageSecrets],
-          workers: [temporalSecret, ...bullBoardSecrets, ...githubAppSecrets],
+          workers: [temporalSecret, ...bullBoardSecrets, ...githubAppSecrets, stripePeriodRefreshSecret],
         }
 
         const secrets = [...baseSecrets, ...(serviceSpecificSecrets[serviceConfig.name] ?? [])]
