@@ -224,6 +224,9 @@ importers:
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations
+      '@domain/partners':
+        specifier: workspace:*
+        version: link:../../packages/domain/partners
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
@@ -506,6 +509,9 @@ importers:
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations
+      '@domain/partners':
+        specifier: workspace:*
+        version: link:../../packages/domain/partners
       '@domain/projects':
         specifier: workspace:*
         version: link:../../packages/domain/projects
@@ -1776,6 +1782,33 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
 
+  packages/domain/partners:
+    dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
+      '@domain/oauth-keys':
+        specifier: workspace:*
+        version: link:../oauth-keys
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../users
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+
   packages/domain/product-feedback:
     dependencies:
       '@domain/annotations':
@@ -2662,6 +2695,9 @@ importers:
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../domain/organizations
+      '@domain/partners':
+        specifier: workspace:*
+        version: link:../../domain/partners
       '@domain/projects':
         specifier: workspace:*
         version: link:../../domain/projects

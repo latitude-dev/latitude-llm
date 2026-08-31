@@ -45,6 +45,7 @@ export const DESIGN_SYSTEM_NAV: DesignSystemNavSection[] = [
       { label: "Master detail", to: "/master-detail" },
       { label: "Rich text editor", to: "/rich-text-editor" },
       { label: "Status", to: "/status" },
+      { label: "Tags input", to: "/tags-input" },
       { label: "Charts", to: "/charts" },
     ],
   },

@@ -1,0 +1,341 @@
+---
+title: Partners
+description: Offer Latitude observability inside your own product — connect a customer's existing Latitude account, or create one for them seamlessly
+---
+
+## Overview
+
+A **partner** is a platform that offers Latitude to its own users: an agent platform, an IDE, a hosting provider, a marketplace. Your users click "install Latitude" inside your product, and a few seconds later their agents are sending traces.
+
+Whichever way a user installs, you end up in the same place: holding an **OAuth access and refresh token** for their Latitude organization, which you use against the regular [Latitude API](https://api.latitude.so/docs). Your users see you listed under **Settings → Keys → OAuth Keys** and can revoke you at any time.
+
+Partners are vetted and registered by hand, so this is not a self-serve program.
+
+<Info>
+  Interested? Email **[hello@latitude.so](mailto:hello@latitude.so)** with your product, the flow you have in mind, and roughly how many users you expect to onboard. We'll set you up and send your credentials.
+</Info>
+
+## What you get
+
+When we register you, we ask for your product name, an icon, your **OAuth redirect URLs** (the exact `https://` callback addresses on your side users return to after authorizing — see [Your client_id](#your-client_id)), and optionally the [egress IPs](#restricting-access-by-ip) to pin your account to.
+
+Once registered you receive a **Partner ID** and an **HMAC secret**. The secret is shown to us once and to you once, so store it somewhere safe.
+
+Those credentials unlock the **private partner API**, which is scoped per partner: you only get the endpoints you were granted.
+
+<Warning>
+  The HMAC secret authenticates **you**, not a user. Keep it on your backend and never ship it to a browser or a mobile app. Every request is signed server-side.
+</Warning>
+
+## The two install paths
+
+Your install button has to handle two kinds of user.
+
+<CardGroup cols={2}>
+  <Card title="They already have Latitude" icon="user-check">
+    Send them through the standard OAuth flow. They sign in, pick which organization to connect, and approve your access. No partner credentials involved.
+  </Card>
+  <Card title="They have no account yet" icon="user-plus">
+    Call the provisioning endpoint. Latitude creates the user, their organization, and your OAuth grant in one signed request, and returns the tokens.
+  </Card>
+</CardGroup>
+
+Both paths converge on the same thing: an access token, a refresh token, and a revocable entry in the user's OAuth Keys settings.
+
+### Path A — existing account
+
+This is the plain OAuth 2.1 authorization code flow with PKCE, the same one the [MCP server](/getting-started/mcp) uses. You need no partner credentials for it.
+
+<Steps>
+  <Step title="Register a client for this account">
+    `POST https://app.latitude.so/api/auth/mcp/register` with your `client_name` and `redirect_uris`. Use `"token_endpoint_auth_method": "none"` for a public client. Store the `client_id` you get back **with this account** — registration is unauthenticated and instant, and each connected account needs its own client (see [Your client_id](#your-client_id)).
+  </Step>
+  <Step title="Send the user to authorize">
+    Open `https://app.latitude.so/api/auth/mcp/authorize` with `response_type=code`, your `client_id`, `redirect_uri`, `scope=openid offline_access`, a `state`, and a PKCE `code_challenge` (S256).
+  </Step>
+  <Step title="They sign in and consent">
+    Latitude asks them to pick which organization to connect and to approve your access.
+  </Step>
+  <Step title="Exchange the code">
+    They come back to your `redirect_uri` with `?code`. Exchange it at `POST https://app.latitude.so/api/auth/mcp/token` with `grant_type=authorization_code`, the `code`, your `client_id`, and the `code_verifier`.
+  </Step>
+</Steps>
+
+You now hold the same token pair path B would have given you, with the same scopes. Unlike path B you did not pick the account, so call `GET /v1/account` with the access token to find out which user and organization you are now connected to.
+
+### Path B — no account yet
+
+There is nobody to consent yet, so instead of an interactive flow you make one signed request. Latitude creates everything the consent flow would have created, minus the interaction.
+
+## Your client_id
+
+A `client_id` at Latitude identifies **one connection between your product and one account** — not your platform as a whole. Each path hands you one:
+
+- **Path A** — the one you registered before sending the user to authorize.
+- **Path B** — the `client_id` field of the provisioning response.
+
+Store it with that account, next to its tokens. Think of `client_id` + `refresh_token` as that customer's connection record, and reuse the same `client_id` for everything you do on their behalf:
+
+- **Refreshing tokens** — the [refresh call](#refreshing) requires it.
+- **Reconnecting** — if the tokens expire or the user revokes and wants to reconnect, run the path-A authorize flow with the *same* `client_id`. Latitude remembers the consent granted to that client, so the user isn't asked to approve you again, and the connection stays a single entry in their **Settings → Keys** page instead of piling up duplicates.
+
+<Warning>
+  **Never point two different accounts at one `client_id`.** Each client is bound to a single organization; connecting a second customer through it disconnects the first. Registration is free — when a new customer arrives via path A, register a fresh client for them.
+</Warning>
+
+## Account provisioning
+
+```http
+POST https://api.latitude.so/v1/private/partners/{partnerId}/accounts
+```
+
+### Request
+
+```json
+{
+  "user": {
+    "email": "ada.lovelace@example.com",
+    "name": "Ada Lovelace",
+    "image": "https://example.com/avatars/ada.png",
+    "phone": "+15550100",
+    "job": "Founder"
+  },
+  "organization": {
+    "name": "Example Inc"
+  }
+}
+```
+
+Only `user.email` is required. Everything else is optional, and anything you omit is derived.
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `user.email` | **yes** | Lowercased before use. Must not already belong to a Latitude account. |
+| `user.name` | no | Display name. Defaults to a name derived from the email — `ada.lovelace@…` becomes `Ada Lovelace`. Up to 256 characters. |
+| `user.image` | no | Avatar URL, shown in the app. Must be `http(s)`. |
+| `user.phone` | no | E.164, including the country code — `+15550100`. |
+| `user.job` | no | Job title. Up to 256 characters. |
+| `organization.name` | no | Defaults to the user's name in possessive form — `Ada Lovelace's Organization`. Latitude derives a unique slug from it. |
+
+<Tip>
+  Send whatever you already know about the user. A provisioned account skips Latitude's onboarding questionnaire, so anything you pass here is profile detail we would otherwise have to ask them for later. Sending nothing but the email is perfectly fine.
+</Tip>
+
+### Response
+
+`201 Created`, shaped like an OAuth token response so you can hand it to the same code that handles path A:
+
+```json
+{
+  "access_token": "IcELntAWIfezzxvHnaruckshczofJCXH",
+  "refresh_token": "usBZhRgdvfpZriBSGwHNLPmVRnurOpsd",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "scope": "openid offline_access",
+  "client_id": "BIWUZupLdMcVNTZbQZjJSfPkyMppuCDl",
+  "organization_id": "ugigziv6z22au5xheuovf771",
+  "organization_slug": "example-inc",
+  "user_id": "xmqnck9azvbydtw50kns31sc"
+}
+```
+
+Store the `client_id` alongside the tokens — it is this account's [connection identity](#your-client_id), and refreshing needs it. The grant carries your registered redirect URLs, so a later interactive re-authorize with this `client_id` works too.
+
+### Errors
+
+| Status | Body | What to do |
+| --- | --- | --- |
+| `400` | `{"error": "invalid_request", "details": ...}` | Fix the request body. `details` is the list of field-level problems, or a message if the body wasn't valid JSON at all. |
+| `401` | `{"error": "unauthorized"}` | Your signature, timestamp, or partner ID was not accepted. See [signing](#signing-a-request). |
+| `403` | `{"error": "insufficient_scope"}` | Your partner account does not have `accounts:provision`. Email us. |
+| `409` | `{"error": "account_already_exists"}` | This email already has a Latitude account. **Fall back to path A** and let them connect it. |
+| `429` | `{"error": "...", "retryAfter": 42}` | You are over the rate limit. Retry after `Retry-After` seconds. |
+
+<Note>
+  The `409` is the important one to handle. Provisioning never touches an existing account, by design, so an install button that only implements path B will fail for any user who already knows Latitude. Show them the "connect your existing account" option instead.
+</Note>
+
+## Signing a request
+
+Every request to the partner API carries three headers. All three are required.
+
+| Header | Value |
+| --- | --- |
+| `X-Partner-Timestamp` | Current Unix time in **seconds**. Must be within **5 minutes** of ours. |
+| `X-Partner-Signature` | `v1=` followed by the lowercase hex HMAC-SHA256 described below. |
+| `X-Partner-Nonce` | A fresh value per request, 8–200 characters of `A-Z a-z 0-9 _ -`. A UUID is ideal. We reject a repeat within 10 minutes. |
+
+The signed string is:
+
+```
+v1:{timestamp}:{METHOD}:{pathname}:{nonce}:{sha256hex(body)}
+```
+
+- `timestamp` — the same value you put in `X-Partner-Timestamp`.
+- `METHOD` — uppercase HTTP method, e.g. `POST`.
+- `pathname` — the request path including `/v1`, without the query string, e.g. `/v1/private/partners/abc123/accounts`.
+- `nonce` — the same value you put in `X-Partner-Nonce`.
+- `sha256hex(body)` — SHA-256 of the **exact raw request body bytes** you send, hex-encoded.
+
+<Note>
+  The nonce is part of the signature, so generate it before you sign and send that same value. It is what makes a captured request unreplayable: swap it and the signature no longer matches, reuse it and we reject the repeat.
+</Note>
+
+Sign that string with HMAC-SHA256 using your partner secret, hex-encode it, and prefix `v1=`.
+
+<Warning>
+  **Serialize your body once.** Hash and send the same string, byte for byte. Handing your HTTP client an object to serialize a second time is the most common reason a signature fails: serializers disagree on whitespace and key order, so the bytes we hash stop matching the bytes you hashed. Both samples below build `body` once and pass that exact string to both the hash and the request.
+</Warning>
+
+<CodeGroup>
+
+```javascript Node.js
+import { createHmac, createHash, randomUUID } from "node:crypto"
+
+const PARTNER_ID = process.env.LATITUDE_PARTNER_ID
+const PARTNER_SECRET = process.env.LATITUDE_PARTNER_SECRET
+
+export async function provisionAccount({ user, organization }) {
+  const pathname = `/v1/private/partners/${PARTNER_ID}/accounts`
+  // Serialize once: the signature covers these exact bytes.
+  const body = JSON.stringify({ user, organization })
+
+  const timestamp = String(Math.floor(Date.now() / 1000))
+  const nonce = randomUUID()
+  const bodyHash = createHash("sha256").update(body, "utf8").digest("hex")
+  const stringToSign = `v1:${timestamp}:POST:${pathname}:${nonce}:${bodyHash}`
+  const signature = createHmac("sha256", PARTNER_SECRET).update(stringToSign, "utf8").digest("hex")
+
+  const response = await fetch(`https://api.latitude.so${pathname}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Partner-Timestamp": timestamp,
+      "X-Partner-Signature": `v1=${signature}`,
+      "X-Partner-Nonce": nonce,
+    },
+    body,
+  })
+
+  if (response.status === 409) throw new Error("account_already_exists")
+  if (!response.ok) throw new Error(`Provisioning failed: ${response.status}`)
+
+  return response.json()
+}
+```
+
+```python Python
+import hashlib
+import hmac
+import json
+import os
+import time
+import uuid
+
+import requests
+
+PARTNER_ID = os.environ["LATITUDE_PARTNER_ID"]
+PARTNER_SECRET = os.environ["LATITUDE_PARTNER_SECRET"]
+
+
+def provision_account(user: dict, organization: dict | None = None) -> dict:
+    pathname = f"/v1/private/partners/{PARTNER_ID}/accounts"
+    payload: dict = {"user": user}
+    if organization:
+        payload["organization"] = organization
+
+    # Serialize once: the signature covers these exact bytes.
+    body = json.dumps(payload)
+
+    timestamp = str(int(time.time()))
+    nonce = str(uuid.uuid4())
+    body_hash = hashlib.sha256(body.encode()).hexdigest()
+    string_to_sign = f"v1:{timestamp}:POST:{pathname}:{nonce}:{body_hash}"
+    signature = hmac.new(PARTNER_SECRET.encode(), string_to_sign.encode(), hashlib.sha256).hexdigest()
+
+    response = requests.post(
+        f"https://api.latitude.so{pathname}",
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Partner-Timestamp": timestamp,
+            "X-Partner-Signature": f"v1={signature}",
+            "X-Partner-Nonce": nonce,
+        },
+    )
+
+    if response.status_code == 409:
+        raise RuntimeError("account_already_exists")
+    response.raise_for_status()
+    return response.json()
+```
+
+</CodeGroup>
+
+<Warning>
+  If you get a `401` you cannot debug from the response — every rejection returns the same body, on purpose, so nobody can use the endpoint to discover valid partner IDs. Check, in order: your clock is accurate, you hashed the exact bytes you sent, the nonce you signed is the one you sent, your nonce is fresh, your path includes the `/v1` prefix, and your method is uppercase.
+</Warning>
+
+## Using the tokens
+
+The access token is a normal Latitude bearer token. Everything in the [API reference](https://api.latitude.so/docs) works with it, scoped to the organization it belongs to:
+
+```bash
+curl https://api.latitude.so/v1/projects \
+  -H "Authorization: Bearer {access_token}"
+```
+
+A typical post-install sequence is to create a project per thing you want to observe, then an API key to configure telemetry with:
+
+```bash
+curl -X POST https://api.latitude.so/v1/projects \
+  -H "Authorization: Bearer {access_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Support Agent"}'
+
+curl -X POST https://api.latitude.so/v1/api-keys \
+  -H "Authorization: Bearer {access_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Your Platform"}'
+```
+
+Hand that API key to your telemetry setup and traces start flowing. See [Start tracing](/telemetry/start-tracing).
+
+### Refreshing
+
+Access tokens last **1 hour**, refresh tokens **7 days**. Refresh at the same token endpoint both paths use. Your client is public, so no secret is involved:
+
+```bash
+curl -X POST https://app.latitude.so/api/auth/mcp/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=refresh_token" \
+  -d "client_id={client_id}" \
+  -d "refresh_token={refresh_token}"
+```
+
+You get a fresh pair back. Store the new refresh token — the old one is spent.
+
+## What your users experience
+
+- **They can sign in immediately.** Latitude uses email magic links, so there is no password to set. They go to [app.latitude.so](https://app.latitude.so), enter the email you provisioned, and they are in as the **owner** of their new organization.
+- **They skip our onboarding questionnaire.** Latitude records your platform as where the account came from, so we don't ask them again. This is why the profile fields above are worth sending.
+- **They see you.** Your name and icon appear under **Settings → Keys → OAuth Keys**, with the date they connected.
+- **They can revoke you.** One click, and your tokens stop working within seconds. Handle a sudden `401` on the public API as "this user disconnected us" and stop retrying.
+
+## Restricting access by IP
+
+If you have stable egress IPs, tell us and we'll pin your partner account to them. Any signed request from anywhere else is rejected, so a leaked secret is useless on its own.
+
+We accept single addresses and CIDR blocks, IPv4 and IPv6 — `203.0.113.7`, `203.0.113.0/24`, `2001:db8::/32`. This is optional and off by default; if your infrastructure moves around, skip it rather than fight it.
+
+## Limits
+
+Provisioning is rate limited **per partner**, at 100 requests per minute by default. That comfortably covers organic signup traffic, since one user installing your integration is one call.
+
+Rejected requests count too, so a bug that sends a bad signature in a loop will exhaust your quota. Back off on a `401` instead of retrying immediately.
+
+Planning a migration or a bulk onboarding? Email us first and we'll raise your limit, rather than have you find the ceiling in production.
+
+## Questions
+
+Email **[hello@latitude.so](mailto:hello@latitude.so)** — for applying, for raising limits, for rotating a secret you think has leaked, or if a response doesn't make sense. For rotations, tell us when you're ready to cut over: the swap is immediate and the old secret stops working the moment we do it.
