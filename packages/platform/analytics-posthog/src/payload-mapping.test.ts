@@ -60,6 +60,46 @@ describe("mapEventToPostHog", () => {
     expect(mapped?.distinctId).toBe("user-new")
   })
 
+  it("carries the partner on a provisioned UserSignedUp, attributed to that user", () => {
+    const mapped = mapEventToPostHog({
+      eventName: "UserSignedUp",
+      organizationId: "system",
+      payload: {
+        userId: "user-new",
+        email: "founder@example.com",
+        partnerId: "partner-1",
+        partnerName: "Longitude",
+      },
+      occurredAt,
+    })
+
+    expect(mapped?.distinctId).toBe("user-new")
+    expect(mapped?.properties).toMatchObject({ partnerId: "partner-1", partnerName: "Longitude" })
+  })
+
+  it("leaves the partner properties off an organic UserSignedUp", () => {
+    const mapped = mapEventToPostHog({
+      eventName: "UserSignedUp",
+      organizationId: "system",
+      payload: { userId: "user-new", email: "a@b.com" },
+      occurredAt,
+    })
+
+    expect(mapped?.properties).not.toHaveProperty("partnerId")
+    expect(mapped?.properties).not.toHaveProperty("partnerName")
+  })
+
+  it("skips PartnerAccountProvisioned, which is audit-only", () => {
+    const mapped = mapEventToPostHog({
+      eventName: "PartnerAccountProvisioned",
+      organizationId: "org-new",
+      payload: { partnerId: "partner-1", partnerName: "Longitude", userId: "user-new" },
+      occurredAt,
+    })
+
+    expect(mapped).toBeNull()
+  })
+
   it("maps ProjectCreated", () => {
     const mapped = mapEventToPostHog({
       eventName: "ProjectCreated",

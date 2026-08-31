@@ -31,5 +31,11 @@ export const registerContact = ({ marketingContacts }: { readonly marketingConta
       source: MARKETING_SOURCE_V2_SIGNUP,
       createdAt: user.createdAt,
       subscribed: true,
+      // Empty for an organic signup — onboarding fills these in later via `updateContact`. A
+      // partner-provisioned user already has them and never reaches onboarding, so send whatever
+      // is on the row rather than letting it go missing.
+      jobTitle: user.jobTitle,
+      phoneNumber: user.phoneNumber,
+      heardAboutUs: user.heardAboutUs,
     })
   })

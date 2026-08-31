@@ -644,6 +644,11 @@ export const createDomainEventsWorker = ({
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
+    AdminPartnerCreated: () => Effect.void,
+    AdminPartnerUpdated: () => Effect.void,
+    AdminPartnerDeleted: () => Effect.void,
+    // Audit-only, like the OAuth-consent event it mirrors.
+    PartnerAccountProvisioned: () => Effect.void,
     // Redaction policy changes are audit-only for the same reason.
     ProjectRedactionPolicyChanged: () => Effect.void,
     OrganizationRedactionPolicyChanged: () => Effect.void,

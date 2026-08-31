@@ -8,6 +8,7 @@ import { bootstrapTelemetryFlaggerSeeders, flaggerSeeders } from "./flaggers/ind
 import { monitorSeeders } from "./monitors/index.ts"
 import { notificationSeeders } from "./notifications/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
+import { partnerSeeders } from "./partners/index.ts"
 import { projectSeeders } from "./projects/index.ts"
 import { scoreSeeders } from "./scores/index.ts"
 import { signalSeeders } from "./signals/index.ts"
@@ -54,6 +55,9 @@ export const allSeeders: readonly Seeder[] = [
   ...organizationSeeders,
   ...projectSeeders,
   ...apiKeySeeders,
+  // Bootstrap-only: the partner registry is global, not per-project, so the
+  // demo workflow must never re-run it.
+  ...partnerSeeders,
   ...contentSeeders,
   // Bootstrap-only: provisions flaggers on the dogfood telemetry project,
   // which lives on the canonical seed org. Excluded from `contentSeeders`

@@ -22,6 +22,28 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
       return Effect.succeed(user)
     },
 
+    findOptionalByEmail: (email) =>
+      Effect.succeed([...users.values()].find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null),
+
+    create: (params) =>
+      Effect.sync(() => {
+        const user: User = {
+          id: params.id,
+          email: params.email,
+          name: params.name,
+          jobTitle: params.jobTitle ?? null,
+          phoneNumber: params.phoneNumber ?? null,
+          heardAboutUs: params.heardAboutUs ?? null,
+          emailVerified: params.emailVerified,
+          image: params.image ?? null,
+          role: "user",
+          notificationPreferences: null,
+          createdAt: new Date(),
+        }
+        users.set(params.id, user)
+        return user
+      }),
+
     update: (params) =>
       Effect.sync(() => {
         const trimmedJobTitle = params.jobTitle?.trim() || undefined

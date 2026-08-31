@@ -118,6 +118,20 @@ The domain use-case is the shared seam. Anything that duplicates business rules 
 
 The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full app with an in-memory Postgres (PGlite), an in-memory ClickHouse (chdb), a fake Redis, and stub queue/workflow clients — no external services required.
 
+## Route classes and their exclusion levels
+
+Not every route belongs on every generated surface. There are three levels, and the mechanism *is* the guarantee — CI's manifest-drift gate makes each one permanent.
+
+| Level | Mechanism | Present on | Example |
+| --- | --- | --- | --- |
+| 1 | plain `app.post(...)` | HTTP only | `/v1/webhooks/github`, `/v1/private/partners/:partnerId/accounts` |
+| 2 | `createRoute` + `app.openapi` | HTTP, OpenAPI, SDK, CLI — not MCP | `/v1/account/bootstrap` |
+| 3 | `defineOperation` | everything, plus in-process agent toolsets | `packages/operations/src/operations/*` |
+
+`app.doc` only walks `app.openapi`-registered routes, Fern only reads `openapi.json`, and the MCP registry only holds `defineOperation` entries — so a level-1 route is provably absent from all of them.
+
+**`/v1/private/*` is a route class, not just a prefix.** These are private partner endpoints: level 1, mounted on `v1` ahead of the auth wall, authenticated by per-partner HMAC request signing instead of a bearer token, and never documented. See [`partners.md`](./partners.md).
+
 ## Where the code lives
 
 | | Path |
@@ -126,7 +140,7 @@ The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full a
 | `defineOperation`, registry, execute/mount/toolset machinery | `packages/operations/src/core/` |
 | MCP HTTP transport | `apps/api/src/mcp/server.ts` |
 | Shared OpenAPI primitives (`Paginated`, `PROTECTED_SECURITY`, `jsonBody`, `typedResponses`) | `packages/operations/src/openapi/` |
-| Non-operation routes (health, well-known, bootstrap) | `apps/api/src/routes/` |
+| Non-operation routes (health, well-known, bootstrap, partners) | `apps/api/src/routes/` |
 | Auth + rate-limit middleware | `apps/api/src/middleware/` |
 | Manifest emitters | `apps/api/scripts/{emit-openapi,emit-mcp}.ts` |
 | API-key validator | `packages/platform/api-key-auth/` |
@@ -142,4 +156,5 @@ The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full a
 - [`sdk.md`](./sdk.md) — TypeScript SDK pipeline (Fern config, versioning, exclusions).
 - [`authentication.md`](./authentication.md) — web-side Better Auth, sessions, OAuth consent page.
 - [`agent-data-access.md`](./agent-data-access.md) — the `queryAnalytics` / `querySpans` analytics read surface exposed through these routes.
+- [`partners.md`](./partners.md) — the private, HMAC-authenticated `/v1/private/*` partner surface.
 - [`api-endpoints` skill](../.agents/skills/api-endpoints/SKILL.md) — concrete recipe for adding routes.

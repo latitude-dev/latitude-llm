@@ -1,5 +1,6 @@
 import type { ApiKeyRepository } from "@domain/api-keys"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
+import type { PartnerRepository } from "@domain/partners"
 import type { ProjectRepository } from "@domain/projects"
 import type { SqlClient } from "@domain/shared"
 import type { SeedScope } from "@domain/shared/seeding"
@@ -13,6 +14,7 @@ export interface Repositories {
   readonly apiKey: ApiKeyRepository["Service"]
   readonly membership: MembershipRepository["Service"]
   readonly user: UserRepository["Service"]
+  readonly partner: PartnerRepository["Service"]
 }
 
 export interface SeedContext {
