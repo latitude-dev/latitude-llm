@@ -6,6 +6,7 @@ import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRe
 import type {
   AgentSpanLink,
   AssistantCall,
+  InheritedSpanContext,
   MemoryEmitOptions,
   MemoryOp,
   OtlpExportRequest,
@@ -47,6 +48,9 @@ export function buildOtlpRequest(opts: {
   userId?: string | undefined
   turnStartNumber: number
   turns: Turn[]
+  // Set when a parent harness handed us a W3C traceparent: every turn joins that
+  // trace under `parentSpanId` instead of minting a trace of its own.
+  inherited?: InheritedSpanContext | undefined
   context?: TraceContext | undefined
   conversationHistory?: Turn[] | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
@@ -74,6 +78,7 @@ export function buildOtlpRequest(opts: {
         requestsByMessageId,
         opts.agentLinks,
         opts.memory,
+        opts.inherited,
       ),
     )
   })
@@ -107,14 +112,19 @@ function buildTurnSpans(
   requestsByMessageId: Map<string, StoredRequest>,
   agentLinks: AgentSpanLink[] | undefined,
   memory: MemoryEmitOptions | undefined,
+  inherited: InheritedSpanContext | undefined,
 ): OtlpSpan[] {
-  const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
-  const turnSpanId = hashHex(`${traceId}:turn`, 16)
+  const traceId = inherited?.traceId ?? hashHex(`${sessionId}:${turnNum}`, 32)
+  // An owned trace id is already per-turn, so "turn"/"gen" are unique salts within it.
+  // An inherited one is shared by every turn of the session, so the turn coordinates
+  // have to move into the salt or turn 2's call 0 would collide with turn 1's.
+  const idScope = inherited ? `${sessionId}:${turnNum}` : ""
+  const turnSpanId = hashHex(`${traceId}:turn${idScope && `:${idScope}`}`, 16)
   const out: OtlpSpan[] = []
   buildInteractionTree(out, {
     traceId,
     turnSpanId,
-    parentSpanId: "",
+    parentSpanId: inherited?.parentSpanId ?? "",
     sessionId,
     userId,
     turn,
@@ -122,8 +132,8 @@ function buildTurnSpans(
     subagentLabel: undefined,
     subagentName: undefined,
     turnNum,
-    interactionIdSalt: "turn",
-    genIdSalt: "gen",
+    interactionIdSalt: idScope ? `turn:${idScope}` : "turn",
+    genIdSalt: idScope ? `gen:${idScope}` : "gen",
     contextAttrs,
     priorTurns,
     requestsByMessageId,

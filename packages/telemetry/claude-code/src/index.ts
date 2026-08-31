@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url"
 import { postTraces } from "./client.ts"
 import { loadConfig } from "./config.ts"
 import { collectTraceContext } from "./context.ts"
+import { detachSelf, isDetachedChild, readDetachedPayload } from "./detach.ts"
+import { type InheritedContext, MAX_INHERITED_SPANS, parseInheritedContext } from "./inherited-context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
 import { memoryProjectsRoot } from "./memory.ts"
@@ -12,7 +14,7 @@ import { buildOtlpRequest, buildSubagentSpans, chunkOtlpRequest } from "./otlp.t
 import type { RedactConfig } from "./redaction.ts"
 import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./request-store.ts"
 import { normalizeInstallFlags, parseFlags, runInstall, runUninstall } from "./setup.ts"
-import { load, save, stateKey, withLock } from "./state.ts"
+import { load, type SessionState, save, stateKey, withLock } from "./state.ts"
 import {
   buildTurns,
   discoverSubagentFiles,
@@ -87,7 +89,12 @@ async function main(): Promise<void> {
   // settings.json once and receive bundle updates for free on subsequent hook runs.
   materializeIntercept(logger)
 
-  const raw = await readStdin()
+  const detachedChild = isDetachedChild()
+  const raw = detachedChild ? readDetachedPayload() : await readStdin()
+  // Hand the work to a process that outlives this session, then exit. Everything
+  // below runs in the detached child.
+  if (!detachedChild && detachSelf(raw, logger)) return
+
   const payload = parsePayload(raw)
   const { sessionId, transcriptPath } = pickSession(payload)
   if (!sessionId || !transcriptPath) {
@@ -110,6 +117,16 @@ async function main(): Promise<void> {
     const context = collectTraceContext(payload)
     logger.debug(`context tags=${context.tags.length} metadata=${Object.keys(context.metadata).length}`)
 
+    // `sessionId` still keys all local state — only what spans report changes — so a
+    // resumed session keeps its transcript offsets when a session id is inherited.
+    const inherited = resolveInherited(prior, logger)
+    const reportedSessionId = inherited?.sessionId ?? sessionId
+    if (inherited) {
+      context.metadata["claude_code.session.id"] = sessionId
+      context.metadata["latitude.parent.trace_id"] = inherited.traceId
+      context.metadata["latitude.parent.span_id"] = inherited.parentSpanId
+    }
+
     const memory: MemoryEmitOptions | undefined = config.memory
       ? { projectsRoot: memoryProjectsRoot(transcriptPath), captureContent: config.memoryContent }
       : undefined
@@ -128,7 +145,8 @@ async function main(): Promise<void> {
     const mainRequests = loadRequestsByMessageId(mainMessageIds)
     const agentLinks: AgentSpanLink[] = []
     const otlpRequest = buildOtlpRequest({
-      sessionId,
+      sessionId: reportedSessionId,
+      inherited,
       turnStartNumber: prior.turnCount + 1,
       turns,
       context,
@@ -151,7 +169,8 @@ async function main(): Promise<void> {
     // Re-emit each subagent's whole subtree whenever its file has grown since the
     // last emission — idempotent, because span ids and start times are stable.
     const subagents = emitSubagents({
-      sessionId,
+      sessionId: reportedSessionId,
+      stateSessionId: sessionId,
       mainTranscriptPath: transcriptPath,
       linkMap,
       context,
@@ -198,6 +217,12 @@ async function main(): Promise<void> {
         buffer: newBuffer,
         turnCount: prior.turnCount + turns.length,
         agentLinks: linkMap,
+        // Kept when `inherited` is undefined: dropping it would reset the ceiling
+        // count and let a capped session immediately rejoin the trace it just left.
+        inheritedTraceId: inherited?.traceId ?? prior.inheritedTraceId,
+        inheritedSpanCount: inherited
+          ? (prior.inheritedTraceId === inherited.traceId ? (prior.inheritedSpanCount ?? 0) : 0) + spanCount
+          : prior.inheritedSpanCount,
       })
       for (const s of subagents.saves) {
         save(s.key, { offset: 0, buffer: "", turnCount: 0, ...s.state })
@@ -210,6 +235,21 @@ async function main(): Promise<void> {
       if (stalePruned > 0) logger.debug(`pruned ${stalePruned} stale request file(s)`)
     })()
   })
+}
+
+// Joining stops once this session has pushed MAX_INHERITED_SPANS into a trace it
+// does not own; later turns fall back to their own per-turn traces and stay grouped
+// by the shared session id alone.
+function resolveInherited(prior: SessionState, logger: Logger): InheritedContext | undefined {
+  const inherited = parseInheritedContext()
+  if (!inherited) return undefined
+  const contributed = prior.inheritedTraceId === inherited.traceId ? (prior.inheritedSpanCount ?? 0) : 0
+  if (contributed >= MAX_INHERITED_SPANS) {
+    logger.debug(`inherited trace ${inherited.traceId} at ${contributed} spans; emitting own traces from here`)
+    return undefined
+  }
+  logger.debug(`joining inherited trace ${inherited.traceId} under span ${inherited.parentSpanId}`)
+  return inherited
 }
 
 function collectCallMessageIds(turns: Turn[]): string[] {
@@ -264,6 +304,9 @@ interface SubagentEmission {
 
 function emitSubagents(args: {
   sessionId: string
+  // Claude's own session id, which keys the per-subagent state. It diverges from
+  // `sessionId` (what spans report) whenever an inherited session id is in play.
+  stateSessionId: string
   mainTranscriptPath: string
   linkMap: AgentLinkMap
   context: TraceContext
@@ -271,7 +314,7 @@ function emitSubagents(args: {
   memory?: MemoryEmitOptions | undefined
   logger: Logger
 }): SubagentEmission {
-  const { sessionId, mainTranscriptPath, linkMap, context, redact, memory, logger } = args
+  const { sessionId, stateSessionId, mainTranscriptPath, linkMap, context, redact, memory, logger } = args
   const spans: OtlpSpan[] = []
   const saves: Array<{ key: string; state: SubagentSave }> = []
 
@@ -284,7 +327,7 @@ function emitSubagents(args: {
     }
     if (size === 0) continue
 
-    const subKey = stateKey(sessionId, file.filePath)
+    const subKey = stateKey(stateSessionId, file.filePath)
     const prior = load(subKey)
     if (prior.subDone && size === prior.lastSize) continue
 

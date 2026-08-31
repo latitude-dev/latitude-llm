@@ -98,13 +98,17 @@ Everything the installer writes. Edit `~/.claude/settings.json` directly if you 
 | `LATITUDE_CLAUDE_CODE_ENABLED` | no | `1` | Set to `0` to pause the hook without uninstalling. |
 | `LATITUDE_CLAUDE_CODE_MEMORY` | no | `1` | Set to `0` to stop emitting memory-operation spans for auto-memory file ops. |
 | `LATITUDE_CLAUDE_CODE_MEMORY_CONTENT` | no | `1` | Set to `0` to emit memory spans without record bodies (structure and counts only). |
+| `LATITUDE_CLAUDE_CODE_DETACH` | no | `1` | Set to `0` to do the work inline instead of in a detached worker. Inline adds roughly a second to the end of every turn. |
+| `LATITUDE_CLAUDE_CODE_INHERIT_CONTEXT` | no | `1` | Set to `0` to ignore an inherited `TRACEPARENT` and always start a trace of your own. See "joining a parent harness's trace" below. |
 | `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
 | `LATITUDE_REDACT_ATTRIBUTES` | no | — | JSON array or comma-separated custom attribute patterns to mask before export. |
 | `LATITUDE_REDACT_MASK` | no | `******` | Mask value for custom redaction. |
 
 ### `hooks.Stop`
 
-A single hook entry running `npx -y @latitude-data/claude-code-telemetry` after each turn (async).
+A single **synchronous** hook entry running `npx -y @latitude-data/claude-code-telemetry` after each turn.
+
+It is deliberately not `async`. Claude Code registers an async Stop hook but exits before spawning it in headless mode, so an async hook emits nothing at all for `claude -p` — which is exactly how another harness drives Claude Code. Instead the hook hands its work to a detached worker and returns in ~60ms, so turns stay snappy without losing headless runs. Installing over an older async hook strips the flag.
 
 ### Files on disk
 
@@ -143,6 +147,21 @@ If the installer doesn't fit your setup (e.g. you manage dotfiles with another t
 ```
 
 You still need `BUN_OPTIONS=--preload=<abs-path>/intercept.js` in the claude runtime's environment to get the full-request capture. Either run `install` once to materialize the preload and set things up, or copy the shim out of `node_modules/@latitude-data/claude-code-telemetry/dist/intercept.js` and wire it up yourself.
+
+## Joining a parent harness's trace
+
+When another harness launches Claude Code — a Hermes tool call, a CI job, a subprocess agent — it can hand over its active span through the standard W3C variables. The hook then joins that trace instead of deriving one from `sessionId:turnNumber`, so the Claude Code session appears nested under the tool call that launched it rather than beside it:
+
+| Variable | Effect |
+| --- | --- |
+| `TRACEPARENT` | `00-<trace id>-<parent span id>-<flags>`. The session's spans join that trace, parented on that span. |
+| `LATITUDE_TRACEPARENT` | Same format, higher precedence — for setups where `TRACEPARENT` already belongs to something else. |
+| `LATITUDE_SESSION_ID` | Reported as the session id, so both harnesses group in one session view. |
+| `LATITUDE_PROJECT` | Must match the parent's project: ingest is project-scoped, so a mismatch splits the trace silently. |
+
+Nothing is required of a session launched on its own — with no valid header the hook generates ids exactly as before. A malformed header is ignored rather than failing the turn.
+
+Claude's own session id remains available as `claude_code.session.id` metadata, and the trace this session joined as `latitude.parent.trace_id` / `latitude.parent.span_id`.
 
 ## Privacy
 

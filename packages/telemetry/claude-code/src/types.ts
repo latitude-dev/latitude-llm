@@ -13,6 +13,11 @@ export interface TraceContext {
   metadata: Record<string, string>
 }
 
+export interface InheritedSpanContext {
+  traceId: string
+  parentSpanId: string
+}
+
 export interface TextBlock {
   type: "text"
   text: string

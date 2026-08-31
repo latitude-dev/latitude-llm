@@ -93,9 +93,16 @@ export function latitudeStopHookCommand(settings: ClaudeSettings): string | unde
 }
 
 // Ensure a Latitude Stop hook runs `command`. An existing Latitude hook (including
-// an older bare-`npx` command or a dev dist path) is rewritten to `command` and
-// forced async, so re-running install upgrades stale hooks instead of leaving them
-// as-is. Only adds a new entry when none is present.
+// an older bare-`npx` command or a dev dist path) is rewritten to `command`, so
+// re-running install upgrades stale hooks instead of leaving them as-is. Only adds a
+// new entry when none is present.
+//
+// The hook is registered synchronously and strips `async` from any hook it adopts.
+// Claude Code registers an async Stop hook but exits before spawning it in headless
+// mode (`claude -p`), so an async hook emits nothing at all for a non-interactive
+// run — which is exactly how another harness drives Claude Code. The hook keeps the
+// turn short by handing its work to a detached worker (see detach.ts) rather than by
+// being registered async.
 export function addLatitudeStopHook(
   settings: ClaudeSettings,
   command = "npx -y @latitude-data/claude-code-telemetry@latest",
@@ -106,10 +113,11 @@ export function addLatitudeStopHook(
     hooks: (group.hooks ?? []).map((hook) => {
       if (!isLatitudeHookCommand(hook.command)) return hook
       found = true
-      return { ...hook, type: "command", command, async: true }
+      const { async: _dropped, ...rest } = hook
+      return { ...rest, type: "command", command }
     }),
   }))
-  if (!found) stop.push({ hooks: [{ type: "command", command, async: true }] })
+  if (!found) stop.push({ hooks: [{ type: "command", command }] })
   return { ...settings, hooks: { ...(settings.hooks ?? {}), Stop: stop } }
 }
 

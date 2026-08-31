@@ -4,11 +4,22 @@
 
 from __future__ import annotations
 
-from typing import Any
+import os
+from contextvars import ContextVar
+from typing import Any, Dict, Optional, Tuple
 
 from .aux_usage import aux_spans
 from .builder import _Builder
 from .config import _config, _debug, reset_config, set_plugin_context
+from .propagation import (
+    PROJECT_VAR,
+    SESSION_VAR,
+    TRACEPARENT_VAR,
+    ChildContext,
+    child_env,
+    current_traceparent,
+    set_active,
+)
 from .transport import _flush, _ship
 
 _BUILDER = _Builder()
@@ -71,11 +82,19 @@ def on_pre_tool_call(**kwargs: Any) -> None:
         _BUILDER.on_pre_tool_call(**kwargs)
     except Exception as exc:  # fail-open
         _debug(f"pre_tool_call handler failed: {exc}")
+    try:
+        _publish_child_context(kwargs)
+    except Exception as exc:  # fail-open
+        _debug(f"publishing child context failed: {exc}")
 
 
 def on_post_tool_call(**kwargs: Any) -> None:
     if not _config()["enabled"]:
         return
+    try:
+        _retract_child_context()
+    except Exception as exc:  # fail-open
+        _debug(f"retracting child context failed: {exc}")
     try:
         _ship(_BUILDER.on_post_tool_call(**kwargs))
     except Exception as exc:  # fail-open
@@ -204,6 +223,60 @@ def on_subagent_stop(**kwargs: Any) -> None:
         _BUILDER.on_subagent_stop(**kwargs)
     except Exception as exc:  # fail-open
         _debug(f"subagent_stop handler failed: {exc}")
+
+
+# ─────────────────────── child-process context ─────────────────────────────
+# Published for the duration of a tool call, so a harness the tool spawns attaches
+# under that tool's span instead of starting a trace of its own.
+
+_ENV_UNDO: ContextVar[Optional[Tuple[Tuple[str, Optional[str]], ...]]] = ContextVar(
+    "latitude_child_env_undo", default=None
+)
+
+
+def _publish_child_context(kwargs: Dict[str, Any]) -> None:
+    context = _BUILDER.child_context(**kwargs)
+    if context is None:
+        return
+    set_active(context)
+    if _config().get("export_traceparent"):
+        _export_to_environ(context)
+
+
+def _retract_child_context() -> None:
+    """Cleared outright rather than restored to a saved token: a tool call that never
+    reaches post_tool_call would otherwise leave the next retract restoring a stale
+    span, and handing a child the wrong parent is worse than handing it none."""
+    _restore_environ()
+    set_active(None)
+
+
+def _export_to_environ(context: ChildContext) -> None:
+    """Make every subprocess of this tool call inherit the context for free.
+
+    Opt-in (`LATITUDE_HERMES_EXPORT_TRACEPARENT=1`): os.environ is process-wide while
+    Hermes runs turns on separate threads, so concurrent tool calls can hand each
+    other's span to their children. Prefer `child_env()` where the tool can pass it.
+    """
+    updates = {TRACEPARENT_VAR: context.traceparent}
+    if context.session_id:
+        updates[SESSION_VAR] = context.session_id
+    if context.project:
+        updates[PROJECT_VAR] = context.project
+    _ENV_UNDO.set(tuple((name, os.environ.get(name)) for name in updates))
+    os.environ.update(updates)
+
+
+def _restore_environ() -> None:
+    undo = _ENV_UNDO.get()
+    if undo is None:
+        return
+    for name, prior in undo:
+        if prior is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = prior
+    _ENV_UNDO.set(None)
 
 
 def register(ctx: Any) -> None:

@@ -2,6 +2,10 @@
 
 Latitude ingests Claude Code sessions via a `Stop` hook that ships the full session transcript as OTLP traces. This page covers the user-facing integration. For the architectural rationale (hooks vs. native OTEL), see [`prd/claude-code-telemetry.md`](../prd/claude-code-telemetry.md).
 
+The Stop hook is registered **synchronously**, not `async`. Claude Code registers an async Stop hook but exits before spawning it in headless mode, so `claude -p` emitted nothing at all — the hook process was never created, which no amount of work inside the hook can recover. The hook instead returns immediately by re-spawning itself `detached` (its own process group via `setsid`, so the session exiting cannot take it down) and doing the transcript read and export there. That is both correct for headless and cheaper for interactive turns than running inline: 0.06s of blocking versus 0.77s on a one-turn transcript. `LATITUDE_CLAUDE_CODE_DETACH=0` disables it.
+
+Correlating this harness's spans with another one's — joining a parent's trace, or handing this trace to a child process — is the shared contract in [`trace-correlation.md`](trace-correlation.md).
+
 ## User setup
 
 Paste into `~/.claude/settings.json`:

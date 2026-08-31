@@ -17,7 +17,9 @@ describe("addLatitudeStopHook", () => {
   it("adds a Latitude Stop hook when none exists", () => {
     const next = addLatitudeStopHook({}, LATEST)
     expect(stopCommands(next)).toEqual([LATEST])
-    expect(next.hooks?.Stop?.[0]?.hooks[0]?.async).toBe(true)
+    // Synchronous on purpose: Claude Code exits before spawning an async Stop hook
+    // in headless mode, so an async hook emits nothing for `claude -p`.
+    expect(next.hooks?.Stop?.[0]?.hooks[0]?.async).toBeUndefined()
   })
 
   it("upgrades an existing bare-npx hook to the new command", () => {
@@ -29,7 +31,7 @@ describe("addLatitudeStopHook", () => {
     expect(stopCommands(next)).toEqual([LATEST])
   })
 
-  it("upgrades a dev dist-path hook and forces async", () => {
+  it("upgrades a dev dist-path hook", () => {
     const before: ClaudeSettings = {
       hooks: {
         Stop: [{ hooks: [{ type: "command", command: "node /repo/packages/telemetry/claude-code/dist/index.js" }] }],
@@ -37,7 +39,17 @@ describe("addLatitudeStopHook", () => {
     }
     const next = addLatitudeStopHook(before, LATEST)
     expect(stopCommands(next)).toEqual([LATEST])
-    expect(next.hooks?.Stop?.[0]?.hooks[0]?.async).toBe(true)
+    expect(next.hooks?.Stop?.[0]?.hooks[0]?.async).toBeUndefined()
+  })
+
+  it("strips async from a hook installed by an older version", () => {
+    // Upgrade path for everyone already carrying the async hook: without this their
+    // headless runs stay silent no matter how many times they reinstall.
+    const before: ClaudeSettings = {
+      hooks: { Stop: [{ hooks: [{ type: "command", command: LATEST, async: true }] }] },
+    }
+    const next = addLatitudeStopHook(before, LATEST)
+    expect(next.hooks?.Stop?.[0]?.hooks[0]?.async).toBeUndefined()
   })
 
   it("leaves an already-current hook unchanged and does not duplicate", () => {
