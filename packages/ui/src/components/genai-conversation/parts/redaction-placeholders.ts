@@ -14,7 +14,6 @@ const REDACTED_VALUE_SUBJECTS: Record<string, string> = {
   US_SSN: "A US Social Security number",
   IP_ADDRESS: "An IP address",
   SECRET: "An API key or secret",
-  CRYPTO_WALLET: "A crypto wallet address",
 }
 
 const OVERSIZED_FIELD_EXPLANATION =

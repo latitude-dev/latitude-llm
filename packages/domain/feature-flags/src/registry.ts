@@ -33,7 +33,7 @@ export const FEATURE_FLAGS = {
     emoji: "🌳",
     name: "Adaptive taxonomy clustering",
     description:
-      "Enforces node-relative adaptive taxonomy clustering for every project in the organization, raising the environment baseline (shadow/enforced) to enforced. The env kill switch still overrides it.",
+      "Builds every project's behaviour tree with node-relative adaptive clustering instead of the static builder. Takes effect on the organization's next gardening pass, either way.",
   },
 } as const satisfies Record<
   string,

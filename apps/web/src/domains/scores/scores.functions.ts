@@ -1,15 +1,18 @@
 import {
+  attachEvaluationParentSignalsUseCase,
+  type ScoreListPageWithEvaluationSignals,
+  type ScoreWithEvaluationSignal,
+} from "@domain/evaluations"
+import {
   listScoresByTraceIdsUseCase,
   listTraceScoresUseCase,
-  type Score,
-  type ScoreListPage,
   type ScoreSourceType,
   scoreDraftModeSchema,
 } from "@domain/scores"
-import { ScoreRepositoryLive } from "@platform/db-postgres"
+import { EvaluationRepositoryLive, ScoreRepositoryLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { getPostgresClient } from "../../server/clients.ts"
 import { traceIdSchema } from "../../server/id-validation.ts"
@@ -27,6 +30,7 @@ export interface ScoreRecord {
   readonly sourceId: string
   readonly simulationId: string | null
   readonly signalId: string | null
+  readonly evaluationSignalId: string | null
   readonly value: number
   readonly passed: boolean
   readonly feedback: string
@@ -43,7 +47,7 @@ export interface ScoreRecord {
   readonly updatedAt: string
 }
 
-const toRecord = (score: Score): ScoreRecord => ({
+const toRecord = (score: ScoreWithEvaluationSignal): ScoreRecord => ({
   id: score.id as string,
   organizationId: score.organizationId as string,
   projectId: score.projectId as string,
@@ -54,6 +58,7 @@ const toRecord = (score: Score): ScoreRecord => ({
   sourceId: score.sourceId,
   simulationId: score.simulationId ? (score.simulationId as string) : null,
   signalId: score.signalId ? (score.signalId as string) : null,
+  evaluationSignalId: score.evaluationSignalId,
   value: score.value,
   passed: score.passed,
   feedback: score.feedback,
@@ -70,12 +75,14 @@ const toRecord = (score: Score): ScoreRecord => ({
   updatedAt: score.updatedAt.toISOString(),
 })
 
-const toListResult = (page: ScoreListPage) => ({
+const toListResult = (page: ScoreListPageWithEvaluationSignals) => ({
   items: page.items.map(toRecord),
   hasMore: page.hasMore,
   limit: page.limit,
   offset: page.offset,
 })
+
+const scoresWithEvaluationsLayer = Layer.mergeAll(ScoreRepositoryLive, EvaluationRepositoryLive)
 
 type ScoreListResult = ReturnType<typeof toListResult>
 
@@ -93,17 +100,21 @@ export const listScoresByTrace = createServerFn({ method: "GET" })
     const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
-    const result = await Effect.runPromise(
+    return await Effect.runPromise(
       listTraceScoresUseCase({
         projectId: data.projectId,
         traceId: data.traceId,
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
-      }).pipe(withScopedPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
+        omitAbsentEvaluations: true,
+      }).pipe(
+        Effect.flatMap(attachEvaluationParentSignalsUseCase),
+        Effect.map(toListResult),
+        withScopedPostgres(scoresWithEvaluationsLayer, client, organizationId),
+        withTracing,
+      ),
     )
-
-    return toListResult(result)
   })
 
 /**
@@ -117,6 +128,7 @@ export const listScoresBySession = createServerFn({ method: "POST" })
     z.object({
       projectId: z.string(),
       traceIds: z.array(traceIdSchema).max(500),
+      signalId: z.string().optional(),
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
@@ -130,15 +142,20 @@ export const listScoresBySession = createServerFn({ method: "POST" })
     const organizationId = await resolveOrgScope(context)
     const client = getPostgresClient()
 
-    const result = await Effect.runPromise(
+    return await Effect.runPromise(
       listScoresByTraceIdsUseCase({
         projectId: data.projectId,
         traceIds: data.traceIds,
+        ...(data.signalId !== undefined ? { signalId: data.signalId } : {}),
         limit: data.limit,
         offset: data.offset,
         draftMode: data.draftMode ?? "include",
-      }).pipe(withScopedPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
+        omitAbsentEvaluations: true,
+      }).pipe(
+        Effect.flatMap(attachEvaluationParentSignalsUseCase),
+        Effect.map(toListResult),
+        withScopedPostgres(scoresWithEvaluationsLayer, client, organizationId),
+        withTracing,
+      ),
     )
-
-    return toListResult(result)
   })

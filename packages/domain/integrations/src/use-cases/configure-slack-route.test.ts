@@ -52,7 +52,7 @@ describe("configureSlackRouteUseCase", () => {
     await Effect.runPromise(
       configureSlackRouteUseCase({
         integrationId,
-        group: "incidents",
+        group: "signals",
         routes: [{ channelId: "C111", channelName: "ops" }],
       }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
     )
@@ -64,7 +64,7 @@ describe("configureSlackRouteUseCase", () => {
       }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
     )
 
-    expect(updated?.routes.incidents).toEqual([{ channelId: "C111", channelName: "ops" }])
+    expect(updated?.routes.signals).toEqual([{ channelId: "C111", channelName: "ops" }])
   })
 
   it("rejects duplicate channels in the same group", async () => {
@@ -77,7 +77,7 @@ describe("configureSlackRouteUseCase", () => {
     const result = await Effect.runPromiseExit(
       configureSlackRouteUseCase({
         integrationId,
-        group: "incidents",
+        group: "signals",
         routes: [
           { channelId: "C111", channelName: "ops" },
           { channelId: "C111", channelName: "ops-also" },
@@ -97,7 +97,7 @@ describe("configureSlackRouteUseCase", () => {
     const result = await Effect.runPromiseExit(
       configureSlackRouteUseCase({
         integrationId: SlackIntegrationId(generateId()),
-        group: "incidents",
+        group: "signals",
         routes: [{ channelId: "C111", channelName: "ops" }],
       }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
     )
@@ -111,11 +111,11 @@ describe("removeSlackRouteUseCase", () => {
     const integrationId = SlackIntegrationId(generateId())
     const layer = InMemorySlackIntegrationRepositoryLive({
       organizationId: ORG,
-      seed: [seedIntegration(integrationId, { routes: { incidents: [{ channelId: "C1", channelName: "ops" }] } })],
+      seed: [seedIntegration(integrationId, { routes: { signals: [{ channelId: "C1", channelName: "ops" }] } })],
     })
 
     await Effect.runPromise(
-      removeSlackRouteUseCase({ integrationId, group: "incidents" }).pipe(
+      removeSlackRouteUseCase({ integrationId, group: "signals" }).pipe(
         Effect.provide(layer),
         Effect.provide(NoopSqlClient),
       ),
@@ -128,6 +128,6 @@ describe("removeSlackRouteUseCase", () => {
       }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
     )
 
-    expect(updated?.routes.incidents).toEqual([])
+    expect(updated?.routes.signals).toEqual([])
   })
 })

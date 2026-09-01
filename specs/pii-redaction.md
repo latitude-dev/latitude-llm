@@ -209,7 +209,8 @@ Similarly, `events_json = JSON.stringify(span.events)` (`transform.ts:223`) is s
 | `toolInput`, `toolOutput` | If the string parses as JSON, walk and re-serialize; otherwise treat as plain text |
 | `statusMessage` | Plain text |
 | `eventsJson` | Parse JSON, walk all string leaves, re-serialize; on parse failure treat as plain text |
-| `attrString` | **Drop known content keys entirely**, then value-redact the remaining values ([§4.2.2](#422-attribute-map-handling)) |
+| `attrString` | Value-redact every value, JSON-aware; keys are never removed ([§4.2.2](#422-attribute-map-handling)) |
+| `attrInt`, `attrFloat` | Scan as text; a match relocates the key into `attrString` as a placeholder ([§4.2.2](#422-attribute-map-handling)) |
 | `resourceString` | Value-redact all values (small map, keys preserved) |
 
 #### Metadata scope — opt-in, `scopes.metadata`, default off
@@ -229,7 +230,9 @@ Both columns are *resolved copies* of span attributes, so the substitution also 
 
 #### Never touched, with reasons
 
-`linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrInt`/`attrFloat`/`attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
+`linksJson` (trace/span ids only), `name`, `serviceName`, `model`, `responseModel`, `provider`, `operation`, `agentName`, `toolName`, `toolNames`, `toolCallId`, `responseId`, `finishReasons`, `scopeName`, `scopeVersion`, `attrBool`, and every numeric or timestamp column. These are identifiers, enums, and metrics. If a customer smuggles PII into a span name, that is out of scope and must be said out loud in the docs.
+
+`attrInt` and `attrFloat` were on this list until the key drop was reversed; they are now scanned as text and relocated on a match ([§4.2.2](#422-attribute-map-handling)). `attrBool` stays because no detector can match `"true"`.
 
 #### 4.2.1 GenAI part walk
 
@@ -258,12 +261,19 @@ The risk this trades into is redacting a tool-call id and breaking the tool-call
 
 #### 4.2.2 Attribute map handling
 
-`attr_string` gets two passes, in order:
+> **Amended.** This section originally specified dropping known content keys from `attr_string` before value-redacting the rest, on the grounds that the parsed columns already carry that content. That is reversed: **redaction replaces values and never deletes a key.** The three reasons are below; the original text is in git history.
 
-1. **Drop content keys.** When `mode == "enforce"`, delete every key for which `isContentAttributeKey(key)` is true. Zero false positives (exact/prefix key matching, no value scanning), zero CPU, and nothing is lost from the product surface because the UI reads the parsed columns.
-2. **Value-redact the remainder.** Backstop for vendors we have not enumerated: run the detectors over the remaining values. Attribute values are small, so this is cheap.
+1. **The drop set and the parse set were never the same set.** `parseContent` returns at the first matching parser, but `isContentAttributeKey` was the union of all eight. An OpenInference span lost `input.value` / `output.value` although the json-value parser never ran and nothing promoted them to a column — content deleted that no code had read.
+2. **"Nothing is lost from the product surface" was false.** The Attributes panel renders `attr_string` directly, so the drop made it display a span the exporter never sent, with no way to distinguish a missing attribute from one we removed. Content under keys no parser claims (`agent_end.messages`) survived regardless, so the effective rule was "deleted if we recognise the key" — not a guarantee, and not explainable to a customer.
+3. **It was a storage decision inside a privacy feature.** The duplicate copy in `attr_string` is a real cost ([T-1](#8-traps)), but it is every project's cost. Deleting it only for projects that enabled a compliance control made redaction a storage optimisation and left redacting projects storing less than everyone else. If the duplication is worth removing, it gets its own setting applying to all projects.
 
-`isContentAttributeKey` must **not** be a hand-maintained list in the redaction module. Each parser in `packages/domain/spans/src/otlp/content/` already knows its own keys; have each module export a key matcher and compose them in `content/index.ts` next to the existing vendor dispatch table (`content/index.ts:41-87`). A new vendor parser then gets redaction coverage automatically. Known families to cover: `genai`, `genai_deprecated`, `openinference`, `vercel`, `livekit`, `flue`, `claude-code`, `json-value`.
+The current behaviour:
+
+- `attr_string` and `resource_string` are value-redacted through `redactJsonString`, not a flat leaf scan, so an attribute holding the same JSON as a parsed column gets the same structural walk — depth cap, `blob`/`file` part skipping, raw-number preservation. One payload redacted by two different passes would be two behaviours to defend rather than one.
+- `attr_int` and `attr_float` are scanned as text, and a match **relocates** the key into `attr_string` as a whole-value placeholder, since `Map(String, Int64)` cannot hold `[REDACTED_*]`. Only `credit_card` is reachable on a bare number — every other entity needs a separator, a sigil, or a letter — and it is gated by length, issuer prefix, and Luhn, so a token count or millisecond timestamp does not match.
+- `attr_bool` is not scanned: no detector matches `"true"` or `"false"`.
+
+The per-parser key matchers this section previously required are deleted along with the drop; the content parsers no longer export their key lists.
 
 ### 4.3 Policy model
 
@@ -278,7 +288,6 @@ export const REDACTION_ENTITIES = [
   "us_ssn",
   "ip_address",
   "secret",
-  "crypto_wallet",
 ] as const
 
 export const DEFAULT_REDACTION_ENTITIES = [
@@ -434,7 +443,7 @@ Without these, nobody can answer "is it working" or "why did my content disappea
 | `redaction.bytes` | bytes scanned |
 | `redaction.matches` | total accepted matches |
 | `redaction.matches.<entity>` | per-entity counts, one annotation per enabled entity with a nonzero count |
-| `redaction.droppedAttributeKeys` | content attribute keys removed from `attr_string` |
+| `redaction.relocatedNumericAttributes` | numeric attributes moved into `attr_string` as a placeholder |
 | `redaction.oversizedFields` | leaves dropped for exceeding `REDACTION_MAX_FIELD_CHARS` or `REDACTION_MAX_DEPTH` |
 | `redaction.pseudonymizedIdentities` | identity values replaced |
 | `redaction.durationMs` | pass duration |
@@ -489,20 +498,25 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 
 ## 5. Detector specification
 
-`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label }` matches. Precision is the design goal, not recall: a false negative leaves content visible, which the customer can see and report, while a false positive is permanent silent data corruption with no delete path.
+`packages/domain/spans/src/redaction/detectors.ts`. Every detector returns `{ start, end, label, rank }` matches.
 
-**The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, and file paths appearing in `tool_output`.
+**Recall was raised above precision in [Phase 7](#phase-7---detector-accuracy).** The original stance was the opposite, and the reasoning behind it still holds — a false negative leaves content visible and reportable, while a false positive is permanent silent corruption with no delete path ([T-4](#8-traps)). It was reversed anyway, on the evidence that the shipped detectors fully removed only 60% of the PII in a labelled corpus, which is not a compliance control. Ambiguous shapes now resolve toward redacting. What makes that affordable is that [P7-1](#phase-7---detector-accuracy) landed a corpus first, so every over-redaction is counted and reviewed before it ships rather than found by a customer.
+
+**The traffic that decides these defaults is coding-agent telemetry** (`packages/telemetry/claude-code`, `openclaw`, `pi`). Any detector must survive git SHAs, semver strings, ports, timestamps, UUIDs, base64 in diffs, long numeric JSON ids, usage counters like `max_tokens`, opaque `*_key` identifiers, and file paths appearing in `tool_output`.
 
 | Entity | Default | Rule | Precision notes |
 | --- | --- | --- | --- |
-| `email` | **on** | Standard local-part + dotted domain + 2+ char TLD | Very high. `@types/node` and `foo@bar` correctly do not match |
-| `phone` | **on** | E.164 (`+` then 8-15 digits, word-boundaried) **and** NANP separated forms (`(NNN) NNN-NNNN`, `NNN-NNN-NNNN`, `NNN.NNN.NNNN`) | The likeliest FP source, hence individually disable-able. `2024-01-15` (4-2-2) and `192.168.1.100` do not match the 3-3-4 shape |
-| `credit_card` | **on** | 13-19 digits with optional space/dash separators, **and** Luhn valid, **and** a known IIN prefix (`4`, `51`-`55`, `2221`-`2720`, `34`, `37`, `6011`, `65`, `35`, `30`, `36`, `38`) | Luhn alone gives ~1-in-10 FP on random digit runs. The IIN requirement is what makes this safe |
-| `iban` | **on** | 2 letters + 2 digits + 11-30 alphanumerics, **and** mod-97 checksum == 1 | Checksum makes it very high precision |
-| `us_ssn` | **on** | `NNN-NN-NNNN` with `-` or space separators only, excluding area `000`/`666`/`900`-`999`, group `00`, serial `0000` | Bare 9-digit matching is explicitly **excluded**: it would eat ids everywhere |
-| `secret` | **on** | **Prefixed vendor forms only**: `sk-…`, `sk-ant-…`, `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`/`github_pat_`, `AKIA[0-9A-Z]{16}`, `xox[abposr]-…`, `AIza[0-9A-Za-z_-]{35}`, Stripe `(sk\|rk)_(live\|test)_…`, JWT `eyJ….….…`, and PEM `-----BEGIN … PRIVATE KEY-----` blocks | See the exclusion below |
-| `ip_address` | **off** | IPv4 dotted-quad with octet range validation; IPv6 standard forms | Default off: `1.2.3.4` is a valid semver and version strings are everywhere in coding-agent traces |
-| `crypto_wallet` | **off** | BTC (`bc1…`, base58 `[13]…`), ETH `0x[a-fA-F0-9]{40}` | Default off: collides with hex hashes, git SHAs, and content hashes |
+| `email` | **on** | Unicode local part (apostrophe included) + dotted domain + 2+ char TLD, plus the `%40` encoded form. Both halves bounded to RFC 5321 lengths | `@types/node` and `foo@bar` do not match. A two-label domain whose TLD is a file extension is rejected, which is what excludes `logo@2x.png`. The length bounds are load-bearing: unbounded, a long run of dashes backtracks quadratically |
+| `phone` | **on** | E.164 contiguous, **and** separated international forms (one pattern per separator, country code `[1-9]`, up to 4 groups, 8-20 digits), **and** NANP separated forms with an optional `1` trunk code and `[2-9]\d\d` area and exchange codes | Still the likeliest FP source, hence individually disable-able. NANP validity is what excludes `100 200 3000` and `123 456 7890`. The 20-digit ceiling deliberately exceeds E.164 so a greedy over-run over-redacts an adjacent number instead of discarding the match and storing the phone number |
+| `credit_card` | **on** | 13-19 digits, compact or grouped with space, dash or slash, **and** Luhn valid, **and** a known IIN prefix (`4`, `51`-`55`, `2221`-`2720`, `34`, `37`, `6011`, `65`, `35`, `30`, `36`, `38`, `50`, `56`-`58`, `6304`, `6759`-`6763`, `62`, `81`) | Luhn plus an IIN still accepts about 1 in 10 random 16-digit runs beginning with 4. That is inherent and documented publicly rather than fixed |
+| `iban` | **on** | 2 letters + 2 digits + 11-30 alphanumerics, any case, compact or grouped with spaces or dashes, **and** mod-97 checksum == 1 | The checksum is what makes case-insensitivity affordable: lowercase alphanumeric runs are far more common in tool output than uppercase ones |
+| `us_ssn` | **on** | `NNN-NN-NNNN` with `-`, `.` or space separators, excluding area `000`/`666`, group `00`, serial `0000`; a 9xx area is accepted only in the ITIN group ranges (70-88, 90-92, 94-99) | Bare 9-digit matching is still explicitly **excluded**: it would eat ids everywhere |
+| `secret` | **on** | Prefixed vendor forms (`sk-`, `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`/`github_pat_`, `AKIA`/`ASIA`, `xox[abposr]-`, `AIza`, Stripe, `hf_`, `glpat-`, `npm_`, `ya29.`, `SG.x.y`, Slack webhook URLs), JWTs, PEM blocks, `scheme://user:password@host` credentials, **and** values assigned to a credential-shaped key | See the exclusion below. The assignment form is the only detector whose extent is not fixed by shape, so it carries the most guards |
+| `ip_address` | **off** | IPv4 dotted-quad with octet range validation; IPv6 standard, compressed, and left-compressed (`::1`) forms | Default off: `1.2.3.4` is a valid semver and version strings are everywhere in coding-agent traces |
+
+**Credential detection reads the key, never the value's entropy.** Values with no distinctive shape — `POSTGRES_PASSWORD=…`, an opaque `Bearer` token, an AWS secret access key, a base64 value in a Kubernetes `Secret` — are recognised from the key they are assigned to. This is the principled version of what the exclusion below rules out: the evidence is the name the customer gave the field, not a guess about how random the bytes look. It is also why plural `tokens` and a bare `key` are excluded from the key list, since `max_tokens` and `cache_key` are in nearly every span we ingest.
+
+**Overlap resolution is leftmost, then most specific, then longest.** Rank exists because a DSN password is also a valid email local part, and the wider email match was labelling passwords `[REDACTED_EMAIL]`. Only detectors with a demonstrated collision carry a rank.
 
 **Explicitly excluded: any generic entropy or generic base64 "possible secret" heuristic.** On coding-agent traffic it fires on diffs, minified bundles, inline images, and hashes. It is the single most likely cause of catastrophic silent corruption, and no amount of tuning makes it safe on this traffic mix. If a customer needs it, that is what the Phase 4 remote tier is for.
 
@@ -529,7 +543,7 @@ Remap by `path`, never by index. Chunk requests by byte count with a cap; do not
 | File | Change |
 | --- | --- |
 | `packages/domain/shared/src/settings.ts` | `redactionSettingSchema`, `organizationRedactionSettingSchema`, both parent schemas, `resolveRedactionPolicy`, `ResolvedRedactionPolicy` |
-| `packages/domain/spans/src/otlp/content/*.ts` + `index.ts` | Per-parser content-key matchers, composed into `isContentAttributeKey` |
+| `packages/domain/spans/src/otlp/content/*.ts` + `index.ts` | Content parsers only; the per-parser key matchers were removed with the drop ([§4.2.2](#422-attribute-map-handling)) |
 | `packages/domain/spans/src/use-cases/ingest-spans.ts` | Resolve policy from `projectBySlug` + cached org settings, build the `redaction` map, pass it to `publisher.publish` |
 | `packages/domain/spans/src/use-cases/process-ingested-spans.ts` | Accept `redaction` in the input, apply between `:133` and `:147`, annotate stats |
 | `packages/domain/queue/src/topic-registry.ts` | `redaction?` on `span-ingestion:ingest` |
@@ -596,7 +610,7 @@ A `rehype` plugin in the `MarkdownContent` pipeline (`packages/ui/src/components
 
 Numbered so PR review can reference them.
 
-**T-1. `attr_string` duplicates all content.** Verified at `transform.ts:181-198` and `span-repository.ts:393`. Any scope that omits it ships a no-op. See [§4.2.2](#422-attribute-map-handling). **This is the single highest-risk item in the project.**
+**T-1. `attr_string` duplicates all content.** Verified at `transform.ts:181-198` and `span-repository.ts:393`. Any scope that omits it ships a no-op, so the map must be in scope. It is value-redacted rather than stripped ([§4.2.2](#422-attribute-map-handling)) — the duplication is a storage cost every project already pays, not something for a privacy control to solve for the subset who enabled one.
 
 **T-2. `events_json` is an unscoped content channel.** Verified at `transform.ts:223`; no content parser reads events. Customers on the older OTel gen_ai convention have all content there.
 
@@ -654,7 +668,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 **Integration, `packages/domain/spans/src/use-cases/process-ingested-spans.test.ts` (extend the existing file):**
 
-- `enforce` project: content redacted, **`attr_string` content keys dropped**, `events_json` redacted, `resource_string` values redacted.
+- `enforce` project: content redacted, **`attr_string` values redacted with every key preserved**, `events_json` redacted, `resource_string` values redacted.
 - Project absent from the policy map: byte-identical to today's output. Add this as a regression guard against accidental unconditional redaction.
 - Mixed batch: one `enforce` project and one absent project in the same OTLP batch, each handled correctly.
 - `metadata` scope off by default and applied when on.
@@ -696,7 +710,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 - [x] **P1-2**: `redaction/labels.ts` and `redaction/detectors.ts` per [§5](#5-detector-specification), including Luhn and IBAN mod-97 helpers. No generic entropy detector.
 - [x] **P1-3**: `redaction/redact-text.ts` with overlap resolution per [§4.3](#43-policy-model).
 - [x] **P1-4**: `redaction/redact-json.ts` structure-aware walk with skip-keys, `blob`/`file` skipping, and stringified-JSON handling.
-- [x] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families.
+- [x] **P1-5**: Per-parser content-key matchers in `packages/domain/spans/src/otlp/content/*`, composed into `isContentAttributeKey` in `content/index.ts` next to the existing dispatch table. Cover all eight vendor families. — **Superseded:** shipped, then removed with the key drop ([§4.2.2](#422-attribute-map-handling)).
 - [x] **P1-6**: `redaction/redact-span.ts` implementing the full field surface in [§4.2](#42-the-complete-field-surface), and `redaction/redact-spans.ts` batch entry point with pseudonym memoization, stat aggregation, and the size cap.
 - [x] **P1-7**: `RedactionError` in `packages/domain/spans/src/errors.ts`.
 - [x] **P1-8**: Unit tests per [§9](#9-testing-plan), including the coding-agent negative vector corpus.
@@ -705,14 +719,14 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 
 - [x] `pnpm --filter @domain/spans test` (1208 tests) and `pnpm --filter @domain/shared test` (168) pass. `pnpm typecheck` clean across all 90 packages. `pnpm knip` and `pnpm format` clean.
 - [x] Every entity in `REDACTION_ENTITIES` has positive vectors and, where immunity is achievable, negative vectors. `ip_address` is the exception and is pinned as such: a test asserts it *does* match version strings, which is the reason it is off by default. Asserting immunity there would have been false.
-- [x] `isContentAttributeKey` covered for all eight vendor parsers, with vectors derived from the parsers' own declarations rather than restated in the test.
+- [x] `isContentAttributeKey` covered for all eight vendor parsers, with vectors derived from the parsers' own declarations rather than restated in the test. — **Superseded** along with the matcher itself; the pipeline tests now assert that a key belonging to a parser that never ran survives redacted.
 - [x] Diff is inert: no non-test file outside `src/redaction/` imports the module, verified by grep.
-- [x] Validators, overlap resolution, and `attr_string` key-dropping each mutation-tested — disabling them fails 9, 2, and 2 tests respectively, so none are decorative.
+- [x] Validators and overlap resolution each mutation-tested — disabling them fails 9 and 2 tests respectively, so neither is decorative.
 
 **Findings from Phase 1** (fold into the relevant sections when promoting to `dev-docs/`):
 
 - The email local-part class must exclude `/`, `=`, `?` and `&`. They are RFC-legal and effectively never issued, but they precede addresses constantly in URLs, paths, and query strings, and including them ran the match left through the whole path: `https://api.example.com/v1/users/john@example.com` collapsed to `https:[REDACTED_EMAIL]`.
-- Dropping content attribute keys is **not** redundant with the `attr_string` value pass, which was the original justification. The value pass only removes what a pattern matches; the duplicate copy also holds names, addresses, and ordinary prose. Dropping is the only thing that removes those.
+- Content attribute keys are value-redacted, not dropped ([§4.2.2](#422-attribute-map-handling)). Prose no detector matches survives in `attr_string` exactly as it already survives in `input_messages` — redaction removes matches, not payloads.
 - `REDACTION_MAX_FIELD_BYTES` became `REDACTION_MAX_FIELD_CHARS`. A byte count would mean encoding every leaf just to size it; UTF-16 code units are exact and allocation-free.
 - Effect in this repo is `4.0.0-beta.57`, which has no `Effect.timeoutFail`. Use `Effect.timeoutOrElse`, as `semantic-similarity.ts` and `name-taxonomy.ts` already do.
 
@@ -732,7 +746,7 @@ Follow the layering in the testing skill: pure unit tests in the domain, PGlite/
 **Exit gate** — met:
 
 - [x] With every project `off`, inserted rows are byte-identical to pre-change output, asserted two ways: no `redaction` field, and an empty `redaction` map.
-- [x] An `enforce` project's inserted row has redacted content **and** no content keys left in `attr_string`, while its operational attributes survive.
+- [x] An `enforce` project's inserted row has redacted content **and** keeps every `attr_string` key, content and operational alike, with matches replaced.
 - [x] A malformed policy produces zero inserts and fails the job. Verified by mutation: skipping malformed policies instead of failing breaks two tests.
 - [x] The `tmp-ingest` object is gone after a successful large-payload ingest, and a failed delete does not fail the ingest. Verified by mutation: removing the delete breaks one test.
 - [x] Benchmark run and recorded below; the target is met with headroom rather than missed.
@@ -808,6 +822,45 @@ The benchmark was run as a throwaway script and not committed. The repository ha
 - **A negative assertion is only as good as the string it forbids.** The provenance-neutrality test forbade "this project's policy", so copy saying "this project" passed. Assert on the shortest offending substring, not the phrasing that happened to be wrong first.
 - **Intermediate commits can break `knip` even when the final tree is clean.** A server function with no caller yet is an unused export, and the pre-commit hook blocks on it. Sequencing the write path into the same commit as its first caller, rather than a commit earlier, keeps every commit independently green.
 
+
+### Phase 7 - Detector accuracy
+
+> Ran after Phase 3 shipped, on the finding that the detectors fully removed only 60% of the PII in a labelled
+> corpus. Independent of Phases 4-6, which remain unbuilt.
+
+Measured before: 117 labelled occurrences, 71 fully redacted (60%), 41 stored verbatim, 5 partially
+redacted, 4 mislabelled, 12 accepted false positives. After, over 118 occurrences (a SendGrid case joined
+the corpus with [P7-7](#phase-7---detector-accuracy)): 107 fully redacted (91%), 9 stored verbatim, 2
+partial, 2 mislabelled, 5 false positives.
+
+- [x] **P7-1**: `redaction/accuracy.test.ts`. A labelled corpus asserted case by case with pinned totals, not against a recall threshold, matching the one regression suite the repo already had. Closing a gap fails the suite until the row and the total are both edited, so an improvement is as visible in the diff as a regression. Ships with a punctuation sweep over 13 identifier shapes, seeded collision probes on synthetic identifiers, and a backtracking canary. Landed first, so every later commit's effect is measured rather than argued.
+- [x] **P7-2**: Trailing-guard fix on the five card patterns, NANP phone, and IPv4. `(?![\d.])` rejects a sentence-final period along with a decimal, and backtracking cannot recover the match. `"My card number is 4111111111111111."` was stored verbatim.
+- [x] **P7-3**: NANP area and exchange code validity (`[2-9]\d\d`), which removes three of the five measured phone false positives at no cost to recall.
+- [x] **P7-4**: Separated international phone forms, one pattern per separator. The 20-digit validator ceiling is deliberate: see the note in [§5](#5-detector-specification).
+- [x] **P7-5**: Detector rank in `resolveOverlaps`, plus a DSN credential detector. Fixes passwords labelled `[REDACTED_EMAIL]`, and passwords stored verbatim when the DSN host is an IP.
+- [x] **P7-6**: Credential detection from the assignment key, with a `group` field on `Detector` so a pattern can require context it must not redact. Forward-matching rather than a lookbehind, for a measurable reason: a lookbehind is evaluated at every position in the leaf.
+- [x] **P7-7**: The missing vendor token prefixes, in one alternation rather than one detector each.
+- [x] **P7-8**: ~~Base58 address checksum~~ — superseded by P7-12, which retired the entity outright.
+- [x] **P7-9**: Email domain gate (file-extension TLDs), Unicode and apostrophe local parts, `%40` form, and RFC length bounds.
+- [x] **P7-10**: IBAN case-insensitivity and dash grouping, Maestro and UnionPay prefixes, slash-grouped cards, dotted SSNs, ITIN ranges, left-compressed IPv6.
+- [x] **P7-11**: This section, the [§5](#5-detector-specification) rewrite, and a known-limits section in `docs/security/pii-redaction.mdx`.
+- [x] **P7-12**: Retire the `crypto_wallet` entity. Ethereum cannot be separated from a 40-character hex digest at all, which made the entity unsafe to enable whatever Bitcoin did, so the checksum work in P7-8 was buying precision on the one form that was not the problem. Removing it drops three patterns, the base58 decoder, the checksum and its digest dependency. `wireRedactionEntitiesSchema` gains a retired-entity list so a policy naming a removed entity drops it rather than failing closed, while an entity that was *never* in the enum still fails closed — those two cases are indistinguishable on the wire and must not be treated alike.
+
+**Exit gate**:
+
+- [x] The corpus suite is green with pinned totals, and every entity in `REDACTION_ENTITIES` has positive and negative vectors.
+- [x] Scan cost inside the [§4.7](#47-size-and-time-budget) budget: 1.71 ms per 32 KB leaf with all seven entities enabled, 1.42 ms with the default six, against a 5 ms target. Up from 0.86 ms and 0.59 ms, for roughly 20 additional patterns.
+- [ ] A toggle set in the UI round-trips and takes effect on newly ingested spans, verified manually end to end. Shared with the Phase 3 exit gate.
+
+**Findings from Phase 7**:
+
+- **The corpus had to land before any detector change, and that ordering did most of the work.** Every commit after it names the gaps it closes and the false positives it accepts, because the suite would not go green otherwise. Two commits changed a false positive's *extent* rather than removing it, which no aggregate metric would have surfaced.
+- **A guard written for one hazard silently created another.** `(?![\d.])` was added to keep the card detector out of decimals and did that correctly, while also dropping every card at the end of a sentence. The punctuation sweep turned that from one anecdote into eighteen failing combinations across four detectors. Sweeping the axis is what found it; no amount of reading the pattern did.
+- **A validator cannot shorten a match.** Once a greedy pattern commits, rejecting it in `validate` discards the whole thing, so a too-strict bound turns an over-redaction into a leak. This is the same trap already documented for the card detector, met again from the other direction in phone.
+- **Prototyping the two hard detectors against negatives before writing them found four false positives that review would not have.** `max_tokens=1048576`, `cache_key=…`, `const apiKey = options.apiKey`, and `# TOKEN=  (unset)` all matched the first draft of the credential detector.
+- **The backtracking canary paid for itself immediately.** Widening the email local part to Unicode made an already-quadratic pattern slow enough to fail: 307 ms on a crafted leaf. Bounding both halves to their RFC lengths took the same input to 1.9 ms. The pre-existing quadratic had never been noticed.
+- **Two detectors matching the same span is normal, not a bug.** Three existing tests asserted the raw match list and broke once a vendor prefix and an assignment key both matched one token. Asserting the redacted text instead is both stabler and closer to what the feature promises.
+- **Test data can be the thing that is wrong.** The corpus GitHub token was 30 characters after its prefix where real ones carry 36, so it never reached the github detector and the case looked like a detector gap. Same for an ITIN written with an all-zero serial.
 
 ### Phase 4 - Optional ML tier
 

@@ -163,9 +163,9 @@ function MomentLabelBadge({ label, store }: { readonly label: MomentLabelRecord;
  * The session Conversation tab renders the latest ingested trace's
  * conversation (with that trace's inline annotations) by mounting the existing
  * trace ConversationTab against `latestTraceId`. Reusing the full trace keeps
- * inline annotation anchoring (`messageIndex`) exact. When the Annotations tab
- * focuses an annotation on the latest trace (which writes the `annotationId`
- * param and switches here) the conversation scrolls to + opens that annotation.
+ * inline annotation anchoring (`messageIndex`) exact. When the Scores tab
+ * focuses a score on the latest trace (which writes the `scoreId` param and
+ * switches here) the conversation scrolls to + opens that annotation.
  *
  * Detected moment labels from the session analysis render as badges anchored
  * below the exact message that triggered the detection. When opened with a
@@ -215,15 +215,14 @@ export function ConversationTab({
     [moments],
   )
 
-  const [focusAnnotationId, setFocusAnnotationId] = useParamState("annotationId", "")
+  const [focusScoreId] = useParamState("scoreId", "")
   const selectedLabelStore = useSelectedLabelStore()
   const { scrollContainerRef, textSelectionPopoverControlsRef, traceDetail, isDetailLoading } =
     useConversationAnnotationFocus({
       projectId,
       traceId: latestTraceId,
-      focusAnnotationId,
+      focusScoreId,
       isConversationActive: isActive,
-      onFocusConsumed: () => setFocusAnnotationId(""),
       annotationsEnabled,
     })
   const conversation = useTraceConversationMessages({

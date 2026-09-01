@@ -22,7 +22,7 @@ class RedactionSetting(UniversalBaseModel):
 
     entities: typing.Optional[typing.List[RedactionSettingEntitiesItem]] = pydantic.Field(default=None)
     """
-    Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.
+    Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail.
     """
 
     scopes: typing.Optional[RedactionSettingScopes] = pydantic.Field(default=None)

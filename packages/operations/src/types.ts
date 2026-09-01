@@ -1,4 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import type { ImportSourceAdapterRegistry } from "@domain/imports"
 import type { Organization } from "@domain/organizations"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import type { OrganizationId, StorageDiskPort, UserId } from "@domain/shared"
@@ -52,6 +53,7 @@ export type AppEnv = {
     workflowStarter: WorkflowStarterShape
     workflowQuerier: WorkflowQuerierShape
     storageDisk: StorageDiskPort
+    importSourceAdapters: ImportSourceAdapterRegistry
   }
 }
 
@@ -74,6 +76,7 @@ declare module "hono" {
     workflowStarter: AppEnv["Variables"]["workflowStarter"]
     workflowQuerier: AppEnv["Variables"]["workflowQuerier"]
     storageDisk: AppEnv["Variables"]["storageDisk"]
+    importSourceAdapters: AppEnv["Variables"]["importSourceAdapters"]
     organization?: Organization
   }
 }

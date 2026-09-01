@@ -6,8 +6,21 @@ import { createProject, ProjectRepository } from "@domain/projects"
 import { createFakeProjectRepository } from "@domain/projects/testing"
 import { type AnnotationScore, type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { OrganizationId, ProjectId, ScoreId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { Effect } from "effect"
+import {
+  CacheStore,
+  type CacheStoreShape,
+  ChSqlClient,
+  OrganizationId,
+  ProjectId,
+  ScoreId,
+  SignalId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
+import { SessionRepository } from "@domain/spans"
+import { createFakeSessionRepository } from "@domain/spans/testing"
+import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
@@ -27,6 +40,34 @@ const createFakeOutboxEventWriter = () => {
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
 const projectSlug = "acme-signals"
+
+const noopCache: CacheStoreShape = {
+  get: () => Effect.succeed(null),
+  set: () => Effect.void,
+  delete: () => Effect.void,
+}
+
+/**
+ * The promotion gate's cross-store dependencies. Under the shipped constants the
+ * floor is above one session, so creation short-circuits before touching either
+ * and these are only here to satisfy the declared requirements — which is what
+ * `never resolves project volume under the shipped floor` pins down.
+ */
+const promotionLayer = (options: { readonly volumeCalls?: string[] } = {}) =>
+  Layer.mergeAll(
+    Layer.succeed(CacheStore, noopCache),
+    Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
+    Layer.succeed(
+      SessionRepository,
+      createFakeSessionRepository({
+        countByProjectId: (input) =>
+          Effect.sync(() => {
+            options.volumeCalls?.push(String(input.projectId))
+            return { totalCount: 0 }
+          }),
+      }).repository,
+    ),
+  )
 
 const { repository: projectRepository } = createFakeProjectRepository([
   createProject({
@@ -98,7 +139,7 @@ const createGenerateSignalDetails =
     })
 
 describe("createSignalFromScoreUseCase", () => {
-  it("generates details, creates a new issue, and claims score ownership", async () => {
+  it("names from the occurrence, creates a new issue, and claims score ownership", async () => {
     const { layer: aiLayer, calls } = createFakeAI({
       generate: createGenerateSignalDetails(
         "Token leakage in assistant responses",
@@ -124,16 +165,20 @@ describe("createSignalFromScoreUseCase", () => {
         Effect.provideService(ProjectRepository, projectRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, outbox.service),
+        Effect.provide(promotionLayer()),
       ),
     )
 
     expect(result.action).toBe("created")
     expect(result.signalId).toHaveLength(24)
     expect(scores.get(score.id)?.signalId).toBe(result.signalId)
-    expect(issues.get(result.signalId)?.name).toBe("Token leakage in assistant responses")
-    expect(issues.get(result.signalId)?.description).toBe("The assistant exposes secrets or tokens in its replies.")
+    // The placeholder, not the model's answer: summarizing a cluster from its
+    // one member is not a well-posed task, so the real summary waits for
+    // promotion and the model is never called here at all.
+    expect(issues.get(result.signalId)?.name).toBe("The assistant leaks API tokens in its response")
+    expect(issues.get(result.signalId)?.description).toBe("The assistant leaks API tokens in its response.")
     expect(issues.get(result.signalId)?.centroid?.mass).toBeGreaterThan(0)
-    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate).toHaveLength(0)
 
     expect(outbox.events).toHaveLength(1)
     expect(outbox.events[0]).toMatchObject({
@@ -143,6 +188,41 @@ describe("createSignalFromScoreUseCase", () => {
       organizationId,
       payload: { organizationId, projectId, signalId: result.signalId },
     })
+  })
+
+  it("leaves a first occurrence unpromoted and never resolves project volume under the shipped floor", async () => {
+    const { layer: aiLayer } = createFakeAI({
+      generate: createGenerateSignalDetails("Token leakage", "Leaks tokens."),
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: signalRepository, issues } = createFakeSignalRepository()
+    const score = makeScore()
+    scores.set(score.id, score)
+    const outbox = createFakeOutboxEventWriter()
+    const volumeCalls: string[] = []
+
+    const result = await Effect.runPromise(
+      createSignalFromScoreUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ProjectRepository, projectRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.provideService(OutboxEventWriter, outbox.service),
+        Effect.provide(promotionLayer({ volumeCalls })),
+      ),
+    )
+
+    expect(issues.get(result.signalId)?.promotedAt).toBeNull()
+    expect(outbox.events.map((event) => event.eventName)).toEqual(["SignalCreated"])
+    // `PROMOTION_MIN_SESSIONS` is above one, so the constant short-circuits before
+    // the ClickHouse scan and creation costs nothing extra.
+    expect(volumeCalls).toEqual([])
   })
 
   it("returns already-assigned before generation when the score already belongs to an issue", async () => {
@@ -167,6 +247,7 @@ describe("createSignalFromScoreUseCase", () => {
         Effect.provideService(ProjectRepository, projectRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
+        Effect.provide(promotionLayer()),
       ),
     )
 
@@ -216,6 +297,7 @@ describe("createSignalFromScoreUseCase", () => {
         Effect.provideService(ProjectRepository, projectRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
+        Effect.provide(promotionLayer()),
       ),
     )
 
@@ -224,7 +306,7 @@ describe("createSignalFromScoreUseCase", () => {
       signalId: winningSignalId,
     })
     expect(issues.size).toBe(0)
-    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate).toHaveLength(0)
   })
 
   describe("issue.source mapping", () => {
@@ -276,6 +358,7 @@ describe("createSignalFromScoreUseCase", () => {
             Effect.provideService(ProjectRepository, projectRepository),
             Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
             Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
+            Effect.provide(promotionLayer()),
           ),
         )
 

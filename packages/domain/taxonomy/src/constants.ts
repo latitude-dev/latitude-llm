@@ -31,23 +31,23 @@ export const TAXONOMY_DIMENSIONS = ["topic"] as const
 export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated", "staging"] as const
 
 // ---------------------------------------------------------------------------
-// Adaptive-clustering rollout gate (LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE)
+// Adaptive-clustering gate
 //
-// The environment baseline for the divisive-build rollout, resolved once in the
-// planning activity (never in workflow code — Temporal determinism). `off` is a
-// guaranteed byte-identical no-op: static builder, `computeSplitLinkThreshold`,
-// sample-only reassignment, centroid-similarity naming, original publish
-// sequence. `shadow`/`enforced` exercise the new machinery (adaptive builder,
-// member-confidence routing thresholds, shape-aware naming, staging + atomic
-// swap, full-window reassignment). The per-organization enforcement flag that
-// can raise the baseline to `enforced` lands in Phase 4 (LAT-773).
+// Which builder a garden run persists, resolved once in the planning activity
+// from the per-organization `adaptiveTaxonomyClustering` feature flag (never in
+// workflow code — Temporal determinism). `off` is a guaranteed byte-identical
+// no-op: static builder, `computeSplitLinkThreshold`, sample-only reassignment,
+// centroid-similarity naming, original publish sequence. `enforced` runs the
+// adaptive machinery (adaptive builder, member-confidence routing thresholds,
+// shape-aware naming, staging + atomic swap, full-window reassignment). Exactly
+// one of the two builders runs per garden pass; static is also the fallback when
+// an adaptive build fails or is structurally rejected.
 // ---------------------------------------------------------------------------
 
-export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "shadow", "enforced"] as const
-export const TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV = "LAT_TAXONOMY_ADAPTIVE_CLUSTERING_MODE"
+export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "enforced"] as const
 
 /**
- * Tag stamped on every shadow/enforced telemetry event so a dashboard can slice
+ * Tag stamped on every adaptive telemetry event so a dashboard can slice
  * by the policy that produced a run. Bump it whenever the relative schedule or
  * routing constants change so old and new calibrations are separable in Logs.
  */
@@ -295,12 +295,39 @@ export const TAXONOMY_NAMING_TIMEOUT_MS = 60_000
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MIN = 4
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 
+export const TAXONOMY_NAMING_PROMPT_TOKEN_BUDGET = 30_000
+export const TAXONOMY_NAMING_CHARS_PER_TOKEN = 4
+export const TAXONOMY_NAMING_SAMPLE_CHAR_MAX = 4_000
+export const TAXONOMY_NAMING_SAMPLE_CHAR_FLOOR = 800
+export const TAXONOMY_CONTRASTIVE_NAMING_TIMEOUT_MS = 180_000
+export const TAXONOMY_CONTRASTIVE_NAMING_MAX_TOKENS = 4_000
+export const TAXONOMY_NAMING_FORBIDDEN_PROMPT_MAX = 60
+
 // ---------------------------------------------------------------------------
 // Storage
 // ---------------------------------------------------------------------------
 
 /** Same TTL horizon as semantic-search embeddings. */
 export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
+
+// ---------------------------------------------------------------------------
+// Lens coverage
+// ---------------------------------------------------------------------------
+
+/**
+ * How far back a lens coverage scan looks: the `taxonomy_view_assignments` TTL
+ * horizon (retention plus the table's 30-day grace), past which no membership
+ * row survives to be covered.
+ */
+export const TAXONOMY_LENS_COVERAGE_HORIZON_DAYS = TAXONOMY_OBSERVATION_RETENTION_DAYS + 30
+
+/**
+ * A day counts as covered when its assigned share of clusterable observations
+ * reaches this fraction of the lens's current rate. The test is relative because
+ * the gardening sample is capped: a busy project's plateau sits well below 100%,
+ * and an absolute test would clip every such lens to nothing.
+ */
+export const TAXONOMY_LENS_COVERAGE_MIN_RATE_FRACTION = 0.75
 
 /**
  * Taxonomy observations are always ingested while retained. Gardening is the
@@ -312,6 +339,8 @@ export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
+
+export const TAXONOMY_CONTRASTIVE_NAMING_CACHE_TTL_SECONDS = 3_600
 
 // ---------------------------------------------------------------------------
 // Divisive builder — per-depth schedules
@@ -422,14 +451,18 @@ export const TAXONOMY_KMEANS_MAX_ITER = 25
 export const TAXONOMY_KMEANS_TOLERANCE = 1e-4
 
 /**
- * Restart budget for a re-search of the relative build when the root split lands
- * near the separation gate. k-means only finds a local optimum, so the tree it
- * returns depends on where k-means++ seeded — and because seeds are drawn as
- * indices into the member list, a few percent of window turnover redraws them
- * entirely. On corpora whose root split sits close to `minRelativeSeparation`,
- * three restarts is too small a sample: some runs find a partition that clears
- * the gate and some do not, so the tree alternates between a real split and a
- * bare leaf. Re-searching with a larger budget finds the good optimum reliably.
+ * Restart budget for re-searching the ROOT split when it lands near the separation
+ * gate. k-means finds a local optimum, so the tree depends on where k-means++
+ * seeded, and seeds are drawn as indices into a member list that window turnover
+ * re-addresses (LAT-825). Three restarts is too small a sample on a corpus whose
+ * root sits near `minRelativeSeparation`: the tree alternates between a real split
+ * and a bare leaf.
+ *
+ * Do not lower this to buy headroom against the worker deadline — it buys almost
+ * none. Over the pilot's real historical windows 12 restarts collapses as many
+ * roots as not re-searching at all, while costing only 6% less than 25, because the
+ * first pass and the subtrees dominate that total rather than the root sweep.
+ * Narrow the swept K instead (TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH).
  */
 export const TAXONOMY_KMEANS_ESCALATION_RESTARTS = 25
 /**
@@ -447,18 +480,92 @@ export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN = 0.8
  * would re-search on every pass to reconfirm the leaf it already had.
  */
 export const TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR = 0.25
+/**
+ * How many K the root re-search sweeps, best-scoring-first from the first pass.
+ *
+ * A k-means run costs O(n·k·dimensions), so sweeping all of 2..maxChildren spends
+ * most of the escalated budget re-confirming K the first pass already ranked last.
+ * On the real pilot corpus the root's accepted split is identical at every sweep
+ * width from 3 to 10 while the build ranges 6.9s to 46.3s. 3 rather than 2 for a
+ * spare candidate if the best-scoring K fails the gates at the higher restart count.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH = 3
 
 // ---------------------------------------------------------------------------
 // Clustering worker resource bounds
 //
-// The divisive build runs in a dedicated Node worker thread. These bound a
-// single worker invocation — one shared deadline and memory budget covering
-// the whole run (static plus, in shadow mode, adaptive). The measured
-// max-sample (1,500 × 2,048) build is ~6s and a real 2,048d pilot build ~12s;
-// the timeout is a generous backstop against a hung/looping worker, not a tuned
-// SLA. The old-generation budget is the calibrated worker heap ceiling: the
-// measured build peaks well under it.
+// The divisive build runs in a dedicated Node worker thread. The old-generation
+// budget is the worker heap ceiling: memory is a function of the sample, not of the
+// search budget.
+//
+// The deadline is the binding constraint on the search budget, not a spare backstop:
+// the re-search is bounded to fit it (TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK), so
+// raising the search budget without re-deriving that is a deadline breach. Sizing
+// it needs production numbers, not local ones — the build this was set against runs
+// ~12s locally but 61-65s on the activity worker, whose speed varies ~4.4x pass to
+// pass. Kept well under the 30-minute Temporal start-to-close of the planning
+// activity that awaits it.
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS = 5 * 60_000
 export const TAXONOMY_CLUSTERING_WORKER_MAX_OLD_GEN_MB = 512
+
+/**
+ * ROOT-SWEEP dot-product element operations per millisecond of TOTAL build time.
+ *
+ * Deliberately not raw throughput. The budget check can only charge the root K
+ * sweeps, because the work below the root depends on a partition that does not exist
+ * until the split is chosen — and a rigorous whole-tree upper bound (every depth
+ * sweeping its full K range over all members, no early convergence) overstates a
+ * real build by ~2x and would decline corpora that finish comfortably. So the
+ * subtree cost is folded into this ratio instead: the numerator counts only the root
+ * sweep, the denominator is the whole build's wall time.
+ *
+ * Calibrated that way from production: a plain build over 970 observations sweeps
+ * K=2..10 at 3 restarts and <=25 iterations, so at most `3 * 25 * 970 * 2048 * 54`
+ * ~ 8.0e9 root-sweep operations, against 61-65s of total build time — ~128_000 per
+ * millisecond. 80_000 leaves headroom for a slow host pass. Retune from
+ * `taxonomy.adaptive.projectedRootSearchWork` against observed `durationMs`, which
+ * keeps both sides of the ratio measured rather than derived.
+ *
+ * Not exported: only the derived budget below is a contract.
+ */
+const CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS = 80_000
+
+/**
+ * Ceiling on the projected ROOT-SWEEP work of an escalated build, in the units of
+ * CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS (which is what makes charging the root
+ * sweeps alone dimensionally sound — see there).
+ *
+ * A projected operation COUNT rather than a duration: the builder must stay a pure
+ * function of its inputs, and a wall-clock check would branch differently on a slow
+ * host and break Temporal replay.
+ *
+ * Exceeding it declines the RE-SEARCH, not the adaptive build: the first pass still
+ * stands, so the run publishes an un-escalated adaptive tree — which on a near-gate
+ * corpus is exactly the collapse-prone one the re-search exists to avoid. That is
+ * why declining reports `escalationSkipped` and `projectedRootSearchWork`; a
+ * too-tight budget degrades tree quality quietly otherwise. At current settings a
+ * ~900-observation corpus projects to ~74% of this and a
+ * TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX corpus is declined.
+ */
+export const TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK =
+  TAXONOMY_CLUSTERING_WORKER_TIMEOUT_MS * CLUSTERING_ROOT_SWEEP_OPS_PER_BUILD_MS
+
+// ---------------------------------------------------------------------------
+// Build quality metrics
+// ---------------------------------------------------------------------------
+
+/**
+ * A node holding at most this share of its own subtree (floored at 1 member at the
+ * call site) is scaffolding. Not a tuning knob: swept 0 through 0.10 across 8
+ * production trees the promoted row list was identical at every setting.
+ */
+export const TAXONOMY_SCAFFOLDING_MAX_OWN_FRACTION = 0.05
+
+/**
+ * Cap on the per-leaf quality profile carried in telemetry; the structural worst case
+ * is 10 * 8 * 6 leaves. Cohesion summaries are taken before this truncates, and the
+ * emitter reports how many leaves it dropped.
+ */
+export const TAXONOMY_QUALITY_LEAF_PROFILE_MAX = 50

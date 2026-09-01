@@ -1,0 +1,2 @@
+ALTER TABLE "latitude"."signals" ADD COLUMN "merged_into_signal_id" varchar(24);--> statement-breakpoint
+CREATE INDEX "signals_merged_into_idx" ON "latitude"."signals" ("organization_id","merged_into_signal_id") WHERE "merged_into_signal_id" IS NOT NULL;

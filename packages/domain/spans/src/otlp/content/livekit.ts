@@ -17,9 +17,9 @@
  */
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
+import { toToolDefinition } from "../../helpers/resolve-tool-definitions.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import type { ParsedContent } from "./index.ts"
-import { toToolDefinition } from "./utils.ts"
 
 function rawString(attrs: readonly OtlpKeyValue[], key: string): string | undefined {
   return attrs.find((a) => a.key === key)?.value?.stringValue
@@ -151,12 +151,6 @@ function parseToolDefinitions(attrs: readonly OtlpKeyValue[]): ToolDefinition[] 
   if (!Array.isArray(tools)) return []
   return tools.map(toToolDefinition).filter(Boolean) as ToolDefinition[]
 }
-
-/** Keys this parser reads, composed into `isContentAttributeKey`. */
-export const LIVEKIT_CONTENT_ATTRIBUTE_KEYS = {
-  exact: ["lk.chat_ctx", "lk.function_tools", "lk.response.text", "lk.response.function_calls"],
-  prefixes: [],
-} as const
 
 export function parseLiveKit(attrs: readonly OtlpKeyValue[]): ParsedContent {
   const { inputMessages, systemInstructions } = parseChatContext(attrs)

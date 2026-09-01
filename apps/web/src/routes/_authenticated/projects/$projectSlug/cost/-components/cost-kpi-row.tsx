@@ -1,10 +1,12 @@
-import { Icon, Skeleton, Text, Tooltip } from "@repo/ui"
-import { formatCount, formatPrice } from "@repo/utils"
+import { cn, Icon, ProviderIcon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { formatCount, formatPercentage, formatPrice } from "@repo/utils"
 import { InfoIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import type { CostOverviewRecord } from "../../../../../../domains/cost/cost.functions.ts"
 import { rollupCostDisplay } from "../../../../../../domains/spans/cost-display.ts"
 import { bucketUnitLabel, microcentsToUsd } from "./cost-formatters.ts"
+import { SplitValue } from "./split-value.tsx"
+import { useGoToModelSessions } from "./use-go-to-model-sessions.ts"
 
 const DASH = "—"
 
@@ -16,7 +18,7 @@ function KpiTile({
   isLoading,
 }: {
   readonly label: string
-  readonly value: string
+  readonly value: ReactNode
   readonly detail?: string
   readonly hint: string
   readonly isLoading: boolean
@@ -58,14 +60,19 @@ export function CostKpiRow({
   overview,
   dailyAverageMicrocents,
   bucketSeconds,
+  projectSlug,
   isLoading,
 }: {
   readonly overview: CostOverviewRecord | undefined
   readonly dailyAverageMicrocents: number | null
   readonly bucketSeconds: number
+  readonly projectSlug: string
   readonly isLoading: boolean
 }): ReactNode {
   const topSpend = overview?.topSpendModel
+  const goToModelSessions = useGoToModelSessions(projectSlug)
+  const topSpendShare =
+    topSpend && overview && overview.totalMicrocents > 0 ? topSpend.costMicrocents / overview.totalMicrocents : null
   const perTrace = overview?.avgPerTraceMicrocents ?? 0
   const unit = bucketUnitLabel(bucketSeconds)
   // The same rollup vocabulary the traces and sessions tables use, so a total of
@@ -80,29 +87,57 @@ export function CostKpiRow({
     <div className="flex flex-row flex-wrap gap-3 rounded-lg bg-secondary p-4">
       <KpiTile
         label="Total spend"
-        value={total.label}
+        value={<SplitValue formatted={total.label} />}
         hint={`Cost recorded on billable LLM calls in this window. Excludes tool and wrapper spans, which carry no usage.${total.note ? ` ${total.note}` : ""}`}
         isLoading={isLoading}
       />
       <KpiTile
         label="Avg per day"
-        value={dailyAverageMicrocents === null ? DASH : formatPrice(microcentsToUsd(dailyAverageMicrocents))}
+        value={
+          dailyAverageMicrocents === null ? (
+            DASH
+          ) : (
+            <SplitValue formatted={formatPrice(microcentsToUsd(dailyAverageMicrocents))} />
+          )
+        }
         {...(dailyAverageMicrocents === null ? {} : { detail: `over completed ${unit}s` })}
         hint={`Spend divided by the ${unit}s that have fully elapsed. The current ${unit} is still filling, so counting it would drag the figure down all day.`}
         isLoading={isLoading}
       />
       <KpiTile
         label="Avg per trace"
-        value={formatPrice(microcentsToUsd(perTrace))}
+        value={<SplitValue formatted={formatPrice(microcentsToUsd(perTrace))} />}
         detail={`${formatCount(overview?.tracesWithUsage ?? 0)} traces with usage`}
         hint="Total spend divided by traces containing at least one billable LLM call. Traces made up only of tool or wrapper spans are excluded — they would dilute the average."
         isLoading={isLoading}
       />
       <KpiTile
         label="Top spend model"
-        value={topSpend ? topSpend.model || "unknown" : DASH}
+        value={
+          topSpend ? (
+            <button
+              type="button"
+              disabled={!topSpend.model}
+              onClick={() => goToModelSessions(topSpend.model)}
+              aria-label={topSpend.model ? `View sessions for ${topSpend.model}` : "Unknown model"}
+              className={cn("inline-flex min-w-0 items-center gap-1.5 text-left transition-colors", {
+                "cursor-pointer hover:text-primary": topSpend.model,
+                "cursor-default": !topSpend.model,
+              })}
+            >
+              <ProviderIcon provider={topSpend.provider || "unknown"} size="sm" />
+              <span className="min-w-0 truncate">{topSpend.model || "unknown"}</span>
+            </button>
+          ) : (
+            DASH
+          )
+        }
         {...(topSpend
-          ? { detail: `${formatPrice(microcentsToUsd(topSpend.costMicrocents))} · ${topSpend.provider || "unknown"}` }
+          ? {
+              detail: `${formatPrice(microcentsToUsd(topSpend.costMicrocents))}${
+                topSpendShare === null ? "" : ` · ${formatPercentage(topSpendShare)} of spend`
+              }`,
+            }
           : {})}
         hint="The model with the highest total spend in this window — not the highest unit price."
         isLoading={isLoading}

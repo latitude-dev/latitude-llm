@@ -70,6 +70,36 @@ describe("findModel", () => {
   it("returns undefined when no prefix matches either", () => {
     expect(findModel(mockModels, "totally-different")).toBeUndefined()
   })
+
+  it("matches a version whose separator differs from the catalog key", () => {
+    const models: Model[] = [{ id: "claude-opus-4-8", name: "Claude Opus 4.8", provider: "anthropic" }]
+    // Claude Code reports the version with a dot; the catalog keys it with a dash.
+    expect(findModel(models, "claude-opus-4.8")?.id).toBe("claude-opus-4-8")
+  })
+
+  it("matches version punctuation in the other direction too", () => {
+    const models: Model[] = [{ id: "gpt-4.1", name: "GPT-4.1", provider: "openai" }]
+    // Reported with a dash, catalog keyed with a dot.
+    expect(findModel(models, "gpt-4-1")?.id).toBe("gpt-4.1")
+  })
+
+  it("does not let a punctuation collapse pick between two different entries", () => {
+    const models: Model[] = [
+      { id: "claude-3-5-haiku", name: "Claude 3.5 Haiku", provider: "anthropic" },
+      { id: "claude-3.5-haiku", name: "Claude 3.5 Haiku (dup)", provider: "anthropic" },
+    ]
+    // Both normalise to the same form; an exact hit still resolves, an ambiguous one does not.
+    expect(findModel(models, "claude-3.5-haiku")?.id).toBe("claude-3.5-haiku")
+    expect(findModel(models, "claude-3-6-haiku")).toBeUndefined()
+  })
+
+  it("requires the whole normalised id to match, not just the version", () => {
+    const models: Model[] = [{ id: "gpt-5-3-instant", name: "GPT-5.3 Instant", provider: "openai" }]
+    // Normalising the version is not enough on its own: the rest of the id must still line up, so a
+    // different qualifier does not borrow this entry's price.
+    expect(findModel(models, "gpt-5.4-instant")).toBeUndefined()
+    expect(findModel(models, "gpt-5.3-instant")?.id).toBe("gpt-5-3-instant")
+  })
 })
 
 describe("getModelPricing", () => {
@@ -425,6 +455,41 @@ describe("formatModel", () => {
   })
 })
 
+/**
+ * First provider in the bundled catalog that namespaces the same bare model id under two vendors,
+ * does not also list the bare id directly, and prices both vendors' entries. All three conditions
+ * matter: without the last one an unpriced bare id would prove nothing, since `getCostSpec` reports
+ * `costImplemented: false` for a model it cannot price as readily as for one it refuses to guess at.
+ * Sorted so a failure names the same pair on every run.
+ */
+function findAmbiguousBareId(): { provider: string; bareId: string; namespacedIds: string[] } | null {
+  const idsByProvider = new Map<string, string[]>()
+  for (const model of getAllModels()) {
+    idsByProvider.set(model.provider, [...(idsByProvider.get(model.provider) ?? []), model.id])
+  }
+
+  for (const provider of [...idsByProvider.keys()].sort()) {
+    const ids = idsByProvider.get(provider) ?? []
+    const direct = new Set(ids.map((id) => id.toLowerCase()))
+    const idsByBareId = new Map<string, string[]>()
+    for (const id of ids) {
+      if (!id.includes("/")) continue
+      const bareId = id.slice(id.lastIndexOf("/") + 1).toLowerCase()
+      idsByBareId.set(bareId, [...(idsByBareId.get(bareId) ?? []), id])
+    }
+
+    for (const bareId of [...idsByBareId.keys()].sort()) {
+      const namespacedIds = idsByBareId.get(bareId) ?? []
+      if (namespacedIds.length < 2 || direct.has(bareId)) continue
+      if (namespacedIds.every((id) => getCostSpec(provider, id).costImplemented)) {
+        return { provider, bareId, namespacedIds }
+      }
+    }
+  }
+
+  return null
+}
+
 describe("getCostSpec bare model ids on namespaced providers", () => {
   // OpenRouter's API takes `grok-4.5` while its catalog keys on `x-ai/grok-4.5`. The rate we
   // resolve is OpenRouter's own, so this borrows nothing from another host.
@@ -437,10 +502,23 @@ describe("getCostSpec bare model ids on namespaced providers", () => {
   })
 
   it("leaves a bare id unpriced when two vendors on that provider share the name", () => {
-    // nano-gpt lists `TEE/glm-5` and `zai-org/glm-5`: two vendors, two rates, so picking one would
-    // invent a number. Driven through getCostSpec because the fallback lives in
-    // `getModelForProvider` — `findModel` never reaches it, so asserting there proves nothing.
-    expect(getCostSpec("nano-gpt", "glm-5").costImplemented).toBe(false)
+    // Two vendors on one provider means two rates, so picking one would invent a number. The pair
+    // is read out of the bundled catalog rather than hardcoded: this case needs both vendors to
+    // still list the same model, and a models.dev refresh dropping one of them (which is how
+    // `nano-gpt`/`glm-5` stopped being ambiguous) would otherwise look like a code regression.
+    // Driven through getCostSpec because the fallback lives in `getModelForProvider` — `findModel`
+    // never reaches it, so asserting there proves nothing.
+    const ambiguous = findAmbiguousBareId()
+    if (ambiguous === null) {
+      throw new Error("bundled catalog has no priced pair of vendors sharing a bare model id")
+    }
+
+    // Both vendors' own ids price, so the bare id going unpriced is the refusal to choose
+    // between their two rates rather than an absence of pricing.
+    for (const id of ambiguous.namespacedIds) {
+      expect(getCostSpec(ambiguous.provider, id).costImplemented).toBe(true)
+    }
+    expect(getCostSpec(ambiguous.provider, ambiguous.bareId).costImplemented).toBe(false)
   })
 
   it("does not reach into another provider's catalog for a model the reported one lacks", () => {

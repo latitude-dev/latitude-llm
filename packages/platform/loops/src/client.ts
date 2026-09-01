@@ -74,6 +74,9 @@ export const createLoopsContactsSender = (config: LoopsConfig | undefined): Mark
               source: parsed.source,
               subscribed: parsed.subscribed,
               createdAt: parsed.createdAt?.toISOString(),
+              jobTitle: sanitizeString(parsed.jobTitle),
+              phoneNumber: sanitizeString(parsed.phoneNumber),
+              heardAboutUs: sanitizeString(parsed.heardAboutUs),
             }),
           }),
         catch: (cause) =>

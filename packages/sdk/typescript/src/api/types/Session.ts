@@ -37,11 +37,11 @@ export interface Session {
     tokensReasoning: number;
     /** Sum of all token counters. */
     tokensTotal: number;
-    /** Cost of input tokens in microcents (1/1,000,000 USD). */
+    /** Cost of input tokens in microcents (100,000,000 per USD). */
     costInputMicrocents: number;
-    /** Cost of output tokens in microcents (1/1,000,000 USD). */
+    /** Cost of output tokens in microcents (100,000,000 per USD). */
     costOutputMicrocents: number;
-    /** Total cost in microcents (1/1,000,000 USD). */
+    /** Total cost in microcents (100,000,000 per USD). */
     costTotalMicrocents: number;
     /** End-user identifier set by the SDK. `null` when absent. */
     userId: string | null;

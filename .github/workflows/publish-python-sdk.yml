@@ -24,97 +24,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
 
-      - name: Get current version
-        id: get_version
-        run: |
-          CURRENT_VERSION=$(grep -m1 '^version' packages/sdk/python/pyproject.toml | sed -E 's/version *= *"([^"]+)"/\1/')
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Check version on PyPI
-        id: check_version
-        run: |
-          CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
-          if curl -s "https://pypi.org/pypi/latitude-sdk/$CURRENT_VERSION/json" | grep -q '"version"'; then
-            echo "should_publish=false" >> $GITHUB_OUTPUT
-          else
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Setup Python
-        if: steps.check_version.outputs.should_publish == 'true'
-        uses: actions/setup-python@v6.2.0
+      - name: Publish
+        uses: ./.github/actions/publish-pypi-package
         with:
-          python-version: "3.11"
-
-      - name: Install uv
-        if: steps.check_version.outputs.should_publish == 'true'
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          enable-cache: true
-
-      - name: Install dependencies
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/sdk/python
-          uv venv
-          uv sync --all-extras --all-groups
-
-      - name: Run tests
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/sdk/python
-          uv run pytest tests/ -x
-
-      - name: Build package
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/sdk/python
-          uv build
-
-      - name: Extract changelog
-        if: steps.check_version.outputs.should_publish == 'true'
-        id: changelog
-        run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          CHANGELOG="packages/sdk/python/CHANGELOG.md"
-          if [ ! -f "$CHANGELOG" ]; then
-            echo "Missing changelog: ${CHANGELOG}"
-            exit 1
-          fi
-
-          awk -v ver="$VERSION" '
-            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
-            found { print }
-          ' "$CHANGELOG" > release_notes.md
-
-          if [ ! -s release_notes.md ]; then
-            echo "Missing changelog entry for version ${VERSION} in ${CHANGELOG}"
-            exit 1
-          fi
-
-          {
-            echo "body<<EOF"
-            cat release_notes.md
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
-      - name: Publish to PyPI
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/sdk/python
-          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
-
-      - name: Create GitHub Release
-        if: steps.check_version.outputs.should_publish == 'true'
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: python-sdk-${{ steps.get_version.outputs.version }}
-          name: Python SDK v${{ steps.get_version.outputs.version }}
-          body: ${{ steps.changelog.outputs.body }}
+          package_path: packages/sdk/python
+          pypi_package: latitude-sdk
+          tag_prefix: python-sdk
+          release_name: Python SDK
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
           target_commitish: ${{ inputs.ref || github.sha }}
-          draft: false
-          prerelease: ${{ contains(steps.get_version.outputs.version, 'a') || contains(steps.get_version.outputs.version, 'b') || contains(steps.get_version.outputs.version, 'rc') }}
+          # Fern-generated: `ruff format` would rewrite ~780 files that the next
+          # `pnpm generate:sdk` reverts, and the lint findings are in code we do
+          # not hand-maintain.
+          run_ruff: "false"

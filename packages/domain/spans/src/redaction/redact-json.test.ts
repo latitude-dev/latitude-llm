@@ -2,15 +2,19 @@ import { DEFAULT_REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared
 import { describe, expect, it } from "vitest"
 import { OVERSIZED_FIELD_PLACEHOLDER, REDACTION_MAX_DEPTH } from "./labels.ts"
 import { redactJsonString, redactJsonValue, redactStringMap } from "./redact-json.ts"
+import { type CompiledRuleSet, compileRuleSet } from "./rules.ts"
 
-const ENTITIES: ReadonlySet<RedactionEntity> = new Set(DEFAULT_REDACTION_ENTITIES)
+const ruleSetOf = (...entities: RedactionEntity[]): CompiledRuleSet =>
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep", rules: [] })
+
+const ENTITIES = ruleSetOf(...DEFAULT_REDACTION_ENTITIES)
 
 describe("redactJsonValue", () => {
   it("redacts a string leaf", () => {
     const result = redactJsonValue({ content: "mail john@example.com" }, ENTITIES)
 
     expect(result.value).toEqual({ content: "mail [REDACTED_EMAIL]" })
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("redacts nested leaves at any depth", () => {
@@ -55,7 +59,7 @@ describe("redactJsonValue", () => {
     const result = redactJsonValue({ id: "john@example.com", tool_call_id: "a@b.co" }, ENTITIES)
 
     expect(result.value).toEqual({ id: "[REDACTED_EMAIL]", tool_call_id: "[REDACTED_EMAIL]" })
-    expect(result.counts).toEqual({ email: 2 })
+    expect(result.counts).toEqual({ EMAIL: 2 })
   })
 
   it.each([
@@ -100,7 +104,7 @@ describe("redactJsonValue", () => {
       { type: "blob", content: "john@example.com" },
       { type: "text", content: "[REDACTED_EMAIL]" },
     ])
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("redacts tool call arguments and responses", () => {
@@ -114,7 +118,7 @@ describe("redactJsonValue", () => {
       { type: "tool_call", id: "call_1", name: "send_email", arguments: { to: "[REDACTED_EMAIL]" } },
       { type: "tool_call_response", id: "call_1", response: { status: "sent to [REDACTED_EMAIL]" } },
     ])
-    expect(result.counts).toEqual({ email: 2 })
+    expect(result.counts).toEqual({ EMAIL: 2 })
   })
 
   it("keeps the tool name intact while redacting its arguments", () => {
@@ -156,7 +160,7 @@ describe("redactJsonValue", () => {
   it("aggregates counts across the whole structure", () => {
     const result = redactJsonValue({ a: "a@b.co", b: ["c@d.co", "+14155552671"] }, ENTITIES)
 
-    expect(result.counts).toEqual({ email: 2, phone: 1 })
+    expect(result.counts).toEqual({ EMAIL: 2, PHONE: 1 })
   })
 })
 
@@ -211,7 +215,7 @@ describe("redactJsonString", () => {
     const result = redactJsonString('{"to":"john@example.com","n":1}', ENTITIES)
 
     expect(JSON.parse(result.value)).toEqual({ to: "[REDACTED_EMAIL]", n: 1 })
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("parses, walks, and re-serializes a JSON array", () => {
@@ -249,7 +253,7 @@ describe("redactJsonString", () => {
     const result = redactJsonString(cardShaped, ENTITIES)
 
     expect(result.value).toBe('{"orderNumber":4532015112830366,"to":"[REDACTED_EMAIL]"}')
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("returns the original bytes when the scan matched nothing", () => {
@@ -264,7 +268,7 @@ describe("redactJsonString", () => {
     const outer = JSON.parse(result.value) as { payload: string }
 
     expect(outer.payload).toBe('{"email":"john@example.com"}'.replace("john@example.com", "[REDACTED_EMAIL]"))
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("treats plain text as text", () => {
@@ -277,7 +281,7 @@ describe("redactJsonString", () => {
     const result = redactJsonString('{"to":"john@example.com"', ENTITIES)
 
     expect(result.value).toBe('{"to":"[REDACTED_EMAIL]"')
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("does not re-serialize a bare JSON scalar, which would add quote escaping", () => {
@@ -293,7 +297,7 @@ describe("redactJsonString", () => {
   it("returns the input unchanged when no entity is enabled", () => {
     const text = '{"to":"john@example.com"}'
 
-    expect(redactJsonString(text, new Set())).toMatchObject({ value: text, counts: {} })
+    expect(redactJsonString(text, ruleSetOf())).toMatchObject({ value: text, counts: {} })
   })
 
   it("is idempotent", () => {
@@ -308,7 +312,7 @@ describe("redactStringMap", () => {
     const result = redactStringMap({ "user.email": "john@example.com", env: "prod" }, ENTITIES)
 
     expect(result.value).toEqual({ "user.email": "[REDACTED_EMAIL]", env: "prod" })
-    expect(result.counts).toEqual({ email: 1 })
+    expect(result.counts).toEqual({ EMAIL: 1 })
   })
 
   it("does not apply skip keys, because attribute keys are not structural", () => {

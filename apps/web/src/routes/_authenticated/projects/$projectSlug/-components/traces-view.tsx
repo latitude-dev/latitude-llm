@@ -31,6 +31,8 @@ interface TracesViewProps {
   readonly visibleColumnIds: readonly TraceColumnId[]
   readonly searchQuery?: string
   readonly selectable?: boolean
+  /** Optional shared ancestor scroll container for page-level scrolling + sticky headers. */
+  readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
 }
 
 export function TracesView({
@@ -51,6 +53,7 @@ export function TracesView({
   visibleColumnIds,
   searchQuery,
   selectable = true,
+  scrollContainerRef,
 }: TracesViewProps) {
   const hasActiveFilters = Object.keys(filters).length > 0
   const hasSearchQuery = !!searchQuery && searchQuery.length > 0
@@ -147,8 +150,10 @@ export function TracesView({
     },
   ])
 
+  const hasExternalScrollArea = scrollContainerRef !== undefined
+
   return (
-    <Layout.Body>
+    <Layout.Body {...(hasExternalScrollArea ? { className: "flex-none overflow-visible" } : {})}>
       {filtersOpen && (
         <FiltersSidebar
           mode="traces"
@@ -160,7 +165,9 @@ export function TracesView({
       )}
       <Layout.List>
         <ProjectTracesTable
-          {...listingLayoutIntrinsicScroll.projectTracesTable}
+          {...(hasExternalScrollArea
+            ? { scrollAreaLayout: "external" as const, scrollContainerRef }
+            : listingLayoutIntrinsicScroll.projectTracesTable)}
           projectId={projectId}
           data={traces}
           isLoading={isLoading}

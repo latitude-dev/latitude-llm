@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { routeAdmitsPayload, type SlackRoute } from "./slack-route.ts"
+import { routeAdmitsPayload, type SlackRoute, slackRouteSchema } from "./slack-route.ts"
 
 const route = (minSeverity?: SlackRoute["minSeverity"]): SlackRoute => ({
   channelId: "C123",
@@ -27,5 +27,28 @@ describe("routeAdmitsPayload", () => {
   it("admits payloads without a severity (wrapped reports, announcements)", () => {
     expect(routeAdmitsPayload(route("high"), { wrappedReportId: "wr1" })).toBe(true)
     expect(routeAdmitsPayload(route("high"), { severity: 42 })).toBe(true)
+  })
+})
+
+describe("slackRouteSchema", () => {
+  // Zod strips unknown keys, so anything the write path validates against a copy
+  // of this shape rather than the shape itself loses the fields the copy forgot.
+  it("keeps the delivery filters through a parse", () => {
+    const parsed = slackRouteSchema.parse({
+      channelId: "C123",
+      channelName: "alerts",
+      minSeverity: "medium",
+      topics: { "signal.regressed": false },
+    })
+
+    expect(parsed.minSeverity).toBe("medium")
+    expect(parsed.topics).toEqual({ "signal.regressed": false })
+  })
+
+  it("leaves both filters absent when the route sets neither", () => {
+    const parsed = slackRouteSchema.parse({ channelId: "C123", channelName: "alerts" })
+
+    expect(parsed.minSeverity).toBeUndefined()
+    expect(parsed.topics).toBeUndefined()
   })
 })

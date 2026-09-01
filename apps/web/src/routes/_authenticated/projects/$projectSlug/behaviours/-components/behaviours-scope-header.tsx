@@ -21,6 +21,7 @@ import { summarizeFilterSet } from "../../../../../../components/filters-builder
 import { useDeleteCustomBehavior } from "../../../../../../domains/taxonomy/custom-behaviors.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { SectionHeader } from "../../-components/section-header.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
 import { BehaviourFormModal } from "./behaviour-form-modal.tsx"
 import type { BehaviourScope } from "./behaviour-scope.ts"
@@ -175,24 +176,24 @@ export function BehavioursScopeHeader({
     <>
       <Layout.Header
         title={
-          <div className="flex min-w-0 flex-row items-center gap-3">
+          <div className="flex min-w-0 flex-col gap-3">
             <Tooltip
               asChild
               side="bottom"
               trigger={
-                <Button asChild variant="ghost" className="h-8 w-8 p-0" aria-label="Back to behaviors">
+                <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to behaviors">
                   <Link to="/projects/$projectSlug/behaviours" params={{ projectSlug }}>
-                    <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                    <Icon icon={ArrowLeftIcon} size="sm" />
+                    Back
                   </Link>
                 </Button>
               }
             >
               Back to behaviors
             </Tooltip>
-            <Text.H4M className="min-w-0 truncate">{view ? view.name : main.name}</Text.H4M>
+            <SectionHeader title={view ? view.name : main.name} description={main.description ?? undefined} />
           </div>
         }
-        description={main.description ? <Text.H5 color="foregroundMuted">{main.description}</Text.H5> : null}
         actions={
           <div className="flex flex-row items-center gap-2">
             {view ? null : behaviorCooking ? (

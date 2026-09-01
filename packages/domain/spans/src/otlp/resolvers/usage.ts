@@ -1,15 +1,9 @@
-import { computeTokenCost, getCostSpec } from "@domain/models"
-import type { CostSource } from "../../entities/span.ts"
+import type { CostSource, SpanTokenCounts } from "../../entities/span.ts"
+import { resolveSpanCost, usdToMicrocents } from "../../helpers/estimate-span-cost.ts"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { resolveTokens } from "./usage/tokens.ts"
 import { first, fromFloat } from "./utils.ts"
-
-const MICROCENTS_PER_USD = 100_000_000
-
-function usdToMicrocents(v: number): number {
-  return Math.round(v * MICROCENTS_PER_USD)
-}
 
 const costInputCandidates = [
   fromFloat("gen_ai.usage.input_cost", usdToMicrocents),
@@ -29,84 +23,7 @@ const costTotalCandidates = [
 
 // ─── Resolve ─────────────────────────────────────────────
 
-type CostEstimation =
-  | {
-      readonly kind: "estimated"
-      readonly input: number
-      readonly output: number
-      readonly pricedProvider: string
-      readonly pricedModel: string
-    }
-  | { readonly kind: "unpriced" }
-  | { readonly kind: "noTokens" }
-
-const COST_SOURCE_BY_ESTIMATION: Record<CostEstimation["kind"], CostSource> = {
-  estimated: "estimated",
-  unpriced: "unpriced",
-  noTokens: "no_tokens",
-}
-
-function costSourceOf(estimation: CostEstimation): CostSource {
-  return COST_SOURCE_BY_ESTIMATION[estimation.kind]
-}
-
-function estimateCostFromTokens({
-  provider,
-  model,
-  tokensInput,
-  tokensOutput,
-  tokensCacheRead,
-  tokensCacheCreate,
-  tokensReasoning,
-}: {
-  provider: string
-  model: string
-  tokensInput: number
-  tokensOutput: number
-  tokensCacheRead: number
-  tokensCacheCreate: number
-  tokensReasoning: number
-}): CostEstimation {
-  if (tokensInput + tokensOutput + tokensCacheRead + tokensCacheCreate + tokensReasoning === 0) {
-    return { kind: "noTokens" }
-  }
-
-  const { cost, costImplemented, pricedProvider, pricedModel } = getCostSpec(provider, model)
-  if (!costImplemented) return { kind: "unpriced" }
-
-  const inputUsd =
-    computeTokenCost(cost, tokensInput, "input") +
-    computeTokenCost(cost, tokensCacheRead, "cacheRead") +
-    computeTokenCost(cost, tokensCacheCreate, "cacheWrite")
-
-  const outputUsd =
-    computeTokenCost(cost, tokensOutput, "output") + computeTokenCost(cost, tokensReasoning, "reasoning")
-
-  return {
-    kind: "estimated",
-    input: Math.round(inputUsd * MICROCENTS_PER_USD),
-    output: Math.round(outputUsd * MICROCENTS_PER_USD),
-    pricedProvider,
-    pricedModel,
-  }
-}
-
-function pricedPairOf(estimation: CostEstimation | undefined): { provider: string; model: string } {
-  if (estimation?.kind !== "estimated") return { provider: "", model: "" }
-  return { provider: estimation.pricedProvider, model: estimation.pricedModel }
-}
-
-export interface ResolvedUsage {
-  /** Non-cached input tokens (additive: total_input = tokensInput + tokensCacheRead + tokensCacheCreate) */
-  readonly tokensInput: number
-  /** Non-reasoning output tokens (additive: total_output = tokensOutput + tokensReasoning) */
-  readonly tokensOutput: number
-  /** Tokens served from provider cache (subset of total input) */
-  readonly tokensCacheRead: number
-  /** Tokens written to provider cache (subset of total input) */
-  readonly tokensCacheCreate: number
-  /** Reasoning/thinking tokens (subset of total output) */
-  readonly tokensReasoning: number
+export interface ResolvedUsage extends SpanTokenCounts {
   readonly costInputMicrocents: number
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
@@ -189,37 +106,19 @@ function resolveEmbeddedMessageUsage(
   const tokens = { tokensInput, tokensOutput, tokensCacheRead, tokensCacheCreate, tokensReasoning }
   const cost = usage.cost && typeof usage.cost === "object" ? usage.cost : undefined
 
-  if (cost && typeof cost.total === "number") {
-    // Provider-supplied cost (USD) — fold cache costs into the input side so
-    // input + output == total, keeping the provider's authoritative total.
-    return {
-      ...tokens,
-      costInputMicrocents: usdToMicrocents(
-        nonNegative(cost.input) + nonNegative(cost.cacheRead) + nonNegative(cost.cacheWrite),
-      ),
-      costOutputMicrocents: usdToMicrocents(nonNegative(cost.output)),
-      costTotalMicrocents: usdToMicrocents(nonNegative(cost.total)),
-      costIsEstimated: false,
-      costSource: "provider_reported",
-      costPricedProvider: "",
-      costPricedModel: "",
-    }
-  }
+  // Cache costs fold into the input side so the two sides reconcile with the provider's own total.
+  const reported =
+    cost && typeof cost.total === "number"
+      ? {
+          inputMicrocents: usdToMicrocents(
+            nonNegative(cost.input) + nonNegative(cost.cacheRead) + nonNegative(cost.cacheWrite),
+          ),
+          outputMicrocents: usdToMicrocents(nonNegative(cost.output)),
+          totalMicrocents: usdToMicrocents(nonNegative(cost.total)),
+        }
+      : {}
 
-  // No embedded cost — estimate from the tokens, same as flat-attr spans.
-  const estimation = estimateCostFromTokens({ provider, model, ...tokens })
-  const costInputMicrocents = estimation.kind === "estimated" ? estimation.input : 0
-  const costOutputMicrocents = estimation.kind === "estimated" ? estimation.output : 0
-  return {
-    ...tokens,
-    costInputMicrocents,
-    costOutputMicrocents,
-    costTotalMicrocents: costInputMicrocents + costOutputMicrocents,
-    costIsEstimated: estimation.kind === "estimated",
-    costSource: costSourceOf(estimation),
-    costPricedProvider: pricedPairOf(estimation).provider,
-    costPricedModel: pricedPairOf(estimation).model,
-  }
+  return { ...tokens, ...resolveSpanCost({ reported, provider, model, tokens }) }
 }
 
 interface ResolveUsageInput {
@@ -234,60 +133,19 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
   const embedded = resolveEmbeddedMessageUsage(attrs, provider, model)
   if (embedded) return embedded
 
-  const {
-    input: tokensInput,
-    output: tokensOutput,
-    cacheRead: tokensCacheRead,
-    cacheCreate: tokensCacheCreate,
-    reasoning: tokensReasoning,
-  } = resolveTokens(attrs, provider)
-
-  // ── Cost ──
-  const attrCostInput = first(costInputCandidates, attrs)
-  const attrCostOutput = first(costOutputCandidates, attrs)
-  const attrCostTotal = first(costTotalCandidates, attrs)
-
-  const hasAttrCosts = attrCostInput !== undefined && attrCostOutput !== undefined
-  // Positive, not merely present: a zero side cost supplies no price, and the total candidates already drop zero.
-  const hasAnyAttrCost = (attrCostInput ?? 0) > 0 || (attrCostOutput ?? 0) > 0 || attrCostTotal !== undefined
-
-  const costEstimation = hasAttrCosts
-    ? undefined
-    : estimateCostFromTokens({
-        provider,
-        model,
-        tokensInput,
-        tokensOutput,
-        tokensCacheRead,
-        tokensCacheCreate,
-        tokensReasoning,
-      })
-
-  const estimated = costEstimation?.kind === "estimated" ? costEstimation : undefined
-  const costIsEstimated = estimated !== undefined
-  const costInput = attrCostInput ?? estimated?.input ?? 0
-  const costOutput = attrCostOutput ?? estimated?.output ?? 0
-  const costTotal = attrCostTotal ?? (costInput + costOutput > 0 ? costInput + costOutput : 0)
-
-  // Any provider-supplied cost counts as reported, even for a model models.dev does not know — and
-  // even at 0, which is a provider stating the call was free rather than us failing to price it.
-  const costSource: CostSource =
-    hasAttrCosts || hasAnyAttrCost ? "provider_reported" : costSourceOf(costEstimation ?? { kind: "noTokens" })
+  const tokens = resolveTokens(attrs, provider)
 
   return {
-    tokensInput,
-    tokensOutput,
-    tokensCacheRead,
-    tokensCacheCreate,
-    tokensReasoning,
-    costInputMicrocents: costInput,
-    costOutputMicrocents: costOutput,
-    costTotalMicrocents: costTotal,
-    costIsEstimated,
-    costSource,
-    // Gated on the source, not on `estimated`: a span can carry both an attr cost and an estimate,
-    // and then the stored number is the provider's, so no catalog entry produced it.
-    costPricedProvider: costSource === "estimated" ? pricedPairOf(costEstimation).provider : "",
-    costPricedModel: costSource === "estimated" ? pricedPairOf(costEstimation).model : "",
+    ...tokens,
+    ...resolveSpanCost({
+      reported: {
+        inputMicrocents: first(costInputCandidates, attrs),
+        outputMicrocents: first(costOutputCandidates, attrs),
+        totalMicrocents: first(costTotalCandidates, attrs),
+      },
+      provider,
+      model,
+      tokens,
+    }),
   }
 }

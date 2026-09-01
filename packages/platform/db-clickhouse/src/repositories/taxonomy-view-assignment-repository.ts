@@ -19,6 +19,7 @@ import {
 import { formatCHDate, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import {
+  parseCHDay,
   type TaxonomyObservationRow,
   selectColumns as taxonomyObservationSelectColumns,
   toDomainObservation,
@@ -244,6 +245,47 @@ export const TaxonomyViewAssignmentRepositoryLive = Layer.effect(
             .pipe(
               Effect.mapError((error) =>
                 toRepositoryError(error, "TaxonomyViewAssignmentRepository.getClusterTrendCounts"),
+              ),
+            )
+        }),
+
+      // Coverage numerator: rows per UTC day that still point at a live cluster.
+      // `assigned_cluster_id IN clusterIds` is the whole point — rows a rebuild
+      // orphaned are physically present but invisible to every other read, so
+      // counting them would advertise coverage the tree cannot show.
+      getAssignedCountsByDay: ({ organizationId, projectId, customBehaviorId, facetId, clusterIds, since }) =>
+        Effect.gen(function* () {
+          if (clusterIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT toDate(start_time) AS day, count() AS count
+                        FROM taxonomy_view_assignments FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND custom_behavior_id = {customBehaviorId:String}
+                          AND facet_id = {facetId:String}
+                          AND assigned_cluster_id IN {clusterIds:Array(String)}
+                          AND start_time >= {since:DateTime64(9, 'UTC')}
+                        GROUP BY day
+                        ORDER BY day ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  customBehaviorId: customBehaviorId as string,
+                  facetId: (facetId ?? "") as string,
+                  clusterIds: clusterIds as readonly string[],
+                  since: formatCHDate(since),
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<{ day: string; count: string | number }>()
+              return rows.map((row) => ({ day: parseCHDay(row.day), count: Number(row.count) }))
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyViewAssignmentRepository.getAssignedCountsByDay"),
               ),
             )
         }),

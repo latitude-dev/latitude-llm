@@ -162,8 +162,8 @@ function SignalGithubReferences({
         <div className="flex items-center justify-between gap-2 px-2 pt-1 pb-2">
           <Text.H6 weight="semibold">Version control history</Text.H6>
           <Link
-            to="/projects/$projectSlug/settings/integrations/github"
-            params={{ projectSlug }}
+            to="/projects/$projectSlug/settings/organization/integrations/$integrationSlug"
+            params={{ projectSlug, integrationSlug: "github" }}
             className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             View all

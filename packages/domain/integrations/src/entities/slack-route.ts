@@ -1,4 +1,10 @@
-import { alertSeveritySchema, meetsMinSeverity, NOTIFICATION_GROUPS, type NotificationGroup } from "@domain/shared"
+import {
+  alertSeveritySchema,
+  meetsMinSeverity,
+  NOTIFICATION_GROUPS,
+  type NotificationGroup,
+  topicPreferencesSchema,
+} from "@domain/shared"
 import { z } from "zod"
 
 /**
@@ -11,6 +17,8 @@ export const slackRouteSchema = z.object({
   channelId: z.string().min(1),
   channelName: z.string().min(1),
   minSeverity: alertSeveritySchema.optional(),
+  /** Per-topic switches for groups with sub-toggles; absent topics are delivered. */
+  topics: topicPreferencesSchema.optional(),
 })
 
 export type SlackRoute = z.infer<typeof slackRouteSchema>

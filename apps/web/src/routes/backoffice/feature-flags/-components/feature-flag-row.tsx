@@ -126,7 +126,7 @@ function EnablementBadge({ featureFlag }: { readonly featureFlag: AdminFeatureFl
 
   if (featureFlag.enabledOrganizations.length === 0) {
     return (
-      <Badge variant="noBorderMuted" noWrap>
+      <Badge variant="muted" noWrap>
         No organizations
       </Badge>
     )

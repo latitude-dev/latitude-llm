@@ -113,7 +113,7 @@ export function NewBehaviorModal({
       scrollable
       size="large"
       onOpenChange={(next) => (next || isSaving ? undefined : onClose())}
-      title="New behavior"
+      title="New behavior group"
       description="A behavior groups your sessions by a question other than topic: what the user wanted, how it ended, why they got stuck."
       footer={
         <Button variant="outline" onClick={onClose} disabled={isSaving}>

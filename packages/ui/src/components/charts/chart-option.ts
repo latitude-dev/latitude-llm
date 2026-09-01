@@ -32,6 +32,12 @@ export interface ChartBarSeries {
  * Line series. Set `area: true` to fill under the line (an area chart).
  * Set `stack` to stack with sibling lines that share the key — combined
  * with `area: true` this is the standard "stacked area" composition.
+ *
+ * `step` draws right-angle jumps between points instead of a straight or
+ * smoothed segment — the correct shape for a value that holds constant
+ * within a bucket and jumps at the boundary, rather than drifting between
+ * two buckets' centers. Ignored together with `smooth`; echarts itself
+ * only honours one.
  */
 export interface ChartLineSeries {
   readonly kind: "line"
@@ -42,6 +48,7 @@ export interface ChartLineSeries {
   readonly stack?: string
   readonly area?: boolean
   readonly smooth?: boolean
+  readonly step?: "start" | "middle" | "end"
 }
 
 export type ChartSeries = ChartBarSeries | ChartLineSeries
@@ -138,8 +145,9 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
     : withAxisOptions(primaryAxis)
 
   // Reserve a touch of right-side padding for the secondary axis labels
-  // when present, and a top strip when the legend renders.
-  const gridTop = showLegend ? 28 : gridVerticalInsetPx
+  // when present, and a top strip when the legend renders — tall enough to
+  // leave a visible gap below the legend row, not just clear its own height.
+  const gridTop = showLegend ? 40 : gridVerticalInsetPx
   const gridRight = hasSecondaryAxis ? 48 : 16
 
   // A hatch in the chart's own background colour reads as "hollow" in both themes.
@@ -189,7 +197,7 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
       data: [...s.values],
       yAxisIndex,
       ...(s.stack ? { stack: s.stack } : {}),
-      smooth: s.smooth ?? false,
+      ...(s.step ? { step: s.step } : { smooth: s.smooth ?? false }),
       showSymbol: false,
       lineStyle: { width: s.area ? 1 : 2, color: s.color, opacity: s.area ? 0.8 : 1 },
       itemStyle: { color: s.color },
@@ -211,8 +219,8 @@ export function buildChartOption(input: ChartOptionInput): EChartsCoreOption {
       ? {
           top: 0,
           textStyle: { color: colors.mutedForeground, fontSize: 11 },
-          itemWidth: 12,
-          itemHeight: 8,
+          itemWidth: 10,
+          itemHeight: 10,
           itemGap: 14,
         }
       : { show: false },

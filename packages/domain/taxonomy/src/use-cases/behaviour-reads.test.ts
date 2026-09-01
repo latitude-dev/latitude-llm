@@ -16,6 +16,7 @@ import { createFakeTaxonomyClusterIntelligenceRepository } from "../testing/fake
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { getBehaviourTrajectoryUseCase } from "./get-behaviour-trajectory.ts"
 import { listBehaviourSessionsUseCase } from "./list-behaviour-sessions.ts"
+import { type ProjectBehaviourNode, promoteBehaviourScaffolding, truncateNodes } from "./list-project-behaviours.ts"
 
 const ORG_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
@@ -32,6 +33,23 @@ const cluster = (id: string, path: string, customBehaviorId: CustomBehaviorId | 
     customBehaviorId,
     facetId: null,
   }) as unknown as TaxonomyCluster
+
+const behaviourNode = (
+  id: string,
+  directObservationCount: number,
+  children: readonly ProjectBehaviourNode[] = [],
+): ProjectBehaviourNode => ({
+  cluster: cluster(id, ""),
+  firstSeenLabel: "older",
+  trend: { status: "steady", currentCount: 0, baselineCount: 0, baselineDailyAverage: 0, ratio: null },
+  novelty: "unknown",
+  directObservationCount,
+  subtreeObservationCount:
+    directObservationCount + children.reduce((sum, child) => sum + child.subtreeObservationCount, 0),
+  children,
+})
+
+const ids = (nodes: readonly ProjectBehaviourNode[]): readonly string[] => nodes.map((node) => String(node.cluster.id))
 
 const trajectoryRow = (bucket: string, frequency: number): ClusterTrajectoryRow => ({
   bucket,
@@ -229,5 +247,126 @@ describe("getBehaviourTrajectoryUseCase", () => {
     )
 
     expect(result.buckets).toEqual(["2026-05-02", "2026-05-10"])
+  })
+})
+
+describe("promoteBehaviourScaffolding", () => {
+  const pilotTree = (rootOwn: number) =>
+    behaviourNode("R", rootOwn, [
+      behaviourNode("l494", 494),
+      behaviourNode("i1", 1, [
+        behaviourNode("l99", 99),
+        behaviourNode("ia", 0, [behaviourNode("l55", 55), behaviourNode("l35", 35)]),
+        behaviourNode("ib", 0, [behaviourNode("l23", 23), behaviourNode("l22", 22)]),
+        behaviourNode("ic", 0, [behaviourNode("l11", 11), behaviourNode("l10", 10)]),
+      ]),
+      behaviourNode("id", 0, [behaviourNode("l73", 73), behaviourNode("l14", 14)]),
+    ])
+
+  const PILOT_GROUPS = ["l494", "l99", "l55", "l35", "l23", "l22", "l11", "l10", "l73", "l14"]
+
+  const leafIds = (nodes: readonly ProjectBehaviourNode[]): readonly string[] =>
+    nodes.flatMap((node) => (node.children.length === 0 ? [String(node.cluster.id)] : leafIds(node.children)))
+
+  it("leaves an already-flat tree alone and never reorders it", () => {
+    const flat = promoteBehaviourScaffolding([
+      behaviourNode("R", 0, [behaviourNode("A", 30), behaviourNode("B", 20), behaviourNode("C", 10)]),
+    ])
+    expect(ids(flat.nodes)).toEqual(["A", "B", "C"])
+
+    const unsorted = promoteBehaviourScaffolding([
+      behaviourNode("R", 0, [behaviourNode("B", 20), behaviourNode("A", 30)]),
+    ])
+    expect(ids(unsorted.nodes)).toEqual(["B", "A"])
+  })
+
+  it("collapses the pilot tree's 6 signposts into its 10 real groups", () => {
+    const promoted = promoteBehaviourScaffolding([pilotTree(1)])
+
+    expect(ids(promoted.nodes)).toEqual(PILOT_GROUPS)
+    expect(promoted.nodes.every((node) => node.children.length === 0)).toBe(true)
+  })
+
+  it("keeps a childless root, which is the project's only group", () => {
+    const promoted = promoteBehaviourScaffolding([behaviourNode("R", 1946)])
+
+    expect(ids(promoted.nodes)).toEqual(["R"])
+    expect(promoted.nodes[0]?.subtreeObservationCount).toBe(1946)
+    expect(promoted.residueObservationCount).toBe(0)
+  })
+
+  it("keeps a content-holding interior as a parent while promoting a signpost sibling", () => {
+    const promoted = promoteBehaviourScaffolding([
+      behaviourNode("R", 0, [
+        behaviourNode("A", 40, [behaviourNode("A1", 30), behaviourNode("A2", 20)]),
+        behaviourNode("B", 0, [behaviourNode("B1", 10), behaviourNode("B2", 10)]),
+      ]),
+    ])
+
+    expect(ids(promoted.nodes)).toEqual(["A", "B1", "B2"])
+    expect(ids(promoted.nodes[0]?.children ?? [])).toEqual(["A1", "A2"])
+  })
+
+  it("counts a surviving interior as its own members plus its visible descendants", () => {
+    const promoted = promoteBehaviourScaffolding([
+      behaviourNode("R", 0, [
+        behaviourNode("A", 40, [behaviourNode("A1", 30), behaviourNode("A2", 20)]),
+        behaviourNode("B", 0, [behaviourNode("B1", 10), behaviourNode("B2", 10)]),
+      ]),
+    ])
+
+    expect(promoted.nodes[0]?.subtreeObservationCount).toBe(90)
+  })
+
+  it("collapses a whole signpost chain in one pass, not one level per call", () => {
+    const promoted = promoteBehaviourScaffolding([
+      behaviourNode("R", 0, [
+        behaviourNode("I1", 0, [behaviourNode("I2", 0, [behaviourNode("L1", 30), behaviourNode("L2", 20)])]),
+      ]),
+    ])
+
+    expect(ids(promoted.nodes)).toEqual(["L1", "L2"])
+  })
+
+  it("keeps the residue of every removed node so rows plus residue equal the project", () => {
+    const root = pilotTree(9)
+    const promoted = promoteBehaviourScaffolding([root])
+
+    // The root's 9 plus the one session held by the promoted `i1`.
+    expect(promoted.residueObservationCount).toBe(10)
+    const rows = promoted.nodes.reduce((sum, node) => sum + node.subtreeObservationCount, 0)
+    expect(rows + promoted.residueObservationCount).toBe(root.subtreeObservationCount)
+  })
+
+  it("does not count a signpost's sessions as residue when a surviving parent still holds them", () => {
+    const root = behaviourNode("R", 0, [
+      behaviourNode("A", 40, [behaviourNode("B", 1, [behaviourNode("L1", 30), behaviourNode("L2", 20)])]),
+    ])
+    const promoted = promoteBehaviourScaffolding([root])
+
+    expect(ids(promoted.nodes)).toEqual(["A"])
+    expect(ids(promoted.nodes[0]?.children ?? [])).toEqual(["L1", "L2"])
+    expect(promoted.residueObservationCount).toBe(0)
+    const rows = promoted.nodes.reduce((sum, node) => sum + node.subtreeObservationCount, 0)
+    expect(rows + promoted.residueObservationCount).toBe(root.subtreeObservationCount)
+  })
+
+  it("spends the node budget on real groups because promotion runs before truncation", () => {
+    expect(ids(truncateNodes(promoteBehaviourScaffolding([pilotTree(1)]).nodes, 10))).toEqual(PILOT_GROUPS)
+
+    // Truncating the raw tree instead spends most of the budget on scaffolding.
+    const withoutPromotion = truncateNodes([pilotTree(1)], 10)
+    expect(ids(withoutPromotion)).toEqual(["R"])
+    expect(leafIds(withoutPromotion).length).toBeLessThan(PILOT_GROUPS.length)
+  })
+
+  it("collapses a degenerate chain to a single row", () => {
+    // Deliberate: one row is below `isOpenableBehaviourTree`'s 2-node floor, so
+    // such a project loses its entry point into the tree screen.
+    const promoted = promoteBehaviourScaffolding([
+      behaviourNode("R", 0, [behaviourNode("I", 0, [behaviourNode("L", 50)])]),
+    ])
+
+    expect(ids(promoted.nodes)).toEqual(["L"])
   })
 })

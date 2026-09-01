@@ -51,7 +51,7 @@ class CreateCustomScoreBody(UniversalBaseModel):
 
     cost: typing.Optional[int] = pydantic.Field(default=None)
     """
-    Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores.
+    Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores.
     """
 
     trace: TraceRef

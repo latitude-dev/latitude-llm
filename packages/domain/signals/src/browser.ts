@@ -2,8 +2,17 @@
 // to the same history as the issue detector without depending on `@domain/scores`.
 export { SEASONAL_HISTORY_WEEKS } from "@domain/scores"
 export {
+  CANDIDATE_EXPIRY_IDLE_DAYS,
+  CANDIDATE_EXPIRY_SWEEP_LIMIT,
+  CANDIDATE_SWEEPER_KEY,
+  CANDIDATE_SWEEPER_PATTERN,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  CONSOLIDATION_MAX_LINEAGE_DEPTH,
+  CONSOLIDATION_MAX_MERGES_PER_PASS,
+  CONSOLIDATION_MIN_SIMILARITY,
+  CONSOLIDATION_NEIGHBOR_LIMIT,
+  CONSOLIDATION_THROTTLE_MS,
   DEFAULT_ESCALATION_SENSITIVITY_K,
   ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR,
   ESCALATION_CHECK_THROTTLE_MS,
@@ -26,6 +35,9 @@ export {
   SIGNAL_DISCOVERY_RERANK_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_CANDIDATES,
   SIGNAL_DISCOVERY_SEARCH_RATIO,
+  SIGNAL_FEEDBACK_MAX_LENGTH,
+  SIGNAL_FEEDBACK_OCCURRENCE_SAMPLE_LIMIT,
+  SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_GENERATION_DEADLINE_MS,
   SIGNAL_GENERATION_DEFAULT_MODEL,
   SIGNAL_GENERATION_MAX_STEPS,
@@ -33,6 +45,7 @@ export {
   SIGNAL_PRIORITIES,
   SIGNAL_PRIORITY_GROUPS,
   SIGNAL_PRIORITY_ORDER,
+  SIGNAL_PROMOTION_THROTTLE_MS,
   SIGNAL_REFRESH_THROTTLE_MS,
   SIGNAL_RELATED_CANDIDATE_LIMIT,
   SIGNAL_RELATED_COOCCURRENCE_WINDOW_DAYS,
@@ -50,10 +63,12 @@ export { type DimensionPattern, rankDimensionValues } from "./dimension-patterns
 export {
   type Signal,
   type SignalCentroid,
+  type SignalFeedback,
   SignalPriority,
   type SignalSource,
   type SignalState,
   signalCentroidSchema,
+  signalFeedbackSchema,
   signalPrioritySchema,
   signalSchema,
   signalSourceSchema,
@@ -72,6 +87,9 @@ export {
   ScoreDiscoveryProjectMismatchError,
   ScoreNotFoundForDiscoveryError,
   SignalDiscoveryLockUnavailableError,
+  SignalFeedbackAlreadySubmittedError,
+  SignalFeedbackNotSupportedError,
+  SignalFeedbackReasonRequiredError,
   SignalNotFoundForAssignmentError,
   SignalNotFoundForDetailsGenerationError,
   SignalNotFoundForEscalationCheckError,
@@ -156,6 +174,12 @@ export {
   checkSignalEscalationUseCase,
 } from "./use-cases/check-signal-escalation.ts"
 export {
+  type ConsolidateSignalCandidatesError,
+  type ConsolidateSignalCandidatesInput,
+  type ConsolidateSignalCandidatesResult,
+  consolidateSignalCandidatesUseCase,
+} from "./use-cases/consolidate-signal-candidates.ts"
+export {
   type CreateSignalFromScoreError,
   type CreateSignalFromScoreInput,
   type CreateSignalFromScoreResult,
@@ -178,6 +202,7 @@ export {
   type EmbedSignalSearchQueryResult,
   embedSignalSearchQueryUseCase,
 } from "./use-cases/embed-signal-search-query.ts"
+export { type ExpireIdleCandidatesResult, expireIdleCandidatesUseCase } from "./use-cases/expire-idle-candidates.ts"
 export {
   type GeneratedSignalDetails,
   type GenerateSignalDetailsError,
@@ -259,6 +284,17 @@ export {
   type UserSignalItem,
 } from "./use-cases/list-user-signals.ts"
 export {
+  type PromoteSignalError,
+  type PromoteSignalInput,
+  type PromoteSignalResult,
+  promoteSignalUseCase,
+} from "./use-cases/promote-signal.ts"
+export {
+  type ReconcileConsolidatedScoresInput,
+  type ReconcileConsolidatedScoresResult,
+  reconcileConsolidatedScoresUseCase,
+} from "./use-cases/reconcile-consolidated-scores.ts"
+export {
   type RefreshSignalDetailsError,
   type RefreshSignalDetailsInput,
   type RefreshSignalDetailsResult,
@@ -276,10 +312,22 @@ export {
   rerankSignalCandidatesUseCase,
 } from "./use-cases/rerank-signal-candidates.ts"
 export {
+  type ReviewSignalFlaggerOccurrencesError,
+  type ReviewSignalFlaggerOccurrencesInput,
+  type ReviewSignalFlaggerOccurrencesResult,
+  reviewSignalFlaggerOccurrencesUseCase,
+} from "./use-cases/review-signal-flagger-occurrences.ts"
+export {
   type OrgSignalSearchItem,
   type SearchOrgSignalsInput,
   searchOrgSignalsUseCase,
 } from "./use-cases/search-org-signals.ts"
+export {
+  type SubmitSignalFeedbackError,
+  type SubmitSignalFeedbackInput,
+  type SubmitSignalFeedbackResult,
+  submitSignalFeedbackUseCase,
+} from "./use-cases/submit-signal-feedback.ts"
 export {
   type SweepEscalatingSignalsPublish,
   type SweepEscalatingSignalsResult,

@@ -1,11 +1,17 @@
 export { adaptiveFallbackReason, type TaxonomyAdaptiveFallbackReason } from "./adaptive-fallback.ts"
 export {
   isAdaptiveModeActive,
-  parseTaxonomyAdaptiveModeBaseline,
-  resolveTaxonomyAdaptiveMode,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODE_DEFAULT,
   type TaxonomyAdaptiveClusteringMode,
 } from "./adaptive-mode.ts"
+export {
+  promotedTopLevelRows,
+  promoteScaffolding,
+  type ScaffoldingShape,
+  type TaxonomyBuildQualityMetrics,
+  type TaxonomyLeafQuality,
+  taxonomyBuildQualityMetrics,
+} from "./build-quality.ts"
 export {
   type BuildRelativeHierarchicalClustersInput,
   type BuildRelativeHierarchicalClustersResult,
@@ -34,10 +40,11 @@ export {
   FACET_PRESET_SLUG_PREFIX,
   FACET_PROJECTION_TEXT_MAX_LENGTH,
   MAX_CUSTOM_BEHAVIORS_PER_PROJECT,
-  TAXONOMY_ADAPTIVE_CLUSTERING_MODE_ENV,
   TAXONOMY_ADAPTIVE_CLUSTERING_MODES,
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
+  TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK,
+  TAXONOMY_ADAPTIVE_ESCALATION_SEARCH_WIDTH,
   TAXONOMY_ADAPTIVE_POLICY_VERSION,
   TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
@@ -80,9 +87,11 @@ export {
   TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_PROJECTION_METHODS,
+  TAXONOMY_QUALITY_LEAF_PROFILE_MAX,
   TAXONOMY_REASSIGNMENT_BATCH_SIZE,
   TAXONOMY_RUN_STATUSES,
   TAXONOMY_RUN_TRIGGERS,
+  TAXONOMY_SCAFFOLDING_MAX_OWN_FRACTION,
   TAXONOMY_SEARCH_MIN_SCORE,
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
   TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
@@ -194,6 +203,12 @@ export {
 } from "./lineage.ts"
 export { taxonomyClusterLockKey, withTaxonomyClusterLock } from "./locks.ts"
 export {
+  normalizedTaxonomyName,
+  type TaxonomyNameQualityCluster,
+  type TaxonomyNameQualityMetrics,
+  taxonomyNameQualityMetrics,
+} from "./name-quality.ts"
+export {
   CustomBehaviorRepository,
   type CustomBehaviorRepositoryShape,
   type FindCustomBehaviorBySlugInput,
@@ -266,16 +281,7 @@ export {
   type RoutedLeafAssignment,
   routeObservationsToLeaves,
 } from "./reassignment.ts"
-export {
-  adjustedRandIndex,
-  type BoundedPercentiles,
-  boundedPercentiles,
-  compareTaxonomyTrees,
-  leafPartitionLabels,
-  summarizeTreeShape,
-  type TaxonomyShadowComparison,
-  type TaxonomyTreeShape,
-} from "./shadow-comparison.ts"
+export { type BoundedPercentiles, boundedPercentiles } from "./telemetry-percentiles.ts"
 export {
   classifyClusterTrend,
   type GetLastRunInput,
@@ -351,6 +357,11 @@ export {
   getClusterDetailsUseCase,
 } from "./use-cases/get-details.ts"
 export {
+  clipRangeToLensCoverage,
+  getLensCoverageUseCase,
+  type TaxonomyLensCoverage,
+} from "./use-cases/lens-coverage.ts"
+export {
   type ListBehaviourSessionsInput,
   listBehaviourSessionsUseCase,
 } from "./use-cases/list-behaviour-sessions.ts"
@@ -384,6 +395,10 @@ export {
   listUserBehavioursUseCase,
   type UserBehaviourItem,
 } from "./use-cases/list-user-behaviours.ts"
+export {
+  type MeasureTaxonomyNameQualityInput,
+  measureTaxonomyNameQualityUseCase,
+} from "./use-cases/measure-taxonomy-name-quality.ts"
 export {
   type NameCustomBehaviorClusterInput,
   nameCustomBehaviorClusterUseCase,

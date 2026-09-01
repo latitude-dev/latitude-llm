@@ -43,7 +43,7 @@ class Incident(UniversalBaseModel):
     ]
     severity: IncidentSeverity = pydantic.Field()
     """
-    Severity bucket assigned to the incident: `low`, `medium`, or `high`.
+    Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`.
     """
 
     started_at: typing_extensions.Annotated[

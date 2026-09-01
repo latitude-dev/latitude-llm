@@ -2,6 +2,7 @@ import {
   BillingUsagePeriodRepository,
   calculatePlanSpendMills,
   PLAN_SLUGS,
+  type PlanSlug,
   updateSpendingLimitUseCase,
 } from "@domain/billing"
 import { BadRequestError, OrganizationId, type UserId } from "@domain/shared"
@@ -26,14 +27,22 @@ import { requireSession } from "../../server/auth.ts"
 import { getBetterAuth, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 interface BillingOverviewDto {
-  planSlug: "free" | "pro" | "enterprise"
-  planSource: "override" | "subscription" | "free-fallback"
+  planSlug: PlanSlug
+  planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   periodStart: string
   periodEnd: string
   /** `null` when the plan entitlement is intentionally unbounded over JSON (Enterprise). */
   includedCredits: number | null
+  /** Authoritative period total from `billing_usage_periods.consumed_credits` (includes overage). */
   consumedCredits: number
   overageCredits: number
+  /** Portion of `consumedCredits` that counts against the included allowance. */
+  includedUsedCredits: number
+  /** Credits left in the included allowance; `null` when the entitlement is unbounded. */
+  remainingCredits: number | null
+  /** 0–1 fill for the usage ring; `1` when unbounded or at/over the included allowance. */
+  usageProgress: number
+  isAtIncludedLimit: boolean
   overageAmountMills: number
   overageAllowed: boolean
   hardCapped: boolean
@@ -51,14 +60,27 @@ const loadBillingOverview = Effect.fn("web.billing.getOverview")(function* (orga
     periodEnd: orgPlan.periodEnd,
   })
 
+  const includedCredits = Number.isFinite(orgPlan.plan.includedCredits) ? orgPlan.plan.includedCredits : null
+  const consumedCredits = period?.consumedCredits ?? 0
+  const overageCredits = period?.overageCredits ?? 0
+  const includedUsedCredits = includedCredits === null ? consumedCredits : Math.min(consumedCredits, includedCredits)
+  const remainingCredits = includedCredits === null ? null : Math.max(includedCredits - consumedCredits, 0)
+  const isAtIncludedLimit = includedCredits !== null && includedCredits > 0 && consumedCredits >= includedCredits
+  const usageProgress =
+    includedCredits === null || includedCredits <= 0 ? 1 : Math.min(consumedCredits / includedCredits, 1)
+
   return {
     planSlug: orgPlan.plan.slug,
     planSource: orgPlan.source as BillingOverviewDto["planSource"],
     periodStart: orgPlan.periodStart.toISOString(),
     periodEnd: orgPlan.periodEnd.toISOString(),
-    includedCredits: Number.isFinite(orgPlan.plan.includedCredits) ? orgPlan.plan.includedCredits : null,
-    consumedCredits: period?.consumedCredits ?? 0,
-    overageCredits: period?.overageCredits ?? 0,
+    includedCredits,
+    consumedCredits,
+    overageCredits,
+    includedUsedCredits,
+    remainingCredits,
+    usageProgress,
+    isAtIncludedLimit,
     overageAmountMills: period?.overageAmountMills ?? 0,
     overageAllowed: orgPlan.plan.overageAllowed,
     hardCapped: orgPlan.plan.hardCapped,

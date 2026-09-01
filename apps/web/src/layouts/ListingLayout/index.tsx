@@ -1,5 +1,5 @@
 import { cn, Text } from "@repo/ui"
-import { Children, isValidElement, type ReactElement, type ReactNode } from "react"
+import { Children, forwardRef, isValidElement, type ReactElement, type ReactNode } from "react"
 
 interface ListingLayoutProps {
   readonly children: ReactNode
@@ -88,10 +88,12 @@ interface HeaderProps {
   readonly description?: ReactNode
   /** Right-aligned controls beside the title; wrap below it when the header is too narrow to fit both. */
   readonly actions?: ReactNode
+  /** Right-aligned control below `actions`, centered against the title/description block. */
+  readonly titleAside?: ReactNode
   readonly className?: string
 }
 
-function Header({ title, badge, description, actions, className }: HeaderProps) {
+function Header({ title, badge, description, actions, titleAside, className }: HeaderProps) {
   return (
     <div className={cn("@container flex flex-col gap-1 p-6 pb-0", className)}>
       <div className="flex min-w-0 flex-row flex-wrap items-start gap-x-4 gap-y-2 @max-[45rem]:flex-col">
@@ -108,9 +110,16 @@ function Header({ title, badge, description, actions, className }: HeaderProps) 
             )
           ) : null}
         </div>
-        {actions ? (
-          <div className="ml-auto flex max-w-full shrink-0 flex-row flex-wrap items-center gap-2 self-start @max-[45rem]:w-full @max-[45rem]:justify-between">
-            {actions}
+        {actions || titleAside ? (
+          <div className="ml-auto flex max-w-full shrink-0 flex-col items-end gap-2 @max-[45rem]:w-full @max-[45rem]:items-stretch">
+            {actions ? (
+              <div className="flex max-w-full flex-row flex-wrap items-center gap-2 @max-[45rem]:w-full @max-[45rem]:justify-between">
+                {actions}
+              </div>
+            ) : null}
+            {titleAside ? (
+              <div className="flex max-w-full flex-row items-center gap-2 @max-[45rem]:w-full">{titleAside}</div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -123,9 +132,13 @@ interface ListProps {
   readonly className?: string
 }
 
-function List({ children, className }: ListProps) {
-  return <div className={cn("min-h-0 min-w-0 grow p-6 pt-0 flex flex-col", className)}>{children}</div>
-}
+const List = forwardRef<HTMLDivElement, ListProps>(function List({ children, className }, ref) {
+  return (
+    <div ref={ref} className={cn("min-h-0 min-w-0 grow p-6 pt-0 flex flex-col", className)}>
+      {children}
+    </div>
+  )
+})
 
 function Body({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
   return (

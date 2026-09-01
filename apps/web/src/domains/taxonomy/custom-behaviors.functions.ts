@@ -138,9 +138,10 @@ export const updateCustomBehaviorFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<CustomBehaviorRecord> => {
     const orgId = await resolveOrgScope(context)
-    // A cohort change re-gardens the view from scratch, so the use-case needs both the
-    // assignment slice (to purge) and a QueuePublisher (to enqueue the run).
-    const publisher = await getQueuePublisher()
+    // A cohort change re-gardens the view from scratch, so the use-case needs the
+    // assignment slice (to purge), a terminator (to stop the run holding the old
+    // filter) and a QueuePublisher (to enqueue the replacement run).
+    const [publisher, terminator] = await Promise.all([getQueuePublisher(), getWorkflowTerminator()])
 
     const updated = await Effect.runPromise(
       updateCustomBehavior({
@@ -149,6 +150,7 @@ export const updateCustomBehaviorFn = createServerFn({ method: "POST" })
         ...(data.filterSet !== undefined ? { filterSet: data.filterSet } : {}),
       }).pipe(
         Effect.provideService(QueuePublisher, publisher),
+        Effect.provideService(WorkflowTerminator, terminator),
         withScopedPostgres(CustomBehaviorRepositoryLive, getPostgresClient(), orgId),
         withScopedClickHouse(TaxonomyViewAssignmentRepositoryLive, getClickhouseClient(), orgId),
         withTracing,

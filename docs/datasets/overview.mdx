@@ -4,7 +4,7 @@ description: Curate collections of inputs, outputs, and expected outputs from re
 ---
 
 <Info>
-  **Where this fits:** Datasets are part of **Refine**, after [Signals](../signals/overview). They turn real traces into reusable test cases for [regression testing](../test-and-fix/regression-testing).
+  **Where this fits:** Datasets are part of **Refine**, after [Signals](../signals/overview). They turn real traces into reusable test cases for [local simulations](../test-and-fix/simulations) and [regression testing](../test-and-fix/regression-testing).
 </Info>
 
 A **dataset** is a collection of rows you curate for testing and improving your agent. Each row holds an **input**, the agent's **output**, an optional **expected output**, and arbitrary **metadata**. Teams use them as golden datasets: stable, known-good test sets that a fix has to keep passing.
@@ -46,6 +46,7 @@ You can build a dataset three ways:
 
 ## How datasets are used
 
+- **Local simulations**: pull the rows with the SDK and run your agent against them in TypeScript or Python, including multi-turn conversations. See [Simulate agents locally](../test-and-fix/simulations).
 - **Regression testing**: replay a dataset's inputs against your agent and compare results to the expected outputs and your evaluations. See [Regression testing](../test-and-fix/regression-testing).
 - **Curating test sets**: collect representative traces from [Search](../search/overview) and [Signals](../signals/overview) into a stable, reusable set.
 - **Sharing with your harness**: export a dataset as CSV to drive tests in your own pipeline.
@@ -54,3 +55,4 @@ You can build a dataset three ways:
 
 - [Add traces to a dataset](./add-traces): build a test set from real production traces.
 - [Custom columns](./custom-columns): add, rename, reorder, or remove columns.
+- [Simulate agents locally](../test-and-fix/simulations): run the dataset against your agent in TypeScript or Python.

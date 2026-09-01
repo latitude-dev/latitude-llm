@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.10.0] - 2026-08-18
+
+### Added
+
+- `client.signals.submit_feedback` — record a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason, and optionally archive the signal in the same call. Only signals a flagger detected accept feedback, and the verdict cannot be changed once submitted.
+- `client.signals.get` now returns `feedback` with the verdict submitted for the signal (`value`, `passed`, `feedback`), or `None` when none has been submitted yet.
+
+## [9.9.0] - 2026-08-06
+
+### Changed
+
+- Severity gained an `urgent` tier, on top of `low`, `medium` and `high`. `client.monitors` accepts it when creating or updating a monitor's rule, and any incident you read can now come back as `urgent`. Existing values are untouched, so the only upgrade to make is widening code that matches on every severity.
+
+## [9.8.0] - 2026-08-05
+
+### Added
+
+- `client.imports` — import historical traces from Langfuse, LangSmith, or Braintrust into a project: `list`, `create`, `get`, `cancel`, and `retry`. An import runs in the background, newest traces first; `retry` resumes a failed, cancelled, or capped import from where it stopped.
+
+## [9.7.1] - 2026-08-03
+
+### Changed
+
+- `client.traces.export` now raises `TooManyRequestsError` when the export is rate-limited (HTTP 429), instead of a generic error. The endpoint is now throttled to match `client.datasets.export_rows` and `client.signals.export`.
+
 ## [9.7.0] - 2026-07-28
 
 ### Added

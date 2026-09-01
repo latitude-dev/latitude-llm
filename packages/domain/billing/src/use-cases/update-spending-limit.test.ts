@@ -13,7 +13,7 @@ import {
 } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer, Result } from "effect"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const USER_ID = UserId("u".repeat(24))
@@ -68,6 +68,14 @@ const createLayer = (input?: {
 }
 
 describe("updateSpendingLimitUseCase", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("rejects callers who are not org admins", async () => {
     const { layer } = createLayer({ isAdmin: false, subscriptionPlan: "pro" })
 

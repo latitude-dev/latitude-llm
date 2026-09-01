@@ -48,7 +48,12 @@ function resolveAnyValue(
   if (!value) return null
   if (value.stringValue !== undefined) return { type: "string", value: value.stringValue }
   if (value.boolValue !== undefined) return { type: "bool", value: value.boolValue }
-  if (value.intValue !== undefined) return { type: "int", value: Number(value.intValue) }
+  // An OTLP int64 outruns the double: past 2^53 `Number` rounds the digits away, so keep the exact text instead.
+  if (value.intValue !== undefined) {
+    const text = String(value.intValue)
+    const parsed = Number(text)
+    return Number.isSafeInteger(parsed) ? { type: "int", value: parsed } : { type: "string", value: text }
+  }
   if (value.doubleValue !== undefined) return { type: "float", value: value.doubleValue }
   // Structured OTLP values (e.g. gen_ai.memory.records) are flattened to a JSON string so they survive in attr_string.
   if (value.arrayValue !== undefined || value.kvlistValue !== undefined) {
@@ -170,6 +175,7 @@ function transformSpan({
   const resolved = resolveAttributes({
     spanAttrs,
     statusCode,
+    events: spanEvents,
     spanName: span.name ?? "",
     scopeName,
     hasParent: hasParentSpan(span.parentSpanId),
@@ -180,6 +186,7 @@ function transformSpan({
     spanAttrs,
     events: spanEvents,
     startTimeUnixNano: span.startTimeUnixNano,
+    endTimeUnixNano: span.endTimeUnixNano,
   })
   const toolExecution = resolveToolExecution(spanAttrs, resolved.operation)
 

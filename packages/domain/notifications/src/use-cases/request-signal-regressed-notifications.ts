@@ -84,6 +84,7 @@ export const requestSignalRegressedNotificationsUseCase = (input: RequestSignalR
       signalId: input.signalId,
       regressedAt: input.regressedAt,
       triggerScoreId: input.triggerScoreId,
+      ...(signal.priority === null ? {} : { severity: signal.priority }),
     }
     const idempotencyKey = buildIdempotencyKey({ kind: "signal.regressed", payload })
     const requests = recipients.map(

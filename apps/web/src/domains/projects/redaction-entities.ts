@@ -1,4 +1,4 @@
-import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
+import { isRedactionEntity, REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
 
 interface RedactionEntityMeta {
   readonly label: string
@@ -14,12 +14,15 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
   },
   phone: {
     label: "Phone numbers",
-    description: "International +NNNNNNNNN numbers and separated North American forms such as (555) 123-4567.",
-    caution: "Numeric ids such as 402-118-2260 may be falsely redacted as phone numbers.",
+    description:
+      "International numbers with or without separators, such as +44 20 7183 8750, and separated North American forms such as (555) 123-4567.",
+    caution: "Three numbers in a row, such as the latencies 250 300 1000, may be falsely redacted as phone numbers.",
   },
   credit_card: {
     label: "Credit card numbers",
     description: "13 to 19 digit numbers that pass a checksum and start with a known issuer prefix.",
+    caution:
+      "About one in ten 16-digit numeric ids beginning with 4, and one in twenty beginning with 5, pass the checksum and may be falsely redacted.",
   },
   iban: {
     label: "IBANs",
@@ -27,7 +30,7 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
   },
   us_ssn: {
     label: "US Social Security numbers",
-    description: "Separated NNN-NN-NNNN numbers in a valid range. Bare nine-digit runs are never matched.",
+    description: "Separated NNN-NN-NNNN numbers in a valid range, and ITINs. Bare nine-digit runs are never matched.",
   },
   ip_address: {
     label: "IP addresses",
@@ -36,12 +39,8 @@ export const REDACTION_ENTITY_META: Record<RedactionEntity, RedactionEntityMeta>
   },
   secret: {
     label: "API keys and secrets",
-    description: "Recognizable key formats from common providers, plus private key blocks.",
-  },
-  crypto_wallet: {
-    label: "Crypto wallet addresses",
-    description: "Bitcoin and Ethereum address formats.",
-    caution: "Long alphanumeric ids may be falsely redacted as wallet addresses.",
+    description:
+      "Recognizable key formats from common providers, private key blocks, connection-string passwords, and values assigned to a credential-shaped key such as DATABASE_PASSWORD.",
   },
 }
 
@@ -50,5 +49,10 @@ export const REDACTION_ENTITY_ORDER: readonly RedactionEntity[] = REDACTION_ENTI
 
 export const encodeEntities = (entities: Iterable<RedactionEntity>): string => [...new Set(entities)].sort().join(",")
 
+/**
+ * Filters to entities the enum still has. A project that enabled one since retired has it in stored
+ * settings, and the form round-trips what it read back into a write that validates strictly, so passing it
+ * through would leave that project unable to save its policy at all.
+ */
 export const decodeEntities = (encoded: string): RedactionEntity[] =>
-  encoded === "" ? [] : (encoded.split(",") as RedactionEntity[])
+  encoded === "" ? [] : encoded.split(",").filter((entity): entity is RedactionEntity => isRedactionEntity(entity))

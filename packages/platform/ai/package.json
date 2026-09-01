@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

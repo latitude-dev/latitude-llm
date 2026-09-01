@@ -100,7 +100,11 @@ export class LatitudeSpanProcessor implements SpanProcessor {
     })
 
     const redactThenExport = new RedactThenExportSpanProcessor(redact, batchOrSimple)
-    this.tail = new ExportFilterSpanProcessor(shouldExport, redactThenExport)
+    this.tail = new ExportFilterSpanProcessor(shouldExport, redactThenExport, {
+      ...(options?.blockedInstrumentationScopes !== undefined
+        ? { blockedInstrumentationScopes: options.blockedInstrumentationScopes }
+        : {}),
+    })
   }
 
   onStart(span: Span, parentContext: Context): void {

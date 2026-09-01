@@ -2,6 +2,12 @@
 
 Latitude ingests Claude Code sessions via a `Stop` hook that ships the full session transcript as OTLP traces. This page covers the user-facing integration. For the architectural rationale (hooks vs. native OTEL), see [`prd/claude-code-telemetry.md`](../prd/claude-code-telemetry.md).
 
+The hook is registered on **two** events. `Stop` fires after each assistant turn and stays `async`, keeping interactive turns unblocked. `SessionEnd` is registered **synchronously**, because Claude Code registers an async Stop hook but exits before spawning it in headless mode — a probe hook under `async` never executed once for `claude -p`, while the same hook registered synchronously ran and received its full payload. Since headless is how one harness drives another, `SessionEnd` is what makes cross-harness correlation possible at all. It also fires on interactive quit (`reason: prompt_input_exit`) and on Ctrl-C. That is a backstop, not a repair: a backgrounded `Stop` hook survives an interactive quit and completes — measured finishing 11s after the process exited — so the interactive path was never losing its final turn. Headless is the case that was broken, because there the hook is registered and then never spawned at all. Unknown hook events are ignored by Claude Code, so the `SessionEnd` entry is inert on versions that predate it.
+
+Double emission is prevented by the incremental design rather than by coordination: both events run the same binary, and whichever runs second finds the transcript offset already advanced behind the state lock. Both hand their work to a detached worker (`detached: true`, so `setsid` moves it out of the session's process group and it survives the session exiting), which keeps the synchronous `SessionEnd` from delaying session teardown — it returns in ~0.03s rather than the ~0.32s an `npx`-resolved inline run costs. `LATITUDE_CLAUDE_CODE_DETACH=0` forces the inline path. Claude Code gives all `SessionEnd` hooks a shared ~1.5s budget and kills them when it expires — a cold `npx` resolve alone can exceed that — so the entry carries an explicit `timeout` (seconds) to raise it, bounded so a wedged hook cannot hold session exit open.
+
+Correlating this harness's spans with another one's — joining a parent's trace, or handing this trace to a child process — is the shared contract in [`trace-correlation.md`](trace-correlation.md).
+
 ## User setup
 
 Paste into `~/.claude/settings.json`:
@@ -19,7 +25,19 @@ Paste into `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry@latest"
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
+            "timeout": 10
           }
         ]
       }
@@ -28,7 +46,7 @@ Paste into `~/.claude/settings.json`:
 }
 ```
 
-The `@latest` tag makes the hook self-update: `npx` re-resolves the newest published version on each run (a cheap, etag-revalidated metadata check — a full download only when a new version ships), so users pick up fixes without re-installing. A bare `npx <pkg>` would reuse whatever the npx cache first fetched and never update. Keep `async: true` so this resolution runs off the turn's critical path.
+The `@latest` tag makes the hook self-update: `npx` re-resolves the newest published version on each run (a cheap, etag-revalidated metadata check — a full download only when a new version ships), so users pick up fixes without re-installing. A bare `npx <pkg>` would reuse whatever the npx cache first fetched and never update. Keep `Stop` `async` so this resolution stays off the turn's critical path — `npx` costs ~0.32s per invocation against ~0.03s for a resolved local path, and pinning the version does not help (the cost is npx's own resolution, not the `@latest` check). `SessionEnd` pays it once per session instead, off the critical path via the detached worker.
 
 The hook runs on every assistant-turn completion. It reads **new** lines from the session transcript since the last run (state is tracked at `~/.claude/state/latitude/state.json`), converts them into OTLP spans, and POSTs to `${LATITUDE_BASE_URL}/v1/traces` with `Authorization: Bearer ${LATITUDE_API_KEY}` and `X-Latitude-Project: ${LATITUDE_PROJECT}`. The project must already exist under the organization that owns the API key.
 

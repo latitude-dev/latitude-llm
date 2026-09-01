@@ -11,7 +11,7 @@ import type {
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 import type { Notification, NotificationKind } from "../entities/notification.ts"
-import { severityFromPayload, shouldSendEmail } from "../entities/notification-preferences.ts"
+import { shouldSendEmail } from "../entities/notification-preferences.ts"
 import { NotificationRepository } from "../ports/notification-repository.ts"
 
 export interface CreateNotificationInput {
@@ -99,8 +99,7 @@ export const createNotificationUseCase = (input: CreateNotificationInput) =>
     const user = yield* users.findById(input.userId).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
     const emailEligible =
-      user !== null &&
-      shouldSendEmail(user.notificationPreferences ?? null, input.kind, severityFromPayload(input.payload))
+      user !== null && shouldSendEmail(user.notificationPreferences ?? null, input.kind, input.payload)
 
     return { notification: inserted, emailEligible } as const
   }).pipe(Effect.withSpan("notifications.createNotification")) as Effect.Effect<

@@ -1,6 +1,6 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { FilterSet, SignalOrigin } from "@domain/shared"
-import type { SignalCentroid, SignalPriority, SignalSource } from "@domain/signals"
+import type { SignalCentroid, SignalFeedback, SignalPriority, SignalSource } from "@domain/signals"
 import { sql } from "drizzle-orm"
 import { customType, index, jsonb, text, uniqueIndex, uuid, varchar, vector } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
@@ -37,25 +37,39 @@ export const signals = latitudeSchema.table(
         `,
       )
       .notNull(),
+    feedback: jsonb("feedback").$type<SignalFeedback>(), // nullable; the customer's one-shot verdict on this signal. Non-null is a one-way latch: feedback is never edited or cleared.
     clusteredAt: tzTimestamp("clustered_at"), // nullable; last time the centroid/cluster state was refreshed (discovered signals only). Authoritative decay anchor (not updatedAt).
+    promotedAt: tzTimestamp("promoted_at"), // one-way latch stamped once the signal accumulated enough distinct sessions; null = discovered but not promoted. Backfilled to created_at for pre-existing rows.
     resolvedAt: tzTimestamp("resolved_at"), // manual resolve; archived, detector keeps running unless keepMonitoring was declined
     ignoredAt: tzTimestamp("ignored_at"), // manual ignore; archived + auto-muted, detector archived
     regressedAt: tzTimestamp("regressed_at"), // set when a new occurrence reopens a resolved signal; cleared by resolve/ignore
     mutedAt: tzTimestamp("muted_at"), // notification barrier only; incidents still open while muted
     deletedAt: tzTimestamp("deleted_at"), // soft-delete: signals are soft-deleted by the delete flow; excluded read-side
+    mergedIntoSignalId: cuid("merged_into_signal_id", { default: false }), // nullable; set when consolidation absorbs this candidate, pointing at the survivor. Written only by the merge, never cleared; same shape as `taxonomy_clusters.merged_into_cluster_id`.
     ...timestamps(),
   },
   (t) => [
     organizationRLSPolicy("signals"),
-    // project-scoped lifecycle filtering and management actions.
-    index("signals_project_lifecycle_idx").on(
-      t.organizationId,
-      t.projectId,
-      t.ignoredAt,
-      t.resolvedAt,
-      t.mutedAt,
-      t.createdAt,
-    ),
+    // project-scoped lifecycle filtering and management actions. Partial on the
+    // visibility rule every user-facing read carries (`userVisibleSignal` in the
+    // repository), which shrinks the index rather than widening it — the
+    // discovery and write paths that must see candidates go through the primary
+    // key or an exact vector scan anyway.
+    index("signals_project_lifecycle_idx")
+      .on(t.organizationId, t.projectId, t.ignoredAt, t.resolvedAt, t.mutedAt, t.createdAt)
+      .where(sql`${t.deletedAt} IS NULL AND ${t.promotedAt} IS NOT NULL`),
+    // The expiry sweep's whole predicate, and the exact complement of the
+    // lifecycle index above — which is why that one cannot serve this scan. The
+    // sweep runs cross-organization, so it is unprefixed; it stays small because
+    // it only ever indexes the bounded candidate population.
+    index("signals_candidate_idle_idx")
+      .on(sql`coalesce(${t.clusteredAt}, ${t.createdAt})`)
+      .where(sql`${t.deletedAt} IS NULL AND ${t.promotedAt} IS NULL`),
+    // Walks the absorbed-candidate chain when reconciling ClickHouse after a
+    // merge. Partial because only absorbed candidates carry a pointer.
+    index("signals_merged_into_idx")
+      .on(t.organizationId, t.mergedIntoSignalId)
+      .where(sql`${t.mergedIntoSignalId} IS NOT NULL`),
     index("signals_search_document_idx").using("gin", t.searchDocument),
     // Organization-unique (D15), spanning projects. Soft-delete-aware: a deleted signal frees its slug for reuse.
     uniqueIndex("signals_unique_slug_per_org_idx").on(t.organizationId, t.slug).where(sql`${t.deletedAt} IS NULL`),

@@ -1,254 +1,121 @@
-import { SLACK_ROUTABLE_NOTIFICATION_GROUPS } from "@domain/shared"
-import { Alert, Button, Icon, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
-import { eq } from "@tanstack/react-db"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
-import { z } from "zod"
+import { Button, Skeleton, Text } from "@repo/ui"
+import { useQueries, useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import {
-  disconnectSlackIntegration,
-  getActiveSlackIntegration,
-  type SlackIntegrationRecord,
-} from "../../../../../../domains/integrations/integrations.functions.ts"
-import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
-import { toUserMessage } from "../../../../../../lib/errors.ts"
+  getProjectDispatchSettings,
+  projectDispatchSettingsQueryKey,
+} from "../../../../../../domains/agent-dispatch/agent-dispatch.functions.ts"
+import {
+  type AgentDispatchKindKey,
+  isAgentDispatchKind,
+} from "../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import {
+  getGithubProjectConfig,
+  githubProjectConfigQueryKey,
+} from "../../../../../../domains/github/github.functions.ts"
+import { useConnectedIntegrations } from "../../../../../../domains/integrations/connected-integrations.ts"
+import {
+  type ConnectedIntegration,
+  hasProjectSettings,
+} from "../../../../../../domains/integrations/integration-catalog.ts"
 import { useRouteProject } from "../../-route-data.ts"
-import { AgentDispatchSection } from "../-components/agent-dispatch-section.tsx"
-import { GithubIntegrationSection } from "../-components/github-integration-section.tsx"
-import { IntegrationCard } from "../-components/integration-card.tsx"
+import { IntegrationRow } from "../-components/integration-row.tsx"
 import { SettingsPage } from "../-components/settings-page.tsx"
-import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../-components/slack-route-row.tsx"
-
-const searchSchema = z.object({
-  installed: z.literal("ok").optional(),
-  error: z.string().optional(),
-  githubInstalled: z.literal("ok").optional(),
-  githubPending: z.literal("approval").optional(),
-  githubError: z.string().optional(),
-})
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations/")({
-  validateSearch: searchSchema,
   component: IntegrationsSettingsPage,
 })
 
+const FOLLOWS_ORGANIZATION = "Following the organization default"
+const OVERRIDES_ORGANIZATION = "Overrides the organization default"
+
+/**
+ * This project's half of the split: what each connected integration does *here*.
+ * Connecting and disconnecting are organization-wide and live on the organization's
+ * own Integrations tab, which is also why Slack — org-wide only — has no row.
+ */
 function IntegrationsSettingsPage() {
-  const { toast } = useToast()
-  const router = useRouter()
-  const search = Route.useSearch()
   const { projectSlug } = Route.useParams()
   const routeProject = useRouteProject()
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
-    [projectSlug],
-  )
-  const currentProject = project ?? routeProject
+  const { connected, isLoading } = useConnectedIntegrations()
 
-  useMountEffect(() => {
-    if (search.installed === "ok") {
-      toast({ description: "Slack connected" })
-    } else if (search.error === "workspace_taken") {
-      toast({
-        variant: "destructive",
-        description: "This Slack workspace is already connected to another Latitude organization.",
-      })
-    } else if (search.error === "oauth_failed") {
-      toast({
-        variant: "destructive",
-        description: "Couldn't complete the Slack install. Please try again.",
-      })
-    }
-    if (search.githubInstalled === "ok") {
-      toast({ description: "GitHub connected" })
-    } else if (search.githubPending === "approval") {
-      toast({
-        variant: "warning",
-        description:
-          "GitHub installation needs approval from an organization admin. Once approved, connect again to finish.",
-      })
-    } else if (search.githubError === "installation_taken") {
-      toast({
-        variant: "destructive",
-        description: "This GitHub installation is already connected to another Latitude organization.",
-      })
-    } else if (search.githubError === "verification_failed") {
-      toast({
-        variant: "destructive",
-        description: "Couldn't verify the GitHub installation. Please start the install from Latitude and try again.",
-      })
-    } else if (search.githubError === "oauth_failed") {
-      toast({ variant: "destructive", description: "Couldn't complete the GitHub install. Please try again." })
-    }
-    if (search.installed || search.error || search.githubInstalled || search.githubPending || search.githubError) {
-      void router.navigate({ to: Route.fullPath, search: {}, replace: true })
-    }
+  const configurable = connected.filter((integration) => hasProjectSettings(integration.entry.key))
+  const dispatchKinds = configurable
+    .map((integration) => integration.entry.key)
+    .filter((key): key is AgentDispatchKindKey => isAgentDispatchKind(key))
+
+  const dispatchSettings = useQueries({
+    queries: dispatchKinds.map((kind) => ({
+      queryKey: projectDispatchSettingsQueryKey(routeProject.id, kind),
+      queryFn: () => getProjectDispatchSettings({ data: { projectId: routeProject.id, kind } }),
+    })),
   })
+  const { data: githubConfig } = useQuery({
+    queryKey: githubProjectConfigQueryKey(routeProject.id),
+    queryFn: () => getGithubProjectConfig({ data: { projectId: routeProject.id } }),
+    enabled: configurable.some((integration) => integration.entry.key === "github"),
+  })
+
+  const scopeDetail = (key: ConnectedIntegration["entry"]["key"]): string | null => {
+    if (key === "github") {
+      if (!githubConfig) return null
+      // A config row of its own is the repo binding, which is an override even when monitoring is inherited.
+      return githubConfig.hasOverride ? OVERRIDES_ORGANIZATION : FOLLOWS_ORGANIZATION
+    }
+    const index = dispatchKinds.indexOf(key as AgentDispatchKindKey)
+    const settings = index === -1 ? undefined : dispatchSettings[index]?.data
+    if (!settings) return null
+    return settings.override ? OVERRIDES_ORGANIZATION : FOLLOWS_ORGANIZATION
+  }
+
+  const rows: ConnectedIntegration[] = configurable.map((integration) => ({
+    ...integration,
+    detail: scopeDetail(integration.entry.key) ?? integration.detail,
+  }))
 
   return (
     <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
-      <div className="flex flex-col gap-3">
-        <SlackIntegrationSection />
-        <GithubIntegrationSection projectSlug={projectSlug} />
-        {currentProject ? (
-          <AgentDispatchSection projectId={currentProject.id} projectSlug={currentProject.slug} />
-        ) : null}
+      <div className="flex w-full flex-col gap-8">
+        {isLoading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : rows.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
+              {rows.map((integration) => (
+                <IntegrationRow
+                  key={integration.entry.key}
+                  integration={integration}
+                  projectSlug={projectSlug}
+                  scope="project"
+                />
+              ))}
+            </div>
+            <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <Text.H6 color="foregroundMuted">
+                Connections, and the defaults these settings inherit, are organization-wide.
+              </Text.H6>
+              <Button asChild variant="ghost">
+                <Link to="/projects/$projectSlug/settings/organization/integrations" params={{ projectSlug }}>
+                  Manage for the organization →
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-border p-6">
+            <Text.H5M>No integrations to configure yet</Text.H5M>
+            <Text.H6 color="foregroundMuted">
+              Integrations are connected once for the whole organization. Connect one, then come back to tune it for
+              this project.
+            </Text.H6>
+            <Button asChild variant="outline">
+              <Link to="/projects/$projectSlug/settings/organization/integrations" params={{ projectSlug }}>
+                Manage for the organization
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </SettingsPage>
-  )
-}
-
-function SlackIntegrationSection() {
-  const { data, isLoading } = useQuery({
-    queryKey: SLACK_INTEGRATION_QUERY_KEY,
-    queryFn: () => getActiveSlackIntegration(),
-  })
-  const [disconnectOpen, setDisconnectOpen] = useState(false)
-
-  if (isLoading) return null
-
-  return (
-    <>
-      {data ? (
-        <ConnectedSlackCard integration={data} onDisconnect={() => setDisconnectOpen(true)} />
-      ) : (
-        <DisconnectedSlackCard />
-      )}
-      {data ? <DisconnectSlackModal open={disconnectOpen} onClose={() => setDisconnectOpen(false)} /> : null}
-    </>
-  )
-}
-
-function DisconnectedSlackCard() {
-  return (
-    <IntegrationCard
-      icon={SlackIcon}
-      title="Slack"
-      subtitle="Send Latitude notifications to your Slack workspace."
-      actions={
-        // `/integrations/slack/install` is a server-handler-only route
-        // that 302s the browser to Slack — needs a full-page GET, not
-        // client-side routing. Plain `<a>` (inside a `Button asChild`)
-        // gives cmd/middle-click + copy-link affordances while keeping
-        // the full-page nav.
-        <Button asChild>
-          <a href="/integrations/slack/install">
-            <Icon icon={Plus} size="sm" />
-            Connect
-          </a>
-        </Button>
-      }
-    />
-  )
-}
-
-function ConnectedSlackCard({
-  integration,
-  onDisconnect,
-}: {
-  integration: SlackIntegrationRecord
-  onDisconnect: () => void
-}) {
-  return (
-    <div className="rounded-lg border border-border">
-      {/* Reconnect banner. Should never appear while on-use refresh is
-          healthy; when it does, the rotation chain is broken (refresh
-          token revoked) and the workspace must be reconnected. */}
-      {integration.needsReconnect && (
-        <div className="border-b border-border p-4">
-          <Alert
-            variant="destructive"
-            showIcon
-            title="Slack connection expired"
-            description="We couldn't refresh the Slack token. Reconnect to restore notifications."
-            cta={
-              <Button asChild variant="destructive">
-                <a href="/integrations/slack/install">Reconnect</a>
-              </Button>
-            }
-          />
-        </div>
-      )}
-
-      {/* Identity row */}
-      <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
-        <div className="flex min-w-0 flex-row items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
-            <Icon icon={SlackIcon} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Text.H5 weight="semibold">{integration.teamName}</Text.H5>
-            <Text.H6 color="foregroundMuted">Connected {relativeTime(new Date(integration.installedAt))}</Text.H6>
-          </div>
-        </div>
-        <div className="shrink-0">
-          <Button variant="destructive" onClick={onDisconnect}>
-            Disconnect
-          </Button>
-        </div>
-      </div>
-
-      {/* Notification routing */}
-      <div className="flex flex-col gap-3 border-t border-border p-4">
-        <Text.H5 weight="semibold">Notifications</Text.H5>
-        <div className="flex w-full flex-col gap-1">
-          {SLACK_ROUTABLE_NOTIFICATION_GROUPS.map((group) => (
-            <SlackRouteRow key={group} group={group} integration={integration} />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DisconnectSlackModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { toast } = useToast()
-  const queryClient = useQueryClient()
-  const [disconnecting, setDisconnecting] = useState(false)
-
-  const mutation = useMutation({
-    mutationFn: () => disconnectSlackIntegration(),
-  })
-
-  const handleConfirm = async () => {
-    setDisconnecting(true)
-    try {
-      await mutation.mutateAsync()
-      await queryClient.invalidateQueries({ queryKey: SLACK_INTEGRATION_QUERY_KEY })
-      toast({ description: "Slack disconnected" })
-      onClose()
-    } catch (error) {
-      setDisconnecting(false)
-      toast({ variant: "destructive", description: toUserMessage(error) })
-    }
-  }
-
-  return (
-    <Modal
-      open={open}
-      onOpenChange={(value) => {
-        if (!value && !disconnecting) onClose()
-      }}
-      title="Disconnect Slack"
-      description="Disconnecting will stop all Latitude notifications to this Slack workspace and revoke the bot token. Channel routing will be reset if you reconnect."
-      dismissible
-      footer={
-        <div className="flex flex-row items-center gap-2">
-          <Button variant="outline" onClick={onClose} disabled={disconnecting}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => void handleConfirm()}
-            disabled={disconnecting}
-            isLoading={disconnecting}
-          >
-            <Trash2 className="h-4 w-4" />
-            {disconnecting ? "Disconnecting…" : "Disconnect Slack"}
-          </Button>
-        </div>
-      }
-    />
   )
 }

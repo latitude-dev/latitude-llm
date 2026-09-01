@@ -167,7 +167,7 @@
     "@arizeai/openinference-instrumentation-langchain": "4.0.12",
     "@opentelemetry/api": "catalog:",
     "@opentelemetry/context-async-hooks": "2.7.1",
-    "@opentelemetry/core": "2.9.0",
+    "@opentelemetry/core": "2.10.0",
     "@opentelemetry/exporter-trace-otlp-http": "0.213.0",
     "@opentelemetry/instrumentation": "0.213.0",
     "@opentelemetry/resources": "2.7.1",
@@ -182,7 +182,7 @@
     "@traceloop/instrumentation-vertexai": "0.26.0"
   },
   "devDependencies": {
-    "@ai-sdk/openai": "3.0.73",
+    "@ai-sdk/openai": "4.0.11",
     "@ai-sdk/openai7": "npm:@ai-sdk/openai@4.0.0-beta.74",
     "@ai-sdk/otel": "1.0.0-beta.127",
     "@anthropic-ai/sdk": "0.104.1",
@@ -200,7 +200,7 @@
     "ai7": "npm:ai@7.0.0-beta.181",
     "cohere-ai": "7.21.0",
     "llamaindex": "0.12.1",
-    "openai": "6.44.0",
+    "openai": "7.4.0",
     "together-ai": "0.40.0",
     "tsdown": "catalog:",
     "typescript": "catalog:",

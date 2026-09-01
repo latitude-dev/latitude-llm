@@ -1,4 +1,6 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import { type ImportSourceAdapterRegistry, ImportSourceError } from "@domain/imports"
+import { createFakeImportAdapterRegistry } from "@domain/imports/testing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId } from "@domain/shared"
 import { OpenAPIHono } from "@hono/zod-openapi"
@@ -31,6 +33,25 @@ import { createFakeRedis } from "./create-fake-redis.ts"
 
 const TEST_ENCRYPTION_KEY_HEX = "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
 export const TEST_ENCRYPTION_KEY = hexDecode(TEST_ENCRYPTION_KEY_HEX)
+
+/** Credentials containing this marker fail the fake connection test, so tests can drive the fail-fast path. */
+export const REJECTED_CREDENTIAL_MARKER = "wrong"
+
+const createTestImportAdapters = (): ImportSourceAdapterRegistry => {
+  const { registry } = createFakeImportAdapterRegistry()
+  const gateCredentials = <S extends keyof ImportSourceAdapterRegistry>(source: S): ImportSourceAdapterRegistry[S] => ({
+    ...registry[source],
+    testConnection: ({ credentials }: { credentials: unknown }) =>
+      JSON.stringify(credentials).includes(REJECTED_CREDENTIAL_MARKER)
+        ? Effect.fail(new ImportSourceError({ category: "auth", message: "Authentication failed", retryable: false }))
+        : Effect.void,
+  })
+  return {
+    langfuse: gateCredentials("langfuse"),
+    langsmith: gateCredentials("langsmith"),
+    braintrust: gateCredentials("braintrust"),
+  }
+}
 
 export interface ApiTestContext extends TestContext {
   app: OpenAPIHono<AppEnv>
@@ -122,6 +143,7 @@ export const setupTestApi = () => {
       workflowStarter: fakeWorkflowStarter,
       workflowQuerier: fakeWorkflowQuerier,
       storageDisk,
+      importSourceAdapters: createTestImportAdapters(),
       logTouchBuffer: false,
     })
   })

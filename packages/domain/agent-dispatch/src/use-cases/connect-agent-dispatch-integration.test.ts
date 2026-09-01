@@ -49,6 +49,7 @@ const makeLayer = (opts: { existingIntegration?: boolean; existingDefault?: Agen
     listByProjectIncludingDefaults: () => Effect.succeed([]),
     findDefaultByIntegration: () => Effect.succeed(opts.existingDefault ?? null),
     findOverrideByProjectAndIntegration: () => Effect.succeed(null),
+    countProjectOverrides: () => Effect.succeed(0),
     findById: () => Effect.die(new Error("not used")),
     upsert: (config) => {
       upserted.push(config)

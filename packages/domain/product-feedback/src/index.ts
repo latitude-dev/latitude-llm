@@ -13,6 +13,11 @@ export {
   recordEnrichmentReviewUseCase,
 } from "./use-cases/record-enrichment-review.ts"
 export {
+  type RecordSignalFlaggerReviewInput,
+  type RecordSignalFlaggerReviewResult,
+  recordSignalFlaggerReviewUseCase,
+} from "./use-cases/record-signal-flagger-review.ts"
+export {
   type RecordSystemAnnotatorReviewInput,
   recordSystemAnnotatorReviewUseCase,
 } from "./use-cases/record-system-annotator-review.ts"

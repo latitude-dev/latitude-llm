@@ -5397,6 +5397,121 @@ client.signals.unmonitor(
 </dl>
 </details>
 
+<details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">submit_feedback</a>(...) -> SubmitSignalFeedbackResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.signals.submit_feedback(
+    project_slug="projectSlug",
+    signal_slug="signalSlug",
+    passed=True,
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**signal_slug:** `str` — Signal slug.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**passed:** `bool` — `true` when the signal is a real problem worth flagging; `false` when it is a false positive.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**feedback:** `typing.Optional[str]` — Reason for the verdict. Required when `passed` is `false`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**value:** `typing.Optional[float]` — Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**ignore:** `typing.Optional[bool]` — Also archive the signal so new occurrences stop being reported.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 <details><summary><code>client.signals.<a href="src/latitude_sdk/signals/client.py">export</a>(...) -> ExportSignalsResponse</code></summary>
 <dl>
 <dd>
@@ -11269,6 +11384,475 @@ client.memory.list_record_users(
 <dd>
 
 **record_id:** `str` — Record identifier (`gen_ai.memory.record.id`). Pass an empty string to address the unnamed record.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+## Imports
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">list</a>(...) -> ListImportsResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.list(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">create</a>(...) -> Import</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient, ImportCredentials_Langfuse
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.create(
+    project_slug="projectSlug",
+    credentials=ImportCredentials_Langfuse(
+        region="eu",
+        public_key="publicKey",
+        secret_key="secretKey",
+    ),
+    source_project_id="sourceProjectId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**credentials:** `ImportCredentials` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**source_project_id:** `str` — Id of the project on the platform to read from.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**source_project_name:** `typing.Optional[str]` — Name of the platform project, shown in Latitude. Defaults to `sourceProjectId`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**range_from:** `typing.Optional[datetime.datetime]` — ISO-8601 start of the range to import. Defaults to 90 days before `rangeTo`, bounded by the plan's retention.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**range_to:** `typing.Optional[datetime.datetime]` — ISO-8601 end of the range to import. Defaults to now.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**max_traces:** `typing.Optional[int]` — Most traces to import, newest first. Each imported trace bills one credit. Defaults to the maximum, 100,000.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**session_metadata_key:** `typing.Optional[str]` — LangSmith only: run metadata key that groups traces into sessions. Defaults to `thread_id`.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">get</a>(...) -> ImportDetail</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns a single import, including its recent run history.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.get(
+    project_slug="projectSlug",
+    import_id="importId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**import_id:** `str` — Import id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">cancel</a>(...) -> Import</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.cancel(
+    project_slug="projectSlug",
+    import_id="importId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**import_id:** `str` — Import id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.imports.<a href="src/latitude_sdk/imports/client.py">retry</a>(...) -> Import</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+from latitude_sdk.imports import RetryImportBodyCredentials_Langfuse
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.imports.retry(
+    project_slug="projectSlug",
+    import_id="importId",
+    credentials=RetryImportBodyCredentials_Langfuse(
+        region="eu",
+        public_key="publicKey",
+        secret_key="secretKey",
+    ),
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**import_id:** `str` — Import id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**credentials:** `RetryImportBodyCredentials` — Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import.
     
 </dd>
 </dl>

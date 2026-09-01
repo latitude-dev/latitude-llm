@@ -19,6 +19,7 @@ const SEVERITY_STATUS_VARIANT: Record<AlertSeverity, StatusProps["variant"]> = {
   low: "info",
   medium: "warning",
   high: "destructive",
+  urgent: "destructive",
 }
 
 /**
@@ -42,8 +43,9 @@ export function SeverityStatus({ severity, label }: { readonly severity: AlertSe
  */
 export const minSeverityHint = (minimum: AlertSeverity): string => {
   if (minimum === "low") return "All severities"
-  if (minimum === "medium") return "Medium and high"
-  return "High only"
+  if (minimum === "medium") return "Medium and above"
+  if (minimum === "high") return "High and urgent"
+  return "Urgent only"
 }
 
 /**

@@ -28,6 +28,7 @@ import {
   listCursorRepositories,
   listSendToDestinations,
   listSignalAgentDispatches,
+  projectDispatchSettingsQueryKey,
   type SendToDestinationRecord,
   sendSignalToIntegration,
   sendToDestinationsQueryKey,
@@ -38,8 +39,8 @@ import {
   AGENT_DISPATCH_KIND_ICONS,
   AGENT_DISPATCH_KIND_LABELS,
 } from "../../../../../../../domains/agent-dispatch/agent-dispatch-kinds.ts"
+import { integrationSlug } from "../../../../../../../domains/integrations/integration-catalog.ts"
 import { toUserMessage } from "../../../../../../../lib/errors.ts"
-import { projectDispatchSettingsQueryKey } from "../../../settings/-components/agent-dispatch-section.tsx"
 import { SignalDispatchHistory } from "./signal-dispatch-history.tsx"
 
 const MCP_DOCS_URL = "https://docs.latitude.so/getting-started/mcp"
@@ -50,8 +51,8 @@ const failureDescription = (label: string, reason: string): string =>
 function dispatchHistoryLink(projectSlug: string, kind: SendToDestinationRecord["kind"]) {
   return (
     <Link
-      to="/projects/$projectSlug/settings/integrations/$integrationKind"
-      params={{ projectSlug, integrationKind: kind }}
+      to="/projects/$projectSlug/settings/integrations/$integrationSlug"
+      params={{ projectSlug, integrationSlug: integrationSlug(kind) }}
       className="font-medium underline"
     >
       View dispatch history

@@ -167,6 +167,11 @@ export {
 } from "./use-cases/alignment/load-alignment-state-or-inactive.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
+  attachEvaluationParentSignalsUseCase,
+  type ScoreListPageWithEvaluationSignals,
+  type ScoreWithEvaluationSignal,
+} from "./use-cases/attach-evaluation-parent-signals.ts"
+export {
   type CreateEvaluationError,
   type CreateEvaluationInput,
   type CreateEvaluationResult,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { OtlpEvent, OtlpKeyValue } from "../types.ts"
 import { resolveAttributes } from "./index.ts"
-import { resolvePerformance } from "./performance.ts"
+import { resolvePerformance, resolveReportedPerformance } from "./performance.ts"
 import { resolveStatusCode } from "./status.ts"
 import { resolveToolExecution } from "./tool-execution.ts"
 import { resolveUsage } from "./usage.ts"
@@ -908,6 +908,41 @@ describe("resolveAttributes", () => {
       const result = resolveAttributes({ spanAttrs: attrs, statusCode: "ok" })
       expect(result.errorType).toBe("")
     })
+
+    it("resolves exception.type when the span was annotated with it directly", () => {
+      const attrs: OtlpKeyValue[] = [strAttr("exception.type", "RateLimitError")]
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "error" })
+      expect(result.errorType).toBe("RateLimitError")
+    })
+
+    // `recordException` writes an event, not a span attribute, so a span that raised rather than
+    // annotated named its exception nowhere the resolver looked and every such failure grouped
+    // together under an empty type.
+    it("resolves exception.type from the event recordException writes", () => {
+      const events: OtlpEvent[] = [
+        { name: "exception", timeUnixNano: "1710590400500000000", attributes: [strAttr("exception.type", "APIError")] },
+      ]
+      const result = resolveAttributes({ spanAttrs: [], statusCode: "error", events })
+      expect(result.errorType).toBe("APIError")
+    })
+
+    it("prefers the span attribute over an event, which may name a caught exception", () => {
+      const events: OtlpEvent[] = [
+        { name: "exception", timeUnixNano: "1710590400500000000", attributes: [strAttr("exception.type", "APIError")] },
+      ]
+      const result = resolveAttributes({
+        spanAttrs: [strAttr("error.type", "TimeoutError")],
+        statusCode: "error",
+        events,
+      })
+      expect(result.errorType).toBe("TimeoutError")
+    })
+
+    it("stays empty for an errored span whose events name no exception", () => {
+      const events: OtlpEvent[] = [{ name: "gen_ai.choice", timeUnixNano: "1710590400500000000" }]
+      const result = resolveAttributes({ spanAttrs: [], statusCode: "error", events })
+      expect(result.errorType).toBe("")
+    })
   })
 })
 
@@ -918,6 +953,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 500_000_000)],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(500_000_000)
     })
@@ -927,6 +963,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [intAttr("llm.latency.time_to_first_token", 300_000_000)],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(300_000_000)
     })
@@ -936,6 +973,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 0)],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(0)
     })
@@ -948,6 +986,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events,
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(500_000_000)
     })
@@ -958,6 +997,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events,
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(200_000_000)
     })
@@ -968,6 +1008,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events,
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(1_200_000_000)
     })
@@ -984,6 +1025,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events,
         startTimeUnixNano: "",
+        endTimeUnixNano: "",
       })
       expect(result.timeToFirstTokenNs).toBe(1_984_144_125)
     })
@@ -998,6 +1040,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events,
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(300_000_000)
     })
@@ -1012,13 +1055,14 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events,
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(0)
     })
 
     it("returns 0 when startTimeUnixNano is empty", () => {
       const events: OtlpEvent[] = [{ name: "gen_ai.content.completion", timeUnixNano: "1710590400300000000" }]
-      const result = resolvePerformance({ spanAttrs: [], events, startTimeUnixNano: "" })
+      const result = resolvePerformance({ spanAttrs: [], events, startTimeUnixNano: "", endTimeUnixNano: "" })
       expect(result.timeToFirstTokenNs).toBe(0)
     })
   })
@@ -1030,6 +1074,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 123_000_000)],
         events,
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(123_000_000)
     })
@@ -1046,6 +1091,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events,
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(321_000_000)
     })
@@ -1057,6 +1103,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [boolAttr("gen_ai.request.stream", true)],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.isStreaming).toBe(true)
     })
@@ -1066,6 +1113,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [boolAttr("gen_ai.request.stream", false)],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.isStreaming).toBe(false)
     })
@@ -1075,6 +1123,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [strAttr("gen_ai.request.stream", "true")],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.isStreaming).toBe(true)
     })
@@ -1084,6 +1133,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [strAttr("ai.settings.mode", "stream")],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.isStreaming).toBe(true)
     })
@@ -1093,6 +1143,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [strAttr("ai.settings.mode", "generate")],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.isStreaming).toBe(false)
     })
@@ -1105,6 +1156,7 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events,
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(500_000_000)
       expect(result.isStreaming).toBe(true)
@@ -1115,9 +1167,36 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(0)
       expect(result.isStreaming).toBe(false)
+    })
+
+    // Inference fills in for a flag nobody set; it does not overrule one. OpenLIT emits a
+    // `gen_ai.choice` event for a non-streaming call too, so the TTFT that event yields used to
+    // relabel every such span as streaming against what it plainly declared.
+    it("keeps an explicit false even when an event yields a TTFT", () => {
+      const events: OtlpEvent[] = [{ name: "gen_ai.choice", timeUnixNano: "1710590400500000000" }]
+      const result = resolvePerformance({
+        spanAttrs: [boolAttr("gen_ai.request.stream", false)],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(500_000_000)
+      expect(result.isStreaming).toBe(false)
+    })
+
+    it("keeps an explicit true when nothing measured a TTFT", () => {
+      const result = resolvePerformance({
+        spanAttrs: [boolAttr("gen_ai.request.stream", true)],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(0)
+      expect(result.isStreaming).toBe(true)
     })
   })
 
@@ -1127,9 +1206,106 @@ describe("resolvePerformance", () => {
         spanAttrs: [],
         events: [],
         startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590405000000000",
       })
       expect(result.timeToFirstTokenNs).toBe(0)
       expect(result.isStreaming).toBe(false)
+    })
+  })
+
+  // A TTFT longer than the span cannot be real, and it is the shape a seconds-for-milliseconds
+  // mix-up takes: the number lands a thousand times too high rather than merely looking odd.
+  describe("implausible TTFT", () => {
+    it("discards a TTFT longer than the span that measured it", () => {
+      const result = resolvePerformance({
+        spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 9_000_000_000)],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590402000000000",
+      })
+
+      expect(result.timeToFirstTokenNs).toBe(0)
+      expect(result.isStreaming).toBe(false)
+    })
+
+    it("keeps a TTFT inside the span", () => {
+      const result = resolvePerformance({
+        spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 500_000_000)],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+        endTimeUnixNano: "1710590402000000000",
+      })
+
+      expect(result.timeToFirstTokenNs).toBe(500_000_000)
+      expect(result.isStreaming).toBe(true)
+    })
+
+    it("keeps a TTFT when the span reports no usable duration", () => {
+      const result = resolvePerformance({
+        spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 9_000_000_000)],
+        events: [],
+        startTimeUnixNano: "",
+        endTimeUnixNano: "",
+      })
+
+      expect(result.timeToFirstTokenNs).toBe(9_000_000_000)
+    })
+  })
+})
+
+// A source's API reports TTFT as a field, so there is nothing to discover — but the plausibility
+// check and the streaming rule are the live span's, so the same call reads the same either way.
+describe("resolveReportedPerformance", () => {
+  const startTime = new Date("2026-01-01T00:00:00.000Z")
+  const endTime = new Date("2026-01-01T00:00:02.000Z")
+
+  it("takes a duration the source already measured", () => {
+    const result = resolveReportedPerformance({ timeToFirstTokenNs: 400_000_000, startTime, endTime })
+
+    expect(result.timeToFirstTokenNs).toBe(400_000_000)
+    expect(result.isStreaming).toBe(true)
+  })
+
+  it("derives it from the moment the first token arrived", () => {
+    const result = resolveReportedPerformance({
+      firstTokenAt: new Date("2026-01-01T00:00:00.400Z"),
+      startTime,
+      endTime,
+    })
+
+    expect(result.timeToFirstTokenNs).toBe(400_000_000)
+  })
+
+  it("prefers a measured duration over the timestamp", () => {
+    const result = resolveReportedPerformance({
+      timeToFirstTokenNs: 400_000_000,
+      firstTokenAt: new Date("2026-01-01T00:00:01.500Z"),
+      startTime,
+      endTime,
+    })
+
+    expect(result.timeToFirstTokenNs).toBe(400_000_000)
+  })
+
+  it("discards a duration longer than the span, the shape of a unit mix-up", () => {
+    const result = resolveReportedPerformance({ timeToFirstTokenNs: 9_000_000_000, startTime, endTime })
+
+    expect(result.timeToFirstTokenNs).toBe(0)
+    expect(result.isStreaming).toBe(false)
+  })
+
+  it("keeps a streaming flag the source stated, whatever the TTFT", () => {
+    expect(resolveReportedPerformance({ isStreaming: true, startTime, endTime }).isStreaming).toBe(true)
+    expect(
+      resolveReportedPerformance({ isStreaming: false, timeToFirstTokenNs: 400_000_000, startTime, endTime })
+        .isStreaming,
+    ).toBe(false)
+  })
+
+  it("reports nothing when the source measured nothing", () => {
+    expect(resolveReportedPerformance({ startTime, endTime })).toEqual({
+      timeToFirstTokenNs: 0,
+      isStreaming: false,
     })
   })
 })

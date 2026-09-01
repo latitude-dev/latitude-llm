@@ -28,7 +28,7 @@ Latitude sends JSON with the trigger, the dispatch context, and the prompt text 
     "organizationName": "Acme Inc.",
     "projectName": "Checkout API",
     "projectSlug": "checkout-api",
-    "deepLinkUrl": "https://app.latitude.so/projects/checkout-api/signals/sig_123",
+    "deepLinkUrl": "https://console.latitude.so/projects/checkout-api/signals/sig_123",
     "signal": {
       "id": "sig_123",
       "name": "Payment timeout spike"
@@ -63,6 +63,24 @@ function verifyLatitudeSignature(rawBody: string, signatureHeader: string, secre
 ```
 
 Verify the signature against the raw request body before parsing JSON.
+
+## Return external run metadata
+
+A successful handler can return an optional JSON body that identifies the agent run it started:
+
+```json
+{
+  "externalAgentId": "agent-scope",
+  "externalRunId": "run_123",
+  "deepLinkUrl": "https://agents.example.com/runs/run_123"
+}
+```
+
+All fields are optional. IDs must be non-empty strings, and `deepLinkUrl` must be an absolute HTTP or HTTPS URL.
+Latitude records each valid field in dispatch history and uses `deepLinkUrl` as the link to the external run.
+
+An empty body, a non-JSON body, or invalid fields do not reject an otherwise successful dispatch. When the response does
+not include a valid `deepLinkUrl`, Latitude links to the configured webhook URL instead.
 
 ## Retry behavior
 

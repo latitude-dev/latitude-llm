@@ -60,10 +60,13 @@ const findAssignedSignalId = (
 ) =>
   Effect.gen(function* () {
     const signalRepository = yield* SignalRepository
+    // Must see unpromoted signals: matching into a candidate is how it accumulates
+    // the evidence that promotes it.
     const candidates = yield* signalRepository.hybridSearch({
       projectId: ProjectId(input.projectId),
       query: search.feedback,
       normalizedEmbedding: search.normalizedEmbedding,
+      includeUnpromoted: true,
     })
 
     // TODO(signal-discovery-rerank): remove this third-party rerank step once we

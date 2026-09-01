@@ -66,6 +66,9 @@ const seedSignal = (id: string, projectId: ProjectId, slug: string) =>
     description: `${slug} description`,
     source: "custom",
     origin: "user",
+    // User-created signals are born promoted, and only a promoted slug is
+    // visible to reference from a pull request title.
+    promotedAt: new Date(),
   })
 
 const seedRepoConfig = (integrationId: string, projectId: ProjectId, branch = "main") =>

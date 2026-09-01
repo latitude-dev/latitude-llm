@@ -116,6 +116,16 @@ const signalListFields = {
     .describe("Fraction of project sessions affected by this signal in the time window, in `[0, 1]`."),
 } as const
 
+// Kept as a field map, not a schema to extend: `.extend()` on a registered
+// component emits an `allOf`, which Fern cannot generate response examples for.
+export const signalFeedbackFields = {
+  value: z.number().min(0).max(1).describe("Normalized score for the signal's usefulness, in `[0, 1]`."),
+  passed: z.boolean().describe("`true` when the signal is a real problem; `false` when it is a false positive."),
+  feedback: z.string().describe("Reason given for the verdict. Empty when none was provided."),
+} as const
+
+const SignalFeedbackSchema = z.object(signalFeedbackFields).openapi("SignalFeedback")
+
 // Detail-endpoint fields: full-history versions of every list stat plus
 // monitoring info. Same field names as the list so downstream tooling can
 // share types; semantics are "lifetime" rather than "windowed".
@@ -140,6 +150,9 @@ const signalDetailFields = {
     .describe("Active evaluations monitoring the signal. Archived and deleted evaluations are excluded."),
   monitoringState: SignalMonitoringStateSchema.describe(
     "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`.",
+  ),
+  feedback: SignalFeedbackSchema.nullable().describe(
+    "The verdict submitted for this signal, or `null` when none has been submitted yet.",
   ),
 } as const
 
@@ -195,6 +208,7 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   trend: details.trend.map((bucket) => ({ bucket: bucket.bucket, count: bucket.count })),
   evaluations: details.evaluations.map(toEvaluationResponse),
   monitoringState: toMonitoringStateResponse(details.alignmentState),
+  feedback: details.issue.feedback,
 })
 
 const toMonitoringStateResponse = (state: SignalDetails["alignmentState"]) => {

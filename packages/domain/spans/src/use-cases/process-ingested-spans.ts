@@ -38,8 +38,8 @@ export interface ProcessIngestedSpansInput {
   readonly pseudonymSecret?: string
   readonly traceUsage?: {
     readonly context?: {
-      readonly planSlug: "free" | "pro" | "enterprise"
-      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+      readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
       readonly periodStart: Date
       readonly periodEnd: Date
       readonly includedCredits: number
@@ -143,7 +143,7 @@ function annotateRedaction(summary: SpanRedactionSummary): Effect.Effect<void> {
     yield* Effect.annotateCurrentSpan("redaction.leavesScanned", summary.leavesScanned)
     yield* Effect.annotateCurrentSpan("redaction.charsScanned", summary.charsScanned)
     yield* Effect.annotateCurrentSpan("redaction.matches", totalRedactionCount(summary.counts))
-    yield* Effect.annotateCurrentSpan("redaction.droppedAttributeKeys", summary.droppedAttributeKeys)
+    yield* Effect.annotateCurrentSpan("redaction.relocatedNumericAttributes", summary.relocatedNumericAttributes)
 
     for (const [entity, count] of Object.entries(summary.counts)) {
       yield* Effect.annotateCurrentSpan(`redaction.matches.${entity}`, count)

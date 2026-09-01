@@ -8,9 +8,9 @@
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
+import { toToolDefinition } from "../../helpers/resolve-tool-definitions.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import type { ParsedContent } from "./index.ts"
-import { toToolDefinition } from "./utils.ts"
 
 function parseJsonString(attrs: readonly OtlpKeyValue[], key: string): unknown {
   const kv = attrs.find((a) => a.key === key)
@@ -225,12 +225,6 @@ function resolveMessages(attrs: readonly OtlpKeyValue[], prefix: string): Record
   linkToolCalls(messages)
   return messages
 }
-
-/** Keys this parser reads, composed into `isContentAttributeKey`. */
-export const GENAI_DEPRECATED_CONTENT_ATTRIBUTE_KEYS = {
-  exact: ["gen_ai.prompt", "gen_ai.completion", "llm.request.functions"],
-  prefixes: ["gen_ai.prompt.", "gen_ai.completion.", "llm.request.functions."],
-} as const
 
 export function parseGenAIDeprecated(attrs: readonly OtlpKeyValue[]): ParsedContent {
   const promptRaw = resolveMessages(attrs, "gen_ai.prompt")

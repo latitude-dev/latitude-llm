@@ -7,6 +7,7 @@ import {
   isCustomBehaviorView,
   listProjectBehavioursUseCase,
   type ProjectBehaviourNode,
+  type TaxonomyClusterTrendStatus,
   TOPICS_BEHAVIOR_SLUG,
 } from "@domain/taxonomy"
 import { TaxonomyObservationRepositoryLive, TaxonomyViewAssignmentRepositoryLive } from "@platform/db-clickhouse"
@@ -26,19 +27,12 @@ export const TOPICS_BEHAVIOR_NAME = "Topics"
 export const TOPICS_BEHAVIOR_DESCRIPTION =
   "Groups every session by what it was about. This is the behavior Latitude builds from your traffic by default, with nothing to set up."
 
-/** Rows a card's tree teaser fits, across every level it shows. */
-const CATALOG_GROUP_ROWS = 7
-/** Levels of the tree the teaser descends into (root + two below). */
-const CATALOG_GROUP_MAX_DEPTH = 3
-/** Children shown per group, so one busy branch can't eat the whole teaser. */
-const CATALOG_GROUP_CHILDREN = 2
-
 export interface BehaviourCatalogGroupRecord {
   readonly id: string
   readonly name: string
+  readonly description: string
   readonly sessionCount: number
-  /** 0 = a top-level group; deeper rows are its nested groups. */
-  readonly depth: number
+  readonly trend: TaxonomyClusterTrendStatus
 }
 
 export interface BehaviourCatalogEntryRecord {
@@ -63,26 +57,18 @@ const postgresCatalogLayer = Layer.mergeAll(
 )
 
 /**
- * The teaser rows: a pre-order walk of the tree, so a card shows its top groups
- * *and* what they break down into rather than a flat list of headings.
+ * The teaser rows: every top-level group, highest-volume first — a panel is a
+ * preview of what the behavior found, not the tree itself, so nested breakdowns
+ * stay behind the click into the tree, but nothing at the top level is hidden.
  */
-const toGroupRecords = (roots: readonly ProjectBehaviourNode[]): readonly BehaviourCatalogGroupRecord[] => {
-  const rows: BehaviourCatalogGroupRecord[] = []
-  const visit = (nodes: readonly ProjectBehaviourNode[], depth: number, siblingLimit: number) => {
-    for (const node of nodes.slice(0, siblingLimit)) {
-      if (rows.length >= CATALOG_GROUP_ROWS) return
-      rows.push({
-        id: node.cluster.id,
-        name: node.cluster.name,
-        sessionCount: node.subtreeObservationCount,
-        depth,
-      })
-      if (depth + 1 < CATALOG_GROUP_MAX_DEPTH) visit(node.children, depth + 1, CATALOG_GROUP_CHILDREN)
-    }
-  }
-  visit(roots, 0, CATALOG_GROUP_ROWS)
-  return rows
-}
+const toGroupRecords = (roots: readonly ProjectBehaviourNode[]): readonly BehaviourCatalogGroupRecord[] =>
+  roots.map((node) => ({
+    id: node.cluster.id,
+    name: node.cluster.name,
+    description: node.cluster.description,
+    sessionCount: node.subtreeObservationCount,
+    trend: node.trend.status,
+  }))
 
 /**
  * The Behaviors home: one entry per main behavior (the topic behavior plus every

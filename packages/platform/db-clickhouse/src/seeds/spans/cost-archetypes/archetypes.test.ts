@@ -75,6 +75,9 @@ const stateFor = (
       cachingOn: totals.cacheRead + totals.cacheCreate > 0,
       actualRate: actual,
       ceilingRate: null,
+      // Ceiling-blind on purpose: this file asserts fixture shape, and the verdicts that
+      // depend on a ceiling are covered in `lifetime-coverage.test.ts`.
+      cachingCostsMore: false,
       breakEvenRate: breakEven,
       calls: rows.length,
       avgInputTokensPerCall: rows.length > 0 ? (totals.input + totals.cacheRead + totals.cacheCreate) / rows.length : 0,
@@ -91,12 +94,6 @@ const stateFor = (
  */
 const expectedCeiling = (cohort: CostCohort): number =>
   (cohort.cadence.callsPerCluster - 1) / cohort.cadence.callsPerCluster
-
-const cohortByKey = (cohorts: readonly CostCohort[], key: string): CostCohort => {
-  const cohort = cohorts.find((candidate) => candidate.key === key)
-  if (!cohort) throw new Error(`no cohort ${key}`)
-  return cohort
-}
 
 describe("cost archetype fixtures", () => {
   it.each(ARCHETYPES)("$key builds deterministically with unique span ids", ({ cohorts, projectId }) => {
@@ -178,41 +175,31 @@ describe("archetype B — the project where findings fire", () => {
     expect(stateFor(findingsSpans, "claude-opus-4-5").breakEven).toBeCloseTo(0.2174, 4)
     expect(stateFor(findingsSpans, "gpt-5-mini").breakEven).toBe(0)
     // Same provider, different price list: break-even is a per-model property.
-    expect(stateFor(findingsSpans, "gpt-5.6").breakEven).toBeCloseTo(0.2174, 4)
+    expect(stateFor(findingsSpans, "gpt-5.6-luna").breakEven).toBeCloseTo(0.2174, 4)
   })
 
-  it("reaches every state the classifier can decide without an achievable ceiling", () => {
-    expect(stateFor(findingsSpans, "claude-opus-4-5").state).toBe("optimal")
-    expect(stateFor(findingsSpans, "claude-haiku-4-5").state).toBe("investigate")
-    expect(stateFor(findingsSpans, "gpt-5-mini").state).toBe("cacheIt")
+  it("gives every cache state a cohort to land on, and the pricing shape it needs", () => {
+    // Which state each cohort actually reaches is asserted in `lifetime-coverage.test.ts`,
+    // which judges them against measured ceilings and the real cost comparison. What
+    // belongs here is the fixture's own shape: that the pricing and token split each
+    // state needs is present at all.
     expect(stateFor(findingsSpans, "gpt-5-nano").state).toBe("correctlyOff")
     expect(stateFor(findingsSpans, "gemini-2.5-flash-lite").state).toBe("notEnoughData")
+
+    // A write premium beside no premium at all, so a blended project figure is visibly wrong.
+    expect(stateFor(findingsSpans, "claude-haiku-4-5").breakEven).toBeCloseTo(0.2174, 4)
+    expect(stateFor(findingsSpans, "gpt-5.4-mini").breakEven).toBe(0)
   })
 
-  it("shapes the two states that stay dark until the achievable ceiling ships", () => {
-    // Isolated calls, so no write is ever read back before it expires: `stopCaching`
-    // once a ceiling below break-even can be asserted. Today the classifier can only
-    // say the weaker thing that holds for every possible ceiling.
-    const stopCaching = stateFor(findingsSpans, "gpt-5.6")
-    expect(stopCaching.actual).toBeLessThan(stopCaching.breakEven ?? 1)
-    expect(stopCaching.state).toBe("investigate")
-    expect(expectedCeiling(cohortByKey(FINDINGS_FIRE_COHORTS, "b-stop-caching"))).toBe(0)
-
-    // Clears its 0% break-even but sits far below what the cadence supports:
-    // `investigate / underusing` once ceilings arrive, `optimal` until then.
-    const underusing = stateFor(findingsSpans, "gpt-5.4-mini")
-    expect(underusing.state).toBe("optimal")
-    const ceiling = expectedCeiling(cohortByKey(FINDINGS_FIRE_COHORTS, "b-underusing"))
-    expect(underusing.actual ?? 0).toBeLessThan(ceiling - 0.2)
-  })
-
-  it("shows the same rate reading as fine on one model and broken on another", () => {
+  it("puts two cohorts at the same measured rate on opposite sides of their own prices", () => {
+    // 6% on both. What separates them is each model's price list, which is the whole
+    // reason break-even is derived per model rather than chosen as a threshold.
     const noPremium = stateFor(findingsSpans, "gpt-5.4-mini")
     const withPremium = stateFor(findingsSpans, "claude-haiku-4-5")
     expect(noPremium.actual).toBeLessThan(0.2174)
     expect(withPremium.actual).toBeLessThan(0.2174)
-    expect(noPremium.state).toBe("optimal")
-    expect(withPremium.state).toBe("investigate")
+    expect(noPremium.breakEven).toBe(0)
+    expect(withPremium.breakEven).toBeCloseTo(0.2174, 4)
   })
 
   it("records no cache tokens at all for a caching-off cohort", () => {
@@ -323,6 +310,33 @@ describe("archetype D — spend regression", () => {
     expect(premiumShare(before)).toBeLessThan(0.15)
     expect(premiumShare(after)).toBeGreaterThan(0.55)
     expect(new Set(before.map(promptOf))).toEqual(new Set(after.map(promptOf)))
+  })
+
+  it("leaves the router's every volume factor identical, so only the mix moved", () => {
+    const { before, after } = forAgent("router")
+    const shape = (rows: readonly SpanRow[]) => ({
+      calls: rows.length,
+      turns: new Set(rows.map((span) => span.trace_id)).size,
+      sessions: new Set(rows.map((span) => span.session_id || span.trace_id)).size,
+      tokens: rows.reduce((sum, span) => sum + promptOf(span) + span.tokens_output, 0),
+    })
+
+    expect(shape(after)).toEqual(shape(before))
+  })
+
+  it("holds each router model's own price per token exactly flat across the shift", () => {
+    // Guards the equal calls-per-cluster: without it, resizing clusters to move traffic
+    // moves each model's own price per token too and the mix effect stops being isolable.
+    const { before, after } = forAgent("router")
+    const pricePerToken = (rows: readonly SpanRow[], model: string) => {
+      const forModel = rows.filter((span) => span.model === model)
+      const tokens = forModel.reduce((sum, span) => sum + promptOf(span) + span.tokens_output, 0)
+      return forModel.reduce((sum, span) => sum + span.cost_total_microcents, 0) / tokens
+    }
+
+    for (const model of new Set(before.map((span) => span.model))) {
+      expect(pricePerToken(after, model), model).toBe(pricePerToken(before, model))
+    }
   })
 
   it("attributes the grader's rise to prompt growth, with model and turns held flat", () => {

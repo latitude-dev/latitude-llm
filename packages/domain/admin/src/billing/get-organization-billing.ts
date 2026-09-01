@@ -3,6 +3,7 @@ import {
   BillingUsagePeriodRepository,
   calculatePlanSpendMills,
   type EffectivePlanResolution,
+  type OverridablePlanSlug,
   type PlanSlug,
   StripeSubscriptionLookup,
 } from "@domain/billing"
@@ -25,7 +26,7 @@ export interface AdminOrganizationBilling {
   readonly currentSpendMills: number | null
   readonly spendingLimitCents: number | null
   readonly override: {
-    readonly plan: PlanSlug
+    readonly plan: OverridablePlanSlug
     readonly includedCredits: number | null
     readonly retentionDays: number | null
     readonly notes: string | null

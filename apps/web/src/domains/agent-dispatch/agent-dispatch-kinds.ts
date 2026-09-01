@@ -10,6 +10,9 @@ export const AGENT_DISPATCH_KIND_LABELS = {
 
 export type AgentDispatchKindKey = keyof typeof AGENT_DISPATCH_KIND_LABELS
 
+export const isAgentDispatchKind = (kind: string): kind is AgentDispatchKindKey =>
+  Object.hasOwn(AGENT_DISPATCH_KIND_LABELS, kind)
+
 export const AGENT_DISPATCH_KIND_ICONS = {
   cursor: CursorIcon,
   claude_code: ClaudeCodeIcon,

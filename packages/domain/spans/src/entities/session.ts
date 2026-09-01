@@ -19,7 +19,10 @@ import { z } from "zod"
  * `durationNs` is **active execution time** (sum of root-span durations across
  * the session's traces), not wall-clock. Wall-clock is recoverable as
  * `endTime - startTime` when needed. See specs/session-problems/1-parity-traces-sessions.md
- * "On `duration_ns` semantics" for the rationale.
+ * "On `duration_ns` semantics" for the rationale. When the session has no
+ * spans with an empty parent (instrumentation nested under spans that are
+ * never exported), active execution is unknowable and `durationNs` falls
+ * back to the wall-clock window.
  */
 export const sessionSchema = z.object({
   organizationId: organizationIdSchema,

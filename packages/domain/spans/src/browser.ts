@@ -41,6 +41,25 @@ export type { Trace, TraceConversationChunk, TraceDetail } from "./entities/trac
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
 export type {
+  CacheCadence,
+  CacheCadenceHistogram,
+  CacheSavingsInput,
+  CacheTokenFlow,
+} from "./helpers/cache-ceiling.ts"
+export {
+  CACHE_CEILING_LIFETIME_SECONDS,
+  CACHE_CEILING_PLAUSIBLE_LIFETIME_SECONDS,
+  CACHE_SAVINGS_MIN_SPEND_SHARE,
+  CACHE_SAVINGS_MIN_WEEKLY_MICROCENTS,
+  cacheCeilingRate,
+  cacheCeilingRatesByLifetime,
+  cacheCeilingSavingsMicrocents,
+  cachingPremiumMicrocents,
+  clearsCacheSavingsFloor,
+  modeledInputCostMicrocents,
+  weeklyCacheSavingsMicrocents,
+} from "./helpers/cache-ceiling.ts"
+export type {
   CacheClassification,
   CacheClassificationInput,
   CacheEconomicsPricing,
@@ -48,6 +67,7 @@ export type {
   CacheUrgency,
 } from "./helpers/cache-economics.ts"
 export {
+  CACHE_CEILING_MIN_MATERIAL_GAP,
   CACHE_ECONOMICS_MIN_CALLS,
   CACHE_MIN_CACHEABLE_INPUT_TOKENS,
   CACHE_STATES,
@@ -55,6 +75,25 @@ export {
   cacheBreakEvenRate,
   classifyCacheState,
 } from "./helpers/cache-economics.ts"
+export type {
+  CostPerSessionDecomposition,
+  DecomposeCostPerSessionInput,
+  SessionCostCell,
+  SessionCostContribution,
+  SessionCostDecompositionStatus,
+  SessionCostFactor,
+  SessionCostPeriod,
+  SessionCostShareShift,
+  TokenSide,
+} from "./helpers/decompose-cost-per-session.ts"
+export {
+  decomposeCostPerSession,
+  SESSION_COST_MIN_SESSIONS,
+  SESSION_COST_QUIET_BAND,
+  sessionCostMicrocents,
+  sessionCostTokens,
+  TOKEN_SIDES,
+} from "./helpers/decompose-cost-per-session.ts"
 export {
   canonicalizeMessageForEmbedding,
   hashMessageContent,
@@ -77,6 +116,7 @@ export {
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
 export type {
+  CacheCadenceRow,
   CacheEconomics,
   CacheModelUsage,
   CacheUsageMeasures,
@@ -90,6 +130,9 @@ export type {
   ModelUsageMeasures,
   ModelUsageSeries,
   ModelUsageSlice,
+  SessionCostBucket,
+  SessionCostFactorsPair,
+  SessionCostFactorsScope,
 } from "./ports/cost-analytics-repository.ts"
 export {
   CACHE_ECONOMICS_ROW_LIMIT,

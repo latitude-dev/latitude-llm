@@ -23,6 +23,12 @@ const generateResultSchema = Schema.Struct({
   object: Schema.Unknown,
   tokens: Schema.Number,
   duration: Schema.Number,
+  servedBy: Schema.optional(
+    Schema.Struct({
+      provider: Schema.String,
+      model: Schema.String,
+    }),
+  ),
   tokenUsage: Schema.optional(
     Schema.Struct({
       input: Schema.Number,
@@ -95,8 +101,10 @@ const invalidGenerateResult = (source: "cached" | "provider", cause: unknown) =>
     cause,
   })
 
-type GenerateResultForValidation = Omit<GenerateResult<unknown>, "tokenUsage"> & {
+type GenerateResultForValidation = Omit<GenerateResult<unknown>, "tokenUsage" | "servedBy" | "traceId"> & {
   readonly tokenUsage?: GenerateResult<unknown>["tokenUsage"] | undefined
+  readonly servedBy?: GenerateResult<unknown>["servedBy"] | undefined
+  readonly traceId?: string | undefined
 }
 
 const validateGenerateResult = <T>(
@@ -110,7 +118,9 @@ const validateGenerateResult = <T>(
         object: parsed.data,
         tokens: result.tokens,
         duration: result.duration,
+        ...(result.servedBy === undefined ? {} : { servedBy: result.servedBy }),
         ...(result.tokenUsage === undefined ? {} : { tokenUsage: result.tokenUsage }),
+        ...(result.traceId === undefined ? {} : { traceId: result.traceId }),
       } satisfies GenerateResult<T>)
     : Effect.fail(invalidGenerateResult(source, parsed.error))
 }
@@ -156,8 +166,12 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape, options?: AICac
 
       const providerResult = yield* ai.generate(input)
       const result = yield* validateGenerateResult("provider", input, providerResult)
+      // The Latitude trace id is deliberately not stored: a cache hit creates no
+      // span, so a persisted id would point at the trace of whichever call first
+      // produced this result. No trace for a call that did not happen.
+      const { traceId: _uncacheable, ...cacheable } = result
       const encoded = yield* Effect.try({
-        try: () => Schema.encodeSync(generateResultFromJsonStringSchema)(result as GenerateResult<unknown>),
+        try: () => Schema.encodeSync(generateResultFromJsonStringSchema)(cacheable as GenerateResult<unknown>),
         catch: toAIError("write"),
       })
       yield* writeCachedValue(cache, key, encoded)

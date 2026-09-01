@@ -42,9 +42,11 @@ import {
   listSignalsUseCase,
   type OrgSignalSearchItem,
   rankDimensionValues,
+  SIGNAL_FEEDBACK_MAX_LENGTH,
   SIGNAL_GENERATION_PROMPT_MAX_LENGTH,
   SIGNAL_GENERATION_RESULT_TTL_SECONDS,
   type Signal,
+  type SignalFeedback,
   type SignalGenerationResult,
   type SignalListItem,
   SignalRepository,
@@ -55,6 +57,7 @@ import {
   signalsLifecycleGroupSchema,
   signalsSortDirectionSchema,
   signalsSortFieldSchema,
+  submitSignalFeedbackUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
   updateSignalEvaluationUseCase,
   updateSignalTriageUseCase,
@@ -336,6 +339,7 @@ const toSignalDetailRecord = (input: {
   ignoredAt: input.issue.ignoredAt?.toISOString() ?? null,
   regressedAt: input.issue.regressedAt?.toISOString() ?? null,
   mutedAt: input.issue.mutedAt?.toISOString() ?? null,
+  feedback: input.issue.feedback,
   firstSeenAt: input.firstSeenAt?.toISOString() ?? null,
   lastSeenAt: input.lastSeenAt?.toISOString() ?? null,
   totalOccurrences: input.totalOccurrences,
@@ -1176,6 +1180,45 @@ export const applySignalLifecycleAction = createServerFn({ method: "POST" })
     )
 
     return toSignalLifecycleCommandRecord(result)
+  })
+
+const submitSignalFeedbackInputSchema = z
+  .object({
+    projectId: z.string(),
+    signalId: z.string(),
+    passed: z.boolean(),
+    feedback: z.string().max(SIGNAL_FEEDBACK_MAX_LENGTH).optional(),
+    ignore: z.boolean().optional(),
+  })
+  .refine((input) => input.passed || (input.feedback?.trim().length ?? 0) > 0, {
+    message: "A reason is required when reporting a signal as a false positive",
+    path: ["feedback"],
+  })
+
+export const submitSignalFeedback = createServerFn({ method: "POST" })
+  .inputValidator(submitSignalFeedbackInputSchema)
+  .handler(async ({ data, context }): Promise<{ readonly feedback: SignalFeedback; readonly ignored: boolean }> => {
+    const orgId = await resolveOrgScope(context)
+    const pgClient = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      submitSignalFeedbackUseCase({
+        projectId: data.projectId,
+        signalId: SignalId(data.signalId),
+        passed: data.passed,
+        ...(data.feedback !== undefined ? { feedback: data.feedback } : {}),
+        ...(data.ignore !== undefined ? { ignore: data.ignore } : {}),
+      }).pipe(
+        withScopedPostgres(
+          Layer.mergeAll(SignalRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive, SettingsReaderLive),
+          pgClient,
+          orgId,
+        ),
+        withTracing,
+      ),
+    )
+
+    return { feedback: result.feedback, ignored: result.ignored }
   })
 
 const bulkSignalLifecycleActionInputSchema = z.object({

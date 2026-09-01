@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 #
-# Datadog APM setup for the taxonomy adaptive shadow comparison.
-# Creates the retention filter (100% keep of the shadow spans, which Datadog's
-# default intelligent retention would otherwise only sample) and the span-based
-# metrics (15-month durable history) over the taxonomy.gardenTaxonomyWorkflow.shadow
-# span. Run this BEFORE enabling shadow in prod — neither is retroactive.
+# Datadog APM setup for the taxonomy garden telemetry — two independent feature
+# sets, converged together because they share credentials and both are missed
+# just as easily:
+#
+#   1. Adaptive clustering rollout — the taxonomy.gardenTaxonomyWorkflow.shadow
+#      span, emitted only for organizations the adaptiveTaxonomyClustering flag
+#      has enabled. Run this BEFORE enabling the flag for an organization.
+#   2. Tree quality (LAT-861 Build 4) — the .buildQuality and .nameQuality spans,
+#      emitted for EVERY garden run of every project regardless of mode. Run this
+#      BEFORE the Build 4 deploy, and before Builds 1-3 land, or their before/after
+#      has no "before".
+#
+# Neither retention filters nor span metrics are retroactive, which is why the
+# ordering above matters. Each span name is load-bearing: the retention filter,
+# the span metrics, and the dashboard widgets all key on it, so renaming a span
+# orphans three objects at once and silently empties a dashboard.
 #
 # Requires a Datadog API key and Application key (read/write APM config). They are
 # read from the environment and never printed; do not paste them into shared logs.
@@ -21,7 +32,12 @@ set -euo pipefail
 
 DD=https://api.datadoghq.eu/api/v2/apm/config
 Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow'
+BUILD_Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality'
+NAME_Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.nameQuality'
+# Also the keys this script converges on, so renaming one would leave the deployed
+# filter behind and create a duplicate.
 RETENTION_FILTER_NAME='Taxonomy adaptive shadow spans'
+QUALITY_RETENTION_FILTER_NAME='Taxonomy quality spans'
 HDR=(-H "DD-API-KEY: ${DD_API_KEY}" -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" -H 'Content-Type: application/json')
 
 FAILED=0
@@ -46,21 +62,33 @@ del() { # <url>  — delete; 2xx or 404 (nothing to delete) ok, else records a f
   esac
 }
 
-echo "== retention filter =="
-# Retention filters have no client-supplied id, so converge by deleting every
-# filter that carries our name before recreating (avoids duplicates on rerun).
-existing="$(curl -sS "${DD}/retention-filters" "${HDR[@]}" | python3 -c '
+retention_filter() { # <name> <query>  — 100%-keep filter, converged by name
+  # Retention filters have no client-supplied id, so converge by deleting every
+  # filter that carries our name before recreating (avoids duplicates on rerun).
+  local existing fid
+  existing="$(curl -sS "${DD}/retention-filters" "${HDR[@]}" | python3 -c '
 import sys, json
 name = sys.argv[1]
 for f in json.load(sys.stdin).get("data", []):
     if f.get("attributes", {}).get("name") == name:
         print(f["id"])
-' "${RETENTION_FILTER_NAME}")"
-for fid in ${existing}; do
-  echo "-- deleting existing ${fid}"
-  del "${DD}/retention-filters/${fid}"
-done
-post "${DD}/retention-filters" '{"data":{"type":"apm_retention_filter","attributes":{"name":"'"${RETENTION_FILTER_NAME}"'","filter_type":"spans-sampling-processor","filter":{"query":"'"${Q}"'"},"rate":1.0,"enabled":true}}}'
+' "$1")"
+  for fid in ${existing}; do
+    echo "-- deleting existing ${fid}"
+    del "${DD}/retention-filters/${fid}"
+  done
+  post "${DD}/retention-filters" '{"data":{"type":"apm_retention_filter","attributes":{"name":"'"$1"'","filter_type":"spans-sampling-processor","filter":{"query":"'"$2"'"},"rate":1.0,"enabled":true}}}'
+}
+
+echo "== retention filter (adaptive) =="
+retention_filter "${RETENTION_FILTER_NAME}" "${Q}"
+
+echo "== retention filter (quality) =="
+# One filter over both quality spans: they are read together and a single object
+# is one ordering problem instead of two (filters are evaluated top-down and the
+# first match decides, so a broad catch-all above this one would sample it out).
+retention_filter "${QUALITY_RETENTION_FILTER_NAME}" \
+  'service:workflows resource_name:(taxonomy.gardenTaxonomyWorkflow.buildQuality OR taxonomy.gardenTaxonomyWorkflow.nameQuality)'
 
 GRP='[{"path":"@taxonomy.projectId","tag_name":"project_id"},{"path":"@taxonomy.organizationId","tag_name":"organization_id"},{"path":"@taxonomy.customBehaviorId","tag_name":"custom_behavior_id"}]'
 
@@ -71,10 +99,6 @@ while IFS='|' read -r id path; do
   del "${DD}/metrics/${id}"
   post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"'"${id}"'","attributes":{"compute":{"aggregation_type":"distribution","include_percentiles":true,"path":"'"${path}"'"},"filter":{"query":"'"${Q}"'"},"group_by":'"${GRP}"'}}}'
 done <<'METRICS'
-taxonomy.shadow.partition_ari|@taxonomy.shadow.diff.partitionAri
-taxonomy.shadow.static_root_children|@taxonomy.shadow.static.rootChildCount
-taxonomy.shadow.adaptive_root_children|@taxonomy.shadow.adaptive.rootChildCount
-taxonomy.shadow.root_child_delta|@taxonomy.shadow.diff.rootChildDelta
 taxonomy.adaptive.duration_ms|@taxonomy.adaptive.durationMs
 taxonomy.adaptive.static_duration_ms|@taxonomy.adaptive.staticDurationMs
 taxonomy.adaptive.peak_rss_bytes|@taxonomy.adaptive.peakRssBytes
@@ -84,6 +108,53 @@ METRICS
 echo "== fallback count metric =="
 del "${DD}/metrics/taxonomy.adaptive.fallback"
 post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"taxonomy.adaptive.fallback","attributes":{"compute":{"aggregation_type":"count"},"filter":{"query":"'"${Q}"' -@taxonomy.adaptive.fallbackReason:none"},"group_by":[{"path":"@taxonomy.projectId","tag_name":"project_id"},{"path":"@taxonomy.adaptive.fallbackReason","tag_name":"fallback_reason"}]}}}'
+
+# Quality spans carry the facet too, so views are separable from the topic tree.
+QUALITY_GRP='[{"path":"@taxonomy.projectId","tag_name":"project_id"},{"path":"@taxonomy.organizationId","tag_name":"organization_id"},{"path":"@taxonomy.customBehaviorId","tag_name":"custom_behavior_id"},{"path":"@taxonomy.facetId","tag_name":"facet_id"}]'
+
+# Span metrics are computed at ingestion, so these keep accruing regardless of what
+# the retention filter above indexes — they are the channel that outlives the
+# 15-day span window and carries the before/after for Builds 1-3.
+echo "== build quality span metrics =="
+while IFS='|' read -r id path; do
+  [ -z "${id}" ] && continue
+  echo "-- ${id}"
+  del "${DD}/metrics/${id}"
+  post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"'"${id}"'","attributes":{"compute":{"aggregation_type":"distribution","include_percentiles":true,"path":"'"${path}"'"},"filter":{"query":"'"${BUILD_Q}"'"},"group_by":'"${QUALITY_GRP}"'}}}'
+done <<'METRICS'
+taxonomy.quality.largest_leaf_share|@taxonomy.quality.largestLeafShare
+taxonomy.quality.largest_top_level_share|@taxonomy.quality.largestTopLevelShare
+taxonomy.quality.top_level_row_count|@taxonomy.quality.topLevelRowCount
+taxonomy.quality.leaf_count|@taxonomy.quality.leafCount
+taxonomy.quality.members_clustered|@taxonomy.quality.membersClustered
+taxonomy.quality.centered_cohesion_min|@taxonomy.quality.centeredCohesion.min
+taxonomy.quality.centered_cohesion_p50|@taxonomy.quality.centeredCohesion.p50
+METRICS
+
+echo "== name quality span metrics =="
+while IFS='|' read -r id path; do
+  [ -z "${id}" ] && continue
+  echo "-- ${id}"
+  del "${DD}/metrics/${id}"
+  post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"'"${id}"'","attributes":{"compute":{"aggregation_type":"distribution","include_percentiles":true,"path":"'"${path}"'"},"filter":{"query":"'"${NAME_Q}"'"},"group_by":'"${QUALITY_GRP}"'}}}'
+done <<'METRICS'
+taxonomy.quality.duplicate_name_rate|@taxonomy.quality.duplicateNameRate
+taxonomy.quality.cross_branch_duplicates|@taxonomy.quality.crossBranchDuplicateLeafCount
+taxonomy.quality.shared_sibling_word_share|@taxonomy.quality.sharedSiblingWordShare
+taxonomy.quality.near_duplicate_name_rate|@taxonomy.quality.nearDuplicateNameRate
+METRICS
+
+echo "== retired shadow-comparison metrics =="
+# The paired static-vs-adaptive attributes are no longer emitted (LAT-774), so these
+# metrics would sit at no-data forever. Deleted here rather than dropped from the
+# list above, which would leave them in Datadog.
+for id in \
+  taxonomy.shadow.partition_ari \
+  taxonomy.shadow.static_root_children \
+  taxonomy.shadow.adaptive_root_children \
+  taxonomy.shadow.root_child_delta; do
+  del "${DD}/metrics/${id}"
+done
 
 if [ "${FAILED}" -gt 0 ]; then
   echo "== ${FAILED} call(s) failed (non-2xx) — see statuses above =="

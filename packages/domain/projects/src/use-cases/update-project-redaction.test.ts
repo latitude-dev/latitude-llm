@@ -97,6 +97,69 @@ describe("updateProjectRedactionUseCase", () => {
     expect(written).toHaveLength(0)
   })
 
+  /**
+   * The change-detection short circuit used to compare a hand-listed set of fields, so a rules-only
+   * edit compared equal to the stored policy: nothing was saved, no audit event was written, and the
+   * UI still reported success. This is that regression.
+   */
+  it("saves and audits a change that touches only the rules", async () => {
+    const rules: RedactionSetting["rules"] = [
+      { id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] },
+    ]
+    const { rows, written } = await run(makeProject({ redaction: ENFORCE }), { ...ENFORCE, rules })
+
+    expect(rows.get(PROJECT_ID)?.settings?.redaction?.rules).toEqual(rules)
+    expect(written.map((event) => event.eventName)).toEqual(["ProjectRedactionPolicyChanged"])
+  })
+
+  it("saves and audits a rule edited in place", async () => {
+    const before: RedactionSetting = {
+      ...ENFORCE,
+      rules: [{ id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] }],
+    }
+    const after: RedactionSetting = {
+      ...ENFORCE,
+      rules: [{ id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-9999"] }],
+    }
+    const { rows, written } = await run(makeProject({ redaction: before }), after)
+
+    expect(rows.get(PROJECT_ID)?.settings?.redaction).toEqual(after)
+    expect(written).toHaveLength(1)
+  })
+
+  /**
+   * `PATCH /v1/projects/{slug}` does not expose `rules`, and this use case replaces the whole
+   * `redaction` object, so a documented API call that changed `mode` deleted every rule the
+   * dashboard had created and the next spans kept the identifiers they existed to remove.
+   */
+  it("keeps stored rules when a write does not mention them", async () => {
+    const rules: RedactionSetting["rules"] = [
+      { id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] },
+    ]
+    const { rows } = await run(makeProject({ redaction: { ...ENFORCE, rules } }), { mode: "off" })
+
+    expect(rows.get(PROJECT_ID)?.settings?.redaction).toEqual({ mode: "off", rules })
+  })
+
+  // The dashboard always sends the whole list, so an empty array is a deletion rather than silence.
+  it("clears rules when a write sends an empty list", async () => {
+    const rules: RedactionSetting["rules"] = [
+      { id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] },
+    ]
+    const { rows } = await run(makeProject({ redaction: { ...ENFORCE, rules } }), { ...ENFORCE, rules: [] })
+
+    expect(rows.get(PROJECT_ID)?.settings?.redaction?.rules).toEqual([])
+  })
+
+  it("still drops rules with the rest of the policy when the override is cleared", async () => {
+    const rules: RedactionSetting["rules"] = [
+      { id: "rule-1", label: "ACCOUNT_NUMBER", kind: "terms", terms: ["ACME-1234"] },
+    ]
+    const { rows } = await run(makeProject({ redaction: { ...ENFORCE, rules } }), null)
+
+    expect(rows.get(PROJECT_ID)?.settings).not.toHaveProperty("redaction")
+  })
+
   it("fails with ProjectNotFoundError for an unknown project", async () => {
     const { repository } = createFakeProjectRepository([])
     const layer = Layer.mergeAll(

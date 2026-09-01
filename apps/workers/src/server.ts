@@ -10,7 +10,12 @@ import {
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
 import { SHOWCASE_CLEANUP_CRON_KEY, SHOWCASE_CLEANUP_CRON_PATTERN } from "@domain/showcase"
-import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
+import {
+  CANDIDATE_SWEEPER_KEY,
+  CANDIDATE_SWEEPER_PATTERN,
+  ESCALATION_SWEEPER_KEY,
+  ESCALATION_SWEEPER_PATTERN,
+} from "@domain/signals"
 import {
   CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
   CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN,
@@ -67,6 +72,7 @@ import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
 import { createFlaggerScreeningWorker } from "./workers/flagger-screening.ts"
 import { createGithubEventsWorker } from "./workers/github-events.ts"
+import { createImportsWorker } from "./workers/imports.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createMemoryProjectionWorker } from "./workers/memory-projection.ts"
 import { createMonitorsWorker } from "./workers/monitors.ts"
@@ -218,6 +224,7 @@ const bootstrap = async () => {
       adminPostgresClient: getAdminPostgresClient(),
       clickhouseClient: ctx.clickhouseClient,
     })
+    createImportsWorker(ctx)
     createApiKeysWorker(ctx)
     createBillingWorker({ consumer: ctx.consumer, postgresClient: ctx.postgresClient })
     createBillingOverageWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })
@@ -342,6 +349,18 @@ const bootstrap = async () => {
           "sweepEscalating",
           {},
           { key: ESCALATION_SWEEPER_KEY, pattern: ESCALATION_SWEEPER_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Daily candidate expiry sweep, bounding the corpus discovery scans exactly.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "issues",
+          "sweepCandidates",
+          {},
+          { key: CANDIDATE_SWEEPER_KEY, pattern: CANDIDATE_SWEEPER_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

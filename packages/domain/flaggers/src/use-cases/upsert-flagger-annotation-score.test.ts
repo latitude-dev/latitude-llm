@@ -30,6 +30,7 @@ const makeHarness = () => {
     readonly flaggerSlug?: string
     readonly contentHash?: string
     readonly sessionId?: string | null
+    readonly flaggerTraceId?: string
   }) =>
     Effect.runPromise(
       upsertFlaggerAnnotationScore({
@@ -40,6 +41,7 @@ const makeHarness = () => {
         feedback: input.feedback,
         flaggerSlug: input.flaggerSlug ?? "frustration",
         contentHash: input.contentHash,
+        flaggerTraceId: input.flaggerTraceId,
       }).pipe(Effect.provide(layer)),
     )
 
@@ -84,6 +86,23 @@ describe("upsertFlaggerAnnotationScore anchor dedup", () => {
     await upsert({ feedback: "Anchored flag.", contentHash: ANCHOR_A })
 
     expect([...scores.values()][0]?.metadata).toMatchObject({ contentHash: ANCHOR_A })
+  })
+
+  it("stores the classification's trace so the detection can be graded later", async () => {
+    const { upsert, scores } = makeHarness()
+    const flaggerTraceId = "f".repeat(32)
+
+    await upsert({ feedback: "Anchored flag.", contentHash: ANCHOR_A, flaggerTraceId })
+
+    expect([...scores.values()][0]?.metadata).toMatchObject({ flaggerTraceId })
+  })
+
+  it("writes no trace pointer for a detection that made no generation", async () => {
+    const { upsert, scores } = makeHarness()
+
+    await upsert({ feedback: "Deterministic flag.", contentHash: ANCHOR_A })
+
+    expect([...scores.values()][0]?.metadata).not.toHaveProperty("flaggerTraceId")
   })
 
   it("falls back to exact-feedback dedup when no anchor is available", async () => {

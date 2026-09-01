@@ -45,8 +45,8 @@ const workerEntryUrl = () => {
  *     crashes the worker (surfaced as a rejection) rather than the whole worker
  *     process.
  *   - a single wall-clock deadline bounds the run and terminates a hung or
- *     looping worker. It covers the entire worker invocation — one build today,
- *     static plus relative shadow later — so shadow mode shares one budget.
+ *     looping worker. It bounds one invocation, and an invocation is one build, so
+ *     an adaptive run that falls back to static gets a fresh budget for each.
  *   - the timer and the thread are registered on a `using` DisposableStack, so
  *     `clearTimeout` + `worker.terminate()` run exactly once when this scope
  *     exits, on every terminal path (message, error, exit, timeout).

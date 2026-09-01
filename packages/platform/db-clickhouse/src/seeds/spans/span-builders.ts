@@ -213,6 +213,31 @@ function computeCost(tokens: number, usdPerMToken: number): number {
 const seedModelPricing = (modelConfig: ModelConfig): ModelRegistryPricing | null =>
   modelRegistryPricing({ provider: modelConfig.provider, model: modelConfig.model })
 
+/**
+ * The same registry pricing for a fixture that assembles its own span rather than going
+ * through `makeLlmSpan`.
+ *
+ * Worth reaching for rather than writing a rate inline: a fixture priced under the
+ * registry reads back as savings larger than the spend it would come out of, because the
+ * cost panel models counterfactuals from registry prices and compares them with what was
+ * recorded.
+ */
+export function seedLlmCostMicrocents({
+  provider,
+  model,
+  inputTokens,
+  outputTokens,
+}: {
+  readonly provider: string
+  readonly model: string
+  readonly inputTokens: number
+  readonly outputTokens: number
+}): { readonly input: number; readonly output: number } {
+  const pricing = modelRegistryPricing({ provider, model })
+  if (!pricing) return { input: 0, output: 0 }
+  return { input: computeCost(inputTokens, pricing.input), output: computeCost(outputTokens, pricing.output) }
+}
+
 // ---------------------------------------------------------------------------
 // Prompt cache
 // ---------------------------------------------------------------------------

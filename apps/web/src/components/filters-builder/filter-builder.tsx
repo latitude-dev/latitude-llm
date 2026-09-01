@@ -447,6 +447,7 @@ export function FilterBuilder({
         placeholderIcon={<Icon icon={PlusIcon} size="sm" color="foregroundMuted" />}
         value={undefined}
         options={availableFilters.map((descriptor) => ({ value: descriptor.field, label: descriptor.label }))}
+        portalTarget={portalContainer ? "local" : "body"}
         onChange={(field) => {
           const descriptor = availableFilters.find((d) => d.field === field)
           if (descriptor) addFilter(descriptor)

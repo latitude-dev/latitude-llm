@@ -98,6 +98,7 @@ export interface FacetRecord {
   readonly name: string
   readonly description: string
   readonly instructions: string
+  readonly createdAt: string
 }
 
 const toFacetRecord = (facet: TaxonomyFacet): FacetRecord => ({
@@ -106,6 +107,7 @@ const toFacetRecord = (facet: TaxonomyFacet): FacetRecord => ({
   name: facet.name,
   description: facet.description,
   instructions: facet.instructions,
+  createdAt: facet.createdAt.toISOString(),
 })
 
 export const listFacets = createServerFn({ method: "GET" })

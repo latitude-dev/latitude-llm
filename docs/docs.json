@@ -83,6 +83,11 @@
           "anchor": "Slack Community",
           "icon": "slack",
           "href": "https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
+        },
+        {
+          "anchor": "Status",
+          "icon": "activity",
+          "href": "https://status.latitude.so"
         }
       ]
     },
@@ -162,6 +167,15 @@
               "telemetry/openclaw",
               "telemetry/pi-coding-agent",
               "telemetry/prime-intellect"
+            ]
+          },
+          {
+            "group": "Platforms",
+            "pages": [
+              "telemetry/imports/overview",
+              "telemetry/imports/langfuse",
+              "telemetry/imports/langsmith",
+              "telemetry/imports/braintrust"
             ]
           }
         ]
@@ -278,6 +292,7 @@
               "datasets/edit-rows"
             ]
           },
+          "test-and-fix/simulations",
           "test-and-fix/regression-testing"
         ]
       },
@@ -328,7 +343,8 @@
               "more/data-destinations/posthog"
             ]
           },
-          "more/api-reference"
+          "more/api-reference",
+          "more/partners"
         ]
       }
     ]

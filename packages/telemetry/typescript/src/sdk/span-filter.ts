@@ -1,6 +1,37 @@
-import type { Context } from "@opentelemetry/api"
+import { type Context, isValidSpanId, trace } from "@opentelemetry/api"
 import type { ReadableSpan, Span, SpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { SCOPE_LATITUDE } from "../constants/scope.ts"
+
+const MAX_TRACKED_SPANS = 2048
+
+type DroppedSpanEntry = {
+  span: ReadableSpan
+  recordedParentId: string | undefined
+}
+
+type ExportFilterSpanProcessorOptions = {
+  blockedInstrumentationScopes?: readonly string[]
+}
+
+function parentSpanIdOf(span: ReadableSpan | Span): string | undefined {
+  const fromContext = (span as ReadableSpan).parentSpanContext?.spanId
+  if (fromContext && isValidSpanId(fromContext)) return fromContext
+  const legacy = (span as { parentSpanId?: string }).parentSpanId
+  if (legacy && isValidSpanId(legacy)) return legacy
+  return undefined
+}
+
+function spanIdOf(span: ReadableSpan | Span): string | undefined {
+  const spanContext = span.spanContext?.()
+  const spanId = spanContext?.spanId
+  if (spanId && isValidSpanId(spanId)) return spanId
+  return undefined
+}
+
+function evictOldestKey(map: Map<string, unknown>): void {
+  const oldest = map.keys().next().value
+  if (oldest !== undefined) map.delete(oldest)
+}
 
 /** OpenTelemetry GenAI semantic convention attribute prefix. */
 const GEN_AI_PREFIX = "gen_ai."
@@ -141,24 +172,63 @@ export function buildShouldExportSpan(options: SmartFilterOptions): (span: Reada
 }
 
 /**
- * Drops spans that fail the export predicate before passing them to the inner processor.
- * Inner processor should perform redaction and export.
+ * Drops spans that fail the export predicate; when a span is kept, also exports its ancestors
+ * so Latitude receives a connected tree.
  */
 export class ExportFilterSpanProcessor implements SpanProcessor {
   private readonly shouldExport: (span: ReadableSpan) => boolean
   private readonly inner: SpanProcessor
+  private readonly blockedScopes: ReadonlySet<string>
+  private readonly parentBySpanId = new Map<string, string | undefined>()
+  private readonly forceExportIds = new Set<string>()
+  private readonly droppedBySpanId = new Map<string, DroppedSpanEntry>()
 
-  constructor(shouldExport: (span: ReadableSpan) => boolean, inner: SpanProcessor) {
+  constructor(
+    shouldExport: (span: ReadableSpan) => boolean,
+    inner: SpanProcessor,
+    options?: ExportFilterSpanProcessorOptions,
+  ) {
     this.shouldExport = shouldExport
     this.inner = inner
+    this.blockedScopes = new Set(options?.blockedInstrumentationScopes ?? [])
   }
 
   onStart(span: Span, parentContext: Context): void {
+    const spanId = spanIdOf(span)
+    if (spanId) {
+      let parentId = parentSpanIdOf(span)
+      if (!parentId) {
+        const fromCtx = trace.getSpanContext(parentContext)?.spanId
+        if (fromCtx && isValidSpanId(fromCtx)) parentId = fromCtx
+      }
+      if (this.parentBySpanId.size >= MAX_TRACKED_SPANS) evictOldestKey(this.parentBySpanId)
+      this.parentBySpanId.set(spanId, parentId)
+    }
     this.inner.onStart(span, parentContext)
   }
 
   onEnd(span: ReadableSpan): void {
-    if (!this.shouldExport(span)) return
+    const spanId = spanIdOf(span)
+    const recordedParentId = spanId ? this.parentBySpanId.get(spanId) : undefined
+    const forced = spanId !== undefined && this.forceExportIds.has(spanId)
+    if (spanId) {
+      this.forceExportIds.delete(spanId)
+      this.parentBySpanId.delete(spanId)
+    }
+
+    if (this.isBlocked(span)) {
+      this.rememberDropped(span, recordedParentId)
+      if (forced) this.flushPromotedAncestors(span, recordedParentId)
+      return
+    }
+
+    if (!forced && !this.shouldExport(span)) {
+      this.rememberDropped(span, recordedParentId)
+      return
+    }
+
+    if (spanId) this.droppedBySpanId.delete(spanId)
+    this.flushPromotedAncestors(span, recordedParentId)
     this.inner.onEnd(span)
   }
 
@@ -167,7 +237,60 @@ export class ExportFilterSpanProcessor implements SpanProcessor {
   }
 
   shutdown(): Promise<void> {
+    this.parentBySpanId.clear()
+    this.forceExportIds.clear()
+    this.droppedBySpanId.clear()
     return this.inner.shutdown()
+  }
+
+  private isBlocked(span: ReadableSpan): boolean {
+    return this.blockedScopes.has(instrumentationScopeName(span))
+  }
+
+  private rememberDropped(span: ReadableSpan, recordedParentId: string | undefined): void {
+    const spanId = spanIdOf(span)
+    if (!spanId) return
+    if (this.droppedBySpanId.size >= MAX_TRACKED_SPANS) evictOldestKey(this.droppedBySpanId)
+    this.droppedBySpanId.set(spanId, { span, recordedParentId })
+  }
+
+  private flushPromotedAncestors(span: ReadableSpan, recordedParentId: string | undefined): void {
+    for (const ancestor of this.collectPromotedAncestors(span, recordedParentId)) {
+      this.inner.onEnd(ancestor)
+    }
+  }
+
+  private collectPromotedAncestors(span: ReadableSpan, recordedParentId: string | undefined): ReadableSpan[] {
+    const toExport: ReadableSpan[] = []
+    let parentId = parentSpanIdOf(span) ?? recordedParentId
+    const seen = new Set<string>()
+
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId)
+
+      const dropped = this.droppedBySpanId.get(parentId)
+      if (dropped) {
+        this.droppedBySpanId.delete(parentId)
+        toExport.push(...this.collectPromotedAncestors(dropped.span, dropped.recordedParentId))
+        if (!this.isBlocked(dropped.span)) toExport.push(dropped.span)
+        parentId = parentSpanIdOf(dropped.span) ?? dropped.recordedParentId
+        continue
+      }
+
+      if (this.parentBySpanId.has(parentId)) {
+        if (this.forceExportIds.size >= MAX_TRACKED_SPANS) {
+          const oldest = this.forceExportIds.values().next().value
+          if (oldest !== undefined) this.forceExportIds.delete(oldest)
+        }
+        this.forceExportIds.add(parentId)
+        parentId = this.parentBySpanId.get(parentId)
+        continue
+      }
+
+      break
+    }
+
+    return toExport
   }
 }
 

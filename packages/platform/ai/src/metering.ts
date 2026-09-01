@@ -22,11 +22,12 @@ import { Effect, Option } from "effect"
 const toAIError = (cause: AIMeteringRecordError): AIError => new AIError({ message: cause.httpMessage, cause })
 
 /**
- * Charges AI primitives against the ambient `AIMeteringScope`. Generations bill
- * their estimated provider cost (registry pricing x reported token usage) through
- * `creditsForLlmGenerationCost`; when the registry has no pricing for the model or
- * the provider reported no usage, the flat `llm-call` price applies instead. Each
- * query-time embedding bills one `semantic-query` at its estimated embed cost through
+ * Charges AI primitives against the ambient `AIMeteringScope`. Generations bill their
+ * estimated provider cost (registry pricing of the model that served the call, per
+ * `result.servedBy`, x reported token usage) through `creditsForLlmGenerationCost`;
+ * when the registry has no pricing for the model or the provider reported no usage,
+ * the flat `llm-call` price applies instead.
+ * Each query-time embedding bills one `semantic-query` at its estimated embed cost through
  * `creditsForSemanticQueryCost`, falling back to the flat price when the adapter
  * reports no token count. Document embeddings and reranking ride on the charge of
  * the operation that produced them. Without a scope in context the call passes
@@ -107,20 +108,25 @@ const recordGeneration = <T>(
   result: GenerateResult<T>,
 ): Effect.Effect<void, AIError> => {
   const usage = result.tokenUsage
-  const costSpec = getCostSpec(input.provider, input.model)
+  const servedBy = result.servedBy ?? { provider: input.provider, model: input.model }
+  const costSpec = getCostSpec(servedBy.provider, servedBy.model)
+  const requestedModel =
+    servedBy.provider === input.provider && servedBy.model === input.model
+      ? {}
+      : { requestedModel: `${input.provider}/${input.model}` }
 
   if (usage === undefined || !costSpec.costImplemented) {
     return reportPricingFallback({
       action: "llm-call",
-      provider: input.provider,
-      model: input.model,
+      provider: servedBy.provider,
+      model: servedBy.model,
       reason: "no usage or registry pricing for model",
-      details: { hasUsage: usage !== undefined, costImplemented: costSpec.costImplemented },
+      details: { hasUsage: usage !== undefined, costImplemented: costSpec.costImplemented, ...requestedModel },
     }).pipe(
       Effect.andThen(
         recordScoped(scope, {
           action: "llm-call",
-          metadata: { provider: input.provider, model: input.model, pricing: "flat-fallback" },
+          metadata: { provider: servedBy.provider, model: servedBy.model, pricing: "flat-fallback", ...requestedModel },
         }),
       ),
     )
@@ -131,8 +137,9 @@ const recordGeneration = <T>(
     action: "llm-call",
     credits: creditsForLlmGenerationCost(estimatedCostUsd),
     metadata: {
-      provider: input.provider,
-      model: input.model,
+      provider: servedBy.provider,
+      model: servedBy.model,
+      ...requestedModel,
       pricing: "cost-based",
       estimatedCostUsd,
       tokensInput: usage.input,

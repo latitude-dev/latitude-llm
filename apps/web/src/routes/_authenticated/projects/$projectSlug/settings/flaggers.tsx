@@ -167,7 +167,7 @@ function ProjectFlaggersSettingsPage() {
       }
       headerSticky={hasDirty}
     >
-      <div className="flex w-full max-w-2xl flex-col gap-8">
+      <div className="flex w-full flex-col gap-8">
         {isLoadingFlaggers ? null : flaggers.length === 0 ? (
           <Text.H5 color="foregroundMuted">No flaggers have been provisioned for this project yet</Text.H5>
         ) : (
@@ -259,7 +259,7 @@ function ProjectFlaggersSettingsPage() {
                                   <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
                                 </div>
                                 <Text.H6 color="foregroundMuted">
-                                  30 credits per scan · runs on {row.viewSampling}% of eligible sessions
+                                  Billed by AI usage · runs on {row.viewSampling}% of eligible sessions
                                 </Text.H6>
                               </div>
                             )}

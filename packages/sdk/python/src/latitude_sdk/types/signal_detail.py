@@ -9,6 +9,7 @@ from ..core.serialization import FieldMetadata
 from .evaluation import Evaluation
 from .signal_detail_source import SignalDetailSource
 from .signal_detail_states_item import SignalDetailStatesItem
+from .signal_feedback import SignalFeedback
 from .signal_monitoring_state import SignalMonitoringState
 from .signal_trend_bucket import SignalTrendBucket
 
@@ -149,5 +150,6 @@ class SignalDetail(UniversalBaseModel):
     monitoring_state: typing_extensions.Annotated[
         SignalMonitoringState, FieldMetadata(alias="monitoringState"), pydantic.Field(alias="monitoringState")
     ]
+    feedback: typing.Optional[SignalFeedback] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -1,10 +1,13 @@
 import { Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
+import type { ReactNode } from "react"
 import { useMemo } from "react"
+import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import {
   useCacheEconomics,
   useCostBreakdown,
   useCostOverview,
+  useCostPerSessionDecomposition,
   useCostSeries,
   useModelUsageSeries,
 } from "../../../../../domains/cost/cost.collection.ts"
@@ -14,11 +17,10 @@ import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../do
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
-import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
+import { SectionHeader } from "../-components/section-header.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { CacheEconomicsPanel } from "./-components/cache-economics-panel.tsx"
 import { CostBreakdownPanel } from "./-components/cost-breakdown-panel.tsx"
-import { CostConfidenceStrip } from "./-components/cost-confidence-strip.tsx"
 import {
   computeDailyAverageMicrocents,
   densifyCostBuckets,
@@ -31,18 +33,31 @@ import {
 } from "./-components/cost-formatters.ts"
 import { CostKpiRow } from "./-components/cost-kpi-row.tsx"
 import { CostOverTimePanel } from "./-components/cost-over-time-panel.tsx"
+import { CostPerSessionPanel } from "./-components/cost-per-session-panel.tsx"
 import { ModelImpactPanel } from "./-components/model-impact-panel.tsx"
 import { ModelUsagePanel } from "./-components/model-usage-panel.tsx"
+import { PricingCoverageBadge } from "./-components/pricing-coverage-badge.tsx"
 
 function CostBreadcrumb() {
   return <BreadcrumbText variant="current">Cost</BreadcrumbText>
 }
 
-/** Groups the panels below it. Sits outside the cards, above their own titles. */
-function SectionHeading({ children }: { readonly children: string }) {
+/**
+ * A heading and the panel(s) it introduces, as one group — so the page body is a flat
+ * list of sections rather than headings and panels floating as independent siblings.
+ * `heading` is optional: the KPI/trend overview up top and the self-titled breakdown
+ * table at the bottom are still their own sections, just unnamed ones. 12px between the
+ * heading and its content; 8px between multiple panels sharing one section.
+ */
+function Section({ heading, children }: { readonly heading?: string; readonly children: ReactNode }) {
   return (
-    <div className="flex flex-col pt-2">
-      <Text.H5M color="foreground">{children}</Text.H5M>
+    <div className="flex flex-col gap-3">
+      {heading ? (
+        <Text.H5M asChild color="foreground">
+          <h2>{heading}</h2>
+        </Text.H5M>
+      ) : null}
+      <div className="flex flex-col gap-2">{children}</div>
     </div>
   )
 }
@@ -56,6 +71,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/cost
 
 function CostPageContent() {
   const project = useRouteProject()
+  const projectSlug = project.slug
   const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
   const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })
   const tw = useAnalyticsTimeWindow({
@@ -102,6 +118,12 @@ function CostPageContent() {
     enabled,
   })
   const { data: modelUsage, isLoading: modelUsageLoading } = useModelUsageSeries({
+    projectId: project.id,
+    range,
+    bucketSeconds,
+    enabled,
+  })
+  const { data: perSession, isLoading: perSessionLoading } = useCostPerSessionDecomposition({
     projectId: project.id,
     range,
     bucketSeconds,
@@ -172,69 +194,83 @@ function CostPageContent() {
   return (
     <Layout>
       <Layout.Header
-        title="Cost dashboard"
-        description="Optimize your spending"
+        title={
+          <SectionHeader
+            title="Cost dashboard"
+            badge={<PricingCoverageBadge confidence={overview?.confidence} isLoading={overviewLoading} />}
+            description="Optimize your spending"
+          />
+        }
         actions={
           <TimeFilterDropdown
             {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
             {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
             onChange={tw.onTimeChange}
+            // Unlike the other sections, every figure here is clamped to the recent
+            // slice, so an unset range is not all time.
+            placeholder="Recent activity"
           />
         }
       />
-      <div className="flex flex-col gap-4 px-6 pb-6">
-        <CostKpiRow
-          overview={overview}
-          dailyAverageMicrocents={dailyAverageMicrocents}
-          bucketSeconds={bucketSeconds}
-          isLoading={overviewLoading || seriesLoading || totalSeriesLoading}
-        />
-        <CostOverTimePanel
-          buckets={buckets}
-          metric={metric}
-          onMetricChange={setMetric}
-          bucketSeconds={bucketSeconds}
-          provisionalIndex={provisionalIndex}
-          rangeFromIso={range.fromIso}
-          rangeToIso={range.toIso}
-          isAllTime={tw.isAllTime}
-          isLoading={seriesLoading}
-        />
-        <SectionHeading>Model</SectionHeading>
-        {/* The two model questions side by side: how spend moves, and who it goes to. */}
-        <div className="flex flex-col gap-4 xl:flex-row">
-          <div className="flex min-w-0 flex-1 flex-col">
-            <ModelUsagePanel
-              series={denseModelUsage}
-              measure={usageMeasure}
-              onMeasureChange={setUsageMeasure}
-              bucketSeconds={bucketSeconds}
-              provisionalIndex={modelUsageProvisionalIndex}
-              rangeFromIso={range.fromIso}
-              rangeToIso={range.toIso}
-              isAllTime={tw.isAllTime}
-              isLoading={modelUsageLoading}
-            />
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <ModelImpactPanel
-              breakdown={modelBreakdown}
-              rangeFromIso={range.fromIso}
-              rangeToIso={range.toIso}
-              isAllTime={tw.isAllTime}
-              isLoading={modelBreakdownLoading}
-            />
-          </div>
-        </div>
-        <SectionHeading>Cache</SectionHeading>
-        <CacheEconomicsPanel economics={cacheEconomics} isLoading={cacheEconomicsLoading} />
-        <CostBreakdownPanel
-          breakdown={breakdown}
-          dimension={dimension}
-          onDimensionChange={setDimension}
-          isLoading={breakdownLoading}
-        />
-        <CostConfidenceStrip confidence={overview?.confidence} isLoading={overviewLoading} />
+      <div className="flex flex-col gap-6 px-6 pb-6">
+        <Section>
+          <CostKpiRow
+            overview={overview}
+            dailyAverageMicrocents={dailyAverageMicrocents}
+            bucketSeconds={bucketSeconds}
+            projectSlug={projectSlug}
+            isLoading={overviewLoading || seriesLoading || totalSeriesLoading}
+          />
+          <CostOverTimePanel
+            buckets={buckets}
+            metric={metric}
+            onMetricChange={setMetric}
+            bucketSeconds={bucketSeconds}
+            provisionalIndex={provisionalIndex}
+            rangeFromIso={range.fromIso}
+            rangeToIso={range.toIso}
+            isAllTime={tw.isAllTime}
+            isLoading={seriesLoading}
+          />
+        </Section>
+        <Section heading="Session">
+          <CostPerSessionPanel record={perSession} rangeFromIso={range.fromIso} isLoading={perSessionLoading} />
+        </Section>
+        {/* The two model questions stacked: how spend moves, then who it goes to. Side by
+            side, one panel's fixed-height chart and the other's variable-length model list
+            never agree on a height — stacking sidesteps that instead of forcing a match. */}
+        <Section heading="Model">
+          <ModelUsagePanel
+            series={denseModelUsage}
+            measure={usageMeasure}
+            onMeasureChange={setUsageMeasure}
+            bucketSeconds={bucketSeconds}
+            provisionalIndex={modelUsageProvisionalIndex}
+            rangeFromIso={range.fromIso}
+            rangeToIso={range.toIso}
+            isAllTime={tw.isAllTime}
+            isLoading={modelUsageLoading}
+          />
+          <ModelImpactPanel
+            breakdown={modelBreakdown}
+            rangeFromIso={range.fromIso}
+            rangeToIso={range.toIso}
+            isAllTime={tw.isAllTime}
+            projectSlug={projectSlug}
+            isLoading={modelBreakdownLoading}
+          />
+        </Section>
+        <Section heading="Cache">
+          <CacheEconomicsPanel economics={cacheEconomics} projectSlug={projectSlug} isLoading={cacheEconomicsLoading} />
+        </Section>
+        <Section>
+          <CostBreakdownPanel
+            breakdown={breakdown}
+            dimension={dimension}
+            onDimensionChange={setDimension}
+            isLoading={breakdownLoading}
+          />
+        </Section>
       </div>
     </Layout>
   )

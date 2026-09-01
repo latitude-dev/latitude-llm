@@ -1,6 +1,17 @@
-import type { TaxonomyClusterId } from "@domain/shared"
-import { type TaxonomyCluster, taxonomyClusterSchema } from "@domain/taxonomy"
-import { createFakeTaxonomyClusterRepository, createFakeTaxonomyObservationRepository } from "@domain/taxonomy/testing"
+import { FacetId, OrganizationId, ProjectId, SessionId, type TaxonomyClusterId } from "@domain/shared"
+import {
+  type TaxonomyCluster,
+  type TaxonomyFacetProjection,
+  type TaxonomyMomentObservation,
+  type TaxonomyViewAssignment,
+  taxonomyClusterSchema,
+} from "@domain/taxonomy"
+import {
+  createFakeFacetProjectionRepository,
+  createFakeTaxonomyClusterRepository,
+  createFakeTaxonomyObservationRepository,
+  createFakeTaxonomyViewAssignmentRepository,
+} from "@domain/taxonomy/testing"
 import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -10,7 +21,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 // `evaluation-alignment-activities.test.ts`: domain fakes behind `withPostgres` /
 // `withClickHouse`, plus an in-memory stand-in for the Redis plan artifact.
 const { fakes, redis, calls } = vi.hoisted(() => ({
-  fakes: { clusters: null as unknown, observations: null as unknown },
+  fakes: {
+    clusters: null as unknown,
+    observations: null as unknown,
+    viewAssignments: null as unknown,
+    facetProjections: null as unknown,
+  },
   redis: new Map<string, string>(),
   calls: [] as string[],
 }))
@@ -58,7 +74,8 @@ vi.mock("@platform/db-clickhouse", async (importOriginal) => {
       <A, Err, R>(effect: Effect.Effect<A, Err, R>) =>
         effect.pipe(
           E.provide(L.succeed(domain.TaxonomyObservationRepository, fakes.observations as never)),
-          E.provide(L.succeed(domain.TaxonomyViewAssignmentRepository, {} as never)),
+          E.provide(L.succeed(domain.TaxonomyViewAssignmentRepository, fakes.viewAssignments as never)),
+          E.provide(L.succeed(domain.FacetProjectionRepository, fakes.facetProjections as never)),
           E.provide(L.succeed(shared.ChSqlClient, testing.createFakeChSqlClient())),
         ),
   }
@@ -83,6 +100,8 @@ const OLD_ROOT = "a".repeat(24)
 const OLD_LEAF = "b".repeat(24)
 const NEW_ROOT = "c".repeat(24)
 const NEW_LEAF = "d".repeat(24)
+const BEHAVIOR = "e".repeat(24)
+const FACET = "f".repeat(24)
 
 const cluster = (input: {
   readonly id: string
@@ -134,6 +153,7 @@ type StoredPlan = {
   readonly mode: string
   readonly fallbackReason: null
   readonly leafClusters: readonly { readonly clusterId: string; readonly centroid: readonly number[] }[]
+  readonly persistsAdaptiveTree?: boolean | undefined
   readonly supersededClusterIds: readonly string[]
   readonly stagedClusterIds?: readonly string[] | undefined
   readonly namingMembers?:
@@ -165,6 +185,7 @@ const storePlan = (overrides: Partial<StoredPlan> = {}) => {
     mode: "off",
     fallbackReason: null,
     leafClusters: [],
+    persistsAdaptiveTree: false,
     supersededClusterIds: [],
     stagedClusterIds: [NEW_ROOT, NEW_LEAF],
     namingMembers: [{ clusterId: NEW_LEAF, observationIds: ["obs-1", "obs-2"] }],
@@ -175,7 +196,53 @@ const storePlan = (overrides: Partial<StoredPlan> = {}) => {
   return plan
 }
 
-const seedRepositories = (seed: readonly TaxonomyCluster[]) => {
+const viewUpserts: TaxonomyViewAssignment[] = []
+
+// A live-window row the full-window reassignment can route: the only fields that
+// path reads are the id, session, embedding and start time.
+const windowObservation = (index: number): TaxonomyMomentObservation => ({
+  organizationId: OrganizationId(organizationId),
+  projectId: ProjectId(projectId),
+  observationId: String(index).padStart(24, "w").slice(0, 24),
+  sessionId: SessionId(`session-${index}`),
+  analysisHash: String(index).repeat(64).slice(0, 64),
+  momentId: `moment-${index}`,
+  projectionMethod: "moment_text_embedding",
+  projectionHash: String(index).repeat(64).slice(0, 64),
+  projectionMetadata: { summary: `Observation ${index}` },
+  embedding: [1, 0],
+  startTime: new Date(now.getTime() - index * 60_000),
+  endTime: new Date(now.getTime() - index * 60_000 + 500),
+  assignedClusterId: null,
+  assignmentConfidence: 0,
+  assignmentMethod: "noise",
+  reassignmentRunId: null,
+  retentionDays: 90,
+  indexedAt: now,
+})
+
+// A cached facet projection: the row the projection-space window routes. Its
+// embedding is deliberately orthogonal to the observation embedding above, so a
+// test can tell which space a pass actually read.
+const windowProjection = (index: number): TaxonomyFacetProjection => ({
+  organizationId: OrganizationId(organizationId),
+  projectId: ProjectId(projectId),
+  facetId: FacetId(FACET),
+  sessionObservationId: String(index).padStart(24, "j").slice(0, 24),
+  sessionId: SessionId(`facet-session-${index}`),
+  extractedText: `Projection ${index}`,
+  analysisHash: String(index).repeat(64).slice(0, 64),
+  embedding: [0, 1],
+  startTime: new Date(now.getTime() - index * 60_000),
+  retentionDays: 90,
+  indexedAt: now,
+})
+
+const seedRepositories = (
+  seed: readonly TaxonomyCluster[],
+  window: readonly TaxonomyMomentObservation[] = [],
+  projections: readonly TaxonomyFacetProjection[] = [],
+) => {
   const clusters = createFakeTaxonomyClusterRepository(seed, {
     swapActiveTree: (input) => {
       calls.push("swap")
@@ -191,14 +258,26 @@ const seedRepositories = (seed: readonly TaxonomyCluster[]) => {
       })
     },
   })
-  const observations = createFakeTaxonomyObservationRepository([], {
+  const observations = createFakeTaxonomyObservationRepository(window, {
     reassignManyById: () => {
       calls.push("reassign")
       return Effect.void
     },
   })
+  const viewAssignments = createFakeTaxonomyViewAssignmentRepository(
+    {},
+    {
+      upsertMany: (rows) =>
+        Effect.sync(() => {
+          calls.push("view-upsert")
+          viewUpserts.push(...rows)
+        }),
+    },
+  )
   fakes.clusters = clusters.repository
   fakes.observations = observations.repository
+  fakes.viewAssignments = viewAssignments.repository
+  fakes.facetProjections = createFakeFacetProjectionRepository(projections).repository
   return clusters
 }
 
@@ -216,6 +295,7 @@ describe("taxonomy gardening publish activities", () => {
   beforeEach(() => {
     redis.clear()
     calls.length = 0
+    viewUpserts.length = 0
   })
 
   it("publishes in the same activity as the reassignment, reassign first", async () => {
@@ -328,6 +408,7 @@ describe("taxonomy gardening publish activities", () => {
       deprecatedClusterIds: [],
       supersededClusterIds: [OLD_ROOT, OLD_LEAF],
       leafClusters: [{ clusterId: NEW_LEAF, centroid: [1, 0] }],
+      persistsAdaptiveTree: true,
     })
     await deprecateGardenTaxonomyClustersActivity({ ...stepInput, planKey })
 
@@ -336,12 +417,116 @@ describe("taxonomy gardening publish activities", () => {
     expect(stateOf(adaptiveClusters, NEW_ROOT)).toBe("active")
   })
 
+  // Staging leaves and an adaptive tree are two different facts about a plan, and
+  // publication reads the second one. No plan carries the first without the second
+  // in production today — LAT-862 Part 2b gives facet lenses one — so the case is
+  // pinned by fixture rather than by trust. A cohort scope keeps it about the two
+  // predicates; the facet write target is Part 2b's problem.
+  const leavesWithoutAdaptiveTree = (overrides: Partial<StoredPlan> = {}) =>
+    storePlan({
+      customBehaviorId: BEHAVIOR,
+      mode: "off",
+      persistsAdaptiveTree: false,
+      leafClusters: [{ clusterId: NEW_LEAF, centroid: [1, 0] }],
+      // A statically-persisted view saves its tree active, so nothing is staged.
+      clusters: [
+        cluster({ id: NEW_ROOT, parentClusterId: null, name: "Rebuilt Umbrella", state: "active" }),
+        cluster({ id: NEW_LEAF, parentClusterId: NEW_ROOT, name: "Rebuilt Leaf", state: "active" }),
+      ],
+      stagedClusterIds: [],
+      deprecatedClusterIds: [OLD_LEAF],
+      supersededClusterIds: [],
+      ...overrides,
+    })
+
+  it("routes the full window but retires only the dead ids when a plan has leaves without an adaptive tree", async () => {
+    const clusters = seedRepositories(publishedTree(), [windowObservation(1), windowObservation(2)])
+    leavesWithoutAdaptiveTree()
+
+    const result = await deprecateGardenTaxonomyClustersActivity({ ...stepInput, planKey })
+
+    // Leaves ⇒ the catch-up pass runs: routing follows the plan's SHAPE.
+    expect(calls).toContain("view-upsert")
+    expect(viewUpserts).toHaveLength(2)
+    // Not an adaptive tree ⇒ the swap retires the ids no node continued, never the
+    // whole prior tree. Retiring it wholesale here would deprecate the live rows a
+    // static persist upserted its continuations onto.
+    expect(stateOf(clusters, OLD_LEAF)).toBe("deprecated")
+    expect(stateOf(clusters, OLD_ROOT)).toBe("active")
+    expect(result).toEqual(expect.objectContaining({ clustersDeprecated: 1, clustersActivated: 0 }))
+  })
+
+  // LAT-862 Part 2b: a facet lens's coverage is the projection cache, not the
+  // 7-day sample, so its passes route `taxonomy_facet_projections`.
+  const facetPlan = (overrides: Partial<StoredPlan> = {}) => leavesWithoutAdaptiveTree({ facetId: FACET, ...overrides })
+
+  it("routes the facet's projection cache, not the observation window, and stamps the facet on every edge", async () => {
+    seedRepositories(
+      publishedTree(),
+      [windowObservation(1), windowObservation(2)],
+      [windowProjection(1), windowProjection(2), windowProjection(3)],
+    )
+    facetPlan()
+
+    await reassignGardenTaxonomyObservationsActivity({ ...stepInput, planKey })
+
+    // Three cached projections, two observations: reading the wrong table is
+    // visible in the count, and the sessions come from the projection rows.
+    expect(viewUpserts).toHaveLength(3)
+    expect(viewUpserts.every((row) => row.facetId === FACET)).toBe(true)
+    expect(viewUpserts.every((row) => (row.sessionId as string).startsWith("facet-session-"))).toBe(true)
+    // The inline column belongs to the global topic tree; a facet never writes it.
+    expect(calls).not.toContain("reassign")
+  })
+
+  it("catches the facet up in projection space after the swap", async () => {
+    seedRepositories(publishedTree(), [windowObservation(1)], [windowProjection(1), windowProjection(2)])
+    facetPlan()
+
+    await deprecateGardenTaxonomyClustersActivity({ ...stepInput, planKey })
+
+    // Without this the coverage is correct at reassign time and stale the moment
+    // the swap lands.
+    expect(viewUpserts).toHaveLength(2)
+    expect(viewUpserts.every((row) => row.facetId === FACET)).toBe(true)
+    expect(calls).not.toContain("reassign")
+  })
+
+  it("never reassigns the global column for a whole-project facet with no behavior", async () => {
+    // A facet plan that carries no cohort has no slice row to write (the slice is
+    // keyed by behavior). Falling through to the global branch would overwrite
+    // every project observation's `assigned_cluster_id` with facet cluster ids.
+    seedRepositories(publishedTree(), [windowObservation(1)], [windowProjection(1)])
+    facetPlan({ customBehaviorId: null })
+
+    await reassignGardenTaxonomyObservationsActivity({ ...stepInput, planKey })
+    await deprecateGardenTaxonomyClustersActivity({ ...stepInput, planKey })
+
+    expect(calls).not.toContain("reassign")
+    expect(viewUpserts).toHaveLength(0)
+  })
+
+  it("activates nothing on a pre-change-shaped plan with leaves but no adaptive tree", async () => {
+    const clusters = seedRepositories(publishedTree(), [windowObservation(1)])
+    // Without `stagedClusterIds` the publish falls back to the whole cluster set,
+    // but only for an adaptive tree — a static view's rows are already active.
+    leavesWithoutAdaptiveTree({ stagedClusterIds: undefined, namingMembers: undefined })
+
+    const result = await deprecateGardenTaxonomyClustersActivity({ ...stepInput, planKey })
+
+    expect(result).toEqual(expect.objectContaining({ clustersActivated: 0 }))
+    expect(stateOf(clusters, NEW_ROOT)).toBe("staging")
+  })
+
   it("falls back to the plan's whole cluster set on a pre-change adaptive plan", async () => {
     const clusters = seedRepositories(publishedTree())
+    // Pre-change plans carry no `persistsAdaptiveTree`; their staging leaves are
+    // the only signal that this was an adaptive tree, and it still has to work.
     storePlan({
       mode: "enforced",
       supersededClusterIds: [OLD_ROOT, OLD_LEAF],
       leafClusters: [{ clusterId: NEW_LEAF, centroid: [1, 0] }],
+      persistsAdaptiveTree: undefined,
       stagedClusterIds: undefined,
       namingMembers: undefined,
     })
@@ -389,6 +574,7 @@ describe("planGardenTaxonomyNamingActivity", () => {
   beforeEach(() => {
     redis.clear()
     calls.length = 0
+    viewUpserts.length = 0
   })
 
   it("plans the STAGED tree deepest-first and carries its sample member ids", async () => {

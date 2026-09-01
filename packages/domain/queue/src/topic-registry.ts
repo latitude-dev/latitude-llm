@@ -172,13 +172,15 @@ const _registry = {
     }
     /**
      * Producer step for signal discovery. Fired by the domain-events router
-     * on `SignalCreated`; the consumer resolves org-member recipients and
-     * emits one `create-notification` task per recipient.
+     * on `SignalPromoted`, which is when a discovered signal starts existing for
+     * users; the consumer resolves org-member recipients and emits one
+     * `create-notification` task per recipient.
      */
     "request-signal-discovered-notifications": {
       readonly organizationId: string
       readonly projectId: string
       readonly signalId: string
+      /** Promotion time, not row-creation time — see `SignalPromoted`. */
       readonly discoveredAt: string
     }
     /**
@@ -193,6 +195,26 @@ const _registry = {
       readonly signalId: string
       readonly regressedAt: string
       readonly triggerScoreId: string
+    }
+    /**
+     * Producer step for a priority increase. Fired by the domain-events router
+     * on `SignalReprioritized`, which only fires on increases in the first
+     * place; the consumer re-checks that rule, skips muted signals, drops the
+     * actor from the org-member fan-out, and emits one `create-notification`
+     * task per remaining recipient. The priorities ride on the task rather
+     * than being re-read, so a burst of edits announces each transition
+     * instead of the newest value N times.
+     */
+    "request-signal-reprioritized-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      /** The raised-to priority. Never null — clearing a priority is a decrease. */
+      readonly priority: string
+      readonly previousPriority: string | null
+      readonly actorUserId: string
+      /** ISO timestamp frozen by the triage transaction; idempotency anchor. */
+      readonly reprioritizedAt: string
     }
     /**
      * Producer step for destination quarantine. Fired directly by the
@@ -436,6 +458,48 @@ const _registry = {
       readonly projectId: string
       readonly signalId: string
     }
+    /**
+     * Name a qualified signal from its whole cluster and stamp `promoted_at`.
+     *
+     * Promotion lives out here rather than in the transaction that observed the
+     * evidence because the signal has to be named before it exists for anyone,
+     * and that is a model call. Emits `SignalPromoted`, which is what the
+     * announcements hang off.
+     */
+    promoteSignal: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
+    /**
+     * Merge a candidate with its near-duplicate candidates, so a problem split
+     * across several one-session signals can reach the gate none of its
+     * fragments could reach alone. Published throttled whenever a candidate's
+     * centroid changes — at creation, and on an assignment that left it
+     * unpromoted.
+     */
+    consolidate: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
+    /**
+     * ClickHouse half of a consolidation, fired from `SignalsConsolidated`
+     * rather than by the merge, whose own retry no-ops on the soft-deleted
+     * losers and would never reach it.
+     */
+    reconcileConsolidation: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly survivorId: string
+    }
+    /**
+     * Fired by the daily cron — soft-deletes candidates that stopped
+     * accumulating. Platform-wide and capped, with no per-signal fan-out: an
+     * expired candidate has no consequences to unwind, since nothing was ever
+     * announced for it.
+     */
+    sweepCandidates: Record<string, never>
     checkEscalation: {
       readonly organizationId: string
       readonly projectId: string
@@ -457,6 +521,31 @@ const _registry = {
       readonly feedback: string
       readonly source: string
       readonly createdAt: string
+    }
+    /**
+     * Fired by the domain-events router on `SignalFeedbackSubmitted`. Scans the
+     * signal's newest occurrences for flagger-authored rows and fans out one
+     * `reviewFlaggerOccurrence` per distinct flagger trace behind them.
+     */
+    reviewFlaggerOccurrences: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
+    /**
+     * Grades one flagger generation with the customer's verdict on the signal it
+     * detected. The annotation lands on Latitude's own flagger trace, in the
+     * dogfood organization — never in the customer's project.
+     */
+    reviewFlaggerOccurrence: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      readonly flaggerTraceId: string
+      readonly flaggerSlug: string
+      readonly value: number
+      readonly passed: boolean
+      readonly feedback: string
     }
   }>(),
 
@@ -704,8 +793,8 @@ const _registry = {
       readonly action: "trace" | "eval-scan" | "semantic-query" | "llm-call"
       readonly idempotencyKey: string
       readonly context: {
-        readonly planSlug: "free" | "pro" | "enterprise"
-        readonly planSource: "override" | "subscription" | "free-fallback"
+        readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+        readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
         readonly periodStart: string
         readonly periodEnd: string
         readonly includedCredits: number
@@ -718,8 +807,8 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceIds: readonly string[]
-      readonly planSlug: "free" | "pro" | "enterprise"
-      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+      readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
       readonly periodStart: string
       readonly periodEnd: string
       readonly includedCredits: number
@@ -863,6 +952,26 @@ const _registry = {
       readonly remainingSegments: readonly { readonly start: string; readonly end: string }[]
       /** The chain's lower bound (ISO); coverage extends to it once the chain drains. */
       readonly coverageFloor: string
+    }
+  }>(),
+
+  imports: payloads<{
+    start: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly importJobId: string
+    }
+    fetchPage: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly importJobId: string
+      /** Consecutive `Retry-After` waits already spent on this page; bounded, carried in the payload. */
+      readonly rateLimitWaits?: number
+    }
+    /** Cascade cleanup fired by the domain-events router on `ProjectDeleted`. */
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
     }
   }>(),
 }

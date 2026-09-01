@@ -9,24 +9,24 @@ Latitude works best as a continuous loop for production agents: observe real tra
 
 <Steps>
   <Step title="Connect telemetry (Observe)">
-    Send traces from your agent to Latitude. Each interaction becomes a trace of spans (LLM calls, tool calls, retrieval, and more), and multi-turn conversations group into [sessions](../observability/sessions). Send a `userId` and `sessionId` so you can also break activity down per [user](../observability/users) and review reliability, errors, and latency per [tool](../observability/tools).
+    Send traces from your agent to Latitude. Each interaction becomes a trace of spans (LLM calls, tool calls, retrieval, and more), and multi-turn conversations group into [sessions](../observability/sessions). Send a `userId` and `sessionId` so you can also break activity down per [user](../observability/users) and review reliability, errors, and latency per [tool](../observability/tools). If your agent keeps persistent memory, [Memory](../observability/memory) tracks how it evolves, and the Cost view shows where your spend goes.
 
     If you have not connected your app yet, follow [Start tracing](../telemetry/start-tracing).
   </Step>
   <Step title="Find what matters (Understand)">
-    Use [Search](../search/overview) to find conversations by meaning, exact text, or metadata filters: frustrated users, tool loops, hallucinations, failed workflows, or anything specific to your product. [Behaviours](../behaviours/overview) goes further, automatically clustering your sessions into the topics users actually hit, so you discover patterns without writing a query.
+    Use [Search](../search/overview) to find conversations by meaning, exact text, or metadata filters: frustrated users, tool loops, hallucinations, failed workflows, or anything specific to your product. [Behaviors](../behaviours/overview) goes further, automatically clustering your sessions into the topics users actually hit, so you discover patterns without writing a query. When you want to measure a difference rather than find examples, [Experiments](../experiments/overview) compare slices of your traffic side by side.
   </Step>
   <Step title="Annotate what is good or bad (Understand)">
-    Open traces from search results, behaviours, or the trace list and leave [annotations](../annotations/overview). A thumbs-down with clear feedback tells Latitude this behaviour is worth tracking. [Flaggers](../annotations/flaggers) also annotate common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
+    Open traces from search results, behaviors, or the trace list and leave [annotations](../annotations/overview). A thumbs-down with clear feedback tells Latitude this behavior is worth tracking. [Flaggers](../annotations/flaggers) also annotate common failure categories automatically, such as frustration, refusal, jailbreaking, tool errors, and empty responses.
   </Step>
   <Step title="Let Latitude group failures into signals (Understand)">
-    Failed annotations, flagger matches, evaluation failures, and custom scores become [scores](../scores/overview). Latitude groups similar failures into named, prioritized [signals](../signals/overview), each with example traces, affected-user counts, trends, and a lifecycle. Signals created from negative annotations are called issues.
+    Failed annotations, flagger matches, evaluation failures, and custom scores become [scores](../scores/overview). Latitude groups similar failures into named, prioritized [signals](../signals/overview), each with example traces, affected-user counts, trends, and a lifecycle.
   </Step>
   <Step title="Triage and monitor (Refine)">
     Triage signals on the Signals page: set priority, inspect example traces, and resolve noise. [Monitors](../monitors/overview) watch a signal, a saved search, a tool, or your raw traffic and open an incident when something needs attention, notifying you in-app, by email, or in Slack. Generate [evaluations](../evaluations/overview) to keep scoring live traffic for the same failure.
   </Step>
   <Step title="Fix and prevent regressions (Refine)">
-    Fix the underlying behaviour in your code, prompts, tools, retrieval, or product flow. Turn the failing traces into a [dataset](../datasets/overview) and [regression test](../test-and-fix/regression-testing) the fix, using the [MCP server](./mcp) to drive it from your coding agent so the failure cannot quietly return. Resolve the signal once it is fixed, and the regressed monitor tells you if it comes back. Repeat the loop as new production traffic arrives.
+    Fix the underlying behavior in your code, prompts, tools, retrieval, or product flow. Turn the failing traces into a [dataset](../datasets/overview), [simulate the agent locally](../test-and-fix/simulations) against those cases, and [regression test](../test-and-fix/regression-testing) the fix, using the [MCP server](./mcp) to drive it from your coding agent so the failure cannot quietly return. Resolve the signal once it is fixed, and the regressed monitor tells you if it comes back. With the [GitHub integration](../more/github) connected, merging a pull request that references the signal's slug resolves it automatically. Repeat the loop as new production traffic arrives.
   </Step>
 </Steps>
 
@@ -36,7 +36,7 @@ If you are setting up Latitude for the first time:
 
 1. Connect tracing for one production agent.
 2. Add `userId` and `sessionId` so traces group by user and conversation.
-3. Search for one failure mode your team already cares about, or browse Behaviours to see what stands out.
+3. Search for one failure mode your team already cares about, or browse Behaviors to see what stands out.
 4. Annotate representative traces with specific feedback.
 5. Watch the Signals page for grouped patterns, and let the built-in monitors notify you.
 6. Generate evaluations for the signals you want to score continuously.

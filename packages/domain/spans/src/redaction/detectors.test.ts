@@ -1,22 +1,32 @@
-import { REDACTION_ENTITIES, type RedactionEntity } from "@domain/shared"
+import { REDACTION_ENTITIES, REDACTION_ENTITY_LABELS, type RedactionEntity } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { findRedactionMatches, type RedactionMatch } from "./detectors.ts"
 import { redactText } from "./redact-text.ts"
+import { type CompiledRuleSet, compileRuleSet, findRedactionMatches, type RedactionMatch } from "./rules.ts"
 
-const ALL_ENTITIES: ReadonlySet<RedactionEntity> = new Set(REDACTION_ENTITIES)
+const ruleSetOf = (...entities: RedactionEntity[]): CompiledRuleSet =>
+  compileRuleSet({ entities: new Set(entities), redactMetadata: false, identities: "keep", rules: [] })
 
-const only = (...entities: RedactionEntity[]): ReadonlySet<RedactionEntity> => new Set(entities)
+const ALL_ENTITIES = ruleSetOf(...REDACTION_ENTITIES)
+
+const only = (...entities: RedactionEntity[]): CompiledRuleSet => ruleSetOf(...entities)
 
 const byPosition = (a: RedactionMatch, b: RedactionMatch): number => a.start - b.start || b.end - a.end
 
 /** Matched substrings for one entity, in document order. */
 const found = (text: string, entity: RedactionEntity): string[] =>
   findRedactionMatches(text, only(entity))
-    .filter((match) => match.entity === entity)
+    .filter((match) => match.label === REDACTION_ENTITY_LABELS[entity])
     .sort(byPosition)
     .map((match) => text.slice(match.start, match.end))
 
 const detects = (text: string, entity: RedactionEntity): boolean => found(text, entity).length > 0
+
+/**
+ * Every credential fixture here is fabricated, but it has to carry the real shape or it tests nothing — and
+ * that shape is what secret scanners match. Assembling from fragments leaves no contiguous credential-shaped
+ * literal in the file, which keeps push protection off this repository and off anyone's fork.
+ */
+const credential = (...fragments: string[]): string => fragments.join("")
 
 describe("email detector", () => {
   it.each([
@@ -54,6 +64,54 @@ describe("email detector", () => {
     expect(detects("installed foo@1.2.beta", "email")).toBe(false)
   })
 
+  /**
+   * Asset naming conventions produce strings that satisfy every structural rule an address does. Only a
+   * two-label domain is rejected on its extension, because `mail@example.com.txt` above is a real address
+   * followed by one.
+   */
+  it.each([
+    "logo@2x.png",
+    "icon@3x.svg",
+    "bundle@main.tar",
+    "report@final.pdf",
+    "config@local.yaml",
+  ])("does not match the asset name %s", (value) => {
+    expect(detects(`open ${value} now`, "email")).toBe(false)
+  })
+
+  /**
+   * A local part the class cannot express is worse than a miss: the match starts partway in and stores the
+   * name it was meant to remove.
+   */
+  it.each([
+    ["Cliente María.García@empresa.es escribió", "María.García@empresa.es"],
+    ["Counsel O'Brien.Sean@law.example.com replied", "O'Brien.Sean@law.example.com"],
+    ["Müller.Hans@firma.de bestätigt", "Müller.Hans@firma.de"],
+  ])("matches the whole local part in %s", (text, expected) => {
+    expect(found(text, "email")).toEqual([expected])
+  })
+
+  /**
+   * The extension list must hold no live TLD. `md`, `py`, `sh` and `zip` were all in it, which cost Moldova,
+   * Paraguay, Saint Helena and every `.zip` domain their coverage.
+   */
+  it.each([
+    "cliente@empresa.py",
+    "user@example.md",
+    "admin@server.sh",
+    "files@backup.zip",
+  ])("detects %s, whose suffix is a real TLD as well as a file extension", (value) => {
+    expect(found(`contact ${value} today`, "email")).toEqual([value])
+  })
+
+  it("does not take the opening quote of a single-quoted address", () => {
+    expect(found("email: 'user@example.com'", "email")).toEqual(["user@example.com"])
+  })
+
+  it("detects a percent-encoded address in a URL", () => {
+    expect(found("https://app.com/reset?email=sam%40corp.com&t=9", "email")).toEqual(["sam%40corp.com"])
+  })
+
   // Regression: an RFC-complete local-part class runs the match left through the whole URL or file path.
   it.each([
     ["https://api.example.com/v1/users/john@example.com", "john@example.com"],
@@ -74,6 +132,52 @@ describe("phone detector", () => {
     expect(found(`call ${value} now`, "phone")).toEqual([value])
   })
 
+  /**
+   * Written international forms, matched whole. Partial coverage is the failure mode that matters here:
+   * matching `415 555 2671` inside `+1 415 555 2671` leaves the country code sitting in the stored span.
+   * Asserted through `redactText` because the international and NANP patterns both match these, and it is
+   * overlap resolution that has to pick the one including the country code.
+   */
+  it.each([
+    "+1 415 555 2671",
+    "+1-415-555-2671",
+    "+1.415.555.2671",
+    "+44 20 7183 8750",
+    "+34 600 123 456",
+    "+91 98765 43210",
+    "+46 70 123 45 67",
+    "+81 90 1234 5678",
+    "1-415-555-2671",
+  ])("redacts the whole of %s", (value) => {
+    expect(redactText(`call ${value} now`, only("phone")).text).toBe("call [REDACTED_PHONE] now")
+  })
+
+  it.each([
+    "version +1 2 3",
+    "diff +12 -4 lines",
+    "commit +2 -3",
+    "+0 123 4567",
+    "span +1710590400200000000 ns",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "phone")).toBe(false)
+  })
+
+  /**
+   * The group repetition is greedy, so a number followed by a numeric list runs past its own end. The
+   * validator's 20-digit ceiling is what keeps that an over-redaction rather than a lost number: at
+   * E.164's 15 the match would be discarded and the phone number stored verbatim, because a validator
+   * cannot shorten a match the regex has already committed to.
+   */
+  it("over-redacts into an adjacent number rather than losing the phone number", () => {
+    expect(redactText("ids +44 20 7183 8750 4471 9982", only("phone")).text).toBe("ids [REDACTED_PHONE] 9982")
+  })
+
+  it("stops at a separator that is not part of the number", () => {
+    expect(redactText("+1 415 555 2671, +44 20 7183 8750", only("phone")).text).toBe(
+      "[REDACTED_PHONE], [REDACTED_PHONE]",
+    )
+  })
+
   it.each([
     "2024-01-15",
     "2024-01-15T10:30:00Z",
@@ -88,8 +192,29 @@ describe("phone detector", () => {
     expect(detects(value, "phone")).toBe(false)
   })
 
+  /**
+   * NANP area and exchange codes start at 2, which is the only thing separating the 3-3-4 shape from
+   * three ordinary numbers. Every vector here was a false positive on real tool output.
+   */
+  it.each([
+    "Rows scanned per shard: 100 200 3000",
+    "Grid offsets 123 456 7890 emitted",
+    "Replace part 100-200-3000 with the revision",
+    "counters 415 100 2671",
+  ])("does not match %s because the area or exchange code is invalid", (value) => {
+    expect(detects(value, "phone")).toBe(false)
+  })
+
   it("does not match a bare ten-digit id because it is indistinguishable from a numeric key", () => {
     expect(detects('{"userId": 4155552671}', "phone")).toBe(false)
+  })
+
+  it.each([
+    "Call 415-555-2671.",
+    "Call 415 555 2671.",
+    "Call 415-555-2671... later",
+  ])("detects the number in %s despite the trailing punctuation", (text) => {
+    expect(detects(text, "phone")).toBe(true)
   })
 })
 
@@ -189,6 +314,18 @@ describe("credit_card detector", () => {
     expect(detects("id 9999999999999995", "credit_card")).toBe(false)
   })
 
+  it.each([
+    ["Maestro", "6759649826438453"],
+    ["UnionPay", "6212345678901232"],
+  ])("detects a %s card, whose prefix range was missing", (_issuer, value) => {
+    expect(found(`card ${value} charged`, "credit_card")).toEqual([value])
+  })
+
+  // A card handwritten onto a form gets grouped with slashes as readily as with dashes.
+  it("detects a slash-grouped card", () => {
+    expect(found("card 4111/1111/1111/1111 charged", "credit_card")).toEqual(["4111/1111/1111/1111"])
+  })
+
   // Both vectors are Luhn-valid, so only the issuer length gate can reject them.
   it.each([
     "41111111111111113",
@@ -204,6 +341,23 @@ describe("credit_card detector", () => {
     "0.000000000000001",
   ])("does not match %s", (value) => {
     expect(detects(value, "credit_card")).toBe(false)
+  })
+
+  /**
+   * A card at the end of a sentence is how a person writes one in a chat, and the trailing guard used to
+   * reject it along with the decimals above. Both directions have to hold at once.
+   */
+  it.each([
+    "My card is 4111111111111111.",
+    "My card is 4111 1111 1111 1111.",
+    "My Amex is 378282246310005.",
+    "My card is 4111111111111111... probably",
+  ])("detects the card in %s", (text) => {
+    expect(detects(text, "credit_card")).toBe(true)
+  })
+
+  it("still rejects a card-length run that is the fractional part of a decimal", () => {
+    expect(detects("ratio 0.4111111111111111", "credit_card")).toBe(false)
   })
 })
 
@@ -227,11 +381,41 @@ describe("iban detector", () => {
   it.each(["AWSACCESSKEYID123456", "CONSTANT_NAME_HERE", "ABCD1234EFGH5678IJKL"])("does not match %s", (value) => {
     expect(detects(value, "iban")).toBe(false)
   })
+
+  it.each([
+    "de89370400440532013000",
+    "De89370400440532013000",
+    "DE89-3704-0044-0532-0130-00",
+    "de89 3704 0044 0532 0130 00",
+  ])("detects %s, since customers paste it as they have it", (value) => {
+    expect(found(`iban ${value} ok`, "iban")).toEqual([value])
+  })
+
+  it("rejects a lowercase candidate whose checksum is wrong", () => {
+    expect(detects("iban de89370400440532013001 ok", "iban")).toBe(false)
+  })
 })
 
 describe("us_ssn detector", () => {
-  it.each(["123-45-6789", "123 45 6789"])("detects %s", (value) => {
+  it.each(["123-45-6789", "123 45 6789", "123.45.6789"])("detects %s", (value) => {
     expect(found(`ssn ${value} ok`, "us_ssn")).toEqual([value])
+  })
+
+  // No SSN has a 9xx area but every ITIN does, and an ITIN identifies a taxpayer just as well.
+  it.each(["900-70-1234", "911-88-4321", "999-99-1234"])("detects the ITIN %s", (value) => {
+    expect(found(`itin ${value} ok`, "us_ssn")).toEqual([value])
+  })
+
+  it.each([
+    "900-45-6789",
+    "900-69-1234",
+    "900-93-1234",
+  ])("does not match %s, a 9xx area outside the assigned ITIN groups", (value) => {
+    expect(detects(`id ${value} ok`, "us_ssn")).toBe(false)
+  })
+
+  it.each(["value -123-45-6789 ok", "value 123-45-6789-suffix ok"])("detects the number in %s", (text) => {
+    expect(detects(text, "us_ssn")).toBe(true)
   })
 
   it.each([
@@ -249,9 +433,13 @@ describe("us_ssn detector", () => {
 })
 
 describe("secret detector", () => {
+  // Asserted on the redacted text: the vendor prefix and the assignment key both match here, over the
+  // same span, so overlap resolution is what makes one placeholder out of two matches.
   it("detects an OpenAI style key", () => {
-    const key = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
-    expect(found(`export OPENAI_API_KEY=${key}`, "secret")).toEqual([key])
+    const key = credential("sk-proj-", "abc123DEF456ghi789JKL012mno345PQR678stu")
+    expect(redactText(`export OPENAI_API_KEY=${key}`, only("secret")).text).toBe(
+      "export OPENAI_API_KEY=[REDACTED_SECRET]",
+    )
   })
 
   it("detects an Anthropic style key", () => {
@@ -260,13 +448,13 @@ describe("secret detector", () => {
   })
 
   it.each([
-    "AKIAIOSFODNN7EXAMPLE",
-    "ASIAIOSFODNN7EXAMPLE",
-    "AIzaSyD-abc123DEF456ghi789JKL012mno345p",
-    "sk_live_abc123DEF456ghi789",
-    "xoxb-123456789012-abcDEF123456",
-    "ghp_abc123DEF456ghi789JKL012mno345PQR678stu9",
-    "github_pat_abc123DEF456ghi789JKL0",
+    credential("AKIA", "IOSFODNN7EXAMPLE"),
+    credential("ASIA", "IOSFODNN7EXAMPLE"),
+    credential("AIzaSy", "D-abc123DEF456ghi789JKL012mno345p"),
+    credential("sk_live_", "abc123DEF456ghi789"),
+    credential("xoxb-", "123456789012-abcDEF123456"),
+    credential("ghp_", "abc123DEF456ghi789JKL012mno345PQR678stu9"),
+    credential("github_pat_", "abc123DEF456ghi789JKL0"),
   ])("detects %s", (value) => {
     expect(detects(`token ${value} end`, "secret")).toBe(true)
   })
@@ -274,7 +462,9 @@ describe("secret detector", () => {
   it("detects a JWT", () => {
     const jwt =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
-    expect(found(`Authorization: Bearer ${jwt}`, "secret")).toEqual([jwt])
+    expect(redactText(`Authorization: Bearer ${jwt}`, only("secret")).text).toBe(
+      "Authorization: Bearer [REDACTED_SECRET]",
+    )
   })
 
   it("detects a PEM private key block including its body", () => {
@@ -282,8 +472,140 @@ describe("secret detector", () => {
     expect(found(`config:\n${pem}\ndone`, "secret")).toEqual([pem])
   })
 
+  // The carrier phrase avoids the word "token": the bearer scheme matches case-insensitively, so
+  // `token <value>` is a second legitimate match on the same span and this table asserts the vendor pattern.
+  it.each([
+    credential("hf_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0o"),
+    credential("glpat-", "9aZq1LmT4vBn7XkR2wEs"),
+    credential("npm_", "9aZq1LmT4vBn7XkR2wEs8YuC3PdF6Hg"),
+    credential("ya29.", "a0AfB_byC9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl5MiQ1AbZ"),
+    credential("SG.", "9aZq1LmT4vBn7XkR2wEs8Y.YuC3PdF6HgJ0oKl5MiQ1AbZ7NcVtR3sYuI9oPl2KmNb"),
+  ])("detects the vendor token %s", (value) => {
+    expect(found(`emitted ${value} here`, "secret")).toEqual([value])
+  })
+
+  it("detects a Slack webhook URL, whose path segments are the credential", () => {
+    const url = credential("https://hooks.slack.com/services/", "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX")
+    expect(found(`posted to ${url}`, "secret")).toEqual([url])
+  })
+
+  /**
+   * A DSN password is also a valid email local part, and the email match covers more characters, so
+   * without detector rank a password was stored as `[REDACTED_EMAIL]`. With an IP host the email detector
+   * has nothing to match at all and the password was stored verbatim.
+   */
+  it.each([
+    ["postgres://app_user:Sup3rS3cretPass@db.internal:5432/prod", "Sup3rS3cretPass"],
+    ["postgres://app:Sup3rS3cret@127.0.0.1:5432/app", "Sup3rS3cret"],
+    ["mongodb+srv://svc:9aZq1LmT4vBn@cluster0.abcde.mongodb.net/app", "9aZq1LmT4vBn"],
+    ["redis://default:h7Kq2LmZ9vBn@cache.internal:6379", "h7Kq2LmZ9vBn"],
+  ])("detects the credential in %s", (text, credential) => {
+    expect(found(text, "secret")).toEqual([credential])
+  })
+
+  it("leaves the host and database readable so a connection error stays diagnosable", () => {
+    expect(redactText("postgres://app:Sup3rS3cret@127.0.0.1:5432/app", only("secret")).text).toBe(
+      "postgres://app:[REDACTED_SECRET]@127.0.0.1:5432/app",
+    )
+  })
+
+  it("does not match a URL with no credential", () => {
+    expect(detects("fetched https://api.example.com/v1/users?page=2", "secret")).toBe(false)
+  })
+
+  /**
+   * Credentials with no shape of their own, recognised from the key they are assigned to.
+   */
+  it.each(
+    (
+      [
+        ["POSTGRES_PASSWORD=", credential("hunter2", "Correct-Horse")],
+        ["REDIS_PASSWORD=", credential("Tr0ub4dor", "&3")],
+        ['{"api_key": "', credential("9aZq1LmT4vBn", "7XkR")],
+        ["  DATABASE_PASSWORD: ", btoa(credential("hunter2", "Correct-Horse"))],
+        ["aws_secret_access_key = ", credential("wJalrXUtnFEMI/K7MDENG/", "bPxRfiCYEXAMPLEKEY")],
+        ["client_secret=", credential("8fJ2kLmN", "9pQrStUvWxYz")],
+        ["--token ", credential("9aZq1LmT4vBn", "7XkR2wEs")],
+        ["Authorization: Bearer ", credential("9aZq1LmT4vBn7XkR", "2wEs8YuC3PdF6HgJ0oKl")],
+      ] as const
+    ).map(([prefix, secret]) => [`${prefix}${secret}`, secret] as const),
+  )("detects the credential assigned in %s", (text, secret) => {
+    expect(found(text, "secret")).toContain(secret)
+  })
+
+  // Auth scheme names are case-insensitive on the wire, and a lowercase `bearer` header is common in logs.
+  it.each([
+    "Authorization: Bearer",
+    "authorization: bearer",
+    "AUTHORIZATION: BEARER",
+  ])("detects the token after %s", (header) => {
+    expect(detects(`${header} 9aZq1LmT4vBn7XkR2wEs8YuC3PdF6HgJ0oKl`, "secret")).toBe(true)
+  })
+
+  it("redacts the value and leaves the key readable", () => {
+    expect(redactText("POSTGRES_PASSWORD=hunter2Correct-Horse", only("secret")).text).toBe(
+      "POSTGRES_PASSWORD=[REDACTED_SECRET]",
+    )
+  })
+
+  /**
+   * The precision surface of the assignment detector, which is the one detector here whose extent is not
+   * fixed by the shape of what it matches. Every vector is something a coding agent emits.
+   */
+  it.each([
+    // Usage counters, in nearly every LLM span. Plural `tokens` is excluded from the key list outright.
+    '{"usage":{"prompt_tokens":1523,"completion_tokens":88,"total_tokens":1611}}',
+    "max_tokens=1048576",
+    "max_tokens: 4096",
+    // Opaque ids whose keys end in `key` but name no credential.
+    "idempotency_key=order-4471-retry",
+    "partition_key = user_events_2024",
+    "cache_key: build-artifacts-v3",
+    "sort_key=timestamp_desc",
+    // Placeholders and references.
+    "password: ****",
+    "token: null",
+    "token: undefined",
+    "api_key: <your key here>",
+    "PASSWORD=$DB_PASSWORD",
+    'password: "${{ secrets.FOO }}"',
+    "api_key: process.env.OPENAI_API_KEY",
+    "token: changeme",
+    "# TOKEN=  (unset)",
+    // Source code and documentation.
+    "const apiKey = options.apiKey",
+    "const token = parseToken(raw)",
+    "| api_key | string | required |",
+    "AUTHORIZATION_HEADER_NAME=Authorization",
+    "the password is wrong, try again",
+    "Set the api key in your environment before running",
+  ])("does not match %s", (value) => {
+    expect(detects(value, "secret")).toBe(false)
+  })
+
+  it("does not run past the end of the value into the rest of the line", () => {
+    expect(redactText("password=hunter2Correct at 09:12 by admin", only("secret")).text).toBe(
+      "password=[REDACTED_SECRET] at 09:12 by admin",
+    )
+  })
+
+  it("cannot pick up the following line as the value", () => {
+    expect(detects("password:\n  type: string\n  required: true", "secret")).toBe(false)
+  })
+
+  it("is idempotent, so its own placeholder is not a credential", () => {
+    const once = redactText("POSTGRES_PASSWORD=hunter2Correct-Horse", only("secret")).text
+
+    expect(redactText(once, only("secret")).text).toBe(once)
+  })
+
   it("does not match sk- prefixed CSS class names", () => {
     expect(detects('<div class="sk-spinner-double-bounce-child">', "secret")).toBe(false)
+  })
+
+  // Clears the length and digit gates on its own, so only the hyphenated-all-lowercase rule rejects it.
+  it("does not match a long hyphenated sk- slug", () => {
+    expect(detects("notebook sk-learn-tutorial-notebook-v2-final archived", "secret")).toBe(false)
   })
 
   it.each([
@@ -302,19 +624,24 @@ describe("entities disabled by default", () => {
     expect(findRedactionMatches("host 192.168.1.100 up", only("email", "secret"))).toEqual([])
   })
 
+  it.each(["from 203.0.113.42.", "from 203.0.113.42... retrying"])("detects the address in %s", (text) => {
+    expect(detects(text, "ip_address")).toBe(true)
+  })
+
   it("detects ipv6 in full and compressed forms", () => {
     expect(detects("addr 2001:0db8:85a3:0000:0000:8a2e:0370:7334 up", "ip_address")).toBe(true)
     expect(detects("addr 2001:db8::8a2e:370:7334 up", "ip_address")).toBe(true)
   })
 
-  it("detects an ethereum address only when crypto_wallet is enabled", () => {
-    const address = "0x52908400098527886E0F7030069857D2E4169EE7"
-    expect(detects(`to ${address}`, "crypto_wallet")).toBe(true)
-    expect(findRedactionMatches(`to ${address}`, only("secret"))).toEqual([])
+  it.each([
+    "Listening on ::1 port 5432",
+    "bound to ::ffff:7f00:1 now",
+  ])("detects the left-compressed address in %s", (text) => {
+    expect(detects(text, "ip_address")).toBe(true)
   })
 
-  it("does not treat a git sha as a wallet when crypto_wallet is off", () => {
-    expect(findRedactionMatches("commit 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567", ALL_ENTITIES)).toEqual([])
+  it.each(["std::vector<int> v", "using Foo::Bar;", "call ::new here"])("does not match %s", (value) => {
+    expect(detects(value, "ip_address")).toBe(false)
   })
 
   // A dotted quad and a four-part version string are the same string, so immunity is impossible, not missing.
@@ -351,22 +678,25 @@ index 0a1b2c3d4e5f60718293a4b5c6d7e8f901234567..f1e2d3c4b5a69788796a5b4c3d2e1f09
   })
 
   it("still finds a real secret embedded in the same output", () => {
-    const key = "sk-proj-abc123DEF456ghi789JKL012mno345PQR678stu"
-    expect(found(`${TOOL_OUTPUT}\nOPENAI_API_KEY=${key}\n`, "secret")).toEqual([key])
+    const key = credential("sk-proj-", "abc123DEF456ghi789JKL012mno345PQR678stu")
+    const redacted = redactText(`${TOOL_OUTPUT}\nOPENAI_API_KEY=${key}\n`, only("secret")).text
+
+    expect(redacted).toContain("OPENAI_API_KEY=[REDACTED_SECRET]")
+    expect(redacted).not.toContain(key)
   })
 })
 
 describe("findRedactionMatches", () => {
-  it("returns nothing when no entity is enabled", () => {
-    expect(findRedactionMatches("john@example.com +14155552671", new Set())).toEqual([])
+  it("returns nothing when no rule is enabled", () => {
+    expect(findRedactionMatches("john@example.com +14155552671", ruleSetOf())).toEqual([])
   })
 
   it("returns matches from several entities in one pass", () => {
     const matches = findRedactionMatches("john@example.com and +14155552671", ALL_ENTITIES)
-    const entities = new Set(matches.map((match) => match.entity))
+    const labels = new Set(matches.map((match) => match.label))
 
-    expect(entities.has("email")).toBe(true)
-    expect(entities.has("phone")).toBe(true)
+    expect(labels.has("EMAIL")).toBe(true)
+    expect(labels.has("PHONE")).toBe(true)
   })
 
   it("reports offsets that slice back to the matched text", () => {

@@ -16,9 +16,9 @@
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { Provider, safeTranslate } from "rosetta-ai"
 import type { ToolDefinition } from "../../entities/span.ts"
+import { toToolDefinition } from "../../helpers/resolve-tool-definitions.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import type { ParsedContent } from "./index.ts"
-import { toToolDefinition } from "./utils.ts"
 
 function rawStringAttr(attrs: readonly OtlpKeyValue[], key: string): string | undefined {
   const kv = attrs.find((a) => a.key === key)
@@ -134,20 +134,6 @@ function parseToolDefinitions(attrs: readonly OtlpKeyValue[]): ToolDefinition[] 
     })
     .filter(Boolean) as ToolDefinition[]
 }
-
-/** Keys this parser reads, composed into `isContentAttributeKey`. */
-export const VERCEL_CONTENT_ATTRIBUTE_KEYS = {
-  exact: [
-    "ai.prompt",
-    "ai.prompt.messages",
-    "ai.prompt.tools",
-    "ai.prompt.toolDefinitions",
-    "ai.response.text",
-    "ai.response.object",
-    "ai.response.toolCalls",
-  ],
-  prefixes: ["ai.prompt.tools.", "ai.response.toolCalls."],
-} as const
 
 export function parseVercel(attrs: readonly OtlpKeyValue[]): ParsedContent {
   // Fall back to call-level for messages, but keep a top-level system prompt (call-level carries none).

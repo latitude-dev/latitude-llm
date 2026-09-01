@@ -16,7 +16,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/annotations": "workspace:*",
+    "@domain/projects": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import { QueuePublisher, WorkflowTerminator } from "@domain/queue"
+import { QueuePublisher, type QueuePublisherShape, WorkflowTerminator } from "@domain/queue"
 import { createFakeQueuePublisher, createFakeWorkflowTerminator } from "@domain/queue/testing"
 import {
   ChSqlClient,
@@ -121,6 +121,30 @@ function makeLayer(facets: readonly TaxonomyFacet[] = []) {
     Layer.succeed(ChSqlClient, createFakeChSqlClient()),
   )
   return { layer, rows, queue, workflows, assignments, clusterRepo, runRepo, projectionRepo, facetRepo }
+}
+
+// Same fakes, but terminate and publish record into one list so their relative order
+// can be asserted: enqueueing first is what Temporal rejects as WorkflowAlreadyStarted.
+function makeOrderedLayer() {
+  const base = makeLayer()
+  const calls: string[] = []
+  const layer = Layer.mergeAll(
+    base.layer,
+    Layer.succeed(QueuePublisher, {
+      ...base.queue.publisher,
+      publish: (queue, task, payload, options) =>
+        Effect.sync(() => calls.push("publish")).pipe(
+          Effect.andThen(base.queue.publisher.publish(queue, task, payload, options)),
+        ),
+    } satisfies QueuePublisherShape),
+    Layer.succeed(WorkflowTerminator, {
+      terminate: (workflowId: string, reason?: string) =>
+        Effect.sync(() => calls.push("terminate")).pipe(
+          Effect.andThen(base.workflows.terminator.terminate(workflowId, reason)),
+        ),
+    }),
+  )
+  return { ...base, layer, calls }
 }
 
 describe("createCustomBehavior", () => {
@@ -317,31 +341,70 @@ describe("updateCustomBehavior", () => {
   })
 
   it("purges the assignment slice and re-gardens when the cohort changes", async () => {
-    const { layer, queue, assignments } = makeLayer()
-    await Effect.runPromise(
+    const { layer, queue, assignments, workflows } = makeLayer()
+    const behavior = await Effect.runPromise(
       Effect.gen(function* () {
         const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
-        return yield* updateCustomBehavior({
+        yield* updateCustomBehavior({
           id: created.id,
           filterSet: { models: [{ op: "in", value: ["gpt-4o-mini"] }] },
         })
+        return created
       }).pipe(Effect.provide(layer)),
     )
     expect(assignments.deletedBehaviorIds).toHaveLength(1)
     // One enqueue from the create, one from the cohort change.
     expect(queue.published).toHaveLength(2)
+    expect(workflows.terminated).toEqual([
+      {
+        workflowId: taxonomyGardenCustomBehaviorDedupeKey({
+          organizationId: behavior.organizationId,
+          customBehaviorId: behavior.id,
+        }),
+        reason: "behavior cohort filter changed",
+      },
+    ])
+  })
+
+  it("terminates the in-flight garden before enqueueing the replacement, so it is not dropped as already-started", async () => {
+    const { layer, rows, calls } = makeOrderedLayer()
+    const behavior = makeBehavior()
+    rows.set(behavior.id, behavior)
+
+    await Effect.runPromise(
+      updateCustomBehavior({
+        id: behavior.id,
+        filterSet: { models: [{ op: "in", value: ["gpt-4o-mini"] }] },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(calls).toEqual(["terminate", "publish"])
   })
 
   it("leaves the gardened tree alone when the filter is re-sent unchanged", async () => {
-    const { layer, queue, assignments } = makeLayer()
+    const { layer, queue, assignments, workflows } = makeLayer()
     await Effect.runPromise(
       Effect.gen(function* () {
         const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
-        // Same conditions, keys in a different order: re-serialization must not read as a change.
+        // The edit modal always re-sends the current filter alongside the name, so a plain
+        // rename must not read as a cohort change and kill a healthy in-flight garden.
         return yield* updateCustomBehavior({ id: created.id, name: "Chargebacks", filterSet: { ...FILTER } })
       }).pipe(Effect.provide(layer)),
     )
     expect(assignments.deletedBehaviorIds).toHaveLength(0)
+    expect(queue.published).toHaveLength(1)
+    expect(workflows.terminated).toEqual([])
+  })
+
+  it("leaves the garden running on a name-only update", async () => {
+    const { layer, queue, workflows } = makeLayer()
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const created = yield* createCustomBehavior({ projectId: PROJECT_ID, name: "Refunds", filterSet: FILTER })
+        return yield* updateCustomBehavior({ id: created.id, name: "Chargebacks" })
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(workflows.terminated).toEqual([])
     expect(queue.published).toHaveLength(1)
   })
 

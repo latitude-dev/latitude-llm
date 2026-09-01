@@ -18,7 +18,7 @@ export interface RecordTraceUsageBatchInput {
   readonly organizationId: OrganizationId
   readonly traceUsages: readonly RecordTraceUsage[]
   readonly planSlug: BillingUsagePeriod["planSlug"]
-  readonly planSource: "override" | "subscription" | "free-fallback"
+  readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   readonly periodStart: Date
   readonly periodEnd: Date
   readonly includedCredits: number

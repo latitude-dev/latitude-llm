@@ -146,7 +146,7 @@ const toOrphanSession = (row: SessionSearchRow): Session => {
     startTime,
     endTime,
     lastActivityTime: endTime,
-    durationNs: 0,
+    durationNs: Math.max(0, Number(row.duration_ns)),
     timeToFirstTokenNs: 0,
     tokensInput: 0,
     tokensOutput: 0,

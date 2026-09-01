@@ -9,7 +9,7 @@ export interface MonitorRule {
     /** When the monitor opens incidents: `match`, `threshold`, or `escalating`. */
     trigger: MonitorRule.Trigger;
     config: Latitude.MonitorConfig;
-    /** Severity of incidents this monitor opens: `low`, `medium`, or `high`. */
+    /** Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`. */
     severity: MonitorRule.Severity;
 }
 
@@ -21,11 +21,12 @@ export namespace MonitorRule {
         Escalating: "escalating",
     } as const;
     export type Trigger = (typeof Trigger)[keyof typeof Trigger];
-    /** Severity of incidents this monitor opens: `low`, `medium`, or `high`. */
+    /** Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`. */
     export const Severity = {
         Low: "low",
         Medium: "medium",
         High: "high",
+        Urgent: "urgent",
     } as const;
     export type Severity = (typeof Severity)[keyof typeof Severity];
 }

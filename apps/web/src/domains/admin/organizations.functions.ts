@@ -14,6 +14,7 @@ import {
   setOrganizationShowcaseUseCase,
   upsertBillingOverrideUseCase,
 } from "@domain/admin"
+import type { OverridablePlanSlug, PlanSlug } from "@domain/billing"
 import { OrganizationId, UserId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -84,8 +85,8 @@ interface AdminOrganizationDetailsDto {
 }
 
 export interface AdminOrganizationBillingDto {
-  effectivePlanSlug: "free" | "pro" | "enterprise"
-  effectivePlanSource: "override" | "subscription" | "free-fallback"
+  effectivePlanSlug: PlanSlug
+  effectivePlanSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   stripeSubscriptionPlan: string | null
   stripeSubscriptionStatus: string | null
   periodStart: string
@@ -99,7 +100,7 @@ export interface AdminOrganizationBillingDto {
   currentSpendMills: number | null
   spendingLimitCents: number | null
   override: {
-    plan: "free" | "pro" | "enterprise"
+    plan: OverridablePlanSlug
     includedCredits: number | null
     retentionDays: number | null
     notes: string | null

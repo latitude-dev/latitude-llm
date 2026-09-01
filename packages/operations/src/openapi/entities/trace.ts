@@ -66,9 +66,9 @@ const traceFields = {
   tokensCacheCreate: z.number().describe("Total tokens written to the provider's prompt cache."),
   tokensReasoning: z.number().describe("Total reasoning tokens reported by the model."),
   tokensTotal: z.number().describe("Sum of all token counters."),
-  costInputMicrocents: z.number().describe("Cost of input tokens in microcents (1/1,000,000 USD)."),
-  costOutputMicrocents: z.number().describe("Cost of output tokens in microcents (1/1,000,000 USD)."),
-  costTotalMicrocents: z.number().describe("Total cost in microcents (1/1,000,000 USD)."),
+  costInputMicrocents: z.number().describe("Cost of input tokens in microcents (100,000,000 per USD)."),
+  costOutputMicrocents: z.number().describe("Cost of output tokens in microcents (100,000,000 per USD)."),
+  costTotalMicrocents: z.number().describe("Total cost in microcents (100,000,000 per USD)."),
   sessionId: nullableString().describe("Conversation/session identifier set by the SDK. `null` when absent."),
   userId: nullableString().describe("End-user identifier set by the SDK. `null` when absent."),
   simulationId: nullableString().describe(
@@ -133,7 +133,7 @@ export const fetchTraceIndicators = (input: {
   Effect.gen(function* () {
     if (input.traceIds.length === 0) return new Map<string, TraceAnnotationCounts>()
     const scoreRepo = yield* ScoreRepository
-    const counts = yield* scoreRepo.countAnnotationsByTraceIds(input)
+    const counts = yield* scoreRepo.countAnnotationsByTraceIds({ ...input, source: "annotation" })
     return new Map(counts.map((entry) => [entry.traceId as string, entry] as const))
   })
 

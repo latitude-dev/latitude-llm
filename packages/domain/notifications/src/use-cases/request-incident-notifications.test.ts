@@ -65,10 +65,12 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
     weights: { annotation: 1, custom: 0, evaluation: 0 },
   },
   clusteredAt: startedAt,
+  promotedAt: startedAt,
   resolvedAt: null,
   ignoredAt: null,
   regressedAt: null,
   mutedAt: null,
+  feedback: null,
   createdAt: startedAt,
   updatedAt: startedAt,
   ...overrides,
@@ -207,6 +209,40 @@ describe("requestIncidentNotificationsUseCase", () => {
       incidentKind: "signal.escalating" satisfies IncidentNotificationKey,
       severity: "high",
       condition: escalatingCondition,
+    })
+  })
+
+  it("uses the signal triage priority as notification severity for escalations", async () => {
+    const incident = makeIncident()
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: incident.id,
+        transition: "created",
+      }).pipe(Effect.provide(makeLayer({ incident, signal: makeSignal({ priority: "urgent" }) }))),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("expected ok")
+    expect(result.requests[0]?.payload).toMatchObject({
+      severity: "urgent",
+      priority: "urgent",
+    })
+  })
+
+  it("keeps the escalation severity floor when triage is below it", async () => {
+    const incident = makeIncident()
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({
+        alertIncidentId: incident.id,
+        transition: "created",
+      }).pipe(Effect.provide(makeLayer({ incident, signal: makeSignal({ priority: "low" }) }))),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("expected ok")
+    expect(result.requests[0]?.payload).toMatchObject({
+      severity: "high",
+      priority: "low",
     })
   })
 

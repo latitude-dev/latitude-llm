@@ -1,6 +1,6 @@
 ---
 title: Core Concepts
-description: "Latitude's core concepts: projects, spans, traces, sessions, users, tools, search, behaviours, scores, signals, evaluations, and monitors."
+description: "Latitude's core concepts: projects, spans, traces, sessions, users, tools, memory, cost, search, behaviors, scores, signals, experiments, evaluations, monitors, and datasets."
 ---
 
 # Core Concepts
@@ -14,14 +14,18 @@ Project
 │  │  └─ Traces
 │  │     └─ Spans (LLM calls, tool calls, retrieval, and more)
 │  ├─ Users
-│  └─ Tools
+│  ├─ Tools
+│  ├─ Memory
+│  └─ Cost
 ├─ Understand
-│  ├─ Search and Behaviours over traces
+│  ├─ Search and Behaviors over traces
 │  ├─ Scores attached to traces
-│  └─ Signals grouped from failed scores, or defined by you
+│  ├─ Signals grouped from failed scores, or defined by you
+│  └─ Experiments comparing slices of traffic side by side
 └─ Refine
    ├─ Evaluations that score live traffic
-   └─ Monitors that alert on signals, searches, or raw traffic
+   ├─ Monitors that alert on signals, searches, or raw traffic
+   └─ Datasets, local simulations, and regression tests that lock a fix in CI
 ```
 
 ## Projects
@@ -31,12 +35,12 @@ A **project** is the main workspace for one agent, application, or AI feature. P
 Project-scoped data includes:
 
 - spans, traces, and sessions
-- users and tools
-- search, saved searches, and behaviours
+- users, tools, memory stores, and cost analytics
+- search, saved searches, and behaviors
 - scores from annotations, evaluations, flaggers, and custom checks
 - signals grouped from failed scores
-- evaluations and monitors
-- project settings such as monitoring behaviour
+- experiments, datasets, evaluations, and monitors
+- project settings such as monitoring behavior
 
 Projects belong to organizations. Organization membership, API keys, and settings control who can access a project and how defaults cascade.
 
@@ -82,9 +86,17 @@ A **user** is an end user of your agent, identified by the `userId` you send wit
 
 A **tool** is a function your agent can call. Latitude discovers every tool from your telemetry and tracks per-tool usage, error rate, and latency in the Tools view, so you can see which tools are heavily used, failing, or never called.
 
+## Memory
+
+**Memory** is the persistent state your agent reads and writes across interactions. Latitude records every memory operation as a span and versions each record like a commit, so the Memory view shows each store's current contents, its full change history with diffs, and the session behind every change. See [Memory](../observability/memory).
+
+## Cost
+
+The **Cost** view breaks down what your agent spends: the spend trend over time, a per-model cost breakdown, cache economics with per-model break-even points and recommendations, and cost per session. Use it to see where the money goes and what caching is actually saving you.
+
 ## Search
 
-**Search** finds traces by meaning, exact text, metadata filters, or a combination of all three. It is the discovery layer for behaviours your team wants to inspect, review, and track. Saved searches let teams bookmark useful cohorts and review them repeatedly.
+**Search** finds traces by meaning, exact text, metadata filters, or a combination of all three. It is the discovery layer for behaviors your team wants to inspect, review, and track. Saved searches let teams bookmark useful cohorts and review them repeatedly.
 
 Use search to find traces such as:
 
@@ -94,9 +106,9 @@ Use search to find traces such as:
 - hallucinated or incomplete answers
 - traces from a specific user, model, release, environment, tag, or metadata value
 
-## Behaviours
+## Behaviors
 
-A **behaviour** is a topic Latitude automatically discovers by clustering your sessions by meaning. Behaviours surface what your users are actually doing, with trends and outcome metrics, so you find patterns you did not know to search for. Where search starts from a query, behaviours start from a map of your traffic.
+A **behavior** is a topic Latitude automatically discovers by clustering your sessions by meaning. Behaviors surface what your users are actually doing, with trends and outcome metrics, so you find patterns you did not know to search for. Where search starts from a query, behaviors start from a map of your traffic.
 
 ## Scores
 
@@ -115,8 +127,6 @@ Failed, eligible scores are the primary input for signal discovery. Scores also 
 
 A **signal** is a recurring failure pattern Latitude tracks. Instead of leaving failures as isolated examples, Latitude groups similar failed scores into named signals with example traces, trends, affected users, lifecycle states, and linked evaluations. You can also define a signal yourself when you already know the behavior to track. See [Create a signal](../signals/create).
 
-Signals created from negative human annotations are also called **issues**; the word is still used in that narrower context.
-
 Signals help teams:
 
 - triage new and escalating production problems
@@ -125,16 +135,20 @@ Signals help teams:
 - generate evaluations that monitor the same failure mode on future traces
 - catch regressions after a fix ships
 
-Signal states are **new**, **escalating**, and **ongoing**. A signal can have more than one at once, such as new and escalating.
+Signal states are **new**, **escalating**, **ongoing**, **resolved**, **regressed**, and **ignored**. A signal can hold more than one at once, such as new and escalating, and a resolved signal that starts occurring again is reopened as regressed. See the [signal lifecycle](../signals/overview#signal-lifecycle).
+
+## Experiments
+
+An **experiment** compares two or more slices of your traffic side by side. Each slice is a variant defined by filters, an optional search query, and a time range; one variant is the baseline, and every metric Latitude tracks is compared against it. Use experiments to measure how a release, a model swap, or a user cohort differs, rather than eyeballing two dashboards. See [Experiments](../experiments/overview).
 
 ## Evaluations
 
-An **evaluation** is an automated monitor that checks traces for a specific behaviour or quality criterion. Evaluations run on completed traces and produce scores, so their results feed the same analytics and signal discovery workflows as annotations, flaggers, and custom checks.
+An **evaluation** is an automated monitor that checks traces for a specific behavior or quality criterion. Evaluations run on completed traces and produce scores, so their results feed the same analytics and signal discovery workflows as annotations, flaggers, and custom checks.
 
 Evaluations help teams:
 
 - monitor known failure modes on live traffic
-- measure whether a fix reduced or eliminated a behaviour
+- measure whether a fix reduced or eliminated a behavior
 - catch regressions after a signal is resolved
 - turn important signals into ongoing monitors
 - compare automated judgments with human annotations through alignment metrics
@@ -150,15 +164,17 @@ A **monitor** watches a target, such as a signal, a saved search, a tool, or you
 1. A **project** receives telemetry from your agent.
 2. Agent operations arrive as **spans**.
 3. Related spans form completed **traces**, and related traces group into **sessions**.
-4. **Search** and **Behaviours** help you find the traces and topics that matter; **Users** and **Tools** break the same activity down by end user and by tool.
+4. **Search** and **Behaviors** help you find the traces and topics that matter; **Users**, **Tools**, **Memory**, and **Cost** break the same activity down by end user, tool, memory store, and spend.
 5. Annotations, flaggers, **evaluations**, and custom checks create **scores** on traces.
-6. Failed scores cluster into **signals** you can triage, monitor, and fix, and you can also define a signal yourself. Signals from negative annotations are called issues.
+6. Failed scores cluster into **signals** you can triage, monitor, and fix, and you can also define a signal yourself. **Experiments** measure whether a change moved the metrics.
 7. **Monitors** watch signals (and searches, tools, or raw traffic) and open incidents that alert you when something needs attention.
+8. **Datasets** built from real traces feed [local simulations](../test-and-fix/simulations) and [regression tests](../test-and-fix/regression-testing), so a fix is checked against the same cases before it ships; if the failure returns in production anyway, the resolved signal reopens as regressed.
 
 ## Next steps
 
 - [Start tracing](../telemetry/start-tracing): send your first spans and traces to Latitude.
-- [Observability](../observability/overview): inspect traces, sessions, users, and tools.
-- [Search](../search/overview) and [Behaviours](../behaviours/overview): find the traffic that matters.
+- [Observability](../observability/overview): inspect traces, sessions, users, tools, and memory.
+- [Search](../search/overview) and [Behaviors](../behaviours/overview): find the traffic that matters.
 - [Signals](../signals/overview): understand how failed scores become tracked signals.
 - [Monitors](../monitors/overview): get alerted when something needs attention.
+- [Simulate agents locally](../test-and-fix/simulations): run a dataset against your agent in TypeScript or Python.

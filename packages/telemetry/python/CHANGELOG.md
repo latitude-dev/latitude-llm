@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Dev extra now pins `openai` 3.3.1. `openai-agents` is 0.21.0 so the graph can resolve
+  (`0.15.1` required `openai<3`). LiteLLM is no longer co-installed: every published
+  `litellm` still requires `openai<3`. Install it separately for the LiteLLM examples.
+- `openinference-semantic-conventions` is 0.1.33, which `openinference-instrumentation-openai`
+  0.1.56 requires.
+
+### Fixed
+
+- Smart filter now promotes ancestors of kept spans (including already-ended parents held briefly
+  after a drop) so exported traces stay connected when only a descendant independently passed the
+  filter — e.g. a stamped `tcp.connect` no longer ships without its parent.
+
 ## [3.7.0] - 2026-07-20
 
 ### Added

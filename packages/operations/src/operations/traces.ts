@@ -7,6 +7,7 @@ import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SessionId, Span
 import { getTraceAnalyticsUseCase, SpanRepository, TraceRepository } from "@domain/spans"
 import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import { MemoryRepositoryLive, SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   MembershipRepositoryLive,
@@ -39,7 +40,9 @@ import {
 import { TraceAnalyticsResponseSchema, toTraceAnalyticsResponse } from "../openapi/entities/trace-analytics.ts"
 import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
+  errorResponse,
   jsonBody,
+  jsonResponse,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   spanIdSchema,
@@ -558,7 +561,13 @@ const exportTraces = traceEndpoint({
       params: ProjectParamsSchema,
       body: jsonBody(ExportBodySchema),
     },
-    responses: typedResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
+    responses: {
+      202: jsonResponse(ExportResponseSchema, "Export enqueued"),
+      400: errorResponse("Validation error"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+      429: errorResponse("Export rate limit exceeded"),
+    },
   }),
   access: "write",
   rateLimitTier: "ultra",
@@ -577,6 +586,17 @@ const exportTraces = traceEndpoint({
           message: "`recipient` must belong to a member of this organization.",
         })
       }
+
+      yield* Effect.tryPromise({
+        try: () =>
+          enforceExportRequestRateLimit({
+            redis: ctx.redis,
+            organizationId: ctx.organization.id as string,
+            projectId: project.id as string,
+            recipientEmail: body.recipient,
+          }),
+        catch: (cause) => cause,
+      })
 
       yield* ctx.queuePublisher.publish("exports", "generate", {
         kind: "traces",

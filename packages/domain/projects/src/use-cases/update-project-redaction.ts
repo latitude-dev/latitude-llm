@@ -1,11 +1,13 @@
 import { OutboxEventWriter } from "@domain/events"
 import {
+  isSameRedactionSetting,
   type NotFoundError,
   type ProjectId,
   type RedactionSetting,
   type RepositoryError,
   SqlClient,
   toRepositoryError,
+  withPreservedRedactionRules,
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Project } from "../entities/project.ts"
@@ -42,9 +44,9 @@ export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRe
         )
 
       const fromRedaction = existing.settings?.redaction ?? null
-      const toRedaction = input.redaction
+      const toRedaction = withPreservedRedactionRules(fromRedaction, input.redaction)
 
-      if (isSameRedaction(fromRedaction, toRedaction)) return existing
+      if (isSameRedactionSetting(fromRedaction, toRedaction)) return existing
 
       const { redaction: _dropped, ...settingsWithoutRedaction } = existing.settings ?? {}
       const now = new Date()
@@ -81,17 +83,3 @@ export const updateProjectRedactionUseCase = Effect.fn("projects.updateProjectRe
     }),
   )
 })
-
-const isSameRedaction = (a: RedactionSetting | null, b: RedactionSetting | null): boolean =>
-  JSON.stringify(normalizeRedaction(a)) === JSON.stringify(normalizeRedaction(b))
-
-/** Entity order is a UI artifact, so sort before comparing or a reorder reads as a change. */
-const normalizeRedaction = (setting: RedactionSetting | null) =>
-  setting === null
-    ? null
-    : {
-        mode: setting.mode ?? null,
-        entities: setting.entities ? [...setting.entities].sort() : null,
-        metadata: setting.scopes?.metadata ?? null,
-        identities: setting.identities ?? null,
-      }

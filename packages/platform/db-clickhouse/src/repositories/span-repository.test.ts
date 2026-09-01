@@ -1292,6 +1292,101 @@ describe("SpanRepository", () => {
 
       expect(latestTraceId).toBeNull()
     })
+
+    it("skips a later trace whose output sits on an operation the conversation view cannot render", async () => {
+      const WRAPPER_TRACE = TraceId("cccccccccccccccccccccccccccccccc")
+      const CHAT_TRACE = TraceId("dddddddddddddddddddddddddddddddd")
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: CHAT_TRACE,
+            span_id: "chatspan00000001",
+            operation: "chat",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"real answer"}]}]',
+            start_time: "2026-03-03 00:00:00.000000000",
+            end_time: "2026-03-03 00:00:01.000000000",
+            ingested_at: "2026-03-03 00:00:02.000",
+          }),
+          makeSpanRow({
+            trace_id: WRAPPER_TRACE,
+            span_id: "wrapspan00000001",
+            operation: "invoke_agent",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"wrapper echo"}]}]',
+            start_time: "2026-03-03 00:00:02.000000000",
+            end_time: "2026-03-03 00:00:03.000000000",
+            ingested_at: "2026-03-03 00:00:04.000",
+          }),
+        ]),
+      )
+
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [CHAT_TRACE, WRAPPER_TRACE],
+        }),
+      )
+
+      expect(latestTraceId).toBe(CHAT_TRACE)
+    })
+
+    it("falls back to an output-bearing trace when none carries output on a message operation", async () => {
+      const UNSPECIFIED_TRACE = TraceId("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: UNSPECIFIED_TRACE,
+            span_id: "unspecspan000001",
+            operation: "unspecified",
+            output_messages: '[{"role":"assistant","parts":[{"type":"text","content":"unrenderable"}]}]',
+            start_time: "2026-03-04 00:00:00.000000000",
+            end_time: "2026-03-04 00:00:01.000000000",
+            ingested_at: "2026-03-04 00:00:02.000",
+          }),
+        ]),
+      )
+
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [UNSPECIFIED_TRACE],
+        }),
+      )
+
+      expect(latestTraceId).toBe(UNSPECIFIED_TRACE)
+    })
+
+    it("returns null when no candidate trace carries output at all", async () => {
+      const SILENT_TRACE = TraceId("ffffffffffffffffffffffffffffffff")
+
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            trace_id: SILENT_TRACE,
+            span_id: "silentspan000001",
+            operation: "chat",
+            input_messages: '[{"role":"user","parts":[{"type":"text","content":"unanswered"}]}]',
+            output_messages: "",
+            start_time: "2026-03-05 00:00:00.000000000",
+            end_time: "2026-03-05 00:00:01.000000000",
+            ingested_at: "2026-03-05 00:00:02.000",
+          }),
+        ]),
+      )
+
+      const latestTraceId = await runCh(
+        repo.findLatestOutputTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [SILENT_TRACE],
+        }),
+      )
+
+      expect(latestTraceId).toBeNull()
+    })
   })
 
   describe("listToolSpansBySessionId", () => {
@@ -1512,6 +1607,68 @@ describe("SpanRepository", () => {
 
       expect(span.toolNames).toEqual(["defined_only_tool"])
       expect(span.toolDefinitions).toEqual([{ name: "defined_only_tool", description: "d", parameters: {} }])
+    })
+  })
+
+  /**
+   * The read the redaction preview samples from, and it had no coverage. Ordering and the dedupe
+   * are the parts that matter: a preview built on the oldest spans, or on superseded copies of
+   * them, would answer a question nobody asked.
+   */
+  describe("listRecentDetailsByProjectId", () => {
+    it("returns the newest deduped spans for the project, with their content payloads", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "1111111111111111",
+            name: "oldest",
+            ingested_at: "2026-01-01 00:00:00.000",
+            tool_output: "mail old@example.com",
+          }),
+          makeSpanRow({
+            span_id: "2222222222222222",
+            name: "newest",
+            ingested_at: "2026-01-01 00:00:05.000",
+            attr_string: { "acme.note": "ref ACME-1234" },
+          }),
+          makeSpanRow({
+            span_id: "2222222222222222",
+            name: "superseded",
+            ingested_at: "2026-01-01 00:00:02.000",
+          }),
+          makeSpanRow({ span_id: "3333333333333333", project_id: OTHER_PROJECT_ID, name: "other-project" }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listRecentDetailsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 10 }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["newest", "oldest"])
+      expect(spans[0]?.attrString["acme.note"]).toBe("ref ACME-1234")
+      expect(spans[1]?.toolOutput).toBe("mail old@example.com")
+    })
+
+    it("honours the limit, newest first", async () => {
+      await runCh(
+        insertJsonEachRow(
+          ch.client,
+          "spans",
+          Array.from({ length: 5 }, (_, index) =>
+            makeSpanRow({
+              span_id: String(index).repeat(16),
+              name: `span-${index}`,
+              ingested_at: `2026-01-01 00:00:0${index}.000`,
+            }),
+          ),
+        ),
+      )
+
+      const spans = await runCh(
+        repo.listRecentDetailsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 2 }),
+      )
+
+      expect(spans.map((span) => span.name)).toEqual(["span-4", "span-3"])
     })
   })
 })

@@ -39,8 +39,11 @@ export type DiscoverSignalError = RepositoryError | ScoreAlreadyOwnedBySignalErr
 const resolveKnownSignalId = ({ signalId, projectId }: { readonly signalId: string; readonly projectId: string }) =>
   Effect.gen(function* () {
     const signalRepository = yield* SignalRepository
+    // Unpromoted signals included: a null here routes the score to
+    // `signalDiscoveryWorkflow`, which would spawn a second signal for a cluster
+    // that already exists instead of adding the evidence that promotes it.
     const issue = yield* signalRepository
-      .findById(SignalId(signalId))
+      .findById(SignalId(signalId), { includeUnpromoted: true })
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
     if (issue === null || issue.projectId !== projectId) {

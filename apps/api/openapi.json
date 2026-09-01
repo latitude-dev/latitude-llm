@@ -239,12 +239,11 @@
                 "iban",
                 "us_ssn",
                 "ip_address",
-                "secret",
-                "crypto_wallet"
+                "secret"
               ]
             },
-            "maxItems": 8,
-            "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` and `crypto_wallet` are off by default because they also match version strings and hex hashes. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail."
+            "maxItems": 7,
+            "description": "Which categories to look for. Defaults to email, phone, credit_card, iban, us_ssn, secret when omitted; `ip_address` is off by default because a dotted quad and a four-part version string are the same string. Detection is pattern based: it reliably catches structured identifiers, and does not catch names, addresses, or free-form personal detail."
           },
           "scopes": {
             "type": "object",
@@ -558,7 +557,7 @@
           "cost": {
             "type": "integer",
             "minimum": 0,
-            "description": "Score cost in microcents (1/1,000,000 of a USD)."
+            "description": "Score cost in microcents (100,000,000 per USD)."
           },
           "draftedAt": {
             "type": [
@@ -736,7 +735,7 @@
           "cost": {
             "type": "integer",
             "minimum": 0,
-            "description": "Score cost in microcents (1/1,000,000 of a USD)."
+            "description": "Score cost in microcents (100,000,000 per USD)."
           },
           "draftedAt": {
             "type": [
@@ -883,7 +882,7 @@
             "type": "integer",
             "minimum": 0,
             "default": 0,
-            "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores."
+            "description": "Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores."
           },
           "trace": {
             "$ref": "#/components/schemas/TraceRef"
@@ -1078,7 +1077,7 @@
             "type": "integer",
             "minimum": 0,
             "default": 0,
-            "description": "Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores."
+            "description": "Score cost in microcents (100,000,000 per USD). `0` for externally-computed scores."
           },
           "trace": {
             "$ref": "#/components/schemas/TraceRef"
@@ -1215,7 +1214,7 @@
           "cost": {
             "type": "integer",
             "minimum": 0,
-            "description": "Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."
+            "description": "Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."
           },
           "draftedAt": {
             "type": [
@@ -1519,15 +1518,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "sessionId": {
             "type": [
@@ -1926,15 +1925,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "sessionId": {
             "type": [
@@ -2242,15 +2241,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "costIsEstimated": {
             "type": "boolean",
@@ -2503,15 +2502,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "costIsEstimated": {
             "type": "boolean",
@@ -5273,6 +5272,9 @@
           },
           "monitoringState": {
             "$ref": "#/components/schemas/SignalMonitoringState"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/SignalFeedback"
           }
         },
         "required": [
@@ -5297,7 +5299,8 @@
           "occurrences",
           "affectedSessionsPercent",
           "evaluations",
-          "monitoringState"
+          "monitoringState",
+          "feedback"
         ]
       },
       "Evaluation": {
@@ -5535,6 +5538,34 @@
         ],
         "description": "Whether the signal is currently being monitored: `automatic`, `idle`, `generating`, `realigning`, or `failed`."
       },
+      "SignalFeedback": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score for the signal's usefulness, in `[0, 1]`."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "`true` when the signal is a real problem; `false` when it is a false positive."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Reason given for the verdict. Empty when none was provided."
+          }
+        },
+        "required": [
+          "value",
+          "passed",
+          "feedback"
+        ],
+        "description": "The verdict submitted for this signal, or `null` when none has been submitted yet."
+      },
       "SignalHistogram": {
         "type": "object",
         "properties": {
@@ -5703,6 +5734,62 @@
           "evaluationId"
         ]
       },
+      "SubmitSignalFeedbackResponse": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score for the signal's usefulness, in `[0, 1]`."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "`true` when the signal is a real problem; `false` when it is a false positive."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Reason given for the verdict. Empty when none was provided."
+          },
+          "ignored": {
+            "type": "boolean",
+            "description": "Whether the signal was archived as part of this call."
+          }
+        },
+        "required": [
+          "value",
+          "passed",
+          "feedback",
+          "ignored"
+        ]
+      },
+      "SubmitSignalFeedbackBody": {
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "description": "`true` when the signal is a real problem worth flagging; `false` when it is a false positive."
+          },
+          "feedback": {
+            "type": "string",
+            "maxLength": 1024,
+            "description": "Reason for the verdict. Required when `passed` is `false`."
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`."
+          },
+          "ignore": {
+            "type": "boolean",
+            "description": "Also archive the signal so new occurrences stop being reported."
+          }
+        },
+        "required": [
+          "passed"
+        ]
+      },
       "ExportSignalsResponse": {
         "type": "object",
         "properties": {
@@ -5803,9 +5890,10 @@
             "enum": [
               "low",
               "medium",
-              "high"
+              "high",
+              "urgent"
             ],
-            "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+            "description": "Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."
           },
           "startedAt": {
             "type": "string",
@@ -8092,9 +8180,10 @@
             "enum": [
               "low",
               "medium",
-              "high"
+              "high",
+              "urgent"
             ],
-            "description": "Severity of incidents this monitor opens: `low`, `medium`, or `high`."
+            "description": "Severity of incidents this monitor opens: `low`, `medium`, `high`, or `urgent`."
           }
         },
         "required": [
@@ -8189,7 +8278,8 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
                 "description": "Severity assigned to incidents opened by this monitor."
               },
@@ -8248,7 +8338,8 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
                 "description": "Severity assigned to incidents opened by this monitor."
               },
@@ -8317,7 +8408,8 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ],
                 "description": "Severity assigned to incidents opened by this monitor."
               },
@@ -8421,7 +8513,8 @@
             "enum": [
               "low",
               "medium",
-              "high"
+              "high",
+              "urgent"
             ],
             "description": "Replacement incident severity."
           }
@@ -8495,9 +8588,10 @@
             "enum": [
               "low",
               "medium",
-              "high"
+              "high",
+              "urgent"
             ],
-            "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+            "description": "Severity bucket assigned to the incident: `low`, `medium`, `high`, or `urgent`."
           },
           "startedAt": {
             "type": "string",
@@ -11959,15 +12053,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "userId": {
             "type": [
@@ -12422,15 +12516,15 @@
           },
           "costInputMicrocents": {
             "type": "number",
-            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of input tokens in microcents (100,000,000 per USD)."
           },
           "costOutputMicrocents": {
             "type": "number",
-            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+            "description": "Cost of output tokens in microcents (100,000,000 per USD)."
           },
           "costTotalMicrocents": {
             "type": "number",
-            "description": "Total cost in microcents (1/1,000,000 USD)."
+            "description": "Total cost in microcents (100,000,000 per USD)."
           },
           "userId": {
             "type": [
@@ -13197,6 +13291,455 @@
           "readCount",
           "writeCount",
           "lastAccessedAt"
+        ]
+      },
+      "ListImportsResponse": {
+        "type": "object",
+        "properties": {
+          "imports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Import"
+            },
+            "description": "The project's imports, newest first."
+          }
+        },
+        "required": [
+          "imports"
+        ]
+      },
+      "Import": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable import identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this import."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Latitude project the traces are imported into."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "langfuse",
+              "langsmith",
+              "braintrust"
+            ],
+            "description": "Observability platform the import reads from."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "queued",
+              "running",
+              "succeeded",
+              "capped",
+              "cancelled",
+              "failed"
+            ],
+            "description": "Lifecycle state. `created`/`queued`/`running` are in flight; `succeeded` finished cleanly; `capped` stopped at a ceiling with everything before it kept; `cancelled` and `failed` can be retried."
+          },
+          "config": {
+            "$ref": "#/components/schemas/ImportConfig"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/ImportStats"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the import did not finish cleanly, or which ceiling stopped a `capped` one. `status` alone says whether it failed."
+          },
+          "cancelledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which cancellation was requested, or `null`."
+          },
+          "startedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which a worker picked the import up, or `null`."
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the import ended, or `null` while in flight."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "source",
+          "status",
+          "config",
+          "stats",
+          "error",
+          "cancelledAt",
+          "startedAt",
+          "finishedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ImportConfig": {
+        "type": "object",
+        "properties": {
+          "sourceProjectId": {
+            "type": "string",
+            "description": "Id of the project on the platform the import reads from."
+          },
+          "sourceProjectName": {
+            "type": "string",
+            "description": "Name of the platform project, as shown in Latitude."
+          },
+          "sourceRegion": {
+            "type": "string",
+            "description": "Platform region the import runs against."
+          },
+          "rangeFrom": {
+            "type": "string",
+            "description": "ISO-8601 start of the imported time range (inclusive)."
+          },
+          "rangeTo": {
+            "type": "string",
+            "description": "ISO-8601 end of the imported time range (exclusive)."
+          },
+          "maxTraces": {
+            "type": "integer",
+            "description": "Most traces this import will bring in, newest first."
+          },
+          "sessionMetadataKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "LangSmith only: run metadata key that groups traces into sessions. `null` elsewhere."
+          }
+        },
+        "required": [
+          "sourceProjectId",
+          "sourceProjectName",
+          "sourceRegion",
+          "rangeFrom",
+          "rangeTo",
+          "maxTraces",
+          "sessionMetadataKey"
+        ],
+        "description": "What the import was asked to bring in, snapshotted when it was created."
+      },
+      "ImportStats": {
+        "type": "object",
+        "properties": {
+          "recordsFetched": {
+            "type": "integer",
+            "description": "Rows read from the platform, including spans later skipped."
+          },
+          "sessionsImported": {
+            "type": "integer",
+            "description": "Distinct sessions among the imported traces."
+          },
+          "tracesImported": {
+            "type": "integer",
+            "description": "Traces imported. One imported trace bills one credit."
+          },
+          "spansImported": {
+            "type": "integer",
+            "description": "Spans written across all imported traces."
+          },
+          "spansSkipped": {
+            "type": "integer",
+            "description": "Spans skipped because they carried no usable trace or span id."
+          }
+        },
+        "required": [
+          "recordsFetched",
+          "sessionsImported",
+          "tracesImported",
+          "spansImported",
+          "spansSkipped"
+        ],
+        "description": "What the import has brought in so far."
+      },
+      "CreateImportBody": {
+        "type": "object",
+        "properties": {
+          "credentials": {
+            "$ref": "#/components/schemas/ImportCredentials"
+          },
+          "sourceProjectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Id of the project on the platform to read from."
+          },
+          "sourceProjectName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the platform project, shown in Latitude. Defaults to `sourceProjectId`."
+          },
+          "rangeFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO-8601 start of the range to import. Defaults to 90 days before `rangeTo`, bounded by the plan's retention."
+          },
+          "rangeTo": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO-8601 end of the range to import. Defaults to now."
+          },
+          "maxTraces": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "Most traces to import, newest first. Each imported trace bills one credit. Defaults to the maximum, 100,000."
+          },
+          "sessionMetadataKey": {
+            "type": "string",
+            "description": "LangSmith only: run metadata key that groups traces into sessions. Defaults to `thread_id`."
+          }
+        },
+        "required": [
+          "credentials",
+          "sourceProjectId"
+        ]
+      },
+      "ImportCredentials": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LangfuseImportCredentials"
+          },
+          {
+            "$ref": "#/components/schemas/LangsmithImportCredentials"
+          },
+          {
+            "$ref": "#/components/schemas/BraintrustImportCredentials"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "langfuse": "#/components/schemas/LangfuseImportCredentials",
+            "langsmith": "#/components/schemas/LangsmithImportCredentials",
+            "braintrust": "#/components/schemas/BraintrustImportCredentials"
+          }
+        },
+        "description": "Credentials for the platform to import from; `kind` names the platform. Not stored after the import ends."
+      },
+      "LangfuseImportCredentials": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "langfuse"
+            ],
+            "description": "Marks these as Langfuse credentials."
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "eu",
+              "us",
+              "jp",
+              "hipaa-us"
+            ],
+            "description": "Langfuse Cloud region the account lives in."
+          },
+          "publicKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Langfuse project public key (`pk-lf-…`)."
+          },
+          "secretKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Langfuse project secret key (`sk-lf-…`)."
+          }
+        },
+        "required": [
+          "kind",
+          "region",
+          "publicKey",
+          "secretKey"
+        ]
+      },
+      "LangsmithImportCredentials": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "langsmith"
+            ],
+            "description": "Marks these as LangSmith credentials."
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "gcp-eu",
+              "gcp-us",
+              "gcp-apac",
+              "aws-us"
+            ],
+            "description": "LangSmith region the account lives in."
+          },
+          "apiKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "LangSmith API key (`lsv2_pt_…`)."
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "Workspace to import from, for accounts with more than one. Omit to use the key's default workspace."
+          }
+        },
+        "required": [
+          "kind",
+          "region",
+          "apiKey"
+        ]
+      },
+      "BraintrustImportCredentials": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "braintrust"
+            ],
+            "description": "Marks these as Braintrust credentials."
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "eu",
+              "us"
+            ],
+            "description": "Braintrust data plane the organization lives on."
+          },
+          "apiKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Braintrust API key with read access to the project."
+          }
+        },
+        "required": [
+          "kind",
+          "region",
+          "apiKey"
+        ]
+      },
+      "ImportDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Import"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "runs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ImportRun"
+                },
+                "description": "Recent pages the import processed, newest first. Bounded, so old pages fall off."
+              }
+            },
+            "required": [
+              "runs"
+            ]
+          }
+        ]
+      },
+      "ImportRun": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "failed"
+            ],
+            "description": "Whether this page of the import was written."
+          },
+          "stats": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImportStats"
+              },
+              {
+                "description": "What this page alone brought in."
+              }
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why this page failed, or `null`."
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the page started."
+          },
+          "finishedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the page ended."
+          }
+        },
+        "required": [
+          "status",
+          "stats",
+          "error",
+          "startedAt",
+          "finishedAt"
+        ]
+      },
+      "RetryImportBody": {
+        "type": "object",
+        "properties": {
+          "credentials": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImportCredentials"
+              },
+              {
+                "description": "Platform credentials, required again because they are not stored after an import ends. Must use the same region as the original import."
+              }
+            ]
+          }
+        },
+        "required": [
+          "credentials"
         ]
       }
     },
@@ -14667,6 +15210,16 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Export rate limit exceeded",
             "content": {
               "application/json": {
                 "schema": {
@@ -18466,6 +19019,97 @@
         }
       }
     },
+    "/v1/projects/{projectSlug}/signals/{signalSlug}/feedback": {
+      "post": {
+        "tags": [
+          "Signals"
+        ],
+        "x-fern-sdk-group-name": "signals",
+        "x-fern-sdk-method-name": "submitFeedback",
+        "summary": "Submit signal feedback",
+        "description": "Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "submitSignalFeedback",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Signal slug."
+            },
+            "required": true,
+            "description": "Signal slug.",
+            "name": "signalSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitSignalFeedbackBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Feedback recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitSignalFeedbackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects/{projectSlug}/signals/export": {
       "post": {
         "tags": [
@@ -18639,7 +19283,8 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "urgent"
                 ]
               },
               "description": "Restrict to incidents whose severity matches any value in this list."
@@ -24092,6 +24737,409 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MemoryRecordUsers"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/imports": {
+      "get": {
+        "tags": [
+          "Imports"
+        ],
+        "x-fern-sdk-group-name": "imports",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List imports",
+        "description": "Returns the project's imports from other observability platforms, newest first. Excludes the run history — fetch a single import for that.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listImports",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of imports",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListImportsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Imports"
+        ],
+        "x-fern-sdk-group-name": "imports",
+        "x-fern-sdk-method-name": "create",
+        "summary": "Create import",
+        "description": "Imports historical traces from another observability platform into the project. The import runs in the background, newest traces first.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "createImport",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateImportBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Import created and started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Import"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/imports/{importId}": {
+      "get": {
+        "tags": [
+          "Imports"
+        ],
+        "x-fern-sdk-group-name": "imports",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get import",
+        "description": "Returns a single import, including its recent run history.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getImport",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Import id."
+            },
+            "required": true,
+            "description": "Import id.",
+            "name": "importId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Import",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/imports/{importId}/cancel": {
+      "post": {
+        "tags": [
+          "Imports"
+        ],
+        "x-fern-sdk-group-name": "imports",
+        "x-fern-sdk-method-name": "cancel",
+        "summary": "Cancel import",
+        "description": "Cancels an import that has not finished. Traces already imported are kept, and the import can be retried later.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "cancelImport",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Import id."
+            },
+            "required": true,
+            "description": "Import id.",
+            "name": "importId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Import cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Import"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/imports/{importId}/retry": {
+      "post": {
+        "tags": [
+          "Imports"
+        ],
+        "x-fern-sdk-group-name": "imports",
+        "x-fern-sdk-method-name": "retry",
+        "summary": "Retry import",
+        "description": "Retries a failed, cancelled, or capped import from where it stopped, as a new import that runs in the background. Credentials must be provided again and match the original's region.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "retryImport",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Import id."
+            },
+            "required": true,
+            "description": "Import id.",
+            "name": "importId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryImportBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Retry created and started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Import"
                 }
               }
             }

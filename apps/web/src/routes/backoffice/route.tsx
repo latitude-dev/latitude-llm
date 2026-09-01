@@ -5,6 +5,7 @@ import {
   Building2,
   CircleDollarSign,
   Flag,
+  Handshake,
   Presentation,
   Search,
   ShieldAlertIcon,
@@ -128,6 +129,13 @@ function BackofficeLayout() {
                   label="Wrapped"
                   to="/backoffice/wrapped"
                   active={pathname === "/backoffice/wrapped" || pathname === "/backoffice/wrapped/"}
+                  collapsed={collapsed}
+                />
+                <NavItem
+                  icon={Handshake}
+                  label="Partners"
+                  to="/backoffice/partners"
+                  active={pathname === "/backoffice/partners" || pathname === "/backoffice/partners/"}
                   collapsed={collapsed}
                 />
                 <NavItem

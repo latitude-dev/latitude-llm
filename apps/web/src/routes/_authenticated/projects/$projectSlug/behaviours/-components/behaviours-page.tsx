@@ -3,6 +3,7 @@ import { Alert, Button, cn, Icon, Modal, Text, Tooltip, useToast } from "@repo/u
 import { useNavigate } from "@tanstack/react-router"
 import { ClockIcon, HourglassIcon, InfoIcon, Loader2Icon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
+import { TimeFilterDropdown } from "../../../../../../components/time-filter-dropdown.tsx"
 import { useAnalyticsTimeWindow } from "../../../../../../domains/projects/use-analytics-time-window.ts"
 import { useCustomBehaviorPreview } from "../../../../../../domains/taxonomy/custom-behaviors.collection.ts"
 import type { CustomBehaviorRecord } from "../../../../../../domains/taxonomy/custom-behaviors.functions.ts"
@@ -13,13 +14,19 @@ import {
   useInvalidateBehaviorQueries,
   useStopBehavior,
 } from "../../../../../../domains/taxonomy/facets.collection.ts"
-import { type BehaviourSegment, useProjectBehaviours } from "../../../../../../domains/taxonomy/taxonomy.collection.ts"
-import type { BehaviourMomentRangeRecord } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
+import {
+  type BehaviourSegment,
+  useBehaviourCoverage,
+  useProjectBehaviours,
+} from "../../../../../../domains/taxonomy/taxonomy.collection.ts"
+import type {
+  BehaviourCoverageRecord,
+  BehaviourMomentRangeRecord,
+} from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
-import { TimeFilterDropdown } from "../../-components/time-filter-dropdown.tsx"
 import type { useRouteProject } from "../../-route-data.ts"
 import { type BehaviourScope, scopeTreeBehaviour } from "./behaviour-scope.ts"
 import { findNodeById, findNodeByPath, isBehaviourTrajectoryMetric } from "./behaviour-tree-nav.ts"
@@ -355,6 +362,34 @@ function BehaviorColdStartProgress({
   )
 }
 
+const coverageDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+
+/**
+ * Says out loud why the picker stops where it does. A facet lens groups sessions
+ * only inside the windows it has been gardened over, and the alternative to
+ * naming that band is a range control that silently answers a narrower question
+ * than the one it was asked.
+ */
+function CoverageNote({ coverage }: { readonly coverage: BehaviourCoverageRecord }) {
+  return (
+    <Tooltip
+      asChild
+      side="bottom"
+      trigger={
+        <span className="flex cursor-default flex-row items-center gap-1 text-muted-foreground">
+          <Icon icon={ClockIcon} size="sm" color="foregroundMuted" />
+          <Text.H6 color="foregroundMuted">{`Coverage: ${coverageDay(coverage.fromIso)} – ${coverageDay(coverage.toIso)}`}</Text.H6>
+        </span>
+      }
+    >
+      <span className="block max-w-xs">
+        This behavior only groups the sessions it has been analyzed over, so counts and trends outside this range would
+        be incomplete. The range grows as it keeps running.
+      </span>
+    </Tooltip>
+  )
+}
+
 /**
  * The single behaviours-tree page body, shared by the legacy global screen, the
  * topic behavior, every facet behavior, and every view. They differ only by
@@ -378,25 +413,41 @@ export function BehavioursTreeBody({
   })
   const [behaviourPathParam, setBehaviourPathParam] = useParamState("behaviourPath", "", { history: "push" })
   const [coldStartSessionId, setColdStartSessionId] = useState("")
-  const tw = useAnalyticsTimeWindow({ project, fromKey: "behaviourTimeFrom", toKey: "behaviourTimeTo" })
+  // A facet lens only has membership for the windows gardening wrote, so its
+  // picker, chart and counts are all bounded by that band rather than offering a
+  // range the slice cannot answer.
+  const coverageQuery = useBehaviourCoverage({
+    projectId: project.id,
+    ...(customBehaviour?.facetId ? { customBehaviorId: customBehaviour.id, facetId: customBehaviour.facetId } : {}),
+  })
+  const coverage = coverageQuery.data
+  const tw = useAnalyticsTimeWindow({
+    project,
+    fromKey: "behaviourTimeFrom",
+    toKey: "behaviourTimeTo",
+    ...(coverage ? { coverageFromIso: coverage.fromIso, coverageToIso: coverage.toIso } : {}),
+  })
   const [momentMetric, setMomentMetric] = useParamState("behaviourMomentMetric", "")
   const [momentTurnFrom, setMomentTurnFrom] = useParamState("behaviourMomentTurnFrom", "")
   const [momentTurnTo, setMomentTurnTo] = useParamState("behaviourMomentTurnTo", "")
   const [momentTurnMax, setMomentTurnMax] = useParamState("behaviourMomentTurnMax", "")
 
+  // All time on a covered lens is not unbounded — it is the covered band, and
+  // sending it explicitly is what keeps the trend chart off the coverage ramp.
   const timeRange = useMemo(
     () =>
-      tw.isAllTime
+      tw.isAllTime && !coverage
         ? undefined
         : {
             ...(tw.listRange.fromIso ? { fromIso: tw.listRange.fromIso } : {}),
             toIso: tw.listRange.toIso,
           },
-    [tw.isAllTime, tw.listRange],
+    [tw.isAllTime, tw.listRange, coverage],
   )
 
   const demoProject = isDemoProject(project)
-  const { data, isLoading } = useProjectBehaviours({
+  const { data, isLoading: treeLoading } = useProjectBehaviours({
+    enabled: !coverageQuery.isLoading,
     projectId: project.id,
     dimension: "topic",
     segment,
@@ -411,6 +462,9 @@ export function BehavioursTreeBody({
       : { pollUntilTopics: demoProject && segment === "all" && !timeRange }),
   })
   const topics = data?.topics ?? []
+  // Coverage bounds the range the tree is read over, so a tree read before it
+  // resolves is a read of the wrong range — that wait is loading, not emptiness.
+  const isLoading = treeLoading || coverageQuery.isLoading
 
   const momentRange = useMemo((): BehaviourMomentRangeRecord | undefined => {
     if (!isBehaviourTrajectoryMetric(momentMetric)) return undefined
@@ -473,11 +527,16 @@ export function BehavioursTreeBody({
             segment={segment}
             behaviourPath={behaviourPath}
             timeFilter={
-              <TimeFilterDropdown
-                {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
-                {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
-                onChange={tw.onTimeChange}
-              />
+              <>
+                <TimeFilterDropdown
+                  {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
+                  {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
+                  {...(coverage ? { minTime: coverage.fromIso, maxTime: coverage.toIso } : {})}
+                  placeholder={coverage ? "Covered range" : "All time"}
+                  onChange={tw.onTimeChange}
+                />
+                {coverage ? <CoverageNote coverage={coverage} /> : null}
+              </>
             }
             timeRange={timeRange}
             momentRange={momentRange}

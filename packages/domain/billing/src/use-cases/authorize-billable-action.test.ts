@@ -63,10 +63,12 @@ describe("authorizeBillableAction", () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-01-15T12:00:00.000Z"))
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllEnvs()
   })
 
   it("allows a free-plan action while credits remain", async () => {

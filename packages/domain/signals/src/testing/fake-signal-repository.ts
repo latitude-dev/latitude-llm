@@ -1,4 +1,4 @@
-import { NotFoundError } from "@domain/shared"
+import { NotFoundError, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
@@ -32,17 +32,34 @@ export const createFakeSignalRepository = (
 ) => {
   const issues = new Map<string, Signal>(seed.map((issue) => [issue.id, issue] as const))
   const lifecycleOverlay = new Map<string, SignalLifecycleFlags>(options.lifecycle ?? [])
+  // loser id -> survivor id, the fake's stand-in for `merged_into_signal_id`.
+  const mergedInto = new Map<string, string>()
 
   const lifecycleFor = (signalId: string): SignalLifecycleFlags => lifecycleOverlay.get(signalId) ?? DEFAULT_LIFECYCLE
 
   const withLifecycle = (issue: Signal): SignalWithLifecycle =>
     Object.assign({}, issue, { lifecycle: lifecycleFor(issue.id) })
 
+  // Mirrors the adapter's predicates, kept as two so `includeUnpromoted` relaxes
+  // only the promotion half — the adapter never stops filtering soft-deletes.
+  // Fidelity matters here: a domain test whose fake still returns a candidate (or
+  // a deleted signal) would pass while the real read leaks one. Loose comparisons
+  // on purpose — Postgres hands back null, but hand-built fixtures leave an unset
+  // timestamp `undefined`.
+  const isLive = (issue: Signal): boolean => issue.deletedAt == null
+  const isUserVisible = (issue: Signal): boolean => isLive(issue) && issue.promotedAt != null
+  const isCandidate = (issue: Signal): boolean => isLive(issue) && issue.promotedAt == null
+  const isReadable = (issue: Signal, includeUnpromoted?: boolean): boolean =>
+    includeUnpromoted ? isLive(issue) : isUserVisible(issue)
+
   const repository: SignalRepositoryShape = {
-    findById: (id) =>
+    findById: (id, options) =>
       Effect.gen(function* () {
         const issue = issues.get(id)
         if (!issue) return yield* new NotFoundError({ entity: "Signal", id })
+        if (!isReadable(issue, options?.includeUnpromoted)) {
+          return yield* new NotFoundError({ entity: "Signal", id })
+        }
         return withLifecycle(issue)
       }),
 
@@ -57,14 +74,16 @@ export const createFakeSignalRepository = (
       Effect.sync(() =>
         signalIds
           .map((signalId) => issues.get(signalId))
-          .filter((issue): issue is Signal => issue !== undefined && issue.projectId === projectId)
+          .filter(
+            (issue): issue is Signal => issue !== undefined && issue.projectId === projectId && isUserVisible(issue),
+          )
           .map(withLifecycle),
       ),
 
-    hybridSearch: ({ projectId }) =>
+    hybridSearch: ({ projectId, includeUnpromoted }) =>
       Effect.sync(() =>
         [...issues.values()]
-          .filter((issue) => issue.projectId === projectId)
+          .filter((issue) => issue.projectId === projectId && isReadable(issue, includeUnpromoted))
           .map((issue) => ({
             signalId: issue.id,
             name: issue.name,
@@ -73,18 +92,32 @@ export const createFakeSignalRepository = (
           })),
       ),
 
-    findSimilarByCentroid: ({ projectId, signalId, limit }) =>
+    findSimilarByCentroid: ({ projectId, signalId, limit, unpromotedOnly }) =>
       Effect.sync(() => {
         // Mirrors the real adapter: cosine over normalized centroid bases,
         // empty when the source is missing or has a zero-mass centroid,
-        // zero-mass neighbors skipped, self excluded, project-scoped.
+        // zero-mass neighbors skipped, self excluded, project-scoped, and the
+        // same visibility predicate applied to both sides.
+        const isVisible = unpromotedOnly ? isCandidate : isUserVisible
         const source = issues.get(signalId)
-        if (!source || source.projectId !== projectId || source.centroid === null || source.centroid.mass <= 0)
+        if (
+          !source ||
+          source.projectId !== projectId ||
+          !isVisible(source) ||
+          source.centroid === null ||
+          source.centroid.mass <= 0
+        )
           return []
         const sourceVector = normalize(source.centroid.base)
         if (sourceVector === null) return []
         return [...issues.values()]
-          .filter((issue) => issue.projectId === projectId && issue.id !== signalId && (issue.centroid?.mass ?? 0) > 0)
+          .filter(
+            (issue) =>
+              issue.projectId === projectId &&
+              issue.id !== signalId &&
+              isVisible(issue) &&
+              (issue.centroid?.mass ?? 0) > 0,
+          )
           .flatMap((issue) => {
             if (issue.centroid === null) return []
             const vector = normalize(issue.centroid.base)
@@ -98,12 +131,12 @@ export const createFakeSignalRepository = (
     searchOrgWide: ({ query, preferProjectId, limit }) =>
       Effect.sync(() => {
         // Default fake behavior: org-wide case-insensitive name match, embedding-agnostic, with the
-        // preferred project's issues first. Resolved/ignored signals are excluded like the real
-        // adapter. Tests that need distinct lexical vs semantic tiers override this method.
+        // preferred project's issues first. Resolved/ignored/unpromoted signals are excluded like
+        // the real adapter. Tests that need distinct lexical vs semantic tiers override this method.
         const q = query.trim().toLowerCase()
         const prefer = (projectId: string) => (preferProjectId && projectId === preferProjectId ? 1 : 0)
         return [...issues.values()]
-          .filter((issue) => issue.resolvedAt === null && issue.ignoredAt === null)
+          .filter((issue) => isUserVisible(issue) && issue.resolvedAt === null && issue.ignoredAt === null)
           .filter((issue) => issue.name.toLowerCase().includes(q))
           .sort((a, b) => prefer(b.projectId) - prefer(a.projectId))
           .slice(0, limit)
@@ -117,11 +150,12 @@ export const createFakeSignalRepository = (
 
     findBySlug: ({ projectId, slug }) =>
       Effect.gen(function* () {
-        const issue = [...issues.values()].find((i) => i.projectId === projectId && i.slug === slug)
+        const issue = [...issues.values()].find((i) => i.projectId === projectId && i.slug === slug && isUserVisible(i))
         if (!issue) return yield* new NotFoundError({ entity: "Signal", id: slug })
         return withLifecycle(issue)
       }),
 
+    // Slug uniqueness counts candidates: a candidate holds its slug for real.
     existsBySlug: ({ projectId, slug }) =>
       Effect.sync(() => [...issues.values()].some((i) => i.projectId === projectId && i.slug === slug)),
 
@@ -146,10 +180,56 @@ export const createFakeSignalRepository = (
         return true
       }),
 
+    claimFeedback: ({ signalId, feedback, now }) =>
+      Effect.sync(() => {
+        const issue = issues.get(signalId)
+        if (!issue || issue.deletedAt != null || issue.feedback != null) return false
+        issues.set(signalId, { ...issue, feedback, updatedAt: now })
+        return true
+      }),
+
     softDelete: (id) =>
       Effect.sync(() => {
         const issue = issues.get(id)
         if (issue) issues.set(id, { ...issue, deletedAt: new Date(), updatedAt: new Date() })
+      }),
+
+    markMerged: ({ survivorId, loserIds, now }) =>
+      Effect.sync(() => {
+        for (const loserId of loserIds) {
+          const issue = issues.get(loserId)
+          if (!issue || issue.deletedAt != null) continue
+          mergedInto.set(loserId, survivorId)
+          issues.set(loserId, { ...issue, deletedAt: now, updatedAt: now })
+        }
+      }),
+
+    findAbsorbedLineage: ({ survivorId, maxDepth }) =>
+      Effect.sync(() => {
+        const absorbed: SignalId[] = []
+        let frontier = [survivorId as string]
+        for (let depth = 0; depth < maxDepth && frontier.length > 0; depth++) {
+          const next = [...mergedInto.entries()]
+            .filter(([, target]) => frontier.includes(target))
+            .map(([loserId]) => loserId)
+            .filter((loserId) => !absorbed.includes(SignalId(loserId)))
+          absorbed.push(...next.map((loserId) => SignalId(loserId)))
+          frontier = next
+        }
+        return absorbed
+      }),
+
+    expireIdleCandidates: ({ idleBefore, now, limit }) =>
+      Effect.sync(() => {
+        const stale = [...issues.values()]
+          .filter(
+            (issue) => isCandidate(issue) && (issue.clusteredAt ?? issue.createdAt).getTime() < idleBefore.getTime(),
+          )
+          .slice(0, limit)
+        for (const issue of stale) {
+          issues.set(issue.id, { ...issue, deletedAt: now, updatedAt: now })
+        }
+        return stale.length
       }),
 
     countBySlug: ({ slug, excludeSignalId }) =>
@@ -164,7 +244,7 @@ export const createFakeSignalRepository = (
     list: ({ projectId, limit, offset }) =>
       Effect.sync(() => {
         const rows = [...issues.values()]
-          .filter((issue) => issue.projectId === projectId)
+          .filter((issue) => issue.projectId === projectId && isUserVisible(issue))
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         const window = rows.slice(offset, offset + limit + 1)
         return {
@@ -179,7 +259,7 @@ export const createFakeSignalRepository = (
       Effect.sync(() => {
         const query = searchQuery?.trim().toLowerCase()
         const filtered = [...issues.values()]
-          .filter((issue) => issue.projectId === projectId)
+          .filter((issue) => issue.projectId === projectId && isUserVisible(issue))
           .map(withLifecycle)
           .filter((issue) => {
             const archived = issue.resolvedAt !== null || issue.ignoredAt !== null
@@ -221,7 +301,7 @@ export const createFakeSignalRepository = (
     listIdsCreatedInTimeRange: ({ projectId, timeRange }) =>
       Effect.sync(() =>
         [...issues.values()]
-          .filter((issue) => issue.projectId === projectId && issue.deletedAt === null)
+          .filter((issue) => issue.projectId === projectId && isUserVisible(issue))
           .filter(
             (issue) =>
               (!timeRange.from || issue.createdAt >= timeRange.from) &&

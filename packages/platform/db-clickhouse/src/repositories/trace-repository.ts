@@ -44,6 +44,7 @@ import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
+import { MESSAGE_OPERATION_FILTER, SYSTEM_INSTRUCTION_OPERATION_FILTER } from "../registries/helpers.ts"
 import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { isActiveSearch, planSearch } from "./search-plan.ts"
@@ -90,10 +91,6 @@ export const LIST_SELECT = `
   argMinIfMerge(root_span_id)   AS root_span_id,
   argMinIfMerge(root_span_name) AS root_span_name
 `
-
-const MESSAGE_OPERATION_FILTER = "operation IN ('chat', 'text_completion', 'generate_content')"
-const SYSTEM_INSTRUCTION_OPERATION_FILTER =
-  "operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent')"
 
 const SPAN_MESSAGES_SELECT = `
   trace_id,

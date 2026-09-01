@@ -722,4 +722,68 @@ describe("TaxonomyObservationRepositoryLive.listForFacetSample", () => {
     expect(sample[0]?.sessionObservationId).toBe("h".repeat(24))
     expect(sample[0]?.transcript).toBe("matched")
   })
+
+  it("counts clusterable observations per UTC day, skipping ones no pass could have used", async () => {
+    const dayProjectId = ProjectId("cov".padEnd(24, "0"))
+    await ch.client.insert({
+      table: "taxonomy_observations",
+      values: [
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d1".padEnd(24, "0"),
+            startTime: new Date("2026-05-24T01:00:00.000Z"),
+          }),
+        ),
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d2".padEnd(24, "0"),
+            startTime: new Date("2026-05-24T23:30:00.000Z"),
+          }),
+        ),
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d3".padEnd(24, "0"),
+            startTime: new Date("2026-05-25T02:00:00.000Z"),
+          }),
+        ),
+        // No embedding: never sampleable, so it is not coverage the lens is missing.
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d4".padEnd(24, "0"),
+            embedding: [],
+            startTime: new Date("2026-05-25T03:00:00.000Z"),
+          }),
+        ),
+        // Before the scan horizon.
+        makeObservationRow(
+          makeObservation({
+            projectId: dayProjectId,
+            observationId: "d5".padEnd(24, "0"),
+            startTime: new Date("2026-05-01T03:00:00.000Z"),
+          }),
+        ),
+      ],
+      format: "JSONEachRow",
+    })
+
+    const counts = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        return yield* repo.getClusterableCountsByDay({
+          organizationId,
+          projectId: dayProjectId,
+          since: new Date("2026-05-20T00:00:00.000Z"),
+        })
+      }),
+    )
+
+    expect(counts).toEqual([
+      { day: new Date("2026-05-24T00:00:00.000Z"), count: 2 },
+      { day: new Date("2026-05-25T00:00:00.000Z"), count: 1 },
+    ])
+  })
 })

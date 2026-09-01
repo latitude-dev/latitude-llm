@@ -9,6 +9,7 @@ import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
 import { registerBootstrapRoute } from "./bootstrap.ts"
 import { registerHealthRoute } from "./health.ts"
+import { registerPartnerRoutes } from "./partners.ts"
 import { registerGithubRoute } from "./webhooks-github.ts"
 import { registerWellKnownRoutes } from "./well-known.ts"
 
@@ -31,11 +32,13 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
     c.set("workflowStarter", options.workflowStarter)
     c.set("workflowQuerier", options.workflowQuerier)
     c.set("storageDisk", options.storageDisk)
+    c.set("importSourceAdapters", options.importSourceAdapters)
     await next()
   })
 
   registerBootstrapRoute({ app: v1, adminDatabase: options.adminDatabase })
   registerGithubRoute({ app: v1 })
+  registerPartnerRoutes({ app: v1, adminDatabase: options.adminDatabase })
 
   routes.use("*", validationErrorMiddleware)
   routes.use(
