@@ -41,7 +41,7 @@ export function SignalRegressedEmail({
   return (
     <ContainerLayout
       previewText={`Signal regressed: ${signalName}`}
-      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "signals" }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         A resolved signal came back

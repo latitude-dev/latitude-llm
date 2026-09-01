@@ -127,14 +127,15 @@ describe("planFacetGardenUseCase", () => {
     expect(plan.clustersBorn).toBeGreaterThanOrEqual(1)
     // All 20 clear projections were clustered (none dropped).
     expect(plan.observationsSampled).toBe(20)
-    // Facet edges go to the view slice, never the inline global column.
+    // Facet edges go to the view slice, never the inline global column — and they
+    // are written by the projection-space full-window pass, not from the sample,
+    // so the plan carries leaf centroids instead of assignments.
     expect(plan.observationAssignments).toEqual([])
-    expect(plan.customAssignments.length).toBeGreaterThan(0)
-    expect(plan.customAssignments.every((a) => a.customBehaviorId === customBehaviorId && a.facetId === facetId)).toBe(
-      true,
-    )
-    // sessionId is threaded from the extracted projections.
-    expect(plan.customAssignments.every((a) => (a.sessionId as string).startsWith("session-"))).toBe(true)
+    expect(plan.customAssignments).toEqual([])
+    expect(plan.leafClusters.length).toBeGreaterThan(0)
+    // Staging leaves without an adaptive tree: publication must keep upserting the
+    // view's continuations in place rather than retiring the whole prior tree.
+    expect(plan.persistsAdaptiveTree).toBe(false)
     expect(plan.clusters.every((c) => c.customBehaviorId === customBehaviorId && c.facetId === facetId)).toBe(true)
   })
 
@@ -148,8 +149,12 @@ describe("planFacetGardenUseCase", () => {
 
     // Only the 20 clear projections reach clustering; the 5 unclear are dropped.
     expect(plan.observationsSampled).toBe(20)
-    const unclearSessionIds = new Set(Array.from({ length: 5 }, (_, index) => `session-${100 + index}`))
-    expect(plan.customAssignments.some((a) => unclearSessionIds.has(a.sessionId as string))).toBe(false)
+    const unclearObservationIds = new Set(
+      Array.from({ length: 5 }, (_, index) => String(100 + index).padStart(24, "0")),
+    )
+    const clustered = plan.namingMembers.flatMap((members) => members.observationIds)
+    expect(clustered).toHaveLength(20)
+    expect(clustered.some((observationId) => unclearObservationIds.has(observationId))).toBe(false)
   })
 
   it("compiles the facet's instructions into the extraction prompt", async () => {

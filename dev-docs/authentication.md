@@ -21,6 +21,8 @@ API boundaries in `apps/api` and `apps/ingest` use API key authentication, not B
 
 Shared implementation: `packages/platform/api-key-auth` exports `validateApiKey`, which both apps call from their Hono middleware so cache TTLs, token hashing, minimum validation timing, and repository lookup stay aligned. `apps/api` additionally wires `onKeyValidated` to the touch buffer for batched `lastUsedAt` updates; ingest uses the same validator without that hook.
 
+`/v1/private/*` in `apps/api` uses neither: those routes authenticate a **partner** rather than a user or an organization, by verifying an HMAC signature over the timestamp, method, path and raw body. The primitives are shared with the webhook verifiers (`hmacSha256Hex`, constant-time `verifyHmacSha256Hex`), and the partner registry itself is staff-managed in the backoffice. See [`partners.md`](./partners.md).
+
 ## Core invariants
 
 1. Browser boundaries must have a Better Auth session (`getSession`) to access protected pages.

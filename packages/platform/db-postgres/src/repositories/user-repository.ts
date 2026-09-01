@@ -65,6 +65,53 @@ export const UserRepositoryLive = Layer.effect(
             )
         }),
 
+      findOptionalByEmail: (email: string) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // Compares the column as-is so `users_email_key` is usable. Every row is already
+          // lowercase: Better Auth normalizes centrally in `internalAdapter.createUser`, and the
+          // one path that bypasses it (`create`, for partner provisioning) is fed a normalized
+          // address. Lowering the column instead would force a sequential scan.
+          const [result] = yield* sqlClient.query((db) =>
+            db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1),
+          )
+          return result ? toDomainUser(result) : null
+        }),
+
+      create: (params: {
+        id: UserId
+        name: string
+        email: string
+        emailVerified: boolean
+        image?: string | null
+        phoneNumber?: string | null
+        jobTitle?: string | null
+        heardAboutUs?: string | null
+      }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const [result] = yield* sqlClient.query((db) =>
+            db
+              .insert(users)
+              .values({
+                id: params.id,
+                name: params.name,
+                // Same normalization Better Auth applies in `internalAdapter.createUser`. This is
+                // the one write path that skips it, and `findOptionalByEmail` relies on every
+                // stored address being lowercase to match against the plain unique index.
+                email: params.email.toLowerCase(),
+                emailVerified: params.emailVerified,
+                image: params.image ?? null,
+                phoneNumber: params.phoneNumber ?? null,
+                jobTitle: params.jobTitle ?? null,
+                heardAboutUs: params.heardAboutUs ?? null,
+              })
+              .returning(),
+          )
+          if (!result) return yield* Effect.die(new Error("User insert returned no row"))
+          return toDomainUser(result)
+        }),
+
       update: ({
         userId,
         jobTitle,

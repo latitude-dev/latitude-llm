@@ -32,6 +32,7 @@
       "!!**/node_modules",
       "!**/*.gen.ts",
       "!**/models.dev.json",
+      "!**/.spans",
       "!**/drizzle/**/*.json"
     ]
   },

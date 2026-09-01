@@ -10,23 +10,29 @@ Multi-channel notification system. Producers fan out to channel-specific workers
 
 | Concept | Where | What it is |
 | --- | --- | --- |
-| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, `billing.limit-reached`, ...). Each kind declares its group and its payload Zod schema. Incidents fan out across three delivery kinds: `incident.event` for point incidents (`endedAt = startedAt`), `incident.opened` for sustained incident entry, and `incident.closed` for sustained incident recovery. `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. `signal.regressed` (group `incidents`) fires when a new occurrence reopens a resolved signal: assignee-first recipients, muted signals skipped, idempotency keyed per regression cycle on `signalId` + `triggerScoreId`. `billing.limit-reached` (group `billing`) fires once per billing period and limit kind when a threshold is first crossed — free included credits exhausted, Pro entering overage (with or without a spend cap), or a configured Pro spend cap — and targets owners/admins only. |
-| **Severity** | `ALERT_SEVERITIES` in `@domain/shared` | One ascending scale — `low`, `medium`, `high`, `urgent` — shared by monitors, incidents, and signals: one vocabulary, so a Slack route's threshold and a user's `emailMinSeverity` mean the same thing wherever they are applied. A signal stores its level in `signals.priority` (same values; the field name is public API and predates the unification) and the producers copy it onto the `signal.discovered` / `signal.regressed` payloads as `severity`, which is what `routeAdmitsPayload` and `severityFromPayload` filter on. **Nothing assigns a signal's level automatically** — it is null until somebody triages it, and a payload with no severity is admitted by every threshold, so an untriaged signal notifies exactly as it did before. |
-| **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category (`incidents`, `wrapped_reports`, `custom_messages`, `personal`, `destinations`, `billing`). `incidents` is labelled "Alerts" and covers every alert source — monitors firing and signals escalating, arriving, or regressing — so its severity threshold applies to all of them. The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. Each group also declares `slackRoutable` — non-routable groups (`personal`, `billing`) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out. |
+| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, `billing.limit-reached`, ...). Each kind declares its routing (see **Group**) and its payload Zod schema. Incidents fan out across three delivery kinds: `incident.event` for point incidents (`endedAt = startedAt`), `incident.opened` for sustained incident entry, and `incident.closed` for sustained incident recovery. `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. `signal.regressed` (group `signals`) fires when a new occurrence reopens a resolved signal: assignee-first recipients, muted signals skipped, idempotency keyed per regression cycle on `signalId` + `triggerScoreId`. `signal.reprioritized` (group `signals`, opt-in topic) fires when a triage edit moves a signal *up* the priority scale: org-member fan-out minus the actor, muted signals skipped, idempotency keyed per edit on `signalId` + `reprioritizedAt`. Downgrades and clears never produce a `SignalReprioritized` event at all, so there is no outbox row, no queue hop, and no producer run to filter — an unset priority ranks below `low`, which makes setting a first priority an increase and clearing one a decrease. `billing.limit-reached` (group `billing`) fires once per billing period and limit kind when a threshold is first crossed — free included credits exhausted, Pro entering overage (with or without a spend cap), or a configured Pro spend cap — and targets owners/admins only. |
+| **Severity** | `ALERT_SEVERITIES` in `@domain/shared` | One ascending scale — `low`, `medium`, `high`, `urgent` — shared by monitors, incidents, and signals: one vocabulary, so a Slack route's threshold and a user's `emailMinSeverity` mean the same thing wherever they are applied. A signal stores its level in `signals.priority` (same values; the field name is public API and predates the unification) and the producers copy it onto the `signal.discovered` / `signal.regressed` / `signal.reprioritized` payloads as `severity`, which is what `routeAdmitsPayload` and `shouldSendEmail` filter on. A reprioritization filters on the priority it moved *to*, which is always set because only increases notify. **Nothing assigns a signal's level automatically** — it is null until somebody triages it, and a payload with no severity is admitted by every threshold, so the severity control never suppresses an untriaged signal. The promotion gate is what does: an unpromoted signal emits no `SignalPromoted`, so it never reaches severity filtering at all (`dev-docs/signals.md` § Denoising: promotion). |
+| **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category (`signals`, `monitors`, `wrapped_reports`, `custom_messages`, `personal`, `destinations`, `billing`). The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. Most kinds name their group statically, but the three `incident.*` kinds fire for both signal escalations and monitors, so they route on the payload's `incidentKind` — `routeOf(kind, payload)` in `@domain/notifications` is the one resolver, and `GROUP_FOR_INCIDENT_NOTIFICATION_KEY` the one mapping. Groups also declare `slackRoutable` (non-routable groups — `personal`, `billing` — are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out), `severityFiltered` (whether the minimum-severity control is offered), and their `topics`. |
+| **Topic** | `NOTIFICATION_TOPICS` + `NOTIFICATION_GROUP_META[group].topics` in `@domain/shared` | Sub-toggle inside a group, for groups whose kinds are distinct enough that one switch is too coarse. Only `signals` has any today: `signal.discovered`, `signal.escalating`, `signal.regressed`, `signal.reprioritized`. A group with no topics is a single switch. Topics are filtered per channel — `emailTopics` on the user's group preferences, `topics` on a Slack route — and an untouched topic falls back to its own `NOTIFICATION_TOPIC_META[topic].defaultEnabled`, so most topics deliver by default while opt-in ones (`signal.reprioritized`) stay off until somebody ticks them. |
 | **Channel** | `apps/workers/src/workers/notification-*.ts` + per-channel registries | Delivery surface (in-app, email; Slack and others later). Each channel is one queue topic + one worker + one renderer registry keyed on `NotificationKind`. |
 | **Idempotency key** | `idempotency_key` column on `notifications` | Producer-computed (`buildIdempotencyKey` in `@domain/notifications`). The unique index `(organization_id, user_id, idempotency_key)` absorbs at-least-once redelivery from the outbox + queue layers. |
 | **Project anchor** | `project_id` column on `notifications` (nullable) | Cascade anchor for kinds tied to a project (`incident.*`, `wrapped.report`). On `ProjectDeleted` the domain-events worker fires `notifications:delete-by-project`, which removes every row anchored to the deleted project. Per the platform's no-FK rule, referential integrity is application-layer. |
-| **User preferences** | `users.notification_preferences` (jsonb) | Per-user, per-group, per-channel switch (today only `email`). Missing entries default to opt-in (`true`). |
+| **User preferences** | `users.notification_preferences` (jsonb) | Per-user, per-group, per-channel switch (today only `email`), plus the group's `emailMinSeverity` threshold and its per-topic `emailTopics` switches. A missing group entry defaults to on; a missing topic entry defaults to that topic's `defaultEnabled`. |
 | **Project-level gate** | `projects.settings.notifications.<group>` (jsonb) | Project-level "should this notification be requested at all" decision. For incidents the leaf is per incident source key: `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`. Other groups get whatever shape is useful at the project level. |
 
 ## Pipeline
 
-```
+```text
 Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
   → routed by apps/workers/src/workers/domain-events.ts
      (incidents: forwards a transition hint — "created" / "closed" —
       not a hardcoded notification kind)
-notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered,signal-regressed,destination-quarantined,billing-limit}-notifications
+notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered,signal-regressed,signal-reprioritized,destination-quarantined,billing-limit}-notifications
+```
+
+`signal.discovered` fires from `SignalPromoted`, not from `SignalCreated`: discovery creates a signal's row before it has the evidence to deserve an announcement, so the notification waits for the promotion gate (`dev-docs/signals.md` § Denoising: promotion). The kind, templates, project gate, and payload shape are exactly as they were before that move; `discoveredAt` carries the promotion time rather than the creation time, which nothing renders (the templates use the notification's own timestamp) and which the `signal.discovered:${signalId}` idempotency key ignores.
+
+```text
   → apps/workers/src/workers/notifications.ts
      – incidents: derive kind from incident.endedAt
        (endedAt = startedAt → incident.event;
@@ -34,8 +40,9 @@ notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered
         endedAt > startedAt → incident.closed)
      – gate (incidents only): projectSettings.notifications.incidents[incidentNotificationKey]
      – mute gate: skip muted monitor or muted signal sources (incidents), and
-       muted signals for signal.regressed; an ignored signal also skips
-       incident fan-out (race cover — ignored signals don't open incidents)
+       muted signals for signal.regressed and signal.reprioritized; an ignored
+       signal also skips incident fan-out (race cover — ignored signals don't
+       open incidents)
      – signal-related notifications target the signal assignee when present;
        unassigned signals and non-signal notifications use the existing
        project-member fan-out
@@ -43,6 +50,12 @@ notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered
      – assignee-targeted signal notifications do not fan out to shared Slack routes
      – signal-assigned: single recipient (the new assignee); router +
        producer both skip cleared assignments and self-assignments
+     – signal-reprioritized: increases only (the event is not emitted for a
+       downgrade or a clear); org-member fan-out minus the actor, carrying the
+       transition off the event rather than re-reading the row. Returns a
+       separate `slackOccurrence` because the actor filter can empty the
+       recipient list in a single-member org while the channel still wants
+       the message
      – snapshot trend window (signal-sourced sustained kinds: 14d ending at the
        transition, UTC-aligned 12h buckets, both occurrence counts and
        per-bucket escalation thresholds via ScoreAnalyticsRepository)
@@ -50,7 +63,8 @@ notifications:request-{incident,wrapped-report,signal-assigned,signal-discovered
 notifications:create-notification (one per recipient)
   → apps/workers/src/workers/notifications.ts
      – insertIfAbsent (ON CONFLICT DO NOTHING on the unique index)
-     – if inserted AND shouldSendEmail(prefs, kind) → publish notification-email:send
+     – if inserted AND shouldSendEmail(prefs, kind, payload) → publish notification-email:send
+       (group switch, then the group's topic switch, then its minimum severity)
 notification-email:send
   → apps/workers/src/workers/notification-emailer.ts
      – markEmailed (UPDATE … WHERE emailed_at IS NULL, RETURNING id)
@@ -126,7 +140,7 @@ If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start
 | File | Purpose |
 | --- | --- |
 | `packages/domain/notifications/src/entities/notification.ts` | `NotificationKind`, `NOTIFICATION_KIND_META`, per-kind payload schemas, `Notification` storage shape. |
-| `packages/domain/notifications/src/entities/notification-preferences.ts` | `shouldSendEmail(prefs, kind)` helper. |
+| `packages/domain/notifications/src/entities/notification-preferences.ts` | `shouldSendEmail(prefs, kind, payload)` helper. |
 | `packages/domain/notifications/src/helpers/idempotency-key.ts` | `buildIdempotencyKey({ kind, payload })` — producer-side. |
 | `packages/domain/notifications/src/use-cases/request-incident-notifications.ts` | Producer use case: gate + snapshots + recipients → list of `CreateNotification` requests. |
 | `packages/domain/notifications/src/use-cases/request-wrapped-report-notifications.ts` | Same shape, no gate. |
@@ -146,13 +160,14 @@ If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start
 | `apps/web/src/domains/notifications/email-chart/` | The chart's satori renderer + lazy-loaded TTF font, used only by the route above. |
 | `packages/domain/email/src/helpers/chart-url.ts` | `buildChartUrl` — builds the `apps/web` chart endpoint URL used by the sustained-incident templates. |
 | `apps/web/src/routes/_authenticated/-components/notifications/` | Bell + feed + per-kind renderers. |
-| `apps/web/src/routes/_authenticated/settings/account.tsx` | "Email notifications" section with per-group toggles. |
+| `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx` | "Email notifications" section with per-group toggles. |
 | `apps/web/src/routes/_authenticated/projects/$projectSlug/settings.tsx` | Project-level incident-kind toggles + escalation sensitivity. |
 
 ## Naming conventions
 
 - **Kind**: `<source>.<event>` style. Examples: `incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`. Keep it lowercase and dot-separated. The first segment names the source aggregate or domain area; the second names what happened or what kind of thing it is. When a source has both eventful (one-shot) and sustained (open-then-close) flavors, split them into distinct kinds rather than overloading `opened` for both — the kind should reflect what the user actually receives.
-- **Group**: lowercase noun (`incidents`, `wrapped_reports`, `custom_messages`, `personal`). Group keys are user-visible (the settings page label comes from `NOTIFICATION_GROUP_META`), but the keys themselves should be stable since they're persisted in `users.notification_preferences` jsonb.
+- **Group**: lowercase noun (`signals`, `monitors`, `wrapped_reports`, `custom_messages`, `personal`). Group keys are user-visible (the settings page label comes from `NOTIFICATION_GROUP_META`), but the keys themselves should be stable since they're persisted in `users.notification_preferences` and `slack_integration_details.routes` jsonb. Renaming or splitting one is a data migration in both columns — see `20260817080413_split-incident-notification-group`.
+- **Topic**: `<group-noun>.<event>` (`signal.discovered`, `signal.regressed`, `signal.reprioritized`). Persisted in the same two jsonb columns, so the same stability rule applies. Each topic declares `defaultEnabled` in `NOTIFICATION_TOPIC_META`: `true` is the normal opt-out topic, `false` makes it opt-in for both channels at once (`admitsTopic` is the single resolver, used by `shouldSendEmail` and the worker's Slack fan-out alike). Ship a topic opt-in when it fires on routine activity that would otherwise read as noise — `signal.reprioritized` fires on every priority increase.
 - **Queue task** for a new source: `request-<group>-notifications` (e.g. `request-incident-notifications`). Mirrors the existing pattern.
 - **Idempotency key**: `${kind}:${naturalEntityId}` when there is a natural source entity; `${kind}:${entityId}:${eventTimestamp}` when the natural anchor is a recurring event on the same entity (`issue.assigned` keys on `issueId` + the transaction-frozen `assignedAt`, so outbox redelivery coalesces while a later re-assignment to the same user re-notifies — the unique index is permanent, so an id-only key would suppress legitimate later events forever); or `${kind}:${generatedId}` when every event is unique by intent (custom messages).
 
@@ -162,8 +177,12 @@ For an existing group:
 
 1. **Add the kind** to `NOTIFICATION_KIND_META` in `packages/domain/notifications/src/entities/notification.ts`:
    ```ts
-   "incident.escalation-ended": { group: "incidents", payload: incidentEscalationEndedPayloadSchema },
+   "incident.escalation-ended": {
+     routing: { group: "monitors", topic: null },
+     payload: incidentEscalationEndedPayloadSchema,
+   },
    ```
+   `topic` is `null` unless the group declares topics and the kind belongs to one. A kind that lands in different groups depending on its payload routes through `routeOf` instead — see the `by-incident-source` entries.
 2. **Define the payload schema** in the same file (sibling of `incidentOpenedPayloadSchema`). Export both the schema and the inferred type.
 3. **Extend `buildIdempotencyKey`** in `packages/domain/notifications/src/helpers/idempotency-key.ts` if the new kind has a natural anchor:
    ```ts
@@ -189,15 +208,21 @@ A new group is a new user-visible category. Adding one requires schema edits at 
 
 1. **Add the group** to `NOTIFICATION_GROUPS` and `NOTIFICATION_GROUP_META` in `packages/domain/shared/src/notification-preferences.ts`:
    ```ts
-   export const NOTIFICATION_GROUPS = ["incidents", "wrapped_reports", "custom_messages", "deployments"] as const
-   
-   export const NOTIFICATION_GROUP_META: Record<NotificationGroup, { label: string; description: string }> = {
+   export const NOTIFICATION_GROUPS = ["signals", "monitors", "wrapped_reports", "custom_messages", "deployments"] as const
+
+   export const NOTIFICATION_GROUP_META: Record<NotificationGroup, { ... }> = {
      ...
-     deployments: { label: "Deployments", description: "Notifications when a project's models or evaluations are promoted to production." },
+     deployments: {
+       label: "Deployments",
+       description: "Notifications when a project's models or evaluations are promoted to production.",
+       slackRoutable: true,
+       severityFiltered: false,
+       topics: [],
+     },
    }
    ```
-   `notificationPreferencesSchema` is **built from `NOTIFICATION_GROUPS`** — the schema auto-extends. No separate schema edit needed.
-2. **User preferences UI** at `apps/web/src/routes/_authenticated/settings/account.tsx` iterates `NOTIFICATION_GROUPS` to render one toggle per group, so the new group **shows up automatically** with its label/description from `NOTIFICATION_GROUP_META`. Verify visually after building.
+   `notificationPreferencesSchema` and `slackRoutesSchema` are both **built from `NOTIFICATION_GROUPS`** — they auto-extend. No separate schema edit needed. Splitting or renaming an existing group is different: both jsonb columns are keyed by these names, so it needs a data migration.
+2. **User preferences UI** at `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx` iterates `NOTIFICATION_GROUPS` to render one toggle per group, so the new group **shows up automatically** with its label/description, its topic checkboxes, and its severity selector, all from `NOTIFICATION_GROUP_META`. The Slack routes UI (`-components/slack-route-row.tsx`) reads the same meta. Verify visually after building.
 3. **Add at least one kind** to the new group via the "Adding a new kind" steps above. A group with no kinds is dead code.
 4. **Project-level gate (optional)** — only needed if the new group should be opt-out-able at the project level (like incidents are today):
    - Add a slot to `notificationsSettingSchema` in `packages/domain/shared/src/settings.ts`:
@@ -231,7 +256,7 @@ Defaults follow the opt-out model: missing entries → `true` (email on). If a g
    ```
 4. **Update the creator step** in `apps/workers/src/workers/notifications.ts` to also publish `notification-slack:send` when `prefs[group].slack` is true. Add a `shouldSendSlack(prefs, kind)` helper alongside `shouldSendEmail` if it gets non-trivial.
 5. **New worker file** mirroring `notification-emailer.ts`. Register it in `apps/workers/src/server.ts`.
-6. **Settings UI** at `apps/web/src/routes/_authenticated/settings/account.tsx` extends the per-group block to show one switch per channel (today it shows just the email switch).
+6. **Settings UI** at `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx` extends the per-group block to show one switch per channel (today it shows just the email switch).
 
 Source events, the producer step, the in-app feed, and the kind registry are all unchanged.
 
@@ -270,6 +295,7 @@ No FK constraint on `project_id` (per the database-postgres skill's no-FK rule).
 | Setting | Default | Reason |
 | --- | --- | --- |
 | User's `notification_preferences` | `null` (treated as "all groups: email on") | Opt-out matches the in-app default of "all org members get every notification." |
+| A group's `emailTopics[topic]` / a Slack route's `topics[topic]` | unset (falls back to `NOTIFICATION_TOPIC_META[topic].defaultEnabled`) | Opt-out by default one level down, so a topic added to an existing group starts delivering rather than silently going nowhere. A topic whose meta sets `defaultEnabled: false` inverts that — `signal.reprioritized` fires on every priority increase, so it waits to be asked for. |
 | Project's `notifications.incidents[incidentNotificationKey]` | unset (treated as enabled) | Per-source-trigger project-level opt-out. Current keys are `monitor.match`, `monitor.threshold`, `monitor.escalating`, and `signal.escalating`. Lives in `projects.settings`; sibling of `escalation.sensitivity` (which is the detector knob, not a notification toggle). |
 
 ## Idempotency under outbox redelivery

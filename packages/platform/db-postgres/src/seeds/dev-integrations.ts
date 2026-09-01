@@ -157,13 +157,21 @@ const seedSlack = async (db: PostgresDb, encrypt: (value: string) => Promise<str
     // come from a live Slack call, but "Don't send" is always there — enough to dirty
     // the form and exercise the save.
     routes: {
-      incidents: [{ channelId: "C0DEVALERTS", channelName: "eng-alerts", minSeverity: "medium" }],
+      signals: [
+        {
+          channelId: "C0DEVSIGNALS",
+          channelName: "eng-signals",
+          minSeverity: "medium",
+          topics: { "signal.regressed": false },
+        },
+      ],
+      monitors: [{ channelId: "C0DEVALERTS", channelName: "eng-alerts", minSeverity: "medium" }],
       wrapped_reports: [{ channelId: "C0DEVWRAPPED", channelName: "eng-weekly" }],
       custom_messages: [{ channelId: "C0DEVANNOUNCE", channelName: "acme-announcements" }],
       destinations: [{ channelId: "C0DEVDATA", channelName: "data-platform" }],
     },
   })
-  console.log("  -> slack: Acme Engineering, all 4 notification groups routed")
+  console.log("  -> slack: Acme Engineering, all 5 notification groups routed")
 }
 
 const seedGithub = async (db: PostgresDb) => {

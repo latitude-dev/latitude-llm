@@ -127,14 +127,15 @@ export function ExperimentDetailPage() {
       <Layout.Content>
         <Layout.Header
           title={
-            <div className="flex min-w-0 flex-row items-center gap-3">
+            <div className="flex min-w-0 flex-col gap-3">
               <Tooltip
                 asChild
                 side="bottom"
                 trigger={
-                  <Button asChild variant="ghost" className="h-8 w-8 p-0" aria-label="Back to experiments">
+                  <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to experiments">
                     <Link to="/projects/$projectSlug/experiments" params={{ projectSlug: project.slug }}>
-                      <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                      <Icon icon={ArrowLeftIcon} size="sm" />
+                      Back
                     </Link>
                   </Button>
                 }

@@ -22,9 +22,9 @@ import {
   SlackIntegrationRepository,
   type SlackRoute,
   type SlackRoutes,
+  slackRouteSchema,
 } from "@domain/integrations"
 import {
-  alertSeveritySchema,
   type NotificationGroup,
   type RepositoryError,
   SLACK_ROUTABLE_NOTIFICATION_GROUPS,
@@ -190,15 +190,9 @@ const notificationGroupValues = SLACK_ROUTABLE_NOTIFICATION_GROUPS as readonly N
 
 const configureSlackRouteSchema = z.object({
   group: z.enum(notificationGroupValues as [NotificationGroup, ...NotificationGroup[]]),
-  routes: z
-    .array(
-      z.object({
-        channelId: z.string().min(1),
-        channelName: z.string().min(1),
-        minSeverity: alertSeveritySchema.optional(),
-      }),
-    )
-    .max(50),
+  // The domain schema, not a copy of it: Zod strips unknown keys, so a field
+  // added to a route would be silently dropped here on its way to the repository.
+  routes: z.array(slackRouteSchema).max(50),
 })
 
 const removeSlackRouteSchema = z.object({

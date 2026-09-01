@@ -19,6 +19,7 @@ import {
   MasterDetail,
   RichTextEditor,
   Status,
+  TagsInput,
   Text,
   useMountEffect,
   useStagedStatus,
@@ -206,6 +207,25 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
       lines: ['import { Status } from "@repo/ui"', "", '<Status label="Healthy" variant="success" />'],
     },
     Demo: StatusDemo,
+  },
+  "tags-input": {
+    title: "Tags input",
+    description: "Free-text chip editor for a list of short values.",
+    usage: {
+      description:
+        "Enter or comma commits the draft, pasting a delimited list commits every entry, Backspace on an empty draft removes the last chip. Duplicates are dropped case-insensitively; validation belongs to the form schema and arrives back through errors.",
+      lines: [
+        'import { TagsInput } from "@repo/ui"',
+        "",
+        "<TagsInput",
+        '  label="Allowed IPs"',
+        "  value={ips}",
+        "  onChange={setIps}",
+        '  placeholder="203.0.113.7, 2001:db8::/32"',
+        "/>",
+      ],
+    },
+    Demo: TagsInputDemo,
   },
   charts: {
     title: "Charts",
@@ -487,6 +507,25 @@ function StatusDemo() {
         <Status label="Warning" variant="warning" />
         <Status label="Destructive" variant="destructive" />
       </div>
+    </ComponentDemoSection>
+  )
+}
+
+function TagsInputDemo() {
+  const [ips, setIps] = useState<string[]>(["203.0.113.7", "2001:db8::/32"])
+
+  return (
+    <ComponentDemoSection
+      title="Chips"
+      description="Type a value and press Enter or comma; paste a delimited list to add several."
+    >
+      <TagsInput
+        label="Allowed IPs"
+        description="Leave empty to accept any address."
+        value={ips}
+        onChange={setIps}
+        placeholder="203.0.113.7, 2001:db8::/32"
+      />
     </ComponentDemoSection>
   )
 }

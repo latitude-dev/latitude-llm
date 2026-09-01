@@ -343,7 +343,8 @@
               "more/data-destinations/posthog"
             ]
           },
-          "more/api-reference"
+          "more/api-reference",
+          "more/partners"
         ]
       }
     ]

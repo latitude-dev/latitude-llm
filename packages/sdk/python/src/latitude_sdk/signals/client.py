@@ -15,6 +15,7 @@ from ..types.signal_analytics_response import SignalAnalyticsResponse
 from ..types.signal_detail import SignalDetail
 from ..types.signal_histogram import SignalHistogram
 from ..types.signals_lifecycle_response import SignalsLifecycleResponse
+from ..types.submit_signal_feedback_response import SubmitSignalFeedbackResponse
 from ..types.update_signal_response import UpdateSignalResponse
 from .raw_client import AsyncRawSignalsClient, RawSignalsClient
 from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
@@ -801,6 +802,72 @@ class SignalsClient:
         )
         """
         _response = self._raw_client.unmonitor(project_slug, signal_slug, request_options=request_options)
+        return _response.data
+
+    def submit_feedback(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        passed: bool,
+        feedback: typing.Optional[str] = OMIT,
+        value: typing.Optional[float] = OMIT,
+        ignore: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SubmitSignalFeedbackResponse:
+        """
+        Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        passed : bool
+            `true` when the signal is a real problem worth flagging; `false` when it is a false positive.
+
+        feedback : typing.Optional[str]
+            Reason for the verdict. Required when `passed` is `false`.
+
+        value : typing.Optional[float]
+            Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.
+
+        ignore : typing.Optional[bool]
+            Also archive the signal so new occurrences stop being reported.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SubmitSignalFeedbackResponse
+            Feedback recorded
+
+        Examples
+        --------
+        from latitude_sdk import LatitudeClient
+
+        client = LatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+        client.signals.submit_feedback(
+            project_slug="projectSlug",
+            signal_slug="signalSlug",
+            passed=True,
+        )
+        """
+        _response = self._raw_client.submit_feedback(
+            project_slug,
+            signal_slug,
+            passed=passed,
+            feedback=feedback,
+            value=value,
+            ignore=ignore,
+            request_options=request_options,
+        )
         return _response.data
 
     def export(
@@ -1764,6 +1831,80 @@ class AsyncSignalsClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.unmonitor(project_slug, signal_slug, request_options=request_options)
+        return _response.data
+
+    async def submit_feedback(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        passed: bool,
+        feedback: typing.Optional[str] = OMIT,
+        value: typing.Optional[float] = OMIT,
+        ignore: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SubmitSignalFeedbackResponse:
+        """
+        Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        passed : bool
+            `true` when the signal is a real problem worth flagging; `false` when it is a false positive.
+
+        feedback : typing.Optional[str]
+            Reason for the verdict. Required when `passed` is `false`.
+
+        value : typing.Optional[float]
+            Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.
+
+        ignore : typing.Optional[bool]
+            Also archive the signal so new occurrences stop being reported.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SubmitSignalFeedbackResponse
+            Feedback recorded
+
+        Examples
+        --------
+        import asyncio
+
+        from latitude_sdk import AsyncLatitudeClient
+
+        client = AsyncLatitudeClient(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.signals.submit_feedback(
+                project_slug="projectSlug",
+                signal_slug="signalSlug",
+                passed=True,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.submit_feedback(
+            project_slug,
+            signal_slug,
+            passed=passed,
+            feedback=feedback,
+            value=value,
+            ignore=ignore,
+            request_options=request_options,
+        )
         return _response.data
 
     async def export(

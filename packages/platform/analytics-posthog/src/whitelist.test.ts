@@ -21,6 +21,8 @@ describe("PostHog whitelist", () => {
     // TracesIngested fires on the ingestion hot path and would dominate PostHog billing/noise.
     expect(POSTHOG_TRACKED_EVENTS.has("TracesIngested")).toBe(false)
     expect(POSTHOG_TRACKED_EVENTS.has("MagicLinkEmailRequested")).toBe(false)
+    // UserSignedUp already carries partnerId/partnerName, so tracking this too would double-count.
+    expect(POSTHOG_TRACKED_EVENTS.has("PartnerAccountProvisioned")).toBe(false)
   })
 
   it("narrows unknown strings via isPostHogTracked", () => {

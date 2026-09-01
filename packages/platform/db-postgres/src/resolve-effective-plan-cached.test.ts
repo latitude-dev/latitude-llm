@@ -31,10 +31,12 @@ const nullCache = Layer.succeed(CacheStore, {
 describe("resolveEffectivePlanCached", () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllEnvs()
   })
 
   it("reuses a cached plan snapshot within the TTL window", async () => {
@@ -90,6 +92,59 @@ describe("resolveEffectivePlanCached", () => {
     expect(first.plan.slug).toBe("pro")
     expect(second.source).toBe("subscription")
     expect(second.plan.slug).toBe("pro")
+  })
+
+  it("round-trips an unbounded self-hosted plan through the cache", async () => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "false")
+    vi.setSystemTime(new Date("2026-09-15T12:00:00.000Z"))
+    const organizationId = generateId()
+    const cache = new Map<string, string>()
+
+    await pg.db.insert(organizations).values({
+      id: organizationId,
+      name: "Self-hosted Org",
+      slug: `self-hosted-${organizationId}`,
+    })
+
+    const run = () =>
+      Effect.runPromise(
+        resolveEffectivePlanCached(OrganizationId(organizationId)).pipe(
+          withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)),
+          Effect.provide(
+            Layer.succeed(CacheStore, {
+              get: (key: string) => Effect.succeed(cache.get(key) ?? null),
+              set: (key: string, value: string) =>
+                Effect.sync(() => {
+                  cache.set(key, value)
+                }),
+              delete: (key: string) =>
+                Effect.sync(() => {
+                  cache.delete(key)
+                }),
+            }),
+          ),
+          withTracing,
+        ),
+      )
+
+    const first = await run()
+
+    const [cacheKey] = [...cache.keys()]
+    const cached = JSON.parse(cache.get(cacheKey ?? "") ?? "{}")
+    // Unbounded allowances have no JSON representation, so they are stored as null.
+    expect(cached.plan.includedCredits).toBeNull()
+
+    // A sentinel the resolver would never produce: reading it back proves the entry
+    // parsed, rather than silently missing and re-resolving.
+    cache.set(cacheKey ?? "", JSON.stringify({ ...cached, plan: { ...cached.plan, retentionDays: 999 } }))
+
+    const second = await run()
+
+    expect(first.plan.slug).toBe("self-hosted")
+    expect(first.plan.includedCredits).toBe(Number.POSITIVE_INFINITY)
+    expect(second.plan.retentionDays).toBe(999)
+    expect(second.plan.includedCredits).toBe(Number.POSITIVE_INFINITY)
+    expect(second.plan.spanQuotaPerPeriod).toBe(Number.POSITIVE_INFINITY)
   })
 
   it("clips the cache TTL to the resolved billing period end", async () => {

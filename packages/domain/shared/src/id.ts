@@ -39,6 +39,9 @@ export type ProjectId = Id<"ProjectId">
 // API Key IDs
 export type ApiKeyId = Id<"ApiKeyId">
 
+// Private partner-API registry IDs
+export type PartnerId = Id<"PartnerId">
+
 // Feature flag IDs — `FeatureFlagId` lives in `@domain/feature-flags`
 // as a literal union derived from the code-side registry.
 export type OrganizationFeatureFlagId = Id<"OrganizationFeatureFlagId">
@@ -96,6 +99,7 @@ export const InvitationId = (value: string): InvitationId => value as Invitation
 export const SandboxId = (value: string): SandboxId => value as SandboxId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
+export const PartnerId = (value: string): PartnerId => value as PartnerId
 export const OrganizationFeatureFlagId = (value: string): OrganizationFeatureFlagId =>
   value as OrganizationFeatureFlagId
 export const ScoreId = (value: string): ScoreId => value as ScoreId
@@ -135,6 +139,7 @@ export const invitationIdSchema = cuidSchema.transform(InvitationId)
 export const sandboxIdSchema = cuidSchema.transform(SandboxId)
 export const projectIdSchema = cuidSchema.transform(ProjectId)
 export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
+export const partnerIdSchema = cuidSchema.transform(PartnerId)
 export const organizationFeatureFlagIdSchema = cuidSchema.transform(OrganizationFeatureFlagId)
 export const datasetIdSchema = cuidSchema.transform(DatasetId)
 export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)

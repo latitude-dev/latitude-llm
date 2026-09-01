@@ -80,7 +80,10 @@ function DropdownItem({
         "bg-primary-muted focus:bg-primary-muted-hover": selected,
       })}
     >
-      {leading ?? (iconProps ? <Icon {...iconProps} /> : null)}
+      {leading ??
+        (iconProps ? (
+          <Icon {...(type === "destructive" ? { color: "destructive" as const } : {})} {...iconProps} />
+        ) : null)}
       <div className={cn("w-full", { "min-w-0": ellipsis })}>
         <Text.H5
           color={type === "destructive" ? "destructive" : selected ? "primary" : "foreground"}

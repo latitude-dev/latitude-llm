@@ -762,6 +762,7 @@ if typing.TYPE_CHECKING:
     from .signal_detail import SignalDetail
     from .signal_detail_source import SignalDetailSource
     from .signal_detail_states_item import SignalDetailStatesItem
+    from .signal_feedback import SignalFeedback
     from .signal_histogram import SignalHistogram
     from .signal_histogram_bucket import SignalHistogramBucket
     from .signal_lifecycle_item import SignalLifecycleItem
@@ -791,6 +792,7 @@ if typing.TYPE_CHECKING:
     from .span_kind import SpanKind
     from .span_row_filter_set import SpanRowFilterSet
     from .span_status_code import SpanStatusCode
+    from .submit_signal_feedback_response import SubmitSignalFeedbackResponse
     from .tool_call_histogram_bucket import ToolCallHistogramBucket
     from .tool_co_occurrence_response import ToolCoOccurrenceResponse
     from .tool_co_occurrence_row import ToolCoOccurrenceRow
@@ -1559,6 +1561,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SignalDetail": ".signal_detail",
     "SignalDetailSource": ".signal_detail_source",
     "SignalDetailStatesItem": ".signal_detail_states_item",
+    "SignalFeedback": ".signal_feedback",
     "SignalHistogram": ".signal_histogram",
     "SignalHistogramBucket": ".signal_histogram_bucket",
     "SignalLifecycleItem": ".signal_lifecycle_item",
@@ -1586,6 +1589,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SpanKind": ".span_kind",
     "SpanRowFilterSet": ".span_row_filter_set",
     "SpanStatusCode": ".span_status_code",
+    "SubmitSignalFeedbackResponse": ".submit_signal_feedback_response",
     "ToolCallHistogramBucket": ".tool_call_histogram_bucket",
     "ToolCoOccurrenceResponse": ".tool_co_occurrence_response",
     "ToolCoOccurrenceRow": ".tool_co_occurrence_row",
@@ -2382,6 +2386,7 @@ __all__ = [
     "SignalDetail",
     "SignalDetailSource",
     "SignalDetailStatesItem",
+    "SignalFeedback",
     "SignalHistogram",
     "SignalHistogramBucket",
     "SignalLifecycleItem",
@@ -2409,6 +2414,7 @@ __all__ = [
     "SpanKind",
     "SpanRowFilterSet",
     "SpanStatusCode",
+    "SubmitSignalFeedbackResponse",
     "ToolCallHistogramBucket",
     "ToolCoOccurrenceResponse",
     "ToolCoOccurrenceRow",

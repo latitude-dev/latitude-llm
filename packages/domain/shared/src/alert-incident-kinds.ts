@@ -50,6 +50,17 @@ const SEVERITY_RANK: Record<AlertSeverity, number> = { low: 0, medium: 1, high: 
 export const meetsMinSeverity = (severity: AlertSeverity, minimum: AlertSeverity): boolean =>
   SEVERITY_RANK[severity] >= SEVERITY_RANK[minimum]
 
+/**
+ * Whether `next` sits strictly higher on the severity scale than `previous`,
+ * treating "unset" as below every tier. So setting a first priority counts as
+ * an increase, clearing one never does, and neither does a repeat of the same
+ * tier.
+ */
+export const isSeverityIncrease = (previous: AlertSeverity | null, next: AlertSeverity | null): next is AlertSeverity =>
+  rankOrUnset(next) > rankOrUnset(previous)
+
+const rankOrUnset = (severity: AlertSeverity | null): number => (severity === null ? -1 : SEVERITY_RANK[severity])
+
 export const SEVERITY_COLOR: Record<AlertSeverity, string> = {
   low: "#3b82f6",
   medium: "#f59e0b",

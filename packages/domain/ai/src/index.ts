@@ -82,6 +82,8 @@ export interface GenerateResult<T> {
   readonly duration: number // nanoseconds
   /** Provider/model that actually served the call, the requested pair unless a fallback answered; price against this, not the input. */
   readonly servedBy?: { readonly provider: string; readonly model: string }
+  /** Latitude trace the generation was captured into; absent when the call was not captured or was served from the cache. */
+  readonly traceId?: string
   readonly tokenUsage?: {
     readonly input: number
     readonly output: number

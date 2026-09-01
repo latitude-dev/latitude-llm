@@ -223,6 +223,7 @@ function buildSignalRow(input: {
     source: input.issue.source,
     centroid,
     clusteredAt: centroid.clusteredAt,
+    promotedAt: input.issue.unpromoted ? null : createdAt,
     resolvedAt: fixtureDates.resolvedAt,
     ignoredAt: fixtureDates.ignoredAt,
     regressedAt: fixtureDates.regressedAt,

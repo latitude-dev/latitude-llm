@@ -49,6 +49,13 @@ export type SeedSignalFixture = {
   readonly ignoredDaysAgo: number | null
   readonly regressedDaysAgo: number | null
   readonly mutedDaysAgo: number | null
+  /**
+   * Seeds a signal that was discovered but never accumulated enough evidence to
+   * be promoted. Declared as the exception rather than as a per-fixture
+   * timestamp because every other fixture is promoted at creation, which is what
+   * a project whose signals all cleared the gate looks like.
+   */
+  readonly unpromoted?: true
 }
 
 const baseSignalFixtures: SeedSignalFixture[] = [
@@ -203,6 +210,87 @@ const baseSignalFixtures: SeedSignalFixture[] = [
 ]
 
 const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
+  // Unpromoted fixtures read as one occurrence's words, not a summary: that is what a candidate is named from.
+  {
+    name: "The agent read the customer's local time as UTC and quoted a delivery window a day early",
+    description:
+      "The agent read the customer's local time as UTC and quoted a delivery window a day early. The customer gave a time with no timezone and the agent never asked which one it was.",
+    createdDaysAgo: 4,
+    clusteredDaysAgo: 4,
+    updatedDaysAgo: 4,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
+  {
+    name: "A one-line answer was flagged as lazy when brevity was the right call",
+    description:
+      "A one-line answer was flagged as lazy when brevity was the right call. The question had a yes or no answer and the reply gave it.",
+    createdDaysAgo: 23,
+    clusteredDaysAgo: 23,
+    updatedDaysAgo: 23,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
+  // The fragmentation case, in two halves: one problem that failed to match
+  // itself, so neither half can reach the gate alone. Consolidation is what
+  // turns this pair into one promotable signal.
+  {
+    name: "The agent quoted a restocking fee that does not exist for opened electronics",
+    description:
+      "The agent quoted a restocking fee that does not exist for opened electronics. The customer asked what returning an opened speaker would cost and the agent named a percentage from nowhere.",
+    createdDaysAgo: 6,
+    clusteredDaysAgo: 6,
+    updatedDaysAgo: 6,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
+  {
+    name: "The agent made up a restocking charge for an opened item",
+    description:
+      "The agent made up a restocking charge for an opened item. It told the customer a flat fee applied to opened boxes, which is not in any returns policy.",
+    createdDaysAgo: 5,
+    clusteredDaysAgo: 5,
+    updatedDaysAgo: 5,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
+  // Past the expiry window with nothing since: what the candidate sweep exists
+  // to remove. `clusteredDaysAgo` is the anchor, so it is what ages it out.
+  {
+    name: "The agent replied in Portuguese to a message written in Spanish",
+    description:
+      "The agent replied in Portuguese to a message written in Spanish. The customer wrote in Spanish throughout and the reply switched language halfway.",
+    createdDaysAgo: 60,
+    clusteredDaysAgo: 60,
+    updatedDaysAgo: 60,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+    regressedDaysAgo: null,
+    mutedDaysAgo: null,
+    unpromoted: true,
+    source: "flagger",
+  },
   {
     name: "Agent invents enterprise SLAs for standard support plans",
     description:

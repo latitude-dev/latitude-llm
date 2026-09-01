@@ -72,7 +72,7 @@ export function SessionSlot({
   readonly isActive: boolean
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
   readonly onOpenSignal: (signalId: string) => void
-  readonly onOpenInConversation: (annotationId: string) => void
+  readonly onOpenInConversation: (scoreId: string) => void
   readonly searchQuery?: string
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined

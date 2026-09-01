@@ -111,6 +111,7 @@ const makeSignalRow = (input?: { readonly id?: string; readonly projectId?: stri
   centroid: createSignalCentroid(),
   clusteredAt: TIMESTAMP,
   mutedAt: null,
+  feedback: null,
   createdAt: TIMESTAMP,
   updatedAt: TIMESTAMP,
 })

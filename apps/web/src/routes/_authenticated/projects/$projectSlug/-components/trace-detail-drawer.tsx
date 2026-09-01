@@ -18,7 +18,6 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ArrowDownIcon, ArrowUpIcon, GaugeIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
-import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
 import { useProjectScope } from "../../../../../domains/projects/project-scope.tsx"
 import { useScoresByTrace } from "../../../../../domains/scores/scores.collection.ts"
 import type { ScoreRecord } from "../../../../../domains/scores/scores.functions.ts"
@@ -27,7 +26,6 @@ import { useTraceDetail } from "../../../../../domains/traces/traces.collection.
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { AddTraceToDatasetAction } from "./add-trace-to-dataset-action.tsx"
-import { isGlobalAnnotation } from "./annotations/hooks/use-annotation-navigation.ts"
 import { useConversationAnnotationFocus } from "./annotations/hooks/use-conversation-annotation-focus.ts"
 import { useTraceTimeline } from "./conversation-timeline/use-trace-timeline.ts"
 import { TraceScoresList } from "./scores/trace-scores-list.tsx"
@@ -148,11 +146,11 @@ function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSy
     drawerStoreKey,
     ...rest
   } = props
+  const [focusScoreId, setFocusScoreId] = useParamState("scoreId", "")
   // Shared with the session panel via the `detailTab` URL param so Conversation
   // / Annotations carry over when switching between trace and session views.
-  // Default to Conversation when arriving from an active search so the
-  // search-match autoscroll/highlight lands on a hit instead of the trace tab.
-  const defaultTab = (props.searchQuery?.length ?? 0) > 0 ? "conversation" : "trace"
+  // Default to Conversation when a search match or a focused score needs that tab to scroll to something.
+  const defaultTab = (props.searchQuery?.length ?? 0) > 0 || focusScoreId ? "conversation" : "trace"
   const [rawActiveTab, setActiveTab] = useParamState("detailTab", defaultTab, {
     validate: isTraceDetailTab,
   })
@@ -168,6 +166,8 @@ function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSy
       onActiveTabChange={setActiveTab}
       selectedSpanId={selectedSpanId}
       onSelectedSpanIdChange={setSelectedSpanId}
+      focusScoreId={focusScoreId}
+      onFocusScoreIdChange={setFocusScoreId}
       {...(closeLabel !== undefined ? { closeLabel } : {})}
       {...(drawerStoreKey !== undefined ? { drawerStoreKey } : {})}
     />
@@ -178,6 +178,7 @@ function TraceDetailDrawerWithLocalTabs(props: Omit<TraceDetailDrawerProps, "url
   const { initialTab, initialSpanId, closeLabel, drawerStoreKey, ...rest } = props
   const [activeTab, setActiveTab] = useState<TabId>(normalizeTraceDetailTab(initialTab ?? "trace"))
   const [selectedSpanId, setSelectedSpanId] = useState(initialSpanId ?? "")
+  const [focusScoreId, setFocusScoreId] = useState("")
   return (
     <TraceDetailDrawerShell
       {...(rest as Omit<
@@ -188,6 +189,8 @@ function TraceDetailDrawerWithLocalTabs(props: Omit<TraceDetailDrawerProps, "url
       onActiveTabChange={setActiveTab}
       selectedSpanId={selectedSpanId}
       onSelectedSpanIdChange={setSelectedSpanId}
+      focusScoreId={focusScoreId}
+      onFocusScoreIdChange={setFocusScoreId}
       {...(closeLabel !== undefined ? { closeLabel } : {})}
       {...(drawerStoreKey !== undefined ? { drawerStoreKey } : {})}
     />
@@ -199,6 +202,9 @@ type TraceDetailTabControlProps = {
   readonly onActiveTabChange: (tab: TabId) => void
   readonly selectedSpanId: string
   readonly onSelectedSpanIdChange: (spanId: string) => void
+  /** Score whose anchor the Conversation tab focuses; empty when nothing is focused. */
+  readonly focusScoreId: string
+  readonly onFocusScoreIdChange: (scoreId: string) => void
 }
 
 export type TraceDetailBodyProps = {
@@ -207,7 +213,6 @@ export type TraceDetailBodyProps = {
   readonly projectId: string
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: (filters: FilterSet) => void
-  readonly focusAnnotationId?: string
   /** Active search query — drives literal/token highlights in the Conversation tab. */
   readonly searchQuery?: string
 } & TraceDetailTabControlProps
@@ -231,7 +236,8 @@ export function TraceDetailBody({
   onActiveTabChange,
   selectedSpanId,
   onSelectedSpanIdChange,
-  focusAnnotationId,
+  focusScoreId,
+  onFocusScoreIdChange,
   searchQuery,
 }: TraceDetailBodyProps) {
   const isSandbox = useProjectScope().kind === "sandbox"
@@ -287,10 +293,12 @@ export function TraceDetailBody({
   // Stable so the palette contributor's command memo doesn't re-register each render.
   const handleSetActiveTab = useCallback(
     (tab: TabId) => {
+      // The focused score only means anything on the Conversation tab, so leaving it drops the param.
+      if (tab !== "conversation") onFocusScoreIdChange("")
       onActiveTabChange(tab)
       setVisitedTabs((prev) => new Set([...prev, tab]))
     },
-    [onActiveTabChange],
+    [onActiveTabChange, onFocusScoreIdChange],
   )
 
   const timeline = useTraceTimeline({
@@ -324,10 +332,10 @@ export function TraceDetailBody({
     },
   ])
 
-  const { scrollContainerRef, textSelectionPopoverControlsRef, scrollToAnnotation } = useConversationAnnotationFocus({
+  const { scrollContainerRef, textSelectionPopoverControlsRef } = useConversationAnnotationFocus({
     projectId,
     traceId,
-    focusAnnotationId,
+    focusScoreId,
     isConversationActive: activeTab === "conversation",
     onActivateConversation: () => handleSetActiveTab("conversation"),
     annotationsEnabled: scoresEnabled,
@@ -337,11 +345,10 @@ export function TraceDetailBody({
     setVisitedTabs((prev) => new Set([...prev, activeTab]))
   }, [activeTab])
 
+  // `ScoreList` only makes anchored annotations clickable; the URL write is what makes the position shareable.
   function handleScoreClick(score: ScoreRecord) {
-    if (score.source !== "annotation") return
-    const annotation = score as unknown as AnnotationRecord
-    if (isGlobalAnnotation(annotation)) return
-    scrollToAnnotation(annotation)
+    onFocusScoreIdChange(score.id)
+    handleSetActiveTab("conversation")
   }
 
   function navigateToSpan(spanId: string | null) {
@@ -510,6 +517,8 @@ function TraceDetailDrawerShell({
   onActiveTabChange,
   selectedSpanId,
   onSelectedSpanIdChange,
+  focusScoreId,
+  onFocusScoreIdChange,
   closeLabel,
   drawerStoreKey = "trace-detail-drawer-width",
   searchQuery,
@@ -580,6 +589,8 @@ function TraceDetailDrawerShell({
         onActiveTabChange={onActiveTabChange}
         selectedSpanId={selectedSpanId}
         onSelectedSpanIdChange={onSelectedSpanIdChange}
+        focusScoreId={focusScoreId}
+        onFocusScoreIdChange={onFocusScoreIdChange}
         {...(searchQuery ? { searchQuery } : {})}
       />
     </DetailDrawer>

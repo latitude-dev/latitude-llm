@@ -79,6 +79,7 @@ export const flaggerClassificationWorkflow = async (input: FlaggerClassification
     traceCreatedAt: result.sessionStartedAt,
     contentHash: result.contentHash,
     ...(draft.messageIndex !== undefined ? { messageIndex: draft.messageIndex } : {}),
+    ...(result.flaggerTraceId !== undefined ? { flaggerTraceId: result.flaggerTraceId } : {}),
   })
 
   log.info("Session flagger annotation saved", { ...logContext, scoreId: draft.scoreId })

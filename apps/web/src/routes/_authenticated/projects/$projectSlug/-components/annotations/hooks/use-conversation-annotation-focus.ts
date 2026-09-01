@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { useAnnotationsByTrace } from "../../../../../../../domains/annotations/annotations.collection.ts"
-import { useTraceDetail } from "../../../../../../../domains/traces/traces.collection.ts"
+import { useTraceConversationMessages, useTraceDetail } from "../../../../../../../domains/traces/traces.collection.ts"
 import { useAnnotationNavigation } from "./use-annotation-navigation.ts"
 import type { TextSelectionPopoverControls } from "./use-annotation-popover.ts"
 
@@ -10,29 +10,27 @@ import type { TextSelectionPopoverControls } from "./use-annotation-popover.ts"
  * `<ConversationTab>`). Owns the scroll container + text-selection popover refs
  * and the navigation hook, and drives:
  *
- * - `focusAnnotationId`: when navigation requests an annotation (e.g. clicking an
- *   inline annotation in the session Annotations tab), scroll to it and open its
- *   popover. We only fire once the conversation is *active* (so its scroll
- *   container is mounted) AND its messages have *loaded* — otherwise the scroll
- *   target doesn't exist yet and the navigation hook would no-op without retrying.
- *   The hook itself observes the DOM for any remaining render lag.
+ * - `focusScoreId`: the score whose anchor the conversation should focus (the
+ *   shareable `scoreId` URL param). Scrolls to its anchored message and opens
+ *   its popover. We only fire once the conversation is *active* AND rendered (its
+ *   scroll container only mounts after the first message chunk loads) — otherwise
+ *   the scroll target doesn't exist yet and the navigation hook would no-op
+ *   without retrying. The hook itself observes the DOM for any remaining render lag.
  * - draining a pending scroll queued while the conversation tab was inactive.
  */
 export function useConversationAnnotationFocus({
   projectId,
   traceId,
-  focusAnnotationId,
+  focusScoreId,
   isConversationActive,
   onActivateConversation,
-  onFocusConsumed,
   annotationsEnabled = true,
 }: {
   readonly projectId: string
   readonly traceId: string
-  readonly focusAnnotationId?: string | undefined
+  readonly focusScoreId?: string | undefined
   readonly isConversationActive: boolean
   readonly onActivateConversation?: (() => void) | undefined
-  readonly onFocusConsumed?: (() => void) | undefined
   /** Off under a sandbox scope — skips the annotations fetch and focus wiring. */
   readonly annotationsEnabled?: boolean
 }) {
@@ -46,6 +44,12 @@ export function useConversationAnnotationFocus({
     enabled: annotationsEnabled,
   })
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({ projectId, traceId })
+  // Same query key the conversation uses, so this mirrors its loading state without adding a fetch.
+  const { isLoading: isConversationLoading } = useTraceConversationMessages({
+    projectId,
+    traceId,
+    enabled: traceDetail != null,
+  })
 
   const { scrollToAnnotation, executePendingScroll } = useAnnotationNavigation({
     scrollContainerRef,
@@ -68,31 +72,31 @@ export function useConversationAnnotationFocus({
   // machine; the effect is the right shape here.
   useEffect(() => {
     // Cleared request → reset the guard so the next one (even the same id) fires.
-    if (!focusAnnotationId) {
+    if (!focusScoreId) {
       focusHandledRef.current = null
       return
     }
-    if (focusHandledRef.current === focusAnnotationId) return
+    if (focusHandledRef.current === focusScoreId) return
     if (!isConversationActive || isDetailLoading || !traceDetail) return
-    const annotation = annotationsData?.items?.find((item) => item.id === focusAnnotationId)
+    // No scroll container exists until the first chunk lands, and marking it handled here would swallow the request.
+    if (isConversationLoading || !scrollContainerRef.current) return
+    const annotation = annotationsData?.items?.find((item) => item.id === focusScoreId)
     if (!annotation) return
-    focusHandledRef.current = focusAnnotationId
+    focusHandledRef.current = focusScoreId
     scrollToAnnotation(annotation)
-    onFocusConsumed?.()
   }, [
-    focusAnnotationId,
+    focusScoreId,
     isConversationActive,
+    isConversationLoading,
     isDetailLoading,
     traceDetail,
     annotationsData,
     scrollToAnnotation,
-    onFocusConsumed,
   ])
 
   return {
     scrollContainerRef,
     textSelectionPopoverControlsRef,
-    scrollToAnnotation,
     traceDetail,
     isDetailLoading,
   }

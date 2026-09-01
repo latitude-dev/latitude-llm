@@ -135,7 +135,7 @@ Models resolve per stage via `resolveGenerationConfig` (`LAT_AI_FLAGGER_{CLASSIF
 
 ## Scores, anchors, and dedup
 
-Both the deterministic matched path and the LLM save path funnel through `upsertFlaggerAnnotationScore`: a row in the `scores` table with `sourceType: "annotation"`, `sourceId: "SYSTEM"`, `value: 0`, `passed: false`, `metadata: { rawFeedback, flaggerSlug, messageIndex?, contentHash? }`. The row's `sessionId` is the flagged session and its `traceId` is the session's latest output trace, so trace-level surfaces stay coherent.
+Both the deterministic matched path and the LLM save path funnel through `upsertFlaggerAnnotationScore`: a row in the `scores` table with `sourceType: "annotation"`, `sourceId: "SYSTEM"`, `value: 0`, `passed: false`, `metadata: { rawFeedback, flaggerSlug, messageIndex?, contentHash?, flaggerTraceId? }`. The row's `sessionId` is the flagged session and its `traceId` is the session's latest output trace, so trace-level surfaces stay coherent.
 
 Sessions re-screen on every settle and scores are never deleted, so dedup happens at write time in two layers:
 
@@ -147,6 +147,23 @@ The anchor dedup is a select-then-insert without a DB unique constraint: a narro
 Context compaction mirrors the moments stance: the analyzed window is the last responsive span's input (post-compaction that is the summary + subsequent turns). Pre-compaction windows that settled earlier already got their own screening pass, and the anchor dedup makes passes additive.
 
 `writeScoreUseCase` emits `ScoreCreated` → signal discovery clusters by feedback embedding (per project, not per slug — the annotator prompt is tuned to produce similar text for similar issues) → signals with `source: "flagger"` are auto-monitored → escalation → incidents. See [`./signals.md`](./signals.md).
+
+## Grading a flagger's own decisions
+
+A flagger score records the generation that produced it: `metadata.flaggerTraceId`, the Latitude trace the classify call was captured into. It is written only where a decision came from a captured LLM call, which is why the pointer is optional:
+
+- **LLM classifications** carry it. `GenerateResult.traceId` (`@domain/ai`) is read inside `runWithAiTelemetry`'s `capture` callback — it has to be read there, since once the effect returns the capture span has ended and the active span is the worker's own trace — then threaded through `RunFlaggerResult` → `ClassifySessionFlaggerResult` → the workflow → `saveSessionFlaggerAnnotation` → `upsertFlaggerAnnotationScore`.
+- **Deterministic detections** never do: `tool-call-errors`, `output-schema-validation`, `empty-response`, `low-cache-hit-rate` and `trashing`'s deterministic path write their score straight from screening with no generation to grade. Their precision is a code question, not a model question.
+- **AI-cache hits** never do either. The trace id is deliberately excluded from the cached generate result (`@platform/ai`'s `withAICache`): a cache hit creates no span, so a stored id would point at whichever session first produced that generation. No trace for a call that did not happen.
+- Occurrences flagged before the pointer existed have none, and there is no backfill — telemetry metadata cannot be re-derived reliably.
+
+The pointer is what lets a customer's verdict on a signal reach the exact decisions behind it — and it is why only `source: "flagger"` signals accept feedback at all. When such a signal is graded ([`./signals.md`](./signals.md#feedback-was-this-signal-worth-raising)), `SignalFeedbackSubmitted` publishes `issues:reviewFlaggerOccurrences`; `reviewSignalFlaggerOccurrencesUseCase` scans the signal's newest 25 occurrences, keeps the flagger-authored rows (`sourceId: "SYSTEM"` with a `flaggerSlug`) that name a flagger trace, dedupes by that trace — one verdict per classification however many occurrence rows point at it — and publishes one `issues:reviewFlaggerOccurrence` per target. Every slug among those occurrences counts, not only the one that created the signal: signals cluster per project, so a noisy pattern is routinely detected by several slugs, and each job carries its own row's `flaggerSlug`.
+
+`recordSignalFlaggerReviewUseCase` (`@domain/product-feedback`) then writes the verdict as a published annotation on that trace, inside the dogfood organization: `sourceId: "API"` (deliberately **not** `SYSTEM`, which marks flagger-authored rows and is load-bearing for the anchor dedup that also runs inside `latitude-flaggers`), `annotatorId: null` (the human belongs to another tenant), and the signal's `value`/`passed`/`feedback` forwarded unchanged — the two grade the same thing, so there is no polarity translation. A bare 👍 substitutes a canned text, matching the sibling dogfood review flows. The write is in-process, not over the public SDK: the dogfood organization is in the same Postgres and ClickHouse (`LAT_LATITUDE_API_URL` points at the deployment's own API), which also allows a pre-write duplicate check that makes a mid-job retry idempotent.
+
+Crossing the organization boundary is the one liberty here, so the rules are explicit: the dogfood organization id may only come from the telemetry credential (`LAT_LATITUDE_TELEMETRY_API_KEY` → `ApiKeyRepository.findByTokenHash` on the admin client, resolved per job — never a request, a payload, or a slug lookup, since `latitude-flaggers` could match a customer project of the same name), the stored trace must be verified to live in that project, only the annotation write runs under that scope, and it happens only in the worker. Mechanically it is an ordinary `withPostgres`/`withClickHouse` scope with a different id, not an RLS bypass. No telemetry key (self-hosted, local dev, CI) ⇒ logged and skipped; a configured key that no longer resolves fails the job instead, so the misconfiguration surfaces. No `latitude-flaggers` project, or a trace absent from it ⇒ logged and skipped.
+
+Those rows are failed annotations inside `latitude-flaggers`, so they flow into signal discovery **for that project** and cluster into signals of the form "the `frustration` flagger keeps mis-firing on X". That is the intended loop, not a side effect. The adversarial review generation is a second, separately traced decision and is not graded yet — capturing its trace id too is the obvious next increment.
 
 ## Billing
 

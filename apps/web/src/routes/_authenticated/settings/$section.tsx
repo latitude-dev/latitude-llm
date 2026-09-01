@@ -1,4 +1,4 @@
-import { notificationGroupSchema } from "@domain/shared"
+import { type NotificationGroup, notificationGroupSchema } from "@domain/shared"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { z } from "zod"
 import { resolveDefaultProjectSlug } from "../../../domains/projects/projects.functions.ts"
@@ -19,8 +19,22 @@ import { resolveDefaultProjectSlug } from "../../../domains/projects/projects.fu
  * the intent through an explicit query param instead.
  */
 const searchSchema = z.object({
-  group: notificationGroupSchema.optional(),
+  // Deliberately not `notificationGroupSchema`: emails already in inboxes name
+  // groups by key, and a group renamed or split since then would fail search
+  // validation and error the page instead of unsubscribing anyone. Resolved below.
+  group: z.string().optional(),
 })
+
+/** Group keys that no longer exist but are still named by delivered emails. */
+const RENAMED_GROUPS: Record<string, NotificationGroup> = { incidents: "signals" }
+
+const anchorFor = (group: string | undefined): string => {
+  if (!group) return ""
+  const current = notificationGroupSchema.safeParse(group)
+  if (current.success) return `#notifications-${current.data}`
+  const renamed = RENAMED_GROUPS[group]
+  return renamed ? `#notifications-${renamed}` : ""
+}
 
 export const Route = createFileRoute("/_authenticated/settings/$section")({
   validateSearch: searchSchema,
@@ -29,9 +43,8 @@ export const Route = createFileRoute("/_authenticated/settings/$section")({
     const slug = await resolveDefaultProjectSlug()
     if (!slug) throw redirect({ to: "/" })
 
-    const hash = deps.group ? `notifications-${deps.group}` : ""
     throw redirect({
-      href: `/projects/${slug}/settings/${params.section}${hash ? `#${hash}` : ""}`,
+      href: `/projects/${slug}/settings/${params.section}${anchorFor(deps.group)}`,
     })
   },
   component: () => null,

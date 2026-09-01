@@ -17,7 +17,7 @@ export interface RecordUsageEventInput {
   readonly credits?: number | undefined
   readonly idempotencyKey: string
   readonly planSlug: BillingUsagePeriod["planSlug"]
-  readonly planSource: "override" | "subscription" | "free-fallback"
+  readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   readonly periodStart: Date
   readonly periodEnd: Date
   readonly includedCredits: number

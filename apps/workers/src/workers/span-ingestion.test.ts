@@ -10,7 +10,7 @@ import { billingUsageEvents, billingUsagePeriods } from "@platform/db-postgres/s
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createBillingWorker } from "./billing.ts"
 import { createDomainEventsWorker } from "./domain-events.ts"
@@ -202,6 +202,14 @@ const cloudflareAiGatewayRequest = {
 }
 
 describe("createSpanIngestionWorker", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("ingests JSON OTLP messages and inserts spans into ClickHouse", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
