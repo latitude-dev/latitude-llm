@@ -28,7 +28,7 @@ jobs:
       production_should_deploy: ${{ steps.target.outputs.production_should_deploy }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -465,7 +465,7 @@ jobs:
       deployment: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.staging-build.outputs.git_commit_sha }}
 
@@ -848,7 +848,7 @@ jobs:
       deployment: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.production-build.outputs.git_commit_sha }}
 
