@@ -138,10 +138,7 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
     const beforePresent = before !== undefined && before.changeKind !== "remove"
     const lastIndex = events.indexOf(last)
     const storeWipedAfterLastTouch = events.some(
-      (event, index) =>
-        event.storeId === first.storeId &&
-        event.changeKind === "store_delete" &&
-        index > lastIndex,
+      (event, index) => event.storeId === first.storeId && event.changeKind === "store_delete" && index > lastIndex,
     )
     const afterPresent = storeWipedAfterLastTouch ? false : last.changeKind !== "remove"
     addEndpoint({
