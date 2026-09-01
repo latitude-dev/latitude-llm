@@ -160,7 +160,8 @@ export interface SpanRepositoryShape {
   /**
    * The trace's memory-operation spans projected to their memory attributes (see
    * `MemoryOperationSpan`). Filtered on the indexed `operation` column, deduped by
-   * newest `ingested_at`, ordered by `end_time`. Unlike `listByTraceId` this
+   * newest `ingested_at`, ordered by `end_time`, `start_time`, `ingested_at`,
+   * `span_id`. Unlike `listByTraceId` this
    * returns the memory attribute values (scalar map lookups, so no memory hazard)
    * because the ledger materializer needs the record content — but only for the
    * few memory spans in one trace.
