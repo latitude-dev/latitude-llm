@@ -59,8 +59,7 @@ const getLogLevel = (): LogLevel => {
   return "info"
 }
 
-export const isLogLevelEnabled = (level: LogLevel): boolean =>
-  LOG_LEVEL_RANK[level] <= LOG_LEVEL_RANK[getLogLevel()]
+export const isLogLevelEnabled = (level: LogLevel): boolean => LOG_LEVEL_RANK[level] <= LOG_LEVEL_RANK[getLogLevel()]
 
 export const isObservabilityEnabled = () => parseBooleanEnv(process.env.LAT_OBSERVABILITY_ENABLED, false)
 
