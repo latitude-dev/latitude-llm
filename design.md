@@ -102,8 +102,10 @@ Treat text styles as roles, not decoration. A heading names a region; a row titl
 
 - Build title, value, status, and supporting copy as a vertical stack unless they are intentionally a compact inline pair, such as a label and a badge.
 - `Text` primitives can render inline. When a text role must start a new line, put it in a flex/grid stack or use the component's block display option. Inspect the rendered result: words from separate roles must never run together.
-- In project routes, use the existing `-components/section-header.tsx` `SectionHeader` for a title with a description or badge. Do not recreate it with a large `Text` heading and a separate paragraph. Use its `xl` variant only for the page-level title.
-- Supporting block labels are low hierarchy. Use the existing muted small-label treatment (`Text.H6` with `foregroundMuted`) rather than a large, bold, black heading. A block needs a display-size heading only when it is the page's main task, not when it is one panel within a summary.
+- In project routes, `-components/section-header.tsx` `SectionHeader` is the single route-level header, as used by the Behaviors page inside `Layout.Header`. Use it once to identify the page or route context; do not reuse it inside summary panels, cards, analytics blocks, or sidebars.
+- Default `SectionHeader` to its standard variant. Use `variant="xl"` only when the closest existing route for the same page type uses it. A page title is not by itself a reason to choose the larger variant.
+- Supporting block labels are low hierarchy. Use the existing muted small-label treatment (`Text.H6` with `foregroundMuted`) rather than a large, bold, black heading. If a block needs a short description, stack it below that muted label with the same low hierarchy; do not use `SectionHeader` to create a mini page header.
+- In JSX, text roles that must appear on separate lines must be direct children of a `flex flex-col` or grid stack. Never place a `Text` title and `Text` description as consecutive children of an unstructured `div`; they will render as a run-on line.
 - Keep a section title close to its content. Add a section description only when it changes how the user reads or acts on that content; do not use a sentence to restate the heading.
 - In repeated panels and rows, use one stable internal order. Do not alternate between title-status-description and title-description-status without a product reason.
 - Use muted text for secondary context, not to hide a necessary distinction between a label, value, and status.
@@ -194,9 +196,9 @@ Review the implementation in context, at desktop and narrow widths, and compare 
 - Does every container have a distinct purpose, with no repeated parent-and-child border treatment?
 - Is the page header flat on the canvas unless a specific persistent state requires a surfaced header?
 - Are clickable repeated items rendered as rows with separators and interaction states rather than cards inside a card?
-- Does a project title with a description use the local `SectionHeader`, with only the page title using its `xl` variant?
+- Is `SectionHeader` used once for the route-level header, following the closest route's variant, and never inside a summary panel?
 - Are supporting block labels small and muted rather than large, bold display headings?
-- Are labels, values, statuses, and descriptions visibly separated and never rendered as a run-on text line?
+- Are labels, values, statuses, and descriptions in an explicit stack or inline layout, never rendered as a run-on text line?
 - Do metrics use a consistent label-value-context order in one compact, non-wrapping strip rather than a grid of metric cards?
 - Does the chosen route, modal, or drawer match the task's size and need for context?
 - Are loading, empty, error, disabled, and destructive states handled where applicable?
