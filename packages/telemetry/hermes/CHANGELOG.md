@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-01
+
 ### Added
 
 - **Cross-harness trace correlation, both directions.** A tool that launches another agent can pass it the current tool span with `child_env()` (or `current_traceparent()`), so the child harness's spans land under that tool call in one trace instead of in a trace of their own — the causal edge a shared session id alone cannot express. `LATITUDE_HERMES_EXPORT_TRACEPARENT=1` scopes those variables onto `os.environ` around each tool call instead, so any subprocess inherits them with no code change; it is off by default because `os.environ` is process-wide while Hermes runs each turn on its own thread. In reverse, a Hermes process launched with a `TRACEPARENT` joins that trace and reports the inherited `LATITUDE_SESSION_ID`, keeping its own session id under `hermes.session.id` (`LATITUDE_HERMES_INHERIT_CONTEXT=0` opts out). Joining is capped per process so a long-lived agent cannot grow a trace it does not own without bound. The active span is published under both `TRACEPARENT` and `LATITUDE_TRACEPARENT`, since reads prefer the scoped name and a chained parent's header would otherwise outrank it. Contract: [`dev-docs/trace-correlation.md`](../../../dev-docs/trace-correlation.md).
