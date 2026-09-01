@@ -738,13 +738,19 @@ describe("createSpanIngestionWorker", () => {
               scope: { name: "test-scope", version: "1.0.0" },
               spans: [
                 {
-                  ...validRequest.resourceSpans[0]!.scopeSpans[0]!.spans[0],
+                  traceId: "0af7651916cd43dd8448eb211c80319c",
+                  spanId: "b7ad6b7169203331",
+                  name: "test-span",
+                  kind: 1,
+                  startTimeUnixNano: "1710590400000000000",
+                  endTimeUnixNano: "1710590401000000000",
                   attributes: [
                     { key: "custom.attr", value: { stringValue: "hello" } },
                     { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
                     { key: "gen_ai.usage.input_tokens", value: { intValue: "100" } },
                     { key: "gen_ai.usage.output_tokens", value: { intValue: "20" } },
                   ],
+                  status: { code: 1 },
                 },
               ],
             },
