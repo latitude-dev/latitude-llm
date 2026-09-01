@@ -94,6 +94,7 @@ export const GithubSignalReferenceRepositoryLive = Layer.succeed(GithubSignalRef
                 authorLogin: reference.authorLogin,
                 matchedSources: [...reference.matchedSources],
                 action: reference.action,
+                actionAppliedAt: sql`CASE WHEN ${githubSignalReferences.action} IS DISTINCT FROM ${reference.action} THEN NULL ELSE ${githubSignalReferences.actionAppliedAt} END`,
                 mergedAt: reference.mergedAt ?? sql`${githubSignalReferences.mergedAt}`,
                 updatedAt: new Date(),
               },

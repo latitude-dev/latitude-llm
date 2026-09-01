@@ -13,7 +13,7 @@ export type GithubPrState = z.infer<typeof githubPrStateSchema>
  * A stored reference row (5.3): one signal ↔ one PR/commit. `prNumber`/`prState` are
  * set only for `pull_request` references; `commitSha`/`pushAfterSha` only for
  * `commit` references. `action` is the strongest matched intent; `actionAppliedAt`
- * is null until the lifecycle command actually ran (merge time). References are
+ * is null until the lifecycle command actually ran. References are
  * historical records — applied ones are never deleted (D8).
  */
 export const githubSignalReferenceSchema = z.object({

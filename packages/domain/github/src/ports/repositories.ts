@@ -164,9 +164,9 @@ export interface GithubSignalReferenceRepositoryShape {
   /**
    * Upserts a reference by its per-type natural key (`(org, signal, repo, pr_number)`
    * for PRs, `(org, signal, repo, commit_sha)` for commits). Refreshes the
-   * mutable label/state/action/sources; never clears an already-stamped
-   * `merged_at` or `action_applied_at` (those are owned by
-   * {@link setPrState}/{@link stampActionApplied}). Returns the stored row.
+   * mutable label/state/action/sources. Never clears an already-stamped
+   * `merged_at`. Clears `action_applied_at` when the stored action changes so
+   * the new intent is eligible to apply. Returns the stored row.
    */
   readonly upsert: (
     reference: GithubSignalReferenceUpsert,
