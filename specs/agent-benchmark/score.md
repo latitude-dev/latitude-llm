@@ -240,6 +240,13 @@ The scoring version changes when any of these changes:
 - a reader floor or applicability rule;
 - a detector change that materially alters observation coverage.
 
+Each scoring version declares the compatible `scoringArtifactVersion` values for every persisted
+flagger reader. The daily job never labels a mixture of incompatible Task Success, Safety, or other
+flagger evidence as one version. It re-evaluates retained session inputs with the target artifact
+where supported; evidence that cannot be re-evaluated is unreadable for that reader. Publication is
+withheld until the compatible window passes coverage and confidence gates. A scoring-version change
+therefore creates a marked boundary, not a gradual blend of old and new verdicts.
+
 The trend chart marks a version boundary. Snapshots on opposite sides remain visible but are not
 presented as a continuous measurement.
 

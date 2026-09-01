@@ -46,6 +46,11 @@ type DetectionResult =
 The exact conditional schema can use discriminated variants per flagger. The invariant is that code
 does not reconstruct score semantics from a feedback sentence.
 
+Every persisted flagger measurement and score also carries `scoringArtifactVersion`. The version
+identifies the prompt, supported judge configuration, detector implementation, and structured result
+schema that produced the evidence. It is evidence provenance, separate from the later daily snapshot
+version.
+
 For `tool-call-errors`, `findingKind` distinguishes failed response, malformed call, duplicate call
 id, orphan response, and undeclared tool. The undeclared-tool kind remains diagnostic because missing
 captured definitions are a common cause.
@@ -184,6 +189,7 @@ type FlaggerScreeningDecision = {
   sessionId: string
   flaggerSlug: string
   analysisHash: string
+  scoringArtifactVersion: string
   attempt: number
   version: number
   selected: boolean
@@ -242,6 +248,7 @@ This table supports:
 Flagger-authored score rows copy the structured fields needed for window reads:
 
 - `flagger_slug`;
+- `scoring_artifact_version`;
 - `finding_kind`;
 - `recovered`;
 - `same_subject_recovered`;

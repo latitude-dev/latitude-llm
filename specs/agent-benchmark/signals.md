@@ -173,7 +173,8 @@ rate.
 
 Every logical screening decision stores:
 
-- project, session, flagger slug, analysis hash, stable decision id, attempt, and timestamp;
+- project, session, flagger slug, analysis hash, scoring-artifact version, stable decision id,
+  attempt, and timestamp;
 - selected or skipped;
 - deterministic, hinted, uniform-sample, ordinary-sample, skipped, or rate-limited reason;
 - inclusion probability;

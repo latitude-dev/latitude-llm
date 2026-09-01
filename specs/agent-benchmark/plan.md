@@ -96,7 +96,8 @@ does not display per-session dimension scores.
 - [ ] **P2-5** Expose classified finish and provider error fields in span and session registries,
   filters, and detail views.
 - [ ] **P2-6** Add the bounded ClickHouse score columns required by
-  [`flaggers.md`](flaggers.md#clickhouse-score-fields). Create migrations only through `ch:create`.
+  [`flaggers.md`](flaggers.md#clickhouse-score-fields), including scoring-artifact provenance. Create
+  migrations only through `ch:create`.
 - [ ] **P2-7** Backfill fields that historical metadata can establish. Do not infer unavailable
   recovery, terminal, or safety facts.
 
@@ -210,7 +211,8 @@ accomplished the requested task.
 - [ ] **P4-1** Add the configurable `task-success` LLM-as-judge flagger and holistic verdict contract
   from [`flaggers.md`](flaggers.md#task-success).
 - [ ] **P4-2** Extend the flagger workflow to persist passed scores for success, failed scores for
-  failure, and coverage-only decisions for indeterminate and not-applicable results.
+  failure, and coverage-only decisions for indeterminate and not-applicable results. Stamp every
+  decision and score with its scoring-artifact version.
 - [ ] **P4-3** Publish failed Task Success scores to normal signal discovery while preventing passed
   scores from creating signals.
 - [ ] **P4-4** Store selection probabilities before classification and preserve hinted, sampled,
@@ -225,8 +227,9 @@ accomplished the requested task.
   and interaction shape.
 - [ ] **P4-8** Freeze the model artifact, feature contract, and validation distribution under a
   scoring-version identifier. Pin supported judge configurations and support the same artifact in
-  self-hosted deployments. Verify that the artifact contains no tenant content or tenant-identifying
-  coefficients.
+  self-hosted deployments. Define compatible evidence-artifact versions and re-evaluation or
+  withholding behavior at boundaries. Verify that the artifact contains no tenant content or
+  tenant-identifying coefficients.
 
 ### Product surfaces
 
