@@ -174,14 +174,18 @@ be confirmed harm.
 
 ## Screening decisions
 
-Screening produces one stored decision per eligible flagger and session:
+Screening produces one logical decision per eligible flagger, session, and analysis generation:
 
 ```ts
 type FlaggerScreeningDecision = {
+  decisionId: string
   organizationId: string
   projectId: string
   sessionId: string
   flaggerSlug: string
+  analysisHash: string
+  attempt: number
+  version: number
   selected: boolean
   reason:
     | "deterministic"
@@ -197,6 +201,12 @@ type FlaggerScreeningDecision = {
 }
 ```
 
+`decisionId` is deterministic for the organization, project, session, flagger, and analysis hash.
+The initial append-only row is written before classifier execution. Terminal outcome rows reuse the
+same id and selection fields with a higher version; queries collapse them with the latest version.
+Execution retries increment `attempt` but reuse the generation's sampling draw and inclusion
+probability.
+
 The reason names the selection mechanism, not the classifier result. An ordinary sample that loses
 its sampling draw has `selected: false` and `reason: "ordinary-sample"`; `skipped` is reserved for a
 policy skip. The inclusion probability is the probability before observing the flagger result.
@@ -204,10 +214,16 @@ Deterministic and uniformly examined sessions use 1. Ordinary samples store thei
 probability. Rate-limited or policy-skipped sessions are not readable unless the probability model
 explicitly accounts for them.
 
-The append-only ClickHouse table is ordered by organization, project, session, and flagger slug and
-uses the standard retention TTL, which must exceed the longest score window plus one daily run
-interval. The workflow writes decisions before executing sampled model calls so failed execution
-remains measurable.
+The append-only ClickHouse table is ordered by organization, project, session, flagger slug, analysis
+hash, and decision id. It uses the standard retention TTL, which must exceed the longest score window
+plus one daily run interval. The workflow writes decisions before executing sampled model calls so
+failed execution remains measurable.
+
+Window readers collapse revisions by decision id, then select the newest analysis generation for
+each session and flagger as of the calculation cutoff. Findings and decisions from superseded
+generations remain operational history but do not add to the examined denominator or estimator. If
+the newest generation is pending or failed, that session is unexamined; readers never fall back to a
+successful older generation.
 
 For Task Success, hinted sessions form a deterministically selected stratum and unhinted sessions use
 the configured probability. Safety chooses the session once and runs every launch Safety detector on

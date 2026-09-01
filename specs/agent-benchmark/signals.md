@@ -171,9 +171,9 @@ Operational flagger screening is not uniform. Hints bypass sampling, clean sessi
 and rate limiting can drop work. An occurrence rate over stored positives therefore is not a defect
 rate.
 
-Every screening decision stores:
+Every logical screening decision stores:
 
-- project, session, flagger slug, and timestamp;
+- project, session, flagger slug, analysis hash, stable decision id, attempt, and timestamp;
 - selected or skipped;
 - deterministic, hinted, uniform-sample, ordinary-sample, skipped, or rate-limited reason;
 - inclusion probability;
@@ -183,6 +183,10 @@ Task Success uses the same configurable sampling and hint path as other flaggers
 its verdicts with stored inclusion probabilities. Safety selects a complete detector suite per
 session. Other sampled observations use inverse-probability weights. A decision without a known
 inclusion probability is usable for an example or cause count, but not for a score.
+
+Readers use only the latest analysis generation at the calculation cutoff and collapse its
+append-only decision revisions by stable id. Superseded generations do not multiply occurrence or
+examined counts. A retry reuses the generation's selection decision rather than drawing again.
 
 ## Avoiding detector and cluster inflation
 

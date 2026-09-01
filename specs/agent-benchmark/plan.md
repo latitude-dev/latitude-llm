@@ -104,9 +104,10 @@ does not display per-session dimension scores.
 
 - [ ] **P2-8** Add the append-only flagger screening-decision table from
   [`flaggers.md`](flaggers.md#screening-decisions), including selection reason, inclusion
-  probability, and structured execution outcome.
-- [ ] **P2-9** Write screening decisions before sampled model execution and preserve the existing
-  summary log.
+  probability, analysis-generation identity, append-only revision identity, attempt, and structured
+  execution outcome.
+- [ ] **P2-9** Write screening decisions before sampled model execution, reuse one sampling draw
+  across retries, implement latest-generation consolidation, and preserve the existing summary log.
 - [ ] **P2-10** Add coverage repositories and a per-flagger coverage view in Settings.
 
 ### Assessment domain and readers
