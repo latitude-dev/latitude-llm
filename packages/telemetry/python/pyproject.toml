@@ -58,7 +58,7 @@ dev = [
     # Note: 0.41.0 onwards made Prompt Caching generally available
     # which is not compatible with the instrumentation
     "anthropic==0.117.0",
-    "litellm[proxy]==1.88.1",
+    "litellm[proxy]==1.98.0",
     # Pinned <2.9.0: openinference-instrumentation-google-genai imports the
     # google.genai._interactions module, which google-genai removed in 2.9.0.
     "google-genai==2.8.0",
