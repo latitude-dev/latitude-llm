@@ -3,6 +3,7 @@ export {
   createFakeImportAdapter,
   createFakeImportAdapterRegistry,
   FAKE_ROWS_LATEST,
+  fakeImportHexId,
   fakeImportRows,
 } from "./fake-adapter.ts"
 export {

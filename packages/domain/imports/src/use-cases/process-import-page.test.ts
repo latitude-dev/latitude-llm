@@ -10,9 +10,11 @@ import {
   ProjectId,
   type RedactionPolicy,
   SqlClient,
+  TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { SpanRepository } from "@domain/spans"
+import type { SpanDetail } from "@domain/spans"
 import { createFakeSpanRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -33,9 +35,10 @@ import {
   FAKE_ROWS_LATEST,
   type FakeAdapterOptions,
   type FakeImportRow,
+  fakeImportHexId,
   fakeImportRows,
 } from "../testing/fake-adapter.ts"
-import { createFakeImportJobRepository, stubImportPlan } from "../testing/fakes.ts"
+import { createFakeImportJobRepository, stubImportPlan, stubSpanDetail } from "../testing/fakes.ts"
 import { importHarness, stubImportJob } from "../testing/harness.ts"
 import { processImportPageUseCase, recordImportFinalFailureUseCase } from "./process-import-page.ts"
 
@@ -101,6 +104,7 @@ const harness = (
     readonly plan?: ReturnType<typeof stubImportPlan>
     readonly consumedCredits?: number
     readonly redactionPolicy?: RedactionPolicy
+    readonly seedSpans?: readonly SpanDetail[]
   } = {},
 ) => {
   const jobs = createFakeImportJobRepository()
@@ -113,6 +117,12 @@ const harness = (
   const periods = createFakeBillingUsagePeriodRepository()
 
   jobs.jobs.set(job.id, job)
+
+  if (deps.seedSpans !== undefined) {
+    for (const span of deps.seedSpans) {
+      spans.inserted.push([span])
+    }
+  }
 
   if (deps.consumedCredits !== undefined) {
     Effect.runSync(
@@ -722,6 +732,116 @@ describe("processImportPageUseCase", () => {
       expect(h.stored()?.status).toBe("capped")
       expect(h.stored()?.error).toContain("plan usage")
       expect(h.fetchPageCalls).toHaveLength(0)
+    })
+
+    it("finishes capped when the plan budget truncates a page", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100 } })
+      const h = harness(
+        job,
+        { rows: fakeImportRows(50) },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 3,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.stored()?.status).toBe("capped")
+      expect(h.stored()?.error).toContain("plan usage")
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(3)
+    })
+
+    it("still finishes succeeded when the user's own ceiling is the tighter bound", async () => {
+      const job = makeJob({ config: { ...withMaxTraces(3), sourcePageSize: 100 } })
+      const h = harness(
+        job,
+        { rows: fakeImportRows(50) },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 10,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "succeeded" })
+      expect(h.stored()?.status).toBe("succeeded")
+      expect(h.stored()?.error).toBeNull()
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+    })
+
+    it("counts unseen rootless traces against the plan budget", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100 } })
+      const rows = Array.from({ length: 10 }, (_, i) => ({
+        sourceTraceId: `rootless-${i}`,
+        sourceSpanId: `child-${i}`,
+        name: `child-${i}`,
+        startTime: new Date(FAKE_ROWS_LATEST.getTime() - i * 60_000),
+        isRoot: false,
+      }))
+      const h = harness(
+        job,
+        { rows },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 3,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.stored()?.status).toBe("capped")
+      expect(h.stored()?.error).toContain("plan usage")
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(3)
+      expect(h.spans.inserted.flat()).toHaveLength(3)
+    })
+
+    it("does not charge continuation spans of already-imported traces", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100 } })
+      const earlierTraceId = fakeImportHexId("trace-earlier", 32)
+      const rows: FakeImportRow[] = [
+        {
+          sourceTraceId: "trace-earlier",
+          sourceSpanId: "span-late",
+          name: "late child",
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - 1_000),
+          isRoot: false,
+        },
+        ...Array.from({ length: 10 }, (_, i) => ({
+          sourceTraceId: `rootless-${i}`,
+          sourceSpanId: `child-${i}`,
+          name: `child-${i}`,
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - (i + 2) * 60_000),
+          isRoot: false,
+        })),
+      ]
+      const h = harness(
+        job,
+        { rows },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 3,
+          seedSpans: [
+            stubSpanDetail({
+              organizationId: job.organizationId,
+              projectId: job.projectId,
+              traceId: TraceId(earlierTraceId),
+            }),
+          ],
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(4)
+      expect(h.spans.inserted.flat()).toHaveLength(5)
     })
 
     it("keeps importing while the plan still has room", async () => {

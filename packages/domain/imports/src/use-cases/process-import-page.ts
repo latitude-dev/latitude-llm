@@ -1,6 +1,6 @@
 import type { EffectivePlanResolution } from "@domain/billing"
 import type { DomainEvent, EventsPublisher } from "@domain/events"
-import { ImportJobId, OrganizationId, ProjectId, type RedactionPolicy } from "@domain/shared"
+import { ImportJobId, OrganizationId, ProjectId, type RedactionPolicy, TraceId } from "@domain/shared"
 import { redactSpans, type SpanDetail, SpanRepository } from "@domain/spans"
 import { Effect, Result } from "effect"
 import {
@@ -20,7 +20,7 @@ import { ImportSourceError, sanitizedImportError } from "../errors.ts"
 import { ImportJobRepository } from "../ports/import-job-repository.ts"
 import { getAdapter, ImportSourceAdapters } from "../ports/import-source-adapter.ts"
 import { finishImport } from "./finish-import.ts"
-import { importUsageAvailable } from "./import-usage-available.ts"
+import { importTraceBudget } from "./import-usage-available.ts"
 
 export interface ProcessImportPageInput {
   readonly organizationId: string
@@ -135,17 +135,50 @@ const advanceWindow = (cursor: ImportCursor, windowStart: Date, wasEmpty: boolea
   source: null,
 })
 
+interface TraceGroup {
+  readonly traceId: string
+  readonly spans: readonly SpanDetail[]
+  readonly root: SpanDetail | undefined
+}
+
 interface AdmittedSpans {
   readonly spans: readonly SpanDetail[]
-  /** Roots admitted, which is the number of traces this page contributes to the budget. */
+  /** Newly billed traces this page contributes — roots, plus unseen rootless groups when the plan caps. */
   readonly traces: number
   /**
-   * Distinct sessions among the admitted roots, counting a sessionless root as its own session
-   * — the same identity the session rollup uses. Per-page distinct, so the job-level sum counts
-   * a session once per page its traces land in.
+   * Distinct sessions among the admitted billed traces, counting a sessionless trace as its own
+   * session — the same identity the session rollup uses. Per-page distinct, so the job-level sum
+   * counts a session once per page its traces land in.
    */
   readonly sessions: number
   readonly truncated: boolean
+}
+
+const groupSpansByTrace = (spans: readonly SpanDetail[]): TraceGroup[] => {
+  const byTrace = new Map<string, SpanDetail[]>()
+  for (const span of spans) {
+    const traceId = span.traceId as string
+    const existing = byTrace.get(traceId)
+    if (existing) existing.push(span)
+    else byTrace.set(traceId, [span])
+  }
+
+  return [...byTrace.entries()].map(([traceId, group]) => ({
+    traceId,
+    spans: group,
+    root: group.find((span) => span.parentSpanId === ""),
+  }))
+}
+
+const newestTimeOf = (group: TraceGroup): number => {
+  if (group.root) return group.root.startTime.getTime()
+  return Math.max(...group.spans.map((span) => span.startTime.getTime()))
+}
+
+const sessionKeyOf = (group: TraceGroup): string => {
+  const sessionSpan = group.root ?? group.spans[0]
+  const sessionId = sessionSpan?.sessionId as string | undefined
+  return sessionId === "" || sessionId === undefined ? `trace:${group.traceId}` : sessionId
 }
 
 /**
@@ -157,51 +190,75 @@ interface AdmittedSpans {
  * reason ordering lives in the engine — so a page arrives in whatever order the source chose.
  * Truncating that stream keeps an arbitrary subset, and windows widen up to 32 days over sparse
  * history, so "newest first" could otherwise mean "some traces from a month-wide window".
- * Sorting by the root's start time makes the truncation exact whatever the source did.
+ * Sorting by the root's start time (or the newest span, for a rootless group) makes the
+ * truncation exact whatever the source did.
  *
  * Whole traces: cutting the stream mid-page also orphaned spans whose own root had already been
  * admitted, leaving a trace half-imported with no record that anything was dropped. A trace is
  * admitted with all of its spans or none of them.
  *
- * Spans whose root is not in this page cost no budget: their root was counted in an earlier page
- * of the same window, and dropping them would strand the trace that root already paid for.
+ * Rootless groups are free when the plan does not cap volume (`alreadyBilledTraceIds` is null),
+ * or when that `traceId` was already billed — `TracesIngested` is idempotent, and dropping those
+ * spans would strand a trace already paid for. Previously unseen rootless groups are billable:
+ * the event charges every distinct admitted `traceId`.
  */
-const admitNewestTraces = (spans: readonly SpanDetail[], remainingTraces: number): AdmittedSpans => {
-  const byTrace = new Map<string, SpanDetail[]>()
-  for (const span of spans) {
-    const traceId = span.traceId as string
-    const existing = byTrace.get(traceId)
-    if (existing) existing.push(span)
-    else byTrace.set(traceId, [span])
+const admitNewestTraces = (
+  spans: readonly SpanDetail[],
+  remainingTraces: number,
+  alreadyBilledTraceIds: ReadonlySet<string> | null,
+): AdmittedSpans => {
+  const freeSpans: SpanDetail[] = []
+  const billed: TraceGroup[] = []
+  for (const group of groupSpansByTrace(spans)) {
+    if (group.root) {
+      billed.push(group)
+      continue
+    }
+    if (alreadyBilledTraceIds === null || alreadyBilledTraceIds.has(group.traceId)) {
+      freeSpans.push(...group.spans)
+      continue
+    }
+    billed.push(group)
   }
 
-  const rooted: { readonly root: SpanDetail; readonly spans: readonly SpanDetail[] }[] = []
-  const orphans: SpanDetail[] = []
-  for (const group of byTrace.values()) {
-    const root = group.find((span) => span.parentSpanId === "")
-    if (root) rooted.push({ root, spans: group })
-    else orphans.push(...group)
-  }
+  billed.sort((left, right) => newestTimeOf(right) - newestTimeOf(left))
 
-  rooted.sort((left, right) => right.root.startTime.getTime() - left.root.startTime.getTime())
-
-  const admitted: SpanDetail[] = [...orphans]
+  const admitted: SpanDetail[] = [...freeSpans]
   const sessionKeys = new Set<string>()
   let traces = 0
   let truncated = false
-  for (const group of rooted) {
+  for (const group of billed) {
     if (traces >= remainingTraces) {
       truncated = true
       break
     }
     admitted.push(...group.spans)
     traces++
-    const sessionId = group.root.sessionId as string
-    sessionKeys.add(sessionId === "" ? `trace:${group.root.traceId}` : sessionId)
+    sessionKeys.add(sessionKeyOf(group))
   }
 
   return { spans: admitted, traces, sessions: sessionKeys.size, truncated }
 }
+
+const alreadyBilledRootlessIds = (
+  organizationId: string,
+  projectId: string,
+  spans: readonly SpanDetail[],
+) =>
+  Effect.gen(function* () {
+    const rootlessIds = groupSpansByTrace(spans)
+      .filter((group) => group.root === undefined)
+      .map((group) => group.traceId)
+    if (rootlessIds.length === 0) return new Set<string>()
+
+    const spanRepo = yield* SpanRepository
+    const existing = yield* spanRepo.listByTraceIds({
+      organizationId: OrganizationId(organizationId),
+      projectId: ProjectId(projectId),
+      traceIds: rootlessIds.map((id) => TraceId(id)),
+    })
+    return new Set(existing.map((span) => span.traceId as string))
+  })
 
 export const recordImportFinalFailureUseCase = (input: RecordImportFinalFailureInput) =>
   Effect.gen(function* () {
@@ -259,10 +316,12 @@ export const processImportPageUseCase =
         return { done: true as const, reason: "succeeded" as const }
       }
 
+      const traceBudget = input.isSandbox ? null : yield* importTraceBudget(input.plan)
+
       // Read fresh each page rather than trusting the snapshot, so live ingestion or a
       // spending-limit change during a long import stops it too. The snapshot in
       // `config.maxTraces` is the user's own ceiling; this is the plan's.
-      if (!input.isSandbox && !(yield* importUsageAvailable(input.plan))) {
+      if (traceBudget === 0) {
         yield* finishImport(job, "capped", { error: PLAN_CAP_REASON })
         return { done: true as const, reason: "capped" as const }
       }
@@ -391,10 +450,17 @@ export const processImportPageUseCase =
         normalized.push(result.span)
       }
 
-      const admitted = admitNewestTraces(normalized, job.config.maxTraces - stats.tracesImported)
+      const userTraceBudget = job.config.maxTraces - stats.tracesImported
+      const admitBudget = traceBudget === null ? userTraceBudget : Math.min(userTraceBudget, traceBudget)
+      const alreadyBilledTraceIds =
+        traceBudget === null
+          ? null
+          : yield* alreadyBilledRootlessIds(job.organizationId, job.projectId, normalized)
+      const admitted = admitNewestTraces(normalized, admitBudget, alreadyBilledTraceIds)
       const spans = admitted.spans
-      const rootsInPage = admitted.traces
+      const tracesInPage = admitted.traces
       const truncatedByCap = admitted.truncated
+      const truncatedByPlan = truncatedByCap && traceBudget !== null && traceBudget < userTraceBudget
 
       // An import is a second content sink into `spans`, so it runs the same redaction the
       // ingest pipeline runs — before the insert, which is the only point where stripping
@@ -420,7 +486,7 @@ export const processImportPageUseCase =
       const traceIds = new Set(importedSpans.map((span) => span.traceId as string))
 
       stats.sessionsImported += admitted.sessions
-      stats.tracesImported += rootsInPage
+      stats.tracesImported += tracesInPage
       stats.spansImported += importedSpans.length
       stats.spansSkipped += skipped
 
@@ -462,7 +528,7 @@ export const processImportPageUseCase =
         stats: {
           recordsFetched: page.rows.length,
           sessionsImported: admitted.sessions,
-          tracesImported: rootsInPage,
+          tracesImported: tracesInPage,
           spansImported: importedSpans.length,
           spansSkipped: skipped,
         },
@@ -475,6 +541,11 @@ export const processImportPageUseCase =
       // ends the job cleanly even with range left over — the preview already told them the oldest
       // traces would be left behind. `capped` is reserved for the plan's ceiling, which is the one
       // the user did not choose and can resume from once usage frees up.
+      if (truncatedByPlan) {
+        yield* finishImport(job, "capped", { cursor: nextCursor, stats, runs, error: PLAN_CAP_REASON })
+        return { done: true as const, reason: "capped" as const }
+      }
+
       if (truncatedByCap || stats.tracesImported >= job.config.maxTraces) {
         yield* finishImport(job, "succeeded", { cursor: nextCursor, stats, runs })
         return { done: true as const, reason: "succeeded" as const }
