@@ -6,6 +6,7 @@ import {
   type SignalFeedback,
   SignalRepository,
   type SignalRepositoryShape,
+  type SignalScoreEvidence,
 } from "@domain/signals"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
@@ -39,6 +40,7 @@ const seedSignal = (input: {
   readonly deletedAt?: Date
   readonly clusteredAt?: Date
   readonly centroidEmbedding?: readonly number[]
+  readonly scoreEvidence?: SignalScoreEvidence[]
 }) =>
   pg.db.insert(signals).values({
     id: input.id,
@@ -49,6 +51,7 @@ const seedSignal = (input: {
     description: `${input.slug} description`,
     source: input.promotedAt === null ? "flagger" : "custom",
     origin: input.promotedAt === null ? "system" : "user",
+    ...(input.scoreEvidence === undefined ? {} : { scoreEvidence: input.scoreEvidence }),
     resolvedAt: input.resolvedAt ?? null,
     ignoredAt: input.ignoredAt ?? null,
     regressedAt: input.regressedAt ?? null,
@@ -72,6 +75,46 @@ const seedSignal = (input: {
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
   })
+
+describe("SignalRepositoryLive score evidence", () => {
+  const SIGNAL = {
+    id: "sig-evidence".padEnd(24, "e"),
+    slug: "evidence",
+    createdAt: new Date("2026-03-15T00:00:00.000Z"),
+  }
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("reads the database default as diagnostic evidence", async () => {
+    await seedSignal(SIGNAL)
+
+    const signal = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).findByIdForUpdate(SignalId(SIGNAL.id))
+      }),
+    )
+
+    expect(signal.scoreEvidence).toEqual([])
+  })
+
+  it("round-trips classified evidence", async () => {
+    const scoreEvidence: SignalScoreEvidence[] = [
+      { scoreDimension: "reliability", role: "completionOutcome" },
+      { scoreDimension: "safety", role: "exposure" },
+    ]
+    await seedSignal({ ...SIGNAL, scoreEvidence })
+
+    const signal = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).findByIdForUpdate(SignalId(SIGNAL.id))
+      }),
+    )
+
+    expect(signal.scoreEvidence).toEqual(scoreEvidence)
+  })
+})
 
 // A signal created inside the window, and one created well before it. Neither
 // has scores, so occurrence-based membership never applies.

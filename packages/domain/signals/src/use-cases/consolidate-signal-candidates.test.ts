@@ -70,6 +70,7 @@ const makeCandidate = ({
     description: "The assistant leaked a token.",
     source: "flagger",
     origin: "system",
+    scoreEvidence: [],
     filters: null,
     assigneeId: null,
     priority: null,

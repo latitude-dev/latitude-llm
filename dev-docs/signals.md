@@ -35,6 +35,12 @@ Signals and live taxonomy both use `@domain/shared/centroid` for decayed weighte
 - Postgres also stores the canonical score rows and signal assignment state that discovery mutates.
 - ClickHouse stores immutable score analytics rows plus signal trend analytics.
 
+## Scoring metadata
+
+`signals.score_evidence` is a non-null JSONB list of dimension and evidence-role pairs. The canonical Signal entity requires the same list. An empty list means the signal is diagnostic and does not contribute to benchmark scoring. Signal evidence supports outcome, reliability, cost, speed, and safety; the signal safety roles are `confirmedHarm` and `exposure`. `successfulDefense` belongs to the broader score evidence contract but cannot classify a signal because signals represent failures.
+
+The database default is `[]`. Signal creation paths initialize the field explicitly, and rows that predate the column receive the empty list from the schema migration. Historical signals are not classified by a model or static mapping.
+
 ## Background Tasks
 
 Signal discovery uses the existing Temporal-backed workflow abstraction in `apps/workflows`, while queue tasks in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers` continue to dispatch the upstream single-step triggers, including the throttled `signals:refresh` task.

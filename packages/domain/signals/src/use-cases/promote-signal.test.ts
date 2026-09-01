@@ -49,6 +49,7 @@ const makeSignal = (promotedAt: Date | null = null): Signal => ({
   description: `${PLACEHOLDER_NAME}.`,
   source: "flagger",
   origin: "system",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,

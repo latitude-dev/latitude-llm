@@ -22,6 +22,7 @@ const makeSignal = ({ id, ...overrides }: Omit<Partial<Signal>, "id"> & { readon
   description: "The assistant leaked a token.",
   source: "flagger",
   origin: "system",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,

@@ -28,6 +28,7 @@ const makeCandidate = (): Signal => ({
   description: PLACEHOLDER_DESCRIPTION,
   source: "flagger",
   origin: "system",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,

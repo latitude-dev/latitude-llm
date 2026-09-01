@@ -23,6 +23,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   description: "The assistant repeatedly fails the task",
   source: "annotation",
   origin: "system",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,

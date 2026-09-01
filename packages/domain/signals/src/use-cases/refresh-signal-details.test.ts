@@ -20,6 +20,7 @@ const makeSignal = (promotedAt: Date | null): Signal => ({
   description: "The assistant leaks API tokens in its response.",
   source: "flagger",
   origin: "system",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,
