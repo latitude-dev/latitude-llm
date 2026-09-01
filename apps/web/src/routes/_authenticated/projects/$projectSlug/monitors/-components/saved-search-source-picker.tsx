@@ -37,7 +37,7 @@ export function SavedSearchSourcePicker({
       footerAction={{
         label: "Create a new saved search",
         icon: <Icon icon={ZoomInIcon} size="sm" />,
-        onClick: () => void navigate({ to: "/projects/$projectSlug", params: { projectSlug } }),
+        onClick: () => void navigate({ to: "/projects/$projectSlug/sessions", params: { projectSlug } }),
       }}
       {...(disabled ? { disabled: true } : {})}
       {...(errors ? { errors } : {})}

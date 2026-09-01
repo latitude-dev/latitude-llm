@@ -6,7 +6,7 @@ export function useGoToModelSessions(projectSlug: string) {
   const navigate = useNavigate()
   return (model: string) =>
     void navigate({
-      to: "/projects/$projectSlug",
+      to: "/projects/$projectSlug/sessions",
       params: { projectSlug },
       search: { tab: "sessions", filters: serializeFilters({ models: [{ op: "in", value: [model] }] }) },
     })
