@@ -219,27 +219,32 @@ prevented a usable completion, Reliability fails.
 ## `tools.repeated_call`
 
 - Dimensions: Cost, Speed.
-- Evidence role: exact redundant resource use.
+- Evidence role: observed repetition with confirmed or modeled resource effect.
 - Reader: repeated tool name, input hash, and output hash within one session.
 
-The same arguments must produce the same result. Polling with changing output is necessary work.
-Calls with empty captured input or output are unreadable.
+The same arguments must produce the same result. Calls with empty captured input or output are
+unreadable. Equal results establish repetition but not avoidability: polling can return the same
+status across several necessary checks, and a non-consecutive revisit can be legitimate.
 
-The first call belongs to the necessary counterfactual. Later identical calls contribute their
-attributable spend and critical-path duration. `tools.thrashing` can describe the same repetitions;
-the session counterfactual deduplicates them.
+Later identical calls contribute exact spend and critical-path duration only when tool semantics or
+captured state-version evidence proves the earlier result remained valid and the call could not
+advance external work. Otherwise the repetition is a modeled feature or context. Its resource effect
+comes from comparable clean sessions and can remain unmeasured. `tools.thrashing` can describe the
+same repetitions; the session counterfactual deduplicates them.
 
 ## `tools.thrashing`
 
 - Dimensions: Cost, Speed.
-- Evidence role: exact redundant resource use and a named loop cause.
+- Evidence role: observed loop with confirmed or modeled resource effect and a named cause.
 - Reader: three or more consecutive identical tool names, inputs, and outputs.
 
 This is the deterministic half of the `trashing` flagger. Tool dominance without identical results
 is only a screening hint for the LLM flagger and does not establish waste.
 
-Thrashing names the loop for attribution. It does not add resource use on top of repeated-call spans
-already classified as avoidable.
+Thrashing names the loop for attribution. Identical output does not by itself prove that a poll or
+time-dependent read was avoidable. Exact resource effect requires the same redundancy proof as
+`tools.repeated_call`; otherwise its effect is modeled or remains context. It does not add resource
+use on top of repeated-call spans already classified as avoidable.
 
 ## `tools.dead_surface`
 

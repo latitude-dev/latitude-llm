@@ -168,7 +168,8 @@ avoidable money and critical-path time.
 ### Waste readers
 
 - [ ] **P3-5** Implement the tool repetition, thrashing, dead-surface, failed-call, and structural
-  readers in [`metrics.md`](metrics.md#tools), including every telemetry guard.
+  readers in [`metrics.md`](metrics.md#tools), including every telemetry guard, redundancy proof,
+  and polling-safe modeled fallback for repeated calls.
 - [ ] **P3-6** Implement the memory waste readers in [`metrics.md`](metrics.md#memory).
 - [ ] **P3-7** Implement cache opportunity in [`metrics.md`](metrics.md#cost).
 - [ ] **P3-8** Carry recovered provider and tool retry resources into session evidence.

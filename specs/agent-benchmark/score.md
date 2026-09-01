@@ -379,8 +379,8 @@ the session's actual spend.
 | --- | --- |
 | `cost.cache_gap` | spend recoverable at the traffic's achievable cache ceiling |
 | `tools.dead_surface` | model-input cost of definitions that remained unused over their observation period |
-| `tools.repeated_call` | spend attributable to a repeated call with unchanged input and output |
-| `tools.thrashing` | spend attributable to a consecutive repeated-call loop |
+| `tools.repeated_call` | confirmed redundant spend or modeled incremental spend for observed repetition |
+| `tools.thrashing` | confirmed redundant spend or modeled incremental spend for an observed loop |
 | `memory.noop_rewrite` | processing cost of a write that changed nothing |
 | `memory.reverted_write` | processing cost of a write later undone in the same session |
 | `memory.repeated_zero_hit` | processing cost of repeating the same fruitless search |
@@ -424,8 +424,8 @@ that does not delay completion remains diagnostic and does not lower Speed.
 | --- | --- |
 | `spans.ttft` | TTFT beyond the frozen expectation for the same provider, model, input bucket, and streaming mode |
 | `spans.throughput` | generation time beyond the frozen cohort expectation |
-| `tools.repeated_call` | critical-path duration of a redundant round trip |
-| `tools.thrashing` | critical-path duration of the repeated loop |
+| `tools.repeated_call` | confirmed redundant duration or modeled incremental time for observed repetition |
+| `tools.thrashing` | confirmed redundant duration or modeled incremental time for an observed loop |
 | `tools.structural_defect` | failed round trip and correction time when completion recovered |
 | recovered provider and tool failures | retry time on the successful path |
 | `memory.repeated_zero_hit` | critical-path duration of the repeated search |

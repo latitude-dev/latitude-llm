@@ -147,9 +147,10 @@ terminal failures but cannot create new ones.
 
 ### Cost and Speed
 
-The estimator first computes exact resource waste from deterministic metrics. It then compares
-signal-positive sessions with matched signal-negative sessions to estimate residual incremental spend
-or critical-path time.
+The estimator first computes exact resource waste from deterministic metrics whose avoidability is
+proven. A deterministic repetition detector without redundancy proof is still modeled evidence. The
+estimator then compares signal-positive sessions with matched signal-negative sessions to estimate
+residual incremental spend or critical-path time.
 
 Matching controls for behavior cluster, provider, model, input and output size, toolset, streaming
 mode, and other stable workload fields when available. Several signals are fit together. The session

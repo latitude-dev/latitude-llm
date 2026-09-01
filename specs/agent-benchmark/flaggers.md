@@ -14,7 +14,7 @@ findings and a record of which sessions each flagger could have examined.
 | --- | --- |
 | persist finding kind and conditional metadata | distinguish terminal failure, recovery, exposure, and harm |
 | retain recovered findings without publishing discovery events automatically | measure retry cost and time without signal-volume inflation |
-| compare tool output in repetition detection | separate polling from repeated work |
+| record tool signatures and avoidability proof separately | distinguish observed repetition from confirmed waste |
 | guard empty grouping fields | prevent missing telemetry from manufacturing matches |
 | pair truncation with output damage | distinguish configured length stops from broken output |
 | separate injection attempt from compliance | keep exposure out of the Safety numerator |
@@ -38,6 +38,7 @@ type DetectionResult =
       recovered?: boolean
       sameSubjectRecovered?: boolean
       terminal?: boolean
+      redundancy?: "confirmed" | "unconfirmed"
       exposure?: boolean
       confirmedHarm?: boolean
     }
@@ -124,7 +125,8 @@ inferring it from the presence of a trace id.
 ## Tool repetition compares results
 
 `trashing` builds a signature for consecutive tool calls. The signature contains tool name, input
-hash, and output hash. Three identical signatures in a row establish thrashing.
+hash, and output hash. Three identical signatures in a row establish observed thrashing, not exact
+waste.
 
 Tool name and input alone are insufficient. Polling repeats arguments because the caller expects the
 result to change. Empty captured arguments or output are also insufficient because every missing
@@ -134,11 +136,18 @@ The deterministic reader therefore:
 
 - skips calls with empty captured input or output;
 - compares output as well as name and input;
-- records every repeated occurrence needed to measure resource waste;
+- records every repeated occurrence and its resource use;
 - publishes one stable loop finding for signal discovery.
 
 `tools.repeated_call` uses the same signature without requiring consecutive calls. The session
 counterfactual deduplicates the two metrics.
+
+Signature equality alone cannot mark a call avoidable. Polling, time-dependent reads, and legitimate
+revisits can return the same value before later progress. `redundancy: "confirmed"` requires tool
+contract or captured state-version evidence that the prior result was still valid and the repeated
+call could not advance external work. Confirmed repeats contribute exact spend and time. Other
+repetitions are modeled evidence or context, and their effect is estimated against comparable clean
+sessions rather than assigned as certain waste.
 
 ## Memory readers guard empty values
 
