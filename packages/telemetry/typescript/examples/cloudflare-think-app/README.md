@@ -70,10 +70,10 @@ npm run verify:local
 
 The verifier uses AI SDK's mock model, forces an `execute` tool call and a
 `draftItinerary` tool call, sends spans with
-`latitude.getTracer("cloudflare-think", context)`, then runs the planner turn
-from the carrier alone after the orchestrator turn has closed — the same late,
-out-of-order arrival an evicted Durable Object produces. It flushes the Latitude
-SDK and polls local ClickHouse for the generated session. It exits non-zero if
+`latitude.getTracer("cloudflare-think", context)`, and runs the planner turn
+from a root OpenTelemetry context so the carrier is the only thing that can
+reattach it — the position a second Durable Object is in. It flushes the
+Latitude SDK and polls local ClickHouse for the generated session. It exits non-zero if
 spans do not arrive, if no `execute` tool span is stored, if any span misses the
 expected user/session context, or if the planner's spans did not join the
 orchestrator's trace under the `draftItinerary` tool span.

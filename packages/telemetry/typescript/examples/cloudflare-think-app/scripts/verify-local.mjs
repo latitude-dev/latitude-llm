@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { setTimeout as sleep } from "node:timers/promises"
+import { context as otelContext, ROOT_CONTEXT } from "@opentelemetry/api"
 import { generateText, stepCountIs, streamText, tool } from "ai"
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test"
 import { z } from "zod"
@@ -94,7 +95,8 @@ function makeThinkModel() {
                 {
                   type: "text-delta",
                   id: "text-1",
-                  delta: "Barcelona is sunny, estimated at 190 EUR, with three local highlights.",
+                  delta:
+                    "Barcelona is sunny and about 190 EUR for two days. The planner suggests: Day 1 old town walk, Day 2 market and sunset viewpoint.",
                 },
                 { type: "text-end", id: "text-1" },
                 { type: "finish", finishReason: "stop", usage: { inputTokens: 30, outputTokens: 12, totalTokens: 42 } },
@@ -173,23 +175,25 @@ function makePlannerModel() {
   })
 }
 
-// The planner runs in a second Durable Object with no shared memory, so all it gets is the carrier
-// the orchestrator handed over its RPC call. Running it after the turn closed also exercises the
-// late-arrival path an evicted object produces.
+// The planner runs in a second Durable Object, so the only thing tying it to the caller is the
+// carrier. `ROOT_CONTEXT` stands in for that isolate: it strips the ambient context this process
+// happens to have, so nothing but the carrier can reattach the turn.
 async function runPlannerTurn(carrier) {
-  return withTraceContext(carrier, async (remote) => {
-    const result = await generateText({
-      model: makePlannerModel(),
-      prompt: "Draft a two-day itinerary for a sunny weekend in Barcelona.",
-      experimental_telemetry: {
-        isEnabled: true,
-        tracer: remote.getTracer(latitude, "cloudflare-planner"),
-        functionId: "planner-turn",
-      },
-    })
+  return otelContext.with(ROOT_CONTEXT, () =>
+    withTraceContext(carrier, async (remote) => {
+      const result = await generateText({
+        model: makePlannerModel(),
+        prompt: "Draft a two-day itinerary for a sunny weekend in Barcelona.",
+        experimental_telemetry: {
+          isEnabled: true,
+          tracer: remote.getTracer(latitude, "cloudflare-planner"),
+          functionId: "planner-turn",
+        },
+      })
 
-    return result.text
-  })
+      return result.text
+    }),
+  )
 }
 
 async function runThinkTurn() {
@@ -211,8 +215,10 @@ async function runThinkTurn() {
     description: "Ask the planner agent, running in its own Durable Object, for a two-day itinerary.",
     inputSchema: z.object({ goal: z.string() }),
     execute: async ({ goal }) => {
+      // Stands in for `planner.draftItinerary(goal, injectTraceContext(...))` over Durable Object
+      // RPC: the carrier is the whole handover, and the caller awaits the answer.
       plannerCarrier = injectTraceContext(context)
-      return { goal, delegatedTo: "planner-durable-object" }
+      return { goal, itinerary: await runPlannerTurn(plannerCarrier) }
     },
   })
 
@@ -336,9 +342,6 @@ if (!plannerCarrier?.traceparent) {
   throw new Error("Expected the orchestrator to hand a traceparent to the planner")
 }
 
-const itinerary = await runPlannerTurn(plannerCarrier)
-await latitude.flush()
-
 const { spanCount, toolSpanCount, codemodeSpanCount, identifiedSpanCount, providerSpanCount } =
   await waitForSpans(sessionId)
 const { traceId, plannerSpanCount } = await waitForPlannerTrace(sessionId)
@@ -350,7 +353,6 @@ console.log(
       sessionId,
       traceId,
       text,
-      itinerary,
       spanCount,
       toolSpanCount,
       codemodeSpanCount,
