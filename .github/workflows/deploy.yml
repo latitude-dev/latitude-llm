@@ -423,7 +423,7 @@ jobs:
                         map(if .name == "DD_LOG_LEVEL" then .value = "error" else . end) |
                         if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "error" }] end
                       ) |
-                      .logConfiguration = { logDriver: "none" }
+                      del(.logConfiguration)
                     else . end
                   ) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
@@ -814,7 +814,7 @@ jobs:
                         map(if .name == "DD_LOG_LEVEL" then .value = "error" else . end) |
                         if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "error" }] end
                       ) |
-                      .logConfiguration = { logDriver: "none" }
+                      del(.logConfiguration)
                     else . end
                   ) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)

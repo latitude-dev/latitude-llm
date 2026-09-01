@@ -678,9 +678,6 @@ function createTaskDefinition(
             { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },
             { name: "DD_SITE", valueFrom: datadogSiteArn },
           ],
-          logConfiguration: {
-            logDriver: "none",
-          },
           healthCheck: {
             command: ["CMD-SHELL", "agent health || exit 1"],
             interval: 30,
