@@ -12,6 +12,7 @@ from .aux_usage import aux_spans
 from .builder import _Builder
 from .config import _config, _debug, reset_config, set_plugin_context
 from .propagation import (
+    LATITUDE_TRACEPARENT_VAR,
     PROJECT_VAR,
     SESSION_VAR,
     TRACEPARENT_VAR,
@@ -261,7 +262,9 @@ def _export_to_environ(context: ChildContext) -> None:
     rather than handed the wrong span. Prefer `child_env()` where the tool can pass it.
     """
     global _ENV_OWNER, _ENV_UNDO
-    updates = {TRACEPARENT_VAR: context.traceparent}
+    # Both names: a scoped header this process inherited would otherwise outrank the
+    # exported one on read. Captured by the same undo, so the original is restored.
+    updates = {TRACEPARENT_VAR: context.traceparent, LATITUDE_TRACEPARENT_VAR: context.traceparent}
     if context.session_id:
         updates[SESSION_VAR] = context.session_id
     if context.project:

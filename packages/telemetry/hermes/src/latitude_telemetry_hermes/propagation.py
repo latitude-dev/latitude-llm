@@ -141,7 +141,11 @@ def child_env(base: Optional[Mapping[str, str]] = None) -> Dict[str, str]:
     active = _ACTIVE.get()
     if active is None:
         return out
+    # Both names, because reads prefer the scoped one: publishing only `TRACEPARENT`
+    # would let a scoped header this process inherited outrank the span we just opened,
+    # attaching the child to our own parent instead of to us.
     out[TRACEPARENT_VAR] = active.traceparent
+    out[LATITUDE_TRACEPARENT_VAR] = active.traceparent
     if active.session_id:
         out[SESSION_VAR] = active.session_id
     if active.project:

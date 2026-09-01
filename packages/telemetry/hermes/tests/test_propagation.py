@@ -19,9 +19,11 @@ from latitude_telemetry_hermes.config import reset_config
 from latitude_telemetry_hermes.propagation import (
     MAX_INHERITED_TURNS,
     ChildContext,
+    child_env,
     format_traceparent,
     inherited_context,
     inherited_session_id,
+    inherited_traceparent,
     parse_traceparent,
 )
 
@@ -355,3 +357,41 @@ def test_an_unpaired_tool_call_does_not_leave_a_stale_parent():
     hooks.on_post_tool_call(**_turn(tool_call_id="call-2", status="ok"))
 
     assert propagation.current_traceparent() is None
+
+
+# --- a stale scoped variable must not outrank what we publish -----------------
+
+STALE = f"00-{'1' * 32}-{'2' * 16}-01"
+
+
+def test_child_env_overrides_a_stale_scoped_traceparent(monkeypatch):
+    """`LATITUDE_TRACEPARENT` outranks `TRACEPARENT` on read, so publishing only the
+    latter would let a chained parent's header win over the tool span we just opened —
+    the child would attach to its grandparent, silently."""
+    monkeypatch.setenv("LATITUDE_TRACEPARENT", STALE)
+    reset_config()
+    hooks._BUILDER = _Builder()
+    hooks.on_pre_api_request(**_turn())
+    hooks.on_pre_tool_call(**_turn(tool_name="terminal", tool_call_id="call-1"))
+
+    env = child_env({"LATITUDE_TRACEPARENT": STALE})
+
+    assert env["TRACEPARENT"] != STALE
+    assert env["LATITUDE_TRACEPARENT"] == env["TRACEPARENT"]
+    assert inherited_traceparent(env) == env["TRACEPARENT"]
+
+
+def test_environ_export_overrides_and_restores_a_stale_scoped_traceparent(monkeypatch):
+    monkeypatch.setenv("LATITUDE_TRACEPARENT", STALE)
+    monkeypatch.setenv("LATITUDE_HERMES_EXPORT_TRACEPARENT", "1")
+    reset_config()
+    hooks._BUILDER = _Builder()
+    hooks.on_pre_api_request(**_turn())
+    try:
+        hooks.on_pre_tool_call(**_turn(tool_name="terminal", tool_call_id="call-1"))
+        assert os.environ["LATITUDE_TRACEPARENT"] != STALE
+        assert inherited_traceparent() == os.environ["TRACEPARENT"]
+    finally:
+        hooks.on_post_tool_call(**_turn(tool_call_id="call-1", status="ok"))
+
+    assert os.environ["LATITUDE_TRACEPARENT"] == STALE
