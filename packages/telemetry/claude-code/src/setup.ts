@@ -6,14 +6,14 @@ import { fileURLToPath } from "node:url"
 import { cancel, confirm, intro, isCancel, log, note, outro, password, spinner, text } from "@clack/prompts"
 import pc from "picocolors"
 import {
-  addLatitudeStopHook,
+  addLatitudeHooks,
   backupSettings,
   type ClaudeSettings,
   hasLatitudeStopHook,
   latitudeStopHookCommand,
   readSettings,
   removeEnv,
-  removeLatitudeStopHook,
+  removeLatitudeHooks,
   SETTINGS_BACKUP_PATH,
   SETTINGS_PATH,
   setEnv,
@@ -261,7 +261,7 @@ async function applyChanges(args: ApplyArgs): Promise<void> {
   else next = setEnv(next, "BUN_OPTIONS", `--preload=${INTERCEPT_INSTALL_PATH}`)
 
   const priorHookCommand = latitudeStopHookCommand(next)
-  next = addLatitudeStopHook(next, DEFAULT_HOOK_COMMAND)
+  next = addLatitudeHooks(next, DEFAULT_HOOK_COMMAND)
 
   const hookNote =
     priorHookCommand === undefined
@@ -569,7 +569,7 @@ function buildUninstallPlan(): UninstallPlan {
         let next = current
         for (const key of latitudeKeys) next = removeEnv(next, key)
         if (removeBunOptions) next = removeEnv(next, "BUN_OPTIONS")
-        next = removeLatitudeStopHook(next)
+        next = removeLatitudeHooks(next)
         writeSettings(next)
       })
     }

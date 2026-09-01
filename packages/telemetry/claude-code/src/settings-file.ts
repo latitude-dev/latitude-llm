@@ -10,6 +10,7 @@ export interface ClaudeSettings {
   env?: Record<string, string>
   hooks?: {
     Stop?: HookGroup[]
+    SessionEnd?: HookGroup[]
     [other: string]: HookGroup[] | undefined
   }
   [other: string]: unknown
@@ -92,45 +93,66 @@ export function latitudeStopHookCommand(settings: ClaudeSettings): string | unde
   return undefined
 }
 
-// Ensure a Latitude Stop hook runs `command`. An existing Latitude hook (including
-// an older bare-`npx` command or a dev dist path) is rewritten to `command`, so
-// re-running install upgrades stale hooks instead of leaving them as-is. Only adds a
-// new entry when none is present.
+// Register the hook on both events Claude Code offers us, because neither covers
+// every session on its own.
 //
-// The hook is registered synchronously and strips `async` from any hook it adopts.
-// Claude Code registers an async Stop hook but exits before spawning it in headless
-// mode (`claude -p`), so an async hook emits nothing at all for a non-interactive
-// run — which is exactly how another harness drives Claude Code. The hook keeps the
-// turn short by handing its work to a detached worker (see detach.ts) rather than by
-// being registered async.
-export function addLatitudeStopHook(
+// `Stop` runs after each assistant turn and stays **async**, so an interactive turn
+// is never blocked. But Claude Code registers an async Stop hook and then exits
+// before spawning it in headless mode, so `claude -p` — how one harness drives
+// another — would emit nothing at all.
+//
+// `SessionEnd` is registered **synchronously** and does fire there, delivering the
+// same session_id/transcript_path payload. It also fires on interactive quit and on
+// Ctrl-C, which catches a final turn whose async Stop hook died with the process.
+// Only SIGKILL escapes both, and nothing can be registered for that.
+//
+// Emission is incremental behind a byte offset and a state lock, so the two never
+// double-count: whichever runs second finds the offset already advanced.
+export function addLatitudeHooks(
   settings: ClaudeSettings,
   command = "npx -y @latitude-data/claude-code-telemetry@latest",
 ): ClaudeSettings {
+  return {
+    ...settings,
+    hooks: {
+      ...(settings.hooks ?? {}),
+      Stop: upsertHook(settings.hooks?.Stop ?? [], command, true),
+      SessionEnd: upsertHook(settings.hooks?.SessionEnd ?? [], command, false),
+    },
+  }
+}
+
+// Rewrites an existing Latitude hook (an older bare-`npx` command, or a dev dist
+// path) rather than appending a second one, so re-running install upgrades in place.
+function upsertHook(groups: HookGroup[], command: string, isAsync: boolean): HookGroup[] {
   let found = false
-  const stop: HookGroup[] = (settings.hooks?.Stop ?? []).map((group) => ({
+  const next: HookGroup[] = groups.map((group) => ({
     ...group,
     hooks: (group.hooks ?? []).map((hook) => {
       if (!isLatitudeHookCommand(hook.command)) return hook
       found = true
-      const { async: _dropped, ...rest } = hook
-      return { ...rest, type: "command", command }
+      const { async: _prior, ...rest } = hook
+      return isAsync ? { ...rest, type: "command", command, async: true } : { ...rest, type: "command", command }
     }),
   }))
-  if (!found) stop.push({ hooks: [{ type: "command", command }] })
-  return { ...settings, hooks: { ...(settings.hooks ?? {}), Stop: stop } }
+  if (!found) next.push({ hooks: [isAsync ? { type: "command", command, async: true } : { type: "command", command }] })
+  return next
 }
 
-export function removeLatitudeStopHook(settings: ClaudeSettings): ClaudeSettings {
-  if (!settings.hooks?.Stop) return settings
-  const stop: HookGroup[] = []
-  for (const group of settings.hooks.Stop) {
-    const keptHooks = (group.hooks ?? []).filter((h) => !isLatitudeHookCommand(h.command))
-    if (keptHooks.length > 0) stop.push({ ...group, hooks: keptHooks })
-  }
+export function removeLatitudeHooks(settings: ClaudeSettings): ClaudeSettings {
+  if (!settings.hooks) return settings
   const hooks = { ...settings.hooks }
-  if (stop.length > 0) hooks.Stop = stop
-  else delete (hooks as { Stop?: unknown }).Stop
+  for (const event of ["Stop", "SessionEnd"] as const) {
+    const groups = hooks[event]
+    if (!groups) continue
+    const kept: HookGroup[] = []
+    for (const group of groups) {
+      const keptHooks = (group.hooks ?? []).filter((h) => !isLatitudeHookCommand(h.command))
+      if (keptHooks.length > 0) kept.push({ ...group, hooks: keptHooks })
+    }
+    if (kept.length > 0) hooks[event] = kept
+    else delete hooks[event]
+  }
   const next: ClaudeSettings = { ...settings, hooks }
   if (Object.keys(hooks).length === 0) delete (next as { hooks?: unknown }).hooks
   return next

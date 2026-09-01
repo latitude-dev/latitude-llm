@@ -74,10 +74,22 @@ If you manage Claude Code settings yourself, add the telemetry command to `~/.cl
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest"
+          }
+        ]
+      }
     ]
   }
 }
 ```
+
+Both entries run the same command. `Stop` reports each turn as it completes and is `async` so it never blocks you. `SessionEnd` is not `async`: it is the one that fires for non-interactive runs (`claude -p`), and it also catches the last turn when you quit. They never double-report.
 
 Restart Claude Code after saving.
 

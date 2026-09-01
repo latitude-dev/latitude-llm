@@ -55,6 +55,10 @@ Both emitters read it at startup and fall back to their own id generation when i
 
 Both record `latitude.parent.trace_id` and `latitude.parent.span_id` as metadata, which is how a joined trace is identifiable after the fact.
 
+## The child has to emit at all
+
+A harness launching another one always does so non-interactively. For Claude Code that means `claude -p`, where Claude Code exits before spawning an `async` Stop hook — so before this contract could work at all, the emitter had to register a synchronous `SessionEnd` hook as well. See [`claude-code-telemetry.md`](claude-code-telemetry.md). Any other harness we add to this contract needs the same question asked of it: does its exporter actually run when it is driven headlessly?
+
 ## Bounds
 
 An inherited trace grows for as long as the child keeps running, and Latitude reloads the whole trace on every late span (`TracesIngested` → debounced per-trace `trace-end`, which calls `loadTraceForTraceEndUseCase`). An all-day interactive session would make that reload an ever-growing read.

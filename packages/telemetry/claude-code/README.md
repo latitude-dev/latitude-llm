@@ -104,11 +104,15 @@ Everything the installer writes. Edit `~/.claude/settings.json` directly if you 
 | `LATITUDE_REDACT_ATTRIBUTES` | no | — | JSON array or comma-separated custom attribute patterns to mask before export. |
 | `LATITUDE_REDACT_MASK` | no | `******` | Mask value for custom redaction. |
 
-### `hooks.Stop`
+### `hooks.Stop` and `hooks.SessionEnd`
 
-A single **synchronous** hook entry running `npx -y @latitude-data/claude-code-telemetry` after each turn.
+The same command is registered on two events, because neither covers every session alone.
 
-It is deliberately not `async`. Claude Code registers an async Stop hook but exits before spawning it in headless mode, so an async hook emits nothing at all for `claude -p` — which is exactly how another harness drives Claude Code. Instead the hook hands its work to a detached worker and returns in ~60ms, so turns stay snappy without losing headless runs. Installing over an older async hook strips the flag.
+`Stop` runs after each assistant turn and stays **async**, so an interactive turn is never blocked. But Claude Code registers an async Stop hook and then exits before spawning it in headless mode, so `claude -p` — how one harness drives another — would emit nothing at all.
+
+`SessionEnd` is registered **synchronously** and does fire there. It also fires on interactive quit and on Ctrl-C, so it catches a final turn whose async Stop hook died with the process. Only `SIGKILL` escapes both, and no hook can be registered for that.
+
+The two never double-count: emission is incremental behind a byte offset and a state lock, so whichever runs second finds the offset already advanced and ships nothing. Both hand their work to a detached worker, so neither delays a turn or a session exit.
 
 ### Files on disk
 
