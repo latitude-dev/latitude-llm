@@ -244,9 +244,9 @@ export function ModelImpactPanel({
         fromIso={rangeFromIso}
         toIso={rangeToIso}
         isAllTime={isAllTime}
-        // The picker above states this window already, and the recent-activity
-        // distinction that other dashboards flag isn't relevant to this panel.
-        showWindow={false}
+        // Totals here follow listRange (full history in All-time) while the
+        // sibling usage chart stays on the recent-activity slice.
+        showWindow={isAllTime}
         titleColor="foregroundMuted"
       />
       {isLoading || !breakdown ? (

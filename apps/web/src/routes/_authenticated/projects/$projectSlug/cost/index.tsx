@@ -72,7 +72,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/cost
 function CostPageContent() {
   const project = useRouteProject()
   const projectSlug = project.slug
-  const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
+  const { firstTraceAt, isLoading: firstTraceLoading } = useProjectFirstTraceAt({ projectId: project.id })
   const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })
   const tw = useAnalyticsTimeWindow({
     project,
@@ -86,97 +86,124 @@ function CostPageContent() {
   const [usageMeasure, setUsageMeasure] = useParamState("costUsage", "cost", { validate: isModelUsageMeasure })
   const costDashboard = useFeatureFlagGate("costDashboard")
 
-  // One window for the KPIs and the chart, so the two can be reconciled.
-  const range = useMemo(
-    () =>
-      tw.isAllTime
-        ? tw.trendRange
-        : { fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso },
-    [tw.isAllTime, tw.listRange, tw.trendRange],
+  const listRange = useMemo(
+    () => ({ fromIso: tw.listRange.fromIso ?? tw.trendRange.fromIso, toIso: tw.listRange.toIso }),
+    [tw.listRange, tw.trendRange],
   )
-  const bucketSeconds = useMemo(
-    () => pickCostBucketSeconds(Date.parse(range.toIso) - Date.parse(range.fromIso)),
-    [range],
+  const chartRange = useMemo(() => (tw.isAllTime ? tw.trendRange : listRange), [tw.isAllTime, tw.trendRange, listRange])
+  const chartBucketSeconds = useMemo(
+    () => pickCostBucketSeconds(Date.parse(chartRange.toIso) - Date.parse(chartRange.fromIso)),
+    [chartRange],
+  )
+  const listBucketSeconds = useMemo(
+    () => pickCostBucketSeconds(Date.parse(listRange.toIso) - Date.parse(listRange.fromIso)),
+    [listRange],
   )
 
   const enabled = costDashboard.isEnabled
-  const { data: overview, isLoading: overviewLoading } = useCostOverview({ projectId: project.id, range, enabled })
+  // Until the first trace settles, All time has no lower bound and `listRange` falls back to the
+  // chart window, so the full-history reads wait rather than fetch a narrower window and refetch.
+  const listEnabled = enabled && !firstTraceLoading
+  const { data: overview, isLoading: overviewLoading } = useCostOverview({
+    projectId: project.id,
+    range: listRange,
+    enabled: listEnabled,
+  })
   const { data: series = [], isLoading: seriesLoading } = useCostSeries({
     projectId: project.id,
-    range,
+    range: chartRange,
     metric,
-    bucketSeconds,
+    bucketSeconds: chartBucketSeconds,
     enabled,
   })
-  // Same query key as above while `total` is selected, so the toggle costs no
-  // second request in the common case.
+  // Feeds the Avg per day KPI, so it follows the KPI window, not the chart's. Outside All time the
+  // two windows are the same key as the series above, so the metric toggle costs no second request.
   const { data: totalSeries = [], isLoading: totalSeriesLoading } = useCostSeries({
     projectId: project.id,
-    range,
+    range: listRange,
     metric: "total",
-    bucketSeconds,
-    enabled,
+    bucketSeconds: listBucketSeconds,
+    enabled: listEnabled,
   })
   const { data: modelUsage, isLoading: modelUsageLoading } = useModelUsageSeries({
     projectId: project.id,
-    range,
-    bucketSeconds,
+    range: chartRange,
+    bucketSeconds: chartBucketSeconds,
     enabled,
   })
   const { data: perSession, isLoading: perSessionLoading } = useCostPerSessionDecomposition({
     projectId: project.id,
-    range,
-    bucketSeconds,
-    enabled,
+    range: listRange,
+    bucketSeconds: listBucketSeconds,
+    enabled: listEnabled,
   })
   const { data: cacheEconomics, isLoading: cacheEconomicsLoading } = useCacheEconomics({
     projectId: project.id,
-    range,
-    enabled,
+    range: listRange,
+    enabled: listEnabled,
   })
   const { data: breakdown, isLoading: breakdownLoading } = useCostBreakdown({
     projectId: project.id,
-    range,
+    range: listRange,
     dimension,
-    enabled,
+    enabled: listEnabled,
   })
   // The impact panel is about models whichever dimension the table below is showing.
   // Same query key as above while the Model tab is selected, so that costs no request.
   const { data: modelBreakdown, isLoading: modelBreakdownLoading } = useCostBreakdown({
     projectId: project.id,
-    range,
+    range: listRange,
     dimension: "model",
-    enabled,
+    enabled: listEnabled,
   })
 
   const buckets = useMemo(
-    () => densifyCostBuckets({ buckets: series, ...range, bucketSeconds }),
-    [series, range, bucketSeconds],
+    () => densifyCostBuckets({ buckets: series, ...chartRange, bucketSeconds: chartBucketSeconds }),
+    [series, chartRange, chartBucketSeconds],
   )
   const provisionalIndex = useMemo(
-    () => resolveIncompleteBucketIndex({ buckets, bucketSeconds, toIso: range.toIso, nowMs: Date.now() }),
-    [buckets, bucketSeconds, range.toIso],
+    () =>
+      resolveIncompleteBucketIndex({
+        buckets,
+        bucketSeconds: chartBucketSeconds,
+        toIso: chartRange.toIso,
+        nowMs: Date.now(),
+      }),
+    [buckets, chartBucketSeconds, chartRange.toIso],
   )
   const denseModelUsage = useMemo(
     () =>
       modelUsage
-        ? { ...modelUsage, buckets: densifyModelUsageBuckets({ buckets: modelUsage.buckets, ...range, bucketSeconds }) }
+        ? {
+            ...modelUsage,
+            buckets: densifyModelUsageBuckets({
+              buckets: modelUsage.buckets,
+              ...chartRange,
+              bucketSeconds: chartBucketSeconds,
+            }),
+          }
         : undefined,
-    [modelUsage, range, bucketSeconds],
+    [modelUsage, chartRange, chartBucketSeconds],
   )
   const modelUsageProvisionalIndex = useMemo(
     () =>
       resolveIncompleteBucketIndex({
         buckets: denseModelUsage?.buckets ?? [],
-        bucketSeconds,
-        toIso: range.toIso,
+        bucketSeconds: chartBucketSeconds,
+        toIso: chartRange.toIso,
         nowMs: Date.now(),
       }),
-    [denseModelUsage, bucketSeconds, range.toIso],
+    [denseModelUsage, chartBucketSeconds, chartRange.toIso],
   )
   const dailyAverageMicrocents = useMemo(
-    () => computeDailyAverageMicrocents({ buckets: totalSeries, bucketSeconds, ...range, nowMs: Date.now() }),
-    [totalSeries, bucketSeconds, range],
+    () =>
+      computeDailyAverageMicrocents({
+        buckets: totalSeries,
+        bucketSeconds: listBucketSeconds,
+        ...listRange,
+        nowMs: Date.now(),
+      }),
+    [totalSeries, listBucketSeconds, listRange],
   )
 
   if (costDashboard.isLoading || !enabled) {
@@ -197,7 +224,12 @@ function CostPageContent() {
         title={
           <SectionHeader
             title="Cost dashboard"
-            badge={<PricingCoverageBadge confidence={overview?.confidence} isLoading={overviewLoading} />}
+            badge={
+              <PricingCoverageBadge
+                confidence={overview?.confidence}
+                isLoading={firstTraceLoading || overviewLoading}
+              />
+            }
             description="Optimize your spending"
           />
         }
@@ -206,9 +238,6 @@ function CostPageContent() {
             {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}
             {...(tw.pickerStartTo ? { startTimeTo: tw.pickerStartTo } : {})}
             onChange={tw.onTimeChange}
-            // Unlike the other sections, every figure here is clamped to the recent
-            // slice, so an unset range is not all time.
-            placeholder="Recent activity"
           />
         }
       />
@@ -217,24 +246,28 @@ function CostPageContent() {
           <CostKpiRow
             overview={overview}
             dailyAverageMicrocents={dailyAverageMicrocents}
-            bucketSeconds={bucketSeconds}
+            bucketSeconds={listBucketSeconds}
             projectSlug={projectSlug}
-            isLoading={overviewLoading || seriesLoading || totalSeriesLoading}
+            isLoading={firstTraceLoading || overviewLoading || totalSeriesLoading}
           />
           <CostOverTimePanel
             buckets={buckets}
             metric={metric}
             onMetricChange={setMetric}
-            bucketSeconds={bucketSeconds}
+            bucketSeconds={chartBucketSeconds}
             provisionalIndex={provisionalIndex}
-            rangeFromIso={range.fromIso}
-            rangeToIso={range.toIso}
+            rangeFromIso={chartRange.fromIso}
+            rangeToIso={chartRange.toIso}
             isAllTime={tw.isAllTime}
             isLoading={seriesLoading}
           />
         </Section>
         <Section heading="Session">
-          <CostPerSessionPanel record={perSession} rangeFromIso={range.fromIso} isLoading={perSessionLoading} />
+          <CostPerSessionPanel
+            record={perSession}
+            rangeFromIso={listRange.fromIso}
+            isLoading={firstTraceLoading || perSessionLoading}
+          />
         </Section>
         {/* The two model questions stacked: how spend moves, then who it goes to. Side by
             side, one panel's fixed-height chart and the other's variable-length model list
@@ -244,31 +277,35 @@ function CostPageContent() {
             series={denseModelUsage}
             measure={usageMeasure}
             onMeasureChange={setUsageMeasure}
-            bucketSeconds={bucketSeconds}
+            bucketSeconds={chartBucketSeconds}
             provisionalIndex={modelUsageProvisionalIndex}
-            rangeFromIso={range.fromIso}
-            rangeToIso={range.toIso}
+            rangeFromIso={chartRange.fromIso}
+            rangeToIso={chartRange.toIso}
             isAllTime={tw.isAllTime}
             isLoading={modelUsageLoading}
           />
           <ModelImpactPanel
             breakdown={modelBreakdown}
-            rangeFromIso={range.fromIso}
-            rangeToIso={range.toIso}
+            rangeFromIso={listRange.fromIso}
+            rangeToIso={listRange.toIso}
             isAllTime={tw.isAllTime}
             projectSlug={projectSlug}
-            isLoading={modelBreakdownLoading}
+            isLoading={firstTraceLoading || modelBreakdownLoading}
           />
         </Section>
         <Section heading="Cache">
-          <CacheEconomicsPanel economics={cacheEconomics} projectSlug={projectSlug} isLoading={cacheEconomicsLoading} />
+          <CacheEconomicsPanel
+            economics={cacheEconomics}
+            projectSlug={projectSlug}
+            isLoading={firstTraceLoading || cacheEconomicsLoading}
+          />
         </Section>
         <Section>
           <CostBreakdownPanel
             breakdown={breakdown}
             dimension={dimension}
             onDimensionChange={setDimension}
-            isLoading={breakdownLoading}
+            isLoading={firstTraceLoading || breakdownLoading}
           />
         </Section>
       </div>
