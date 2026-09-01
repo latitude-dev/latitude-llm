@@ -19,12 +19,14 @@ import os
 import re
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Dict, Mapping, Optional, Tuple
 
-_TRACE_ID_RE = re.compile(r"^[0-9a-f]{32}$")
-_SPAN_ID_RE = re.compile(r"^[0-9a-f]{16}$")
-_VERSION_RE = re.compile(r"^[0-9a-f]{2}$")
-_FLAGS_RE = re.compile(r"^[0-9a-f]{2}$")
+# Matched with `fullmatch`: `$` also matches before a trailing newline, so a field
+# ending in one would otherwise pass.
+_TRACE_ID_RE = re.compile(r"[0-9a-f]{32}")
+_SPAN_ID_RE = re.compile(r"[0-9a-f]{16}")
+_VERSION_RE = re.compile(r"[0-9a-f]{2}")
+_FLAGS_RE = re.compile(r"[0-9a-f]{2}")
 
 TRACEPARENT_VAR = "TRACEPARENT"
 LATITUDE_TRACEPARENT_VAR = "LATITUDE_TRACEPARENT"
@@ -66,15 +68,15 @@ def parse_traceparent(raw: Optional[str]) -> Optional[Tuple[str, str]]:
     if len(parts) < 4:
         return None
     version, trace_id, span_id, flags = parts[0], parts[1], parts[2], parts[3]
-    if not _VERSION_RE.match(version) or version == "ff":
+    if not _VERSION_RE.fullmatch(version) or version == "ff":
         return None
     # Version 00 is exactly four fields; a later version may append more, which this
     # version must ignore rather than reject (W3C forward-compatibility rule).
     if version == "00" and len(parts) != 4:
         return None
-    if not _TRACE_ID_RE.match(trace_id) or not _SPAN_ID_RE.match(span_id):
+    if not _TRACE_ID_RE.fullmatch(trace_id) or not _SPAN_ID_RE.fullmatch(span_id):
         return None
-    if not _FLAGS_RE.match(flags):
+    if not _FLAGS_RE.fullmatch(flags):
         return None
     if trace_id == "0" * 32 or span_id == "0" * 16:
         return None
@@ -85,19 +87,37 @@ def format_traceparent(trace_id: str, span_id: str, sampled: bool = True) -> str
     return f"00-{trace_id}-{span_id}-{'01' if sampled else '00'}"
 
 
-def inherited_context(env: Optional[Mapping[str, str]] = None) -> Optional[InheritedContext]:
-    """The span this process was launched under, if any."""
+def inherited_traceparent(env: Optional[Mapping[str, str]] = None) -> Optional[str]:
+    """The header this process was launched with, by variable precedence.
+
+    Presence, not truthiness: setting the scoped variable to an empty value opts this
+    harness out of an unrelated `TRACEPARENT` the environment already carries.
+    """
     source = os.environ if env is None else env
     # The Latitude-scoped name wins so a pipeline that already sets `TRACEPARENT` for
     # something unrelated can opt this harness in (or out) without disturbing it.
-    raw = source.get(LATITUDE_TRACEPARENT_VAR) or source.get(TRACEPARENT_VAR) or source.get("traceparent")
-    parsed = parse_traceparent(raw)
+    for name in (LATITUDE_TRACEPARENT_VAR, TRACEPARENT_VAR, "traceparent"):
+        if name in source:
+            return source[name]
+    return None
+
+
+def inherited_session_id(env: Optional[Mapping[str, str]] = None) -> str:
+    """The session id a parent handed us, read independently of trace joining: past
+    the join ceiling turns root their own traces but stay grouped by this id."""
+    source = os.environ if env is None else env
+    return (source.get(SESSION_VAR) or "").strip()
+
+
+def inherited_context(env: Optional[Mapping[str, str]] = None) -> Optional[InheritedContext]:
+    """The span this process was launched under, if any."""
+    parsed = parse_traceparent(inherited_traceparent(env))
     if parsed is None:
         return None
     return InheritedContext(
         trace_id=parsed[0],
         parent_span_id=parsed[1],
-        session_id=(source.get(SESSION_VAR) or "").strip(),
+        session_id=inherited_session_id(env),
     )
 
 

@@ -136,8 +136,7 @@ If the installer doesn't fit your setup (e.g. you manage dotfiles with another t
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry",
-            "async": true
+            "command": "npx -y @latitude-data/claude-code-telemetry"
           }
         ]
       }
@@ -155,8 +154,8 @@ When another harness launches Claude Code — a Hermes tool call, a CI job, a su
 | Variable | Effect |
 | --- | --- |
 | `TRACEPARENT` | `00-<trace id>-<parent span id>-<flags>`. The session's spans join that trace, parented on that span. |
-| `LATITUDE_TRACEPARENT` | Same format, higher precedence — for setups where `TRACEPARENT` already belongs to something else. |
-| `LATITUDE_SESSION_ID` | Reported as the session id, so both harnesses group in one session view. |
+| `LATITUDE_TRACEPARENT` | Same format, higher precedence — for setups where `TRACEPARENT` already belongs to something else. Set it empty to opt out of a `TRACEPARENT` that is already there. |
+| `LATITUDE_SESSION_ID` | Reported as the session id, so both harnesses group in one session view. Read independently of the header: a session that never joins a trace still reports it. |
 | `LATITUDE_PROJECT` | Must match the parent's project: ingest is project-scoped, so a mismatch splits the trace silently. |
 
 Nothing is required of a session launched on its own — with no valid header the hook generates ids exactly as before. A malformed header is ignored rather than failing the turn.

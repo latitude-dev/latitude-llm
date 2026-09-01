@@ -6,7 +6,12 @@ import { postTraces } from "./client.ts"
 import { loadConfig } from "./config.ts"
 import { collectTraceContext } from "./context.ts"
 import { detachSelf, isDetachedChild, readDetachedPayload } from "./detach.ts"
-import { type InheritedContext, MAX_INHERITED_SPANS, parseInheritedContext } from "./inherited-context.ts"
+import {
+  type InheritedContext,
+  inheritedSessionId,
+  MAX_INHERITED_SPANS,
+  parseInheritedContext,
+} from "./inherited-context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
 import { memoryProjectsRoot } from "./memory.ts"
@@ -120,9 +125,11 @@ async function main(): Promise<void> {
     // `sessionId` still keys all local state — only what spans report changes — so a
     // resumed session keeps its transcript offsets when a session id is inherited.
     const inherited = resolveInherited(prior, logger)
-    const reportedSessionId = inherited?.sessionId ?? sessionId
+    // Read on its own: past the join cap the session stops joining the trace but
+    // stays grouped by the shared session id.
+    const reportedSessionId = inheritedSessionId() ?? sessionId
+    if (reportedSessionId !== sessionId) context.metadata["claude_code.session.id"] = sessionId
     if (inherited) {
-      context.metadata["claude_code.session.id"] = sessionId
       context.metadata["latitude.parent.trace_id"] = inherited.traceId
       context.metadata["latitude.parent.span_id"] = inherited.parentSpanId
     }
@@ -146,6 +153,7 @@ async function main(): Promise<void> {
     const agentLinks: AgentSpanLink[] = []
     const otlpRequest = buildOtlpRequest({
       sessionId: reportedSessionId,
+      localSessionId: sessionId,
       inherited,
       turnStartNumber: prior.turnCount + 1,
       turns,

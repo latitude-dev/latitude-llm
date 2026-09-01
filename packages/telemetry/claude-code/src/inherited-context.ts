@@ -24,20 +24,33 @@ const SPAN_ID_RE = /^[0-9a-f]{16}$/
 const VERSION_RE = /^[0-9a-f]{2}$/
 const FLAGS_RE = /^[0-9a-f]{2}$/
 
+function inheritEnabled(env: NodeJS.ProcessEnv): boolean {
+  return (env.LATITUDE_CLAUDE_CODE_INHERIT_CONTEXT ?? "1") !== "0"
+}
+
+// Read on its own because session grouping does not depend on trace joining: a
+// session that never joins, or stops joining at the cap, still reports the shared id.
+export function inheritedSessionId(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  if (!inheritEnabled(env)) return undefined
+  return env.LATITUDE_SESSION_ID?.trim() || undefined
+}
+
 export function parseInheritedContext(env: NodeJS.ProcessEnv = process.env): InheritedContext | undefined {
-  if ((env.LATITUDE_CLAUDE_CODE_INHERIT_CONTEXT ?? "1") === "0") return undefined
+  if (!inheritEnabled(env)) return undefined
   // The Latitude-scoped name wins so a repo that already sets `TRACEPARENT` for an
   // unrelated pipeline can opt this harness in (or out) without disturbing it.
   const raw = env.LATITUDE_TRACEPARENT ?? env.TRACEPARENT ?? env.traceparent
   const parsed = parseTraceparent(raw)
   if (!parsed) return undefined
-  const sessionId = env.LATITUDE_SESSION_ID?.trim()
-  return { ...parsed, sessionId: sessionId || undefined }
+  return { ...parsed, sessionId: inheritedSessionId(env) }
 }
 
 export function parseTraceparent(raw: string | undefined): { traceId: string; parentSpanId: string } | undefined {
   const value = raw?.trim().toLowerCase()
   if (!value) return undefined
+  // `$` matches before a trailing newline in JS, so a field ending in one would pass
+  // the per-field patterns below. No traceparent field may contain whitespace.
+  if (/\s/.test(value)) return undefined
 
   const parts = value.split("-")
   if (parts.length < 4) return undefined

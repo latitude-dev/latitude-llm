@@ -5,8 +5,8 @@
 from __future__ import annotations
 
 import os
-from contextvars import ContextVar
-from typing import Any, Dict, Optional, Tuple
+import threading
+from typing import Any, Dict, Optional
 
 from .aux_usage import aux_spans
 from .builder import _Builder
@@ -16,8 +16,6 @@ from .propagation import (
     SESSION_VAR,
     TRACEPARENT_VAR,
     ChildContext,
-    child_env,
-    current_traceparent,
     set_active,
 )
 from .transport import _flush, _ship
@@ -229,9 +227,13 @@ def on_subagent_stop(**kwargs: Any) -> None:
 # Published for the duration of a tool call, so a harness the tool spawns attaches
 # under that tool's span instead of starting a trace of its own.
 
-_ENV_UNDO: ContextVar[Optional[Tuple[Tuple[str, Optional[str]], ...]]] = ContextVar(
-    "latitude_child_env_undo", default=None
-)
+# os.environ is process-wide while Hermes runs each turn on its own thread, so the
+# export is owned by one tool call at a time: a concurrent call keeps its context on
+# the ContextVar (child_env) rather than overwriting a sibling's variables and
+# restoring them to the wrong values afterwards.
+_ENV_LOCK = threading.Lock()
+_ENV_OWNER: Optional[int] = None
+_ENV_UNDO: Optional[Dict[str, Optional[str]]] = None
 
 
 def _publish_child_context(kwargs: Dict[str, Any]) -> None:
@@ -254,29 +256,54 @@ def _retract_child_context() -> None:
 def _export_to_environ(context: ChildContext) -> None:
     """Make every subprocess of this tool call inherit the context for free.
 
-    Opt-in (`LATITUDE_HERMES_EXPORT_TRACEPARENT=1`): os.environ is process-wide while
-    Hermes runs turns on separate threads, so concurrent tool calls can hand each
-    other's span to their children. Prefer `child_env()` where the tool can pass it.
+    Opt-in (`LATITUDE_HERMES_EXPORT_TRACEPARENT=1`) and single-owner: only one tool
+    call at a time holds the process environment, so a concurrent one is skipped
+    rather than handed the wrong span. Prefer `child_env()` where the tool can pass it.
     """
+    global _ENV_OWNER, _ENV_UNDO
     updates = {TRACEPARENT_VAR: context.traceparent}
     if context.session_id:
         updates[SESSION_VAR] = context.session_id
     if context.project:
         updates[PROJECT_VAR] = context.project
-    _ENV_UNDO.set(tuple((name, os.environ.get(name)) for name in updates))
-    os.environ.update(updates)
+    me = threading.get_ident()
+    with _ENV_LOCK:
+        if _ENV_OWNER is not None and _ENV_OWNER != me and _owner_alive(_ENV_OWNER):
+            _debug("environment export skipped: a concurrent tool call owns it; use child_env()")
+            return
+        # A tool call that never reached post_tool_call left its export standing;
+        # restore the original values before capturing this call's undo over them.
+        if _ENV_OWNER != me:
+            _restore_environ_locked()
+        undo = _ENV_UNDO if _ENV_UNDO is not None else {}
+        for name in updates:
+            undo.setdefault(name, os.environ.get(name))
+        _ENV_UNDO = undo
+        _ENV_OWNER = me
+        os.environ.update(updates)
+
+
+def _owner_alive(ident: int) -> bool:
+    return any(thread.ident == ident for thread in threading.enumerate())
 
 
 def _restore_environ() -> None:
-    undo = _ENV_UNDO.get()
-    if undo is None:
-        return
-    for name, prior in undo:
-        if prior is None:
-            os.environ.pop(name, None)
-        else:
-            os.environ[name] = prior
-    _ENV_UNDO.set(None)
+    with _ENV_LOCK:
+        if _ENV_OWNER is not None and _ENV_OWNER != threading.get_ident():
+            return
+        _restore_environ_locked()
+
+
+def _restore_environ_locked() -> None:
+    global _ENV_OWNER, _ENV_UNDO
+    if _ENV_UNDO is not None:
+        for name, prior in _ENV_UNDO.items():
+            if prior is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = prior
+    _ENV_UNDO = None
+    _ENV_OWNER = None
 
 
 def register(ctx: Any) -> None:

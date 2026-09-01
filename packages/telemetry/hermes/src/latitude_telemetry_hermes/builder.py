@@ -37,6 +37,7 @@ from .propagation import (
     InheritedContext,
     format_traceparent,
     inherited_context,
+    inherited_session_id,
 )
 from .tools import resolve_tool_definitions
 from .util import _now_ms, _safe_json, _span_id, _trace_id, _trace_key
@@ -441,6 +442,9 @@ class _Builder:
         turn_id = str(kw.get("turn_id") or "")
         link = self._subagents.get(session_id)
         external = self._inherited_link_locked() if link is None else None
+        # Read on its own: past the join ceiling turns root their own traces but stay
+        # grouped by the session id the parent handed us.
+        inherited_session = "" if link else self._inherited_session_locked()
         if link is not None:
             # A delegated child belongs to the parent's session, so it carries the
             # parent's identity rather than minting one from `platform="subagent"`.
@@ -469,11 +473,7 @@ class _Builder:
             ),
             session=session,
             session_id=session_id,
-            reported_session_id=(
-                link.parent_session_id
-                if link
-                else (external.session_id if external and external.session_id else session_id)
-            ),
+            reported_session_id=(link.parent_session_id if link else (inherited_session or session_id)),
             task_id=task_id,
             turn_id=turn_id,
             subagent=link,
@@ -482,9 +482,10 @@ class _Builder:
         )
         run.root.trace_id = run.trace_id
         run.extra_metadata = _run_metadata(kw, session, link)
+        if inherited_session and inherited_session != session_id:
+            run.extra_metadata["hermes.session.id"] = session_id
         if external:
             self._inherited_turns += 1
-            run.extra_metadata["hermes.session.id"] = session_id
             run.extra_metadata["latitude.parent.trace_id"] = external.trace_id
             run.extra_metadata["latitude.parent.span_id"] = external.parent_span_id
         if link:
@@ -575,6 +576,12 @@ class _Builder:
         if self._inherited_turns >= MAX_INHERITED_TURNS:
             return None
         return inherited_context()
+
+    def _inherited_session_locked(self) -> str:
+        """The session id this process was launched with, ceiling or not."""
+        if not _config().get("inherit_context"):
+            return ""
+        return inherited_session_id()
 
     def child_context(self, **kw: Any) -> Optional[ChildContext]:
         """Context for a subprocess spawned by the tool call `kw` describes.

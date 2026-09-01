@@ -89,21 +89,41 @@ describe("detachSelf", () => {
 })
 
 describe("stale payload sweep", () => {
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60_000)
+
   it("removes payloads no worker will ever consume, and keeps recent ones", () => {
     const env = baseEnv()
     const dir = env.LATITUDE_CLAUDE_CODE_PAYLOAD_DIR as string
-    const old = join(dir, "old.json")
-    const fresh = join(dir, "fresh.json")
+    const old = join(dir, "latitude-payload-old.json")
+    const fresh = join(dir, "latitude-payload-fresh.json")
     writeFileSync(old, "{}")
     writeFileSync(fresh, "{}")
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60_000)
     utimesSync(old, twoHoursAgo, twoHoursAgo)
 
     detachSelf("{}", logger, env, fakeSpawn().fn)
 
     const left = readdirSync(dir)
-    expect(left).toContain("fresh.json")
-    expect(left).not.toContain("old.json")
+    expect(left).toContain("latitude-payload-fresh.json")
+    expect(left).not.toContain("latitude-payload-old.json")
+  })
+
+  it("leaves files it did not write alone, however old", () => {
+    // The payload directory is user-configurable: pointed at /tmp or any shared
+    // directory, an unrestricted sweep would delete a stranger's files.
+    const env = baseEnv()
+    const dir = env.LATITUDE_CLAUDE_CODE_PAYLOAD_DIR as string
+    const stranger = join(dir, "someone-elses.json")
+    const strangerNoExt = join(dir, "notes.txt")
+    writeFileSync(stranger, "{}")
+    writeFileSync(strangerNoExt, "hi")
+    utimesSync(stranger, twoHoursAgo, twoHoursAgo)
+    utimesSync(strangerNoExt, twoHoursAgo, twoHoursAgo)
+
+    detachSelf("{}", logger, env, fakeSpawn().fn)
+
+    const left = readdirSync(dir)
+    expect(left).toContain("someone-elses.json")
+    expect(left).toContain("notes.txt")
   })
 })
 

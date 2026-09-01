@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatTraceparent, parseInheritedContext, parseTraceparent } from "./inherited-context.ts"
+import { formatTraceparent, inheritedSessionId, parseInheritedContext, parseTraceparent } from "./inherited-context.ts"
 
 const TRACE = "4bf92f3577b34da6a3ce929d0e0e4736"
 const SPAN = "00f067aa0ba902b7"
@@ -32,6 +32,11 @@ describe("parseTraceparent", () => {
     ["non-hex span id", `00-${TRACE}-zzzzzzzzzzzzzzzz-01`],
     ["missing flags", `00-${TRACE}-${SPAN}`],
     ["empty", ""],
+    // `$` matches before a trailing newline in JS, so these pass the per-field
+    // patterns unless the whole value is checked for whitespace.
+    ["a newline inside the trace id", `00-${TRACE}\n-${SPAN}-01`],
+    ["a newline inside the span id", `00-${TRACE}-${SPAN}\n-01`],
+    ["a newline inside the flags", `00-${TRACE}-${SPAN}-01\n-x`],
   ])("rejects %s", (_label, header) => {
     expect(parseTraceparent(header)).toBeUndefined()
   })
@@ -80,5 +85,22 @@ describe("parseInheritedContext", () => {
 
   it("ignores a malformed header rather than failing the hook", () => {
     expect(parseInheritedContext({ TRACEPARENT: "garbage" })).toBeUndefined()
+  })
+})
+
+describe("inheritedSessionId", () => {
+  it("is readable without a traceparent, so a session that never joins still groups", () => {
+    expect(inheritedSessionId({ LATITUDE_SESSION_ID: "hermes-sess" })).toBe("hermes-sess")
+  })
+
+  it("treats a blank id as absent", () => {
+    expect(inheritedSessionId({ LATITUDE_SESSION_ID: "   " })).toBeUndefined()
+    expect(inheritedSessionId({})).toBeUndefined()
+  })
+
+  it("honours the opt-out", () => {
+    expect(
+      inheritedSessionId({ LATITUDE_SESSION_ID: "hermes-sess", LATITUDE_CLAUDE_CODE_INHERIT_CONTEXT: "0" }),
+    ).toBeUndefined()
   })
 })

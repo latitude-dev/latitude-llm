@@ -19,6 +19,9 @@ import type { Logger } from "./logger.ts"
 const DETACHED_ENV = "LATITUDE_CLAUDE_CODE_DETACHED"
 const PAYLOAD_ENV = "LATITUDE_CLAUDE_CODE_PAYLOAD_FILE"
 const PAYLOAD_DIR_ENV = "LATITUDE_CLAUDE_CODE_PAYLOAD_DIR"
+// The payload directory is user-configurable and may be shared, so every file we
+// write carries this prefix and the sweep below only ever removes its own.
+const PAYLOAD_PREFIX = "latitude-payload-"
 
 function payloadDir(env: NodeJS.ProcessEnv): string {
   return env[PAYLOAD_DIR_ENV] || join(homedir(), ".claude", "state", "latitude", "payloads")
@@ -54,6 +57,7 @@ function sweepStalePayloads(dir: string): void {
   try {
     const cutoff = Date.now() - PAYLOAD_TTL_MS
     for (const name of readdirSync(dir)) {
+      if (!name.startsWith(PAYLOAD_PREFIX) || !name.endsWith(".json")) continue
       const path = join(dir, name)
       try {
         if (statSync(path).mtimeMs < cutoff) rmSync(path, { force: true })
@@ -80,7 +84,7 @@ export function detachSelf(
     const dir = payloadDir(env)
     mkdirSync(dir, { recursive: true })
     sweepStalePayloads(dir)
-    const payloadPath = join(dir, `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.json`)
+    const payloadPath = join(dir, `${PAYLOAD_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 10)}.json`)
     writeFileSync(payloadPath, raw, "utf-8")
 
     const child = spawnFn(process.execPath, [selfPath], {

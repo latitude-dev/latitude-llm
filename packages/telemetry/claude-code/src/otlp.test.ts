@@ -124,6 +124,25 @@ describe("buildOtlpRequest inherited context", () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
+  it("keeps span ids distinct across two children of the same parent span", () => {
+    // One Hermes run hands every child it launches the same trace id and the same
+    // LATITUDE_SESSION_ID, and each child starts counting turns at 1. Only Claude's
+    // own session id, which is per process, separates them.
+    const child = (localSessionId: string) =>
+      otlpSpans(
+        buildOtlpRequest({
+          sessionId: "hermes-sess",
+          localSessionId,
+          turnStartNumber: 1,
+          turns: [baseTurn({ messageId: "noid:0" })],
+          inherited: { traceId: TRACE, parentSpanId: SPAN },
+        }),
+      ).map((s) => s.spanId)
+
+    const ids = [...child("claude-a"), ...child("claude-b")]
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
   it("is deterministic, so a re-sent turn produces identical span ids", () => {
     const build = () =>
       otlpSpans(

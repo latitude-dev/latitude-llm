@@ -32,7 +32,7 @@ Paste into `~/.claude/settings.json`:
 }
 ```
 
-The `@latest` tag makes the hook self-update: `npx` re-resolves the newest published version on each run (a cheap, etag-revalidated metadata check — a full download only when a new version ships), so users pick up fixes without re-installing. A bare `npx <pkg>` would reuse whatever the npx cache first fetched and never update. Keep `async: true` so this resolution runs off the turn's critical path.
+The `@latest` tag makes the hook self-update: `npx` re-resolves the newest published version on each run (a cheap, etag-revalidated metadata check — a full download only when a new version ships), so users pick up fixes without re-installing. A bare `npx <pkg>` would reuse whatever the npx cache first fetched and never update. The hook must **not** be `async`: Claude Code exits before spawning an async Stop hook in headless mode, so `claude -p` would emit nothing. It keeps the turn's critical path short by handing its work to a detached worker instead.
 
 The hook runs on every assistant-turn completion. It reads **new** lines from the session transcript since the last run (state is tracked at `~/.claude/state/latitude/state.json`), converts them into OTLP spans, and POSTs to `${LATITUDE_BASE_URL}/v1/traces` with `Authorization: Bearer ${LATITUDE_API_KEY}` and `X-Latitude-Project: ${LATITUDE_PROJECT}`. The project must already exist under the organization that owns the API key.
 

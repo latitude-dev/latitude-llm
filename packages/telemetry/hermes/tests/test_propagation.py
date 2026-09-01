@@ -8,17 +8,20 @@ directions.
 from __future__ import annotations
 
 import os
+import threading
 from typing import Any, Dict
 
 import pytest
 
-from latitude_telemetry_hermes import hooks
+from latitude_telemetry_hermes import hooks, propagation
 from latitude_telemetry_hermes.builder import _Builder
 from latitude_telemetry_hermes.config import reset_config
 from latitude_telemetry_hermes.propagation import (
     MAX_INHERITED_TURNS,
+    ChildContext,
     format_traceparent,
     inherited_context,
+    inherited_session_id,
     parse_traceparent,
 )
 
@@ -27,6 +30,12 @@ SPAN = "00f067aa0ba902b7"
 HEADER = f"00-{TRACE}-{SPAN}-01"
 
 _MESSAGES = [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": "ls"}]}]
+
+_OTHER_CONTEXT = ChildContext(
+    traceparent=f"00-0af7651916cd43dd8448eb211c80319c-{SPAN}-01",
+    session_id="other-session",
+    project="other-project",
+)
 
 
 def _turn(**overrides: Any) -> Dict[str, Any]:
@@ -70,6 +79,9 @@ def test_version_00_rejects_trailing_fields():
         f"00-{TRACE}-{'0' * 16}-01",
         f"00-{TRACE}-{SPAN}",
         "00-short-00f067aa0ba902b7-01",
+        # `$` also matches before a trailing newline, so these pass a `match` check.
+        f"00-{TRACE}\n-{SPAN}-01",
+        f"00-{TRACE}-{SPAN}\n-01",
         "garbage",
         "",
         None,
@@ -92,6 +104,14 @@ def test_the_latitude_scoped_variable_wins_over_an_unrelated_pipelines(monkeypat
 
 
 # --- joining a parent's trace ----------------------------------------------
+
+
+def test_an_empty_scoped_variable_opts_out_of_an_unrelated_pipelines(monkeypatch):
+    # Precedence is by presence, not truthiness: emptying the scoped variable is how a
+    # pipeline that already sets TRACEPARENT for something else keeps Hermes out of it.
+    monkeypatch.setenv("TRACEPARENT", HEADER)
+    monkeypatch.setenv("LATITUDE_TRACEPARENT", "")
+    assert inherited_context() is None
 
 
 def test_a_turn_joins_the_trace_it_was_launched_under(monkeypatch):
@@ -151,6 +171,39 @@ def test_joining_stops_at_the_ceiling(monkeypatch):
     assert run.root.parent_span_id == ""
 
 
+def test_the_shared_session_survives_the_ceiling(monkeypatch):
+    # Past the ceiling a turn roots its own trace, which is exactly when the shared
+    # session id is the only thing still grouping it with the parent harness.
+    monkeypatch.setenv("TRACEPARENT", HEADER)
+    monkeypatch.setenv("LATITUDE_SESSION_ID", "hermes-parent-session")
+    reset_config()
+    b = _Builder()
+    b._inherited_turns = MAX_INHERITED_TURNS
+    b.on_pre_api_request(**_turn())
+    run = next(iter(b._runs.values()))
+
+    assert run.trace_id != TRACE
+    assert run.reported_session_id == "hermes-parent-session"
+
+
+def test_the_shared_session_applies_without_a_traceparent(monkeypatch):
+    monkeypatch.setenv("LATITUDE_SESSION_ID", "hermes-parent-session")
+    reset_config()
+    b = _Builder()
+    b.on_pre_api_request(**_turn())
+    run = next(iter(b._runs.values()))
+
+    assert run.reported_session_id == "hermes-parent-session"
+    assert run.extra_metadata["hermes.session.id"] == "sess-1"
+
+
+def test_the_session_id_is_read_independently_of_the_header(monkeypatch):
+    monkeypatch.setenv("LATITUDE_SESSION_ID", "  hermes-parent-session  ")
+    assert inherited_session_id() == "hermes-parent-session"
+    monkeypatch.delenv("LATITUDE_SESSION_ID")
+    assert inherited_session_id() == ""
+
+
 def test_inheritance_can_be_turned_off(monkeypatch):
     monkeypatch.setenv("TRACEPARENT", HEADER)
     monkeypatch.setenv("LATITUDE_HERMES_INHERIT_CONTEXT", "0")
@@ -202,7 +255,7 @@ def test_child_env_carries_trace_session_and_project(monkeypatch):
     hooks.on_pre_api_request(**_turn())
     hooks.on_pre_tool_call(**_turn(tool_name="terminal", tool_call_id="call-1"))
 
-    env = hooks.child_env({})
+    env = propagation.child_env({})
     assert env["TRACEPARENT"].startswith("00-")
     assert env["LATITUDE_SESSION_ID"] == "sess-1"
     # Ingest is project-scoped: without this the child's spans land in another
@@ -210,7 +263,7 @@ def test_child_env_carries_trace_session_and_project(monkeypatch):
     assert env["LATITUDE_PROJECT"] == "test-project"
 
     hooks.on_post_tool_call(**_turn(tool_call_id="call-1", status="ok"))
-    assert "TRACEPARENT" not in hooks.child_env({})
+    assert "TRACEPARENT" not in propagation.child_env({})
 
 
 def test_environ_export_is_opt_in(monkeypatch):
@@ -253,6 +306,44 @@ def test_environ_export_restores_a_pre_existing_value(monkeypatch):
     assert os.environ["TRACEPARENT"] == outer
 
 
+def test_a_concurrent_tool_call_does_not_take_over_the_exported_environment(monkeypatch):
+    # os.environ is process-wide while turns run on their own threads. One owner at a
+    # time, so a sibling call cannot clear this call's variables or restore them to
+    # its own values once both finish.
+    monkeypatch.setenv("LATITUDE_HERMES_EXPORT_TRACEPARENT", "1")
+    reset_config()
+    hooks._BUILDER = _Builder()
+    hooks.on_pre_api_request(**_turn())
+    hooks.on_pre_tool_call(**_turn(tool_name="terminal", tool_call_id="call-1"))
+    mine = os.environ["TRACEPARENT"]
+
+    sibling = threading.Thread(target=lambda: hooks._export_to_environ(_OTHER_CONTEXT))
+    sibling.start()
+    sibling.join()
+    try:
+        assert os.environ["TRACEPARENT"] == mine
+    finally:
+        hooks.on_post_tool_call(**_turn(tool_call_id="call-1", status="ok"))
+
+    assert "TRACEPARENT" not in os.environ
+
+
+def test_an_unpaired_export_is_restored_by_the_next_one(monkeypatch):
+    # A tool call that errors out never reaches post_tool_call. The next export must
+    # capture the original values, not the abandoned call's, or the restore leaks them.
+    outer = f"00-0af7651916cd43dd8448eb211c80319c-{SPAN}-01"
+    monkeypatch.setenv("TRACEPARENT", outer)
+    monkeypatch.setenv("LATITUDE_HERMES_EXPORT_TRACEPARENT", "1")
+    reset_config()
+    hooks._BUILDER = _Builder()
+    hooks.on_pre_api_request(**_turn())
+    hooks.on_pre_tool_call(**_turn(tool_name="terminal", tool_call_id="call-1"))
+    hooks.on_pre_tool_call(**_turn(tool_name="terminal", tool_call_id="call-2"))
+    hooks.on_post_tool_call(**_turn(tool_call_id="call-2", status="ok"))
+
+    assert os.environ["TRACEPARENT"] == outer
+
+
 def test_an_unpaired_tool_call_does_not_leave_a_stale_parent():
     # A tool that errors out can skip post_tool_call. The next retract must clear the
     # context rather than restore the earlier tool's span — handing a child the wrong
@@ -263,4 +354,4 @@ def test_an_unpaired_tool_call_does_not_leave_a_stale_parent():
     hooks.on_pre_tool_call(**_turn(tool_name="terminal", tool_call_id="call-2"))
     hooks.on_post_tool_call(**_turn(tool_call_id="call-2", status="ok"))
 
-    assert hooks.current_traceparent() is None
+    assert propagation.current_traceparent() is None
