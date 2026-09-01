@@ -78,11 +78,21 @@ Use at most one strong container treatment for a given level of information:
 
 - A page region can be flat on the canvas, or it can use one distinct surface.
 - Inside a surfaced region, use a grid, stack, or `divide-y` list by default. Do not give every child the same rounded border as its parent.
-- Give a nested item its own surface only when it is independently selectable, draggable, expandable, or actionable, or when it contains a genuinely separate task.
+- A clickable row is still a row, not a card. Navigation, a hover state, or a trailing action alone does not justify a nested border; use a separator and interaction state instead.
+- Give a nested item its own surface only when it contains a genuinely separate task, independent persistent object, or dense interaction that cannot be scanned as a row.
 - When a section needs grouping but not separation, prefer a subtle background difference before adding a border. Use borders as a precise edge, not as the default way to make content look designed.
-- Do not combine `rounded-* border bg-*` at the page, section, and item levels by default. Remove the least meaningful boundary first. In most overview pages, the canvas, a section surface, and an active or actionable item are the maximum useful surface levels.
+- Do not combine `rounded-* border bg-*` at the page, section, and item levels by default. Remove the least meaningful boundary first. In most overview pages, the canvas, a section surface, and a selected or exceptional item are the maximum useful surface levels.
 
 For repeated rows, make the row structure do the work: consistent padding, aligned columns, and separators are usually clearer than a collection of mini-cards. Reserve larger radii and full outlines for an actual panel, dialog, popover, empty state, or selected item.
+
+### Page Headers
+
+Keep page headers lightweight. A header or welcome region orients the user; it does not normally need to become a card.
+
+- Default to a flat header on the page canvas: title, concise context when needed, and actions aligned by layout and spacing. Do not wrap a standard page title, description, badge, and buttons in `Card`, `rounded-* border`, or a background surface.
+- Let the first content region establish the first meaningful boundary. This keeps the page from starting with a large, empty rectangle before any work begins.
+- A surfaced header is an exception for a product-specific state that needs containment, such as onboarding progress, an urgent project-wide warning, or a dense persistent control set. Reuse an existing V2 pattern and be able to name the state that the surface communicates.
+- Do not use a header card simply to make a page look finished. If the header feels too empty, improve the title, context, action placement, or the first content block rather than adding a border.
 
 ## Typography, Colour, And Surfaces
 
@@ -178,6 +188,8 @@ Review the implementation in context, at desktop and narrow widths, and compare 
 - Is there a clear primary action for the active scope and no competing primary actions?
 - Are spacing, typography, surfaces, and icon treatment consistent with nearby UI?
 - Does every container have a distinct purpose, with no repeated parent-and-child border treatment?
+- Is the page header flat on the canvas unless a specific persistent state requires a surfaced header?
+- Are clickable repeated items rendered as rows with separators and interaction states rather than cards inside a card?
 - Are labels, values, statuses, and descriptions visibly separated and never rendered as a run-on text line?
 - Do metrics use a consistent label-value-context order with units, timeframe, and state easy to scan?
 - Does the chosen route, modal, or drawer match the task's size and need for context?
