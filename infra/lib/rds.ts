@@ -137,7 +137,6 @@ function createAuroraServerless(
     storageEncrypted: true,
     preferredBackupWindow: "03:00-04:00",
     enabledCloudwatchLogsExports: [],
-    applyImmediately: true,
     tags: {
       Name: `${name}-aurora`,
       Environment: config.name,
@@ -290,7 +289,6 @@ function createStandardInstance(
     skipFinalSnapshot: config.name === "staging",
     finalSnapshotIdentifier: config.name === "production" ? `${name}-final-snapshot` : undefined,
     enabledCloudwatchLogsExports: [],
-    applyImmediately: true,
     parameterGroupName: parameterGroup.name,
     tags: {
       Name: `${name}-postgres`,
