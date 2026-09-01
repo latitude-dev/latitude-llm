@@ -66,6 +66,8 @@ Each dimension section contains:
 The evidence list contains only metrics with readable observations and promoted signals with an
 eligible occurrence in the selected window. Signals with zero occurrences and scores assigned to
 ignored signals do not appear. Items whose effect is not yet measurable remain visible and say so.
+A signal that informs several dimensions can appear in each applicable dimension section. This is a
+presentation choice and does not duplicate the occurrence in estimation or attribution.
 
 Native inputs and causes are labelled as current evidence from the live selected window. They
 explain present behavior but do not claim to reproduce the immutable snapshot, whose stored contract

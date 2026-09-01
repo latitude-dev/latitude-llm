@@ -35,7 +35,8 @@ introduce new evidence semantics. It composes the behavior already exercised by 
 ## PR 1: dimension-aware signals
 
 **Product result**: every promoted signal says which Agent Score dimensions it informs. Users can
-filter and group Signals by those dimensions, and API consumers receive the same classification.
+filter Signals by those dimensions, and API consumers receive the same classification. The Signals
+list keeps one row per signal and shows dimensions as chips rather than grouping rows by dimension.
 
 ### Shared contracts
 
@@ -55,8 +56,8 @@ filter and group Signals by those dimensions, and API consumers receive the same
 - [ ] **P1-6** Extend signal detail generation with evidence-role classification for signals that do
   not have a dominant mapped flagger.
 - [ ] **P1-7** Assign and latch `scoreEvidence` during promotion. Detail refresh must not rewrite it.
-- [ ] **P1-8** Backfill existing promoted signals once and skip any signal that already has evidence
-  roles.
+- [ ] **P1-8** Backfill every existing signal with an empty, non-null `scoreEvidence` list in the
+  schema migration. Do not classify historical signals with a model or the static flagger mapping.
 - [ ] **P1-9** Centralize signal score eligibility. Require promoted system signals, exclude scores
   assigned to ignored signals, and stop treating every non-empty `signal_id` as eligible.
 
@@ -65,7 +66,8 @@ filter and group Signals by those dimensions, and API consumers receive the same
 - [ ] **P1-10** Expose signal evidence through `@repo/operations`, OpenAPI, MCP, SDK methods, and the
   CLI. Regenerate generated contracts.
 - [ ] **P1-11** Add dimension chips to signal detail and the signal drawer.
-- [ ] **P1-12** Add dimension filters and grouping to the Signals list.
+- [ ] **P1-12** Add dimension filters and chips to the Signals list without grouping or duplicating
+  signal rows by dimension.
 - [ ] **P1-13** Add dimensions to signal rows in the session Signals tab.
 - [ ] **P1-14** Mark signals with no scoring role as diagnostic rather than assigning a fallback
   dimension.
@@ -73,8 +75,8 @@ filter and group Signals by those dimensions, and API consumers receive the same
 ### Exit gate
 
 - [ ] **P1-15** Tests cover valid dimension-role pairs, static and generated assignment, promotion
-  latching, refresh behavior, backfill idempotency, ignored-score exclusion, and promoted-only
-  analytics.
+  latching, generation failure, strict flagger dominance, refresh behavior, the non-null empty
+  backfill, ignored-score exclusion, and promoted-only analytics.
 - [ ] **P1-16** Signal detail, list filters, and session signal rows render the same dimension set.
 - [ ] `pnpm typecheck` and `pnpm test` pass for touched packages. Generated API artifacts are current.
 
