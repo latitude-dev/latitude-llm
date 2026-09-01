@@ -346,28 +346,32 @@ describe("applySignalLifecycleCommandUseCase", () => {
       expect(events).toHaveLength(1)
     })
 
-    it.each(["resolve", "unresolve", "ignore", "unignore", "mute", "unmute"] as const)(
-      "treats an unpromoted candidate as not found on %s",
-      async (command) => {
-        const candidate = makeSignal("c".repeat(24), { promotedAt: null })
-        const { effect, issues, events, softDeletedSignalIds } = run({
-          signals: [candidate],
-          command,
-        })
+    it.each([
+      "resolve",
+      "unresolve",
+      "ignore",
+      "unignore",
+      "mute",
+      "unmute",
+    ] as const)("treats an unpromoted candidate as not found on %s", async (command) => {
+      const candidate = makeSignal("c".repeat(24), { promotedAt: null })
+      const { effect, issues, events, softDeletedSignalIds } = run({
+        signals: [candidate],
+        command,
+      })
 
-        await expect(Effect.runPromise(effect)).rejects.toMatchObject({
-          _tag: "NotFoundError",
-          entity: "Signal",
-          id: candidate.id,
-        })
-        expect(issues.get(candidate.id)).toMatchObject({
-          resolvedAt: null,
-          ignoredAt: null,
-          mutedAt: null,
-        })
-        expect(events).toEqual([])
-        expect(softDeletedSignalIds).toEqual([])
-      },
-    )
+      await expect(Effect.runPromise(effect)).rejects.toMatchObject({
+        _tag: "NotFoundError",
+        entity: "Signal",
+        id: candidate.id,
+      })
+      expect(issues.get(candidate.id)).toMatchObject({
+        resolvedAt: null,
+        ignoredAt: null,
+        mutedAt: null,
+      })
+      expect(events).toEqual([])
+      expect(softDeletedSignalIds).toEqual([])
+    })
   })
 })
