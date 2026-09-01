@@ -118,6 +118,9 @@ export const createSpanIngestionWorker = ({
           Effect.catchTag("SpanDecodingError", (error) =>
             Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
           ),
+          Effect.catchTag("RedactionError", (error) =>
+            Effect.sync(() => logger.error("Dropping batch after redaction failure; not retrying", error)),
+          ),
           Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
           withPostgres(postgresLayers, postgresClient, OrganizationId(organizationId)),
           withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
