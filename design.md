@@ -102,6 +102,8 @@ Treat text styles as roles, not decoration. A heading names a region; a row titl
 
 - Build title, value, status, and supporting copy as a vertical stack unless they are intentionally a compact inline pair, such as a label and a badge.
 - `Text` primitives can render inline. When a text role must start a new line, put it in a flex/grid stack or use the component's block display option. Inspect the rendered result: words from separate roles must never run together.
+- In project routes, use the existing `-components/section-header.tsx` `SectionHeader` for a title with a description or badge. Do not recreate it with a large `Text` heading and a separate paragraph. Use its `xl` variant only for the page-level title.
+- Supporting block labels are low hierarchy. Use the existing muted small-label treatment (`Text.H6` with `foregroundMuted`) rather than a large, bold, black heading. A block needs a display-size heading only when it is the page's main task, not when it is one panel within a summary.
 - Keep a section title close to its content. Add a section description only when it changes how the user reads or acts on that content; do not use a sentence to restate the heading.
 - In repeated panels and rows, use one stable internal order. Do not alternate between title-status-description and title-description-status without a product reason.
 - Use muted text for secondary context, not to hide a necessary distinction between a label, value, and status.
@@ -172,7 +174,9 @@ Numbers are data, not body copy or decoration. Give each metric a clear, repeata
 - Put deltas, units, thresholds, and status on a separate supporting line or aligned metadata slot. Never concatenate a value, a status word, and an explanatory sentence into one text run.
 - A badge can communicate state or a bounded delta; it is not a substitute for the metric label or the value. Keep status badges secondary to the number they qualify.
 - Use one unit and timeframe per metric. Write the scope in the label or context rather than forcing readers to infer it from a nearby paragraph.
-- When multiple metrics need comparison, use a shared grid or table-like alignment. Do not make a distinct card for every number unless each metric is independently actionable.
+- For a project overview or analytics summary, metrics MUST use one compact horizontal strip, matching the `AggregationItem` composition in the existing users, tools, and sessions analytics panels. Keep every metric in one row with a shared secondary surface, `shrink-0` metric items, and horizontal overflow on narrow screens. Never use a responsive grid that wraps an overview metric strip onto a second row.
+- Do not place a `Card`, rounded border, or separate background behind each metric in a summary strip. The strip owns the surface; metrics are aligned label-value pairs inside it.
+- When multiple metrics need comparison outside a summary strip, use a shared table or aligned layout. Do not make a distinct card for every number unless each metric is independently actionable.
 - Before creating a route-local metric component, search for an existing metric, stats strip, analytics panel, table summary, or comparable V2 view. Extract a shared primitive only after the pattern is needed in more than one product area.
 
 Design complete states, not only the happy path. Account for loading, empty, error, permission-limited, disabled, long-content, and destructive-action states where relevant. An empty state explains what is absent, why it matters, and the next available action without becoming a marketing panel.
@@ -190,8 +194,10 @@ Review the implementation in context, at desktop and narrow widths, and compare 
 - Does every container have a distinct purpose, with no repeated parent-and-child border treatment?
 - Is the page header flat on the canvas unless a specific persistent state requires a surfaced header?
 - Are clickable repeated items rendered as rows with separators and interaction states rather than cards inside a card?
+- Does a project title with a description use the local `SectionHeader`, with only the page title using its `xl` variant?
+- Are supporting block labels small and muted rather than large, bold display headings?
 - Are labels, values, statuses, and descriptions visibly separated and never rendered as a run-on text line?
-- Do metrics use a consistent label-value-context order with units, timeframe, and state easy to scan?
+- Do metrics use a consistent label-value-context order in one compact, non-wrapping strip rather than a grid of metric cards?
 - Does the chosen route, modal, or drawer match the task's size and need for context?
 - Are loading, empty, error, disabled, and destructive states handled where applicable?
 - Is the change legible and usable with keyboard navigation and in both themes?

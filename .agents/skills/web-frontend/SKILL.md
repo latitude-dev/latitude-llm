@@ -13,6 +13,8 @@ Before designing or editing any user-facing UI, read the root [`design.md`](../.
 
 Treat `packages/ui/src/components/`, `packages/ui/src/tokens/`, the live `apps/design-system` inventory, and adjacent `apps/web` routes as the implementation source of truth. Search for an existing component and a comparable in-product pattern before creating a component, introducing custom styling, or adding a new token. Follow `design.md` when deciding whether new UI is justified; follow this skill for the required React, TanStack, route, form, and component APIs.
 
+For project-route UI, use the local `-components/section-header.tsx` `SectionHeader` whenever a title has a description or badge; only use `variant="xl"` for the page-level title. For project overview metrics, first inspect the compact `AggregationItem` strips in the users, tools, and sessions analytics panels. Keep overview metrics in one horizontally scrollable row; do not create a grid or a separate `Card` for each metric.
+
 ## Existing V2 UI reference
 
 - Before building new UI, inspect comparable V2 routes and components in `apps/web/src/routes/` and `packages/ui/src/components/`.
