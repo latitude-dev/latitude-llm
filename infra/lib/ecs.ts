@@ -476,6 +476,7 @@ function createTaskDefinition(
           { name: "DD_ENV", value: config.name },
           { name: "DD_SERVICE", value: serviceConfig.name },
           { name: "LAT_OBSERVABILITY_ENVIRONMENT", value: config.name },
+          { name: "LAT_LOG_LEVEL", value: "warn" },
           { name: "DD_DOGSTATSD_HOST", value: "localhost" },
           { name: "DD_DOGSTATSD_PORT", value: "8125" },
           { name: "DD_AGENT_HOST", value: "localhost" },
@@ -671,19 +672,14 @@ function createTaskDefinition(
             { name: "DD_OTLP_CONFIG_TRACES_ENABLED", value: "true" },
             { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT", value: "0.0.0.0:4318" },
             { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT", value: "0.0.0.0:4317" },
-            { name: "DD_LOG_LEVEL", value: "info" },
+            { name: "DD_LOG_LEVEL", value: "error" },
           ],
           secrets: [
             { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },
             { name: "DD_SITE", valueFrom: datadogSiteArn },
           ],
           logConfiguration: {
-            logDriver: "awslogs",
-            options: {
-              "awslogs-group": `/ecs/${name}/datadog-agent`,
-              "awslogs-region": config.region,
-              "awslogs-stream-prefix": "datadog-agent",
-            },
+            logDriver: "none",
           },
           healthCheck: {
             command: ["CMD-SHELL", "agent health || exit 1"],

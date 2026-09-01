@@ -1,5 +1,5 @@
 import { context, trace } from "@opentelemetry/api"
-import { getEnvironment, getServiceName } from "./config.ts"
+import { getEnvironment, getServiceName, isLogLevelEnabled } from "./config.ts"
 import type { LogLevel, ObservabilityState } from "./types.ts"
 
 const getTraceContext = () => {
@@ -54,6 +54,10 @@ const stringifyValue = (value: unknown): string => {
 }
 
 export const emitLog = (state: ObservabilityState, level: LogLevel, scope: string, args: unknown[]) => {
+  if (!isLogLevelEnabled(level)) {
+    return
+  }
+
   const environment = state.environment || getEnvironment()
   const service = getServiceName(state, scope)
   const values = args.map(toSerializable)

@@ -1,4 +1,10 @@
-import type { ObservabilityState, TracesConfig } from "./types.ts"
+import type { LogLevel, ObservabilityState, TracesConfig } from "./types.ts"
+
+const LOG_LEVEL_RANK: Record<LogLevel, number> = {
+  error: 0,
+  warn: 1,
+  info: 2,
+}
 
 const parseBooleanEnv = (value: string | undefined, fallback: boolean): boolean => {
   if (value === undefined || value.length === 0) {
@@ -44,6 +50,17 @@ const parseHeaders = (value: string | undefined): Record<string, string> => {
 }
 
 export const getEnvironment = () => process.env.LAT_OBSERVABILITY_ENVIRONMENT || process.env.NODE_ENV || "development"
+
+const getLogLevel = (): LogLevel => {
+  const value = process.env.LAT_LOG_LEVEL?.trim().toLowerCase()
+  if (value === "error" || value === "warn" || value === "info") {
+    return value
+  }
+  return "info"
+}
+
+export const isLogLevelEnabled = (level: LogLevel): boolean =>
+  LOG_LEVEL_RANK[level] <= LOG_LEVEL_RANK[getLogLevel()]
 
 export const isObservabilityEnabled = () => parseBooleanEnv(process.env.LAT_OBSERVABILITY_ENABLED, false)
 

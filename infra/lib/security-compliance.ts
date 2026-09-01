@@ -259,8 +259,6 @@ function createCloudTrailWithCloudWatch(name: string, config: EnvironmentConfig)
     {
       name: trailName,
       s3BucketName: bucket.bucket,
-      cloudWatchLogsGroupArn: pulumi.interpolate`${logGroup.arn}:*`,
-      cloudWatchLogsRoleArn: role.arn,
       includeGlobalServiceEvents: true,
       isMultiRegionTrail: true,
       enableLogFileValidation: true,

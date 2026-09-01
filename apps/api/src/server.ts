@@ -38,7 +38,12 @@ const startServer = async () => {
   const url = Effect.runSync(parseEnv("LAT_API_URL", "string", "http://localhost:3001"))
   const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
 
-  app.use(accessLogger((message) => logger.info(message)))
+  app.use(
+    accessLogger({
+      info: (message) => logger.info(message),
+      warn: (message) => logger.warn(message),
+    }),
+  )
 
   // Add Hono OpenTelemetry middleware
   app.use(otel())
