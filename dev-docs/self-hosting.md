@@ -62,8 +62,8 @@ The blessed default configuration, verified per tier. Defaults match Latitude Cl
 
 AI is never constructed at boot — each provider reads its key lazily and fails per-call with a tagged error, so **every service boots and core observability (trace ingest + viewing) works with zero AI keys.** Providers and models are selected with `LAT_AI_*` (per-feature generation overrides → global `LAT_AI_GENERATION_*` → built-in default; embeddings/reranking are global-only):
 
-- **Generation** → Amazon Bedrock by default; selectable across `amazon-bedrock` / `anthropic` / `openai` / `google` / `custom` (any OpenAI-compatible endpoint — the fully-OSS path via Ollama/vLLM/LM Studio).
-- **Embeddings** → Voyage AI by default; `voyage` / `openai` / `google` / `custom`. The model must emit the fixed **2048-dim** vectors (baked into the pgvector/ClickHouse schema). **The embedding model is a one-time, install-time choice** — Latitude never re-embeds existing data, so switching it on a live deployment breaks semantic search/clustering and is unsupported.
+- **Generation** → Amazon Bedrock by default; selectable across `amazon-bedrock` / `anthropic` / `openai` / `google` / `custom` (any OpenAI-compatible endpoint — the fully-OSS path via Ollama/vLLM/LM Studio) / `orcarouter` (the OrcaRouter gateway).
+- **Embeddings** → Voyage AI by default; `voyage` / `openai` / `google` / `custom` / `orcarouter`. The model must emit the fixed **2048-dim** vectors (baked into the pgvector/ClickHouse schema). **The embedding model is a one-time, install-time choice** — Latitude never re-embeds existing data, so switching it on a live deployment breaks semantic search/clustering and is unsupported.
 - **Reranking** → Voyage AI by default; `voyage` / `amazon-bedrock`. Optional; unavailable reranking degrades to hybrid-search order.
 
 See [`./ai-generation-features.md`](./ai-generation-features.md) for the per-feature resolver and the configuration reference at `docs/deployment/configuration.mdx` for the full `LAT_*` matrix.
