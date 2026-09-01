@@ -90,13 +90,27 @@ Two distinct bounded reads sit over the observations table:
 `routeToDeepestClusterUseCase` is the single router used by live analysis (invoked from conversation intelligence's `analyze-session` path):
 
 1. Start at the roots: pgvector nearest-neighbour (`listNearestActive` with `parentClusterId = null`) returns the top `TAXONOMY_ASSIGN_TOPK` (10) active candidates.
-2. Gate with `decideClusterAssignment`: the fixed `TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD` (0.65) plus a softmax relative margin (`TAXONOMY_ASSIGN_RELATIVE_MARGIN`, 0.06) between top-1 and top-2. The margin measures ambiguity *between* candidates — a lone child passes it trivially by design.
+2. Gate with `decideClusterAssignment`: the fixed `TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD` (0.75) plus a softmax relative margin (`TAXONOMY_ASSIGN_RELATIVE_MARGIN`, 0.06) between top-1 and top-2. The margin measures ambiguity *between* candidates — a lone child passes it trivially by design. See [Calibrating the fit floor](#calibrating-the-fit-floor) for where 0.75 comes from and why the same constant is not the same test on every path.
 3. While a level clears the gates, descend into the winner's children. Descent into a node with a `split_link_threshold` raises the absolute gate to `max(absoluteGate, parent.split_link_threshold)` — the global gate is tuned for root coarseness and would otherwise walk into a tight subtree on marginal similarity.
 4. The observation lands on the **deepest node that cleared**; a child that fails the gate leaves the observation on the matched parent as residue.
 
 The router only decides placement. Applying it goes through two locked use-cases — `assignObservationToClusterUseCase` (new observation) and `replaceObservationInClusterUseCase` (re-analyzed session, projection changed) — under the per-cluster Redis lock (`org:${org}:taxonomy:cluster:${clusterId}`, TTL `TAXONOMY_CLUSTER_LOCK_TTL_SECONDS`). Both follow `merged_into_cluster_id` redirects and no-op when the locked re-read finds the cluster non-`active`.
 
 Known imprecision sources: ambiguous near-duplicate siblings parking observations one level up, and greedy single-path descent (beam width 1 — an observation never recovers into a different root's subtree). Both are corrected at the next rebuild, which re-derives the whole tree from the raw sample.
+
+### Calibrating the fit floor
+
+`TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD` is 0.75, raised from 0.65 in LAT-866. It is the one constant every assignment path reads, but **it is not the same test on every path**, and that distinction is easy to lose:
+
+- **Online routing applies it at depth 0.** `routeToDeepestClusterUseCase` begins its descent at `parent = null`, so an observation must clear the floor against a *top-level* centroid before any leaf is reachable; failing there returns `noise` immediately. Since the divisive build emits exactly one depth-0 root per project, the first gate is effectively "is this session close to the project's global centroid".
+- **Full-window reassignment applies it at a leaf.** `routeObservationsToLeaves` scores leaf centroids directly, with no root indirection.
+- **The build floors every `split_link_threshold` at it**, so raising the constant also lifts stored descent gates at read time.
+
+A leaf centroid sits closer to its own members than a root does, so the same number is a harsher gate online than in reassignment. Measured on production, the practical difference is small: the median cluster's centroid sits at 0.86 cosine (depth 3) to its root, and only 0.2% of depth-3 online assignments fall below 0.75 at the root, because reaching depth 3 already required clearing the root and each descent gate. Rejections concentrate at depth 0 (23.6% at 0.75), where the two tests coincide — sessions that never got past the root and were marginal there. Separating a loose root/admission gate from a strict leaf-fit floor is a real design question, deferred with per-cluster thresholds.
+
+**Where 0.75 comes from.** The previous 0.65 was too permissive nearly everywhere: across production clusters with ≥50 members, the per-cluster p10 of member-to-centroid similarity — how far a cluster's own weakest genuine member sits from it — has median 0.813, so 0.65 sat below the real floor of ~95% of clusters. 0.75 is deliberately *below* that median, because those floors span 0.671 (q05) to 0.977 (q95) and no flat value fits them all. Matching the median cluster (0.81) rejects 27.7% of online assignments and costs 2 of 11 well-measured projects more than half their assignments; 0.75 rejects 12.1% and costs no project that much. Bounding the collateral of being flat is what the value is for — per-cluster thresholds are the real fix, and that spread is the evidence for them.
+
+**Two limits on any measurement of this made from stored `assignment_confidence`.** It records the similarity at the *deepest accepted node*, not the root similarity the gate tests, so it understates online rejections; and centroids drift after assignment (online updates them incrementally, gardening rebuilds every ~6h), which was measured shifting similarities by up to ±0.07 on one project and leaves ~37% of a week's online rows pointing at already-retired clusters. Both are reasons to read the forward-looking coverage span (`taxonomy.gardenTaxonomyWorkflow.assignmentCoverage`) rather than to re-derive the floor from history — and never to re-derive it from birth confidences, which are the clustering's own output and therefore the best-fitting population by construction.
 
 ## Gardening: top-down divisive rebuild
 

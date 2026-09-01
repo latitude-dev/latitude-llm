@@ -165,6 +165,66 @@ export const buildQualitySpanAttributes = (
   }
 }
 
+/**
+ * What the fit floor costs, per garden run of the whole-project topic tree. Emitted
+ * for every MODE (unlike the adaptive events) but only for a global target: the
+ * window counts come from `taxonomy_observations`, which a view's assignments never
+ * touch, so emitting it for a view would tag the project's coverage with that view's
+ * id. Views have `TAXONOMY_LENS_COVERAGE_*`.
+ *
+ * `routedFullWindow` is the arm, and deliberately the plan's SHAPE rather than its
+ * mode — an enforced run that fell back to static also takes the sample-only path,
+ * and grouping it with adaptive would blend two different treatments:
+ *
+ * - `routedFullWindow:0` — sample-only. Only the online gate moved this project, and
+ *   only for sessions analyzed since the last pass, so coverage ramps down across the
+ *   trailing window as it turns over.
+ * - `routedFullWindow:1` — full-window routing. Both the online gate and the
+ *   reassignment floor moved it, and the whole window is re-gated every pass, so
+ *   coverage steps rather than ramps.
+ */
+export interface AssignmentCoverageMetrics {
+  readonly mode: string
+  /** The calibration that produced these counts, so a re-tune is separable from a traffic change. */
+  readonly fitFloor: number
+  readonly routedFullWindow: boolean
+  readonly windowTotal: number
+  readonly windowAssigned: number
+  readonly windowNoise: number
+  /** Assigned ÷ total over the live window. The headline coverage number. */
+  readonly assignedShare: number
+  /** This run's writes only, so a step is attributable to the pass that caused it. */
+  readonly observationsReassigned: number
+  readonly observationsRejected: number
+}
+
+export const assignmentCoverageFields = (scope: QualityTelemetryScope, metrics: AssignmentCoverageMetrics) => ({
+  organizationId: scope.organizationId,
+  projectId: scope.projectId,
+  customBehaviorId: scope.customBehaviorId,
+  facetId: scope.facetId,
+  ...metrics,
+})
+
+export const assignmentCoverageSpanAttributes = (
+  scope: QualityTelemetryScope,
+  metrics: AssignmentCoverageMetrics,
+): Record<string, string | number> => ({
+  "taxonomy.organizationId": scope.organizationId,
+  "taxonomy.projectId": scope.projectId,
+  "taxonomy.customBehaviorId": scope.customBehaviorId ?? "none",
+  "taxonomy.facetId": scope.facetId ?? "none",
+  "taxonomy.coverage.mode": metrics.mode,
+  "taxonomy.coverage.fitFloor": metrics.fitFloor,
+  "taxonomy.coverage.routedFullWindow": metrics.routedFullWindow ? 1 : 0,
+  "taxonomy.coverage.windowTotal": metrics.windowTotal,
+  "taxonomy.coverage.windowAssigned": metrics.windowAssigned,
+  "taxonomy.coverage.windowNoise": metrics.windowNoise,
+  "taxonomy.coverage.assignedShare": metrics.assignedShare,
+  "taxonomy.coverage.observationsReassigned": metrics.observationsReassigned,
+  "taxonomy.coverage.observationsRejected": metrics.observationsRejected,
+})
+
 export const nameQualityFields = (scope: QualityTelemetryScope, metrics: TaxonomyNameQualityMetrics) => ({
   organizationId: scope.organizationId,
   projectId: scope.projectId,

@@ -11,6 +11,12 @@
 #      emitted for EVERY garden run of every project regardless of mode. Run this
 #      BEFORE the Build 4 deploy, and before Builds 1-3 land, or their before/after
 #      has no "before".
+#   3. Assignment coverage (LAT-866) — the .assignmentCoverage span, also emitted
+#      for every garden run in every mode. Run this BEFORE the fit-floor deploy.
+#      The floor's cost is a coverage drop, so without this the change ships
+#      unmeasured; the exact pre-change baseline comes from ClickHouse instead
+#      (scripts/taxonomy/snapshot-assignment-baseline.ts), because the observation
+#      rows behind it expire on the 30-day retention horizon.
 #
 # Neither retention filters nor span metrics are retroactive, which is why the
 # ordering above matters. Each span name is load-bearing: the retention filter,
@@ -34,16 +40,30 @@ DD=https://api.datadoghq.eu/api/v2/apm/config
 Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.shadow'
 BUILD_Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.buildQuality'
 NAME_Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.nameQuality'
+COVERAGE_Q='service:workflows resource_name:taxonomy.gardenTaxonomyWorkflow.assignmentCoverage'
 # Also the keys this script converges on, so renaming one would leave the deployed
 # filter behind and create a duplicate.
 RETENTION_FILTER_NAME='Taxonomy adaptive shadow spans'
 QUALITY_RETENTION_FILTER_NAME='Taxonomy quality spans'
+COVERAGE_RETENTION_FILTER_NAME='Taxonomy assignment coverage spans'
 HDR=(-H "DD-API-KEY: ${DD_API_KEY}" -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" -H 'Content-Type: application/json')
 
 FAILED=0
 post() { # <url> <json>  — create; prints body + status; non-2xx records a failure
   local response status body
   response="$(curl -sS -X POST "$1" "${HDR[@]}" -d "$2" -w $'\n%{http_code}')"
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+  printf '%s\n-> HTTP %s\n' "${body}" "${status}"
+  case "${status}" in
+    2*) ;;
+    *) FAILED=$((FAILED + 1)) ;;
+  esac
+}
+
+put() { # <url> <json>  — replace; prints body + status; non-2xx records a failure
+  local response status body
+  response="$(curl -sS -X PUT "$1" "${HDR[@]}" -d "$2" -w $'\n%{http_code}')"
   status="${response##*$'\n'}"
   body="${response%$'\n'*}"
   printf '%s\n-> HTTP %s\n' "${body}" "${status}"
@@ -78,6 +98,28 @@ for f in json.load(sys.stdin).get("data", []):
     del "${DD}/retention-filters/${fid}"
   done
   post "${DD}/retention-filters" '{"data":{"type":"apm_retention_filter","attributes":{"name":"'"$1"'","filter_type":"spans-sampling-processor","filter":{"query":"'"$2"'"},"rate":1.0,"enabled":true}}}'
+}
+
+promote_retention_filters() { # <name...>  — move the named filters to the FRONT of the execution order
+  # Filters are evaluated top-down and the first match decides, so a broad
+  # `service:workflows` or catch-all filter sitting above ours samples the garden spans
+  # out before they are indexed — silently emptying the dashboards. Recreating a filter
+  # (which this script does on every run, by name) puts it back at the bottom with a
+  # NEW id, so ordering has to be re-asserted here or it is lost each run.
+  #
+  # The endpoint replaces the WHOLE order, so the payload must carry every filter that
+  # exists, not just ours. A stable sort keeps every filter we do not name in its
+  # current relative position, including Datadog's own intelligent retention filter.
+  local payload
+  payload="$(curl -sS "${DD}/retention-filters" "${HDR[@]}" | python3 -c '
+import sys, json
+names = sys.argv[1:]
+data = json.load(sys.stdin).get("data", [])
+rank = lambda f: names.index(f.get("attributes", {}).get("name")) if f.get("attributes", {}).get("name") in names else len(names)
+ordered = sorted(data, key=rank)
+print(json.dumps({"data": [{"id": f["id"], "type": "apm_retention_filter"} for f in ordered]}))
+' "$@")"
+  put "${DD}/retention-filters-execution-order" "${payload}"
 }
 
 echo "== retention filter (adaptive) =="
@@ -143,6 +185,42 @@ taxonomy.quality.cross_branch_duplicates|@taxonomy.quality.crossBranchDuplicateL
 taxonomy.quality.shared_sibling_word_share|@taxonomy.quality.sharedSiblingWordShare
 taxonomy.quality.near_duplicate_name_rate|@taxonomy.quality.nearDuplicateNameRate
 METRICS
+
+echo "== retention filter (assignment coverage) =="
+retention_filter "${COVERAGE_RETENTION_FILTER_NAME}" "${COVERAGE_Q}"
+
+# Grouped by the arm as well as the scope: `routed_full_window` separates the
+# projects the reassignment floor moved from the ones only the online gate moved,
+# which `mode` does NOT — an enforced run that fell back to static takes the
+# sample-only path and would otherwise be pooled with adaptive.
+COVERAGE_GRP='[{"path":"@taxonomy.projectId","tag_name":"project_id"},{"path":"@taxonomy.organizationId","tag_name":"organization_id"},{"path":"@taxonomy.coverage.routedFullWindow","tag_name":"routed_full_window"},{"path":"@taxonomy.coverage.fitFloor","tag_name":"fit_floor"}]'
+
+echo "== assignment coverage span metrics =="
+while IFS='|' read -r id path; do
+  [ -z "${id}" ] && continue
+  echo "-- ${id}"
+  del "${DD}/metrics/${id}"
+  post "${DD}/metrics" '{"data":{"type":"spans_metrics","id":"'"${id}"'","attributes":{"compute":{"aggregation_type":"distribution","include_percentiles":true,"path":"'"${path}"'"},"filter":{"query":"'"${COVERAGE_Q}"'"},"group_by":'"${COVERAGE_GRP}"'}}}'
+#
+# No `window_assigned` metric on purpose: it is exactly `sum(window_total) -
+# sum(window_noise)`, so generating it would pay for a third custom metric to carry
+# no extra information. The attribute is still on the span for Trace Explorer.
+# Datadog also rejected registering it ("Cannot register summary definition", HTTP
+# 500) while its identically-shaped siblings registered fine.
+done <<'METRICS'
+taxonomy.coverage.assigned_share|@taxonomy.coverage.assignedShare
+taxonomy.coverage.window_total|@taxonomy.coverage.windowTotal
+taxonomy.coverage.window_noise|@taxonomy.coverage.windowNoise
+taxonomy.coverage.observations_rejected|@taxonomy.coverage.observationsRejected
+taxonomy.coverage.observations_reassigned|@taxonomy.coverage.observationsReassigned
+METRICS
+
+# Last, so every filter this script owns already exists and carries its final id.
+echo "== retention filter execution order =="
+promote_retention_filters \
+  "${RETENTION_FILTER_NAME}" \
+  "${QUALITY_RETENTION_FILTER_NAME}" \
+  "${COVERAGE_RETENTION_FILTER_NAME}"
 
 echo "== retired shadow-comparison metrics =="
 # The paired static-vs-adaptive attributes are no longer emitted (LAT-774), so these
