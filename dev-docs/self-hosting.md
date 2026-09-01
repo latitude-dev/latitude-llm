@@ -67,4 +67,30 @@ AI is never constructed at boot — each provider reads its key lazily and fails
 - **Reranking** → Voyage AI by default; `voyage` / `amazon-bedrock`. Optional; unavailable reranking degrades to hybrid-search order.
 
 See [`./ai-generation-features.md`](./ai-generation-features.md) for the per-feature resolver and the configuration reference at `docs/deployment/configuration.mdx` for the full `LAT_*` matrix.
+
+## Anonymous deployment telemetry
+
+Self-hosted production installs send a best-effort **`oss_deployment_heartbeat`** event to Latitude's PostHog project when the API process starts. This is anonymous aggregate telemetry — not trace or customer data — used to understand OSS adoption (version mix, hostnames, Node runtime).
+
+**Defaults and opt-out:**
+
+- Enabled when `NODE_ENV=production` unless `LAT_OSS_TELEMETRY_ENABLED=false`. Development disables it by default.
+- A bundled write-only PostHog project key ships in `@platform/analytics-posthog` so operators need no extra configuration. Forks or staging variants can override with `LAT_OSS_TELEMETRY_POSTHOG_API_KEY` and `LAT_OSS_TELEMETRY_POSTHOG_HOST`.
+- Set `LAT_OSS_TELEMETRY_ENABLED=false` to opt out entirely.
+
+**What is sent:**
+
+- `deploymentId` — first 32 hex chars of `sha256(LAT_BETTER_AUTH_SECRET)`; stable per install, not reversible to the secret
+- `service` — `"api"` today (heartbeat runs from `apps/api` startup)
+- `version` — `LAT_IMAGE_TAG` when set, else Datadog version env vars (`DD_VERSION`, `DD_GIT_COMMIT_SHA`)
+- `webHost` — hostname parsed from `LAT_WEB_URL` when set
+- `nodeVersion`
+
+**Operational behavior:**
+
+- Redis dedupes at most one heartbeat per deployment per 24h (`oss-telemetry:heartbeat:<deploymentId>`). Redis failures fail open.
+- The entire path is wrapped in try/catch so telemetry errors never reject API startup.
+- `docker-stack.yml` injects `LAT_IMAGE_TAG` into app services so compose pulls report the pinned tag even when `.env.production` omits it.
+
+Implementation: `reportOssDeploymentHeartbeat` in `@platform/analytics-posthog`. Operator-facing env reference: [`docs/deployment/configuration.mdx`](../docs/deployment/configuration.mdx).
 </content>
