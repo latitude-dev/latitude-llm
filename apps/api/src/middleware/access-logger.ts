@@ -9,16 +9,26 @@ type AccessLog = {
 export const accessLogger = (log: AccessLog) => {
   return createMiddleware(async (c, next) => {
     const isHealth = c.req.method === "GET" && c.req.path === "/health"
-    const messages: string[] = []
-    await logger((message) => messages.push(message))(c, next)
+    let incoming: string | undefined
 
-    if (isHealth && c.res.ok) {
-      return
-    }
+    await logger((message) => {
+      if (incoming === undefined) {
+        incoming = message
+        if (!isHealth) {
+          log.info(message)
+        }
+        return
+      }
 
-    const write = c.res.ok ? log.info : log.warn
-    for (const message of messages) {
+      if (isHealth && c.res.ok) {
+        return
+      }
+
+      const write = c.res.ok ? log.info : log.warn
+      if (isHealth && incoming) {
+        write(incoming)
+      }
       write(message)
-    }
+    })(c, next)
   })
 }

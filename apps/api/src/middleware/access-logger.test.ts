@@ -53,15 +53,30 @@ describe("accessLogger", () => {
     expect(logs[1]?.message).toMatch(/\d+ms$/)
   })
 
-  it("logs failed requests other than GET /health at warn", async () => {
+  it("logs the incoming line at info and the completion line at warn for failed requests", async () => {
     const { app, logs } = createApp()
     app.get("/status", (c) => c.json({ status: "nope" }, 500))
 
     await app.request("/status")
 
     expect(logs).toHaveLength(2)
-    expect(logs[0]?.level).toBe("warn")
+    expect(logs[0]).toEqual({ level: "info", message: "<-- GET /status" })
     expect(logs[1]?.level).toBe("warn")
     expect(logs[1]?.message).toContain("500")
+  })
+
+  it("writes the incoming line before the handler finishes", async () => {
+    const { app, logs } = createApp()
+    let logsDuringHandler: { level: "info" | "warn"; message: string }[] = []
+    app.get("/slow", async (c) => {
+      logsDuringHandler = [...logs]
+      return c.json({ ok: true })
+    })
+
+    await app.request("/slow")
+
+    expect(logsDuringHandler).toEqual([{ level: "info", message: "<-- GET /slow" }])
+    expect(logs[1]?.level).toBe("info")
+    expect(logs[1]?.message).toContain("--> GET /slow")
   })
 })
