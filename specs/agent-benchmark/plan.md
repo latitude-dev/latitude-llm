@@ -314,8 +314,9 @@ already exercised elsewhere in the product.
   [`score.md`](score.md#eligible-sessions) and [`score.md`](score.md#the-window).
 - [ ] **P6-2** Implement all five window estimators by composing bulk session evidence. Do not add
   metric-specific scoring arithmetic.
-- [ ] **P6-3** Implement bootstrap intervals, the all-five-dimensions publication gate, the fixed
-  composite, optional policy cap, and scoring-version boundaries from [`score.md`](score.md).
+- [ ] **P6-3** Implement complete-session bootstrap intervals, boundary-aware endpoint intervals,
+  the all-five-dimensions publication gate, the fixed composite, optional policy cap, and
+  scoring-version boundaries from [`score.md`](score.md).
 - [ ] **P6-4** Implement dynamic attributed deficit, fix gain, residual, grouped causes, and bounded
   Shapley approximation from [`score.md`](score.md#dynamic-attribution-after-scoring).
 
@@ -347,7 +348,8 @@ already exercised elsewhere in the product.
 ### Exit gate
 
 - [ ] **P6-14** Pure tests cover every formula boundary, all-five publication, unavailable scores,
-  intervals, dynamic attribution closure, policy-cap separation, and scoring-version change.
+  zero-event endpoint intervals, dynamic attribution closure, policy-cap separation, and
+  scoring-version change.
 - [ ] **P6-15** Integration tests cover snapshot RLS, idempotency, queue payload scope, bulk evidence,
   rendering headline and history from frozen snapshot data, and dynamic current-cause queries.
 - [ ] **P6-16** End-to-end fixtures cover every metric, signal role, overlap case, missing-coverage

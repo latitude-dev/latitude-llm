@@ -139,6 +139,18 @@ The bootstrap repeats the entire dimension estimator, including inverse-probabil
 counterfactual prediction, and the reference-run transform. Model calibration uncertainty is sampled
 from its stored validation distribution.
 
+Empirical resampling is not the sole uncertainty method for binary endpoint dimensions. Reliability
+first computes a boundary-aware interval for the terminal-failure probability. Safety does the same
+for confirmed-harm probability. Uniformly examined populations use an exact binomial interval;
+non-uniform populations use a stratified profile-likelihood interval that preserves known selection
+probabilities. A propensity pattern that cannot support that interval leaves the dimension
+unmeasured.
+
+The endpoint interval remains non-degenerate when the window contains zero observed failures or zero
+observed harms. Its bounds pass through the monotone `p^20` or `(1 - q)^1000` transform in the
+opposite order where required. Composite bootstrap replicates draw the native endpoint probability
+from the fitted boundary-aware model instead of repeatedly resampling an all-zero outcome vector.
+
 The page also reports coverage facts that the interval cannot explain by itself:
 
 - eligible and readable session counts;
