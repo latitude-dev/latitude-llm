@@ -15,7 +15,7 @@ dependencies = [
     "opentelemetry-sdk==1.44.0",
     "opentelemetry-exporter-otlp-proto-http==1.44.0",
     "opentelemetry-semantic-conventions-ai==0.5.1",
-    "openinference-semantic-conventions==0.1.30",
+    "openinference-semantic-conventions==0.1.33",
     "opentelemetry-instrumentation-alephalpha==0.61.0",
     "opentelemetry-instrumentation-anthropic==0.61.0",
     "opentelemetry-instrumentation-bedrock==0.62.1",
@@ -50,15 +50,17 @@ dev = [
     "pyright==1.1.411",
     "ruff==0.16.4",
     "sh==2.4.0",
-    "openai==2.46.0",
+    "openai==3.3.1",
     # Host SDK for the openai-agents integration (example/tests only). The
     # instrumentor (openinference-instrumentation-openai-agents) is the runtime
     # dep; the agents SDK itself is the user's to install.
-    "openai-agents==0.15.1",
+    "openai-agents==0.21.0",
     # Note: 0.41.0 onwards made Prompt Caching generally available
     # which is not compatible with the instrumentation
     "anthropic==0.117.0",
-    "litellm[proxy]==1.98.0",
+    # LiteLLM is example-only and cannot share this group with openai 3.x:
+    # every published litellm still requires openai>=2.20.0,<3.0.0.
+    # Install it separately for examples (`uv add 'litellm>=1.88'`).
     # Pinned <2.9.0: openinference-instrumentation-google-genai imports the
     # google.genai._interactions module, which google-genai removed in 2.9.0.
     "google-genai==2.8.0",
