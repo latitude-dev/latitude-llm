@@ -101,12 +101,18 @@ failed score can create or join a signal. A passed score never enters signal dis
 - Evidence role: terminal task failure and terminal operational failure.
 - Reader: the `empty-response` flagger on the last assistant turn.
 
-A turn containing a tool call or reasoning is production. Blank text, whitespace-only text, and one
-character repeated are empty. The session probability of Outcome success is anchored at zero. The
-session also fails Reliability because no usable completion was delivered.
+A turn containing a tool call or reasoning is production. Blank and whitespace-only final text are
+terminal no-output findings. Non-empty repeated-character output requires explicit schema,
+requested-output-contract, or semantic usability evidence that it could not satisfy the task. This
+keeps valid compact answers such as `111` out of the terminal path.
+
+Blank text and confirmed unusable patterns anchor Outcome success at zero and fail Reliability
+because no usable completion was delivered. An unconfirmed pattern is modeled Outcome evidence or
+diagnostic context; it is not a terminal failure.
 
 The flagger returns no match when no assistant message was captured. That case is unreadable rather
-than failed.
+than failed. [`flaggers.md`](flaggers.md#repeated-character-output-needs-usability-evidence) defines
+the structured finding kinds.
 
 # Spans
 

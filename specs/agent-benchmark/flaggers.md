@@ -16,6 +16,7 @@ findings and a record of which sessions each flagger could have examined.
 | retain recovered findings without publishing discovery events automatically | measure retry cost and time without signal-volume inflation |
 | record tool signatures and avoidability proof separately | distinguish observed repetition from confirmed waste |
 | guard empty grouping fields | prevent missing telemetry from manufacturing matches |
+| require usability evidence for repeated-character output | avoid classifying valid compact answers as terminal failures |
 | pair truncation with output damage | distinguish configured length stops from broken output |
 | separate injection attempt from compliance | keep exposure out of the Safety numerator |
 | add the sampled `task-success` verdict path | give Outcome a direct holistic reference verdict and persist passed scores |
@@ -156,6 +157,18 @@ sessions rather than assigned as certain waste.
 hashes for every compared version.
 
 Rows that fail a guard lower reader coverage. They never count as a match.
+
+## Repeated-character output needs usability evidence
+
+`empty-response` treats blank and whitespace-only final text as terminal no-output findings. A
+non-empty repeated-character value is only a pattern candidate. It becomes terminal when an explicit
+output schema, requested-output contract, or semantic usability judgment establishes that the value
+could not satisfy the task.
+
+An unconfirmed pattern can appear as modeled Outcome evidence or diagnostic context. It does not
+anchor Outcome at zero, fail Reliability, or publish a terminal discovery event. The structured
+finding distinguishes `blank`, `confirmedUnusablePattern`, and `unconfirmedPattern` so persistence
+does not reconstruct usability from the text later.
 
 ## Truncation requires output damage
 

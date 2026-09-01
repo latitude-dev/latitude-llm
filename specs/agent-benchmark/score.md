@@ -334,7 +334,7 @@ The rate is explanatory context, not a second dimension score.
 
 A session fails operationally when it cannot produce a structurally usable completion because of:
 
-- no output;
+- confirmed no output or unusable output pattern;
 - an unreliable final finish with observable output damage;
 - a provider error from which the session did not recover;
 - a failed tool call after which the session made no successful progress;

@@ -87,7 +87,8 @@ does not display per-session dimension scores.
 ### Structured observations
 
 - [ ] **P2-1** Extend flagger detection results and score metadata with the structured fields in
-  [`flaggers.md`](flaggers.md#structured-findings).
+  [`flaggers.md`](flaggers.md#structured-findings), including confirmed versus unconfirmed
+  repeated-character output.
 - [ ] **P2-2** Surface tool finding kinds and both recovery meanings. Separate measurement
   persistence from signal-discovery publication for recovered incidents.
 - [ ] **P2-3** Give flagger observations stable identities across re-screening.
