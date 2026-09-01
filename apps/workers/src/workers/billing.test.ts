@@ -856,8 +856,8 @@ describe("billing runtime integration", () => {
      */
     const PRO_BASE_CENTS = PLAN_CONFIGS.pro.priceCents as number
     const SPENDING_LIMIT_CENTS = PRO_BASE_CENTS + 1
-    const PERIOD_START = new Date("2026-08-01T00:00:00.000Z")
-    const PERIOD_END = new Date("2026-09-01T00:00:00.000Z")
+    const PERIOD_START = BILLING_PERIOD_START
+    const PERIOD_END = BILLING_PERIOD_END
     const CONCURRENCY = 10
     const ACTION_COST = 1
 

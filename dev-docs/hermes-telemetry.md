@@ -4,6 +4,8 @@
 
 Sibling docs: [`pi-telemetry.md`](pi-telemetry.md), [`claude-code-telemetry.md`](claude-code-telemetry.md), [`spans.md`](spans.md) (attribute resolution, trace/session conversation assembly), [`memory-observability`](../specs/memory-observability.md) (the `gen_ai.memory.*` contract). Public page: [`docs/telemetry/hermes.md`](../docs/telemetry/hermes.md).
 
+Correlating this harness's spans with another one's — joining a parent's trace, or handing this trace to a child process — is the shared contract in [`trace-correlation.md`](trace-correlation.md).
+
 ## User install model
 
 Hermes discovers pip plugins through the `hermes_agent.plugins` entry point and calls the module's `register(ctx)`. Two traps worth knowing before debugging anyone's install:

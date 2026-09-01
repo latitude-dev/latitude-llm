@@ -31,6 +31,14 @@ from .messages import (
     system_instructions_from,
 )
 from .model import _Run, _Session, _Span, _StreamWatch, _Subagent
+from .propagation import (
+    MAX_INHERITED_TURNS,
+    ChildContext,
+    InheritedContext,
+    format_traceparent,
+    inherited_context,
+    inherited_session_id,
+)
 from .tools import resolve_tool_definitions
 from .util import _now_ms, _safe_json, _span_id, _trace_id, _trace_key
 
@@ -57,6 +65,7 @@ class _Builder:
         self._sessions: Dict[str, _Session] = {}
         self._subagents: Dict[str, _Subagent] = {}
         self._streams: Dict[Tuple[str, str], _StreamWatch] = {}
+        self._inherited_turns = 0
         self._lock = threading.Lock()
         self._stream_lock = threading.Lock()
 
@@ -432,6 +441,10 @@ class _Builder:
         task_id = str(kw.get("task_id") or "")
         turn_id = str(kw.get("turn_id") or "")
         link = self._subagents.get(session_id)
+        external = self._inherited_link_locked() if link is None else None
+        # Read on its own: past the join ceiling turns root their own traces but stay
+        # grouped by the session id the parent handed us.
+        inherited_session = "" if link else self._inherited_session_locked()
         if link is not None:
             # A delegated child belongs to the parent's session, so it carries the
             # parent's identity rather than minting one from `platform="subagent"`.
@@ -446,19 +459,21 @@ class _Builder:
         thread = threading.current_thread()
         is_background = thread.name.startswith(_REVIEW_THREAD_NAME)
 
+        trace_id = link.trace_id if link else (external.trace_id if external else _trace_id())
+        parent_span_id = link.parent_span_id if link else (external.parent_span_id if external else "")
         run = _Run(
             trace_key=key,
-            trace_id=link.trace_id if link else _trace_id(),
+            trace_id=trace_id,
             root=_Span(
-                trace_id=link.trace_id if link else "",
+                trace_id="",
                 span_id=_span_id(),
-                parent_span_id=link.parent_span_id if link else "",
+                parent_span_id=parent_span_id,
                 name="interaction",
                 start_ms=now,
             ),
             session=session,
             session_id=session_id,
-            reported_session_id=link.parent_session_id if link else session_id,
+            reported_session_id=(link.parent_session_id if link else (inherited_session or session_id)),
             task_id=task_id,
             turn_id=turn_id,
             subagent=link,
@@ -467,6 +482,12 @@ class _Builder:
         )
         run.root.trace_id = run.trace_id
         run.extra_metadata = _run_metadata(kw, session, link)
+        if inherited_session and inherited_session != session_id:
+            run.extra_metadata["hermes.session.id"] = session_id
+        if external:
+            self._inherited_turns += 1
+            run.extra_metadata["latitude.parent.trace_id"] = external.trace_id
+            run.extra_metadata["latitude.parent.span_id"] = external.parent_span_id
         if link:
             run.extra_tags.append(f"subagent:{link.child_role}")
 
@@ -547,6 +568,41 @@ class _Builder:
             session.memory_read_done = False
             session.context = None
             session.updated_at = time.time()
+
+    def _inherited_link_locked(self) -> Optional[InheritedContext]:
+        """The span this process was launched under, until the join ceiling is hit."""
+        if not _config().get("inherit_context"):
+            return None
+        if self._inherited_turns >= MAX_INHERITED_TURNS:
+            return None
+        return inherited_context()
+
+    def _inherited_session_locked(self) -> str:
+        """The session id this process was launched with, ceiling or not."""
+        if not _config().get("inherit_context"):
+            return ""
+        return inherited_session_id()
+
+    def child_context(self, **kw: Any) -> Optional[ChildContext]:
+        """Context for a subprocess spawned by the tool call `kw` describes.
+
+        Anchored on that tool's own span, so the child harness lands under the tool
+        invocation that launched it rather than beside it under the turn.
+        """
+        with self._lock:
+            run = self._runs.get(_run_key(kw))
+            if run is None:
+                return None
+            tool_call_id = str(kw.get("tool_call_id") or "")
+            span = run.open_tools.get(tool_call_id) if tool_call_id else None
+            if span is None:
+                span = next(reversed(list(run.open_tools.values())), None) if run.open_tools else None
+            anchor = span or run.root
+            return ChildContext(
+                traceparent=format_traceparent(run.trace_id, anchor.span_id),
+                session_id=run.reported_session_id,
+                project=str(_config().get("project") or ""),
+            )
 
     def _find_run_locked(self, session_id: str, turn_id: str) -> Optional[_Run]:
         candidates = [run for run in self._runs.values() if run.session_id == session_id]
