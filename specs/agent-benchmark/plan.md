@@ -40,9 +40,9 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
 
 ### Shared contracts
 
-- [ ] **P1-1** Add the shared dimension and evidence-role schemas defined in
+- [x] **P1-1** Add the shared dimension and evidence-role schemas defined in
   [`session-assessment.md`](session-assessment.md#shared-vocabulary) to `@domain/shared`.
-- [ ] **P1-2** Export the schemas through the browser-safe shared entry points used by Signals and
+- [x] **P1-2** Export the schemas through the browser-safe shared entry points used by Signals and
   the web app.
 
 ### Signal persistence and lifecycle
