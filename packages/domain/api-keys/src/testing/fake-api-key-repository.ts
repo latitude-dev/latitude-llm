@@ -1,7 +1,7 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import type { ApiKey } from "../entities/api-key.ts"
-import { touch as touchApiKey } from "../entities/api-key.ts"
+import { isActive, touch as touchApiKey } from "../entities/api-key.ts"
 import type { ApiKeyRepository } from "../ports/api-key-repository.ts"
 
 type ApiKeyRepositoryShape = (typeof ApiKeyRepository)["Service"]
@@ -35,7 +35,7 @@ export const createFakeApiKeyRepository = (overrides?: Partial<ApiKeyRepositoryS
       }),
 
     findByTokenHash: (tokenHash) => {
-      const apiKey = [...apiKeys.values()].find((k) => k.tokenHash === tokenHash)
+      const apiKey = [...apiKeys.values()].find((k) => k.tokenHash === tokenHash && isActive(k))
       if (!apiKey) return Effect.fail(new NotFoundError({ entity: "ApiKey", id: tokenHash }))
       return Effect.succeed(apiKey)
     },

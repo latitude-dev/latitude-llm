@@ -1,4 +1,4 @@
-import { ApiKeyCacheInvalidator, ApiKeyRepository } from "@domain/api-keys"
+import { ApiKeyCacheInvalidator, ApiKeyRepository, isActive } from "@domain/api-keys"
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import { OrganizationId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
@@ -150,7 +150,7 @@ export const validateApiKey = (
     const apiKeyRepository = yield* ApiKeyRepository
     const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
 
-    if (Option.isNone(apiKeyOption)) {
+    if (Option.isNone(apiKeyOption) || !isActive(apiKeyOption.value)) {
       yield* cacheApiKeyResult(redis, tokenHash, null, INVALID_KEY_TTL_SECONDS)
       yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
       return null

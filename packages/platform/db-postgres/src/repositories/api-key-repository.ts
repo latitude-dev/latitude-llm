@@ -124,7 +124,11 @@ export const ApiKeyRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const [result] = yield* sqlClient.query((db) =>
-            db.select().from(apiKeys).where(eq(apiKeys.tokenHash, tokenHash)).limit(1),
+            db
+              .select()
+              .from(apiKeys)
+              .where(and(eq(apiKeys.tokenHash, tokenHash), isNull(apiKeys.deletedAt)))
+              .limit(1),
           )
 
           if (!result) return yield* new NotFoundError({ entity: "ApiKey", id: tokenHash })

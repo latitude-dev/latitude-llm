@@ -82,6 +82,30 @@ describe("auth middleware dispatch", () => {
     expect(res.status).toBe(200)
   })
 
+  it<ApiTestContext>("rejects a revoked API-key bearer", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const token = generateApiKeyToken()
+    const { id } = await insertApiKey(database, tenant.organizationId, token)
+
+    const authorized = await app.fetch(
+      new Request("http://localhost/v1/api-keys", { headers: { Authorization: `Bearer ${token}` } }),
+    )
+    expect(authorized.status).toBe(200)
+
+    const revoked = await app.fetch(
+      new Request(`http://localhost/v1/api-keys/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    )
+    expect(revoked.status).toBe(204)
+
+    const afterRevoke = await app.fetch(
+      new Request("http://localhost/v1/api-keys", { headers: { Authorization: `Bearer ${token}` } }),
+    )
+    expect(afterRevoke.status).toBe(401)
+  })
+
   it<ApiTestContext>("rejects an unknown bearer (no API-key match, no OAuth match)", async ({ app, database }) => {
     await createTenantSetup(database)
 

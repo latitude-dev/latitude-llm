@@ -12,6 +12,7 @@ export class ApiKeyRepository extends Context.Service<
     save: (apiKey: ApiKey) => Effect.Effect<void, RepositoryError, SqlClient>
     delete: (id: ApiKeyIdType) => Effect.Effect<void, RepositoryError, SqlClient>
     touch: (id: ApiKeyIdType) => Effect.Effect<void, RepositoryError, SqlClient>
+    /** Resolves active keys only — a revoked (soft-deleted) key must fail with `NotFoundError`. */
     findByTokenHash: (tokenHash: string) => Effect.Effect<ApiKey, NotFoundError | RepositoryError, SqlClient>
     touchBatch: (ids: readonly ApiKeyIdType[]) => Effect.Effect<void, RepositoryError, SqlClient>
   }
