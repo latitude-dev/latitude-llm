@@ -13,9 +13,11 @@ import {
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-const STATE_DIR = join(homedir(), ".claude", "state", "latitude")
-const STATE_FILE = join(STATE_DIR, "state.json")
-const LOCK_FILE = join(STATE_DIR, "state.lock")
+// Overridable so a test never writes to — or locks — the real state a live session
+// is using. Read per call rather than captured, so a test can point it elsewhere.
+const stateDir = () => process.env.LATITUDE_CLAUDE_CODE_STATE_DIR || join(homedir(), ".claude", "state", "latitude")
+const stateFile = () => join(stateDir(), "state.json")
+const lockFile = () => join(stateDir(), "state.lock")
 const LOCK_TIMEOUT_MS = 2_000
 // A hook killed mid-run (e.g. by Claude Code's hook timeout) leaves its lock file
 // behind; anything older than this is treated as abandoned and broken.
@@ -56,8 +58,8 @@ export function stateKey(sessionId: string, transcriptPath: string): string {
 
 export function load(key: string): SessionState {
   try {
-    if (!existsSync(STATE_FILE)) return empty()
-    const raw = readFileSync(STATE_FILE, "utf-8")
+    if (!existsSync(stateFile())) return empty()
+    const raw = readFileSync(stateFile(), "utf-8")
     const all = JSON.parse(raw) as StateMap
     const entry = all[key]
     if (!entry) return empty()
@@ -84,51 +86,58 @@ export function save(key: string, state: SessionState): void {
     ensureDir()
     const all = readAll()
     all[key] = { ...state, updated: new Date().toISOString() }
-    const tmp = `${STATE_FILE}.tmp`
+    const tmp = `${stateFile()}.tmp`
     writeFileSync(tmp, JSON.stringify(all, null, 2), "utf-8")
-    renameSync(tmp, STATE_FILE)
+    renameSync(tmp, stateFile())
   } catch {
     // fail-open
   }
 }
 
-export async function withLock<T>(fn: () => Promise<T> | T): Promise<T | undefined> {
+export async function withLock<T>(fn: () => Promise<T> | T, onBusy?: () => void): Promise<T | undefined> {
   ensureDir()
   const deadline = Date.now() + LOCK_TIMEOUT_MS
   let fd: number | undefined
   while (Date.now() < deadline) {
     try {
-      fd = openSync(LOCK_FILE, "wx")
+      fd = openSync(lockFile(), "wx")
       break
     } catch {
       breakStaleLock()
       await sleep(50)
     }
   }
+  // Skip rather than proceed unlocked. Two hooks can run against one session at once
+  // — an async Stop worker still uploading when SessionEnd fires at quit — and a
+  // single POST may take 30s against this 2s wait. Running anyway would re-send the
+  // same deterministic spans before the offset advanced, and `traces_mv` is a
+  // per-insert GROUP BY with no dedup, so the trace rollups would inflate. The holder
+  // advances the offset; whatever this run would have shipped is picked up by the
+  // next hook, and an abandoned lock is broken by age.
+  if (fd === undefined) {
+    onBusy?.()
+    return undefined
+  }
   try {
     return await fn()
   } finally {
-    // Only release the lock we actually acquired — when the wait timed out and we
-    // proceeded anyway, the file belongs to another hook run still in flight.
-    if (fd !== undefined) {
-      try {
-        closeSync(fd)
-      } catch {
-        // ignore
-      }
-      try {
-        unlinkSync(LOCK_FILE)
-      } catch {
-        // already gone
-      }
+    try {
+      closeSync(fd)
+    } catch {
+      // ignore
+    }
+    try {
+      unlinkSync(lockFile())
+    } catch {
+      // already gone
     }
   }
 }
 
 function breakStaleLock(): void {
   try {
-    const age = Date.now() - statSync(LOCK_FILE).mtimeMs
-    if (age > LOCK_STALE_MS) unlinkSync(LOCK_FILE)
+    const age = Date.now() - statSync(lockFile()).mtimeMs
+    if (age > LOCK_STALE_MS) unlinkSync(lockFile())
   } catch {
     // lock vanished between the failed acquire and now — fine
   }
@@ -136,15 +145,15 @@ function breakStaleLock(): void {
 
 function readAll(): StateMap {
   try {
-    if (!existsSync(STATE_FILE)) return {}
-    return JSON.parse(readFileSync(STATE_FILE, "utf-8")) as StateMap
+    if (!existsSync(stateFile())) return {}
+    return JSON.parse(readFileSync(stateFile(), "utf-8")) as StateMap
   } catch {
     return {}
   }
 }
 
 function ensureDir(): void {
-  if (!existsSync(STATE_DIR)) mkdirSync(STATE_DIR, { recursive: true })
+  if (!existsSync(stateDir())) mkdirSync(stateDir(), { recursive: true })
 }
 
 function empty(): SessionState {
