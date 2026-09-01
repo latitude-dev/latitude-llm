@@ -430,6 +430,18 @@ export const CONSOLIDATION_MAX_LINEAGE_DEPTH = 10
  */
 export const CONSOLIDATION_THROTTLE_MS = 15 * 60 * 1000
 
+/**
+ * Leading-throttle window for `issues:reconcileConsolidation`, published from
+ * `SignalsConsolidated`.
+ *
+ * A window rather than a bare dedupe key: a bare key becomes a BullMQ `jobId`
+ * and failed jobs are retained, so a permanently failed reconciliation would
+ * shadow outbox redelivery and leave ClickHouse occurrence counts permanently
+ * short of Postgres. The marker expires instead, so the same merge event can
+ * retry.
+ */
+export const SIGNAL_RECONCILE_CONSOLIDATION_THROTTLE_MS = 10 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // Candidate expiry
 // ---------------------------------------------------------------------------
