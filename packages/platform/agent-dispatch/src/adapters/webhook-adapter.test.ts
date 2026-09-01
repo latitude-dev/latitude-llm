@@ -121,7 +121,9 @@ describe("createWebhookAdapter", () => {
 
   it("discards metadata when the acknowledgement body exceeds the read limit", async () => {
     await expect(
-      dispatchWebhook(async () => makePinnedResponse(JSON.stringify({ externalRunId: "run-123" }) + "x".repeat(64 * 1024))),
+      dispatchWebhook(async () =>
+        makePinnedResponse(JSON.stringify({ externalRunId: "run-123" }) + "x".repeat(64 * 1024)),
+      ),
     ).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
   })
 

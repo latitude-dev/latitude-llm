@@ -31,10 +31,11 @@ describe("resolvePublicWebhookUrl", () => {
 
 describe("resolvePublicWebhookTarget", () => {
   it("returns the first public address to pin the connection", async () => {
-    await expect(resolvePublicWebhookTarget("https://hooks.example.com/run", async () => ["8.8.8.8", "1.1.1.1"])).resolves
-      .toEqual({
-        url: new URL("https://hooks.example.com/run"),
-        address: "8.8.8.8",
-      })
+    await expect(
+      resolvePublicWebhookTarget("https://hooks.example.com/run", async () => ["8.8.8.8", "1.1.1.1"]),
+    ).resolves.toEqual({
+      url: new URL("https://hooks.example.com/run"),
+      address: "8.8.8.8",
+    })
   })
 })
