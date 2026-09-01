@@ -4,7 +4,7 @@ import { type MemoryOperationSpan, SpanRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { MemoryBlob } from "../entities/memory-blob.ts"
 import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
-import type { MemoryChangeKind, MemoryEvent } from "../entities/memory-event.ts"
+import { compareMemoryEventOrder, type MemoryChangeKind, type MemoryEvent } from "../entities/memory-event.ts"
 import { memoryRecordBody, parseMemoryRecords } from "../entities/memory-record.ts"
 import { countTokens } from "../entities/tokenizer.ts"
 import { MemoryRepository } from "../ports/memory-repository.ts"
@@ -41,8 +41,8 @@ const needsPresentSeed = (span: MemoryOperationSpan): boolean =>
  * Materialize one settled trace's memory-operation spans into the ledger:
  * per mutated record write a content-addressed blob (dedup by sha256), a
  * ledger event, and a `memory_current` projection row; record reads and
- * store-lifecycle events for completeness. Spans arrive ordered by `end_time`
- * so "last-to-finish wins" ([D2]) holds within the trace.
+ * store-lifecycle events for completeness. Spans apply in `endTime`, then
+ * `startTime`, then `spanId` order so "last-to-finish wins" ([D2]) holds.
  *
  * A whole-store wipe ([D9]) writes a `remove` row into `memory_current` for
  * each of the store's live records, so the current-state view reflects the wipe
@@ -58,7 +58,8 @@ export const materializeTraceMemoryUseCase = Effect.fn("memories.materializeTrac
   const spanRepository = yield* SpanRepository
   const memoryRepository = yield* MemoryRepository
 
-  const spans = yield* spanRepository.listMemoryOperationSpansByTraceId({ organizationId, projectId, traceId })
+  const spans = [...(yield* spanRepository.listMemoryOperationSpansByTraceId({ organizationId, projectId, traceId }))]
+  spans.sort(compareMemoryEventOrder)
   if (spans.length === 0) {
     return { eventCount: 0, blobCount: 0, recordCount: 0 } satisfies MaterializeTraceMemoryResult
   }

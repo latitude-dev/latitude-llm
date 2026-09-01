@@ -251,6 +251,58 @@ describe("computeSessionMemorySummary", () => {
     expect(summary.total.tokensRemoved).toBeGreaterThan(0)
   })
 
+  it("nets out a record created then wiped at the same end_time even when wipe is listed first", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("1"),
+          operation: "delete_memory",
+          recordId: "",
+          startTime: at(1),
+          endTime: at(1),
+        }),
+        makeSpan({
+          spanId: spanId("9"),
+          recordsRaw: records({ id: "rec1", content: "a" }),
+          startTime: at(0),
+          endTime: at(1),
+        }),
+      ],
+      memory,
+    )
+
+    const summary = await summarize(memory, { sessionId: SessionId("sess1") })
+    expect(summary.records).toHaveLength(0)
+    expect(summary.total).toEqual({ readTokens: 0, tokensAdded: 0, tokensRemoved: 0, writeRecords: 0 })
+  })
+
+  it("counts a create after a same-end_time wipe even when create is listed first", async () => {
+    const memory = createFakeMemoryRepository()
+    await materialize(
+      [
+        makeSpan({
+          spanId: spanId("9"),
+          recordsRaw: records({ id: "rec1", content: "a" }),
+          startTime: at(1),
+          endTime: at(1),
+        }),
+        makeSpan({
+          spanId: spanId("1"),
+          operation: "delete_memory",
+          recordId: "",
+          startTime: at(0),
+          endTime: at(1),
+        }),
+      ],
+      memory,
+    )
+
+    const summary = await summarize(memory, { sessionId: SessionId("sess1") })
+    expect(summary.records).toHaveLength(1)
+    expect(summary.records[0]?.tokensAdded).toBeGreaterThan(0)
+  })
+
   it("restricts the summary to one trace when a trace id is given", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(

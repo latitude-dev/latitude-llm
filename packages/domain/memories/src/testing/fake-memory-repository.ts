@@ -2,7 +2,7 @@ import type { ExternalUserId } from "@domain/shared"
 import { Effect } from "effect"
 import type { MemoryBlob } from "../entities/memory-blob.ts"
 import type { MemoryCurrentEntry } from "../entities/memory-current.ts"
-import { MEMORY_MUTATING_CHANGE_KINDS, type MemoryEvent } from "../entities/memory-event.ts"
+import { compareMemoryEventOrder, MEMORY_MUTATING_CHANGE_KINDS, type MemoryEvent } from "../entities/memory-event.ts"
 import type { MemoryRecordVersion, MemoryStoreWipe } from "../entities/memory-snapshot.ts"
 import type { MemoryStoreListItem } from "../entities/memory-store.ts"
 import type { MemoryRepositoryShape } from "../ports/memory-repository.ts"
@@ -30,8 +30,9 @@ const toVersion = (entry: MemoryCurrentEntry | MemoryEvent): MemoryRecordVersion
 
 /**
  * In-memory `MemoryRepository` that faithfully mirrors the ClickHouse read
- * semantics (blob dedup, latest-by-`endTime` manifest, store-wipe times), so
- * reconstruct / materialize use-case tests run without chdb.
+ * semantics (blob dedup, latest-by-`endTime` manifest, store-wipe times,
+ * session events by `endTime`/`startTime`/`spanId`), so reconstruct /
+ * materialize use-case tests run without chdb.
  */
 export const createFakeMemoryRepository = (overrides?: Partial<MemoryRepositoryShape>) => {
   const events: MemoryEvent[] = []
@@ -108,7 +109,7 @@ export const createFakeMemoryRepository = (overrides?: Partial<MemoryRepositoryS
           if (traceId !== undefined && event.traceId !== traceId) continue
           deduped.set(`${event.spanId}\u0000${event.storeId}\u0000${event.recordId}`, event)
         }
-        return [...deduped.values()].sort((a, b) => a.endTime.getTime() - b.endTime.getTime())
+        return [...deduped.values()].sort(compareMemoryEventOrder)
       }),
     readRecordVersions: ({ organizationId, projectId, records, at }) =>
       Effect.sync(() => {

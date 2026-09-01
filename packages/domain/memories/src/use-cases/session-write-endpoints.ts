@@ -1,6 +1,6 @@
 import type { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
-import type { MemoryEvent } from "../entities/memory-event.ts"
+import { compareMemoryEventOrder, type MemoryEvent } from "../entities/memory-event.ts"
 import type { MemoryRecordVersion } from "../entities/memory-snapshot.ts"
 import { MemoryRepository } from "../ports/memory-repository.ts"
 import { reconstructSnapshotUseCase } from "./reconstruct-snapshot.ts"
@@ -128,6 +128,7 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
   }
 
   for (const [key, list] of mutatingByRecord) {
+    list.sort(compareMemoryEventOrder)
     const first = list[0]!
     const last = list[list.length - 1]!
     // chain is end_time ASC; the last version before the session's first touch is the "before".
@@ -136,9 +137,13 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
       if (version.endTime.getTime() < first.endTime.getTime()) before = version
     }
     const beforePresent = before !== undefined && before.changeKind !== "remove"
-    const wipeAt = wipeAtByStore.get(first.storeId)
-    const wipedAfter = wipeAt !== undefined && wipeAt.getTime() > last.endTime.getTime()
-    const afterPresent = wipedAfter ? false : last.changeKind !== "remove"
+    const storeWipedAfterLastTouch = events.some(
+      (event) =>
+        event.storeId === first.storeId &&
+        event.changeKind === "store_delete" &&
+        compareMemoryEventOrder(event, last) > 0,
+    )
+    const afterPresent = storeWipedAfterLastTouch ? false : last.changeKind !== "remove"
     addEndpoint({
       storeId: first.storeId,
       recordId: first.recordId,
@@ -148,7 +153,7 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
       afterTokens: afterPresent ? last.tokenCount : 0,
       afterPresent,
       // A wipe removal has no per-record version to deep-link; linking the pre-wipe change would mislead.
-      afterSpanId: wipedAfter ? null : last.spanId,
+      afterSpanId: storeWipedAfterLastTouch ? null : last.spanId,
     })
   }
 

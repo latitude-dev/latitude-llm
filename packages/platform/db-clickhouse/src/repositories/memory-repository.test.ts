@@ -182,7 +182,7 @@ describe("MemoryRepository", () => {
     ])
   })
 
-  it("reads a session's events (deduped, end_time ASC) and filters by trace", async () => {
+  it("reads a session's events (deduped, end_time then start_time ASC) and filters by trace", async () => {
     await withRepo((repo) =>
       repo.insertEvents([
         makeEvent({
@@ -255,6 +255,60 @@ describe("MemoryRepository", () => {
     )
     expect(events.map((e) => e.recordId)).toEqual(["recA", "recB"])
     expect(events.map((e) => e.traceId)).toEqual([traceN(1), traceN(2)])
+  })
+
+  it("orders same-end_time session events by start_time, not insert order or span_id", async () => {
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          recordId: "",
+          changeKind: "store_delete",
+          spanId: spanN(1),
+          sessionId: SessionId("sessA"),
+          startTime: at(1),
+          endTime: at(1),
+        }),
+        makeEvent({
+          recordId: "rec1",
+          changeKind: "add",
+          spanId: spanN(9),
+          sessionId: SessionId("sessA"),
+          startTime: at(0),
+          endTime: at(1),
+        }),
+      ]),
+    )
+
+    const createThenWipe = await withRepo((repo) =>
+      repo.readSessionMemoryEvents({ organizationId, projectId, sessionId: SessionId("sessA") }),
+    )
+    expect(createThenWipe.map((event) => event.changeKind)).toEqual(["add", "store_delete"])
+
+    await withRepo((repo) =>
+      repo.insertEvents([
+        makeEvent({
+          recordId: "rec2",
+          changeKind: "add",
+          spanId: spanN(8),
+          sessionId: SessionId("sessB"),
+          startTime: at(1),
+          endTime: at(1),
+        }),
+        makeEvent({
+          recordId: "",
+          changeKind: "store_delete",
+          spanId: spanN(2),
+          sessionId: SessionId("sessB"),
+          startTime: at(0),
+          endTime: at(1),
+        }),
+      ]),
+    )
+
+    const wipeThenCreate = await withRepo((repo) =>
+      repo.readSessionMemoryEvents({ organizationId, projectId, sessionId: SessionId("sessB") }),
+    )
+    expect(wipeThenCreate.map((event) => event.changeKind)).toEqual(["store_delete", "add"])
   })
 
   it("reads mutating version chains for the requested record set, honoring `at` and exact pairs", async () => {

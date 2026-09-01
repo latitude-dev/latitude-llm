@@ -836,7 +836,7 @@ export const SpanRepositoryLive = Layer.effect(
                         ORDER BY span_id, ingested_at DESC
                         LIMIT 1 BY span_id
                       )
-                      ORDER BY end_time ASC`,
+                      ORDER BY end_time ASC, start_time ASC, ingested_at ASC, span_id ASC`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
