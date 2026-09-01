@@ -59,6 +59,37 @@ Both record `latitude.parent.trace_id` and `latitude.parent.span_id` as metadata
 
 A harness launching another one always does so non-interactively. For Claude Code that means `claude -p`, where Claude Code exits before spawning an `async` Stop hook — so before this contract could work at all, the emitter had to register a synchronous `SessionEnd` hook as well. See [`claude-code-telemetry.md`](claude-code-telemetry.md). Any other harness we add to this contract needs the same question asked of it: does its exporter actually run when it is driven headlessly?
 
+## Carrying it without an environment
+
+Environment variables only reach a child that is a *process*. A second agent in a Cloudflare Durable Object has the same problem — its own isolate, no shared memory, no ambient OpenTelemetry context — but is reached over an RPC call, so there is nothing to inherit. `@latitude-data/telemetry` carries the same contract as an argument.
+
+`injectTraceContext(context?)` returns a carrier keyed by HTTP header names, so one object serves both as an RPC argument and as `fetch` headers:
+
+| Key | Counterpart |
+| --- | --- |
+| `traceparent` | `TRACEPARENT` |
+| `tracestate` | Vendor sampling state, preserved as-is so a host SDK's propagation survives the hop. |
+| `x-latitude-context` | `LATITUDE_SESSION_ID` and `LATITUDE_PROJECT`, plus the rest of `ContextOptions`, as JSON with non-Latin-1 characters escaped — an unescaped accent in metadata would throw when the carrier is spread into `fetch` headers. |
+
+`extractTraceContext()` and `withTraceContext()` reinstall it. Parsing follows the same W3C rules as the Python side, with the same failure posture: malformed means root.
+
+Two deliberate departures from the variables:
+
+- **No scoped second name.** `LATITUDE_TRACEPARENT` exists because a repo's environment may already carry an unrelated `TRACEPARENT`. An argument constructed at the call site cannot collide with anything, so there is nothing to opt out of.
+- **The capture `name` and the SDK's default `project` stay behind.** `name` labels one capture root, so carrying it would relabel every span the callee emits. The default project is per-instance configuration each side already has; an explicit `ContextOptions.project` *is* carried, and has to be set when the two agents are configured for different projects — otherwise this is exactly the silent split the `LATITUDE_PROJECT` row above warns about.
+
+The shape matches, anchored on the tool span for the same reason:
+
+```
+Orchestrator Durable Object
+└── ai.streamText (turn)
+     └── ai.toolCall draftItinerary      ← the causal boundary
+          └── ai.generateText            ← the planner's Durable Object
+               └── ai.generateText.doGenerate
+```
+
+The cap in [Bounds](#bounds) has no counterpart on this path. A carrier anchors on the span active at the call site, which is already scoped to one turn, so a long-lived Durable Object starts a new trace each turn instead of growing one forever.
+
 ## Bounds
 
 An inherited trace grows for as long as the child keeps running, and Latitude reloads the whole trace on every late span (`TracesIngested` → debounced per-trace `trace-end`, which calls `loadTraceForTraceEndUseCase`). An all-day interactive session would make that reload an ever-growing read.
@@ -78,4 +109,4 @@ Span ids on the owned-trace path are unchanged, which keeps a session that is mi
 
 ## Late and out-of-order arrival
 
-A child process routinely ships after the parent turn has closed, and sometimes before it. Traces are not immutable: late spans re-fire the debounced `trace-end` job for that trace id, which recomputes from ClickHouse. `packages/domain/spans/src/otlp/cross-harness-correlation.test.ts` covers both orders producing the same tree.
+A child process routinely ships after the parent turn has closed, and sometimes before it. Traces are not immutable: late spans re-fire the debounced `trace-end` job for that trace id, which recomputes from ClickHouse. `packages/domain/spans/src/otlp/cross-harness-correlation.test.ts` covers both orders producing the same tree, for the environment path and for the Durable Object one.

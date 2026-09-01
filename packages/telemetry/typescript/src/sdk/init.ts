@@ -159,7 +159,8 @@ export class Latitude {
       console.error("[Latitude] Failed to register instrumentations:", err)
     })
 
-    if (!shutdownHandlersRegistered) {
+    // Workers never delivers these signals and may not expose `process`; it flushes at work boundaries.
+    if (!shutdownHandlersRegistered && typeof process !== "undefined" && typeof process.once === "function") {
       process.once("SIGTERM", () => void this.handleShutdown())
       process.once("SIGINT", () => void this.handleShutdown())
       shutdownHandlersRegistered = true

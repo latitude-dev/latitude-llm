@@ -195,3 +195,89 @@ describe("cross-harness trace correlation", () => {
     expect(buildAgentGraph({ spans: graphInput(spans) }).roots.length).toBeGreaterThan(1)
   })
 })
+
+// Two Cloudflare Durable Objects, two isolates with no shared memory: the orchestrator hands the
+// active tool span over its RPC call and the planner emits against it from its own Latitude SDK.
+// Same contract as above, over an argument instead of the environment.
+const DO_TOOL_SPAN = "5555555555555555"
+const DO_PLANNER_SPAN = "6666666666666666"
+const DO_SESSION_ID = "cloudflare-session-1"
+const DO_TOOL_CALL_ID = "call_plan_01"
+
+const DO_TURN_SPAN = "7777777777777777"
+const DO_ORCHESTRATOR_MODEL_SPAN = "8888888888888888"
+const DO_PLANNER_MODEL_SPAN = "9999999999999999"
+
+const orchestratorBatch = batch("orchestrator-agent", "so.latitude.instrumentation.cloudflare-think", [
+  span({
+    spanId: DO_TURN_SPAN,
+    name: "ai.streamText",
+    attributes: [str("ai.operationId", "ai.streamText"), str("session.id", DO_SESSION_ID)],
+  }),
+  span({
+    spanId: DO_ORCHESTRATOR_MODEL_SPAN,
+    parentSpanId: DO_TURN_SPAN,
+    name: "ai.streamText.doStream",
+    attributes: [
+      str("ai.operationId", "ai.streamText.doStream"),
+      str("ai.model.provider", "anthropic.messages"),
+      str("ai.model.id", "claude-sonnet-4-5"),
+      str("session.id", DO_SESSION_ID),
+    ],
+  }),
+  span({
+    spanId: DO_TOOL_SPAN,
+    parentSpanId: DO_ORCHESTRATOR_MODEL_SPAN,
+    name: "ai.toolCall",
+    attributes: [
+      str("ai.operationId", "ai.toolCall"),
+      str("ai.toolCall.name", "plan"),
+      str("ai.toolCall.id", DO_TOOL_CALL_ID),
+      str("session.id", DO_SESSION_ID),
+    ],
+  }),
+])
+
+const plannerBatch = batch("planner-agent", "so.latitude.instrumentation.planner", [
+  span({
+    spanId: DO_PLANNER_SPAN,
+    parentSpanId: DO_TOOL_SPAN,
+    name: "ai.generateText",
+    attributes: [str("ai.operationId", "ai.generateText"), str("session.id", DO_SESSION_ID)],
+  }),
+  span({
+    spanId: DO_PLANNER_MODEL_SPAN,
+    parentSpanId: DO_PLANNER_SPAN,
+    name: "ai.generateText.doGenerate",
+    attributes: [
+      str("ai.operationId", "ai.generateText.doGenerate"),
+      str("ai.model.provider", "anthropic.messages"),
+      str("ai.model.id", "claude-sonnet-4-5"),
+      str("session.id", DO_SESSION_ID),
+    ],
+  }),
+])
+
+describe("Durable Object trace correlation", () => {
+  it("resolves the second agent as a subagent of the tool call that invoked it", () => {
+    const spans = ingest(orchestratorBatch, plannerBatch)
+    const graph = buildAgentGraph({ spans: graphInput(spans) })
+    const planner = flatten(graph.roots).find((n) => n.trigger.type === "tool" && n.trigger.toolName === "plan")
+
+    expect(new Set(spans.map((s) => s.traceId)).size).toBe(1)
+    expect(graph.roots).toHaveLength(1)
+    expect(planner?.kind).toBe("subagent")
+    expect(planner?.parentId).toBe(graph.roots[0]?.id)
+    expect(planner?.ownGenerationCount).toBe(1)
+    expect(planner?.trigger).toEqual({ type: "tool", toolName: "plan", toolCallId: DO_TOOL_CALL_ID })
+  })
+
+  it("merges the same way when the evicted object's batch arrives first", () => {
+    // Either object can be evicted mid-turn and flush after the other has already shipped.
+    const reversed = buildAgentGraph({ spans: graphInput(ingest(plannerBatch, orchestratorBatch)) })
+    const forward = buildAgentGraph({ spans: graphInput(ingest(orchestratorBatch, plannerBatch)) })
+
+    expect(reversed.roots).toHaveLength(1)
+    expect(flatten(reversed.roots).map((n) => n.trigger)).toEqual(flatten(forward.roots).map((n) => n.trigger))
+  })
+})
