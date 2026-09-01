@@ -240,11 +240,7 @@ const admitNewestTraces = (
   return { spans: admitted, traces, sessions: sessionKeys.size, truncated }
 }
 
-const alreadyBilledRootlessIds = (
-  organizationId: string,
-  projectId: string,
-  spans: readonly SpanDetail[],
-) =>
+const alreadyBilledRootlessIds = (organizationId: string, projectId: string, spans: readonly SpanDetail[]) =>
   Effect.gen(function* () {
     const rootlessIds = groupSpansByTrace(spans)
       .filter((group) => group.root === undefined)
@@ -453,9 +449,7 @@ export const processImportPageUseCase =
       const userTraceBudget = job.config.maxTraces - stats.tracesImported
       const admitBudget = traceBudget === null ? userTraceBudget : Math.min(userTraceBudget, traceBudget)
       const alreadyBilledTraceIds =
-        traceBudget === null
-          ? null
-          : yield* alreadyBilledRootlessIds(job.organizationId, job.projectId, normalized)
+        traceBudget === null ? null : yield* alreadyBilledRootlessIds(job.organizationId, job.projectId, normalized)
       const admitted = admitNewestTraces(normalized, admitBudget, alreadyBilledTraceIds)
       const spans = admitted.spans
       const tracesInPage = admitted.traces

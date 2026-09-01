@@ -13,8 +13,8 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
-import { SpanRepository } from "@domain/spans"
 import type { SpanDetail } from "@domain/spans"
+import { SpanRepository } from "@domain/spans"
 import { createFakeSpanRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
