@@ -9,6 +9,7 @@ import {
   EyeOffIcon,
   Fingerprint,
   FlaskConical,
+  HouseIcon,
   ImportIcon,
   Key,
   type LucideIcon,
@@ -44,12 +45,20 @@ interface ProjectSection {
 
 const PROJECT_SECTIONS: readonly ProjectSection[] = [
   {
+    key: "home",
+    label: "Home",
+    icon: HouseIcon,
+    group: "observe",
+    path: (slug) => `/projects/${slug}`,
+    isActive: (pathname, slug) => pathname === `/projects/${slug}` || pathname === `/projects/${slug}/`,
+  },
+  {
     key: "sessions",
     label: "Sessions",
     icon: MessagesSquareIcon,
     group: "observe",
-    path: (slug) => `/projects/${slug}`,
-    isActive: (pathname, slug) => pathname === `/projects/${slug}` || pathname === `/projects/${slug}/`,
+    path: (slug) => `/projects/${slug}/sessions`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/sessions`),
   },
   {
     key: "users",

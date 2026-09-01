@@ -59,6 +59,7 @@ import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/a
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
 import { Route as AuthenticatedProjectsProjectSlugTracesRouteImport } from './routes/_authenticated/projects/$projectSlug/traces'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
+import { Route as AuthenticatedProjectsProjectSlugSessionsRouteImport } from './routes/_authenticated/projects/$projectSlug/sessions'
 import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
 import { Route as AuthenticatedProjectsProjectSlugUsersIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/users/index'
 import { Route as AuthenticatedProjectsProjectSlugToolsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/tools/index'
@@ -378,6 +379,12 @@ const AuthenticatedProjectsProjectSlugSettingsRoute =
   AuthenticatedProjectsProjectSlugSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugSessionsRoute =
+  AuthenticatedProjectsProjectSlugSessionsRouteImport.update({
+    id: '/sessions',
+    path: '/sessions',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
 const AuthenticatedProjectsProjectSlugOnboardingRoute =
@@ -719,6 +726,7 @@ export interface FileRoutesByFullPath {
   '/backoffice/unpriced-spans/': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
+  '/projects/$projectSlug/sessions': typeof AuthenticatedProjectsProjectSlugSessionsRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
   '/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
@@ -813,6 +821,7 @@ export interface FileRoutesByTo {
   '/backoffice/unpriced-spans': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
+  '/projects/$projectSlug/sessions': typeof AuthenticatedProjectsProjectSlugSessionsRoute
   '/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
@@ -911,6 +920,7 @@ export interface FileRoutesById {
   '/backoffice/unpriced-spans/': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
+  '/_authenticated/projects/$projectSlug/sessions': typeof AuthenticatedProjectsProjectSlugSessionsRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
   '/_authenticated/projects/$projectSlug/traces': typeof AuthenticatedProjectsProjectSlugTracesRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
@@ -1010,6 +1020,7 @@ export interface FileRouteTypes {
     | '/backoffice/unpriced-spans/'
     | '/sandbox/$sandboxOrgId/'
     | '/projects/$projectSlug/onboarding'
+    | '/projects/$projectSlug/sessions'
     | '/projects/$projectSlug/settings'
     | '/projects/$projectSlug/traces'
     | '/api/auth/$provider/start'
@@ -1104,6 +1115,7 @@ export interface FileRouteTypes {
     | '/backoffice/unpriced-spans'
     | '/sandbox/$sandboxOrgId'
     | '/projects/$projectSlug/onboarding'
+    | '/projects/$projectSlug/sessions'
     | '/projects/$projectSlug/traces'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
@@ -1201,6 +1213,7 @@ export interface FileRouteTypes {
     | '/backoffice/unpriced-spans/'
     | '/sandbox/$sandboxOrgId/'
     | '/_authenticated/projects/$projectSlug/onboarding'
+    | '/_authenticated/projects/$projectSlug/sessions'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/_authenticated/projects/$projectSlug/traces'
     | '/api/auth/$provider/start'
@@ -1640,6 +1653,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/sessions': {
+      id: '/_authenticated/projects/$projectSlug/sessions'
+      path: '/sessions'
+      fullPath: '/projects/$projectSlug/sessions'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSessionsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/onboarding': {
       id: '/_authenticated/projects/$projectSlug/onboarding'
       path: '/onboarding'
@@ -2069,6 +2089,7 @@ const AuthenticatedProjectsProjectSlugSettingsRouteWithChildren =
 
 interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugOnboardingRoute: typeof AuthenticatedProjectsProjectSlugOnboardingRoute
+  AuthenticatedProjectsProjectSlugSessionsRoute: typeof AuthenticatedProjectsProjectSlugSessionsRoute
   AuthenticatedProjectsProjectSlugSettingsRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
   AuthenticatedProjectsProjectSlugTracesRoute: typeof AuthenticatedProjectsProjectSlugTracesRoute
   AuthenticatedProjectsProjectSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugIndexRoute
@@ -2104,6 +2125,8 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
   {
     AuthenticatedProjectsProjectSlugOnboardingRoute:
       AuthenticatedProjectsProjectSlugOnboardingRoute,
+    AuthenticatedProjectsProjectSlugSessionsRoute:
+      AuthenticatedProjectsProjectSlugSessionsRoute,
     AuthenticatedProjectsProjectSlugSettingsRoute:
       AuthenticatedProjectsProjectSlugSettingsRouteWithChildren,
     AuthenticatedProjectsProjectSlugTracesRoute:
