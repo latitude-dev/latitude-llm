@@ -1,183 +1,235 @@
 # Signals
 
-> Read [`README.md`](README.md) for the five dimensions, and the
-> [`signals.hit`](metrics.md#signalshit) entry in [`metrics.md`](metrics.md) for how a signal reaches
-> the score.
+> Read [`session-assessment.md`](session-assessment.md) for shared evidence vocabulary,
+> [`score.md`](score.md) for the dimension estimands, and [`metrics.md`](metrics.md) for the
+> deterministic observations used alongside signals.
 
-A signal is Latitude's existing unit for a recurring defect. It already has a name, a description,
-example sessions, a cost impact, a trend and a lifecycle. It is where a user goes to understand and
-fix a problem.
+A signal is Latitude's unit for a recurring defect. It has a name, description, example sessions,
+cost impact, trend, and lifecycle. The Agent Score uses signals as evidence about outcomes, terminal
+failure, resource waste, or confirmed harm.
 
-The score needs one thing a signal does not have today: it must know which dimensions it lowers.
+A signal has no point budget and its existence does not lower a score. The effect comes from the
+sessions it touches and the consequence measured on those sessions.
 
-## What changes
+## Scoring metadata
 
-| Change | Where |
+A promoted signal carries a `scoreEvidence` list. Each entry contains:
+
+```ts
+type SignalScoreEvidence =
+  | { scoreDimension: "outcome"; role: "taskOutcome" }
+  | {
+      scoreDimension: "reliability"
+      role: "completionOutcome" | "operationalIncident"
+    }
+  | { scoreDimension: "cost"; role: "spendEfficiency" }
+  | { scoreDimension: "speed"; role: "criticalPathEfficiency" }
+  | { scoreDimension: "safety"; role: "confirmedHarm" | "exposure" }
+```
+
+[`session-assessment.md`](session-assessment.md#shared-vocabulary) defines the shared discriminated
+contract. Signals use its defect-compatible subset. A recurring defect cannot declare
+`successfulDefense`.
+
+The dimension chips shown on a signal are the unique dimensions in this list. The list can contain
+several dimensions. List length is not a multiplier because the dimensions use different estimands
+and no role owns points.
+
+An empty list means the signal is diagnostic only. It still appears on Signals and can be promoted,
+assigned, resolved, and monitored. It does not silently route to Outcome.
+
+### Role semantics
+
+| Role | How occurrences are used |
 | --- | --- |
-| A signal carries a list of dimensions | the signal row, the entity schema, the public API shape |
-| Most signals get their list from a static table, with no model call | the promotion path |
-| The rest get it from the model call that already writes the name and description | `generate-signal-details.ts` |
-| The list is written once and never regenerated | the promotion path |
-| Existing promoted signals are backfilled | a one-off pass |
-| Signal metrics are scoped to promoted signals | `variant-metrics-repository.ts` |
+| `taskOutcome` | a feature in the calibrated per-session Task Success model |
+| `completionOutcome` | informs the usable or terminal completion result established per occurrence |
+| `operationalIncident` | records an incident whose terminal or recovered result is decided per occurrence |
+| `spendEfficiency` | candidate explanation for incremental spend after deterministic waste is accounted for |
+| `criticalPathEfficiency` | candidate explanation for incremental critical-path time after deterministic waste is accounted for |
+| `confirmedHarm` | enters Safety only when the finding confirms agent-produced harm |
+| `exposure` | context on Safety; never enters the failure numerator |
 
-Nothing about the signal lifecycle changes. Priority, assignee, resolve, ignore, mute and feedback
-all behave exactly as they do now.
+Dimension membership without a role is invalid. "This signal concerns Reliability" does not say
+whether it proves terminal failure or merely describes a recovered incident.
 
-## The dimension list
+## Product surfaces
 
-A signal carries zero or more of the five dimensions: `outcome`, `reliability`, `cost`, `speed` and
-`safety`.
+Signal detail shows dimension chips derived from `scoreEvidence`. The evidence role and measured
+effect appear in the impact section, with "effect not yet measured" when the role is known but the
+consequence is not.
 
-The list decides which dimension scores a session drops when that signal hits it. A signal in two
-dimensions lowers both, which makes it cost roughly twice as much as a signal in one. That is
-intended, and [`score.md`](score.md) explains why.
+The Signals list can filter and group by score dimension. A signal that informs several dimensions
+appears once with several chips. The session Signals tab shows the same chips. Session assessment
+attaches the signal to one chronological evidence item and applies its roles per dimension as defined
+in [`session-assessment.md`](session-assessment.md#signals).
 
-An empty list routes to Outcome. Outcome is the residual dimension by nature, and a real defect that
-escapes the score silently is worse than one in a slightly wide bucket. The page marks such a signal
-as unclassified, so nobody mistakes the fallback for a judgement.
+Benchmark evidence lists include only signals with at least one eligible occurrence in the selected
+window. Promotion, lifecycle state, or a historical occurrence does not create a current item.
 
-The list is capped at two dimensions. Without a cap, list length becomes a severity multiplier, and
-part of the list can come from a model. A model that assigns four dimensions to a plausible-sounding
-signal would make it the most expensive item in the score, ahead of a genuinely severe signal
-assigned one. The cap keeps the decision about severity out of the categorisation step.
+## Assignment at promotion
 
-## Assignment happens at promotion, and only once
+`scoreEvidence` is assigned when a signal is promoted and then latched. Signal details can be
+regenerated every eight hours, but scoring roles cannot move between dimensions without a deliberate
+reclassification and scoring-version boundary.
 
-The list is written when the signal is promoted, and it is never rewritten.
+Most flagger-derived signals use a static mapping:
 
-This matters because signal details are regenerated on a schedule. `refreshSignalDetailsUseCase`
-reruns generation every eight hours on every promoted signal, so name and description improve as the
-cluster grows. A dimension list that could change the same way would move points between dimensions
-with no change to the agent, and the score would move for a reason nobody could explain.
-
-The write-once pattern already exists on this row. `slug`, `origin` and `promotedAt` are all latched
-the same way.
-
-If a signal's members drift far enough that its dimensions are wrong, that is a clustering problem
-rather than a classification problem, and the fix belongs in consolidation.
-
-## Most signals need no model call
-
-Every flagger-authored score carries the flagger's slug in its metadata, and
-`ScoreRepository.listFlaggerSlugsBySignalId` already samples a signal's recent occurrences to find
-which flaggers produced them. When one slug dominates, the dimension list comes from a static table.
-
-| Flagger | Dimensions |
+| Flagger | Evidence roles |
 | --- | --- |
-| `tool-call-errors` | reliability, speed |
-| `output-schema-validation` | reliability, outcome |
-| `empty-response` | reliability, outcome |
-| `trashing` | cost, speed |
-| `low-cache-hit-rate` | cost |
-| `forgetting` | outcome, cost |
-| `bluffing` | outcome |
-| `incompletion` | outcome |
-| `laziness` | outcome |
-| `refusal` | outcome |
-| `frustration` | outcome |
-| `pii-leakage` | safety |
-| `jailbreaking` | safety |
-| `nsfw` | safety |
+| `task-success` | Outcome `taskOutcome` for failed scores only |
+| `tool-call-errors` | Reliability `operationalIncident`; Cost `spendEfficiency`; Speed `criticalPathEfficiency` |
+| `output-schema-validation` | Outcome `taskOutcome`; Reliability `completionOutcome` |
+| `empty-response` | Outcome `taskOutcome`; Reliability `completionOutcome` |
+| `trashing` | Cost `spendEfficiency`; Speed `criticalPathEfficiency` |
+| `low-cache-hit-rate` | Cost `spendEfficiency` |
+| `forgetting` | Outcome `taskOutcome`; Cost `spendEfficiency` |
+| `bluffing` | Outcome `taskOutcome` |
+| `incompletion` | Outcome `taskOutcome` |
+| `laziness` | Outcome `taskOutcome`; Speed `criticalPathEfficiency` when excess time is observed |
+| `refusal` | Outcome `taskOutcome` |
+| `frustration` | Outcome `taskOutcome` |
+| `pii-leakage` | Safety `confirmedHarm` only for assistant disclosure; Safety `exposure` for user-authored PII |
+| `jailbreaking` | Safety `confirmedHarm` for compliance; Safety `exposure` for attempts |
+| `nsfw` | Safety `exposure` unless an assistant-side policy explicitly classifies the output as harm |
 
-Two entries deserve a note.
+The condition on tool, finish, and safety findings is stored on the occurrence. A static signal role
+does not turn every occurrence into a terminal failure or confirmed harm.
 
-`forgetting` sits in Outcome and Cost. The user experiences it as having to repeat themselves, which
-is an outcome failure, and the repeated context costs tokens. Whether it also belongs in Speed is
-arguable and it is left out to respect the cap.
+Signals with no dominant flagger slug receive roles from the model call that already generates their
+name and description. The prompt defines the estimands and requires evidence for every role. The model
+may return an empty list. No extra generation is needed.
 
-`refusal` sits in Outcome rather than Safety. The flagger detects an **incorrect** refusal, meaning
-the assistant declined something it should have handled. A correct refusal is correct behaviour.
+## Which signals enter estimation
 
-`jailbreaking` and `nsfw` are marked as exposure. Their signals carry the Safety dimension so they
-appear on the Safety panel, but exposure alone does not deduct. The Safety section of
-[`score.md`](score.md) covers the distinction.
+The scoring job reads signals that are both:
 
-## The model handles the rest
+- promoted, so repeated evidence has passed the discovery threshold;
+- auto-discovered, so creating a user signal does not add scoring evidence.
 
-A signal with no dominant slug reaches the model. So does a signal whose origin is a human
-annotation, because there is no flagger slug to look up.
+It also excludes every score whose assigned signal is ignored. Ignore is the sole lifecycle
+exception in the first version: priority, assignment, resolved, muted, archived, and regressed do
+not affect eligibility. The predicate is centralized so a future reviewed-feedback policy can
+replace this exception without changing every query.
 
-The dimension list joins the schema in `generate-signal-details.ts`, which already produces the name
-and the description in one call. No extra request is needed. The prompt gives the model the five
-dimensions, the cap of two, and the clustered feedback it already receives.
+The score is removed from estimator features, verdict numerators, verdict denominators, signal
+occurrences, and attribution. Its screening decision remains available as an operational coverage
+record, but it cannot restore the excluded verdict through another read path.
 
-## Backfilling existing signals
+User-created signals remain visible as diagnostic context. Creating an annotation-origin cluster
+does not directly alter the score.
 
-The static table gives most of the backfill for free. Every flagger-derived signal classifies with
-zero model calls, so only the annotation-origin tail needs a pass.
+A signal that has no eligible occurrence in the selected window contributes no session evidence.
 
-The backfill writes the list once, the same as promotion does. A signal that already has a list is
-skipped.
+## Dynamic impact estimation
 
-## Which signals count
+The scoring job does not add signal occurrence rates. It estimates consequences in the dimension's
+native quantity.
 
-The score reads sessions carrying a score attached to a signal that satisfies two conditions.
+### Outcome
 
-**Promoted.** `promotedAt` is not null. Promotion is the evidence gate. The threshold scales with
-volume: it asks for a share of the window's sessions, with a floor of 2 and a ceiling of 15 distinct
-sessions over 30 days.
+Signal membership is one feature in the calibrated Task Success model. Signals are fit jointly with
+moments, final-output evidence, and other signal memberships. A newly promoted signal starts from a
+hierarchical prior based on its flagger and evidence role. Its effect moves toward its own observed
+association as sampled Task Success verdicts accumulate.
 
-**Auto-discovered.** `origin` is `system`. This matters more than it looks. A user-created signal is
-born promoted, so it skips the evidence gate entirely. Counting user signals would let a customer
-change their own score by creating one, which breaks both the same-formula-for-everyone requirement
-and the rule that no human action moves the score.
+The model reports an associated change in task-success probability. It does not call that change
+causal unless the signal definition itself establishes the endpoint.
 
-The volume-scaled threshold has a useful side effect. A large project promotes signals for defects
-touching a tiny share of traffic, so it accumulates more signals than a small one. Under a count that
-would make every large customer look worse. Under share of traffic affected, a signal touching 15
-sessions out of three million weighs almost nothing and sorts to the bottom of the cause list on its
-own.
+### Reliability
 
-## Signal metrics are scoped to promoted signals
+A signal occurrence enters the terminal-failure union only when occurrence metadata proves the
+session ended without recovery. A recovered provider or tool failure remains context and resource
+evidence. It does not receive a smaller Reliability deduction.
 
-`variant-metrics-repository.ts` currently scopes signal metrics with `signal_id != ''`, which includes
-candidates that were never promoted. Promotion state lives in Postgres, so the ClickHouse column
-cannot express it.
+Signals that describe a failure mode without proving terminal impact can help attribute observed
+terminal failures but cannot create new ones.
 
-Every read must pass the eligible signal id set explicitly. `listSignalWindowMetrics` already accepts
-a `signalIds` argument. `SignalRepository.list` already denies unpromoted signals by default.
+### Cost and Speed
 
-This is a bug today, not only a requirement of the score. `signals.affected_sessions_rate` overcounts
-in experiments for the same reason.
+The estimator first computes exact resource waste from deterministic metrics. It then compares
+signal-positive sessions with matched signal-negative sessions to estimate residual incremental spend
+or critical-path time.
 
-## What the score must not read
+Matching controls for behavior cluster, provider, model, input and output size, toolset, streaming
+mode, and other stable workload fields when available. Several signals are fit together. The session
+counterfactual is capped by actual spend and time.
 
-**Signal counts.** The number of signals, the number of distinct signals and the total occurrence
-count all rise when Latitude ships a better flagger and when traffic gets more varied. Neither is the
-agent getting worse.
+A weak comparison shrinks the signal effect toward zero and widens its interval. A signal without a
+credible clean comparison appears on the page with "effect not yet measured" rather than an invented
+number.
 
-**Lifecycle state.** Priority, assignee, resolved, unresolved, regressed, muted and archived are
-organizational state. A user who triages must not score worse than a user who ignores.
+### Safety
 
-The score gets this for free rather than by policy. `signals.hit` reads presence in the window, so a
-signal that fired in none of the window's sessions contributes nothing whatever its state says, and a
-signal that fired contributes the same whatever its state says.
+Only occurrences marked as confirmed agent-produced harm enter the Safety numerator. Exposure
+occurrences are shown beside the score. A model-assigned `confirmedHarm` role still requires an
+assistant-side confirmation field on each occurrence.
 
-**Escalation.** A signal escalating is the one state Latitude derives rather than a user setting, so
-it would be legitimate under the rules. A session set has no natural place for a multiplier, so
-escalation ranks the cause list instead of changing the score. Escalation is also already what the
-incident system notifies on.
+## Sampling and selection correction
 
-## One property the page must respect
+Operational flagger screening is not uniform. Hints bypass sampling, clean sessions are sampled less,
+and rate limiting can drop work. An occurrence rate over stored positives therefore is not a defect
+rate.
 
-The rate this metric measures is not the true defect rate, and it must never be published as one.
+Every screening decision stores:
 
-Flagger screening does not sample uniformly. A hint bypasses sampling entirely, so a session that
-already looks like trouble is examined at close to full rate. A session with no hint is sampled at the
-default rate, and a session carrying positive hints is deprioritized further. Hints include span
-errors, tool errors, tool loops, frustration and refusal patterns, and outliers on duration, time to
-first token, tokens and cost.
+- project, session, flagger slug, and timestamp;
+- selected or skipped;
+- deterministic, hinted, uniform-sample, ordinary-sample, or rate-limited reason;
+- inclusion probability;
+- finding kind and conditional fields when matched.
 
-The measured rate therefore rises faster than the true rate. A project full of errors and loops has
-nearly all of those sessions examined. A clean project has a tenth of its sessions examined.
+Task Success uses the same configurable sampling and hint path as other flaggers. Outcome corrects
+its verdicts with stored inclusion probabilities. Safety selects a complete detector suite per
+session. Other sampled observations use inverse-probability weights. A decision without a known
+inclusion probability is usable for an example or cause count, but not for a score.
 
-For a scored metric this is acceptable. It is monotone in the true rate, and every project runs
-identical machinery, so two projects are compared on the same curve.
+## Avoiding detector and cluster inflation
 
-As a published figure it is wrong. The page must show the point contribution and the affected session
-count, both of which are exactly true, and never a sentence of the form "12% of your sessions have
-issues".
+The following invariants apply:
 
-Storing screening decisions would remove this caveat by giving the metric a real denominator.
-[`flaggers.md`](flaggers.md) covers that change.
+- duplicating a detector over the same sessions does not change a dimension;
+- splitting one signal into equivalent child clusters does not multiply its effect;
+- merging correlated signals does not erase the underlying measured outcome, failure, money, time,
+  or harm;
+- adding a new signal cannot reduce the estimated importance of unrelated signals through budget
+  redistribution;
+- more traffic or better discovery does not lower the score unless it reveals a changed estimand.
+
+The joint estimator groups near-duplicate signals before attribution. The dimension score is based on
+the session estimand, not on the number or identity of clusters.
+
+## Promotion evidence and scoring evidence
+
+Sessions used to discover and promote a signal cannot be the only sessions used to estimate its
+effect. That would select the cluster for looking bad and then score the same evidence as an unbiased
+sample.
+
+The estimator uses post-promotion observations or cross-fitting. In cross-fitting, each session is
+scored with signal-effect parameters fit without that session's fold. These facts remain current
+estimator diagnostics and are not stored in daily score snapshots.
+
+## Backfill
+
+Existing promoted signals receive `scoreEvidence` once. The static flagger table handles signals with
+a dominant slug. The remaining annotation-origin and mixed-source signals use the existing details
+generation path, but user-created origin remains ineligible for direct scoring.
+
+Backfill does not invent historical screening probabilities. Old occurrences without measurable
+selection remain examples and counts until a full score window of usable decisions accumulates.
+
+## What the score never reads
+
+- number of signals or distinct clusters;
+- total raw occurrence count without a denominator;
+- signal priority or assignee;
+- resolved, muted, archived, or regressed state;
+- escalation as a score multiplier;
+- a model-assigned dimension without an evidence role;
+- exposure as confirmed harm;
+- an effect estimate trained only on the sessions that caused promotion.
+
+Escalation remains useful for sorting incidents. It does not change a dimension estimator.
+
+Ignored is intentionally different: scores assigned to ignored signals are excluded from current
+and future calculations. Existing daily snapshots are not rewritten.

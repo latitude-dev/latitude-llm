@@ -1,690 +1,406 @@
 # Metrics
 
-> Read [`README.md`](README.md) for the five rules and [`score.md`](score.md) for how a metric's
-> loss becomes a dimension score.
+> Read [`score.md`](score.md) for the dimension estimands and
+> [`session-assessment.md`](session-assessment.md) for how observations tell one session's story.
+> This catalogue defines the observations used by both.
 
-This is the catalogue. Every metric that may enter the score is listed with its ID, its shape, the
-dimensions it belongs to, how it is read, and what stops it firing on missing telemetry. The last
-section lists what stays out and why.
+A metric does not return a generic loss and has no point budget. It returns evidence in a native
+form: an endpoint, probability feature, amount of spend, duration on the critical path, or confirmed
+safety failure.
 
-## Contents
+## Metric contract
 
-- [How a metric qualifies](#how-a-metric-qualifies)
-- [Guards against missing telemetry](#guards-against-missing-telemetry)
-- [Fleet baselines](#fleet-baselines)
-- [Sessions](#sessions)
-- [Spans](#spans)
-- [Tools](#tools)
-- [Memory](#memory)
-- [Cost](#cost)
-- [Moments](#moments)
-- [Signals](#signals)
-- [Safety](#safety)
-- [What we do not measure](#what-we-do-not-measure)
+Every metric definition specifies:
 
-## How a metric qualifies
+| Field | Meaning |
+| --- | --- |
+| ID | stable identifier used in evidence, filters, and cause rows |
+| dimensions | estimands the observation can inform |
+| evidence role | endpoint, outcome feature, resource evidence, or confirmed harm |
+| reader | telemetry and grouping used to produce the observation |
+| counterfactual | what the same session would look like without the defect, where needed |
+| overlap rule | how the reader avoids duplicating evidence from another metric |
+| guard | missing or ambiguous telemetry that makes the observation unreadable |
+| coverage | population over which the observation can be trusted |
 
-Rule 4 forbids a tunable constant. Many useful measurements have a healthy non-zero value, so a
-plain threshold would penalize an agent that has nothing left to improve. Four forms remove the
-constant. A metric enters the score through one of them, or it stays out.
+The shared session-assessment resolver deduplicates metric observations before the daily job
+aggregates a dimension.
 
-**Repetition without progress.** The identical action, with the identical result, more than once. No
-agent of any kind benefits from doing the same fruitless thing twice. This form covers
-`tools.repeated_call`, `tools.thrashing`, `memory.repeated_zero_hit`, `memory.noop_rewrite` and
-`memory.reverted_write`.
+## Telemetry guards
 
-**Paired evidence.** A sequence where each half is normal and the combination is not. A handoff to a
-human is correct for many products. A handoff after the agent already had to be corrected is a
-failure of self-service. This form covers `moments.failed_self_service`.
+Missing telemetry is not agent behavior. Readers follow two common rules:
 
-**A measured ceiling.** Compute what this project could achieve given its own constraints, and read
-the gap. If achievable equals actual, the loss is 0. This form covers `cost.cache_gap` and
-`tools.dead_surface`.
+- A missing field cannot establish a failure. The session is unreadable for that observation.
+- Empty grouping fields are excluded. Hashing an empty argument, query, or content field would make
+  unrelated actions collide.
 
-**A fleet baseline.** Compare against percentiles measured across every project running the same
-provider and model. The line is measured rather than chosen. This form covers `spans.ttft` and
-`spans.throughput`.
+Readers also expose their readable count. A dimension can use the observations it has while reporting
+partial coverage, but it becomes unmeasured when the missing share crosses the versioned floor.
 
-A fifth form exists and is deferred. Comparing a metric inside one behavior cluster holds the
-workload constant, which would admit dispersion. Percentile spread across a whole project measures
-workload variety as much as instability, because a support agent legitimately handles both "what are
-your hours" and "debug my integration". Inside one cluster the work is roughly uniform, so spread
-means instability. This needs the cluster assignment to be reliable, so it is not in the first
-version.
+### Complete resource bases
 
-## Guards against missing telemetry
+Session assessment can show an exact observation from partially captured telemetry. A project-level
+Cost or Speed ratio is stricter:
 
-A metric must fire on what the agent did, not on what the customer failed to instrument. Two shapes
-of mistake produce that failure, and both have been found in candidate metrics.
+- Cost uses a session only when every spend-bearing component is priced or explicitly zero-priced.
+- Speed uses a session only when its critical path is reconstructable and every latency-bearing
+  segment required by the counterfactual is classified or has a frozen reference.
 
-**Absence read as evidence.** A field is missing and the metric treats the absence as misbehaviour.
-Missing instrumentation is then indistinguishable from the defect. One candidate metric was cut for
-this: a tool called but never declared usually means the definitions were not captured, not that the
-agent invented a tool name. The flagger code already guards the same case, with the comment
-"Successful execution proves availability; incomplete definedTools must not flag it".
+An incomplete session is excluded from that dimension's numerator and denominator. Its exact waste
+remains visible as evidence. The page reports the excluded workload and the resulting coverage so
+complete-case selection is not hidden.
 
-**Collision on empty fields.** A metric groups or hashes on a field that can be empty. When the
-field is empty every row collides, so the pattern appears in every session. Three metrics needed a
-guard for this, all of them named below.
+## Frozen latency references
 
-Every metric in the catalogue states its guard. A metric with no guard needs none.
-
-## Fleet baselines
-
-Some measurements have an unambiguous direction and no universal scale. Time to first token is the
-clearest case. Lower is always better, but 200 milliseconds, 2 seconds and 20 seconds are all
-correct for some agent somewhere.
-
-Latitude has the data to set the line without guessing. It holds spans from every project, so it can
-measure what time to first token actually looks like for the same provider and the same model.
+TTFT and generation throughput have a direction but no universal scale. Latitude compares them with
+frozen distributions for equivalent model calls.
 
 ### Cohort keys
 
-Time to first token is mostly explained by four things Latitude records. The baseline groups on all
-four.
-
-| Key | Why it matters |
+| Key | Reason |
 | --- | --- |
-| Provider | the same model served through Bedrock and through Anthropic behaves differently |
-| Model | a reasoning model and a small chat model are not comparable |
-| Input token bucket | a 200,000 token prompt starts slower than a 500 token prompt on the same model. Buckets step by powers of four: under 1k, 1k to 4k, 4k to 16k, 16k to 64k, over 64k |
-| Streaming | for a non-streaming call, time to first token collapses into total duration |
+| provider | the same model behaves differently across serving platforms |
+| model | reasoning and small chat models are not comparable |
+| input token bucket | prompt size changes startup latency; buckets are under 1k, 1k to 4k, 4k to 16k, 16k to 64k, and over 64k |
+| streaming | non-streaming TTFT collapses into total duration |
 
-Without the model key, a project running a reasoning model would lose points for a model choice
-rather than for anything it did. That is the failure the baseline exists to prevent.
+Output token bucket joins the throughput cohort because longer generations provide a more stable
+rate estimate.
 
-### The two control points
+The expected counterfactual is the cohort median, not a pass threshold. Excess duration is the
+positive difference between the observed call and that expectation. A call faster than the median
+has zero avoidable time; it does not earn credit that can erase waste elsewhere.
 
-A job computes the distribution per cohort and extracts two points.
+The distributions are frozen into the scoring version. A live fleet lookup would let other projects
+move a project's score. Frozen values also keep self-hosted scoring independent of Latitude's hosted
+fleet.
 
-| Point | Value | Meaning |
-| --- | --- | --- |
-| good | the fleet median | being typical for your model is fine, and scores full marks |
-| poor | the fleet 95th percentile | being in the slowest 5% costs the whole metric |
-
-A project's value maps between them.
-
-The good point has to sit at the median, because a score is not a ranking. Putting it at the 25th
-percentile would leave three quarters of all projects below full marks by construction, so the median
-project would lose roughly a fifth of the metric and an average agent could never score well on Speed
-no matter what it did. The control points encode acceptable against bad, not top quartile against
-bottom decile.
-
-The poor point sits at the 95th percentile rather than the 90th for the same reason in the other
-direction. Losing the whole metric should mean being genuinely unusual, not merely below average.
-
-### Frozen, not live
-
-The baseline is not queried at scoring time. The control points are frozen into the scoring version.
-This matters for three reasons.
-
-A live comparison would make the score depend on other projects' behaviour. A project could lose
-points because someone else got faster, with no change to itself. Rule 3 forbids comparison against
-the project's own past, and the same reasoning applies to the fleet's present.
-
-A live comparison also makes the fleet average 50 by construction, so no absolute reading is
-possible and general improvement moves nobody.
-
-Frozen points work when self-hosted. The numbers ship in the code, so an instance with no fleet
-scores identically. Latitude must stay cleanly self-hostable, so a metric that needs a network
-lookup to a central service cannot be load-bearing.
-
-When the fleet shifts materially, the points are recomputed, the scoring version is bumped, and the
-trend chart marks the discontinuity.
-
-### Gates and fallback
-
-A rarely used model has too few samples for a stable percentile. The existing cohort code sets the
-precedent at 30, 100 and 1000 samples for the 90th, 95th and 99th percentiles.
-
-The fallback chain is provider and model and token bucket, then provider and model, then not
-measured. It never falls back to a single line across all models, because that reintroduces the
-model-choice penalty the cohort keys exist to remove.
-
-### Reading across organizations
-
-Computing the baseline reads spans from every organization, which is a boundary this codebase
-guards. The job must therefore emit only the derived distribution: cohort keys, percentiles and a
-sample count. No per-organization data leaves its scope and no tenant is identifiable in the output.
-
----
+The fallback chain is provider, model, token bucket, and streaming mode; then provider and model;
+then unmeasured. It never falls back to one distribution across models. Existing percentile sample
+gates at 30, 100, and 1,000 observations remain the minimum evidence for published cohort summaries.
 
 # Sessions
 
-### sessions.no_output
+## `sessions.task_success`
 
-Session metric. Outcome, Reliability.
+- Dimension: Outcome.
+- Evidence role: holistic task-outcome verdict.
+- Reader: passed and failed scores from the sampled `task-success` flagger.
 
-The agent's last turn produced nothing a user could read. The `empty-response` flagger already
-detects this, and it is the only reader for this metric.
+The verdict concerns the complete session. Success means the agent resolved all material user goals
+that remained active at the end. Failure means at least one material goal failed, was abandoned, or
+remained unresolved. Indeterminate and not-applicable classifications are coverage facts, not
+scores.
 
-The flagger finds the last assistant message and checks it. A message holding a tool call or a
-reasoning part counts as production, so a turn that only calls a tool is not empty. Text that is
-blank, whitespace only, or one character repeated counts as empty.
+The reader corrects configurable, hint-aware sampling with the stored inclusion probability. A
+failed score can create or join a signal. A passed score never enters signal discovery.
 
-The flagger needs no guard, because it already has one. It returns no match when the conversation
-holds no assistant message at all, which is exactly what happens when a framework never captured
-assistant output. The metric therefore under-reports for such a project rather than reporting every
-session as broken.
+## `sessions.no_output`
 
----
+- Dimensions: Outcome, Reliability.
+- Evidence role: terminal task failure and terminal operational failure.
+- Reader: the `empty-response` flagger on the last assistant turn.
+
+A turn containing a tool call or reasoning is production. Blank text, whitespace-only text, and one
+character repeated are empty. The session probability of Outcome success is anchored at zero. The
+session also fails Reliability because no usable completion was delivered.
+
+The flagger returns no match when no assistant message was captured. That case is unreadable rather
+than failed.
 
 # Spans
 
-### spans.finish_ruined
+## `spans.finish_failure`
 
-Session metric. Outcome, Reliability.
+- Dimensions: Outcome, Reliability, Speed.
+- Evidence role: terminal endpoint on the final generation; resource evidence on an earlier
+  generation.
+- Reader: classified finish reason plus observable output damage where required.
 
-The session's last generation stopped for a reason other than the model finishing its answer or the
-caller stopping it. Truncation is the common case: the answer stops mid-sentence, the user sees
-something broken, and no error status is set anywhere.
+A shared classifier maps provider-native finish reasons to `clean`, `unreliable`, or `unmapped`.
+Clean includes normal stops, caller-forced stops, tool-call continuations, and explicit refusals.
+Whether a refusal was correct belongs to Outcome signal evidence. Unreliable includes truncation,
+provider content filters, guardrail intervention, and malformed function calls.
 
-A shared classifier sorts every finish reason into clean, unreliable or unmapped. Clean covers normal
-stops, caller-forced stops and tool-call continuations. A stop sequence, a cancelled request or a
-disconnected client is the caller setting a boundary, so the agent did what it was told. A tool-call
-finish is the normal shape of an agent loop. A refusal is the model working correctly and declining
-on purpose, so whether the refusal was right is an Outcome question the `refusal` flagger already
-answers. Unreliable covers truncation, provider content filters, guardrail interventions and
-malformed function calls. Unmapped covers anything else.
+Truncation requires two observations: an unreliable length-related finish reason and malformed or
+incomplete output from `output-schema-validation`. A deliberately short output limit can end with
+`length` while still returning a complete value. Content filters, guardrail interventions, and
+malformed calls require no second observation.
 
-Unmapped reasons feed confidence rather than the score. A value the SDK could not map says something
-about instrumentation quality and nothing about the agent.
+An unreliable final generation anchors Outcome at zero and creates a Reliability failure. The same
+condition on an earlier generation contributes the wasted generation's critical-path duration to
+Speed if the session recovered. Position is metadata on one metric, not a second metric or severity.
 
-Values arrive provider-native with only light normalization, so the classifier compares lowercased
-strings. Gemini emits uppercase, Anthropic uses `end_turn` where OpenAI uses `stop`, and Cohere uses
-`COMPLETE`. The classifier is one helper in `@domain/spans`, so the score, the field registry and the
-page all read the same list.
+Unmapped values lower coverage. A periodic fleet report keeps the classifier current.
 
-The guard is that truncation needs two signals. A classifier with a deliberately tight output limit
-hits `length` on nearly every call, and its output may be complete. So this metric marks a session
-ruined only when the finish reason is unreliable **and** the output shows the damage, which the
-`output-schema-validation` flagger detects as unclosed or malformed text. A content filter or a
-malformed function call needs no second signal, because neither has a legitimate configured cause.
+## `spans.provider_error`
 
-The finish reason list drifts. A new provider or a new value lands in unmapped, which is safe but
-silent. A periodic report of the top unmapped values across the fleet keeps the list current without
-anyone remembering to look.
+- Dimensions: Reliability, Cost, Speed.
+- Evidence role: terminal endpoint when unrecovered; resource evidence when recovered.
+- Reader: a named provider-error classifier over `error_type` on chat spans.
 
-### spans.finish_degraded
+Rate limiting, overload, service failure, and provider rejection qualify. Generic span error status
+does not, because SDKs disagree about whether handled exceptions set it.
 
-Session metric. Reliability, Speed.
+The reader pairs the error with later successful progress:
 
-The same condition on a generation that was not the session's last. The agent hit the problem and
-kept going, so the session is degraded rather than ruined. It cost an extra generation, which is why
-this sits in Speed as well.
+- no later successful generation or usable completion: terminal Reliability failure;
+- later success: retry spend and retry critical-path duration for Cost and Speed.
 
-Position decides which of the two metrics applies. Finish reasons sit on every chat span, and an
-agent loop has many.
+The finding carries `recovered`, the failed span index, the successful span index when present, cost,
+and critical-path duration. Recovery is factual metadata, not a score band.
 
-### spans.provider_error
+## `spans.ttft`
 
-Session metric. Reliability, Speed.
+- Dimension: Speed.
+- Evidence role: value-based critical-path excess.
+- Reader: time to first token on streaming chat spans.
 
-The provider rejected a call. Rate limiting, overload and service failure all qualify, read from the
-span's error type on a chat span.
+For each readable span:
 
-A retry that then succeeded still counts, at degraded rather than ruined. The run was unreliable
-even though it finished, and the retry cost time. A rejection the session never recovered from
-counts as ruined.
+```text
+excessTTFT = max(0, observedTTFT - frozenExpectedTTFT[cohort])
+```
 
-The guard is that this reads a named provider error class on a chat span. It does not read a span
-status count. A generic count of errored spans depends on how the customer's framework reports
-handled exceptions, and it mixes in tool failures that other metrics already measure.
+Only the portion on the session's critical path contributes. Calls without a usable cohort reference
+remain visible as raw latency but do not enter avoidable time.
 
-### spans.ttft
+## `spans.throughput`
 
-Baseline metric. Speed.
+- Dimension: Speed.
+- Evidence role: value-based critical-path excess.
+- Reader: output tokens and generation duration after first token.
 
-How long the model takes to start answering, compared against the fleet baseline for the same
-provider, model, prompt size and streaming mode.
+The frozen cohort supplies expected tokens per second. The counterfactual generation duration uses
+the session's observed output token count:
 
-Read the project's median time to first token per cohort, then map it between the cohort's good and
-poor control points.
+```text
+expectedDuration = outputTokens / expectedTokensPerSecond
+excessGenerationTime = max(0, observedGenerationDuration - expectedDuration)
+```
 
-This metric is not measured until the fleet aggregation job has run and the control points are
-frozen into the scoring version.
-
-### spans.throughput
-
-Baseline metric. Speed.
-
-How fast the model produces tokens once it has started, compared against the same cohort.
-
-The span table already computes `tokens_per_second` and `inter_token_latency_ns` as aliases, so no
-new arithmetic is needed. The same cohort keys, gates and fallback chain apply.
-
-Also not measured until the aggregation job has run.
-
----
+This compares the same produced output rather than rewarding short answers.
 
 # Tools
 
-### tools.call_failed
+## `tools.call_failed`
 
-Session metric. Reliability, Speed.
+- Dimensions: Reliability, Cost, Speed.
+- Evidence role: terminal endpoint when unrecovered; resource evidence when recovered.
+- Reader: error findings from `tool-call-errors`.
 
-A tool call failed and no later call succeeded. The `tool-call-errors` flagger is the reader.
+The flagger pairs tool calls with responses and excludes HTTP statuses the caller declared expected.
+A later successful call or other successful progress can recover the session even when it used a
+different tool. Reliability asks whether the agent completed, not whether one integration was flaky.
 
-The flagger walks tool call and response pairs in the message payload. It marks an error recovered
-when a later call succeeded, and then does not flag it. An agent that runs hundreds of tools hits
-transient failures constantly and the user never sees them.
+Recovered failures remain observable so their actual spend and critical-path duration can enter Cost
+and Speed. They do not open signal-discovery work automatically. [`flaggers.md`](flaggers.md) defines
+that separation.
 
-It also excludes HTTP statuses in a range the caller expects, so a tool that answers 404 for a
-missing record is not a defect.
+Attribution also records same-tool recovery. The session-wide marker answers whether the run
+completed; the tool-specific marker tells the user which integration needs work.
 
-Reading the flagger rather than the span status is deliberate. A span status read has none of that
-judgement, so it would flag every agent that retries.
+## `tools.structural_defect`
 
-### tools.structural_defect
+- Dimensions: Reliability, Cost, Speed.
+- Evidence role: terminal endpoint only when completion failed; otherwise resource evidence.
+- Reader: malformed, duplicate-id, and unknown-id findings from `tool-call-errors`.
 
-Session metric. Reliability, Speed.
+A call with a missing id or name, duplicate call id, or response referencing no known call qualifies.
+A tool absent from captured definitions does not. Missing definitions usually indicate incomplete
+instrumentation.
 
-The agent emitted a tool call the provider could not accept. Three cases qualify: a call with a
-missing or empty id or name, a duplicate call id, and a response referencing an id no call used.
+The unknown-id case is readable only when at least one tool call survived in the window. Input
+truncation can otherwise leave an orphan response after removing the original call.
 
-All three live in the message payload, so a span status cannot see them. All three are bugs in how
-the agent calls tools rather than transient failures, so none is ever marked recovered.
+If the session recovered, Cost and Speed receive only the measured correction work. If the defect
+prevented a usable completion, Reliability fails.
 
-The guard is that the flagger's fourth finding kind, a call to a tool absent from the declared
-toolset, is excluded from this metric. That case usually means the definitions were not captured
-rather than that the agent invented a name. The flagger already partly guards it, and this metric
-drops it entirely.
+## `tools.repeated_call`
 
-The unknown-id case carries its own guard in the flagger, which only flags when at least one tool
-call survived in the window. Input truncation can strip the assistant turn that made a call and
-leave an orphan response behind.
+- Dimensions: Cost, Speed.
+- Evidence role: exact redundant resource use.
+- Reader: repeated tool name, input hash, and output hash within one session.
 
-### tools.repeated_call
+The same arguments must produce the same result. Polling with changing output is necessary work.
+Calls with empty captured input or output are unreadable.
 
-Session metric. Cost, Speed.
+The first call belongs to the necessary counterfactual. Later identical calls contribute their
+attributable spend and critical-path duration. `tools.thrashing` can describe the same repetitions;
+the session counterfactual deduplicates them.
 
-The same tool ran more than once in a session with the same arguments and returned the same result.
-Group by session, tool name, a hash of the input, and a hash of the output.
+## `tools.thrashing`
 
-Comparing the output is required, not optional. Polling repeats arguments by design: an agent
-checking a job status five times is behaving correctly, and the point is that the answer changes. A
-call is waste only when it returned something already known.
+- Dimensions: Cost, Speed.
+- Evidence role: exact redundant resource use and a named loop cause.
+- Reader: three or more consecutive identical tool names, inputs, and outputs.
 
-The guard is that calls with an empty input are excluded. If arguments were never captured, every
-call to the same tool hashes alike and the metric would fire on every session that used one tool
-twice.
+This is the deterministic half of the `trashing` flagger. Tool dominance without identical results
+is only a screening hint for the LLM flagger and does not establish waste.
 
-### tools.thrashing
+Thrashing names the loop for attribution. It does not add resource use on top of repeated-call spans
+already classified as avoidable.
 
-Session metric. Cost, Speed.
+## `tools.dead_surface`
 
-The same tool ran three times consecutively with the same arguments and the same result. The
-deterministic half of the `trashing` flagger is the reader.
+- Dimension: Cost.
+- Evidence role: value-based avoidable input spend.
+- Reader: tool definitions and calls over the definition's observation period.
 
-Three identical invocations is the canonical hard-loop signal used across agent frameworks. The
-flagger currently compares tool name and arguments only, so it needs the output comparison and the
-empty-argument guard described for `tools.repeated_call`. Both changes are in
-[`flaggers.md`](flaggers.md).
+A definition qualifies when it has been sent since first observation and has never been called. Its
+avoidable spend is the priced input-token cost of serializing that definition on each model request:
 
-Dominance shape, meaning one tool taking most of the calls in a session, is not this metric and not
-any metric. A search agent legitimately calls search in most of its turns. That shape stays what it
-is today: a hint that routes the session to the LLM half of the same flagger for verification, whose
-verdict then reaches the score through a promoted signal.
-
-### tools.dead_surface
-
-Ratio metric. Cost.
-
-Tool definitions re-sent on every request and never called. Every unused definition costs money on
-every turn and makes tool selection harder.
-
-```
-loss = tools never called across the whole observation period / tools defined
+```text
+avoidableSpend = sum(definitionInputTokens * requestInputTokenPrice)
 ```
 
-The achievable value is the point of the observation period. A tool that went uncalled in one window
-may simply not have been needed that week, so incidental dead surface is excluded. Only definitions
-never called since they first appeared count.
+Definitions merely unused in the current score window do not qualify. The observation period avoids
+penalizing a legitimate tool that was not needed this week.
 
-The score uses the ratio. The page shows an estimated monthly cost derived from the definition
-payload size, labelled as an estimate, because a ratio is defensible in a formula and a money figure
-is what makes someone act.
-
-The definition shape needs no guard. Ingestion normalizes all three tool conventions into one flat
-form before the definitions reach storage, including the wrapped OpenAI shape, and it reads the
-schema from `parameters`, `inputSchema` or `input_schema`.
-
-One known false positive remains. A tool defined under one name and called under another, for
-example with an MCP namespace prefix on one side only, looks permanently dead. The rate of called
-names with no matching definition measures how often this happens, and it is reported as a confidence
-input for this metric.
-
----
+A called name with no matching definition reports a coverage warning because MCP namespace
+differences can make a used tool look dead.
 
 # Memory
 
-All three memory metrics use the repetition form, so none inspects what is stored. They apply only
-to sessions with memory activity.
+Memory metrics apply only to captured memory activity. Each identifies exact repeated work.
 
-### memory.repeated_zero_hit
+## `memory.repeated_zero_hit`
 
-Session metric. Cost, Speed.
+- Dimensions: Cost, Speed.
+- Evidence role: redundant resource use.
+- Reader: the same non-empty query repeated in one session with zero results every time.
 
-The same search query ran more than once in a session and returned nothing every time.
+The first search is necessary. Later searches contribute captured processing spend and critical-path
+duration. A single zero-hit search is healthy and does not score.
 
-A single search that finds nothing is healthy. An agent checking whether it already knows something,
-and correctly finding that it does not, is doing the right thing. Only the repetition is a defect:
-either the answer should have been recorded after the first search, or the second search should not
-have happened.
+## `memory.noop_rewrite`
 
-Grouping is on the query text alone. Nothing compares the query against memory contents, which was
-considered and rejected as too expensive.
+- Dimension: Cost.
+- Evidence role: redundant resource use.
+- Reader: a write whose non-empty content hash matches the record's prior hash.
 
-The guard is that searches with empty query text are excluded. Redaction or missing instrumentation
-would otherwise collapse every search into one group.
+The write's attributable processing cost is avoidable. Empty hashes are unreadable.
 
-### memory.noop_rewrite
+## `memory.reverted_write`
 
-Session metric. Cost.
+- Dimension: Cost.
+- Evidence role: redundant resource use.
+- Reader: a write restored to the record's prior non-empty content hash within the same session.
 
-A write whose content matched what the record already held. Writing the same bytes again is waste at
-any scale.
-
-Read by comparing the write's content hash against the record's previous hash.
-
-The guard is that writes with an empty content hash are excluded, for the same collision reason.
-
-### memory.reverted_write
-
-Session metric. Cost.
-
-A write that was undone back to the record's prior content within the same session. The work that
-produced it was wasted.
-
-The same empty-hash guard applies.
-
----
+The intermediate write and the work directly required to undo it are candidate avoidable spend. The
+session-level counterfactual prevents overlap with a no-op or repeated-call cause.
 
 # Cost
 
-### cost.cache_gap
+## `cost.cache_gap`
 
-Ratio metric. Cost.
+- Dimension: Cost.
+- Evidence role: value-based avoidable spend.
+- Reader: measured cache use and achievable cache use for the project's own request cadence.
 
-How much of the cache saving this traffic could have had, that it did not have.
+The achievable ceiling accounts for each model's documented cache lifetime and for how much
+cache-eligible input arrived soon enough behind a matching request. Traffic with no possible cache
+reuse has no gap.
 
+```text
+avoidableCachedTokens = max(0, achievableCachedTokens - measuredCachedTokens)
+avoidableSpend = avoidableCachedTokens * applicableTokenSaving
 ```
-loss = 1 - (measured hit rate / achievable hit rate)
-```
 
-The achievable rate is the highest hit rate this project's own request cadence could produce. It is
-derived from how much cache-eligible volume arrived close enough behind another call to have found a
-live entry, measured against each model's documented cache lifetime. The Cost dashboard already
-computes both figures, along with the share of tokens for which a ceiling could be computed at all.
-
-A project whose traffic is not cacheable has a low ceiling and a loss near zero. A model correctly
-running without caching is classified as such and contributes nothing. No threshold is involved
-anywhere, which is why this metric replaced the `low-cache-hit-rate` flagger as the reader for
-caching.
-
-The denominator is tokens belonging to models where a ceiling could be computed. That share is
-reported as a confidence input, because a model with no measurable cadence would otherwise have to
-count as either perfect or worthless, and both are inventions.
-
----
+The reader reports the share of priced tokens for which a ceiling could be computed. Missing models
+do not count as either fully cached or fully wasted.
 
 # Moments
 
-Conversation intelligence runs on every session that ends, with no sampling. All three metrics use
-analyzed sessions as their denominator.
+Conversation intelligence produces probabilistic Outcome evidence. It does not assign a fixed score
+deduction.
 
-### moments.strong_failure
+## `moments.strong_failure`
 
-Session metric. Outcome.
+- Dimension: Outcome.
+- Evidence role: strong negative task-success feature.
+- Reader: correction, repeated-information request, abandonment, or explicit frustration.
 
-The user told Latitude that the agent failed. Any one of four moment kinds is enough: the user
-corrected the agent, the agent re-asked for something already given, the user abandoned the session,
-or the user expressed frustration.
+These moments quote the user's next turn as evidence. The Outcome model learns their conditional
+failure probability from sampled Task Success verdicts. Multiple strong moments on one session
+remain one feature set rather than repeated deductions.
 
-This is stronger evidence than any judge, because the ground truth is the user's own next turn rather
-than a model's opinion.
+## `moments.failed_self_service`
 
-Moment confidence is persisted per label. The classifier already validated every label it stored, so
-no second confidence floor applies. That may need revisiting if false positives appear.
+- Dimension: Outcome.
+- Evidence role: paired negative task-success feature.
+- Reader: escalation to a human after a correction or frustration, ordered by message index.
 
-### moments.failed_self_service
+An intended handoff is not failure. The earlier negative moment establishes that self-service failed
+before the handoff.
 
-Session metric. Outcome.
+## `moments.weak_failure`
 
-The session was handed to a human after the agent had already gone wrong. Read as an escalation
-moment preceded by a correction or a frustration moment, ordered by message index.
+- Dimensions: Outcome, Speed.
+- Evidence role: probabilistic task-success feature and residual time attribution.
+- Reader: stalled or hesitant behavior.
 
-The pairing is what makes this fair. Many products are designed to hand off, and a handoff as the
-intended path is not a failure. A handoff after the agent had to be corrected is one.
-
-### moments.weak_failure
-
-Session metric. Outcome, Speed.
-
-The agent stalled or hesitated. The session is marked degraded rather than ruined, because the user
-may still have got what they came for.
-
-It sits in Speed as well because a stalled agent is one the user waited on.
-
----
-
-# Signals
-
-### signals.hit
-
-Session metric. All five dimensions.
-
-The session carried a score attached to a signal that was both promoted and auto-discovered. The
-signal's own dimension list decides which dimensions the session affects, which is why this metric
-appears in all five.
-
-Both conditions matter. Promotion is the evidence gate. Auto-discovered origin matters because a
-user-created signal is born promoted and skips that gate, so counting user signals would let a
-customer move their own score by creating one.
-
-Presence in the window is what counts, not existence. A project with a hundred old signals that fired
-in none of the window's sessions loses nothing for having them. That also settles triage by
-construction rather than by policy: resolving or ignoring a signal cannot change the score, because
-this metric never reads a signal's state.
-
-[`signals.md`](signals.md) covers how a signal gets its dimensions, and records one property of this
-metric that the page must respect: hints bypass sampling, so the measured rate rises faster than the
-true rate. That is acceptable for a scored metric and not acceptable as a published percentage.
-
----
+For Outcome, the calibrated model determines how much this changes task-success probability. For
+Speed, it can attribute excess critical-path time left unexplained after deterministic latency and
+retry readers. It never invents a fixed duration.
 
 # Safety
 
-### safety.confirmed_failure
+## `safety.confirmed_failure`
 
-Penalty metric. Safety.
+- Dimension: Safety.
+- Evidence role: confirmed agent-caused harm.
+- Reader: assistant-side PII disclosure or confirmed compliance with an injection.
 
-The agent produced or did something it should not have. Two cases qualify: the assistant revealed
-personal data it should not have surfaced, and the assistant complied with a prompt injection.
+Multiple findings on one session produce one failed safety session. The finding type remains on the
+cause list, but the Safety probability uses the union of harmed sessions.
 
-This metric does not produce a loss between 0 and 1 like the others. It deducts from a starting
-score of 100, once per distinct confirmed failure type rather than once per occurrence. The Safety
-section of [`score.md`](score.md) explains why.
+User-authored PII, injection attempts, and unsafe prompts are exposure. They are shown but do not
+enter the numerator.
 
-The second case cannot be read today. The `jailbreaking` flagger reports the attempt and the
-compliance in one verdict, so a hit does not distinguish an attack received from an attack that
-worked. Scoring it as it stands would penalize an agent for having hostile users. Separating the two
-needs flagger work, described in [`flaggers.md`](flaggers.md).
+# Signals
 
-Exposure is never scored on its own. Personal data arriving in a conversation, and injection attempts
-being received, are shown as counts for context.
+Each promoted signal is dynamic evidence with the roles and estimators defined in
+[`signals.md`](signals.md). Signal observations resolve at session level so cluster count and
+taxonomy cannot multiply the measured consequence.
 
----
+# Measurements kept outside the score
 
-# What we do not measure
+The page may show these values, but they do not estimate one of the five dimension quantities.
 
-Everything below could be computed and is deliberately left out of the score. Most of it is shown on
-the page, next to the number, with its trend and a link to the page that owns it.
+## Raw levels
 
-## Absolute values
+Total spend, cost per session, wall-clock duration, raw TTFT, token counts, and traffic volume remain
+context. Cost and Speed use them only inside normalized necessary-resource ratios.
 
-Cost per session and in total. Session duration at any percentile. Time to first token as a raw
-figure. Token counts. Session, trace and span volume. User counts.
+## Project-history comparisons
 
-Rule 2 excludes all of them. A coding agent that runs for ten minutes and costs a dollar per session
-is not worse than a chatbot that answers in two seconds for a fraction of a cent. Any threshold
-separating them would be a statement about one use case.
+Window-over-window drift, signal escalation, and regression state belong to monitors and trend
+charts. They do not enter the current-window score.
 
-Time to first token and generation speed do enter the score, but only through a fleet baseline that
-controls for provider and model. The raw figure never does.
+## Ambiguous healthy levels
 
-## Comparisons against the project's own past
+Zero-hit search share, general tool dominance, calls per offered tool, duplicate memory records, and
+uncalibrated dispersion can be healthy for some agents. Only the unambiguous repeated or
+counterfactual waste isolated by a metric enters the score.
 
-Window-over-window drift on any metric. Behavior cluster trend classification. Signal escalation
-scoring.
+## Generic span error counts
 
-Rule 3 excludes them, and the reasons are worth keeping written down. A project cloned from another
-starts with no baseline, so its drift metrics go unmeasured, its weights redistribute, and it scores
-higher than the original for behaving identically. A defect that was fixed and came back costs more
-the second time than the first, because a regression term fires on top of the defect. A project that
-degrades slowly never triggers drift, because its baseline keeps catching up.
+SDKs disagree about handled exceptions. Named provider errors and judged tool failures are used
+instead.
 
-None of this machinery is wasted. Monitors watch metrics against their own baselines and open
-incidents. The score's own daily history shows whether the agent improved, and it can only do that
-because drift is not inside the score. If it were, a drop could mean the agent got worse or could
-mean it was already bad and the baseline caught up, and nobody could tell which.
+## Human workflow state
 
-## Levels with a healthy value
+Signal priority, assignment, resolution, muting, archiving, and feedback do not describe agent
+behavior. Annotation volume is not itself a metric. Scores assigned to ignored signals are the
+explicit exclusion defined in [`signals.md`](signals.md); independent telemetry readers remain
+unchanged.
 
-Zero-hit search share. Dead memory token share. Cache hit rate read as a level rather than against
-its ceiling. Calls per offer. Dominance shape, meaning one tool taking most of a session's calls.
-Duplicate memory records.
+## Positive evidence without Task Success calibration
 
-Each has a non-zero value that a well-behaved agent produces, so scoring the level would cap that
-agent below 100 with no action available. A search agent calls search in most of its turns. A
-memory-using agent checks before writing. First turns cannot hit a cache.
-
-Where a defect could be isolated inside one of these, it appears in the catalogue as its own metric
-and the level stays out. Calls per offer has no such defect, because a high value means loops and a
-low value means dead surface, so it stays purely diagnostic.
-
-## Span error counts
-
-The error count on a trace or a session.
-
-Those spans can be failed tool calls, which `tools.call_failed` already measures with far more
-judgement. They can also be spans that never affected the agent at all. Some auto-instrumentation
-sets an error status on any caught exception, including one the framework handled cleanly, so the
-figure is not comparable between projects.
-
-The count keeps every other job it has. It still drives the session status field, the
-`sessions.error_rate` experiment metric and the Errors monitor dimension. The score does not read it.
-
-## A tool called but never declared
-
-The agent called a tool absent from the captured definitions.
-
-This usually means the definitions were not sent or not parsed, not that the agent invented a name.
-The flagger code already reaches the same conclusion for the case where the call succeeded.
-
-The measurement is still useful in one place. The rate of called names with no matching definition
-tells you how much to trust the defined tool surface, so it is reported as a confidence input for
-`tools.dead_surface`.
-
-## Dispersion
-
-Percentile ratios on duration, cost and tokens.
-
-Scale-free and a genuine function of the window, so rules 2 and 3 are satisfied. Across a whole
-project it measures workload variety as much as instability. It becomes admissible inside a behavior
-cluster, and it waits for that.
-
-## Counts that grow with detection or traffic
-
-Signal count. Distinct signals. Total occurrences. Affected trace and user counts as scored figures.
-
-A count rises when Latitude ships a better flagger and when a project's traffic gets more varied.
-Neither is the agent getting worse. Share of traffic affected does not have this property, which is
-why the catalogue uses it.
-
-Better detection does still lower every project's score. That is handled rather than avoided by the
-scoring version, which stamps every snapshot, marks the discontinuity on the trend chart, and comes
-with a published note on what changed.
-
-## Human actions and workflow state
-
-Priority. Assignee. Resolved, unresolved and regressed. Muted and archived. Signal feedback.
-
-Rule 5 and the invariance it protects. A user who triages must not score worse than a user who
-ignores. These change what the page shows and how it sorts. They never change the arithmetic.
-
-## Flagger configuration
-
-Muted, archived and disabled flaggers.
-
-Ignoring a signal archives its flagger, so occurrences stop by construction. That is Latitude
-stopping looking, not the defect going away. Confidence drops and the score holds.
-
-One uncomfortable corollary follows. Flaggers are switchable per project, so a customer can switch
-off part of their own measurement. Rule 5 handles it correctly, and it is a reason to keep
-`spans.finish_ruined` and `spans.provider_error` sourced from telemetry even where a flagger
-overlaps, because those cannot be turned off.
-
-## Sampled flagger output not routed through a signal
-
-Raw occurrence counts from the flaggers that call a model: incompletion, laziness, bluffing,
-forgetting, refusal and frustration.
-
-These sample and store only positive findings, so a raw count is not a rate over anything. There is
-no recorded denominator, because screening decisions are reduced to a log line and never stored. Such
-a flagger enters the score only through a promoted signal, where the promotion threshold has already
-demanded repeated evidence.
-
-## Flaggers that judge user-authored content
-
-Jailbreaking and NSFW, as they behave today.
-
-Both classify what arrived rather than what the agent produced, and the registry records this as
-`classifiesAssistantResponseOnly: false`. Scoring them would penalize an agent for having hostile
-users. They appear as exposure counts, which is a different claim: how many attempts arrived, and
-whether any were complied with.
-
-## Correct refusals
-
-The policy refusal moment, and the `refusal` finish reason.
-
-A model declining a request it should decline worked correctly. Whether a refusal was wrong is a
-separate question, and the `refusal` flagger already answers it.
-
-## Human annotations
-
-Annotation pass rate. Thumbs-down counts.
-
-The strongest evidence available and the least usable as a rate, because its coverage is whatever a
-person happened to review. A team that reviews more of its traffic would score worse. Annotations
-feed confidence and the cause list, never a metric.
-
-## Evaluation alignment
-
-The confusion matrix and agreement figures on generated evaluations.
-
-These measure how well a flagger or an evaluation matches a human reviewer. That is the detection
-system's quality, not the agent's.
-
-## Positive evidence
-
-Resolution and user satisfaction moments.
-
-Absence of a positive moment is not evidence of failure, so counting them as credit would penalize
-sessions that went quietly. They raise the confidence figure instead, which is the honest use:
-separating "we saw it go well" from "we saw nothing".
+Resolution and satisfaction moments may be Outcome features once sampled Task Success verdicts show
+how they relate to success. Their absence is not failure.
 
 ## Synthetic traffic
 
-Sessions carrying a simulation id.
-
-Simulations are test runs against curated cases. They belong to experiments and regression testing,
-not to a production score.
-
-## Recoverable zero-hit classification
-
-Deciding whether a zero-hit memory search would have matched an existing record.
-
-This would need an embedding comparison against live memory contents on every search. Ruled out on
-cost. The repetition form in `memory.repeated_zero_hit` catches the unambiguous part of the same idea
-without reading the store.
+Sessions with a simulation id belong to experiments and evaluations, not the production score.

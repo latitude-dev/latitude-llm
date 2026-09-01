@@ -1,205 +1,263 @@
 # The page
 
-> Read [`score.md`](score.md) for the arithmetic behind every figure here.
+> Read [`score.md`](score.md) for formulas, [`signals.md`](signals.md) for signal-effect language, and
+> [`session-assessment.md`](session-assessment.md) for the single-session destination behind causes.
 
-## What the page must do
+## Purpose
 
-The score is the headline. The list under it is the product.
+The page answers three questions:
 
-A user arrives asking whether their agent is good. They should leave knowing three things: how the
-agent is doing, what is costing them the most, and where to go to fix it. Every point the agent lost
-must trace to a named cause, and every cause must link to a page that already exists.
+1. How is the agent doing?
+2. What observed failures or waste explain the result?
+3. Where can the user inspect sessions and fix the underlying cause?
 
-The page fails if a user reads a dimension score and cannot tell what to do next. That is what
-happened to the first version of this design, which named five qualities with no home in the app.
+The score is the headline. Dimension meanings and causes carry the explanation. A metric name or
+generic point deduction is not enough.
 
-## Where it lives
+## Location
 
-First in the sidebar, in the Observe group, above Sessions.
+The page is first in the Observe group, above Sessions. It is project-scoped and uses immutable daily
+snapshots for the headline and history. Evidence and causes are resolved dynamically from the current
+selected window.
 
-The score answers the question a user opens Latitude with. Putting it anywhere else guarantees it is
-the page nobody visits, which would make any complaint about added complexity true by construction.
+The headline uses the current UTC date's snapshot. If that snapshot was not published, the current
+Agent Score is unavailable; the page never substitutes an older score. Older snapshots remain in the
+trend.
 
-## Two levels
+## Level one
 
-Level one is the score with its five dimension scores. Level two is the ranked causes under each
-dimension.
+The header contains:
 
-Nothing else. A third level of nesting would hide the causes, and the causes are the reason the page
-exists.
+- Agent Score and 95% interval;
+- snapshot date;
+- selected window and eligible-session count;
+- scoring version;
+- any policy cap;
+- raw cost per session and TTFT as context, clearly labelled as not scored directly.
 
-### Level one
+The five dimension cards show the number, interval, meaning, native measurement, and coverage:
 
-The score, its interval, the window, and the eligible session count. Then the five dimension scores,
-each linking to its own section further down the page.
-
-Beside the score, and clearly outside it, sit the figures the score does not measure: cost per
-session, time to first token, and their trends. A user wants those numbers on this page. They cannot
-be scored, because rule 2 excludes them, so they are shown and labelled as shown.
-
-A dimension that was not measured says so and says why, rather than rendering blank or rendering 100.
-
-### Level two
-
-One section per dimension, in the same order as level one. Each section holds its dimension score,
-its denominator, and its causes ranked by gain.
-
-Every cause row carries six things.
-
-| Column | What it says |
+| Dimension | Native measurement shown beside the score |
 | --- | --- |
-| Severity | whether the cause ruined the sessions or degraded them |
-| Cause | what happened, in the agent's own terms |
-| Sessions | how many sessions it touched, and how that moved since the last snapshot |
-| Points | the gain, meaning what the score recovers if this cause alone is fixed |
-| Cost | money spent inside the affected sessions, when the window is large enough to bother |
-| Destination | the page where a user acts on it |
+| Outcome | expected successful sessions per 100 comparable sessions |
+| Reliability | one-session operational success rate and chance of 20 consecutive successes |
+| Cost | actual spend and estimated avoidable spend |
+| Speed | observed critical-path time and estimated avoidable time |
+| Safety | confirmed harmful sessions, examined sessions, and chance of 1,000 sessions without harm |
 
-Gain sorts the list, because it is the only number that answers "what do I get for fixing this". A
-user can re-sort by any column, because points are not the only thing that matters. A cause worth
-three points that burns four thousand dollars a month can matter more than one worth six points that
-costs nothing.
+Numbers appear only when all five dimensions pass the publication gate. If any dimension is
+unmeasured, every card states what has been observed and what evidence is still missing without
+rendering a numeric score.
 
-## A worked example
+## Level two
 
-```
-Agent score   74 / 100      interval 2.1   ·   7 days   ·   1,240 sessions
+Each dimension section contains:
 
-              $0.11 per session   up 34%          time to first token 2.4s   up 12%
-                                                  shown, not scored
+- score, interval, and one-sentence meaning when the publication gate passes;
+- the formula populated with the snapshot's values when available;
+- coverage and important missing evidence;
+- causes ranked by expected fix gain;
+- contextual observations that do not lower this dimension;
+- destinations for investigation.
 
-   62   Outcome        Did the agent do what it was asked to?
-   43   Reliability    Can the agent succeed every time?
-   87   Cost           Does the agent waste money?
-   71   Speed          Does the agent waste time?
-   80   Safety         2 confirmed failures. Not a rate, see below
+The evidence list contains only metrics with readable observations and promoted signals with an
+eligible occurrence in the selected window. Signals with zero occurrences and scores assigned to
+ignored signals do not appear. Items whose effect is not yet measurable remain visible and say so.
 
-              A confirmed safety failure caps this score at 80.
+### Cause rows
 
-────────────────────────────────────────────────────────────────────────────
+| Field | Meaning |
+| --- | --- |
+| Cause | metric, signal, or residual explanation |
+| Evidence | endpoint, probability feature, money, time, or confirmed harm |
+| Reach | affected and readable sessions |
+| Native effect | probability change, avoidable spend, avoidable time, or harmed sessions |
+| Attributed deficit | Shapley share of the displayed dimension deficit |
+| Fix gain | estimated score recovered if this cause alone disappeared |
+| Confidence | interval, independent observation count, and measured or associated label |
+| Destination | Sessions, Tools, Memory, Cost, Signals, Behaviors, or Settings |
 
-43   Reliability                                              lost 11.4 points
-     over 1,240 eligible sessions
+Attributed deficits add to the current dynamic estimate. Fix gains may overlap and do not. The
+interface labels the distinction and never sums fix gains into a promise. Current causes may change
+after the immutable daily snapshot when new evidence arrives, so they are not presented as a frozen
+historical decomposition.
 
-  ruined     search_docs failed and never recovered      412 sessions   -8.1
-             up from 260 last week          $1,240            Tools › search_docs
+Exact observations use direct language such as "wasted $430" or "ended 32 sessions." Signal effects
+estimated from matched sessions use "associated with" and show their interval.
 
-  ruined     Answers truncated on gpt-4o-mini            188 sessions   -5.2
-             new this week                                    Sessions
+## Worked example
 
-  degraded   Provider rejected a call, then retried      340 sessions   -1.2
-             down from 480                                    Sessions
+```text
+Agent Score   69 / 100      interval 2.4      7 days      1,240 sessions      v1
 
-  degraded   Empty response                    signal    126 sessions   -0.9
-             flat                              $310           Signal
+              $0.11 per session, up 34%       median TTFT 2.4s, up 12%
+              context only                     context only
 
-     Fixing the top two takes the score from 74 to 80, where the safety cap holds it.
-
-────────────────────────────────────────────────────────────────────────────
-
-62   Outcome
-     over 890 analyzed sessions, 72% of eligible traffic
-
-  ruined     Users corrected the agent                   204 sessions   -6.4
-             up from 150                                      Behaviors
-
-  ruined     Refund flow loops             signal        190 sessions   -3.8
-             escalating                        $840           Signal
-
-  degraded   The agent stalled                            64 sessions   -0.8
-             flat                                             Sessions
+   78   Outcome        78 successful outcomes expected per 100 comparable sessions
+   36   Reliability    95.0% one-session success; 36% chance of 20 in a row
+   84   Cost           $160 of $1,000 spend estimated avoidable
+   72   Speed          28 of 100 critical-path hours estimated avoidable
+   90   Safety         1 confirmed failure in 10,000 examined sessions
 ```
 
-The two figures at the top of the example carry the whole reframing. Cost per session went up 34% and
-the Cost dimension still reads 87, because the dimension measures waste rather than spend. The page
-has to make that legible or the two numbers look like a contradiction. The dimension's own question
-does that work: "Does the agent waste money?" is answered by 87, and "how much am I spending?" is
-answered by the figure beside it.
+The composite is:
 
-The example also shows the safety cap doing its job. Two confirmed failures hold the composite at 80,
-so fixing the two largest Reliability causes takes the score to the ceiling and no further. The top-k
-preview must respect the cap, otherwise it promises points the cap will not release. The page says
-where the ceiling came from, so the user knows the next move is the safety finding rather than another
-reliability fix.
+```text
+69 = round(78*0.35 + 36*0.25 + 84*0.15 + 72*0.15 + 90*0.10)
+```
 
-## Where each row goes
+Raw spend rose while Cost remained 84 because Cost measures waste as a share of spend. The user can
+read both without treating them as contradictory.
 
-Every cause resolves to one destination, and all six already exist.
+### Reliability example
 
-| Destination | Rows that go there |
+```text
+36   Reliability       p = 1,178 / 1,240 = 95.0%       100 * p^20 = 35.8
+     interval 29 to 43       100% output/error telemetry coverage
+
+Cause                                      Reach          Attributed    Fix gain
+Provider error ended the session           30 sessions       -30 pts       +20
+search_docs failed without later progress  22 sessions       -20 pts       +14
+No usable assistant output                 14 sessions       -14 pts        +7
+
+Context, not a Reliability failure
+Provider rejected a call and retry worked  290 sessions   $180 and 4.1h wasted
+```
+
+Four sessions appear in more than one cause row. Session-level resolution and Shapley attribution
+keep their failures from being counted twice. Recovered provider errors remain visible and link to
+the Cost and Speed sections.
+
+### Cost example
+
+```text
+84   Cost              $160 avoidable / $1,000 observed
+
+Cause                                      Native effect   Attributed   Fix gain
+Achievable cache reuse was missed                $70          -7 pts      +7
+Repeated identical tool calls                    $40          -4 pts      +4
+Recovered provider and tool retries              $30          -3 pts      +3
+Refund-loop signal, residual matched effect       $20          -2 pts      +2
+```
+
+The native amounts add to the estimated avoidable spend because the session counterfactual has
+already resolved overlap. The signal row uses associated-effect language and displays its matching
+coverage in the expanded view.
+
+### Outcome example
+
+```text
+78   Outcome           mean calibrated P(success) = 0.78
+     890 analyzed sessions, covering 72% of eligible traffic
+
+Cause                                      Reach          Attributed   Fix gain
+Users corrected or abandoned               204 sessions      -9 pts      +7
+Refund-flow loop signal                     190 sessions      -7 pts      +5
+No usable final output                       36 sessions      -4 pts      +4
+Other calibrated evidence                                  -2 pts       -
+```
+
+The cause rows explain the model's estimate. They do not claim that every session with a weak signal
+failed.
+
+### Safety example
+
+```text
+90   Safety            q = 1 / 10,000       100 * (1 - q)^1000 = 90.5
+     interval 56 to 99
+
+Confirmed harm
+Assistant disclosed personal data            1 session      -10 pts
+
+Exposure only
+Injection attempts received                 340 sessions
+Unsafe user content received                 82 sessions
+```
+
+Safety always shows the wide interval created by rare events. Exposure counts remain outside the
+formula.
+
+## Cause destinations
+
+| Destination | Causes |
 | --- | --- |
-| Sessions | run failures, truncation, provider rejections, stalls |
-| Tools | failing tools, thrashing, repeated calls, dead definitions |
-| Memory | repeated searches, no-op writes, reverted writes |
-| Cost | the cache gap, with the recoverable spend the Cost page already models |
-| Signals | any row sourced from a signal, which lands on that signal's page |
-| Behaviors | user corrections, abandonment, frustration, which cluster by topic there |
+| Sessions | terminal failures, retries, damaged final output, and critical paths |
+| Tools | failed, repeated, thrashing, malformed, and unused tools |
+| Memory | repeated searches, no-op writes, and reverted writes |
+| Cost | cache opportunity, pricing coverage, and recoverable spend |
+| Signals | recurring defects, examples, patterns, and associated effects |
+| Behaviors | Outcome evidence grouped by conversation topic |
+| Settings | flagger coverage, safety screening, and policy controls |
 
-A row sourced from a signal is the strongest case, because the signal page already carries examples,
-patterns, a lifecycle, agent dispatch and GitHub resolution. The score does not reinvent any of that.
-It ranks signals by what they cost and links out.
+A signal row links to its signal page. That page already owns examples, lifecycle, dispatch, and
+resolution. The benchmark page ranks the consequence and does not duplicate the workflow.
 
-## Recommendations come in two tiers
+## Recommendations
 
-The line between them is whether Latitude knows the fix or only knows where to look.
+Mechanical recommendations come from exact evidence:
 
-**Mechanical.** The metric definition determines the fix, so the text is exact and needs no model.
-Dead tool definitions name the unused tools and their estimated monthly cost. Truncation names the
-model whose output limit to raise. A repeated call names the tool and the arguments. A cache gap
-reports the measured rate against the achievable one.
+- truncation names the model and affected output limit;
+- a failing or repeated tool names the tool and call pattern;
+- dead surface names unused definitions and their observed input cost;
+- cache gap shows measured and achievable cached tokens plus recoverable spend;
+- provider retries name the provider, error class, and wasted time.
 
-**Evidence-backed.** For a signal, Latitude does not know the fix and does not pretend to. It shows
-the signal's name and description, its example sessions, and where it concentrates. Concentration is
-free: `aggregateDimensionBySignal` already computes the conditional rate against the base rate over
-model, provider, tool, tag and finish reason. "Four times more likely on model X" is a real lead.
+Signals do not receive generated fixes on the score page. The page shows the measured association,
+example sessions, and concentrations already computed for the signal. It does not claim a causal
+remedy from observational evidence.
 
-A third tier, where a model writes advice per cause, is out of scope. It is the part most likely to be
-wrong, it costs money on every project every day, and the two tiers above carry the specifics.
+## Coverage panel
 
-## Safety's panel is different
+The expandable coverage panel contains:
 
-Safety cannot show a rate, because every safety flagger samples and screening decisions are not
-stored. Its panel says so.
+- readable sessions per dimension and reader;
+- analysis, pricing, critical-path, and safety-examination coverage;
+- configured, hinted, and propensity-corrected sample shares;
+- unmapped provider errors and finish reasons;
+- disabled detectors;
+- signal effects waiting for independent observations;
+- attribution approximation error;
+- scoring model and frozen reference identifiers.
 
-It shows the confirmed count against the population that was examined, for example "2 confirmed in
-412 examined sessions". It shows the exposure counts as context, for example "340 injection attempts
-received, 0 complied with". It does not show a percentage of traffic, and it labels its score as a
-floor rather than an estimate.
+The page says "unmeasured" when coverage fails a floor. It says "effect not yet measured" for a
+signal whose consequence is unknown.
 
-Once screening decisions are stored, Safety becomes a rate like the other four and this panel
-simplifies.
+## When the score is unavailable
 
-## Below the floor
+The page withholds the composite and all five dimension scores when the eligible-session floor or any
+dimension's coverage or confidence gate fails. It still shows:
 
-Under 200 eligible sessions the page withholds the score and the dimension scores. It withholds
-nothing else.
+- session and finding counts;
+- actual cost and duration;
+- confirmed safety findings and exposure;
+- deterministic waste amounts that are exact at small samples;
+- progress toward each reader's floor;
+- links to affected sessions and causes.
 
-Every cause is a count, and counts are honest at any sample size. Ten sessions with two thrashing
-loops and a truncated response is worth reading, and it is exactly what a user testing an agent before
-launch wants.
+Each dimension lists the observations available so far and the exact condition blocking publication.
+No candidate or partial dimension number is shown.
 
-The header reads "collecting, 40 of 200 sessions". The cause list ranks by affected sessions instead of
-by gain, because gain needs a deficit to exist. The recommendations are unchanged.
+Modeled effect and fix-gain ranking wait for enough evidence. Exact money and time observations do
+not.
 
-## The trend
+## Trend
 
-A daily chart of the score, with the dimensions available as series.
+The daily chart shows the composite and each dimension as separate series. It marks:
 
-The chart matters more than it looks. The score lags by the whole window, so a fix shipped today
-barely moves a 7 day number tomorrow. The chart is where a user sees the fix landing.
+- scoring-version changes;
+- window-length changes;
+- policy caps;
+- dates without a published score as gaps.
 
-Two things the chart must mark. A change in the scoring version, because a drop caused by a better
-flagger must not read as the agent getting worse. And a change in the window length, because a score
-over 30 days and a score over 7 days answer slightly different questions.
+The point tooltip shows the stored point estimate, interval, scoring version, window length, and
+eligible-session count. Historical causes and native estimator inputs are not stored in snapshots.
 
-## What the page must never say
+## Statements the page must avoid
 
-**A defect percentage.** The signal metric's rate is not the true defect rate, because hints bypass
-sampling and troubled sessions are examined more often than clean ones. The page shows point
-contributions and session counts, both exactly true, and never "12% of your sessions have issues".
-[`signals.md`](signals.md) covers why.
-
-**A safety percentage.** No denominator exists. Counts only.
-
-**That a dimension is perfect when it was not measured.** A dimension below its floor reads as not
-measured, with the reason.
+- It does not call a sampled-positive share a defect rate without selection correction.
+- It does not say a signal caused an outcome when the estimator found only association.
+- It does not sum overlapping fix gains.
+- It does not present exposure as Safety failure.
+- It does not label missing evidence as healthy.
+- It does not imply that raw spend or raw duration is good or bad without a waste counterfactual.
+- It does not hide a scoring-version or policy-cap change inside the trend.

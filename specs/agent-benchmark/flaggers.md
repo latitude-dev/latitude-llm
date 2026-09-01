@@ -1,181 +1,260 @@
 # Flaggers
 
-> Read [`metrics.md`](metrics.md) first. Six metrics read a flagger, and this document covers what
-> must change before those reads are correct.
+> Read [`metrics.md`](metrics.md), [`signals.md`](signals.md), and
+> [`session-assessment.md`](session-assessment.md) first. This document defines the flagger
+> observations and coverage data used by session assessment and the score.
 
-A flagger finds one kind of failure in a session. The score does not add a scoring layer on top of
-flaggers. It reads them, which means a flagger that fires on the wrong thing puts the wrong number on
-the page.
+A flagger is a detector, not a scoring unit. Its finding can establish an endpoint, supply a model
+feature, identify resource waste, or confirm harm. Session assessment and the score need structured
+findings and a record of which sessions each flagger could have examined.
 
-Three fixes are correctness work that improves the product whether or not the score ships. Two
-additions are new capability the score needs. One schema change unblocks the cause list.
+## Required changes
 
-## What changes
+| Change | Purpose |
+| --- | --- |
+| persist finding kind and conditional metadata | distinguish terminal failure, recovery, exposure, and harm |
+| retain recovered findings without publishing discovery events automatically | measure retry cost and time without signal-volume inflation |
+| compare tool output in repetition detection | separate polling from repeated work |
+| guard empty grouping fields | prevent missing telemetry from manufacturing matches |
+| pair truncation with output damage | distinguish configured length stops from broken output |
+| separate injection attempt from compliance | keep exposure out of the Safety numerator |
+| add the sampled `task-success` verdict path | give Outcome a direct holistic reference verdict and persist passed scores |
+| store every screening decision and inclusion probability | provide denominators and selection correction |
+| copy structured flagger fields to ClickHouse | keep scoring and attribution queries session-grained |
 
-| Change | Kind | Blocks |
-| --- | --- | --- |
-| `trashing` compares tool output, not only tool name and arguments | fix | `tools.thrashing`, `tools.repeated_call` |
-| Two memory reads guard against empty fields | fix | all three memory metrics |
-| Truncation requires two signals | fix | `spans.finish_ruined` |
-| A flagger separates a prompt injection that worked from one that was attempted | addition | `safety.confirmed_failure` |
-| Screening decisions are stored | addition | Safety as a rate, and the honesty caveat on `signals.hit` |
-| ClickHouse `scores` carries the flagger slug | schema | the cause list, not the score |
+## Structured findings
 
-## Deterministic and LLM flaggers earn different trust
+The matched variant of `DetectionResult` carries structured fields in addition to feedback and
+message position:
 
-The registry marks each flagger as deterministic or LLM. The distinction decides how the score reads
-its output.
+```ts
+type DetectionResult =
+  | { kind: "unmatched" }
+  | {
+      kind: "matched"
+      feedback: string
+      messageIndex?: number
+      findingKind: string
+      recovered?: boolean
+      sameSubjectRecovered?: boolean
+      terminal?: boolean
+      exposure?: boolean
+      confirmedHarm?: boolean
+    }
+```
 
-A **deterministic** flagger is code. It runs on every session and it cannot hallucinate. Its scores
-count directly, whether or not they clustered into a signal. These are `tool-call-errors`,
-`output-schema-validation`, `empty-response`, `low-cache-hit-rate` and the deterministic half of
-`trashing`.
+The exact conditional schema can use discriminated variants per flagger. The invariant is that code
+does not reconstruct score semantics from a feedback sentence.
 
-An **LLM** flagger samples and stores only positive findings, so its raw occurrence count is not a
-rate over anything. Its output reaches the score only through a promoted signal, where the promotion
-threshold has already demanded repeated evidence.
+For `tool-call-errors`, `findingKind` distinguishes failed response, malformed call, duplicate call
+id, orphan response, and undeclared tool. The undeclared-tool kind remains diagnostic because missing
+captured definitions are a common cause.
 
-`trashing` has both halves, and they are separable on the score row. The metadata carries a flagger
-trace id only when the decision came from a captured model call. An absent trace id means the
-deterministic half fired.
+For `output-schema-validation`, the kind distinguishes incomplete or unclosed output from other
+schema failures so finish-reason classification can apply the two-observation truncation rule.
 
-## Fix: thrashing must compare output
+## Task Success
 
-`trashing` builds a signature per tool call from the tool name and a preview of the arguments, then
-counts the longest consecutive run of identical signatures. Three in a row is a match.
+`task-success` is a configurable LLM-as-judge flagger named **Task Success**. It asks whether the
+agent successfully completed all material user goals that remained active at the end of the session.
+It judges the session holistically rather than publishing task episodes.
 
-Two false positives follow from comparing arguments alone.
+```ts
+type TaskSuccessVerdict =
+  | { verdict: "success"; feedback: string; messageIndex?: number }
+  | { verdict: "failure"; feedback: string; messageIndex?: number }
+  | { verdict: "indeterminate"; reason: string }
+  | { verdict: "notApplicable"; reason: string }
+```
 
-**Polling repeats arguments by design.** An agent checking a job status five times sends the same
-arguments every time, and the point is that the answer changes. That is correct behaviour and it
-currently reads as a hard loop.
+The flagger uses the normal project-configured sample rate, hints, rate limits, and screening
+decision infrastructure. The selection probability is stored before classification.
 
-**Absent arguments collide.** If the arguments were never captured, or redaction removed them, every
-consecutive call to the same tool produces the same signature. A session that used one tool three
-times reads as thrashing.
+The existing flagger workflow writes only matched negative annotations. Task Success extends it:
 
-The fix is one change with two parts. Add a hash of the tool output to the signature, so a run counts
-only when the calls returned the same result. And skip calls whose captured arguments are empty, so a
-missing field cannot manufacture a run.
+- `success` writes a published, passed system score with `value = 1`;
+- `failure` writes a published, failed system score with `value = 0`, feedback, and anchors;
+- only a failed score publishes the discovery event that can create or join a signal;
+- `indeterminate` and `notApplicable` write no score and remain coverage decisions;
+- a model or workflow error is unexamined, not a failed task.
 
-This is a flagger bug independent of the score. It affects the signals customers see today.
+Hard deterministic endpoints such as no output can establish failure even when the LLM path was not
+selected. Specialized Outcome flaggers remain evidence about why the task failed; they do not
+replace the holistic verdict.
 
-The same signature rule applies to the span-level read behind `tools.repeated_call`, which is a
-separate reader of the same idea. Both need it.
+## Recovery has two meanings
 
-## Fix: memory reads need non-empty guards
+Tool and provider observations carry two recovery fields:
 
-Two memory metrics group on a field that can be empty, which is the same collision.
+- `recovered` means the session made successful progress later and delivered a usable completion;
+- `sameSubjectRecovered` means the same provider operation or tool later succeeded.
 
-`memory.noop_rewrite` compares a write's content hash against the record's previous hash. If the
-content hash is empty, because the SDK did not populate it or content capture is off, every write
-matches every other and every session reads as a no-op.
+The first field controls terminal Reliability. The second supports attribution to the integration a
+user should fix. A failed `search_docs` followed by a successful `grep_files` can be recovered at the
+session level without proving that `search_docs` recovered.
 
-`memory.repeated_zero_hit` groups searches by query text. If the query text is empty, every search
-collapses into one group and every session with two searches reads as a repeat.
+Recovered findings remain available to Cost and Speed. They do not automatically publish the
+`ScoreCreated` event used by signal discovery, clustering, naming, monitor evaluation, and
+notifications. Signal discovery continues to receive terminal findings, structural defects, and
+findings selected by its own evidence policy. Measurement persistence and signal publication are
+separate decisions.
 
-Both need the same guard: skip rows whose grouping field is empty. The existing memory analytics reads
-are store-scoped and grouped by record and trace, so a session-grained read is new work in any case,
-and the guard goes in when that read is written.
+This separation also prevents re-screening a session from changing the identity of its primary
+published finding. Measurement rows use a stable key that includes session, flagger slug, finding
+kind, and occurrence position.
 
-## Fix: truncation requires two signals
+## Deterministic and sampled flaggers
 
-A finish reason of `length` or `max_tokens` usually means the answer was cut off. It does not always.
-A classifier with a deliberately tight output limit hits `length` on nearly every call, and its output
-may be complete.
+Deterministic flaggers run on every readable session. Their structured observations can enter a
+dimension directly. These include `tool-call-errors`, `output-schema-validation`, `empty-response`,
+and the deterministic repeated-call portion of `trashing`.
 
-So `spans.finish_ruined` marks a session ruined on truncation only when the finish reason is
-unreliable and the output shows the damage. The `output-schema-validation` flagger already detects
-unclosed and malformed text, which is the second signal.
+LLM flaggers are sampled. Their findings can enter a calibrated estimator only when the screening
+decision has a known inclusion probability. Stored positives without a measurable selection process
+remain examples and signal-discovery evidence.
 
-A content filter, a guardrail intervention or a malformed function call needs no second signal. None
-of those has a legitimate configured cause.
+`trashing` has deterministic and LLM paths. The observation records which path matched rather than
+inferring it from the presence of a trace id.
 
-## Addition: separate a successful injection from an attempted one
+## Tool repetition compares results
 
-`safety.confirmed_failure` needs to know that an injection worked. Today it cannot.
+`trashing` builds a signature for consecutive tool calls. The signature contains tool name, input
+hash, and output hash. Three identical signatures in a row establish thrashing.
 
-The `jailbreaking` flagger covers both halves in one verdict. Its instructions ask for prompt
-injection, instruction hierarchy attacks, policy evasion and tool abuse, and also for "assistant
-behavior that actually follows those bypass attempts". The registry marks it
-`classifiesAssistantResponseOnly: false`, so it classifies user-authored content as well.
+Tool name and input alone are insufficient. Polling repeats arguments because the caller expects the
+result to change. Empty captured arguments or output are also insufficient because every missing
+value would collide.
 
-A hit therefore cannot tell an attack received from an attack that worked. Scoring it as it stands
-would penalize an agent for having hostile users, which is the exact mistake the exposure and failure
-distinction exists to prevent.
+The deterministic reader therefore:
 
-Two ways to fix it. Split the verdict so one flagger reports the attempt and another reports the
-compliance. Or extend the existing verdict with a compliance field, which keeps one model call.
+- skips calls with empty captured input or output;
+- compares output as well as name and input;
+- records every repeated occurrence needed to measure resource waste;
+- publishes one stable loop finding for signal discovery.
 
-The second is cheaper and it keeps the two halves consistent, because the same model sees the same
-conversation. Either way, only the compliance half deducts, and the attempt half stays a count on the
-Safety panel.
+`tools.repeated_call` uses the same signature without requiring consecutive calls. The session
+counterfactual deduplicates the two metrics.
 
-## Addition: store screening decisions
+## Memory readers guard empty values
 
-Screening decides, per session and per flagger, whether the flagger runs. The decision has a reason:
-it matched deterministically, a hint fired, the sampler selected it, the sampler skipped it, or the
-rate limiter dropped it.
+`memory.noop_rewrite` requires non-empty current and previous content hashes.
+`memory.repeated_zero_hit` requires non-empty query text. `memory.reverted_write` requires non-empty
+hashes for every compared version.
 
-Today `summarizeDecisions` reduces all of that to a log line. Nothing is stored.
+Rows that fail a guard lower reader coverage. They never count as a match.
 
-Three things depend on storing it.
+## Truncation requires output damage
 
-**Safety cannot be a rate.** With no record of what was examined, there is no denominator, so Safety
-has to be a penalty model whose number is a floor rather than an estimate. Storing decisions turns
-Safety into a rate like the other four dimensions.
+A finish reason of `length` or `max_tokens` can describe a complete response produced under an
+intentional output limit. Truncation becomes `spans.finish_failure` only when the final output also
+contains observable damage reported by `output-schema-validation`.
 
-**The `signals.hit` caveat.** Hints bypass sampling, so the measured rate rises faster than the true
-rate and the page must never publish it as a percentage. Stored decisions make the actual examined
-population known, so the rate becomes a real figure over a real denominator.
+Content filters, guardrail interventions, and malformed function calls do not need a second finding.
+They have no equivalent healthy configured cause.
 
-**Confidence.** The confidence panel wants the screened share per flagger. It cannot report what it
-cannot count.
+The structured finding records whether the affected generation was final. A final broken generation
+is terminal Outcome and Reliability evidence. An earlier broken generation that the session replaced
+is measured as avoidable Cost and Speed where resource telemetry exists.
 
-The shape is small: organization, project, session, flagger slug, decision, reason and a timestamp.
-One append-only ClickHouse table, or a column set on an existing one. The value is not limited to the
-score, because every sampled flagger becomes measurable for the first time.
+## Injection attempt and compliance
 
-## Schema: the flagger slug in ClickHouse
+The `jailbreaking` classification returns separate fields for:
 
-The ClickHouse `scores` table has nineteen columns and no metadata column. The flagger slug and the
-flagger trace id live only in the Postgres `scores.metadata` field.
+- an injection or instruction-hierarchy attack was attempted;
+- the assistant complied with the attempt;
+- the assistant action that constitutes compliance.
 
-So in ClickHouse every flagger-authored score looks identical. You can tell that a flagger wrote a
-score on a session. You cannot tell which flagger.
+The same model call judges both sides of the conversation. Attempt is Safety exposure. Compliance is
+confirmed harm when the assistant-side evidence is present. This structured LLM verdict is the
+confirmation contract; a second model or human review is not required. A generic jailbreak match
+never enters the Safety numerator.
 
-This does **not** block the score. A dimension's session metrics union together, and membership
-resolves from columns that already exist: the source, and the signal id joined against the eligible
-signal set. The union does not care which flagger fired.
+PII findings follow the same authorship rule. User-authored PII is exposure. Assistant disclosure can
+be confirmed harm.
 
-It blocks two other things. The cause list names each cause, and a row reading "a flagger fired" is
-useless. And the confidence panel reports how much of a dimension's evidence came from deterministic
-flaggers rather than sampled ones, which needs the slug.
+## Screening decisions
 
-Two ways to get it. Read Postgres and join to the ClickHouse session ids, which needs an expression
-index on the metadata field and can return a lot of rows for a busy project per window. Or add a
-`flagger_slug` column to the ClickHouse `scores` table, backfilled from Postgres.
+Screening produces one stored decision per eligible flagger and session:
 
-The column is the better trade. It is one append-only migration, it keeps the daily job to pure
-ClickHouse, and it is useful beyond the score for signal patterns and tool analytics.
+```ts
+type FlaggerScreeningDecision = {
+  organizationId: string
+  projectId: string
+  sessionId: string
+  flaggerSlug: string
+  selected: boolean
+  reason: "deterministic" | "hint" | "uniform" | "sample" | "skipped" | "rateLimited"
+  inclusionProbability?: number
+  hintKinds: string[]
+  outcome?: "matched" | "unmatched" | "success" | "failure" | "indeterminate" | "notApplicable" | "error"
+  createdAt: Date
+}
+```
 
-## What does not change
+The inclusion probability is the probability before observing the flagger result. Deterministic and
+uniformly examined sessions use 1. Ordinary samples store their configured probability. Rate-limited
+or policy-skipped sessions are not readable unless the probability model explicitly accounts for
+them.
 
-The flagger registry keeps its shape. No flagger is removed, and no flagger's polarity is inverted.
+The append-only ClickHouse table is ordered by organization, project, session, and flagger slug and
+uses the standard retention TTL, which must exceed the longest score window plus one daily run
+interval. The workflow writes decisions before executing sampled model calls so failed execution
+remains measurable.
 
-`empty-response` gains a second consumer rather than a change. The score reads it as
-`sessions.no_output`, replacing an earlier design that read the trace rollup for absent output. The
-flagger is better on three counts: it looks at the last assistant turn rather than at a whole trace,
-it treats a turn holding a tool call or reasoning as production so a delegating turn is not empty, and
-it returns no match when the conversation holds no assistant message at all. That last point is the
-guard the rollup read would have needed, and it is already there.
+For Task Success, hinted sessions form a deterministically selected stratum and unhinted sessions use
+the configured probability. Safety chooses the session once and runs every launch Safety detector on
+the selected session, so exposure and confirmed-harm unions share one examined population.
 
-`low-cache-hit-rate` keeps running and keeps producing signals. The score no longer reads it as a
-defect, because [`cost.cache_gap`](metrics.md#costcache_gap) measures caching against a ceiling
-derived from the project's own traffic instead of against a fixed threshold. The flagger's own
-threshold remains a reasonable line for raising a signal a human should look at.
+This table supports:
 
-Flaggers stay switchable per project. A project that disables one loses that evidence, the affected
-dimension reports lower confidence, and the score never rises as a result. This is why
-`spans.finish_ruined` and `spans.provider_error` stay sourced from telemetry rather than from a
-flagger, since telemetry cannot be switched off.
+- inverse-probability correction for signal and flagger evidence;
+- Task Success and Safety examined populations;
+- per-flagger coverage and rate-limiter diagnostics;
+- confidence intervals over the examined population;
+- an honest distinction between no finding and no examination.
+
+## ClickHouse score fields
+
+Flagger-authored score rows copy the structured fields needed for window reads:
+
+- `flagger_slug`;
+- `finding_kind`;
+- `recovered`;
+- `same_subject_recovered`;
+- `terminal`;
+- `exposure`;
+- `confirmed_harm`;
+- Task Success verdict;
+- flagger path, deterministic or sampled.
+
+The Postgres score metadata remains the source for detailed feedback. ClickHouse receives the bounded
+columns required for session-level estimation and attribution. Migrations are append-only and the
+backfill preserves stable occurrence identities.
+
+## Flagger controls
+
+Flaggers remain switchable per project. Disabling a detector stops new observations and lowers
+coverage. It cannot turn prior failures into successes or increase a dimension.
+
+Muted and archived state affects discovery and triage. The scoring job reads stored observations and
+screening coverage, not current workflow state.
+
+Ignored signals are the exception defined in [`signals.md`](signals.md#which-signals-enter-estimation):
+scores assigned to an ignored signal are excluded by the shared eligibility predicate.
+
+Telemetry readers remain independent where practical. Provider errors and finish reasons come from
+spans so disabling an overlapping flagger cannot hide operational failure.
+
+## User-facing coverage
+
+The Flaggers settings page shows, per flagger and selected window:
+
+- eligible sessions;
+- deterministic, hinted, uniformly sampled, ordinarily sampled, skipped, and rate-limited counts;
+- readable share;
+- positive findings split by kind;
+- whether the finding can enter a calibrated score;
+- unknown selection probability or missing telemetry warnings.
+
+The session and signal pages name the finding kind rather than displaying a raw feedback paragraph as
+the primary label.
