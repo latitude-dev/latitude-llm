@@ -386,8 +386,10 @@ agents are configured for different Latitude projects, or their spans will split
 and the trace will break in half.
 
 <Note>
-  An absent or malformed carrier is not an error. The callee simply starts its own trace, which is
-  the same thing it did before you added propagation.
+  The carrier overrides, it does not replace. What it holds wins over whatever the callee already
+  has; what it leaves out the callee keeps. So an absent or malformed carrier is not an error and
+  not a reset either — the callee behaves exactly as it did before you added propagation, starting
+  its own trace in a plain handler and staying inside an enclosing `capture()` where you have one.
 </Note>
 
 ---

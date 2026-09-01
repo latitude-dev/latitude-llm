@@ -223,6 +223,76 @@ describe("extractTraceContext", () => {
     expect(extractTraceContext(carrier).parent).toBeUndefined()
   })
 
+  it("stays inside an enclosing capture when no carrier arrived", async () => {
+    const exporter = new InMemorySpanExporter()
+    const latitude = newLatitude(exporter)
+
+    // Resetting to a clean context on an absent carrier would tear this work out of its own capture.
+    await capture(
+      "planner-turn",
+      async () => {
+        await withTraceContext(undefined, async () => {
+          latitude.getTracer("planner").startSpan("work").end()
+        })
+      },
+      { sessionId: "local-session" },
+    )
+    await latitude.flush()
+
+    const spans = exporter.getFinishedSpans()
+    const root = find(spans, "planner-turn")
+    const work = find(spans, "work")
+
+    expect(work?.spanContext().traceId).toBe(root?.spanContext().traceId)
+    expect(work?.parentSpanContext?.spanId).toBe(root?.spanContext().spanId)
+    expect(work?.attributes["session.id"]).toBe("local-session")
+
+    await latitude.shutdown()
+  })
+
+  it("overrides the receiver's context with what the carrier holds and keeps the rest", async () => {
+    const exporter = new InMemorySpanExporter()
+    const latitude = newLatitude(exporter)
+    const carrier = {
+      traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-2222222222222222-01",
+      "x-latitude-context": JSON.stringify({ sessionId: "caller-session" }),
+    }
+
+    await capture(
+      "planner-turn",
+      async () => {
+        await withTraceContext(carrier, async () => {
+          latitude.getTracer("planner").startSpan("work").end()
+        })
+      },
+      { sessionId: "local-session", userId: "local-user" },
+    )
+    await latitude.flush()
+
+    const work = find(exporter.getFinishedSpans(), "work")
+    expect(work?.parentSpanContext?.spanId).toBe("2222222222222222")
+    expect(work?.attributes["session.id"]).toBe("caller-session")
+    expect(work?.attributes["user.id"]).toBe("local-user")
+
+    await latitude.shutdown()
+  })
+
+  it("leaves baggage the host SDK set in place", async () => {
+    const latitude = newLatitude(new InMemorySpanExporter())
+    const tenant = propagation.setBaggage(context.active(), propagation.createBaggage({ tenant: { value: "acme" } }))
+
+    const seen = context.with(tenant, () =>
+      withTraceContext(
+        { traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-2222222222222222-01" },
+        () => propagation.getBaggage(context.active())?.getEntry("tenant")?.value,
+      ),
+    )
+
+    expect(seen).toBe("acme")
+
+    await latitude.shutdown()
+  })
+
   it("survives a malformed Latitude context without dropping the trace", () => {
     const carrier = {
       traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-2222222222222222-01",

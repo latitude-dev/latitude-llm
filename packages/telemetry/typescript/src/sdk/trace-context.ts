@@ -219,7 +219,13 @@ export function injectTraceContext(context?: ContextOptions, carrier: TraceConte
 
 /**
  * Reads a carrier produced by `injectTraceContext()`. Accepts a plain carrier, a `Headers`, or a
- * `Request`. Always returns a usable result: an absent or malformed carrier yields a root.
+ * `Request`.
+ *
+ * The carrier overrides, it does not replace. A parent it holds wins over the receiver's active
+ * span and the fields it holds win over the receiver's, but whatever it leaves out stays as the
+ * receiver had it — so an absent or malformed carrier is a no-op, and the callee roots its own
+ * trace exactly where it would have anyway. Deliberately not a reset to a clean context: that
+ * would pull the work out of an enclosing `capture()` and drop baggage the host SDK set.
  */
 export function extractTraceContext(source?: CarrierSource): RemoteTraceContext {
   const read = toReader(source)
