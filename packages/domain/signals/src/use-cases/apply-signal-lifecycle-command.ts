@@ -4,7 +4,7 @@ import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
   cuidSchema,
-  type NotFoundError,
+  NotFoundError,
   ProjectId,
   RepositoryError,
   resolveSettings,
@@ -159,6 +159,9 @@ export const applySignalLifecycleCommandUseCase = (
             return yield* new BadRequestError({
               message: `Signal ${signal.id} does not belong to project ${parsed.projectId}`,
             })
+          }
+          if (signal.promotedAt === null) {
+            return yield* new NotFoundError({ entity: "Signal", id: signal.id })
           }
 
           const { nextSignal, changed } = applyCommandToSignal({ signal, command: parsed.command, now })
