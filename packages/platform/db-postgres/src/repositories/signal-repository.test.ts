@@ -35,6 +35,9 @@ const seedSignal = (input: {
   readonly resolvedAt?: Date | null
   readonly ignoredAt?: Date | null
   readonly regressedAt?: Date | null
+  readonly mutedAt?: Date | null
+  readonly origin?: "user" | "system"
+  readonly source?: "annotation" | "flagger" | "custom"
   /** Omitted means promoted at creation, which is what every read expects to see. Null makes the row a discovered candidate, provenance included. */
   readonly promotedAt?: Date | null
   readonly deletedAt?: Date
@@ -49,12 +52,13 @@ const seedSignal = (input: {
     slug: input.slug,
     name: input.slug,
     description: `${input.slug} description`,
-    source: input.promotedAt === null ? "flagger" : "custom",
-    origin: input.promotedAt === null ? "system" : "user",
+    source: input.source ?? (input.promotedAt === null ? "flagger" : "custom"),
+    origin: input.origin ?? (input.promotedAt === null ? "system" : "user"),
     ...(input.scoreEvidence === undefined ? {} : { scoreEvidence: input.scoreEvidence }),
     resolvedAt: input.resolvedAt ?? null,
     ignoredAt: input.ignoredAt ?? null,
     regressedAt: input.regressedAt ?? null,
+    mutedAt: input.mutedAt ?? null,
     promotedAt: input.promotedAt === undefined ? input.createdAt : input.promotedAt,
     deletedAt: input.deletedAt ?? null,
     ...(input.clusteredAt ? { clusteredAt: input.clusteredAt } : {}),
@@ -113,6 +117,67 @@ describe("SignalRepositoryLive score evidence", () => {
     )
 
     expect(signal.scoreEvidence).toEqual(scoreEvidence)
+  })
+})
+
+describe("SignalRepositoryLive.listScoringEligibleIds", () => {
+  const CREATED_AT = new Date("2026-07-01T00:00:00.000Z")
+  const LIFECYCLE_AT = new Date("2026-08-01T00:00:00.000Z")
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("returns promoted system signals unless they are ignored or deleted", async () => {
+    const eligible: Parameters<typeof seedSignal>[0][] = [
+      { id: "eligible-open".padEnd(24, "e"), slug: "eligible-open", createdAt: CREATED_AT },
+      {
+        id: "eligible-resolved".padEnd(24, "r"),
+        slug: "eligible-resolved",
+        createdAt: CREATED_AT,
+        resolvedAt: LIFECYCLE_AT,
+        mutedAt: LIFECYCLE_AT,
+      },
+    ]
+    const ineligible: Parameters<typeof seedSignal>[0][] = [
+      {
+        id: "user-created".padEnd(24, "u"),
+        slug: "user-created",
+        createdAt: CREATED_AT,
+        origin: "user",
+      },
+      {
+        id: "unpromoted".padEnd(24, "p"),
+        slug: "unpromoted",
+        createdAt: CREATED_AT,
+        promotedAt: null,
+      },
+      {
+        id: "ignored".padEnd(24, "i"),
+        slug: "ignored-scoring",
+        createdAt: CREATED_AT,
+        ignoredAt: LIFECYCLE_AT,
+      },
+      {
+        id: "deleted".padEnd(24, "d"),
+        slug: "deleted-scoring",
+        createdAt: CREATED_AT,
+        deletedAt: LIFECYCLE_AT,
+      },
+    ]
+
+    for (const signal of [...eligible, ...ineligible]) {
+      const origin = signal.origin ?? "system"
+      await seedSignal({ ...signal, origin, source: origin === "user" ? "custom" : "flagger" })
+    }
+
+    const ids = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).listScoringEligibleIds({ projectId: PROJECT_ID })
+      }),
+    )
+
+    expect([...ids].sort()).toEqual(eligible.map((signal) => signal.id).sort())
   })
 })
 

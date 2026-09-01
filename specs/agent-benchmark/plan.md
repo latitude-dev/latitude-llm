@@ -58,7 +58,7 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
 - [x] **P1-7** Assign and latch `scoreEvidence` during promotion. Detail refresh must not rewrite it.
 - [x] **P1-8** Backfill every existing signal with an empty, non-null `scoreEvidence` list in the
   schema migration. Do not classify historical signals with a model or the static flagger mapping.
-- [ ] **P1-9** Centralize signal score eligibility. Require promoted system signals, exclude scores
+- [x] **P1-9** Centralize signal score eligibility. Require promoted system signals, exclude scores
   assigned to ignored signals, and stop treating every non-empty `signal_id` as eligible.
 
 ### Product surfaces

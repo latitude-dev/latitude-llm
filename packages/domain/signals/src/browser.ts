@@ -138,6 +138,10 @@ export {
   semanticRelatednessScore,
 } from "./related-signals.ts"
 export {
+  isSignalEligibleForScoring,
+  type SignalScoringEligibility,
+} from "./score-eligibility.ts"
+export {
   findDominantMappedSignalFlaggerSlug,
   getSignalScoreEvidenceForFlagger,
   isMappedSignalFlaggerSlug,

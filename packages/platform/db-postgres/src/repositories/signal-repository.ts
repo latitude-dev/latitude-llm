@@ -81,6 +81,8 @@ type AbsorbedLineageQueryResult = { readonly rows?: ReadonlyArray<{ readonly id:
 // and the discovery opt-ins deliberately sit outside it — see the port docs.
 const userVisibleSignal = and(isNull(signals.deletedAt), isNotNull(signals.promotedAt))
 
+const scoringEligibleSignal = and(userVisibleSignal, eq(signals.origin, "system"), isNull(signals.ignoredAt))
+
 // The exact complement, for the two paths that work on candidates: the
 // consolidation neighbor scan and the expiry sweep.
 const candidateSignal = and(isNull(signals.deletedAt), isNull(signals.promotedAt))
@@ -427,6 +429,25 @@ const signalRepositoryCoreLive = Layer.effect(
                     userVisibleSignal,
                     timeRange.from ? gte(signals.createdAt, timeRange.from) : undefined,
                     timeRange.to ? lte(signals.createdAt, timeRange.to) : undefined,
+                  ),
+                ),
+            )
+            .pipe(Effect.map((rows) => rows.map((row) => SignalId(row.id))))
+        }),
+
+      listScoringEligibleIds: ({ projectId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select({ id: signals.id })
+                .from(signals)
+                .where(
+                  and(
+                    eq(signals.organizationId, organizationId),
+                    eq(signals.projectId, projectId),
+                    scoringEligibleSignal,
                   ),
                 ),
             )

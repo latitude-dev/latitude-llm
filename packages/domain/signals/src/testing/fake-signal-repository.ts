@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import type { SignalLifecycleFlags, SignalRepositoryShape, SignalWithLifecycle } from "../ports/signal-repository.ts"
+import { isSignalEligibleForScoring } from "../score-eligibility.ts"
 
 const DEFAULT_LIFECYCLE: SignalLifecycleFlags = {
   isEscalating: false,
@@ -307,6 +308,13 @@ export const createFakeSignalRepository = (
               (!timeRange.from || issue.createdAt >= timeRange.from) &&
               (!timeRange.to || issue.createdAt <= timeRange.to),
           )
+          .map((issue) => issue.id),
+      ),
+
+    listScoringEligibleIds: ({ projectId }) =>
+      Effect.sync(() =>
+        [...issues.values()]
+          .filter((issue) => issue.projectId === projectId && isSignalEligibleForScoring(issue))
           .map((issue) => issue.id),
       ),
 

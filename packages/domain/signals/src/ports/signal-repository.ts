@@ -300,6 +300,14 @@ export interface SignalRepositoryShape {
       readonly to?: Date
     }
   }): Effect.Effect<readonly SignalId[], RepositoryError, SqlClient>
+  /**
+   * Signal ids whose assigned scores may enter benchmark evidence. A score's
+   * non-null signal id is not enough: the signal must be promoted,
+   * system-origin, non-ignored, and non-deleted.
+   */
+  listScoringEligibleIds(input: {
+    readonly projectId: ProjectId
+  }): Effect.Effect<readonly SignalId[], RepositoryError, SqlClient>
 }
 
 export class SignalRepository extends Context.Service<SignalRepository, SignalRepositoryShape>()(
