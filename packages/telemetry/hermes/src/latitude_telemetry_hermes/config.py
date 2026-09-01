@@ -54,7 +54,7 @@ _SSL_CONTEXT = _ssl_context()
 logger = logging.getLogger(__name__)
 
 SCOPE_NAME = "latitude-telemetry-hermes"
-PKG_VERSION = "0.2.0"
+PKG_VERSION = "0.3.0"
 
 DEFAULT_SERVICE_NAME = "hermes-agent"
 
