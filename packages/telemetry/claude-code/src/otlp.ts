@@ -6,6 +6,7 @@ import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRe
 import type {
   AgentSpanLink,
   AssistantCall,
+  InheritedSpanContext,
   MemoryEmitOptions,
   MemoryOp,
   OtlpExportRequest,
@@ -44,9 +45,17 @@ const POST_BYTE_BUDGET = 3 * 1024 * 1024
 
 export function buildOtlpRequest(opts: {
   sessionId: string
+  // Claude's own session id, which is unique per process. `sessionId` may be an
+  // inherited one that the parent handed to several children, so span-id salting on
+  // an inherited trace uses this instead — two children of one Hermes run share
+  // trace id, session id and turn number, and would otherwise mint identical ids.
+  localSessionId?: string | undefined
   userId?: string | undefined
   turnStartNumber: number
   turns: Turn[]
+  // Set when a parent harness handed us a W3C traceparent: every turn joins that
+  // trace under `parentSpanId` instead of minting a trace of its own.
+  inherited?: InheritedSpanContext | undefined
   context?: TraceContext | undefined
   conversationHistory?: Turn[] | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
@@ -66,6 +75,7 @@ export function buildOtlpRequest(opts: {
     spans.push(
       ...buildTurnSpans(
         opts.sessionId,
+        opts.localSessionId ?? opts.sessionId,
         opts.userId,
         turnNum,
         turn,
@@ -74,6 +84,7 @@ export function buildOtlpRequest(opts: {
         requestsByMessageId,
         opts.agentLinks,
         opts.memory,
+        opts.inherited,
       ),
     )
   })
@@ -99,6 +110,7 @@ function redactSpan(span: OtlpSpan, redact: RedactConfig): OtlpSpan {
 
 function buildTurnSpans(
   sessionId: string,
+  localSessionId: string,
   userId: string | undefined,
   turnNum: number,
   turn: Turn,
@@ -107,14 +119,21 @@ function buildTurnSpans(
   requestsByMessageId: Map<string, StoredRequest>,
   agentLinks: AgentSpanLink[] | undefined,
   memory: MemoryEmitOptions | undefined,
+  inherited: InheritedSpanContext | undefined,
 ): OtlpSpan[] {
-  const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
-  const turnSpanId = hashHex(`${traceId}:turn`, 16)
+  const traceId = inherited?.traceId ?? hashHex(`${sessionId}:${turnNum}`, 32)
+  // An owned trace id is already per-turn, so "turn"/"gen" are unique salts within it.
+  // An inherited one is shared by every turn of the session — and by every sibling
+  // process the same parent launched — so the local session id and the turn number
+  // have to move into the salt, or turn 2's call 0 collides with turn 1's and one
+  // child's turn 1 collides with its sibling's.
+  const idScope = inherited ? `${localSessionId}:${turnNum}` : ""
+  const turnSpanId = hashHex(`${traceId}:turn${idScope && `:${idScope}`}`, 16)
   const out: OtlpSpan[] = []
   buildInteractionTree(out, {
     traceId,
     turnSpanId,
-    parentSpanId: "",
+    parentSpanId: inherited?.parentSpanId ?? "",
     sessionId,
     userId,
     turn,
@@ -122,8 +141,8 @@ function buildTurnSpans(
     subagentLabel: undefined,
     subagentName: undefined,
     turnNum,
-    interactionIdSalt: "turn",
-    genIdSalt: "gen",
+    interactionIdSalt: idScope ? `turn:${idScope}` : "turn",
+    genIdSalt: idScope ? `gen:${idScope}` : "gen",
     contextAttrs,
     priorTurns,
     requestsByMessageId,

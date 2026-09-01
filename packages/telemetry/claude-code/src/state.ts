@@ -21,11 +21,16 @@ const LOCK_TIMEOUT_MS = 2_000
 // behind; anything older than this is treated as abandoned and broken.
 const LOCK_STALE_MS = 10 * 60_000
 
-interface SessionState {
+export interface SessionState {
   offset: number
   buffer: string
   turnCount: number
   traceId?: string | undefined
+  // Main-session entries only: the inherited trace this session joined (see
+  // inherited-context.ts) and how many spans it has contributed to it. The count
+  // caps how far one interactive session may grow a trace it does not own.
+  inheritedTraceId?: string | undefined
+  inheritedSpanCount?: number | undefined
   // Main-session entries only: accumulated parent Agent tool_use -> span links,
   // keyed by toolUseId (and promptId as a fallback), so subagents can re-parent on
   // later turns.
@@ -61,6 +66,8 @@ export function load(key: string): SessionState {
       buffer: typeof entry.buffer === "string" ? entry.buffer : "",
       turnCount: Number(entry.turnCount) || 0,
       traceId: typeof entry.traceId === "string" ? entry.traceId : undefined,
+      inheritedTraceId: typeof entry.inheritedTraceId === "string" ? entry.inheritedTraceId : undefined,
+      inheritedSpanCount: typeof entry.inheritedSpanCount === "number" ? entry.inheritedSpanCount : undefined,
       agentLinks: entry.agentLinks && typeof entry.agentLinks === "object" ? entry.agentLinks : undefined,
       emittedCalls: typeof entry.emittedCalls === "number" ? entry.emittedCalls : undefined,
       interactionEmitted: typeof entry.interactionEmitted === "boolean" ? entry.interactionEmitted : undefined,

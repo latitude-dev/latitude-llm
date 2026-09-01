@@ -81,6 +81,92 @@ function baseTurn(overrides: LegacyTurnOpts = {}): Turn {
   }
 }
 
+describe("buildOtlpRequest inherited context", () => {
+  const TRACE = "4bf92f3577b34da6a3ce929d0e0e4736"
+  const SPAN = "00f067aa0ba902b7"
+
+  it("joins the inherited trace and parents the interaction under the given span", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [baseTurn()],
+      inherited: { traceId: TRACE, parentSpanId: SPAN },
+    })
+
+    const spans = otlpSpans(req)
+    expect(spans.every((s) => s.traceId === TRACE)).toBe(true)
+    expect(unwrap(spans[0]).parentSpanId).toBe(SPAN)
+  })
+
+  it("roots its own per-turn trace when no context is inherited", () => {
+    const spans = otlpSpans(buildOtlpRequest({ sessionId: "sess-1", turnStartNumber: 1, turns: [baseTurn()] }))
+    expect(unwrap(spans[0]).traceId).not.toBe(TRACE)
+    expect(unwrap(spans[0]).parentSpanId).toBe("")
+  })
+
+  it("keeps span ids distinct across turns that share one inherited trace", () => {
+    // Every turn joins the same trace, so the per-turn trace id no longer separates
+    // ids. Calls without a message id fall back to `noid:<index>`, which repeats on
+    // every turn — turn 2 call 0 would reuse turn 1 call 0's span id if the turn
+    // coordinates were not part of the salt.
+    const noid = (): Turn => baseTurn({ messageId: "noid:0" })
+    const ids = [1, 2, 3].flatMap((turnNum) =>
+      otlpSpans(
+        buildOtlpRequest({
+          sessionId: "sess-1",
+          turnStartNumber: turnNum,
+          turns: [noid()],
+          inherited: { traceId: TRACE, parentSpanId: SPAN },
+        }),
+      ).map((s) => s.spanId),
+    )
+
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it("keeps span ids distinct across two children of the same parent span", () => {
+    // One Hermes run hands every child it launches the same trace id and the same
+    // LATITUDE_SESSION_ID, and each child starts counting turns at 1. Only Claude's
+    // own session id, which is per process, separates them.
+    const child = (localSessionId: string) =>
+      otlpSpans(
+        buildOtlpRequest({
+          sessionId: "hermes-sess",
+          localSessionId,
+          turnStartNumber: 1,
+          turns: [baseTurn({ messageId: "noid:0" })],
+          inherited: { traceId: TRACE, parentSpanId: SPAN },
+        }),
+      ).map((s) => s.spanId)
+
+    const ids = [...child("claude-a"), ...child("claude-b")]
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it("is deterministic, so a re-sent turn produces identical span ids", () => {
+    const build = () =>
+      otlpSpans(
+        buildOtlpRequest({
+          sessionId: "sess-1",
+          turnStartNumber: 2,
+          turns: [baseTurn()],
+          inherited: { traceId: TRACE, parentSpanId: SPAN },
+        }),
+      ).map((s) => s.spanId)
+
+    expect(build()).toEqual(build())
+  })
+
+  it("leaves owned-trace span ids unchanged", () => {
+    // Guards the upgrade path: a session already mid-flight when the emitter updates
+    // must keep producing the ids it produced before, or its next Stop re-inserts
+    // spans the additive trace rollups would double-count.
+    const spans = otlpSpans(buildOtlpRequest({ sessionId: "sess-1", turnStartNumber: 1, turns: [baseTurn()] }))
+    expect(unwrap(spans[0]).traceId).toBe("b1b3bad40622b42bb0aad1e39cc45fcf")
+    expect(unwrap(spans[0]).spanId).toBe("6168b591e06f449b")
+  })
+})
+
 describe("buildOtlpRequest", () => {
   it("emits one interaction + one llm_request span per turn", () => {
     const req = buildOtlpRequest({
