@@ -60,6 +60,7 @@ export * from '@latitude-data/constants/tracing'
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
 export const LATITUDE_EMAIL = 'hello@latitude.so'
+export const LATITUDE_V2_URL = 'https://latitude.so'
 export const LATITUDE_SLACK_URL =
   'https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw'
 export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 100

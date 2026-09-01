@@ -1,7 +1,9 @@
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'
+import { ShutdownBanner } from '$/components/ShutdownBanner'
 import { ROUTES } from '$/services/routes'
+import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
 
 export const metadata = buildMetatags({
@@ -18,6 +20,7 @@ export default async function MagicLinkSent({
 
   return (
     <FocusLayout
+      banner={env.LATITUDE_CLOUD ? <ShutdownBanner /> : null}
       header={
         <FocusHeader
           title="You've got mail!"

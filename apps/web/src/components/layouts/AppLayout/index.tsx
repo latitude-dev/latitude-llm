@@ -6,6 +6,7 @@ import AppHeader, { AppHeaderProps } from './Header'
 
 import DocumentationSidebarLayout from './DocumentationSidebarLayout'
 import { DocumentationProvider } from '$/components/Documentation/Provider'
+import { ShutdownBanner } from '$/components/ShutdownBanner'
 
 export type AppLayoutProps = AppHeaderProps & {
   children: ReactNode
@@ -26,17 +27,20 @@ export default function AppLayout({
         'overflow-y-auto custom-scrollbar': scrollable,
       })}
     >
+      {isCloud ? <ShutdownBanner /> : null}
       <DocumentationProvider>
         <AppHeader
           currentUser={currentUser}
           cloudInfo={cloudInfo}
           isCloud={isCloud}
         />
-        <DocumentationSidebarLayout>
-          <main className='w-full flex-grow min-h-0 h-full relative'>
-            {children}
-          </main>
-        </DocumentationSidebarLayout>
+        <div className='flex-1 min-h-0 overflow-hidden'>
+          <DocumentationSidebarLayout>
+            <main className='w-full flex-grow min-h-0 h-full relative'>
+              {children}
+            </main>
+          </DocumentationSidebarLayout>
+        </div>
       </DocumentationProvider>
     </div>
   )

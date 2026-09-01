@@ -1,6 +1,7 @@
 import AuthFooter from '$/app/(public)/_components/Footer'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'
+import { ShutdownBanner } from '$/components/ShutdownBanner'
 import { GoogleTagManager } from '$/components/Providers/GoogleTagManager'
 import { env } from '@latitude-data/env'
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
@@ -35,6 +36,7 @@ export default async function SetupPage({
     <>
       <GoogleTagManager />
       <FocusLayout
+        banner={env.LATITUDE_CLOUD ? <ShutdownBanner /> : null}
         header={
           <FocusHeader
             title='Create your Latitude account'
