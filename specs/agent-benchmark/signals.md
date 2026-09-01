@@ -175,7 +175,7 @@ Every screening decision stores:
 
 - project, session, flagger slug, and timestamp;
 - selected or skipped;
-- deterministic, hinted, uniform-sample, ordinary-sample, or rate-limited reason;
+- deterministic, hinted, uniform-sample, ordinary-sample, skipped, or rate-limited reason;
 - inclusion probability;
 - finding kind and conditional fields when matched.
 

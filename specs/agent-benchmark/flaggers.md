@@ -183,7 +183,13 @@ type FlaggerScreeningDecision = {
   sessionId: string
   flaggerSlug: string
   selected: boolean
-  reason: "deterministic" | "hint" | "uniform" | "sample" | "skipped" | "rateLimited"
+  reason:
+    | "deterministic"
+    | "hinted"
+    | "uniform-sample"
+    | "ordinary-sample"
+    | "skipped"
+    | "rate-limited"
   inclusionProbability?: number
   hintKinds: string[]
   outcome?: "matched" | "unmatched" | "success" | "failure" | "indeterminate" | "notApplicable" | "error"
@@ -191,10 +197,12 @@ type FlaggerScreeningDecision = {
 }
 ```
 
-The inclusion probability is the probability before observing the flagger result. Deterministic and
-uniformly examined sessions use 1. Ordinary samples store their configured probability. Rate-limited
-or policy-skipped sessions are not readable unless the probability model explicitly accounts for
-them.
+The reason names the selection mechanism, not the classifier result. An ordinary sample that loses
+its sampling draw has `selected: false` and `reason: "ordinary-sample"`; `skipped` is reserved for a
+policy skip. The inclusion probability is the probability before observing the flagger result.
+Deterministic and uniformly examined sessions use 1. Ordinary samples store their configured
+probability. Rate-limited or policy-skipped sessions are not readable unless the probability model
+explicitly accounts for them.
 
 The append-only ClickHouse table is ordered by organization, project, session, and flagger slug and
 uses the standard retention TTL, which must exceed the longest score window plus one daily run
