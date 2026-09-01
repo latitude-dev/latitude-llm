@@ -45,6 +45,9 @@ The five dimension cards show the number, interval, meaning, native measurement,
 | Speed | observed critical-path time and estimated avoidable time |
 | Safety | confirmed harmful sessions, examined sessions, and chance of 1,000 sessions without harm |
 
+Reliability never appears as the 20-session value alone. Its card, dimension section, tooltip, and
+public representation always show the one-session operational success rate beside it.
+
 Numbers appear only when all five dimensions pass the publication gate. If any dimension is
 unmeasured, every card states what has been observed and what evidence is still missing without
 rendering a numeric score.

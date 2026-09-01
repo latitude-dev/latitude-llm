@@ -308,6 +308,9 @@ The power expresses a reference run of 20 sessions. Reliability 80 means the cur
 an estimated 80% chance of completing 20 consecutive sessions without a terminal operational
 failure.
 
+Every user-facing Reliability value displays the one-session success rate `p` beside `100 * p^20`.
+The rate is explanatory context, not a second dimension score.
+
 #### Terminal failure
 
 A session fails operationally when it cannot produce a structurally usable completion because of:
