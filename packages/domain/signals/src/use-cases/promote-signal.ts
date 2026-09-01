@@ -1,8 +1,24 @@
 import { OutboxEventWriter } from "@domain/events"
-import { type RepositoryError, SignalId, SqlClient } from "@domain/shared"
+import { ScoreRepository } from "@domain/scores"
+import {
+  type CacheError,
+  type CacheStore,
+  type ChSqlClient,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  SignalId,
+  SqlClient,
+} from "@domain/shared"
+import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
+import { PROMOTION_WINDOW_DAYS } from "../constants.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
+import { promotionThresholdForVolume } from "../promotion.ts"
 import { type GenerateSignalDetailsError, generateSignalDetailsUseCase } from "./generate-signal-details.ts"
+import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
 export interface PromoteSignalInput {
   readonly organizationId: string
@@ -20,10 +36,36 @@ export interface PromoteSignalInput {
 
 export type PromoteSignalResult = {
   readonly signalId: string
-  readonly action: "promoted" | "already-promoted" | "not-found"
+  readonly action: "promoted" | "already-promoted" | "not-qualified" | "not-found"
 }
 
-export type PromoteSignalError = RepositoryError | GenerateSignalDetailsError
+export type PromoteSignalError = CacheError | RepositoryError | GenerateSignalDetailsError
+
+const resolvePromotionThreshold = (input: PromoteSignalInput, at: Date) =>
+  Effect.gen(function* () {
+    const volume = yield* resolveProjectSessionVolumeUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      now: at,
+    })
+    const threshold = promotionThresholdForVolume(volume)
+
+    yield* Effect.annotateCurrentSpan("promotion.volume", volume ?? -1)
+    yield* Effect.annotateCurrentSpan("promotion.volumeDegraded", volume === null)
+    yield* Effect.annotateCurrentSpan("promotion.threshold", threshold)
+
+    return threshold
+  })
+
+const countPromotionSessions = (input: { readonly projectId: string; readonly signalId: SignalId; readonly at: Date }) =>
+  Effect.gen(function* () {
+    const scoreRepository = yield* ScoreRepository
+    return yield* scoreRepository.countDistinctSessionsBySignalId({
+      projectId: ProjectId(input.projectId),
+      signalId: input.signalId,
+      since: new Date(input.at.getTime() - PROMOTION_WINDOW_DAYS * MILLISECONDS_PER_DAY),
+    })
+  })
 
 /**
  * Stamps `promoted_at` and emits `SignalPromoted`, after replacing the
@@ -57,6 +99,19 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
     }
     if (existing.signal.promotedAt !== null) {
       return { action: "already-promoted", signalId: input.signalId } satisfies PromoteSignalResult
+    }
+
+    const at = new Date()
+    const threshold = yield* resolvePromotionThreshold(input, at)
+    const sessions = yield* countPromotionSessions({
+      projectId: existing.signal.projectId,
+      signalId: existing.signal.id,
+      at,
+    })
+    yield* Effect.annotateCurrentSpan("promotion.sessions", sessions)
+    yield* Effect.annotateCurrentSpan("promotion.qualified", sessions >= threshold)
+    if (sessions < threshold) {
+      return { action: "not-qualified", signalId: input.signalId } satisfies PromoteSignalResult
     }
 
     // Generated before the transaction opens, and read straight from
@@ -98,6 +153,16 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
           return { action: "already-promoted", signalId: input.signalId } satisfies PromoteSignalResult
         }
 
+        // Re-count here: a delayed SignalQualifiedForPromotion job can fire after the evidence was removed.
+        const lockedSessions = yield* countPromotionSessions({
+          projectId: locked.signal.projectId,
+          signalId: locked.signal.id,
+          at: new Date(),
+        })
+        if (lockedSessions < threshold) {
+          return { action: "not-qualified", signalId: input.signalId } satisfies PromoteSignalResult
+        }
+
         const promotedAt = new Date()
         yield* signalRepository.save({
           ...locked.signal,
@@ -123,4 +188,8 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
         return { action: "promoted", signalId: locked.signal.id } satisfies PromoteSignalResult
       }),
     )
-  }).pipe(Effect.withSpan("issues.promoteSignal")) as Effect.Effect<PromoteSignalResult, PromoteSignalError>
+  }).pipe(Effect.withSpan("issues.promoteSignal")) as Effect.Effect<
+    PromoteSignalResult,
+    PromoteSignalError,
+    CacheStore | ChSqlClient | SessionRepository
+  >
