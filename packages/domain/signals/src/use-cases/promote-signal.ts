@@ -57,7 +57,11 @@ const resolvePromotionThreshold = (input: PromoteSignalInput, at: Date) =>
     return threshold
   })
 
-const countPromotionSessions = (input: { readonly projectId: string; readonly signalId: SignalId; readonly at: Date }) =>
+const countPromotionSessions = (input: {
+  readonly projectId: string
+  readonly signalId: SignalId
+  readonly at: Date
+}) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
     return yield* scoreRepository.countDistinctSessionsBySignalId({
