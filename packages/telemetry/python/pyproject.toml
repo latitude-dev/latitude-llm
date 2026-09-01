@@ -48,7 +48,7 @@ dev = [
     "pytest-xdist==3.8.0",
     "pytest==9.1.1",
     "pyright==1.1.411",
-    "ruff==0.15.22",
+    "ruff==0.16.4",
     "sh==2.4.0",
     "openai==2.46.0",
     # Host SDK for the openai-agents integration (example/tests only). The
