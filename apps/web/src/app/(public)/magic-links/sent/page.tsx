@@ -1,6 +1,7 @@
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'
+import { ShutdownBanner } from '$/components/ShutdownBanner'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
@@ -18,6 +19,7 @@ export default async function MagicLinkSent({
 
   return (
     <FocusLayout
+      banner={<ShutdownBanner />}
       header={
         <FocusHeader
           title="You've got mail!"

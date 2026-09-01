@@ -5,6 +5,7 @@ import { use } from 'react'
 import { useOnce } from '$/hooks/useMount'
 import { confirmMagicLinkTokenAction } from '$/actions/magicLinkTokens/confirm'
 import { FocusLayout } from '$/components/layouts'
+import { ShutdownBanner } from '$/components/ShutdownBanner'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 
@@ -27,6 +28,7 @@ export default function ConfirmMagicLink({
 
   return (
     <FocusLayout
+      banner={<ShutdownBanner />}
       header={
         <FocusHeader
           title='You are in!'

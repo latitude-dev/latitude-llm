@@ -2,6 +2,7 @@ import AuthFooter from '$/app/(public)/_components/Footer'
 import LoginFooter from '$/app/(public)/login/_components/LoginFooter'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import FocusLayout from '$/components/layouts/FocusLayout'
+import { ShutdownBanner } from '$/components/ShutdownBanner'
 import { getDataFromSession } from '$/data-access'
 import { ROUTES } from '$/services/routes'
 import { isLatitudeUrl } from '@latitude-data/constants'
@@ -38,6 +39,7 @@ export default async function LoginPage({
 
   return (
     <FocusLayout
+      banner={<ShutdownBanner />}
       header={<FocusHeader title='Welcome to Latitude' />}
       footer={<LoginFooter returnTo={returnTo} />}
     >
