@@ -88,9 +88,11 @@ export interface SignalTableRowsPage extends SignalListPage {
  * visible, because that is how it accumulates the evidence that promotes it.
  *
  * Default-deny with an `includeUnpromoted` opt-in: `findById`, `hybridSearch`.
- * Default-deny with no opt-in: `findByIds`, `findBySlug`, `findSimilarByCentroid`,
- * `searchOrgWide`, `list`, `listTableRows`, `listIdsCreatedInTimeRange`.
- * Never filtered: every write path, plus the two slug-uniqueness reads.
+ * Default-deny with an `unpromotedOnly` opt-in: `findSimilarByCentroid`.
+ * Default-deny with no opt-in: `findByIds`, `findBySlug`, `searchOrgWide`,
+ * `list`, `listTableRows`, `listIdsCreatedInTimeRange`.
+ * Never filtered: every write path, plus the two slug-uniqueness reads and
+ * `findAbsorbedLineage`, which reads soft-deleted rows by definition.
  */
 export interface SignalRepositoryShape {
   /** Default-deny: pass `includeUnpromoted` on discovery paths that must resolve a candidate. */
@@ -140,14 +142,17 @@ export interface SignalRepositoryShape {
    * "a similar issue was already resolved" is the most actionable neighbor.
    * No similarity floor here; gating lives in the domain scorer.
    *
-   * Unpromoted issues are excluded, on both sides — the source read and the
-   * neighbor scan. Candidate consolidation will need an opt-in here, since it
-   * matches candidates against each other.
+   * Unpromoted issues are excluded on both sides — the source read and the
+   * neighbor scan — and `unpromotedOnly` inverts that on both sides rather than
+   * relaxing it. Consolidation is the caller that needs it, and it may only ever
+   * merge candidates into candidates, so restricting the scan is what makes that
+   * a guarantee of this method rather than discipline in the use case.
    */
   findSimilarByCentroid(input: {
     readonly projectId: ProjectId
     readonly signalId: SignalId
     readonly limit: number
+    readonly unpromotedOnly?: boolean
   }): Effect.Effect<readonly SignalCentroidNeighbor[], RepositoryError, SqlClient>
   /**
    * Org-wide issue search across every project in the organization (RLS-scoped to the caller's
@@ -228,6 +233,49 @@ export interface SignalRepositoryShape {
   }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /** Soft-delete: stamps `deleted_at` so the signal is excluded read-side and frees its slug. No-op if already deleted. */
   softDelete(id: SignalId): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Soft-deletes the absorbed candidates of a consolidation and points each at
+   * its survivor, in one statement. The pointer is what lets a later merge find
+   * everything that ever flowed into a signal; see `findAbsorbedLineage`.
+   */
+  markMerged(input: {
+    readonly survivorId: SignalId
+    readonly loserIds: readonly SignalId[]
+    readonly now: Date
+  }): Effect.Effect<void, RepositoryError, SqlClient>
+  /**
+   * Every signal that was absorbed into this one, transitively, walking
+   * `merged_into_signal_id` up to a bounded depth. Excludes the survivor.
+   *
+   * This is what makes ClickHouse reconciliation independent of the order two
+   * chained merges execute in: a merge that absorbs a former survivor sweeps
+   * that survivor's own absorbed ids too, so rows a not-yet-applied earlier
+   * mutation would have moved are covered either way.
+   */
+  findAbsorbedLineage(input: {
+    readonly survivorId: SignalId
+    readonly maxDepth: number
+  }): Effect.Effect<readonly SignalId[], RepositoryError, SqlClient>
+  /**
+   * Soft-deletes candidates whose last clustered score is older than
+   * `idleBefore`, returning how many this call took. Promoted signals are never
+   * touched.
+   *
+   * Platform-wide and **unscoped by organization** — the sweep behind it runs on
+   * the admin client, like the escalation sweep's open-incident read. Capped so
+   * one tick is one bounded statement; the next tick takes the rest.
+   *
+   * Safe to do bluntly because an expired candidate has no consequences to
+   * unwind: nothing was announced, assigned, escalated or linked, and its scores
+   * stay attached on purpose — `check-eligibility` rejects a score that already
+   * carries a `signal_id`, which is what stops the sweep feeding the same
+   * annotations back into discovery forever.
+   */
+  expireIdleCandidates(input: {
+    readonly idleBefore: Date
+    readonly now: Date
+    readonly limit: number
+  }): Effect.Effect<number, RepositoryError, SqlClient>
   /**
    * Every promoted, non-deleted signal in the project. Also the "does this
    * project have any signals at all" probe behind the list's empty state, so a

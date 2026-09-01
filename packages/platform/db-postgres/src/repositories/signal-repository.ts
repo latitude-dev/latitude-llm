@@ -69,12 +69,21 @@ const isEscalatingExpr = sql<boolean>`exists (
     and ${incidents.endedAt} is null
 )`
 
+// `db.execute` is typed as a bare row array here, but the driver returns a
+// node-postgres result; the same cast is used for the RLS probe in
+// `score-repository.ts`.
+type AbsorbedLineageQueryResult = { readonly rows?: ReadonlyArray<{ readonly id: string }> }
+
 // Both halves of "this signal exists for the product": not soft-deleted, and
 // promoted. Shared rather than inlined per clause because the visibility rule is
 // repeated across a dozen `and(...)`s, and the next read added here has to
 // inherit it instead of remembering it. Write paths, the slug-uniqueness reads,
 // and the discovery opt-ins deliberately sit outside it — see the port docs.
 const userVisibleSignal = and(isNull(signals.deletedAt), isNotNull(signals.promotedAt))
+
+// The exact complement, for the two paths that work on candidates: the
+// consolidation neighbor scan and the expiry sweep.
+const candidateSignal = and(isNull(signals.deletedAt), isNull(signals.promotedAt))
 
 const signalColumnsWithLifecycle = {
   ...getTableColumns(signals),
@@ -547,9 +556,10 @@ const signalRepositoryCoreLive = Layer.effect(
           }))
         }),
 
-      findSimilarByCentroid: ({ projectId, signalId, limit }) =>
+      findSimilarByCentroid: ({ projectId, signalId, limit, unpromotedOnly }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const visibility = unpromotedOnly ? candidateSignal : userVisibleSignal
 
           // Two round-trips instead of a self-join: the source embedding is read
           // first so the second query can inline it as a pgvector literal (the
@@ -564,7 +574,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   eq(signals.id, signalId),
-                  userVisibleSignal,
+                  visibility,
                 ),
               )
               .limit(1),
@@ -579,7 +589,8 @@ const signalRepositoryCoreLive = Layer.effect(
 
           // Exact cosine scan over the project's other signals — no ANN index by
           // design (see the schema comment on `centroidEmbedding`). Resolved and
-          // ignored signals are deliberately included; unpromoted ones are not.
+          // ignored signals are deliberately included; unpromoted ones are not,
+          // unless the caller asked for candidates, in which case only those are.
           // `save()` only persists embeddings for the configured embedding model,
           // so every non-null row is in the same embedding space by construction.
           const similarity = sql<number>`(1::double precision - (${signals.centroidEmbedding} <=> ${queryVector}))`
@@ -592,7 +603,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   eq(signals.organizationId, organizationId),
                   eq(signals.projectId, projectId),
                   ne(signals.id, signalId),
-                  userVisibleSignal,
+                  visibility,
                   isNotNull(signals.centroidEmbedding),
                 ),
               )
@@ -780,6 +791,70 @@ const signalRepositoryCoreLive = Layer.effect(
               .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
               .where(and(eq(signals.organizationId, organizationId), eq(signals.id, id), isNull(signals.deletedAt))),
           )
+        }),
+
+      markMerged: ({ survivorId, loserIds, now }) =>
+        Effect.gen(function* () {
+          if (loserIds.length === 0) return
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db, organizationId) =>
+            db
+              .update(signals)
+              .set({ deletedAt: now, updatedAt: now, mergedIntoSignalId: survivorId })
+              .where(
+                and(
+                  eq(signals.organizationId, organizationId),
+                  inArray(signals.id, [...loserIds]),
+                  isNull(signals.deletedAt),
+                ),
+              ),
+          )
+        }),
+
+      findAbsorbedLineage: ({ survivorId, maxDepth }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db.execute(sql`
+              WITH RECURSIVE absorbed(id, depth) AS (
+                SELECT ${signals.id}, 1
+                FROM ${signals}
+                WHERE ${and(eq(signals.organizationId, organizationId), eq(signals.mergedIntoSignalId, survivorId))}
+                UNION ALL
+                SELECT s.id, a.depth + 1
+                FROM ${signals} s
+                JOIN absorbed a ON s.merged_into_signal_id = a.id
+                WHERE s.organization_id = ${organizationId} AND a.depth < ${maxDepth}
+              )
+              SELECT DISTINCT id FROM absorbed
+            `),
+          )
+          return ((rows as unknown as AbsorbedLineageQueryResult).rows ?? []).map((row) => SignalId(row.id))
+        }),
+
+      expireIdleCandidates: ({ idleBefore, now, limit }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // Unscoped by organization on purpose — this runs on the admin client.
+          const idle = sql`coalesce(${signals.clusteredAt}, ${signals.createdAt}) < ${idleBefore}`
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .update(signals)
+              .set({ deletedAt: now, updatedAt: now })
+              .where(
+                // Repeated outside the subselect on purpose: a row can be promoted or absorbed before the lock.
+                and(
+                  candidateSignal,
+                  idle,
+                  inArray(
+                    signals.id,
+                    db.select({ id: signals.id }).from(signals).where(and(candidateSignal, idle)).limit(limit),
+                  ),
+                ),
+              )
+              .returning({ id: signals.id }),
+          )
+          return rows.length
         }),
 
       countBySlug: (input) =>

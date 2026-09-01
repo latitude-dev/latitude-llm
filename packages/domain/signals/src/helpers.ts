@@ -8,6 +8,7 @@ import type {
 import type { ScoreSourceType } from "@domain/scores"
 import {
   createCentroid,
+  mergeCentroids,
   normalizeCentroid,
   normalizeEmbedding as sharedNormalizeEmbedding,
   updateCentroid,
@@ -80,6 +81,23 @@ export const updateSignalCentroid = ({
     timestamp,
   }) as SignalCentroid & { clusteredAt: Date }
 }
+
+/**
+ * Fold an absorbed candidate's centroid into its survivor's, for consolidation.
+ * Delegates to the shared primitive, which decays both sides to `timestamp`
+ * before summing — re-clustering from the raw scores instead would throw away
+ * the decayed mass the loser already accumulated.
+ */
+export const mergeSignalCentroids = ({
+  survivor,
+  loser,
+  timestamp,
+}: {
+  readonly survivor: SignalCentroid & { clusteredAt: Date }
+  readonly loser: SignalCentroid & { clusteredAt: Date }
+  readonly timestamp: Date
+}): SignalCentroid & { clusteredAt: Date } =>
+  mergeCentroids({ survivor, loser, timestamp }) as SignalCentroid & { clusteredAt: Date }
 
 /**
  * Convert the persisted running sum into the unit vector used for cosine

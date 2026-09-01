@@ -36,8 +36,8 @@ export interface EventPayloads {
      */
     readonly isSandbox?: boolean
     readonly billing?: {
-      readonly planSlug: "free" | "pro" | "enterprise"
-      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+      readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
       readonly periodStart: string
       readonly periodEnd: string
       readonly includedCredits: number
@@ -55,11 +55,23 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly signalId: string
+    /**
+     * Whether the signal was still a candidate when the score landed, read under
+     * the row lock. Carried so the router can route consolidation without a
+     * lookup: only a candidate's centroid change is worth a pass, and at volume
+     * almost every assignment is to a promoted signal.
+     *
+     * Absent on events written before this field existed, including any still
+     * under the legacy `ScoreAssignedToIssue` name.
+     */
+    readonly unpromoted?: boolean
   }
   /**
    * Emitted by `createSignalFromScoreUseCase` after the signal row is saved.
-   * An audit fact with no consumers — a discovered signal is announced when it
-   * is promoted, not when its row appears (see `SignalPromoted`).
+   * Announces nothing: a discovered signal is announced when it is promoted, not
+   * when its row appears (see `SignalPromoted`). Its one consumer schedules
+   * `issues:consolidate`, since a new row is always a candidate and its centroid
+   * is the first of the two changes a consolidation pass looks for.
    */
   SignalCreated: {
     readonly organizationId: string
@@ -84,7 +96,32 @@ export interface EventPayloads {
     readonly projectId: string
     readonly signalId: string
     readonly qualifiedAt: string
-    readonly triggerScoreId: string
+    /** The score whose assignment reached the threshold; null when a consolidation merge did. */
+    readonly triggerScoreId: string | null
+  }
+  /**
+   * Emitted by `consolidateSignalCandidatesUseCase` from the merge transaction
+   * itself, because it is what drives the ClickHouse half of the reassignment.
+   *
+   * It cannot be a call placed after the commit: the merge is idempotent
+   * precisely because a re-run finds the losers soft-deleted and no-ops, so a
+   * crash between the two stores would leave the loser's ClickHouse rows under a
+   * deleted id forever and the survivor's occurrence count permanently short.
+   * At-least-once delivery of this event plus an idempotent mutation is what
+   * closes that window.
+   *
+   * Carries identity only. The consumer derives what to sweep from Postgres at
+   * execution time, walking `signals.merged_into_signal_id`, so a merge that
+   * absorbs a former survivor also sweeps that survivor's own absorbed ids. That
+   * is what makes two chained merges converge whichever order their jobs run in.
+   */
+  SignalsConsolidated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly survivorId: string
+    /** Absorbed in this merge only; the consumer resolves the full lineage itself. */
+    readonly loserIds: readonly string[]
+    readonly consolidatedAt: string
   }
   /**
    * Emitted by `promoteSignalUseCase` from the transaction that stamps
@@ -300,6 +337,14 @@ export interface EventPayloads {
   UserSignedUp: {
     readonly userId: string
     readonly email: string
+    /**
+     * Set only when a partner provisioned the account through the private
+     * partner API; absent for organic signups. This is the one signup event
+     * PostHog receives, so carrying the partner here is what lets a single
+     * funnel compare partner-driven signups against organic ones.
+     */
+    readonly partnerId?: string
+    readonly partnerName?: string
   }
   /**
    * Emitted when a user finishes the project-onboarding form (role + stack
@@ -503,7 +548,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly periodStart: string
     readonly periodEnd: string
-    readonly planSource: "override" | "subscription" | "free-fallback"
+    readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
     readonly overageAllowed: boolean
     readonly includedCredits: number
     readonly consumedCredits: number
@@ -617,6 +662,53 @@ export interface EventPayloads {
   OrganizationClaimed: {
     readonly organizationId: string
     readonly ownerUserId: string
+  }
+  /**
+   * Emitted by `provisionPartnerAccountUseCase` — the audit record for the
+   * private partner API. It exists because the provisioned user, org and OAuth
+   * grant are otherwise indistinguishable from ones created interactively.
+   *
+   * Deliberately NOT fanned out to PostHog: `UserSignedUp` carries `partnerId`
+   * and `partnerName` for that, and sending both would double-count every
+   * partner signup. This one stays the durable audit record.
+   *
+   * `partnerName` is denormalized so audit queries can read a name without
+   * joining the registry. It is a snapshot: a later rename does not rewrite
+   * past events.
+   */
+  PartnerAccountProvisioned: {
+    readonly partnerId: string
+    readonly partnerName: string
+    readonly organizationId: string
+    readonly userId: string
+    readonly userEmail: string
+    readonly clientId: string
+  }
+  /** Emitted when staff register a new partner in the backoffice. Audit-only. */
+  AdminPartnerCreated: {
+    readonly adminUserId: string
+    readonly partnerId: string
+    readonly name: string
+  }
+  /**
+   * Emitted when staff change anything about a partner, including rotating its
+   * HMAC secret. Audit-only.
+   *
+   * `changes` names the entity fields that actually changed (`name`, `iconUrl`,
+   * `scopes`, `allowedIps`, `enabled`, `hmacSecret`) and deliberately carries no
+   * values: the point is "who touched what, and when", and one of the possible
+   * fields is a secret that must never leave the encrypted column.
+   */
+  AdminPartnerUpdated: {
+    readonly adminUserId: string
+    readonly partnerId: string
+    readonly name: string
+    readonly changes: readonly string[]
+  }
+  /** Emitted when staff soft-delete a partner, killing its request verification. Audit-only. */
+  AdminPartnerDeleted: {
+    readonly adminUserId: string
+    readonly partnerId: string
   }
   /**
    * Emitted by `bootstrapOrganizationUseCase` when an email is supplied; drives the claim email.

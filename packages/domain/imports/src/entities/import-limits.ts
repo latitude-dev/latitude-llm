@@ -1,3 +1,4 @@
+import type { PlanSlug } from "@domain/billing"
 import {
   IMPORT_DEFAULT_LOOKBACK_DAYS,
   IMPORT_HARD_MAX_TRACES,
@@ -6,7 +7,7 @@ import {
 } from "../constants.ts"
 
 export interface ImportPlanUsage {
-  readonly planSlug: "free" | "pro" | "enterprise"
+  readonly planSlug: PlanSlug
   /** How long this plan keeps spans. Older history would be deleted, so it bounds the range. */
   readonly retentionDays: number
   /** When this period's usage resets, which is when a job paused on usage can carry on. */

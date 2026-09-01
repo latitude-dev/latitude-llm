@@ -44,8 +44,7 @@ export function useConversationAnnotationFocus({
     enabled: annotationsEnabled,
   })
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({ projectId, traceId })
-  // Same query key the conversation itself uses, so this only mirrors its
-  // loading state instead of adding a fetch.
+  // Same query key the conversation uses, so this mirrors its loading state without adding a fetch.
   const { isLoading: isConversationLoading } = useTraceConversationMessages({
     projectId,
     traceId,
@@ -79,9 +78,7 @@ export function useConversationAnnotationFocus({
     }
     if (focusHandledRef.current === focusScoreId) return
     if (!isConversationActive || isDetailLoading || !traceDetail) return
-    // The conversation renders a skeleton until its first chunk of messages
-    // lands, so the scroll container the navigation pass needs doesn't exist
-    // yet. Marking the request handled before then would swallow it for good.
+    // No scroll container exists until the first chunk lands, and marking it handled here would swallow the request.
     if (isConversationLoading || !scrollContainerRef.current) return
     const annotation = annotationsData?.items?.find((item) => item.id === focusScoreId)
     if (!annotation) return

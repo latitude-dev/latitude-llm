@@ -2,8 +2,17 @@
 // to the same history as the issue detector without depending on `@domain/scores`.
 export { SEASONAL_HISTORY_WEEKS } from "@domain/scores"
 export {
+  CANDIDATE_EXPIRY_IDLE_DAYS,
+  CANDIDATE_EXPIRY_SWEEP_LIMIT,
+  CANDIDATE_SWEEPER_KEY,
+  CANDIDATE_SWEEPER_PATTERN,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  CONSOLIDATION_MAX_LINEAGE_DEPTH,
+  CONSOLIDATION_MAX_MERGES_PER_PASS,
+  CONSOLIDATION_MIN_SIMILARITY,
+  CONSOLIDATION_NEIGHBOR_LIMIT,
+  CONSOLIDATION_THROTTLE_MS,
   DEFAULT_ESCALATION_SENSITIVITY_K,
   ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR,
   ESCALATION_CHECK_THROTTLE_MS,
@@ -165,6 +174,12 @@ export {
   checkSignalEscalationUseCase,
 } from "./use-cases/check-signal-escalation.ts"
 export {
+  type ConsolidateSignalCandidatesError,
+  type ConsolidateSignalCandidatesInput,
+  type ConsolidateSignalCandidatesResult,
+  consolidateSignalCandidatesUseCase,
+} from "./use-cases/consolidate-signal-candidates.ts"
+export {
   type CreateSignalFromScoreError,
   type CreateSignalFromScoreInput,
   type CreateSignalFromScoreResult,
@@ -187,6 +202,7 @@ export {
   type EmbedSignalSearchQueryResult,
   embedSignalSearchQueryUseCase,
 } from "./use-cases/embed-signal-search-query.ts"
+export { type ExpireIdleCandidatesResult, expireIdleCandidatesUseCase } from "./use-cases/expire-idle-candidates.ts"
 export {
   type GeneratedSignalDetails,
   type GenerateSignalDetailsError,
@@ -273,6 +289,11 @@ export {
   type PromoteSignalResult,
   promoteSignalUseCase,
 } from "./use-cases/promote-signal.ts"
+export {
+  type ReconcileConsolidatedScoresInput,
+  type ReconcileConsolidatedScoresResult,
+  reconcileConsolidatedScoresUseCase,
+} from "./use-cases/reconcile-consolidated-scores.ts"
 export {
   type RefreshSignalDetailsError,
   type RefreshSignalDetailsInput,

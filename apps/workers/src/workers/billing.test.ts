@@ -26,7 +26,7 @@ import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { setupTestPostgres } from "@platform/testkit"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createBillingWorker, TRACE_USAGE_BATCH_FLUSH_MS } from "./billing.ts"
 
@@ -63,8 +63,17 @@ const provideAtomicReservation = Effect.provideService(
 const NOW = new Date()
 const BILLING_PERIOD_START = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth(), 1))
 const BILLING_PERIOD_END = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth() + 1, 1))
+const BILLING_PERIOD_MIDPOINT = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth(), 15, 12))
 
 describe("billing runtime integration", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("prefers a manual override over an active Stripe subscription", async () => {
     vi.useFakeTimers()
     try {
@@ -520,7 +529,7 @@ describe("billing runtime integration", () => {
 
     vi.useFakeTimers()
     try {
-      vi.setSystemTime(new Date("2026-06-15T12:00:00.000Z"))
+      vi.setSystemTime(BILLING_PERIOD_MIDPOINT)
 
       await pg.db.insert(organizations).values([
         {
@@ -539,14 +548,14 @@ describe("billing runtime integration", () => {
         id: generateId(),
         organizationId: freeOrgId,
         planSlug: "free",
-        periodStart: new Date("2026-06-01T00:00:00.000Z"),
-        periodEnd: new Date("2026-07-01T00:00:00.000Z"),
+        periodStart: BILLING_PERIOD_START,
+        periodEnd: BILLING_PERIOD_END,
         includedCredits: PLAN_CONFIGS.free.includedCredits,
         consumedCredits: PLAN_CONFIGS.free.includedCredits,
         overageCredits: 0,
         reportedOverageCredits: 0,
         overageAmountMills: 0,
-        updatedAt: new Date("2026-06-15T12:00:00.000Z"),
+        updatedAt: BILLING_PERIOD_MIDPOINT,
       })
 
       await pg.db.insert(subscriptions).values({
@@ -556,21 +565,21 @@ describe("billing runtime integration", () => {
         stripeCustomerId: "cus_overage",
         stripeSubscriptionId: "sub_overage",
         status: "active",
-        periodStart: new Date("2026-06-01T00:00:00.000Z"),
-        periodEnd: new Date("2026-07-01T00:00:00.000Z"),
+        periodStart: BILLING_PERIOD_START,
+        periodEnd: BILLING_PERIOD_END,
       })
       await pg.db.insert(billingUsagePeriods).values({
         id: generateId(),
         organizationId: proOrgId,
         planSlug: "pro",
-        periodStart: new Date("2026-06-01T00:00:00.000Z"),
-        periodEnd: new Date("2026-07-01T00:00:00.000Z"),
+        periodStart: BILLING_PERIOD_START,
+        periodEnd: BILLING_PERIOD_END,
         includedCredits: PLAN_CONFIGS.pro.includedCredits,
         consumedCredits: PLAN_CONFIGS.pro.includedCredits,
         overageCredits: 0,
         reportedOverageCredits: 0,
         overageAmountMills: 0,
-        updatedAt: new Date("2026-06-15T12:00:00.000Z"),
+        updatedAt: BILLING_PERIOD_MIDPOINT,
       })
 
       const freeResult = await Effect.runPromise(
@@ -624,14 +633,14 @@ describe("billing runtime integration", () => {
         context: {
           planSlug: "free",
           planSource: "free-fallback",
-          periodStart: new Date("2026-06-01T00:00:00.000Z"),
-          periodEnd: new Date("2026-07-01T00:00:00.000Z"),
+          periodStart: BILLING_PERIOD_START,
+          periodEnd: BILLING_PERIOD_END,
           includedCredits: PLAN_CONFIGS.free.includedCredits,
           overageAllowed: false,
         },
         period: {
-          start: new Date("2026-06-01T00:00:00.000Z"),
-          end: new Date("2026-07-01T00:00:00.000Z"),
+          start: BILLING_PERIOD_START,
+          end: BILLING_PERIOD_END,
           includedCredits: PLAN_CONFIGS.free.includedCredits,
           consumedCredits: PLAN_CONFIGS.free.includedCredits,
           overageCredits: 0,
@@ -847,8 +856,8 @@ describe("billing runtime integration", () => {
      */
     const PRO_BASE_CENTS = PLAN_CONFIGS.pro.priceCents as number
     const SPENDING_LIMIT_CENTS = PRO_BASE_CENTS + 1
-    const PERIOD_START = new Date("2026-08-01T00:00:00.000Z")
-    const PERIOD_END = new Date("2026-09-01T00:00:00.000Z")
+    const PERIOD_START = BILLING_PERIOD_START
+    const PERIOD_END = BILLING_PERIOD_END
     const CONCURRENCY = 10
     const ACTION_COST = 1
 

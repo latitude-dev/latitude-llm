@@ -1,0 +1,1 @@
+CREATE INDEX "signals_candidate_idle_idx" ON "latitude"."signals" (coalesce("clustered_at", "created_at")) WHERE "deleted_at" IS NULL AND "promoted_at" IS NULL;

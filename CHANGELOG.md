@@ -2,6 +2,49 @@
 
 ## Unreleased
 
+## v0.3.86 - 2026-09-01
+
+### Partners
+
+- Added a private partner API so a third-party platform can offer "install Latitude" from inside its own product. A staff-registered partner holds an HMAC secret and calls one signed endpoint to create a user, an organization and its own OAuth grant, receiving the same token pair the interactive consent flow would have produced. The registry is a global staff-managed table with no tenant scope, carrying the partner's scopes, an optional IP allowlist and the redirect URLs stamped onto every grant, so a provisioned account can re-authorize later through its own `client_id` instead of accumulating a second entry in the user's Keys settings. Requests are signed Stripe-style with the nonce inside the signed string, claimed only after the signature verifies; every pre-scope refusal returns an identical 401 so the surface cannot be used to enumerate partner ids. Provisioning never touches an existing account: a taken email is a 409 and the partner falls back to the interactive flow. Staff manage partners at `/backoffice/partners` (ref: #4508).
+
+### Billing and self-hosting
+
+- Billing enforcement is now opt-in behind `LAT_BILLING_ENABLED`, default off, so a self-hosted deployment is never rejected at ingest or aged out by a plan's retention. An organization with no override resolves to a new unenforced `self-hosted` plan whose retention comes from `LAT_TELEMETRY_RETENTION_DAYS`; usage events are still recorded, they just gate nothing. A malformed value dies as a configuration defect rather than falling back, because both silent outcomes, metering a self-hoster and not metering Cloud, are worse than a crash. Latitude Cloud sets the flag on every service (ref: #4515, #4516).
+- Hardened the OSS deployment heartbeat: the whole path is wrapped so a Redis failure cannot reject startup, the PostHog project key ships with the build so a production self-host reports without extra configuration, and `LAT_IMAGE_TAG` is passed through the Docker stack so heartbeats carry the compose image tag (ref: #4513).
+
+### Telemetry
+
+- Hermes and Claude Code traces now correlate across processes, published as `latitude-telemetry-hermes` 0.3.0 and the Claude Code hook 0.0.15. Both emitters minted their own trace ids, so a Claude Code session launched by a Hermes turn appeared as an unrelated trace and a shared session id could group them but never show that one launched the other. Both now read a W3C traceparent from the environment and parent their root span on the supplied span, with `LATITUDE_SESSION_ID` joining the parent's session and `LATITUDE_PROJECT` keeping both halves in one project, since ingest is project-scoped and a mismatch splits the trace silently. Hermes publishes its active tool span through `child_env()`, or onto `os.environ` around each tool call behind an opt-in flag so any subprocess inherits it. Joining is capped per session, and a session launched on its own is unaffected (ref: #4524, #4525).
+- Fixed headless Claude Code runs emitting nothing at all, which the correlation feature depends on. The hook was registered only on an async `Stop`, and Claude Code exits before spawning an async Stop hook in headless mode, so `claude -p` was invisible even though headless is how another harness drives it. The installer now also registers a synchronous `SessionEnd`, which additionally catches interactive quit and Ctrl-C; the two never double-count, and both hand their work to a detached worker so session teardown is not delayed. Existing installs need `install` re-run to pick up the entry (ref: #4524).
+- Fixed the Claude Code hook proceeding without its state lock when another hook held it, and the stale-payload sweep deleting files it had not written in a user-configured directory (ref: #4523).
+- Rewrote the Hermes docs around upgrading the plugin, including that a running Hermes must be restarted to pick up a new version (ref: #4504).
+
+### Traces
+
+- Bumped `rosetta-ai` to 2.3.0, adding server tool call request and response parts, a compaction part, the `document` content type and the `compaction` finish reason to the conversation vocabulary. The change is additive (ref: #4501).
+
+## v0.3.85 - 2026-08-26
+
+### Signals
+
+- Near-duplicate candidates now merge into one promotable signal. Discovery could split a real problem across several one-session candidates, none of which reached the promotion gate alone; a pass runs whenever a candidate's centroid moves, merges the neighbours above the similarity floor, and re-qualifies the survivor, so the union faces the gate its fragments could not. A promoted signal is never absorbed nor picked as survivor, and each pass is capped, because there is no demerge (ref: #4482).
+- Candidates that stop accumulating evidence are now swept. Every signal row carries a 2048-dimension centroid that hybrid search scans exactly, so this is the first mechanism that lets the corpus shrink rather than only grow; a candidate idle past the promotion window is provably something nobody has seen. Their scores stay attached, which is what keeps the sweep from feeding the same annotations back into discovery (ref: #4482).
+- An absorbed candidate now records the signal that took it over, and the ClickHouse pass that moves its scores resolves the sweep set from Postgres at execution time. Two merges in a chain publish independent jobs with no ordering between them, which could strand rows on a soft-deleted signal and leave the survivor's occurrence count permanently short (ref: #4482).
+
+### Web
+
+- A score's conversation anchor is now shareable. Clicking an anchored score already scrolled the Conversation tab to the message it points at, but the position was wiped from the URL the moment it landed; the focus now lives in a `scoreId` search param that survives, so the link reproduces the scroll and highlight on load. Opening a session from a signal lands on the anchor of the score that signal recorded there, and that first scroll now actually reaches it, waiting for the conversation to render and its layout to settle (ref: #4478, #4483).
+
+### Telemetry
+
+- The Hermes telemetry plugin now recovers the conversation, memory, tools, and usage a session was losing, published as `latitude-telemetry-hermes` 0.2.0. It normalized only the OpenAI Chat Completions message shape, so on Hermes's Codex/Responses path every tool call and result was dropped from the conversation and assistant text arrived as a JSON blob. Everything else in the hook payloads is now read too: system instructions, tool definitions, tool error status and duration, the real response model, time to first token, end-user identity, and the delegating subagent. Added alongside it are memory telemetry for the built-in stores, derived and user-defined tags and metadata, `config.yaml` as a second configuration surface, secret and attribute redaction, and accounting for the auxiliary calls Hermes makes through a client that fires no hooks at all. The export path was rebuilt so every span id ships exactly once, and the per-turn flush budget dropped from 10s to 2s (ref: #4499).
+- Ingest now normalizes OpenAI Responses items into the GenAI vocabulary, so `output_text`, `function_call`, and `function_call_output` from any Responses-dialect instrumentation pair and render like every other conversation instead of reaching storage as unknown part types (ref: #4499).
+
+### Docs
+
+- Rewrote the Hermes telemetry page around the settings that changed: every option is now readable from the profile's `config.yaml` as well as the environment, time to first token requires `plugins.stream_reasoning_deltas`, and secret redaction is on by default. Added sections for running several agents in one project, memory, usage and cost, and privacy, and fixed the troubleshooting step that told you to confirm the plugin with `hermes plugins list`, which never works for a pip plugin (ref: #4499).
+
 ## v0.3.84 - 2026-08-19
 
 ### Web

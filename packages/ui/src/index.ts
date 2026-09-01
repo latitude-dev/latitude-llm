@@ -319,6 +319,7 @@ export {
   TagList,
   type TagListProps,
 } from "./components/tag-badge/tag-list.tsx"
+export { TagsInput, type TagsInputProps } from "./components/tags-input/tags-input.tsx"
 export {
   type Common as TextCommonProps,
   Text,

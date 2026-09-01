@@ -10,7 +10,12 @@ import {
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
 import { SHOWCASE_CLEANUP_CRON_KEY, SHOWCASE_CLEANUP_CRON_PATTERN } from "@domain/showcase"
-import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
+import {
+  CANDIDATE_SWEEPER_KEY,
+  CANDIDATE_SWEEPER_PATTERN,
+  ESCALATION_SWEEPER_KEY,
+  ESCALATION_SWEEPER_PATTERN,
+} from "@domain/signals"
 import {
   CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
   CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN,
@@ -344,6 +349,18 @@ const bootstrap = async () => {
           "sweepEscalating",
           {},
           { key: ESCALATION_SWEEPER_KEY, pattern: ESCALATION_SWEEPER_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Daily candidate expiry sweep, bounding the corpus discovery scans exactly.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "issues",
+          "sweepCandidates",
+          {},
+          { key: CANDIDATE_SWEEPER_KEY, pattern: CANDIDATE_SWEEPER_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

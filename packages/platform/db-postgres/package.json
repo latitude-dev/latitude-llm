@@ -54,6 +54,7 @@
     "@domain/notifications": "workspace:*",
     "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
+    "@domain/partners": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/sandboxes": "workspace:*",
     "@domain/saved-searches": "workspace:*",

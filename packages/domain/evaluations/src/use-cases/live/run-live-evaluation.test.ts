@@ -54,7 +54,7 @@ import {
   createFakeTraceSearchRepository,
 } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   wrapPromptAsEvaluationScript,
@@ -427,6 +427,14 @@ function expectImmutableAnalyticsSyncOrder(operations: readonly string[]) {
 }
 
 describe("runLiveEvaluationUseCase", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("skips when the evaluation no longer exists", async () => {
     let traceLoadCalls = 0
     const { repository: traceRepository } = createFakeTraceRepository({

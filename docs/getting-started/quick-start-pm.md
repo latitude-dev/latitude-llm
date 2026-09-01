@@ -9,7 +9,7 @@ This guide walks you through the Latitude web interface. You'll learn how to nav
 
 ## Prerequisites
 
-- A Latitude account (sign up at [latitude.so](https://latitude.so))
+- A Latitude account (sign up at [console.latitude.so](https://console.latitude.so/login))
 - A project with telemetry already connected (ask your development team to set this up using the [Developer Quick Start](./quick-start-dev))
 
 ## Understanding the Dashboard

@@ -14,6 +14,19 @@ Users gain a `settings` JSONB payload for personal workflow preferences only.
 
 The exact fields are still pending definition in the proposal.
 
+## Partner-provisioned users
+
+A user can also be created without ever visiting Latitude: a vetted partner calls the private provisioning API and Latitude inserts the `users` row directly, bypassing Better Auth. See [`partners.md`](./partners.md).
+
+Those rows differ from signup-created ones in exactly two ways, both deliberate:
+
+- `email_verified` is `false` — the partner asserted the address but did not prove it.
+- `name` is derived from the email local part when the partner supplies none (`ada.lovelace@…` becomes `Ada Lovelace`), because a provisioned user never sees the onboarding form that would otherwise ask. It falls back to `""` only when the local part carries no letters or digits at all, which the app already treats as "no name".
+
+They have no credential accounts and no sessions, so the only ways in prove ownership of the email: the **magic link** (which flips `email_verified` on first use) or SSO. Social implicit linking is disabled repo-wide, so trying Google on a pre-created account yields `account_not_linked` rather than silently adopting it — that is the property that stops a partner-asserted email from becoming a takeover path.
+
+`UserRepository.create` is the only direct-insert path and exists solely for this flow; everything user-initiated still goes through Better Auth so its hooks fire. `findOptionalByEmail` is its absent-is-not-an-error companion, for the provisioning pre-check that treats "no such user" as the happy path. It compares the column as-is against a lowercased argument, which keeps `users_email_key` usable: every stored address is already lowercase, because Better Auth normalizes centrally and `create` normalizes the one path that bypasses it.
+
 ## Why User Scope Stays Small
 
 Keeping reliability user settings small avoids:

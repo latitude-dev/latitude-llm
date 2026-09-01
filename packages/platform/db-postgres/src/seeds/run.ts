@@ -2,6 +2,7 @@ import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { ApiKeyRepository } from "@domain/api-keys"
 import { MembershipRepository, OrganizationRepository } from "@domain/organizations"
+import { PartnerRepository } from "@domain/partners"
 import { ProjectRepository } from "@domain/projects"
 import { bootstrapSeedScope } from "@domain/shared/seeding"
 import { UserRepository } from "@domain/users"
@@ -12,6 +13,7 @@ import { closePostgres, createPostgresClient } from "../client.ts"
 import { ApiKeyRepositoryLive } from "../repositories/api-key-repository.ts"
 import { MembershipRepositoryLive } from "../repositories/membership-repository.ts"
 import { OrganizationRepositoryLive } from "../repositories/organization-repository.ts"
+import { PartnerRepositoryLive } from "../repositories/partner-repository.ts"
 import { ProjectRepositoryLive } from "../repositories/project-repository.ts"
 import { UserRepositoryLive } from "../repositories/user-repository.ts"
 import { SqlClientLive } from "../sql-client.ts"
@@ -39,6 +41,7 @@ const main = async () => {
       ApiKeyRepositoryLive,
       MembershipRepositoryLive,
       OrganizationRepositoryLive,
+      PartnerRepositoryLive,
       ProjectRepositoryLive,
       UserRepositoryLive,
     ).pipe(Layer.provideMerge(SqlClientLive(client)))
@@ -49,6 +52,7 @@ const main = async () => {
         apiKey: yield* ApiKeyRepository,
         membership: yield* MembershipRepository,
         organization: yield* OrganizationRepository,
+        partner: yield* PartnerRepository,
         project: yield* ProjectRepository,
         user: yield* UserRepository,
       }

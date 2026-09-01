@@ -200,7 +200,7 @@
     "ai7": "npm:ai@7.0.0-beta.181",
     "cohere-ai": "7.21.0",
     "llamaindex": "0.12.1",
-    "openai": "6.44.0",
+    "openai": "7.4.0",
     "together-ai": "0.40.0",
     "tsdown": "catalog:",
     "typescript": "catalog:",

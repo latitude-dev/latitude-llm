@@ -327,6 +327,29 @@ export interface ScoreAnalyticsRepositoryShape {
   // consistent across append-only and upsert-backed stores.
   insert(score: Score): Effect.Effect<void, RepositoryError, ChSqlClient>
   delete(id: ScoreId): Effect.Effect<void, RepositoryError, ChSqlClient>
+  /**
+   * ClickHouse half of a candidate consolidation: move every score owned by the
+   * absorbed signals onto the survivor. Postgres decides promotion, but
+   * occurrences, affected sessions, impact and the trend all read from here, so
+   * skipping this would announce a merged signal whose occurrence count shows
+   * only part of its evidence.
+   *
+   * Submitted as an asynchronous mutation and never awaited — a few seconds of
+   * stale count is acceptable, a request held open past the client timeout is
+   * not. Idempotent, so redelivery is safe.
+   *
+   * `createdFrom` bounds the partitions the mutation walks and must come from
+   * the rows Postgres actually moved, not from the signals: a replayed
+   * annotation is older than the signal it was assigned to.
+   *
+   * `scores_hourly_buckets` is deliberately left alone — see the adapter.
+   */
+  reassignSignal(input: {
+    readonly projectId: ProjectId
+    readonly fromSignalIds: readonly string[]
+    readonly toSignalId: string
+    readonly createdFrom: Date
+  }): Effect.Effect<void, RepositoryError, ChSqlClient>
 
   // -- Project-wide aggregates -----------------------------------------------
   aggregateByProject(input: {

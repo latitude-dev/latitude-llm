@@ -13,7 +13,7 @@ import {
 } from "@domain/shared"
 import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
-import { PROMOTION_WINDOW_DAYS, SIGNAL_UPDATE_LOCK_KEY, SIGNAL_UPDATE_LOCK_TTL_SECONDS } from "../constants.ts"
+import { SIGNAL_UPDATE_LOCK_KEY, SIGNAL_UPDATE_LOCK_TTL_SECONDS } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import type { CheckEligibilityError, SignalDiscoveryLockUnavailableError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError, SignalNotFoundForAssignmentError } from "../errors.ts"
@@ -22,6 +22,7 @@ import { withSignalDiscoveryLock } from "../locks.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { promotionThresholdForVolume } from "../promotion.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
+import { qualifySignalForPromotion } from "./qualify-signal-for-promotion.ts"
 import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
 
 export interface AssignScoreToSignalInput {
@@ -82,8 +83,6 @@ const loadEligibleScoreOrCurrentOwner = (input: {
     ),
   )
 
-const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
-
 /**
  * Distinct sessions this signal must reach to be promoted, resolved before the
  * transaction opens because it reads Redis and ClickHouse.
@@ -100,7 +99,10 @@ const resolvePromotionThreshold = (input: AssignScoreToSignalInput) =>
       projectId: ProjectId(input.projectId),
     })
 
-    return { threshold: promotionThresholdForVolume(volume), volume }
+    yield* Effect.annotateCurrentSpan("promotion.volume", volume ?? -1)
+    yield* Effect.annotateCurrentSpan("promotion.volumeDegraded", volume === null)
+
+    return { threshold: promotionThresholdForVolume(volume) }
   })
 
 const buildSignalWithAssignedScore = ({
@@ -234,37 +236,6 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
               return yield* new ScoreAlreadyOwnedBySignalError({ scoreId: score.id })
             }
 
-            // The gate, in the one order that is cheap: the latch is re-checked
-            // under the row lock before anything is counted, because a promoted
-            // signal can hold hundreds of thousands of scores and
-            // `scores_signal_lookup_idx` does not cover `session_id`. An
-            // unpromoted signal holds at most the threshold, so counting it is
-            // trivial. Counted after the claim so the score just assigned counts.
-            //
-            // Qualifying does not stamp `promoted_at`. A signal has to be named
-            // from its whole cluster before it exists for anyone, that is a model
-            // call, and a model call cannot run in here — so the latch is stamped
-            // downstream by `promoteSignalUseCase` and this only records that the
-            // gate passed. Until then every further score re-qualifies and
-            // re-emits; the consumer's leading throttle collapses those.
-            const qualified = yield* Effect.gen(function* () {
-              if (issue.promotedAt !== null || promotion === null) return false
-
-              const sessions = yield* scoreRepository.countDistinctSessionsBySignalId({
-                projectId: ProjectId(issue.projectId),
-                signalId: issue.id,
-                since: new Date(assignedAt.getTime() - PROMOTION_WINDOW_DAYS * MILLISECONDS_PER_DAY),
-              })
-
-              yield* Effect.annotateCurrentSpan("promotion.sessions", sessions)
-              yield* Effect.annotateCurrentSpan("promotion.threshold", promotion.threshold)
-              yield* Effect.annotateCurrentSpan("promotion.volume", promotion.volume ?? -1)
-              yield* Effect.annotateCurrentSpan("promotion.volumeDegraded", promotion.volume === null)
-              yield* Effect.annotateCurrentSpan("promotion.qualified", sessions >= promotion.threshold)
-
-              return sessions >= promotion.threshold
-            })
-
             yield* signalRepository.save(updatedSignal)
             yield* outboxEventWriter.write({
               eventName: "ScoreAssignedToSignal",
@@ -275,24 +246,18 @@ export const assignScoreToSignalUseCase = (input: AssignScoreToSignalInput) =>
                 organizationId: score.organizationId,
                 projectId: score.projectId,
                 signalId: issue.id,
+                unpromoted: issue.promotedAt === null,
               },
             })
 
-            if (qualified) {
-              yield* outboxEventWriter.write({
-                eventName: "SignalQualifiedForPromotion",
-                aggregateType: "issue",
-                aggregateId: issue.id,
-                organizationId: issue.organizationId,
-                payload: {
-                  organizationId: issue.organizationId,
-                  projectId: issue.projectId,
-                  signalId: issue.id,
-                  qualifiedAt: assignedAt.toISOString(),
-                  triggerScoreId: score.id,
-                },
-              })
-            }
+            // Counted after the claim, so the score just assigned counts toward
+            // the evidence that promotes the signal.
+            yield* qualifySignalForPromotion({
+              signal: issue,
+              threshold: promotion?.threshold ?? null,
+              at: assignedAt,
+              triggerScoreId: score.id,
+            })
 
             if (isRegression) {
               yield* outboxEventWriter.write({
