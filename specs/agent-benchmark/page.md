@@ -57,7 +57,7 @@ rendering a numeric score.
 Each dimension section contains:
 
 - score, interval, and one-sentence meaning when the publication gate passes;
-- the formula populated with the snapshot's values when available;
+- the formula definition and current native inputs when they are readable;
 - coverage and important missing evidence;
 - causes ranked by expected fix gain;
 - contextual observations that do not lower this dimension;
@@ -66,6 +66,10 @@ Each dimension section contains:
 The evidence list contains only metrics with readable observations and promoted signals with an
 eligible occurrence in the selected window. Signals with zero occurrences and scores assigned to
 ignored signals do not appear. Items whose effect is not yet measurable remain visible and say so.
+
+Native inputs and causes are labelled as current evidence from the live selected window. They
+explain present behavior but do not claim to reproduce the immutable snapshot, whose stored contract
+contains only scores, intervals, version, window, and eligible-session count.
 
 ### Cause rows
 

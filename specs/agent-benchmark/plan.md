@@ -352,7 +352,8 @@ already exercised elsewhere in the product.
   zero-event endpoint intervals, dynamic attribution closure, policy-cap separation, and
   scoring-version change.
 - [ ] **P6-15** Integration tests cover snapshot RLS, idempotency, queue payload scope, bulk evidence,
-  rendering headline and history from frozen snapshot data, and dynamic current-cause queries.
+  rendering headline and history from frozen snapshot data, and dynamic current-native-input and
+  cause queries that are never presented as historical decomposition.
 - [ ] **P6-16** End-to-end fixtures cover every metric, signal role, overlap case, missing-coverage
   case, and destination.
 - [ ] **P6-17** One full run on the largest project meets the agreed query, worker, snapshot-size,
