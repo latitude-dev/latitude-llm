@@ -51,6 +51,8 @@ Avoid generated-design reflexes:
 - **Equal-weight UI:** making every section, button, number, and panel equally prominent. Let importance change scale, placement, density, or contrast.
 - **Invented primitives:** recreating a component, token, or interaction already available in `@repo/ui`.
 - **Tiny-muted rescue text:** shrinking copy or reducing contrast to fit an overcrowded layout. Reorder, split, simplify, or give the content room instead.
+- **Border echo:** putting rounded, bordered cards inside a rounded, bordered section when neither boundary has a distinct job. A parent group and every child must not use the same visual treatment.
+- **Run-on hierarchy:** placing a title, status, metric, and description next to one another until they read as one sentence. Stack distinct information roles; do not rely on typography alone to create separation.
 
 ## Layout And Spacing
 
@@ -68,9 +70,31 @@ Use spacing to express relationships:
 
 Use responsive layout to preserve reading and interaction, not just to fit every desktop column onto a smaller screen. Stack when labels, values, filters, or actions can no longer be scanned reliably. Preserve touch targets and do not hide the only label behind an icon on small screens.
 
+## Containers And Surface Hierarchy
+
+Every visible boundary needs a job. Before adding a border, identify whether it marks a page region, a related group, a selectable item, an input, a state change, or an interaction. If it cannot answer one of those, use whitespace and alignment instead.
+
+Use at most one strong container treatment for a given level of information:
+
+- A page region can be flat on the canvas, or it can use one distinct surface.
+- Inside a surfaced region, use a grid, stack, or `divide-y` list by default. Do not give every child the same rounded border as its parent.
+- Give a nested item its own surface only when it is independently selectable, draggable, expandable, or actionable, or when it contains a genuinely separate task.
+- When a section needs grouping but not separation, prefer a subtle background difference before adding a border. Use borders as a precise edge, not as the default way to make content look designed.
+- Do not combine `rounded-* border bg-*` at the page, section, and item levels by default. Remove the least meaningful boundary first. In most overview pages, the canvas, a section surface, and an active or actionable item are the maximum useful surface levels.
+
+For repeated rows, make the row structure do the work: consistent padding, aligned columns, and separators are usually clearer than a collection of mini-cards. Reserve larger radii and full outlines for an actual panel, dialog, popover, empty state, or selected item.
+
 ## Typography, Colour, And Surfaces
 
 Use `Text` from `@repo/ui` for text content and its established type hierarchy. Use `Text.Mono` only for code, IDs, paths, timestamps, raw tokens, and short operational identifiers. Do not introduce a different font or custom type scale in route code.
+
+Treat text styles as roles, not decoration. A heading names a region; a row title identifies an item; a value reports data; a description adds context. Do not use a large heading style for a short status such as "Healthy" or "Watching" merely to make a card feel important.
+
+- Build title, value, status, and supporting copy as a vertical stack unless they are intentionally a compact inline pair, such as a label and a badge.
+- `Text` primitives can render inline. When a text role must start a new line, put it in a flex/grid stack or use the component's block display option. Inspect the rendered result: words from separate roles must never run together.
+- Keep a section title close to its content. Add a section description only when it changes how the user reads or acts on that content; do not use a sentence to restate the heading.
+- In repeated panels and rows, use one stable internal order. Do not alternate between title-status-description and title-description-status without a product reason.
+- Use muted text for secondary context, not to hide a necessary distinction between a label, value, and status.
 
 Write concise, sentence-case headings that describe the user's task or the information on screen. Prefer specific labels such as "Sampling rules" over generic labels such as "Configuration" when context permits. Do not use all-caps eyebrows, decorative section numbers, or marketing copy in product workflows.
 
@@ -129,6 +153,18 @@ Choose the visual form that makes the data quickest to understand:
 - Use a chart only when it reveals a relationship, trend, distribution, or threshold faster than aligned text or a table.
 - Use existing chart, table, badge, status, skeleton, and empty-state components before adding custom visual treatment.
 
+### Metrics And Numerical Data
+
+Numbers are data, not body copy or decoration. Give each metric a clear, repeatable structure: **label, value, then context**. Keep these roles visually and spatially distinct.
+
+- Put the metric label above or beside the value; use muted label text that names the measure and period, such as "Traces this week".
+- Make the value the strongest element in its metric group. Keep comparable values at the same type scale, alignment, and precision. Use tabular or monospaced numerals only when comparison benefits from it and an existing pattern supports it.
+- Put deltas, units, thresholds, and status on a separate supporting line or aligned metadata slot. Never concatenate a value, a status word, and an explanatory sentence into one text run.
+- A badge can communicate state or a bounded delta; it is not a substitute for the metric label or the value. Keep status badges secondary to the number they qualify.
+- Use one unit and timeframe per metric. Write the scope in the label or context rather than forcing readers to infer it from a nearby paragraph.
+- When multiple metrics need comparison, use a shared grid or table-like alignment. Do not make a distinct card for every number unless each metric is independently actionable.
+- Before creating a route-local metric component, search for an existing metric, stats strip, analytics panel, table summary, or comparable V2 view. Extract a shared primitive only after the pattern is needed in more than one product area.
+
 Design complete states, not only the happy path. Account for loading, empty, error, permission-limited, disabled, long-content, and destructive-action states where relevant. An empty state explains what is absent, why it matters, and the next available action without becoming a marketing panel.
 
 Use semantic controls and native behavior through `@repo/ui`. Keep visible labels for inputs, keyboard access, focus treatment, meaningful icon labels, and readable contrast in light and dark themes. Never communicate a critical state only through colour, position, hover, or an icon.
@@ -141,6 +177,9 @@ Review the implementation in context, at desktop and narrow widths, and compare 
 - Is the main user task obvious before secondary detail?
 - Is there a clear primary action for the active scope and no competing primary actions?
 - Are spacing, typography, surfaces, and icon treatment consistent with nearby UI?
+- Does every container have a distinct purpose, with no repeated parent-and-child border treatment?
+- Are labels, values, statuses, and descriptions visibly separated and never rendered as a run-on text line?
+- Do metrics use a consistent label-value-context order with units, timeframe, and state easy to scan?
 - Does the chosen route, modal, or drawer match the task's size and need for context?
 - Are loading, empty, error, disabled, and destructive states handled where applicable?
 - Is the change legible and usable with keyboard navigation and in both themes?
