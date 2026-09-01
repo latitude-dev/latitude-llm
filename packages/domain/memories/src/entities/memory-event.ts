@@ -45,16 +45,3 @@ export const memoryEventSchema = z.object({
 })
 
 export type MemoryEvent = z.infer<typeof memoryEventSchema>
-
-/** Fields the session ledger and materializer share for a stable causal order. */
-export type MemoryEventOrderKey = {
-  readonly endTime: Date
-  readonly startTime: Date
-  readonly spanId: string
-}
-
-/** `endTime`, then `startTime`, then `spanId`. Matches `readSessionMemoryEvents`. */
-export const compareMemoryEventOrder = (a: MemoryEventOrderKey, b: MemoryEventOrderKey): number =>
-  a.endTime.getTime() - b.endTime.getTime() ||
-  a.startTime.getTime() - b.startTime.getTime() ||
-  (a.spanId < b.spanId ? -1 : a.spanId > b.spanId ? 1 : 0)

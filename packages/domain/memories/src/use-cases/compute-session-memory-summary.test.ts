@@ -251,21 +251,21 @@ describe("computeSessionMemorySummary", () => {
     expect(summary.total.tokensRemoved).toBeGreaterThan(0)
   })
 
-  it("nets out a record created then wiped at the same end_time even when wipe is listed first", async () => {
+  it("nets out a record created then wiped at the same start and end time", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(
       [
+        makeSpan({
+          spanId: spanId("9"),
+          recordsRaw: records({ id: "rec1", content: "a" }),
+          startTime: at(1),
+          endTime: at(1),
+        }),
         makeSpan({
           spanId: spanId("1"),
           operation: "delete_memory",
           recordId: "",
           startTime: at(1),
-          endTime: at(1),
-        }),
-        makeSpan({
-          spanId: spanId("9"),
-          recordsRaw: records({ id: "rec1", content: "a" }),
-          startTime: at(0),
           endTime: at(1),
         }),
       ],
@@ -277,21 +277,21 @@ describe("computeSessionMemorySummary", () => {
     expect(summary.total).toEqual({ readTokens: 0, tokensAdded: 0, tokensRemoved: 0, writeRecords: 0 })
   })
 
-  it("counts a create after a same-end_time wipe even when create is listed first", async () => {
+  it("counts a create after a wipe at the same start and end time", async () => {
     const memory = createFakeMemoryRepository()
     await materialize(
       [
         makeSpan({
           spanId: spanId("9"),
-          recordsRaw: records({ id: "rec1", content: "a" }),
+          operation: "delete_memory",
+          recordId: "",
           startTime: at(1),
           endTime: at(1),
         }),
         makeSpan({
           spanId: spanId("1"),
-          operation: "delete_memory",
-          recordId: "",
-          startTime: at(0),
+          recordsRaw: records({ id: "rec1", content: "a" }),
+          startTime: at(1),
           endTime: at(1),
         }),
       ],

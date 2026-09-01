@@ -1,6 +1,6 @@
 import type { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
-import { compareMemoryEventOrder, type MemoryEvent } from "../entities/memory-event.ts"
+import type { MemoryEvent } from "../entities/memory-event.ts"
 import type { MemoryRecordVersion } from "../entities/memory-snapshot.ts"
 import { MemoryRepository } from "../ports/memory-repository.ts"
 import { reconstructSnapshotUseCase } from "./reconstruct-snapshot.ts"
@@ -128,7 +128,6 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
   }
 
   for (const [key, list] of mutatingByRecord) {
-    list.sort(compareMemoryEventOrder)
     const first = list[0]!
     const last = list[list.length - 1]!
     // chain is end_time ASC; the last version before the session's first touch is the "before".
@@ -137,11 +136,12 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
       if (version.endTime.getTime() < first.endTime.getTime()) before = version
     }
     const beforePresent = before !== undefined && before.changeKind !== "remove"
+    const lastIndex = events.indexOf(last)
     const storeWipedAfterLastTouch = events.some(
-      (event) =>
+      (event, index) =>
         event.storeId === first.storeId &&
         event.changeKind === "store_delete" &&
-        compareMemoryEventOrder(event, last) > 0,
+        index > lastIndex,
     )
     const afterPresent = storeWipedAfterLastTouch ? false : last.changeKind !== "remove"
     addEndpoint({

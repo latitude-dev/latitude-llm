@@ -257,23 +257,23 @@ describe("MemoryRepository", () => {
     expect(events.map((e) => e.traceId)).toEqual([traceN(1), traceN(2)])
   })
 
-  it("orders same-end_time session events by start_time, not insert order or span_id", async () => {
+  it("orders same-timestamp session events by ingested_at, not span_id", async () => {
     await withRepo((repo) =>
       repo.insertEvents([
+        makeEvent({
+          recordId: "rec1",
+          changeKind: "add",
+          spanId: spanN(9),
+          sessionId: SessionId("sessA"),
+          startTime: at(1),
+          endTime: at(1),
+        }),
         makeEvent({
           recordId: "",
           changeKind: "store_delete",
           spanId: spanN(1),
           sessionId: SessionId("sessA"),
           startTime: at(1),
-          endTime: at(1),
-        }),
-        makeEvent({
-          recordId: "rec1",
-          changeKind: "add",
-          spanId: spanN(9),
-          sessionId: SessionId("sessA"),
-          startTime: at(0),
           endTime: at(1),
         }),
       ]),
@@ -287,19 +287,19 @@ describe("MemoryRepository", () => {
     await withRepo((repo) =>
       repo.insertEvents([
         makeEvent({
-          recordId: "rec2",
-          changeKind: "add",
+          recordId: "",
+          changeKind: "store_delete",
           spanId: spanN(8),
           sessionId: SessionId("sessB"),
           startTime: at(1),
           endTime: at(1),
         }),
         makeEvent({
-          recordId: "",
-          changeKind: "store_delete",
+          recordId: "rec2",
+          changeKind: "add",
           spanId: spanN(2),
           sessionId: SessionId("sessB"),
-          startTime: at(0),
+          startTime: at(1),
           endTime: at(1),
         }),
       ]),

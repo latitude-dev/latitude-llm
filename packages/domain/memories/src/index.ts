@@ -36,13 +36,11 @@ export type {
   MemoryRecordChange,
 } from "./entities/memory-diff.ts"
 export {
-  compareMemoryEventOrder,
   MEMORY_CHANGE_KINDS,
   MEMORY_EVENT_SOURCES,
   MEMORY_MUTATING_CHANGE_KINDS,
   type MemoryChangeKind,
   type MemoryEvent,
-  type MemoryEventOrderKey,
   type MemoryEventSource,
   memoryChangeKindSchema,
   memoryEventSchema,

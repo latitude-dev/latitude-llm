@@ -62,7 +62,7 @@ export interface MemoryRepositoryShape {
     readonly hashes: readonly string[]
   }): Effect.Effect<readonly MemoryBlob[], RepositoryError, ChSqlClient>
 
-  /** All ledger events for a session (optionally one trace), deduped, ordered by `endTime`, `startTime`, `spanId`. */
+  /** All ledger events for a session (optionally one trace), deduped, ordered by `endTime`, `startTime`, ingest order. */
   readSessionMemoryEvents(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
