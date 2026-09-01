@@ -212,6 +212,44 @@ describe("promoteSignalUseCase", () => {
     expect(outbox.events).toHaveLength(0)
   })
 
+  it("locks matching scores when re-counting under the signal row lock", async () => {
+    const lockedCounts: boolean[] = []
+    const { layer: aiLayer } = createFakeAI({
+      generate: generated("Token leakage in assistant responses", "Secrets reach the user verbatim."),
+    })
+    const { repository: signalRepository } = createFakeSignalRepository([makeSignal()])
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      countDistinctSessionsBySignalId: (input) => {
+        lockedCounts.push(input.forUpdate === true)
+        return Effect.succeed(PROMOTION_MIN_SESSIONS)
+      },
+    })
+    const outbox: { events: OutboxWriteEvent[] } = { events: [] }
+
+    const result = await Effect.runPromise(
+      promoteSignalUseCase({ organizationId, projectId, signalId }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(
+          OutboxEventWriter,
+          OutboxEventWriter.of({
+            write: (event) =>
+              Effect.sync(() => {
+                outbox.events.push(event)
+              }),
+          }),
+        ),
+        ...promotionGateLayers(),
+      ),
+    )
+
+    expect(result.action).toBe("promoted")
+    expect(lockedCounts).toEqual([false, true])
+    expect(outbox.events.filter((event) => event.eventName === "SignalPromoted")).toHaveLength(1)
+  })
+
   it("does not stamp after a stale job if evidence disappears during naming", async () => {
     const counts = [PROMOTION_MIN_SESSIONS, PROMOTION_MIN_SESSIONS - 1]
     const { layer: aiLayer } = createFakeAI({

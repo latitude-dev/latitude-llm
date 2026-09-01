@@ -61,6 +61,7 @@ const countPromotionSessions = (input: {
   readonly projectId: string
   readonly signalId: SignalId
   readonly at: Date
+  readonly forUpdate?: boolean
 }) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
@@ -68,6 +69,7 @@ const countPromotionSessions = (input: {
       projectId: ProjectId(input.projectId),
       signalId: input.signalId,
       since: new Date(input.at.getTime() - PROMOTION_WINDOW_DAYS * MILLISECONDS_PER_DAY),
+      ...(input.forUpdate ? { forUpdate: true } : {}),
     })
   })
 
@@ -157,11 +159,12 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
           return { action: "already-promoted", signalId: input.signalId } satisfies PromoteSignalResult
         }
 
-        // Re-count here: a delayed SignalQualifiedForPromotion job can fire after the evidence was removed.
+        // Score-row FOR UPDATE: annotation delete never takes the signal lock.
         const lockedSessions = yield* countPromotionSessions({
           projectId: locked.signal.projectId,
           signalId: locked.signal.id,
           at: new Date(),
+          forUpdate: true,
         })
         if (lockedSessions < threshold) {
           return { action: "not-qualified", signalId: input.signalId } satisfies PromoteSignalResult

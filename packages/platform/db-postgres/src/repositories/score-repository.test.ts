@@ -1191,6 +1191,19 @@ describe("ScoreRepositoryLive + score use cases", () => {
     // session-1 (twice, counted once) + session-2 + the trace-keyed row + the bare
     // row. The draft, the other signal's row, and the pre-window row are excluded.
     expect(count).toBe(4)
+
+    const lockedCount = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.countDistinctSessionsBySignalId({
+          projectId: annotationProjectId,
+          signalId: signal,
+          since: windowStart,
+          forUpdate: true,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+    expect(lockedCount).toBe(4)
   })
 
   it("reassignSignal moves every absorbed signal's scores and reports the oldest one", async () => {
