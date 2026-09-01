@@ -1,5 +1,13 @@
+import { PassThrough } from "node:stream"
 import { describe, expect, it } from "vitest"
-import { isPublicUnicastIp, resolvePublicWebhookTarget, resolvePublicWebhookUrl } from "./host-guard.ts"
+import {
+  httpsRequestHost,
+  isPublicUnicastIp,
+  resolvePublicWebhookTarget,
+  resolvePublicWebhookUrl,
+  toPinnedHttpsResponse,
+  WEBHOOK_RESPONSE_MAX_BYTES,
+} from "./host-guard.ts"
 
 describe("isPublicUnicastIp", () => {
   it.each(["8.8.8.8", "1.1.1.1", "2001:4860:4860::8888"])("accepts public address %s", (ip) => {
@@ -37,5 +45,60 @@ describe("resolvePublicWebhookTarget", () => {
       url: new URL("https://hooks.example.com/run"),
       address: "8.8.8.8",
     })
+  })
+})
+
+describe("httpsRequestHost", () => {
+  it("omits the default https port", () => {
+    expect(httpsRequestHost(new URL("https://hooks.example.com/run"))).toBe("hooks.example.com")
+    expect(httpsRequestHost(new URL("https://hooks.example.com:443/run"))).toBe("hooks.example.com")
+  })
+
+  it("includes a custom port in the Host header", () => {
+    expect(httpsRequestHost(new URL("https://hooks.example.com:8443/run"))).toBe("hooks.example.com:8443")
+  })
+})
+
+describe("toPinnedHttpsResponse", () => {
+  const incomingMessage = (status = 200) => {
+    const stream = new PassThrough()
+    Object.assign(stream, { statusCode: status, headers: {} })
+    return stream as PassThrough & { statusCode: number; headers: Record<string, string> }
+  }
+
+  it("exposes status before the body ends", async () => {
+    const incoming = incomingMessage(202)
+    const response = toPinnedHttpsResponse(incoming, () => undefined)
+    expect(response.status).toBe(202)
+    if (!response.body) throw new Error("expected streamed body")
+    const reader = response.body.getReader()
+    incoming.write(Buffer.from('{"externalRunId":"run-1"}'))
+    const first = await reader.read()
+    expect(new TextDecoder().decode(first.value)).toBe('{"externalRunId":"run-1"}')
+    incoming.end()
+    await expect(reader.read()).resolves.toEqual({ done: true, value: undefined })
+  })
+
+  it("aborts the request when the body stream is cancelled", async () => {
+    const incoming = incomingMessage()
+    let aborted = false
+    const response = toPinnedHttpsResponse(incoming, () => {
+      aborted = true
+    })
+    await response.body?.cancel()
+    expect(aborted).toBe(true)
+  })
+
+  it("caps text() and aborts an oversized body", async () => {
+    const incoming = incomingMessage()
+    let aborted = false
+    const response = toPinnedHttpsResponse(incoming, () => {
+      aborted = true
+    })
+    incoming.write(Buffer.alloc(WEBHOOK_RESPONSE_MAX_BYTES + 8, 0x61))
+    incoming.end()
+    const text = await response.text()
+    expect(text.length).toBeLessThanOrEqual(WEBHOOK_RESPONSE_MAX_BYTES)
+    expect(aborted).toBe(true)
   })
 })

@@ -127,6 +127,33 @@ describe("createWebhookAdapter", () => {
     ).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
   })
 
+  it.each([301, 302, 303, 307, 308])("rejects HTTP %s redirects as transport errors", async (status) => {
+    await expect(dispatchWebhook(async () => makePinnedResponse("", status))).rejects.toMatchObject({
+      reason: "transport",
+      cause: status,
+    })
+  })
+
+  it("cancels the body when the response is a redirect", async () => {
+    let cancelled = false
+    const body = new ReadableStream<Uint8Array>({
+      start() {},
+      cancel() {
+        cancelled = true
+      },
+    })
+
+    await expect(
+      dispatchWebhook(async () => ({
+        status: 302,
+        headers: new Headers({ Location: "https://evil.example/internal" }),
+        body,
+        text: async () => "",
+      })),
+    ).rejects.toMatchObject({ reason: "transport", cause: 302 })
+    await vi.waitFor(() => expect(cancelled).toBe(true))
+  })
+
   it("discards metadata and cancels a response that never finishes", async () => {
     let cancelled = false
     const body = new ReadableStream<Uint8Array>({

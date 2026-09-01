@@ -1,6 +1,8 @@
 import { lookup } from "node:dns/promises"
+import type { IncomingHttpHeaders } from "node:http"
 import https from "node:https"
 import { isIP } from "node:net"
+import { Readable } from "node:stream"
 
 export type HostLookup = (hostname: string) => Promise<readonly string[]>
 
@@ -80,11 +82,83 @@ export const resolvePublicWebhookUrl = async (
   lookupHost: HostLookup = defaultHostLookup,
 ): Promise<URL> => (await resolvePublicWebhookTarget(webhookUrl, lookupHost)).url
 
+export const WEBHOOK_RESPONSE_MAX_BYTES = 64 * 1024
+
+export const httpsRequestHost = (url: URL): string => (url.port === "" || url.port === "443" ? url.hostname : url.host)
+
 export interface PinnedHttpsResponse {
   readonly status: number
   readonly headers: Headers
   readonly body: ReadableStream<Uint8Array> | null
   text(): Promise<string>
+}
+
+const readCappedText = async (body: ReadableStream<Uint8Array>, abort: () => void): Promise<string> => {
+  const reader = body.getReader()
+  const chunks: Uint8Array[] = []
+  let bytes = 0
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (bytes + value.byteLength > WEBHOOK_RESPONSE_MAX_BYTES) {
+        abort()
+        void reader.cancel().catch(() => undefined)
+        break
+      }
+      bytes += value.byteLength
+      chunks.push(value)
+    }
+  } catch {
+    return ""
+  }
+  const payload = new Uint8Array(bytes)
+  let offset = 0
+  for (const chunk of chunks) {
+    payload.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return new TextDecoder().decode(payload)
+}
+
+export const toPinnedHttpsResponse = (
+  res: Readable & { readonly statusCode?: number | undefined; readonly headers: IncomingHttpHeaders },
+  abort: () => void,
+): PinnedHttpsResponse => {
+  const headers = new Headers()
+  for (const [key, value] of Object.entries(res.headers)) {
+    if (value === undefined) continue
+    headers.set(key, Array.isArray(value) ? value.join(", ") : value)
+  }
+
+  const source = Readable.toWeb(res) as ReadableStream<Uint8Array>
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      reader ??= source.getReader()
+      try {
+        const { done, value } = await reader.read()
+        if (done) {
+          controller.close()
+          return
+        }
+        controller.enqueue(value)
+      } catch (cause) {
+        controller.error(cause)
+      }
+    },
+    cancel() {
+      void reader?.cancel().catch(() => undefined)
+      abort()
+    },
+  })
+
+  return {
+    status: res.statusCode ?? 0,
+    headers,
+    body,
+    text: () => readCappedText(body, abort),
+  }
 }
 
 export const postPinnedHttps = (
@@ -101,38 +175,19 @@ export const postPinnedHttps = (
         method: "POST",
         headers: {
           ...init.headers,
-          Host: target.url.hostname,
+          Host: httpsRequestHost(target.url),
           "Content-Length": Buffer.byteLength(init.body, "utf8"),
         },
         servername: target.url.hostname,
         rejectUnauthorized: true,
       },
       (res) => {
-        const chunks: Buffer[] = []
-        res.on("data", (chunk) => chunks.push(chunk))
-        res.on("end", () => {
-          const bytes = Buffer.concat(chunks)
-          const headers = new Headers()
-          for (const [key, value] of Object.entries(res.headers)) {
-            if (value === undefined) continue
-            headers.set(key, Array.isArray(value) ? value.join(", ") : value)
-          }
-          const body =
-            bytes.length === 0
-              ? null
-              : new ReadableStream<Uint8Array>({
-                  start(controller) {
-                    controller.enqueue(new Uint8Array(bytes))
-                    controller.close()
-                  },
-                })
-          resolve({
-            status: res.statusCode ?? 0,
-            headers,
-            body,
-            text: async () => bytes.toString("utf8"),
-          })
-        })
+        resolve(
+          toPinnedHttpsResponse(res, () => {
+            res.destroy()
+            req.destroy()
+          }),
+        )
       },
     )
     req.on("error", reject)
