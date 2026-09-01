@@ -29,7 +29,7 @@ dependencies = [
     "openinference-instrumentation-llama-index==4.4.2",
     "opentelemetry-instrumentation-mistralai==0.61.0",
     "opentelemetry-instrumentation-ollama==0.61.0",
-    "openinference-instrumentation-openai==0.1.52",
+    "openinference-instrumentation-openai==0.1.56",
     "openinference-instrumentation-openai-agents==1.6.1",
     "opentelemetry-instrumentation-replicate==0.61.0",
     "opentelemetry-instrumentation-sagemaker==0.62.1",
