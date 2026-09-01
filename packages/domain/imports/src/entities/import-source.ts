@@ -134,6 +134,7 @@ export const importStatsSchema = z.object({
   tracesImported: z.number().int().min(0),
   spansImported: z.number().int().min(0),
   spansSkipped: z.number().int().min(0),
+  consumedCreditsAtStart: z.number().int().min(0).optional(),
 })
 export type ImportStats = z.infer<typeof importStatsSchema>
 

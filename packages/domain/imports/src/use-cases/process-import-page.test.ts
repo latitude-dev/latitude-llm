@@ -10,8 +10,10 @@ import {
   ProjectId,
   type RedactionPolicy,
   SqlClient,
+  TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import type { SpanDetail } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
 import { createFakeSpanRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -33,9 +35,10 @@ import {
   FAKE_ROWS_LATEST,
   type FakeAdapterOptions,
   type FakeImportRow,
+  fakeImportHexId,
   fakeImportRows,
 } from "../testing/fake-adapter.ts"
-import { createFakeImportJobRepository, stubImportPlan } from "../testing/fakes.ts"
+import { createFakeImportJobRepository, stubImportPlan, stubSpanDetail } from "../testing/fakes.ts"
 import { importHarness, stubImportJob } from "../testing/harness.ts"
 import { processImportPageUseCase, recordImportFinalFailureUseCase } from "./process-import-page.ts"
 
@@ -101,6 +104,7 @@ const harness = (
     readonly plan?: ReturnType<typeof stubImportPlan>
     readonly consumedCredits?: number
     readonly redactionPolicy?: RedactionPolicy
+    readonly seedSpans?: readonly SpanDetail[]
   } = {},
 ) => {
   const jobs = createFakeImportJobRepository()
@@ -113,6 +117,12 @@ const harness = (
   const periods = createFakeBillingUsagePeriodRepository()
 
   jobs.jobs.set(job.id, job)
+
+  if (deps.seedSpans !== undefined) {
+    for (const span of deps.seedSpans) {
+      spans.inserted.push([span])
+    }
+  }
 
   if (deps.consumedCredits !== undefined) {
     Effect.runSync(
@@ -187,6 +197,23 @@ const harness = (
     return { result, pages }
   }
 
+  const setConsumedCredits = (consumedCredits: number) => {
+    Effect.runSync(
+      periods.repository
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: job.organizationId,
+            planSlug: plan.plan.slug,
+            periodStart: plan.periodStart,
+            periodEnd: plan.periodEnd,
+            includedCredits: plan.plan.includedCredits,
+            consumedCredits,
+          }),
+        )
+        .pipe(Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: job.organizationId }))),
+    )
+  }
+
   return {
     jobs,
     spans,
@@ -196,6 +223,7 @@ const harness = (
     fetchPageCalls,
     run,
     drain,
+    setConsumedCredits,
     stored: () => jobs.jobs.get(job.id),
   }
 }
@@ -722,6 +750,248 @@ describe("processImportPageUseCase", () => {
       expect(h.stored()?.status).toBe("capped")
       expect(h.stored()?.error).toContain("plan usage")
       expect(h.fetchPageCalls).toHaveLength(0)
+    })
+
+    it("finishes capped when the plan budget truncates a page", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100 } })
+      const h = harness(
+        job,
+        { rows: fakeImportRows(50) },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 3,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.stored()?.status).toBe("capped")
+      expect(h.stored()?.error).toContain("plan usage")
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(3)
+      expect(h.stored()?.cursor).toEqual(insideFirstWindow(null))
+    })
+
+    it("still finishes succeeded when the user's own ceiling is the tighter bound", async () => {
+      const job = makeJob({ config: { ...withMaxTraces(3), sourcePageSize: 100 } })
+      const h = harness(
+        job,
+        { rows: fakeImportRows(50) },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 10,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "succeeded" })
+      expect(h.stored()?.status).toBe("succeeded")
+      expect(h.stored()?.error).toBeNull()
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+    })
+
+    it("counts unseen rootless traces against the plan budget", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100 } })
+      const rows = Array.from({ length: 10 }, (_, i) => ({
+        sourceTraceId: `rootless-${i}`,
+        sourceSpanId: `child-${i}`,
+        name: `child-${i}`,
+        startTime: new Date(FAKE_ROWS_LATEST.getTime() - i * 60_000),
+        isRoot: false,
+      }))
+      const h = harness(
+        job,
+        { rows },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 3,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.stored()?.status).toBe("capped")
+      expect(h.stored()?.error).toContain("plan usage")
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(3)
+      expect(h.spans.inserted.flat()).toHaveLength(3)
+    })
+
+    it("does not charge a root that arrives after its children were billed", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 3 } })
+      const rows: FakeImportRow[] = [
+        {
+          sourceTraceId: "a",
+          sourceSpanId: "a-child",
+          name: "a-child",
+          startTime: FAKE_ROWS_LATEST,
+          isRoot: false,
+        },
+        {
+          sourceTraceId: "b",
+          sourceSpanId: "b-child",
+          name: "b-child",
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - 60_000),
+          isRoot: false,
+        },
+        {
+          sourceTraceId: "c",
+          sourceSpanId: "c-child",
+          name: "c-child",
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - 120_000),
+          isRoot: false,
+        },
+        {
+          sourceTraceId: "a",
+          sourceSpanId: "a-root",
+          name: "a-root",
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - 180_000),
+          isRoot: true,
+        },
+        {
+          sourceTraceId: "b",
+          sourceSpanId: "b-root",
+          name: "b-root",
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - 240_000),
+          isRoot: true,
+        },
+        {
+          sourceTraceId: "c",
+          sourceSpanId: "c-root",
+          name: "c-root",
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - 300_000),
+          isRoot: true,
+        },
+      ]
+      const h = harness(
+        job,
+        { rows },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 10,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "succeeded" })
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.fetchPageCalls).toHaveLength(2)
+    })
+
+    it("does not charge an already-stored rooted trace on re-import", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100 } })
+      const storedTraceId = fakeImportHexId("trace-0", 32)
+      const h = harness(
+        job,
+        { rows: fakeImportRows(50) },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 3,
+          seedSpans: [
+            stubSpanDetail({
+              organizationId: job.organizationId,
+              projectId: job.projectId,
+              traceId: TraceId(storedTraceId),
+            }),
+          ],
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(4)
+      expect(h.events.at(-1)?.payload.traceIds).toContain(storedTraceId)
+    })
+
+    it("does not admit a second page against the same remaining credits", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 10 } })
+      const h = harness(
+        job,
+        { rows: fakeImportRows(30, { spansPerTrace: 1 }) },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 10,
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.fetchPageCalls).toHaveLength(1)
+      expect(h.stored()?.stats.tracesImported).toBe(10)
+    })
+
+    it("does not double-subtract once this job's traces have landed in the period", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 5 } })
+      const startConsumed = FREE_PLAN_CONFIG.includedCredits - 10
+      const h = harness(
+        job,
+        { rows: fakeImportRows(20, { spansPerTrace: 1 }) },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: startConsumed,
+        },
+      )
+
+      const first = await h.run()
+      expect(first).toEqual({ done: false, reason: "next_page" })
+      expect(h.stored()?.stats.tracesImported).toBe(5)
+
+      h.setConsumedCredits(startConsumed + 5)
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.stored()?.stats.tracesImported).toBe(10)
+      expect(h.fetchPageCalls).toHaveLength(2)
+    })
+
+    it("does not charge continuation spans of already-imported traces", async () => {
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100 } })
+      const earlierTraceId = fakeImportHexId("trace-earlier", 32)
+      const rows: FakeImportRow[] = [
+        {
+          sourceTraceId: "trace-earlier",
+          sourceSpanId: "span-late",
+          name: "late child",
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - 1_000),
+          isRoot: false,
+        },
+        ...Array.from({ length: 10 }, (_, i) => ({
+          sourceTraceId: `rootless-${i}`,
+          sourceSpanId: `child-${i}`,
+          name: `child-${i}`,
+          startTime: new Date(FAKE_ROWS_LATEST.getTime() - (i + 2) * 60_000),
+          isRoot: false,
+        })),
+      ]
+      const h = harness(
+        job,
+        { rows },
+        {
+          plan: freePlan(job.organizationId),
+          consumedCredits: FREE_PLAN_CONFIG.includedCredits - 3,
+          seedSpans: [
+            stubSpanDetail({
+              organizationId: job.organizationId,
+              projectId: job.projectId,
+              traceId: TraceId(earlierTraceId),
+            }),
+          ],
+        },
+      )
+
+      const { result } = await h.drain()
+
+      expect(result).toEqual({ done: true, reason: "capped" })
+      expect(h.stored()?.stats.tracesImported).toBe(3)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(4)
+      expect(h.spans.inserted.flat()).toHaveLength(5)
     })
 
     it("keeps importing while the plan still has room", async () => {
