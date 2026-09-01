@@ -86,10 +86,27 @@ export interface SpanIngestedAtWindow {
 /**
  * Repository port for spans (ClickHouse).
  */
+export interface SpanIdentity {
+  readonly projectId: ProjectId
+  readonly traceId: TraceId
+  readonly spanId: SpanId
+}
+
 export interface SpanRepositoryShape {
   // TODO(repositories): rename insert -> save to keep repository write verbs
   // consistent across append-only and upsert-backed stores.
   insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError, ChSqlClient>
+
+  /**
+   * Identities from `spans` that already have a row in ClickHouse. Used to skip
+   * re-inserts: `spans` is ReplacingMergeTree, but `traces_mv`/`sessions_mv`
+   * add per inserted block, so a retry after a successful write would
+   * permanently double rollup counts, tokens, cost, and duration.
+   */
+  listExistingIdentities(input: {
+    readonly organizationId: OrganizationId
+    readonly spans: readonly SpanIdentity[]
+  }): Effect.Effect<readonly SpanIdentity[], RepositoryError, ChSqlClient>
 
   /**
    * Every span in a trace. The dynamic attribute maps

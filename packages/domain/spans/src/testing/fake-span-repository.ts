@@ -13,6 +13,16 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
       inserted.push([...spans])
       return Effect.void
     },
+    listExistingIdentities: ({ spans }) => {
+      const stored = new Set(
+        inserted.flat().map((span) => `${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+      )
+      return Effect.succeed(
+        spans.filter((span) =>
+          stored.has(`${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+        ),
+      )
+    },
     listByTraceId: () => Effect.succeed([]),
     listByTraceIds: () => Effect.succeed([]),
     listBySessionId: () => Effect.succeed([]),

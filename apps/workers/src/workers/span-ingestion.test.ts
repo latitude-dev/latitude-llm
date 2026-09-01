@@ -1,5 +1,5 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
-import type { QueuePublishError } from "@domain/queue"
+import { QueuePublishError } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
@@ -721,5 +721,131 @@ describe("createSpanIngestionWorker", () => {
       (message) => message.queue === "billing" && message.task === "recordTraceUsageBatch",
     )
     expect(billingPublishes).toHaveLength(2)
+  })
+
+  it("does not double-count traces_mv after a retry that follows a post-insert publish failure", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const organizationId = generateId()
+    const projectId = generateId()
+    const fileKey = `span-ingestion/${organizationId}-retry.json`
+    const request = {
+      resourceSpans: [
+        {
+          resource: { attributes: [{ key: "service.name", value: { stringValue: "test-service" } }] },
+          scopeSpans: [
+            {
+              scope: { name: "test-scope", version: "1.0.0" },
+              spans: [
+                {
+                  ...validRequest.resourceSpans[0]!.scopeSpans[0]!.spans[0],
+                  attributes: [
+                    { key: "custom.attr", value: { stringValue: "hello" } },
+                    { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
+                    { key: "gen_ai.usage.input_tokens", value: { intValue: "100" } },
+                    { key: "gen_ai.usage.output_tokens", value: { intValue: "20" } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(request), "utf-8"))
+
+    const published: DomainEvent[] = []
+    let failNextPublish = true
+    const eventsPublisher = {
+      published,
+      publish: (event: DomainEvent) => {
+        if (failNextPublish) {
+          failNextPublish = false
+          return Effect.fail(new QueuePublishError({ cause: "redis down", queue: "domain-events" }))
+        }
+        published.push(event)
+        return Effect.void
+      },
+    }
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    await expect(dispatchValidIngest(consumer, fileKey, organizationId, projectId)).rejects.toThrow()
+    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+
+    const traces = await Effect.runPromise(
+      queryClickhouse<{ span_count: string; tokens_total: string }>(
+        ch.client,
+        `SELECT sum(span_count) AS span_count, sum(tokens_total) AS tokens_total
+         FROM traces
+         WHERE organization_id = {organizationId:String}`,
+        { organizationId },
+      ),
+    )
+    const sessions = await Effect.runPromise(
+      queryClickhouse<{ span_count: string }>(
+        ch.client,
+        `SELECT sum(span_count) AS span_count
+         FROM sessions
+         WHERE organization_id = {organizationId:String}`,
+        { organizationId },
+      ),
+    )
+
+    expect(Number(traces[0]?.span_count)).toBe(1)
+    expect(Number(traces[0]?.tokens_total)).toBe(120)
+    expect(Number(sessions[0]?.span_count)).toBe(1)
+    expect(published).toHaveLength(1)
+    expect(published[0]).toMatchObject({ name: "TracesIngested" })
+  })
+
+  it("drops a deterministic redaction failure without retrying the job", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const organizationId = generateId()
+    const projectId = generateId()
+    const fileKey = `span-ingestion/${organizationId}-redaction.json`
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey,
+      inlinePayload: null,
+      contentType: "application/json",
+      organizationId,
+      apiKeyId: `api-key-${organizationId}`,
+      ingestedAt: "2026-03-18T10:00:00.000Z",
+      defaultProjectId: projectId,
+      projectIdBySlug: {},
+      redaction: { [projectId]: { entities: "not-an-array" } },
+    })
+
+    const rows = await Effect.runPromise(
+      queryClickhouse<{ count: string }>(
+        ch.client,
+        "SELECT count() AS count FROM spans WHERE organization_id = {organizationId:String}",
+        { organizationId },
+      ),
+    )
+
+    expect(Number(rows[0]?.count)).toBe(0)
+    expect(pub.published).toHaveLength(0)
+    expect(disk.files.has(fileKey)).toBe(true)
   })
 })

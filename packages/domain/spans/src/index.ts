@@ -244,6 +244,7 @@ export { emptySessionMetrics, SessionRepository } from "./ports/session-reposito
 export type {
   MemoryOperationSpan,
   SessionToolSpan,
+  SpanIdentity,
   SpanIngestedAtWindow,
   SpanIngestionCursor,
   SpanListCursor,
