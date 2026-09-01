@@ -925,6 +925,43 @@ describe("runLiveEvaluationUseCase", () => {
     })
   })
 
+  it("skips before billing when the linked signal is ignored", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT })
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
+      ignoredAt: new Date("2026-07-20T12:00:00.000Z"),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
+    const { repository: billingUsageEventRepository, eventsByPeriodAndIdempotencyKey } =
+      createFakeBillingUsageEventRepository()
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            billingLayer: createBillingLayer({ billingUsageEventRepository }),
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "signal-ignored",
+      evaluationId: evaluation.id,
+      traceId: traceDetail.traceId,
+    })
+    expect([...eventsByPeriodAndIdempotencyKey.values()]).toEqual([])
+  })
+
   it("skips before AI execution when billing blocks the live evaluation", async () => {
     const evaluation = makeEvaluation({ script: VALID_SCRIPT })
     const issue = makeSignal({ id: SignalId(evaluation.signalId) })
@@ -1075,10 +1112,9 @@ describe("runLiveEvaluationUseCase", () => {
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
+    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const signalRepository = createSignalRepository(() =>
-      Effect.die("Signal should not be loaded while deferring for embeddings"),
-    )
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
     const scriptRuntime = createFakeScriptRuntime({
       run: () => Effect.die("Script should not run while deferring for embeddings"),
     })
@@ -1121,16 +1157,63 @@ describe("runLiveEvaluationUseCase", () => {
     expect(scriptRuntime.calls.run).toHaveLength(0)
   })
 
+  it("skips an ignored signal ahead of the embedding gate without requeueing", async () => {
+    const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
+    const issue = makeSignal({
+      id: SignalId(evaluation.signalId),
+      ignoredAt: new Date("2026-07-20T12:00:00.000Z"),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.die("Script should not run for an ignored signal"),
+    })
+    const published: unknown[] = []
+    const publisher = createNoopPublisher({
+      publish: (_queue, _task, payload) =>
+        Effect.sync(() => {
+          published.push(payload)
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            publisher,
+            scriptRuntimeLayer: scriptRuntime.layer,
+            ...embeddingGateRepos({ withEmbeddings: false }),
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "signal-ignored",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(published).toHaveLength(0)
+    expect(scriptRuntime.calls.run).toHaveLength(0)
+  })
+
   it("skips a semantic evaluation without persisting a score once the wait attempts are exhausted", async () => {
     const evaluation = makeEvaluation({ script: EMBEDDING_SCRIPT })
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
+    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const signalRepository = createSignalRepository(() =>
-      Effect.die("Signal should not be loaded when embeddings are unavailable"),
-    )
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
     const scriptRuntime = createFakeScriptRuntime({
       run: () => Effect.die("Script should not run when embeddings are unavailable"),
     })
