@@ -4,11 +4,21 @@
 
 from __future__ import annotations
 
-from typing import Any
+import os
+import threading
+from typing import Any, Dict, Optional
 
 from .aux_usage import aux_spans
 from .builder import _Builder
 from .config import _config, _debug, reset_config, set_plugin_context
+from .propagation import (
+    LATITUDE_TRACEPARENT_VAR,
+    PROJECT_VAR,
+    SESSION_VAR,
+    TRACEPARENT_VAR,
+    ChildContext,
+    set_active,
+)
 from .transport import _flush, _ship
 
 _BUILDER = _Builder()
@@ -71,11 +81,19 @@ def on_pre_tool_call(**kwargs: Any) -> None:
         _BUILDER.on_pre_tool_call(**kwargs)
     except Exception as exc:  # fail-open
         _debug(f"pre_tool_call handler failed: {exc}")
+    try:
+        _publish_child_context(kwargs)
+    except Exception as exc:  # fail-open
+        _debug(f"publishing child context failed: {exc}")
 
 
 def on_post_tool_call(**kwargs: Any) -> None:
     if not _config()["enabled"]:
         return
+    try:
+        _retract_child_context()
+    except Exception as exc:  # fail-open
+        _debug(f"retracting child context failed: {exc}")
     try:
         _ship(_BUILDER.on_post_tool_call(**kwargs))
     except Exception as exc:  # fail-open
@@ -204,6 +222,91 @@ def on_subagent_stop(**kwargs: Any) -> None:
         _BUILDER.on_subagent_stop(**kwargs)
     except Exception as exc:  # fail-open
         _debug(f"subagent_stop handler failed: {exc}")
+
+
+# ─────────────────────── child-process context ─────────────────────────────
+# Published for the duration of a tool call, so a harness the tool spawns attaches
+# under that tool's span instead of starting a trace of its own.
+
+# os.environ is process-wide while Hermes runs each turn on its own thread, so the
+# export is owned by one tool call at a time: a concurrent call keeps its context on
+# the ContextVar (child_env) rather than overwriting a sibling's variables and
+# restoring them to the wrong values afterwards.
+_ENV_LOCK = threading.Lock()
+_ENV_OWNER: Optional[int] = None
+_ENV_UNDO: Optional[Dict[str, Optional[str]]] = None
+
+
+def _publish_child_context(kwargs: Dict[str, Any]) -> None:
+    context = _BUILDER.child_context(**kwargs)
+    if context is None:
+        return
+    set_active(context)
+    if _config().get("export_traceparent"):
+        _export_to_environ(context)
+
+
+def _retract_child_context() -> None:
+    """Cleared outright rather than restored to a saved token: a tool call that never
+    reaches post_tool_call would otherwise leave the next retract restoring a stale
+    span, and handing a child the wrong parent is worse than handing it none."""
+    _restore_environ()
+    set_active(None)
+
+
+def _export_to_environ(context: ChildContext) -> None:
+    """Make every subprocess of this tool call inherit the context for free.
+
+    Opt-in (`LATITUDE_HERMES_EXPORT_TRACEPARENT=1`) and single-owner: only one tool
+    call at a time holds the process environment, so a concurrent one is skipped
+    rather than handed the wrong span. Prefer `child_env()` where the tool can pass it.
+    """
+    global _ENV_OWNER, _ENV_UNDO
+    # Both names: a scoped header this process inherited would otherwise outrank the
+    # exported one on read. Captured by the same undo, so the original is restored.
+    updates = {TRACEPARENT_VAR: context.traceparent, LATITUDE_TRACEPARENT_VAR: context.traceparent}
+    if context.session_id:
+        updates[SESSION_VAR] = context.session_id
+    if context.project:
+        updates[PROJECT_VAR] = context.project
+    me = threading.get_ident()
+    with _ENV_LOCK:
+        if _ENV_OWNER is not None and _ENV_OWNER != me and _owner_alive(_ENV_OWNER):
+            _debug("environment export skipped: a concurrent tool call owns it; use child_env()")
+            return
+        # A tool call that never reached post_tool_call left its export standing;
+        # restore the original values before capturing this call's undo over them.
+        if _ENV_OWNER != me:
+            _restore_environ_locked()
+        undo = _ENV_UNDO if _ENV_UNDO is not None else {}
+        for name in updates:
+            undo.setdefault(name, os.environ.get(name))
+        _ENV_UNDO = undo
+        _ENV_OWNER = me
+        os.environ.update(updates)
+
+
+def _owner_alive(ident: int) -> bool:
+    return any(thread.ident == ident for thread in threading.enumerate())
+
+
+def _restore_environ() -> None:
+    with _ENV_LOCK:
+        if _ENV_OWNER is not None and _ENV_OWNER != threading.get_ident():
+            return
+        _restore_environ_locked()
+
+
+def _restore_environ_locked() -> None:
+    global _ENV_OWNER, _ENV_UNDO
+    if _ENV_UNDO is not None:
+        for name, prior in _ENV_UNDO.items():
+            if prior is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = prior
+    _ENV_UNDO = None
+    _ENV_OWNER = None
 
 
 def register(ctx: Any) -> None:

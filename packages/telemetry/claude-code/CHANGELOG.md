@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Headless runs (`claude -p`) emitted nothing at all.** The hook was registered only on `Stop` with `async: true`, and Claude Code registers an async Stop hook but exits before spawning it in headless mode — verified with a probe hook that never executed once, while the same hook registered synchronously ran and received its full payload. Since headless is how another harness drives Claude Code, every non-interactive session was invisible. The installer now also registers a **synchronous `SessionEnd`** hook, which does fire there. `Stop` stays `async`, so interactive turns are unaffected. `SessionEnd` additionally fires on interactive quit and on Ctrl-C, so it catches a final turn whose async `Stop` hook died with the process; only `SIGKILL` escapes both. The two never double-count — emission is incremental behind a byte offset and a state lock. Both hand their work to a detached worker (`detached: true`, so `setsid` moves it out of the session's process group), which keeps the synchronous `SessionEnd` from delaying session teardown: 0.03s rather than the 0.32s an `npx`-resolved inline run costs. `LATITUDE_CLAUDE_CODE_DETACH=0` forces the inline path. The `SessionEnd` entry carries an explicit `timeout`, because Claude Code kills those hooks on a shared ~1.5s budget that a cold `npx` resolve can exceed on its own. Existing installs need `install` re-run to pick up the `SessionEnd` entry.
+
+### Added
+
+- **Cross-harness trace correlation.** When another harness launches Claude Code — a Hermes tool call, a CI job, a subprocess agent — it can hand over its active span through the standard `TRACEPARENT` variable. The hook then joins that trace instead of deriving one from `sessionId:turnNumber`, and parents its turns on the supplied span, so a Claude Code session appears nested under the tool call that launched it rather than beside it. `LATITUDE_SESSION_ID` joins the parent's Latitude session and `LATITUDE_PROJECT` keeps both halves in one project (ingest is project-scoped, so a mismatch would split the trace with no error). `LATITUDE_TRACEPARENT` takes precedence for setups where `TRACEPARENT` already belongs to something else, and `LATITUDE_CLAUDE_CODE_INHERIT_CONTEXT=0` opts out. A session launched on its own is unaffected: with no valid header the hook generates ids exactly as before, and a malformed header is ignored rather than failing the turn. Claude's own session id stays available as `claude_code.session.id`. Joining is capped per session so one long-lived session cannot grow a trace it does not own without bound. Contract: [`dev-docs/trace-correlation.md`](../../../dev-docs/trace-correlation.md).
+
 ## [0.0.14] - 2026-07-22
 
 ### Fixed

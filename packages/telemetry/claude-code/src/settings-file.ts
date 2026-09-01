@@ -10,6 +10,7 @@ export interface ClaudeSettings {
   env?: Record<string, string>
   hooks?: {
     Stop?: HookGroup[]
+    SessionEnd?: HookGroup[]
     [other: string]: HookGroup[] | undefined
   }
   [other: string]: unknown
@@ -92,37 +93,76 @@ export function latitudeStopHookCommand(settings: ClaudeSettings): string | unde
   return undefined
 }
 
-// Ensure a Latitude Stop hook runs `command`. An existing Latitude hook (including
-// an older bare-`npx` command or a dev dist path) is rewritten to `command` and
-// forced async, so re-running install upgrades stale hooks instead of leaving them
-// as-is. Only adds a new entry when none is present.
-export function addLatitudeStopHook(
+// Register the hook on both events Claude Code offers us, because neither covers
+// every session on its own.
+//
+// `Stop` runs after each assistant turn and stays **async**, so an interactive turn
+// is never blocked. But Claude Code registers an async Stop hook and then exits
+// before spawning it in headless mode, so `claude -p` — how one harness drives
+// another — would emit nothing at all.
+//
+// `SessionEnd` is registered **synchronously** and does fire there, delivering the
+// same session_id/transcript_path payload. It also fires on interactive quit and on
+// Ctrl-C, which catches a final turn whose async Stop hook died with the process.
+// Only SIGKILL escapes both, and nothing can be registered for that.
+//
+// Emission is incremental behind a byte offset and a state lock, so the two never
+// double-count: whichever runs second finds the offset already advanced.
+// Claude Code gives all SessionEnd hooks a ~1.5s shared budget and kills them when
+// it expires, and a cold `npx` resolve alone can take longer than that — which would
+// kill the hook before it reaches detachSelf, putting headless back where it started.
+// An explicit per-hook timeout raises the budget; it stays bounded so a wedged hook
+// cannot hold session exit open indefinitely.
+const SESSION_END_TIMEOUT_SECONDS = 10
+
+export function addLatitudeHooks(
   settings: ClaudeSettings,
   command = "npx -y @latitude-data/claude-code-telemetry@latest",
 ): ClaudeSettings {
+  return {
+    ...settings,
+    hooks: {
+      ...(settings.hooks ?? {}),
+      Stop: upsertHook(settings.hooks?.Stop ?? [], command, { async: true }),
+      SessionEnd: upsertHook(settings.hooks?.SessionEnd ?? [], command, { timeout: SESSION_END_TIMEOUT_SECONDS }),
+    },
+  }
+}
+
+// Rewrites an existing Latitude hook (an older bare-`npx` command, or a dev dist
+// path) rather than appending a second one, so re-running install upgrades in place.
+function upsertHook(groups: HookGroup[], command: string, extra: { async?: true; timeout?: number }): HookGroup[] {
   let found = false
-  const stop: HookGroup[] = (settings.hooks?.Stop ?? []).map((group) => ({
+  const entry = (): HookEntry => ({ type: "command", command, ...extra })
+  const next: HookGroup[] = groups.map((group) => ({
     ...group,
     hooks: (group.hooks ?? []).map((hook) => {
       if (!isLatitudeHookCommand(hook.command)) return hook
       found = true
-      return { ...hook, type: "command", command, async: true }
+      // `async` and `timeout` are dropped before re-applying, so a hook written by an
+      // older version is corrected rather than left with a stale combination.
+      const { async: _priorAsync, timeout: _priorTimeout, ...rest } = hook
+      return { ...rest, ...entry() }
     }),
   }))
-  if (!found) stop.push({ hooks: [{ type: "command", command, async: true }] })
-  return { ...settings, hooks: { ...(settings.hooks ?? {}), Stop: stop } }
+  if (!found) next.push({ hooks: [entry()] })
+  return next
 }
 
-export function removeLatitudeStopHook(settings: ClaudeSettings): ClaudeSettings {
-  if (!settings.hooks?.Stop) return settings
-  const stop: HookGroup[] = []
-  for (const group of settings.hooks.Stop) {
-    const keptHooks = (group.hooks ?? []).filter((h) => !isLatitudeHookCommand(h.command))
-    if (keptHooks.length > 0) stop.push({ ...group, hooks: keptHooks })
-  }
+export function removeLatitudeHooks(settings: ClaudeSettings): ClaudeSettings {
+  if (!settings.hooks) return settings
   const hooks = { ...settings.hooks }
-  if (stop.length > 0) hooks.Stop = stop
-  else delete (hooks as { Stop?: unknown }).Stop
+  for (const event of ["Stop", "SessionEnd"] as const) {
+    const groups = hooks[event]
+    if (!groups) continue
+    const kept: HookGroup[] = []
+    for (const group of groups) {
+      const keptHooks = (group.hooks ?? []).filter((h) => !isLatitudeHookCommand(h.command))
+      if (keptHooks.length > 0) kept.push({ ...group, hooks: keptHooks })
+    }
+    if (kept.length > 0) hooks[event] = kept
+    else delete hooks[event]
+  }
   const next: ClaudeSettings = { ...settings, hooks }
   if (Object.keys(hooks).length === 0) delete (next as { hooks?: unknown }).hooks
   return next
