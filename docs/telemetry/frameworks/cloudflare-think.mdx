@@ -177,8 +177,6 @@ This is the recommended setup for most Think apps.
 
 ## Codemode Internal Tools
 
-Requires `@latitude-data/telemetry` 3.6.0 or newer.
-
 Think's codemode `execute` tool appears as a normal AI SDK tool span. Tools
 called from inside codemode run outside the active AI SDK tool-call context, so
 wrap both the internal tool set and the outer `execute` tool with
@@ -274,8 +272,6 @@ const codemode = createCodemodeTelemetry({
 ---
 
 ## Multiple Agents Across Durable Objects
-
-Requires `@latitude-data/telemetry` 4.1.0 or newer.
 
 A second agent in its own Durable Object gets a fresh isolate: no shared memory, no ambient
 OpenTelemetry context. Its spans start a trace of their own, so the planner or researcher you

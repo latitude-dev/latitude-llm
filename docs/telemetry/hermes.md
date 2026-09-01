@@ -95,11 +95,11 @@ passing `-U`:
 
 <CodeGroup>
 ```bash Official installer
-~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes==0.1.2
+~/.hermes/bin/uv pip install --python ~/.hermes/hermes-agent/venv/bin/python latitude-telemetry-hermes==<version>
 ```
 
 ```bash Your own environment
-pip install latitude-telemetry-hermes==0.1.2
+pip install latitude-telemetry-hermes==<version>
 ```
 </CodeGroup>
 
