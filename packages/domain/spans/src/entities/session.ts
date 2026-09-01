@@ -19,7 +19,10 @@ import { z } from "zod"
  * `durationNs` is **active execution time** (sum of root-span durations across
  * the session's traces), not wall-clock. Wall-clock is recoverable as
  * `endTime - startTime` when needed. See specs/session-problems/1-parity-traces-sessions.md
- * "On `duration_ns` semantics" for the rationale.
+ * "On `duration_ns` semantics" for the rationale. When the session has no
+ * spans with an empty parent (instrumentation nested under spans that are
+ * never exported), active execution is unknowable and `durationNs` falls
+ * back to the wall-clock window.
  */
 export const sessionSchema = z.object({
   organizationId: organizationIdSchema,
@@ -49,6 +52,8 @@ export const sessionSchema = z.object({
   costInputMicrocents: z.number(),
   costOutputMicrocents: z.number(),
   costTotalMicrocents: z.number(),
+  /** Spans whose token usage no pricing matched, so `costTotalMicrocents` understates real spend. */
+  unpricedSpanCount: z.number().int().nonnegative(),
 
   userId: externalUserIdSchema,
   userEmail: z.string(),
@@ -59,6 +64,7 @@ export const sessionSchema = z.object({
   providers: z.array(z.string()).readonly(),
   serviceNames: z.array(z.string()).readonly(),
   agentNames: z.array(z.string()).readonly(),
+  definedTools: z.array(z.string()).readonly(), // union of tool names declared available across the session's spans; empty when instrumentation never reported a toolset
 
   rootSpanId: z.union([z.literal(""), spanIdSchema]), // root of the session's first trace, empty string when no root span has been ingested
   rootSpanName: z.string(),
@@ -84,3 +90,18 @@ export const sessionDetailSchema = sessionSchema.extend({
 })
 
 export type SessionDetail = z.infer<typeof sessionDetailSchema>
+
+/**
+ * The canonical session conversation: system instructions + the latest
+ * responsive span's input window + its output — the exact list the session
+ * drawer renders, so message indices align across every anchoring consumer.
+ */
+export const sessionConversationMessages = (
+  session: Pick<SessionDetail, "systemInstructions" | "lastInputMessages" | "outputMessages">,
+): readonly GenAIMessage[] => {
+  const systemMessage =
+    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
+      ? [{ role: "system", parts: session.systemInstructions } as GenAIMessage]
+      : []
+  return [...systemMessage, ...session.lastInputMessages, ...session.outputMessages]
+}

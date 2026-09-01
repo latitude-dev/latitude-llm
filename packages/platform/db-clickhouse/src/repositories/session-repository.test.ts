@@ -286,6 +286,44 @@ describe("SessionRepository", () => {
       // Two roots × 3s each = 6_000_000_000 ns. Children are absent so no double counting.
       expect(session.durationNs).toBe(6_000_000_000)
     })
+
+    it("falls back to the wall-clock window when no span has an empty parent", async () => {
+      const sessionId = "orphan-root-session"
+      const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      // The local root is nested under a span that is never exported (e.g.
+      // Vercel AI SDK under the app's own HTTP span). Its child is ingested,
+      // so no span has an empty parent and sessions_mv materializes
+      // duration_ns = 0 for the whole session.
+      await insertSpans([
+        makeSpanRow({
+          traceId: "6".repeat(32),
+          spanId: "1".repeat(16),
+          parentSpanId: "f".repeat(16),
+          sessionId,
+          startTime: start,
+          durationMs: 4_000,
+          name: "local-root",
+        }),
+        makeSpanRow({
+          traceId: "6".repeat(32),
+          spanId: "2".repeat(16),
+          parentSpanId: "1".repeat(16),
+          sessionId,
+          startTime: new Date(start.getTime() + 500),
+          durationMs: 1_000,
+          name: "child",
+        }),
+      ])
+
+      const session = nonNull(
+        (
+          await runCh(repo.listByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, options: { limit: 10 } }))
+        ).items.find((s) => s.sessionId === sessionId),
+      )
+
+      // Wall-clock window: earliest start → latest end = 4s.
+      expect(session.durationNs).toBe(4_000_000_000)
+    })
   })
 
   describe("time_to_first_token_ns sentinel", () => {
@@ -1436,6 +1474,39 @@ describe("SessionRepository", () => {
       expect(match.matchingTraceCount).toBe(1)
       expect(match.matchingTraceIds).toEqual([orphanTrace])
       expect(match.bestTraceId).toBe(orphanTrace)
+    })
+
+    it("preserves the rollup duration when session hydration misses (toOrphanSession)", async () => {
+      const start = new Date(Date.UTC(2026, 0, 5, 12, 0, 0))
+      const traceId = padTrace("e2")
+      const sessionId = "hydration-miss-session"
+
+      await insertSpans([
+        makeSpanRow({
+          traceId,
+          spanId: padSpan("h1"),
+          sessionId,
+          startTime: start,
+          durationMs: 7_000,
+          name: "root",
+        }),
+      ])
+      await insertSearchDocs([{ traceId, text: "hydration miss needle", startTime: start, contentHashSuffix: "h1" }])
+      // Simulate a session row missing from `sessions` (legacy pre-00016 data
+      // or an MV race): the search rollup still matches via `traces`, so the
+      // synthesized fallback session must carry the rollup's duration.
+      await ch.client.command({ query: "TRUNCATE TABLE sessions" })
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: '"hydration miss"', limit: 10 },
+        }),
+      )
+
+      const session = nonNull(page.items.find((s) => s.sessionId === sessionId))
+      expect(session.durationNs).toBe(7_000_000_000)
     })
 
     // 6) Multi-trace session: matching_trace_ids and matching_trace_scores

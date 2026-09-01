@@ -14,12 +14,17 @@ import {
   isEligibilityError,
   SignalDiscoveryLockUnavailableError,
 } from "@domain/signals"
-import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
-import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { AIEmbedLive, AIRerankLive, withAi } from "@platform/ai"
+import {
+  RedisBillingSpendReservationLive,
+  RedisCacheStoreLive,
+  RedisDistributedLockRepositoryLive,
+} from "@platform/cache-redis"
+import { ScoreAnalyticsRepositoryLive, SessionRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   OutboxEventWriterLive,
+  ProjectRepositoryLive,
   ScoreRepositoryLive,
   SignalRepositoryLive,
   withPostgres,
@@ -27,6 +32,7 @@ import {
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-signal-discovery")
 
@@ -67,15 +73,26 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
     ),
   )
 
+// Metering must stay off this path: it fails the activity outright when an organization is out of
+// AI credits, which would stop a candidate recording the evidence that promotes it.
 export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =>
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          ScoreRepositoryLive,
+          SignalRepositoryLive,
+          OutboxEventWriterLive,
+          EvaluationRepositoryLive,
+        ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
-      withAi(AIGenerateLive, getRedisClient()),
+      // Creation evaluates the promotion gate too, so a first occurrence can be
+      // born promoted where the floor admits a single session.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
     ),
   )
@@ -83,15 +100,32 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
 export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
   Effect.runPromise(
     assignOrCreateSignalUseCase(input).pipe(
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "signal-assign",
+      }),
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive, OutboxEventWriterLive, EvaluationRepositoryLive),
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          ScoreRepositoryLive,
+          SignalRepositoryLive,
+          OutboxEventWriterLive,
+          EvaluationRepositoryLive,
+          billingMeteringRepositoriesLive,
+        ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
+      // Promotion sizes its threshold from the project's session volume, read
+      // from ClickHouse through a Redis cache.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       // TODO(signal-discovery-rerank): drop AIRerankLive when assignOrCreateSignal
       // relies on Postgres pgvector hybrid search directly.
-      withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
+      withAi(AIRerankLive, getRedisClient()),
       withTracing,
       Effect.match({
         onFailure: (error) => {
@@ -118,6 +152,10 @@ export const assignScoreToSignal = async (input: AssignScoreToSignalInput) =>
         OrganizationId(input.organizationId),
       ),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
+      // Promotion sizes its threshold from the project's session volume, read
+      // from ClickHouse through a Redis cache.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
       Effect.match({
         onFailure: (error) => {

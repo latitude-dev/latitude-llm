@@ -1,4 +1,4 @@
-import { type PlanSlug, PRO_PLAN_CONFIG } from "@domain/billing"
+import { OVERRIDABLE_PLAN_SLUGS, type OverridablePlanSlug, type PlanSlug, PRO_PLAN_CONFIG } from "@domain/billing"
 import {
   Avatar,
   Badge,
@@ -294,7 +294,7 @@ function BillingSummarySection({ billing }: { billing: AdminOrganizationBillingD
       value: `${formatCredits(billing.includedCredits)} / ${numberFormatter.format(billing.consumedCredits)}`,
       muted:
         billing.includedCredits === null
-          ? "No fixed monthly bundle — entitlement scales with contract"
+          ? "No fixed monthly bundle. Entitlement scales with the contract."
           : `${numberFormatter.format(Math.max(billing.includedCredits - billing.consumedCredits, 0))} credits remaining`,
     },
     {
@@ -432,6 +432,13 @@ function FeatureFlagToggleRow({
   )
 }
 
+const isOverridablePlan = (slug: PlanSlug): slug is OverridablePlanSlug =>
+  (OVERRIDABLE_PLAN_SLUGS as readonly string[]).includes(slug)
+
+/** A deployment-level plan (self-hosted) is not a valid override target, so the form opens on enterprise. */
+const defaultOverridePlan = (effectivePlanSlug: PlanSlug): OverridablePlanSlug =>
+  isOverridablePlan(effectivePlanSlug) ? effectivePlanSlug : "enterprise"
+
 function BillingOverrideSection({
   organizationId,
   billing,
@@ -447,7 +454,7 @@ function BillingOverrideSection({
 
   const form = useForm({
     defaultValues: {
-      plan: (billing.override?.plan ?? billing.effectivePlanSlug) as PlanSlug,
+      plan: billing.override?.plan ?? defaultOverridePlan(billing.effectivePlanSlug),
       includedCredits: billing.override?.includedCredits?.toString() ?? "",
       retentionDays: billing.override?.retentionDays?.toString() ?? "",
       notes: billing.override?.notes ?? "",
@@ -514,7 +521,7 @@ function BillingOverrideSection({
                 name="billing-plan"
                 label="Override plan"
                 value={field.state.value}
-                onChange={(value) => field.handleChange(value as PlanSlug)}
+                onChange={(value) => field.handleChange(value as OverridablePlanSlug)}
                 errors={fieldErrorsAsStrings(field.state.meta.errors)}
                 options={[
                   { label: "Free", value: "free" },

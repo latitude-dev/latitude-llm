@@ -4,6 +4,7 @@ import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
   cuidSchema,
+  isSeverityIncrease,
   type NotFoundError,
   OrganizationId,
   ProjectId,
@@ -19,7 +20,7 @@ import { SignalRepository } from "../ports/signal-repository.ts"
 const updateSignalTriageInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   signalId: signalIdSchema,
-  /** User performing the edit — carried on `SignalAssigneeChanged` so consumers can skip self-assignments. */
+  /** User performing the edit — carried on the triage events so consumers can skip the actor's own edit. */
   actorUserId: cuidSchema,
   // `undefined` (key omitted) leaves the field unchanged; explicit `null` clears it; a value sets it.
   assigneeId: cuidSchema.nullable().optional(),
@@ -94,11 +95,10 @@ export const updateSignalTriageUseCase = (input: UpdateSignalTriageInput) =>
         }
         yield* signalRepository.save(nextSignal)
 
-        // Assignee changes (set / reassign / clear) emit a domain event from
-        // the same transaction; priority-only edits stay silent. `assignedAt`
-        // is frozen here as the per-assignment idempotency anchor downstream.
+        // `assignedAt` / `reprioritizedAt` are frozen here as the per-edit idempotency anchors downstream.
+        const outboxEventWriter = yield* OutboxEventWriter
+
         if (nextAssigneeId !== issue.assigneeId) {
-          const outboxEventWriter = yield* OutboxEventWriter
           yield* outboxEventWriter.write({
             eventName: "SignalAssigneeChanged",
             aggregateType: "issue",
@@ -112,6 +112,24 @@ export const updateSignalTriageUseCase = (input: UpdateSignalTriageInput) =>
               previousAssigneeId: issue.assigneeId,
               actorUserId: parsed.actorUserId,
               assignedAt: now.toISOString(),
+            },
+          })
+        }
+
+        if (isSeverityIncrease(issue.priority, nextPriority)) {
+          yield* outboxEventWriter.write({
+            eventName: "SignalReprioritized",
+            aggregateType: "issue",
+            aggregateId: issue.id,
+            organizationId: issue.organizationId,
+            payload: {
+              organizationId: issue.organizationId,
+              projectId: issue.projectId,
+              signalId: issue.id,
+              priority: nextPriority,
+              previousPriority: issue.priority,
+              actorUserId: parsed.actorUserId,
+              reprioritizedAt: now.toISOString(),
             },
           })
         }

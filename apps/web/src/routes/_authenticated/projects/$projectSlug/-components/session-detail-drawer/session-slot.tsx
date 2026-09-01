@@ -18,6 +18,7 @@ import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-f
 import { ConversationTab } from "./conversation-tab.tsx"
 import { MetadataTab } from "./metadata-tab.tsx"
 import { ScoresTab } from "./scores-tab.tsx"
+import { isLargeSession, MAX_SESSION_ANALYSIS_TRACE_COUNT } from "./session-size.ts"
 import { SessionSpansTab } from "./session-spans-tab.tsx"
 import { SessionStatusPill } from "./session-status-pill.tsx"
 import { SignalsTab } from "./signals-tab.tsx"
@@ -71,7 +72,7 @@ export function SessionSlot({
   readonly isActive: boolean
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
   readonly onOpenSignal: (signalId: string) => void
-  readonly onOpenInConversation: (annotationId: string) => void
+  readonly onOpenInConversation: (scoreId: string) => void
   readonly searchQuery?: string
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
@@ -82,11 +83,11 @@ export function SessionSlot({
 }) {
   const traceIds = session.traceIds
 
-  // Annotations and issues are analysis/feedback features the sandbox doesn't
-  // produce — both off under a sandbox scope: hide the tabs and skip the fetches.
   const isSandbox = useProjectScope().kind === "sandbox"
-  const scoresEnabled = !isSandbox
-  const signalsEnabled = !isSandbox
+  const analysisTabsSupported = !isSandbox && traceIds.length <= MAX_SESSION_ANALYSIS_TRACE_COUNT
+  const scoresEnabled = analysisTabsSupported
+  const signalsEnabled = analysisTabsSupported
+  const deferAnalysisCounts = isLargeSession(session)
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   const [selectedSpanTraceId, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const { openWithErrors, openWithModel } = useSpanFilters()
@@ -134,14 +135,17 @@ export function SessionSlot({
     setSelectedSpanId(selection?.spanId ?? "")
   }
 
-  // Badge counts. Both queries are shared (same key) with the tab panes, so
-  // mounting a tab doesn't refetch.
+  // Large sessions fetch analysis counts only when their tab is opened.
   const { data: scoresData } = useScoresBySession({
     projectId,
     traceIds,
-    enabled: scoresEnabled,
+    enabled: scoresEnabled && (!deferAnalysisCounts || visitedTabs.has("scores")),
   })
-  const { data: issues } = useSessionSignals({ projectId, traceIds, enabled: signalsEnabled })
+  const { data: issues } = useSessionSignals({
+    projectId,
+    traceIds,
+    enabled: signalsEnabled && (!deferAnalysisCounts || visitedTabs.has("issues")),
+  })
   const scoreCount = scoresData?.items.length ?? 0
   const signalCount = issues?.length ?? 0
 
@@ -315,7 +319,6 @@ export function SessionSlot({
             <SessionSpansTab
               projectId={projectId}
               session={session}
-              traces={traces}
               selectedSpanId={selectedSpanId}
               selectedSpanTraceId={selectedSpanTraceId}
               onSelectSpan={selectSpan}

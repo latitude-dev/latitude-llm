@@ -8,6 +8,7 @@ import type * as Latitude from "../index.js";
 export interface ProjectSettings {
     /** When `true`, the evaluation linked to an signal keeps running after the signal is resolved. When `false`, resolving the signal stops the evaluation. Defaults to `true` when omitted. */
     keepMonitoring?: boolean | undefined;
+    redaction?: Latitude.RedactionSetting | undefined;
     notifications?: Latitude.NotificationsSetting | undefined;
     escalation?: Latitude.EscalationSetting | undefined;
 }

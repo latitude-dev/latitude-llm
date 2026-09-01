@@ -39,6 +39,9 @@ export interface LineageNewNode {
   readonly depth: number
   /** L2-normalized centroid of the node's members. */
   readonly centroid: readonly number[]
+  /** Structural shape — used by shape-aware naming to force a rename on a flip. */
+  readonly isLeaf?: boolean
+  readonly childCount?: number
 }
 
 /** A previously-active cluster the new node may continue. */
@@ -47,6 +50,9 @@ export interface LineageOldCluster {
   readonly depth: number
   /** L2-normalized centroid. */
   readonly centroid: readonly number[]
+  /** Structural shape at the previous pass. */
+  readonly isLeaf?: boolean
+  readonly childCount?: number
 }
 
 export type LineageDecision =
@@ -75,6 +81,13 @@ export interface MatchTaxonomyLineageInput {
   readonly continuationThreshold: number
   /** Above this cosine the topic is unchanged enough to keep the old name. */
   readonly nameReuseThreshold: number
+  /**
+   * When true, a continuation additionally forfeits its old name (forcing a
+   * rename) if it flipped leaf↔interior or its child count changed — a stale
+   * name must not survive an umbrella becoming a leaf or vice versa. Off keeps
+   * the pre-change centroid-similarity-only rule (byte-identical).
+   */
+  readonly shapeAwareNaming?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -160,8 +173,13 @@ const DISALLOWED_COST = 10
  * decide, per new node, whether it continues an old cluster (reusing its id) or
  * is born fresh.
  */
+/** A continuation keeps its name only when the topic barely moved AND (when
+ * shape-aware naming is on) the node's shape is unchanged. */
+const sameShape = (newNode: LineageNewNode, old: LineageOldCluster): boolean =>
+  newNode.isLeaf === old.isLeaf && newNode.childCount === old.childCount
+
 export const matchTaxonomyLineage = (input: MatchTaxonomyLineageInput): TaxonomyLineageMatch => {
-  const { newNodes, oldClusters, continuationThreshold, nameReuseThreshold } = input
+  const { newNodes, oldClusters, continuationThreshold, nameReuseThreshold, shapeAwareNaming } = input
   const n = newNodes.length
   const m = oldClusters.length
 
@@ -205,12 +223,13 @@ export const matchTaxonomyLineage = (input: MatchTaxonomyLineageInput): Taxonomy
     const sim = similarity[i]?.[j] ?? -1
     if (old && sim >= continuationThreshold) {
       matchedOldIds.add(old.id)
+      const carryName = sim >= nameReuseThreshold && (!shapeAwareNaming || sameShape(node, old))
       decisions.push({
         tempId: node.tempId,
         transition: "continuation",
         reuseId: old.id,
         similarity: sim,
-        carryName: sim >= nameReuseThreshold,
+        carryName,
       })
     } else {
       decisions.push({ tempId: node.tempId, transition: "birth" })

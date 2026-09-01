@@ -144,12 +144,39 @@ export const createTierRateLimiter = (tier: RateLimitTier) => {
 }
 
 /**
+ * Per-partner limiter for the private partner API, keyed off the `:partnerId`
+ * path param — a signed request carries no organization, and IP-keying would
+ * lump every partner behind one egress gateway together. Each private route
+ * declares its own quota, since they are not interchangeable in cost.
+ *
+ * Applied *after* authentication, like the tier limiters on the public API: the
+ * partner id is caller-supplied until the signature is verified, so pre-auth
+ * placement would let anyone drain a named partner's quota.
+ */
+export const createPartnerRateLimiter = ({
+  maxRequests,
+  windowSeconds,
+}: {
+  maxRequests: number
+  windowSeconds: number
+}) =>
+  createRedisRateLimiter({
+    maxRequests,
+    windowSeconds,
+    keyPrefix: "ratelimit:partner",
+    keyGenerator: (c) => `partner:${c.req.param("partnerId") ?? "unknown"}`,
+    errorMessage: "Rate limit exceeded for the partner API. Please slow down.",
+  })
+
+/**
  * Global (tenant-agnostic) rate limiter: one shared counter across every
  * caller, keyed only by `key`. It bounds the *total* request rate instead of
  * partitioning per org/IP like {@link createTierRateLimiter} — use it to shield
  * an unauthenticated surface from bulk abuse when there's no per-caller
  * identity or CAPTCHA to key on (e.g. account bootstrap). Stack it after a
- * per-IP tier so a single greedy IP is rejected before it burns global budget.
+ * per-IP tier so a single greedy IP is rejected before it burns global budget —
+ * one shared bucket reached before any per-caller check is a free denial of
+ * service against every legitimate caller.
  */
 export const createGlobalRateLimiter = ({
   key,

@@ -5,6 +5,7 @@ import {
 import { type AnnotationScore, ScoreRepository, writeScoreUseCase } from "@domain/scores"
 import { BadRequestError, OrganizationId, ScoreId } from "@domain/shared"
 import { AIGenerateLive, withAi } from "@platform/ai"
+import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
@@ -15,6 +16,7 @@ import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platf
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const enrichAnnotationForPublicationEffect = Effect.fn("workflows.enrichAnnotationForPublication")(function* (input: {
   readonly organizationId: string
@@ -72,7 +74,17 @@ export const enrichAnnotationForPublication = async (input: {
 }) =>
   Effect.runPromise(
     enrichAnnotationForPublicationEffect(input).pipe(
-      withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withActivityAIMetering({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        label: "annotation-enrich",
+      }),
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, billingMeteringRepositoriesLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withClickHouse(
         Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive),
         getClickhouseClient(),

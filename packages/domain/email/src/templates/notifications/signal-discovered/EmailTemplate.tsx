@@ -41,7 +41,7 @@ export function SignalDiscoveredEmail({
   return (
     <ContainerLayout
       previewText={`Signal discovered: ${signalName}`}
-      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "signals" }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         New signal discovered

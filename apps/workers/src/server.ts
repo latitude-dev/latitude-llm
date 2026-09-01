@@ -10,7 +10,12 @@ import {
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
 import { SHOWCASE_CLEANUP_CRON_KEY, SHOWCASE_CLEANUP_CRON_PATTERN } from "@domain/showcase"
-import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/signals"
+import {
+  CANDIDATE_SWEEPER_KEY,
+  CANDIDATE_SWEEPER_PATTERN,
+  ESCALATION_SWEEPER_KEY,
+  ESCALATION_SWEEPER_PATTERN,
+} from "@domain/signals"
 import {
   CUSTOM_BEHAVIOR_GARDENING_CRON_KEY,
   CUSTOM_BEHAVIOR_GARDENING_CRON_PATTERN,
@@ -56,7 +61,6 @@ import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createBillingWorker } from "./workers/billing.ts"
 import { createBillingOverageWorker } from "./workers/billing-overage.ts"
 import { createDestinationsWorker } from "./workers/destinations.ts"
-import { createDeterministicFlaggersWorker } from "./workers/deterministic-flaggers.ts"
 import { createIncidentsWorker } from "./workers/domain-events/incidents.ts"
 import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
@@ -66,6 +70,9 @@ import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
+import { createFlaggerScreeningWorker } from "./workers/flagger-screening.ts"
+import { createGithubEventsWorker } from "./workers/github-events.ts"
+import { createImportsWorker } from "./workers/imports.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createMemoryProjectionWorker } from "./workers/memory-projection.ts"
 import { createMonitorsWorker } from "./workers/monitors.ts"
@@ -85,7 +92,6 @@ import { createSignalsGenerateSignalWorker } from "./workers/signals-generate-si
 import { createSignalsMatchWorker } from "./workers/signals-match.ts"
 import { createSignalsPreviewWorker } from "./workers/signals-preview.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
-import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTaxonomyWorker } from "./workers/taxonomy.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
 import { createTraceSearchWorker } from "./workers/trace-search.ts"
@@ -218,6 +224,7 @@ const bootstrap = async () => {
       adminPostgresClient: getAdminPostgresClient(),
       clickhouseClient: ctx.clickhouseClient,
     })
+    createImportsWorker(ctx)
     createApiKeysWorker(ctx)
     createBillingWorker({ consumer: ctx.consumer, postgresClient: ctx.postgresClient })
     createBillingOverageWorker({ consumer: ctx.consumer, workflowStarter: ctx.workflowStarter })
@@ -232,6 +239,7 @@ const bootstrap = async () => {
     createExportsWorker(ctx)
     await createSignalsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
     createMonitorsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
+    createGithubEventsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
@@ -240,9 +248,8 @@ const bootstrap = async () => {
     createSignalsMatchWorker(ctx)
     createSignalsPreviewWorker(ctx)
     createSignalsGenerateSignalWorker(ctx)
-    createDeterministicFlaggersWorker(ctx)
+    createFlaggerScreeningWorker(ctx)
     createMemoryProjectionWorker(ctx)
-    createStartFlaggerWorkflowWorker(ctx)
     createProjectsWorker(ctx)
     createScoresWorker(ctx)
     createShowcaseWorker(ctx)
@@ -342,6 +349,18 @@ const bootstrap = async () => {
           "sweepEscalating",
           {},
           { key: ESCALATION_SWEEPER_KEY, pattern: ESCALATION_SWEEPER_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Daily candidate expiry sweep, bounding the corpus discovery scans exactly.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "issues",
+          "sweepCandidates",
+          {},
+          { key: CANDIDATE_SWEEPER_KEY, pattern: CANDIDATE_SWEEPER_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

@@ -21,7 +21,7 @@ export function TraceSlot({
 }) {
   const [activeTab, setActiveTab] = useParamState("traceTab", "trace", { validate: isTraceDetailTab })
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
-  const [focusAnnotationId] = useParamState("annotationId", "")
+  const [focusScoreId, setFocusScoreId] = useParamState("scoreId", "")
 
   return (
     <TraceDetailBody
@@ -31,7 +31,8 @@ export function TraceSlot({
       onActiveTabChange={setActiveTab}
       selectedSpanId={selectedSpanId}
       onSelectedSpanIdChange={setSelectedSpanId}
-      {...(focusAnnotationId ? { focusAnnotationId } : {})}
+      focusScoreId={focusScoreId}
+      onFocusScoreIdChange={setFocusScoreId}
       {...(searchQuery ? { searchQuery } : {})}
     />
   )

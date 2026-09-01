@@ -10,9 +10,9 @@ import {
   seedBillingUsagePeriod,
 } from "@domain/billing/testing"
 import { OutboxEventWriter } from "@domain/events"
-import { OrganizationId, ProjectId, SqlClient, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SettingsReader, SqlClient, TraceId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
-import { Effect, Layer } from "effect"
+import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
@@ -23,18 +23,34 @@ const SQL_CLIENT = createFakeSqlClient({ organizationId: ORGANIZATION_ID })
 
 const buildEventKey = (periodStart: Date, idempotencyKey: string) => `${periodStart.toISOString()}:${idempotencyKey}`
 
-const createLayer = () => {
+const createLayer = (opts?: { spendingLimitCents?: number | null }) => {
   const { repository: events, eventsByPeriodAndIdempotencyKey } = createFakeBillingUsageEventRepository()
   const { repository: periods, periodsByKey } = createFakeBillingUsagePeriodRepository()
+  const outboxEvents: Array<{ eventName: string; payload: Record<string, unknown> }> = []
+
+  const settingsReader = SettingsReader.of({
+    getOrganizationSettings: () =>
+      Effect.succeed(
+        opts?.spendingLimitCents != null ? { billing: { spendingLimitCents: opts.spendingLimitCents } } : null,
+      ),
+    getProjectSettings: () => Effect.succeed(null),
+  })
 
   return {
     eventsByPeriodAndIdempotencyKey,
     periodsByKey,
     periods,
+    outboxEvents,
     layer: Layer.mergeAll(
       Layer.succeed(BillingUsageEventRepository, events),
       Layer.succeed(BillingUsagePeriodRepository, periods),
-      Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
+      Layer.succeed(OutboxEventWriter, {
+        write: (event) =>
+          Effect.sync(() => {
+            outboxEvents.push({ eventName: event.eventName, payload: event.payload as Record<string, unknown> })
+          }),
+      }),
+      Layer.succeed(SettingsReader, settingsReader),
       Layer.succeed(SqlClient, SQL_CLIENT),
     ),
   }
@@ -68,6 +84,32 @@ describe("recordUsageEventUseCase", () => {
     })
   })
 
+  it("dies on a credits override that is not a positive integer", async () => {
+    const { layer, eventsByPeriodAndIdempotencyKey } = createLayer()
+
+    for (const credits of [0, -5, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const exit = await Effect.runPromiseExit(
+        recordUsageEventUseCase({
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID,
+          action: "llm-call",
+          credits,
+          idempotencyKey: `llm-call:${credits}`,
+          planSlug: "free",
+          planSource: "free-fallback",
+          periodStart: PERIOD_START,
+          periodEnd: PERIOD_END,
+          includedCredits: 20_000,
+          overageAllowed: false,
+        }).pipe(Effect.provide(layer)),
+      )
+
+      expect(exit._tag).toBe("Failure")
+      expect(exit._tag === "Failure" && Cause.hasDies(exit.cause)).toBe(true)
+    }
+    expect(eventsByPeriodAndIdempotencyKey.size).toBe(0)
+  })
+
   it("returns the existing period snapshot when the idempotency key was already recorded", async () => {
     const { layer, periods, periodsByKey, eventsByPeriodAndIdempotencyKey } = createLayer()
 
@@ -90,8 +132,8 @@ describe("recordUsageEventUseCase", () => {
       id: "evt-dup",
       organizationId: ORGANIZATION_ID,
       projectId: PROJECT_ID,
-      action: "live-eval-scan",
-      credits: 30,
+      action: "semantic-query",
+      credits: 15,
       idempotencyKey: "dup-key",
       happenedAt: new Date("2026-01-15T00:00:00.000Z"),
       billingPeriodStart: PERIOD_START,
@@ -102,7 +144,7 @@ describe("recordUsageEventUseCase", () => {
       recordUsageEventUseCase({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         idempotencyKey: "dup-key",
         planSlug: "pro",
         planSource: "subscription",
@@ -206,7 +248,7 @@ describe("checkCreditAvailabilityUseCase", () => {
             periodStart: PERIOD_START,
             periodEnd: PERIOD_END,
             includedCredits: 20_000,
-            consumedCredits: 19_980,
+            consumedCredits: 20_000,
           }),
         )
         .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),
@@ -215,7 +257,7 @@ describe("checkCreditAvailabilityUseCase", () => {
     const allowed = await Effect.runPromise(
       checkCreditAvailabilityUseCase({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         planSlug: "free",
         periodStart: PERIOD_START,
         periodEnd: PERIOD_END,
@@ -250,7 +292,7 @@ describe("checkCreditAvailabilityUseCase", () => {
     const allowed = await Effect.runPromise(
       checkCreditAvailabilityUseCase({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         planSlug: "pro",
         periodStart: PERIOD_START,
         periodEnd: PERIOD_END,
@@ -262,5 +304,125 @@ describe("checkCreditAvailabilityUseCase", () => {
     )
 
     expect(allowed).toBe(false)
+  })
+})
+
+describe("recordUsageEventUseCase limit crossing", () => {
+  it("emits limitsCrossed=[included-credits] when a free plan first exhausts its allotment", async () => {
+    const { layer, periods, outboxEvents } = createLayer()
+
+    await Effect.runPromise(
+      periods
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: ORGANIZATION_ID,
+            planSlug: "free",
+            periodStart: PERIOD_START,
+            periodEnd: PERIOD_END,
+            includedCredits: 20_000,
+            consumedCredits: 19_999,
+          }),
+        )
+        .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),
+    )
+
+    await Effect.runPromise(
+      recordUsageEventUseCase({
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        action: "trace",
+        idempotencyKey: "trace:cross-free",
+        planSlug: "free",
+        planSource: "free-fallback",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 20_000,
+        overageAllowed: false,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(outboxEvents[0]?.payload).toMatchObject({
+      consumedCredits: 20_000,
+      limitsCrossed: ["included-credits"],
+    })
+  })
+
+  it("emits limitsCrossed=[] on subsequent free usage after the allotment is already exhausted", async () => {
+    const { layer, periods, outboxEvents } = createLayer()
+
+    await Effect.runPromise(
+      periods
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: ORGANIZATION_ID,
+            planSlug: "free",
+            periodStart: PERIOD_START,
+            periodEnd: PERIOD_END,
+            includedCredits: 20_000,
+            consumedCredits: 20_000,
+          }),
+        )
+        .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),
+    )
+
+    await Effect.runPromise(
+      recordUsageEventUseCase({
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        action: "trace",
+        idempotencyKey: "trace:already-over",
+        planSlug: "free",
+        planSource: "free-fallback",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 20_000,
+        overageAllowed: false,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(outboxEvents[0]?.payload).toMatchObject({
+      consumedCredits: 20_001,
+      limitsCrossed: [],
+    })
+  })
+
+  it("emits limitsCrossed=[overage-started] when an uncapped Pro plan first exceeds included credits", async () => {
+    const { layer, periods, outboxEvents } = createLayer()
+
+    await Effect.runPromise(
+      periods
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: ORGANIZATION_ID,
+            planSlug: "pro",
+            periodStart: PERIOD_START,
+            periodEnd: PERIOD_END,
+            includedCredits: 100_000,
+            consumedCredits: 99_999,
+          }),
+        )
+        .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),
+    )
+
+    await Effect.runPromise(
+      recordUsageEventUseCase({
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        action: "trace",
+        idempotencyKey: "trace:cross-pro-overage",
+        planSlug: "pro",
+        planSource: "subscription",
+        periodStart: PERIOD_START,
+        periodEnd: PERIOD_END,
+        includedCredits: 100_000,
+        overageAllowed: true,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(outboxEvents[0]?.payload).toMatchObject({
+      consumedCredits: 100_000,
+      overageCredits: 0,
+      limitsCrossed: ["overage-started"],
+    })
   })
 })

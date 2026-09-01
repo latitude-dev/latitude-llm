@@ -24,6 +24,8 @@ export interface AgentDispatchConfigRepositoryShape {
     readonly projectId: ProjectId
     readonly integrationId: string
   }) => Effect.Effect<AgentDispatchConfigRow | null, RepositoryError, SqlClient>
+  /** How many projects override the org default for an integration — the settings "N override it" count. */
+  readonly countProjectOverrides: (integrationId: string) => Effect.Effect<number, RepositoryError, SqlClient>
   readonly findById: (id: string) => Effect.Effect<AgentDispatchConfigRow, RepositoryError, SqlClient>
   readonly upsert: (config: AgentDispatchConfigRow) => Effect.Effect<AgentDispatchConfigRow, RepositoryError, SqlClient>
   readonly delete: (id: string) => Effect.Effect<void, RepositoryError, SqlClient>
@@ -103,6 +105,11 @@ export interface AgentDispatchRepositoryShape {
     readonly errorDetail: string
   }) => Effect.Effect<boolean, RepositoryError, SqlClient>
   readonly listByProject: (projectId: ProjectId) => Effect.Effect<readonly AgentDispatch[], RepositoryError, SqlClient>
+  readonly listBySource: (input: {
+    readonly projectId: ProjectId
+    readonly sourceType: "signal" | "monitor"
+    readonly sourceId: string
+  }) => Effect.Effect<readonly AgentDispatch[], RepositoryError, SqlClient>
 }
 
 export class AgentDispatchRepository extends Context.Service<AgentDispatchRepository, AgentDispatchRepositoryShape>()(

@@ -1,19 +1,64 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 
+const listSessionTraces = vi.fn()
 const listTracesByProject = vi.fn()
 
 vi.mock("../../../../../../domains/traces/traces.functions.ts", () => ({
+  listSessionTraces: (...args: unknown[]) => listSessionTraces(...args),
   listTracesByProject: (...args: unknown[]) => listTracesByProject(...args),
 }))
 
 // Imported after the mock is registered.
-const { sessionTracesQueryOptions } = await import("./use-session-traces.ts")
+const { sessionTracePageQueryOptions, sessionTracesQueryOptions } = await import("./use-session-traces.ts")
 
 const trace = (traceId: string, startTime: string): TraceRecord => ({ traceId, startTime }) as unknown as TraceRecord
 
 beforeEach(() => {
+  listSessionTraces.mockReset()
   listTracesByProject.mockReset()
+})
+
+describe("sessionTracePageQueryOptions queryFn", () => {
+  it("fetches only the requested session trace page", async () => {
+    const ids = Array.from({ length: 100 }, (_, index) => `t${index}`)
+    listSessionTraces.mockResolvedValue({ traces: [], hasMore: true })
+
+    const result = await sessionTracePageQueryOptions(undefined, "p1", "s1", ids, 25).queryFn()
+
+    expect(listSessionTraces).toHaveBeenCalledWith({ data: { projectId: "p1", traceIds: ids, limit: 25 } })
+    expect(result).toEqual({ traces: [], hasMore: true })
+  })
+
+  it("supports chronological cursor pages for session spans", async () => {
+    const cursor = { sortValue: "2026-01-01T00:00:00.000Z", traceId: "t25" }
+    listSessionTraces.mockResolvedValue({ traces: [], hasMore: true })
+
+    await sessionTracePageQueryOptions(undefined, "p1", "s1", ["t1", "t25"], 25, {
+      cursor,
+      sortDirection: "asc",
+    }).queryFn()
+
+    expect(listSessionTraces).toHaveBeenCalledWith({
+      data: {
+        projectId: "p1",
+        traceIds: ["t1", "t25"],
+        limit: 25,
+        cursor,
+        sortDirection: "asc",
+      },
+    })
+  })
+
+  it("caps oversized sessions at 500 traces", async () => {
+    const ids = Array.from({ length: 650 }, (_, index) => `t${index}`)
+    listSessionTraces.mockResolvedValue({ traces: [], hasMore: false })
+
+    await sessionTracePageQueryOptions(undefined, "p1", "s1", ids, 650).queryFn()
+
+    expect(listSessionTraces.mock.calls[0]?.[0]?.data.traceIds).toHaveLength(500)
+    expect(listSessionTraces.mock.calls[0]?.[0]?.data.limit).toBe(500)
+  })
 })
 
 describe("sessionTracesQueryOptions queryFn", () => {

@@ -1,21 +1,21 @@
 ---
 title: Experiments
-description: Compare two or more slices of your data side by side — every metric across sessions, users, tools, signals, behaviours and more.
+description: Compare two or more slices of your data side by side, with every metric across sessions, users, tools, signals, behaviors and more.
 ---
 
 <Info>
   **Where this fits:** Experiments are part of the **Understand** section. A [search](../search/overview) answers "show me these sessions"; an experiment answers "how do these slices differ from each other?"
 </Info>
 
-An **Experiment** is a side-by-side dashboard. You define a **baseline** slice of your data and one or more comparison slices, and Latitude computes every metric it already tracks for each slice, then shows how each comparison moved relative to the baseline — greener when a change is good, redder when it's bad.
+An **Experiment** is a side-by-side dashboard. You define a **baseline** slice of your data and one or more comparison slices, and Latitude computes every metric it already tracks for each slice, then shows how each comparison moved relative to the baseline: greener when a change is good, redder when it's bad.
 
 ## Variants
 
 Each slice is a **Variant**: a saved population selector made of three things.
 
-- **Filters** — the same session filters you use on the dashboard (model, status, user, tool, metadata, duration, and so on).
-- **Search query** — an optional free-text or semantic query.
-- **Time range** — a preset (last day, last week, last month…) or a fixed calendar window. Presets stay live, so a "last 7 days" variant always covers the trailing week.
+- **Filters**: the same session filters you use on the dashboard (model, status, user, tool, metadata, duration, and so on).
+- **Search query**: an optional free-text or semantic query.
+- **Time range**: a preset (last day, last week, last month…) or a fixed calendar window. Presets stay live, so a "last 7 days" variant always covers the trailing week.
 
 ## Baseline
 
@@ -25,11 +25,11 @@ You can mark one Variant as the **baseline**. Every other Variant's metrics are 
 
 For every Variant, an experiment computes the full set of analytics Latitude produces, grouped by type:
 
-- **Sessions** — count, distinct users, total and average cost and tokens, error rate, cache hit rate, and duration percentiles.
-- **Users** — distinct users and per-user rollups (sessions, traces, cost, duration, error rate).
-- **Tools** — calls, distinct tools, usage rate, error rate, and duration percentiles, plus the top tools.
-- **Signals** — distinct signals, occurrences, affected sessions/traces/users, and cost impact, plus the top signals.
-- **Behaviours** — observations, distinct clusters, and detected moments, plus the top behaviours.
+- **Sessions**: count, distinct users, total and average cost and tokens, error rate, cache hit rate, and duration percentiles.
+- **Users**: distinct users and per-user rollups (sessions, traces, cost, duration, error rate).
+- **Tools**: calls, distinct tools, usage rate, error rate, and duration percentiles, plus the top tools.
+- **Signals**: distinct signals, occurrences, affected sessions/traces/users, and cost impact, plus the top signals.
+- **Behaviors**: observations, distinct clusters, and detected moments, plus the top behaviors.
 
 ## Population deviation
 
@@ -42,3 +42,7 @@ A semantic search query returns a ranked sample rather than an exact set, so any
 ## Creating an experiment
 
 From a project, open **Experiments** and create one with a name and optional description. A new experiment starts with two variants (a baseline and one comparison) so it's useful immediately; edit their filters, query, and time range, then read the comparison. "Import from search" seeds a Variant from a saved search's filters and query.
+
+## Compare simulation runs
+
+When you [simulate an agent locally](../test-and-fix/simulations) against a dataset, tag each run with a version (`agentVersion` in metadata, plus a `simulation` tag). Create an experiment whose baseline is `simulation` + `agentVersion = v1` and whose comparison is `simulation` + `agentVersion = v2`. The experiment then compares those two slices on every metric Latitude already tracks, including signals and behaviors.

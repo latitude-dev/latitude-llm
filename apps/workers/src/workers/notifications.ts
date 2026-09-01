@@ -4,14 +4,27 @@ import {
   deleteNotificationsByProjectUseCase,
   NOTIFICATION_KIND_META,
   type NotificationKind,
+  requestBillingLimitNotificationsUseCase,
   requestDestinationQuarantinedNotificationsUseCase,
   requestIncidentNotificationsUseCase,
   requestSignalAssignedNotificationsUseCase,
   requestSignalDiscoveredNotificationsUseCase,
+  requestSignalRegressedNotificationsUseCase,
+  requestSignalReprioritizedNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
+  routeOf,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { NOTIFICATION_GROUP_META, OrganizationId, ProjectId, SignalId, type SqlClient } from "@domain/shared"
+import {
+  admitsTopic,
+  NOTIFICATION_GROUP_META,
+  OrganizationId,
+  ProjectId,
+  ScoreId,
+  SignalId,
+  type SqlClient,
+} from "@domain/shared"
+import { signalPrioritySchema } from "@domain/signals"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
@@ -72,8 +85,9 @@ interface ProducerRequest {
   readonly projectId: string | null
   readonly payload: Record<string, unknown>
   /** One per-recipient notification ID (all share the same idempotencyKey).
-   *  The first one is passed to Slack jobs for chart URL generation. */
-  readonly notificationId: string
+   *  The first one is passed to Slack jobs for chart URL generation; null when
+   *  the occurrence wrote no in-app row to deep-link. */
+  readonly notificationId: string | null
   readonly slackEligible?: boolean
 }
 
@@ -91,14 +105,17 @@ const fanOutSlackRoutes = (
     if (!integration) return
 
     const kind = first.kind as NotificationKind
-    const group = NOTIFICATION_KIND_META[kind]?.group
-    if (!group) return
+    if (!NOTIFICATION_KIND_META[kind]) return
+    const { group, topic } = routeOf(kind, first.payload)
     // Personal kinds target a single user — never broadcast them to a
     // shared channel, even if a stale route were somehow configured.
     if (!NOTIFICATION_GROUP_META[group].slackRoutable) return
-    // Routes can set a minimum incident severity; incidents below it never
-    // reach the channel (payloads without a severity always pass).
-    const routes = (integration.routes[group] ?? []).filter((route) => routeAdmitsPayload(route, first.payload))
+    // A route can mute individual topics within its group, and set a minimum
+    // incident severity below which nothing reaches the channel (payloads
+    // without a topic or a severity always pass).
+    const routes = (integration.routes[group] ?? []).filter(
+      (route) => routeAdmitsPayload(route, first.payload) && admitsTopic(route.topics, topic),
+    )
     if (routes.length === 0) return
 
     yield* Effect.all(
@@ -352,6 +369,125 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         withTracing,
       ),
 
+    "request-signal-regressed-notifications": (payload) =>
+      requestSignalRegressedNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        signalId: SignalId(payload.signalId),
+        regressedAt: payload.regressedAt,
+        triggerScoreId: ScoreId(payload.triggerScoreId),
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-signal-regressed skipped signalId=${payload.signalId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.request-signal-regressed failed signalId=${payload.signalId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "request-signal-reprioritized-notifications": (payload) => {
+      // Queue payloads are untyped strings, and an unrecognised priority ranks
+      // as `undefined`, which would look like "not an increase" and drop the
+      // notification without a trace.
+      const priority = signalPrioritySchema.safeParse(payload.priority)
+      const previousPriority = signalPrioritySchema.nullable().safeParse(payload.previousPriority)
+      if (!priority.success || !previousPriority.success) {
+        logger.error(
+          `notifications.request-signal-reprioritized unparseable priority signalId=${payload.signalId} priority=${payload.priority} previousPriority=${payload.previousPriority}`,
+        )
+        return Effect.void
+      }
+
+      return requestSignalReprioritizedNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+        signalId: SignalId(payload.signalId),
+        priority: priority.data,
+        previousPriority: previousPriority.data,
+        actorUserId: payload.actorUserId,
+        reprioritizedAt: payload.reprioritizedAt,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-signal-reprioritized skipped signalId=${payload.signalId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              // The occurrence, not `result.requests`: Slack is channel-scoped,
+              // and the actor-filtered recipient list is empty in a solo org.
+              fanOutSlackRoutes([result.slackOccurrence], publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.request-signal-reprioritized failed signalId=${payload.signalId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      )
+    },
+
     "request-destination-quarantined-notifications": (payload) =>
       requestDestinationQuarantinedNotificationsUseCase({
         organizationId: OrganizationId(payload.organizationId),
@@ -399,6 +535,62 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
           Effect.sync(() =>
             logger.error(
               `notifications.request-destination-quarantined failed destinationId=${payload.destinationId}`,
+              error,
+            ),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "request-billing-limit-notifications": (payload) =>
+      requestBillingLimitNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        periodStart: payload.periodStart,
+        periodEnd: payload.periodEnd,
+        limitKind: payload.limitKind,
+        includedCredits: payload.includedCredits,
+        consumedCredits: payload.consumedCredits,
+        overageCredits: payload.overageCredits,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-billing-limit skipped org=${payload.organizationId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          return Effect.all(
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(
+              `notifications.request-billing-limit failed org=${payload.organizationId} kind=${payload.limitKind}`,
               error,
             ),
           ),

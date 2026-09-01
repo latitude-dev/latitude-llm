@@ -8,6 +8,7 @@ import {
   BarChart,
   ChartSkeleton,
   Checkbox,
+  CodeDiff,
   CopyButton,
   type DateRange,
   DateRangePicker,
@@ -18,6 +19,7 @@ import {
   MasterDetail,
   RichTextEditor,
   Status,
+  TagsInput,
   Text,
   useMountEffect,
   useStagedStatus,
@@ -109,6 +111,20 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
     },
     Demo: CheckboxDemo,
   },
+  "code-diff": {
+    title: "Code diff",
+    description: "Read-only unified diff of two text bodies, syntax-highlighted per line.",
+    usage: {
+      description:
+        "Pass before and after text; language enables syntax highlighting and fillHeight scrolls inside a bounded parent.",
+      lines: [
+        'import { CodeDiff } from "@repo/ui"',
+        "",
+        '<CodeDiff before={before} after={after} language="json" fillHeight />',
+      ],
+    },
+    Demo: CodeDiffDemo,
+  },
   "copy-button": {
     title: "Copy button",
     description: "Clipboard copy with feedback.",
@@ -191,6 +207,25 @@ const COMPONENT_REGISTRY: Record<string, ComponentEntry> = {
       lines: ['import { Status } from "@repo/ui"', "", '<Status label="Healthy" variant="success" />'],
     },
     Demo: StatusDemo,
+  },
+  "tags-input": {
+    title: "Tags input",
+    description: "Free-text chip editor for a list of short values.",
+    usage: {
+      description:
+        "Enter or comma commits the draft, pasting a delimited list commits every entry, Backspace on an empty draft removes the last chip. Duplicates are dropped case-insensitively; validation belongs to the form schema and arrives back through errors.",
+      lines: [
+        'import { TagsInput } from "@repo/ui"',
+        "",
+        "<TagsInput",
+        '  label="Allowed IPs"',
+        "  value={ips}",
+        "  onChange={setIps}",
+        '  placeholder="203.0.113.7, 2001:db8::/32"',
+        "/>",
+      ],
+    },
+    Demo: TagsInputDemo,
   },
   charts: {
     title: "Charts",
@@ -388,6 +423,29 @@ function CopyButtonDemo() {
   )
 }
 
+const CODE_DIFF_BEFORE = `{
+  "model": "gpt-4",
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "tools": ["search"]
+}`
+const CODE_DIFF_AFTER = `{
+  "model": "claude-opus-4",
+  "temperature": 0.5,
+  "tools": ["search", "memory"],
+  "stream": true
+}`
+
+function CodeDiffDemo() {
+  return (
+    <ComponentDemoSection title="Code diff" description="Unified before/after diff, syntax-highlighted per line.">
+      <div className="h-64 w-full">
+        <CodeDiff before={CODE_DIFF_BEFORE} after={CODE_DIFF_AFTER} language="json" fillHeight />
+      </div>
+    </ComponentDemoSection>
+  )
+}
+
 function FormsDemo() {
   const inputId = "design-system-forms-manual"
 
@@ -449,6 +507,25 @@ function StatusDemo() {
         <Status label="Warning" variant="warning" />
         <Status label="Destructive" variant="destructive" />
       </div>
+    </ComponentDemoSection>
+  )
+}
+
+function TagsInputDemo() {
+  const [ips, setIps] = useState<string[]>(["203.0.113.7", "2001:db8::/32"])
+
+  return (
+    <ComponentDemoSection
+      title="Chips"
+      description="Type a value and press Enter or comma; paste a delimited list to add several."
+    >
+      <TagsInput
+        label="Allowed IPs"
+        description="Leave empty to accept any address."
+        value={ips}
+        onChange={setIps}
+        placeholder="203.0.113.7, 2001:db8::/32"
+      />
     </ComponentDemoSection>
   )
 }

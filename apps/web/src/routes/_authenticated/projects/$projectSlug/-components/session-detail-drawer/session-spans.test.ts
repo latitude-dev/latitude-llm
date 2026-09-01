@@ -4,6 +4,7 @@ import type { TraceRecord } from "../../../../../../domains/traces/traces.functi
 import { getTraceTimeRange } from "../trace-detail-drawer/tabs/spans-tab/span-tree/tree-utils.ts"
 import {
   filterSessionSpanGroups,
+  getLoadedSessionSpanTraceIds,
   getSessionTraceNumberById,
   groupSessionSpans,
   resolveSpanTraceId,
@@ -60,6 +61,7 @@ function makeTrace(
     costInputMicrocents: 0,
     costOutputMicrocents: 0,
     costTotalMicrocents: 0,
+    unpricedSpanCount: 0,
     sessionId: "session",
     userId: "",
     simulationId: "",
@@ -75,6 +77,16 @@ function makeTrace(
 }
 
 describe("session span groups", () => {
+  it("includes a selected session trace that has not reached the loaded page", () => {
+    expect(
+      getLoadedSessionSpanTraceIds({
+        loadedTraceIds: ["trace-a", "trace-b"],
+        sessionTraceIds: ["trace-a", "trace-b", "trace-c"],
+        selectedSpanTraceId: "trace-c",
+      }),
+    ).toEqual(["trace-a", "trace-b", "trace-c"])
+  })
+
   it("groups spans oldest-first and falls back to span timing when trace metadata is missing", () => {
     const spans = [
       makeSpan({

@@ -1,9 +1,27 @@
 export type TraceFilterFieldType = "status" | "text" | "multiSelect" | "numberRange"
 
+/**
+ * Functional groups the filter UI renders fields under, in this order. Groups
+ * also cover controls that exist only in the UI (scores, metadata, LLM
+ * activity), so not every group has a field in `TRACE_FILTER_FIELDS`.
+ */
+export const TRACE_FILTER_GROUPS = [
+  { id: "identity", label: "Identity" },
+  { id: "status", label: "Status" },
+  { id: "modelsAndTools", label: "Models & tools" },
+  { id: "performance", label: "Performance & cost" },
+  { id: "conversation", label: "Conversation" },
+  { id: "scores", label: "Scores" },
+  { id: "custom", label: "Custom" },
+] as const satisfies readonly { readonly id: string; readonly label: string }[]
+
+export type TraceFilterGroupId = (typeof TRACE_FILTER_GROUPS)[number]["id"]
+
 export interface TraceFilterField {
   readonly field: string
   readonly type: TraceFilterFieldType
   readonly label: string
+  readonly group: TraceFilterGroupId
   readonly placeholder?: string
   readonly tooltip?: string
   readonly percentile?: boolean // Numeric fields with this flag also support `gtePercentile` filtering
@@ -24,44 +42,55 @@ export interface TraceFilterField {
 }
 
 export const TRACE_FILTER_FIELDS = [
-  { field: "status", type: "status", label: "Status" },
-  { field: "name", type: "text", label: "Name", placeholder: "Enter name..." },
+  { field: "status", type: "status", label: "Status", group: "status" },
+  { field: "name", type: "text", label: "Name", placeholder: "Enter name...", group: "identity" },
   {
     field: "traceId",
     type: "text",
     label: "Trace ID",
     placeholder: "Filter by trace...",
+    group: "identity",
   },
   {
     field: "sessionId",
     type: "text",
     label: "Session ID",
     placeholder: "Filter by session...",
+    group: "identity",
   },
   {
     field: "simulationId",
     type: "text",
     label: "Simulation ID",
     placeholder: "Filter by simulation...",
+    group: "identity",
   },
   {
     field: "userId",
     type: "text",
     label: "User ID",
     placeholder: "Filter by user...",
+    group: "identity",
   },
-  { field: "tags", type: "multiSelect", label: "Tags" },
-  { field: "moments", type: "multiSelect", label: "Moments", sessionOnly: true },
-  { field: "topics", type: "multiSelect", label: "Behaviors", sessionOnly: true },
-  { field: "models", type: "multiSelect", label: "Models" },
-  { field: "providers", type: "multiSelect", label: "Providers" },
-  { field: "serviceNames", type: "multiSelect", label: "Services" },
-  { field: "tools", type: "multiSelect", label: "Tools", tooltip: "Traces with at least one call of the tool." },
+  { field: "tags", type: "multiSelect", label: "Tags", group: "custom" },
+  { field: "moments", type: "multiSelect", label: "Moments", sessionOnly: true, group: "conversation" },
+  { field: "topics", type: "multiSelect", label: "Behaviors", sessionOnly: true, group: "conversation" },
+  { field: "models", type: "multiSelect", label: "Models", group: "modelsAndTools" },
+  { field: "providers", type: "multiSelect", label: "Providers", group: "modelsAndTools" },
+  { field: "serviceNames", type: "multiSelect", label: "Services", group: "modelsAndTools" },
+  {
+    field: "tools",
+    type: "multiSelect",
+    label: "Tools",
+    tooltip: "Traces with at least one call of the tool.",
+    group: "modelsAndTools",
+  },
   {
     field: "definedTools",
     type: "multiSelect",
     label: "Defined tools",
     tooltip: "Traces where the tool was offered to the model, whether or not it was called.",
+    group: "modelsAndTools",
   },
   {
     field: "duration",
@@ -71,6 +100,7 @@ export const TRACE_FILTER_FIELDS = [
     percentile: true,
     displayScale: 1_000_000_000,
     displayStep: 0.001,
+    group: "performance",
   },
   {
     field: "ttft",
@@ -80,6 +110,7 @@ export const TRACE_FILTER_FIELDS = [
     percentile: true,
     displayScale: 1_000_000,
     displayStep: 1,
+    group: "performance",
   },
   {
     field: "cost",
@@ -89,11 +120,12 @@ export const TRACE_FILTER_FIELDS = [
     percentile: true,
     displayScale: 100_000_000,
     displayStep: 0.01,
+    group: "performance",
   },
-  { field: "spanCount", type: "numberRange", label: "Span Count" },
-  { field: "errorCount", type: "numberRange", label: "Error Count" },
-  { field: "tokensInput", type: "numberRange", label: "Tokens Input" },
-  { field: "tokensOutput", type: "numberRange", label: "Tokens Output" },
+  { field: "spanCount", type: "numberRange", label: "Span Count", group: "performance" },
+  { field: "errorCount", type: "numberRange", label: "Error Count", group: "status" },
+  { field: "tokensInput", type: "numberRange", label: "Tokens Input", group: "performance" },
+  { field: "tokensOutput", type: "numberRange", label: "Tokens Output", group: "performance" },
   {
     // Wire value is an integer percentage (0–100), not a 0–1 ratio: the
     // numberRange UI rounds wire values to integers, so a fractional scale
@@ -103,6 +135,7 @@ export const TRACE_FILTER_FIELDS = [
     label: "Cache Hit Rate (%)",
     tooltip: "Share of input tokens served from cache. Low values on large sessions often signal broken caching.",
     displayStep: 1,
+    group: "performance",
   },
 ] as const satisfies readonly TraceFilterField[]
 
@@ -200,3 +233,28 @@ export const isTraceFilterFieldName = (key: string): boolean =>
 /** Returns the filter-set keys the trace query cannot apply — empty when every key is valid. */
 export const unknownTraceFilterFields = (filters: Readonly<Record<string, unknown>>): string[] =>
   Object.keys(filters).filter((key) => !isTraceFilterFieldName(key))
+
+/**
+ * Telemetry (non-score) session filter field names applicable at the API
+ * boundary: every generic field — sessions include the session-only fields,
+ * unlike traces — plus the time-window fields. Kept in sync with the ClickHouse
+ * `SESSION_FIELD_REGISTRY` (guarded by a test in `@platform/db-clickhouse`).
+ */
+export const SESSION_TELEMETRY_FILTER_FIELDS = [
+  ...TRACE_FILTER_FIELDS.map((f) => f.field),
+  ...TRACE_TIME_FILTER_FIELDS,
+] as const
+
+const SESSION_FILTER_FIELD_NAME_SET: ReadonlySet<string> = new Set([
+  ...SESSION_TELEMETRY_FILTER_FIELDS,
+  ...SCORE_FILTER_FIELDS,
+])
+
+/** True when `key` is a filter field the session query can apply (registry field, `moments`/`topics`, `score.*`, or `metadata.<path>`). */
+export const isSessionFilterFieldName = (key: string): boolean =>
+  SESSION_FILTER_FIELD_NAME_SET.has(key) ||
+  (key.startsWith(METADATA_FILTER_FIELD_PREFIX) && key.length > METADATA_FILTER_FIELD_PREFIX.length)
+
+/** Returns the filter-set keys the session query cannot apply — empty when every key is valid. */
+export const unknownSessionFilterFields = (filters: Readonly<Record<string, unknown>>): string[] =>
+  Object.keys(filters).filter((key) => !isSessionFilterFieldName(key))

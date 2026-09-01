@@ -369,10 +369,15 @@ export const AIGenerateLive = Layer.effect(
       const fallback = resolveGenerateFallback(input)
       const fallbackProviderModel = fallback ? yield* createProviderModel(fallback.provider, fallback.model) : undefined
 
-      return yield* Effect.tryPromise({
+      // Started before the primary attempt so a fallback-served call reports the caller's total wait.
+      const startTime = performance.now()
+      const outcome = yield* Effect.tryPromise({
         try: async () => {
-          const generateWithModel = async (model: ProviderModel) => {
-            const startTime = performance.now()
+          const generateWithModel = async (
+            model: ProviderModel,
+            servedBy: { readonly provider: string; readonly model: string },
+            traceId: string | undefined,
+          ) => {
             const providerOptions = normalizeProviderOptions(input.providerOptions)
 
             const call: GenerateTextCall = {
@@ -402,6 +407,8 @@ export const AIGenerateLive = Layer.effect(
             return {
               object: result.output,
               tokens: usage?.totalTokens ?? 0,
+              servedBy,
+              ...(traceId !== undefined ? { traceId } : {}),
               tokenUsage: {
                 input: usage?.inputTokens ?? 0,
                 output: usage?.outputTokens ?? 0,
@@ -412,16 +419,29 @@ export const AIGenerateLive = Layer.effect(
             } satisfies GenerateResult<T>
           }
 
-          const execute = async () => {
+          const execute = async (traceId?: string) => {
             try {
-              return await generateWithModel(providerModel)
+              return {
+                result: await generateWithModel(
+                  providerModel,
+                  { provider: input.provider, model: input.model },
+                  traceId,
+                ),
+                fallback: null,
+              }
             } catch (primaryError) {
               if (!fallback || fallbackProviderModel === undefined) {
                 throw primaryError
               }
 
               try {
-                return await generateWithModel(fallbackProviderModel)
+                return {
+                  result: await generateWithModel(fallbackProviderModel, fallback, traceId),
+                  fallback: {
+                    model: `${fallback.provider}/${fallback.model}`,
+                    primaryError: formatGenerateError(primaryError),
+                  },
+                }
               } catch (fallbackError) {
                 throw new Error(
                   `Primary model ${input.provider}/${input.model} failed: ${formatGenerateError(primaryError)}; ` +
@@ -439,6 +459,16 @@ export const AIGenerateLive = Layer.effect(
             cause: error,
           }),
       })
+
+      if (outcome.fallback !== null) {
+        yield* Effect.annotateCurrentSpan("effect.ai.fallback_model", outcome.fallback.model)
+        yield* Effect.annotateCurrentSpan("effect.ai.fallback_reason", outcome.fallback.primaryError)
+        yield* Effect.logWarning(
+          `AI generation fell back from ${input.provider}/${input.model} to ${outcome.fallback.model}: ${outcome.fallback.primaryError}`,
+        )
+      }
+
+      return outcome.result
     })
 
     return {

@@ -2,7 +2,7 @@ name: Update README badges
 
 on:
   schedule:
-    - cron: "17 6 * * *"
+    - cron: "17 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v7.0.1
 
       - name: Update npm downloads badge
         run: |

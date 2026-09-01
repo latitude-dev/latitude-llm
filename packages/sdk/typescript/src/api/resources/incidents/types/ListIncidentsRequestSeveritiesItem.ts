@@ -4,6 +4,7 @@ export const ListIncidentsRequestSeveritiesItem = {
     Low: "low",
     Medium: "medium",
     High: "high",
+    Urgent: "urgent",
 } as const;
 export type ListIncidentsRequestSeveritiesItem =
     (typeof ListIncidentsRequestSeveritiesItem)[keyof typeof ListIncidentsRequestSeveritiesItem];

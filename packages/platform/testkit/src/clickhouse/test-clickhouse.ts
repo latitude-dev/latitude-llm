@@ -147,15 +147,25 @@ interface TestClickHouseContext {
   readonly client: ClickHouseClient
 }
 
+interface SetupTestClickHouseOptions {
+  /**
+   * Truncate every table before each test. Pass `false` when the whole file reads one
+   * immutable fixture, so it can seed once in its own `beforeAll` instead.
+   */
+  readonly truncateBetweenTests?: boolean
+}
+
 /**
  * Registers beforeAll / beforeEach / afterAll hooks for a chdb-backed test file.
  * - beforeAll: creates session + loads schema
- * - beforeEach: truncates all tables
+ * - beforeEach: truncates all tables, unless `truncateBetweenTests: false`
  * - afterAll: destroys the session
  *
  * Returns an object whose `client` property resolves lazily after beforeAll.
  */
-export function setupTestClickHouse(): TestClickHouseContext {
+export function setupTestClickHouse({
+  truncateBetweenTests = true,
+}: SetupTestClickHouseOptions = {}): TestClickHouseContext {
   let ch: TestClickHouse | undefined
 
   beforeAll(() => {
@@ -163,10 +173,12 @@ export function setupTestClickHouse(): TestClickHouseContext {
     loadClickHouseSchema(ch)
   })
 
-  beforeEach(() => {
-    if (!ch) return
-    truncateClickHouseTables(ch)
-  })
+  if (truncateBetweenTests) {
+    beforeEach(() => {
+      if (!ch) return
+      truncateClickHouseTables(ch)
+    })
+  }
 
   afterAll(() => {
     if (!ch) return

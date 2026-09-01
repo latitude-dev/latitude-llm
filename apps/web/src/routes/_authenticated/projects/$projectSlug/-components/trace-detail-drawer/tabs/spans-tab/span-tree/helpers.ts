@@ -8,7 +8,6 @@ export const INDENT_PX = 16
 export const MIN_TREE_WIDTH = 180
 export const MIN_WATERFALL_WIDTH = 120
 export const DEFAULT_TREE_FRACTION = 0.5
-export const MINIMIZED_MAX_HEIGHT = 192
 export const KEYBOARD_STEP = 8
 export const KEYBOARD_STEP_LARGE = 32
 

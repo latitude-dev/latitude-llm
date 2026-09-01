@@ -1,7 +1,8 @@
 import { Input, Tabs, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { CircleSlashIcon, LayoutGridIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import { allToolsMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
 import { useAnalyticsTimeWindow } from "../../../../../domains/projects/use-analytics-time-window.ts"
 import { useProjectTools, useToolCallHistogram } from "../../../../../domains/tools/tools.collection.ts"
@@ -11,7 +12,6 @@ import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
-import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { AddTargetMonitorButton } from "../monitors/-components/add-target-monitor-button.tsx"
 import { getToolStatuses, pickToolTrendBucketSeconds } from "./-components/tool-formatters.ts"
@@ -70,6 +70,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/tool
 
 function ToolsPageContent() {
   const project = useRouteProject()
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
   const { firstTraceAt } = useProjectFirstTraceAt({ projectId: project.id })
   const { lastTraceAt } = useProjectLastTraceAt({ projectId: project.id })
   const tw = useAnalyticsTimeWindow({
@@ -216,7 +217,7 @@ function ToolsPageContent() {
       {showEmptyState ? (
         <ToolsEmptyState isLoading={isLoading} />
       ) : (
-        <>
+        <div ref={scrollAreaRef} className="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto">
           {hasOnlyDefinedTools ? (
             <div className="px-6 pb-2">
               <ToolsDiscoveryBanner projectId={project.id} />
@@ -246,8 +247,9 @@ function ToolsPageContent() {
             trendBucketSeconds={trendBucketSeconds}
             focusedToolName={focusedToolName}
             onFocusedToolChange={setFocusedToolName}
+            scrollContainerRef={scrollAreaRef}
           />
-        </>
+        </div>
       )}
     </Layout>
   )

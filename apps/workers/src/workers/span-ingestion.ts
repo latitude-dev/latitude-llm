@@ -1,3 +1,4 @@
+import { persistedIncludedCreditsForPlan } from "@domain/billing"
 import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
 import { OrganizationId, type StorageDiskPort } from "@domain/shared"
@@ -14,9 +15,11 @@ import {
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnvOptional } from "@platform/env"
 import { StorageDiskLive } from "@platform/storage-object"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
+import { reportUnpricedSpans } from "./unpriced-spans-report.ts"
 
 const logger = createLogger("span-ingestion")
 
@@ -47,7 +50,11 @@ export const createSpanIngestionWorker = ({
     OrganizationRepositoryLive,
   )
 
-  const processSpans = processIngestedSpansUseCase({ eventsPublisher })
+  const processSpans = processIngestedSpansUseCase({ eventsPublisher, onUnpricedSpans: reportUnpricedSpans })
+
+  // Unset degrades pseudonymized identities to full redaction rather than blocking
+  // a self-hoster's ingestion on a missing variable.
+  const pseudonymSecret = Effect.runSync(parseEnvOptional("LAT_REDACTION_PSEUDONYM_SECRET", "string"))
 
   consumer.subscribe(
     "span-ingestion",
@@ -82,19 +89,25 @@ export const createSpanIngestionWorker = ({
             defaultProjectId,
             projectIdBySlug,
             isSandbox,
+            // Absent means no project opted in, which is why this needs no legacy
+            // fallback: jobs enqueued before the field existed are correct as-is.
+            ...(wire.redaction ? { redaction: wire.redaction } : {}),
+            ...(pseudonymSecret ? { pseudonymSecret } : {}),
             ...(orgPlan ? { retentionDays: orgPlan.plan.retentionDays } : {}),
             // Emit the full event (plan snapshot + the `isSandbox` bit). Whether to
-            // bill is the consumer's call — `domain-events` skips the billing fan-out
-            // for sandbox events. See the `TracesIngested` handler there.
+            // bill is the consumer's call — the `billing` worker drops sandbox usage
+            // rather than batching it.
             ...(orgPlan
               ? {
                   traceUsage: {
                     context: {
                       planSlug: orgPlan.plan.slug,
-                      planSource: orgPlan.source as "override" | "subscription" | "free-fallback",
+                      planSource: orgPlan.source as "override" | "subscription" | "free-fallback" | "self-hosted",
                       periodStart: orgPlan.periodStart,
                       periodEnd: orgPlan.periodEnd,
-                      includedCredits: orgPlan.plan.includedCredits,
+                      // An unbounded allowance has no JSON representation, and this
+                      // snapshot crosses BullMQ and the outbox before it is read.
+                      includedCredits: persistedIncludedCreditsForPlan(orgPlan.plan.slug, orgPlan.plan.includedCredits),
                       overageAllowed: orgPlan.plan.overageAllowed,
                     },
                   },

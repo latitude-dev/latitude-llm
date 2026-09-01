@@ -7,18 +7,20 @@ Latitude's TypeScript and Python telemetry SDKs expose a class-based bootstrap A
 - TypeScript uses `new Latitude({ ... })` from `@latitude-data/telemetry`.
 - Python uses `Latitude(...)` from `latitude_telemetry`.
 - The bootstrap object exposes the OpenTelemetry tracer provider as `provider` and lifecycle methods for flushing and shutdown.
-- TypeScript also exposes `ready: Promise<void>` because instrumentation registration is asynchronous; Python registration is synchronous and does not expose `ready`.
+- TypeScript exposes `ready: Promise<void>` as the stable registration boundary; consumers await it before creating instrumented clients or making calls. Python registration is synchronous and does not expose `ready`.
 - Both SDKs expose `getTracer(scope, context?)` on the bootstrap instance. The returned tracer is scoped under `so.latitude.<scope>` and, when `context` is provided, stamps every span it starts with the same `latitude.*` attributes that `capture()` would attach.
 
 The bootstrap class is responsible for:
 
 - validating `apiKey` / `api_key` and `project` / `project_slug`
 - configuring the Latitude span processor and exporter
-- registering requested LLM instrumentations
+- registering the requested LLM instrumentation instances
 - installing W3C trace-context and baggage propagation when the SDK owns the provider
 - registering graceful shutdown handling
 
 `project` is the preferred option name. `projectSlug` / `project_slug` remain accepted for backwards compatibility; when both are set, `project` wins and a deprecation warning is logged.
+
+TypeScript provider and framework instrumentations are opt-in subpath exports. Each `@latitude-data/telemetry/instrumentations/<name>` entry exports a factory that accepts the consumer's LLM SDK module and returns an OpenTelemetry instrumentation. `LatitudeOptions.instrumentations` is a readonly array of these instances. Provider implementations are package dependencies, but only their dedicated subpath entry points import them, allowing bundlers to exclude unused integrations. The main entry must not import or re-export provider instrumentation implementations.
 
 ## Capture
 

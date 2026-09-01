@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Dev extra now pins `openai` 3.3.1. `openai-agents` is 0.21.0 so the graph can resolve
+  (`0.15.1` required `openai<3`). LiteLLM is no longer co-installed: every published
+  `litellm` still requires `openai<3`. Install it separately for the LiteLLM examples.
+- `openinference-semantic-conventions` is 0.1.33, which `openinference-instrumentation-openai`
+  0.1.56 requires.
+
+### Fixed
+
+- Smart filter now promotes ancestors of kept spans (including already-ended parents held briefly
+  after a drop) so exported traces stay connected when only a descendant independently passed the
+  filter — e.g. a stamped `tcp.connect` no longer ships without its parent.
+
+## [3.7.0] - 2026-07-20
+
+### Added
+
+- `create_memory_telemetry()` emits OpenTelemetry GenAI memory-operation spans (`create_memory`, `update_memory`, `upsert_memory`, `delete_memory`, `search_memory`, `create_memory_store`, `delete_memory_store`). Each operation optionally wraps a sync or async `execute` callable — capturing latency, errors, and status — or emits a completed span. It sets `gen_ai.operation.name` and the `gen_ai.memory.*` attributes, stamps Latitude context, and maps a `search` result to the records it returned.
+- Content is opt-in via `capture_content` (off by default) and covers both record bodies (`gen_ai.memory.records`) and the search query (`gen_ai.memory.query.text`), with a `redact` hook to scrub records before they are sent.
+- `MEMORY_ATTRIBUTES` and `MEMORY_OPERATIONS` constants are exported for raw OpenTelemetry instrumentation.
+
 ## [3.6.0] - 2026-06-29
 
 ### Added

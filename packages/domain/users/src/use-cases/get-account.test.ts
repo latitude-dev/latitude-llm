@@ -24,6 +24,7 @@ const testUser: User = {
   name: "Alice",
   jobTitle: null,
   phoneNumber: null,
+  heardAboutUs: null,
   emailVerified: true,
   image: null,
   role: "user",

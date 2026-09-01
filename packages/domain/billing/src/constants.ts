@@ -1,8 +1,13 @@
 import { InvalidBillingIdempotencyKeyError } from "./errors.ts"
 
-export const PLAN_SLUGS = ["free", "pro", "enterprise"] as const
+export const PLAN_SLUGS = ["free", "pro", "enterprise", "self-hosted"] as const
 
 export type PlanSlug = (typeof PLAN_SLUGS)[number]
+
+/** Plans an operator may pin an organization to through a billing override. */
+export const OVERRIDABLE_PLAN_SLUGS = ["free", "pro", "enterprise"] as const
+
+export type OverridablePlanSlug = (typeof OVERRIDABLE_PLAN_SLUGS)[number]
 
 export const CENT_TO_MILLS = 10
 
@@ -10,22 +15,22 @@ export const BILLING_OVERAGE_SYNC_THROTTLE_MS = 5 * 60_000 // 5 minutes
 
 export const SELF_SERVE_PLAN_SLUGS: readonly PlanSlug[] = ["pro"] as const
 
-export const CHARGEABLE_ACTIONS = [
-  "trace",
-  "flagger-scan",
-  "deterministic-eval-scan",
-  "live-eval-scan",
-  "eval-generation",
-] as const
+export const CHARGEABLE_ACTIONS = ["trace", "eval-scan", "semantic-query", "llm-call"] as const
 
 export type ChargeableAction = (typeof CHARGEABLE_ACTIONS)[number]
 
+/**
+ * Flat credit prices at the Pro overage rate ($0.002/credit). `llm-call` and
+ * `semantic-query` are authorization estimates and fallbacks when cost cannot be
+ * determined — actual generations/embeds bill estimated provider cost through
+ * `creditsForLlmGenerationCost` / `creditsForSemanticQueryCost`. Derivation lives
+ * in dev-docs/billing.md.
+ */
 export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   trace: 1,
-  "flagger-scan": 30,
-  "deterministic-eval-scan": 1,
-  "live-eval-scan": 30,
-  "eval-generation": 1000,
+  "eval-scan": 1,
+  "semantic-query": 1,
+  "llm-call": 4,
 } as const
 
 export const FREE_PLAN_CONFIG = {
@@ -71,6 +76,31 @@ export const ENTERPRISE_PLAN_CONFIG = {
   sandboxActiveCap: 1,
 } as const
 
+/**
+ * Retention stamped when billing enforcement is off. Bounded because the ClickHouse
+ * span TTL evaluates `toDateTime(start_time) + toIntervalDay(retention_days + 30)`,
+ * and `DateTime` runs out in 2106.
+ */
+export const SELF_HOSTED_RETENTION_DAYS_MIN = 1
+export const SELF_HOSTED_RETENTION_DAYS_MAX = 3650
+
+/**
+ * Effective plan of any organization on a deployment that does not enforce billing.
+ * Unmetered and unbounded: `LAT_BILLING_ENABLED` gates Latitude Cloud's plan limits,
+ * so a self-hoster is never rejected at ingest or aged out by a plan's retention.
+ */
+export const SELF_HOSTED_PLAN_CONFIG = {
+  slug: "self-hosted" as const,
+  selfServe: false,
+  includedCredits: Infinity,
+  retentionDays: SELF_HOSTED_RETENTION_DAYS_MAX,
+  overageAllowed: true,
+  hardCapped: false,
+  priceCents: null as null,
+  spanQuotaPerPeriod: Number.POSITIVE_INFINITY,
+  sandboxActiveCap: 1,
+} as const
+
 export type PlanConfig = {
   slug: PlanSlug
   selfServe: boolean
@@ -88,6 +118,7 @@ export const PLAN_CONFIGS: Record<PlanSlug, PlanConfig> = {
   free: FREE_PLAN_CONFIG,
   pro: PRO_PLAN_CONFIG,
   enterprise: ENTERPRISE_PLAN_CONFIG,
+  "self-hosted": SELF_HOSTED_PLAN_CONFIG,
 } as const
 
 export const SANDBOX_SPAN_RETENTION_DAYS = 7
@@ -97,6 +128,45 @@ export const SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME: Record<string, PlanSlug> 
 } as const
 
 export const OverageCreditUnit = PRO_PLAN_CONFIG.overageCreditsPerUnit
+
+/** Dollar value of one credit at the Pro overage rate, in mills ($20 per 10k credits = 2 mills). */
+export const CREDIT_VALUE_MILLS =
+  (PRO_PLAN_CONFIG.overagePriceCentsPerUnit * CENT_TO_MILLS) / PRO_PLAN_CONFIG.overageCreditsPerUnit
+
+export const LLM_GENERATION_BILLING_MARGIN = 1.3
+
+export const SEMANTIC_QUERY_BILLING_MARGIN = 2
+
+/**
+ * voyage-4-large embed rate. Voyage models are absent from the `@domain/models`
+ * registry, so query-embed cost is priced with this constant against the
+ * adapter-reported token count.
+ */
+export const SEMANTIC_QUERY_EMBED_USD_PER_MILLION_TOKENS = 0.12
+
+const USD_TO_MILLS = 1_000
+
+const creditsForCostWithMargin = (costUsd: number, margin: number): number =>
+  Math.max(1, Math.ceil((costUsd * USD_TO_MILLS * margin) / CREDIT_VALUE_MILLS))
+
+/**
+ * Credits billed for one LLM generation from its estimated provider cost: a 1.3x
+ * margin over cost, converted at the overage credit value, rounded up to an integer
+ * with a 1-credit floor.
+ */
+export const creditsForLlmGenerationCost = (costUsd: number): number =>
+  creditsForCostWithMargin(costUsd, LLM_GENERATION_BILLING_MARGIN)
+
+/**
+ * Credits billed for one semantic query from its estimated embed cost: same
+ * conversion as LLM generations but at a 2x margin.
+ */
+export const creditsForSemanticQueryCost = (costUsd: number): number =>
+  creditsForCostWithMargin(costUsd, SEMANTIC_QUERY_BILLING_MARGIN)
+
+/** Estimated provider cost of one query embed from the adapter-reported token count. */
+export const semanticQueryEmbedCostUsd = (tokens: number): number =>
+  (tokens * SEMANTIC_QUERY_EMBED_USD_PER_MILLION_TOKENS) / 1_000_000
 
 export const calculateOverageAmountMills = (planSlug: PlanSlug, overageCredits: number) => {
   if (planSlug !== "pro") return 0

@@ -1,3 +1,4 @@
+import { agentDispatchSeeders } from "./agent-dispatch/index.ts"
 import { alertIncidentSeeders } from "./alert-incidents/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { customBehaviorQaSeeders } from "./custom-behaviors/index.ts"
@@ -7,6 +8,7 @@ import { bootstrapTelemetryFlaggerSeeders, flaggerSeeders } from "./flaggers/ind
 import { monitorSeeders } from "./monitors/index.ts"
 import { notificationSeeders } from "./notifications/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
+import { partnerSeeders } from "./partners/index.ts"
 import { projectSeeders } from "./projects/index.ts"
 import { scoreSeeders } from "./scores/index.ts"
 import { signalSeeders } from "./signals/index.ts"
@@ -44,12 +46,18 @@ export const contentSeeders: readonly Seeder[] = [
   // Must run after notificationSeeders so it fully controls which of its own
   // incidents read as "Notified" vs "Muted".
   ...monitorSeeders,
+  // Attaches agent-dispatch ledger rows to seeded signals; only depends on
+  // signalSeeders having run.
+  ...agentDispatchSeeders,
 ]
 
 export const allSeeders: readonly Seeder[] = [
   ...organizationSeeders,
   ...projectSeeders,
   ...apiKeySeeders,
+  // Bootstrap-only: the partner registry is global, not per-project, so the
+  // demo workflow must never re-run it.
+  ...partnerSeeders,
   ...contentSeeders,
   // Bootstrap-only: provisions flaggers on the dogfood telemetry project,
   // which lives on the canonical seed org. Excluded from `contentSeeders`

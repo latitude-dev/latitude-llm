@@ -14,6 +14,7 @@ import {
   setOrganizationShowcaseUseCase,
   upsertBillingOverrideUseCase,
 } from "@domain/admin"
+import type { OverridablePlanSlug, PlanSlug } from "@domain/billing"
 import { OrganizationId, UserId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AdminOrganizationUsageRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -84,8 +85,8 @@ interface AdminOrganizationDetailsDto {
 }
 
 export interface AdminOrganizationBillingDto {
-  effectivePlanSlug: "free" | "pro" | "enterprise"
-  effectivePlanSource: "override" | "subscription" | "free-fallback"
+  effectivePlanSlug: PlanSlug
+  effectivePlanSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   stripeSubscriptionPlan: string | null
   stripeSubscriptionStatus: string | null
   periodStart: string
@@ -99,7 +100,7 @@ export interface AdminOrganizationBillingDto {
   currentSpendMills: number | null
   spendingLimitCents: number | null
   override: {
-    plan: "free" | "pro" | "enterprise"
+    plan: OverridablePlanSlug
     includedCredits: number | null
     retentionDays: number | null
     notes: string | null
@@ -292,6 +293,7 @@ export interface AdminOrganizationUsageItemDto {
   slug: string
   plan: string | null
   memberCount: number
+  consumedCredits: number
   traceCount: number
   /** ISO-8601, or null when the org has no traces in the rolling window. */
   lastTraceAt: string | null
@@ -310,6 +312,7 @@ const toUsageItemDto = (item: AdminOrganizationUsageSummary): AdminOrganizationU
   slug: item.slug,
   plan: item.plan,
   memberCount: item.memberCount,
+  consumedCredits: item.consumedCredits,
   traceCount: item.traceCount,
   lastTraceAt: item.lastTraceAt ? item.lastTraceAt.toISOString() : null,
   createdAt: item.createdAt.toISOString(),
@@ -347,9 +350,10 @@ export const adminListOrganizationsByUsageInputSchema = z.object({
 })
 
 /**
- * Backoffice "organisations by usage" listing. Sorted by trace count over
- * the rolling 30-day window (descending), with org id as the tiebreaker so
- * pagination is deterministic.
+ * Backoffice "organisations by usage" listing. Sorted by current billing
+ * period credit spend (descending), with org id as the tiebreaker so
+ * pagination is deterministic. Trace counts over the rolling 30-day window
+ * are enriched from ClickHouse for the activity columns.
  *
  * Guard: {@link adminMiddleware}. Postgres queries run on the admin client
  * at the `"system"` org scope (RLS bypass); ClickHouse aggregates `traces`

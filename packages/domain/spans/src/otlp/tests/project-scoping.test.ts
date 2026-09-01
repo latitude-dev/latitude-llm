@@ -390,4 +390,171 @@ describe("transformOtlpToSpans trace ID normalization", () => {
     expect(spans).toHaveLength(1)
     expect(spans[0]?.traceId).toBe("0af7651916cd43dd8448eb211c80319c")
   })
+
+  it("rejects a span with a missing trace ID instead of crashing the batch", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: [str("service.name", "test")] },
+            scopeSpans: [
+              {
+                scope: { name: "scope", version: "1" },
+                spans: [
+                  {
+                    traceId: undefined as unknown as string,
+                    spanId: "missing-trace",
+                    name: "missing-trace",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      ctx,
+    )
+    expect(rejectedSpans).toBe(1)
+    expect(spans).toHaveLength(0)
+  })
+
+  it("rejects a span whose trace ID is a non-string value instead of crashing the batch", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: [str("service.name", "test")] },
+            scopeSpans: [
+              {
+                scope: { name: "scope", version: "1" },
+                spans: [
+                  {
+                    traceId: { "0": "a" } as unknown as string,
+                    spanId: "object-trace",
+                    name: "object-trace",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      ctx,
+    )
+    expect(rejectedSpans).toBe(1)
+    expect(spans).toHaveLength(0)
+  })
+
+  it("keeps processing the rest of the batch when one span has an invalid trace ID", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(
+      {
+        resourceSpans: [
+          {
+            resource: { attributes: [str("service.name", "test")] },
+            scopeSpans: [
+              {
+                scope: { name: "scope", version: "1" },
+                spans: [
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "ok1",
+                    name: "ok1",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [],
+                    status: { code: 1 },
+                  },
+                  {
+                    traceId: "" as unknown as string,
+                    spanId: "empty-trace",
+                    name: "empty-trace",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      ctx,
+    )
+    expect(rejectedSpans).toBe(1)
+    expect(spans).toHaveLength(1)
+    expect(spans[0]?.spanId).toBe("ok1")
+  })
+})
+
+describe("transformOtlpToSpans rejects oversized trace/span IDs", () => {
+  const ctx = {
+    ...baseContext,
+    defaultProjectId: "proj-default",
+    projectIdBySlug: new Map<string, string>(),
+  }
+
+  const buildSpanWithTraceId = (
+    traceId: string,
+    spanId: string,
+  ): NonNullable<OtlpExportTraceServiceRequest["resourceSpans"]> => [
+    {
+      resource: { attributes: [str("service.name", "test")] },
+      scopeSpans: [
+        {
+          scope: { name: "scope", version: "1" },
+          spans: [
+            {
+              traceId,
+              spanId,
+              name: spanId,
+              startTimeUnixNano: "1710590400000000000",
+              endTimeUnixNano: "1710590401000000000",
+              attributes: [],
+              status: { code: 1 },
+            },
+          ],
+        },
+      ],
+    },
+  ]
+
+  it("rejects a trace ID longer than 32 chars", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(
+      { resourceSpans: buildSpanWithTraceId(`${TRACE}extra`, "n1") },
+      ctx,
+    )
+    expect(spans).toHaveLength(0)
+    expect(rejectedSpans).toBe(1)
+  })
+
+  it("rejects a span ID longer than 16 chars", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans({ resourceSpans: buildSpan("this-span-id-is-too-long") }, ctx)
+    expect(spans).toHaveLength(0)
+    expect(rejectedSpans).toBe(1)
+  })
+
+  it("keeps a short, arbitrary span ID unaffected", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans({ resourceSpans: buildSpan("n1") }, ctx)
+    expect(rejectedSpans).toBe(0)
+    expect(spans).toHaveLength(1)
+    expect(spans[0]?.spanId).toBe("n1")
+  })
+
+  it("rejects a 40-char hex trace ID simulating a non-conformant exporter", () => {
+    const { spans, rejectedSpans } = transformOtlpToSpans(
+      { resourceSpans: buildSpanWithTraceId("a".repeat(40), "n1") },
+      ctx,
+    )
+    expect(spans).toHaveLength(0)
+    expect(rejectedSpans).toBe(1)
+  })
 })

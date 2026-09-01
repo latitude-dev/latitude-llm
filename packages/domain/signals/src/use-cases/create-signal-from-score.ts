@@ -1,16 +1,32 @@
-import { resolveEmbeddingConfig } from "@domain/ai"
+import { type AIError, resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
+import { ProjectRepository } from "@domain/projects"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { generateId, generateSlug, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import {
+  type CacheError,
+  type CacheStore,
+  type ChSqlClient,
+  generateId,
+  type NotFoundError,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  ScoreId,
+  SqlClient,
+} from "@domain/shared"
+import type { SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
+import { buildCandidatePlaceholder } from "../candidate-naming.ts"
+import { PROMOTION_MIN_SESSIONS } from "../constants.ts"
 import type { Signal, SignalSource } from "../entities/signal.ts"
 import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedBySignalError } from "../errors.ts"
 import { createSignalCentroid, updateSignalCentroid } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
+import { promotionThresholdForVolume } from "../promotion.ts"
+import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
-import type { GenerateSignalDetailsError } from "./generate-signal-details.ts"
-import { generateSignalDetailsUseCase } from "./generate-signal-details.ts"
+import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
 
 export interface CreateSignalFromScoreInput {
   readonly organizationId: string
@@ -24,7 +40,13 @@ export type CreateSignalFromScoreResult = {
   readonly action: "created" | "already-assigned"
 }
 
-export type CreateSignalFromScoreError = CheckEligibilityError | GenerateSignalDetailsError | RepositoryError
+export type CreateSignalFromScoreError =
+  | AIError
+  | CacheError
+  | CheckEligibilityError
+  | RepositoryError
+  | NotFoundError
+  | SignalSlugGenerationError
 
 type LoadedEligibleScoreResult =
   | {
@@ -110,11 +132,45 @@ const buildNewSignalFromScore = ({
     priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
+    promotedAt: null,
+    resolvedAt: null,
+    ignoredAt: null,
+    regressedAt: null,
     mutedAt: null,
+    feedback: null,
     createdAt: assignedAt,
     updatedAt: assignedAt,
   }
 }
+
+/** The creating score is one session, and there is no way for a new signal to have more. */
+const SESSIONS_AT_CREATION = 1
+
+/**
+ * Whether a signal discovered now already clears the promotion gate.
+ *
+ * The threshold is clamped below by `PROMOTION_MIN_SESSIONS`, so one session can
+ * only ever clear it where that floor admits one — testing the constant first
+ * keeps the volume lookup (Redis, then ClickHouse) off the creation path in every
+ * configuration that cannot use it, including the default. Without this the floor
+ * is effectively 2 whatever it is configured to be, because the gate is otherwise
+ * only ever evaluated when a *second* score arrives.
+ *
+ * Qualifying here still does not create a promoted signal: the row is written
+ * unpromoted either way, and `promoteSignalUseCase` stamps the latch once the
+ * signal has a name drawn from its cluster.
+ */
+const resolveQualifiesAtCreation = (input: CreateSignalFromScoreInput) =>
+  Effect.gen(function* () {
+    if (PROMOTION_MIN_SESSIONS > SESSIONS_AT_CREATION) return false
+
+    const volume = yield* resolveProjectSessionVolumeUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+    })
+
+    return SESSIONS_AT_CREATION >= promotionThresholdForVolume(volume)
+  })
 
 export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) =>
   Effect.gen(function* () {
@@ -129,17 +185,9 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
       } satisfies CreateSignalFromScoreResult
     }
 
-    const signalDetails = yield* generateSignalDetailsUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      occurrences: [
-        {
-          sourceType: initialScoreResult.score.sourceType,
-          feedback: initialScoreResult.score.feedback,
-        },
-      ],
-    })
-
+    // Resolved before the transaction: it reads Redis and ClickHouse, neither of
+    // which belongs inside a Postgres transaction.
+    const qualifiesAtCreation = yield* resolveQualifiesAtCreation(input)
     const sqlClient = yield* SqlClient
 
     const assignment = yield* sqlClient.transaction(
@@ -147,6 +195,7 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
         const signalRepository = yield* SignalRepository
         const scoreRepository = yield* ScoreRepository
         const outboxEventWriter = yield* OutboxEventWriter
+        const projectRepository = yield* ProjectRepository
 
         const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
         if (scoreResult.action === "already-assigned") {
@@ -158,21 +207,23 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
 
         const score = scoreResult.score
         const assignedAt = new Date()
-        // Slug must be unique per (org, project). Re-derived inside the
-        // transaction so it's contention-aware (previous slugs in this project
-        // are visible to the existence check) and so we don't have to retry on
-        // a unique-constraint conflict.
-        const slug = yield* generateSlug({
-          name: signalDetails.name,
-          count: (slug) => signalRepository.countBySlug({ projectId: ProjectId(score.projectId), slug }),
+        // Slug must be unique per organization (D15). Generated inside the
+        // transaction so it's contention-aware (previous slugs in this org are
+        // visible to the count) and so we don't have to retry on a
+        // unique-constraint conflict.
+        const project = yield* projectRepository.findById(score.projectId)
+        const slug = yield* generateSignalSlug({
+          projectSlug: project.slug,
+          count: (slug) => signalRepository.countBySlug({ slug }),
         })
+        const placeholder = buildCandidatePlaceholder(score.feedback)
         const issue = buildNewSignalFromScore({
           score,
           normalizedEmbedding: input.normalizedEmbedding,
           embeddingModel: embeddingConfig.model,
           assignedAt,
-          name: signalDetails.name,
-          description: signalDetails.description,
+          name: placeholder.name,
+          description: placeholder.description,
           slug,
         })
 
@@ -211,6 +262,22 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
           },
         })
 
+        if (qualifiesAtCreation) {
+          yield* outboxEventWriter.write({
+            eventName: "SignalQualifiedForPromotion",
+            aggregateType: "issue",
+            aggregateId: issue.id,
+            organizationId: issue.organizationId,
+            payload: {
+              organizationId: issue.organizationId,
+              projectId: issue.projectId,
+              signalId: issue.id,
+              qualifiedAt: issue.createdAt.toISOString(),
+              triggerScoreId: score.id,
+            },
+          })
+        }
+
         return {
           action: "created",
           signalId: issue.id,
@@ -219,7 +286,12 @@ export const createSignalFromScoreUseCase = (input: CreateSignalFromScoreInput) 
     )
 
     return assignment
+    // As in `assignScoreToSignalUseCase`: this package erases its requirements, so
+    // the promotion gate's cross-store needs are declared here or a caller that
+    // forgets a layer fails at runtime inside one activity instead of at compile
+    // time.
   }).pipe(Effect.withSpan("issues.createSignalFromScore")) as Effect.Effect<
     CreateSignalFromScoreResult,
-    CreateSignalFromScoreError
+    CreateSignalFromScoreError,
+    CacheStore | ChSqlClient | ProjectRepository | SessionRepository
   >

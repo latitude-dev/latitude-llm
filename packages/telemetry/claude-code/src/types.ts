@@ -13,6 +13,11 @@ export interface TraceContext {
   metadata: Record<string, string>
 }
 
+export interface InheritedSpanContext {
+  traceId: string
+  parentSpanId: string
+}
+
 export interface TextBlock {
   type: "text"
   text: string
@@ -82,6 +87,20 @@ export interface ToolCall {
   subagent?: SubagentInvocation
   startMs: number
   endMs: number
+}
+
+export interface MemoryOp {
+  operation: "upsert_memory" | "update_memory" | "search_memory"
+  storeId: string
+  recordId: string
+  count: number
+  body?: string
+}
+
+export interface MemoryEmitOptions {
+  projectsRoot: string
+  captureContent: boolean
+  readFile?: (path: string) => string | undefined
 }
 
 export interface SubagentInvocation {

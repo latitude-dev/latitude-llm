@@ -22,9 +22,9 @@ import {
   SlackIntegrationRepository,
   type SlackRoute,
   type SlackRoutes,
+  slackRouteSchema,
 } from "@domain/integrations"
 import {
-  alertSeveritySchema,
   type NotificationGroup,
   type RepositoryError,
   SLACK_ROUTABLE_NOTIFICATION_GROUPS,
@@ -91,6 +91,11 @@ const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
   routes: row.routes ?? {},
   needsReconnect: row.reconnectRequiredAt !== null,
 })
+
+// Shared with the onboarding step so a save on either surface invalidates both.
+export const SLACK_INTEGRATION_QUERY_KEY = ["slack-integration"] as const
+export const SLACK_CHANNELS_QUERY_KEY = ["slack-channels"] as const
+export const SLACK_CONFIGURED_QUERY_KEY = ["slack-integration", "configured"] as const
 
 // Dynamic import keeps `@platform/slack` (and its `@slack/web-api` transitive dep) off the client bundle.
 export const isSlackConfigured = createServerFn({ method: "GET" }).handler(async (): Promise<boolean> => {
@@ -185,15 +190,9 @@ const notificationGroupValues = SLACK_ROUTABLE_NOTIFICATION_GROUPS as readonly N
 
 const configureSlackRouteSchema = z.object({
   group: z.enum(notificationGroupValues as [NotificationGroup, ...NotificationGroup[]]),
-  routes: z
-    .array(
-      z.object({
-        channelId: z.string().min(1),
-        channelName: z.string().min(1),
-        minSeverity: alertSeveritySchema.optional(),
-      }),
-    )
-    .max(50),
+  // The domain schema, not a copy of it: Zod strips unknown keys, so a field
+  // added to a route would be silently dropped here on its way to the repository.
+  routes: z.array(slackRouteSchema).max(50),
 })
 
 const removeSlackRouteSchema = z.object({

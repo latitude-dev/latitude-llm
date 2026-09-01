@@ -12,8 +12,15 @@ const EMPTY_AGGREGATE = {
   erroredCount: 0,
 } as const
 
+interface FakeScoreReassignment {
+  readonly fromSignalIds: readonly string[]
+  readonly toSignalId: string
+  readonly createdFrom: Date
+}
+
 export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnalyticsRepositoryShape>) => {
   const inserted: string[] = [] // score ids that were inserted
+  const reassignments: FakeScoreReassignment[] = []
 
   const repository: ScoreAnalyticsRepositoryShape = {
     existsById: (id) => Effect.succeed(inserted.includes(id)),
@@ -69,6 +76,11 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
     countSessionsBySignal: () => Effect.succeed(0),
     listSignalsByTraceIds: () => Effect.succeed([]),
     listSignalsByUser: () => Effect.succeed([]),
+    reassignSignal: ({ fromSignalIds, toSignalId, createdFrom }) =>
+      Effect.sync(() => {
+        if (fromSignalIds.length === 0) return
+        reassignments.push({ fromSignalIds, toSignalId, createdFrom })
+      }),
     delete: (id) =>
       Effect.sync(() => {
         const index = inserted.indexOf(id)
@@ -77,5 +89,5 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
     ...overrides,
   }
 
-  return { repository, inserted }
+  return { repository, inserted, reassignments }
 }

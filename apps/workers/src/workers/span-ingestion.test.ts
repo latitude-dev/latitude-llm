@@ -10,7 +10,7 @@ import { billingUsageEvents, billingUsagePeriods } from "@platform/db-postgres/s
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createBillingWorker } from "./billing.ts"
 import { createDomainEventsWorker } from "./domain-events.ts"
@@ -145,7 +145,71 @@ const vercelWrapperRequest = {
   ],
 }
 
+// Cloudflare AI Gateway OTLP export (captured live). Standard gen_ai.* metadata, but content
+// lives in non-standard envelopes under the standard keys: input = request body {messages},
+// output = the upstream provider's native response (here OpenAI-compat {choices:[{message}]}).
+const cloudflareAiGatewayRequest = {
+  resourceSpans: [
+    {
+      resource: {
+        attributes: [{ key: "service.name", value: { stringValue: "ai-gateway" } }],
+      },
+      scopeSpans: [
+        {
+          scope: { name: "ai" },
+          spans: [
+            {
+              traceId: "22222222222222222222222222222222",
+              spanId: "cccccccccccccccc",
+              name: "cf.aig.request",
+              kind: 1,
+              startTimeUnixNano: "1710590400000000000",
+              endTimeUnixNano: "1710590401000000000",
+              attributes: [
+                { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
+                { key: "gen_ai.request.model", value: { stringValue: "@cf/openai/gpt-oss-120b" } },
+                { key: "gen_ai.provider.name", value: { stringValue: "internal-workers-ai" } },
+                { key: "gen_ai.usage.input_tokens", value: { intValue: "73" } },
+                { key: "gen_ai.usage.output_tokens", value: { intValue: "41" } },
+                { key: "gen_ai.usage.cost", value: { doubleValue: 0.0000563 } },
+                {
+                  key: "gen_ai.input.messages",
+                  value: {
+                    stringValue: JSON.stringify({
+                      messages: [{ role: "user", content: "Say hi in one sentence." }],
+                      max_tokens: 128,
+                    }),
+                  },
+                },
+                {
+                  key: "gen_ai.output.messages",
+                  value: {
+                    stringValue: JSON.stringify({
+                      choices: [{ finish_reason: "stop", index: 0, message: { role: "assistant", content: "Hello!" } }],
+                      object: "chat.completion",
+                      model: "@cf/openai/gpt-oss-120b",
+                    }),
+                  },
+                },
+              ],
+              status: { code: 1 },
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
 describe("createSpanIngestionWorker", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("ingests JSON OTLP messages and inserts spans into ClickHouse", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
@@ -337,7 +401,7 @@ describe("createSpanIngestionWorker", () => {
     }
   })
 
-  it("persists Vercel outer wrappers faithfully as invoke_agent (rollup gating, not zeroing, prevents double-count)", async () => {
+  it("persists a trace-root Vercel wrapper as invoke_agent (rollup gating, not zeroing, prevents double-count)", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
     const pub = createFakeEventsPublisher()
@@ -398,10 +462,8 @@ describe("createSpanIngestionWorker", () => {
 
     expect(rows).toHaveLength(2)
 
-    // The wrapper is classified `invoke_agent` and keeps its SDK-reported usage
-    // verbatim — the trace/session rollup excludes non-billable operations, so
-    // there is no double-count and no need to zero the span (which would destroy
-    // the reported values).
+    // The root wrapper keeps its SDK-reported usage verbatim; the rollup excludes it by
+    // operation, so there is no double-count and no need to zero the span.
     expect(rows[0]?.name).toBe("ai.generateText")
     expect(rows[0]?.trace_id).toBe("11111111111111111111111111111111")
     expect(rows[0]?.operation).toBe("invoke_agent")
@@ -421,7 +483,8 @@ describe("createSpanIngestionWorker", () => {
     expect(Number(rows[1]?.cost_total_microcents ?? 0)).toBeGreaterThan(0)
     expect(rows[1]?.parent_span_id).toBe("aaaaaaaaaaaaaaaa")
     expect(rows[1]?.ai_operation_id).toBe("ai.generateText.doGenerate")
-    expect(rows[1]?.provider).toBe("openai.responses")
+    // Normalized like the wrapper above, though it arrives on `gen_ai.system` rather than `ai.model.provider`.
+    expect(rows[1]?.provider).toBe("openai")
     expect(rows[1]?.model).toBe("gpt-4o")
 
     expect(pub.published).toHaveLength(1)
@@ -431,6 +494,83 @@ describe("createSpanIngestionWorker", () => {
         organizationId: "org_vercel_wrapper_test",
         projectId: "proj_vercel_wrapper_test",
         traceIds: ["11111111111111111111111111111111"],
+      },
+    })
+  })
+
+  it("resolves a Cloudflare AI Gateway span end-to-end into a stored chat generation", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const fileKey = "span-ingestion/test-cloudflare-ai-gateway.json"
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(cloudflareAiGatewayRequest), "utf-8"))
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey,
+      inlinePayload: null,
+      contentType: "application/json",
+      organizationId: "org_cf_ai_gateway_test",
+      apiKeyId: "api_key_cf_ai_gateway_test",
+      ingestedAt: "2026-03-18T10:00:00.000Z",
+      defaultProjectId: "proj_cf_ai_gateway_test",
+      projectIdBySlug: {},
+    })
+
+    const rows = await Effect.runPromise(
+      queryClickhouse<{
+        operation: string
+        provider: string
+        model: string
+        tokens_input: string
+        tokens_output: string
+        cost_total_microcents: string
+        input_messages: string
+        output_messages: string
+      }>(
+        ch.client,
+        `SELECT
+           operation,
+           provider,
+           model,
+           tokens_input,
+           tokens_output,
+           cost_total_microcents,
+           input_messages,
+           output_messages
+         FROM spans
+         WHERE organization_id = {organizationId:String}`,
+        { organizationId: "org_cf_ai_gateway_test" },
+      ),
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.operation).toBe("chat")
+    expect(rows[0]?.provider).toBe("cloudflare-workers-ai")
+    expect(rows[0]?.model).toBe("@cf/openai/gpt-oss-120b")
+    expect(Number(rows[0]?.tokens_input ?? 0)).toBe(73)
+    expect(Number(rows[0]?.tokens_output ?? 0)).toBe(41)
+    // gen_ai.usage.cost = 0.0000563 USD → 5630 microcents.
+    expect(Number(rows[0]?.cost_total_microcents ?? 0)).toBe(5_630)
+    // Content recovered from the non-standard envelopes.
+    expect(rows[0]?.input_messages).toContain("Say hi in one sentence.")
+    expect(rows[0]?.output_messages).toContain("Hello!")
+
+    expect(pub.published).toHaveLength(1)
+    expect(pub.published[0]).toMatchObject({
+      name: "TracesIngested",
+      payload: {
+        organizationId: "org_cf_ai_gateway_test",
+        projectId: "proj_cf_ai_gateway_test",
+        traceIds: ["22222222222222222222222222222222"],
       },
     })
   })
@@ -517,10 +657,14 @@ describe("createSpanIngestionWorker", () => {
     const disk = new FakeStorageDisk()
     const pub = createFakeEventsPublisher()
     const queue = createFakeQueuePublisher()
-    const fileKey = `span-ingestion/${generateId()}-duplicate.json`
+    // A key per request, as production does: `putInDisk` mints a fresh id per OTLP
+    // request, so two ingests of the same trace never share a buffered payload.
+    const firstFileKey = `span-ingestion/${generateId()}-duplicate.json`
+    const secondFileKey = `span-ingestion/${generateId()}-duplicate.json`
     const organizationId = generateId()
     const projectId = generateId()
-    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+    disk.putBytes(firstFileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+    disk.putBytes(secondFileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
 
     createSpanIngestionWorker({
       consumer,
@@ -538,7 +682,7 @@ describe("createSpanIngestionWorker", () => {
 
     let processedEvents = 0
 
-    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchValidIngest(consumer, firstFileKey, organizationId, projectId)
     await dispatchPublishedDomainEvents(consumer, pub.published, processedEvents)
     processedEvents = pub.published.length
     for (const message of queue.published.filter(
@@ -547,7 +691,7 @@ describe("createSpanIngestionWorker", () => {
       await consumer.dispatchTask("billing", "recordTraceUsageBatch", message.payload)
     }
 
-    await dispatchValidIngest(consumer, fileKey, organizationId, projectId)
+    await dispatchValidIngest(consumer, secondFileKey, organizationId, projectId)
     await dispatchPublishedDomainEvents(consumer, pub.published, processedEvents)
     processedEvents = pub.published.length
     for (const message of queue.published

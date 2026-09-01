@@ -59,7 +59,13 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   priority: null,
   centroid: null,
   clusteredAt: null,
+  // User-created signals are born promoted.
+  promotedAt: new Date("2026-06-01T00:00:00Z"),
+  resolvedAt: null,
+  ignoredAt: null,
+  regressedAt: null,
   mutedAt: null,
+  feedback: null,
   deletedAt: null,
   createdAt: new Date("2026-06-01T00:00:00Z"),
   updatedAt: new Date("2026-06-01T00:00:00Z"),

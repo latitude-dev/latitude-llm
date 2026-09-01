@@ -7,7 +7,7 @@ type UserRepositoryShape = (typeof UserRepository)["Service"]
 
 export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape>) => {
   const users = new Map<string, User>()
-  const updates: { userId: string; jobTitle?: string; phoneNumber?: string }[] = []
+  const updates: { userId: string; jobTitle?: string; phoneNumber?: string; heardAboutUs?: string }[] = []
 
   const repository: UserRepositoryShape = {
     findById: (userId) => {
@@ -22,23 +22,43 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
       return Effect.succeed(user)
     },
 
+    findOptionalByEmail: (email) =>
+      Effect.succeed([...users.values()].find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null),
+
+    create: (params) =>
+      Effect.sync(() => {
+        const user: User = {
+          id: params.id,
+          email: params.email,
+          name: params.name,
+          jobTitle: params.jobTitle ?? null,
+          phoneNumber: params.phoneNumber ?? null,
+          heardAboutUs: params.heardAboutUs ?? null,
+          emailVerified: params.emailVerified,
+          image: params.image ?? null,
+          role: "user",
+          notificationPreferences: null,
+          createdAt: new Date(),
+        }
+        users.set(params.id, user)
+        return user
+      }),
+
     update: (params) =>
       Effect.sync(() => {
         const trimmedJobTitle = params.jobTitle?.trim() || undefined
         const trimmedPhoneNumber = params.phoneNumber?.trim() || undefined
-        if (!trimmedJobTitle && !trimmedPhoneNumber) return
-        updates.push({
-          userId: params.userId,
+        const trimmedHeardAboutUs = params.heardAboutUs?.trim() || undefined
+        if (!trimmedJobTitle && !trimmedPhoneNumber && !trimmedHeardAboutUs) return
+        const changes = {
           ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
           ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
-        })
+          ...(trimmedHeardAboutUs ? { heardAboutUs: trimmedHeardAboutUs } : {}),
+        }
+        updates.push({ userId: params.userId, ...changes })
         const existing = users.get(params.userId)
         if (existing) {
-          users.set(params.userId, {
-            ...existing,
-            ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
-            ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
-          })
+          users.set(params.userId, { ...existing, ...changes })
         }
       }),
 

@@ -1,6 +1,7 @@
 // Entities
 
 export type {
+  BillingLimitReachedPayload,
   CustomMessagePayload,
   DestinationQuarantinedPayload,
   IncidentBreach,
@@ -16,12 +17,14 @@ export type {
   NotificationKind,
   SignalAssignedPayload,
   SignalDiscoveredPayload,
+  SignalRegressedPayload,
+  SignalReprioritizedPayload,
   WrappedReportPayload,
 } from "./entities/notification.ts"
 export {
+  billingLimitReachedPayloadSchema,
   customMessagePayloadSchema,
   destinationQuarantinedPayloadSchema,
-  groupOf,
   incidentBreachSchema,
   incidentClosedPayloadSchema,
   incidentEventPayloadSchema,
@@ -36,8 +39,11 @@ export {
   notificationKindSchema,
   notificationSchema,
   payloadSchemaFor,
+  routeOf,
   signalAssignedPayloadSchema,
   signalDiscoveredPayloadSchema,
+  signalRegressedPayloadSchema,
+  signalReprioritizedPayloadSchema,
   wrappedReportPayloadSchema,
 } from "./entities/notification.ts"
 export { shouldSendEmail } from "./entities/notification-preferences.ts"
@@ -45,6 +51,8 @@ export { shouldSendEmail } from "./entities/notification-preferences.ts"
 // Helpers
 export type { BuildIdempotencyKeyInput } from "./helpers/idempotency-key.ts"
 export { buildIdempotencyKey } from "./helpers/idempotency-key.ts"
+export type { ResolveAdminRecipientsInput } from "./helpers/resolve-admin-recipients.ts"
+export { resolveAdminRecipients } from "./helpers/resolve-admin-recipients.ts"
 export type { ResolveRecipientsInput } from "./helpers/resolve-recipients.ts"
 export { resolveRecipients } from "./helpers/resolve-recipients.ts"
 
@@ -92,6 +100,13 @@ export type {
 } from "./use-cases/mark-notification-seen.ts"
 export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.ts"
 export type {
+  BillingLimitNotificationRequest,
+  RequestBillingLimitNotificationsError,
+  RequestBillingLimitNotificationsInput,
+  RequestBillingLimitNotificationsResult,
+} from "./use-cases/request-billing-limit-notifications.ts"
+export { requestBillingLimitNotificationsUseCase } from "./use-cases/request-billing-limit-notifications.ts"
+export type {
   DestinationQuarantinedNotificationRequest,
   RequestDestinationQuarantinedNotificationsError,
   RequestDestinationQuarantinedNotificationsInput,
@@ -121,6 +136,21 @@ export type {
   SignalDiscoveredNotificationRequest,
 } from "./use-cases/request-signal-discovered-notifications.ts"
 export { requestSignalDiscoveredNotificationsUseCase } from "./use-cases/request-signal-discovered-notifications.ts"
+export type {
+  RequestSignalRegressedNotificationsError,
+  RequestSignalRegressedNotificationsInput,
+  RequestSignalRegressedNotificationsResult,
+  SignalRegressedNotificationRequest,
+} from "./use-cases/request-signal-regressed-notifications.ts"
+export { requestSignalRegressedNotificationsUseCase } from "./use-cases/request-signal-regressed-notifications.ts"
+export type {
+  RequestSignalReprioritizedNotificationsError,
+  RequestSignalReprioritizedNotificationsInput,
+  RequestSignalReprioritizedNotificationsResult,
+  SignalReprioritizedNotificationRequest,
+  SignalReprioritizedSlackOccurrence,
+} from "./use-cases/request-signal-reprioritized-notifications.ts"
+export { requestSignalReprioritizedNotificationsUseCase } from "./use-cases/request-signal-reprioritized-notifications.ts"
 export type {
   RequestWrappedReportNotificationsError,
   RequestWrappedReportNotificationsInput,

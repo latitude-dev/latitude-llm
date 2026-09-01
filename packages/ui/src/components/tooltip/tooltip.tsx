@@ -39,6 +39,8 @@ interface TooltipProps {
   sideOffset?: number
   delayDuration?: number
   align?: "start" | "center" | "end"
+  /** Merged onto the content, e.g. to widen it past the default `max-w-70` for a wider payload. */
+  className?: string
 }
 
 const textAlignMap = {
@@ -47,11 +49,21 @@ const textAlignMap = {
   end: "text-right",
 } as const
 
-function Tooltip({ children, trigger, asChild = false, side, sideOffset, delayDuration = 250, align }: TooltipProps) {
+function Tooltip({
+  children,
+  trigger,
+  asChild = false,
+  side,
+  sideOffset,
+  delayDuration = 250,
+  align,
+  className,
+}: TooltipProps) {
   const contentProps: React.ComponentPropsWithoutRef<typeof TooltipContent> = {}
   if (side !== undefined) contentProps.side = side
   if (sideOffset !== undefined) contentProps.sideOffset = sideOffset
-  if (align !== undefined) contentProps.className = textAlignMap[align]
+  const alignClassName = align !== undefined ? textAlignMap[align] : undefined
+  if (alignClassName || className) contentProps.className = cn(alignClassName, className)
 
   return (
     <TooltipProvider>

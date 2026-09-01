@@ -55,7 +55,7 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
           setOpen(false)
           toast({
             title: "Success",
-            description: "API Key created successfully.",
+            description: "API key created successfully.",
           })
         },
         onError: (error) => {
@@ -75,8 +75,8 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
           }}
         >
           <Modal.Header
-            title="Create API Key"
-            description="Create a new API Key for your organization to access the Latitude API."
+            title="Create API key"
+            description="Create a new API key for your organization to access the Latitude API."
           />
           <Modal.Body>
             <FormWrapper>
@@ -89,8 +89,8 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                    placeholder="My API Key"
-                    description="A descriptive name for this API Key"
+                    placeholder="My API key"
+                    description="A descriptive name for this API key"
                   />
                 )}
               </form.Field>
@@ -99,7 +99,7 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
           <Modal.Footer>
             <CloseTrigger />
             <Button type="submit" disabled={form.state.isSubmitting}>
-              Create API Key
+              Create API key
             </Button>
           </Modal.Footer>
         </form>
@@ -121,7 +121,7 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
         onSuccess: async () => {
           toast({
             title: "Success",
-            description: "API Key name updated.",
+            description: "API key name updated.",
           })
           onClose()
         },
@@ -141,7 +141,7 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
             void form.handleSubmit()
           }}
         >
-          <Modal.Header title="Update API Key" description="Update the name for your API Key." />
+          <Modal.Header title="Update API key" description="Update the name for your API key." />
           <Modal.Body>
             <FormWrapper>
               <form.Field name="name">
@@ -153,7 +153,7 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                    placeholder="API Key name"
+                    placeholder="API key name"
                   />
                 )}
               </form.Field>
@@ -162,7 +162,7 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
           <Modal.Footer>
             <CloseTrigger />
             <Button type="submit" disabled={form.state.isSubmitting}>
-              Update API Key
+              Update API key
             </Button>
           </Modal.Footer>
         </form>
@@ -174,13 +174,13 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
 function DeleteApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose: () => void }) {
   const { toast } = useToast()
   const [deleting, setDeleting] = useState(false)
-  const displayName = apiKey.name || "Latitude API Key"
+  const displayName = apiKey.name || "Latitude API key"
 
   const handleConfirm = async () => {
     setDeleting(true)
     try {
       await deleteApiKeyMutation(apiKey.id).isPersisted.promise
-      toast({ description: "API Key deleted" })
+      toast({ description: "API key deleted" })
       onClose()
     } catch (error) {
       setDeleting(false)
@@ -194,7 +194,7 @@ function DeleteApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
       onOpenChange={(open) => {
         if (!open && !deleting) onClose()
       }}
-      title="Delete API Key"
+      title="Delete API key"
       description={`Are you sure you want to delete "${displayName}"? Any application using this Key will immediately lose access to the Latitude API. This action cannot be undone.`}
       dismissible
       footer={
@@ -204,7 +204,7 @@ function DeleteApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
           </Button>
           <Button variant="destructive" onClick={() => void handleConfirm()} disabled={deleting}>
             {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            <Text.H5 color="white">{deleting ? "Deleting..." : "Delete API Key"}</Text.H5>
+            <Text.H5 color="white">{deleting ? "Deleting..." : "Delete API key"}</Text.H5>
           </Button>
         </div>
       }
@@ -231,13 +231,13 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
           {apiKeys.map((apiKey) => (
             <TableRow key={apiKey.id} verticalPadding hoverable={false}>
               <TableCell>
-                <Text.H5>{apiKey.name || "Latitude API Key"}</Text.H5>
+                <Text.H5>{apiKey.name || "Latitude API key"}</Text.H5>
               </TableCell>
               <TableCell>
                 <CopyableText
                   value={apiKey.token}
                   displayValue={maskSensitiveValue(apiKey.token)}
-                  tooltip="Copy API Key"
+                  tooltip="Copy API key"
                 />
               </TableCell>
               <TableCell>
@@ -253,7 +253,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                       </Button>
                     }
                   >
-                    Edit API Key name
+                    Edit API key name
                   </Tooltip>
                   <Tooltip
                     asChild
@@ -263,7 +263,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                       </Button>
                     }
                   >
-                    {apiKeys.length === 1 ? "You can't delete the last API Key" : "Delete API Key"}
+                    {apiKeys.length === 1 ? "You can't delete the last API key" : "Delete API key"}
                   </Tooltip>
                 </div>
               </TableCell>
@@ -288,7 +288,7 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
     setRevoking(true)
     try {
       await revokeOAuthKeyMutation({ clientId: keyToRevoke.clientId, userId: keyToRevoke.userId })
-      toast({ description: "OAuth Key revoked" })
+      toast({ description: "OAuth key revoked" })
       setKeyToRevoke(null)
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
@@ -346,7 +346,7 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
                     </Button>
                   }
                 >
-                  Revoke OAuth Key
+                  Revoke OAuth key
                 </Tooltip>
               </TableCell>
             </TableRow>
@@ -360,7 +360,7 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
           onOpenChange={(open) => {
             if (!open && !revoking) setKeyToRevoke(null)
           }}
-          title="Revoke OAuth Key"
+          title="Revoke OAuth key"
           description={`Are you sure you want to revoke "${keyToRevoke.clientName ?? "this OAuth client"}" for ${
             keyToRevoke.userName ?? keyToRevoke.userEmail
           }? The client will immediately lose access to the Latitude API. This action cannot be undone.`}
@@ -372,7 +372,7 @@ function OAuthKeysTable({ oauthKeys }: { oauthKeys: OAuthKeyRecord[] }) {
               </Button>
               <Button variant="destructive" onClick={() => void handleConfirm()} disabled={revoking}>
                 {revoking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                <Text.H5 color="white">{revoking ? "Revoking..." : "Revoke OAuth Key"}</Text.H5>
+                <Text.H5 color="white">{revoking ? "Revoking..." : "Revoke OAuth key"}</Text.H5>
               </Button>
             </div>
           }
@@ -396,24 +396,23 @@ function KeysSettingsPage() {
   const oauthKeys = (oauthKeyData ?? []).slice().sort(byCreatedAtDesc)
 
   return (
-    <SettingsPage
-      title="Keys"
-      description="Manage API keys and OAuth connections for this organization"
-      actions={
-        <Button variant="outline" onClick={() => setCreateOpen(true)}>
-          <Icon size="sm" icon={PlusIcon} />
-          API Key
-        </Button>
-      }
-    >
+    <SettingsPage title="Keys" description="Manage API keys and OAuth connections for this organization">
       <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
 
       <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <Text.H4 weight="bold">API Keys</Text.H4>
-          <Text.H5 color="foregroundMuted">
-            Application keys with access to this organization (through API or SDK)
-          </Text.H5>
+        <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex flex-col gap-1">
+            <Text.H4 weight="bold">API keys</Text.H4>
+            <Text.H5 color="foregroundMuted">
+              Application keys with access to this organization (through API or SDK)
+            </Text.H5>
+          </div>
+          <div className="shrink-0">
+            <Button variant="outline" onClick={() => setCreateOpen(true)}>
+              <Icon size="sm" icon={PlusIcon} />
+              API key
+            </Button>
+          </div>
         </div>
         <div className="flex flex-col gap-2">
           {apiKeysLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
@@ -422,9 +421,10 @@ function KeysSettingsPage() {
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <Text.H4 weight="bold">OAuth Keys</Text.H4>
+          <Text.H4 weight="bold">OAuth keys</Text.H4>
           <Text.H5 color="foregroundMuted">
-            Connected OAuth clients with access to this organization (Claude Code, Codex, Cursor... through MCP)
+            Connected OAuth clients with access to this organization (Claude Code, Codex, Cursor... through MCP or
+            Partners)
           </Text.H5>
         </div>
         <div className="flex flex-col gap-2">

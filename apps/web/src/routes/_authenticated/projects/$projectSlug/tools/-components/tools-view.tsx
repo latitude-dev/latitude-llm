@@ -2,12 +2,9 @@ import { InfiniteTable, type InfiniteTableColumn, Text, Tooltip } from "@repo/ui
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { WrenchIcon } from "lucide-react"
-import { useCallback, useMemo } from "react"
+import { type RefObject, useCallback, useMemo } from "react"
 import type { ToolSummaryRecord } from "../../../../../../domains/tools/tools.functions.ts"
-import {
-  ListingLayout as Layout,
-  listingLayoutIntrinsicScroll,
-} from "../../../../../../layouts/ListingLayout/index.tsx"
+import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useListRowKeyboardNav } from "../../../../../../lib/hooks/useListRowKeyboardNav.ts"
 import { formatPercent, TOOL_FAILING_ERROR_RATE } from "./tool-formatters.ts"
 import { ToolStatusBadges } from "./tool-status-badges.tsx"
@@ -76,6 +73,7 @@ export function ToolsView({
   focusedToolName,
   onFocusedToolChange,
   keyboardNavEnabled = true,
+  scrollContainerRef,
 }: {
   readonly tools: readonly ToolSummaryRecord[]
   readonly isLoading: boolean
@@ -90,6 +88,8 @@ export function ToolsView({
   readonly focusedToolName?: string | undefined
   readonly onFocusedToolChange?: (toolName: string | undefined) => void
   readonly keyboardNavEnabled?: boolean
+  /** Shared ancestor scroll container for page-level scrolling + sticky headers. */
+  readonly scrollContainerRef: RefObject<HTMLDivElement | null>
 }) {
   const navigate = useNavigate()
   const toolNames = useMemo(() => tools.map((tool) => tool.name), [tools])
@@ -213,7 +213,7 @@ export function ToolsView({
           </Tooltip>
         ) : (
           <Tooltip asChild trigger={<span>-</span>}>
-            Calls per offer needs tool definitions on chat spans — none were found for this tool.
+            Calls per offer needs tool definitions on chat spans. None were found for this tool.
           </Tooltip>
         ),
     },
@@ -321,10 +321,11 @@ export function ToolsView({
   })
 
   return (
-    <Layout.Body>
+    <Layout.Body className="flex-none overflow-visible">
       <Layout.List>
         <InfiniteTable
-          {...listingLayoutIntrinsicScroll.infiniteTable}
+          scrollAreaLayout="external"
+          scrollContainerRef={scrollContainerRef}
           data={tools}
           isLoading={isLoading}
           columns={columns}

@@ -9,7 +9,7 @@ This guide walks you through connecting an existing AI agent to Latitude. By the
 
 ## Prerequisites
 
-- A Latitude account (sign up at [latitude.so](https://latitude.so))
+- A Latitude account (sign up at [console.latitude.so](https://console.latitude.so/login))
 - An existing AI-powered application using a supported provider or framework
 
 ## Step 1: Create a Project

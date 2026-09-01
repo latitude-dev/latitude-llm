@@ -21,13 +21,16 @@ import {
   getSignalTrendUseCase,
   listSignalsUseCase,
   listSignalTracesUseCase,
+  SIGNAL_FEEDBACK_MAX_LENGTH,
   SIGNAL_PRIORITIES,
   type SignalLifecycleCommand,
   SignalRepository,
+  submitSignalFeedbackUseCase,
   updateSignalUseCase,
 } from "@domain/signals"
 import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
+import { enforceExportRequestRateLimit } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
@@ -53,6 +56,7 @@ import {
   PaginatedSignalsSchema,
   SignalDetailSchema,
   SignalHistogramSchema,
+  signalFeedbackFields,
   toSignalDetailResponse,
   toSignalHistogramResponse,
   toSignalResponse,
@@ -61,8 +65,10 @@ import { SignalAnalyticsResponseSchema, toSignalAnalyticsResponse } from "../ope
 import { fetchTraceIndicators, PaginatedTracesSchema, toTraceResponse } from "../openapi/entities/trace.ts"
 import { PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
+  errorResponse,
   FilterSetSchema,
   jsonBody,
+  jsonResponse,
   PROTECTED_SECURITY,
   ProjectParamsSchema,
   typedResponses,
@@ -129,10 +135,34 @@ const LifecycleBodySchema = z
   })
   .openapi("SignalsLifecycleBody")
 
+const ResolveSignalsBodySchema = z
+  .object({
+    signalIds: z
+      .array(cuidSchema)
+      .min(1)
+      .describe("Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged."),
+    keepMonitoring: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether linked evaluations keep running after the resolve, so regressions are detected. Defaults to the project setting.",
+      ),
+  })
+  .openapi("ResolveSignalsBody")
+
 const LifecycleItemSchema = z
   .object({
     signalId: cuidSchema.describe("Signal this entry applies to."),
-    mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was muted, or `null`."),
+    resolvedAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was resolved, or `null`."),
+    ignoredAt: z.string().nullable().describe("ISO-8601 timestamp at which the signal was ignored, or `null`."),
+    regressedAt: z
+      .string()
+      .nullable()
+      .describe("ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`."),
+    mutedAt: z
+      .string()
+      .nullable()
+      .describe("ISO-8601 timestamp at which notifications were muted, or `null`. Ignoring a signal also mutes it."),
     updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
     changed: z
       .boolean()
@@ -163,10 +193,10 @@ const buildLifecycleEndpoint = ({
   command: SignalLifecycleCommand
   name: string
   fernMethod: string
-  pathSuffix: "/mute" | "/unmute"
+  pathSuffix: "/resolve" | "/unresolve" | "/ignore" | "/unignore" | "/mute" | "/unmute"
   summary: string
   description: string
-  bodySchema: typeof LifecycleBodySchema
+  bodySchema: typeof LifecycleBodySchema | typeof ResolveSignalsBodySchema
   rateLimitTier: RateLimitTier
 }) =>
   signalEndpoint({
@@ -188,7 +218,7 @@ const buildLifecycleEndpoint = ({
     execute: (input, ctx) =>
       Effect.gen(function* () {
         const { projectSlug } = input.params
-        const body = input.body
+        const body: z.infer<typeof ResolveSignalsBodySchema> = input.body
 
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
@@ -197,12 +227,16 @@ const buildLifecycleEndpoint = ({
           projectId: project.id,
           signalIds: body.signalIds.map((id) => SignalId(id)),
           command,
+          ...(body.keepMonitoring !== undefined ? { keepMonitoring: body.keepMonitoring } : {}),
         })
         return {
           status: 200,
           body: {
             items: result.items.map((item) => ({
               signalId: item.signalId,
+              resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
+              ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
+              regressedAt: item.regressedAt ? item.regressedAt.toISOString() : null,
               mutedAt: item.mutedAt ? item.mutedAt.toISOString() : null,
               updatedAt: item.updatedAt.toISOString(),
               changed: item.changed,
@@ -225,13 +259,60 @@ const buildLifecycleEndpoint = ({
       ),
   })
 
+const resolveSignals = buildLifecycleEndpoint({
+  command: "resolve",
+  name: "resolveSignals",
+  fernMethod: "resolve",
+  pathSuffix: "/resolve",
+  summary: "Resolve signals",
+  description:
+    "Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.",
+  bodySchema: ResolveSignalsBodySchema,
+  rateLimitTier: "medium",
+})
+
+const unresolveSignals = buildLifecycleEndpoint({
+  command: "unresolve",
+  name: "unresolveSignals",
+  fernMethod: "unresolve",
+  pathSuffix: "/unresolve",
+  summary: "Unresolve signals",
+  description: "Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
+
+const ignoreSignals = buildLifecycleEndpoint({
+  command: "ignore",
+  name: "ignoreSignals",
+  fernMethod: "ignore",
+  pathSuffix: "/ignore",
+  summary: "Ignore signals",
+  description:
+    "Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
+
+const unignoreSignals = buildLifecycleEndpoint({
+  command: "unignore",
+  name: "unignoreSignals",
+  fernMethod: "unignore",
+  pathSuffix: "/unignore",
+  summary: "Unignore signals",
+  description: "Returns each signal in `signalIds` to the active list and re-enables its notifications.",
+  bodySchema: LifecycleBodySchema,
+  rateLimitTier: "medium",
+})
+
 const muteSignals = buildLifecycleEndpoint({
   command: "mute",
   name: "muteSignals",
   fernMethod: "mute",
   pathSuffix: "/mute",
   summary: "Mute signals",
-  description: "Mutes each signal in `signalIds`.",
+  description:
+    "Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.",
   bodySchema: LifecycleBodySchema,
   rateLimitTier: "medium",
 })
@@ -242,7 +323,7 @@ const unmuteSignals = buildLifecycleEndpoint({
   fernMethod: "unmute",
   pathSuffix: "/unmute",
   summary: "Unmute signals",
-  description: "Reverts each signal in `signalIds` to an unmuted state.",
+  description: "Re-enables notifications for each signal in `signalIds`.",
   bodySchema: LifecycleBodySchema,
   rateLimitTier: "medium",
 })
@@ -260,7 +341,9 @@ const ListSignalsQuerySchema = PaginatedQueryParamsSchema.extend({
   lifecycleGroup: z
     .enum(SIGNAL_LIFECYCLE_GROUP_VALUES)
     .optional()
-    .describe('`"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.'),
+    .describe(
+      '`"active"` for signals that are neither resolved nor ignored; `"archived"` for resolved or ignored signals. Omit to include both.',
+    ),
   sortBy: z
     .enum(ISSUES_SORT_FIELDS)
     .default("lastSeen")
@@ -448,7 +531,10 @@ const getSignal = signalEndpoint({
         projectId: project.id,
         signalId: SignalId(signal.id as string),
       })
-      return { status: 200, body: toSignalDetailResponse(details, ctx.organization.id as string) } as const
+      return {
+        status: 200,
+        body: toSignalDetailResponse(details, ctx.organization.id as string),
+      } as const
     }).pipe(
       withPostgres(
         Layer.mergeAll(ProjectRepositoryLive, SignalRepositoryLive, EvaluationRepositoryLive),
@@ -605,7 +691,13 @@ const exportSignals = signalEndpoint({
       "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(ExportBodySchema) },
-    responses: typedResponses({ status: 202, schema: ExportResponseSchema, description: "Export enqueued" }),
+    responses: {
+      202: jsonResponse(ExportResponseSchema, "Export enqueued"),
+      400: errorResponse("Validation error"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+      429: errorResponse("Export rate limit exceeded"),
+    },
   }),
   access: "write",
   rateLimitTier: "ultra",
@@ -624,6 +716,17 @@ const exportSignals = signalEndpoint({
           message: "`recipient` must belong to a member of this organization.",
         })
       }
+
+      yield* Effect.tryPromise({
+        try: () =>
+          enforceExportRequestRateLimit({
+            redis: ctx.redis,
+            organizationId: ctx.organization.id as string,
+            projectId: project.id as string,
+            recipientEmail: body.recipient,
+          }),
+        catch: (cause) => cause,
+      })
 
       yield* ctx.queuePublisher.publish("exports", "generate", {
         // KEEP: the export queue kind is a wire token retained until Phase 9.
@@ -893,6 +996,89 @@ const updateSignal = signalEndpoint({
     ),
 })
 
+const SubmitSignalFeedbackBodySchema = z
+  .object({
+    passed: z
+      .boolean()
+      .describe("`true` when the signal is a real problem worth flagging; `false` when it is a false positive."),
+    feedback: z
+      .string()
+      .max(SIGNAL_FEEDBACK_MAX_LENGTH)
+      .optional()
+      .describe("Reason for the verdict. Required when `passed` is `false`."),
+    value: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe("Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`."),
+    ignore: z.boolean().optional().describe("Also archive the signal so new occurrences stop being reported."),
+  })
+  .openapi("SubmitSignalFeedbackBody")
+
+const SubmitSignalFeedbackResponseSchema = z
+  .object({
+    ...signalFeedbackFields,
+    ignored: z.boolean().describe("Whether the signal was archived as part of this call."),
+  })
+  .openapi("SubmitSignalFeedbackResponse")
+
+const submitSignalFeedback = signalEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/{signalSlug}/feedback",
+    name: "submitSignalFeedback",
+    tags: ["Signals"],
+    group: "signals",
+    sdkMethod: "submitFeedback",
+    summary: "Submit signal feedback",
+    description:
+      "Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.",
+    security: PROTECTED_SECURITY,
+    request: { params: SignalSlugParamsSchema, body: jsonBody(SubmitSignalFeedbackBodySchema) },
+    responses: typedResponses({
+      status: 201,
+      schema: SubmitSignalFeedbackResponseSchema,
+      description: "Feedback recorded",
+    }),
+  }),
+  access: "write",
+  rateLimitTier: "medium",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const { projectSlug, signalSlug } = input.params
+      const body = input.body
+
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(projectSlug)
+      const signalRepo = yield* SignalRepository
+      const signal = yield* signalRepo.findBySlug({ projectId: project.id, slug: signalSlug })
+
+      const result = yield* submitSignalFeedbackUseCase({
+        projectId: project.id as string,
+        signalId: SignalId(signal.id as string),
+        passed: body.passed,
+        ...(body.feedback !== undefined ? { feedback: body.feedback } : {}),
+        ...(body.value !== undefined ? { value: body.value } : {}),
+        ...(body.ignore !== undefined ? { ignore: body.ignore } : {}),
+      })
+      return { status: 201, body: { ...result.feedback, ignored: result.ignored } } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          SignalRepositoryLive,
+          EvaluationRepositoryLive,
+          OutboxEventWriterLive,
+          SettingsReaderLive,
+        ),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withTracing,
+    ),
+})
+
 const deleteSignal = signalEndpoint({
   route: createRoute({
     method: "delete",
@@ -941,10 +1127,15 @@ export const signalsModule: OperationModule = {
     getSignal,
     getSignalTrend,
     listSignalTraces,
+    resolveSignals,
+    unresolveSignals,
+    ignoreSignals,
+    unignoreSignals,
     muteSignals,
     unmuteSignals,
     monitorSignal,
     unmonitorSignal,
+    submitSignalFeedback,
     exportSignals,
   ],
 }

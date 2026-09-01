@@ -1,5 +1,16 @@
-import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
+import {
+  ExternalUserId,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SimulationId,
+  SPAN_ID_LENGTH,
+  SpanId,
+  TRACE_ID_LENGTH,
+  TraceId,
+} from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
+import { shouldReportUnpricedSpan } from "../helpers/should-report-unpriced.ts"
 import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
@@ -37,7 +48,12 @@ function resolveAnyValue(
   if (!value) return null
   if (value.stringValue !== undefined) return { type: "string", value: value.stringValue }
   if (value.boolValue !== undefined) return { type: "bool", value: value.boolValue }
-  if (value.intValue !== undefined) return { type: "int", value: Number(value.intValue) }
+  // An OTLP int64 outruns the double: past 2^53 `Number` rounds the digits away, so keep the exact text instead.
+  if (value.intValue !== undefined) {
+    const text = String(value.intValue)
+    const parsed = Number(text)
+    return Number.isSafeInteger(parsed) ? { type: "int", value: parsed } : { type: "string", value: text }
+  }
   if (value.doubleValue !== undefined) return { type: "float", value: value.doubleValue }
   // Structured OTLP values (e.g. gen_ai.memory.records) are flattened to a JSON string so they survive in attr_string.
   if (value.arrayValue !== undefined || value.kvlistValue !== undefined) {
@@ -83,10 +99,19 @@ export interface TransformContext {
   readonly projectIdBySlug: ReadonlyMap<string, string>
 }
 
+/** Spans carrying token usage that no models.dev pricing matched, grouped for reporting. */
+export interface UnpricedSpanGroup {
+  readonly projectId: string
+  readonly provider: string
+  readonly model: string
+  readonly spans: number
+}
+
 interface TransformResult {
   readonly spans: readonly SpanDetail[]
-  /** Spans skipped because no `projectId` could be resolved for them. */
+  /** Spans skipped for lacking a resolvable `projectId` or a valid `traceId`. */
   readonly rejectedSpans: number
+  readonly unpricedSpanGroups: readonly UnpricedSpanGroup[]
 }
 
 /** Reads `latitude.project` from span attrs first, falling back to resource attrs. */
@@ -109,8 +134,22 @@ function resolveSpanProjectId(
   return context.defaultProjectId
 }
 
+/**
+ * ClickHouse's `spans` table stores `trace_id`/`span_id` as `FixedString(32)`/`FixedString(16)` — a
+ * value longer than that fails the whole async-insert batch, not just the offending row, so an
+ * oversized ID (a non-conformant exporter, e.g. a wider `bytes` protobuf field) must be rejected here.
+ */
+function hasValidIdLengths(normalizedTraceId: string, spanId: string): boolean {
+  return normalizedTraceId.length <= TRACE_ID_LENGTH && spanId.length <= SPAN_ID_LENGTH
+}
+
+function hasParentSpan(parentSpanId: string | undefined): boolean {
+  return !!parentSpanId && !/^0+$/.test(parentSpanId)
+}
+
 function transformSpan({
   span,
+  traceId,
   resource,
   scopeName,
   scopeVersion,
@@ -119,6 +158,7 @@ function transformSpan({
   ingestedAt,
 }: {
   span: OtlpSpan
+  traceId: string
   resource: OtlpResource | undefined
   scopeName: string
   scopeVersion: string
@@ -135,8 +175,10 @@ function transformSpan({
   const resolved = resolveAttributes({
     spanAttrs,
     statusCode,
+    events: spanEvents,
     spanName: span.name ?? "",
     scopeName,
+    hasParent: hasParentSpan(span.parentSpanId),
   })
   const content = parseContent(spanAttrs)
   const serviceName = stringAttr(resourceAttrs, "service.name") ?? ""
@@ -144,6 +186,7 @@ function transformSpan({
     spanAttrs,
     events: spanEvents,
     startTimeUnixNano: span.startTimeUnixNano,
+    endTimeUnixNano: span.endTimeUnixNano,
   })
   const toolExecution = resolveToolExecution(spanAttrs, resolved.operation)
 
@@ -171,13 +214,13 @@ function transformSpan({
     }
   }
 
-  return {
+  const detail: SpanDetail = {
     organizationId: OrganizationId(context.organizationId),
     projectId: ProjectId(projectId),
     sessionId: SessionId(resolved.sessionId),
     userId: ExternalUserId(resolved.userId),
     userEmail: resolved.userEmail,
-    traceId: TraceId(span.traceId.replace(/-/g, "")),
+    traceId: TraceId(traceId),
     spanId: SpanId(span.spanId),
     parentSpanId: span.parentSpanId ?? "",
     apiKeyId: context.apiKeyId,
@@ -210,6 +253,9 @@ function transformSpan({
     costOutputMicrocents: resolved.costOutputMicrocents,
     costTotalMicrocents: resolved.costTotalMicrocents,
     costIsEstimated: resolved.costIsEstimated,
+    costSource: resolved.costSource,
+    costPricedProvider: resolved.costPricedProvider,
+    costPricedModel: resolved.costPricedModel,
     timeToFirstTokenNs: performance.timeToFirstTokenNs,
     isStreaming: performance.isStreaming,
     responseId: resolved.responseId,
@@ -232,6 +278,8 @@ function transformSpan({
     toolOutput: toolExecution.toolOutput,
     ingestedAt,
   }
+
+  return detail
 }
 
 export function transformOtlpToSpans(
@@ -240,6 +288,7 @@ export function transformOtlpToSpans(
 ): TransformResult {
   const spans: SpanDetail[] = []
   let rejectedSpans = 0
+  const unpricedByKey = new Map<string, { projectId: string; provider: string; model: string; spans: number }>()
   const { ingestedAt } = context
 
   for (const resourceSpans of request.resourceSpans ?? []) {
@@ -250,15 +299,45 @@ export function transformOtlpToSpans(
       const scopeVersion = scopeSpans.scope?.version ?? ""
       for (const span of scopeSpans.spans ?? []) {
         if (isDroppedSpan(scopeName, span.name ?? "")) continue
+        // OTLP/JSON bodies are cast, not validated, so `traceId` can arrive missing or non-string.
+        if (typeof span.traceId !== "string" || span.traceId.length === 0) {
+          rejectedSpans++
+          continue
+        }
         const projectId = resolveSpanProjectId(span.attributes ?? [], resourceAttrs, context)
         if (!projectId) {
           rejectedSpans++
           continue
         }
-        spans.push(transformSpan({ span, resource, scopeName, scopeVersion, context, projectId, ingestedAt }))
+        const traceId = span.traceId.replace(/-/g, "")
+        if (!hasValidIdLengths(traceId, span.spanId)) {
+          rejectedSpans++
+          continue
+        }
+        const transformed = transformSpan({
+          span,
+          traceId,
+          resource,
+          scopeName,
+          scopeVersion,
+          context,
+          projectId,
+          ingestedAt,
+        })
+        spans.push(transformed)
+
+        // Reporting only. `costSource` keeps every unpriced span marked, so the stored record and
+        // the Cost page's coverage stay exact; the filter just withholds the alert.
+        if (transformed.costSource === "unpriced" && shouldReportUnpricedSpan(transformed)) {
+          const { provider, model } = transformed
+          const key = `${projectId} ${provider} ${model}`
+          const existing = unpricedByKey.get(key)
+          if (existing) existing.spans++
+          else unpricedByKey.set(key, { projectId, provider, model, spans: 1 })
+        }
       }
     }
   }
 
-  return { spans, rejectedSpans }
+  return { spans, rejectedSpans, unpricedSpanGroups: [...unpricedByKey.values()] }
 }

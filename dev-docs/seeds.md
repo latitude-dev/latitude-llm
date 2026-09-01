@@ -113,6 +113,9 @@ The default seed creates:
 - one default project
 - an owner, an admin, and additional members used by assignment-heavy UIs
 - one default API key that seeded telemetry references
+- one registered partner, **Longitude** (a fictional platform, deliberately not a real company), so the private partner API is exercisable locally with no configuration (see [`partners.md`](./partners.md))
+
+The partner is the one seeded row that is not tenant data: `latitude.partners` is a global staff-managed table, so the seeder is bootstrap-only and the runtime demo-project seeding path never re-runs it. Its fixed id and secret are the demo server's env defaults, which is what makes `pnpm pg:seed` plus the demo server work out of the box.
 
 This foundation is intentionally simple so the more interesting seed complexity can live in the reliability workflows.
 

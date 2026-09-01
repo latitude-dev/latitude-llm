@@ -1,14 +1,27 @@
 import type { ScoreSourceType } from "@domain/scores"
-import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
+import { ALERT_SEVERITIES, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 
 export const SIGNAL_NAME_MAX_LENGTH = 128
 
-export const SIGNAL_STATES = ["new", "escalating", "ongoing"] as const
+/** Boundary guard on the reason accompanying a signal feedback verdict, so a pasted transcript cannot land in the row. */
+export const SIGNAL_FEEDBACK_MAX_LENGTH = 1024
+
+/** Newest occurrences inspected when fanning a signal's verdict out onto the flagger generations that detected it. */
+export const SIGNAL_FEEDBACK_OCCURRENCE_SAMPLE_LIMIT = 25
+
+export const SIGNAL_STATES = ["new", "escalating", "ongoing", "resolved", "regressed", "ignored"] as const
 
 export const SIGNAL_SOURCES = ["annotation", "flagger", "custom"] as const
 
-/** Manual triage priority levels, ascending in urgency. Null means "unset". */
-export const SIGNAL_PRIORITIES = ["low", "medium", "high", "urgent"] as const
+/**
+ * Manual triage priority levels, ascending in urgency. Null means "unset".
+ *
+ * The same list monitors and incidents call severity — one array, two names:
+ * `signals.priority` is public API and `severity` is the key inside stored
+ * notification payloads, so neither can be renamed for free. Aliasing rather
+ * than repeating the values is what stops the two scales drifting apart again.
+ */
+export const SIGNAL_PRIORITIES = ALERT_SEVERITIES
 
 /**
  * Priority groups in display order for the always-grouped issues list.
@@ -313,6 +326,138 @@ export const SIGNAL_GENERATION_PROMPT_MAX_LENGTH = 2000
 
 /** Distinct values fetched per filter dimension for the generation grounding context. */
 export const SIGNAL_GENERATION_DISTINCT_VALUES_LIMIT = 50
+
+// ---------------------------------------------------------------------------
+// Promotion
+// ---------------------------------------------------------------------------
+
+/**
+ * Distinct sessions a discovered signal must reach before it is promoted. Floor of
+ * a volume-scaled threshold; see `promotionThreshold`.
+ */
+export const PROMOTION_MIN_SESSIONS = 2
+
+/** Volume-relative term of the promotion threshold: 0.05% of the window's sessions. */
+export const PROMOTION_RATE_FLOOR = 0.0005
+
+/**
+ * Ceiling on required evidence. Load-bearing rather than tidy: uncapped, the
+ * volume-relative term asks ~1,500 sessions of a 3M-session month, which switches
+ * discovery off for a large customer instead of making it stricter.
+ */
+export const PROMOTION_MAX_SESSIONS = 15
+
+/** Window the promotion threshold counts distinct sessions over. */
+export const PROMOTION_WINDOW_DAYS = 30
+
+/** TTL for the cached per-project session volume that scales the promotion threshold. */
+export const PROJECT_SESSION_VOLUME_CACHE_TTL_SECONDS = 6 * 60 * 60
+
+/** Cache key for the per-project session volume steering the promotion threshold. */
+export const PROJECT_SESSION_VOLUME_CACHE_KEY = (organizationId: string, projectId: string): string =>
+  `org:${organizationId}:projects:${projectId}:session-volume`
+
+/**
+ * Leading-throttle window for `issues:promoteSignal`, which fires immediately
+ * and drops re-publishes for this long.
+ *
+ * A window rather than a bare dedupe key, because a bare key becomes a BullMQ
+ * `jobId` and failed jobs are retained (`removeOnFail: { count: 1000 }`) — a
+ * permanently failed promotion would shadow every later publish and the signal
+ * would never promote at all. The marker expires instead, so the next score to
+ * re-qualify the signal retries it. Sized well above one generation.
+ */
+export const SIGNAL_PROMOTION_THROTTLE_MS = 10 * 60 * 1000
+
+/**
+ * Leading-throttle window for `issues:reviewFlaggerOccurrences` and per-trace
+ * `issues:reviewFlaggerOccurrence` jobs.
+ *
+ * Feedback is one-shot on the signal row, so a bare dedupe key would make a
+ * permanently failed fan-out or grading job shadow every later publish and the
+ * flagger would never be graded. The marker expires instead, so outbox
+ * redelivery can retry.
+ */
+export const SIGNAL_FEEDBACK_THROTTLE_MS = 10 * 60 * 1000
+
+// ---------------------------------------------------------------------------
+// Candidate consolidation
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimum centroid cosine similarity for two candidates to be merged.
+ *
+ * Deliberately below live matching's `SIGNAL_DISCOVERY_MIN_VECTOR_SIMILARITY`,
+ * but "looser" needs care: this compares two *averages*, so noise cancels on
+ * both sides and a numerically equal floor would be effectively stricter than
+ * the score-to-centroid comparison discovery makes. The repo's own calibration
+ * agrees on the shape — `SIGNAL_RELATED_SEMANTIC_CEILING` already marks 0.85 as
+ * the point where two signals are duplicate clusters.
+ *
+ * Provisional: merging is irreversible, so this is the constant to tune against
+ * real candidate populations before widening.
+ */
+export const CONSOLIDATION_MIN_SIMILARITY = 0.7
+
+/**
+ * Hard cap on losers absorbed in one pass, logged when it binds.
+ *
+ * The one irreversible failure mode in the promotion effort: a mis-set
+ * threshold with no cap collapses a project's candidate pool into a single
+ * meaningless signal, and there is no demerge. The common case is one loser, so
+ * the cap only binds where a candidate bridges several existing fragments —
+ * exactly where a ceiling earns its keep.
+ */
+export const CONSOLIDATION_MAX_MERGES_PER_PASS = 5
+
+/** Neighbors fetched per pass, before the similarity floor and the merge cap. */
+export const CONSOLIDATION_NEIGHBOR_LIMIT = 25
+
+/**
+ * Depth cap on the absorbed-candidate walk when reconciling ClickHouse. Merges
+ * chain one level at a time and a chain that long would already be a sign the
+ * threshold is wrong, so this bounds the recursion rather than expressing a real
+ * expectation. Mirrors taxonomy's `MAX_MERGE_REDIRECTS`.
+ */
+export const CONSOLIDATION_MAX_LINEAGE_DEPTH = 10
+
+/**
+ * Throttle window for `issues:consolidate`, published whenever a candidate's
+ * centroid changes. Trailing rather than leading: the pass wants a settled
+ * centroid, and the delay also means a candidate that qualified in the same
+ * transaction is already promoted by the time its pass runs, so consolidation
+ * skips it instead of racing promotion.
+ */
+export const CONSOLIDATION_THROTTLE_MS = 15 * 60 * 1000
+
+// ---------------------------------------------------------------------------
+// Candidate expiry
+// ---------------------------------------------------------------------------
+
+/**
+ * Idle days after which an unpromoted signal is swept. Keyed on
+ * `coalesce(clustered_at, created_at)` — the centroid anchor is literally "last
+ * score folded in", where `updated_at` is also bumped by throttled refreshes.
+ *
+ * Must stay at or above `PROMOTION_WINDOW_DAYS`: promotion is only ever
+ * evaluated on score assignment, so a candidate idle for a full window is
+ * provably dead. The grace past that preserves the revival path — a score
+ * arriving on day 35 still clusters into the existing candidate rather than
+ * starting a fresh one.
+ */
+export const CANDIDATE_EXPIRY_IDLE_DAYS = 45
+
+/** Candidates expired per sweep tick. Bounds one statement; the next tick takes the rest. */
+export const CANDIDATE_EXPIRY_SWEEP_LIMIT = 1000
+
+/**
+ * BullMQ scheduler key for the daily candidate expiry sweep. Idempotent across
+ * worker restarts — re-registering with the same key replaces the schedule.
+ */
+export const CANDIDATE_SWEEPER_KEY = "issues:candidate-sweep"
+
+/** Cron pattern for the candidate expiry sweep — daily, off the hour so it misses the escalation sweep, UTC. */
+export const CANDIDATE_SWEEPER_PATTERN = "30 3 * * *"
 
 // ---------------------------------------------------------------------------
 // Signal refresh throttle

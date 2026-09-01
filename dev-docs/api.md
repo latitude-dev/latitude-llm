@@ -29,6 +29,10 @@ authenticate(c) → AuthContext | 401
 
 Both validators have a short negative-cache TTL (~5s), so an unknown bearer hits each underlying datastore at most once per cache window.
 
+The one exception is `/v1/mcp`, which admits OAuth bearers only — see [`mcp.md`](./mcp.md). It runs in the same protected ring; the transport handler rejects an `api-key` `AuthContext` with a 401 before it starts a session.
+
+Every 401 the error handler emits carries `WWW-Authenticate: Bearer resource_metadata="<LAT_API_URL>/.well-known/oauth-protected-resource"` (RFC 9728 §5.1), which is how a spec-following MCP client discovers the authorization server instead of guessing the well-known path. The GitHub webhook's signature 401 returns its response directly and is deliberately not a bearer challenge.
+
 ### `AuthContext` shape
 
 ```ts
@@ -70,7 +74,7 @@ attachSharedContext(db, redis, clickhouse, queue)   ← all routes
     createOrganizationContextMiddleware()
 
       /v1/...   ← all REST routes, with per-endpoint tier limiters
-      /v1/mcp   ← MCP transport, per-request McpServer
+      /v1/mcp   ← MCP transport, per-request McpServer (OAuth bearers only)
 ```
 
 Public routes are bodyless metadata documents — never product data. Everything that touches an organization runs under the protected ring.
@@ -114,6 +118,20 @@ The domain use-case is the shared seam. Anything that duplicates business rules 
 
 The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full app with an in-memory Postgres (PGlite), an in-memory ClickHouse (chdb), a fake Redis, and stub queue/workflow clients — no external services required.
 
+## Route classes and their exclusion levels
+
+Not every route belongs on every generated surface. There are three levels, and the mechanism *is* the guarantee — CI's manifest-drift gate makes each one permanent.
+
+| Level | Mechanism | Present on | Example |
+| --- | --- | --- | --- |
+| 1 | plain `app.post(...)` | HTTP only | `/v1/webhooks/github`, `/v1/private/partners/:partnerId/accounts` |
+| 2 | `createRoute` + `app.openapi` | HTTP, OpenAPI, SDK, CLI — not MCP | `/v1/account/bootstrap` |
+| 3 | `defineOperation` | everything, plus in-process agent toolsets | `packages/operations/src/operations/*` |
+
+`app.doc` only walks `app.openapi`-registered routes, Fern only reads `openapi.json`, and the MCP registry only holds `defineOperation` entries — so a level-1 route is provably absent from all of them.
+
+**`/v1/private/*` is a route class, not just a prefix.** These are private partner endpoints: level 1, mounted on `v1` ahead of the auth wall, authenticated by per-partner HMAC request signing instead of a bearer token, and never documented. See [`partners.md`](./partners.md).
+
 ## Where the code lives
 
 | | Path |
@@ -122,11 +140,15 @@ The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full a
 | `defineOperation`, registry, execute/mount/toolset machinery | `packages/operations/src/core/` |
 | MCP HTTP transport | `apps/api/src/mcp/server.ts` |
 | Shared OpenAPI primitives (`Paginated`, `PROTECTED_SECURITY`, `jsonBody`, `typedResponses`) | `packages/operations/src/openapi/` |
-| Non-operation routes (health, well-known, bootstrap) | `apps/api/src/routes/` |
+| Non-operation routes (health, well-known, bootstrap, partners) | `apps/api/src/routes/` |
 | Auth + rate-limit middleware | `apps/api/src/middleware/` |
 | Manifest emitters | `apps/api/scripts/{emit-openapi,emit-mcp}.ts` |
 | API-key validator | `packages/platform/api-key-auth/` |
 | OAuth access-token validator | `packages/platform/oauth-token-auth/` |
+
+## Trace detail shape
+
+`GET /v1/projects/{projectId}/traces/{traceId}` returns `TraceDetail` with a `conversation` array (OpenTelemetry GenAI messages) instead of separate `system_instructions`, `input_messages`, and `output_messages`. The single field carries the full multi-turn history the domain stores in `TraceDetail.allMessages`. Span detail endpoints are unchanged — they still expose per-span `inputMessages` / `outputMessages`. See [`spans.md`](./spans.md) for how the canonical conversation is built and consumed internally.
 
 ## Related docs
 
@@ -134,4 +156,5 @@ The test harness (`apps/api/src/test-utils/create-test-app.ts`) boots the full a
 - [`sdk.md`](./sdk.md) — TypeScript SDK pipeline (Fern config, versioning, exclusions).
 - [`authentication.md`](./authentication.md) — web-side Better Auth, sessions, OAuth consent page.
 - [`agent-data-access.md`](./agent-data-access.md) — the `queryAnalytics` / `querySpans` analytics read surface exposed through these routes.
+- [`partners.md`](./partners.md) — the private, HMAC-authenticated `/v1/private/*` partner surface.
 - [`api-endpoints` skill](../.agents/skills/api-endpoints/SKILL.md) — concrete recipe for adding routes.

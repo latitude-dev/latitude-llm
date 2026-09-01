@@ -9,9 +9,10 @@ import {
   TagList,
   Tooltip,
 } from "@repo/ui"
-import { formatCount, formatDuration, formatPercentage, formatPrice, relativeTime } from "@repo/utils"
+import { formatCount, formatDuration, formatPercentage, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { type MouseEvent, type ReactNode, useCallback, useMemo } from "react"
+import { type MouseEvent, type ReactNode, type RefObject, useCallback, useMemo } from "react"
+import { rollupCostDisplay } from "../../../../../domains/spans/cost-display.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { CacheHitRateSubheader } from "./table/cache-hit-rate-subheader.tsx"
 import { IndicatorsCell } from "./table/indicators-cell.tsx"
@@ -67,11 +68,20 @@ interface ProjectTracesTableProps {
   readonly metricsLoading?: boolean | undefined
   readonly annotationCounts?: ReadonlyMap<string, TraceAnnotationCounts> | undefined
   readonly annotationCountsPendingTraceIds?: ReadonlySet<string> | undefined
-  readonly scrollAreaLayout?: "fill" | "intrinsic"
   readonly scrollContainerClassName?: string
   readonly onErrorClick?: (trace: TraceRecord) => void
   readonly onAnnotationClick?: (trace: TraceRecord) => void
 }
+
+type ProjectTracesTableScrollProps =
+  | {
+      readonly scrollAreaLayout: "external"
+      readonly scrollContainerRef: RefObject<HTMLDivElement | null>
+    }
+  | {
+      readonly scrollAreaLayout?: "fill" | "intrinsic"
+      readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
+    }
 
 export function ProjectTracesTable({
   projectId,
@@ -97,9 +107,10 @@ export function ProjectTracesTable({
   annotationCountsPendingTraceIds,
   scrollAreaLayout,
   scrollContainerClassName,
+  scrollContainerRef,
   onErrorClick,
   onAnnotationClick,
-}: ProjectTracesTableProps) {
+}: ProjectTracesTableProps & ProjectTracesTableScrollProps) {
   const showMetricSubheaders = traceMetrics !== undefined || metricsLoading !== undefined
   const isRelevanceSort = sorting?.column === RELEVANCE_SORT_COLUMN
 
@@ -240,12 +251,21 @@ export function ProjectTracesTable({
         align: "end",
         sortKey: "cost",
         width: 146,
-        render: (trace) => (
-          <span className="flex items-center justify-end gap-1">
-            <TraceOutlierBadge projectId={projectId} value={trace.costTotalMicrocents} metric="costTotalMicrocents" />
-            {trace.costTotalMicrocents > 0 ? formatPrice(trace.costTotalMicrocents / 100_000_000) : "-"}
-          </span>
-        ),
+        render: (trace) => {
+          const cost = rollupCostDisplay(trace)
+          const cell = (
+            <span className="flex items-center justify-end gap-1">
+              <TraceOutlierBadge projectId={projectId} value={trace.costTotalMicrocents} metric="costTotalMicrocents" />
+              {cost.label}
+            </span>
+          )
+          if (!cost.note) return cell
+          return (
+            <Tooltip trigger={cell} asChild>
+              {cost.note}
+            </Tooltip>
+          )
+        },
         ...(showMetricSubheaders
           ? {
               renderSubheader: () => (
@@ -375,11 +395,19 @@ export function ProjectTracesTable({
     return `View trace ${shortName}`
   }, [])
 
+  const scrollAreaProps =
+    scrollAreaLayout === "external"
+      ? ({ scrollAreaLayout: "external", scrollContainerRef } as const)
+      : {
+          ...(scrollAreaLayout !== undefined ? { scrollAreaLayout } : {}),
+          ...(scrollContainerRef !== undefined ? { scrollContainerRef } : {}),
+        }
+
   return (
     <InfiniteTable
       data={data}
       {...(isLoading !== undefined ? { isLoading } : {})}
-      {...(scrollAreaLayout !== undefined ? { scrollAreaLayout } : {})}
+      {...scrollAreaProps}
       {...(scrollContainerClassName !== undefined ? { className: scrollContainerClassName } : {})}
       columns={columns}
       getRowKey={(trace) => trace.traceId}

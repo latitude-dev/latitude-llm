@@ -9,7 +9,7 @@ const tabsListVariants = cva("relative flex flex-row", {
   variants: {
     variant: {
       secondary: "",
-      bordered: "w-fit border border-border bg-secondary",
+      bordered: "w-fit bg-muted",
     },
     size: {
       md: "gap-2",
@@ -25,7 +25,7 @@ const tabsListVariants = cva("relative flex flex-row", {
   },
   compoundVariants: [
     { variant: "bordered", size: "md", className: "rounded-lg p-1" },
-    { variant: "bordered", size: "sm", className: "h-8 items-center rounded-md p-0.5" },
+    { variant: "bordered", size: "sm", className: "items-center rounded-md p-1" },
   ],
   defaultVariants: {
     variant: "secondary",
@@ -40,7 +40,7 @@ const tabTriggerVariants = cva(
     variants: {
       variant: {
         secondary: "text-xs leading-4 font-medium",
-        bordered: "border border-transparent bg-transparent",
+        bordered: "bg-transparent",
       },
       hideLabels: {
         true: "",
@@ -62,7 +62,7 @@ const tabTriggerVariants = cva(
       { size: "sm", variant: "secondary", hideLabels: true, className: "h-8 w-8" },
       { size: "sm", variant: "secondary", hideLabels: false, className: "h-8 gap-1 px-2" },
       { size: "sm", variant: "bordered", hideLabels: true, className: "h-6.5 w-6.5" },
-      { size: "sm", variant: "bordered", hideLabels: false, className: "h-6.5 gap-1 px-2" },
+      { size: "sm", variant: "bordered", hideLabels: false, className: "h-6.5 gap-1 px-1.5" },
       {
         variant: "secondary",
         hideLabels: true,
@@ -119,7 +119,7 @@ const tabIndicatorVariants = cva("pointer-events-none absolute left-0 top-0", {
   variants: {
     variant: {
       secondary: "rounded-md bg-muted",
-      bordered: "rounded border border-border bg-background",
+      bordered: "rounded bg-background",
     },
   },
   defaultVariants: {
@@ -143,6 +143,9 @@ export type TabsProps<T extends string = string> = {
   readonly onSelect: (id: T) => void
   readonly hideLabels?: boolean
   readonly disabled?: boolean
+  readonly className?: string
+  /** Extra classes merged onto the sliding active-tab indicator. */
+  readonly indicatorClassName?: string
 } & VariantProps<typeof tabsListVariants>
 
 type SlidingIndicatorParams<T extends string> = {
@@ -254,6 +257,8 @@ export function Tabs<T extends string>({
   variant = "secondary",
   size = "md",
   wrap = false,
+  className,
+  indicatorClassName,
 }: TabsProps<T>) {
   const resolvedVariant = variant ?? "secondary"
   const resolvedSize = size ?? "md"
@@ -298,19 +303,25 @@ export function Tabs<T extends string>({
 
   return (
     <div
-      className={cn(tabsListVariants({ variant: resolvedVariant, size: resolvedSize, wrap }), {
-        "cursor-not-allowed opacity-60": disabled,
-      })}
+      className={cn(
+        tabsListVariants({ variant: resolvedVariant, size: resolvedSize, wrap }),
+        { "cursor-not-allowed opacity-60": disabled },
+        className,
+      )}
       role="tablist"
       onKeyDown={onKeyDown}
       ref={listRef}
     >
       <div
         aria-hidden="true"
-        className={cn(tabIndicatorVariants({ variant: resolvedVariant }), {
-          hidden: !isIndicatorVisible,
-          "transition-[transform,width,height] duration-200 ease-in-out": isIndicatorAnimated,
-        })}
+        className={cn(
+          tabIndicatorVariants({ variant: resolvedVariant }),
+          {
+            hidden: !isIndicatorVisible,
+            "transition-[transform,width,height] duration-200 ease-in-out": isIndicatorAnimated,
+          },
+          indicatorClassName,
+        )}
         ref={indicatorRef}
       />
       {options.map((option) => {

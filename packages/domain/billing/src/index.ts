@@ -1,4 +1,14 @@
 export {
+  AIMeteringScope,
+  type AIMeteringScopeShape,
+  type MakeAIMeteringScopeInput,
+  type MeteredAIAction,
+  makeAIMeteringScope,
+  provideAIMeteringScope,
+  type RecordMeteredAIActionInput,
+} from "./ai-metering.ts"
+export { billingEnforcementEnabled, selfHostedRetentionDays } from "./config.ts"
+export {
   ACTION_CREDITS,
   BILLING_INCLUDED_CREDITS_PG_MAX,
   BILLING_OVERAGE_SYNC_THROTTLE_MS,
@@ -8,13 +18,19 @@ export {
   CENT_TO_MILLS,
   CHARGEABLE_ACTIONS,
   type ChargeableAction,
+  CREDIT_VALUE_MILLS,
   calculateMaxAllowedConsumedCreditsForCap,
   calculateMaxReportableOverageCreditsForCap,
   calculateOverageAmountMills,
   calculatePlanSpendMills,
+  creditsForLlmGenerationCost,
+  creditsForSemanticQueryCost,
   ENTERPRISE_PLAN_CONFIG,
   FREE_PLAN_CONFIG,
+  LLM_GENERATION_BILLING_MARGIN,
+  OVERRIDABLE_PLAN_SLUGS,
   OverageCreditUnit,
+  type OverridablePlanSlug,
   PLAN_CONFIGS,
   PLAN_SLUGS,
   type PlanConfig,
@@ -22,8 +38,14 @@ export {
   PRO_PLAN_CONFIG,
   persistedIncludedCreditsForPlan,
   SANDBOX_SPAN_RETENTION_DAYS,
+  SELF_HOSTED_PLAN_CONFIG,
+  SELF_HOSTED_RETENTION_DAYS_MAX,
+  SELF_HOSTED_RETENTION_DAYS_MIN,
   SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME,
   SELF_SERVE_PLAN_SLUGS,
+  SEMANTIC_QUERY_BILLING_MARGIN,
+  SEMANTIC_QUERY_EMBED_USD_PER_MILLION_TOKENS,
+  semanticQueryEmbedCostUsd,
 } from "./constants.ts"
 export {
   type BillingOverride,
@@ -44,6 +66,8 @@ export {
   billingUsagePeriodSchema,
 } from "./entities/billing-usage-period.ts"
 export {
+  AIMeteringRecordError,
+  BillingConfigurationError,
   InvalidBillingIdempotencyKeyError,
   NoCreditsRemainingError,
   NoSubscriptionFoundError,
@@ -51,6 +75,11 @@ export {
   UnknownStripePlanError,
   UsageEventAlreadyRecordedError,
 } from "./errors.ts"
+export {
+  BILLING_LIMIT_KINDS,
+  type BillingLimitKind,
+  detectBillingLimitCrossed,
+} from "./helpers/detect-billing-limit-crossed.ts"
 export { BillingOverrideRepository } from "./ports/billing-override-repository.ts"
 export {
   BillingSpendReservation,

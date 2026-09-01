@@ -4,6 +4,7 @@ import {
   type PercentileSessionFilterField,
   type PercentileTraceFilterField,
   TRACE_FILTER_FIELDS,
+  type TraceFilterGroupId,
 } from "@domain/shared"
 import type { FilterMode } from "./multi-select-filter.tsx"
 
@@ -11,11 +12,13 @@ const TEXT_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "text").map((f)
   field: f.field,
   label: f.label,
   placeholder: f.placeholder ?? "Enter value...",
+  group: f.group,
 }))
 
 const ALL_MULTI_SELECT_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "multiSelect").map((f) => ({
   field: f.field,
   label: f.label,
+  group: f.group,
   sessionOnly: "sessionOnly" in f && f.sessionOnly === true,
 }))
 
@@ -26,6 +29,7 @@ export function getMultiSelectFieldsForMode(mode: FilterMode) {
 export const STATUS_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "status").map((f) => ({
   field: f.field,
   label: f.label,
+  group: f.group,
 }))
 
 export type PercentileFieldName = PercentileTraceFilterField | PercentileSessionFilterField
@@ -33,6 +37,7 @@ export type PercentileFieldName = PercentileTraceFilterField | PercentileSession
 interface NumberRangeFieldDefinition {
   readonly field: string
   readonly label: string
+  readonly group: TraceFilterGroupId
   readonly tooltip: string | undefined
   readonly percentile?: {
     readonly field?: PercentileFieldName
@@ -55,6 +60,7 @@ export const NUMBER_RANGE_FIELDS: readonly NumberRangeFieldDefinition[] = TRACE_
   return {
     field: f.field,
     label: f.label,
+    group: f.group,
     tooltip: "tooltip" in f ? f.tooltip : undefined,
     ...(supportsPercentile ? { percentile: isPercentileField ? { field: f.field } : {} } : {}),
     ...(displayScale !== undefined ? { displayScale } : {}),

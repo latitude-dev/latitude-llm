@@ -1,14 +1,9 @@
-import { computeTokenCost, getCostSpec } from "@domain/models"
+import type { CostSource, SpanTokenCounts } from "../../entities/span.ts"
+import { resolveSpanCost, usdToMicrocents } from "../../helpers/estimate-span-cost.ts"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import { resolveTokens } from "./usage/tokens.ts"
 import { first, fromFloat } from "./utils.ts"
-
-const MICROCENTS_PER_USD = 100_000_000
-
-function usdToMicrocents(v: number): number {
-  return Math.round(v * MICROCENTS_PER_USD)
-}
 
 const costInputCandidates = [
   fromFloat("gen_ai.usage.input_cost", usdToMicrocents),
@@ -28,62 +23,16 @@ const costTotalCandidates = [
 
 // ─── Resolve ─────────────────────────────────────────────
 
-interface EstimatedCost {
-  readonly input: number
-  readonly output: number
-}
-
-function estimateCostFromTokens({
-  provider,
-  model,
-  tokensInput,
-  tokensOutput,
-  tokensCacheRead,
-  tokensCacheCreate,
-  tokensReasoning,
-}: {
-  provider: string
-  model: string
-  tokensInput: number
-  tokensOutput: number
-  tokensCacheRead: number
-  tokensCacheCreate: number
-  tokensReasoning: number
-}): EstimatedCost | undefined {
-  if (tokensInput + tokensOutput + tokensCacheRead + tokensCacheCreate + tokensReasoning === 0) return undefined
-
-  const { cost, costImplemented } = getCostSpec(provider, model)
-  if (!costImplemented) return undefined
-
-  const inputUsd =
-    computeTokenCost(cost, tokensInput, "input") +
-    computeTokenCost(cost, tokensCacheRead, "cacheRead") +
-    computeTokenCost(cost, tokensCacheCreate, "cacheWrite")
-
-  const outputUsd =
-    computeTokenCost(cost, tokensOutput, "output") + computeTokenCost(cost, tokensReasoning, "reasoning")
-
-  return {
-    input: Math.round(inputUsd * MICROCENTS_PER_USD),
-    output: Math.round(outputUsd * MICROCENTS_PER_USD),
-  }
-}
-
-export interface ResolvedUsage {
-  /** Non-cached input tokens (additive: total_input = tokensInput + tokensCacheRead + tokensCacheCreate) */
-  readonly tokensInput: number
-  /** Non-reasoning output tokens (additive: total_output = tokensOutput + tokensReasoning) */
-  readonly tokensOutput: number
-  /** Tokens served from provider cache (subset of total input) */
-  readonly tokensCacheRead: number
-  /** Tokens written to provider cache (subset of total input) */
-  readonly tokensCacheCreate: number
-  /** Reasoning/thinking tokens (subset of total output) */
-  readonly tokensReasoning: number
+export interface ResolvedUsage extends SpanTokenCounts {
   readonly costInputMicrocents: number
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
   readonly costIsEstimated: boolean
+  readonly costSource: CostSource
+  /** Catalog provider the estimate came from. Empty unless we priced it ourselves. */
+  readonly costPricedProvider: string
+  /** Catalog model id the estimate came from, which may be a base entry of the reported model. */
+  readonly costPricedModel: string
 }
 
 // ─── OpenClaw embedded usage ──────────────────────────────
@@ -157,31 +106,19 @@ function resolveEmbeddedMessageUsage(
   const tokens = { tokensInput, tokensOutput, tokensCacheRead, tokensCacheCreate, tokensReasoning }
   const cost = usage.cost && typeof usage.cost === "object" ? usage.cost : undefined
 
-  if (cost && typeof cost.total === "number") {
-    // Provider-supplied cost (USD) — fold cache costs into the input side so
-    // input + output == total, keeping the provider's authoritative total.
-    return {
-      ...tokens,
-      costInputMicrocents: usdToMicrocents(
-        nonNegative(cost.input) + nonNegative(cost.cacheRead) + nonNegative(cost.cacheWrite),
-      ),
-      costOutputMicrocents: usdToMicrocents(nonNegative(cost.output)),
-      costTotalMicrocents: usdToMicrocents(nonNegative(cost.total)),
-      costIsEstimated: false,
-    }
-  }
+  // Cache costs fold into the input side so the two sides reconcile with the provider's own total.
+  const reported =
+    cost && typeof cost.total === "number"
+      ? {
+          inputMicrocents: usdToMicrocents(
+            nonNegative(cost.input) + nonNegative(cost.cacheRead) + nonNegative(cost.cacheWrite),
+          ),
+          outputMicrocents: usdToMicrocents(nonNegative(cost.output)),
+          totalMicrocents: usdToMicrocents(nonNegative(cost.total)),
+        }
+      : {}
 
-  // No embedded cost — estimate from the tokens, same as flat-attr spans.
-  const estimation = estimateCostFromTokens({ provider, model, ...tokens })
-  const costInputMicrocents = estimation?.input ?? 0
-  const costOutputMicrocents = estimation?.output ?? 0
-  return {
-    ...tokens,
-    costInputMicrocents,
-    costOutputMicrocents,
-    costTotalMicrocents: costInputMicrocents + costOutputMicrocents,
-    costIsEstimated: estimation !== undefined,
-  }
+  return { ...tokens, ...resolveSpanCost({ reported, provider, model, tokens }) }
 }
 
 interface ResolveUsageInput {
@@ -196,47 +133,19 @@ export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): Res
   const embedded = resolveEmbeddedMessageUsage(attrs, provider, model)
   if (embedded) return embedded
 
-  const {
-    input: tokensInput,
-    output: tokensOutput,
-    cacheRead: tokensCacheRead,
-    cacheCreate: tokensCacheCreate,
-    reasoning: tokensReasoning,
-  } = resolveTokens(attrs, provider)
-
-  // ── Cost ──
-  const attrCostInput = first(costInputCandidates, attrs)
-  const attrCostOutput = first(costOutputCandidates, attrs)
-  const attrCostTotal = first(costTotalCandidates, attrs)
-
-  const hasAttrCosts = attrCostInput !== undefined && attrCostOutput !== undefined
-
-  const costEstimation = hasAttrCosts
-    ? undefined
-    : estimateCostFromTokens({
-        provider,
-        model,
-        tokensInput,
-        tokensOutput,
-        tokensCacheRead,
-        tokensCacheCreate,
-        tokensReasoning,
-      })
-
-  const costIsEstimated = !hasAttrCosts && costEstimation !== undefined
-  const costInput = attrCostInput ?? costEstimation?.input ?? 0
-  const costOutput = attrCostOutput ?? costEstimation?.output ?? 0
-  const costTotal = attrCostTotal ?? (costInput + costOutput > 0 ? costInput + costOutput : 0)
+  const tokens = resolveTokens(attrs, provider)
 
   return {
-    tokensInput,
-    tokensOutput,
-    tokensCacheRead,
-    tokensCacheCreate,
-    tokensReasoning,
-    costInputMicrocents: costInput,
-    costOutputMicrocents: costOutput,
-    costTotalMicrocents: costTotal,
-    costIsEstimated,
+    ...tokens,
+    ...resolveSpanCost({
+      reported: {
+        inputMicrocents: first(costInputCandidates, attrs),
+        outputMicrocents: first(costOutputCandidates, attrs),
+        totalMicrocents: first(costTotalCandidates, attrs),
+      },
+      provider,
+      model,
+      tokens,
+    }),
   }
 }

@@ -1,6 +1,7 @@
 import { PRO_PLAN_CONFIG } from "@domain/billing"
-import { Button, cn, Text, Tooltip, useToast } from "@repo/ui"
+import { Button, cn, Icon, Text, Tooltip, useToast } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
+import { Flame } from "lucide-react"
 import { useState } from "react"
 import { createBillingCheckoutSession, getBillingOverview } from "../../../domains/billing/billing.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
@@ -36,24 +37,18 @@ export function BillingCreditCounter({
   if (!overview) return null
 
   const includedCredits = overview.includedCredits
-  const totalUsedCredits = overview.consumedCredits + overview.overageCredits
   const hasIncludedCredits = includedCredits !== null && includedCredits > 0
-  const progress = hasIncludedCredits ? Math.min(totalUsedCredits / includedCredits, 1) : 1
   const isOverage = overview.overageCredits > 0
-  const isAtIncludedLimit = hasIncludedCredits && totalUsedCredits >= includedCredits
-  const showLimitState = isOverage || (overview.planSlug === "free" && isAtIncludedLimit)
-  const strokeOffset = BILLING_COUNTER_CIRCUMFERENCE * (1 - progress)
-  const consumedLabel = numberFormatter.format(totalUsedCredits)
+  const showLimitState = isOverage || (overview.planSlug === "free" && overview.isAtIncludedLimit)
+  const strokeOffset = BILLING_COUNTER_CIRCUMFERENCE * (1 - overview.usageProgress)
+  const consumedLabel = numberFormatter.format(overview.consumedCredits)
   const includedLabel = includedCredits === null ? "custom" : numberFormatter.format(includedCredits)
-  const usageLabel =
-    includedCredits === null ? `${consumedLabel} credits` : `${consumedLabel} / ${includedLabel} credits`
+  const usageLabel = includedCredits === null ? consumedLabel : `${consumedLabel}/${includedLabel}`
   const tooltip = isOverage
-    ? `${numberFormatter.format(totalUsedCredits)} credits used: ${numberFormatter.format(overview.consumedCredits)} included credits plus ${numberFormatter.format(overview.overageCredits)} metered overage credits. Usage can exceed the included limit because this plan allows overage billing.`
+    ? `${numberFormatter.format(overview.consumedCredits)} credits used: ${numberFormatter.format(overview.includedUsedCredits)} included credits plus ${numberFormatter.format(overview.overageCredits)} metered overage credits. Usage can exceed the included limit because this plan allows overage billing.`
     : `${numberFormatter.format(overview.consumedCredits)} of ${includedLabel} credits used this period`
   const showUpgradeCta =
-    overview.planSlug === "free" &&
-    hasIncludedCredits &&
-    totalUsedCredits / includedCredits >= FREE_PLAN_UPGRADE_USAGE_THRESHOLD
+    overview.planSlug === "free" && hasIncludedCredits && overview.usageProgress >= FREE_PLAN_UPGRADE_USAGE_THRESHOLD
 
   const openUpgrade = async () => {
     setIsUpgradePending(true)
@@ -73,54 +68,60 @@ export function BillingCreditCounter({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {showUpgradeCta ? (
-        <Button size="sm" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
-          Upgrade now
-        </Button>
-      ) : null}
+    <div className="flex flex-col gap-4">
       <Tooltip
         asChild
         trigger={
-          <div className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-foreground">
-            <span className="relative flex h-5 w-5 items-center justify-center" aria-hidden="true">
-              <svg aria-hidden="true" className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
-                <circle
-                  cx="10"
-                  cy="10"
-                  r={BILLING_COUNTER_RADIUS}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-muted"
-                />
-                <circle
-                  cx="10"
-                  cy="10"
-                  r={BILLING_COUNTER_RADIUS}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeDasharray={BILLING_COUNTER_CIRCUMFERENCE}
-                  strokeDashoffset={strokeOffset}
-                  className={cn("transition-colors", {
-                    "text-primary": !showLimitState,
-                    "text-destructive": showLimitState,
-                  })}
-                />
-              </svg>
+          <div className="flex items-center justify-between gap-2 px-2">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Icon icon={Flame} size="xs" weight="L" />
+              <Text.H6 color="foregroundMuted" weight="medium">
+                Usage
+              </Text.H6>
             </span>
-            <div className="hidden items-baseline gap-1 md:flex">
+            <span className="flex items-center gap-2">
+              <span className="relative flex h-3.5 w-3.5 items-center justify-center" aria-hidden="true">
+                <svg aria-hidden="true" className="h-3.5 w-3.5 -rotate-90" viewBox="0 0 20 20">
+                  <circle
+                    cx="10"
+                    cy="10"
+                    r={BILLING_COUNTER_RADIUS}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-muted"
+                  />
+                  <circle
+                    cx="10"
+                    cy="10"
+                    r={BILLING_COUNTER_RADIUS}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={BILLING_COUNTER_CIRCUMFERENCE}
+                    strokeDashoffset={strokeOffset}
+                    className={cn("transition-colors", {
+                      "text-primary": !showLimitState,
+                      "text-destructive": showLimitState,
+                    })}
+                  />
+                </svg>
+              </span>
               <Text.H6 weight="medium" color={showLimitState ? "destructive" : "foreground"}>
                 {usageLabel}
               </Text.H6>
-            </div>
+            </span>
           </div>
         }
       >
         {tooltip}
       </Tooltip>
+      {showUpgradeCta ? (
+        <Button size="sm" className="w-full" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
+          Upgrade now
+        </Button>
+      ) : null}
     </div>
   )
 }

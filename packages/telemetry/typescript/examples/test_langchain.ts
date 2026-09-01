@@ -20,12 +20,13 @@ import { tool } from "@langchain/core/tools"
 import { ChatOpenAI } from "@langchain/openai"
 import { z } from "zod"
 import { capture, Latitude } from "../src"
+import { createLangChainInstrumentation } from "../src/instrumentations/langchain.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: { langchain: CallbackManagerModule },
+  instrumentations: [createLangChainInstrumentation(CallbackManagerModule)],
 })
 
 const PROVIDER = "langchain"

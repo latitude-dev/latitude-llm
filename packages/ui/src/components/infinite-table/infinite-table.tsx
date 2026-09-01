@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { InfoIcon } from "lucide-react"
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { cn } from "../../utils/cn.ts"
 import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import { Checkbox } from "../checkbox/checkbox.tsx"
@@ -22,6 +22,20 @@ const SELECTION_COLUMN_WIDTH = 48
 
 const EXPANDED_SKELETON_CELL_CLASS =
   "px-4 py-2 first:rounded-l-lg last:rounded-r-lg overflow-hidden align-middle text-sm leading-5"
+
+export function externalScrollMargin(input: {
+  readonly containerTop: number
+  readonly containerScrollTop: number
+  readonly wrapperTop: number
+}) {
+  const { containerTop, containerScrollTop, wrapperTop } = input
+  return wrapperTop - containerTop + containerScrollTop
+}
+
+export function distanceToTableBottom(input: { readonly containerBottom: number; readonly tableBottom: number }) {
+  const { containerBottom, tableBottom } = input
+  return tableBottom - containerBottom
+}
 
 function renderExpandedSkeletonRows<T>(
   columns: readonly InfiniteTableColumn<T>[],
@@ -88,6 +102,7 @@ export function InfiniteTable<T>({
   onSortChange,
   blankSlate,
   scrollAreaLayout = "fill",
+  scrollContainerRef: externalScrollContainerRef,
   className,
   expandedRowKeys,
   getExpandedRows,
@@ -111,8 +126,13 @@ export function InfiniteTable<T>({
 
   const totalVirtualRows = displayRows.length + (hasMore || (isLoading && data.length === 0) ? SKELETON_ROW_COUNT : 0)
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const isExternalScrollArea = scrollAreaLayout === "external"
+  const ownScrollContainerRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef =
+    isExternalScrollArea && externalScrollContainerRef ? externalScrollContainerRef : ownScrollContainerRef
+  const tableWrapperRef = useRef<HTMLDivElement>(null)
   const theadRef = useRef<HTMLTableSectionElement>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
 
   // Group headers are pinned to the visible viewport on both axes: in-flow
   // header rows get an explicit `clientWidth` + sticky-left wrapper (so they
@@ -122,6 +142,7 @@ export function InfiniteTable<T>({
   const [containerWidth, setContainerWidth] = useState(0)
   const [theadHeight, setTheadHeight] = useState(0)
   const [scrollTop, setScrollTop] = useState(0)
+  const [isHeaderCoveringRows, setIsHeaderCoveringRows] = useState(false)
 
   useLayoutEffect(() => {
     if (!hasGrouping) return
@@ -138,6 +159,35 @@ export function InfiniteTable<T>({
     if (theadRef.current) resizeObserver.observe(theadRef.current)
     return () => resizeObserver.disconnect()
   }, [hasGrouping])
+
+  useLayoutEffect(() => {
+    if (!isExternalScrollArea) return
+    const container = scrollContainerRef.current
+    const wrapper = tableWrapperRef.current
+    if (!container || !wrapper) return
+
+    const measure = () => {
+      const wrapperRect = wrapper.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      setScrollMargin(
+        externalScrollMargin({
+          wrapperTop: wrapperRect.top,
+          containerTop: containerRect.top,
+          containerScrollTop: container.scrollTop,
+        }),
+      )
+    }
+    measure()
+    const resizeObserver = new ResizeObserver(measure)
+    resizeObserver.observe(container)
+    resizeObserver.observe(wrapper)
+    const mutationObserver = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => measure())
+    mutationObserver?.observe(container, { childList: true, subtree: true })
+    return () => {
+      resizeObserver.disconnect()
+      mutationObserver?.disconnect()
+    }
+  }, [isExternalScrollArea, scrollContainerRef])
 
   const handleSortClick = useCallback(
     (sortKey: string) => {
@@ -178,23 +228,50 @@ export function InfiniteTable<T>({
       return displayRow.kind === "group" ? `group-${displayRow.groupKey}` : `row-${rowKeys[displayRow.dataIndex]}`
     },
     overscan: 10,
+    ...(isExternalScrollArea ? { scrollMargin } : {}),
   })
 
-  const handleScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      const target = e.currentTarget
+  const handleScrollElement = useCallback(
+    (target: HTMLDivElement) => {
       // Tracked in state (not read from the virtualizer) so the sticky
       // group-header overlay re-evaluates on every scroll tick, not only
       // when the virtual window shifts.
       if (hasGrouping) setScrollTop(target.scrollTop)
+      // Compare rects rather than a precomputed scroll offset: the thead is "covering"
+      // rows exactly when it's pinned flush against the container's top edge, which is
+      // true regardless of how much (if any) content sits above the table in flow.
+      const thead = theadRef.current
+      if (thead) {
+        setIsHeaderCoveringRows(thead.getBoundingClientRect().top <= target.getBoundingClientRect().top + 0.5)
+      }
       if (!infiniteScroll || !hasMore || infiniteScroll.isLoadingMore) return
-      const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
+      const distanceToBottom = isExternalScrollArea
+        ? distanceToTableBottom({
+            containerBottom: target.getBoundingClientRect().bottom,
+            tableBottom:
+              tableWrapperRef.current?.getBoundingClientRect().bottom ?? target.getBoundingClientRect().bottom,
+          })
+        : target.scrollHeight - target.scrollTop - target.clientHeight
       if (distanceToBottom < ROW_HEIGHT * 5) {
         infiniteScroll.onLoadMore()
       }
     },
-    [infiniteScroll, hasMore, hasGrouping],
+    [infiniteScroll, hasMore, hasGrouping, isExternalScrollArea],
   )
+
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => handleScrollElement(e.currentTarget),
+    [handleScrollElement],
+  )
+
+  useEffect(() => {
+    if (!isExternalScrollArea) return
+    const container = scrollContainerRef.current
+    if (!container) return
+    const listener = () => handleScrollElement(container)
+    container.addEventListener("scroll", listener, { passive: true })
+    return () => container.removeEventListener("scroll", listener)
+  }, [isExternalScrollArea, handleScrollElement, scrollContainerRef])
 
   const virtualRows = virtualizer.getVirtualItems()
 
@@ -253,9 +330,20 @@ export function InfiniteTable<T>({
     return () => cancelAnimationFrame(rafId)
   }, [activeRowAutoScroll, activeRowIndex, virtualizer])
 
-  const paddingTop = virtualRows[0]?.start ?? 0
+  // In external mode `virtualRow.start`/`.end` are measured from the scroll
+  // container's own origin, so they already bake in `scrollMargin` (the space the
+  // table's preceding in-flow siblings occupy there). The `paddingTop` spacer lives
+  // inside the table itself though, which is already positioned past that content by
+  // normal document flow — so `scrollMargin` must be subtracted back out, or that
+  // offset gets counted twice, opening a gap above the first row equal to its size.
+  const paddingTop = (virtualRows[0]?.start ?? 0) - (isExternalScrollArea ? scrollMargin : 0)
   const lastRow = virtualRows[virtualRows.length - 1]
-  const paddingBottom = lastRow ? virtualizer.getTotalSize() - lastRow.end : 0
+  // `getTotalSize()` subtracts `scrollMargin` back out internally (it describes the
+  // list's own size, not its offset within the scroll container), while `lastRow.end`
+  // still includes it — add it back so the two are comparable, mirroring `paddingTop`.
+  const paddingBottom = lastRow
+    ? virtualizer.getTotalSize() + (isExternalScrollArea ? scrollMargin : 0) - lastRow.end
+    : 0
   const showBlankSlate = !isLoading && data.length === 0
   const blankSlateContent =
     showBlankSlate && blankSlate !== undefined
@@ -269,13 +357,17 @@ export function InfiniteTable<T>({
         blankSlateContent
       ) : (
         <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          className={cn(
-            scrollAreaLayout === "fill" ? "min-h-0 flex-1" : "min-h-0 w-full max-w-full",
-            "overflow-auto",
-            className,
-          )}
+          ref={isExternalScrollArea ? tableWrapperRef : scrollContainerRef}
+          {...(isExternalScrollArea ? {} : { onScroll: handleScroll })}
+          className={
+            isExternalScrollArea
+              ? cn("w-full max-w-full", className)
+              : cn(
+                  scrollAreaLayout === "fill" ? "min-h-0 flex-1" : "min-h-0 w-full max-w-full",
+                  "overflow-auto",
+                  className,
+                )
+          }
         >
           {/* Sticky mirror of the active group's header. A zero-height sticky
               box pinned below the thead (and to the container's left edge, so
@@ -292,9 +384,16 @@ export function InfiniteTable<T>({
             ref={tableRef}
             className={cn("min-w-full border-separate border-spacing-y-1", { "table-fixed": layoutFixed })}
           >
-            <thead ref={theadRef} className="sticky top-0 z-10 border-b border-border bg-background">
+            <thead ref={theadRef} className="sticky top-0 z-10 bg-background">
               <tr>
-                {hasExpansion && <HeaderCell resizable={false} className="w-8" showSubheaderSlot={hasSubheaderRow} />}
+                {hasExpansion && (
+                  <HeaderCell
+                    resizable={false}
+                    className="w-8"
+                    showSubheaderSlot={hasSubheaderRow}
+                    bottomBorder={isHeaderCoveringRows}
+                  />
+                )}
                 {selection && (
                   <HeaderCell
                     resizable={false}
@@ -302,6 +401,7 @@ export function InfiniteTable<T>({
                     minWidth={SELECTION_COLUMN_WIDTH}
                     maxWidth={SELECTION_COLUMN_WIDTH}
                     showSubheaderSlot={hasSubheaderRow}
+                    bottomBorder={isHeaderCoveringRows}
                   >
                     <Checkbox checked={selection.headerState} onCheckedChange={() => selection.toggleAll()} />
                   </HeaderCell>
@@ -324,6 +424,7 @@ export function InfiniteTable<T>({
                       {...(col.width !== undefined ? { width: col.width } : {})}
                       {...(col.maxWidth !== undefined ? { maxWidth: col.maxWidth } : {})}
                       showSubheaderSlot={hasSubheaderRow}
+                      bottomBorder={isHeaderCoveringRows}
                       {...(hasSubheaderRow ? { subheader: col.renderSubheader?.(col, i) } : {})}
                       {...(sortDir ? { sortDirection: sortDir } : {})}
                       {...(isSortable && col.sortKey
@@ -460,17 +561,6 @@ export function InfiniteTable<T>({
                         </td>
                       </tr>
                     )}
-                  {isExpanded && expanded && !expanded.isLoading && expanded.header !== undefined && (
-                    <tr>
-                      {hasExpansion && <td className="px-2 py-2 w-8 border-none" />}
-                      {selection && (
-                        <td style={{ width: 48, minWidth: 48, maxWidth: 48 }} className="px-4 py-2 border-none" />
-                      )}
-                      <td colSpan={colCount - (hasExpansion ? 1 : 0) - (selection ? 1 : 0)} className="p-0 border-none">
-                        {expanded.header}
-                      </td>
-                    </tr>
-                  )}
                   {expanded &&
                     !expanded.isLoading &&
                     expanded.data.map((subRow) => {
@@ -511,6 +601,17 @@ export function InfiniteTable<T>({
                         />
                       )
                     })}
+                  {isExpanded && expanded && !expanded.isLoading && expanded.header !== undefined && (
+                    <tr>
+                      {hasExpansion && <td className="px-2 py-2 w-8 border-none" />}
+                      {selection && (
+                        <td style={{ width: 48, minWidth: 48, maxWidth: 48 }} className="px-4 py-2 border-none" />
+                      )}
+                      <td colSpan={colCount - (hasExpansion ? 1 : 0) - (selection ? 1 : 0)} className="p-0 border-none">
+                        {expanded.header}
+                      </td>
+                    </tr>
+                  )}
                   {isExpanded &&
                     expanded &&
                     !expanded.isLoading &&

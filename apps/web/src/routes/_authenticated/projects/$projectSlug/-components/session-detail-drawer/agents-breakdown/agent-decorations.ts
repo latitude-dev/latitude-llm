@@ -22,15 +22,19 @@ export function buildSubagentToolCalls({
   graph,
   onOpenConversation,
   previews,
+  excludeNodeId,
 }: {
   readonly graph: AgentGraph
   readonly onOpenConversation?: ((node: AgentNode) => void) | undefined
   readonly previews?: ReadonlyMap<string, SubagentPreview> | undefined
+  /** The node whose own conversation is being decorated — never links back to itself. */
+  readonly excludeNodeId?: string | undefined
 }): Map<string, SubagentToolCallInfo> {
   const out = new Map<string, SubagentToolCallInfo>()
   const ambiguous = new Set<string>()
   for (const node of graph.nodeByToolCallId.values()) {
     if (node.kind !== "subagent" || node.trigger.type !== "tool" || !node.trigger.toolCallId) continue
+    if (node.id === excludeNodeId) continue
     const toolCallId = node.trigger.toolCallId
     if (ambiguous.has(toolCallId)) continue
     if (out.has(toolCallId)) {

@@ -1,9 +1,8 @@
+import { resolveProviderName } from "@domain/models"
 import { stringAttr } from "../attributes.ts"
 import type { OtlpKeyValue } from "../types.ts"
 import type { Candidate } from "./utils.ts"
-import { first, fromString } from "./utils.ts"
-
-const VERCEL_PROVIDER_SUFFIX = /\.(chat|messages|responses|generative-ai|embed)$/
+import { attrsFromMetadata, first, fromString } from "./utils.ts"
 
 // Claude Code embeds ANSI color codes in the `model` attribute (e.g.
 // `"\x1b[32mclaude-opus-4-5\x1b[0m"`); strip them. No other source does this.
@@ -15,39 +14,6 @@ function sanitizeModelName(raw: string): string {
     .trim()
 }
 
-const PROVIDER_ALIASES: Record<string, string> = {
-  bedrock: "amazon-bedrock",
-  amazon_bedrock: "amazon-bedrock",
-  gemini: "google",
-  "google.generative-ai": "google",
-  vertexai: "google-vertex",
-  vertex_ai: "google-vertex",
-  google_vertex: "google-vertex",
-  "google.vertex": "google-vertex",
-  anthropic_vertex: "google-vertex-anthropic",
-  mistralai: "mistral",
-  mistral_ai: "mistral",
-  together_ai: "togetherai",
-  fireworks_ai: "fireworks-ai",
-  workersai: "cloudflare-workers-ai",
-  "workersai.chat": "cloudflare-workers-ai",
-  // OTel GenAI well-known names from Vercel AI SDK v7's @ai-sdk/otel.
-  "gcp.vertex_ai": "google-vertex",
-  "gcp.gemini": "google",
-  "aws.bedrock": "amazon-bedrock",
-  "azure.ai.openai": "azure",
-  "azure.ai.inference": "azure",
-  x_ai: "xai",
-  "gcp.vertex.agent": "google-vertex", // Google ADK generate_content leaves
-}
-
-// Case-fold before alias lookup so non-canonical casings (`Google`, `OpenAI`) resolve to
-// the same canonical key. Alias keys are lowercase.
-const aliasProvider = (v: string) => {
-  const lower = v.toLowerCase()
-  return PROVIDER_ALIASES[lower] ?? lower
-}
-
 // OpenInference's LangChain instrumentation nests the provider in a JSON `metadata` attribute as
 // LangSmith's `ls_provider` (e.g. "openai") rather than emitting llm.system / llm.provider.
 function providerFromOpenInferenceMetadata(attrs: readonly OtlpKeyValue[]): string | undefined {
@@ -55,21 +21,41 @@ function providerFromOpenInferenceMetadata(attrs: readonly OtlpKeyValue[]): stri
   if (!raw) return undefined
   try {
     const meta = JSON.parse(raw) as { ls_provider?: unknown }
-    return typeof meta.ls_provider === "string" ? aliasProvider(meta.ls_provider) : undefined
+    return typeof meta.ls_provider === "string" ? resolveProviderName(meta.ls_provider) : undefined
   } catch {
     return undefined
   }
 }
 
 const providerCandidates: Candidate<string>[] = [
-  fromString("gen_ai.provider.name", aliasProvider), // OTEL GenAI v1.37+
-  fromString("gen_ai.system", aliasProvider), // OTEL GenAI v1.36 deprecated
-  fromString("llm.system", aliasProvider), // OpenInference / Arize Phoenix
-  fromString("llm.provider", aliasProvider), // OpenInference (DSPy, LiteLLM) — no llm.system
+  fromString("gen_ai.provider.name", resolveProviderName), // OTEL GenAI v1.37+
+  fromString("gen_ai.model.provider", resolveProviderName), // Cloudflare AI Gateway OTEL export
+  fromString("gen_ai.system", resolveProviderName), // OTEL GenAI v1.36 deprecated
+  fromString("llm.system", resolveProviderName), // OpenInference / Arize Phoenix
+  fromString("llm.provider", resolveProviderName), // OpenInference (DSPy, LiteLLM) — no llm.system
   { resolve: (attrs) => providerFromOpenInferenceMetadata(attrs) }, // OpenInference LangChain (LangSmith metadata)
-  fromString("ai.model.provider", (v) => aliasProvider(v.replace(VERCEL_PROVIDER_SUFFIX, ""))), // Vercel AI SDK
-  { resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined) }, // Claude Code
+  fromString("ai.model.provider", resolveProviderName), // Vercel AI SDK
+  {
+    resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined),
+  }, // Claude Code
 ]
+
+/**
+ * The provider named somewhere in a source's own metadata map, resolved by the same candidates as a
+ * live span's attributes.
+ */
+export function resolveProviderFromMetadata(metadata: Record<string, unknown> | null | undefined): string {
+  const attrs = attrsFromMetadata(metadata)
+
+  const fromAttributes = first(providerCandidates, attrs)
+  if (fromAttributes) return fromAttributes
+
+  // Two names that are not OTEL attributes, so they are not candidates above. `ls_provider` is
+  // LangChain's own run metadata, which reaches here as a flat key because the adapters flatten a
+  // vendor's metadata map; `provider` is whatever a source chose to call it.
+  const fromMetadataNames = stringAttr(attrs, "ls_provider") || stringAttr(attrs, "provider")
+  return fromMetadataNames ? resolveProviderName(fromMetadataNames) : ""
+}
 
 function anthropicProviderFromClaudeCodeSpanName(spanName: string): string | undefined {
   if (!spanName.startsWith("claude_code.llm_request")) return undefined
@@ -150,3 +136,43 @@ export const userEmailCandidates = [
   fromString("enduser.email"), // OTEL enduser semconv
   fromString("langfuse.user.email"), // Langfuse
 ]
+
+/**
+ * The model named somewhere in a source's own metadata map.
+ *
+ * The candidates run first, which is also what strips the ANSI escape codes Claude Code wraps a model
+ * name in. `sourceKeys` carries the names only that source uses — LangChain's `ls_model_name`, say —
+ * and are read after, since they are not OTEL attributes.
+ */
+export function resolveModelFromMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+  sourceKeys: readonly string[] = [],
+): string {
+  const attrs = attrsFromMetadata(metadata)
+  const fromCandidates = first(modelCandidates, attrs)
+  if (fromCandidates) return fromCandidates
+
+  for (const key of sourceKeys) {
+    const value = stringAttr(attrs, key)
+    if (value) return value
+  }
+  return ""
+}
+
+/**
+ * The end user's email named somewhere in a source's own metadata map.
+ *
+ * The candidates run first — `langfuse.user.email` above all, since a Langfuse import is exactly where
+ * that key turns up — then the three plain names a caller writes by hand, which are not OTEL attributes
+ * and so are not candidates.
+ */
+export function resolveUserEmailFromMetadata(metadata: Record<string, unknown> | null | undefined): string {
+  const attrs = attrsFromMetadata(metadata)
+  return (
+    first(userEmailCandidates, attrs) ??
+    stringAttr(attrs, "user_email") ??
+    stringAttr(attrs, "userEmail") ??
+    stringAttr(attrs, "email") ??
+    ""
+  )
+}

@@ -5,7 +5,7 @@ Multi-tenant Slack OAuth + notification routing. One Latitude organization ↔ o
 ## What ships in v1
 
 - Per-org connect / disconnect flow under **Settings → Integrations** (`apps/web/src/routes/_authenticated/projects/$projectSlug/settings/integrations.tsx`). Phase 2.
-- Operator-configured channel routing per `NotificationGroup` (incidents, wrapped reports, custom messages). Phase 3.
+- Operator-configured channel routing per `NotificationGroup` (signals, monitors, wrapped reports, custom messages), each with an optional minimum severity and per-topic switches. Phase 3.
 - Worker fan-out: existing notification producers also publish `notification-slack:send` jobs per configured channel. The Slack worker renders + posts via `chat.postMessage`. Phase 3.
 
 What is **not** in v1: token refresh on rotation (Phase 4) and `@latitude` bot mentions (Phase 5).
@@ -33,11 +33,16 @@ The cross-org claim ("one workspace, one Latitude org") is enforced by a partial
 ### `routes` shape
 
 ```ts
-type SlackRoute = { channelId: string; channelName: string }
+type SlackRoute = {
+  channelId: string
+  channelName: string
+  minSeverity?: AlertSeverity
+  topics?: Partial<Record<NotificationTopic, boolean>>
+}
 type SlackRoutes = Partial<Record<NotificationGroup, SlackRoute[]>>
 ```
 
-Updated per-group with `jsonb_set` so concurrent writes to different groups don't clobber each other. `channelName` is a best-effort label cached at configure-time; `channelId` is the source of truth.
+Updated per-group with `jsonb_set` so concurrent writes to different groups don't clobber each other. `channelName` is a best-effort label cached at configure-time; `channelId` is the source of truth. `minSeverity` and `topics` are the delivery filters the worker applies before posting (`routeAdmitsPayload` + `admitsTopic`); both absent means everything in the group reaches the channel. The route schema is defined once in `@domain/integrations` and reused by the server fn that writes it — a copy would silently drop new fields, since Zod strips unknown keys.
 
 ### Idempotency ledger
 

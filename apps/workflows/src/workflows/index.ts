@@ -6,7 +6,14 @@ export {
 export { publishAnnotationWorkflow } from "./annotation-publication-workflow.ts"
 export { assignScoreToKnownSignalWorkflow } from "./assign-score-to-known-signal-workflow.ts"
 export { type BillingOverageWorkflowInput, billingOverageWorkflow } from "./billing-overage-workflow.ts"
-export { flaggerWorkflow } from "./flagger-workflow.ts"
+export {
+  type FlaggerClassificationWorkflowInput,
+  flaggerClassificationWorkflow,
+} from "./flagger-classification-workflow.ts"
+export {
+  type FlaggerScreeningWorkflowInput,
+  flaggerScreeningWorkflow,
+} from "./flagger-screening-workflow.ts"
 export {
   type OptimizeEvaluationWorkflowResult,
   optimizeEvaluationWorkflow,

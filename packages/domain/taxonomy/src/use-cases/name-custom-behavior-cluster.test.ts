@@ -20,10 +20,10 @@ import {
   TaxonomyObservationAssignmentMethod,
   TaxonomyProjectionMethod,
 } from "../entities/observation.ts"
-import { CustomBehaviorAssignmentRepository } from "../ports/custom-behavior-assignment-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { createFakeCustomBehaviorAssignmentRepository } from "../testing/fake-custom-behavior-assignment-repository.ts"
+import { TaxonomyViewAssignmentRepository } from "../ports/taxonomy-view-assignment-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
+import { createFakeTaxonomyViewAssignmentRepository } from "../testing/fake-taxonomy-view-assignment-repository.ts"
 import { nameCustomBehaviorClusterUseCase } from "./name-custom-behavior-cluster.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -37,6 +37,7 @@ const cluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => (
   organizationId,
   projectId,
   customBehaviorId,
+  facetId: null,
   dimension: "topic",
   parentClusterId: null,
   depth: 0,
@@ -90,11 +91,11 @@ const runNameCluster = (input: {
   readonly generate: <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>>
 }) => {
   const clusters = createFakeTaxonomyClusterRepository([input.seedCluster ?? cluster()])
-  const assignments = createFakeCustomBehaviorAssignmentRepository({ [clusterId]: input.members })
+  const assignments = createFakeTaxonomyViewAssignmentRepository({ [clusterId]: input.members })
   const ai = createFakeAI({ generate: input.generate })
   const effect = nameCustomBehaviorClusterUseCase({ organizationId, projectId, customBehaviorId, clusterId, now }).pipe(
     Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-    Effect.provide(Layer.succeed(CustomBehaviorAssignmentRepository, assignments.repository)),
+    Effect.provide(Layer.succeed(TaxonomyViewAssignmentRepository, assignments.repository)),
     Effect.provide(ai.layer),
     Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
     Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),

@@ -1,0 +1,39 @@
+name: Publish Prime Intellect Telemetry
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Publish
+        uses: ./.github/actions/publish-pypi-package
+        with:
+          package_path: packages/telemetry/prime-intellect
+          pypi_package: latitude-telemetry-prime-intellect
+          tag_prefix: prime-intellect-telemetry
+          release_name: Prime Intellect Telemetry
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
+          target_commitish: ${{ inputs.ref || github.sha }}

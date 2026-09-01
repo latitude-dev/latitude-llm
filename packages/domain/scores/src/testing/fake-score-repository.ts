@@ -34,6 +34,29 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
       })
       return Effect.succeed(true)
     },
+    reassignSignal: ({ projectId, fromSignalIds, toSignalId, updatedAt }) => {
+      const from = new Set<string>(fromSignalIds)
+      const moving = [...scores.values()].filter(
+        (score) => score.projectId === projectId && score.signalId !== null && from.has(score.signalId),
+      )
+      for (const score of moving) {
+        scores.set(score.id, { ...score, signalId: toSignalId, updatedAt })
+      }
+      const earliest = moving.reduce<Date | null>(
+        (oldest, score) => (oldest === null || score.createdAt < oldest ? score.createdAt : oldest),
+        null,
+      )
+      return Effect.succeed({ count: moving.length, earliestCreatedAt: earliest })
+    },
+    findEarliestCreatedAtBySignalId: ({ projectId, signalId }) =>
+      Effect.succeed(
+        [...scores.values()]
+          .filter((score) => score.projectId === projectId && score.signalId === signalId)
+          .reduce<Date | null>(
+            (oldest, score) => (oldest === null || score.createdAt < oldest ? score.createdAt : oldest),
+            null,
+          ),
+      ),
     delete: (id: ScoreId) => {
       scores.delete(id)
       return Effect.void
@@ -52,14 +75,14 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
           return score.traceId === traceId
         }),
       ),
-    existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
+    findByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
       Effect.succeed(
-        [...scores.values()].some(
+        [...scores.values()].find(
           (score) =>
             score.projectId === projectId &&
             isCanonicalEvaluationScore(score, evaluationId) &&
             score.traceId === traceId,
-        ),
+        ) ?? null,
       ),
     listByProjectId: () => Effect.succeed(EMPTY_PAGE),
     listBySourceId: () => Effect.succeed(EMPTY_PAGE),
@@ -69,6 +92,22 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     listBySessionId: () => Effect.succeed(EMPTY_PAGE),
     listBySpanId: () => Effect.succeed(EMPTY_PAGE),
     listBySignalId: () => Effect.succeed(EMPTY_PAGE),
+    countDistinctSessionsBySignalId: ({ projectId, signalId, since }) =>
+      Effect.succeed(
+        new Set(
+          [...scores.values()]
+            .filter(
+              (score) =>
+                score.projectId === projectId &&
+                score.signalId === signalId &&
+                score.draftedAt === null &&
+                score.createdAt.getTime() >= since.getTime(),
+            )
+            // `||`, not `??`: the SQL side treats an empty id as absent (`nullif`), so a
+            // fake that kept `""` as a key would count unrelated scores as one session.
+            .map((score) => score.sessionId || score.traceId || score.id),
+        ).size,
+      ),
     findPublishedSystemAnnotationByTraceAndFeedback: ({ projectId, traceId, feedback }) =>
       Effect.succeed(
         [...scores.values()].find(
@@ -80,6 +119,19 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
             score.feedback === feedback &&
             score.draftedAt === null,
         ) ?? null,
+      ),
+    listPublishedSystemAnnotationsBySession: ({ projectId, sessionId, limit = 200 }) =>
+      Effect.succeed(
+        [...scores.values()]
+          .filter(
+            (score) =>
+              score.projectId === projectId &&
+              score.sourceType === "annotation" &&
+              score.sourceId === "SYSTEM" &&
+              score.sessionId === sessionId &&
+              score.draftedAt === null,
+          )
+          .slice(0, limit),
       ),
     listFlaggerSlugsBySignalId: ({ projectId, signalId }) =>
       Effect.succeed(

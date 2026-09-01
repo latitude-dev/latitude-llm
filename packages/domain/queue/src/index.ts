@@ -98,6 +98,23 @@ export class WorkflowQuerier extends Context.Service<WorkflowQuerier, WorkflowQu
 ) {}
 
 /**
+ * Hard-stops a running workflow by id, discarding whatever it was doing. Use it
+ * when the work itself became invalid (the record it gardens is being deleted),
+ * not to shut a workflow down gracefully.
+ *
+ * `terminate` is best-effort by contract: a workflow that is missing, already
+ * closed, or GC'd counts as stopped and succeeds, so callers can terminate
+ * without first querying whether the run is alive.
+ */
+export interface WorkflowTerminatorShape {
+  readonly terminate: (workflowId: string, reason?: string) => Effect.Effect<void>
+}
+
+export class WorkflowTerminator extends Context.Service<WorkflowTerminator, WorkflowTerminatorShape>()(
+  "@domain/queue/WorkflowTerminator",
+) {}
+
+/**
  * Whether the workflow with `workflowId` is still live — it exists and hasn't
  * reached a terminal status. A missing workflow (never durably started, or
  * already GC'd) counts as not alive.
@@ -158,6 +175,15 @@ export interface PublishOptions {
    * Requires `dedupeKey`. Mutually exclusive with `debounceMs`, `throttleMs` and `latestThrottleMs`.
    */
   readonly leadingThrottleMs?: number
+  /**
+   * Fixed one-shot delay in ms before the job becomes eligible to run. Unlike
+   * the coalescing options above it applies no dedupe/replace semantics — it
+   * only defers a single publish. Combine with `dedupeKey` to get a deferred
+   * job that is still idempotent by job id (the GitHub push grace delay, 5.9).
+   *
+   * Mutually exclusive with `debounceMs`, `throttleMs`, `latestThrottleMs` and `leadingThrottleMs`.
+   */
+  readonly delayMs?: number
   /**
    * Total attempts BullMQ should make before the job is considered failed
    * (inclusive of the first try). Set alongside `backoff` to get bounded

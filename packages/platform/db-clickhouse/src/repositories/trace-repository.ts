@@ -44,6 +44,7 @@ import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
+import { MESSAGE_OPERATION_FILTER, SYSTEM_INSTRUCTION_OPERATION_FILTER } from "../registries/helpers.ts"
 import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { isActiveSearch, planSearch } from "./search-plan.ts"
@@ -74,6 +75,7 @@ export const LIST_SELECT = `
   sum(cost_input_microcents)   AS cost_input_microcents,
   sum(cost_output_microcents)  AS cost_output_microcents,
   sum(cost_total_microcents)   AS cost_total_microcents,
+  sum(unpriced_span_count)     AS unpriced_span_count,
   argMaxIfMerge(session_id)    AS session_id,
   argMaxIfMerge(user_id)       AS user_id,
   argMaxIfMerge(user_email)    AS user_email,
@@ -89,10 +91,6 @@ export const LIST_SELECT = `
   argMinIfMerge(root_span_id)   AS root_span_id,
   argMinIfMerge(root_span_name) AS root_span_name
 `
-
-const MESSAGE_OPERATION_FILTER = "operation IN ('chat', 'text_completion', 'generate_content')"
-const SYSTEM_INSTRUCTION_OPERATION_FILTER =
-  "operation IN ('chat', 'text_completion', 'generate_content', 'invoke_agent')"
 
 const SPAN_MESSAGES_SELECT = `
   trace_id,
@@ -148,6 +146,7 @@ type TraceListRow = {
   cost_input_microcents: string
   cost_output_microcents: string
   cost_total_microcents: string
+  unpriced_span_count: string
   session_id: string
   user_id: string
   user_email: string
@@ -263,6 +262,7 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   costInputMicrocents: Number(row.cost_input_microcents),
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
+  unpricedSpanCount: Number(row.unpriced_span_count),
   sessionId: SessionId(normalizeCHString(row.session_id)),
   userId: ExternalUserId(normalizeCHString(row.user_id)),
   userEmail: normalizeCHString(row.user_email),

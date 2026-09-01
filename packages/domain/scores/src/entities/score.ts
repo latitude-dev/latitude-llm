@@ -32,6 +32,7 @@ const annotationAnchorFields = {
   startOffset: z.number().int().nonnegative().optional(), // optional start offset for substring annotations within a textual part
   endOffset: z.number().int().nonnegative().optional(), // optional end offset for substring annotations within a textual part
   textFormat: z.enum(ANNOTATION_ANCHOR_TEXT_FORMATS).optional(), // optional UI-side text transform applied before the offsets were captured (e.g. prettified JSON); resolvers must apply the same transform before slicing
+  contentHash: z.string().optional(), // hash of the anchored message's content; flagger dedup key per (session, flaggerSlug) that survives compaction renumbering (flagger rows only)
 } as const
 
 function validateAnnotationAnchor(anchor: AnnotationAnchorInput, ctx: z.core.$RefinementCtx<unknown>) {
@@ -91,6 +92,7 @@ export const annotationScoreMetadataSchema = baseScoreMetadataSchema
   .extend({
     rawFeedback: z.string(), // original feedback text before enrichment; human-authored for human drafts/published annotations, model-authored for system-created drafts
     flaggerSlug: z.string().optional(), // slug of the automatic flagger that authored this annotation (only set for flagger-created `sourceId: "SYSTEM"` rows); lets the UI name the flagger and link to its project settings
+    flaggerTraceId: z.string().optional(), // Latitude trace of the flagger generation that produced this annotation (flagger rows only, and only when the decision came from a captured LLM call); the way back from a detection to the decision behind it
     ...annotationAnchorFields,
   })
   .superRefine(validateAnnotationAnchor)

@@ -71,6 +71,7 @@ Latitude includes dedicated instrumentation for the OpenAI Agents SDK, so agent 
     <Tabs>
       <Tab title="TypeScript">
         ```ts
+        import { createOpenAIAgentsInstrumentation } from "@latitude-data/telemetry/instrumentations/openai-agents"
         import { Latitude, capture } from "@latitude-data/telemetry"
         import { Agent, run, tool } from "@openai/agents"
         import * as OpenAIAgentsSDK from "@openai/agents"
@@ -79,10 +80,10 @@ Latitude includes dedicated instrumentation for the OpenAI Agents SDK, so agent 
         const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           project: process.env.LATITUDE_PROJECT_SLUG!,
-          instrumentations: { "openai-agents": OpenAIAgentsSDK },
+          instrumentations: [createOpenAIAgentsInstrumentation(OpenAIAgentsSDK)],
         })
 
-
+        await latitude.ready
         const getWeather = tool({
           name: "get_weather",
           description: "Returns the current weather for a city.",

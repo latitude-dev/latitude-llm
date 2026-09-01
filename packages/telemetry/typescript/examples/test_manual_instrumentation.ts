@@ -18,11 +18,12 @@ import { randomUUID } from "node:crypto"
 import { trace } from "@opentelemetry/api"
 import OpenAI from "openai"
 import { capture, Latitude } from "../src"
+import { createOpenAIInstrumentation } from "../src/instrumentations/openai.ts"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
   disableBatch: true,
 })
 
@@ -127,11 +128,7 @@ async function manualSpansWithToolConversation() {
 async function main() {
   await latitude.ready
 
-  const result = await capture(
-    "manual-instrumentation-tools",
-    manualSpansWithToolConversation,
-    ctx("tools", "tools"),
-  )
+  const result = await capture("manual-instrumentation-tools", manualSpansWithToolConversation, ctx("tools", "tools"))
   console.log(`Result: ${result}`)
   console.log("Expected spans: pipeline.prepare, execute_tool get_weather, pipeline.format + 2 openai LLM spans")
 

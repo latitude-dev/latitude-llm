@@ -1,5 +1,6 @@
 import { createEvaluationUseCase, type EvaluationRepository } from "@domain/evaluations"
 import { OutboxEventWriter } from "@domain/events"
+import { ProjectRepository } from "@domain/projects"
 import type { ScriptCompileError, ScriptRuntime } from "@domain/sandbox"
 import {
   type BadRequestError,
@@ -8,7 +9,7 @@ import {
   evaluationDraftSchema,
   filterSetSchema,
   generateId,
-  generateSlug,
+  type NotFoundError,
   ProjectId,
   type RepositoryError,
   SqlClient,
@@ -18,6 +19,7 @@ import { z } from "zod"
 import { SIGNAL_NAME_MAX_LENGTH } from "../constants.ts"
 import { signalPrioritySchema, signalSchema } from "../entities/signal.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
+import { generateSignalSlug, type SignalSlugGenerationError } from "../slug.ts"
 
 const createSignalInputSchema = z.object({
   organizationId: cuidSchema,
@@ -40,7 +42,13 @@ export interface CreateSignalResult {
   readonly evaluationId: string
 }
 
-export type CreateSignalError = BadRequestError | ScriptCompileError | ConcurrentSqlTransactionError | RepositoryError
+export type CreateSignalError =
+  | BadRequestError
+  | ScriptCompileError
+  | ConcurrentSqlTransactionError
+  | RepositoryError
+  | NotFoundError
+  | SignalSlugGenerationError
 
 export const createSignalUseCase = (input: CreateSignalInput) =>
   Effect.gen(function* () {
@@ -53,10 +61,12 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
       Effect.gen(function* () {
         const signalRepository = yield* SignalRepository
         const outboxEventWriter = yield* OutboxEventWriter
+        const projectRepository = yield* ProjectRepository
 
-        const slug = yield* generateSlug({
-          name: parsed.name,
-          count: (slug) => signalRepository.countBySlug({ projectId: parsed.projectId, slug }),
+        const project = yield* projectRepository.findById(parsed.projectId)
+        const slug = yield* generateSignalSlug({
+          projectSlug: project.slug,
+          count: (slug) => signalRepository.countBySlug({ slug }),
         })
 
         const signal = signalSchema.parse({
@@ -74,7 +84,13 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           priority: parsed.priority ?? null,
           centroid: null,
           clusteredAt: null,
+          // A signal somebody built deliberately needs no evidence to be real.
+          promotedAt: now,
+          resolvedAt: null,
+          ignoredAt: null,
+          regressedAt: null,
           mutedAt: null,
+          feedback: null,
           deletedAt: null,
           createdAt: now,
           updatedAt: now,
@@ -113,5 +129,5 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
   }).pipe(Effect.withSpan("signals.createSignal")) as Effect.Effect<
     CreateSignalResult,
     CreateSignalError,
-    SignalRepository | EvaluationRepository | OutboxEventWriter | ScriptRuntime | SqlClient
+    SignalRepository | EvaluationRepository | OutboxEventWriter | ProjectRepository | ScriptRuntime | SqlClient
   >

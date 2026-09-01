@@ -2,7 +2,8 @@ import { CodeBlock, DetailSection, DetailSummary, Text } from "@repo/ui"
 import { DatabaseIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
-import { isMemoryOperation } from "../memory-operations.ts"
+import { SpanRecordChangeDiff } from "../../../../memory-changes/span-record-change-diff.tsx"
+import { isMemoryOperation, isMutatingMemoryOperation } from "../memory-operations.ts"
 import { MemoryRecordsView } from "./memory-records.tsx"
 import { parseMemoryRecords } from "./memory-records-parse.ts"
 
@@ -38,6 +39,7 @@ export function MemoryOperationSection({ span }: { readonly span: SpanDetailReco
   const recordsRaw = span.attrString[RECORDS_ATTR] ?? ""
   const records = parseMemoryRecords(recordsRaw)
   const isSearch = span.operation === "search_memory"
+  const isMutating = isMutatingMemoryOperation(span.operation)
   const recordsLabel = isSearch ? "Results" : "Records"
 
   // Store and count ride the records header; the identity fields only surface as
@@ -65,7 +67,31 @@ export function MemoryOperationSection({ span }: { readonly span: SpanDetailReco
         )}
         <Subsection label={recordsLabel}>
           {records ? (
-            <MemoryRecordsView records={records} isSearch={isSearch} {...(storeId ? { storeId } : {})} />
+            <MemoryRecordsView
+              records={records}
+              isSearch={isSearch}
+              projectId={span.projectId}
+              spanId={span.spanId}
+              diffable={isMutating}
+              {...(storeId ? { storeId } : {})}
+              {...(recordId ? { fallbackRecordId: recordId } : {})}
+            />
+          ) : isMutating && recordId ? (
+            <div className="h-72 overflow-hidden rounded-md border border-border">
+              <SpanRecordChangeDiff
+                projectId={span.projectId}
+                spanId={span.spanId}
+                storeId={storeId ?? ""}
+                recordId={recordId}
+                fallback={
+                  recordsRaw ? (
+                    <CodeBlock value={recordsRaw} className="bg-secondary" />
+                  ) : (
+                    <Text.H6 color="foregroundMuted">Content not captured</Text.H6>
+                  )
+                }
+              />
+            </div>
           ) : recordsRaw ? (
             <CodeBlock value={recordsRaw} className="bg-secondary" />
           ) : (

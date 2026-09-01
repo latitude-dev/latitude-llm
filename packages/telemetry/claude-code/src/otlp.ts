@@ -1,10 +1,14 @@
 import { createHash } from "node:crypto"
 import { arch, hostname, platform, release } from "node:os"
+import { classifyMemoryTool } from "./memory.ts"
 import { type RedactConfig, redactAttributes } from "./redaction.ts"
 import type { AnthropicMessage, AnthropicMessageBlock, AnthropicSystem, StoredRequest } from "./request-store.ts"
 import type {
   AgentSpanLink,
   AssistantCall,
+  InheritedSpanContext,
+  MemoryEmitOptions,
+  MemoryOp,
   OtlpExportRequest,
   OtlpKeyValue,
   OtlpResourceSpans,
@@ -33,6 +37,7 @@ const SYSTEM_CAP = 16 * 1024
 const TOOL_DEFS_CAP = 16 * 1024
 const TOOL_ARGS_CAP = 16 * 1024
 const USER_PROMPT_CAP = 64 * 1024
+const MEMORY_RECORDS_CAP = 64 * 1024
 // Each POST is kept under this size so it completes well inside the client
 // timeout even on modest uplinks; one logical trace may span several POSTs
 // (the server groups spans by trace_id, so splitting is transparent).
@@ -40,9 +45,17 @@ const POST_BYTE_BUDGET = 3 * 1024 * 1024
 
 export function buildOtlpRequest(opts: {
   sessionId: string
+  // Claude's own session id, which is unique per process. `sessionId` may be an
+  // inherited one that the parent handed to several children, so span-id salting on
+  // an inherited trace uses this instead — two children of one Hermes run share
+  // trace id, session id and turn number, and would otherwise mint identical ids.
+  localSessionId?: string | undefined
   userId?: string | undefined
   turnStartNumber: number
   turns: Turn[]
+  // Set when a parent harness handed us a W3C traceparent: every turn joins that
+  // trace under `parentSpanId` instead of minting a trace of its own.
+  inherited?: InheritedSpanContext | undefined
   context?: TraceContext | undefined
   conversationHistory?: Turn[] | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
@@ -50,6 +63,7 @@ export function buildOtlpRequest(opts: {
   // Out-param: populated with one link per parent Agent tool call emitted, so the
   // caller can (re-)attach subagent spans under it on later turns.
   agentLinks?: AgentSpanLink[]
+  memory?: MemoryEmitOptions | undefined
 }): OtlpExportRequest {
   const contextAttrs = buildContextAttrs(opts.context)
   const history = opts.conversationHistory ?? []
@@ -61,6 +75,7 @@ export function buildOtlpRequest(opts: {
     spans.push(
       ...buildTurnSpans(
         opts.sessionId,
+        opts.localSessionId ?? opts.sessionId,
         opts.userId,
         turnNum,
         turn,
@@ -68,6 +83,8 @@ export function buildOtlpRequest(opts: {
         priorTurns,
         requestsByMessageId,
         opts.agentLinks,
+        opts.memory,
+        opts.inherited,
       ),
     )
   })
@@ -93,6 +110,7 @@ function redactSpan(span: OtlpSpan, redact: RedactConfig): OtlpSpan {
 
 function buildTurnSpans(
   sessionId: string,
+  localSessionId: string,
   userId: string | undefined,
   turnNum: number,
   turn: Turn,
@@ -100,14 +118,22 @@ function buildTurnSpans(
   priorTurns: Turn[],
   requestsByMessageId: Map<string, StoredRequest>,
   agentLinks: AgentSpanLink[] | undefined,
+  memory: MemoryEmitOptions | undefined,
+  inherited: InheritedSpanContext | undefined,
 ): OtlpSpan[] {
-  const traceId = hashHex(`${sessionId}:${turnNum}`, 32)
-  const turnSpanId = hashHex(`${traceId}:turn`, 16)
+  const traceId = inherited?.traceId ?? hashHex(`${sessionId}:${turnNum}`, 32)
+  // An owned trace id is already per-turn, so "turn"/"gen" are unique salts within it.
+  // An inherited one is shared by every turn of the session — and by every sibling
+  // process the same parent launched — so the local session id and the turn number
+  // have to move into the salt, or turn 2's call 0 collides with turn 1's and one
+  // child's turn 1 collides with its sibling's.
+  const idScope = inherited ? `${localSessionId}:${turnNum}` : ""
+  const turnSpanId = hashHex(`${traceId}:turn${idScope && `:${idScope}`}`, 16)
   const out: OtlpSpan[] = []
   buildInteractionTree(out, {
     traceId,
     turnSpanId,
-    parentSpanId: "",
+    parentSpanId: inherited?.parentSpanId ?? "",
     sessionId,
     userId,
     turn,
@@ -115,12 +141,13 @@ function buildTurnSpans(
     subagentLabel: undefined,
     subagentName: undefined,
     turnNum,
-    interactionIdSalt: "turn",
-    genIdSalt: "gen",
+    interactionIdSalt: idScope ? `turn:${idScope}` : "turn",
+    genIdSalt: idScope ? `gen:${idScope}` : "gen",
     contextAttrs,
     priorTurns,
     requestsByMessageId,
     agentLinks,
+    memory,
   })
   return out
 }
@@ -142,6 +169,7 @@ interface TreeCtx {
   priorTurns: Turn[]
   requestsByMessageId: Map<string, StoredRequest>
   agentLinks: AgentSpanLink[] | undefined
+  memory: MemoryEmitOptions | undefined
   // Emission window (subagent incremental re-emission). Defaults emit everything.
   emitInteraction?: boolean
   callFrom?: number
@@ -294,6 +322,15 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
     // interaction so the timeline reads as: llm_request → tool → llm_request → tool → ...
     out.push(buildToolSpan(traceId, ctx.turnSpanId, toolSpanId, sessionId, userId, tool, ctx.contextAttrs))
 
+    // A successful file op inside the auto-memory dir gets a child memory span for the ledger.
+    if (ctx.memory && !tool.isError) {
+      const op = classifyMemoryTool(tool, ctx.memory)
+      if (op) {
+        const memSpanId = hashHex(`${traceId}:${callSalt}:tool:${idx}:${tool.id}:mem`, 16)
+        out.push(buildMemorySpan(traceId, toolSpanId, memSpanId, sessionId, userId, tool, op, ctx.contextAttrs))
+      }
+    }
+
     if (!isSubagent && tool.name === "Agent") {
       ctx.agentLinks?.push({ toolUseId: tool.id, promptId: tool.promptId, traceId, parentSpanId: toolSpanId })
     }
@@ -307,6 +344,7 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         userId,
         subagent: tool.subagent,
         contextAttrs: ctx.contextAttrs,
+        memory: ctx.memory,
         requestsByMessageId: ctx.requestsByMessageId,
         emitInteraction: true,
         fromCall: 0,
@@ -324,6 +362,7 @@ interface SubagentTreeCtx {
   subagent: SubagentInvocation
   contextAttrs: OtlpKeyValue[]
   requestsByMessageId: Map<string, StoredRequest>
+  memory: MemoryEmitOptions | undefined
   // Emission window over the subagent's calls, flattened across its turns. The
   // interaction span is emitted only when emitInteraction is set. Defaults emit all.
   emitInteraction: boolean
@@ -361,6 +400,7 @@ function emitSubagentTree(out: OtlpSpan[], ctx: SubagentTreeCtx): void {
       priorTurns: subagent.turns.slice(0, subIdx),
       requestsByMessageId: ctx.requestsByMessageId,
       agentLinks: undefined,
+      memory: ctx.memory,
       emitInteraction: ctx.emitInteraction,
       callFrom: Math.max(0, ctx.fromCall - globalIdx),
       callTo: Math.min(count, ctx.toCall - globalIdx),
@@ -386,6 +426,7 @@ export function buildSubagentSpans(opts: {
   context?: TraceContext | undefined
   requestsByMessageId?: Map<string, StoredRequest> | undefined
   redact?: RedactConfig | undefined
+  memory?: MemoryEmitOptions | undefined
 }): OtlpSpan[] {
   const out: OtlpSpan[] = []
   const totalCalls = opts.subagent.turns.reduce((sum, t) => sum + t.calls.length, 0)
@@ -397,6 +438,7 @@ export function buildSubagentSpans(opts: {
     subagent: opts.subagent,
     contextAttrs: buildContextAttrs(opts.context),
     requestsByMessageId: opts.requestsByMessageId ?? new Map<string, StoredRequest>(),
+    memory: opts.memory,
     emitInteraction: opts.emitInteraction ?? true,
     fromCall: opts.fromCall ?? 0,
     toCall: opts.toCall ?? totalCalls,
@@ -461,6 +503,42 @@ function buildToolSpan(
       ...contextAttrs,
     ]),
     status: { code: call.isError ? 2 : 1 },
+  }
+}
+
+// Child of the tool span, matching the SDK memory helper's gen_ai.memory.* shape.
+function buildMemorySpan(
+  traceId: string,
+  parentSpanId: string,
+  spanId: string,
+  sessionId: string,
+  userId: string | undefined,
+  tool: ToolCall,
+  op: MemoryOp,
+  contextAttrs: OtlpKeyValue[],
+): OtlpSpan {
+  // Cap the body, not the serialized array, so the attribute stays valid JSON for the materializer.
+  const body = op.body !== undefined ? clamp(op.body, MEMORY_RECORDS_CAP) : undefined
+  const recordsJson = body !== undefined ? safeJson([{ id: op.recordId, content: body }]) : undefined
+  return {
+    traceId,
+    spanId,
+    parentSpanId,
+    name: op.operation,
+    kind: 3,
+    startTimeUnixNano: msToNs(tool.startMs),
+    endTimeUnixNano: msToNs(tool.endMs),
+    attributes: stripUndef([
+      str("gen_ai.operation.name", op.operation),
+      str("gen_ai.memory.store.id", op.storeId),
+      str("gen_ai.memory.record.id", op.recordId),
+      int("gen_ai.memory.record.count", op.count),
+      recordsJson !== undefined ? str("gen_ai.memory.records", recordsJson) : undefined,
+      str("session.id", sessionId),
+      userId ? str("user.id", userId) : undefined,
+      ...contextAttrs,
+    ]),
+    status: { code: 1 },
   }
 }
 
@@ -558,7 +636,7 @@ function capLlmRequestPayload(args: {
 
   const notes: string[] = []
   if (args.toolDefs && toolDefsJson && toolDefsJson.length > TOOL_DEFS_CAP) {
-    const r = capArrayJson(args.toolDefs, TOOL_DEFS_CAP)
+    const r = capToolDefinitions(args.toolDefs, TOOL_DEFS_CAP)
     toolDefsJson = r.json
     if (r.note) notes.push(`tool definitions: ${r.note}`)
   }
@@ -652,20 +730,55 @@ function capPartsJson(parts: MessagePart[], maxBytes: number): CapResult {
   return { json: JSON.stringify(parts.map((p) => shrinkPart(p, perPart))), note: `shrunk ${parts.length} part(s)` }
 }
 
-// Keeps whole leading entries that fit the budget. Used for tool definitions, where
-// each entry is self-contained and order carries no recency meaning.
-function capArrayJson(items: unknown[], maxBytes: number): CapResult {
-  const full = JSON.stringify(items)
+function toolNameStub(tool: unknown): unknown {
+  if (!tool || typeof tool !== "object") return tool
+  const name = (tool as { name?: unknown }).name
+  return typeof name === "string" ? { name } : tool
+}
+
+// Never drop tool names when capping — definedTools keys off names; only schemas are optional.
+function capToolDefinitions(tools: unknown[], maxBytes: number): CapResult {
+  const full = JSON.stringify(tools)
   if (full.length <= maxBytes) return { json: full }
-  let budget = maxBytes - 2
-  let end = 0
-  while (end < items.length) {
-    const cost = JSON.stringify(items[end]).length + 1
-    if (cost > budget) break
-    budget -= cost
-    end++
+
+  const stubs = tools.map(toolNameStub)
+  const stubCosts = stubs.map((stub) => JSON.stringify(stub).length + 1)
+  const suffixStubBytes = new Array<number>(tools.length + 1)
+  suffixStubBytes[tools.length] = 0
+  for (let i = tools.length - 1; i >= 0; i--) {
+    suffixStubBytes[i] = suffixStubBytes[i + 1]! + stubCosts[i]!
   }
-  return { json: JSON.stringify(items.slice(0, end)), note: `kept ${end} of ${items.length} entries` }
+
+  let budget = maxBytes - 2
+  const out: unknown[] = []
+  let fullCount = 0
+  for (let i = 0; i < tools.length; i++) {
+    const fullCost = JSON.stringify(tools[i]).length + 1
+    if (fullCost + suffixStubBytes[i + 1]! <= budget) {
+      out.push(tools[i])
+      budget -= fullCost
+      fullCount++
+      continue
+    }
+    for (let j = i; j < tools.length; j++) {
+      const stubCost = stubCosts[j]!
+      if (stubCost > budget) {
+        return {
+          json: JSON.stringify(out),
+          note: `kept ${out.length} of ${tools.length} names (${fullCount} full schemas, ${out.length - fullCount} name-only)`,
+        }
+      }
+      out.push(stubs[j])
+      budget -= stubCost
+    }
+    break
+  }
+
+  const stubCount = out.length - fullCount
+  return {
+    json: JSON.stringify(out),
+    note: `kept all ${tools.length} names (${fullCount} full schemas, ${stubCount} name-only)`,
+  }
 }
 
 function shrinkPart(part: MessagePart, maxBytes: number): MessagePart {

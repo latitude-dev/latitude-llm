@@ -1,10 +1,10 @@
-import { type BillingOverride, BillingOverrideRepository, type PlanSlug } from "@domain/billing"
+import { type BillingOverride, BillingOverrideRepository, type OverridablePlanSlug } from "@domain/billing"
 import { generateId, type OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 
 export interface UpsertBillingOverrideInput {
   readonly organizationId: OrganizationId
-  readonly plan: PlanSlug
+  readonly plan: OverridablePlanSlug
   readonly includedCredits: number | null
   readonly retentionDays: number | null
   readonly notes: string | null

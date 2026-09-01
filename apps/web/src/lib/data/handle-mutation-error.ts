@@ -1,5 +1,6 @@
 import { toast } from "@repo/ui"
 import { parseServerError } from "../errors.ts"
+import { STALE_SERVER_FN_ERROR_TAG } from "../stale-server-fn.ts"
 
 /** `_tag` of the read-only (showcase) write rejection. */
 export const READ_ONLY_PROJECT_ERROR_TAG = "ReadOnlyProjectError"
@@ -33,6 +34,11 @@ export function handleMutationError(error: unknown, options: HandleMutationError
     // The read-only "demo" modal is opened once, centrally, by the write-gate
     // client middleware (the single choke point every write flows through). Here
     // we only swallow the error so it isn't also toasted.
+    return
+  }
+
+  if (parsed._tag === STALE_SERVER_FN_ERROR_TAG) {
+    if (typeof window !== "undefined") window.location.reload()
     return
   }
 

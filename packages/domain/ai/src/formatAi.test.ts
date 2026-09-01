@@ -18,6 +18,20 @@ describe("formatGenAIPart", () => {
     )
   })
 
+  it("formats blobs using mime type when modality is wrong", () => {
+    expect(
+      formatGenAIPart({
+        type: "blob",
+        modality: "image",
+        mime_type: "application/pdf",
+        content: "JVBERi0=",
+      }),
+    ).toBe("[BLOB:document]")
+    expect(formatGenAIPart({ type: "blob", modality: "image", mime_type: "image/png", content: "aGVsbG8=" })).toBe(
+      "[IMAGE]",
+    )
+  })
+
   it("formats tool_call and tool_call_response", () => {
     expect(
       formatGenAIPart({

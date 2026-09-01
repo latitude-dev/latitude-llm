@@ -25,7 +25,7 @@ export function ScoresTab({
   readonly traceIds: readonly string[]
   readonly latestTraceId: string
   readonly traceNumberById: ReadonlyMap<string, number>
-  readonly onOpenInConversation: (annotationId: string) => void
+  readonly onOpenInConversation: (scoreId: string) => void
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
 }) {
   const { data, isLoading, isError } = useScoresBySession({ projectId, traceIds })
@@ -70,7 +70,7 @@ export function ScoresTab({
         const traceId = score.traceId ?? ""
         if (!traceId) return
         if (traceId === latestTraceId) onOpenInConversation(score.id)
-        else onOpenTrace(traceId, { focusAnnotationId: score.id })
+        else onOpenTrace(traceId, { focusScoreId: score.id })
       }}
       renderItemAccessory={(score) => {
         const traceNumber = traceNumberById.get(score.traceId ?? "")

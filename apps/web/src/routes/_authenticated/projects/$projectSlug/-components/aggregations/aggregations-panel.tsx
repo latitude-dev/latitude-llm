@@ -7,15 +7,16 @@ import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-sh
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { GeneralAggregations } from "./general-aggregations.tsx"
 import { Histogram } from "./histogram.tsx"
+import { type AggregationsMode, resolveMetricForMode } from "./histogram-metrics.ts"
 
-const DEFAULT_HISTOGRAM_METRIC: TraceHistogramMetric = "sessions"
+const UNSET_HISTOGRAM_METRIC = ""
 
 interface TraceAggregationsPanelProps {
   readonly projectId: string
   readonly projectSlug: string
   readonly filters: FilterSet
   /** Must match the table below the panel — drives which rollup the cards + histogram use. */
-  readonly mode: "traces" | "sessions"
+  readonly mode: AggregationsMode
   /** Called when user selects a time range via brush on the histogram. */
   readonly onTimeRangeSelect?: (range: { from: string; to: string } | null) => void
   /** Overrides the histogram window (independent of `filters`) — used to anchor an "All time" list to recent activity. */
@@ -31,9 +32,11 @@ export function TraceAggregationsPanel({
   histogramRangeOverride,
 }: TraceAggregationsPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
-  const [selectedMetric, setSelectedMetric] = useParamState("histogramMetric", DEFAULT_HISTOGRAM_METRIC, {
-    validate: isTraceHistogramMetric,
+  const [metricParam, setSelectedMetric] = useParamState("histogramMetric", UNSET_HISTOGRAM_METRIC, {
+    validate: (value): value is TraceHistogramMetric | typeof UNSET_HISTOGRAM_METRIC =>
+      value === UNSET_HISTOGRAM_METRIC || isTraceHistogramMetric(value),
   })
+  const selectedMetric = resolveMetricForMode(metricParam === UNSET_HISTOGRAM_METRIC ? undefined : metricParam, mode)
 
   const { flagEnabled: incidentsFlagEnabled, showIncidents, setShowIncidents } = useShowIncidentsOverlay()
 

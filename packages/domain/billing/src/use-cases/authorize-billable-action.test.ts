@@ -63,17 +63,19 @@ describe("authorizeBillableAction", () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-01-15T12:00:00.000Z"))
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllEnvs()
   })
 
   it("allows a free-plan action while credits remain", async () => {
     const result = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:1",
       }).pipe(Effect.provide(createLayer())),
@@ -102,7 +104,7 @@ describe("authorizeBillableAction", () => {
             periodStart: PERIOD_START,
             periodEnd: PERIOD_END,
             includedCredits: 20_000,
-            consumedCredits: 19_980,
+            consumedCredits: 20_000,
           }),
         )
         .pipe(Effect.provideService(SqlClient, SQL_CLIENT)),
@@ -111,14 +113,14 @@ describe("authorizeBillableAction", () => {
     const result = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:2",
       }).pipe(Effect.provide(createLayer({ periods }))),
     )
 
     expect(result.allowed).toBe(false)
-    expect(result.period?.consumedCredits).toBe(19_980)
+    expect(result.period?.consumedCredits).toBe(20_000)
   })
 
   it("blocks a pro action when the snapshot projection already exceeds the spending cap", async () => {
@@ -142,7 +144,7 @@ describe("authorizeBillableAction", () => {
     const result = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:3",
       }).pipe(
@@ -182,7 +184,7 @@ describe("authorizeBillableAction", () => {
     const run = () =>
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:retry",
       }).pipe(
@@ -202,7 +204,7 @@ describe("authorizeBillableAction", () => {
     expect(first.allowed).toBe(true)
     expect(second.allowed).toBe(true)
     expect(counters.size).toBe(1)
-    expect([...counters.values()][0]?.reservedCredits).toBe(100_030)
+    expect([...counters.values()][0]?.reservedCredits).toBe(100_001)
   })
 
   it("routes hard-capped free-plan authorization through the reservation port", async () => {
@@ -211,7 +213,7 @@ describe("authorizeBillableAction", () => {
     const result = await Effect.runPromise(
       authorizeBillableAction({
         organizationId: ORGANIZATION_ID,
-        action: "live-eval-scan",
+        action: "semantic-query",
         skipIfBlocked: true,
         idempotencyKey: "live-eval:free-reservation",
       }).pipe(Effect.provide(createLayer({ reservation }))),
@@ -219,6 +221,6 @@ describe("authorizeBillableAction", () => {
 
     expect(result.allowed).toBe(true)
     expect(counters.size).toBe(1)
-    expect([...counters.values()][0]?.reservedCredits).toBe(30)
+    expect([...counters.values()][0]?.reservedCredits).toBe(1)
   })
 })

@@ -1,7 +1,7 @@
 import { ALIGNMENT_METRIC_RECOMPUTE_THROTTLE_MS, EvaluationRepository, isActiveEvaluation } from "@domain/evaluations"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
-import { generateSlug, ProjectId, type RepositoryError, SignalId, SqlClient } from "@domain/shared"
+import { ProjectId, type RepositoryError, SignalId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { type GenerateSignalDetailsError, generateSignalDetailsUseCase } from "./generate-signal-details.ts"
@@ -10,11 +10,21 @@ export interface RefreshSignalDetailsInput {
   readonly organizationId: string
   readonly signalId: string
   readonly projectId: string
+  /**
+   * Generate without the signal's current details as the stabilization baseline.
+   * Set by the promotion path, where those details are still the deterministic
+   * placeholder built from one occurrence.
+   */
+  readonly ignorePreviousDetails?: boolean
 }
 
 export type RefreshSignalDetailsResult =
   | {
       readonly action: "not-found"
+      readonly signalId: string
+    }
+  | {
+      readonly action: "unpromoted"
       readonly signalId: string
     }
   | {
@@ -72,10 +82,28 @@ export const refreshSignalDetailsUseCase = (input: RefreshSignalDetailsInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("signalId", input.signalId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    // An unpromoted signal keeps its placeholder. `ScoreAssignedToSignal`
+    // schedules this task for candidates too, and generating there would spend a
+    // model call to make matching worse: the placeholder is the occurrence's own
+    // feedback, which is the better rerank and lexical document for a cluster
+    // this thin, and the summary that replaced it would be drawn from the same
+    // one or two members that make the task ill-posed. The promotion task passes
+    // through here after `promoted_at` is stamped, so it is unaffected.
+    const signals = yield* SignalRepository
+    const unpromoted = yield* signals
+      .findById(SignalId(input.signalId), { includeUnpromoted: true })
+      .pipe(Effect.map((signal) => signal.promotedAt === null))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(false)))
+
+    if (unpromoted) {
+      return { action: "unpromoted", signalId: input.signalId } satisfies RefreshSignalDetailsResult
+    }
+
     const generatedDetailsResult = yield* generateSignalDetailsUseCase({
       organizationId: input.organizationId,
       projectId: input.projectId,
       signalId: input.signalId,
+      ...(input.ignorePreviousDetails ? { ignorePreviousDetails: true } : {}),
     }).pipe(
       Effect.map((details) => ({ action: "ready", details }) as const),
       Effect.catchTag("SignalNotFoundForDetailsGenerationError", () =>
@@ -119,23 +147,9 @@ export const refreshSignalDetailsUseCase = (input: RefreshSignalDetailsInput) =>
           } satisfies RefreshSignalDetailsResult
         }
 
-        // Slug regenerates only when the name actually changed; description-only refreshes keep the slug.
-        const slug =
-          issue.name === generatedDetailsResult.details.name
-            ? issue.slug
-            : yield* generateSlug({
-                name: generatedDetailsResult.details.name,
-                count: (slug) =>
-                  signalRepository.countBySlug({
-                    projectId: ProjectId(issue.projectId),
-                    slug,
-                    excludeSignalId: issue.id,
-                  }),
-              })
-
+        // The slug is a stable id assigned at creation; a rename never changes it.
         yield* signalRepository.save({
           ...issue,
-          slug,
           name: generatedDetailsResult.details.name,
           description: generatedDetailsResult.details.description,
           updatedAt: new Date(),

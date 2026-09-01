@@ -39,6 +39,9 @@ export type ProjectId = Id<"ProjectId">
 // API Key IDs
 export type ApiKeyId = Id<"ApiKeyId">
 
+// Private partner-API registry IDs
+export type PartnerId = Id<"PartnerId">
+
 // Feature flag IDs — `FeatureFlagId` lives in `@domain/feature-flags`
 // as a literal union derived from the code-side registry.
 export type OrganizationFeatureFlagId = Id<"OrganizationFeatureFlagId">
@@ -64,6 +67,7 @@ export type TaxonomyClusterId = Id<"TaxonomyClusterId">
 export type TaxonomyRunId = Id<"TaxonomyRunId">
 export type TaxonomyLineageId = Id<"TaxonomyLineageId">
 export type CustomBehaviorId = Id<"CustomBehaviorId">
+export type FacetId = Id<"FacetId">
 
 // Integration-related IDs
 export type SlackIntegrationId = Id<"SlackIntegrationId">
@@ -72,6 +76,9 @@ export type SlackDeliveryId = Id<"SlackDeliveryId">
 // Data-destination IDs
 export type DestinationId = Id<"DestinationId">
 export type DestinationSyncRunId = Id<"DestinationSyncRunId">
+
+// Import IDs
+export type ImportJobId = Id<"ImportJobId">
 
 // Enterprise SSO IDs
 export type SsoProviderId = Id<"SsoProviderId">
@@ -92,6 +99,7 @@ export const InvitationId = (value: string): InvitationId => value as Invitation
 export const SandboxId = (value: string): SandboxId => value as SandboxId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
+export const PartnerId = (value: string): PartnerId => value as PartnerId
 export const OrganizationFeatureFlagId = (value: string): OrganizationFeatureFlagId =>
   value as OrganizationFeatureFlagId
 export const ScoreId = (value: string): ScoreId => value as ScoreId
@@ -109,10 +117,12 @@ export const TaxonomyClusterId = (value: string): TaxonomyClusterId => value as 
 export const TaxonomyRunId = (value: string): TaxonomyRunId => value as TaxonomyRunId
 export const TaxonomyLineageId = (value: string): TaxonomyLineageId => value as TaxonomyLineageId
 export const CustomBehaviorId = (value: string): CustomBehaviorId => value as CustomBehaviorId
+export const FacetId = (value: string): FacetId => value as FacetId
 export const SlackIntegrationId = (value: string): SlackIntegrationId => value as SlackIntegrationId
 export const SlackDeliveryId = (value: string): SlackDeliveryId => value as SlackDeliveryId
 export const DestinationId = (value: string): DestinationId => value as DestinationId
 export const DestinationSyncRunId = (value: string): DestinationSyncRunId => value as DestinationSyncRunId
+export const ImportJobId = (value: string): ImportJobId => value as ImportJobId
 export const SsoProviderId = (value: string): SsoProviderId => value as SsoProviderId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
@@ -129,6 +139,7 @@ export const invitationIdSchema = cuidSchema.transform(InvitationId)
 export const sandboxIdSchema = cuidSchema.transform(SandboxId)
 export const projectIdSchema = cuidSchema.transform(ProjectId)
 export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
+export const partnerIdSchema = cuidSchema.transform(PartnerId)
 export const organizationFeatureFlagIdSchema = cuidSchema.transform(OrganizationFeatureFlagId)
 export const datasetIdSchema = cuidSchema.transform(DatasetId)
 export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)
@@ -148,10 +159,12 @@ export const taxonomyClusterIdSchema = cuidSchema.transform(TaxonomyClusterId)
 export const taxonomyRunIdSchema = cuidSchema.transform(TaxonomyRunId)
 export const taxonomyLineageIdSchema = cuidSchema.transform(TaxonomyLineageId)
 export const customBehaviorIdSchema = cuidSchema.transform(CustomBehaviorId)
+export const facetIdSchema = cuidSchema.transform(FacetId)
 export const slackIntegrationIdSchema = cuidSchema.transform(SlackIntegrationId)
 export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
 export const destinationIdSchema = cuidSchema.transform(DestinationId)
 export const destinationSyncRunIdSchema = cuidSchema.transform(DestinationSyncRunId)
+export const importJobIdSchema = cuidSchema.transform(ImportJobId)
 export const ssoProviderIdSchema = cuidSchema.transform(SsoProviderId)
 
 // The telemetry-related IDs have custom length constraints

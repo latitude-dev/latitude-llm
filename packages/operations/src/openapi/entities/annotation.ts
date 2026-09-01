@@ -7,10 +7,11 @@ import { cuidSchema } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 import { sessionIdSchema, spanIdSchema, traceIdSchema } from "../schemas.ts"
 
-// Anchor pins an annotation to a position inside a trace. Shape mirrors
-// `annotationAnchorSchema` from `@domain/scores` field-for-field; redeclared
-// here so every property carries a description for the SDK + MCP surfaces
-// (the domain schema is description-free by design).
+// Anchor pins an annotation to a position inside a trace. Shape mirrors the
+// user-settable fields of `annotationAnchorSchema` from `@domain/scores`
+// (system-computed `contentHash` is omitted); redeclared here so every
+// property carries a description for the SDK + MCP surfaces (the domain
+// schema is description-free by design).
 const annotationAnchorFields = {
   messageIndex: z
     .number()
@@ -90,7 +91,7 @@ export const AnnotationSchema = z
       .number()
       .int()
       .nonnegative()
-      .describe("Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."),
+      .describe("Total LLM cost in microcents (100,000,000 per USD). `0` for human annotations."),
     draftedAt: z.iso
       .datetime()
       .nullable()

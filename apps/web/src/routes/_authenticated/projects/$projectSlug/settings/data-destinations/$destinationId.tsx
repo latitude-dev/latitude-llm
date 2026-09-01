@@ -1,7 +1,7 @@
-import { Icon, Text } from "@repo/ui"
+import { Button, Icon, Text, Tooltip } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeftIcon } from "lucide-react"
 import { listDestinations } from "../../../../../../domains/destinations/destinations.functions.ts"
 import { useRouteProject } from "../../-route-data.ts"
 import { DestinationCard } from "../-components/destination-card.tsx"
@@ -17,14 +17,20 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 
 function BackLink({ projectSlug }: { readonly projectSlug: string }) {
   return (
-    <Link
-      to="/projects/$projectSlug/settings/data-destinations"
-      params={{ projectSlug }}
-      className="flex w-fit flex-row items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+    <Tooltip
+      asChild
+      side="bottom"
+      trigger={
+        <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to data destinations">
+          <Link to="/projects/$projectSlug/settings/data-destinations" params={{ projectSlug }}>
+            <Icon icon={ArrowLeftIcon} size="sm" />
+            Back
+          </Link>
+        </Button>
+      }
     >
-      <Icon icon={ArrowLeft} size="sm" />
-      <Text.H6 color="foregroundMuted">Data destinations</Text.H6>
-    </Link>
+      Back to data destinations
+    </Tooltip>
   )
 }
 

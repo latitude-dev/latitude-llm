@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest"
 import { buildOtlpRequest, buildSubagentSpans, chunkOtlpRequest } from "./otlp.ts"
 import type { StoredRequest } from "./request-store.ts"
-import type { AgentSpanLink, AssistantCall, OtlpKeyValue, SubagentInvocation, ToolCall, Turn, Usage } from "./types.ts"
+import type {
+  AgentSpanLink,
+  AssistantCall,
+  MemoryEmitOptions,
+  OtlpKeyValue,
+  SubagentInvocation,
+  ToolCall,
+  Turn,
+  Usage,
+} from "./types.ts"
 
 function unwrap<T>(value: T | undefined | null): T {
   expect(value).toBeDefined()
@@ -71,6 +80,92 @@ function baseTurn(overrides: LegacyTurnOpts = {}): Turn {
     ],
   }
 }
+
+describe("buildOtlpRequest inherited context", () => {
+  const TRACE = "4bf92f3577b34da6a3ce929d0e0e4736"
+  const SPAN = "00f067aa0ba902b7"
+
+  it("joins the inherited trace and parents the interaction under the given span", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-1",
+      turnStartNumber: 1,
+      turns: [baseTurn()],
+      inherited: { traceId: TRACE, parentSpanId: SPAN },
+    })
+
+    const spans = otlpSpans(req)
+    expect(spans.every((s) => s.traceId === TRACE)).toBe(true)
+    expect(unwrap(spans[0]).parentSpanId).toBe(SPAN)
+  })
+
+  it("roots its own per-turn trace when no context is inherited", () => {
+    const spans = otlpSpans(buildOtlpRequest({ sessionId: "sess-1", turnStartNumber: 1, turns: [baseTurn()] }))
+    expect(unwrap(spans[0]).traceId).not.toBe(TRACE)
+    expect(unwrap(spans[0]).parentSpanId).toBe("")
+  })
+
+  it("keeps span ids distinct across turns that share one inherited trace", () => {
+    // Every turn joins the same trace, so the per-turn trace id no longer separates
+    // ids. Calls without a message id fall back to `noid:<index>`, which repeats on
+    // every turn — turn 2 call 0 would reuse turn 1 call 0's span id if the turn
+    // coordinates were not part of the salt.
+    const noid = (): Turn => baseTurn({ messageId: "noid:0" })
+    const ids = [1, 2, 3].flatMap((turnNum) =>
+      otlpSpans(
+        buildOtlpRequest({
+          sessionId: "sess-1",
+          turnStartNumber: turnNum,
+          turns: [noid()],
+          inherited: { traceId: TRACE, parentSpanId: SPAN },
+        }),
+      ).map((s) => s.spanId),
+    )
+
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it("keeps span ids distinct across two children of the same parent span", () => {
+    // One Hermes run hands every child it launches the same trace id and the same
+    // LATITUDE_SESSION_ID, and each child starts counting turns at 1. Only Claude's
+    // own session id, which is per process, separates them.
+    const child = (localSessionId: string) =>
+      otlpSpans(
+        buildOtlpRequest({
+          sessionId: "hermes-sess",
+          localSessionId,
+          turnStartNumber: 1,
+          turns: [baseTurn({ messageId: "noid:0" })],
+          inherited: { traceId: TRACE, parentSpanId: SPAN },
+        }),
+      ).map((s) => s.spanId)
+
+    const ids = [...child("claude-a"), ...child("claude-b")]
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it("is deterministic, so a re-sent turn produces identical span ids", () => {
+    const build = () =>
+      otlpSpans(
+        buildOtlpRequest({
+          sessionId: "sess-1",
+          turnStartNumber: 2,
+          turns: [baseTurn()],
+          inherited: { traceId: TRACE, parentSpanId: SPAN },
+        }),
+      ).map((s) => s.spanId)
+
+    expect(build()).toEqual(build())
+  })
+
+  it("leaves owned-trace span ids unchanged", () => {
+    // Guards the upgrade path: a session already mid-flight when the emitter updates
+    // must keep producing the ids it produced before, or its next Stop re-inserts
+    // spans the additive trace rollups would double-count.
+    const spans = otlpSpans(buildOtlpRequest({ sessionId: "sess-1", turnStartNumber: 1, turns: [baseTurn()] }))
+    expect(unwrap(spans[0]).traceId).toBe("b1b3bad40622b42bb0aad1e39cc45fcf")
+    expect(unwrap(spans[0]).spanId).toBe("6168b591e06f449b")
+  })
+})
 
 describe("buildOtlpRequest", () => {
   it("emits one interaction + one llm_request span per turn", () => {
@@ -896,6 +991,58 @@ describe("span size capping", () => {
     expect(getAttr(interaction.attributes, "user_prompt_length")).toBe("200000")
     expect(getAttr(interaction.attributes, "latitude.truncation")).toBe("user prompt clamped")
   })
+
+  it("preserves every tool name when tool-definition schemas exceed the byte budget", () => {
+    const fatDescription = "d".repeat(8_000)
+    const toolNames = ["Agent", "Artifact", "Bash", "Read", "ToolSearch", "WebFetch", "WebSearch"]
+    const tools = toolNames.map((name) => ({
+      name,
+      description: fatDescription,
+      input_schema: { type: "object", properties: { q: { type: "string" } } },
+    }))
+    // Captured payloads replace reconstruction — oversize the captured request to hit the budget.
+    const captured: StoredRequest = {
+      messageId: "msg_tools_cap",
+      capturedAt: "2026-07-21T12:00:00.000Z",
+      url: "https://api.anthropic.com/v1/messages",
+      request: {
+        model: "claude-opus-4-8",
+        max_tokens: 32000,
+        system: [{ type: "text", text: "s".repeat(80_000) }],
+        tools,
+        messages: Array.from({ length: 20 }, (_, i) => ({
+          role: "user" as const,
+          content: `prompt ${i} ${"h".repeat(4_000)}`,
+        })),
+      },
+    }
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          messageId: "msg_tools_cap",
+          userText: "search the web",
+          toolCalls: [
+            {
+              id: "toolu_web",
+              name: "WebSearch",
+              input: { query: "AI agents" },
+              output: "results",
+            },
+          ],
+        }),
+      ],
+      requestsByMessageId: new Map([["msg_tools_cap", captured]]),
+    })
+    const llm = unwrap(otlpSpans(req).find((s) => s.name === "llm_request"))
+    const truncation = unwrap(getAttr(llm.attributes, "latitude.truncation"))
+    expect(truncation).toContain("tool definitions:")
+    expect(truncation).toMatch(/name-only|names/)
+    const defs = JSON.parse(unwrap(getAttr(llm.attributes, "gen_ai.tool.definitions"))) as Array<{ name: string }>
+    expect(defs.map((d) => d.name)).toEqual(toolNames)
+    expect(JSON.stringify(defs).length).toBeLessThanOrEqual(16 * 1024)
+  })
 })
 
 describe("redaction", () => {
@@ -1107,5 +1254,128 @@ describe("buildSubagentSpans", () => {
     for (const s of [...stop1, ...stop2]) {
       expect(s.startTimeUnixNano).toBe(fullStart.get(s.spanId))
     }
+  })
+})
+
+describe("memory operation child spans", () => {
+  const ROOT = "/home/u/.claude/projects"
+  const MEM = `${ROOT}/-proj/memory`
+  const MEM_OPS = ["upsert_memory", "update_memory", "search_memory"]
+
+  function memory(overrides: Partial<MemoryEmitOptions> = {}): MemoryEmitOptions {
+    return { projectsRoot: ROOT, captureContent: true, readFile: () => "disk body", ...overrides }
+  }
+
+  function build(
+    toolCalls: (Partial<ToolCall> & Pick<ToolCall, "id" | "name" | "input">)[],
+    mem: MemoryEmitOptions | undefined,
+  ) {
+    return otlpSpans(
+      buildOtlpRequest({ sessionId: "s1", turnStartNumber: 1, turns: [baseTurn({ toolCalls })], memory: mem }),
+    )
+  }
+
+  it("emits an upsert_memory child under a Write to the memory dir", () => {
+    const spans = build(
+      [
+        {
+          id: "tu1",
+          name: "Write",
+          input: { file_path: `${MEM}/MEMORY.md`, content: "hello" },
+          output: "File created",
+        },
+      ],
+      memory(),
+    )
+    const toolSpan = unwrap(spans.find((s) => s.name === "tool:Write"))
+    const mem = unwrap(spans.find((s) => s.name === "upsert_memory"))
+    expect(mem.parentSpanId).toBe(toolSpan.spanId)
+    expect(mem.kind).toBe(3)
+    expect(getAttr(mem.attributes, "gen_ai.memory.store.id")).toBe("-proj")
+    expect(getAttr(mem.attributes, "gen_ai.memory.record.id")).toBe("MEMORY.md")
+    expect(getAttr(mem.attributes, "gen_ai.memory.record.count")).toBe("1")
+    expect(JSON.parse(unwrap(getAttr(mem.attributes, "gen_ai.memory.records")))).toEqual([
+      { id: "MEMORY.md", content: "hello" },
+    ])
+  })
+
+  it("emits update_memory carrying the disk body for an Edit", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Edit", input: { file_path: `${MEM}/topic.md`, old_string: "a", new_string: "b" } }],
+      memory(),
+    )
+    const mem = unwrap(spans.find((s) => s.name === "update_memory"))
+    expect(JSON.parse(unwrap(getAttr(mem.attributes, "gen_ai.memory.records")))).toEqual([
+      { id: "topic.md", content: "disk body" },
+    ])
+  })
+
+  it("emits search_memory for a Read", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Read", input: { file_path: `${MEM}/topic.md` }, output: "1\thi" }],
+      memory(),
+    )
+    expect(spans.some((s) => s.name === "search_memory")).toBe(true)
+  })
+
+  it("ignores files outside the projects root", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Write", input: { file_path: "/home/u/repo/a.ts", content: "x" } }],
+      memory(),
+    )
+    expect(spans.some((s) => MEM_OPS.includes(s.name))).toBe(false)
+  })
+
+  it("emits the child span for a store under a different slug than the session (git worktree)", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Write", input: { file_path: `${ROOT}/-main-worktree/memory/x.md`, content: "hi" } }],
+      memory(),
+    )
+    const toolSpan = unwrap(spans.find((s) => s.name === "tool:Write"))
+    const mem = unwrap(spans.find((s) => s.name === "upsert_memory"))
+    expect(mem.parentSpanId).toBe(toolSpan.spanId)
+    expect(getAttr(mem.attributes, "gen_ai.memory.store.id")).toBe("-main-worktree")
+    expect(getAttr(mem.attributes, "gen_ai.memory.record.id")).toBe("x.md")
+  })
+
+  it("emits structure only when captureContent is off", () => {
+    const spans = build(
+      [{ id: "tu1", name: "Write", input: { file_path: `${MEM}/x.md`, content: "hi" } }],
+      memory({ captureContent: false }),
+    )
+    const mem = unwrap(spans.find((s) => s.name === "upsert_memory"))
+    expect(getAttr(mem.attributes, "gen_ai.memory.record.id")).toBe("x.md")
+    expect(getAttr(mem.attributes, "gen_ai.memory.records")).toBeUndefined()
+  })
+
+  it("skips the memory span when the tool call errored", () => {
+    const spans = build(
+      [
+        {
+          id: "tu1",
+          name: "Edit",
+          input: { file_path: `${MEM}/x.md`, old_string: "a", new_string: "b" },
+          isError: true,
+        },
+      ],
+      memory(),
+    )
+    expect(spans.some((s) => s.name === "update_memory")).toBe(false)
+  })
+
+  it("emits no memory spans when memory is not configured", () => {
+    const spans = build([{ id: "tu1", name: "Write", input: { file_path: `${MEM}/x.md`, content: "hi" } }], undefined)
+    expect(spans.some((s) => MEM_OPS.includes(s.name))).toBe(false)
+  })
+
+  it("keeps gen_ai.memory.records valid JSON when a huge body is capped", () => {
+    const huge = "x".repeat(200_000)
+    const spans = build([{ id: "tu1", name: "Write", input: { file_path: `${MEM}/big.md`, content: huge } }], memory())
+    const mem = unwrap(spans.find((s) => s.name === "upsert_memory"))
+    const raw = unwrap(getAttr(mem.attributes, "gen_ai.memory.records"))
+    const parsed = JSON.parse(raw) as Array<{ id: string; content: string }>
+    expect(parsed[0]?.id).toBe("big.md")
+    expect(parsed[0]?.content).toContain("[latitude: truncated")
+    expect(parsed[0]?.content.length).toBeLessThan(huge.length)
   })
 })

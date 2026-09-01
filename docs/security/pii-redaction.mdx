@@ -1,17 +1,137 @@
 ---
 title: PII redaction
-description: How Latitude reduces PII exposure with SDK redaction and internal data handling safeguards.
+description: How Latitude reduces PII exposure with ingest-side redaction, SDK attribute masking, and internal data handling safeguards.
 ---
 
 # PII redaction
 
-Latitude reduces exposure of personally identifiable information (PII) and other sensitive values in telemetry. Redaction starts in the SDKs before spans are exported to Latitude.
+Latitude reduces exposure of personally identifiable information (PII) and other sensitive values in telemetry. There are two independent controls: **ingest redaction**, which Latitude applies to span content before storing it, and **SDK attribute masking**, which your application applies before exporting.
+
+Ingest redaction covers built-in categories such as email addresses and card numbers, plus [custom rules](#custom-rules) for identifiers specific to your business.
 
 <Note>
   Redaction is best effort. Customers should avoid sending unnecessary regulated or highly sensitive data to Latitude and configure custom redaction patterns for application-specific identifiers.
 </Note>
 
-## SDK redaction by default
+## Ingest PII redaction
+
+Opt-in, per project. When enabled, Latitude scans span content for the categories you configure and replaces matches with a labeled placeholder before the span is persisted.
+
+<Warning>
+  Redaction applies only to spans ingested after you enable it, and redacted content cannot be recovered. Existing spans are never rewritten, and there is no way to restore a redacted value.
+</Warning>
+
+### What it does and does not catch
+
+Detection is pattern based. It reliably catches structured identifiers, and it does **not** catch names, addresses, or free-form personal detail — those need semantic understanding that a deterministic matcher cannot provide.
+
+| Category | Default | What it matches |
+| --- | --- | --- |
+| Email addresses | On | Addresses with a domain and a two-or-more character suffix, including non-ASCII names and percent-encoded addresses in URLs |
+| Phone numbers | On | International numbers written with or without separators (`+44 20 7183 8750`, `+1-415-555-2671`) and separated North American forms |
+| Credit card numbers | On | 13–19 digits passing the Luhn checksum with a known issuer prefix, compact or grouped with spaces, dashes or slashes |
+| IBANs | On | Bank account numbers passing the mod-97 checksum, in any case, compact or grouped |
+| US Social Security numbers | On | Separated `NNN-NN-NNNN` in a valid range, and ITINs |
+| API keys and secrets | On | Recognizable provider key formats, private key blocks, connection-string passwords, and values assigned to a credential-shaped key such as `DATABASE_PASSWORD` or `api_key` |
+| IP addresses | Off | IPv4 and IPv6 addresses |
+
+IP addresses are off by default because a version string such as `1.2.3.4` and a dotted quad are the same string. Every category can be toggled individually.
+
+### Known limits
+
+Deterministic detection has edges, and it is more useful to know where they are than to discover them. As of the current version:
+
+- **Names, street addresses, dates of birth, and health or insurance identifiers are not detected at all.** These need semantic understanding.
+- **Numeric JSON values are never scanned.** A card number sent as `{"pan": 4111111111111111}` — a JSON number rather than a string — is stored as-is, because scanning number literals would corrupt the numeric identifiers that fill tool output. Send values that may contain personal data as strings.
+- **A bare ten-digit phone number or nine-digit SSN is not matched.** Without separators they are indistinguishable from the numeric identifiers in tool output.
+- **National phone formats with no country code are not matched**, such as `07700 900123` or `06 12 34 56 78`, and neither is the parenthesised international form `+44 (20) 7183 8750`.
+- **A credential under a key named only `*_KEY`** is not matched unless the name also contains `api`, `secret`, `private`, `access`, `auth`, `client`, `encryption` or `signing`. Keys such as `idempotency_key`, `partition_key` and `cache_key` are far too common in tool output to treat as credentials.
+- **Credential detection reads the key next to the value**, so it works in a stringified payload or a log line. In already-parsed message content the key and value are separate fields, and only the value is scanned.
+- **A 16-digit numeric identifier beginning with 4 has roughly a one-in-ten chance** of passing the card checks and being redacted, and one beginning with 5 roughly one in twenty. That is inherent to Luhn plus an issuer prefix.
+- **Some numeric sequences read as phone numbers.** Three groups of 3, 3 and 4 digits, such as latency percentiles printed as `250 300 1000`, cannot be told apart from a phone number without reading the surrounding prose.
+
+When a value is redacted that should not have been, the fix is to turn off the category that matched it: the placeholder names the category, so it tells you which one.
+
+### Enabling it
+
+**Dashboard** — **Settings → Privacy**, per project. Organization owners can also set an organization-wide policy that applies to every project, and lock it so projects cannot weaken it. Changing a project policy needs the owner or admin role; changing the organization policy needs owner.
+
+**API** — `settings.redaction` on `PATCH /v1/projects/{projectSlug}`, also available through the SDKs and the `latitude` CLI.
+
+```bash
+curl -X PATCH https://api.latitude.so/v1/projects/my-project \
+  -H "Authorization: Bearer $LATITUDE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"settings":{"redaction":{"mode":"enforce","entities":["email","credit_card"]}}}'
+```
+
+A change takes effect within a minute.
+
+### Scope
+
+Scanned: message content, tool call arguments and results, reasoning, span attributes holding text or numbers, span events, and resource attributes. Boolean attributes are not scanned — no detector can match `true` or `false`.
+
+Redaction replaces values; it never removes an attribute. Every attribute your exporter sends is stored, so the attribute view stays a faithful record of the span with sensitive values marked.
+
+Not scanned by default: the metadata map and tags. These are usually operational, and redacting them removes values you filter and group by — enable the metadata scope if you put personal data there.
+
+Never scanned: span names, service names, model identifiers, and other enum or identifier columns, plus binary payloads in file and image parts.
+
+### User identifiers
+
+`userId` and `userEmail` can be kept as-is or replaced with a stable pseudonym. Pseudonyms are deterministic and scoped to your organization, so filtering, grouping, and per-user analytics keep working while the underlying identity is no longer stored. Self-hosted deployments with no pseudonym secret configured remove the identifier entirely rather than pseudonymizing it.
+
+The pseudonym replaces the identifier everywhere it appears on the span, not only in the user column: the attribute it was read from, resource attributes, metadata, and tags all get the same value. Metadata and tags are covered here even when the metadata scope is off.
+
+### What redacted content looks like
+
+Redacted values appear as a labeled marker in place of the original — the dashboard renders them as a small tag naming the category. This is intentional: you need to be able to tell the difference between content that was removed and content that was never sent.
+
+You may also see an oversized-field marker. Fields above 1 MB are removed whole rather than stored unscanned, so nothing in them was necessarily personal data.
+
+A numeric attribute that matches — a card number sent as an integer, for example — moves to the span's text attributes as a single marker, because a numeric field cannot hold one. Its key does not change, so you can still find it where you expect.
+
+### Custom rules
+
+The built-in categories cover structured identifiers that look the same for everyone. Anything shaped like *your* data — an internal account format, a list of known customer references, a vendor attribute Latitude does not recognise — needs a rule you define. Rules are part of the redaction policy, so they follow the same **Set by** control as everything else on the card, and come in three kinds.
+
+**Attribute key.** Replaces the whole value of a span attribute you name, wherever it appears: the attribute map, resource attributes, and metadata, whatever type the attribute arrived as. A number or boolean moves to the text attributes as the marker, since a typed field cannot hold one. The key itself is kept, like every other redaction, so a removed value never looks like an attribute you failed to send. Nothing is scanned, so this kind cannot match the wrong value. Name a key exactly (`acme.customer.tax_id`) or by prefix (`acme.customer.*`). This is the server-side counterpart to SDK attribute masking below, and unlike that one it takes effect without redeploying your application.
+
+**Exact terms.** Removes a list of literal strings — known account numbers, internal codenames, a set of employee addresses. Matches only what you list. Whole-word matching is on by default, so `ACME` does not match inside `ACMEXYZ`, and matching is case-insensitive unless you say otherwise.
+
+**Pattern.** Removes anything matching a regular expression. The most capable kind and the only one that can remove values you did not intend, so it is checked before it can be saved.
+
+Each rule carries a label, which is what appears in stored content: a rule labelled `ACCOUNT_NUMBER` leaves `[REDACTED_ACCOUNT_NUMBER]` behind. Labels cannot reuse a built-in category name.
+
+<Note>
+  Custom rules are configured in the dashboard only. They are not part of `settings.redaction` on the API yet, so a `PATCH` that changes other redaction fields leaves your rules exactly as they were. Sending `rules: []` is the only way to clear them, and the API cannot express that.
+</Note>
+
+#### How a pattern is checked
+
+Latitude refuses to save a pattern that would be unsafe to run: one that cannot compile, matches the empty string, uses a backreference, or backtracks catastrophically — the last checked both by inspecting the expression and by timing it against generated input.
+
+What it does **not** judge is whether a pattern is too broad. Only your data can answer that, so nothing stops you saving `\d{4,}`; the check below is what tells you it would eat every long number in your tool output.
+
+#### Check before you enable
+
+The editor tells you whether a rule is safe to run. To see whether it removes the right things, use **Check against recent spans** on the Privacy page. It runs the policy you have on screen against spans already stored and reports how many values each category and rule would remove — including the ones that matched nothing, which is how you tell a new rule is not doing what you meant — followed by each distinct change with the number of spans carrying it. Nothing is written, and no policy is saved.
+
+This is worth doing every time. Redaction is not retroactive and cannot be undone, so the first time you enable a rule for real is otherwise the first time you find out what it removes.
+
+#### How organization and project rules combine
+
+Rules follow the card's **Set by** control like the rest of the policy. A project set to *This project* carries its own rule list, which **replaces** the organization default rather than adding to it — the same way the categories behave. Switching to *This project* seeds the list from the organization default, so taking ownership does not lose anything. Locking the organization default stops projects changing rules at all.
+
+### Things to know before enabling
+
+- **The raw payload is buffered before redaction runs.** Latitude acknowledges your export first and redacts in a background worker, so the unredacted payload exists briefly in the ingestion queue and, for large batches, in object storage. Queue entries are bounded and object-storage buffers are deleted after processing, with a one-day lifecycle rule as a backstop. Redaction is a control over what Latitude *stores*, not a guarantee that unredacted content never reaches our infrastructure.
+- **Search matches redacted text.** Full-text search indexes are built from the stored content, so a redacted value is no longer findable.
+- **Deduplication does not span a policy change.** Identical messages hash differently before and after redaction, so cross-trace message deduplication treats them as distinct.
+
+## SDK attribute masking
+
+### Masked by default
 
 The TypeScript and Python SDKs mask common security-sensitive attributes before export.
 
@@ -24,28 +144,31 @@ Redacted by default:
 
 The default mask is `******`.
 
-## Custom redaction patterns
+### Custom attribute patterns
 
-Add custom patterns when your app places PII or secrets in known attributes, metadata fields, headers, or prompt variables.
+Add custom attribute patterns when your app places PII or secrets in known attributes, metadata fields, headers, or prompt variables.
 
-### TypeScript
+#### TypeScript
 
 ```ts
 import { Latitude } from "@latitude-data/telemetry"
+import { createOpenAIInstrumentation } from "@latitude-data/telemetry/instrumentations/openai"
 import OpenAI from "openai"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   project: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: { openai: OpenAI },
+  instrumentations: [createOpenAIInstrumentation(OpenAI)],
   redact: {
     attributes: [/^password$/i, /email/i, /phone/i, /secret/i],
     mask: () => "[REDACTED]",
   },
 })
+
+await latitude.ready
 ```
 
-### Python
+#### Python
 
 ```python
 import re
@@ -81,8 +204,10 @@ Latitude's internal systems are designed to avoid unnecessary sensitive-data exp
 
 For strongest protection:
 
-1. Do not send fields your team does not need for debugging, search, scoring, or signal discovery.
-2. Add custom SDK redaction patterns for app-specific PII fields.
-3. Use project boundaries to avoid mixing traces from unrelated agents or products.
-4. Review metadata before adding it to spans, sessions, scores, or annotations.
-5. Keep API keys and secrets out of prompts, tool outputs, and trace metadata whenever possible.
+1. Do not send fields your team does not need for debugging, search, scoring, or signal discovery. Nothing beats not collecting it.
+2. Add custom SDK attribute patterns for app-specific PII fields, so those values never leave your infrastructure.
+3. Enable ingest redaction as a backstop for the structured identifiers that slip through anyway.
+4. Add [custom rules](#custom-rules) for the identifier formats specific to your business, which no built-in category can know about. Check each one against recent spans before enabling it.
+5. Use project boundaries to avoid mixing traces from unrelated agents or products.
+6. Review metadata before adding it to spans, sessions, scores, or annotations.
+7. Keep API keys and secrets out of prompts, tool outputs, and trace metadata whenever possible.

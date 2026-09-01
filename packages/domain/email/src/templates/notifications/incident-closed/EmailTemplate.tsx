@@ -1,5 +1,5 @@
 import type { IncidentRecovery } from "@domain/notifications"
-import type { AlertSeverity, IncidentNotificationKey } from "@domain/shared"
+import { type AlertSeverity, GROUP_FOR_INCIDENT_NOTIFICATION_KEY, type IncidentNotificationKey } from "@domain/shared"
 import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -64,13 +64,13 @@ export function IncidentClosedEmail({
   const isMonitorIncident = incidentKind.startsWith("monitor.")
   const heading = "Resolved escalation"
   const subtitle = isMonitorIncident
-    ? "We notified everyone watching this project — the monitored target has returned below the threshold."
-    : "We notified everyone watching this project — the occurrence rate has returned to baseline."
+    ? "We notified everyone watching this project. The monitored target is back below its threshold."
+    : "We notified everyone watching this project. The occurrence rate is back to baseline."
   const scope = formatScope(organizationName, projectName)
   const duration = humanizeDurationMs(recovery.durationMs)
   const recoveryLine = isMonitorIncident
-    ? `Elevated for ${duration} — no further action needed unless the monitored target climbs again.`
-    : `Elevated for ${duration} — no further action needed unless the signal regresses again.`
+    ? `Elevated for ${duration}. No action needed unless the target climbs again.`
+    : `Elevated for ${duration}. No action needed unless the signal regresses again.`
   const ctaHref = isMonitorIncident ? monitor?.url : signalUrl
 
   const metadataRows = [
@@ -83,7 +83,7 @@ export function IncidentClosedEmail({
   return (
     <ContainerLayout
       previewText={`Resolved: escalation on ${sourceName}`}
-      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: GROUP_FOR_INCIDENT_NOTIFICATION_KEY[incidentKind] }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         {heading}

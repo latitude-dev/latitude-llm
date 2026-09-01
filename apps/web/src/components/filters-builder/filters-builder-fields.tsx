@@ -1,7 +1,7 @@
 import { MOMENT_KINDS } from "@domain/conversation-intelligence"
-import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Button, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
-import { ChevronDown, ChevronUp, InfoIcon, XIcon } from "lucide-react"
+import type { FilterCondition, FilterSet, TraceFilterGroupId } from "@domain/shared"
+import { Button, cn, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
+import { ChevronDown, ChevronUp, InfoIcon, SearchIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useProjectMembersCollection } from "../../domains/members/members.collection.ts"
 import { isHasLlmActivityFilterOn } from "../../domains/sessions/sessions.collection.ts"
@@ -15,6 +15,7 @@ import {
   type PercentileFieldName,
   STATUS_FIELDS,
 } from "./constants.ts"
+import { groupFilterSections } from "./group-sections.ts"
 import { MetadataFilter } from "./metadata-filter/metadata-filter.tsx"
 import { type FilterMode, MultiSelectFilter, type StaticFilterItem } from "./multi-select-filter.tsx"
 import { PercentileFilter } from "./percentile-filter.tsx"
@@ -410,11 +411,22 @@ const MOMENT_FILTER_ITEMS: readonly StaticFilterItem[] = MOMENT_KINDS.map((kind)
   label: humanizeKind(kind),
 }))
 
+interface FilterSectionEntry {
+  readonly group: TraceFilterGroupId
+  readonly label: string
+  readonly node: ReactNode
+}
+
 /**
  * The full session/trace filter builder body, minus any surrounding chrome. Both
  * the Sessions/Traces `FiltersSidebar` and the custom-behavior modal render this;
  * the consumer supplies its own scroll container. `excludeFields` drops fields the
  * consumer must not offer (custom behaviors hide `topics`).
+ *
+ * Sections render under the functional headings of `TRACE_FILTER_GROUPS`, in that
+ * order; a group with no visible section (mode, `excludeFields`, or the search box)
+ * drops its heading too. Within a group, order follows the control type: status,
+ * text, multi-select, number range, then the UI-only controls.
  */
 export function FiltersBuilderFields({
   mode,
@@ -423,6 +435,7 @@ export function FiltersBuilderFields({
   onFiltersChange,
   excludeFields,
 }: FiltersBuilderFieldsProps) {
+  const [search, setSearch] = useState("")
   const isExcluded = useCallback((field: string) => excludeFields?.includes(field) ?? false, [excludeFields])
 
   // Topic options come from the taxonomy tree, parents before children;
@@ -542,97 +555,123 @@ export function FiltersBuilderFields({
     [filters, onFiltersChange],
   )
 
-  return (
-    <>
-      {STATUS_FIELDS.filter(({ field }) => !isExcluded(field)).map(({ label, field }) => {
-        const selected = getStatusValues(filters, field)
-        return (
+  const entries: FilterSectionEntry[] = []
+
+  for (const { label, field, group } of STATUS_FIELDS.filter(({ field }) => !isExcluded(field))) {
+    const selected = getStatusValues(filters, field)
+    entries.push({
+      group,
+      label,
+      node: (
+        <CollapsibleSection key={field} label={label} defaultOpen={selected.length > 0}>
+          <StatusFilter
+            selected={selected}
+            onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: [...values] }] : [])}
+          />
+        </CollapsibleSection>
+      ),
+    })
+  }
+
+  for (const { label, field, placeholder, group } of textFields) {
+    const value = getTextFilterValue(filters, field)
+    const selectedValues = getInValues(filters, field)
+    if (field === "userId") {
+      const selected = selectedValues.length > 0 ? selectedValues : value ? [value] : []
+      entries.push({
+        group,
+        label,
+        node: (
           <CollapsibleSection key={field} label={label} defaultOpen={selected.length > 0}>
-            <StatusFilter
-              selected={selected}
-              onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: [...values] }] : [])}
-            />
-          </CollapsibleSection>
-        )
-      })}
-
-      {textFields.map(({ label, field, placeholder }) => {
-        const value = getTextFilterValue(filters, field)
-        const selectedValues = getInValues(filters, field)
-        if (field === "userId") {
-          const selected = selectedValues.length > 0 ? selectedValues : value ? [value] : []
-          return (
-            <CollapsibleSection key={field} label={label} defaultOpen={selected.length > 0}>
-              <MultiSelectFilter
-                mode={mode}
-                projectId={projectId}
-                column={field as DistinctColumn}
-                selected={selected}
-                onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
-                placeholder={placeholder}
-              />
-            </CollapsibleSection>
-          )
-        }
-        return (
-          <CollapsibleSection key={field} label={label} defaultOpen={!!value}>
-            <DebouncedInput
-              placeholder={placeholder}
-              size="sm"
-              value={value}
-              onDebouncedChange={(nextValue) => setContainsFilter(field, nextValue)}
-            />
-          </CollapsibleSection>
-        )
-      })}
-
-      {getMultiSelectFieldsForMode(mode)
-        .filter(({ field }) => !isExcluded(field))
-        .map(({ label, field }) => {
-          const selectedValues = getInValues(filters, field)
-          const staticItems = staticItemsByField[field]
-          return (
-            <CollapsibleSection key={field} label={label} defaultOpen={selectedValues.length > 0}>
-              <MultiSelectFilter
-                mode={mode}
-                projectId={projectId}
-                column={field as DistinctColumn}
-                selected={selectedValues}
-                onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
-                {...(staticItems ? { staticItems } : {})}
-              />
-            </CollapsibleSection>
-          )
-        })}
-
-      {NUMBER_RANGE_FIELDS.filter(({ field }) => !isExcluded(field)).map(
-        ({ label, field, tooltip, percentile, displayScale, displayStep }) => {
-          const range = getRangeValues(filters, field)
-          const percentileValue = getPercentileValue(filters, field)
-          return (
-            <NumberFilterSection
-              key={field}
-              label={label}
-              field={field}
-              tooltip={tooltip}
-              percentileField={percentile?.field}
-              projectId={projectId}
+            <MultiSelectFilter
               mode={mode}
-              minValue={toDisplayUnit(range.min, displayScale)}
-              maxValue={toDisplayUnit(range.max, displayScale)}
-              percentileValue={percentileValue}
-              onRangeChange={(min, max) =>
-                setRangeFilter(field, toWireUnit(min, displayScale), toWireUnit(max, displayScale))
-              }
-              onPercentileChange={(p) => setPercentileFilter(field, p)}
-              {...(displayStep !== undefined ? { step: displayStep } : {})}
+              projectId={projectId}
+              column={field as DistinctColumn}
+              selected={selected}
+              onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
+              placeholder={placeholder}
             />
-          )
-        },
-      )}
+          </CollapsibleSection>
+        ),
+      })
+      continue
+    }
+    entries.push({
+      group,
+      label,
+      node: (
+        <CollapsibleSection key={field} label={label} defaultOpen={!!value}>
+          <DebouncedInput
+            placeholder={placeholder}
+            size="sm"
+            value={value}
+            onDebouncedChange={(nextValue) => setContainsFilter(field, nextValue)}
+          />
+        </CollapsibleSection>
+      ),
+    })
+  }
 
-      {!isExcluded(ANNOTATOR_FIELD) && (
-        <CollapsibleSection label="Scored by" defaultOpen={getInValues(filters, ANNOTATOR_FIELD).length > 0}>
+  for (const { label, field, group } of getMultiSelectFieldsForMode(mode).filter(({ field }) => !isExcluded(field))) {
+    const selectedValues = getInValues(filters, field)
+    const staticItems = staticItemsByField[field]
+    entries.push({
+      group,
+      label,
+      node: (
+        <CollapsibleSection key={field} label={label} defaultOpen={selectedValues.length > 0}>
+          <MultiSelectFilter
+            mode={mode}
+            projectId={projectId}
+            column={field as DistinctColumn}
+            selected={selectedValues}
+            onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
+            {...(staticItems ? { staticItems } : {})}
+          />
+        </CollapsibleSection>
+      ),
+    })
+  }
+
+  for (const { label, field, group, tooltip, percentile, displayScale, displayStep } of NUMBER_RANGE_FIELDS.filter(
+    ({ field }) => !isExcluded(field),
+  )) {
+    const range = getRangeValues(filters, field)
+    entries.push({
+      group,
+      label,
+      node: (
+        <NumberFilterSection
+          key={field}
+          label={label}
+          field={field}
+          tooltip={tooltip}
+          percentileField={percentile?.field}
+          projectId={projectId}
+          mode={mode}
+          minValue={toDisplayUnit(range.min, displayScale)}
+          maxValue={toDisplayUnit(range.max, displayScale)}
+          percentileValue={getPercentileValue(filters, field)}
+          onRangeChange={(min, max) =>
+            setRangeFilter(field, toWireUnit(min, displayScale), toWireUnit(max, displayScale))
+          }
+          onPercentileChange={(p) => setPercentileFilter(field, p)}
+          {...(displayStep !== undefined ? { step: displayStep } : {})}
+        />
+      ),
+    })
+  }
+
+  if (!isExcluded(ANNOTATOR_FIELD)) {
+    entries.push({
+      group: "scores",
+      label: "Scored by",
+      node: (
+        <CollapsibleSection
+          key={ANNOTATOR_FIELD}
+          label="Scored by"
+          defaultOpen={getInValues(filters, ANNOTATOR_FIELD).length > 0}
+        >
           <MultiSelectFilter
             mode={mode}
             projectId={projectId}
@@ -643,15 +682,18 @@ export function FiltersBuilderFields({
             placeholder="Search members..."
           />
         </CollapsibleSection>
-      )}
-
-      {!isExcluded(ANNOTATOR_FIELD) && (
-        <CollapsibleSection label="Has scores" defaultOpen={getHasAnnotationsOn(filters)}>
+      ),
+    })
+    entries.push({
+      group: "scores",
+      label: "Has scores",
+      node: (
+        <CollapsibleSection key="hasScores" label="Has scores" defaultOpen={getHasAnnotationsOn(filters)}>
           <div className="flex items-center justify-between gap-2">
             <Text.H7 color="foregroundMuted">
               {getHasAnnotationsOn(filters)
                 ? "Showing only items with a human score."
-                : "Off — scores don't filter results."}
+                : "Showing all items, scored or not."}
             </Text.H7>
             <Switch
               checked={getHasAnnotationsOn(filters)}
@@ -659,16 +701,29 @@ export function FiltersBuilderFields({
             />
           </div>
         </CollapsibleSection>
-      )}
+      ),
+    })
+  }
 
-      {!isExcluded("metadata") && (
-        <CollapsibleSection label="Metadata" defaultOpen={metadataEntries.length > 0}>
+  if (!isExcluded("metadata")) {
+    entries.push({
+      group: "custom",
+      label: "Metadata",
+      node: (
+        <CollapsibleSection key="metadata" label="Metadata" defaultOpen={metadataEntries.length > 0}>
           <MetadataFilter entries={metadataEntries} onChange={handleMetadataChange} />
         </CollapsibleSection>
-      )}
+      ),
+    })
+  }
 
-      {mode === "sessions" && !isExcluded("hasLlmActivity") && (
+  if (mode === "sessions" && !isExcluded("hasLlmActivity")) {
+    entries.push({
+      group: "status",
+      label: "Has LLM activity",
+      node: (
         <CollapsibleSection
+          key="hasLlmActivity"
           label="Has LLM activity"
           defaultOpen={filters.hasLlmActivity !== undefined && !isHasLlmActivityFilterOn(filters)}
         >
@@ -684,7 +739,44 @@ export function FiltersBuilderFields({
             />
           </div>
         </CollapsibleSection>
+      ),
+    })
+  }
+
+  const groups = groupFilterSections(entries, search)
+
+  return (
+    <>
+      <div className="sticky top-0 z-10 bg-background pt-3 pb-1">
+        <div className="relative">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search filters"
+            size="sm"
+            className="pl-8 rounded-lg"
+          />
+          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        </div>
+      </div>
+
+      {groups.every((group) => group.hidden) && (
+        <Text.H6 color="foregroundMuted" className="py-3">
+          No filter matches “{search.trim()}”.
+        </Text.H6>
       )}
+      {groups.map((group) => (
+        <div key={group.id} className={cn("flex flex-col", group.hidden && "hidden")}>
+          <Text.H6 color="foregroundMuted" weight="medium" className="pt-3 pb-0.5 uppercase tracking-wide">
+            {group.label}
+          </Text.H6>
+          {group.sections.map((section) => (
+            <div key={section.label} className={cn(section.hidden && "hidden")}>
+              {section.node}
+            </div>
+          ))}
+        </div>
+      ))}
     </>
   )
 }

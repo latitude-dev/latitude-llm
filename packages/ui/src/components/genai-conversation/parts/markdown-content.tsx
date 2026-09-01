@@ -2,17 +2,20 @@ import { isJsonBlock, LARGE_MARKDOWN_CONTENT_THRESHOLD, prettifyCompactJson } fr
 import { isValidElement, type ReactNode, use, useEffect, useMemo, useState } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import rehypeHighlight from "rehype-highlight"
-import remarkBreaks from "remark-breaks"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
+import { cn } from "../../../utils/cn.ts"
 import { CodeBlockControls } from "../../code-block/code-block-controls.tsx"
 import { type HighlightRange, TextSelectionContext } from "../text-selection.tsx"
 import { CodeBlockShell } from "./code-block-shell.tsx"
 import { JsonContent } from "./json-content.tsx"
+import { RedactionChip } from "./redaction-chip.tsx"
+import { REDACTION_CHIP_LABEL_ATTR, rehypeRedactionChips } from "./rehype-redaction-chips.ts"
 import { remarkCodeContentPositions } from "./remark-code-content-positions.ts"
+import { remarkSourceMappedBreaks } from "./remark-source-mapped-breaks.ts"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
-const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks, remarkCodeContentPositions] as const
+const remarkPlugins = [remarkGfm, remarkEmoji, remarkSourceMappedBreaks, remarkCodeContentPositions] as const
 
 // `rehype-highlight` only tokenizes `<code>` elements that carry a
 // `language-*` class (i.e. fences with an explicit language); it leaves
@@ -65,9 +68,20 @@ const markdownComponents: Components = {
       <table>{children}</table>
     </div>
   ),
+  mark: ({ children, ...props }) => {
+    const label = (props as Record<string, unknown>)[REDACTION_CHIP_LABEL_ATTR]
+    if (typeof label !== "string") return <mark>{children}</mark>
+    return <RedactionChip label={label} />
+  },
 }
 export const LARGE_MARKDOWN_HEAD_LENGTH = 6_000
 export const LARGE_MARKDOWN_TAIL_LENGTH = 2_000
+
+// Tailwind Typography sets these as literal colors directly on `.prose`, so a
+// `text-muted-foreground` ancestor can't reach them by inheritance — they
+// have to be overridden by name, for both the light and `prose-invert` sets.
+const MUTED_PROSE_CLASSES =
+  "[--tw-prose-body:var(--color-muted-foreground)] [--tw-prose-headings:var(--color-muted-foreground)] [--tw-prose-lead:var(--color-muted-foreground)] [--tw-prose-links:var(--color-muted-foreground)] [--tw-prose-bold:var(--color-muted-foreground)] [--tw-prose-code:var(--color-muted-foreground)] [--tw-prose-pre-code:var(--color-muted-foreground)] [--tw-prose-bullets:var(--color-muted-foreground)] [--tw-prose-counters:var(--color-muted-foreground)] [--tw-prose-quotes:var(--color-muted-foreground)] [--tw-prose-quote-borders:var(--color-muted-foreground)] [--tw-prose-hr:var(--color-muted-foreground)] [--tw-prose-captions:var(--color-muted-foreground)] [--tw-prose-th-borders:var(--color-muted-foreground)] [--tw-prose-td-borders:var(--color-muted-foreground)] [--tw-prose-invert-body:var(--color-muted-foreground)] [--tw-prose-invert-headings:var(--color-muted-foreground)] [--tw-prose-invert-lead:var(--color-muted-foreground)] [--tw-prose-invert-links:var(--color-muted-foreground)] [--tw-prose-invert-bold:var(--color-muted-foreground)] [--tw-prose-invert-code:var(--color-muted-foreground)] [--tw-prose-invert-pre-code:var(--color-muted-foreground)] [--tw-prose-invert-bullets:var(--color-muted-foreground)] [--tw-prose-invert-counters:var(--color-muted-foreground)] [--tw-prose-invert-quotes:var(--color-muted-foreground)] [--tw-prose-invert-quote-borders:var(--color-muted-foreground)] [--tw-prose-invert-hr:var(--color-muted-foreground)] [--tw-prose-invert-captions:var(--color-muted-foreground)] [--tw-prose-invert-th-borders:var(--color-muted-foreground)] [--tw-prose-invert-td-borders:var(--color-muted-foreground)]"
 
 // Snap to the nearest newline within a small radius so we don't cut markdown
 // constructs (lists, fences, headings) mid-syntax on the first/last slice.
@@ -136,7 +150,7 @@ function MarkdownBody({
   return (
     <ReactMarkdown
       remarkPlugins={[...remarkPlugins]}
-      rehypePlugins={[rehypeHighlightPlugin, sourcePlugin]}
+      rehypePlugins={[rehypeHighlightPlugin, rehypeRedactionChips, sourcePlugin]}
       components={markdownComponents}
     >
       {content}
@@ -162,10 +176,13 @@ export function MarkdownContent({
   content,
   messageIndex,
   partIndex,
+  flat = false,
 }: {
   readonly content: string
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
+  /** Mutes the rendered text color, for nested contexts like a subagent's inline conversation. */
+  readonly flat?: boolean
 }) {
   const selectionCtx = use(TextSelectionContext)
   const highlights = useMemo(
@@ -211,7 +228,7 @@ export function MarkdownContent({
           } hidden`
 
     return (
-      <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
+      <div className={cn("prose prose-sm dark:prose-invert max-w-none wrap-break-word", flat && MUTED_PROSE_CLASSES)}>
         <MarkdownBody content={head} highlights={highlights} sliceSourceStart={0} />
         {middle.length > 0 &&
           (showMiddle ? (
@@ -239,7 +256,7 @@ export function MarkdownContent({
   }
 
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
+    <div className={cn("prose prose-sm dark:prose-invert max-w-none wrap-break-word", flat && MUTED_PROSE_CLASSES)}>
       <MarkdownBody content={content} highlights={highlights} sliceSourceStart={0} />
     </div>
   )

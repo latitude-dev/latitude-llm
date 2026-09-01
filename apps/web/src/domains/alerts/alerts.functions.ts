@@ -38,6 +38,8 @@ export interface AlertIncidentRecord {
   readonly endedAt: string | null
   /** Resolved name of the issue tied to the incident; `null` if not found (e.g., deleted). */
   readonly signalName: string | null
+  /** Resolved slug of the issue tied to the incident, for the deep link; `null` if not found. */
+  readonly signalSlug: string | null
   /** Resolved name of the saved search tied to the monitor, when available. */
   readonly savedSearchName: string | null
   /** Owning monitor name + slug for the attribution line + deep link; `null` on legacy or issue rows. */
@@ -73,6 +75,7 @@ const toRecord = (
     startedAt: incident.startedAt.toISOString(),
     endedAt: incident.endedAt?.toISOString() ?? null,
     signalName: issue?.name ?? null,
+    signalSlug: issue?.slug ?? null,
     savedSearchName: savedSearchName ?? null,
     monitorName: monitor?.name ?? null,
     monitorSlug: monitor?.slug ?? null,

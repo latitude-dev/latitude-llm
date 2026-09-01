@@ -1,29 +1,24 @@
-import type { CustomBehaviorId, OrganizationId, ProjectId } from "@domain/shared"
+import type { CustomBehaviorId, FacetId, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import { TaxonomyQualityGateError } from "../errors.ts"
+import { normalizedTaxonomyName } from "../name-quality.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 
 export interface AssertTaxonomyQualityInput {
   readonly organizationId?: OrganizationId
   readonly projectId: ProjectId
   readonly dimension?: TaxonomyDimensionType
-  /** Omit/null asserts the global tree; an id asserts that custom behavior's scoped tree. */
+  /** Omit/null asserts the whole-project tree; an id asserts that cohort's scoped tree. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** Omit/null = topic; an id asserts that facet's tree. */
+  readonly facetId?: FacetId | null
 }
 
 export interface AssertTaxonomyQualityResult {
   readonly clustersScanned: number
   readonly findings: readonly string[]
 }
-
-const normalizedName = (name: string): string =>
-  name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
 
 /**
  * Hard gates for taxonomy graph invariants that should never be presented to
@@ -40,6 +35,7 @@ export const assertTaxonomyQualityUseCase = (input: AssertTaxonomyQualityInput) 
       projectId: input.projectId,
       dimension,
       customBehaviorId: input.customBehaviorId ?? null,
+      facetId: input.facetId ?? null,
     })
     const parentsWithChildren = new Set(
       active.flatMap((cluster) => (cluster.parentClusterId ? [cluster.parentClusterId] : [])),
@@ -55,7 +51,7 @@ export const assertTaxonomyQualityUseCase = (input: AssertTaxonomyQualityInput) 
     const namesBySiblingGroup = new Map<string, Map<string, string[]>>()
     for (const cluster of active) {
       const groupKey = cluster.parentClusterId ?? "__root__"
-      const name = normalizedName(cluster.name)
+      const name = normalizedTaxonomyName(cluster.name)
       if (name.length === 0 || name === "pending") continue
       const group = namesBySiblingGroup.get(groupKey) ?? new Map<string, string[]>()
       const ids = group.get(name) ?? []

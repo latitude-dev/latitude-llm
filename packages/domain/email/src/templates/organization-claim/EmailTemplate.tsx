@@ -20,7 +20,7 @@ export function OrganizationClaimEmail({ claimUrl, organizationName, expiresAtLa
         {`Claim ${organizationName} on Latitude`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`Your new ${organizationName} organization has been set up for you on Latitude, the open-source AI Agent Monitoring platform. Claim it before ${expiresAtLabel} to capture Agent trajectories, discover behavior patterns, and catch issues before your users do!`}
+        {`Your ${organizationName} organization is set up on Latitude, the open-source AI agent monitoring platform. Claim it before ${expiresAtLabel} to start monitoring your agents and catching issues before your users do.`}
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>

@@ -1,4 +1,5 @@
 import type { DomainEvent } from "@domain/events"
+import type { SerializedRedactionPolicy } from "@domain/shared"
 
 /**
  * Phantom type helper: returns an empty object at runtime but carries type T
@@ -87,6 +88,14 @@ const _registry = {
       readonly defaultProjectId: string | null
       readonly projectIdBySlug: Readonly<Record<string, string>>
       readonly isSandbox?: boolean
+      /**
+       * Redaction policy per project id, resolved at the ingest boundary where each
+       * project's settings are already loaded for sampling. Projects resolving to
+       * `off` are absent and the field is omitted when no project opted in, so a
+       * missing field means "redact nothing" — which is what makes this field safe
+       * to deploy in either order and is why the worker needs no legacy fallback.
+       */
+      readonly redaction?: Readonly<Record<string, SerializedRedactionPolicy>>
     }
   }>(),
 
@@ -163,14 +172,49 @@ const _registry = {
     }
     /**
      * Producer step for signal discovery. Fired by the domain-events router
-     * on `SignalCreated`; the consumer resolves org-member recipients and
-     * emits one `create-notification` task per recipient.
+     * on `SignalPromoted`, which is when a discovered signal starts existing for
+     * users; the consumer resolves org-member recipients and emits one
+     * `create-notification` task per recipient.
      */
     "request-signal-discovered-notifications": {
       readonly organizationId: string
       readonly projectId: string
       readonly signalId: string
+      /** Promotion time, not row-creation time — see `SignalPromoted`. */
       readonly discoveredAt: string
+    }
+    /**
+     * Producer step for signal regression. Fired by the domain-events router
+     * on `SignalRegressed` (a new occurrence reopened a resolved signal); the
+     * consumer skips muted signals, resolves recipients (assignee-first), and
+     * emits one `create-notification` task per recipient.
+     */
+    "request-signal-regressed-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      readonly regressedAt: string
+      readonly triggerScoreId: string
+    }
+    /**
+     * Producer step for a priority increase. Fired by the domain-events router
+     * on `SignalReprioritized`, which only fires on increases in the first
+     * place; the consumer re-checks that rule, skips muted signals, drops the
+     * actor from the org-member fan-out, and emits one `create-notification`
+     * task per remaining recipient. The priorities ride on the task rather
+     * than being re-read, so a burst of edits announces each transition
+     * instead of the newest value N times.
+     */
+    "request-signal-reprioritized-notifications": {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      /** The raised-to priority. Never null — clearing a priority is a decrease. */
+      readonly priority: string
+      readonly previousPriority: string | null
+      readonly actorUserId: string
+      /** ISO timestamp frozen by the triage transaction; idempotency anchor. */
+      readonly reprioritizedAt: string
     }
     /**
      * Producer step for destination quarantine. Fired directly by the
@@ -190,6 +234,22 @@ const _registry = {
       readonly destinationKind: string
       readonly quarantinedAt: string
       readonly failureMessage: string | null
+    }
+    /**
+     * Producer step for billing limit alerts. Fired by the domain-events
+     * router once per entry in `BillingUsagePeriodUpdated.limitsCrossed`
+     * (free included credits, Pro overage entry, or Pro spend cap). The
+     * consumer fans out to owners/admins only and emits one
+     * `create-notification` per recipient.
+     */
+    "request-billing-limit-notifications": {
+      readonly organizationId: string
+      readonly periodStart: string
+      readonly periodEnd: string
+      readonly limitKind: "included-credits" | "overage-started" | "spend-cap"
+      readonly includedCredits: number
+      readonly consumedCredits: number
+      readonly overageCredits: number
     }
     /**
      * Creator step. One message per recipient. The consumer writes the
@@ -275,6 +335,8 @@ const _registry = {
       readonly signalId?: string
       readonly alertIncidentId?: string
       readonly source: "signal" | "incident"
+      /** Signal-source trigger; omitted means `signal.discovered`. */
+      readonly trigger?: "signal.discovered" | "signal.regressed"
     }
     send: {
       readonly organizationId: string
@@ -289,6 +351,71 @@ const _registry = {
       readonly prompt: string
       readonly context: Record<string, unknown>
       readonly target: Record<string, unknown>
+    }
+  }>(),
+
+  // Inbound GitHub App webhook events, slim-extracted by the receiver (5.7). Never carries a raw
+  // payload — the receiver caps commit messages and count before enqueueing. Routed to the org by
+  // `installationId`; `pull-request`/`push` are stubbed in Phase 1 to ledger-claim + skip.
+  "github-events": payloads<{
+    "pull-request": {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly repoId: number
+      readonly repoFullName: string
+      readonly action: string
+      readonly prNumber: number
+      readonly title: string
+      readonly body: string | null
+      readonly state: string
+      readonly draft: boolean
+      readonly merged: boolean
+      readonly mergeCommitSha: string | null
+      readonly mergedAt: string | null
+      readonly headRef: string
+      readonly headSha: string
+      readonly headRepoId: number | null
+      readonly baseRef: string
+      readonly htmlUrl: string
+      readonly userLogin: string
+      readonly authorAssociation: string
+      /** Present only on `edited` retargets — the previous base ref. */
+      readonly changesBaseRef: string | null
+    }
+    push: {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly repoId: number
+      readonly repoFullName: string
+      readonly defaultBranch: string
+      readonly ref: string
+      readonly before: string
+      readonly after: string
+      readonly created: boolean
+      readonly deleted: boolean
+      readonly forced: boolean
+      readonly commits: readonly {
+        readonly id: string
+        readonly message: string
+        readonly timestamp: string
+        readonly authorUsername: string | null
+        readonly url: string
+      }[]
+      /** commits[] hit the per-push cap or GitHub's truncation; the API walk (Phase 5) completes it. */
+      readonly truncated: boolean
+    }
+    installation: {
+      readonly deliveryId: string
+      readonly installationId: number
+      readonly event: "installation" | "installation_repositories"
+      readonly action: string
+      readonly accountLogin: string
+      readonly accountType: string
+      readonly repositorySelection: string
+    }
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
     }
   }>(),
 
@@ -331,6 +458,48 @@ const _registry = {
       readonly projectId: string
       readonly signalId: string
     }
+    /**
+     * Name a qualified signal from its whole cluster and stamp `promoted_at`.
+     *
+     * Promotion lives out here rather than in the transaction that observed the
+     * evidence because the signal has to be named before it exists for anyone,
+     * and that is a model call. Emits `SignalPromoted`, which is what the
+     * announcements hang off.
+     */
+    promoteSignal: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
+    /**
+     * Merge a candidate with its near-duplicate candidates, so a problem split
+     * across several one-session signals can reach the gate none of its
+     * fragments could reach alone. Published throttled whenever a candidate's
+     * centroid changes — at creation, and on an assignment that left it
+     * unpromoted.
+     */
+    consolidate: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
+    /**
+     * ClickHouse half of a consolidation, fired from `SignalsConsolidated`
+     * rather than by the merge, whose own retry no-ops on the soft-deleted
+     * losers and would never reach it.
+     */
+    reconcileConsolidation: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly survivorId: string
+    }
+    /**
+     * Fired by the daily cron — soft-deletes candidates that stopped
+     * accumulating. Platform-wide and capped, with no per-signal fan-out: an
+     * expired candidate has no consequences to unwind, since nothing was ever
+     * announced for it.
+     */
+    sweepCandidates: Record<string, never>
     checkEscalation: {
       readonly organizationId: string
       readonly projectId: string
@@ -352,6 +521,31 @@ const _registry = {
       readonly feedback: string
       readonly source: string
       readonly createdAt: string
+    }
+    /**
+     * Fired by the domain-events router on `SignalFeedbackSubmitted`. Scans the
+     * signal's newest occurrences for flagger-authored rows and fans out one
+     * `reviewFlaggerOccurrence` per distinct flagger trace behind them.
+     */
+    reviewFlaggerOccurrences: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+    }
+    /**
+     * Grades one flagger generation with the customer's verdict on the signal it
+     * detected. The annotation lands on Latitude's own flagger trace, in the
+     * dogfood organization — never in the customer's project.
+     */
+    reviewFlaggerOccurrence: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly signalId: string
+      readonly flaggerTraceId: string
+      readonly flaggerSlug: string
+      readonly value: number
+      readonly passed: boolean
+      readonly feedback: string
     }
   }>(),
 
@@ -489,22 +683,9 @@ const _registry = {
     }
   }>(),
 
-  // Runs the deterministic portion of every registered flagger strategy against
-  // a trace. Matched strategies write a SYSTEM-authored score directly; strategies
-  // that return `no-match` are sampled and, if selected, routed to the LLM
-  // workflow; `ambiguous` strategies are rate-limited per {org, slug} and also
-  // routed to the LLM workflow. Per-strategy failures are isolated.
-  "deterministic-flaggers": payloads<{
-    run: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly traceId: string
-    }
-  }>(),
-
   // Materializes a settled trace's memory-operation spans into the memory ledger
   // (memory_events / memory_blobs / memory_current). Fanned out from trace-end as
-  // an isolated failure domain, mirroring deterministic-flaggers.
+  // an isolated failure domain.
   "memory-projection": payloads<{
     run: {
       readonly organizationId: string
@@ -514,17 +695,15 @@ const _registry = {
     }
   }>(),
 
-  // Thin start-workflow job. Separates the Temporal `start()` call out of the
-  // deterministic-flaggers hot path so transient Temporal unavailability retries
-  // with bounded BullMQ backoff instead of re-running the whole deterministic fan-out.
-  "start-flagger-workflow": payloads<{
+  // Starts the session flagger screening workflow, published by the moments
+  // persist activity per recorded generation. The dedupe key MUST include the
+  // analysis hash — a bare per-session jobId shadows later generations.
+  "flagger-screening": payloads<{
     start: {
       readonly organizationId: string
       readonly projectId: string
-      readonly traceId: string
-      readonly flaggerId: string
-      readonly flaggerSlug: string
-      readonly reason: "sampled" | "ambiguous"
+      readonly sessionId: string
+      readonly analysisHash: string
     }
   }>(),
 
@@ -611,11 +790,11 @@ const _registry = {
     recordBillableAction: {
       readonly organizationId: string
       readonly projectId: string
-      readonly action: "trace" | "flagger-scan" | "deterministic-eval-scan" | "live-eval-scan" | "eval-generation"
+      readonly action: "trace" | "eval-scan" | "semantic-query" | "llm-call"
       readonly idempotencyKey: string
       readonly context: {
-        readonly planSlug: "free" | "pro" | "enterprise"
-        readonly planSource: "override" | "subscription" | "free-fallback"
+        readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+        readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
         readonly periodStart: string
         readonly periodEnd: string
         readonly includedCredits: number
@@ -628,8 +807,8 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceIds: readonly string[]
-      readonly planSlug: "free" | "pro" | "enterprise"
-      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+      readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
       readonly periodStart: string
       readonly periodEnd: string
       readonly includedCredits: number
@@ -773,6 +952,26 @@ const _registry = {
       readonly remainingSegments: readonly { readonly start: string; readonly end: string }[]
       /** The chain's lower bound (ISO); coverage extends to it once the chain drains. */
       readonly coverageFloor: string
+    }
+  }>(),
+
+  imports: payloads<{
+    start: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly importJobId: string
+    }
+    fetchPage: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly importJobId: string
+      /** Consecutive `Retry-After` waits already spent on this page; bounded, carried in the payload. */
+      readonly rateLimitWaits?: number
+    }
+    /** Cascade cleanup fired by the domain-events router on `ProjectDeleted`. */
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
     }
   }>(),
 }

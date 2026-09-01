@@ -1,4 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import type { ImportSourceAdapterRegistry } from "@domain/imports"
 import type { Organization } from "@domain/organizations"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
@@ -26,4 +27,5 @@ export interface OperationContext {
   readonly workflowStarter: WorkflowStarterShape
   readonly workflowQuerier: WorkflowQuerierShape
   readonly storageDisk: StorageDiskPort
+  readonly importSourceAdapters: ImportSourceAdapterRegistry
 }

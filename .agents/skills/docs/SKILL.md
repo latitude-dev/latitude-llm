@@ -189,6 +189,7 @@ Use the closest existing doc when possible:
 - `dev-docs/repositories.md`: repository port naming, standard verbs, audit of domain ports
 - `dev-docs/command-palette.md`: global Cmd+K palette architecture and how to register new pages/actions/searchable entities
 - `dev-docs/showcase.md`: the shared read-only Showcase project (`/projects/lat-demo`) — project-scope/Biome enforcement, security model, blue/green regeneration, and backoffice lifecycle
+- `dev-docs/design-system.md`: `apps/design-system` component reference site (`@repo/ui` demos, local dev, deployment)
 
 If a change spans multiple domains, update multiple docs.
 

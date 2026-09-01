@@ -9,7 +9,7 @@ This guide walks you through the Latitude web interface. You'll learn how to nav
 
 ## Prerequisites
 
-- A Latitude account (sign up at [latitude.so](https://latitude.so))
+- A Latitude account (sign up at [console.latitude.so](https://console.latitude.so/login))
 - A project with telemetry already connected (ask your development team to set this up using the [Developer Quick Start](./quick-start-dev))
 
 ## Understanding the Dashboard
@@ -45,31 +45,46 @@ When a search is one you'll come back to, click **Save search** and give it a na
 
 ## Automatic Detection with Flaggers
 
-Some failure categories are common enough that Latitude detects them for you. Every project starts with a set of built-in **flaggers** running on every completed trace:
+Some failure categories are common enough that Latitude detects them for you. Every project starts with a set of built-in **flaggers** that inspect every completed session. They come in four groups:
 
-- **Jailbreaking**: Attempts to bypass safety constraints
-- **NSFW**: Sexual or otherwise inappropriate content
-- **Refusal**: The agent refuses requests it should handle
-- **Frustration**: Clear user dissatisfaction
-- **Forgetting**: The agent loses conversation context
+**User-side signals** (LLM-based)
+
+- **Jailbreaking**: Attempts to bypass safety constraints or system instructions
+- **NSFW**: Workplace-inappropriate or toxic content
+- **Frustration**: Clear user dissatisfaction or loss of trust
+
+**Agent behavior** (LLM-based)
+
+- **Refusal**: The agent refuses a request it should handle
 - **Laziness**: The agent avoids doing the requested work
+- **Forgetting**: The agent loses context from earlier in the conversation
+- **Incompletion**: A task was left undone and the user had to follow up
 - **Thrashing**: The agent cycles between tools without making progress
-- **Tool Call Errors**: Failed tool invocations
-- **Output Schema Validation**: Structured output didn't conform to the declared schema
-- **Empty Response**: The assistant returned an empty or degenerate response
+- **Bluffing**: The agent continues past a failed tool call as if it succeeded
+- **PII leakage**: The agent's output exposes personal data it should not have surfaced
 
-When a flagger matches, it writes an annotation directly on the trace. That annotation feeds into [signal discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list.
+**Response validity** (deterministic, free, runs on every session while enabled)
 
-## Reviewing Traces
+- **Empty response**: The agent returned an empty or degenerate response
+- **Tool call errors**: Malformed, duplicated, failed, or undeclared tool calls
+- **Output schema validation**: Structured output was truncated or unparseable
 
-To leave human feedback on a trace, open it from any list (Search, Traces, a signal's logs) and use the annotation panel on the right:
+**Cost and efficiency** (deterministic, free, runs on every session while enabled)
+
+- **Low cache hit rate**: Caching is on but most input tokens are missing the cache
+
+When a flagger matches, it annotates the trace inside the session where the issue appeared. That annotation feeds into [signal discovery](../signals/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. Under **Project Settings** you can toggle each flagger, apply a use-case preset, and set how aggressively the LLM ones sample. See [Flaggers](../annotations/flaggers) for what each one detects.
+
+## Reviewing Sessions
+
+To leave human feedback, open a session from any list (Sessions, Search, a signal's logs) and use the annotation panel on the right. Your verdict attaches to the trace you are looking at:
 
 - Click anywhere in the conversation to create a message-level annotation, or use the button for a conversation-level one.
 - Mark it as positive (thumbs up) or negative (thumbs down).
 - Write feedback describing what you observed.
 - Optionally link it to an existing signal, or leave the assignment automatic.
 
-A typical review session combines saved searches and inline annotations: open the saved search you're responsible for, click the first trace, annotate, move on. The saved search's Annotated count goes up as you work.
+A typical review slot combines saved searches and inline annotations: open the saved search you're responsible for, click the first session, annotate, move on. The saved search's Annotated count goes up as you work.
 
 ## Understanding Signals
 

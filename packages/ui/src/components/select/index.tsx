@@ -25,6 +25,8 @@ export type SelectOption<V = unknown> = {
   value: V
   icon?: ReactNode
   disabled?: boolean
+  /** Text a searchable Select filters on instead of `label`, for aliases the label doesn't spell out. */
+  searchText?: string
 }
 
 export type SelectOptionGroup<V = unknown> = {
@@ -111,6 +113,7 @@ export type SelectProps<V = unknown> = Omit<FormFieldProps, "children"> &
     open?: boolean
     onOpenChange?: (open: boolean) => void
     footerAction?: SelectFooterAction
+    portalTarget?: "local" | "body"
   }
 
 export function Select<V = unknown>(selectProps: SelectProps<V>) {
@@ -153,9 +156,11 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
     footerAction,
+    portalTarget = "local",
   } = selectProps
   const [internalSelected, setInternalSelected] = useState<V | undefined>(defaultValue)
   const [internalIsOpen, setInternalIsOpen] = useState(false)
+  // Local portals stay within modal interaction scopes; body portals escape ancestor stacking and overflow contexts.
   const [popoverContainer, setPopoverContainer] = useState<HTMLDivElement | null>(null)
 
   const selectedValue = isControlled ? value : internalSelected
@@ -167,6 +172,11 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
     selectedValue === undefined || selectedValue === null || selectedValue === ("" as V) ? "" : String(selectedValue)
 
   const _onChange = (newValue: string) => {
+    // Radix rejects an item whose value is empty, so an empty change is never a real selection.
+    // It emits one anyway when a controlled value is set in the same commit that first renders
+    // its matching item, which reads as the caller clearing the field it just set. Clearing is
+    // `_onRemove`'s job.
+    if (newValue === "") return
     if (!isControlled) {
       setInternalSelected(newValue as V)
     }
@@ -258,7 +268,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
             </PopoverTrigger>
             <PopoverContent
               data-slot="searchable-select-content"
-              container={popoverContainer ?? undefined}
+              container={portalTarget === "local" ? (popoverContainer ?? undefined) : undefined}
               align={align}
               side={side}
               {...(sideOffset !== undefined ? { sideOffset } : { sideOffset: 4 })}

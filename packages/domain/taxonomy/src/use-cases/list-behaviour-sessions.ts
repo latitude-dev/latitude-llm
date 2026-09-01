@@ -1,4 +1,4 @@
-import type { CustomBehaviorId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import type { CustomBehaviorId, FacetId, OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
 import {
   type ClusterSessionMomentRange,
@@ -20,6 +20,8 @@ export interface ListBehaviourSessionsInput {
   readonly limit?: number
   /** Omit/null = global taxonomy; an id reads that behavior's scoped slice. */
   readonly customBehaviorId?: CustomBehaviorId | null
+  /** The behavior's facet; omit/null = topic edges, a facet id = that facet's edges. */
+  readonly facetId?: FacetId | null
 }
 
 const EMPTY_PAGE: ClusterSessionsPage = { sessions: [], histogram: [], hasMore: false, nextOffset: null }
@@ -36,7 +38,10 @@ export const listBehaviourSessionsUseCase = (input: ListBehaviourSessionsInput) 
     yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
     const clusters = yield* TaxonomyClusterRepository
     const intelligence = yield* TaxonomyClusterIntelligenceRepository
-    const scope = input.customBehaviorId != null ? { customBehaviorId: input.customBehaviorId } : {}
+    const scope =
+      input.customBehaviorId != null
+        ? { customBehaviorId: input.customBehaviorId, ...(input.facetId != null ? { facetId: input.facetId } : {}) }
+        : {}
     const clusterIds = yield* clusters.listSubtreeIds({
       projectId: input.projectId,
       clusterId: input.clusterId,

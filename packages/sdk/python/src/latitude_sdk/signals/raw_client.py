@@ -15,6 +15,7 @@ from ..core.request_options import RequestOptions
 from ..core.serialization import convert_and_respect_annotation_metadata
 from ..errors.bad_request_error import BadRequestError
 from ..errors.not_found_error import NotFoundError
+from ..errors.too_many_requests_error import TooManyRequestsError
 from ..errors.unauthorized_error import UnauthorizedError
 from ..types.create_signal_response import CreateSignalResponse
 from ..types.error import Error
@@ -27,6 +28,7 @@ from ..types.signal_analytics_response import SignalAnalyticsResponse
 from ..types.signal_detail import SignalDetail
 from ..types.signal_histogram import SignalHistogram
 from ..types.signals_lifecycle_response import SignalsLifecycleResponse
+from ..types.submit_signal_feedback_response import SubmitSignalFeedbackResponse
 from ..types.update_signal_response import UpdateSignalResponse
 from .types.create_signal_body_evaluation import CreateSignalBodyEvaluation
 from .types.create_signal_body_priority import CreateSignalBodyPriority
@@ -76,7 +78,7 @@ class RawSignalsClient:
             Free-text semantic search across the signals' names and descriptions.
 
         lifecycle_group : typing.Optional[ListSignalsRequestLifecycleGroup]
-            `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
+            `"active"` for signals that are neither resolved nor ignored; `"archived"` for resolved or ignored signals. Omit to include both.
 
         sort_by : typing.Optional[ListSignalsRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
@@ -787,6 +789,371 @@ class RawSignalsClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    def resolve(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        keep_monitoring: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SignalsLifecycleResponse]:
+        """
+        Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        keep_monitoring : typing.Optional[bool]
+            Whether linked evaluations keep running after the resolve, so regressions are detected. Defaults to the project setting.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SignalsLifecycleResponse]
+            Per-signal result
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/resolve",
+            method="POST",
+            json={
+                "signalIds": signal_ids,
+                "keepMonitoring": keep_monitoring,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalsLifecycleResponse,
+                    parse_obj_as(
+                        type_=SignalsLifecycleResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def unresolve(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SignalsLifecycleResponse]:
+        """
+        Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SignalsLifecycleResponse]
+            Per-signal result
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/unresolve",
+            method="POST",
+            json={
+                "signalIds": signal_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalsLifecycleResponse,
+                    parse_obj_as(
+                        type_=SignalsLifecycleResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def ignore(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SignalsLifecycleResponse]:
+        """
+        Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SignalsLifecycleResponse]
+            Per-signal result
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/ignore",
+            method="POST",
+            json={
+                "signalIds": signal_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalsLifecycleResponse,
+                    parse_obj_as(
+                        type_=SignalsLifecycleResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def unignore(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SignalsLifecycleResponse]:
+        """
+        Returns each signal in `signalIds` to the active list and re-enables its notifications.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SignalsLifecycleResponse]
+            Per-signal result
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/unignore",
+            method="POST",
+            json={
+                "signalIds": signal_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalsLifecycleResponse,
+                    parse_obj_as(
+                        type_=SignalsLifecycleResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     def mute(
         self,
         project_slug: str,
@@ -795,7 +1162,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SignalsLifecycleResponse]:
         """
-        Mutes each signal in `signalIds`.
+        Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.
 
         Parameters
         ----------
@@ -885,7 +1252,7 @@ class RawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SignalsLifecycleResponse]:
         """
-        Reverts each signal in `signalIds` to an unmuted state.
+        Re-enables notifications for each signal in `signalIds`.
 
         Parameters
         ----------
@@ -1084,6 +1451,115 @@ class RawSignalsClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    def submit_feedback(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        passed: bool,
+        feedback: typing.Optional[str] = OMIT,
+        value: typing.Optional[float] = OMIT,
+        ignore: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SubmitSignalFeedbackResponse]:
+        """
+        Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        passed : bool
+            `true` when the signal is a real problem worth flagging; `false` when it is a false positive.
+
+        feedback : typing.Optional[str]
+            Reason for the verdict. Required when `passed` is `false`.
+
+        value : typing.Optional[float]
+            Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.
+
+        ignore : typing.Optional[bool]
+            Also archive the signal so new occurrences stop being reported.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SubmitSignalFeedbackResponse]
+            Feedback recorded
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/feedback",
+            method="POST",
+            json={
+                "passed": passed,
+                "feedback": feedback,
+                "value": value,
+                "ignore": ignore,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SubmitSignalFeedbackResponse,
+                    parse_obj_as(
+                        type_=SubmitSignalFeedbackResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     def export(
         self,
         project_slug: str,
@@ -1175,6 +1651,17 @@ class RawSignalsClient:
                         ),
                     ),
                 )
+            if _response.status_code == 429:
+                raise TooManyRequestsError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
             _response_json = _response.json()
         except JSONDecodeError:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
@@ -1221,7 +1708,7 @@ class AsyncRawSignalsClient:
             Free-text semantic search across the signals' names and descriptions.
 
         lifecycle_group : typing.Optional[ListSignalsRequestLifecycleGroup]
-            `"active"` for unmuted signals; `"archived"` for muted signals. Omit to include both.
+            `"active"` for signals that are neither resolved nor ignored; `"archived"` for resolved or ignored signals. Omit to include both.
 
         sort_by : typing.Optional[ListSignalsRequestSortBy]
             Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.
@@ -1932,6 +2419,371 @@ class AsyncRawSignalsClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    async def resolve(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        keep_monitoring: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
+        """
+        Marks each signal in `signalIds` as resolved, archiving it and re-enabling its notifications. Unless `keepMonitoring` is `false`, linked evaluations keep running so a new occurrence reopens the signal as regressed.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        keep_monitoring : typing.Optional[bool]
+            Whether linked evaluations keep running after the resolve, so regressions are detected. Defaults to the project setting.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SignalsLifecycleResponse]
+            Per-signal result
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/resolve",
+            method="POST",
+            json={
+                "signalIds": signal_ids,
+                "keepMonitoring": keep_monitoring,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalsLifecycleResponse,
+                    parse_obj_as(
+                        type_=SignalsLifecycleResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def unresolve(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
+        """
+        Reopens each signal in `signalIds` without marking it as regressed, re-enabling its notifications.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SignalsLifecycleResponse]
+            Per-signal result
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/unresolve",
+            method="POST",
+            json={
+                "signalIds": signal_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalsLifecycleResponse,
+                    parse_obj_as(
+                        type_=SignalsLifecycleResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def ignore(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
+        """
+        Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped and notifications are also muted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SignalsLifecycleResponse]
+            Per-signal result
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/ignore",
+            method="POST",
+            json={
+                "signalIds": signal_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalsLifecycleResponse,
+                    parse_obj_as(
+                        type_=SignalsLifecycleResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def unignore(
+        self,
+        project_slug: str,
+        *,
+        signal_ids: typing.Sequence[str],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
+        """
+        Returns each signal in `signalIds` to the active list and re-enables its notifications.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_ids : typing.Sequence[str]
+            Non-empty list of signal ids. Operations are idempotent — already-applied signals are unchanged.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SignalsLifecycleResponse]
+            Per-signal result
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/unignore",
+            method="POST",
+            json={
+                "signalIds": signal_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SignalsLifecycleResponse,
+                    parse_obj_as(
+                        type_=SignalsLifecycleResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     async def mute(
         self,
         project_slug: str,
@@ -1940,7 +2792,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
         """
-        Mutes each signal in `signalIds`.
+        Silences notifications for each signal in `signalIds`. Muted signals keep tracking occurrences and opening incidents; only notifications stop.
 
         Parameters
         ----------
@@ -2030,7 +2882,7 @@ class AsyncRawSignalsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SignalsLifecycleResponse]:
         """
-        Reverts each signal in `signalIds` to an unmuted state.
+        Re-enables notifications for each signal in `signalIds`.
 
         Parameters
         ----------
@@ -2229,6 +3081,115 @@ class AsyncRawSignalsClient:
             )
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    async def submit_feedback(
+        self,
+        project_slug: str,
+        signal_slug: str,
+        *,
+        passed: bool,
+        feedback: typing.Optional[str] = OMIT,
+        value: typing.Optional[float] = OMIT,
+        ignore: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SubmitSignalFeedbackResponse]:
+        """
+        Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
+
+        Parameters
+        ----------
+        project_slug : str
+            Project slug (human-readable identifier)
+
+        signal_slug : str
+            Signal slug.
+
+        passed : bool
+            `true` when the signal is a real problem worth flagging; `false` when it is a false positive.
+
+        feedback : typing.Optional[str]
+            Reason for the verdict. Required when `passed` is `false`.
+
+        value : typing.Optional[float]
+            Normalized score for the signal's usefulness. Defaults to `1` when `passed` is `true`, else `0`.
+
+        ignore : typing.Optional[bool]
+            Also archive the signal so new occurrences stop being reported.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SubmitSignalFeedbackResponse]
+            Feedback recorded
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/projects/{encode_path_param(project_slug)}/signals/{encode_path_param(signal_slug)}/feedback",
+            method="POST",
+            json={
+                "passed": passed,
+                "feedback": feedback,
+                "value": value,
+                "ignore": ignore,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SubmitSignalFeedbackResponse,
+                    parse_obj_as(
+                        type_=SubmitSignalFeedbackResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        except ValidationError as e:
+            raise ParsingError(
+                status_code=_response.status_code, headers=dict(_response.headers), body=_response.json(), cause=e
+            )
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     async def export(
         self,
         project_slug: str,
@@ -2311,6 +3272,17 @@ class AsyncRawSignalsClient:
                 )
             if _response.status_code == 404:
                 raise NotFoundError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        Error,
+                        parse_obj_as(
+                            type_=Error,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            if _response.status_code == 429:
+                raise TooManyRequestsError(
                     headers=dict(_response.headers),
                     body=typing.cast(
                         Error,

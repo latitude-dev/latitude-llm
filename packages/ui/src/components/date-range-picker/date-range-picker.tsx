@@ -34,7 +34,11 @@ interface DateRangePickerProps {
   readonly placeholder?: string
   readonly clearLabel?: string
   readonly disabled?: boolean
+  /** Selectable bounds. Days outside are disabled and month navigation stops at them. */
+  readonly minDate?: Date
+  readonly maxDate?: Date
   readonly align?: "start" | "center" | "end"
+  readonly portalTarget?: "local" | "body"
   /** Fill the available width, pushing the chevron to the far end (defaults to sizing to content). */
   readonly fullWidth?: boolean
   readonly onChange: (change: DateRangePickerChange) => void
@@ -144,16 +148,22 @@ function formatDraftSummary(range?: DateRange) {
 
 function RangeCalendar({
   value,
+  minDate,
+  maxDate,
   onChange,
 }: {
   readonly value: DateRange | undefined
+  readonly minDate?: Date
+  readonly maxDate?: Date
   readonly onChange: (next: DateRange | undefined) => void
 }) {
   return (
     <DayPicker
       mode="range"
       showOutsideDays
-      defaultMonth={value?.from ?? value?.to ?? new Date()}
+      defaultMonth={value?.from ?? value?.to ?? maxDate ?? new Date()}
+      {...(minDate ? { fromDate: minDate } : {})}
+      {...(maxDate ? { toDate: maxDate } : {})}
       selected={toDayPickerRange(value)}
       onSelect={(nextRange) => onChange(fromDayPickerRange(nextRange))}
       className="select-none"
@@ -211,12 +221,17 @@ export function DateRangePicker({
   placeholder = "Pick a date range",
   clearLabel = "Clear dates",
   disabled = false,
+  minDate,
+  maxDate,
   align = "start",
+  portalTarget = "local",
   fullWidth = false,
   onChange,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
   const [draftRange, setDraftRange] = useState<DateRange | undefined>(() => copyRange(value))
+  // Local portals stay within modal interaction scopes; body portals escape ancestor stacking and overflow contexts.
+  const [popoverContainer, setPopoverContainer] = useState<HTMLDivElement | null>(null)
 
   const selection = formatSelectionLabel({
     value,
@@ -267,60 +282,74 @@ export function DateRangePicker({
   }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          disabled={disabled}
-          // `[&>div]` targets Button's inner content wrapper so the chevron sits at the far end;
-          // Button packs its children into one content-width row, so plain `justify-between` can't.
-          className={cn("gap-2", fullWidth ? "w-full [&>div]:w-full [&>div]:justify-between" : "w-auto justify-start")}
-        >
-          <span className="flex items-center gap-2">
-            <Icon icon={CalendarIcon} size="sm" color={selection.selected ? "accentForeground" : "foreground"} />
-            <span
-              className={cn("whitespace-nowrap", {
-                "text-accent-foreground": selection.selected,
-                "text-foreground": !selection.selected,
-              })}
-            >
-              {selection.label}
+    <div ref={setPopoverContainer} className={fullWidth ? "w-full" : "w-auto"}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="default"
+            disabled={disabled}
+            // `[&>div]` targets Button's inner content wrapper so the chevron sits at the far end;
+            // Button packs its children into one content-width row, so plain `justify-between` can't.
+            className={cn(
+              "gap-2",
+              fullWidth ? "w-full [&>div]:w-full [&>div]:justify-between" : "w-auto justify-start",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Icon icon={CalendarIcon} size="sm" color={selection.selected ? "accentForeground" : "foreground"} />
+              <span
+                className={cn("whitespace-nowrap", {
+                  "text-accent-foreground": selection.selected,
+                  "text-foreground": !selection.selected,
+                })}
+              >
+                {selection.label}
+              </span>
             </span>
-          </span>
-          <Icon icon={ChevronDown} size="sm" color="foregroundMuted" className="shrink-0" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align={align} className="w-[min(100vw-2rem,360px)] p-0 sm:w-auto">
-        <div className="flex flex-col gap-3 p-3">
-          {presets.length > 0 ? (
-            <Select
-              name="date-range-picker-preset"
-              options={presetOptions}
-              value={selectedPresetId}
-              placeholder="Custom range"
-              width="full"
-              contentWidth="trigger"
-              side="bottom"
-              onChange={(presetId) => {
-                const preset = presets.find((entry) => entry.id === presetId)
-                if (!preset) return
-                handlePresetSelect(preset)
-              }}
+            <Icon icon={ChevronDown} size="sm" color="foregroundMuted" className="shrink-0" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          container={portalTarget === "local" ? (popoverContainer ?? undefined) : undefined}
+          align={align}
+          className="w-[min(100vw-2rem,360px)] p-0 sm:w-auto"
+        >
+          <div className="flex flex-col gap-3 p-3">
+            {presets.length > 0 ? (
+              <Select
+                name="date-range-picker-preset"
+                options={presetOptions}
+                value={selectedPresetId}
+                placeholder="Custom range"
+                width="full"
+                contentWidth="trigger"
+                side="bottom"
+                onChange={(presetId) => {
+                  const preset = presets.find((entry) => entry.id === presetId)
+                  if (!preset) return
+                  handlePresetSelect(preset)
+                }}
+              />
+            ) : null}
+            <RangeCalendar
+              value={draftRange}
+              {...(minDate ? { minDate } : {})}
+              {...(maxDate ? { maxDate } : {})}
+              onChange={setDraftRange}
             />
-          ) : null}
-          <RangeCalendar value={draftRange} onChange={setDraftRange} />
-          <div className="flex items-center justify-between gap-3">
-            <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
-              {formatDraftSummary(draftRange)}
-            </Text.H6>
-            <Button type="button" variant="ghost" size="sm" disabled={!canClear} onClick={handleClear}>
-              {clearLabel}
-            </Button>
+            <div className="flex items-center justify-between gap-3">
+              <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
+                {formatDraftSummary(draftRange)}
+              </Text.H6>
+              <Button type="button" variant="ghost" size="sm" disabled={!canClear} onClick={handleClear}>
+                {clearLabel}
+              </Button>
+            </div>
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }

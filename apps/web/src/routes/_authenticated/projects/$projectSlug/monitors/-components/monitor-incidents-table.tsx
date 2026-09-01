@@ -1,7 +1,7 @@
 import { InfiniteTable, type InfiniteTableColumn, Status, Text } from "@repo/ui"
 import { formatDuration } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { type ReactNode, useCallback, useState } from "react"
+import { type ReactNode, type RefObject, useCallback, useState } from "react"
 import {
   type MonitorIncidentRecord,
   useMonitorIncidents,
@@ -106,23 +106,27 @@ export function MonitorIncidentsTable({
   projectId,
   projectSlug,
   monitorId,
+  scrollContainerRef,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly monitorId: string
+  /** Optional shared ancestor scroll container for page-level scrolling + sticky headers. */
+  readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
 }) {
   const { incidents, isLoading, infiniteScroll } = useMonitorIncidents({ projectId, monitorId })
   const [resolveTarget, setResolveTarget] = useState<string | null>(null)
+  const hasExternalScrollArea = scrollContainerRef !== undefined
 
   // Rows whose producer was deleted (or can't be deep-linked) return null and aren't navigable.
   const renderRowLink = useCallback(
     (incident: MonitorIncidentRecord, props: { className: string }): ReactNode => {
-      if (incident.sourceType === "signal" && incident.sourceName) {
+      if (incident.sourceType === "signal" && incident.sourceSlug) {
         return (
           <Link
-            to="/projects/$projectSlug/signals/$signalId"
-            params={{ projectSlug, signalId: incident.sourceId }}
-            aria-label={`Open signal ${incident.sourceName}`}
+            to="/projects/$projectSlug/signals/$signalSlug"
+            params={{ projectSlug, signalSlug: incident.sourceSlug }}
+            aria-label={`Open signal ${incident.sourceName ?? incident.sourceSlug}`}
             {...props}
           />
         )
@@ -135,7 +139,9 @@ export function MonitorIncidentsTable({
   return (
     <>
       <InfiniteTable
-        {...listingLayoutIntrinsicScroll.infiniteTable}
+        {...(hasExternalScrollArea
+          ? { scrollAreaLayout: "external" as const, scrollContainerRef }
+          : listingLayoutIntrinsicScroll.infiniteTable)}
         data={incidents}
         isLoading={isLoading}
         columns={incidentColumns(setResolveTarget)}

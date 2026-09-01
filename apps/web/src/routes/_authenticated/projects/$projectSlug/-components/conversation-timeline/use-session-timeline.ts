@@ -17,6 +17,7 @@ import {
 import { useAgentGraph } from "../session-detail-drawer/agents-breakdown/use-agent-graph.ts"
 import {
   annotatorNameFor,
+  toolCallSpanMapFromSpans,
   toTimelineAnnotation,
   toTimelineSpan,
   toTimelineSubagents,
@@ -54,11 +55,10 @@ export function useSessionTimeline({
   })
   const { data: spanMaps } = useSessionConversationSpanMaps({
     projectId,
-    sessionId: session.sessionId,
-    latestTraceId,
-    sessionStartTime: session.startTime,
-    sessionEndTime: session.endTime,
-    allMessages: conversation.messages,
+    traces,
+    loadedMessages: conversation.messages,
+    totalMessages: conversation.totalMessages,
+    sessionSpans: spans,
     enabled: conversation.messages.length > 0,
   })
   const { data: annotationsData } = useAnnotationsBySession({
@@ -70,12 +70,12 @@ export function useSessionTimeline({
   const agentGraph = useAgentGraph(spans)
 
   return useMemo(() => {
-    if (!traceDetail || !spanMaps || conversation.messages.length === 0) return null
+    if (!traceDetail || conversation.messages.length === 0) return null
     return buildConversationTimeline({
       messages: conversation.messages,
       spans: (spans ?? []).map(toTimelineSpan),
-      messageSpanMap: toSpanIdMap(spanMaps.messageSpanMap),
-      toolCallSpanMap: toSpanIdMap(spanMaps.toolCallSpanMap),
+      messageSpanMap: spanMaps ? toSpanIdMap(spanMaps.messageSpanMap) : {},
+      toolCallSpanMap: spanMaps ? toSpanIdMap(spanMaps.toolCallSpanMap) : toolCallSpanMapFromSpans(spans),
       traces: traces.map(toTimelineTrace),
       annotations: (annotationsData?.items ?? []).map((a) =>
         toTimelineAnnotation(a, annotatorNameFor(a, memberByUserId)),

@@ -15,10 +15,20 @@ import { Effect, Schema } from "effect"
 
 const DEFAULT_AI_CACHE_TTL_SECONDS = 24 * 60 * 60
 
+export interface AICacheOptions {
+  readonly organizationId?: string
+}
+
 const generateResultSchema = Schema.Struct({
   object: Schema.Unknown,
   tokens: Schema.Number,
   duration: Schema.Number,
+  servedBy: Schema.optional(
+    Schema.Struct({
+      provider: Schema.String,
+      model: Schema.String,
+    }),
+  ),
   tokenUsage: Schema.optional(
     Schema.Struct({
       input: Schema.Number,
@@ -31,6 +41,7 @@ const generateResultSchema = Schema.Struct({
 })
 const embedResultSchema = Schema.Struct({
   embedding: Schema.Array(Schema.Number),
+  tokens: Schema.optional(Schema.Number),
 })
 const rerankResultSchema = Schema.Array(
   Schema.Struct({
@@ -50,9 +61,11 @@ const toAIError =
       cause,
     })
 
-const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, AIError> =>
+const cacheKey = (namespace: string, input: unknown, options?: AICacheOptions): Effect.Effect<string, AIError> =>
   hash({ namespace, input }).pipe(
-    Effect.map((hashValue) => `ai:${namespace}:${hashValue}`),
+    Effect.map(
+      (hashValue) => `${options?.organizationId ? `org:${options.organizationId}:` : ""}ai:${namespace}:${hashValue}`,
+    ),
     Effect.mapError(
       (cause: CryptoError) =>
         new AIError({
@@ -76,6 +89,42 @@ const writeCachedValue = (cache: CacheStoreShape, key: string, value: string) =>
     Effect.orElseSucceed(() => undefined),
   )
 
+const discardCachedValue = (cache: CacheStoreShape, key: string) =>
+  cache.delete(key).pipe(
+    Effect.tapError((error) => Effect.logWarning("AI cache delete failed; continuing without cache", error)),
+    Effect.orElseSucceed(() => undefined),
+  )
+
+const invalidGenerateResult = (source: "cached" | "provider", cause: unknown) =>
+  new AIError({
+    message: `AI cache ${source} generate result failed schema validation`,
+    cause,
+  })
+
+type GenerateResultForValidation = Omit<GenerateResult<unknown>, "tokenUsage" | "servedBy" | "traceId"> & {
+  readonly tokenUsage?: GenerateResult<unknown>["tokenUsage"] | undefined
+  readonly servedBy?: GenerateResult<unknown>["servedBy"] | undefined
+  readonly traceId?: string | undefined
+}
+
+const validateGenerateResult = <T>(
+  source: "cached" | "provider",
+  input: GenerateInput<T>,
+  result: GenerateResultForValidation,
+) => {
+  const parsed = input.schema.safeParse(result.object)
+  return parsed.success
+    ? Effect.succeed({
+        object: parsed.data,
+        tokens: result.tokens,
+        duration: result.duration,
+        ...(result.servedBy === undefined ? {} : { servedBy: result.servedBy }),
+        ...(result.tokenUsage === undefined ? {} : { tokenUsage: result.tokenUsage }),
+        ...(result.traceId === undefined ? {} : { traceId: result.traceId }),
+      } satisfies GenerateResult<T>)
+    : Effect.fail(invalidGenerateResult(source, parsed.error))
+}
+
 /**
  * Applies cache-aside behavior to an existing `AI` implementation.
  *
@@ -90,23 +139,39 @@ const writeCachedValue = (cache: CacheStoreShape, key: string, value: string) =>
  * will share a cache entry — callers that need schema-level isolation should add a discriminator
  * via `providerOptions`.
  */
-export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
+export const withAICache = (ai: AIShape, cache: CacheStoreShape, options?: AICacheOptions) => ({
   generate: <T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError> =>
     Effect.gen(function* () {
       const { schema: _, telemetry: _telemetry, ...hashable } = input
-      const key = yield* cacheKey("generate", hashable)
+      const key = yield* cacheKey("generate", hashable, options)
 
       const cached = yield* readCachedValue(cache, key)
       if (cached !== null) {
-        return yield* Effect.try({
-          try: () => Schema.decodeUnknownSync(generateResultFromJsonStringSchema)(cached) as GenerateResult<T>,
+        const decoded = yield* Effect.try({
+          try: () => Schema.decodeUnknownSync(generateResultFromJsonStringSchema)(cached),
           catch: toAIError("read"),
         })
+          .pipe(Effect.flatMap((result) => validateGenerateResult("cached", input, result)))
+          .pipe(
+            Effect.catch((error) =>
+              Effect.gen(function* () {
+                yield* Effect.logWarning("AI cache contained an invalid generate result; treating as cache miss", error)
+                yield* discardCachedValue(cache, key)
+                return null
+              }),
+            ),
+          )
+        if (decoded !== null) return decoded
       }
 
-      const result = yield* ai.generate(input)
+      const providerResult = yield* ai.generate(input)
+      const result = yield* validateGenerateResult("provider", input, providerResult)
+      // The Latitude trace id is deliberately not stored: a cache hit creates no
+      // span, so a persisted id would point at the trace of whichever call first
+      // produced this result. No trace for a call that did not happen.
+      const { traceId: _uncacheable, ...cacheable } = result
       const encoded = yield* Effect.try({
-        try: () => Schema.encodeSync(generateResultFromJsonStringSchema)(result as GenerateResult<unknown>),
+        try: () => Schema.encodeSync(generateResultFromJsonStringSchema)(cacheable as GenerateResult<unknown>),
         catch: toAIError("write"),
       })
       yield* writeCachedValue(cache, key, encoded)
@@ -116,7 +181,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
   embed: (input: EmbedInput): Effect.Effect<EmbedResult, AIError> =>
     Effect.gen(function* () {
       const { telemetry: _telemetry, ...hashableEmbed } = input
-      const key = yield* cacheKey("embed", hashableEmbed)
+      const key = yield* cacheKey("embed", hashableEmbed, options)
 
       const cached = yield* readCachedValue(cache, key)
       if (cached !== null) {
@@ -124,7 +189,10 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
           try: () => Schema.decodeUnknownSync(embedResultFromJsonStringSchema)(cached),
           catch: toAIError("read"),
         })
-        return { embedding: [...decoded.embedding] } satisfies EmbedResult
+        return {
+          embedding: [...decoded.embedding],
+          ...(decoded.tokens === undefined ? {} : { tokens: decoded.tokens }),
+        } satisfies EmbedResult
       }
 
       const result = yield* ai.embed(input)
@@ -139,7 +207,7 @@ export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
   rerank: (input: RerankInput): Effect.Effect<readonly RerankResult[], AIError> =>
     Effect.gen(function* () {
       const { telemetry: _telemetry, ...hashableRerank } = input
-      const key = yield* cacheKey("rerank", hashableRerank)
+      const key = yield* cacheKey("rerank", hashableRerank, options)
 
       const cached = yield* readCachedValue(cache, key)
       if (cached !== null) {

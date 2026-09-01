@@ -13,30 +13,77 @@ Current plan slugs:
 - `free`
 - `pro`
 - `enterprise`
+- `self-hosted`
 
 Plan semantics:
 
 - `free`: hard capped, `20,000` included credits, `30` entitlement retention days
 - `pro`: overage allowed, `100,000` included credits, `90` entitlement retention days, optional customer-managed period spending cap
 - `enterprise`: manual-only, override-driven included credits and retention by contract
+- `self-hosted`: unenforced, unbounded credits, retention from `LAT_TELEMETRY_RETENTION_DAYS`. Not a contract and not selectable as an override — it is what an organization with no override resolves to on a deployment that does not enforce billing (`OVERRIDABLE_PLAN_SLUGS` is the subset an operator may pin). Usage events are still recorded; nothing enforces them
 
 Chargeable actions:
 
 - `trace = 1 credit`
-- `flagger-scan = 30 credits`
-- `deterministic-eval-scan = 1 credit`
-- `live-eval-scan = 30 credits` for scripts that call `llm()`
-- `eval-generation = 1,000 credits`
+- `eval-scan = 1 credit`
+- `semantic-query = cost-based` (flat `1 credit` as authorization estimate and fallback)
+- `llm-call = cost-based` (flat `4 credits` as authorization estimate and fallback)
+
+AI work is billed per primitive produced, not per feature-level scan: every hosted LLM
+generation is one `llm-call` and every query-time semantic embedding (a query embed
+against the search index) is one `semantic-query`, wherever they are produced.
+Every live evaluation scan additionally bills the baseline `eval-scan` credit,
+regardless of whether the script uses `llm()`, `semanticSimilarity()`, or only
+deterministic rules — the AI charges stack on top of it.
+
+### Credit price grounding
+
+One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credits =
+`$0.002/credit`, `CREDIT_VALUE_MILLS`).
+
+- `llm-call`: each generation bills its **estimated provider cost with a `1.3x`
+  margin** (`LLM_GENERATION_BILLING_MARGIN`), converted at the overage credit value
+  and rounded **up** to an integer with a 1-credit floor:
+  `credits = max(1, ceil(costUsd * 1000 * 1.3 / 2))` (`creditsForLlmGenerationCost`).
+  Cost is estimated from the provider-reported token usage priced through the
+  `@domain/models` registry (the same catalog that prices customer spans), covering
+  input/output/reasoning/cache token rates. Examples: a typical MiniMax M2.5 judge
+  call (~`$0.005`) bills 4 credits; a 100k-token-session judge call (~`$0.04`) bills
+  26; a Sonnet-tier GEPA proposal (~`$0.30`) bills 195.
+  **Fallback**: when the registry has no pricing for the configured model or the
+  provider reported no usage (including errored calls), the flat
+  `ACTION_CREDITS["llm-call"] = 4` applies. The metering layer logs a warning and
+  annotates the active OTel span with `billing.pricing=flat-fallback` (plus action,
+  provider, and model) so Datadog can alert on silent registry gaps — keep the
+  registry data current for every model configured via `LAT_AI_*`.
+- `semantic-query`: each query embedding bills its **estimated provider cost with a
+  `2x` margin** (`SEMANTIC_QUERY_BILLING_MARGIN`), converted and rounded the same way
+  (`creditsForSemanticQueryCost`). Voyage models are not in the `@domain/models`
+  registry, so cost uses the adapter-reported token count priced at the hardcoded
+  voyage-4-large rate (`$0.12` per 1M tokens, `SEMANTIC_QUERY_EMBED_USD_PER_TOKEN`).
+  **Fallback**: when the adapter reports no token usage, the flat
+  `ACTION_CREDITS["semantic-query"] = 1` applies, with the same warning +
+  `billing.pricing=flat-fallback` span annotation. Reranking and document-side
+  embeddings ride on this charge (document embeds are part of trace ingest and are
+  covered by the `trace` credit).
+- `eval-scan`: flat 1 credit baseline for every evaluation scan — it prices the
+  orchestration (queueing, session loading, sandbox execution, score writes) that
+  every scan consumes even when it makes no AI calls.
+- `trace`: unchanged; ingest-side document embedding for a typical trace costs well
+  under one credit's overage value.
 
 ## Effective Plan Resolution
 
 Every organization resolves to one effective billing plan in this order:
 
 1. manual organization billing override
-2. active or trialing Stripe self-serve subscription mapped by explicit plan slug
-3. fallback to `free`
+2. `self-hosted` when `LAT_BILLING_ENABLED` is not `true`
+3. active or trialing Stripe self-serve subscription mapped by explicit plan slug
+4. fallback to `free`
 
 Unknown Stripe plan names fail closed through `UnknownStripePlanError`. The billing domain must never infer `paid => pro`.
+
+**Enforcement is opt-in (`LAT_BILLING_ENABLED`, default `false`).** The published images enforce nothing until a deployment asks for it, so a self-hoster is never rejected at ingest or aged out by a plan's retention (usage events are still recorded, they just gate nothing); **Latitude Cloud sets `LAT_BILLING_ENABLED=true` on every service**, and the plan source reads `self-hosted` in the backoffice wherever it does not. A malformed value in either config var dies as a `BillingConfigurationError` defect rather than falling back, because both silent outcomes — metering a self-hoster, not metering Cloud — are worse than a crash. The override is checked first so an operator can still pin an organization on an unmetered deployment.
 
 ## Persistence Model
 
@@ -90,12 +137,58 @@ Trace ingestion splits enforcement (HTTP) from attribution (worker):
 4. **Persistence semantics**: `recordTraceUsageBatchUseCase` inserts append-only usage events with `ON CONFLICT DO NOTHING` on `(billing_period_start, idempotency_key)`, then advances `billing_usage_periods` atomically through `appendCreditsForBillingPeriod` by the number of newly inserted events in the flush. Parallel trace batches therefore preserve correct counters even under concurrent workers.
 5. If metering fails **after persistence**, ingest remains available (prioritize telemetry durability): log loudly with org/project/trace context and reconcile or retry idempotently out-of-band—the same trace key stays idempotent once billing dependency is healthy again.
 
+### AI metering scopes
+
+LLM calls and semantic queries are metered at the AI layer, not per feature. The
+`createAiLayer` composition in `@platform/ai` wraps every assembled AI service with
+`withAIMetering`, which charges against the ambient `AIMeteringScope`
+(`@domain/billing/src/ai-metering.ts`) when one is present in context:
+
+- `generate` → one `llm-call` billed at estimated cost x 1.3 (flat 4-credit fallback
+  when registry pricing or provider usage is unavailable), recorded on success and on
+  `AIError` (the provider call was attempted, tokens may have been consumed — flat
+  price, no usage to bill) but not on `AICredentialError`
+- `embed` with `inputType: "query"` → one `semantic-query` billed at estimated cost x 2
+  (flat 1-credit fallback when the adapter reports no token usage); document embeds and
+  rerank are never charged directly — `semanticSimilarity()` in evaluation scripts embeds
+  content-addressed documents, so its cost rides on the scan's flat credit
+
+The metering decorator sits **under** `withAICache`, so AI cache hits — which cost no
+provider tokens — are never charged.
+
+Without a scope in context, AI calls run unbilled. That is the intended default for
+platform-internal work (demo seeding, backoffice tooling); every org-serving AI entry
+point must provide a scope. Flows that carry one today: flagger classification and
+draft annotations, live evaluations, evaluation alignment/optimization (baseline/
+incremental judging, GEPA proposals and candidate evaluation), session analysis,
+signal discovery/refresh, taxonomy cluster naming (topic, custom-behavior, and facet
+trees), facet projection extraction, and annotation publication enrichment. Known unbilled follow-ups: web/API semantic search (`planSearch` query
+embeds — needs out-of-credits UX; the planner already falls back to lexical-only),
+the signal-generation agent (`AIAgent` bypasses `withAIMetering`; needs metering on
+the agent service itself), and eval/signal previews (free by design for now).
+
+Scope idempotency keys are `{action}:{organizationId}:{...keyParts}:{sequence}` with the
+sequence assigned in call order. Retries of an operation whose calls replay
+deterministically (Temporal activities are keyed by run id + activity id) reproduce the
+same keys and dedupe; runs whose call order is not deterministic (GEPA's parallel judge
+fan-out) rely on the 24h AI cache to make retried calls free instead.
+
 Canonical charge points:
 
 - trace ingest metering: `apps/workers/src/workers/span-ingestion.ts` emits `TracesIngested`, `apps/workers/src/workers/domain-events.ts` routes billing work, and `apps/workers/src/workers/billing.ts` records once per distinct trace id using `trace:{organizationId}:{projectId}:{traceId}`
-- LLM flagger scans: `apps/workflows/src/activities/flagger-activities.ts` before `draftAnnotate`
-- live evaluations: `apps/workers/src/workers/live-evaluations.ts` immediately before execution; script capabilities select `deterministic-eval-scan` or `live-eval-scan`
-- eval generation: `apps/workflows/src/activities/evaluation-alignment-activities.ts` before expensive alignment generation/optimization work, keyed by `billingOperationId`
+- LLM flagger classification and annotation: `apps/workflows/src/activities/flagger-session-activities.ts` meters the classifier per call under a `flagger-classify` activity scope; `draftSessionFlaggerAnnotation` runs the anchor dedup first so a re-detected issue never authorizes, then meters the fallback annotator per call under a `flagger:{flaggerSlug}:{sessionId}:{contentHash}` scope
+- live evaluations: `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` — every scan records the baseline `eval-scan` credit after execution; `llm()`-capable scripts authorize one `llm-call` (the larger estimate) and meter each generation and query embed on top under a `live-eval` scope
+- evaluation alignment and GEPA optimization: `apps/workflows/src/activities/evaluation-alignment-activities.ts` and `evaluation-optimization-activities.ts`, metered per call under per-activity scopes
+- session analysis: `apps/workflows/src/activities/analyze-session-activities.ts` (`analyzeSessionActivity`), metered under a `session-analysis` activity scope
+- signal discovery, refresh, and taxonomy naming: `signal-discovery-activities.ts` (`signal-create`, `signal-assign`), `apps/workers/src/workers/signals.ts` refresh handler (`signal-refresh`), `taxonomy-naming-activities.ts` (`taxonomy-name`, on all three branches: topic, custom-behavior, and facet)
+- facet projection extraction: `taxonomy-gardening-activities.ts` (`taxonomy-facet-extract`) — one generation per sampled session, the taxonomy's heaviest AI spend. Extraction runs `FACET_EXTRACTION_CONCURRENCY` calls at a time, so its keys are not order-stable across retries; that undercharges the unflushed tail (a reused key dedupes to "already charged") rather than double-charging it, and work already cached in `taxonomy_facet_projections` is skipped instead of re-extracted
+- annotation publication enrichment: `annotation-publication-activities.ts` (`annotation-enrich`)
+
+Expensive flows still authorize (and cap-reserve) **one** flat-estimate `llm-call` at
+the boundary before any AI work starts; per-call metering then records the exact
+cost-based credits for what actually ran. A flow that makes several calls, or a call
+that costs more than the estimate, can therefore overshoot a cap by the calls in one
+flow — the same intentional coarseness as the trace ingest gate.
 
 Retries must not double-charge. Idempotency is enforced by `billing_usage_events` on `(billing_period_start, idempotency_key)` and use-case fallback behavior that re-reads the same period snapshot when an event already exists.
 
@@ -105,10 +198,18 @@ Free organizations are hard capped.
 
 Enforcement rules:
 
-- chargeable scan and AI work (`flagger-scan`, `deterministic-eval-scan`, `live-eval-scan`, `eval-generation`) is skipped before execution once no credits remain
+- chargeable scan and AI work (`llm-call`, `semantic-query`, `eval-scan`) is skipped before execution once no credits remain: expensive flows authorize one `llm-call` at their boundary and bail before doing AI work
 - ingest: the **ingest HTTP route** rejects over-limit payloads with **`402`**. Accepted payloads persist first; metering runs afterward inside the ingest worker (`402` semantics use `NoCreditsRemainingError` aligned with metering domain errors).
 
 The system never partially accepts only part of one ingest payload. Do **not** bypass the ingest billing gate—other producers must enqueue `span-ingestion` only after applying the **same credit checks**.
+
+When a billing period first crosses a notify-worthy threshold, the usage write stamps `limitsCrossed` on `BillingUsagePeriodUpdated`:
+
+- free / hard-capped: included credits exhausted — hard stop (`included-credits`)
+- Pro (with or without a spend cap): included allotment runs out and metered overage begins — one alert (`overage-started`)
+- Pro with a spend cap: configured spend limit reached — separate later alert (`spend-cap`)
+
+A single write may include both `overage-started` and `spend-cap` when the cap sits at the included-credit boundary. The domain-events worker publishes one `notifications:request-billing-limit-notifications` job per kind, which notifies organization owners and admins once per period and limit kind via email and in-app. The billing group is not Slack-routable, so spend and credit status stay off shared channels. Subsequent usage after each crossing does not re-notify.
 
 ## Pro Spending Limits
 
@@ -134,7 +235,7 @@ This applies to the same charge points as normal billing metering:
 Two layers of enforcement run in `authorizeBillableAction`:
 
 1. **Snapshot projection (Postgres)**: reads the current period's `consumedCredits`, computes the projected spend with this action included, and refuses immediately if the projection already exceeds the cap. This catches the simple sequential case.
-2. **Atomic spend reservation (Redis)**: when the caller supplies an `idempotencyKey`, the use-case asks the `BillingSpendReservation` port to reserve `creditsRequested` against an in-memory counter for the period, refusing if the resulting reservation total would exceed the cap. The Redis adapter runs this as a single Lua script so concurrent scan callers cannot all race past the snapshot check at the cap boundary. The same `idempotencyKey` reused on retry is a no-op success — matching the period-scoped Postgres usage-event idempotency semantics so worker retries don't double-reserve.
+2. **Atomic spend reservation (Redis)**: when the caller supplies an `idempotencyKey`, the use-case asks the `BillingSpendReservation` port to reserve `creditsRequested` against an in-memory counter for the period, refusing if the resulting reservation total would exceed the cap. The Redis adapter runs this as a single Lua script so concurrent AI-flow callers cannot all race past the snapshot check at the cap boundary. The same `idempotencyKey` reused on retry is a no-op success — matching the period-scoped Postgres usage-event idempotency semantics so worker retries don't double-reserve.
 
 The reservation counter is initialized lazily from the Postgres `consumedCredits` snapshot when the key is missing, so a fresh period or a Redis cold start re-syncs to the authoritative value. The counter is not decremented when the worker writes to Postgres — the reservation already counts that consumption — and the period TTL evicts the key after rollover.
 
@@ -178,6 +279,8 @@ Retention is stamped at write time, not recomputed retroactively. If an organiza
 
 - rows written while the org was on Pro keep `90` stamped retention days
 - rows written after the downgrade get `30` stamped retention days
+
+The same applies to `LAT_TELEMETRY_RETENTION_DAYS` (default and maximum `3650`): changing it moves new rows only, and widening it on existing data is an operator-run `ALTER TABLE ... UPDATE retention_days` documented in `docs/deployment/single-host.mdx`. The ceiling exists because the TTL expression casts `start_time` to `DateTime`, whose range ends in 2106.
 
 ## Product Surfaces
 

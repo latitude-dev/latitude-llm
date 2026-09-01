@@ -5,7 +5,9 @@ import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { defaultEvaluationTrigger, type Evaluation, emptyEvaluationAlignment } from "../entities/evaluation.ts"
+import { SignalNotActiveForMonitoringError } from "../errors.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../ports/evaluation-repository.ts"
+import { type EvaluationSignal, EvaluationSignalRepository } from "../ports/evaluation-signal-repository.ts"
 import { monitorSignalUseCase } from "./monitor-signal.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -99,9 +101,20 @@ const createOutboxEventWriter = () => {
   return { writer, events }
 }
 
+const makeSignal = (overrides: Partial<EvaluationSignal> = {}): EvaluationSignal => ({
+  id: signalId,
+  projectId: projectId as string,
+  name: "Signal",
+  description: "Signal description",
+  resolvedAt: null,
+  ignoredAt: null,
+  ...overrides,
+})
+
 const buildLayer = (input: {
   readonly activeEvaluations?: readonly Evaluation[]
   readonly runningWorkflows?: ReadonlySet<string>
+  readonly signal?: EvaluationSignal
 }) => {
   const { workflowStarter, started } = createWorkflowStarter()
   const { workflowQuerier, describeCalls } = createWorkflowQuerier(input.runningWorkflows)
@@ -113,6 +126,10 @@ const buildLayer = (input: {
     events,
     layer: Layer.mergeAll(
       Layer.succeed(EvaluationRepository, createEvaluationRepository(input.activeEvaluations ?? [])),
+      Layer.succeed(EvaluationSignalRepository, {
+        findById: () => Effect.succeed(input.signal ?? makeSignal()),
+        claimReopenOnOccurrence: () => Effect.succeed(false),
+      }),
       Layer.succeed(WorkflowStarter, workflowStarter),
       Layer.succeed(WorkflowQuerier, workflowQuerier),
       Layer.succeed(OutboxEventWriter, writer),
@@ -138,6 +155,31 @@ describe("monitorSignalUseCase", () => {
 
       expect(started).toEqual([])
       expect(events).toEqual([])
+    })
+  })
+
+  describe("resolved/ignored signals", () => {
+    it.each([
+      ["resolved", makeSignal({ resolvedAt: new Date("2026-04-01T00:00:00.000Z") })],
+      ["ignored", makeSignal({ ignoredAt: new Date("2026-04-01T00:00:00.000Z") })],
+      ["cross-project", makeSignal({ projectId: "x".repeat(24) })],
+    ])("rejects monitoring a %s signal before any workflow work", async (_label, signal) => {
+      const { started, events, describeCalls, layer } = buildLayer({
+        activeEvaluations: [makeEvaluation()],
+        signal,
+      })
+
+      const error = await Effect.runPromise(
+        monitorSignalUseCase({ organizationId, projectId, signalId, actorUserId }).pipe(
+          Effect.flip,
+          Effect.provide(layer),
+        ),
+      )
+
+      expect(error).toBeInstanceOf(SignalNotActiveForMonitoringError)
+      expect(started).toEqual([])
+      expect(events).toEqual([])
+      expect(describeCalls).toEqual([])
     })
   })
 

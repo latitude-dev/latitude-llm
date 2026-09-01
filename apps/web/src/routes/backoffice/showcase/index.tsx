@@ -77,15 +77,15 @@ function NoShowcase({ onSuccess }: { readonly onSuccess: () => void | Promise<vo
         <div className="flex flex-col gap-1">
           <Text.H5 weight="semibold">No showcase exists</Text.H5>
           <Text.H6 color="foregroundMuted">
-            Create the showcase to bootstrap its dedicated organization and the singleton pointer row. No project is
-            built yet — trigger the first regeneration afterwards.
+            Create the showcase to bootstrap its dedicated organization and singleton pointer row. No project is built
+            yet; trigger the first regeneration afterward.
           </Text.H6>
         </div>
         <ShowcaseActionButton
           label="Create showcase"
           variant="default"
           description="Bootstrap the shared demo showcase."
-          confirmBody="Creates the dedicated 'Showcase' organization and inserts the singleton pointer row (no project yet). Fails loudly if a showcase already exists — there is exactly one, ever."
+          confirmBody="Creates the dedicated 'Showcase' organization and inserts the singleton pointer row (no project yet). Fails loudly if a showcase already exists, since there's only ever one."
           errorTitle="Could not create showcase"
           onSuccess={onSuccess}
           run={async () => {
@@ -169,7 +169,7 @@ function ExistingShowcase({
         <ActionRow
           icon={RefreshCw}
           title="Regenerate"
-          description="Build a fresh next project, gate it, and auto-swap on ready — the same job the daily cron fires."
+          description="Build a fresh next project, gate it, and auto-swap when ready. This is the same job the daily cron fires."
           action={
             <ShowcaseActionButton
               label="Regenerate"
@@ -197,7 +197,7 @@ function ExistingShowcase({
               label="Swap now"
               disabled={!canSwap}
               description="Promote the ready build to current."
-              confirmBody="Runs the transactional pointer flip (current ← next) and invalidates the resolver cache. Only succeeds when the next build is ready — a not-ready swap fails cleanly."
+              confirmBody="Runs the transactional pointer flip (current ← next) and invalidates the resolver cache. It only succeeds when the next build is ready; a not-ready swap fails cleanly."
               errorTitle="Could not swap"
               onSuccess={onSuccess}
               run={async () => {
@@ -215,7 +215,7 @@ function ExistingShowcase({
             <ShowcaseActionButton
               label="Reclaim"
               description="Self-heal a wedged build."
-              confirmBody="Publishes the cleanup job: reclaims a 'building' pointer whose regeneration run has died (resetting it to idle) and retires orphaned showcase projects. Once it lands the pointer is idle — click Regenerate to build a fresh project. Idempotent; a healthy in-flight build is left untouched."
+              confirmBody="Publishes the cleanup job: it reclaims a 'building' pointer whose regeneration run has died (resetting it to idle) and retires orphaned showcase projects. Once it lands, the pointer is idle, so click Regenerate to build a fresh project. Idempotent; a healthy in-flight build is left untouched."
               errorTitle="Could not reclaim"
               onSuccess={onSuccess}
               run={async () => {

@@ -1,9 +1,24 @@
 export const FLAGGER_DEFAULT_SAMPLING = 10
 
-export const AMBIGUOUS_FLAGGER_DEFAULT_RATE_LIMIT = {
+// Independent fixed windows per org+slug; sampled sessions with positive hints
+// (satisfaction/resolution) get the smallest budget.
+export const FLAGGER_HINTED_RATE_LIMIT = {
   maxRequests: 30,
   windowSeconds: 60,
 } as const
+
+export const FLAGGER_SAMPLED_RATE_LIMIT = {
+  maxRequests: 25,
+  windowSeconds: 60,
+} as const
+
+export const FLAGGER_SAMPLED_POSITIVE_RATE_LIMIT = {
+  maxRequests: 5,
+  windowSeconds: 60,
+} as const
+
+export const FLAGGER_PROMPT_MAX_HINTS = 20
+export const FLAGGER_HINT_EVIDENCE_MAX_CHARS = 256
 
 export const FLAGGER_CONTEXT_WINDOW = 8
 

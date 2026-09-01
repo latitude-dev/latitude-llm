@@ -54,7 +54,7 @@ Rules:
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
 - signal-generated evaluation creation is also asynchronous: kickoff starts a deterministic-id Temporal workflow and returns nothing to the caller; the frontend polls `getSignalAlignmentState`, which asks Temporal directly (`workflow.describe()` for the initial run, a query handler for in-flight manual-realignment) — there is no Redis-backed job-status key
 
-## Lifecycle and Mute
+## Lifecycle: resolve, ignore, and mute
 
 Signals can be:
 
@@ -63,6 +63,9 @@ export const SignalState = {
   New: "new",
   Escalating: "escalating",
   Ongoing: "ongoing",
+  Resolved: "resolved",
+  Regressed: "regressed",
+  Ignored: "ignored",
 } as const;
 
 export type SignalState = (typeof SignalState)[keyof typeof SignalState];
@@ -70,23 +73,52 @@ export type SignalState = (typeof SignalState)[keyof typeof SignalState];
 
 - `new`: first discovered less than 7 days ago
 - `escalating`: backed by an open signal-sourced incident
-- `ongoing`: existing, non-escalating signal activity
+- `ongoing`: fallback when no other state applies
+- `resolved`: manually resolved (`resolved_at` set); archived, detector keeps running unless "keep monitoring" was declined
+- `regressed`: a new occurrence reopened a resolved signal (`regressed_at` set); cleared by the next resolve or ignore
+- `ignored`: manually ignored (`ignored_at` set); archived, detector archived, auto-muted
 
-An signal can be in multiple states at the same time, for example `new` and `escalating`.
+A signal can be in multiple states at the same time, for example `new` and `escalating`. `resolved`/`regressed`/`ignored` are stored timestamps; the rest are derived at read time (`deriveSignalLifecycleStates`).
 
-Manual lifecycle control is **mute**, stored as `signals.muted_at`.
+Three manual controls, applied by `applySignalLifecycleCommandUseCase` (`resolve`/`unresolve`/`ignore`/`unignore`/`mute`/`unmute`, batch, idempotent per command):
 
-- muting a signal suppresses signal escalation notification fan-out
-- unmuting clears `muted_at`
-- discovery, score assignment, centroid updates, linked evaluations, and analytics continue while muted
+- **Resolve** stamps `resolved_at`, clears `ignored_at`/`regressed_at`/`muted_at` (unmuted so the regression alert can reach the user), and closes any open escalation silently (`SignalEscalationEnded` with reason `resolved`; the recovery notification is suppressed for manual closes). The effective `keepMonitoring` (input ?? project → org → system setting, default true) decides whether linked evaluations keep running; `false` soft-deletes them.
+- **Ignore** stamps `ignored_at`, clears `resolved_at`/`regressed_at`, **auto-mutes** (`muted_at` set if null), always soft-deletes linked evaluations, and closes any open escalation with reason `ignored`. Ignored signals are skipped by escalation checks entirely, but remain valid discovery match candidates so their noise keeps flowing into one bucket. Unignore releases the mute along with `ignored_at`, so notifications come back with the signal.
+- **Mute** (`muted_at`) is a pure **notification barrier**: escalation checks still run and incidents still open/close while muted; only notification fan-out and agent dispatch are suppressed. It never touches the other stamps, and resolve/unresolve/unignore never touch it.
+
+Resolve and ignore are mutually exclusive; the un-commands never resurrect soft-deleted evaluations (re-track or re-author instead). The mute rule: only an explicit mute or an ignore sets `muted_at` — resolve, unresolve, and unignore all clear it, so no lifecycle transition leaves a signal silently muted. `archived` in the UI/API (`lifecycleGroup`) means `resolved_at IS NOT NULL OR ignored_at IS NOT NULL`; muted-only signals are active.
+
+`applySignalLifecycleCommandUseCase` is also driven **externally** by the GitHub integration ([`github-integration.md`](github-integration.md)): a PR or commit that references a signal's slug and lands on a monitored branch auto-resolves (or, on a revert/reopen, unresolves) the signal, calling the same command with no actor attribution — provenance lives on the reference row, not the signal. This is why slugs are **organization-unique** (`(organization_id, slug) WHERE deleted_at IS NULL`, spanning projects): a GitHub reference resolves to exactly one signal org-wide.
+
+**Regression.** A new occurrence on a resolved signal reopens it: `resolved_at` is cleared, `regressed_at` is stamped, and `SignalRegressed` (with `triggerScoreId`) drives the `signal.regressed` notification (assignee-first, mute-gated) plus an agent-dispatch request for configs subscribed to the `signal.regressed` trigger. Both occurrence paths hook in — discovery assignment (`assignScoreToSignalUseCase`, under the signal row lock) and the live-evaluation writer (`runLiveEvaluationUseCase`, via the race-safe `claimReopenOnOccurrence` conditional UPDATE guarded on "resolved, not ignored, resolved before the occurrence"). Exactly one writer per regression cycle wins the claim and emits the event; replayed historical scores cannot reopen. Escalation `enter` on a resolved signal also reopens it (sets `regressed_at`) but emits no separate `SignalRegressed` — the escalation notification announces the recurrence.
 
 The `escalating` state is backed by an open incident with `source_type = "signal"` and `source_id = signal.id`. A seasonal detector opens/closes that row through `EscalationEngine`; closes fire on the absolute-rate backstop, a band-shape + dwell recovery, or a hard timeout. Signals with no seasonal history use the same band-shape + dwell exit on the close side, so they de-escalate shortly after going quiet.
 
 Important state timestamps:
 
 - `clusteredAt`: last centroid/cluster refresh
-- `escalatedAt`: latest escalation transition timestamp
-- `mutedAt`: manual mute timestamp, or `null`
+- `resolvedAt` / `ignoredAt`: manual archive stamps, or `null`
+- `regressedAt`: last occurrence-driven reopen, or `null`
+- `mutedAt`: manual notification mute timestamp, or `null`
+
+## Feedback: was this signal worth raising?
+
+Nothing else in the product asks the customer whether a signal was a real problem — resolve/ignore rates and the reviewer LLM's own rejections are proxies. `signals.feedback` is the direct question, answered once per signal.
+
+The column is a single nullable JSONB holding the core of a Latitude score, because a verdict on a signal **is** a score: `{ value, passed, feedback }`. 👍 is `passed: true, value: 1`; 👎 is `passed: false, value: 0`; the reason is `feedback` (empty when a 👍 was saved bare). `null` is the whole "not graded yet" state, and it doubles as the immutability latch. Nothing records who graded it or when: no consumer reads either, so the row does not carry them.
+
+`submitSignalFeedbackUseCase` (`@domain/signals`) is the one seam, called by the web server fn and by the `submitSignalFeedback` operation (REST + MCP + SDK + CLI):
+
+1. Read the signal through the default-deny visibility filter, so an unpromoted or deleted signal cannot be graded, and reject a cross-project id.
+2. Refuse a signal no flagger detected (`SignalFeedbackNotSupportedError`, 422) — the verdict measures how well Latitude flags, so only Latitude's own detections are gradable.
+3. Reject a `passed: false` submission whose trimmed reason is empty (`SignalFeedbackReasonRequiredError`, 422). A false positive without a reason cannot be acted on; a confirmation without one is still useful.
+4. `SignalRepository.claimFeedback` — one conditional `UPDATE … WHERE id = ? AND feedback IS NULL`, returning whether **this** call wrote. `false` ⇒ `SignalFeedbackAlreadySubmittedError` (409). The claim is what makes immutability true under concurrency (two tabs, a UI click racing an MCP call) rather than merely usually true; `save` deliberately omits `feedback` from its upsert set so a writer holding a pre-verdict copy cannot clear the latch.
+5. `SignalFeedbackSubmitted` goes to the outbox in the same transaction. Feedback is one-shot, so if the fan-out were a publish from the request path and Redis blinked, there would be no way to ask again.
+6. `ignore: true` then runs `applySignalLifecycleCommandUseCase("ignore")` — the `Save and ignore` shortcut, so a 👎 is also the fastest path to a clean list. The verdict is claimed **before** the archive: a lifecycle failure surfaces as an error with the verdict standing, and ignoring is one more click from the header.
+
+Downstream, `SignalFeedbackSubmitted` fans the verdict out as human annotations onto Latitude's own flagger generations in `latitude-flaggers` — never onto the customer's traces. See [`./flaggers.md`](./flaggers.md#grading-a-flaggers-own-decisions).
+
+**Surface.** The signal detail header carries two thumb buttons, right-aligned under the action row (`ListingLayout.Header`'s `titleAside` slot). Clicking one opens a popover with a reason textarea; 👎 requires a reason and offers `Save and ignore` (primary) plus `Save`, 👍 offers `Save` alone. After saving, the control collapses to the chosen thumb — filled, disabled, with the reason as its tooltip — for every viewer and every later session. The control renders only on signals a flagger detected (`source: "flagger"`), and the use-case refuses anything else (`SignalFeedbackNotSupportedError`, 422). A hand-written or annotation-born signal has no decision of ours behind it, so there is nothing for the verdict to grade.
 
 ## Signal Source
 
@@ -145,6 +177,14 @@ A `user` signal **must** have an evaluation. `createSignal` accepts `evaluation.
 Lifecycle:
 
 - **Update** (`updateSignalUseCase`) edits `name`/`description`/`filters`; filter changes apply forward-only and the slug is stable. Triage (priority/assignee) and resolve/ignore keep their own use-cases.
+- **Level.** `signals.priority` holds the shared `ALERT_SEVERITIES` scale (`low` → `urgent`), so a signal's level and a monitor's severity are one vocabulary; the field name stays `priority` because it is public API. The level flows on to the notification payloads as `severity` (see `dev-docs/notifications.md`) and sets the severity of the signal's escalation incidents. **No level means no notification** — no email, no Slack. Agent dispatch is untouched by this and keeps its own rules.
+
+  **Level.** `signals.priority` holds the shared `ALERT_SEVERITIES` scale (`low` → `urgent`), so a signal's level and a monitor's severity are one vocabulary; the field name stays `priority` because it is public API. The level flows on to the `signal.discovered` / `signal.regressed` notification payloads as `severity` (see `dev-docs/notifications.md`), so a Slack route's minimum severity and a user's `emailMinSeverity` filter signals the same way they filter monitor incidents.
+
+  **Nothing assigns it automatically.** A discovered signal is created with `priority: null` and stays there until somebody triages it through `updateSignalTriageUseCase`. An automatic rating was built and removed before merge: any heuristic — a model reading the occurrence, or a level derived from measured volume — is going to disagree with what a particular customer expected, and a level that moves on its own is one nobody can reason about. Noisy discovery notifications are a notifications problem, to be solved with per-project opt-outs and digest delivery rather than by guessing a priority.
+
+  A payload with no severity is admitted by every threshold, so an untriaged signal notifies exactly as it did before this change. Filtering only starts to apply once a human has said what a signal is worth.
+
 - **Delete** (`deleteSignalUseCase`) **soft-deletes** the signal (`deleted_at`) and **archives** its active evaluation so the matching pipeline stops running it. No ClickHouse cleanup — deleted-signal scores linger and are excluded read-side (every signal read filters `deleted_at IS NULL`); the slug becomes reusable (the slug-unique index is partial on `deleted_at IS NULL`).
 
 REST surface: `POST /` (create), `PATCH /{signalSlug}` (update), `DELETE /{signalSlug}` (delete), under `/v1/projects/{projectSlug}/signals`. Regenerate the SDK/MCP with `pnpm generate:sdk` after route changes.
@@ -186,7 +226,7 @@ Signal discovery should follow the original proposal closely:
 13. write `scores.issue_id` in Postgres
 14. if the score was added to an existing signal, write `ScoreAssignedToSignal` transactionally so later signal-details regeneration can debounce safely
 15. after the transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
-16. refresh signal name/description asynchronously on debounce only for the existing-signal path that requested `ScoreAssignedToSignal`, reusing the shared signal-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
+16. refresh signal name/description asynchronously on debounce only for the existing-signal path that requested `ScoreAssignedToSignal`, reusing the shared signal-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline; the refresh returns early while the signal is unpromoted, and the promotion-time generation is the one call that drops that baseline
 
 Execution rules:
 
@@ -197,7 +237,7 @@ Execution rules:
 - `signals:refresh` runs after the configured throttle window elapses for an existing signal
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, do feedback embedding first and then enter locked serialization; annotation scores may carry both enriched and raw feedback embeddings, and the search/rerank/create-or-assign decision runs under the Redis serialization gates
-- the brand-new signal path must generate its first name/description before the signal row is first persisted, and that synchronous generation step must reuse the same shared signal-details generation use case that later debounced refreshes call
+- the brand-new signal path must **not** generate a name/description; it writes a deterministic placeholder built from the creating occurrence's feedback, and the first generated summary is produced at promotion through the same shared signal-details generation use case that later debounced refreshes call (see § Denoising: promotion)
 - the debounced `signals:refresh` path must re-lock and re-read the canonical signal row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
 - after `signals:refresh` persists changed details, no explicit search sync is required because Postgres derives `search_document` from canonical signal text
 - rerank results already carry canonical signal ids from Postgres search, so there is no projection UUID resolution step
@@ -206,7 +246,7 @@ Execution rules:
 - each Redis lock acquisition must be non-blocking; if the lock is already held, serialization returns a lock-unavailable result so the workflow sleeps durably and retries at that point instead of holding a database connection while waiting
 - both the create-from-score step and the assign-to-signal step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical signal row and centroid stay transactionally consistent
 - the assign-to-signal path must lock the canonical signal row before recomputing and saving the centroid so parallel score assignments into the same signal do not lose centroid contributions
-- muted signals are still valid discovery match candidates; mute controls notification noise, not score ownership or matching
+- muted, resolved, and ignored signals are still valid discovery match candidates; new occurrences keep attaching (and reopen resolved signals) instead of spawning duplicates
 
 ### Bounded locked serialization
 
@@ -315,24 +355,69 @@ Recommended initial half-life:
 
 These thresholds, weights, half-lives, and other tunables should be defined as named constants inside `packages/domain/signals` rather than as scattered inline literals.
 
-## Denoising
+## Denoising: promotion
 
-The base v2 denoising strategy should remain conservative and aligned with the proposal:
+**A discovered signal is not real until it has been seen in enough distinct sessions.** `signals.promoted_at` is a one-way latch: null means the signal was discovered but has not yet earned its place, non-null means it has. The latch is never cleared — a promoted signal that goes quiet is handled by resolve / ignore / mute, not by demotion, because demotion would let a signal a person has already triaged silently vanish, and would let one signal announce itself twice.
 
-- low-evidence signals with no linked annotations can be hidden from the main UI
-- signals with at least one linked annotation are always visible
-- manually created signals and manually linked annotation signals are always visible
-- do not bring back the v1 merge/merged-state system
+Deliberate human intent promotes without evidence. A signal created by a person (`origin = 'user'`) is born promoted, as is any signal created through the API's `createSignal`. Nobody can track an unpromoted signal with an evaluation, because nobody can reach one. Everything else has to accumulate evidence.
 
-The exact low-evidence visibility threshold should remain configurable.
+**The evidence unit is distinct sessions, not scores.** One long session can trip the same flagger many times and one trace can carry several annotations; none of that is independent evidence. A score with no `session_id` counts as its own session keyed by `trace_id`, and failing that by its own id, so annotations from non-session instrumentation still count exactly once (`ScoreRepository.countDistinctSessionsBySignalId`).
 
-The system may also support a stronger buffered/provisional workflow on top of the same signal entity. The exact promotion rules are still pending precise definition, but the intended shape is:
+**The threshold scales with the project's traffic**, because a flat number is wrong in opposite directions at the two ends. In a project doing thousands of sessions a day, two independent false positives of the same kind inside one window stop being a coincidence, so a flat `2` would promote noise that only repeated by chance. In a project doing a few dozen sessions a month, a chronic problem may never put two occurrences inside the window, so a flat `2` would bury a true positive. Hence `promotionThreshold(sessionsInWindow)`: a floor, a term proportional to volume, and a cap (`PROMOTION_*` constants in `@domain/signals`). The cap exists because uncapped the proportional term reaches ~1,500 sessions for a 3M-session month, which does not make discovery stricter for a large customer but switches it off for them.
 
-- persist newly created signal candidates immediately
-- keep provisional signals hidden until they pass promotion rules
-- promote them when enough evidence accumulates, when annotation evidence lands, or when a user explicitly promotes them
-- let the stronger provisional workflow absorb duplicate or noisy concurrent no-match signal candidates before they become visible in the main Signals UI
-- keep the core signal entity shape unchanged
+**Promotion conditions are uniform.** No flagger slug is special-cased, no human annotation short-circuits the count, and no severity or model rating is consulted. Accepted consequence: in a high-traffic project a `pii-leakage` or `jailbreaking` finding needs the full threshold before it is announced. A slug-keyed safety exception was considered and rejected — per-flagger behavior in the promotion rule cannot be explained or tuned, and such a list only grows. If safety findings need to reach a user sooner, that belongs in the flagger or in notification routing.
+
+**Where it runs.** `assignScoreToSignalUseCase`, split across the transaction boundary by what each step is allowed to touch:
+
+1. An unlocked `findById` pre-read. A signal that is already promoted stops here, before anything else runs. This is the load-bearing step: a promoted signal can hold hundreds of thousands of scores and `scores_signal_lookup_idx` does not cover `session_id`, so counting one would mean a heap fetch per row on the ingestion hot path. Promotion is a one-way latch, so this read can only be stale in the harmless direction.
+2. For an unpromoted signal, the project's session volume, read through a TTL cache (`org:${organizationId}:projects:${projectId}:session-volume`) populated on miss from ClickHouse. This happens *before* the transaction because it touches Redis and ClickHouse, neither of which belongs inside a Postgres transaction. A failure at either layer degrades to the floor, so an unavailable cache can only make promotion easier, never suppress a signal.
+3. Inside the existing transaction and per-signal lock that already serialize centroid updates and the regression claim: re-check the latch, count distinct sessions, compare against the threshold, and write.
+
+The count therefore comes *after* volume resolution rather than gating it. Counting first would need the count outside the lock to be authoritative, and it cannot be: the count has to include the score being claimed in this transaction. The cost of that ordering is one cached read per assignment to an unpromoted signal, on a path that already takes a distributed lock.
+
+Crossing the threshold stamps `promoted_at` and emits `SignalPromoted`.
+
+**An unpromoted signal is indistinguishable from one that does not exist.** No UI surface, no tab, no badge, no API representation, no automation. Enforcement is a **default-deny filter in `SignalRepository`** rather than a check in each of the dozen use-cases downstream: twelve call sites that have to remember the filter is twelve chances to leak a candidate, and the next read path added would leak by default. `userVisibleSignal` in the adapter carries the rule, so the list, its counts and histogram, the detail page, the command palette, Related, session and user reads, the CSV export, and every API, MCP, SDK and CLI response drop candidates for free — the hydrating reads (`findByIds`, `findBySlug`) already tolerated a missing row. A project holding nothing but candidates reads as an empty project and shows onboarding.
+
+Four reads sit on the discovery side and pass `includeUnpromoted`. Three of them fail *silently* without it, which is why each carries a comment naming the failure: the promotion pre-read (the latch would never fire again), `resolveKnownSignalId` (an evaluation-linked score would spawn a second signal instead of adding evidence to the first), `generateSignalDetailsUseCase` (the throttled `signals:refresh` runs for candidates too, so every refresh would fail), and discovery's `hybridSearch` (the one read that has to see candidates, since matching into one is how it earns promotion — the signals-list search box calls the same method without the opt-in). Two reads stay unfiltered beyond soft-delete on purpose: `countBySlug` and `existsBySlug` back slug generation, and a candidate holds its slug for real.
+
+**Consequences fire at promotion, not at creation.** The `signal.discovered` notification and the `signal.discovered` agent dispatch both hang off `SignalPromoted`; `SignalCreated` stays registered and inert as an audit fact. Nothing user-visible was renamed — same kind, same trigger, same templates, same project gate, and existing dispatch configs are untouched. Escalation skips an unpromoted signal that is not already escalating, so an incident cannot route around the gate. The "not already escalating" half is deliberate: an unpromoted signal holding an open incident should be unreachable, but returning early there would strand that incident forever, because even the duration timeout exits from inside the detector. Falling through cannot announce anything, since entry requires the signal not to be escalating already. `isSignalNew` anchors on `signalFirstVisibleAt` (promotion, falling back to creation), so a signal discovered on day 0 and promoted on day 20 is new on day 20 — and arrives with a warm escalation baseline rather than a cold-started one.
+
+Enforcement landed as a straight cutover with no feature flag: a flag would put a branch on every read path and leave a dozen places to un-branch later. The **constants are the kill switch** — `PROMOTION_MIN_SESSIONS = 1` with `PROMOTION_RATE_FLOOR = 0` reproduces the pre-gate behaviour as a config change rather than a revert. For that to be true the gate is evaluated at *creation* as well as on assignment: a creating score is one session, so a signal is born promoted wherever the floor admits one. Without that, promotion would only ever be evaluated when a second score arrived and the floor would effectively be 2 whatever it was set to. Testing the constant before resolving volume keeps the extra lookup off the creation path in every configuration that cannot use it, including the default. Both the migration that added `promoted_at` and the one that enforced it backfill `promoted_at = created_at`, so the gate only ever applied to signals discovered after enforcement shipped. The consequence to communicate: a complaining customer's existing list does not get cleaner on deploy, it stops getting worse. Cleaning the backlog is a separate bulk resolve/ignore.
+
+**Naming follows the same line.** A candidate is named deterministically from its first occurrence — the truncated first sentence of the feedback as the name, the feedback itself as the description — with no model call on the creation path at all. Summarizing a cluster from its single first member is not a well-posed task, and asking a model to do it produced exactly that answer in production: signals titled `description`, and one whose description was the model explaining that one occurrence is not enough to identify a shared pattern. The real summary is generated once, over the whole cluster, when the signal is promoted.
+
+The placeholder survives until then, because `refreshSignalDetailsUseCase` returns early while `promoted_at` is null. `ScoreAssignedToSignal` schedules the throttled `signals:refresh` for candidates too, and without that guard a candidate picking up a second score is renamed by a model eight hours later — spending a call to make matching worse, since it swaps the occurrence's own feedback for a generalization drawn from the one or two members that make the summary ill-posed.
+
+**Passing the gate and being promoted are two different facts, and two different events.** The transaction that observes the evidence emits `SignalQualifiedForPromotion` and stops there: `promoted_at` stays null, so the signal stays invisible. `issues:promoteSignal` then generates the summary from the whole cluster, stamps the latch and emits `SignalPromoted` in one transaction, and the announcements hang off *that*. So a signal is never visible carrying the raw feedback sentence it was created from, and `SignalPromoted` is fully formed for everything downstream — which matters because agent dispatch builds its Cursor prompt from the name and description, and Slack renders once at send time. (The in-app renderer and the email are safe either way: the payload carries no name, so they resolve it live.) Splitting the two facts is what lets promotion wait on a model call that cannot run inside the gate's transaction. The generation is asked to ignore the signal's current details, since using the placeholder as the stabilization baseline would anchor the first real summary to one member's phrasing.
+
+Two consequences worth knowing. Until the latch is stamped every further score re-qualifies and re-emits, so the consumer publishes under a **leading throttle** rather than a bare dedupe key — a bare key becomes a BullMQ job id, failed jobs are retained, and a permanently failed promotion would shadow every later publish so the signal could never promote at all. And generation failure never blocks promotion: `promoteSignalUseCase` promotes under the placeholder and lets the now-unblocked refresh correct the name, because a signal held back by a failed model call is invisible with nothing scheduled to retry it.
+
+### Consolidation: fragments that could never qualify apart
+
+The gate alone would suppress a real problem that discovery split across several one-session signals, because no fragment reaches the threshold on its own. **Consolidation merges near-duplicate candidates into one**, so the union faces the gate that the pieces could not.
+
+It is candidate-to-candidate, and the repository is what enforces that: the neighbor scan runs `findSimilarByCentroid({ unpromotedOnly: true })`, which inverts the default-deny rule on *both* sides rather than relaxing it, so a promoted signal is neither absorbed nor picked as a survivor. Two promoted signals are never auto-merged — that is the retired v1 merge system. Merging candidates needs no "merged" state because nothing points at a candidate: it was never announced, assigned, escalated, or linked from a pull request, which is exactly what makes a real merge safe here.
+
+Matching is **centroid-only, and must stay that way**. Consolidation exists to catch what live matching rejected, and what live matching rejected was rejected largely by the rerank gate over name and description — the channel a candidate's placeholder makes unreliable. Re-applying that gate here would make the pass a no-op by construction. The floor is a separate, looser constant (`CONSOLIDATION_MIN_SIMILARITY`), and "looser" needs care: centroid-to-centroid compares two averages, so noise cancels on both sides and a numerically equal floor would be *stricter* than discovery's score-to-centroid comparison.
+
+A pass runs from a throttled `issues:consolidate` publish, triggered wherever a candidate's centroid changes — at creation, and on an assignment that left it unpromoted. `ScoreAssignedToSignal` carries `unpromoted` for that second trigger, read under the row lock: at volume almost every assignment is to a promoted signal, and publishing for those would enqueue a job per signal per window for a handler that could only return. The throttle is trailing, which also keeps a candidate that qualified in the same transaction from being consolidated out from under its own promotion.
+
+Then, in order: neighbors above the floor, capped at `CONSOLIDATION_MAX_MERGES_PER_PASS`; the per-signal lock for **every participant**, in ascending id order; and one transaction that re-reads them under those locks, picks the survivor (most distinct sessions, then oldest, then lowest id), moves the losers' scores, folds their centroids in with `mergeCentroids`, soft-deletes them, and re-qualifies the survivor. The cap is the guard on the one irreversible failure mode in the whole design — a mis-set threshold with no ceiling collapses a project's candidate pool into one meaningless signal, and there is no demerge. Locking the losers matters as much as locking the survivor: an unlocked loser can take a concurrent assignment while the merge reassigns its scores and deletes it, stranding that score on a deleted row.
+
+The survivor keeps its placeholder name. If the merge carries it over the gate, promotion names it from the merged cluster — which is the point at which a fragmented problem finally gets one title.
+
+**The merge spans two stores.** Postgres decides promotion, but occurrences, affected sessions, impact and the trend all read ClickHouse, so a Postgres-only merge would announce a signal whose occurrence count shows part of its evidence. The merge transaction writes a `SignalsConsolidated` outbox event, and its consumer runs one bounded `ALTER TABLE scores UPDATE`. That event cannot be a call placed after the commit: the merge is idempotent precisely because a re-run finds the losers soft-deleted and no-ops, so a crash between the two stores would leave the loser's rows under a deleted id forever. The event carries identity only: what the mutation sweeps is resolved from Postgres when the job runs, by walking `signals.merged_into_signal_id` from the survivor. That pointer is stamped as the merge soft-deletes each loser, and it is what makes two chained merges converge. `B → A` followed by `A → C` publishes two independent jobs and BullMQ orders neither, but the merge that absorbs a former survivor sweeps that survivor's own absorbed ids too, so whichever job runs first covers what the other may not have moved yet. Without it, running `A → C` first leaves B's rows on a soft-deleted `A` permanently. The mutation's `created_at` lower bound comes from the survivor's earliest score, never from the losers' own `created_at` — a replayed annotation is older than the signal it was later assigned to, and a sweep set spanning several merges reaches further back than any one of them. `scores_hourly_buckets` is deliberately **not** reconciled: it is an AggregatingMergeTree fed by a materialized view, the only available mechanism is an additive `INSERT … SELECT` that double-counts on retry, and its `SimpleAggregateFunction(sum, UInt64)` column cannot take a compensating negative. The cost is confined to seasonal escalation baselines, self-heals as new scores land, and `isSignalNew` already excludes the signal from escalation for `NEW_SIGNAL_AGE_DAYS` after promotion.
+
+### Expiry: candidates that stopped accumulating
+
+Discovery accumulates rows forever, and every `signals` row carries a 2048-dim centroid that `hybridSearch` scans exactly, with no ANN index by design. A candidate that never accumulated evidence is provably something nobody has seen, so it can be dropped without anyone noticing — which makes expiry the first mechanism that lets the corpus shrink instead of only grow.
+
+A daily cron soft-deletes candidates idle for `CANDIDATE_EXPIRY_IDLE_DAYS`, measured from `clustered_at` (the anchor the centroid itself decays from) rather than `updated_at` (which a throttled refresh also bumps). The window sits past `PROMOTION_WINDOW_DAYS` because promotion is only ever evaluated on score assignment: a candidate idle for a full window is provably dead, and the grace beyond it keeps a late score clustering into the existing candidate instead of starting a fresh one. Promoted signals are never swept.
+
+**Expired candidates keep their scores attached.** `check-eligibility` rejects a score that already carries a `signal_id`, so leaving them attached is what stops the sweep feeding the same annotations back into discovery forever. The signal is soft-deleted, so the evidence simply stops existing; if the same problem recurs it starts a fresh candidate, which is correct and self-correcting. The sweep is one capped `UPDATE` per tick on the admin client with no per-signal fan-out — an unpromoted signal has no consequences to unwind — backed by `signals_candidate_idle_idx`, whose predicate is the exact complement of the user-facing lifecycle index. Soft-delete also frees the slug, so expiry recycles the `PRE-XXXX` space.
+
+Full design, decisions, and open parameters: `specs/signal-promotion.md`.
 
 ## Naming
 
@@ -354,7 +439,7 @@ Required Postgres storage on the signal row:
 - no IVFFlat/HNSW index on `centroid_embedding`: signals per project are expected in the hundreds to low thousands, and an exact project-scoped sequential scan outperforms an approximate index at that scale
 - do not add JSONB indexes on `centroid`; centroid search is served by derived pgvector state maintained by `SignalRepository.save`
 
-Names/descriptions are generated from occurrences and refreshed on debounce.
+Names/descriptions are generated from occurrences and refreshed on debounce, but not from the first one and not at creation — a candidate carries a deterministic placeholder until it is promoted, and generation starts there. See § Denoising: promotion.
 
 They may use:
 
@@ -400,7 +485,7 @@ Action-row behavior:
 - left side: time range selector and columns selector
 - right side: an assignee filter (multi-select over org members plus an `Unassigned` option), a `My signals` toggle whose count badge reflects the current time/search filters (but not the assignee filter itself), plus hybrid search without rerank
 - the time range filters score `created_at` in ClickHouse, not signal-row timestamps in Postgres
-- mute state affects notification fan-out, not the analytics panel
+- lifecycle stamps affect the Active/Archived tabs and notification fan-out, not the analytics panel
 - the page does not expose the generic Traces filter builder or filter drawer
 - signal search relies on the shared AI-layer Redis cache for embeddings; the signals domain does not add an extra embedding cache on top
 - the managed Signals surface is web-only for now; there is no public `apps/api` signals contract yet
@@ -433,7 +518,8 @@ Signal page behavior:
 
 - the dedicated route (`/projects/<slug>/signals/<signalId>`) is the single signal surface; it replaced the former right-side drawer. The list row click navigates here, and the legacy `?signalId=` deep link redirects to it
 - page-level time range and search controls do not apply on the page; signal reads use full history
-- the header shows the signal name + canonical status, mute/unmute action, the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list), and a copyable slug; the description and tags sit in a full-width row below
+- the header shows the signal name + canonical status, the resolve/ignore actions and mute toggle, the assignee + priority triage pickers, previous/next-signal navigation (buttons + `J`/`K`, cycling the default-sorted list), and a copyable slug; the description and tags sit in a full-width row below
+- the header's far right, below the action row, carries the one-shot 👍/👎 feedback control (see [Feedback](#feedback-was-this-signal-worth-raising))
 - the command palette gains contextual `Assign to…` (Me / Unassigned / org members) and `Set priority…` drill-down commands while the page is open, running the same `updateSignalTriage` mutation as the pickers
 - triage fields are functional beyond the page: the signals list groups by priority and filters by assignee, incident notification payloads snapshot `assigneeId`/`priority` for email/Slack/in-app rendering, and changing the assignee emits `SignalAssigneeChanged` which notifies the new assignee (`issue.assigned`, in-app + email; see `dev-docs/notifications.md`)
 - the report body includes the impact summary band (occurrences, affected traces/sessions/users, cost), the Patterns section, a 14-day trend histogram, the linked-evaluations section, an Examples carousel (`H`/`L` cycling), and an infinitely paginated traces table; clicking a trace opens it in an overlay sheet on top of the page

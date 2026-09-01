@@ -13,9 +13,16 @@ on:
         required: false
         default: development
 
+concurrency:
+  group: pr-diff-artifact-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   generate-diff-artifact:
-    if: github.repository == 'latitude-dev/latitude-llm' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: >
+      github.repository == 'latitude-dev/latitude-llm' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false) &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,12 +35,12 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 25
 
@@ -48,7 +55,7 @@ jobs:
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@v1.0.166
+        uses: anthropics/claude-code-action@v1.0.179
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           show_full_output: true

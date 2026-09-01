@@ -5,6 +5,7 @@ import {
   EvaluationId,
   MembershipId,
   OrganizationId,
+  PartnerId,
   ProjectId,
   ScoreId,
   SignalId,
@@ -124,6 +125,8 @@ export const SEED_WARRANTY_ARCHIVED_EVALUATION_HASH = "bb11cc22dd33ee44ff55aa66b
 export const SEED_COMBINATION_EVALUATION_HASH = "cc11dd22ee33ff44aa55bb66cc77dd88ee99ff00"
 export const SEED_RETURNS_EVALUATION_HASH = "dd11ee22ff33aa44bb55cc66dd77ee88ff99aa00"
 export const SEED_ACCESS_EVALUATION_HASH = "ee11ff22aa33bb44cc55dd66ee77ff88aa99bb00"
+export const SEED_GROUNDING_EVALUATION_HASH = "ff11aa22bb33cc44dd55ee66ff77aa88bb99cc00"
+export const SEED_RECALL_EVALUATION_HASH = "ab12cd34ef56ab78cd90ef12ab34cd56ef78ab90"
 
 // ---------------------------------------------------------------------------
 // Simulations
@@ -296,6 +299,76 @@ export const SEED_OLD_TRACES_QA_FROM_DAYS_AGO = 45
 export const SEED_OLD_TRACES_QA_TO_DAYS_AGO = 31
 export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
 
+// ---------------------------------------------------------------------------
+// Private partner API — the demo partner
+// ---------------------------------------------------------------------------
+
+/**
+ * "Longitude" is a fictional third-party platform, deliberately not a real
+ * company: this row shows up in the backoffice partner list and, once it
+ * provisions an account, in that organization's OAuth Keys settings.
+ *
+ * The local demo ships these values as its env defaults, so `pnpm pg:seed`
+ * followed by the demo server works with no configuration. The id is a real
+ * CUID2 rather than a readable literal because `partners.id` is `varchar(24)`
+ * and lookups parse it as one.
+ */
+export const SEED_PARTNER_ID = PartnerId("oimduget8sjsc6xqma6sv8c4")
+export const SEED_PARTNER_NAME = "Longitude"
+export const SEED_PARTNER_ICON_URL = "https://avatars.githubusercontent.com/u/98949449?s=200&v=4"
+export const SEED_PARTNER_REDIRECT_URLS = ["http://localhost:4321/oauth/callback"] as const
+export const SEED_PARTNER_SECRET = "longitude-dev-secret-do-not-use-in-prod-0000000000"
+
+/**
+ * QA fixtures for the cost section: one project per archetype, because an
+ * archetype is only judgeable when the whole project tells the same story. A
+ * project stuffed with every failure mode proves the code paths execute; it
+ * cannot tell you whether the page cries wolf on a well-run project.
+ *
+ * The unhealthy archetype is deliberately absent — it lives on the default seed
+ * project, which already is the demo project where findings should fire.
+ */
+export interface SeedCostArchetypeProject {
+  readonly id: ProjectId
+  readonly name: string
+  readonly slug: string
+  /** Backdated so All time reaches the archetype's oldest span. */
+  readonly firstTraceAtDaysAgo: number
+}
+
+export const SEED_COST_ARCHETYPE_PROJECTS = {
+  healthy: {
+    id: ProjectId("costqahealthy00000000001"),
+    name: "Cost: healthy at scale (QA)",
+    slug: "cost-healthy-qa",
+    firstTraceAtDaysAgo: 91,
+  },
+  singleTurn: {
+    id: ProjectId("costqasingleturn00000001"),
+    name: "Cost: single-turn pipeline (QA)",
+    slug: "cost-single-turn-qa",
+    firstTraceAtDaysAgo: 22,
+  },
+  regression: {
+    id: ProjectId("costqaregression00000001"),
+    name: "Cost: spend regression (QA)",
+    slug: "cost-regression-qa",
+    firstTraceAtDaysAgo: 57,
+  },
+  tiny: {
+    id: ProjectId("costqatiny00000000000001"),
+    name: "Cost: tiny and new (QA)",
+    slug: "cost-tiny-qa",
+    firstTraceAtDaysAgo: 3,
+  },
+  free: {
+    id: ProjectId("costqafree00000000000001"),
+    name: "Cost: genuinely free (QA)",
+    slug: "cost-free-qa",
+    firstTraceAtDaysAgo: 15,
+  },
+} as const satisfies Readonly<Record<string, SeedCostArchetypeProject>>
+
 // Dogfood projects — one per internal AI feature, mirroring
 // `LATITUDE_TELEMETRY_PROJECT_SLUGS`. Each receives the LLM generations that
 // feature exports (and, for flaggers / annotation-enrichment, the product-feedback
@@ -329,6 +402,11 @@ export const SEED_LATITUDE_TAXONOMY_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SL
 export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_ID = ProjectId("signalgen008afjbcb7gzwlh")
 export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_NAME = "Latitude Signal Generation"
 export const SEED_LATITUDE_SIGNAL_GENERATION_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.signalGeneration
+
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_ID = ProjectId("convintel009afjbcb7gzwli")
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_NAME = "Latitude Conversation Intelligence"
+export const SEED_LATITUDE_CONVERSATION_INTELLIGENCE_PROJECT_SLUG =
+  LATITUDE_TELEMETRY_PROJECT_SLUGS.conversationIntelligence
 
 // ---------------------------------------------------------------------------
 // Test Mode — second org (empty-sandbox state) and Acme sandboxes

@@ -20,7 +20,7 @@ The fastest path today pairs the [MCP server](../getting-started/mcp) with a dat
   <Step title="Capture the failing traces as a dataset">
     Turn the traces behind the signal into a [dataset](../datasets/overview), the seed of your regression test. Your agent can do this through the MCP, or you can [add the traces](../datasets/add-traces) from the UI.
   </Step>
-  <Step title="Add the expected behaviour">
+  <Step title="Add the expected behavior">
     Record what the agent should have done by [adding expected output](../datasets/expected-output) to the rows you want to check precisely.
   </Step>
   <Step title="Replay and check">
@@ -38,6 +38,11 @@ You can drive a regression test from a dataset in your own pipeline:
 - **Export** a [dataset](../datasets/overview) as CSV and replay its inputs in your own test harness.
 - Submit the results back as [scores](../scores/overview) through the Scores API, so regression results live alongside your production data, and gate the build on the outcome.
 
+## Multi-turn simulations
+
+If the case is a conversation rather than a single input/output pair, run a [local simulation](./simulations): pull the dataset with the SDK, let a user simulator talk to your agent, and send the sessions back to Latitude so [Experiments](../experiments/overview) can compare versions.
+
 ## Next step
 
+- [Simulate agents locally](./simulations): run the dataset as multi-turn conversations in TypeScript or Python.
 - [Datasets](../datasets/overview): turn the traces behind a signal into a reusable test set.

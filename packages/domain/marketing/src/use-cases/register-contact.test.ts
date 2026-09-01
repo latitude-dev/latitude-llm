@@ -54,6 +54,7 @@ describe("registerContact", () => {
       name: "Ada Lovelace",
       jobTitle: null,
       phoneNumber: null,
+      heardAboutUs: null,
       emailVerified: true,
       image: null,
       role: "user",
@@ -73,8 +74,42 @@ describe("registerContact", () => {
         source: MARKETING_SOURCE_V2_SIGNUP,
         createdAt: CREATED_AT,
         subscribed: true,
+        // Organic signup: onboarding fills these in later, via updateContact.
+        jobTitle: null,
+        phoneNumber: null,
+        heardAboutUs: null,
       },
     ])
+    expect(sender.updates).toHaveLength(0)
+  })
+
+  it("forwards profile fields the row already carries, for users who skip onboarding", async () => {
+    const { users, layers } = buildLayers()
+    const sender = createFakeSender()
+    users.set(USER_ID, {
+      id: USER_ID,
+      email: "ada@example.com",
+      name: "Ada Lovelace",
+      jobTitle: "Founder",
+      phoneNumber: "+15550100",
+      heardAboutUs: "Longitude",
+      emailVerified: false,
+      image: null,
+      role: "user",
+      notificationPreferences: null,
+      createdAt: CREATED_AT,
+    })
+
+    await Effect.runPromise(
+      registerContact({ marketingContacts: sender })({ userId: USER_ID }).pipe(Effect.provide(layers)),
+    )
+
+    // A partner-provisioned user never reaches onboarding, so this is the only sync that will happen.
+    expect(sender.creates[0]).toMatchObject({
+      jobTitle: "Founder",
+      phoneNumber: "+15550100",
+      heardAboutUs: "Longitude",
+    })
     expect(sender.updates).toHaveLength(0)
   })
 

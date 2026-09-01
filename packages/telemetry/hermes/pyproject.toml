@@ -1,6 +1,6 @@
 [project]
 name = "latitude-telemetry-hermes"
-version = "0.1.1"
+version = "0.3.0"
 description = "Hermes Agent plugin that streams sessions to Latitude as OTLP traces"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]

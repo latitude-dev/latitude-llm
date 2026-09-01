@@ -1,10 +1,11 @@
 import { OutboxEventWriter } from "@domain/events"
 import type { OrganizationId, ProjectId, TraceId } from "@domain/shared"
-import { generateId, SqlClient, toRepositoryError } from "@domain/shared"
+import { generateId, SettingsReader, SqlClient, toRepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import { ACTION_CREDITS, buildBillingIdempotencyKey, persistedIncludedCreditsForPlan } from "../constants.ts"
 import type { BillingUsageEvent } from "../entities/billing-usage-event.ts"
 import type { BillingUsagePeriod } from "../entities/billing-usage-period.ts"
+import { detectBillingLimitCrossed } from "../helpers/detect-billing-limit-crossed.ts"
 import { BillingUsageEventRepository } from "../ports/billing-usage-event-repository.ts"
 import { BillingUsagePeriodRepository } from "../ports/billing-usage-period-repository.ts"
 
@@ -17,7 +18,7 @@ export interface RecordTraceUsageBatchInput {
   readonly organizationId: OrganizationId
   readonly traceUsages: readonly RecordTraceUsage[]
   readonly planSlug: BillingUsagePeriod["planSlug"]
-  readonly planSource: "override" | "subscription" | "free-fallback"
+  readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   readonly periodStart: Date
   readonly periodEnd: Date
   readonly includedCredits: number
@@ -85,10 +86,30 @@ const buildTraceUsageEvents = (
       }) satisfies BillingUsageEvent,
   )
 
+const resolveSpendingLimitCents = Effect.fn("billing.resolveTraceUsageSpendingLimitCents")(function* (
+  overageAllowed: boolean,
+) {
+  if (!overageAllowed) return null
+  const reader = yield* SettingsReader
+  const orgSettings = yield* reader.getOrganizationSettings()
+  return orgSettings?.billing?.spendingLimitCents ?? null
+})
+
 const writeBillingUsagePeriodUpdatedEvent = Effect.fn("billing.writeTraceUsagePeriodUpdated")(function* (input: {
   readonly recordInput: RecordTraceUsageBatchInput
+  readonly previousConsumedCredits: number
   readonly updated: BillingUsagePeriod
 }) {
+  const spendingLimitCents = yield* resolveSpendingLimitCents(input.recordInput.overageAllowed)
+  const limitsCrossed = detectBillingLimitCrossed({
+    previousConsumedCredits: input.previousConsumedCredits,
+    consumedCredits: input.updated.consumedCredits,
+    includedCredits: input.updated.includedCredits,
+    overageAllowed: input.recordInput.overageAllowed,
+    planSlug: input.recordInput.planSlug,
+    spendingLimitCents,
+  })
+
   const outboxEventWriter = yield* OutboxEventWriter
   yield* outboxEventWriter
     .write({
@@ -106,6 +127,7 @@ const writeBillingUsagePeriodUpdatedEvent = Effect.fn("billing.writeTraceUsagePe
         consumedCredits: input.updated.consumedCredits,
         overageCredits: input.updated.overageCredits,
         reportedOverageCredits: input.updated.reportedOverageCredits,
+        limitsCrossed,
       },
     })
     .pipe(Effect.mapError((error) => toRepositoryError(error, "outbox.writeBillingUsagePeriodUpdated")))
@@ -135,6 +157,7 @@ export const recordTraceUsageBatchUseCase = Effect.fn("billing.recordTraceUsageB
         return yield* loadCurrentOrEmptyPeriod(input)
       }
 
+      const previous = yield* loadCurrentOrEmptyPeriod(input)
       const updated = yield* periodRepo.appendCreditsForBillingPeriod({
         organizationId: input.organizationId,
         periodStart: input.periodStart,
@@ -146,6 +169,7 @@ export const recordTraceUsageBatchUseCase = Effect.fn("billing.recordTraceUsageB
 
       yield* writeBillingUsagePeriodUpdatedEvent({
         recordInput: input,
+        previousConsumedCredits: previous.consumedCredits,
         updated,
       })
 

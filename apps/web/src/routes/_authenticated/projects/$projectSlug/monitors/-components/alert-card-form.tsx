@@ -121,16 +121,19 @@ function MetricSelector({
   stream,
   onChange,
   disabled,
+  countOnly = false,
 }: {
   readonly value: MonitorMetric
   readonly stream: NonNullable<AlertDraft["target"]>["stream"]
   readonly onChange: (metric: MonitorMetric, direction?: MetricDirection) => void
   readonly disabled?: boolean
+  readonly countOnly?: boolean
 }) {
   const options = targetMetricOptions(stream)
   const selectedDimension = metricDimension(value)
   const dimensions = (["count", "errorRate", "cacheHitRate", "duration", "cost", "tokens"] as const).filter(
-    (dimension) => options.some((option) => metricDimension(option.metric) === dimension),
+    (dimension) =>
+      (!countOnly || dimension === "count") && options.some((option) => metricDimension(option.metric) === dimension),
   )
   const aggregations = options.filter((option) => metricDimension(option.metric) === selectedDimension)
 
@@ -194,9 +197,10 @@ function MetricSelector({
 // alert opens (incident lists, chart markers, notifications) — it doesn't
 // change when or how the alert fires.
 const SEVERITY_HELP: Record<AlertSeverity, string> = {
-  low: "Incidents open as low priority — informational, review when convenient",
-  medium: "Incidents open as medium priority — worth attention soon",
-  high: "Incidents open as high priority — needs immediate attention",
+  low: "Opens incidents as low priority. Informational; review when you have time.",
+  medium: "Opens incidents as medium priority. Worth a look soon.",
+  high: "Opens incidents as high priority. Needs attention right away.",
+  urgent: "Opens incidents as urgent. Drop what you're doing.",
 }
 
 const COMPARISON_TABS: readonly TabOption<ComparisonMode>[] = [
@@ -513,6 +517,7 @@ export function AlertCardForm({
         <MetricSelector
           value={value.metric}
           stream={value.target.stream}
+          countOnly={isEscalatingKind(value.kind)}
           onChange={(metric, direction) => set(direction ? { metric, direction } : { metric })}
           {...(disabled || metricReadonly ? { disabled: true } : {})}
         />

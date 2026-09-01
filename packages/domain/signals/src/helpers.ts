@@ -8,6 +8,7 @@ import type {
 import type { ScoreSourceType } from "@domain/scores"
 import {
   createCentroid,
+  mergeCentroids,
   normalizeCentroid,
   normalizeEmbedding as sharedNormalizeEmbedding,
   updateCentroid,
@@ -82,6 +83,23 @@ export const updateSignalCentroid = ({
 }
 
 /**
+ * Fold an absorbed candidate's centroid into its survivor's, for consolidation.
+ * Delegates to the shared primitive, which decays both sides to `timestamp`
+ * before summing — re-clustering from the raw scores instead would throw away
+ * the decayed mass the loser already accumulated.
+ */
+export const mergeSignalCentroids = ({
+  survivor,
+  loser,
+  timestamp,
+}: {
+  readonly survivor: SignalCentroid & { clusteredAt: Date }
+  readonly loser: SignalCentroid & { clusteredAt: Date }
+  readonly timestamp: Date
+}): SignalCentroid & { clusteredAt: Date } =>
+  mergeCentroids({ survivor, loser, timestamp }) as SignalCentroid & { clusteredAt: Date }
+
+/**
  * Convert the persisted running sum into the unit vector used for cosine
  * search. The stored centroid `base` itself stays unnormalized.
  */
@@ -120,9 +138,15 @@ export const getEscalationExitThreshold = (baselineAvgOccurrences: number): numb
  * detection — their `baselineAvgOccurrences` window (days 1–8 ago) hasn't
  * filled in yet, so any volume above the floor would falsely trip the
  * threshold.
+ *
+ * Callers pass `signalFirstVisibleAt`, not `createdAt`.
  */
 export const isSignalNew = (firstSeenAt: Date, now: Date = new Date()): boolean =>
   firstSeenAt.getTime() > now.getTime() - NEW_SIGNAL_AGE_DAYS * MILLISECONDS_PER_DAY
+
+/** When the signal started existing for a user: its promotion, or its creation if it predates the gate. */
+export const signalFirstVisibleAt = (issue: Pick<Signal, "promotedAt" | "createdAt">): Date =>
+  issue.promotedAt ?? issue.createdAt
 
 export type SeasonalEscalationDecisionInput = EscalationDecisionInput
 export type SeasonalEscalationTransition = EscalationTransition
@@ -136,12 +160,24 @@ export const deriveSignalLifecycleStates = ({
 }: DeriveSignalLifecycleStatesInput): readonly SignalStateValue[] => {
   const states = new Set<SignalStateValue>()
 
-  if (isSignalNew(issue.createdAt, now)) {
+  if (isSignalNew(signalFirstVisibleAt(issue), now)) {
     states.add(SignalState.New)
   }
 
   if (isEscalating) {
     states.add(SignalState.Escalating)
+  }
+
+  if (issue.regressedAt !== null) {
+    states.add(SignalState.Regressed)
+  }
+
+  if (issue.resolvedAt !== null) {
+    states.add(SignalState.Resolved)
+  }
+
+  if (issue.ignoredAt !== null) {
+    states.add(SignalState.Ignored)
   }
 
   if (states.size === 0) {

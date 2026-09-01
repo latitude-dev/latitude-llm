@@ -3,6 +3,7 @@ packages:
   - packages/**
   - "!packages/telemetry/python/**"
   - "!packages/telemetry/hermes/**"
+  - "!packages/telemetry/prime-intellect/**"
   - "!packages/platform/op-gepa/python/**"
   - "!packages/telemetry/typescript/examples/flue-app"
   - "!packages/telemetry/typescript/examples/flue-app/**"
@@ -26,6 +27,7 @@ publicHoistPattern:
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "@temporalio/*"
+  - "rosetta-ai"
 
 # Disable npm `pre*` / `post*` lifecycle scripts (defense in depth on top of
 # pnpm-workspace.yaml `onlyBuiltDependencies` allowlist). Mini Shai-Hulud
@@ -35,7 +37,7 @@ enablePrePostScripts: false
 catalog:
   "@biomejs/biome": 2.4.6
   "@clickhouse/client": 1.21.0
-  "@hono/node-server": 1.19.13
+  "@hono/node-server": 1.19.15
   "@opentelemetry/api": 1.9.1
   "@paralleldrive/cuid2": 3.3.0
   "@temporalio/activity": 1.17.5
@@ -48,11 +50,11 @@ catalog:
   "@types/react": 19.2.14
   "@types/react-dom": 19.2.3
   "@typescript/native-preview": 7.0.0-dev.20260705.1
-  "@vitejs/plugin-react": 6.0.1
-  better-auth: 1.6.13
-  "@better-auth/core": 1.6.13
-  "@better-auth/sso": 1.6.13
-  "@better-auth/stripe": 1.6.13
+  "@vitejs/plugin-react": 6.1.0
+  better-auth: 1.6.22
+  "@better-auth/core": 1.6.22
+  "@better-auth/sso": 1.6.22
+  "@better-auth/stripe": 1.6.22
   "@bull-board/api": 6.12.1
   "@bull-board/hono": 6.12.1
   bullmq: 5.76.2
@@ -63,16 +65,18 @@ catalog:
   fast-json-stable-stringify: 2.1.0
   "@effect/opentelemetry": 4.0.0-beta.57
   effect: 4.0.0-beta.57
-  hono: 4.12.21
+  hono: 4.12.34
   ioredis: 5.10.1
+  jose: 6.2.3
   js-tiktoken: 1.0.21
   mustache: 4.2.0
+  pdfjs-dist: 6.2.108
   pg: 8.16.0
   quickjs-emscripten: 0.32.0
   react: 19.2.5
   react-dom: 19.2.5
-  rosetta-ai: 2.2.0
-  protobufjs: 8.6.0
+  rosetta-ai: 2.3.0
+  protobufjs: 8.7.2
   tsdown: 0.21.9
   tsx: 4.21.0
   turbo: 2.9.18
@@ -83,6 +87,11 @@ catalog:
   voyageai: 0.2.1
   "@modelcontextprotocol/sdk": 1.29.0
   "@modelcontextprotocol/inspector": 0.21.2
+
+# pdfjs-dist pulls @napi-rs/canvas for its Node rasterization path, which we never take. It
+# reaches it through a runtime `createRequire`, so no bundler ever resolves the specifier.
+ignoredOptionalDependencies:
+  - "@napi-rs/canvas"
 
 ignoredBuiltDependencies:
   - "@prisma/engines"

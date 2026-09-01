@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, RefObject } from "react"
 import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import type { CheckedState } from "../checkbox/checkbox.tsx"
 
@@ -54,9 +54,8 @@ export interface ExpandedRows<T> {
   /** Shown when expanded data finished loading and `data` is empty. */
   blankSlate?: ReactNode | string
   /**
-   * Rendered ABOVE the expanded `data` rows (when present and not loading).
-   * Spans the table width via `colSpan`. Useful for per-expansion affordances
-   * like "show hidden rows" toggles that don't fit cleanly as a data row.
+   * Rendered below the expanded `data` rows (when present and not loading).
+   * Spans the table width via `colSpan` for pagination and expansion controls.
    */
   header?: ReactNode
 }
@@ -82,8 +81,6 @@ export interface InfiniteTableSharedProps<T> {
   defaultSorting?: InfiniteTableSorting
   onSortChange?: (sorting: InfiniteTableSorting) => void
   blankSlate?: ReactNode | string
-  /** `fill` (default) stretches in a fixed parent; `intrinsic` sizes to content up to scroll `className` max-height. */
-  scrollAreaLayout?: "fill" | "intrinsic"
   className?: string
   expandedRowKeys?: ReadonlySet<string>
   getExpandedRows?: (row: T) => ExpandedRows<T>
@@ -129,33 +126,47 @@ export interface InfiniteTableSharedProps<T> {
   groupOrder?: readonly string[]
 }
 
+type InfiniteTableScrollAreaProps =
+  | {
+      scrollAreaLayout: "external"
+      /** Shared ancestor scroll container used for sticky headers and virtualization. */
+      scrollContainerRef: RefObject<HTMLDivElement | null>
+    }
+  | {
+      scrollAreaLayout?: "fill" | "intrinsic"
+      scrollContainerRef?: RefObject<HTMLDivElement | null>
+    }
+
 export type InfiniteTableProps<T> =
-  | (InfiniteTableSharedProps<T> & {
-      onRowClick: (row: T) => void
-      getRowAriaLabel: (row: T) => string
-      /** Semantic role for clickable rows (`link` when the action navigates). Defaults to `button`. */
-      rowInteractionRole?: "button" | "link"
-      renderRowLink?: undefined
-    })
-  | (InfiniteTableSharedProps<T> & {
-      /**
-       * Render a real anchor for navigation rows (router-agnostic — the app provides the element).
-       * The `props.className` must be spread onto the anchor to apply the stretched-link overlay.
-       * Use this instead of `onRowClick` whenever clicking navigates to a different page.
-       *
-       * @example
-       * renderRowLink={(row, props) => (
-       *   <Link to="/items/$id" params={{ id: row.id }} {...props} aria-label={`Open ${row.name}`} />
-       * )}
-       */
-      renderRowLink: (row: T, props: { className: string }) => ReactNode
-      onRowClick?: undefined
-      getRowAriaLabel?: undefined
-      rowInteractionRole?: undefined
-    })
-  | (InfiniteTableSharedProps<T> & {
-      onRowClick?: undefined
-      getRowAriaLabel?: undefined
-      rowInteractionRole?: undefined
-      renderRowLink?: undefined
-    })
+  | (InfiniteTableSharedProps<T> &
+      InfiniteTableScrollAreaProps & {
+        onRowClick: (row: T) => void
+        getRowAriaLabel: (row: T) => string
+        /** Semantic role for clickable rows (`link` when the action navigates). Defaults to `button`. */
+        rowInteractionRole?: "button" | "link"
+        renderRowLink?: undefined
+      })
+  | (InfiniteTableSharedProps<T> &
+      InfiniteTableScrollAreaProps & {
+        /**
+         * Render a real anchor for navigation rows (router-agnostic — the app provides the element).
+         * The `props.className` must be spread onto the anchor to apply the stretched-link overlay.
+         * Use this instead of `onRowClick` whenever clicking navigates to a different page.
+         *
+         * @example
+         * renderRowLink={(row, props) => (
+         *   <Link to="/items/$id" params={{ id: row.id }} {...props} aria-label={`Open ${row.name}`} />
+         * )}
+         */
+        renderRowLink: (row: T, props: { className: string }) => ReactNode
+        onRowClick?: undefined
+        getRowAriaLabel?: undefined
+        rowInteractionRole?: undefined
+      })
+  | (InfiniteTableSharedProps<T> &
+      InfiniteTableScrollAreaProps & {
+        onRowClick?: undefined
+        getRowAriaLabel?: undefined
+        rowInteractionRole?: undefined
+        renderRowLink?: undefined
+      })

@@ -77,6 +77,43 @@ describe("createLoopsContactsSender", () => {
     })
   })
 
+  it("forwards profile properties on create and omits the empty ones", async () => {
+    const sender = createLoopsContactsSender({ apiKey: "test-key" })
+    createContactMock.mockResolvedValueOnce(successResponse)
+
+    await Effect.runPromise(
+      sender.createContact({
+        email: "a@b.co",
+        userId: "user_123",
+        jobTitle: "  Founder  ",
+        phoneNumber: "+15550100",
+        heardAboutUs: "Longitude",
+      }),
+    )
+
+    expect(createContactMock).toHaveBeenCalledWith({
+      email: "a@b.co",
+      properties: { userId: "user_123", jobTitle: "Founder", phoneNumber: "+15550100", heardAboutUs: "Longitude" },
+    })
+  })
+
+  it("omits null profile properties on create, so an organic signup sends nothing extra", async () => {
+    const sender = createLoopsContactsSender({ apiKey: "test-key" })
+    createContactMock.mockResolvedValueOnce(successResponse)
+
+    await Effect.runPromise(
+      sender.createContact({
+        email: "a@b.co",
+        userId: "user_123",
+        jobTitle: null,
+        phoneNumber: null,
+        heardAboutUs: null,
+      }),
+    )
+
+    expect(createContactMock).toHaveBeenCalledWith({ email: "a@b.co", properties: { userId: "user_123" } })
+  })
+
   it("swallows duplicate-contact APIErrors on create", async () => {
     const sender = createLoopsContactsSender({ apiKey: "test-key" })
     createContactMock.mockRejectedValueOnce(
@@ -128,6 +165,18 @@ describe("createLoopsContactsSender", () => {
         phoneNumber: "+1 555 0100",
         telemetryEnabled: true,
       },
+    })
+  })
+
+  it("forwards a typed source as the channel when the user picked Other", async () => {
+    const sender = createLoopsContactsSender({ apiKey: "test-key" })
+    updateContactMock.mockResolvedValueOnce(successResponse)
+
+    await Effect.runPromise(sender.updateContact({ userId: "user_123", heardAboutUs: " A talk at PyData " }))
+
+    expect(updateContactMock).toHaveBeenCalledWith({
+      userId: "user_123",
+      properties: { heardAboutUs: "A talk at PyData" },
     })
   })
 

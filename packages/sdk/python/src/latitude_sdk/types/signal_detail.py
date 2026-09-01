@@ -9,6 +9,7 @@ from ..core.serialization import FieldMetadata
 from .evaluation import Evaluation
 from .signal_detail_source import SignalDetailSource
 from .signal_detail_states_item import SignalDetailStatesItem
+from .signal_feedback import SignalFeedback
 from .signal_monitoring_state import SignalMonitoringState
 from .signal_trend_bucket import SignalTrendBucket
 
@@ -51,14 +52,43 @@ class SignalDetail(UniversalBaseModel):
 
     states: typing.List[SignalDetailStatesItem] = pydantic.Field()
     """
-    Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `ongoing`).
+    Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`).
     """
 
+    resolved_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="resolvedAt"),
+        pydantic.Field(
+            alias="resolvedAt",
+            default=None,
+            description="ISO-8601 timestamp at which the signal was resolved, or `null`.",
+        ),
+    ]
+    ignored_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="ignoredAt"),
+        pydantic.Field(
+            alias="ignoredAt",
+            default=None,
+            description="ISO-8601 timestamp at which the signal was ignored, or `null`.",
+        ),
+    ]
+    regressed_at: typing_extensions.Annotated[
+        typing.Optional[str],
+        FieldMetadata(alias="regressedAt"),
+        pydantic.Field(
+            alias="regressedAt",
+            default=None,
+            description="ISO-8601 timestamp at which a new occurrence reopened the resolved signal, or `null`.",
+        ),
+    ]
     muted_at: typing_extensions.Annotated[
         typing.Optional[str],
         FieldMetadata(alias="mutedAt"),
         pydantic.Field(
-            alias="mutedAt", default=None, description="ISO-8601 timestamp at which the signal was muted, or `null`."
+            alias="mutedAt",
+            default=None,
+            description="ISO-8601 timestamp at which notifications were muted, or `null`. Muting only silences notifications; incidents still open.",
         ),
     ]
     created_at: typing_extensions.Annotated[
@@ -120,5 +150,6 @@ class SignalDetail(UniversalBaseModel):
     monitoring_state: typing_extensions.Annotated[
         SignalMonitoringState, FieldMetadata(alias="monitoringState"), pydantic.Field(alias="monitoringState")
     ]
+    feedback: typing.Optional[SignalFeedback] = None
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

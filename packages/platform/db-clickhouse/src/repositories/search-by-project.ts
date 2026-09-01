@@ -71,6 +71,7 @@ type SessionSearchRow = {
   session_start_time: string
   session_end_time: string
   cost_total_microcents: string
+  unpriced_span_count: string
   span_count: string
   error_count: string
   tokens_total: string
@@ -145,7 +146,7 @@ const toOrphanSession = (row: SessionSearchRow): Session => {
     startTime,
     endTime,
     lastActivityTime: endTime,
-    durationNs: 0,
+    durationNs: Math.max(0, Number(row.duration_ns)),
     timeToFirstTokenNs: 0,
     tokensInput: 0,
     tokensOutput: 0,
@@ -156,6 +157,7 @@ const toOrphanSession = (row: SessionSearchRow): Session => {
     costInputMicrocents: 0,
     costOutputMicrocents: 0,
     costTotalMicrocents: Number(row.cost_total_microcents),
+    unpricedSpanCount: Number(row.unpriced_span_count),
     userId: ExternalUserId(""),
     userEmail: "",
     simulationId: "",
@@ -165,6 +167,7 @@ const toOrphanSession = (row: SessionSearchRow): Session => {
     providers: [],
     serviceNames: [],
     agentNames: [],
+    definedTools: [],
     rootSpanId: "",
     rootSpanName: "",
   }
@@ -299,6 +302,7 @@ const TRACE_ROLLUP_BODY = `
     groupUniqArrayArray(t.defined_tools)           AS defined_tools,
     argMinIfMerge(t.root_span_name)                AS root_span_name,
     sum(t.cost_total_microcents)                   AS cost_total_microcents,
+    sum(t.unpriced_span_count)                     AS unpriced_span_count,
     sum(t.span_count)                              AS span_count,
     sum(t.error_count)                             AS error_count,
     sum(t.tokens_total)                            AS tokens_total,
@@ -409,6 +413,7 @@ export const listSessionsBySearchQuery = ({
                     min(start_time)                                                 AS session_start_time,
                     max(end_time)                                                   AS session_end_time,
                     sum(cost_total_microcents)                                      AS cost_total_microcents,
+                    sum(unpriced_span_count)                                        AS unpriced_span_count,
                     sum(span_count)                                                 AS span_count,
                     sum(error_count)                                                AS error_count,
                     sum(tokens_total)                                               AS tokens_total,

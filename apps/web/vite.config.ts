@@ -9,6 +9,7 @@ import { Effect } from "effect"
 import { nitro } from "nitro/vite"
 import { visualizer } from "rollup-plugin-visualizer"
 import { defineConfig } from "vite"
+import { pdfjsAssets } from "./vite-plugins/pdfjs-assets.ts"
 
 const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
 const envFilePath = fileURLToPath(new URL(`../../.env.${nodeEnv}`, import.meta.url))
@@ -75,12 +76,19 @@ export default defineConfig({
             "Content-Security-Policy": oauthConsentContentSecurityPolicy,
           },
         },
+        // Version-scoped path, so the pdf.js font/cmap/wasm payloads never go stale.
+        "/pdfjs/**": {
+          headers: {
+            "cache-control": "public, max-age=31536000, immutable",
+          },
+        },
       },
       rollupConfig: { external: ssrExternal },
       rolldownConfig: { external: ssrExternal },
     }),
     tailwindcss(),
     react(),
+    pdfjsAssets(),
   ],
   ssr: {
     external: [
@@ -116,6 +124,12 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             {
+              // Every chunk containing a dynamic import needs this helper, so leaving it to fall
+              // into a vendor group drags that entire vendor into the entry graph.
+              test: /preload-helper/,
+              name: "vite-preload",
+            },
+            {
               // The Effect runtime leaks into the client bundle via shared domain/server-fn
               // modules and is the single largest vendor in the entry chunk. Peel it into its
               // own cacheable chunk so `main` stays under the client-asset size budget.
@@ -129,6 +143,15 @@ export default defineConfig({
               name: "tanstack-router",
             },
             {
+              // Keep UI primitives out of the near-limit @repo/ui barrel chunk.
+              test: /node_modules\/@base-ui\//,
+              name: "base-ui",
+            },
+            {
+              test: /node_modules\/@radix-ui\//,
+              name: "radix-ui",
+            },
+            {
               test: /node_modules\/codemirror/,
               name: "codemirror",
             },
@@ -139,6 +162,11 @@ export default defineConfig({
             {
               test: /node_modules\/echarts\//,
               name: "echarts",
+            },
+            {
+              // Keep the lazy pdf.js vendor under a stable name for bundle accounting.
+              test: /node_modules\/pdfjs-dist\//,
+              name: "pdfjs",
             },
             {
               test: /node_modules\/react/,

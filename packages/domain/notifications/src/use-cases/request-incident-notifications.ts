@@ -4,10 +4,12 @@ import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
   AlertIncidentId,
+  type AlertSeverity,
   type ChSqlClient,
   generateId,
   type IncidentNotificationKey,
   isIncidentNotificationEnabled,
+  meetsMinSeverity,
   type NotFoundError,
   NotificationId,
   type OrganizationId,
@@ -74,7 +76,7 @@ export interface IncidentNotificationRequest {
 export type RequestIncidentNotificationsResult =
   | {
       readonly status: "skipped"
-      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted"
+      readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" | "signal-muted" | "signal-ignored"
     }
   | { readonly status: "ok"; readonly requests: readonly IncidentNotificationRequest[] }
 
@@ -399,6 +401,12 @@ const buildRecovery = (incident: Incident): IncidentRecovery => ({
   durationMs: incident.endedAt !== null ? Math.max(0, incident.endedAt.getTime() - incident.startedAt.getTime()) : 0,
 })
 
+const notificationSeverity = (incident: SourcedIncident, triage: SignalTriageSnapshot | null): AlertSeverity => {
+  if (incident.sourceType !== "signal" || triage?.priority == null) return incident.severity
+  const triaged = triage.priority
+  return meetsMinSeverity(triaged, incident.severity) ? triaged : incident.severity
+}
+
 const buildPayload = (input: {
   readonly incident: SourcedIncident
   readonly kind: IncidentNotificationKind
@@ -410,12 +418,13 @@ const buildPayload = (input: {
   readonly triage: SignalTriageSnapshot | null
 }): IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload => {
   const { incident, kind, trend, triggerRatePerHour, tags, sampleExcerpt, monitor, triage } = input
+  const severity = notificationSeverity(incident, triage)
   const base = {
     alertIncidentId: incident.id,
     sourceType: incident.sourceType,
     sourceId: incident.sourceId,
     incidentKind: notificationKeyForIncident(incident),
-    severity: incident.severity,
+    severity,
   } as const
   // Monitor attribution + condition, spread into every variant; empty on legacy incidents.
   const attribution = {
@@ -507,6 +516,18 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     if (signal?.mutedAt !== null && signal?.mutedAt !== undefined) {
       yield* Effect.annotateCurrentSpan("skipped", "signal-muted")
       return { status: "skipped", reason: "signal-muted" } as const
+    }
+    // Ignored signals normally never open incidents; this covers the race
+    // where an ignore lands between the incident opening and this fan-out.
+    if (signal?.ignoredAt !== null && signal?.ignoredAt !== undefined) {
+      yield* Effect.annotateCurrentSpan("skipped", "signal-ignored")
+      return { status: "skipped", reason: "signal-ignored" } as const
+    }
+    // Same race for resolve: the manual close already suppressed the recovery
+    // notification, so a still-queued open must not ping for an archived signal.
+    if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) {
+      yield* Effect.annotateCurrentSpan("skipped", "signal-resolved")
+      return { status: "skipped", reason: "signal-resolved" } as const
     }
 
     const notificationKind = resolveKind(incident, input.transition)

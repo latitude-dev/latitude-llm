@@ -13,6 +13,7 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
 import { FilterIcon, MessagesSquareIcon, TextIcon, XIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
+import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { ProjectScopeProvider } from "../../../../domains/projects/project-scope.tsx"
 import { useSandboxDefaultApiKey } from "../../../../domains/sandbox/sandbox.collection.ts"
 import { rememberLastSandboxProjectSlug } from "../../../../domains/sandbox/sandbox-navigation.functions.ts"
@@ -271,7 +272,7 @@ function SandboxTracesContent({ sandboxOrgId, projectSlug }: { sandboxOrgId: str
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filters
-                  <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">F</kbd>
+                  <HotkeyBadge hotkey="F" />
                   {hasActiveFilters ? (
                     <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-medium leading-4 text-primary-foreground">
                       {Object.keys(filters).length}

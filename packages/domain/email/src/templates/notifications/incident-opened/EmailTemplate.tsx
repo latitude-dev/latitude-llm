@@ -1,5 +1,10 @@
 import type { IncidentBreach, IncidentSampleExcerpt } from "@domain/notifications"
-import { type AlertSeverity, INCIDENT_NOTIFICATION_KEY_LABEL, type IncidentNotificationKey } from "@domain/shared"
+import {
+  type AlertSeverity,
+  GROUP_FOR_INCIDENT_NOTIFICATION_KEY,
+  INCIDENT_NOTIFICATION_KEY_LABEL,
+  type IncidentNotificationKey,
+} from "@domain/shared"
 import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -57,7 +62,7 @@ const buildBreachLine = (breach: IncidentBreach | undefined): string | null => {
   }
   const multiplier = breach.triggerRate / breach.baselineRate
   const multiplierStr = multiplier >= 10 ? `${Math.round(multiplier)}×` : `${multiplier.toFixed(1)}×`
-  return `Rate climbed to ${trigger} — ${multiplierStr} the baseline of ${baseline}.`
+  return `Rate climbed to ${trigger}, ${multiplierStr} the baseline of ${baseline}.`
 }
 
 export function IncidentOpenedEmail({
@@ -82,8 +87,8 @@ export function IncidentOpenedEmail({
   const isMonitorIncident = incidentKind.startsWith("monitor.")
   const heading = INCIDENT_NOTIFICATION_KEY_LABEL[incidentKind]
   const subtitle = isMonitorIncident
-    ? "We notified everyone watching this project — the monitor stayed above its configured threshold."
-    : "We notified everyone watching this project — an ongoing signal is being detected more than expected."
+    ? "We notified everyone watching this project. The monitor stayed above its threshold."
+    : "We notified everyone watching this project. A signal is being detected more often than expected."
   const scope = formatScope(organizationName, projectName)
   const breachLine = buildBreachLine(breach)
   const ctaHref = isMonitorIncident ? monitor?.url : signalUrl
@@ -99,7 +104,7 @@ export function IncidentOpenedEmail({
   return (
     <ContainerLayout
       previewText={`Escalating: ${sourceName}`}
-      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: GROUP_FOR_INCIDENT_NOTIFICATION_KEY[incidentKind] }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         {heading}

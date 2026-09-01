@@ -2,6 +2,7 @@
   "$schema": "https://mintlify.com/schema.json",
   "redirects": [
     { "source": "/issues/:slug*", "destination": "/signals/:slug*" },
+    { "source": "/search/behaviours", "destination": "/behaviours/overview" },
     {
       "source": "/more/data-destinations",
       "destination": "/more/data-destinations/overview"
@@ -82,6 +83,11 @@
           "anchor": "Slack Community",
           "icon": "slack",
           "href": "https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
+        },
+        {
+          "anchor": "Status",
+          "icon": "activity",
+          "href": "https://status.latitude.so"
         }
       ]
     },
@@ -98,6 +104,7 @@
         "group": "Getting Started",
         "pages": [
           "telemetry/start-tracing",
+          "telemetry/memory",
           {
             "group": "SDKs",
             "pages": [
@@ -134,6 +141,7 @@
               "telemetry/frameworks/vercel-ai-sdk",
               "telemetry/frameworks/vercel-ai-sdk-v7",
               "telemetry/frameworks/cloudflare-think",
+              "telemetry/frameworks/cloudflare-ai-gateway",
               "telemetry/frameworks/openai-agents",
               "telemetry/frameworks/google-adk",
               "telemetry/frameworks/langchain",
@@ -157,7 +165,17 @@
               "telemetry/claude-code",
               "telemetry/hermes",
               "telemetry/openclaw",
-              "telemetry/pi-coding-agent"
+              "telemetry/pi-coding-agent",
+              "telemetry/prime-intellect"
+            ]
+          },
+          {
+            "group": "Platforms",
+            "pages": [
+              "telemetry/imports/overview",
+              "telemetry/imports/langfuse",
+              "telemetry/imports/langsmith",
+              "telemetry/imports/braintrust"
             ]
           }
         ]
@@ -169,6 +187,7 @@
           "observability/sessions",
           "observability/users",
           "observability/tools",
+          "observability/memory",
           "observability/traces",
           "observability/spans",
           "observability/tool-calls",
@@ -214,7 +233,7 @@
           "signals/overview",
           "signals/create",
           "signals/management",
-          "search/behaviours",
+          "behaviours/overview",
           "experiments/overview",
           {
             "group": "Annotations",
@@ -273,6 +292,7 @@
               "datasets/edit-rows"
             ]
           },
+          "test-and-fix/simulations",
           "test-and-fix/regression-testing"
         ]
       },
@@ -315,6 +335,7 @@
           "getting-started/cli",
           "getting-started/skills",
           "more/slack",
+          "more/github",
           {
             "group": "Data destinations",
             "pages": [
@@ -322,7 +343,8 @@
               "more/data-destinations/posthog"
             ]
           },
-          "more/api-reference"
+          "more/api-reference",
+          "more/partners"
         ]
       }
     ]

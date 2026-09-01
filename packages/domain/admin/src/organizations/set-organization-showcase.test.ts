@@ -11,6 +11,7 @@ const fakeRepo = (calls: Array<{ organizationId: string; enabled: boolean }>, ex
   Layer.succeed(AdminOrganizationRepository, {
     findById: () => Effect.die("findById not used"),
     findManySummariesByIds: () => Effect.die("findManySummariesByIds not used"),
+    listByConsumedCredits: () => Effect.die("listByConsumedCredits not used"),
     findFirstApiKeyId: () => Effect.die("findFirstApiKeyId not used"),
     setWantsShowcase: (organizationId, enabled) =>
       exists

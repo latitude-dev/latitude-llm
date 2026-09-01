@@ -1,7 +1,18 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, notFound, Outlet, useRouter } from "@tanstack/react-router"
-import { ArrowLeft, Building2, Flag, Presentation, Search, ShieldAlertIcon, Sparkles } from "lucide-react"
+import {
+  ArrowLeft,
+  Building2,
+  CircleDollarSign,
+  Flag,
+  Handshake,
+  Presentation,
+  Search,
+  ShieldAlertIcon,
+  Sparkles,
+} from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
+import { SidebarCollapseProvider } from "../../layouts/AppSidebar/sidebar-collapse.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 import { requireAdminSession } from "../../server/admin-auth.ts"
 
@@ -76,56 +87,72 @@ function BackofficeLayout() {
           Back to app
         </Button>
       </header>
-      <div className="flex min-h-0 flex-1">
-        <AppSidebar title="Backoffice">
-          {({ collapsed }) => (
-            <>
-              <NavItem
-                icon={Search}
-                label="Search"
-                to="/backoffice/search"
-                active={pathname === "/backoffice/search" || pathname.startsWith("/backoffice/search/")}
-                collapsed={collapsed}
-              />
-              <NavItem
-                icon={Building2}
-                label="Organizations"
-                to="/backoffice/organizations"
-                // Match only the listing route, not the per-org detail page —
-                // detail pages are reached from search / recent chips and
-                // shouldn't highlight the listing entry as if the user is
-                // browsing it.
-                active={pathname === "/backoffice/organizations" || pathname === "/backoffice/organizations/"}
-                collapsed={collapsed}
-              />
-              <NavItem
-                icon={Flag}
-                label="Feature Flags"
-                to="/backoffice/feature-flags"
-                active={pathname === "/backoffice/feature-flags" || pathname === "/backoffice/feature-flags/"}
-                collapsed={collapsed}
-              />
-              <NavItem
-                icon={Sparkles}
-                label="Wrapped"
-                to="/backoffice/wrapped"
-                active={pathname === "/backoffice/wrapped" || pathname === "/backoffice/wrapped/"}
-                collapsed={collapsed}
-              />
-              <NavItem
-                icon={Presentation}
-                label="Showcase"
-                to="/backoffice/showcase"
-                active={pathname === "/backoffice/showcase" || pathname === "/backoffice/showcase/"}
-                collapsed={collapsed}
-              />
-            </>
-          )}
-        </AppSidebar>
-        <main className="flex-1 min-w-0 overflow-y-auto">
-          <Outlet />
-        </main>
-      </div>
+      <SidebarCollapseProvider>
+        <div className="flex min-h-0 flex-1">
+          <AppSidebar title="Backoffice">
+            {({ collapsed }) => (
+              <>
+                <NavItem
+                  icon={Search}
+                  label="Search"
+                  to="/backoffice/search"
+                  active={pathname === "/backoffice/search" || pathname.startsWith("/backoffice/search/")}
+                  collapsed={collapsed}
+                />
+                <NavItem
+                  icon={Building2}
+                  label="Organizations"
+                  to="/backoffice/organizations"
+                  // Match only the listing route, not the per-org detail page —
+                  // detail pages are reached from search / recent chips and
+                  // shouldn't highlight the listing entry as if the user is
+                  // browsing it.
+                  active={pathname === "/backoffice/organizations" || pathname === "/backoffice/organizations/"}
+                  collapsed={collapsed}
+                />
+                <NavItem
+                  icon={Flag}
+                  label="Feature Flags"
+                  to="/backoffice/feature-flags"
+                  active={pathname === "/backoffice/feature-flags" || pathname === "/backoffice/feature-flags/"}
+                  collapsed={collapsed}
+                />
+                <NavItem
+                  icon={CircleDollarSign}
+                  label="Unpriced Spans"
+                  to="/backoffice/unpriced-spans"
+                  active={pathname === "/backoffice/unpriced-spans" || pathname === "/backoffice/unpriced-spans/"}
+                  collapsed={collapsed}
+                />
+                <NavItem
+                  icon={Sparkles}
+                  label="Wrapped"
+                  to="/backoffice/wrapped"
+                  active={pathname === "/backoffice/wrapped" || pathname === "/backoffice/wrapped/"}
+                  collapsed={collapsed}
+                />
+                <NavItem
+                  icon={Handshake}
+                  label="Partners"
+                  to="/backoffice/partners"
+                  active={pathname === "/backoffice/partners" || pathname === "/backoffice/partners/"}
+                  collapsed={collapsed}
+                />
+                <NavItem
+                  icon={Presentation}
+                  label="Showcase"
+                  to="/backoffice/showcase"
+                  active={pathname === "/backoffice/showcase" || pathname === "/backoffice/showcase/"}
+                  collapsed={collapsed}
+                />
+              </>
+            )}
+          </AppSidebar>
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            <Outlet />
+          </main>
+        </div>
+      </SidebarCollapseProvider>
     </div>
   )
 }

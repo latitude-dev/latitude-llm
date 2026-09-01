@@ -18,7 +18,6 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router"
 import { ArrowLeftIcon, TextAlignStartIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useUserActivity, useUserProfile } from "../../../../../../domains/end-users/end-users.collection.ts"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { userMonitorTarget } from "../../../../../../domains/monitors/monitor-target.ts"
 import { defaultProjectTimeWindowDays } from "../../../../../../domains/projects/default-time-window.ts"
 import { useSessionsCount, useSessionsInfiniteScroll } from "../../../../../../domains/sessions/sessions.collection.ts"
@@ -172,7 +171,6 @@ function UserDetailPage() {
   const [errorsParam, setErrorsParam] = useParamState("errors", "")
   const errorsOnly = errorsParam === "1"
   const { data: profile, isLoading: profileLoading } = useUserProfile({ projectId: project.id, userId, errorsOnly })
-  const showMemoryStores = useHasFeatureFlag("memoryObservability")
   const [sessionsSorting, setSessionsSorting] = useState(DEFAULT_SESSIONS_SORTING)
 
   const sessionFilters: FilterSet = useMemo(
@@ -200,14 +198,15 @@ function UserDetailPage() {
       <Layout.Content>
         <Layout.Header
           title={
-            <div className="flex min-w-0 flex-row items-center gap-3">
+            <div className="flex min-w-0 flex-col gap-3">
               <Tooltip
                 asChild
                 side="bottom"
                 trigger={
-                  <Button asChild variant="ghost" className="h-8 w-8 p-0" aria-label="Back to users">
+                  <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to users">
                     <Link to="/projects/$projectSlug/users" params={{ projectSlug }}>
-                      <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                      <Icon icon={ArrowLeftIcon} size="sm" />
+                      Back
                     </Link>
                   </Button>
                 }
@@ -217,10 +216,10 @@ function UserDetailPage() {
               {profileLoading ? (
                 <Skeleton className="h-7 w-56" />
               ) : (
-                <>
+                <div className="flex min-w-0 items-center gap-3">
                   <Avatar size="sm" name={profile ? userDisplayName(profile) : userId} imageSrc={null} />
                   <Text.H4M className="min-w-0 truncate">{profile ? userDisplayName(profile) : userId}</Text.H4M>
-                </>
+                </div>
               )}
             </div>
           }
@@ -309,12 +308,10 @@ function UserDetailPage() {
 
               <UserUsageSection projectId={project.id} userId={userId} errorsOnly={errorsOnly} />
 
-              {showMemoryStores ? (
-                <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
-                  <Text.H6 color="foregroundMuted">Memory stores</Text.H6>
-                  <UserMemoryStoresSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
-                </div>
-              ) : null}
+              <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+                <Text.H6 color="foregroundMuted">Memory stores</Text.H6>
+                <UserMemoryStoresSection projectId={project.id} projectSlug={projectSlug} userId={userId} />
+              </div>
 
               <div className="flex min-w-0 flex-col gap-3">
                 <div className="flex items-center justify-between gap-2">

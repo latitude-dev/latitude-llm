@@ -150,7 +150,7 @@ describe("runTraceEndJob", () => {
     expect(published).toEqual([])
   })
 
-  it("enqueues deterministic flaggers, trace-search, and session-end", async () => {
+  it("enqueues trace-search and session-end (flaggers moved to the session path)", async () => {
     await insertTraceRows([makeTraceRow()])
 
     const { publisher, published } = createFakeQueuePublisher()
@@ -171,26 +171,8 @@ describe("runTraceEndJob", () => {
       summary: {
         traceId: TRACE_ID,
         sessionId: SESSION_ID,
-        deterministicFlaggersEnqueued: true,
       },
     })
-
-    expect(published).toEqual(
-      expect.arrayContaining([
-        {
-          queue: "deterministic-flaggers",
-          task: "run",
-          payload: {
-            organizationId: ORGANIZATION_ID,
-            projectId: PROJECT_ID,
-            traceId: TRACE_ID,
-          },
-          options: {
-            dedupeKey: `deterministic-flaggers:${TRACE_ID}`,
-          },
-        },
-      ]),
-    )
 
     // Verify trace-search refresh task was published
     const traceSearchPublish = published.find((p) => p.queue === "trace-search")
@@ -258,7 +240,6 @@ describe("createRunHandler", () => {
       traceId,
       outcome: "completed",
       sessionId,
-      deterministicFlaggersEnqueued: true,
     })
   })
 })

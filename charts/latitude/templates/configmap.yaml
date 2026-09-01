@@ -20,6 +20,14 @@ data:
   LAT_WORKERS_HEALTH_PORT: "9090"
   LAT_WORKFLOWS_HEALTH_PORT: "9091"
 
+  # --- Retention ------------------------------------------------------------
+  LAT_TELEMETRY_RETENTION_DAYS: {{ .Values.config.telemetryRetentionDays | quote }}
+
+  # --- Ingest payload protection --------------------------------------------
+  LAT_INGEST_TRACE_MAX_PAYLOAD_BYTES: {{ .Values.config.ingestTraceMaxPayloadBytes | quote }}
+  LAT_INGEST_TRACE_MAX_IN_FLIGHT_BYTES: {{ .Values.config.ingestTraceMaxInFlightBytes | quote }}
+  LAT_INGEST_TRACE_MAX_CONCURRENT_PAYLOADS: {{ .Values.config.ingestTraceMaxConcurrentPayloads | quote }}
+
   # --- Postgres (bundled-container bootstrap; connection URLs live in the Secret)
   {{- if .Values.postgres.enabled }}
   POSTGRES_USER: {{ .Values.postgres.auth.username | quote }}

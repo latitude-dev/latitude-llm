@@ -1,7 +1,38 @@
 import { describe, expect, it } from "vitest"
-import { payloadSchemaFor } from "./notification.ts"
+import { payloadSchemaFor, routeOf } from "./notification.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
+
+describe("routeOf", () => {
+  const incident = (incidentKind: string) => ({ alertIncidentId: cuid("ai"), incidentKind })
+
+  it("sends signal escalations to the signals group under their own topic", () => {
+    for (const kind of ["incident.event", "incident.opened", "incident.closed"] as const) {
+      expect(routeOf(kind, incident("signal.escalating"))).toEqual({
+        group: "signals",
+        topic: "signal.escalating",
+      })
+    }
+  })
+
+  it("sends every monitor trigger to the monitors group, which has no topics", () => {
+    for (const trigger of ["monitor.match", "monitor.threshold", "monitor.escalating"]) {
+      expect(routeOf("incident.opened", incident(trigger))).toEqual({ group: "monitors", topic: null })
+    }
+  })
+
+  it("routes the standalone signal kinds by kind alone", () => {
+    expect(routeOf("signal.discovered", {})).toEqual({ group: "signals", topic: "signal.discovered" })
+    expect(routeOf("signal.regressed", {})).toEqual({ group: "signals", topic: "signal.regressed" })
+    expect(routeOf("signal.reprioritized", {})).toEqual({ group: "signals", topic: "signal.reprioritized" })
+    expect(routeOf("issue.assigned", {})).toEqual({ group: "personal", topic: null })
+  })
+
+  it("falls back to the topic-less monitors group for an unreadable incidentKind", () => {
+    expect(routeOf("incident.opened", { incidentKind: "nonsense" })).toEqual({ group: "monitors", topic: null })
+    expect(routeOf("incident.opened", {})).toEqual({ group: "monitors", topic: null })
+  })
+})
 
 /**
  * Stored payloads are re-parsed with `payloadSchemaFor(kind)` at every read
@@ -57,5 +88,20 @@ describe("incident payload backwards compatibility", () => {
     })
     expect(cleared.assigneeId).toBeNull()
     expect(cleared.priority).toBeNull()
+  })
+})
+
+describe("signalReprioritizedPayloadSchema", () => {
+  it("rejects a cleared priority — only increases are ever stored", () => {
+    const parsed = payloadSchemaFor("signal.reprioritized").safeParse({
+      signalId: cuid("s"),
+      actorUserId: cuid("u"),
+      reprioritizedAt: "2026-07-01T10:00:00.000Z",
+      priority: null,
+      previousPriority: "high",
+      severity: "high",
+    })
+
+    expect(parsed.success).toBe(false)
   })
 })

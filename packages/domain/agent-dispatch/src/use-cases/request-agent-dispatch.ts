@@ -28,6 +28,7 @@ export type AgentDispatchRequestSource =
       readonly organizationId: OrganizationId
       readonly projectId: ProjectId
       readonly signalId: SignalId
+      readonly trigger?: "signal.discovered" | "signal.regressed"
     }
   | { readonly type: "incident"; readonly organizationId: OrganizationId; readonly alertIncidentId: string }
 
@@ -62,7 +63,15 @@ const passesGuardrails = (
   return null
 }
 
-const dispatchWindow = (date: Date): string => date.toISOString().slice(0, 10)
+/**
+ * Ledger window for the automatic triggers. A signal is discovered exactly once —
+ * `SignalPromoted` is latched — so that trigger carries no window and the ledger's
+ * unique key makes its dispatch permanently idempotent per config. Every other
+ * trigger can legitimately recur (a signal regresses, a monitor re-fires), so
+ * those stay day-scoped.
+ */
+const dispatchWindow = (trigger: AgentDispatchTrigger, date: Date): string =>
+  trigger === "signal.discovered" ? "once" : date.toISOString().slice(0, 10)
 
 const buildSendRequest = (input: {
   readonly config: EffectiveAgentDispatchConfig
@@ -78,7 +87,7 @@ const buildSendRequest = (input: {
     configId: input.config.id,
     trigger: input.trigger,
     sourceId: input.sourceId,
-    dispatchWindow: dispatchWindow(input.requestedAt),
+    dispatchWindow: dispatchWindow(input.trigger, input.requestedAt),
   })
   return {
     organizationId: input.config.organizationId,
@@ -102,20 +111,30 @@ export const requestAgentDispatchUseCase = (input: {
 }) =>
   Effect.gen(function* () {
     const organizations = yield* OrganizationRepository
-    const organization = yield* organizations.findById(input.source.organizationId)
+    const organization = yield* organizations
+      .findById(input.source.organizationId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (organization === null) return { status: "skipped", reason: "organization-not-found" } as const
     if (isSandbox(organization)) return { status: "skipped", reason: "sandbox" } as const
 
     const configRepo = yield* AgentDispatchConfigRepository
     const incidents = yield* IncidentRepository
-    const projectId =
-      input.source.type === "signal"
-        ? input.source.projectId
-        : (yield* incidents.findById(AlertIncidentId(input.source.alertIncidentId))).projectId
+    let projectId: ProjectId
+    if (input.source.type === "signal") {
+      projectId = input.source.projectId
+    } else {
+      const incidentForProject = yield* incidents
+        .findById(AlertIncidentId(input.source.alertIncidentId))
+        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+      if (incidentForProject === null) return { status: "skipped", reason: "incident-not-found" } as const
+      projectId = incidentForProject.projectId
+    }
     const rows = yield* configRepo.listByProjectIncludingDefaults(projectId)
     const configs = resolveEffectiveConfigsForProject(projectId, rows).filter((config) => config.enabled)
     if (configs.length === 0) return { status: "skipped", reason: "no-config" } as const
 
     if (input.source.type === "signal") {
+      const trigger = input.source.trigger ?? "signal.discovered"
       const signals = yield* SignalRepository
       const signal = yield* signals
         .findById(input.source.signalId)
@@ -124,19 +143,25 @@ export const requestAgentDispatchUseCase = (input: {
         return { status: "skipped", reason: "signal-not-found" } as const
       }
       if (signal.mutedAt !== null) return { status: "skipped", reason: "signal-muted" } as const
-      if (signal.origin === "user") return { status: "skipped", reason: "user-origin-signal" } as const
+      if (signal.ignoredAt !== null) return { status: "skipped", reason: "signal-ignored" } as const
+      if (signal.resolvedAt !== null) return { status: "skipped", reason: "signal-resolved" } as const
+      // Discovery skips user-created signals; runtime triggers (regression) dispatch regardless of origin.
+      if (trigger === "signal.discovered" && signal.origin === "user") {
+        return { status: "skipped", reason: "user-origin-signal" } as const
+      }
 
       const context = yield* buildDispatchContextFromSignal({
         organizationId: input.source.organizationId,
         projectId: input.source.projectId,
         signalId: input.source.signalId,
         webAppUrl: input.webAppUrl,
+        trigger,
       })
 
       const requestedAt = new Date()
       const requests: AgentDispatchSendRequest[] = []
       for (const config of configs) {
-        if (!passesTriggerGate(config, "signal.discovered")) continue
+        if (!passesTriggerGate(config, trigger)) continue
         const readiness = checkTargetReadiness(config.kind, config.target)
         if (!readiness.ready) continue
         const guardrailReason = yield* checkGuardrails(config, signal.id)
@@ -145,7 +170,7 @@ export const requestAgentDispatchUseCase = (input: {
           buildSendRequest({
             config,
             target: readiness.target,
-            trigger: "signal.discovered",
+            trigger,
             sourceType: "signal",
             sourceId: signal.id,
             context,
@@ -157,7 +182,10 @@ export const requestAgentDispatchUseCase = (input: {
       return { status: "ok", requests } as const
     }
 
-    const incident = yield* incidents.findById(AlertIncidentId(input.source.alertIncidentId))
+    const incident = yield* incidents
+      .findById(AlertIncidentId(input.source.alertIncidentId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (incident === null) return { status: "skipped", reason: "incident-not-found" } as const
     const trigger = resolveIncidentTrigger(incident)
     if (trigger === null) return { status: "skipped", reason: "unsupported-source" } as const
 
@@ -175,6 +203,12 @@ export const requestAgentDispatchUseCase = (input: {
         .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       if (signal?.mutedAt !== null && signal?.mutedAt !== undefined) {
         return { status: "skipped", reason: "signal-muted" } as const
+      }
+      if (signal?.ignoredAt !== null && signal?.ignoredAt !== undefined) {
+        return { status: "skipped", reason: "signal-ignored" } as const
+      }
+      if (signal?.resolvedAt !== null && signal?.resolvedAt !== undefined) {
+        return { status: "skipped", reason: "signal-resolved" } as const
       }
     }
 

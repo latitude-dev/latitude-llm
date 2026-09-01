@@ -4,6 +4,7 @@ export { RedisBillingSpendReservationLive } from "./billing-spend-reservation.ts
 export { RedisDetectorHealthTrackerLive } from "./detector-health.ts"
 export { RedisDistributedLockRepositoryLive } from "./distributed-lock.ts"
 export { EmbedBudgetResolverLive } from "./embed-budget-resolver.ts"
+export { enforceExportRequestRateLimit } from "./export-rate-limit.ts"
 export { SandboxSignalsLive } from "./sandbox-signals.ts"
 export { RedisSlackRefreshLockRepositoryLive } from "./slack-refresh-lock.ts"
 export { TraceSearchBudgetLive } from "./trace-search-budget.ts"

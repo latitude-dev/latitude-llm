@@ -25,6 +25,7 @@ import {
   getRedisClient,
   getWorkflowStarter,
 } from "../../server/clients.ts"
+import { spanIdSchema, traceIdSchema } from "../../server/id-validation.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
@@ -88,8 +89,8 @@ export const createAnnotation = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string().length(32),
-      spanId: z.string().optional(),
+      traceId: traceIdSchema,
+      spanId: spanIdSchema.optional(),
       sessionId: z.string().optional(),
       queueId: z.string().optional(),
       value: z.number(),
@@ -142,7 +143,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
     z.object({
       scoreId: z.string(),
       projectId: z.string(),
-      traceId: z.string().length(32),
+      traceId: traceIdSchema,
       queueId: z.string().optional(),
       value: z.number(),
       passed: z.boolean(),
@@ -204,7 +205,7 @@ export const listAnnotationsByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceId: z.string(),
+      traceId: traceIdSchema,
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
@@ -233,11 +234,12 @@ export const listAnnotationsByTrace = createServerFn({ method: "GET" })
  * than `session_id` so orphan sessions — whose scores carry no `session_id` —
  * still surface their annotations.
  */
-export const listAnnotationsBySession = createServerFn({ method: "GET" })
+// POST keeps the up-to-500 trace-id payload below HTTP request-line limits.
+export const listAnnotationsBySession = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(500),
+      traceIds: z.array(traceIdSchema).max(500),
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
@@ -270,11 +272,12 @@ export const listAnnotationsBySession = createServerFn({ method: "GET" })
     return toListResult(result)
   })
 
+/** Positive/negative score counts per trace for Indicators. Includes every source except signal-less absent evaluation runs. */
 export const listAnnotationCountsByTraceIds = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(500),
+      traceIds: z.array(traceIdSchema).max(500),
       draftMode: scoreDraftModeSchema.optional(),
     }),
   )

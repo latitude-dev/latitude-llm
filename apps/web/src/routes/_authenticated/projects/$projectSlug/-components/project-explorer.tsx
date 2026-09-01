@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
+import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import {
   addTracesToDatasetFunction,
   createDatasetFromTracesFunction,
@@ -60,7 +61,6 @@ import {
   SessionsView,
 } from "./sessions-view.tsx"
 import { useTableColumnSettings } from "./table-column-settings.ts"
-import { TimeFilterDropdown } from "./time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./trace-detail-drawer.tsx"
 import { DEFAULT_SEARCH_SORTING, DEFAULT_TRACE_SORTING, parseFilters, serializeFilters } from "./trace-page-state.ts"
 import { TracesEmptyOnboarding } from "./traces-empty-onboarding.tsx"
@@ -84,6 +84,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
+  const [, setFocusScoreId] = useParamState("scoreId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [, setSelectedSpanTraceId] = useParamState("spanTraceId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
@@ -216,6 +217,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
   // Ref to the ordered list of trace IDs from the currently loaded table page
   const traceIdsRef = useRef<string[]>([])
 
+  const sessionsScrollAreaRef = useRef<HTMLDivElement>(null)
+
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
   // Sessions/Traces date filter: default is "All time"; a picked range lives in `filters.startTime`,
   // and the histogram stays clamped (anchored to latest activity when All time). See the hook.
@@ -333,13 +336,15 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     setActiveTraceId("")
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-  }, [setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
+    setFocusScoreId("")
+  }, [setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId, setFocusScoreId])
 
   const onActiveTraceChange = (traceId: string | undefined) => {
     if (!traceId) {
       closeTraceDrawer()
       return
     }
+    setFocusScoreId("")
     setActiveTraceId(traceId)
   }
 
@@ -352,8 +357,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       setActiveTraceId(traceId ?? "")
       setSelectedSpanId("")
       setSelectedSpanTraceId("")
+      setFocusScoreId("")
     },
-    [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId],
+    [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId, setFocusScoreId],
   )
 
   const closeSessionPanel = useCallback(() => {
@@ -361,7 +367,8 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     setActiveTraceId("")
     setSelectedSpanId("")
     setSelectedSpanTraceId("")
-  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId])
+    setFocusScoreId("")
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId, setSelectedSpanTraceId, setFocusScoreId])
 
   // Submitting a new query invalidates any open drawer context against the new result set.
   // The `savedSearch` slug is intentionally kept so the Save button can surface drift.
@@ -422,9 +429,9 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
       if (ids.length === 0) return
       const idx = ids.indexOf(activeTraceId)
       const target = idx < 0 ? ids[0] : ids[idx + delta]
-      if (target) setActiveTraceId(target)
+      if (target) onActiveTraceChange(target)
     },
-    [activeTraceId],
+    [activeTraceId, onActiveTraceChange],
   )
 
   const onNextTrace = useCallback(() => navigateTrace(1), [navigateTrace])
@@ -490,6 +497,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
     onFiltersClose: () => setFiltersOpen(false),
     onActiveTraceChange,
     traceIdsRef,
+    scrollContainerRef: sessionsScrollAreaRef,
   }
 
   return (
@@ -531,7 +539,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filters
-                  <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">F</kbd>
+                  <HotkeyBadge hotkey="F" />
                   {hasActiveFilters && (
                     <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
                       {Object.keys(filters).length}
@@ -556,7 +564,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                   asChild
                   trigger={
                     <span className="inline-flex">
-                      <Button variant="outline" size="sm" className="h-8 w-auto" disabled>
+                      <Button variant="outline" size="default" className="h-8 w-auto" disabled>
                         <Icon icon={BellPlusIcon} size="sm" />
                         Monitor sessions
                       </Button>
@@ -585,7 +593,7 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
                 trigger={
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     className="h-8 w-auto"
                     onClick={() => void createCustomBehaviorFromFilters()}
                   >
@@ -647,59 +655,62 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
         </Layout.ActionsRow>
       </Layout.Actions>
 
-      {selectedCount > 0 && (
-        <div className="flex items-center gap-2 px-6">
-          <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
-            <Icon icon={DownloadIcon} size="sm" />
-            Export Traces ({selectedCount.toLocaleString()})
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
-            <Icon icon={DatabaseIcon} size="sm" />
-            Add to Dataset ({selectedCount})
-          </Button>
+      <div ref={sessionsScrollAreaRef} className="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto">
+        {selectedCount > 0 && (
+          <div className="sticky left-0 z-[1] flex items-center gap-2 bg-background px-6">
+            <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
+              <Icon icon={DownloadIcon} size="sm" />
+              Export Traces ({selectedCount.toLocaleString()})
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+              <Icon icon={DatabaseIcon} size="sm" />
+              Add to Dataset ({selectedCount})
+            </Button>
+          </div>
+        )}
+
+        <div className="sticky left-0 z-[1] bg-background px-6">
+          <TraceAggregationsPanel
+            projectId={currentProject.id}
+            projectSlug={currentProject.slug}
+            filters={filtersWithDefaultTime}
+            mode={activeTab}
+            onTimeRangeSelect={onTimeRangeSelect}
+            {...(histogramRangeOverride ? { histogramRangeOverride } : {})}
+          />
         </div>
-      )}
 
-      <div className="px-6">
-        <TraceAggregationsPanel
-          projectId={currentProject.id}
-          projectSlug={currentProject.slug}
-          filters={filtersWithDefaultTime}
-          mode={activeTab}
-          onTimeRangeSelect={onTimeRangeSelect}
-          {...(histogramRangeOverride ? { histogramRangeOverride } : {})}
-        />
+        {isSessions ? (
+          <SessionsView
+            projectId={currentProject.id}
+            filters={filtersWithDefaultTime}
+            filtersOpen={filtersOpen}
+            activeSessionId={activeSessionId || undefined}
+            activeTraceId={activeTraceId || undefined}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            selectionState={selectionState}
+            onSelectionChange={setSelectionState}
+            totalTraceCount={totalTraceCount}
+            onFiltersChange={onFiltersChange}
+            onShowAllSessions={onShowAllSessions}
+            onFiltersClose={() => setFiltersOpen(false)}
+            onOpenSession={onOpenSession}
+            onCloseSession={closeSessionPanel}
+            visibleColumnIds={sessionColumnSettings.visibleColumnIds}
+            isSearching={hasSearchQuery}
+            hasUserAppliedFilters={hasActiveFilters}
+            scrollContainerRef={sessionsScrollAreaRef}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
+          />
+        ) : (
+          <TracesView
+            {...sharedViewProps}
+            visibleColumnIds={traceColumnSettings.visibleColumnIds}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
+          />
+        )}
       </div>
-
-      {isSessions ? (
-        <SessionsView
-          projectId={currentProject.id}
-          filters={filtersWithDefaultTime}
-          filtersOpen={filtersOpen}
-          activeSessionId={activeSessionId || undefined}
-          activeTraceId={activeTraceId || undefined}
-          sorting={sorting}
-          onSortingChange={onSortingChange}
-          selectionState={selectionState}
-          onSelectionChange={setSelectionState}
-          totalTraceCount={totalTraceCount}
-          onFiltersChange={onFiltersChange}
-          onShowAllSessions={onShowAllSessions}
-          onFiltersClose={() => setFiltersOpen(false)}
-          onOpenSession={onOpenSession}
-          onCloseSession={closeSessionPanel}
-          visibleColumnIds={sessionColumnSettings.visibleColumnIds}
-          isSearching={hasSearchQuery}
-          hasUserAppliedFilters={hasActiveFilters}
-          {...(hasSearchQuery ? { searchQuery: query } : {})}
-        />
-      ) : (
-        <TracesView
-          {...sharedViewProps}
-          visibleColumnIds={traceColumnSettings.visibleColumnIds}
-          {...(hasSearchQuery ? { searchQuery: query } : {})}
-        />
-      )}
 
       {!isSessions && activeTraceId ? (
         <Layout.Aside>

@@ -1,30 +1,45 @@
 # Adaptive taxonomy clustering — Phase 1 recorded baselines (LAT-770)
 
-Offline calibration for `specs/taxonomy-adaptive-clustering.md`.
-Everything here is produced by the harness in this folder. The committed
-`calibration.test.ts` re-verifies the numbers against **synthetic** fixtures; the
-schedule values themselves were **calibrated on the real narrow-domain pilot
-corpus** (see "Validation on the real pilot corpus" below). No production code
-path changed in Phase 1 — the static column is today's
-`buildHierarchicalClusters`; the adaptive column is the Phase-2 candidate
-implemented as a calibration fork in `adaptive-clustering.ts`.
+> **This is a historical record, not a CI gate.** The `calibration.test.ts` gate,
+> the `adaptive-clustering.ts` builder fork, and the `schedule.ts` value record
+> were removed once Phase 2 promoted the relative builder into `clustering.ts`:
+> the fork had become a second copy of a shipped algorithm that could drift, and
+> the gate cost ~45 s of every taxonomy test run (80% of the suite) to re-verify
+> synthetic numbers. The calibrated values now live in `constants.ts` as
+> `TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE`.
+>
+> **The one load-bearing assertion survives**, moved to `src/clustering.test.ts`
+> and now run against the shipped builder: the narrow-domain and pilot fixtures
+> must resolve at the calibrated root separation of **0.45** and **collapse at
+> 0.60**, so a future retune cannot quietly restore the synthetic-only ~0.60 that
+> the real pilot corpus disproved.
+>
+> Memory and runtime are better observed in production than approximated in CI —
+> the retired resource test asserted the build's own RSS *growth* against a 512 MB
+> budget and measured tens of MB, while the shadow span reports process peaks of
+> ~1.7 GiB. Watch `taxonomy.adaptive.peakRssBytes` and `durationMs` on the shadow
+> dashboard instead.
+>
+> Everything below is kept because it is the only written account of how these
+> values were derived and what was measured on real data. Treat the numbers as
+> dated evidence, not as invariants.
 
-Run it:
+Offline calibration for `specs/taxonomy-adaptive-clustering.md`. The schedule
+values were **calibrated on the real narrow-domain pilot corpus** (see
+"Validation on the real pilot corpus" below); the synthetic fixtures reproduce
+that geometry so the numbers are reproducible without the uncommitted dump.
 
-```
-pnpm exec vitest run packages/domain/taxonomy/src/calibration/calibration.test.ts
-```
+The harness is still here as a tool. To try a schedule value offline, drive
+`compareOnCorpus` / `crossSampleAri` from `harness.ts` — both now run the
+**shipped** builders, so a result reflects production rather than a fork.
 
 ## What's here
 
 | File | Role |
 | --- | --- |
 | `fixtures.ts` | Deterministic, seeded **synthetic** corpora (broad support, narrow-domain, pilot stand-in, shape stressors). No `Math.random`, no external data. |
-| `adaptive-clustering.ts` | Candidate adaptive builder: node-relative separation gate + dominant-child protection + member-confidence routing thresholds. Verbatim k-means fork of `clustering.ts` so static vs adaptive is a clean A/B on the gate. |
 | `metrics.ts` | Purity, per-group recall, ARI, tree shape, partition signature. |
-| `harness.ts` | `compareOnCorpus` / `crossSampleAri` — runs both builders with identical seed + k-means constants. |
-| `schedule.ts` | **The Phase-1 deliverable**: calibrated adaptive depth schedule, rollout limits, and calibration thresholds. |
-| `calibration.test.ts` | Synthetic exit-criteria gate that keeps these numbers true. |
+| `harness.ts` | `compareOnCorpus` / `crossSampleAri` — runs the shipped static and relative builders with identical seed + k-means constants. Offline tool; no test imports it. |
 
 ## Selected adaptive depth schedule
 
@@ -75,6 +90,13 @@ new, plus dominant-child protection.
 
 ## Validation on the real pilot corpus
 
+> **Re-baselined 2026-07-21 against the current builder.** The figures in this
+> section were originally measured with the LAT-770 prototype builder; the
+> LAT-771 "pure relative divisive" rewrite (plus Phase 3/4 integration) changed
+> the tree, so the shape, root-child sizes, sweep, and cross-sample ARI below are
+> re-measured on the same 670-obs corpus. See "Cross-sample ARI is not a usable
+> point estimate" at the end of this section.
+
 The binding calibration evidence. Real anonymized pilot embeddings (voyage
 2048d) were pulled from production ClickHouse via the CH MCP for offline
 calibration and are **not committed** (they live only in a local scratchpad
@@ -91,25 +113,46 @@ schedule above:
 | Metric | Static (production path) | Adaptive |
 | --- | --- | --- |
 | Root children | **0 (collapses to one leaf)** | **4** |
-| Leaves | 1 | 8 (max depth 3) |
-| Deterministic partition | — | yes (identical signature across builds) |
-| Cross-sample ARI | — | **0.850** |
-| Root sibling centroid cosines | — | 0.838–0.889 |
-| Routing thresholds | — | 0.685–0.882 |
+| Leaves | 1 | 5 (max depth 2) |
+| Deterministic partition | — | yes (identical signature at a fixed sample) |
+| Cross-sample ARI | — | averaged over fold pairs; see note below |
+| Root sibling centroid cosines | — | 0.84–0.89 (prototype run; not re-measured) |
+| Routing thresholds | — | 0.685–0.882 (prototype run; not re-measured) |
 
-The four adaptive root children are human-coherent, distinct ad-ops intents:
+The four adaptive root children are human-coherent, distinct ad-ops intents
+(sizes shift with the sample; current-builder run):
 
 | Root child | Obs | Intent (from representative session text) |
 | --- | --- | --- |
-| #0 | 109 | **Ad creative** — RSA asset performance, replacement copy, running-ad review |
-| #1 | 68 | **Improvement review** — "analyse the attached improvement" |
-| #2 | 130 | **Search-term audits → negative keywords** — irrelevancy audits, Sheets exports |
-| #3 | 363 | **Performance analysis & client reporting** — 90-day reports, talking points |
+| #0 | 369 | **Performance analysis & client reporting** — budget pacing, CPC drivers, account health checks, month-over-month reports |
+| #1 | 160 | **Improvement & search-term review** — "analyse the attached improvement", high-spend search-term audits |
+| #2 | 77 | **Landing-page & ad review** — landing-page copy analysis, running-ad performance, campaign underperformance |
+| #3 | 64 | **Keyword research & account Q&A** — keyword/QS analysis, capability questions, ad-hoc account queries |
 
-The `minRelativeSeparation` sweep on this corpus: root 0.30 → 2 children /
-7 leaves; 0.40 → 3 children; **0.45 → 4 children / 8 leaves**; 0.50 → 4 children;
-0.60 → collapses to a leaf. 0.45 is the setting that reproduces the target 3–5
-coherent root children.
+The `minRelativeSeparation` sweep on this corpus (current builder): root 0.65 →
+collapses to a leaf; **0.45 → 4 children / 5 leaves**; 0.55 → 5 children / 11
+leaves; 0.35 and below → 2 children with a larger dominant blob. 0.45 remains the
+setting that reproduces the target 3–5 coherent root children; lowering it does
+not split the dominant cluster — it grows it.
+
+### Cross-sample ARI — averaged, and the floor re-derived
+
+`crossSampleAri` originally returned a single order-dependent 90/90 split, which
+swung across **[0.00, 0.92]** on this corpus purely by fold choice (24 seeded
+permutations: p25 0.00, median 0.74, max 0.92) — the recorded 0.850 was one high
+draw on the prototype builder. It now returns the **mean over all 45
+leave-one-tenth-out fold pairs** (10 builds), a reproducible number, and
+`ADAPTIVE_CROSS_SAMPLE_ARI_FLOOR` is re-derived from it: **0.8 → 0.75**, below the
+averaged synthetic worst case (narrow-pilot ~0.79, the dominant-blob shape).
+
+A fresh 1,500-obs pull of the current 7-day window (2026-07-21) still collapses
+under static (1 leaf) and resolves 3 adaptive root children / 8 leaves, with a
+~63% dominant cluster, and its **averaged xSample is 0.695 — below even the 0.75
+synthetic floor**. That dominance is why the pilot is the least-stable corpus and
+genuinely sample-sensitive (matching the live 3→2 root-child wobble) — the real
+enforcement-readiness signal for the ads pilot, tracked separately from this
+synthetic regression floor (do not gate the ads-pilot rollout on the synthetic
+0.75).
 
 ## Synthetic fixtures — static vs adaptive (committed regression)
 
@@ -120,17 +163,22 @@ are the committed regression guard, not the calibration authority.
 `minRec` = min per-group recall in one root child, `ARI` = static-vs-adaptive
 agreement, `xSample` = cross-sample stability.
 
+> `xSample` is now the **averaged** cross-sample ARI (mean over all 45
+> leave-one-tenth-out fold pairs). The shape/purity columns predate the LAT-771
+> rewrite. They were range-enforced by the retired `calibration.test.ts`; nothing
+> asserts them now, so read them as dated measurements.
+
 | Fixture | members | groups | static rc/lf/d/pur | adaptive rc/lf/d/pur/minRec | ARI | xSample |
 | --- | --- | --- | --- | --- | --- | --- |
 | retail-support | 780 | 6 | 6 / 6 / 1 / 1.00 | 6 / 6 / 1 / 1.00 / 1.00 | 1.000 | 1.000 |
 | telecom-support | 600 | 5 | 5 / 5 / 1 / 1.00 | 5 / 5 / 1 / 1.00 / 1.00 | 1.000 | 1.000 |
 | airline-support | 690 | 6 | 2 / 6 / 3 / 1.00 | 2 / 6 / 3 / 1.00 / 1.00 | 1.000 | 1.000 |
 | **narrow-domain** | 420 | 4 | **0 / 1 / 0 / 0.29** | **4 / 4 / 1 / 1.00 / 1.00** | 0.000 | 1.000 |
-| **narrow-pilot (synthetic)** | 730 | 5 | **0 / 1 / 0 / 0.49** | **4 / 4 / 1 / 0.92 / 1.00** | 0.000 | 0.943 |
+| **narrow-pilot (synthetic)** | 730 | 5 | **0 / 1 / 0 / 0.49** | **4 / 4 / 1 / 0.92 / 1.00** | 0.000 | 0.790 |
 | unimodal | 300 | 1 | 0 / 1 / 0 / 1.00 | 0 / 1 / 0 / 1.00 / — | 1.000 | 1.000 |
 | diffuse-multi-topic | 480 | 8 | 2 / 8 / 3 / 1.00 | 2 / 8 / 3 / 1.00 / 1.00 | 1.000 | 1.000 |
-| imbalanced-long-tail | 675 | 6 | 3 / 3 / 1 / 0.98 | 3 / 3 / 1 / 0.98 / 0.80¹ | 1.000 | 0.990 |
-| rare-intent-duplicate | 487 | 4 | 2 / 3 / 2 / 0.99 | 2 / 3 / 2 / 0.99 / — | 1.000 | 0.990 |
+| imbalanced-long-tail | 675 | 6 | 3 / 3 / 1 / 0.98 | 3 / 3 / 1 / 0.98 / 0.80¹ | 1.000 | 0.995 |
+| rare-intent-duplicate | 487 | 4 | 2 / 3 / 2 / 0.99 | 2 / 3 / 2 / 0.99 / — | 1.000 | 0.996 |
 
 ¹ Sub-floor tail group; the recall criterion applies to intended narrow-domain
 groups (all 1.00). Sub-floor tail/rare/duplicate groups are absorbed, never
@@ -140,8 +188,8 @@ The **narrow-domain** and **pilot** rows are tuned to the real pilot geometry:
 accepted-split relative separations are **0.57** and **0.52** (not ≥ 1.2), the
 pilot carries the dominant-blob + tail imbalance and lands at purity 0.92 (not
 1.00), and both **collapse to a single leaf at `minRelativeSeparation` 0.60** —
-which is what makes the calibrated 0.45 a CI-enforced value rather than a
-documented one. The broad support corpora keep their clean geometry (that is what
+which is what keeps the calibrated 0.45 a CI-enforced value rather than a merely
+documented one — that pinning assertion now lives in `src/clustering.test.ts`. The broad support corpora keep their clean geometry (that is what
 broad well-separated topics look like).
 
 Closest sibling centroid cosines (what trips the fixed 0.85 gate — the closest
@@ -171,7 +219,7 @@ static share that cost identically, so the ratio is unaffected.)
 | Criterion | Status | Evidence |
 | --- | --- | --- |
 | Narrow-domain root has 3–5 children | ✅ | real pilot 4 (after de-dup) at root 0.45; synthetic narrow 4, pilot 4 |
-| Calibrated `minRelativeSeparation` is CI-enforced | ✅ | narrow + pilot fixtures resolve at 0.45 and collapse at 0.60 (pinning test) |
+| Calibrated `minRelativeSeparation` is CI-enforced | ✅ | narrow + pilot fixtures resolve at 0.45 and collapse at 0.60 — pinning test, now in `src/clustering.test.ts` |
 | Mean labeled purity ≥ 0.85 | ⚠️ synthetic only | 1.00 narrow / 0.92 pilot synthetic; no human labels on the real pilot yet — real check is human-eyeballed coherence (four clean intents) |
 | Each intended group ≥ 0.85 recall in one child | ⚠️ synthetic only | 1.00 synthetic; pending human labels on the real pilot |
 | Unimodal fixture stays a leaf | ✅ | 0 accepted splits |

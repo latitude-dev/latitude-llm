@@ -1,7 +1,7 @@
 import { Button, cn, Slider, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute, useBlocker } from "@tanstack/react-router"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { createFileRoute } from "@tanstack/react-router"
+import { useMemo, useRef, useState } from "react"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../../domains/flaggers/flaggers.functions.ts"
 import {
@@ -11,8 +11,10 @@ import {
 } from "../../../../../domains/flaggers/presets.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { useDirtyGuard } from "../../../../../lib/hooks/use-dirty-guard.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { useRouteProject } from "../-route-data.ts"
+import { DirtyActions } from "./-components/dirty-actions.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/flaggers")({
@@ -134,36 +136,12 @@ function ProjectFlaggersSettingsPage() {
     }
   }
 
-  const applyRef = useRef(apply)
-  applyRef.current = apply
-  const isApplyingRef = useRef(isApplying)
-  isApplyingRef.current = isApplying
-
-  useEffect(() => {
-    if (!hasDirty) return
-    const handler = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null
-      const inField =
-        !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable === true)
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault()
-        void applyRef.current()
-      } else if (event.key === "Escape" && !inField && !isApplyingRef.current) {
-        event.preventDefault()
-        setPending({})
-      }
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [hasDirty])
-
-  useBlocker({
-    shouldBlockFn: () => {
-      if (!hasDirty) return false
-      return !window.confirm("You have unsaved flagger changes. Leave anyway?")
-    },
-    enableBeforeUnload: () => hasDirty,
-    disabled: !hasDirty,
+  useDirtyGuard({
+    hasDirty,
+    isApplying,
+    confirmMessage: "You have unsaved changes. Leave anyway?",
+    onApply: apply,
+    onDiscard: discard,
   })
 
   const [targetFlaggerSlug] = useParamState("flagger", "")
@@ -175,28 +153,21 @@ function ProjectFlaggersSettingsPage() {
     }
   }
 
-  const dirtyActions = hasDirty ? (
-    <div className="flex flex-row items-center gap-3">
-      <Text.H5 color="foregroundMuted">
-        {dirtyCount} unsaved change{dirtyCount === 1 ? "" : "s"}
-      </Text.H5>
-      <Button variant="outline" onClick={discard} disabled={isApplying}>
-        Discard
-      </Button>
-      <Button onClick={() => void apply()} isLoading={isApplying}>
-        Apply
-      </Button>
-    </div>
-  ) : null
-
   return (
     <SettingsPage
       title="Flaggers"
       description="Flaggers automatically inspect new traces for known failure patterns and create issues when they detect regressions"
-      actions={dirtyActions}
+      actions={
+        <DirtyActions
+          dirtyCount={dirtyCount}
+          isApplying={isApplying}
+          onApply={() => void apply()}
+          onDiscard={discard}
+        />
+      }
       headerSticky={hasDirty}
     >
-      <div className="flex w-full max-w-2xl flex-col gap-8">
+      <div className="flex w-full flex-col gap-8">
         {isLoadingFlaggers ? null : flaggers.length === 0 ? (
           <Text.H5 color="foregroundMuted">No flaggers have been provisioned for this project yet</Text.H5>
         ) : (
@@ -270,7 +241,7 @@ function ProjectFlaggersSettingsPage() {
                               </div>
                             </div>
                             {isDeterministic ? (
-                              <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible traces</Text.H6>
+                              <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible sessions</Text.H6>
                             ) : (
                               <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
                                 <div className="flex flex-row items-center gap-3">
@@ -288,7 +259,7 @@ function ProjectFlaggersSettingsPage() {
                                   <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
                                 </div>
                                 <Text.H6 color="foregroundMuted">
-                                  30 credits per scan · runs on {row.viewSampling}% of eligible traces
+                                  Billed by AI usage · runs on {row.viewSampling}% of eligible sessions
                                 </Text.H6>
                               </div>
                             )}

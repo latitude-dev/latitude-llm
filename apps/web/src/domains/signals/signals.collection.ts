@@ -30,6 +30,7 @@ import {
   getSignalDetail,
   getSignalDimensions,
   getSignalGenerationResult,
+  getSignalIdBySlug,
   getSignalImpact,
   getSignalOccurrences,
   getSignalPreviewResult,
@@ -39,6 +40,7 @@ import {
   listSignals,
   previewEvaluation,
   searchOrgSignals,
+  submitSignalFeedback,
   updateSignal,
   updateSignalEvaluation,
   updateSignalTriage,
@@ -56,6 +58,8 @@ const EMPTY_ISSUES_ANALYTICS: SignalsListResultRecord["analytics"] = {
     newSignals: 0,
     escalatingSignals: 0,
     ongoingSignals: 0,
+    resolvedSignals: 0,
+    ignoredSignals: 0,
     seenOccurrences: 0,
   },
   histogram: [],
@@ -369,6 +373,29 @@ export function useSignalDetail({
   })
 }
 
+/**
+ * Resolves the URL's signal `slug` to its stable CUID id. The detail route is
+ * addressed by slug, but every downstream query is keyed by id — so the route
+ * resolves once through this hook and passes the id to its children.
+ */
+export function useSignalIdBySlug({
+  projectId,
+  signalSlug,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly signalSlug: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: ["issue-id-by-slug", projectId, signalSlug] as const,
+    queryFn: (): Promise<{ readonly signalId: string } | null> =>
+      getSignalIdBySlug({ data: { projectId, signalSlug } }),
+    enabled: enabled && projectId.length > 0 && signalSlug.length > 0,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+  })
+}
+
 export function useSignal({
   projectId,
   signalId,
@@ -532,6 +559,22 @@ export function useUpdateSignalEvaluation(projectId: string, signalId: string) {
           signalId,
           evaluation: input.evaluation,
           ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
+        },
+      }),
+    onSuccess: () => invalidateSignalQueries(projectId, signalId),
+  })
+}
+
+export function useSubmitSignalFeedback(projectId: string, signalId: string) {
+  return useMutation({
+    mutationFn: (input: { readonly passed: boolean; readonly feedback?: string; readonly ignore?: boolean }) =>
+      submitSignalFeedback({
+        data: {
+          projectId,
+          signalId,
+          passed: input.passed,
+          ...(input.feedback !== undefined ? { feedback: input.feedback } : {}),
+          ...(input.ignore !== undefined ? { ignore: input.ignore } : {}),
         },
       }),
     onSuccess: () => invalidateSignalQueries(projectId, signalId),
