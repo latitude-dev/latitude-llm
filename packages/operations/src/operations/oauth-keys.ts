@@ -17,7 +17,7 @@ import type { OrganizationScopedEnv } from "../types.ts"
 
 // OAuth keys are the `(client, user)` connections users grant to OAuth /
 // MCP clients (Claude Code, Cursor, Codex…) via the consent flow at
-// `app.latitude.so/auth/consent`. The API exposes read + revoke surfaces;
+// `console.latitude.so/auth/consent`. The API exposes read + revoke surfaces;
 // creation is impossible by design (rows are minted by the consent UX).
 //
 // **Response contract**: never expose `access_token`, `refresh_token`,

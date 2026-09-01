@@ -44,7 +44,7 @@ The MCP server is the protected resource; the web app is the authorization serve
 
 ```
 ┌──────────────────────────────────────┐      ┌────────────────────────────────────┐
-│ apps/web — app.latitude.so           │      │ apps/api — api.latitude.so         │
+│ apps/web — console.latitude.so       │      │ apps/api — api.latitude.so         │
 │ (TanStack Start)                     │      │ (Hono / OpenAPIHono)               │
 │                                      │      │                                    │
 │  /login              sign-in UI      │      │  /v1/...   REST + ApiKey/OAuth     │
@@ -53,7 +53,7 @@ The MCP server is the protected resource; the web app is the authorization serve
 │  /api/auth/*         BA handler      │      │  /.well-known/oauth-protected-     │
 │    (incl. mcp/authorize, mcp/token,  │      │     resource                       │
 │     mcp/register, oauth2/consent,    │      │     → static JSON pointing at      │
-│     .well-known/*)                   │      │       app.latitude.so/api/auth     │
+│     .well-known/*)                   │      │       console.latitude.so/api/auth │
 │                                      │      │                                    │
 │  getBetterAuth() ◄───────────────────┼─┐    │  no Better Auth here               │
 └──────────────────────────────────────┘ │    │                                    │
@@ -78,13 +78,13 @@ The MCP server is the protected resource; the web app is the authorization serve
 ### Discovery flow (RFC 9728 + RFC 8414)
 
 1. MCP client → `api.latitude.so/v1/mcp` with no token → `401` + `WWW-Authenticate: Bearer resource_metadata="https://api.latitude.so/.well-known/oauth-protected-resource"`.
-2. MCP client → `api.latitude.so/.well-known/oauth-protected-resource` → `{ "resource": "https://api.latitude.so", "authorization_servers": ["https://app.latitude.so/api/auth"] }`.
-3. MCP client → `app.latitude.so/api/auth/.well-known/oauth-authorization-server` → Better Auth's AS metadata listing the authorize/token/register endpoints (all on the web origin).
-4. MCP client opens the browser at `app.latitude.so/api/auth/mcp/authorize?…`. Same origin as the existing session cookie — Better Auth reads it directly. If no session, BA redirects to `/login`, user signs in, BA continues the authorize step.
-5. BA mints a `consent_code` and redirects to `app.latitude.so/auth/consent?consent_code=…&client_id=…`. Still same origin.
+2. MCP client → `api.latitude.so/.well-known/oauth-protected-resource` → `{ "resource": "https://api.latitude.so", "authorization_servers": ["https://console.latitude.so/api/auth"] }`.
+3. MCP client → `console.latitude.so/api/auth/.well-known/oauth-authorization-server` → Better Auth's AS metadata listing the authorize/token/register endpoints (all on the web origin).
+4. MCP client opens the browser at `console.latitude.so/api/auth/mcp/authorize?…`. Same origin as the existing session cookie — Better Auth reads it directly. If no session, BA redirects to `/login`, user signs in, BA continues the authorize step.
+5. BA mints a `consent_code` and redirects to `console.latitude.so/auth/consent?consent_code=…&client_id=…`. Still same origin.
 6. User picks an org and approves. The web server fn (a) validates membership, (b) writes the chosen org id to `oauth_applications.organization_id` for the matching `client_id`, (c) calls `betterAuth.api.oauth2Consent({ accept: true, consent_code })` in-process.
 7. BA returns the auth code to the MCP client's redirect URI.
-8. MCP client → `POST app.latitude.so/api/auth/mcp/token` → opaque access token.
+8. MCP client → `POST console.latitude.so/api/auth/mcp/token` → opaque access token.
 9. MCP client → `api.latitude.so/v1/mcp` with `Authorization: Bearer …`. The API's middleware validates the token (Drizzle SELECT, joins to `oauth_applications.organization_id`) and sets `c.var.auth` / `c.var.organization`. Tool dispatch proceeds.
 
 The browser never crosses origins — the session cookie stays on the web app. The MCP client (a CLI agent) crosses origins for the token call and the protected-resource call, but those are header-bearer requests, not cookie requests, so CORS and `SameSite` don't apply.
