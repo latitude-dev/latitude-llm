@@ -59,7 +59,7 @@ When a value is redacted that should not have been, the fix is to turn off the c
 **API** — `settings.redaction` on `PATCH /v1/projects/{projectSlug}`, also available through the SDKs and the `latitude` CLI.
 
 ```bash
-curl -X PATCH https://gateway.latitude.so/v1/projects/my-project \
+curl -X PATCH https://api.latitude.so/v1/projects/my-project \
   -H "Authorization: Bearer $LATITUDE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"settings":{"redaction":{"mode":"enforce","entities":["email","credit_card"]}}}'
