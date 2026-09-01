@@ -10,20 +10,6 @@ export interface SecurityComplianceOutput {
   guardDutyDetector: aws.guardduty.Detector
 }
 
-const serviceAssumeRolePolicy = (service: string) =>
-  JSON.stringify({
-    Version: "2012-10-17",
-    Statement: [
-      {
-        Effect: "Allow",
-        Principal: {
-          Service: service,
-        },
-        Action: "sts:AssumeRole",
-      },
-    ],
-  })
-
 function createComplianceBucket(name: string, config: EnvironmentConfig, purpose: string): aws.s3.Bucket {
   const bucket = new aws.s3.Bucket(
     `${name}-${purpose}`,
@@ -229,31 +215,6 @@ function createCloudTrailWithCloudWatch(name: string, config: EnvironmentConfig)
     },
   })
 
-  const role = new aws.iam.Role(`${name}-cloudtrail-cloudwatch-role`, {
-    assumeRolePolicy: serviceAssumeRolePolicy("cloudtrail.amazonaws.com"),
-    tags: {
-      Name: `${name}-cloudtrail-cloudwatch-role`,
-      Environment: config.name,
-      Purpose: "cloudtrail-cloudwatch-logs-delivery",
-    },
-  })
-
-  const rolePolicy = new aws.iam.RolePolicy(`${name}-cloudtrail-cloudwatch-policy`, {
-    role: role.id,
-    policy: pulumi.all([logGroup.arn]).apply(([logGroupArn]) =>
-      JSON.stringify({
-        Version: "2012-10-17",
-        Statement: [
-          {
-            Effect: "Allow",
-            Action: ["logs:CreateLogStream", "logs:PutLogEvents"],
-            Resource: `${logGroupArn}:log-stream:*`,
-          },
-        ],
-      }),
-    ),
-  })
-
   const trail = new aws.cloudtrail.Trail(
     `${name}-cloudtrail`,
     {
@@ -270,7 +231,7 @@ function createCloudTrailWithCloudWatch(name: string, config: EnvironmentConfig)
       },
     },
     {
-      dependsOn: [bucketPolicy, rolePolicy],
+      dependsOn: [bucketPolicy],
     },
   )
 
