@@ -20,7 +20,7 @@ import { ImportSourceError, sanitizedImportError } from "../errors.ts"
 import { ImportJobRepository } from "../ports/import-job-repository.ts"
 import { getAdapter, ImportSourceAdapters } from "../ports/import-source-adapter.ts"
 import { finishImport } from "./finish-import.ts"
-import { importTraceBudget } from "./import-usage-available.ts"
+import { importTraceBudget, remainingAfterInFlightImport } from "./import-usage-available.ts"
 
 export interface ProcessImportPageInput {
   readonly organizationId: string
@@ -197,10 +197,11 @@ const sessionKeyOf = (group: TraceGroup): string => {
  * admitted, leaving a trace half-imported with no record that anything was dropped. A trace is
  * admitted with all of its spans or none of them.
  *
- * Rootless groups are free when the plan does not cap volume (`alreadyBilledTraceIds` is null),
- * or when that `traceId` was already billed — `TracesIngested` is idempotent, and dropping those
- * spans would strand a trace already paid for. Previously unseen rootless groups are billable:
- * the event charges every distinct admitted `traceId`.
+ * Groups whose `traceId` already exists in the span store are free — `TracesIngested` is
+ * idempotent, and dropping those spans would strand a trace already paid for. That includes
+ * a root that arrives after its children were billed on an earlier page. Previously unseen
+ * groups are billable: the event charges every distinct admitted `traceId`. When the plan
+ * does not cap volume (`alreadyBilledTraceIds` is null), only rootless groups stay free.
  */
 const admitNewestTraces = (
   spans: readonly SpanDetail[],
@@ -210,11 +211,9 @@ const admitNewestTraces = (
   const freeSpans: SpanDetail[] = []
   const billed: TraceGroup[] = []
   for (const group of groupSpansByTrace(spans)) {
-    if (group.root) {
-      billed.push(group)
-      continue
-    }
-    if (alreadyBilledTraceIds === null || alreadyBilledTraceIds.has(group.traceId)) {
+    const alreadyStored = alreadyBilledTraceIds?.has(group.traceId) === true
+    const uncappedOrphan = alreadyBilledTraceIds === null && group.root === undefined
+    if (alreadyStored || uncappedOrphan) {
       freeSpans.push(...group.spans)
       continue
     }
@@ -240,18 +239,16 @@ const admitNewestTraces = (
   return { spans: admitted, traces, sessions: sessionKeys.size, truncated }
 }
 
-const alreadyBilledRootlessIds = (organizationId: string, projectId: string, spans: readonly SpanDetail[]) =>
+const alreadyStoredTraceIds = (organizationId: string, projectId: string, spans: readonly SpanDetail[]) =>
   Effect.gen(function* () {
-    const rootlessIds = groupSpansByTrace(spans)
-      .filter((group) => group.root === undefined)
-      .map((group) => group.traceId)
-    if (rootlessIds.length === 0) return new Set<string>()
+    const traceIds = [...new Set(spans.map((span) => span.traceId as string))]
+    if (traceIds.length === 0) return new Set<string>()
 
     const spanRepo = yield* SpanRepository
     const existing = yield* spanRepo.listByTraceIds({
       organizationId: OrganizationId(organizationId),
       projectId: ProjectId(projectId),
-      traceIds: rootlessIds.map((id) => TraceId(id)),
+      traceIds: traceIds.map((id) => TraceId(id)),
     })
     return new Set(existing.map((span) => span.traceId as string))
   })
@@ -312,7 +309,19 @@ export const processImportPageUseCase =
         return { done: true as const, reason: "succeeded" as const }
       }
 
-      const traceBudget = input.isSandbox ? null : yield* importTraceBudget(input.plan)
+      const periodBudget = input.isSandbox ? null : yield* importTraceBudget(input.plan)
+      if (periodBudget !== null && stats.consumedCreditsAtStart === undefined) {
+        stats.consumedCreditsAtStart = periodBudget.consumedCredits
+      }
+      const traceBudget =
+        periodBudget === null
+          ? null
+          : remainingAfterInFlightImport({
+              remaining: periodBudget.remaining,
+              consumedCredits: periodBudget.consumedCredits,
+              tracesImported: stats.tracesImported,
+              consumedCreditsAtStart: stats.consumedCreditsAtStart,
+            })
 
       // Read fresh each page rather than trusting the snapshot, so live ingestion or a
       // spending-limit change during a long import stops it too. The snapshot in
@@ -449,7 +458,7 @@ export const processImportPageUseCase =
       const userTraceBudget = job.config.maxTraces - stats.tracesImported
       const admitBudget = traceBudget === null ? userTraceBudget : Math.min(userTraceBudget, traceBudget)
       const alreadyBilledTraceIds =
-        traceBudget === null ? null : yield* alreadyBilledRootlessIds(job.organizationId, job.projectId, normalized)
+        traceBudget === null ? null : yield* alreadyStoredTraceIds(job.organizationId, job.projectId, normalized)
       const admitted = admitNewestTraces(normalized, admitBudget, alreadyBilledTraceIds)
       const spans = admitted.spans
       const tracesInPage = admitted.traces
@@ -536,7 +545,7 @@ export const processImportPageUseCase =
       // traces would be left behind. `capped` is reserved for the plan's ceiling, which is the one
       // the user did not choose and can resume from once usage frees up.
       if (truncatedByPlan) {
-        yield* finishImport(job, "capped", { cursor: nextCursor, stats, runs, error: PLAN_CAP_REASON })
+        yield* finishImport(job, "capped", { cursor, stats, runs, error: PLAN_CAP_REASON })
         return { done: true as const, reason: "capped" as const }
       }
 
