@@ -218,7 +218,7 @@ subprocess.run(["claude", "-p", goal], env=child_env())
 
 `child_env()` returns the current environment plus `TRACEPARENT`, `LATITUDE_SESSION_ID` and `LATITUDE_PROJECT`, anchored on the tool span currently executing; `current_traceparent()` returns just the header. Both are correct under Hermes's per-turn worker threads.
 
-`LATITUDE_HERMES_EXPORT_TRACEPARENT=1` scopes those variables onto `os.environ` for the duration of each tool call instead, so any subprocess inherits them without code changes. It is off by default because `os.environ` is process-wide: with concurrent tool calls on different threads, one call's span can reach another's child.
+`LATITUDE_HERMES_EXPORT_TRACEPARENT=1` scopes those variables onto `os.environ` for the duration of each tool call instead, so any subprocess inherits them without code changes. It is off by default because `os.environ` is process-wide while Hermes runs each turn on its own thread, and the ownership lock cannot fix that: it keeps a concurrent call from corrupting the owner's saved values, but the environment still holds the owner's header, so a subprocess launched by the skipped call inherits the **wrong** parent span rather than none. Safe only when tool calls do not overlap. `child_env()` is the path that is always correct.
 
 The same works in reverse — if something launched *this* Hermes process with a `TRACEPARENT`, its turns join that trace. The full contract, including how far a join is allowed to grow, is in [`dev-docs/trace-correlation.md`](../../../dev-docs/trace-correlation.md).
 

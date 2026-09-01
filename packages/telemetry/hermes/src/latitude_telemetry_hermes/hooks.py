@@ -259,7 +259,12 @@ def _export_to_environ(context: ChildContext) -> None:
 
     Opt-in (`LATITUDE_HERMES_EXPORT_TRACEPARENT=1`) and single-owner: only one tool
     call at a time holds the process environment, so a concurrent one is skipped
-    rather than handed the wrong span. Prefer `child_env()` where the tool can pass it.
+    rather than corrupting the owner's saved values.
+
+    Skipping does not make that call context-free. os.environ still carries the
+    owner's header, so a subprocess the skipped call launches inherits the wrong
+    parent span. Process-wide export cannot be made safe under overlapping tool
+    calls; `child_env()` is the path that always is.
     """
     global _ENV_OWNER, _ENV_UNDO
     # Both names: a scoped header this process inherited would otherwise outrank the
