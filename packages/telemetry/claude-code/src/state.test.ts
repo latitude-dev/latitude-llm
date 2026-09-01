@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
@@ -20,20 +20,21 @@ afterEach(() => {
 describe("withLock", () => {
   it("runs the callback and releases the lock", async () => {
     let ran = 0
-    expect(await withLock(() => ++ran)).toBe(1)
+    expect(await withLock("sess-a", () => ++ran)).toBe(1)
     // Released, so the next run acquires it rather than skipping.
-    expect(await withLock(() => ++ran)).toBe(2)
+    expect(await withLock("sess-a", () => ++ran)).toBe(2)
   })
 
   it("skips instead of running unlocked while another worker holds it", async () => {
     // An async Stop worker mid-upload when SessionEnd fires at quit. Proceeding here
     // would re-send the same deterministic spans before the offset advanced, and the
     // trace rollups are additive with no dedup.
-    writeFileSync(join(dir, "state.lock"), "")
+    writeFileSync(join(dir, "sess-a.lock"), "999999")
     let ran = 0
     let busy = 0
 
     const result = await withLock(
+      "sess-a",
       () => ++ran,
       () => busy++,
     )
@@ -44,15 +45,36 @@ describe("withLock", () => {
   })
 
   it("breaks a lock left behind by a killed worker", async () => {
-    const lock = join(dir, "state.lock")
+    const lock = join(dir, "sess-a.lock")
     writeFileSync(lock, "")
     const ancient = new Date(Date.now() - 60 * 60_000)
     const { utimesSync } = await import("node:fs")
     utimesSync(lock, ancient, ancient)
     let ran = 0
 
-    expect(await withLock(() => ++ran)).toBe(1)
+    expect(await withLock("sess-a", () => ++ran)).toBe(1)
     expect(ran).toBe(1)
+  })
+
+  it("does not let one session's in-flight run block another's", async () => {
+    // The lock is per session: a global one would let a busy session drop another's
+    // SessionEnd, which is the last hook that session ever gets.
+    writeFileSync(join(dir, "sess-a.lock"), "999999")
+    let ran = 0
+
+    expect(await withLock("sess-b", () => ++ran)).toBe(1)
+    expect(ran).toBe(1)
+  })
+
+  it("does not remove a lock that was broken and retaken by another worker", async () => {
+    // A batch slower than the stale window has its lock broken; unlinking by path
+    // alone on release would delete the new holder's lock.
+    const lock = join(dir, "sess-a.lock")
+    await withLock("sess-a", () => {
+      writeFileSync(lock, "999999")
+    })
+
+    expect(readFileSync(lock, "utf-8")).toBe("999999")
   })
 })
 

@@ -114,9 +114,10 @@ async function main(): Promise<void> {
   // miss request files (no llm_request.captured marker).
   await delay(250)
 
+  const key = stateKey(sessionId, transcriptPath)
   await withLock(
+    key,
     () => {
-      const key = stateKey(sessionId, transcriptPath)
       const prior = load(key)
       logger.debug(`prior offset=${prior.offset} turnCount=${prior.turnCount}`)
 
