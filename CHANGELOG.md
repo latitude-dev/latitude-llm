@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## v0.3.87 - 2026-09-01
+
+### Telemetry
+
+- A second agent running in its own Cloudflare Durable Object now joins the caller's trace instead of starting one of its own, published as `@latitude-data/telemetry` 4.1.0. A Durable Object gets a fresh isolate with no shared memory and no ambient OpenTelemetry context, so the planner a turn delegated to, often the most useful part of the trace, landed orphaned; the object is also evicted whenever it goes idle with no hook that runs first, so anything still buffered was lost. `injectTraceContext()`, `extractTraceContext()` and `withTraceContext()` carry the active span and Latitude context across the boundary in a carrier keyed by HTTP header names, so one object serves both an RPC argument and `fetch` headers, and injecting from inside a tool's `execute` parents the callee on that tool call, which is what makes it render as a subagent rather than something that merely ran during the same turn. `withParentContext()` covers frameworks that take a tracer instead of a callback, attaching only the first span to the remote parent so the framework's own nesting survives. `createDurableObjectTelemetry()` makes flushing cheap enough to do at every unit of work, the only reliable point on a runtime that evicts without warning: exports are serialized and coalesced, a caller arriving mid-export gets a later one, in-flight exports register with `ctx.waitUntil()`, and a failed export is reported instead of failing the turn. A missing or malformed carrier leaves the callee a root and never throws. Ingest needed no changes (ref: #4529).
+- The Python telemetry dev extra installs on `openai` 3.x again: `openai-agents` moves to 0.21.0, the first release that accepts it, `openinference-semantic-conventions` is pinned to the version the 0.1.56 OpenAI instrumentor requires, and LiteLLM is no longer co-installed because every published version still requires `openai<3`. Install LiteLLM separately for its examples (ref: #4527).
+- Corrected the Claude Code hook docs on why `SessionEnd` was added. A backgrounded `Stop` hook outlives an interactive quit, measured at 11.2s past process exit, so that path was never losing anything: `SessionEnd` is a backstop there and the actual fix on the headless path, where the hook is registered and never spawned (ref: afe2e8855).
+
+### Cost
+
+- The Cost page's All-time view now reports over full history. The chart header already said All-time, but the KPIs, per-session decomposition, cache economics, breakdown table and model impact panel were still reading the roughly 30-day chart window, so the totals disagreed with the label. The KPI window is now separate from the trend slice, matching Tools, and the full-history reads wait for the project's first trace to settle rather than fetching the fallback window and immediately refetching (ref: #4316).
+
+### Traces
+
+- Fixed the Traces page returning a 500 for a percentile filter over All time. `findLastTraceAt` and `countAnnotatedByProjectId` passed `gtePercentile` filters straight to the clause builder without the resolution step every other trace query runs, so a valid filter such as duration >= p99 failed with an unsupported-operator error (ref: #4090).
+
+### Evaluations
+
+- Signals archived by the muted-to-ignored backfill no longer keep running, and billing for, live evaluations. That migration stamped `ignored_at` without archiving the linked evaluations; a follow-up migration soft-deletes them, and live evaluation execution now skips an ignored signal, including jobs already in flight (ref: #4224).
+
+### Models
+
+- Updated the bundled models.dev data (ref: #4444).
+
+### Docs
+
+- Product links now point at `console.latitude.so`. `app.latitude.so` is v1, so the OAuth endpoints documented in the partners guide, the webhook deep-link example and the quick-start signup links were all sending people to the wrong app; the PII redaction curl also moves off the v1 `gateway.latitude.so` host to `api.latitude.so` (ref: #4528).
+- Added the Agent Score benchmark spec: one project-level score computed from telemetry Latitude already collects, needing no per-trace judge and no customer-configured evaluation. It scores five dimensions a user already knows how to reach in the app (Outcome, Reliability, Cost, Speed, Safety), where Cost and Speed measure waste rather than how cheap or fast the agent is, safety acts as a ceiling instead of a weighted term, and every lost point decomposes into named causes each carrying its share of the loss and the points recovered by fixing it alone (ref: #4526).
+
 ## v0.3.86 - 2026-09-01
 
 ### Partners
