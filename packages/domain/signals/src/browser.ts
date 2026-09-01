@@ -138,6 +138,12 @@ export {
   semanticRelatednessScore,
 } from "./related-signals.ts"
 export {
+  findDominantMappedSignalFlaggerSlug,
+  getSignalScoreEvidenceForFlagger,
+  isMappedSignalFlaggerSlug,
+  type MappedSignalFlaggerSlug,
+} from "./score-evidence.ts"
+export {
   buildSignalGenerationResultKey,
   SIGNAL_GENERATION_RESULT_TTL_SECONDS,
   type SignalGenerationResult,

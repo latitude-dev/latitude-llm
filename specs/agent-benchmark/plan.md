@@ -51,7 +51,7 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
   [`signals.md`](signals.md#scoring-metadata).
 - [x] **P1-4** Generate the Postgres migration through the package migration script. Ask before
   running any migration command.
-- [ ] **P1-5** Implement the static flagger mapping from
+- [x] **P1-5** Implement the static flagger mapping from
   [`signals.md`](signals.md#assignment-at-promotion).
 - [ ] **P1-6** Extend signal detail generation with evidence-role classification for signals that do
   not have a dominant mapped flagger.
