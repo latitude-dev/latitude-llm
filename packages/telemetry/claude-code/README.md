@@ -140,7 +140,18 @@ If the installer doesn't fit your setup (e.g. you manage dotfiles with another t
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry"
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest"
           }
         ]
       }
@@ -148,6 +159,8 @@ If the installer doesn't fit your setup (e.g. you manage dotfiles with another t
   }
 }
 ```
+
+Both entries are required. `SessionEnd` is deliberately not `async` — it is the only one of the two that fires for `claude -p`.
 
 You still need `BUN_OPTIONS=--preload=<abs-path>/intercept.js` in the claude runtime's environment to get the full-request capture. Either run `install` once to materialize the preload and set things up, or copy the shim out of `node_modules/@latitude-data/claude-code-telemetry/dist/intercept.js` and wire it up yourself.
 
