@@ -103,8 +103,8 @@ export function latitudeStopHookCommand(settings: ClaudeSettings): string | unde
 //
 // `SessionEnd` is registered **synchronously** and does fire there, delivering the
 // same session_id/transcript_path payload. It also fires on interactive quit and on
-// Ctrl-C, which catches a final turn whose async Stop hook died with the process.
-// Only SIGKILL escapes both, and nothing can be registered for that.
+// Ctrl-C, as a backstop: a backgrounded Stop hook outlives an interactive quit, so
+// that path is covered already.
 //
 // Emission is incremental behind a byte offset and a state lock, so the two never
 // double-count: whichever runs second finds the offset already advanced.
