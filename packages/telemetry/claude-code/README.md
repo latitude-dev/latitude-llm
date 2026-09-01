@@ -112,7 +112,7 @@ The same command is registered on two events, because neither covers every sessi
 
 `SessionEnd` is registered **synchronously** and does fire there. It also fires on interactive quit and on Ctrl-C, so it catches a final turn whose async Stop hook died with the process. Only `SIGKILL` escapes both, and no hook can be registered for that.
 
-The two never double-count: emission is incremental behind a byte offset and a state lock, so whichever runs second finds the offset already advanced and ships nothing. Both hand their work to a detached worker, so neither delays a turn or a session exit.
+The two never double-count: emission is incremental behind a byte offset and a state lock, so whichever runs second finds the offset already advanced and ships nothing. Both hand their work to a detached worker, so neither delays a turn or a session exit. Claude Code gives all `SessionEnd` hooks a shared ~1.5s budget and kills them when it expires — a cold `npx` resolve alone can exceed that — so the entry carries an explicit `timeout` (seconds) to raise it, bounded so a wedged hook cannot hold session exit open.
 
 ### Files on disk
 
@@ -151,7 +151,8 @@ If the installer doesn't fit your setup (e.g. you manage dotfiles with another t
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry@latest"
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
+            "timeout": 10
           }
         ]
       }

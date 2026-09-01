@@ -23,6 +23,9 @@ describe("addLatitudeHooks", () => {
     expect(next.hooks?.Stop?.[0]?.hooks[0]?.async).toBe(true)
     expect(next.hooks?.SessionEnd?.[0]?.hooks[0]?.command).toBe(LATEST)
     expect(next.hooks?.SessionEnd?.[0]?.hooks[0]?.async).toBeUndefined()
+    // Claude Code kills SessionEnd hooks on a ~1.5s shared budget, which a cold npx
+    // resolve alone can exceed — an explicit timeout raises it.
+    expect(next.hooks?.SessionEnd?.[0]?.hooks[0]?.timeout).toBe(10)
   })
 
   it("upgrades an existing bare-npx hook to the new command", () => {
@@ -54,6 +57,23 @@ describe("addLatitudeHooks", () => {
     const next = addLatitudeHooks(before, LATEST)
     expect(next.hooks?.Stop?.[0]?.hooks).toHaveLength(1)
     expect(next.hooks?.SessionEnd?.[0]?.hooks[0]?.command).toBe(LATEST)
+  })
+
+  it("corrects a stale async/timeout combination on an adopted hook", () => {
+    // An older version wrote SessionEnd without a timeout, or Stop with one; both are
+    // rewritten to the current shape rather than left as a stale mixture.
+    const before: ClaudeSettings = {
+      hooks: {
+        Stop: [{ hooks: [{ type: "command", command: LATEST, timeout: 3 }] }],
+        SessionEnd: [{ hooks: [{ type: "command", command: LATEST, async: true }] }],
+      },
+    }
+    const next = addLatitudeHooks(before, LATEST)
+
+    expect(next.hooks?.Stop?.[0]?.hooks[0]?.async).toBe(true)
+    expect(next.hooks?.Stop?.[0]?.hooks[0]?.timeout).toBeUndefined()
+    expect(next.hooks?.SessionEnd?.[0]?.hooks[0]?.async).toBeUndefined()
+    expect(next.hooks?.SessionEnd?.[0]?.hooks[0]?.timeout).toBe(10)
   })
 
   it("preserves a foreign SessionEnd hook", () => {

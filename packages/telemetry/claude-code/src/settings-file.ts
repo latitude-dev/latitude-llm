@@ -108,6 +108,13 @@ export function latitudeStopHookCommand(settings: ClaudeSettings): string | unde
 //
 // Emission is incremental behind a byte offset and a state lock, so the two never
 // double-count: whichever runs second finds the offset already advanced.
+// Claude Code gives all SessionEnd hooks a ~1.5s shared budget and kills them when
+// it expires, and a cold `npx` resolve alone can take longer than that — which would
+// kill the hook before it reaches detachSelf, putting headless back where it started.
+// An explicit per-hook timeout raises the budget; it stays bounded so a wedged hook
+// cannot hold session exit open indefinitely.
+const SESSION_END_TIMEOUT_SECONDS = 10
+
 export function addLatitudeHooks(
   settings: ClaudeSettings,
   command = "npx -y @latitude-data/claude-code-telemetry@latest",
@@ -116,26 +123,29 @@ export function addLatitudeHooks(
     ...settings,
     hooks: {
       ...(settings.hooks ?? {}),
-      Stop: upsertHook(settings.hooks?.Stop ?? [], command, true),
-      SessionEnd: upsertHook(settings.hooks?.SessionEnd ?? [], command, false),
+      Stop: upsertHook(settings.hooks?.Stop ?? [], command, { async: true }),
+      SessionEnd: upsertHook(settings.hooks?.SessionEnd ?? [], command, { timeout: SESSION_END_TIMEOUT_SECONDS }),
     },
   }
 }
 
 // Rewrites an existing Latitude hook (an older bare-`npx` command, or a dev dist
 // path) rather than appending a second one, so re-running install upgrades in place.
-function upsertHook(groups: HookGroup[], command: string, isAsync: boolean): HookGroup[] {
+function upsertHook(groups: HookGroup[], command: string, extra: { async?: true; timeout?: number }): HookGroup[] {
   let found = false
+  const entry = (): HookEntry => ({ type: "command", command, ...extra })
   const next: HookGroup[] = groups.map((group) => ({
     ...group,
     hooks: (group.hooks ?? []).map((hook) => {
       if (!isLatitudeHookCommand(hook.command)) return hook
       found = true
-      const { async: _prior, ...rest } = hook
-      return isAsync ? { ...rest, type: "command", command, async: true } : { ...rest, type: "command", command }
+      // `async` and `timeout` are dropped before re-applying, so a hook written by an
+      // older version is corrected rather than left with a stale combination.
+      const { async: _priorAsync, timeout: _priorTimeout, ...rest } = hook
+      return { ...rest, ...entry() }
     }),
   }))
-  if (!found) next.push({ hooks: [isAsync ? { type: "command", command, async: true } : { type: "command", command }] })
+  if (!found) next.push({ hooks: [entry()] })
   return next
 }
 

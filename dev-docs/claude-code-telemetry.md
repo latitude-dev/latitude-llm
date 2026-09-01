@@ -4,7 +4,7 @@ Latitude ingests Claude Code sessions via a `Stop` hook that ships the full sess
 
 The hook is registered on **two** events. `Stop` fires after each assistant turn and stays `async`, keeping interactive turns unblocked. `SessionEnd` is registered **synchronously**, because Claude Code registers an async Stop hook but exits before spawning it in headless mode — a probe hook under `async` never executed once for `claude -p`, while the same hook registered synchronously ran and received its full payload. Since headless is how one harness drives another, `SessionEnd` is what makes cross-harness correlation possible at all. It also fires on interactive quit (`reason: prompt_input_exit`) and on Ctrl-C, catching a final turn whose async Stop hook died with the process; only `SIGKILL` escapes both. Unknown hook events are ignored by Claude Code, so the `SessionEnd` entry is inert on versions that predate it.
 
-Double emission is prevented by the incremental design rather than by coordination: both events run the same binary, and whichever runs second finds the transcript offset already advanced behind the state lock. Both hand their work to a detached worker (`detached: true`, so `setsid` moves it out of the session's process group and it survives the session exiting), which keeps the synchronous `SessionEnd` from delaying session teardown — it returns in ~0.03s rather than the ~0.32s an `npx`-resolved inline run costs. `LATITUDE_CLAUDE_CODE_DETACH=0` forces the inline path.
+Double emission is prevented by the incremental design rather than by coordination: both events run the same binary, and whichever runs second finds the transcript offset already advanced behind the state lock. Both hand their work to a detached worker (`detached: true`, so `setsid` moves it out of the session's process group and it survives the session exiting), which keeps the synchronous `SessionEnd` from delaying session teardown — it returns in ~0.03s rather than the ~0.32s an `npx`-resolved inline run costs. `LATITUDE_CLAUDE_CODE_DETACH=0` forces the inline path. Claude Code gives all `SessionEnd` hooks a shared ~1.5s budget and kills them when it expires — a cold `npx` resolve alone can exceed that — so the entry carries an explicit `timeout` (seconds) to raise it, bounded so a wedged hook cannot hold session exit open.
 
 Correlating this harness's spans with another one's — joining a parent's trace, or handing this trace to a child process — is the shared contract in [`trace-correlation.md`](trace-correlation.md).
 
@@ -25,7 +25,19 @@ Paste into `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry@latest"
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
+            "timeout": 10
           }
         ]
       }

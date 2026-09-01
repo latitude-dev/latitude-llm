@@ -80,7 +80,8 @@ If you manage Claude Code settings yourself, add the telemetry command to `~/.cl
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry@latest"
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
+            "timeout": 10
           }
         ]
       }
