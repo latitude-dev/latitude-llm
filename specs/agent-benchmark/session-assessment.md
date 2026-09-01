@@ -131,7 +131,7 @@ type SessionEvidenceImpact =
       sameSubjectRecovered?: boolean
     }
   | { kind: "spend"; observedMicrocents: number; avoidableMicrocents?: number }
-  | { kind: "duration"; observedNanoseconds: number; avoidableNanoseconds?: number }
+  | { kind: "duration"; observedNs: number; avoidableNs?: number }
   | { kind: "outcomeAssociation"; probabilityChange?: number }
   | {
       kind: "safety"
