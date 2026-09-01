@@ -271,14 +271,18 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
   readonly observationAssignments: readonly ReassignTaxonomyObservationByIdInput[]
   /** Scoped write target: the `taxonomy_view_assignments` slice. Empty on the global/adaptive path. */
   readonly customAssignments: readonly TaxonomyViewAssignment[]
-  /** Leaf id + centroid for adaptive full-window routing. Empty on the off path. */
+  /**
+   * Leaf id + centroid for full-window routing, in whichever embedding space this
+   * pass clustered. Populated by the adaptive path and by every facet pass; empty
+   * on a sample-only pass, which wrote its assignments directly.
+   */
   readonly leafClusters: readonly StagingLeafCluster[]
   /**
    * Whether this pass persists a freshly-built ADAPTIVE tree: every node gets a
    * new id, so publication retires the whole prior tree rather than the ids no
-   * node continued. Distinct from having `leafClusters`, which says only that
-   * the assignment writes are deferred to a full-window routing pass — the two
-   * coincide today, and publication must keep reading this one.
+   * node continued. Distinct from having `leafClusters`, which says only that the
+   * assignment writes are deferred to a full-window routing pass — a facet has the
+   * second without the first, and publication must keep reading this one.
    */
   readonly persistsAdaptiveTree: boolean
   /**
@@ -864,11 +868,17 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       }),
     )
 
-    // Off writes the sample assignments here (sample-only reassignment). Adaptive
-    // reassigns the FULL bounded live window in a later activity, routing every
-    // window observation to these leaf centroids — so it publishes `leafClusters`
-    // instead and leaves both sample-assignment arrays empty.
-    const leafClusters: StagingLeafCluster[] = persistAdaptive
+    // Two write strategies, and `mode` is not what chooses between them.
+    // Sample-only writes the sampled assignments here; full-window publishes
+    // `leafClusters` instead, leaves both sample-assignment arrays empty, and a
+    // later activity routes the whole window to these centroids. Adaptive needs
+    // the second because it staged a whole new tree; a FACET needs it because its
+    // coverage would otherwise never outgrow the sample window, where routing the
+    // cumulative projection cache each pass makes it accumulate. A facet's
+    // centroids are already projection-space — this use-case was handed projection
+    // embeddings as its observations.
+    const routeFullWindow = persistAdaptive || scopedFacetId !== null
+    const leafClusters: StagingLeafCluster[] = routeFullWindow
       ? bornLeaves.map((leaf) => ({ clusterId: leaf.clusterId, centroid: [...leaf.centroid] }))
       : []
 
@@ -877,7 +887,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // view (cohort topic or facet) writes the `taxonomy_view_assignments` slice
     // (keyed by customBehaviorId × facetId, carrying sessionId), never the column.
     const observationAssignments: ReassignTaxonomyObservationByIdInput[] =
-      persistAdaptive || scopedBehaviorId
+      routeFullWindow || isView
         ? []
         : leafMembers.map(({ leaf, observation, confidence }) => ({
             observationId: observation.observationId,
@@ -888,7 +898,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
             indexedAt: now,
           }))
     const customAssignments: TaxonomyViewAssignment[] =
-      !persistAdaptive && scopedBehaviorId
+      !routeFullWindow && scopedBehaviorId
         ? leafMembers.flatMap(({ leaf, observation, confidence }) => {
             // Scoped/facet samples carry a sessionId; guard at runtime (via a
             // widening cast, not an unchecked one) so a whole-project topic

@@ -1120,4 +1120,184 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     expect(slugs).toEqual(["beta", "alpha"])
   })
+
+  it("countDistinctSessionsBySignalId counts sessions, falls back to trace then score id, and honors the window", async () => {
+    const organizationId = "y".repeat(24)
+    const signal = SignalId("c".repeat(24))
+    const otherSignal = SignalId("d".repeat(24))
+    const traceId = TraceId("f".repeat(32))
+    const windowStart = new Date("2026-05-10T00:00:00.000Z")
+
+    const write = (input: {
+      readonly feedback: string
+      readonly signalId: SignalId
+      readonly sessionId?: string
+      readonly traceId?: TraceId
+      readonly draftedAt?: Date
+    }) =>
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        signalId: input.signalId,
+        ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId }),
+        ...(input.traceId === undefined ? {} : { traceId: input.traceId }),
+        value: 0,
+        passed: false,
+        feedback: input.feedback,
+        metadata: { rawFeedback: input.feedback, flaggerSlug: "alpha" },
+        draftedAt: input.draftedAt ?? null,
+      })
+
+    const created = await Effect.runPromise(
+      Effect.gen(function* () {
+        return {
+          // Two scores in one session are one piece of evidence, not two.
+          sessionOneA: yield* write({ feedback: "one a", signalId: signal, sessionId: "session-1" }),
+          sessionOneB: yield* write({ feedback: "one b", signalId: signal, sessionId: "session-1" }),
+          sessionTwo: yield* write({ feedback: "two", signalId: signal, sessionId: "session-2" }),
+          // No session: stands in for itself, keyed by trace.
+          traceOnly: yield* write({ feedback: "trace only", signalId: signal, traceId }),
+          // Neither session nor trace: keyed by its own id.
+          bare: yield* write({ feedback: "bare", signalId: signal }),
+          drafted: yield* write({
+            feedback: "drafted",
+            signalId: signal,
+            sessionId: "session-9",
+            draftedAt: new Date(),
+          }),
+          other: yield* write({ feedback: "other signal", signalId: otherSignal, sessionId: "session-3" }),
+          stale: yield* write({ feedback: "stale", signalId: signal, sessionId: "session-4" }),
+        }
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2026-05-01T00:00:00.000Z") })
+      .where(eq(scoresTable.id, created.stale.id as string))
+
+    const count = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.countDistinctSessionsBySignalId({
+          projectId: annotationProjectId,
+          signalId: signal,
+          since: windowStart,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    // session-1 (twice, counted once) + session-2 + the trace-keyed row + the bare
+    // row. The draft, the other signal's row, and the pre-window row are excluded.
+    expect(count).toBe(4)
+  })
+
+  it("reassignSignal moves every absorbed signal's scores and reports the oldest one", async () => {
+    const organizationId = "z".repeat(24)
+    const survivor = SignalId("1".repeat(24))
+    const loser = SignalId("2".repeat(24))
+    const untouched = SignalId("3".repeat(24))
+    const replayedAt = new Date("2026-01-05T00:00:00.000Z")
+    const reassignedAt = new Date("2026-06-01T00:00:00.000Z")
+
+    const write = (input: { readonly feedback: string; readonly signalId: SignalId; readonly sessionId: string }) =>
+      writeScoreUseCase({
+        projectId: annotationProjectId,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        signalId: input.signalId,
+        sessionId: input.sessionId,
+        value: 0,
+        passed: false,
+        feedback: input.feedback,
+        metadata: { rawFeedback: input.feedback, flaggerSlug: "alpha" },
+        draftedAt: null,
+      })
+
+    const created = await Effect.runPromise(
+      Effect.gen(function* () {
+        return {
+          own: yield* write({ feedback: "survivor own", signalId: survivor, sessionId: "session-1" }),
+          absorbed: yield* write({ feedback: "absorbed", signalId: loser, sessionId: "session-2" }),
+          // Older than the signal it belongs to — a replayed annotation, which
+          // is why the ClickHouse bound has to come from the scores.
+          replayed: yield* write({ feedback: "replayed", signalId: loser, sessionId: "session-3" }),
+          other: yield* write({ feedback: "other", signalId: untouched, sessionId: "session-4" }),
+        }
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: replayedAt })
+      .where(eq(scoresTable.id, created.replayed.id as string))
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.reassignSignal({
+          projectId: annotationProjectId,
+          fromSignalIds: [loser],
+          toSignalId: survivor,
+          updatedAt: reassignedAt,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(result).toEqual({ count: 2, earliestCreatedAt: replayedAt })
+
+    const rows = await database.db.select().from(scoresTable).where(eq(scoresTable.organizationId, organizationId))
+    const bySignal = (signalId: SignalId) => rows.filter((row) => row.signalId === signalId).length
+    expect(bySignal(survivor)).toBe(3)
+    expect(bySignal(loser)).toBe(0)
+    expect(bySignal(untouched)).toBe(1)
+  })
+
+  it("reassignSignal aggregates in SQL when one session carries many scores", async () => {
+    const organizationId = "w".repeat(24)
+    const survivor = SignalId("4".repeat(24))
+    const loser = SignalId("5".repeat(24))
+    const oldest = new Date("2026-02-01T00:00:00.000Z")
+
+    // Nothing caps the scores one session can produce, so the row count is not
+    // bounded by the promotion threshold even for a candidate.
+    const created = await Effect.runPromise(
+      Effect.forEach(
+        Array.from({ length: 25 }, (_, index) => index),
+        (index) =>
+          writeScoreUseCase({
+            projectId: annotationProjectId,
+            sourceType: "annotation",
+            sourceId: "SYSTEM",
+            signalId: loser,
+            sessionId: "session-busy",
+            value: 0,
+            passed: false,
+            feedback: `busy session finding ${index}`,
+            metadata: { rawFeedback: `busy session finding ${index}`, flaggerSlug: "alpha" },
+            draftedAt: null,
+          }),
+      ).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: oldest })
+      .where(eq(scoresTable.id, created[0]?.id as string))
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.reassignSignal({
+          projectId: annotationProjectId,
+          fromSignalIds: [loser],
+          toSignalId: survivor,
+          updatedAt: new Date("2026-06-01T00:00:00.000Z"),
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(result).toEqual({ count: 25, earliestCreatedAt: oldest })
+  })
 })

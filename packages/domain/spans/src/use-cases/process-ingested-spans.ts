@@ -38,8 +38,8 @@ export interface ProcessIngestedSpansInput {
   readonly pseudonymSecret?: string
   readonly traceUsage?: {
     readonly context?: {
-      readonly planSlug: "free" | "pro" | "enterprise"
-      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+      readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
       readonly periodStart: Date
       readonly periodEnd: Date
       readonly includedCredits: number

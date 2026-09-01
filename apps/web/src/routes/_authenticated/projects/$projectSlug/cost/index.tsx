@@ -17,6 +17,7 @@ import { useProjectFirstTraceAt, useProjectLastTraceAt } from "../../../../../do
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
+import { SectionHeader } from "../-components/section-header.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { CacheEconomicsPanel } from "./-components/cache-economics-panel.tsx"
 import { CostBreakdownPanel } from "./-components/cost-breakdown-panel.tsx"
@@ -193,9 +194,13 @@ function CostPageContent() {
   return (
     <Layout>
       <Layout.Header
-        title="Cost dashboard"
-        badge={<PricingCoverageBadge confidence={overview?.confidence} isLoading={overviewLoading} />}
-        description="Optimize your spending"
+        title={
+          <SectionHeader
+            title="Cost dashboard"
+            badge={<PricingCoverageBadge confidence={overview?.confidence} isLoading={overviewLoading} />}
+            description="Optimize your spending"
+          />
+        }
         actions={
           <TimeFilterDropdown
             {...(tw.pickerStartFrom ? { startTimeFrom: tw.pickerStartFrom } : {})}

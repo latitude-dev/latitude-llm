@@ -1,5 +1,5 @@
 import type { IncidentRecovery } from "@domain/notifications"
-import type { AlertSeverity, IncidentNotificationKey } from "@domain/shared"
+import { type AlertSeverity, GROUP_FOR_INCIDENT_NOTIFICATION_KEY, type IncidentNotificationKey } from "@domain/shared"
 import type { SignalPriority } from "@domain/signals"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -83,7 +83,7 @@ export function IncidentClosedEmail({
   return (
     <ContainerLayout
       previewText={`Resolved: escalation on ${sourceName}`}
-      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: GROUP_FOR_INCIDENT_NOTIFICATION_KEY[incidentKind] }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         {heading}

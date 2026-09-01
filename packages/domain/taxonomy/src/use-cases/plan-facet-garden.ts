@@ -34,9 +34,12 @@ const lookbackStart = (now: Date): Date =>
  * shared planner. The extraction side-effect (AI + projection cache) lives here,
  * not in `planHierarchicalTaxonomyUseCase`, so that planner stays a pure
  * embeddings→tree function; this use-case is the facet analogue of the topic
- * path's in-repo sampling. Always `mode: "off"` — facet clusters live in the
- * projection embedding space, where the adaptive full-window reassignment (which
- * routes the observation window) does not apply.
+ * path's in-repo sampling. Always `mode: "off"` — the adaptive builder's gates
+ * are tuned on observation embeddings, and adaptive doubles as "route the
+ * observation window later", which for a facet would compare observation vectors
+ * against projection-space centroids. The full-window reassignment a facet DOES
+ * get is the projection-space one, driven by the plan's staged leaves rather than
+ * by its mode.
  */
 export const planFacetGardenUseCase = (input: PlanFacetGardenInput) =>
   Effect.gen(function* () {

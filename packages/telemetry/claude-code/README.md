@@ -98,13 +98,21 @@ Everything the installer writes. Edit `~/.claude/settings.json` directly if you 
 | `LATITUDE_CLAUDE_CODE_ENABLED` | no | `1` | Set to `0` to pause the hook without uninstalling. |
 | `LATITUDE_CLAUDE_CODE_MEMORY` | no | `1` | Set to `0` to stop emitting memory-operation spans for auto-memory file ops. |
 | `LATITUDE_CLAUDE_CODE_MEMORY_CONTENT` | no | `1` | Set to `0` to emit memory spans without record bodies (structure and counts only). |
+| `LATITUDE_CLAUDE_CODE_DETACH` | no | `1` | Set to `0` to do the work inline instead of in a detached worker. Inline adds roughly a second to the end of every turn. |
+| `LATITUDE_CLAUDE_CODE_INHERIT_CONTEXT` | no | `1` | Set to `0` to ignore an inherited `TRACEPARENT` and always start a trace of your own. See "joining a parent harness's trace" below. |
 | `LATITUDE_DEBUG` | no | — | Set to `1` to log diagnostics to stderr. |
 | `LATITUDE_REDACT_ATTRIBUTES` | no | — | JSON array or comma-separated custom attribute patterns to mask before export. |
 | `LATITUDE_REDACT_MASK` | no | `******` | Mask value for custom redaction. |
 
-### `hooks.Stop`
+### `hooks.Stop` and `hooks.SessionEnd`
 
-A single hook entry running `npx -y @latitude-data/claude-code-telemetry` after each turn (async).
+The same command is registered on two events, because neither covers every session alone.
+
+`Stop` runs after each assistant turn and stays **async**, so an interactive turn is never blocked. But Claude Code registers an async Stop hook and then exits before spawning it in headless mode, so `claude -p` — how one harness drives another — would emit nothing at all.
+
+`SessionEnd` is registered **synchronously** and does fire there. It also fires on interactive quit and on Ctrl-C, so a session that ends without a further turn still gets a final pass. A backgrounded `Stop` hook does survive an interactive quit — measured finishing 11s after the process exited — so this is a backstop rather than a repair.
+
+The two never double-count: emission is incremental behind a byte offset and a state lock, so whichever runs second finds the offset already advanced and ships nothing. Both hand their work to a detached worker, so neither delays a turn or a session exit. Claude Code gives all `SessionEnd` hooks a shared ~1.5s budget and kills them when it expires — a cold `npx` resolve alone can exceed that — so the entry carries an explicit `timeout` (seconds) to raise it, bounded so a wedged hook cannot hold session exit open.
 
 ### Files on disk
 
@@ -132,8 +140,19 @@ If the installer doesn't fit your setup (e.g. you manage dotfiles with another t
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @latitude-data/claude-code-telemetry",
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
             "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @latitude-data/claude-code-telemetry@latest",
+            "timeout": 10
           }
         ]
       }
@@ -142,7 +161,24 @@ If the installer doesn't fit your setup (e.g. you manage dotfiles with another t
 }
 ```
 
+Both entries are required. `SessionEnd` is deliberately not `async` — it is the only one of the two that fires for `claude -p`.
+
 You still need `BUN_OPTIONS=--preload=<abs-path>/intercept.js` in the claude runtime's environment to get the full-request capture. Either run `install` once to materialize the preload and set things up, or copy the shim out of `node_modules/@latitude-data/claude-code-telemetry/dist/intercept.js` and wire it up yourself.
+
+## Joining a parent harness's trace
+
+When another harness launches Claude Code — a Hermes tool call, a CI job, a subprocess agent — it can hand over its active span through the standard W3C variables. The hook then joins that trace instead of deriving one from `sessionId:turnNumber`, so the Claude Code session appears nested under the tool call that launched it rather than beside it:
+
+| Variable | Effect |
+| --- | --- |
+| `TRACEPARENT` | `00-<trace id>-<parent span id>-<flags>`. The session's spans join that trace, parented on that span. |
+| `LATITUDE_TRACEPARENT` | Same format, higher precedence — for setups where `TRACEPARENT` already belongs to something else. Set it empty to opt out of a `TRACEPARENT` that is already there. |
+| `LATITUDE_SESSION_ID` | Reported as the session id, so both harnesses group in one session view. Read independently of the header: a session that never joins a trace still reports it. |
+| `LATITUDE_PROJECT` | Must match the parent's project: ingest is project-scoped, so a mismatch splits the trace silently. |
+
+Nothing is required of a session launched on its own — with no valid header the hook generates ids exactly as before. A malformed header is ignored rather than failing the turn.
+
+Claude's own session id remains available as `claude_code.session.id` metadata, and the trace this session joined as `latitude.parent.trace_id` / `latitude.parent.span_id`.
 
 ## Privacy
 

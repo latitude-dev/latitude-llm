@@ -11,6 +11,8 @@ x-app: &app
   restart: unless-stopped
   env_file:
     - .env.production
+  environment:
+    LAT_IMAGE_TAG: ${LAT_IMAGE_TAG:-latest}
   logging: *logging
   depends_on:
     migrations:

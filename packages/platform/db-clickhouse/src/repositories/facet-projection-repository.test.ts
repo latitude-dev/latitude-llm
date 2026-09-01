@@ -143,6 +143,30 @@ describe("FacetProjectionRepositoryLive", () => {
     expect(found[0]?.extractedText).toBe("facet A answer")
   })
 
+  it("lists the whole cached window for routing, newest first, skipping unclear rows and other facets", async () => {
+    const older = new Date("2026-05-01T00:00:00.000Z")
+    const window = await run(
+      Effect.gen(function* () {
+        const repo = yield* FacetProjectionRepository
+        yield* repo.upsertMany([
+          makeProjection({ sessionObservationId: "obs-new".padEnd(24, "0"), startTime: now }),
+          makeProjection({ sessionObservationId: "obs-old".padEnd(24, "0"), startTime: older }),
+          // Unclear: no embedding, so there is nothing to route it by.
+          makeProjection({ sessionObservationId: "obs-unclr".padEnd(24, "0"), extractedText: "", embedding: [] }),
+          makeProjection({ sessionObservationId: "obs-other".padEnd(24, "0"), facetId: otherFacetId }),
+        ])
+        return yield* repo.listWindowForReassignment({ organizationId, projectId, facetId, limit: 10 })
+      }),
+    )
+
+    // The window is the cumulative extraction cache — this is what makes a lens's
+    // coverage accumulate instead of tracking the latest sample window.
+    expect(window.map((row) => row.observationId)).toEqual(["obs-new".padEnd(24, "0"), "obs-old".padEnd(24, "0")])
+    expect(window[0]?.embedding).toEqual([1, 0, 0])
+    expect(window[1]?.startTime).toEqual(older)
+    expect(window[0]?.sessionId).toMatch(/^session-/)
+  })
+
   it("purges only the given facet's slice on deleteByFacet", async () => {
     const [mine, theirs] = await run(
       Effect.gen(function* () {

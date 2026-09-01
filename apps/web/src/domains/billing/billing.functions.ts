@@ -2,6 +2,7 @@ import {
   BillingUsagePeriodRepository,
   calculatePlanSpendMills,
   PLAN_SLUGS,
+  type PlanSlug,
   updateSpendingLimitUseCase,
 } from "@domain/billing"
 import { BadRequestError, OrganizationId, type UserId } from "@domain/shared"
@@ -26,8 +27,8 @@ import { requireSession } from "../../server/auth.ts"
 import { getBetterAuth, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 interface BillingOverviewDto {
-  planSlug: "free" | "pro" | "enterprise"
-  planSource: "override" | "subscription" | "free-fallback"
+  planSlug: PlanSlug
+  planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   periodStart: string
   periodEnd: string
   /** `null` when the plan entitlement is intentionally unbounded over JSON (Enterprise). */

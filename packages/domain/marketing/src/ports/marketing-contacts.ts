@@ -12,6 +12,11 @@ export const marketingCreateContactInputSchema = z.object({
   source: z.string().optional(),
   createdAt: z.date().optional(),
   subscribed: z.boolean().optional(),
+  // Normally still empty at signup and filled in later by `updateContact` once onboarding runs.
+  // Partner-provisioned users never see onboarding, so for them this is the only chance to send it.
+  jobTitle: z.string().nullish(),
+  phoneNumber: z.string().nullish(),
+  heardAboutUs: z.string().nullish(),
 })
 
 export const marketingUpdateContactInputSchema = z.object({

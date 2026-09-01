@@ -1,5 +1,6 @@
 import { ApiKeyRepository } from "@domain/api-keys"
 import { MembershipRepository, OrganizationRepository } from "@domain/organizations"
+import { PartnerRepository } from "@domain/partners"
 import { ProjectRepository } from "@domain/projects"
 import type { SeedScope } from "@domain/shared/seeding"
 import { UserRepository } from "@domain/users"
@@ -8,6 +9,7 @@ import type { PostgresClient } from "../client.ts"
 import { ApiKeyRepositoryLive } from "../repositories/api-key-repository.ts"
 import { MembershipRepositoryLive } from "../repositories/membership-repository.ts"
 import { OrganizationRepositoryLive } from "../repositories/organization-repository.ts"
+import { PartnerRepositoryLive } from "../repositories/partner-repository.ts"
 import { ProjectRepositoryLive } from "../repositories/project-repository.ts"
 import { UserRepositoryLive } from "../repositories/user-repository.ts"
 import { SqlClientLive } from "../sql-client.ts"
@@ -33,6 +35,7 @@ export const seedDemoProjectPostgres = (params: { client: PostgresClient; scope:
     ApiKeyRepositoryLive,
     MembershipRepositoryLive,
     OrganizationRepositoryLive,
+    PartnerRepositoryLive,
     ProjectRepositoryLive,
     UserRepositoryLive,
   ).pipe(Layer.provideMerge(SqlClientLive(params.client)))
@@ -42,6 +45,7 @@ export const seedDemoProjectPostgres = (params: { client: PostgresClient; scope:
       apiKey: yield* ApiKeyRepository,
       membership: yield* MembershipRepository,
       organization: yield* OrganizationRepository,
+      partner: yield* PartnerRepository,
       project: yield* ProjectRepository,
       user: yield* UserRepository,
     }

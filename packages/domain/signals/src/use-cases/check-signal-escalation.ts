@@ -19,7 +19,7 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { SignalNotFoundForEscalationCheckError } from "../errors.ts"
-import { isSignalNew } from "../helpers.ts"
+import { isSignalNew, signalFirstVisibleAt } from "../helpers.ts"
 import { makeScoreOccurrenceReader } from "../ports/score-occurrence-reader.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 
@@ -73,8 +73,11 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     const settingsReader = yield* SettingsReader
     const sqlClient = yield* SqlClient
 
+    // Read through the gate and skip below, rather than letting a default-deny
+    // read 404: the hourly sweeper feeds this path, so a candidate would surface
+    // as a failed task instead of a deliberate no-op.
     const signalWithLifecycle = yield* signalRepository
-      .findById(SignalId(input.signalId))
+      .findById(SignalId(input.signalId), { includeUnpromoted: true })
       .pipe(
         Effect.catchTag("NotFoundError", () =>
           Effect.fail(new SignalNotFoundForEscalationCheckError({ signalId: input.signalId })),
@@ -90,6 +93,18 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
     // open/close normally and only the fan-out is suppressed.
     if (signalWithLifecycle.ignoredAt !== null) {
       return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckSignalEscalationResult
+    }
+
+    // A candidate has no user-facing existence, so it must not open an incident
+    // that would route around the promotion gate. It is only skipped while it is
+    // not already escalating: an unpromoted signal holding an open incident should
+    // be unreachable (the enforcement migration promoted everything that existed,
+    // and the latch is one-way), but returning early there would strand that
+    // incident forever, since even the duration timeout exits from inside the
+    // engine. Falling through cannot announce anything — `enter` requires
+    // `!wasEscalating` — so the only outcomes left are exit and none.
+    if (signalWithLifecycle.promotedAt === null && !wasEscalating) {
+      return { transition: "none", currentlyEscalating: false } satisfies CheckSignalEscalationResult
     }
 
     const [projectSettings, openIncident] = yield* Effect.all(
@@ -113,7 +128,7 @@ export const checkSignalEscalationUseCase = (input: CheckSignalEscalationInput) 
         projectId: ProjectId(input.projectId),
         sourceId: input.signalId,
         kShort,
-        isNew: isSignalNew(signalWithLifecycle.createdAt, now),
+        isNew: isSignalNew(signalFirstVisibleAt(signalWithLifecycle), now),
         wasEscalating,
         // Narrow the now-polymorphic snapshot to the seasonal shape.
         entrySignals:

@@ -1162,6 +1162,18 @@ Marks each signal in `signalIds` as resolved, archiving it and re-enabling its n
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
+#### `latitude signals submit-feedback`
+
+Records a one-time verdict on whether a flagger-detected signal is a real problem, with an optional reason. Only signals a flagger detected accept feedback, and feedback cannot be changed once submitted.
+
+`POST /v1/projects/{projectSlug}/signals/{signalSlug}/feedback`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--signal-slug` | `string` | Yes | Signal slug. |
+| `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
+
 #### `latitude signals trend`
 
 Returns the occurrence histogram for one signal over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.

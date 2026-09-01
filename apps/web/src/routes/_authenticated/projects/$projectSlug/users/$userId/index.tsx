@@ -198,14 +198,15 @@ function UserDetailPage() {
       <Layout.Content>
         <Layout.Header
           title={
-            <div className="flex min-w-0 flex-row items-center gap-3">
+            <div className="flex min-w-0 flex-col gap-3">
               <Tooltip
                 asChild
                 side="bottom"
                 trigger={
-                  <Button asChild variant="ghost" className="h-8 w-8 p-0" aria-label="Back to users">
+                  <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to users">
                     <Link to="/projects/$projectSlug/users" params={{ projectSlug }}>
-                      <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                      <Icon icon={ArrowLeftIcon} size="sm" />
+                      Back
                     </Link>
                   </Button>
                 }
@@ -215,10 +216,10 @@ function UserDetailPage() {
               {profileLoading ? (
                 <Skeleton className="h-7 w-56" />
               ) : (
-                <>
+                <div className="flex min-w-0 items-center gap-3">
                   <Avatar size="sm" name={profile ? userDisplayName(profile) : userId} imageSrc={null} />
                   <Text.H4M className="min-w-0 truncate">{profile ? userDisplayName(profile) : userId}</Text.H4M>
-                </>
+                </div>
               )}
             </div>
           }

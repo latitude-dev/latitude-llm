@@ -14,9 +14,13 @@ import {
   isEligibilityError,
   SignalDiscoveryLockUnavailableError,
 } from "@domain/signals"
-import { AIEmbedLive, AIGenerateLive, AIRerankLive, withAi } from "@platform/ai"
-import { RedisBillingSpendReservationLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { AIEmbedLive, AIRerankLive, withAi } from "@platform/ai"
+import {
+  RedisBillingSpendReservationLive,
+  RedisCacheStoreLive,
+  RedisDistributedLockRepositoryLive,
+} from "@platform/cache-redis"
+import { ScoreAnalyticsRepositoryLive, SessionRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   OutboxEventWriterLive,
@@ -69,14 +73,11 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
     ),
   )
 
+// Metering must stay off this path: it fails the activity outright when an organization is out of
+// AI credits, which would stop a candidate recording the evidence that promotes it.
 export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =>
   Effect.runPromise(
     createSignalFromScoreUseCase(input).pipe(
-      withActivityAIMetering({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        label: "signal-create",
-      }),
       withPostgres(
         Layer.mergeAll(
           ProjectRepositoryLive,
@@ -84,13 +85,14 @@ export const createSignalFromScore = async (input: CreateSignalFromScoreInput) =
           SignalRepositoryLive,
           OutboxEventWriterLive,
           EvaluationRepositoryLive,
-          billingMeteringRepositoriesLive,
         ),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
-      Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
-      withAi(AIGenerateLive, getRedisClient()),
+      // Creation evaluates the promotion gate too, so a first occurrence can be
+      // born promoted where the floor admits a single session.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
     ),
   )
@@ -117,9 +119,13 @@ export const assignOrCreateSignal = async (input: AssignOrCreateSignalInput) =>
       ),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
+      // Promotion sizes its threshold from the project's session volume, read
+      // from ClickHouse through a Redis cache.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       // TODO(signal-discovery-rerank): drop AIRerankLive when assignOrCreateSignal
       // relies on Postgres pgvector hybrid search directly.
-      withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
+      withAi(AIRerankLive, getRedisClient()),
       withTracing,
       Effect.match({
         onFailure: (error) => {
@@ -146,6 +152,10 @@ export const assignScoreToSignal = async (input: AssignScoreToSignalInput) =>
         OrganizationId(input.organizationId),
       ),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
+      // Promotion sizes its threshold from the project's session volume, read
+      // from ClickHouse through a Redis cache.
+      withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
       Effect.match({
         onFailure: (error) => {

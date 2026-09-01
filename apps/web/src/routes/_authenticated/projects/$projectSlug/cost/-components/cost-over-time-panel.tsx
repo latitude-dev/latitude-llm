@@ -140,8 +140,6 @@ export function CostOverTimePanel({
           <Tabs
             variant="bordered"
             size="sm"
-            className="border-none bg-muted"
-            indicatorClassName="border-none"
             options={METRIC_OPTIONS.map((option) => ({
               id: option.id,
               label: option.label,

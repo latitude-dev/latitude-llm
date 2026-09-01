@@ -2,6 +2,103 @@
 
 ## Unreleased
 
+## v0.3.86 - 2026-09-01
+
+### Partners
+
+- Added a private partner API so a third-party platform can offer "install Latitude" from inside its own product. A staff-registered partner holds an HMAC secret and calls one signed endpoint to create a user, an organization and its own OAuth grant, receiving the same token pair the interactive consent flow would have produced. The registry is a global staff-managed table with no tenant scope, carrying the partner's scopes, an optional IP allowlist and the redirect URLs stamped onto every grant, so a provisioned account can re-authorize later through its own `client_id` instead of accumulating a second entry in the user's Keys settings. Requests are signed Stripe-style with the nonce inside the signed string, claimed only after the signature verifies; every pre-scope refusal returns an identical 401 so the surface cannot be used to enumerate partner ids. Provisioning never touches an existing account: a taken email is a 409 and the partner falls back to the interactive flow. Staff manage partners at `/backoffice/partners` (ref: #4508).
+
+### Billing and self-hosting
+
+- Billing enforcement is now opt-in behind `LAT_BILLING_ENABLED`, default off, so a self-hosted deployment is never rejected at ingest or aged out by a plan's retention. An organization with no override resolves to a new unenforced `self-hosted` plan whose retention comes from `LAT_TELEMETRY_RETENTION_DAYS`; usage events are still recorded, they just gate nothing. A malformed value dies as a configuration defect rather than falling back, because both silent outcomes, metering a self-hoster and not metering Cloud, are worse than a crash. Latitude Cloud sets the flag on every service (ref: #4515, #4516).
+- Hardened the OSS deployment heartbeat: the whole path is wrapped so a Redis failure cannot reject startup, the PostHog project key ships with the build so a production self-host reports without extra configuration, and `LAT_IMAGE_TAG` is passed through the Docker stack so heartbeats carry the compose image tag (ref: #4513).
+
+### Telemetry
+
+- Hermes and Claude Code traces now correlate across processes, published as `latitude-telemetry-hermes` 0.3.0 and the Claude Code hook 0.0.15. Both emitters minted their own trace ids, so a Claude Code session launched by a Hermes turn appeared as an unrelated trace and a shared session id could group them but never show that one launched the other. Both now read a W3C traceparent from the environment and parent their root span on the supplied span, with `LATITUDE_SESSION_ID` joining the parent's session and `LATITUDE_PROJECT` keeping both halves in one project, since ingest is project-scoped and a mismatch splits the trace silently. Hermes publishes its active tool span through `child_env()`, or onto `os.environ` around each tool call behind an opt-in flag so any subprocess inherits it. Joining is capped per session, and a session launched on its own is unaffected (ref: #4524, #4525).
+- Fixed headless Claude Code runs emitting nothing at all, which the correlation feature depends on. The hook was registered only on an async `Stop`, and Claude Code exits before spawning an async Stop hook in headless mode, so `claude -p` was invisible even though headless is how another harness drives it. The installer now also registers a synchronous `SessionEnd`, which additionally catches interactive quit and Ctrl-C; the two never double-count, and both hand their work to a detached worker so session teardown is not delayed. Existing installs need `install` re-run to pick up the entry (ref: #4524).
+- Fixed the Claude Code hook proceeding without its state lock when another hook held it, and the stale-payload sweep deleting files it had not written in a user-configured directory (ref: #4523).
+- Rewrote the Hermes docs around upgrading the plugin, including that a running Hermes must be restarted to pick up a new version (ref: #4504).
+
+### Traces
+
+- Bumped `rosetta-ai` to 2.3.0, adding server tool call request and response parts, a compaction part, the `document` content type and the `compaction` finish reason to the conversation vocabulary. The change is additive (ref: #4501).
+
+## v0.3.85 - 2026-08-26
+
+### Signals
+
+- Near-duplicate candidates now merge into one promotable signal. Discovery could split a real problem across several one-session candidates, none of which reached the promotion gate alone; a pass runs whenever a candidate's centroid moves, merges the neighbours above the similarity floor, and re-qualifies the survivor, so the union faces the gate its fragments could not. A promoted signal is never absorbed nor picked as survivor, and each pass is capped, because there is no demerge (ref: #4482).
+- Candidates that stop accumulating evidence are now swept. Every signal row carries a 2048-dimension centroid that hybrid search scans exactly, so this is the first mechanism that lets the corpus shrink rather than only grow; a candidate idle past the promotion window is provably something nobody has seen. Their scores stay attached, which is what keeps the sweep from feeding the same annotations back into discovery (ref: #4482).
+- An absorbed candidate now records the signal that took it over, and the ClickHouse pass that moves its scores resolves the sweep set from Postgres at execution time. Two merges in a chain publish independent jobs with no ordering between them, which could strand rows on a soft-deleted signal and leave the survivor's occurrence count permanently short (ref: #4482).
+
+### Web
+
+- A score's conversation anchor is now shareable. Clicking an anchored score already scrolled the Conversation tab to the message it points at, but the position was wiped from the URL the moment it landed; the focus now lives in a `scoreId` search param that survives, so the link reproduces the scroll and highlight on load. Opening a session from a signal lands on the anchor of the score that signal recorded there, and that first scroll now actually reaches it, waiting for the conversation to render and its layout to settle (ref: #4478, #4483).
+
+### Telemetry
+
+- The Hermes telemetry plugin now recovers the conversation, memory, tools, and usage a session was losing, published as `latitude-telemetry-hermes` 0.2.0. It normalized only the OpenAI Chat Completions message shape, so on Hermes's Codex/Responses path every tool call and result was dropped from the conversation and assistant text arrived as a JSON blob. Everything else in the hook payloads is now read too: system instructions, tool definitions, tool error status and duration, the real response model, time to first token, end-user identity, and the delegating subagent. Added alongside it are memory telemetry for the built-in stores, derived and user-defined tags and metadata, `config.yaml` as a second configuration surface, secret and attribute redaction, and accounting for the auxiliary calls Hermes makes through a client that fires no hooks at all. The export path was rebuilt so every span id ships exactly once, and the per-turn flush budget dropped from 10s to 2s (ref: #4499).
+- Ingest now normalizes OpenAI Responses items into the GenAI vocabulary, so `output_text`, `function_call`, and `function_call_output` from any Responses-dialect instrumentation pair and render like every other conversation instead of reaching storage as unknown part types (ref: #4499).
+
+### Docs
+
+- Rewrote the Hermes telemetry page around the settings that changed: every option is now readable from the profile's `config.yaml` as well as the environment, time to first token requires `plugins.stream_reasoning_deltas`, and secret redaction is on by default. Added sections for running several agents in one project, memory, usage and cost, and privacy, and fixed the troubleshooting step that told you to confirm the plugin with `hermes plugins list`, which never works for a pip plugin (ref: #4499).
+
+## v0.3.84 - 2026-08-19
+
+### Web
+
+- List pages that sit under a chart or summary panel no longer scroll the table inside its own short box. `InfiniteTable` gained an opt-in external scroll mode where rows virtualize against a scroll container the page owns, so the panel and the table scroll as one section and the table header pins to the top once it reaches it. Rolled out to Sessions, Traces, Behaviors topics, Monitor incidents, and the Tools and Users lists, with the panel above pinned in place when the table scrolls sideways (ref: #4476).
+- Reworked the project detail page headers and controls into a shared section header, and cleaned up the surrounding chrome: the bordered `Tabs` variant no longer overflows its container at the small size, behavior view chips and hotkey badges follow the same sizing, and each key of a shortcut renders in its own square (ref: #4476).
+- Fixed the project switcher staying open, and painting over the modal, after clicking `Create new` (ref: #4476).
+
+### Signals
+
+- Flagger feedback now recovers from a transient job failure. Submitting a verdict published its fan-out with a permanent dedupe key, so one failed job silently shadowed every later publish and flaggers stopped being graded even though customer verdicts were stored. The fan-out and per-trace review jobs now use an expiring throttle, letting outbox redelivery retry them (ref: #4477).
+
+### Documentation
+
+- Rewrote the flagger documentation to match what ships: the four flagger groups, which ones use an LLM and which are deterministic, what each one does and does not flag, and that detection reads the whole session while the annotation lands on the trace where the problem appears. Refreshed the annotation overview, the effective-annotation guide, sampling, and the PM quick start alongside it (ref: #4481).
+
+## v0.3.83 - 2026-08-18
+
+### Signals
+
+- Signals that a flagger detected can now be graded. The detail header carries a one-shot thumbs-up/thumbs-down control; a thumbs-down requires a reason and offers `Save and ignore` to archive the signal in the same click. The verdict is recorded once and cannot be changed afterwards, and the control only appears on Latitude's own detections — a hand-written signal has no decision of ours behind it to grade (ref: #4472).
+- That verdict now travels back to the generations that produced the detection. Flagger scores record the trace of the classify call behind them, so submitting feedback annotates those exact generations inside the `latitude-flaggers` project, which then cluster into signals about a flagger that keeps mis-firing. Deterministic detections and cached generations carry no trace and are skipped (ref: #4472).
+- Discovered signals are no longer named by a model at creation. A candidate carries a deterministic placeholder built from its first occurrence's own words, and the real name and description are generated once at promotion, over the whole cluster. This fixes signals reaching production titled `description`, or described as the model explaining that one occurrence is not enough to identify a shared pattern (ref: #4471).
+- Promotion is now two steps: passing the evidence gate records the qualification, and promotion itself generates the summary before the signal becomes visible. A signal is therefore never visible carrying the raw sentence it was created from, and everything downstream, agent dispatch and Slack included, sees a fully named signal. A failed generation still promotes under the placeholder rather than leaving the signal invisible with nothing to retry it (ref: #4471).
+
+### Notifications
+
+- Raising a signal's priority now notifies the organization in-app, by email, and over Slack, with the person who made the edit excluded. Setting a priority for the first time counts as an increase; downgrades and clears never notify. The topic ships opt-in, because it fires on routine triage activity, so enable it under the Signals group to receive it (ref: #4474).
+- Notification topics can now declare their own default, which is what lets an opt-in topic stay silent across both email and Slack until it is enabled. Existing topics keep delivering by default (ref: #4474).
+
+### API and SDKs
+
+- Added `submitSignalFeedback` across the REST API, MCP, the TypeScript and Python SDKs, and the CLI (`latitude signals submit-feedback`), and `signals.get` now returns the submitted verdict. Published as SDK 9.10.0 and CLI 7.10.0 (ref: #4472).
+
+## v0.3.82 - 2026-08-17
+
+### Signals
+
+- Discovered signals now have to earn their place before anyone sees them. A signal opened by discovery stays hidden until distinct sessions back it up, against a threshold that scales with the project's session volume (floor of 2, capped at 15). Until it is promoted it stays out of lists, search, analytics and escalation, sends no notification and dispatches no agent. Promotion is one-way and every signal that already existed was backfilled as promoted, so nothing currently visible disappears (ref: #4407, #4465).
+- The `signal.discovered` notification and agent dispatch moved from creation to promotion, and the dispatch is now idempotent for the lifetime of the signal rather than per day, so a discovery can no longer open a second pull request (ref: #4465).
+
+### Notifications
+
+- Split the Monitors notification group into separate Signals and Monitors groups. Signals carries a checkbox per lifecycle event (discovered, escalating, regressed), Monitors stays a single switch, and both now offer the minimum-severity selector in email and Slack. Existing preferences and Slack routes were copied into both new groups, so delivery is unchanged until you edit them (ref: #4466).
+- Fixed Slack route topic checkboxes silently saving nothing, unsubscribe links in already-delivered emails failing on the retired `incidents` group, and two quick preference toggles landing out of order (ref: #4466).
+
+### Behaviors
+
+- Facet lenses now accumulate coverage across gardening passes instead of labelling only the sampled window. Each pass routes the facet's cached projections against its staged leaf centroids, so widening the date range on a facet view keeps adding sessions, with no extra LLM calls per pass (ref: #4419).
+
+### Scores
+
+- Hid failed live evaluations that matched no condition from the Scores tab and the negative Indicators count, where they were showing up as unlabeled thumbs-down. A failed evaluation that already owns a signal stays visible (ref: #4443).
+
 ## v0.3.81 - 2026-08-14
 
 ### Traces

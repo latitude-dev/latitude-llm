@@ -217,7 +217,7 @@ describe("SlackIntegrationRepositoryLive", () => {
     const updated = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* SlackIntegrationRepository
-        return yield* repo.updateRoutes(saved.id, "incidents", [
+        return yield* repo.updateRoutes(saved.id, "signals", [
           { channelId: "C1", channelName: "ops" },
           { channelId: "C2", channelName: "alerts" },
         ])
@@ -231,7 +231,7 @@ describe("SlackIntegrationRepositoryLive", () => {
         return yield* repo.findActiveByOrganizationId()
       }),
     )
-    expect(reread?.routes.incidents).toEqual([
+    expect(reread?.routes.signals).toEqual([
       { channelId: "C1", channelName: "ops" },
       { channelId: "C2", channelName: "alerts" },
     ])

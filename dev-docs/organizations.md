@@ -35,6 +35,16 @@ Organization scope is where reliability needs:
 - Users without an active organization are routed to `/welcome` for organization selection or onboarding.
 - `apps/api` and `apps/ingest` do not use browser sessions for auth; they use API-key context directly.
 
+## How organizations get created
+
+Three paths onto the same `organizations` table. Two of them also write the initial `members` row; bootstrap deliberately does not, and stays owner-less until the claim flow adopts it:
+
+1. **Signup / onboarding.** `auth.api.createOrganization` from `/welcome`, membership role hardcoded `"owner"`. The ordinary path.
+2. **Bootstrap** (`POST /v1/account/bootstrap`). An owner-less *temporary* org with `expires_at` set, adopted later through the claim flow or reaped. See [`api.md`](./api.md).
+3. **Partner provisioning** (`POST /v1/private/partners/:partnerId/accounts`). A signed request from a vetted partner creates the user, the organization, the owner membership, and the partner's OAuth grant in one admin-client transaction. `expires_at` is `null` — these are real accounts from birth, with nothing to claim. See [`partners.md`](./partners.md).
+
+Paths 2 and 3 write memberships directly rather than through Better Auth, so neither fires the `MemberJoined` hook. Path 3 does emit `OrganizationCreated`, matching onboarding.
+
 ## Tenancy
 
 Organization-scoped reliability data and all domain repositories still follow the existing tenancy model:

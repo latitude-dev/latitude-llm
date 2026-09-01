@@ -33,6 +33,9 @@ config:
   ingestUrl: ""
   temporalTaskQueue: latitude-workflows
   temporalMaxConcurrentActivityTasks: ""
+  # Days of telemetry kept before ClickHouse deletes it (max 3650). Stamped at ingest,
+  # so a change applies to newly ingested data only.
+  telemetryRetentionDays: 3650
   ingestTraceMaxPayloadBytes: 33554432
   ingestTraceMaxInFlightBytes: 67108864
   ingestTraceMaxConcurrentPayloads: 16

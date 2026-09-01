@@ -63,7 +63,15 @@ const passesGuardrails = (
   return null
 }
 
-const dispatchWindow = (date: Date): string => date.toISOString().slice(0, 10)
+/**
+ * Ledger window for the automatic triggers. A signal is discovered exactly once —
+ * `SignalPromoted` is latched — so that trigger carries no window and the ledger's
+ * unique key makes its dispatch permanently idempotent per config. Every other
+ * trigger can legitimately recur (a signal regresses, a monitor re-fires), so
+ * those stay day-scoped.
+ */
+const dispatchWindow = (trigger: AgentDispatchTrigger, date: Date): string =>
+  trigger === "signal.discovered" ? "once" : date.toISOString().slice(0, 10)
 
 const buildSendRequest = (input: {
   readonly config: EffectiveAgentDispatchConfig
@@ -79,7 +87,7 @@ const buildSendRequest = (input: {
     configId: input.config.id,
     trigger: input.trigger,
     sourceId: input.sourceId,
-    dispatchWindow: dispatchWindow(input.requestedAt),
+    dispatchWindow: dispatchWindow(input.trigger, input.requestedAt),
   })
   return {
     organizationId: input.config.organizationId,

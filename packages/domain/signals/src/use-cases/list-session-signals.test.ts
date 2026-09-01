@@ -28,10 +28,12 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   priority: null,
   centroid: createSignalCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
+  promotedAt: new Date("2026-03-01T00:00:00.000Z"),
   resolvedAt: null,
   ignoredAt: null,
   regressedAt: null,
   mutedAt: null,
+  feedback: null,
   deletedAt: null,
   createdAt: new Date("2026-03-01T00:00:00.000Z"),
   updatedAt: new Date("2026-03-01T00:00:00.000Z"),
@@ -117,6 +119,27 @@ describe("listSessionSignalsUseCase", () => {
       updatedAt: signal.updatedAt,
     })
     expect(result[0]?.traceIds).toEqual([traceId("a"), traceId("b")])
+  })
+
+  it("drops a rollup whose signal is still a candidate", async () => {
+    const candidate = makeSignal({ promotedAt: null })
+    const layer = buildLayer({
+      rollups: [
+        {
+          signalId: candidate.id,
+          occurrences: 4,
+          firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-02T00:00:00.000Z"),
+          traceIds: [traceId("a")],
+        },
+      ],
+      signals: [candidate],
+    })
+
+    const result = await Effect.runPromise(
+      listSessionSignalsUseCase({ organizationId, projectId, traceIds: [traceId("a")] }).pipe(Effect.provide(layer)),
+    )
+    expect(result).toEqual([])
   })
 
   it("drops a rollup whose signal is missing from Postgres", async () => {

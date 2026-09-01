@@ -40,7 +40,7 @@ import {
 import { createFakeSqlClient, createFakeStorageDisk } from "@domain/shared/testing"
 import { base64Decode } from "@repo/utils"
 import { Effect, Layer, Result } from "effect"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { decodeOtlpRequest, ingestSpansUseCase } from "./ingest-spans.ts"
 import { ingestSpansWithBillingUseCase } from "./ingest-spans-with-billing.ts"
 
@@ -656,6 +656,14 @@ describe("ingestSpansUseCase trace sampling", () => {
 })
 
 describe("ingestSpansWithBillingUseCase", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("checks billing before enqueueing spans", async () => {
     const { disk } = createFakeStorageDisk()
     const { publisher, published } = createFakeQueuePublisher()
@@ -708,9 +716,49 @@ describe("ingestSpansWithBillingUseCase", () => {
     }
     expect(published).toHaveLength(0)
   })
+
+  it("never blocks ingestion when the deployment does not enforce billing", async () => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "false")
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const { billingPeriods, layer } = createBillingLayer()
+
+    await Effect.runPromise(
+      billingPeriods
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: ORGANIZATION_ID,
+            planSlug: "free",
+            periodStart: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)),
+            periodEnd: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)),
+            includedCredits: 20_000,
+            consumedCredits: 20_000,
+          }),
+        )
+        .pipe(Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID }))),
+    )
+
+    await Effect.runPromise(
+      ingestSpansWithBillingUseCase(makeInput(buildOtlpJson(), { defaultProjectSlug: "primary" })).pipe(
+        Effect.provide(
+          Layer.mergeAll(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher), layer),
+        ),
+      ),
+    )
+
+    expect(published).toHaveLength(1)
+  })
 })
 
 describe("ingestSpansWithBillingUseCase sandbox path", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   const seedExhaustedFreePeriod = (billingPeriods: ReturnType<typeof createBillingLayer>["billingPeriods"]) =>
     Effect.runPromise(
       billingPeriods

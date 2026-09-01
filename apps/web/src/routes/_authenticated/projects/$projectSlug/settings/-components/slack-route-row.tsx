@@ -1,7 +1,8 @@
 import type { SlackRoute } from "@domain/integrations"
-import { NOTIFICATION_GROUP_META, type NotificationGroup } from "@domain/shared"
+import { admitsTopic, NOTIFICATION_GROUP_META, NOTIFICATION_TOPIC_META, type NotificationGroup } from "@domain/shared"
 import {
   Button,
+  Checkbox,
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
@@ -9,6 +10,7 @@ import {
   ComboboxItem,
   ComboboxList,
   ComboboxTrigger,
+  Label,
   Text,
 } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
@@ -65,11 +67,12 @@ export function SlackRouteRow({
 
   const pick = (option: ChannelOption) => {
     if (option.id === "") return onChange(null)
-    // Re-picking the channel keeps the configured severity threshold.
+    // Re-picking the channel keeps the configured filters.
     onChange({
       channelId: option.id,
       channelName: option.name,
       ...(route?.minSeverity ? { minSeverity: route.minSeverity } : {}),
+      ...(route?.topics ? { topics: route.topics } : {}),
     })
   }
 
@@ -136,7 +139,31 @@ export function SlackRouteRow({
           </Combobox>
         </div>
       </div>
-      {group === "incidents" && route ? (
+      {route && meta.topics.length > 0 ? (
+        <div className="flex flex-col gap-3 rounded-lg bg-muted/80 px-3 py-2.5">
+          {meta.topics.map((topic) => {
+            const topicMeta = NOTIFICATION_TOPIC_META[topic]
+            const topicId = `slack-route-${group}-${topic}`
+            return (
+              <div key={topic} className="flex flex-row items-start gap-3">
+                <Checkbox
+                  id={topicId}
+                  checked={admitsTopic(route.topics, topic)}
+                  disabled={disabled}
+                  onCheckedChange={(checked) =>
+                    onChange({ ...route, topics: { ...(route.topics ?? {}), [topic]: checked === true } })
+                  }
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <Label htmlFor={topicId}>{topicMeta.label}</Label>
+                  <Text.H6 color="foregroundMuted">{topicMeta.description}</Text.H6>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+      {route && meta.severityFiltered ? (
         <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-muted/80 px-3 py-2">
           <Text.H6 color="foregroundMuted" className="min-w-0 flex-1">
             Severity · {minSeverityHint(route.minSeverity ?? "low")}

@@ -12,12 +12,19 @@ import {
   type TraceId,
 } from "@domain/shared"
 import { createLogger } from "@repo/observability"
-import { and, desc, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { scores } from "../schema/scores.ts"
 
 const logger = createLogger("db-postgres/score-repository")
+
+type ReassignSignalQueryResult = {
+  readonly rows?: ReadonlyArray<{
+    readonly moved_count?: number
+    readonly earliest_created_at?: string | Date | null
+  }>
+}
 
 type RlsOrganizationQueryResult = {
   readonly rows?: ReadonlyArray<{
@@ -307,6 +314,58 @@ export const ScoreRepositoryLive = Layer.effect(
             .pipe(Effect.map((rows) => rows.length > 0))
         }),
 
+      reassignSignal: ({ projectId, fromSignalIds, toSignalId, updatedAt }) =>
+        Effect.gen(function* () {
+          if (fromSignalIds.length === 0) return { count: 0, earliestCreatedAt: null }
+          const sqlClient = yield* resolveSqlClient()
+          // Aggregated in a data-modifying CTE rather than through `RETURNING`:
+          // the promotion gate counts distinct sessions, but nothing caps the
+          // scores one session can carry, so a candidate thin enough to still be
+          // unpromoted can hold thousands of rows.
+          const result = yield* sqlClient.query((db, organizationId) =>
+            db.execute(sql`
+              WITH moved AS (
+                UPDATE ${scores}
+                SET signal_id = ${toSignalId}, updated_at = ${updatedAt}
+                WHERE ${and(
+                  eq(scores.organizationId, organizationId),
+                  eq(scores.projectId, projectId),
+                  inArray(scores.signalId, [...fromSignalIds]),
+                )}
+                RETURNING created_at
+              )
+              SELECT count(*)::int AS moved_count, min(created_at) AS earliest_created_at FROM moved
+            `),
+          )
+
+          const row = (result as unknown as ReassignSignalQueryResult).rows?.[0]
+          const earliest = row?.earliest_created_at
+          return {
+            count: row?.moved_count ?? 0,
+            earliestCreatedAt: earliest == null ? null : new Date(earliest),
+          }
+        }),
+
+      findEarliestCreatedAtBySignalId: ({ projectId, signalId }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select({ createdAt: scores.createdAt })
+              .from(scores)
+              .where(
+                and(
+                  eq(scores.organizationId, organizationId),
+                  eq(scores.projectId, projectId),
+                  eq(scores.signalId, signalId),
+                ),
+              )
+              .orderBy(scores.createdAt)
+              .limit(1),
+          )
+          return rows[0]?.createdAt ?? null
+        }),
+
       delete: (id: ScoreId) =>
         Effect.gen(function* () {
           const sqlClient = yield* resolveSqlClient()
@@ -447,15 +506,43 @@ export const ScoreRepositoryLive = Layer.effect(
             )
         }),
 
+      countDistinctSessionsBySignalId: ({ projectId, signalId, since }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                // Sessions are the evidence unit; a score without one stands in for
+                // itself so non-session instrumentation still counts exactly once.
+                sessions: sql<number>`count(distinct coalesce(nullif(${scores.sessionId}, ''), nullif(${scores.traceId}, ''), ${scores.id}))::int`,
+              })
+              .from(scores)
+              .where(
+                and(
+                  eq(scores.organizationId, sqlClient.organizationId),
+                  eq(scores.projectId, projectId),
+                  eq(scores.signalId, String(signalId)),
+                  isNull(scores.draftedAt),
+                  gte(scores.createdAt, since),
+                ),
+              ),
+          )
+
+          return rows[0]?.sessions ?? 0
+        }),
+
       listByTraceIds: ({
         projectId,
         traceIds,
         source,
+        signalId,
         options,
       }: {
         readonly projectId: ProjectId
         readonly traceIds: readonly TraceId[]
         readonly source?: ScoreSourceType
+        readonly signalId?: SignalId
         readonly options?: ScoreListOptions
       }) => {
         if (traceIds.length === 0) {
@@ -467,14 +554,12 @@ export const ScoreRepositoryLive = Layer.effect(
           })
         }
         const traceIdValues = traceIds.map((traceId) => String(traceId))
-        const combined =
-          source !== undefined
-            ? and(
-                eq(scores.projectId, projectId),
-                inArray(scores.traceId, traceIdValues),
-                eq(scores.sourceType, source),
-              )
-            : and(eq(scores.projectId, projectId), inArray(scores.traceId, traceIdValues))
+        const combined = and(
+          eq(scores.projectId, projectId),
+          inArray(scores.traceId, traceIdValues),
+          ...(source !== undefined ? [eq(scores.sourceType, source)] : []),
+          ...(signalId !== undefined ? [eq(scores.signalId, signalId)] : []),
+        )
         return list({
           baseWhere: combined ?? eq(scores.projectId, projectId),
           options,

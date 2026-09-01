@@ -7,6 +7,7 @@ export {
   provideAIMeteringScope,
   type RecordMeteredAIActionInput,
 } from "./ai-metering.ts"
+export { billingEnforcementEnabled, selfHostedRetentionDays } from "./config.ts"
 export {
   ACTION_CREDITS,
   BILLING_INCLUDED_CREDITS_PG_MAX,
@@ -27,7 +28,9 @@ export {
   ENTERPRISE_PLAN_CONFIG,
   FREE_PLAN_CONFIG,
   LLM_GENERATION_BILLING_MARGIN,
+  OVERRIDABLE_PLAN_SLUGS,
   OverageCreditUnit,
+  type OverridablePlanSlug,
   PLAN_CONFIGS,
   PLAN_SLUGS,
   type PlanConfig,
@@ -35,6 +38,9 @@ export {
   PRO_PLAN_CONFIG,
   persistedIncludedCreditsForPlan,
   SANDBOX_SPAN_RETENTION_DAYS,
+  SELF_HOSTED_PLAN_CONFIG,
+  SELF_HOSTED_RETENTION_DAYS_MAX,
+  SELF_HOSTED_RETENTION_DAYS_MIN,
   SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME,
   SELF_SERVE_PLAN_SLUGS,
   SEMANTIC_QUERY_BILLING_MARGIN,
@@ -61,6 +67,7 @@ export {
 } from "./entities/billing-usage-period.ts"
 export {
   AIMeteringRecordError,
+  BillingConfigurationError,
   InvalidBillingIdempotencyKeyError,
   NoCreditsRemainingError,
   NoSubscriptionFoundError,

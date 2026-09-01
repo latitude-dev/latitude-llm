@@ -1,7 +1,7 @@
 import { Button, Icon, Input, Text, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { ExternalLinkIcon, SearchIcon, UsersRoundIcon } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { TimeFilterDropdown } from "../../../../../components/time-filter-dropdown.tsx"
 import { useProjectUsers, useUsersOverview } from "../../../../../domains/end-users/end-users.collection.ts"
 import { allUsersMonitorTarget } from "../../../../../domains/monitors/monitor-target.ts"
@@ -89,6 +89,7 @@ function UsersPage() {
   })
   const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
   const [focusedUserId, setFocusedUserId] = useState<string | undefined>()
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useDebounce(
     () => {
@@ -197,30 +198,33 @@ function UsersPage() {
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
-        <div className="px-6">
-          <UsersAnalyticsPanel
-            overview={overview}
-            isLoading={overviewLoading}
-            rangeFromIso={overviewRange.fromIso}
-            rangeToIso={overviewRange.toIso}
-            isAllTime={tw.isAllTime}
-            onRangeSelect={tw.onBrushSelect}
+        <div ref={scrollAreaRef} className="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto">
+          <div className="px-6">
+            <UsersAnalyticsPanel
+              overview={overview}
+              isLoading={overviewLoading}
+              rangeFromIso={overviewRange.fromIso}
+              rangeToIso={overviewRange.toIso}
+              isAllTime={tw.isAllTime}
+              onRangeSelect={tw.onBrushSelect}
+            />
+          </div>
+          <UsersView
+            users={users}
+            isLoading={showSkeletons}
+            infiniteScroll={infiniteScroll}
+            sorting={sorting}
+            totalCount={totalCount}
+            activityBucketSeconds={activityBucketSeconds ?? trendBucketSeconds}
+            costRollup={costRollup}
+            visibleColumnIds={columnSettings.visibleColumnIds}
+            onSortChange={(next) => setRawSorting(serializeSorting(next))}
+            projectSlug={project.slug}
+            focusedUserId={focusedUserId}
+            onFocusedUserChange={setFocusedUserId}
+            scrollContainerRef={scrollAreaRef}
           />
         </div>
-        <UsersView
-          users={users}
-          isLoading={showSkeletons}
-          infiniteScroll={infiniteScroll}
-          sorting={sorting}
-          totalCount={totalCount}
-          activityBucketSeconds={activityBucketSeconds ?? trendBucketSeconds}
-          costRollup={costRollup}
-          visibleColumnIds={columnSettings.visibleColumnIds}
-          onSortChange={(next) => setRawSorting(serializeSorting(next))}
-          projectSlug={project.slug}
-          focusedUserId={focusedUserId}
-          onFocusedUserChange={setFocusedUserId}
-        />
       </Layout.Content>
     </Layout>
   )

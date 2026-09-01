@@ -134,12 +134,8 @@ def _map_trace_to_run(
     )
 
     closed: List[_Span] = []
-    closed.extend(
-        _llm_spans(trace_id, root.span_id, calls, messages, tags, metadata, model, resolved_session)
-    )
-    closed.extend(
-        _tool_spans(trace_id, root.span_id, messages, tags, metadata, start_ms, end_ms, resolved_session)
-    )
+    closed.extend(_llm_spans(trace_id, root.span_id, calls, messages, tags, metadata, model, resolved_session))
+    closed.extend(_tool_spans(trace_id, root.span_id, messages, tags, metadata, start_ms, end_ms, resolved_session))
 
     run = _Run(trace_id=trace_id, root=root, closed=closed)
     if rewards:

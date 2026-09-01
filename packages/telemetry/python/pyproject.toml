@@ -29,7 +29,7 @@ dependencies = [
     "openinference-instrumentation-llama-index==4.4.2",
     "opentelemetry-instrumentation-mistralai==0.61.0",
     "opentelemetry-instrumentation-ollama==0.61.0",
-    "openinference-instrumentation-openai==0.1.52",
+    "openinference-instrumentation-openai==0.1.56",
     "openinference-instrumentation-openai-agents==1.6.1",
     "opentelemetry-instrumentation-replicate==0.61.0",
     "opentelemetry-instrumentation-sagemaker==0.62.1",
@@ -48,8 +48,8 @@ dev = [
     "pytest-xdist==3.8.0",
     "pytest==9.1.1",
     "pyright==1.1.411",
-    "ruff==0.15.22",
-    "sh==2.3.0",
+    "ruff==0.16.4",
+    "sh==2.4.0",
     "openai==2.46.0",
     # Host SDK for the openai-agents integration (example/tests only). The
     # instrumentor (openinference-instrumentation-openai-agents) is the runtime
@@ -58,7 +58,7 @@ dev = [
     # Note: 0.41.0 onwards made Prompt Caching generally available
     # which is not compatible with the instrumentation
     "anthropic==0.117.0",
-    "litellm[proxy]==1.88.1",
+    "litellm[proxy]==1.98.0",
     # Pinned <2.9.0: openinference-instrumentation-google-genai imports the
     # google.genai._interactions module, which google-genai removed in 2.9.0.
     "google-genai==2.8.0",

@@ -13,6 +13,7 @@ import { SignalLifecycleActions } from "../-components/signal-lifecycle-actions.
 import { SignalLifecycleStatuses } from "../-components/signal-lifecycle-statuses.tsx"
 import { SignalRenameModal } from "../-components/signal-rename-modal.tsx"
 import { SignalExamples } from "./-components/signal-examples.tsx"
+import { SignalFeedback } from "./-components/signal-feedback.tsx"
 import { SignalGithubReferencesPill } from "./-components/signal-github-references.tsx"
 import { SignalNeighborNav } from "./-components/signal-neighbor-nav.tsx"
 import { SignalPatterns } from "./-components/signal-patterns.tsx"
@@ -80,21 +81,21 @@ function SignalDetailPage() {
         <Layout.Header
           title={
             <div className="flex min-w-0 flex-col gap-1.5">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <Tooltip
                   asChild
                   side="bottom"
                   trigger={
-                    <Button asChild variant="ghost" className="h-7 w-7 p-0" aria-label="Back to signals">
+                    <Button asChild variant="ghost" size="sm" className="w-fit" aria-label="Back to signals">
                       <Link to="/projects/$projectSlug/signals" params={{ projectSlug }}>
-                        <ArrowLeftIcon className="h-4 w-4 text-muted-foreground" />
+                        <Icon icon={ArrowLeftIcon} size="sm" />
+                        Back
                       </Link>
                     </Button>
                   }
                 >
                   Back to signals
                 </Tooltip>
-                <div className="h-4 w-px bg-border" />
                 <SignalNeighborNav
                   projectId={project.id}
                   projectSlug={projectSlug}
@@ -159,6 +160,18 @@ function SignalDetailPage() {
               <SignalTriageControls projectId={project.id} signalId={signalId} compact />
               <SignalLifecycleActions projectId={project.id} signalId={signalId} compact />
             </>
+          }
+          titleAside={
+            // Only a flagger's own detections are gradable — nothing of ours decided
+            // to raise a hand-written or annotation-born signal.
+            signal?.source === "flagger" ? (
+              <SignalFeedback
+                projectId={project.id}
+                signalId={signalId}
+                feedback={signal.feedback}
+                disabled={isLoading}
+              />
+            ) : undefined
           }
         />
         <SignalDetailBody

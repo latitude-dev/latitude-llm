@@ -107,7 +107,7 @@ const customMessagePayload = {
   link: "https://docs.example.com",
 }
 
-const makeSignal = (): Signal => {
+const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
   const now = new Date("2026-06-17T10:00:00.000Z")
   return {
     id: SIGNAL,
@@ -128,12 +128,15 @@ const makeSignal = (): Signal => {
       weights: { annotation: 1, custom: 0, evaluation: 0 },
     },
     clusteredAt: now,
+    promotedAt: now,
     resolvedAt: null,
     ignoredAt: null,
     regressedAt: null,
     mutedAt: null,
+    feedback: null,
     createdAt: now,
     updatedAt: now,
+    ...overrides,
   }
 }
 
@@ -237,6 +240,95 @@ describe("dispatchSlackNotificationUseCase", () => {
         }),
       ]),
     })
+  })
+
+  it("renders a priority change as a labelled transition", async () => {
+    const messenger = fakeMessenger()
+    const layer = InMemorySlackDeliveryRepositoryLive()
+    const { repository } = createFakeSignalRepository([makeSignal()])
+
+    const outcome = await Effect.runPromise(
+      dispatchSlackNotificationUseCase({
+        integrationId: INTEGRATION,
+        botToken: "xoxb-test",
+        channelId: "C123",
+        kind: "signal.reprioritized",
+        payload: {
+          signalId: SIGNAL,
+          actorUserId: "uuuuuuuuuuuuuuuuuuuuuuuu",
+          reprioritizedAt: "2026-06-17T10:00:00.000Z",
+          priority: "urgent",
+          previousPriority: "medium",
+          severity: "urgent",
+        },
+        idempotencyKey: `signal.reprioritized:${SIGNAL}:2026-06-17T10:00:00.000Z`,
+        context: ctx,
+        messenger,
+      }).pipe(
+        Effect.provide(layer),
+        Effect.provide(Layer.succeed(SignalRepository, repository)),
+        Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopUserRepository),
+        Effect.provide(NoopSqlClient),
+        Effect.provide(LiveOrg),
+      ),
+    )
+
+    expect(outcome.status).toBe("delivered")
+    expect(messenger.calls[0]).toMatchObject({
+      text: "Priority raised on Bad JSON output in Frontend.",
+      blocks: expect.arrayContaining([
+        expect.objectContaining({
+          text: expect.objectContaining({
+            text: "Priority raised on *<https://app.example.com/projects/frontend/signals/bad-json-output|Bad JSON output>*: \u{1F7E1} Medium → \u{1F534} Urgent.",
+          }),
+        }),
+      ]),
+    })
+  })
+
+  it("escapes mrkdwn in the signal name so a `>` cannot close the link early", async () => {
+    const messenger = fakeMessenger()
+    const layer = InMemorySlackDeliveryRepositoryLive()
+    const { repository } = createFakeSignalRepository([makeSignal({ name: "Tool <output> breaks & retries" })])
+
+    await Effect.runPromise(
+      dispatchSlackNotificationUseCase({
+        integrationId: INTEGRATION,
+        botToken: "xoxb-test",
+        channelId: "C123",
+        kind: "signal.reprioritized",
+        payload: {
+          signalId: SIGNAL,
+          actorUserId: "uuuuuuuuuuuuuuuuuuuuuuuu",
+          reprioritizedAt: "2026-06-17T10:00:00.000Z",
+          priority: "urgent",
+          previousPriority: "medium",
+          severity: "urgent",
+        },
+        idempotencyKey: `signal.reprioritized:${SIGNAL}:escaped`,
+        context: ctx,
+        messenger,
+      }).pipe(
+        Effect.provide(layer),
+        Effect.provide(Layer.succeed(SignalRepository, repository)),
+        Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopUserRepository),
+        Effect.provide(NoopSqlClient),
+        Effect.provide(LiveOrg),
+      ),
+    )
+
+    expect(messenger.calls[0]).toMatchObject({
+      blocks: expect.arrayContaining([
+        expect.objectContaining({
+          text: expect.objectContaining({
+            text: expect.stringContaining("Tool &lt;output&gt; breaks &amp; retries"),
+          }),
+        }),
+      ]),
+    })
+    expect(JSON.stringify(messenger.calls[0])).not.toContain("<output>")
   })
 
   it("short-circuits on second dispatch with the same idempotency + channel", async () => {

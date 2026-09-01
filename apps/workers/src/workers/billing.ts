@@ -32,8 +32,8 @@ interface RecordTraceUsageBatchPayload {
   readonly organizationId: string
   readonly projectId: string
   readonly traceIds: readonly string[]
-  readonly planSlug: "free" | "pro" | "enterprise"
-  readonly planSource: "override" | "subscription" | "free-fallback"
+  readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+  readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   readonly periodStart: string
   readonly periodEnd: string
   readonly includedCredits: number
@@ -47,8 +47,8 @@ interface RecordBillableActionPayload {
   readonly action: "trace" | "eval-scan" | "semantic-query" | "llm-call"
   readonly idempotencyKey: string
   readonly context: {
-    readonly planSlug: "free" | "pro" | "enterprise"
-    readonly planSource: "override" | "subscription" | "free-fallback"
+    readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+    readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
     readonly periodStart: string
     readonly periodEnd: string
     readonly includedCredits: number

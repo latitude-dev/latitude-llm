@@ -1,13 +1,20 @@
-import { type AlertSeverity, alertSeveritySchema, meetsMinSeverity, type NotificationPreferences } from "@domain/shared"
-import { groupOf, type NotificationKind } from "./notification.ts"
+import {
+  type AlertSeverity,
+  admitsTopic,
+  alertSeveritySchema,
+  meetsMinSeverity,
+  type NotificationPreferences,
+} from "@domain/shared"
+import { type NotificationKind, routeOf } from "./notification.ts"
 
 /**
- * Resolves whether to send an email for a given notification kind, taking
- * the user's current preferences into account. Missing prefs default to
- * `true` — this is the opt-out model agreed at design time. When the
- * notification carries an incident `severity`, the group's optional
- * `emailMinSeverity` threshold applies progressively (e.g. `medium` admits
- * medium and high); a missing threshold admits everything.
+ * Resolves whether to send an email for a given notification, taking the
+ * user's current preferences into account. Missing prefs default to `true`
+ * — this is the opt-out model agreed at design time. Three gates apply in
+ * order: the group's own switch, the per-topic switch for groups that have
+ * sub-toggles, and the group's optional `emailMinSeverity` threshold, which
+ * applies progressively (e.g. `medium` admits medium and high) to payloads
+ * that carry a severity.
  *
  * `NotificationPreferences` itself lives in `@domain/shared` so that the
  * user entity can carry it without a circular dep on `@domain/notifications`.
@@ -15,11 +22,14 @@ import { groupOf, type NotificationKind } from "./notification.ts"
 export const shouldSendEmail = (
   prefs: NotificationPreferences | null | undefined,
   kind: NotificationKind,
-  severity?: AlertSeverity,
+  payload: Record<string, unknown>,
 ): boolean => {
-  const channel = prefs?.[groupOf(kind)]
+  const { group, topic } = routeOf(kind, payload)
+  const channel = prefs?.[group]
   if (!(channel?.email ?? true)) return false
+  if (!admitsTopic(channel?.emailTopics, topic)) return false
   const minimum = channel?.emailMinSeverity
+  const severity = severityFromPayload(payload)
   if (!minimum || severity === undefined) return true
   return meetsMinSeverity(severity, minimum)
 }
@@ -30,7 +40,7 @@ export const shouldSendEmail = (
  * kinds (wrapped reports, announcements) return `undefined` and are never
  * severity-filtered.
  */
-export const severityFromPayload = (payload: Record<string, unknown>): AlertSeverity | undefined => {
+const severityFromPayload = (payload: Record<string, unknown>): AlertSeverity | undefined => {
   const parsed = alertSeveritySchema.safeParse(payload.severity)
   return parsed.success ? parsed.data : undefined
 }

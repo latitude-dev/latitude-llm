@@ -5,6 +5,7 @@ import {
   type FilterSet,
   OrganizationId,
   ProjectId,
+  type SessionId,
   TaxonomyClusterId,
   TaxonomyRunId,
 } from "@domain/shared"
@@ -14,6 +15,7 @@ import {
   CustomBehaviorStatus,
   customBehaviorFilterSetHasConditions,
   emitLineageUseCase,
+  FacetProjectionRepository,
   type HierarchicalTaxonomyPlan,
   isDisplayableTaxonomyName,
   measureTaxonomyNameQualityUseCase,
@@ -426,13 +428,18 @@ const withCustomBehaviorClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
     withClickHouse(TaxonomyViewAssignmentRepositoryLive, getClickhouseClient(), OrganizationId(organizationId)),
   )
 
-// Scoped full-window reassignment reads the global taxonomy window (filtered by
-// the behavior's sessions) and writes the scoped taxonomy_view_assignments
-// slice, so it needs both ClickHouse repositories.
+// Scoped full-window reassignment reads its window (the global taxonomy window
+// filtered by the behavior's sessions, or the facet's projection cache) and
+// writes the scoped taxonomy_view_assignments slice, so it needs all three
+// ClickHouse repositories.
 const withScopedReassignClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(
     withClickHouse(
-      Layer.mergeAll(TaxonomyObservationRepositoryLive, TaxonomyViewAssignmentRepositoryLive),
+      Layer.mergeAll(
+        TaxonomyObservationRepositoryLive,
+        TaxonomyViewAssignmentRepositoryLive,
+        FacetProjectionRepositoryLive,
+      ),
       getClickhouseClient(),
       OrganizationId(organizationId),
     ),
@@ -821,6 +828,15 @@ const planLeaves = (plan: StoredGardenTaxonomyPlan): ReassignmentLeaf[] =>
 // those up after the swap). More than this means the bulk write did not land.
 const STAGING_SNAPSHOT_STRAGGLER_FRACTION = 0.05
 
+// What the write needs from a window row once routing is done, in either
+// embedding space — so the observation window and the projection window are
+// interchangeable to everything downstream of the router.
+interface ReassignmentWindowRow {
+  readonly observationId: string
+  readonly sessionId: SessionId
+  readonly startTime: Date
+}
+
 // Shared kernel of both full-window reassignment targets: read the bounded live
 // window (optionally scoped to the behavior's sessions) and route every row to
 // its nearest staging leaf. The caller maps the routed assignments onto its own
@@ -828,12 +844,47 @@ const STAGING_SNAPSHOT_STRAGGLER_FRACTION = 0.05
 const routeWindowToStagingLeaves = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
     const observations = yield* TaxonomyObservationRepository
-    const window = yield* observations.listWindowForReassignment({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
-      ...(input.filterSet ? { filterSet: input.filterSet } : {}),
-    })
+    const window: readonly (ReassignmentWindowRow & { readonly embedding: readonly number[] })[] =
+      yield* observations.listWindowForReassignment({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+        ...(input.filterSet ? { filterSet: input.filterSet } : {}),
+      })
+    const routed = routeObservationsToLeaves(
+      window.map((row) => ({ observationId: row.observationId, embedding: row.embedding })),
+      planLeaves(plan),
+    )
+    return { window, routed }
+  })
+
+/**
+ * The facet analogue: route the facet's cached PROJECTIONS, not the observation
+ * window. A facet's leaf centroids were built from projection embeddings, so
+ * comparing observation embeddings against them would be a cosine between two
+ * unrelated spaces. Both sides are normalized at write time
+ * (`extract-facet-projections` normalizes before persisting, exactly as the
+ * observation path does), which is what `cosineSimilarityNormalized` assumes.
+ *
+ * This is where the coverage win lands: extraction is cached per session and
+ * never invalidated, so the window is the union of every pass, not the 7-day
+ * sample. Cost is unchanged — nearest-centroid dot products, no LLM call.
+ */
+const routeProjectionWindowToStagingLeaves = (
+  input: GardenTaxonomyReassignObservationsInput,
+  plan: StoredGardenTaxonomyPlan,
+  facetId: FacetId,
+) =>
+  Effect.gen(function* () {
+    const projections = yield* FacetProjectionRepository
+    const window: readonly (ReassignmentWindowRow & { readonly embedding: readonly number[] })[] =
+      yield* projections.listWindowForReassignment({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        facetId,
+        limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+        ...(input.filterSet ? { filterSet: input.filterSet } : {}),
+      })
     const routed = routeObservationsToLeaves(
       window.map((row) => ({ observationId: row.observationId, embedding: row.embedding })),
       planLeaves(plan),
@@ -879,10 +930,20 @@ const reassignFullWindowGlobal = (input: GardenTaxonomyReassignObservationsInput
     return { observationsReassigned: assignments.length, windowSize: window.length }
   }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
 
-const reassignFullWindowScoped = (input: GardenTaxonomyReassignObservationsInput, plan: StoredGardenTaxonomyPlan) =>
+// The view slice's full-window writer. A cohort routes the observation window; a
+// facet routes its projection cache instead — the window source is the only thing
+// the two have that differs, and the leaf space follows it.
+const reassignFullWindowScoped = (
+  input: GardenTaxonomyReassignObservationsInput,
+  plan: StoredGardenTaxonomyPlan,
+  customBehaviorId: CustomBehaviorId,
+) =>
   Effect.gen(function* () {
     const assignmentsRepo = yield* TaxonomyViewAssignmentRepository
-    const { window, routed } = yield* routeWindowToStagingLeaves(input, plan)
+    const facetId = plan.facetId == null ? null : FacetId(plan.facetId)
+    const { window, routed } = yield* facetId === null
+      ? routeWindowToStagingLeaves(input, plan)
+      : routeProjectionWindowToStagingLeaves(input, plan, facetId)
     // Correlate routed results back to window rows for the slice's sessionId/startTime.
     const routedById = new Map(routed.map((assignment) => [assignment.observationId, assignment] as const))
     const now = new Date(input.now)
@@ -893,8 +954,8 @@ const reassignFullWindowScoped = (input: GardenTaxonomyReassignObservationsInput
         {
           organizationId: OrganizationId(input.organizationId),
           projectId: ProjectId(input.projectId),
-          customBehaviorId: CustomBehaviorId(plan.customBehaviorId as string),
-          facetId: null,
+          customBehaviorId,
+          facetId,
           observationId: row.observationId,
           sessionId: row.sessionId,
           assignedClusterId: routed.assignedClusterId,
@@ -913,28 +974,52 @@ const reassignFullWindowScoped = (input: GardenTaxonomyReassignObservationsInput
     return { observationsReassigned: assignments.length, windowSize: window.length }
   }).pipe((effect) => withScopedReassignClickHouse(effect, input.organizationId))
 
+/**
+ * Where this plan's assignments go, decided once and read by both the reassign
+ * and the catch-up pass.
+ *
+ * Being a view is asked BEFORE the staging-leaves question, and that ordering is
+ * load-bearing: only the whole-project topic tree may touch
+ * `taxonomy_observations.assigned_cluster_id`, and a view that fell through to a
+ * global branch would overwrite the shared topic tree's assignments with its own
+ * cluster ids. A view with no behavior has no slice row to write either (the
+ * slice is keyed by behavior), so it takes no full-window path at all rather than
+ * the global one.
+ */
+type ReassignmentTarget =
+  | { readonly kind: "fullWindowScoped"; readonly customBehaviorId: CustomBehaviorId }
+  | { readonly kind: "fullWindowGlobal" }
+  | { readonly kind: "sampleScoped" }
+  | { readonly kind: "sampleGlobal" }
+
+const reassignmentTarget = (plan: StoredGardenTaxonomyPlan): ReassignmentTarget => {
+  // A plan staged by the pre-unification code has no `customBehaviorId` key
+  // (undefined) — a nullish check keeps those, and every global run, on the
+  // observation-reassign branch; only a real behavior id routes to the slice.
+  const isView = plan.customBehaviorId != null || plan.facetId != null
+  if (!planHasStagingLeaves(plan)) return { kind: isView ? "sampleScoped" : "sampleGlobal" }
+  if (!isView) return { kind: "fullWindowGlobal" }
+  return plan.customBehaviorId == null
+    ? { kind: "sampleScoped" }
+    : { kind: "fullWindowScoped", customBehaviorId: CustomBehaviorId(plan.customBehaviorId) }
+}
+
 export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomyReassignObservationsInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow reassign observations",
     input,
-    // A plan staged by the pre-unification code has no `customBehaviorId` key
-    // (undefined) — a truthy check keeps those, and every global run, on the
-    // observation-reassign branch; only a real behavior id routes to the slice.
-    // Off does sample-only reassignment (byte-identical); adaptive routes the
-    // full bounded live window to the staging leaves.
+    // Sample-only reassignment writes what the plan already computed; the
+    // full-window paths route their whole window to the staging leaves.
     Effect.gen(function* () {
       const plan = yield* loadGardenTaxonomyPlan(input)
-      // Any view (a cohort OR a facet) writes the view-assignment slice; only
-      // the whole-project topic tree reassigns the inline column. Facet plans are
-      // always off-mode (no staging leaves), so they take the sample-only branch.
-      const isView = plan.customBehaviorId != null || plan.facetId != null
-      const reassigned = yield* planHasStagingLeaves(plan)
-        ? plan.customBehaviorId
-          ? reassignFullWindowScoped(input, plan)
-          : reassignFullWindowGlobal(input, plan)
-        : isView
-          ? reassignScopedAssignments(input, plan)
-          : reassignGlobalObservations(input, plan)
+      const target = reassignmentTarget(plan)
+      const reassigned = yield* target.kind === "fullWindowScoped"
+        ? reassignFullWindowScoped(input, plan, target.customBehaviorId)
+        : target.kind === "fullWindowGlobal"
+          ? reassignFullWindowGlobal(input, plan)
+          : target.kind === "sampleScoped"
+            ? reassignScopedAssignments(input, plan)
+            : reassignGlobalObservations(input, plan)
       // Publish here, not one activity later: the write above moved the counts the
       // Behaviours read drives visibility from onto the staged tree, so anything
       // between it and the swap is a window where neither tree is visible. The
@@ -1041,16 +1126,22 @@ const catchUpGlobal = (input: GardenTaxonomyDeprecateClustersInput, plan: Stored
     return assignments.length
   }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId))
 
-// Adaptive: confirm publication (a no-op when the reassign activity already
-// swapped), then run one bounded catch-up pass for observations indexed during
-// reassignment.
+// Confirm publication (a no-op when the reassign activity already swapped), then
+// run one bounded catch-up pass for rows indexed during reassignment. The target
+// is resolved the same way as the reassign pass, so a facet catches up in
+// projection space too — skipping it here would leave coverage correct at
+// reassign time and stale the moment the swap landed.
 const swapAndCatchUp = (input: GardenTaxonomyDeprecateClustersInput, plan: StoredGardenTaxonomyPlan) =>
   Effect.gen(function* () {
     const published = yield* publishStagedTree(input, plan)
+    const target = reassignmentTarget(plan)
 
-    const caughtUp = plan.customBehaviorId
-      ? (yield* reassignFullWindowScoped(input, plan)).observationsReassigned
-      : yield* catchUpGlobal(input, plan)
+    const caughtUp =
+      target.kind === "fullWindowScoped"
+        ? (yield* reassignFullWindowScoped(input, plan, target.customBehaviorId)).observationsReassigned
+        : target.kind === "fullWindowGlobal"
+          ? yield* catchUpGlobal(input, plan)
+          : 0
 
     return { ...published, caughtUp }
   })
