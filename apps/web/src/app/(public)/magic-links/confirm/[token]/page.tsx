@@ -1,40 +1,19 @@
-'use client'
+import { env } from '@latitude-data/env'
 
-import { use } from 'react'
+import ConfirmMagicLink from './ConfirmMagicLink'
 
-import { useOnce } from '$/hooks/useMount'
-import { confirmMagicLinkTokenAction } from '$/actions/magicLinkTokens/confirm'
-import { FocusLayout } from '$/components/layouts'
-import { ShutdownBanner } from '$/components/ShutdownBanner'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
-
-export default function ConfirmMagicLink({
+export default function ConfirmMagicLinkPage({
   params,
   searchParams,
 }: {
   params: Promise<{ token: string }>
   searchParams: Promise<{ returnTo?: string }>
 }) {
-  const { token } = use(params)
-  const { returnTo } = use(searchParams)
-  const { execute } = useLatitudeAction(confirmMagicLinkTokenAction, {
-    onSuccess: () => {}, // We don't want the default toast message in this case
-  })
-
-  useOnce(() => {
-    setTimeout(() => execute({ token, returnTo }), 1000)
-  })
-
   return (
-    <FocusLayout
-      banner={<ShutdownBanner />}
-      header={
-        <FocusHeader
-          title='You are in!'
-          description='In a few seconds you will be redirected to your workspace.'
-        />
-      }
+    <ConfirmMagicLink
+      params={params}
+      searchParams={searchParams}
+      isCloud={!!env.LATITUDE_CLOUD}
     />
   )
 }

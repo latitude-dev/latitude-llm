@@ -27,7 +27,7 @@ export default function AppLayout({
         'overflow-y-auto custom-scrollbar': scrollable,
       })}
     >
-      <ShutdownBanner />
+      {isCloud ? <ShutdownBanner /> : null}
       <DocumentationProvider>
         <AppHeader
           currentUser={currentUser}

@@ -36,7 +36,7 @@ export default async function SetupPage({
     <>
       <GoogleTagManager />
       <FocusLayout
-        banner={<ShutdownBanner />}
+        banner={env.LATITUDE_CLOUD ? <ShutdownBanner /> : null}
         header={
           <FocusHeader
             title='Create your Latitude account'

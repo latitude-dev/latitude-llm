@@ -10,17 +10,17 @@ export function ShutdownBanner() {
       title='Latitude v1 is shutting down'
       description={
         <span>
-          Latitude v1 will shut down on October 31, 2026. Please{' '}
+          Latitude v1 will shut down on October 31, 2026.{' '}
           <Text.H5 asChild underline color='warningMutedForeground'>
             <a href={LATITUDE_V2_URL} target='_blank' rel='noreferrer'>
-              migrate to Latitude v2
+              Migrate to Latitude v2
             </a>
           </Text.H5>
           , or{' '}
           <Text.H5 asChild underline color='warningMutedForeground'>
             <a href={`mailto:${LATITUDE_EMAIL}`}>contact support</a>
-          </Text.H5>{' '}
-          for more information.
+          </Text.H5>
+          .
         </span>
       }
     />
