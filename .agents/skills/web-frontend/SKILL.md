@@ -7,11 +7,17 @@ description: apps/web UI — routes, @repo/ui, TanStack Start server functions a
 
 **When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, **navigation (`Link` vs `useNavigate`)**, forms (**`useForm`** with **`createFormSubmitHandler`** + **`fieldErrorsAsStrings`** when Zod validation errors should appear on fields), Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.
 
-## Legacy UI reference
+## Required design context
 
-- Before building new UI, inspect the old v1 UI/components and product patterns as a reference when relevant.
-- Reuse as much as possible when the old implementation is still solid.
-- Do not copy v1 UI blindly; review it critically and improve it to match v2 conventions, architecture, and quality expectations when needed.
+Before designing or editing any user-facing UI, read the root [`design.md`](../../../design.md). It defines the Latitude product UI rules for reuse-first discovery, composition, hierarchy, spacing, actions, responsive behavior, and route versus modal versus drawer decisions.
+
+Treat `packages/ui/src/components/`, `packages/ui/src/tokens/`, the live `apps/design-system` inventory, and adjacent `apps/web` routes as the implementation source of truth. Search for an existing component and a comparable in-product pattern before creating a component, introducing custom styling, or adding a new token. Follow `design.md` when deciding whether new UI is justified; follow this skill for the required React, TanStack, route, form, and component APIs.
+
+## Existing V2 UI reference
+
+- Before building new UI, inspect comparable V2 routes and components in `apps/web/src/routes/` and `packages/ui/src/components/`.
+- Reuse the closest V2 interaction and composition pattern when it is solid; preserve consistency across the active product rather than recreating the pattern locally.
+- Treat the V2 application and `apps/design-system` as the visual and behavioral reference. Do not use V1 as a default source of UI guidance.
 
 ## React 19
 
