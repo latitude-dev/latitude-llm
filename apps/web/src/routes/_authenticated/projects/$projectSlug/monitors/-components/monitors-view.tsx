@@ -249,7 +249,7 @@ export function MonitorsView({
           monitor={row.monitor}
           onOpenSearch={(slug) =>
             void navigate({
-              to: "/projects/$projectSlug/sessions",
+              to: "/projects/$projectSlug",
               params: { projectSlug },
               search: { savedSearch: slug },
             })

@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { BreadcrumbText } from "../../-components/breadcrumb-ui.tsx"
-import { ProjectHomePage } from "./-components/project-home-page.tsx"
+import { ProjectExplorer } from "./-components/project-explorer.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
   staticData: {
-    breadcrumb: () => <BreadcrumbText variant="current">Home</BreadcrumbText>,
+    breadcrumb: () => <BreadcrumbText variant="current">Sessions</BreadcrumbText>,
   },
-  component: ProjectHomeRoute,
+  component: SessionsPage,
 })
 
-function ProjectHomeRoute() {
-  return <ProjectHomePage />
+function SessionsPage() {
+  const { projectSlug } = Route.useParams()
+  return <ProjectExplorer projectSlug={projectSlug} />
 }
