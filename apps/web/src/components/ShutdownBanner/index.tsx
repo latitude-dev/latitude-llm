@@ -1,7 +1,4 @@
-import {
-  LATITUDE_EMAIL,
-  LATITUDE_V2_URL,
-} from '@latitude-data/core/constants'
+import { LATITUDE_EMAIL, LATITUDE_V2_URL } from '@latitude-data/core/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
