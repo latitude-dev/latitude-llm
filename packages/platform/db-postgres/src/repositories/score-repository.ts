@@ -745,6 +745,35 @@ export const ScoreRepositoryLive = Layer.effect(
             })
             .pipe(Effect.map((rows) => rows.map((row) => row.slug)))
         }),
+      listFlaggerSlugSampleBySignalId: ({ projectId, signalId }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select({
+                  slug: sql<string | null>`case
+                    when ${scores.sourceType} = 'annotation' and ${scores.sourceId} = 'SYSTEM'
+                    then nullif(${scores.metadata}->>'flaggerSlug', '')
+                    else null
+                  end`.as("slug"),
+                })
+                .from(scores)
+                .where(
+                  and(
+                    eq(scores.organizationId, organizationId),
+                    eq(scores.projectId, projectId),
+                    eq(scores.signalId, signalId as string),
+                    isNull(scores.draftedAt),
+                    eq(scores.passed, false),
+                    eq(scores.errored, false),
+                  ),
+                )
+                .orderBy(desc(scores.createdAt), desc(scores.id))
+                .limit(SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT),
+            )
+            .pipe(Effect.map((rows) => rows.map((row) => row.slug)))
+        }),
     }
   }),
 )

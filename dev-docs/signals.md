@@ -41,6 +41,8 @@ Signals and live taxonomy both use `@domain/shared/centroid` for decayed weighte
 
 The database default is `[]`. Signal creation paths initialize the field explicitly, and rows that predate the column receive the empty list from the schema migration. Historical signals are not classified by a model or static mapping.
 
+Promotion assigns `scoreEvidence` once. It samples up to 200 of the signal's newest published, failed, non-errored scores. A mapped system flagger supplies the static roles only when its slug occurs in a strict majority of the whole sample; scores with missing, unknown, or unmapped slugs remain in the denominator. Without a dominant mapped flagger, the name-and-description generation call also classifies the evidence roles. If generation is disabled, fails, or returns no roles, promotion stores `[]`. Later detail refreshes update only the name and description, so they cannot reclassify the signal.
+
 ## Background Tasks
 
 Signal discovery uses the existing Temporal-backed workflow abstraction in `apps/workflows`, while queue tasks in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers` continue to dispatch the upstream single-step triggers, including the throttled `signals:refresh` task.

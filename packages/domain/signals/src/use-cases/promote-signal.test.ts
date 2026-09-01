@@ -18,7 +18,7 @@ import { createFakeSessionRepository } from "@domain/spans/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { PROMOTION_MIN_SESSIONS } from "../constants.ts"
-import type { Signal } from "../entities/signal.ts"
+import type { Signal, SignalScoreEvidence } from "../entities/signal.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
 import { promoteSignalUseCase } from "./promote-signal.ts"
@@ -67,9 +67,9 @@ const makeSignal = (promotedAt: Date | null = null): Signal => ({
 })
 
 const generated =
-  (name: string, description: string): AIGenerate =>
+  (name: string, description: string, scoreEvidence: SignalScoreEvidence[] = []): AIGenerate =>
   <T>(input: GenerateInput<T>) =>
-    Effect.succeed({ object: input.schema.parse({ name, description }), tokens: 10, duration: 5 })
+    Effect.succeed({ object: input.schema.parse({ name, description, scoreEvidence }), tokens: 10, duration: 5 })
 
 const promotionGateLayers = (projectSessions = 500) => {
   const cache: CacheStoreShape = {
@@ -93,6 +93,7 @@ const run = (input: {
   readonly generate?: AIGenerate
   readonly sessions?: number
   readonly projectSessions?: number
+  readonly flaggerSlugSample?: readonly (string | null)[]
 }) => {
   const { layer: aiLayer } = createFakeAI(
     input.generate ? { generate: input.generate } : { generate: () => Effect.die("model unavailable") },
@@ -100,6 +101,7 @@ const run = (input: {
   const { repository: signalRepository, issues } = createFakeSignalRepository([input.signal ?? makeSignal()])
   const { repository: scoreRepository } = createFakeScoreRepository({
     countDistinctSessionsBySignalId: () => Effect.succeed(input.sessions ?? PROMOTION_MIN_SESSIONS),
+    listFlaggerSlugSampleBySignalId: () => Effect.succeed(input.flaggerSlugSample ?? []),
     listBySignalId: () =>
       Effect.succeed({
         items: [
@@ -142,6 +144,7 @@ describe("promoteSignalUseCase", () => {
     expect(result.action).toBe("promoted")
     expect(stored?.name).toBe("Token leakage in assistant responses")
     expect(stored?.promotedAt).not.toBeNull()
+    expect(stored?.scoreEvidence).toEqual([])
 
     // Emitted from the transaction that stamps the latch, so by the time anyone
     // consumes it the signal is visible AND carries its cluster's name — agent
@@ -160,7 +163,31 @@ describe("promoteSignalUseCase", () => {
     expect(result.action).toBe("promoted")
     expect(stored?.name).toBe(PLACEHOLDER_NAME)
     expect(stored?.promotedAt).not.toBeNull()
+    expect(stored?.scoreEvidence).toEqual([])
     expect(outbox.events.filter((event) => event.eventName === "SignalPromoted")).toHaveLength(1)
+  })
+
+  it("uses static evidence for a dominant mapped flagger", async () => {
+    const { stored } = await run({
+      flaggerSlugSample: ["tool-call-errors", "tool-call-errors", "refusal"],
+      generate: generated("Tool call failures", "Tools fail during execution."),
+    })
+
+    expect(stored?.scoreEvidence).toEqual([
+      { scoreDimension: "reliability", role: "operationalIncident" },
+      { scoreDimension: "cost", role: "spendEfficiency" },
+      { scoreDimension: "speed", role: "criticalPathEfficiency" },
+    ])
+  })
+
+  it("uses generated evidence without a dominant mapped flagger", async () => {
+    const scoreEvidence: SignalScoreEvidence[] = [{ scoreDimension: "safety", role: "exposure" }]
+    const { stored } = await run({
+      flaggerSlugSample: ["unknown", "refusal", null],
+      generate: generated("Unsafe input exposure", "User input contains sensitive content.", scoreEvidence),
+    })
+
+    expect(stored?.scoreEvidence).toEqual(scoreEvidence)
   })
 
   it("does not call the model when generation is switched off", async () => {
@@ -173,6 +200,7 @@ describe("promoteSignalUseCase", () => {
     const { repository: signalRepository, issues } = createFakeSignalRepository([makeSignal()])
     const { repository: scoreRepository } = createFakeScoreRepository({
       countDistinctSessionsBySignalId: () => Effect.succeed(PROMOTION_MIN_SESSIONS),
+      listFlaggerSlugSampleBySignalId: () => Effect.succeed(["refusal", "refusal", null]),
     })
     const outbox: { events: OutboxWriteEvent[] } = { events: [] }
 
@@ -199,6 +227,7 @@ describe("promoteSignalUseCase", () => {
     expect(calls.generate).toHaveLength(0)
     expect(issues.get(signalId)?.name).toBe(PLACEHOLDER_NAME)
     expect(issues.get(signalId)?.promotedAt).not.toBeNull()
+    expect(issues.get(signalId)?.scoreEvidence).toEqual([{ scoreDimension: "outcome", role: "taskOutcome" }])
   })
 
   it("does not promote when evidence dropped below the threshold after qualification", async () => {
@@ -288,14 +317,16 @@ describe("promoteSignalUseCase", () => {
 
   it("is idempotent for an already-promoted signal", async () => {
     const promotedAt = new Date("2026-07-01T00:00:00Z")
+    const scoreEvidence: SignalScoreEvidence[] = [{ scoreDimension: "cost", role: "spendEfficiency" }]
     const { result, outbox, stored } = await run({
-      signal: makeSignal(promotedAt),
+      signal: { ...makeSignal(promotedAt), scoreEvidence },
       generate: generated("Should never be written", "Nor this."),
     })
 
     expect(result.action).toBe("already-promoted")
     expect(stored?.name).toBe(PLACEHOLDER_NAME)
     expect(stored?.promotedAt).toEqual(promotedAt)
+    expect(stored?.scoreEvidence).toEqual(scoreEvidence)
     expect(outbox.events).toHaveLength(0)
   })
 })

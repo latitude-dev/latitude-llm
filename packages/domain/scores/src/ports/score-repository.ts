@@ -198,6 +198,15 @@ export interface ScoreRepositoryShape {
     readonly projectId: ProjectId
     readonly signalId: SignalId
   }): Effect.Effect<readonly string[], RepositoryError, SqlClient>
+  /**
+   * Flagger slug for each of a signal's most-recent published, failed,
+   * non-errored scores, newest first. Missing slugs remain null so callers can
+   * use the whole bounded sample as a dominance denominator.
+   */
+  listFlaggerSlugSampleBySignalId(input: {
+    readonly projectId: ProjectId
+    readonly signalId: SignalId
+  }): Effect.Effect<readonly (string | null)[], RepositoryError, SqlClient>
 }
 
 export class ScoreRepository extends Context.Service<ScoreRepository, ScoreRepositoryShape>()(

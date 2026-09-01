@@ -15,6 +15,7 @@ import { Effect } from "effect"
 import { PROMOTION_WINDOW_DAYS } from "../constants.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { promotionThresholdForVolume } from "../promotion.ts"
+import { findDominantMappedSignalFlaggerSlug, getSignalScoreEvidenceForFlagger } from "../score-evidence.ts"
 import { type GenerateSignalDetailsError, generateSignalDetailsUseCase } from "./generate-signal-details.ts"
 import { resolveProjectSessionVolumeUseCase } from "./resolve-project-session-volume.ts"
 
@@ -120,6 +121,15 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
       return { action: "not-qualified", signalId: input.signalId } satisfies PromoteSignalResult
     }
 
+    const scoreRepository = yield* ScoreRepository
+    const flaggerSlugSample = yield* scoreRepository.listFlaggerSlugSampleBySignalId({
+      projectId: ProjectId(existing.signal.projectId),
+      signalId: existing.signal.id,
+    })
+    const dominantFlaggerSlug = findDominantMappedSignalFlaggerSlug(flaggerSlugSample)
+    const staticScoreEvidence =
+      dominantFlaggerSlug === null ? null : getSignalScoreEvidenceForFlagger(dominantFlaggerSlug)
+
     // Generated before the transaction opens, and read straight from
     // `generateSignalDetailsUseCase` rather than through `refreshSignalDetails`:
     // that one returns early for an unpromoted signal, which is every signal
@@ -132,8 +142,9 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
             projectId: input.projectId,
             signalId: input.signalId,
             ignorePreviousDetails: true,
+            classifyScoreEvidence: staticScoreEvidence === null,
           }).pipe(
-            Effect.map((generated) => ({ name: generated.name, description: generated.description })),
+            Effect.map((generated) => generated),
             // `catchCause`, not `catch`: a provider that throws surfaces as a
             // defect rather than an `AIError`, and a defect must not hold
             // promotion back any more than a typed failure does.
@@ -171,9 +182,11 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
         }
 
         const promotedAt = new Date()
+        const scoreEvidence = staticScoreEvidence ?? details?.scoreEvidence ?? []
         yield* signalRepository.save({
           ...locked.signal,
           ...(details ?? {}),
+          scoreEvidence,
           promotedAt,
           updatedAt: promotedAt,
         })
