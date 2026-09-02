@@ -3,6 +3,7 @@ import { relativeTime } from "@repo/utils"
 import { useMemo, useState } from "react"
 import { getPrimaryLifecycleState } from "../../../../../../components/signals/lifecycle-formatters.ts"
 import { SignalLifecycleStatuses } from "../../../../../../components/signals/signal-lifecycle-statuses.tsx"
+import { SignalScoreDimensions } from "../../../../../../components/signals/signal-score-dimensions.tsx"
 import { useSessionSignals } from "../../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionSignalRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 
@@ -76,6 +77,13 @@ export function SignalsTab({
           const primaryState = getPrimaryLifecycleState(issue.states)
           return <SignalLifecycleStatuses states={primaryState ? [primaryState] : []} wrap={false} />
         },
+      },
+      {
+        key: "dimensions",
+        header: "Dimensions",
+        width: 190,
+        minWidth: 150,
+        render: (issue) => <SignalScoreDimensions scoreEvidence={issue.scoreEvidence} wrap={false} />,
       },
       {
         key: "seenAt",

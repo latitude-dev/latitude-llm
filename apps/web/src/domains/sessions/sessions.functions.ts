@@ -7,7 +7,7 @@ import {
   SessionId,
   TraceId,
 } from "@domain/shared"
-import { listSessionSignalsUseCase } from "@domain/signals"
+import { listSessionSignalsUseCase, type SignalScoreEvidence } from "@domain/signals"
 import type {
   CohortSummary,
   Session,
@@ -361,6 +361,7 @@ export interface SessionSignalRecord {
   readonly name: string
   readonly description: string
   readonly source: string
+  readonly scoreEvidence: readonly SignalScoreEvidence[]
   readonly states: readonly string[]
   readonly occurrences: number
   readonly firstSeenAt: string
@@ -399,6 +400,7 @@ export const listSessionSignals = createServerFn({ method: "POST" })
       name: signal.name,
       description: signal.description,
       source: signal.source,
+      scoreEvidence: signal.scoreEvidence.map((evidence) => ({ ...evidence })),
       states: signal.states,
       occurrences: signal.occurrences,
       firstSeenAt: signal.firstSeenAt.toISOString(),
