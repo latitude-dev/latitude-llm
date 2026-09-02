@@ -1,4 +1,12 @@
-import { type Attributes, type Context, type Span, type SpanOptions, type Tracer, trace } from "@opentelemetry/api"
+import {
+  type Attributes,
+  type Context,
+  context as otelContext,
+  type Span,
+  type SpanOptions,
+  type Tracer,
+  trace,
+} from "@opentelemetry/api"
 import { ATTRIBUTES } from "../constants/attributes.ts"
 import { SCOPE_LATITUDE } from "../constants/scope.ts"
 import type { ContextOptions } from "./types.ts"
@@ -73,4 +81,40 @@ export function withLatitudeAttributes(tracer: Tracer, attributes: Attributes): 
   }
 
   return wrapper
+}
+
+/**
+ * Wraps a tracer so a span it starts outside any active span attaches to `parent` — the span a
+ * caller in another process handed over — instead of rooting a fresh trace. Once one of its spans
+ * is active, descendants nest under that span as usual: re-parenting everything on the remote span
+ * would flatten the framework's own nesting into one level.
+ */
+export function withParentContext(tracer: Tracer, parent: Context): Tracer {
+  const resolve = (explicit?: Context): Context => {
+    if (explicit) return explicit
+    const active = otelContext.active()
+    return trace.getSpan(active) ? active : parent
+  }
+
+  const startActive = tracer.startActiveSpan.bind(tracer) as (name: string, ...rest: unknown[]) => unknown
+
+  return {
+    startSpan(name: string, options?: SpanOptions, context?: Context): Span {
+      return tracer.startSpan(name, options, resolve(context))
+    },
+    startActiveSpan<F extends (span: Span) => unknown>(
+      name: string,
+      arg1: F | SpanOptions,
+      arg2?: F | Context,
+      arg3?: F,
+    ): ReturnType<F> {
+      if (typeof arg1 === "function") {
+        return startActive(name, {}, resolve(), arg1) as ReturnType<F>
+      }
+      if (typeof arg2 === "function") {
+        return startActive(name, arg1, resolve(), arg2) as ReturnType<F>
+      }
+      return startActive(name, arg1, resolve(arg2 as Context), arg3) as ReturnType<F>
+    },
+  }
 }

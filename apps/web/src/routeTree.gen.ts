@@ -32,6 +32,7 @@ import { Route as SandboxSandboxOrgIdRouteRouteImport } from './routes/sandbox/$
 import { Route as SandboxSandboxOrgIdIndexRouteImport } from './routes/sandbox/$sandboxOrgId/index'
 import { Route as BackofficeUnpricedSpansIndexRouteImport } from './routes/backoffice/unpriced-spans/index'
 import { Route as BackofficeShowcaseIndexRouteImport } from './routes/backoffice/showcase/index'
+import { Route as BackofficePartnersIndexRouteImport } from './routes/backoffice/partners/index'
 import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
 import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
 import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
@@ -222,6 +223,11 @@ const BackofficeUnpricedSpansIndexRoute =
 const BackofficeShowcaseIndexRoute = BackofficeShowcaseIndexRouteImport.update({
   id: '/showcase/',
   path: '/showcase/',
+  getParentRoute: () => BackofficeRouteRoute,
+} as any)
+const BackofficePartnersIndexRoute = BackofficePartnersIndexRouteImport.update({
+  id: '/partners/',
+  path: '/partners/',
   getParentRoute: () => BackofficeRouteRoute,
 } as any)
 const BackofficeOrganizationsIndexRoute =
@@ -708,6 +714,7 @@ export interface FileRoutesByFullPath {
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
+  '/backoffice/partners/': typeof BackofficePartnersIndexRoute
   '/backoffice/showcase/': typeof BackofficeShowcaseIndexRoute
   '/backoffice/unpriced-spans/': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
@@ -801,6 +808,7 @@ export interface FileRoutesByTo {
   '/api/observability-test': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations': typeof BackofficeOrganizationsIndexRoute
+  '/backoffice/partners': typeof BackofficePartnersIndexRoute
   '/backoffice/showcase': typeof BackofficeShowcaseIndexRoute
   '/backoffice/unpriced-spans': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdIndexRoute
@@ -898,6 +906,7 @@ export interface FileRoutesById {
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
+  '/backoffice/partners/': typeof BackofficePartnersIndexRoute
   '/backoffice/showcase/': typeof BackofficeShowcaseIndexRoute
   '/backoffice/unpriced-spans/': typeof BackofficeUnpricedSpansIndexRoute
   '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
@@ -996,6 +1005,7 @@ export interface FileRouteTypes {
     | '/api/observability-test/'
     | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
+    | '/backoffice/partners/'
     | '/backoffice/showcase/'
     | '/backoffice/unpriced-spans/'
     | '/sandbox/$sandboxOrgId/'
@@ -1089,6 +1099,7 @@ export interface FileRouteTypes {
     | '/api/observability-test'
     | '/backoffice/feature-flags'
     | '/backoffice/organizations'
+    | '/backoffice/partners'
     | '/backoffice/showcase'
     | '/backoffice/unpriced-spans'
     | '/sandbox/$sandboxOrgId'
@@ -1185,6 +1196,7 @@ export interface FileRouteTypes {
     | '/api/observability-test/'
     | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
+    | '/backoffice/partners/'
     | '/backoffice/showcase/'
     | '/backoffice/unpriced-spans/'
     | '/sandbox/$sandboxOrgId/'
@@ -1437,6 +1449,13 @@ declare module '@tanstack/react-router' {
       path: '/showcase'
       fullPath: '/backoffice/showcase/'
       preLoaderRoute: typeof BackofficeShowcaseIndexRouteImport
+      parentRoute: typeof BackofficeRouteRoute
+    }
+    '/backoffice/partners/': {
+      id: '/backoffice/partners/'
+      path: '/partners'
+      fullPath: '/backoffice/partners/'
+      preLoaderRoute: typeof BackofficePartnersIndexRouteImport
       parentRoute: typeof BackofficeRouteRoute
     }
     '/backoffice/organizations/': {
@@ -1955,6 +1974,7 @@ interface BackofficeRouteRouteChildren {
   BackofficeUsersUserIdRoute: typeof BackofficeUsersUserIdRoute
   BackofficeFeatureFlagsIndexRoute: typeof BackofficeFeatureFlagsIndexRoute
   BackofficeOrganizationsIndexRoute: typeof BackofficeOrganizationsIndexRoute
+  BackofficePartnersIndexRoute: typeof BackofficePartnersIndexRoute
   BackofficeShowcaseIndexRoute: typeof BackofficeShowcaseIndexRoute
   BackofficeUnpricedSpansIndexRoute: typeof BackofficeUnpricedSpansIndexRoute
 }
@@ -1969,6 +1989,7 @@ const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
   BackofficeUsersUserIdRoute: BackofficeUsersUserIdRoute,
   BackofficeFeatureFlagsIndexRoute: BackofficeFeatureFlagsIndexRoute,
   BackofficeOrganizationsIndexRoute: BackofficeOrganizationsIndexRoute,
+  BackofficePartnersIndexRoute: BackofficePartnersIndexRoute,
   BackofficeShowcaseIndexRoute: BackofficeShowcaseIndexRoute,
   BackofficeUnpricedSpansIndexRoute: BackofficeUnpricedSpansIndexRoute,
 }

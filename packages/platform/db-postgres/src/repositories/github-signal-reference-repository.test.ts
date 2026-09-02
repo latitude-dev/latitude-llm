@@ -86,6 +86,24 @@ describe("GithubSignalReferenceRepositoryLive", () => {
     expect(references.map((l) => l.referenceType).sort()).toEqual(["commit", "pull_request"])
   })
 
+  it("clears actionAppliedAt when upsert changes the stored action", async () => {
+    const appliedAt = new Date("2026-06-01T00:00:00.000Z")
+    const { kept, cleared } = await run(
+      Effect.gen(function* () {
+        const repo = yield* GithubSignalReferenceRepository
+        const created = yield* repo.upsert(prLink())
+        yield* repo.stampActionApplied({ id: created.id, appliedAt })
+        const kept = yield* repo.upsert(prLink({ title: "Fixes LAT-AB12 still" }))
+        const cleared = yield* repo.upsert(prLink({ action: "unresolve", title: "Reopen LAT-AB12" }))
+        return { kept, cleared }
+      }),
+    )
+    expect(kept.action).toBe("resolve")
+    expect(kept.actionAppliedAt).toEqual(appliedAt)
+    expect(cleared.action).toBe("unresolve")
+    expect(cleared.actionAppliedAt).toBeNull()
+  })
+
   it("does not clear an existing merged_at when a later upsert passes null", async () => {
     const merged = new Date("2026-05-01T00:00:00.000Z")
     const after = await run(

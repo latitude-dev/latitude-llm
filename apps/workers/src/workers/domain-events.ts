@@ -7,6 +7,7 @@ import {
   ESCALATION_CHECK_THROTTLE_MS,
   SIGNAL_FEEDBACK_THROTTLE_MS,
   SIGNAL_PROMOTION_THROTTLE_MS,
+  SIGNAL_RECONCILE_CONSOLIDATION_THROTTLE_MS,
   SIGNAL_REFRESH_THROTTLE_MS,
 } from "@domain/signals"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
@@ -219,9 +220,9 @@ export const createDomainEventsWorker = ({
           projectId: event.payload.projectId,
           survivorId: event.payload.survivorId,
         },
-        // Bare key, unlike the coalescing publishes above: it names one merge, so a later merge is never shadowed.
         {
           dedupeKey: `org:${event.payload.organizationId}:issues:reconcile-consolidation:${event.payload.survivorId}:${event.payload.consolidatedAt}`,
+          leadingThrottleMs: SIGNAL_RECONCILE_CONSOLIDATION_THROTTLE_MS,
         },
       ),
 
@@ -644,6 +645,11 @@ export const createDomainEventsWorker = ({
     AdminUserEmailChanged: () => Effect.void,
     AdminUserSessionsRevoked: () => Effect.void,
     AdminUserSessionRevoked: () => Effect.void,
+    AdminPartnerCreated: () => Effect.void,
+    AdminPartnerUpdated: () => Effect.void,
+    AdminPartnerDeleted: () => Effect.void,
+    // Audit-only, like the OAuth-consent event it mirrors.
+    PartnerAccountProvisioned: () => Effect.void,
     // Redaction policy changes are audit-only for the same reason.
     ProjectRedactionPolicyChanged: () => Effect.void,
     OrganizationRedactionPolicyChanged: () => Effect.void,

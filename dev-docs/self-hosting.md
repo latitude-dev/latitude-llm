@@ -56,6 +56,8 @@ The blessed default configuration, verified per tier. Defaults match Latitude Cl
 - **Object storage** — `fs` (Tier 1) / bundled SeaweedFS behind `s3` (Tier 2/3) / BYO managed S3.
 - **Email** — Mailpit (dev) or any SMTP / Mailgun / SendGrid (prod). With no transport reachable, magic-link/invite email won't send, so one is effectively required to sign in.
 
+**Billing and retention:** the plan catalog ships in the OSS build but enforces nothing unless `LAT_BILLING_ENABLED=true` (Latitude Cloud sets it on every service). Without it every organization with no manual billing override resolves to the `self-hosted` plan: no credit cap, no ingest `402`, and telemetry retention taken from `LAT_TELEMETRY_RETENTION_DAYS` (default and maximum `3650`). An override still wins, so an operator can pin one organization to a capped plan on an otherwise unenforced deployment. See [`./billing.md`](./billing.md) for the resolution order and why a bad value dies rather than falling back.
+
 **AI providers (pluggable, env-configurable; defaults = Latitude Cloud):**
 
 AI is never constructed at boot — each provider reads its key lazily and fails per-call with a tagged error, so **every service boots and core observability (trace ingest + viewing) works with zero AI keys.** Providers and models are selected with `LAT_AI_*` (per-feature generation overrides → global `LAT_AI_GENERATION_*` → built-in default; embeddings/reranking are global-only):
@@ -65,4 +67,30 @@ AI is never constructed at boot — each provider reads its key lazily and fails
 - **Reranking** → Voyage AI by default; `voyage` / `amazon-bedrock`. Optional; unavailable reranking degrades to hybrid-search order.
 
 See [`./ai-generation-features.md`](./ai-generation-features.md) for the per-feature resolver and the configuration reference at `docs/deployment/configuration.mdx` for the full `LAT_*` matrix.
+
+## Anonymous deployment telemetry
+
+Self-hosted production installs send a best-effort **`oss_deployment_heartbeat`** event to Latitude's PostHog project when the API process starts. This is anonymous aggregate telemetry — not trace or customer data — used to understand OSS adoption (version mix, hostnames, Node runtime).
+
+**Defaults and opt-out:**
+
+- Enabled when `NODE_ENV=production` unless `LAT_OSS_TELEMETRY_ENABLED=false`. Development disables it by default.
+- A bundled write-only PostHog project key ships in `@platform/analytics-posthog` so operators need no extra configuration. Forks or staging variants can override with `LAT_OSS_TELEMETRY_POSTHOG_API_KEY` and `LAT_OSS_TELEMETRY_POSTHOG_HOST`.
+- Set `LAT_OSS_TELEMETRY_ENABLED=false` to opt out entirely.
+
+**What is sent:**
+
+- `deploymentId` — first 32 hex chars of `sha256(LAT_BETTER_AUTH_SECRET)`; stable per install, not reversible to the secret
+- `service` — `"api"` today (heartbeat runs from `apps/api` startup)
+- `version` — `LAT_IMAGE_TAG` when set, else Datadog version env vars (`DD_VERSION`, `DD_GIT_COMMIT_SHA`)
+- `webHost` — hostname parsed from `LAT_WEB_URL` when set
+- `nodeVersion`
+
+**Operational behavior:**
+
+- Redis dedupes at most one heartbeat per deployment per 24h (`oss-telemetry:heartbeat:<deploymentId>`). Redis failures fail open.
+- The entire path is wrapped in try/catch so telemetry errors never reject API startup.
+- `docker-stack.yml` injects `LAT_IMAGE_TAG` into app services so compose pulls report the pinned tag even when `.env.production` omits it.
+
+Implementation: `reportOssDeploymentHeartbeat` in `@platform/analytics-posthog`. Operator-facing env reference: [`docs/deployment/configuration.mdx`](../docs/deployment/configuration.mdx).
 </content>

@@ -146,10 +146,12 @@ latitude = Latitude(
     disable_batch=True,
 )
 
+
 @capture("test-name", {"tags": ["test"], "session_id": "example"})
 def test_function():
     # Your LLM call here
     ...
+
 
 if __name__ == "__main__":
     test_function()

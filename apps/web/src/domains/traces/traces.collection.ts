@@ -155,6 +155,8 @@ export function useProjectLastTraceAt({
 /**
  * Earliest trace `start_time` (ISO) for the whole project, or null. The concrete "All time" lower
  * bound for analytics screens whose endpoints require one (robust, unlike `project.firstTraceAt`).
+ * `isLoading` separates "not settled yet" from "no traces", so callers can hold a query whose window
+ * would otherwise fall back to a narrower default.
  */
 export function useProjectFirstTraceAt({
   projectId,
@@ -164,14 +166,14 @@ export function useProjectFirstTraceAt({
   readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
-  const { data = null } = useQuery({
+  const { data = null, isLoading } = useQuery({
     queryKey: [...projectScopeKey(scope), "traces-first-at", projectId],
     queryFn: () => getProjectFirstTraceAt({ data: { ...projectScopeData(scope), projectId } }),
     staleTime: 30_000,
     enabled: enabled && projectId.length > 0,
   })
 
-  return { firstTraceAt: data }
+  return { firstTraceAt: data, isLoading }
 }
 
 export function useTraceMetrics({

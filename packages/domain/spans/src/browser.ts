@@ -158,6 +158,7 @@ export type {
 export { emptySessionMetrics, SessionRepository } from "./ports/session-repository.ts"
 export type {
   SessionToolSpan,
+  SpanIdentity,
   SpanIngestedAtWindow,
   SpanIngestionCursor,
   SpanListCursor,

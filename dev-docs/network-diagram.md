@@ -25,7 +25,7 @@ Latitude production runs in AWS `eu-central-1` with public HTTPS ingress, privat
 - The bastion host is the controlled administrative network path for private infrastructure troubleshooting and is described as Tailscale VPN-backed in the security group configuration.
 - S3 and Secrets Manager are AWS managed services reached through configured VPC endpoints where applicable.
 - Application secrets, database credentials, OAuth secrets, Stripe secrets, Temporal credentials, Datadog credentials, and other provider keys are stored in AWS Secrets Manager.
-- Application logs are written to CloudWatch log groups and exported/observed through Datadog sidecars and Datadog SaaS.
+- Application containers write warn/error stdout to CloudWatch; Datadog sidecars collect APM traces and metrics. The Datadog agent itself does not ship logs to CloudWatch.
 - Outbound third-party integrations use TLS to approved SaaS services such as ClickHouse Cloud, Temporal Cloud, Datadog, Stripe, Mailgun, OAuth providers, Cloudflare Turnstile, PostHog, Loops, Intercom, and Voyage AI.
 
 ## Security boundaries represented

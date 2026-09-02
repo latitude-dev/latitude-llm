@@ -15,6 +15,10 @@ export {
   type User,
 } from "./create-better-auth.ts"
 export { healthcheckPostgres } from "./health.ts"
+export {
+  ensureBillingUsageEventsPartitions,
+  maintainBillingUsageEventsRetention,
+} from "./maintain-billing-usage-events.ts"
 // Outbox consumer for reliable event publishing
 export {
   createPollingOutboxConsumer,
@@ -71,9 +75,11 @@ export { InvitationRepositoryLive } from "./repositories/invitation-repository.t
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"
 export { MonitorRepositoryLive } from "./repositories/monitor-repository.ts"
 export { NotificationRepositoryLive } from "./repositories/notification-repository.ts"
+export { OAuthGrantRepositoryLive } from "./repositories/oauth-grant-repository.ts"
 export { OAuthKeyRepositoryLive } from "./repositories/oauth-key-repository.ts"
 export { OrganizationClaimRepositoryLive } from "./repositories/organization-claim-repository.ts"
 export { OrganizationRepositoryLive } from "./repositories/organization-repository.ts"
+export { PartnerRepositoryLive } from "./repositories/partner-repository.ts"
 export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { SandboxRepositoryLive } from "./repositories/sandbox-repository.ts"
 export { SavedSearchRepositoryLive } from "./repositories/saved-search-repository.ts"

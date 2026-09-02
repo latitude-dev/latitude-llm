@@ -44,7 +44,8 @@ export const createFakeGithubSignalReferenceRepository = (init: {
           authorLogin: reference.authorLogin,
           matchedSources: [...reference.matchedSources],
           action: reference.action,
-          actionAppliedAt: existing?.actionAppliedAt ?? null,
+          actionAppliedAt:
+            existing && existing.action !== reference.action ? null : (existing?.actionAppliedAt ?? null),
           mergedAt: reference.mergedAt ?? existing?.mergedAt ?? null,
           createdAt: existing?.createdAt ?? now,
           updatedAt: now,

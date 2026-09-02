@@ -396,24 +396,23 @@ function KeysSettingsPage() {
   const oauthKeys = (oauthKeyData ?? []).slice().sort(byCreatedAtDesc)
 
   return (
-    <SettingsPage
-      title="Keys"
-      description="Manage API keys and OAuth connections for this organization"
-      actions={
-        <Button variant="outline" onClick={() => setCreateOpen(true)}>
-          <Icon size="sm" icon={PlusIcon} />
-          API key
-        </Button>
-      }
-    >
+    <SettingsPage title="Keys" description="Manage API keys and OAuth connections for this organization">
       <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
 
       <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <Text.H4 weight="bold">API keys</Text.H4>
-          <Text.H5 color="foregroundMuted">
-            Application keys with access to this organization (through API or SDK)
-          </Text.H5>
+        <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex flex-col gap-1">
+            <Text.H4 weight="bold">API keys</Text.H4>
+            <Text.H5 color="foregroundMuted">
+              Application keys with access to this organization (through API or SDK)
+            </Text.H5>
+          </div>
+          <div className="shrink-0">
+            <Button variant="outline" onClick={() => setCreateOpen(true)}>
+              <Icon size="sm" icon={PlusIcon} />
+              API key
+            </Button>
+          </div>
         </div>
         <div className="flex flex-col gap-2">
           {apiKeysLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
@@ -424,7 +423,8 @@ function KeysSettingsPage() {
         <div className="flex flex-col gap-1">
           <Text.H4 weight="bold">OAuth keys</Text.H4>
           <Text.H5 color="foregroundMuted">
-            Connected OAuth clients with access to this organization (Claude Code, Codex, Cursor... through MCP)
+            Connected OAuth clients with access to this organization (Claude Code, Codex, Cursor... through MCP or
+            Partners)
           </Text.H5>
         </div>
         <div className="flex flex-col gap-2">

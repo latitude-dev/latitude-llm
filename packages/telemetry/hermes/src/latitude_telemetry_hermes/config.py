@@ -54,7 +54,7 @@ _SSL_CONTEXT = _ssl_context()
 logger = logging.getLogger(__name__)
 
 SCOPE_NAME = "latitude-telemetry-hermes"
-PKG_VERSION = "0.2.0"
+PKG_VERSION = "0.3.0"
 
 DEFAULT_SERVICE_NAME = "hermes-agent"
 
@@ -117,6 +117,8 @@ _ENV_ALIASES: Dict[str, Tuple[str, ...]] = {
     "agent.name": ("LATITUDE_HERMES_AGENT_NAME",),
     "agent.version": ("LATITUDE_HERMES_AGENT_VERSION",),
     "service_name": ("LATITUDE_HERMES_SERVICE_NAME",),
+    "inherit_context": ("LATITUDE_HERMES_INHERIT_CONTEXT",),
+    "export_traceparent": ("LATITUDE_HERMES_EXPORT_TRACEPARENT",),
 }
 
 _CONFIG: Optional[Dict[str, Any]] = None
@@ -270,6 +272,11 @@ def _load_config() -> Dict[str, Any]:
         "agent_name": _text("agent.name"),
         "agent_version": _text("agent.version"),
         "service_name": _text("service_name", DEFAULT_SERVICE_NAME),
+        "inherit_context": _flag("inherit_context", True),
+        # Off by default: it mutates process-wide os.environ, and Hermes runs each
+        # turn on its own worker thread, so two concurrent tool calls would hand one
+        # another's span to their children. child_env() is the safe path.
+        "export_traceparent": _flag("export_traceparent", False),
         "profile": _PROFILE or profile_name(),
     }
 

@@ -201,10 +201,10 @@ class Latitude:
         redact: RedactSpanProcessorOptions | None = None,
         exporter: SpanExporter | None = None,
         tracer_provider: TracerProvider | None = None,
-    ):
-        ...
+    ): ...
 
     provider: TracerProvider
+
     def get_tracer(self, scope: str, context: ContextOptions | None = None) -> Tracer: ...
     def flush(self) -> None: ...
     def shutdown(self) -> None: ...
@@ -241,8 +241,8 @@ class LatitudeSpanProcessor:
         api_key: str,
         project: str | None,
         options: LatitudeSpanProcessorOptions | None = None,
-    ):
-        ...
+    ): ...
+
 
 @dataclass
 class LatitudeSpanProcessorOptions:
@@ -328,13 +328,13 @@ Registers LLM auto-instrumentations against a specific tracer provider.
 # ]
 # InstrumentationsInput = dict[InstrumentationName, object]
 
+
 def register_latitude_instrumentations(
     # Dict mapping integration name → the LLM SDK module the consumer imports.
     # Anything else throws at register time.
     instrumentations: InstrumentationsInput,
     tracer_provider: TracerProvider,
-) -> None:
-    ...
+) -> None: ...
 ```
 
 ## Migrating from `instrumentations=["openai"]` (3.0.0a6 and earlier)
@@ -491,9 +491,7 @@ from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from opentelemetry.baggage.propagation import W3CBaggagePropagator
 
-set_global_textmap(
-    CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()])
-)
+set_global_textmap(CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()]))
 ```
 
 `Latitude(...)` does this automatically when it owns the provider. For shared-provider setups, your app's existing OTel setup should already have this.

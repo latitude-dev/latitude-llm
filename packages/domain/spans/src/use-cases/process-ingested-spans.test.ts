@@ -427,4 +427,57 @@ describe("processIngestedSpansUseCase buffered payload recovery", () => {
     expect(inserted).toHaveLength(1)
     expect(storage.deleted).toEqual([])
   })
+
+  it("skips re-insert and still publishes when retrying after a post-insert publish failure", async () => {
+    const { repository: spanRepo, inserted } = createFakeSpanRepository()
+    const payload = payloadFor([spanWith(contentAttributes, "b7ad6b7169203331")])
+    const storage = createFakeStorageDisk({
+      getBytes: async () => new Uint8Array(Buffer.from(payload, "base64")),
+    })
+    let publishCalls = 0
+    const published: DomainEvent[] = []
+    const eventsPublisher: EventsPublisher<QueuePublishError> & { readonly published: DomainEvent[] } = {
+      published,
+      publish: (event) => {
+        publishCalls += 1
+        if (publishCalls === 1) {
+          return Effect.fail(new QueuePublishError({ cause: "redis down", queue: "domain-events" }))
+        }
+        published.push(event)
+        return Effect.void
+      },
+    }
+
+    const run = () =>
+      processIngestedSpansUseCase({ eventsPublisher })({
+        organizationId: ORGANIZATION_ID,
+        apiKeyId: "key-1",
+        contentType: "application/json",
+        ingestedAt: new Date("2026-03-18T10:00:00.000Z"),
+        isSandbox: false,
+        inlinePayload: null,
+        fileKey: "tmp-ingest/org/proj/abc.json",
+        defaultProjectId: PROJECT_ID,
+        projectIdBySlug: {},
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(SpanRepository, spanRepo),
+            Layer.succeed(StorageDisk, storage.disk),
+            Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
+          ),
+        ),
+      )
+
+    const first = await Effect.runPromiseExit(run())
+    expect(first._tag).toBe("Failure")
+    expect(inserted).toHaveLength(1)
+
+    await Effect.runPromise(run())
+
+    expect(inserted).toHaveLength(1)
+    expect(eventsPublisher.published).toHaveLength(1)
+    expect(eventsPublisher.published[0]).toMatchObject({ name: "TracesIngested" })
+    expect(storage.deleted).toEqual(["tmp-ingest/org/proj/abc.json"])
+  })
 })

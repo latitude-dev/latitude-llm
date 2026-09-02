@@ -9,6 +9,7 @@ import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  maintainBillingUsageEventsRetention,
   OutboxEventWriterLive,
   type PostgresClient,
   SettingsReaderLive,
@@ -32,8 +33,8 @@ interface RecordTraceUsageBatchPayload {
   readonly organizationId: string
   readonly projectId: string
   readonly traceIds: readonly string[]
-  readonly planSlug: "free" | "pro" | "enterprise"
-  readonly planSource: "override" | "subscription" | "free-fallback"
+  readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+  readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
   readonly periodStart: string
   readonly periodEnd: string
   readonly includedCredits: number
@@ -47,8 +48,8 @@ interface RecordBillableActionPayload {
   readonly action: "trace" | "eval-scan" | "semantic-query" | "llm-call"
   readonly idempotencyKey: string
   readonly context: {
-    readonly planSlug: "free" | "pro" | "enterprise"
-    readonly planSource: "override" | "subscription" | "free-fallback"
+    readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+    readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
     readonly periodStart: string
     readonly periodEnd: string
     readonly includedCredits: number
@@ -242,6 +243,17 @@ export const createBillingWorker = ({ consumer, postgresClient }: BillingDeps) =
               ),
               Effect.asVoid,
             ),
+
+      maintainUsageEventPartitions: () =>
+        Effect.tryPromise({
+          try: () => maintainBillingUsageEventsRetention(pgClient),
+          catch: (cause) => cause,
+        }).pipe(
+          withTracing,
+          Effect.tapError((error) =>
+            Effect.sync(() => logger.error("Billing usage event partition maintenance failed", { error })),
+          ),
+        ),
     },
     { concurrency: 50 },
   )

@@ -254,3 +254,35 @@ def test_the_ledger_is_only_ever_read(ledger: Path):
     before = ledger.read_bytes()
     aux_usage_module.aux_spans("sess-1", _exported(), {})
     assert ledger.read_bytes() == before, "never a write, never a lock"
+
+
+def test_unfinalized_sessions_survive_the_session_cap(ledger: Path, monkeypatch):
+    """LRU eviction must not drop `exported` / `child_sessions` before finalize."""
+    monkeypatch.setattr("latitude_telemetry_hermes.builder.MAX_SESSIONS", 2)
+    builder = _Builder()
+    victim = builder._session_locked("sess-1", {"platform": "cli"})
+    victim.exported.update(_exported(calls=0))
+    builder._session_locked("filler", {"platform": "cli"})
+    builder._session_locked("evictor", {"platform": "cli"})
+
+    assert builder.session_state("sess-1") is not None
+    hooks._BUILDER = builder
+    try:
+        spans = hooks._aux_usage("sess-1")
+    finally:
+        hooks._BUILDER = _Builder()
+
+    assert any(span.name == "aux:approval" for span in spans)
+
+
+def test_finalized_sessions_are_still_evicted_at_the_cap(monkeypatch):
+    monkeypatch.setattr("latitude_telemetry_hermes.builder.MAX_SESSIONS", 2)
+    builder = _Builder()
+    stale = builder._session_locked("stale", {"platform": "cli"})
+    stale.aux_emitted = True
+    builder._session_locked("active", {"platform": "cli"})
+    builder._session_locked("new", {"platform": "cli"})
+
+    assert builder.session_state("stale") is None
+    assert builder.session_state("active") is not None
+    assert builder.session_state("new") is not None

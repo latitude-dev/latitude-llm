@@ -37,7 +37,7 @@ enablePrePostScripts: false
 catalog:
   "@biomejs/biome": 2.4.6
   "@clickhouse/client": 1.21.0
-  "@hono/node-server": 1.19.13
+  "@hono/node-server": 1.19.15
   "@opentelemetry/api": 1.9.1
   "@paralleldrive/cuid2": 3.3.0
   "@temporalio/activity": 1.17.5
@@ -50,7 +50,7 @@ catalog:
   "@types/react": 19.2.14
   "@types/react-dom": 19.2.3
   "@typescript/native-preview": 7.0.0-dev.20260705.1
-  "@vitejs/plugin-react": 6.0.1
+  "@vitejs/plugin-react": 6.1.0
   better-auth: 1.6.22
   "@better-auth/core": 1.6.22
   "@better-auth/sso": 1.6.22
@@ -76,7 +76,7 @@ catalog:
   react: 19.2.5
   react-dom: 19.2.5
   rosetta-ai: 2.3.0
-  protobufjs: 8.6.6
+  protobufjs: 8.7.2
   tsdown: 0.21.9
   tsx: 4.21.0
   turbo: 2.9.18

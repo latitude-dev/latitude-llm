@@ -161,6 +161,12 @@ export interface ScoreRepositoryShape {
     readonly projectId: ProjectId
     readonly signalId: SignalId
     readonly since: Date
+    /**
+     * Lock the matching score rows until the current transaction commits.
+     * `findByIdForUpdate` on the signal does not serialize annotation delete,
+     * which never takes that lock. Only meaningful inside a transaction.
+     */
+    readonly forUpdate?: boolean
   }): Effect.Effect<number, RepositoryError, SqlClient>
   findPublishedSystemAnnotationByTraceAndFeedback(input: {
     readonly projectId: ProjectId

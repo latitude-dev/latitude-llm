@@ -836,7 +836,7 @@ export const SpanRepositoryLive = Layer.effect(
                         ORDER BY span_id, ingested_at DESC
                         LIMIT 1 BY span_id
                       )
-                      ORDER BY end_time ASC`,
+                      ORDER BY end_time ASC, start_time ASC, ingested_at ASC, span_id ASC`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
@@ -959,6 +959,54 @@ export const SpanRepositoryLive = Layer.effect(
               })
             })
             .pipe(Effect.mapError((error) => toRepositoryError(error, "insert")))
+        }),
+
+      listExistingIdentities: ({ organizationId, spans }) =>
+        Effect.gen(function* () {
+          if (spans.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const wanted = new Set(
+            spans.map((span) => `${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+          )
+          const traceIds = [...new Set(spans.map((span) => span.traceId as string))]
+          const spanIds = [...new Set(spans.map((span) => span.spanId as string))]
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT project_id, trace_id, span_id
+                      FROM (
+                        SELECT project_id, trace_id, span_id
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND trace_id IN {traceIds:Array(String)}
+                          AND span_id IN {spanIds:Array(String)}
+                        ORDER BY project_id, trace_id, span_id, ingested_at DESC
+                        LIMIT 1 BY project_id, trace_id, span_id
+                      )`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  traceIds,
+                  spanIds,
+                },
+                format: "JSONEachRow",
+                clickhouse_settings: BOUNDED_READ_SETTINGS,
+              })
+              return result.json<{ project_id: string; trace_id: string; span_id: string }>()
+            })
+            .pipe(
+              Effect.map((rows) =>
+                rows.flatMap((row) => {
+                  const identity = {
+                    projectId: toProjectId(normalizeCHString(row.project_id)),
+                    traceId: toTraceId(normalizeCHString(row.trace_id)),
+                    spanId: SpanId(normalizeCHString(row.span_id)),
+                  }
+                  const key = `${identity.projectId as string}:${identity.traceId as string}:${identity.spanId as string}`
+                  return wanted.has(key) ? [identity] : []
+                }),
+              ),
+              Effect.mapError((error) => toRepositoryError(error, "listExistingIdentities")),
+            )
         }),
 
       listByTraceId,

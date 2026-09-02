@@ -173,6 +173,10 @@ export const processGithubPullRequestUseCase = (input: ProcessGithubPullRequestI
         if (!desiredSignals.has(reference.signalId) && reference.actionAppliedAt === null)
           yield* referenceRepo.deleteById(reference.id)
       }
+      if (prState === "merged") {
+        const references = yield* referenceRepo.listByPr({ repoId: input.repoId, prNumber: input.prNumber })
+        yield* applyReferenceActions({ references, now })
+      }
     }
 
     yield* deliveryRepo.finalize({ id: ledgerId, status: "processed" })

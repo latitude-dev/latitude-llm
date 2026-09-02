@@ -136,9 +136,11 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
       if (version.endTime.getTime() < first.endTime.getTime()) before = version
     }
     const beforePresent = before !== undefined && before.changeKind !== "remove"
-    const wipeAt = wipeAtByStore.get(first.storeId)
-    const wipedAfter = wipeAt !== undefined && wipeAt.getTime() > last.endTime.getTime()
-    const afterPresent = wipedAfter ? false : last.changeKind !== "remove"
+    const lastIndex = events.indexOf(last)
+    const storeWipedAfterLastTouch = events.some(
+      (event, index) => event.storeId === first.storeId && event.changeKind === "store_delete" && index > lastIndex,
+    )
+    const afterPresent = storeWipedAfterLastTouch ? false : last.changeKind !== "remove"
     addEndpoint({
       storeId: first.storeId,
       recordId: first.recordId,
@@ -148,7 +150,7 @@ export const computeSessionWriteEndpoints = Effect.fn("memories.computeSessionWr
       afterTokens: afterPresent ? last.tokenCount : 0,
       afterPresent,
       // A wipe removal has no per-record version to deep-link; linking the pre-wipe change would mislead.
-      afterSpanId: wipedAfter ? null : last.spanId,
+      afterSpanId: storeWipedAfterLastTouch ? null : last.spanId,
     })
   }
 

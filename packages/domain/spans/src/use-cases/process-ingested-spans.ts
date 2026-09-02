@@ -38,8 +38,8 @@ export interface ProcessIngestedSpansInput {
   readonly pseudonymSecret?: string
   readonly traceUsage?: {
     readonly context?: {
-      readonly planSlug: "free" | "pro" | "enterprise"
-      readonly planSource: "override" | "subscription" | "free-fallback"
+      readonly planSlug: "free" | "pro" | "enterprise" | "self-hosted"
+      readonly planSource: "override" | "subscription" | "free-fallback" | "self-hosted"
       readonly periodStart: Date
       readonly periodEnd: Date
       readonly includedCredits: number
@@ -296,9 +296,21 @@ export const processIngestedSpansUseCase =
       }
 
       const repo = yield* SpanRepository
-      yield* repo.insert(persistedSpans)
-
-      yield* reportUnpricedSpans(unpricedSpanGroups, input.organizationId, onUnpricedSpans)
+      const existing = yield* repo.listExistingIdentities({
+        organizationId: input.organizationId,
+        spans: persistedSpans,
+      })
+      const existingKeys = new Set(
+        existing.map((span) => `${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+      )
+      // ReplacingMergeTree collapses duplicate spans; traces_mv/sessions_mv add per insert.
+      const newSpans = persistedSpans.filter(
+        (span) => !existingKeys.has(`${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+      )
+      if (newSpans.length > 0) {
+        yield* repo.insert(newSpans)
+        yield* reportUnpricedSpans(unpricedSpanGroups, input.organizationId, onUnpricedSpans)
+      }
 
       // Spans in a single OTLP batch may now belong to different projects (per-span scoping).
       // Group by projectId so each TracesIngested event addresses one project at a time —

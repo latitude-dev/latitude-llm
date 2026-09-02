@@ -1,6 +1,7 @@
 import {
   BillingOverrideRepository,
   resolveEffectivePlan,
+  SELF_HOSTED_RETENTION_DAYS_MAX,
   StripeSubscriptionLookup,
   UnknownStripePlanError,
 } from "@domain/billing"
@@ -8,7 +9,7 @@ import { createFakeBillingOverrideRepository, createFakeStripeSubscriptionLookup
 import { OrganizationId, type OrganizationSettings, SettingsReader, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer, Result } from "effect"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 
@@ -34,6 +35,14 @@ const createTestLayer = (input?: { readonly organizationSettings?: OrganizationS
 }
 
 describe("resolveEffectivePlan", () => {
+  beforeEach(() => {
+    vi.stubEnv("LAT_BILLING_ENABLED", "true")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("falls back to the free plan when the organization has no override or subscription", async () => {
     const { layer } = createTestLayer({ organizationSettings: { billing: { spendingLimitCents: 12_345 } } })
 
@@ -123,5 +132,67 @@ describe("resolveEffectivePlan", () => {
     if (Result.isFailure(result)) {
       expect(result.failure).toBeInstanceOf(UnknownStripePlanError)
     }
+  })
+
+  describe("without billing enforcement", () => {
+    beforeEach(() => {
+      vi.stubEnv("LAT_BILLING_ENABLED", "false")
+    })
+
+    it("resolves an unmetered self-hosted plan instead of the free fallback", async () => {
+      const { layer } = createTestLayer()
+
+      const result = await Effect.runPromise(resolveEffectivePlan(ORGANIZATION_ID).pipe(Effect.provide(layer)))
+
+      expect(result.source).toBe("self-hosted")
+      expect(result.plan).toMatchObject({
+        slug: "self-hosted",
+        includedCredits: Number.POSITIVE_INFINITY,
+        retentionDays: SELF_HOSTED_RETENTION_DAYS_MAX,
+        hardCapped: false,
+        overageAllowed: true,
+        spendingLimitCents: null,
+      })
+    })
+
+    it("stamps the operator's configured retention", async () => {
+      vi.stubEnv("LAT_TELEMETRY_RETENTION_DAYS", "180")
+      const { layer } = createTestLayer()
+
+      const result = await Effect.runPromise(resolveEffectivePlan(ORGANIZATION_ID).pipe(Effect.provide(layer)))
+
+      expect(result.plan.retentionDays).toBe(180)
+    })
+
+    it("dies on a retention value the ClickHouse TTL cannot express", async () => {
+      vi.stubEnv("LAT_TELEMETRY_RETENTION_DAYS", String(SELF_HOSTED_RETENTION_DAYS_MAX + 1))
+      const { layer } = createTestLayer()
+
+      const result = await Effect.runPromise(
+        Effect.result(resolveEffectivePlan(ORGANIZATION_ID).pipe(Effect.provide(layer), Effect.sandbox)),
+      )
+
+      expect(Result.isFailure(result)).toBe(true)
+    })
+
+    it("still honors a billing override, so an operator can pin retention down", async () => {
+      const { layer, overridesByOrganizationId } = createTestLayer()
+
+      overridesByOrganizationId.set(String(ORGANIZATION_ID), {
+        id: "override-1",
+        organizationId: ORGANIZATION_ID,
+        plan: "free",
+        includedCredits: null,
+        retentionDays: 14,
+        notes: "keep the box small",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      })
+
+      const result = await Effect.runPromise(resolveEffectivePlan(ORGANIZATION_ID).pipe(Effect.provide(layer)))
+
+      expect(result.source).toBe("override")
+      expect(result.plan).toMatchObject({ slug: "free", retentionDays: 14 })
+    })
   })
 })

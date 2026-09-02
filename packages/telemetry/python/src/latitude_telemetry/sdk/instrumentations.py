@@ -162,7 +162,9 @@ def _is_plain_dict(value: object) -> bool:
 
 def _register_litellm_native_otel(litellm_module: object, tracer_provider: TracerProvider) -> None:
     """Register LiteLLM's built-in OpenTelemetry callback on our tracer provider."""
-    from litellm.integrations.opentelemetry import OpenTelemetry, OpenTelemetryConfig
+    otel_module = __import__("litellm.integrations.opentelemetry", fromlist=["OpenTelemetry", "OpenTelemetryConfig"])
+    OpenTelemetry = otel_module.OpenTelemetry
+    OpenTelemetryConfig = otel_module.OpenTelemetryConfig
 
     os.environ.setdefault("USE_OTEL_LITELLM_REQUEST_SPAN", "true")
     os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "gen_ai_latest_experimental")

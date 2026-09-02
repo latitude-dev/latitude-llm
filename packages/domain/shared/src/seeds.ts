@@ -5,6 +5,7 @@ import {
   EvaluationId,
   MembershipId,
   OrganizationId,
+  PartnerId,
   ProjectId,
   ScoreId,
   SignalId,
@@ -297,6 +298,26 @@ export const SEED_OLD_TRACES_QA_PROJECT_SLUG = "old-traces-qa"
 export const SEED_OLD_TRACES_QA_FROM_DAYS_AGO = 45
 export const SEED_OLD_TRACES_QA_TO_DAYS_AGO = 31
 export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
+
+// ---------------------------------------------------------------------------
+// Private partner API — the demo partner
+// ---------------------------------------------------------------------------
+
+/**
+ * "Longitude" is a fictional third-party platform, deliberately not a real
+ * company: this row shows up in the backoffice partner list and, once it
+ * provisions an account, in that organization's OAuth Keys settings.
+ *
+ * The local demo ships these values as its env defaults, so `pnpm pg:seed`
+ * followed by the demo server works with no configuration. The id is a real
+ * CUID2 rather than a readable literal because `partners.id` is `varchar(24)`
+ * and lookups parse it as one.
+ */
+export const SEED_PARTNER_ID = PartnerId("oimduget8sjsc6xqma6sv8c4")
+export const SEED_PARTNER_NAME = "Longitude"
+export const SEED_PARTNER_ICON_URL = "https://avatars.githubusercontent.com/u/98949449?s=200&v=4"
+export const SEED_PARTNER_REDIRECT_URLS = ["http://localhost:4321/oauth/callback"] as const
+export const SEED_PARTNER_SECRET = "longitude-dev-secret-do-not-use-in-prod-0000000000"
 
 /**
  * QA fixtures for the cost section: one project per archetype, because an

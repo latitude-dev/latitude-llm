@@ -1,21 +1,34 @@
 import { createMiddleware } from "hono/factory"
 import { logger } from "hono/logger"
 
-type AccessLog = (message: string) => void
+type AccessLog = {
+  info: (message: string) => void
+  warn: (message: string) => void
+}
 
 export const accessLogger = (log: AccessLog) => {
-  const logRequest = logger(log)
-
   return createMiddleware(async (c, next) => {
-    if (c.req.method !== "GET" || c.req.path !== "/health") {
-      return logRequest(c, next)
-    }
+    const isHealth = c.req.method === "GET" && c.req.path === "/health"
+    let incoming: string | undefined
 
-    const messages: string[] = []
-    await logger((message) => messages.push(message))(c, next)
+    await logger((message) => {
+      if (incoming === undefined) {
+        incoming = message
+        if (!isHealth) {
+          log.info(message)
+        }
+        return
+      }
 
-    if (!c.res.ok) {
-      messages.forEach(log)
-    }
+      if (isHealth && c.res.ok) {
+        return
+      }
+
+      const write = c.res.ok ? log.info : log.warn
+      if (isHealth && incoming) {
+        write(incoming)
+      }
+      write(message)
+    })(c, next)
   })
 }

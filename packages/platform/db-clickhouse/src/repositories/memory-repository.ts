@@ -229,7 +229,7 @@ const toBlob =
     tokenCount: Number(row.token_count),
   })
 
-const toEventInsertRow = (event: MemoryEvent) => ({
+const toEventInsertRow = (event: MemoryEvent, ingestedAt: Date) => ({
   organization_id: event.organizationId as string,
   project_id: event.projectId as string,
   store_id: event.storeId,
@@ -246,6 +246,7 @@ const toEventInsertRow = (event: MemoryEvent) => ({
   user_id: event.userId as string,
   start_time: formatCHDate(event.startTime),
   end_time: formatCHDate(event.endTime),
+  ingested_at: formatCHDate(ingestedAt),
   source: event.source,
 })
 
@@ -294,9 +295,10 @@ export const MemoryRepositoryLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         yield* chSqlClient
           .query(async (client) => {
+            const ingestedAtBase = Date.now()
             await client.insert({
               table: "memory_events",
-              values: events.map(toEventInsertRow),
+              values: events.map((event, index) => toEventInsertRow(event, new Date(ingestedAtBase + index))),
               format: "JSONEachRow",
             })
           })
@@ -493,7 +495,7 @@ export const MemoryRepositoryLive = Layer.effect(
                         ORDER BY trace_id, span_id, store_id, record_id, ingested_at DESC
                         LIMIT 1 BY trace_id, span_id, store_id, record_id
                       )
-                      ORDER BY end_time ASC`,
+                      ORDER BY end_time ASC, start_time ASC, ingested_at ASC, span_id ASC`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,

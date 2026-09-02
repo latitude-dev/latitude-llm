@@ -5,10 +5,29 @@ All notable changes to the TypeScript Telemetry SDK will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.1.0] - 2026-09-01
+
+### Added
+
+- `injectTraceContext()` / `extractTraceContext()` / `withTraceContext()` carry the active span and
+  Latitude context across a boundary with no ambient OpenTelemetry context, so a second agent in its
+  own Cloudflare Durable Object joins the caller's trace instead of orphaning one. Injecting from
+  inside a tool's `execute` parents the callee on that tool call, which is what makes it render as a
+  subagent. The carrier is keyed by HTTP header names, so one object serves an RPC argument and
+  `fetch` headers, and an absent or malformed carrier leaves the callee a root rather than failing.
+- `withParentContext(tracer, context)` attaches a framework-owned tracer's first span to a remote
+  parent while leaving nested spans on their real parents.
+- `createDurableObjectTelemetry()` flushes at each unit of work, which is the only reliable point on
+  a runtime that evicts without warning. Exports are serialized and coalesced, a caller arriving
+  mid-export gets a later one, in-flight exports register with `ctx.waitUntil()`, and a failed
+  export is reported instead of failing the turn.
+- The Cloudflare Think guide and runnable example cover multi-agent propagation and eviction-safe
+  flushing, including a second `Planner` agent in its own Durable Object.
 
 ### Fixed
 
+- Constructing `Latitude` no longer assumes `process.once` exists, so it works on runtimes without
+  Node signal handling.
 - Smart filter now promotes ancestors of kept spans (including already-ended parents held briefly
   after a drop) so exported traces stay connected when only a descendant independently passed the
   filter — e.g. a stamped `tcp.connect` no longer ships without its parent.

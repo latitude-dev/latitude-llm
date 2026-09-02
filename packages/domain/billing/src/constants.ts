@@ -1,8 +1,13 @@
 import { InvalidBillingIdempotencyKeyError } from "./errors.ts"
 
-export const PLAN_SLUGS = ["free", "pro", "enterprise"] as const
+export const PLAN_SLUGS = ["free", "pro", "enterprise", "self-hosted"] as const
 
 export type PlanSlug = (typeof PLAN_SLUGS)[number]
+
+/** Plans an operator may pin an organization to through a billing override. */
+export const OVERRIDABLE_PLAN_SLUGS = ["free", "pro", "enterprise"] as const
+
+export type OverridablePlanSlug = (typeof OVERRIDABLE_PLAN_SLUGS)[number]
 
 export const CENT_TO_MILLS = 10
 
@@ -71,6 +76,31 @@ export const ENTERPRISE_PLAN_CONFIG = {
   sandboxActiveCap: 1,
 } as const
 
+/**
+ * Retention stamped when billing enforcement is off. Bounded because the ClickHouse
+ * span TTL evaluates `toDateTime(start_time) + toIntervalDay(retention_days + 30)`,
+ * and `DateTime` runs out in 2106.
+ */
+export const SELF_HOSTED_RETENTION_DAYS_MIN = 1
+export const SELF_HOSTED_RETENTION_DAYS_MAX = 3650
+
+/**
+ * Effective plan of any organization on a deployment that does not enforce billing.
+ * Unmetered and unbounded: `LAT_BILLING_ENABLED` gates Latitude Cloud's plan limits,
+ * so a self-hoster is never rejected at ingest or aged out by a plan's retention.
+ */
+export const SELF_HOSTED_PLAN_CONFIG = {
+  slug: "self-hosted" as const,
+  selfServe: false,
+  includedCredits: Infinity,
+  retentionDays: SELF_HOSTED_RETENTION_DAYS_MAX,
+  overageAllowed: true,
+  hardCapped: false,
+  priceCents: null as null,
+  spanQuotaPerPeriod: Number.POSITIVE_INFINITY,
+  sandboxActiveCap: 1,
+} as const
+
 export type PlanConfig = {
   slug: PlanSlug
   selfServe: boolean
@@ -88,6 +118,7 @@ export const PLAN_CONFIGS: Record<PlanSlug, PlanConfig> = {
   free: FREE_PLAN_CONFIG,
   pro: PRO_PLAN_CONFIG,
   enterprise: ENTERPRISE_PLAN_CONFIG,
+  "self-hosted": SELF_HOSTED_PLAN_CONFIG,
 } as const
 
 export const SANDBOX_SPAN_RETENTION_DAYS = 7
@@ -224,3 +255,9 @@ export const calculateMaxReportableOverageCreditsForCap = (
 
 /** TTL for in-memory spend-reservation counters. Comfortably outlasts any single billing period. */
 export const BILLING_SPEND_RESERVATION_TTL_SECONDS = 60 * 60 * 24 * 34
+
+export const BILLING_USAGE_EVENTS_RETENTION_DAYS = 60
+export const BILLING_USAGE_EVENTS_MONTHS_BACK = 2
+export const BILLING_USAGE_EVENTS_MONTHS_AHEAD = 3
+export const BILLING_USAGE_EVENTS_MAINTENANCE_CRON_KEY = "billing:maintain-usage-event-partitions"
+export const BILLING_USAGE_EVENTS_MAINTENANCE_CRON_PATTERN = "0 2 * * *"

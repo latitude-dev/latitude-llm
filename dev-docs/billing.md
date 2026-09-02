@@ -13,12 +13,14 @@ Current plan slugs:
 - `free`
 - `pro`
 - `enterprise`
+- `self-hosted`
 
 Plan semantics:
 
 - `free`: hard capped, `20,000` included credits, `30` entitlement retention days
 - `pro`: overage allowed, `100,000` included credits, `90` entitlement retention days, optional customer-managed period spending cap
 - `enterprise`: manual-only, override-driven included credits and retention by contract
+- `self-hosted`: unenforced, unbounded credits, retention from `LAT_TELEMETRY_RETENTION_DAYS`. Not a contract and not selectable as an override — it is what an organization with no override resolves to on a deployment that does not enforce billing (`OVERRIDABLE_PLAN_SLUGS` is the subset an operator may pin). Usage events are still recorded; nothing enforces them
 
 Chargeable actions:
 
@@ -75,10 +77,13 @@ One credit is worth `2` mills at the Pro overage rate (`$20` per `10,000` credit
 Every organization resolves to one effective billing plan in this order:
 
 1. manual organization billing override
-2. active or trialing Stripe self-serve subscription mapped by explicit plan slug
-3. fallback to `free`
+2. `self-hosted` when `LAT_BILLING_ENABLED` is not `true`
+3. active or trialing Stripe self-serve subscription mapped by explicit plan slug
+4. fallback to `free`
 
 Unknown Stripe plan names fail closed through `UnknownStripePlanError`. The billing domain must never infer `paid => pro`.
+
+**Enforcement is opt-in (`LAT_BILLING_ENABLED`, default `false`).** The published images enforce nothing until a deployment asks for it, so a self-hoster is never rejected at ingest or aged out by a plan's retention (usage events are still recorded, they just gate nothing); **Latitude Cloud sets `LAT_BILLING_ENABLED=true` on every service**, and the plan source reads `self-hosted` in the backoffice wherever it does not. A malformed value in either config var dies as a `BillingConfigurationError` defect rather than falling back, because both silent outcomes — metering a self-hoster, not metering Cloud — are worse than a crash. The override is checked first so an operator can still pin an organization on an unmetered deployment.
 
 ## Persistence Model
 
@@ -95,7 +100,7 @@ Postgres is the authoritative store for metered billing usage. This is intention
 
 `billing_usage_events` is retained for `60` days. After that window, finalized Stripe invoices and `billing_usage_periods.reported_overage_credits` are the durable billing record. Postgres does not have a native TTL clause like ClickHouse, so the table is range-partitioned by `billing_period_start`; old partitions are dropped instead of deleting row-by-row. Idempotency is scoped to `(billing_period_start, idempotency_key)` because Postgres unique constraints on partitioned tables must include the partition key. Do not use `TRUNCATE` for TTL retention because it removes all rows, including current-period idempotency keys.
 
-Partition maintenance lives in database functions created by the billing partition migration. Run `pnpm --filter @platform/db-postgres billing:usage-events:maintain` on a daily operational schedule to ensure future monthly partitions exist and drop partitions whose full billing-period month is older than the `60` day retention window.
+Partition maintenance lives in database functions created by the billing partition migration. Workers and workflows call `maintain_billing_usage_events_retention` on boot so the current UTC month exists before the first insert. Workers also run the same function from a daily `02:00` UTC job (`billing:maintainUsageEventPartitions`) so the next three months are created before they are needed and partitions whose full billing-period month is older than `60` days are dropped. The CLI (`pnpm --filter @platform/db-postgres billing:usage-events:maintain`) remains for one-off ops.
 
 `billing_usage_periods` is keyed by `(organization_id, period_start, period_end)`, not just by organization. That lets the app hold several historical periods safely and prevents a new cycle from overwriting the previous one.
 
@@ -274,6 +279,8 @@ Retention is stamped at write time, not recomputed retroactively. If an organiza
 
 - rows written while the org was on Pro keep `90` stamped retention days
 - rows written after the downgrade get `30` stamped retention days
+
+The same applies to `LAT_TELEMETRY_RETENTION_DAYS` (default and maximum `3650`): changing it moves new rows only, and widening it on existing data is an operator-run `ALTER TABLE ... UPDATE retention_days` documented in `docs/deployment/single-host.mdx`. The ceiling exists because the TTL expression casts `start_time` to `DateTime`, whose range ends in 2106.
 
 ## Product Surfaces
 

@@ -6,8 +6,14 @@ export const createFakeRedis = (): RedisClient => {
   return {
     status: "ready",
     get: async (key: string) => store.get(key) ?? null,
-    set: async (key: string, value: string) => {
+    // Honors the `NX` flag (`set(key, value, "EX", n, "NX")`) so single-use
+    // checks like the partner nonce guard are actually exercised.
+    set: async (key: string, value: string, ...args: unknown[]) => {
+      if (args.includes("NX") && store.has(key)) return null
       store.set(key, value)
+      const expiryIndex = args.indexOf("EX")
+      const seconds = expiryIndex === -1 ? undefined : args[expiryIndex + 1]
+      if (typeof seconds === "number") ttls.set(key, seconds)
       return "OK"
     },
     setex: async (key: string, _ttl: number, value: string) => {

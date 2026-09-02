@@ -12,6 +12,12 @@ export interface FormFieldProps {
   inline?: boolean | undefined
   errors?: string[] | undefined
   className?: string | undefined
+  /**
+   * Id of the control inside `children`. Supply it when the child can carry an `id`,
+   * so the label actually focuses it and `${controlId}-description` /
+   * `${controlId}-error` are addressable from `aria-describedby`.
+   */
+  controlId?: string | undefined
   /** When true with inline, renders children before label (useful for checkboxes) */
   childrenFirst?: boolean | undefined
 }
@@ -24,10 +30,12 @@ function FormField({
   inline = false,
   errors,
   className,
+  controlId,
   childrenFirst = false,
 }: FormFieldProps) {
   const hasError = errors && errors.length > 0
-  const id = useId()
+  const generatedId = useId()
+  const id = controlId ?? generatedId
   const errorId = `${id}-error`
   const descriptionId = `${id}-description`
 

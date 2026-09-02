@@ -30,8 +30,9 @@ const toVersion = (entry: MemoryCurrentEntry | MemoryEvent): MemoryRecordVersion
 
 /**
  * In-memory `MemoryRepository` that faithfully mirrors the ClickHouse read
- * semantics (blob dedup, latest-by-`endTime` manifest, store-wipe times), so
- * reconstruct / materialize use-case tests run without chdb.
+ * semantics (blob dedup, latest-by-`endTime` manifest, store-wipe times,
+ * session events by `endTime`/`startTime` then insert order), so reconstruct /
+ * materialize use-case tests run without chdb.
  */
 export const createFakeMemoryRepository = (overrides?: Partial<MemoryRepositoryShape>) => {
   const events: MemoryEvent[] = []
@@ -108,7 +109,9 @@ export const createFakeMemoryRepository = (overrides?: Partial<MemoryRepositoryS
           if (traceId !== undefined && event.traceId !== traceId) continue
           deduped.set(`${event.spanId}\u0000${event.storeId}\u0000${event.recordId}`, event)
         }
-        return [...deduped.values()].sort((a, b) => a.endTime.getTime() - b.endTime.getTime())
+        return [...deduped.values()].sort(
+          (a, b) => a.endTime.getTime() - b.endTime.getTime() || a.startTime.getTime() - b.startTime.getTime(),
+        )
       }),
     readRecordVersions: ({ organizationId, projectId, records, at }) =>
       Effect.sync(() => {

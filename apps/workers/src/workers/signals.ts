@@ -245,6 +245,8 @@ export const createSignalsWorker = async ({
           pgClient,
           OrganizationId(payload.organizationId),
         ),
+        withClickHouse(SessionRepositoryLive, chClient, OrganizationId(payload.organizationId)),
+        Effect.provide(RedisCacheStoreLive(rdClient)),
         Effect.provide(RedisBillingSpendReservationLive(rdClient)),
         withAi(AIGenerateLive, rdClient),
         withTracing,

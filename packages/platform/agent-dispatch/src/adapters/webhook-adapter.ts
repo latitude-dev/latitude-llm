@@ -3,12 +3,19 @@ import type { AgentDispatchAdapter } from "@domain/agent-dispatch"
 import { DispatchAdapterError } from "@domain/agent-dispatch"
 import { Effect } from "effect"
 import { z } from "zod"
-import { type HostLookup, resolvePublicWebhookUrl } from "../host-guard.ts"
+import {
+  type HostLookup,
+  postPinnedHttps,
+  resolvePublicWebhookTarget,
+  WEBHOOK_RESPONSE_MAX_BYTES,
+} from "../host-guard.ts"
 
 const signPayload = (secret: string, body: string): string => createHmac("sha256", secret).update(body).digest("hex")
 
-const WEBHOOK_ACK_MAX_BYTES = 64 * 1024
 const WEBHOOK_ACK_READ_TIMEOUT_MS = 1_000
+const HTTP_REDIRECT_STATUSES = [301, 302, 303, 307, 308] as const
+
+const isHttpRedirect = (status: number): boolean => (HTTP_REDIRECT_STATUSES as readonly number[]).includes(status)
 
 const httpUrlSchema = z
   .string()
@@ -40,7 +47,15 @@ const cancelReader = (reader: ReadableStreamDefaultReader<Uint8Array>): void => 
   } catch {}
 }
 
-const readWebhookAcknowledgement = (response: Response, signal: AbortSignal): Promise<unknown> => {
+const cancelResponseBody = (response: { readonly body: ReadableStream<Uint8Array> | null }): void => {
+  if (!response.body) return
+  void response.body.cancel().catch(() => undefined)
+}
+
+const readWebhookAcknowledgement = (
+  response: { readonly body: ReadableStream<Uint8Array> | null },
+  signal: AbortSignal,
+): Promise<unknown> => {
   if (!response.body) return Promise.resolve(undefined)
 
   const reader = response.body.getReader()
@@ -84,7 +99,7 @@ const readWebhookAcknowledgement = (response: Response, signal: AbortSignal): Pr
           }
 
           bytesRead += value.byteLength
-          if (bytesRead > WEBHOOK_ACK_MAX_BYTES) {
+          if (bytesRead > WEBHOOK_RESPONSE_MAX_BYTES) {
             fail(new Error("webhook acknowledgement body exceeded the size limit"))
             return
           }
@@ -101,18 +116,21 @@ const readWebhookAcknowledgement = (response: Response, signal: AbortSignal): Pr
   })
 }
 
-export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdapter => ({
+export const createWebhookAdapter = (
+  lookupHost?: HostLookup,
+  postHttps: typeof postPinnedHttps = postPinnedHttps,
+): AgentDispatchAdapter => ({
   kind: "webhook",
   dispatch: ({ idempotencyKey, prompt, context, config, credential }) =>
     Effect.gen(function* () {
-      const target = config as { webhookUrl: string }
+      const webhookTarget = config as { webhookUrl: string }
       const secret = credential.webhookSecret
       if (!secret) {
         return yield* Effect.fail(new DispatchAdapterError({ reason: "config", cause: "missing webhook secret" }))
       }
 
-      const url = yield* Effect.tryPromise({
-        try: () => resolvePublicWebhookUrl(target.webhookUrl, lookupHost),
+      const pinnedTarget = yield* Effect.tryPromise({
+        try: () => resolvePublicWebhookTarget(webhookTarget.webhookUrl, lookupHost),
         catch: (cause) =>
           new DispatchAdapterError({
             reason: cause instanceof Error && cause.message.startsWith("webhook_") ? "config" : "transport",
@@ -125,9 +143,7 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
 
       const response = yield* Effect.tryPromise({
         try: () =>
-          fetch(url, {
-            method: "POST",
-            redirect: "error",
+          postHttps(pinnedTarget, {
             headers: {
               "Content-Type": "application/json",
               "X-Latitude-Signature": `sha256=${signature}`,
@@ -138,10 +154,16 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
         catch: (cause) => new DispatchAdapterError({ reason: "transport", cause }),
       })
 
+      if (isHttpRedirect(response.status)) {
+        cancelResponseBody(response)
+        return yield* Effect.fail(new DispatchAdapterError({ reason: "transport", cause: response.status }))
+      }
       if (response.status === 401 || response.status === 403) {
+        cancelResponseBody(response)
         return yield* Effect.fail(new DispatchAdapterError({ reason: "auth", cause: response.status }))
       }
       if (response.status === 429) {
+        cancelResponseBody(response)
         const retryAfter = response.headers.get("Retry-After")
         return yield* Effect.fail(
           new DispatchAdapterError({
@@ -152,6 +174,7 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
         )
       }
       if (response.status >= 500) {
+        cancelResponseBody(response)
         return yield* Effect.fail(new DispatchAdapterError({ reason: "transport", cause: response.status }))
       }
       if (response.status >= 400) {
@@ -172,7 +195,7 @@ export const createWebhookAdapter = (lookupHost?: HostLookup): AgentDispatchAdap
         status: "accepted" as const,
         ...(acknowledgement.externalAgentId !== undefined ? { externalAgentId: acknowledgement.externalAgentId } : {}),
         ...(acknowledgement.externalRunId !== undefined ? { externalRunId: acknowledgement.externalRunId } : {}),
-        deepLinkUrl: acknowledgement.deepLinkUrl ?? target.webhookUrl,
+        deepLinkUrl: acknowledgement.deepLinkUrl ?? webhookTarget.webhookUrl,
       }
     }),
 })
