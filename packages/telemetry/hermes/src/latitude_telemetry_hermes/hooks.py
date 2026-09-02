@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from typing import Any, Dict, Optional
 
 from .aux_usage import aux_spans
@@ -173,22 +174,23 @@ def on_session_finalize(**kwargs: Any) -> None:
     if not _config()["enabled"]:
         return
     session_id = kwargs.get("session_id") or ""
+    deadline = time.monotonic() + _TEARDOWN_FLUSH_SECONDS
     try:
         _ship(_BUILDER.finish_scoped(**kwargs))
     except Exception as exc:  # fail-open
         _debug(f"session_finalize handler failed: {exc}")
     try:
-        _ship(_aux_usage(session_id))
+        _ship(_aux_usage(session_id, deadline))
     except Exception as exc:  # fail-open
         _debug(f"auxiliary usage reconciliation failed: {exc}")
     finally:
         try:
-            _flush(_TEARDOWN_FLUSH_SECONDS)
+            _flush(max(0.0, deadline - time.monotonic()))
         except Exception as exc:  # fail-open
             _debug(f"flush failed: {exc}")
 
 
-def _aux_usage(session_id: str) -> Any:
+def _aux_usage(session_id: str, deadline: Optional[float] = None) -> Any:
     """The session's own auxiliary calls, plus those of every subagent it spawned.
 
     A delegated child records its usage under its own session id and never gets a
@@ -202,7 +204,7 @@ def _aux_usage(session_id: str) -> Any:
         if session is None or session.aux_emitted:
             continue
         session.aux_emitted = True
-        spans.extend(aux_spans(sid, session.exported, context))
+        spans.extend(aux_spans(sid, session.exported, context, deadline))
     return spans
 
 

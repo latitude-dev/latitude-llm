@@ -14,8 +14,8 @@ from typing import Any, Dict, List
 import pytest
 from helpers import attr_map, span_attrs
 
+import latitude_telemetry_hermes.aux_usage as aux_usage_module
 import latitude_telemetry_hermes.hooks as hooks
-from latitude_telemetry_hermes.aux_usage import aux_spans
 from latitude_telemetry_hermes.builder import _Builder
 from latitude_telemetry_hermes.config import reset_config
 from latitude_telemetry_hermes.hermes import state_db_path
@@ -91,7 +91,7 @@ def _names(spans: List[Any]) -> List[str]:
 
 
 def test_only_the_calls_no_hook_could_see_are_emitted(ledger: Path):
-    spans = aux_spans("sess-1", _exported(), {"session.id": "sess-1"})
+    spans = aux_usage_module.aux_spans("sess-1", _exported(), {"session.id": "sess-1"})
     assert _names(spans) == ["aux:approval", "aux:compression", "aux:title_generation", "interaction"]
     assert spans[-1].attrs["hermes.llm_calls"] == 41, "38 approval + 2 compression + 1 title"
 
@@ -100,20 +100,53 @@ def test_the_hook_visible_tasks_are_never_re_emitted(ledger: Path):
     """The main loop and background-review forks fire the api hooks, so their
     ledger rows are already in Latitude. Emitting them again invents tokens —
     the first dogfood run produced a phantom `aux:main` worth 166k input."""
-    tasks = {span.attrs.get("hermes.aux.task") for span in aux_spans("sess-1", _exported(), {})}
+    tasks = {span.attrs.get("hermes.aux.task") for span in aux_usage_module.aux_spans("sess-1", _exported(), {})}
     assert "" not in tasks and "main" not in tasks
     assert "background_review" not in tasks
     assert tasks == {"approval", "compression", "title_generation", None}
 
 
-def test_it_gives_up_rather_than_risk_double_counting(ledger: Path):
+def test_it_gives_up_rather_than_risk_double_counting(ledger: Path, monkeypatch):
     """If we exported more calls than the hook-visible tasks account for, the
     assumption about which tasks fire hooks no longer holds."""
-    assert aux_spans("sess-1", _exported(calls=999), {}) == []
+    slept: List[float] = []
+    monkeypatch.setattr(aux_usage_module.time, "sleep", lambda seconds: slept.append(seconds))
+    assert aux_usage_module.aux_spans("sess-1", _exported(calls=999), {}) == []
+    assert slept == []
+
+
+def test_it_gives_up_when_the_teardown_deadline_expires(ledger: Path, monkeypatch):
+    """A shared teardown deadline bounds the wait; the guard still skips."""
+    clock = {"now": 0.0}
+    monkeypatch.setattr(aux_usage_module.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(aux_usage_module.time, "sleep", lambda seconds: clock.update(now=clock["now"] + seconds))
+    assert aux_usage_module.aux_spans("sess-1", _exported(calls=999), {}, deadline=0.5) == []
+    assert clock["now"] == pytest.approx(0.5)
+
+
+def test_aux_is_emitted_once_the_hook_visible_ledger_catches_up(ledger: Path, monkeypatch):
+    """The ledger flusher can land auxiliary rows before hook-visible ones."""
+    reads = {"count": 0}
+    original_query = aux_usage_module._query
+
+    def lagging_query(session_id: str) -> List[Dict[str, Any]]:
+        reads["count"] += 1
+        rows = original_query(session_id)
+        if reads["count"] <= 3:
+            return [row for row in rows if str(row.get("task") or "") not in {"", "background_review"}]
+        return rows
+
+    monkeypatch.setattr(aux_usage_module, "_query", lagging_query)
+    monkeypatch.setattr(aux_usage_module.time, "sleep", lambda _: None)
+
+    spans = aux_usage_module.aux_spans(
+        "sess-1", _exported(), {"session.id": "sess-1"}, deadline=aux_usage_module.time.monotonic() + 10
+    )
+    assert _names(spans) == ["aux:approval", "aux:compression", "aux:title_generation", "interaction"]
 
 
 def test_an_aux_span_is_priced_on_the_ledgers_own_route(ledger: Path):
-    span = next(s for s in aux_spans("sess-1", _exported(), {}) if s.name == "aux:compression")
+    span = next(s for s in aux_usage_module.aux_spans("sess-1", _exported(), {}) if s.name == "aux:compression")
     assert span.attrs["gen_ai.provider.name"] == "openai-codex"
     assert span.attrs["gen_ai.system"] == "openai-codex"
 
@@ -121,12 +154,12 @@ def test_an_aux_span_is_priced_on_the_ledgers_own_route(ledger: Path):
 def test_an_aux_span_has_no_duration_of_its_own(ledger: Path):
     """It stands for N calls; a first_seen..last_seen window is not latency, and
     stamping one inflated the session's timings by twenty minutes."""
-    for span in aux_spans("sess-1", _exported(), {}):
+    for span in aux_usage_module.aux_spans("sess-1", _exported(), {}):
         assert span.start_ms == span.end_ms
 
 
 def test_an_aux_span_carries_the_tokens_and_its_provenance(ledger: Path):
-    spans = aux_spans("sess-1", _exported(), {"session.id": "sess-1"})
+    spans = aux_usage_module.aux_spans("sess-1", _exported(), {"session.id": "sess-1"})
     attrs = span_attrs(spans, "aux:compression")
     assert attrs["gen_ai.operation.name"] == "chat", "so it lands in the token gate"
     assert attrs["gen_ai.usage.input_tokens"] == 37_509
@@ -142,11 +175,11 @@ def test_an_aux_span_carries_the_tokens_and_its_provenance(ledger: Path):
 
 def test_a_missing_ledger_is_a_no_op(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / "nowhere"))
-    assert aux_spans("sess-1", _exported(), {}) == []
+    assert aux_usage_module.aux_spans("sess-1", _exported(), {}) == []
 
 
 def test_an_unknown_session_is_a_no_op(ledger: Path):
-    assert aux_spans("other-session", _exported(), {}) == []
+    assert aux_usage_module.aux_spans("other-session", _exported(), {}) == []
 
 
 def test_the_aux_trace_joins_the_session_even_without_a_live_context(ledger: Path):
@@ -154,19 +187,21 @@ def test_the_aux_trace_joins_the_session_even_without_a_live_context(ledger: Pat
 
     context = _Builder().context_for_session("sess-1")
     assert context["session.id"] == "sess-1", "a released context must not orphan the aux trace"
-    assert all(span.attrs["session.id"] == "sess-1" for span in aux_spans("sess-1", _exported(), context))
+    spans = aux_usage_module.aux_spans("sess-1", _exported(), context)
+    assert all(span.attrs["session.id"] == "sess-1" for span in spans)
 
 
 def test_it_can_be_turned_off(ledger: Path, monkeypatch):
     monkeypatch.setenv("LATITUDE_HERMES_AUX_USAGE", "0")
     reset_config()
-    assert aux_spans("sess-1", _exported(), {}) == []
+    assert aux_usage_module.aux_spans("sess-1", _exported(), {}) == []
 
 
 def test_the_totals_reconcile_with_the_whole_ledger(ledger: Path):
     """Latitude's session totals equal SUM(session_model_usage) for the session."""
     exported = _exported()
-    encoded = _build_otlp(aux_spans("sess-1", exported, {}))["resourceSpans"][0]["scopeSpans"][0]["spans"]
+    encoded = _build_otlp(aux_usage_module.aux_spans("sess-1", exported, {}))
+    encoded = encoded["resourceSpans"][0]["scopeSpans"][0]["spans"]
 
     aux_input = sum(attr_map(s["attributes"]).get("gen_ai.usage.input_tokens", 0) for s in encoded)
     assert exported["input_tokens"] + aux_input == sum(row[2] for row in _ROWS)
@@ -217,7 +252,7 @@ def test_a_subagents_auxiliary_calls_are_reconciled_into_the_parent_session(ledg
 
 def test_the_ledger_is_only_ever_read(ledger: Path):
     before = ledger.read_bytes()
-    aux_spans("sess-1", _exported(), {})
+    aux_usage_module.aux_spans("sess-1", _exported(), {})
     assert ledger.read_bytes() == before, "never a write, never a lock"
 
 
