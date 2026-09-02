@@ -83,7 +83,13 @@ export function SignalsTab({
         header: "Dimensions",
         width: 190,
         minWidth: 150,
-        render: (issue) => <SignalScoreDimensions scoreEvidence={issue.scoreEvidence} wrap={false} />,
+        render: (issue) => (
+          <SignalScoreDimensions
+            scoreEvidence={issue.scoreEvidence}
+            ignored={issue.states.includes("ignored")}
+            wrap={false}
+          />
+        ),
       },
       {
         key: "seenAt",

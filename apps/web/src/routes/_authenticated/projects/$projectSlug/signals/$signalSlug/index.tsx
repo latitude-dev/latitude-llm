@@ -190,7 +190,7 @@ function SignalDetailPage() {
                 )}
                 {!isLoading && signal ? (
                   <div className="flex flex-row flex-wrap items-center gap-2">
-                    <SignalScoreDimensions scoreEvidence={signal.scoreEvidence} />
+                    <SignalScoreDimensions scoreEvidence={signal.scoreEvidence} ignored={signal.ignoredAt !== null} />
                     {signal.tags.length > 0 ? <TagList tags={signal.tags} wrap /> : null}
                   </div>
                 ) : null}

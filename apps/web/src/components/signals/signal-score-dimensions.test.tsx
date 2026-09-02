@@ -43,6 +43,22 @@ describe("SignalScoreDimensions", () => {
     expect(badgeClassName).toContain("font-normal")
   })
 
+  it("treats an ignored signal as diagnostic even when roles are stored", () => {
+    const scoreEvidence = [
+      { scoreDimension: "outcome", role: "taskOutcome" },
+      { scoreDimension: "safety", role: "exposure" },
+    ] as const
+    const { rerender } = render(<SignalScoreDimensions ignored scoreEvidence={scoreEvidence} />)
+
+    expect(screen.getByText("Diagnostic")).toBeTruthy()
+    expect(screen.queryByText("Outcome")).toBeNull()
+    expect(screen.queryByText("Safety")).toBeNull()
+
+    rerender(<SignalScoreDimensions ignored scoreEvidence={scoreEvidence} wrap={false} />)
+    expect(screen.getByText("Diagnostic")).toBeTruthy()
+    expect(screen.queryByLabelText("Agent Score dimensions")).toBeNull()
+  })
+
   it("uses visible regular-weight badges in a single non-wrapping row", () => {
     render(
       <SignalScoreDimensions

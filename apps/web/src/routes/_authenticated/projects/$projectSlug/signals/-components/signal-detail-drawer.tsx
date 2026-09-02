@@ -356,7 +356,7 @@ export function SignalDetailBody({
                   <div className="flex min-w-[33%] max-w-max flex-1">
                     <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
                   </div>
-                  <SignalScoreDimensions scoreEvidence={issue.scoreEvidence} />
+                  <SignalScoreDimensions scoreEvidence={issue.scoreEvidence} ignored={issue.ignoredAt !== null} />
                   {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
                 </div>
               )}

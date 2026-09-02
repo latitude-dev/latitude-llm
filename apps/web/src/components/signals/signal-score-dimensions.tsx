@@ -20,12 +20,14 @@ function getSignalScoreDimensions(scoreEvidence: readonly SignalScoreEvidence[])
 
 export function SignalScoreDimensions({
   scoreEvidence,
+  ignored = false,
   wrap = true,
 }: {
   readonly scoreEvidence: readonly SignalScoreEvidence[]
+  readonly ignored?: boolean
   readonly wrap?: boolean
 }) {
-  const dimensions = useMemo(() => getSignalScoreDimensions(scoreEvidence), [scoreEvidence])
+  const dimensions = useMemo(() => (ignored ? [] : getSignalScoreDimensions(scoreEvidence)), [ignored, scoreEvidence])
   const containerRef = useRef<HTMLUListElement>(null)
   const [visibleCount, setVisibleCount] = useState(dimensions.length)
 
