@@ -2,7 +2,7 @@ import { SCORE_DIMENSIONS, type ScoreDimension } from "@domain/shared"
 import type { SignalScoreEvidence } from "@domain/signals"
 import { Badge } from "@repo/ui"
 
-const SCORE_DIMENSION_LABELS = {
+export const SIGNAL_SCORE_DIMENSION_LABELS = {
   outcome: "Outcome",
   reliability: "Reliability",
   cost: "Cost",
@@ -31,7 +31,7 @@ export function SignalScoreDimensions({
       {dimensions.map((dimension) => (
         <li key={dimension}>
           <Badge variant="outlinePurple" size="small" noWrap>
-            {SCORE_DIMENSION_LABELS[dimension]}
+            {SIGNAL_SCORE_DIMENSION_LABELS[dimension]}
           </Badge>
         </li>
       ))}

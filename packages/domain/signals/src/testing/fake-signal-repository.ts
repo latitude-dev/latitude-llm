@@ -256,7 +256,17 @@ export const createFakeSignalRepository = (
         }
       }),
 
-    listTableRows: ({ projectId, limit, offset, lifecycleGroup, assigneeIds, searchQuery, timeRange, sort }) =>
+    listTableRows: ({
+      projectId,
+      limit,
+      offset,
+      lifecycleGroup,
+      assigneeIds,
+      scoreDimensions,
+      searchQuery,
+      timeRange,
+      sort,
+    }) =>
       Effect.sync(() => {
         const query = searchQuery?.trim().toLowerCase()
         const filtered = [...issues.values()]
@@ -267,6 +277,12 @@ export const createFakeSignalRepository = (
             if (lifecycleGroup === "active" && archived) return false
             if (lifecycleGroup === "archived" && !archived) return false
             if (assigneeIds?.length && !assigneeIds.includes(issue.assigneeId ?? "unassigned")) return false
+            if (
+              scoreDimensions?.length &&
+              !issue.scoreEvidence.some((evidence) => scoreDimensions.includes(evidence.scoreDimension))
+            ) {
+              return false
+            }
             if (timeRange?.from || timeRange?.to) {
               const inWindow = (date: Date) =>
                 (!timeRange.from || date >= timeRange.from) && (!timeRange.to || date <= timeRange.to)

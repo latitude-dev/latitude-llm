@@ -22,6 +22,7 @@ import {
   resolveSettings,
   SettingsReader,
   SignalId,
+  scoreDimensionSchema,
 } from "@domain/shared"
 import {
   type ApplySignalLifecycleCommandResult,
@@ -100,6 +101,7 @@ const listSignalsInputSchema = z.object({
   offset: z.number().int().min(0).optional(),
   lifecycleGroup: signalsLifecycleGroupSchema.optional(),
   assigneeIds: z.array(signalAssigneeFilterSchema).min(1).optional(),
+  scoreDimensions: z.array(scoreDimensionSchema).min(1).optional(),
   sort: z
     .object({
       field: signalsSortFieldSchema,
@@ -128,6 +130,7 @@ const toSignalRecord = (issue: SignalListItem) => ({
   name: issue.name,
   description: issue.description,
   source: issue.source,
+  scoreEvidence: issue.scoreEvidence.map((evidence) => ({ ...evidence })),
   states: issue.states,
   assigneeId: issue.assigneeId,
   priority: issue.priority,
@@ -440,6 +443,7 @@ const runSignalsList = async (
         ...(options.includeItems !== undefined ? { includeItems: options.includeItems } : {}),
         ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
         ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
+        ...(data.scoreDimensions?.length ? { scoreDimensions: data.scoreDimensions } : {}),
         ...(data.sort ? { sort: data.sort } : {}),
         ...(timeRange ? { timeRange } : {}),
         ...(data.histogramMaxSpanDays ? { histogramMaxSpanDays: data.histogramMaxSpanDays } : {}),
@@ -1229,6 +1233,7 @@ const bulkSignalLifecycleActionInputSchema = z.object({
   keepMonitoring: z.boolean().optional(),
   lifecycleGroup: signalsLifecycleGroupSchema.optional(),
   assigneeIds: z.array(signalAssigneeFilterSchema).min(1).optional(),
+  scoreDimensions: z.array(scoreDimensionSchema).min(1).optional(),
   sort: z
     .object({
       field: signalsSortFieldSchema,
@@ -1290,6 +1295,7 @@ export const applyBulkSignalLifecycleAction = createServerFn({ method: "POST" })
               includeAnalytics: false,
               ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
               ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
+              ...(data.scoreDimensions?.length ? { scoreDimensions: data.scoreDimensions } : {}),
               ...(data.sort ? { sort: data.sort } : {}),
               ...(timeRange ? { timeRange } : {}),
               ...(search
@@ -1361,6 +1367,7 @@ export const enqueueSignalsExport = createServerFn({ method: "POST" })
       selection: exportSelectionSchema.optional(),
       lifecycleGroup: signalsLifecycleGroupSchema.optional(),
       assigneeIds: z.array(signalAssigneeFilterSchema).min(1).optional(),
+      scoreDimensions: z.array(scoreDimensionSchema).min(1).optional(),
       sort: z
         .object({
           field: signalsSortFieldSchema,
@@ -1410,6 +1417,7 @@ export const enqueueSignalsExport = createServerFn({ method: "POST" })
         ...(data.selection ? { selection: data.selection } : {}),
         ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
         ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
+        ...(data.scoreDimensions?.length ? { scoreDimensions: data.scoreDimensions } : {}),
         ...(data.sort ? { sort: data.sort } : {}),
         ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         ...(exportTimeRange ? { timeRange: exportTimeRange } : {}),

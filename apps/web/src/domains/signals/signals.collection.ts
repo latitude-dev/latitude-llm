@@ -1,5 +1,6 @@
 import type { SignalPreviewResult } from "@domain/evaluations"
 import type { SignalDimension } from "@domain/scores"
+import type { ScoreDimension } from "@domain/shared"
 import type { SignalGenerationResult } from "@domain/signals"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query"
@@ -93,6 +94,7 @@ interface SignalsKeyInput {
   readonly limit: number
   readonly lifecycleGroup: "active" | "archived" | undefined
   readonly assigneeIds: readonly string[] | undefined
+  readonly scoreDimensions: readonly ScoreDimension[] | undefined
   readonly sorting: SignalsSorting
   readonly searchQuery: string | undefined
   readonly timeRange: SignalsTimeRange | undefined
@@ -106,6 +108,7 @@ const getSignalsQueryKey = (input: SignalsKeyInput) =>
     input.limit,
     input.lifecycleGroup ?? null,
     input.assigneeIds?.length ? [...input.assigneeIds].sort().join(",") : null,
+    input.scoreDimensions?.length ? [...input.scoreDimensions].sort().join(",") : null,
     input.sorting.column,
     input.sorting.direction,
     input.searchQuery ?? null,
@@ -155,6 +158,7 @@ const buildListSignalsRequest = (input: SignalsKeyInput, offset: number) => ({
   },
   ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
   ...(input.assigneeIds?.length ? { assigneeIds: [...input.assigneeIds] } : {}),
+  ...(input.scoreDimensions?.length ? { scoreDimensions: [...input.scoreDimensions] } : {}),
   ...(input.searchQuery ? { searchQuery: input.searchQuery } : {}),
   ...(input.timeRange?.fromIso || input.timeRange?.toIso ? { timeRange: input.timeRange } : {}),
   ...(input.histogramMaxSpanDays ? { histogramMaxSpanDays: input.histogramMaxSpanDays } : {}),
@@ -164,6 +168,7 @@ export function useSignals(input: {
   readonly projectId: string
   readonly lifecycleGroup?: "active" | "archived"
   readonly assigneeIds?: readonly string[]
+  readonly scoreDimensions?: readonly ScoreDimension[]
   readonly sorting?: SignalsSorting
   readonly searchQuery?: string
   readonly timeRange?: SignalsTimeRange
@@ -179,6 +184,7 @@ export function useSignals(input: {
     limit,
     lifecycleGroup: input.lifecycleGroup,
     assigneeIds: input.assigneeIds?.length ? input.assigneeIds : undefined,
+    scoreDimensions: input.scoreDimensions?.length ? input.scoreDimensions : undefined,
     sorting,
     searchQuery: normalizedSearchQuery,
     timeRange: input.timeRange,
@@ -192,6 +198,7 @@ export function useSignals(input: {
       keyInput.limit,
       keyInput.lifecycleGroup,
       keyInput.assigneeIds,
+      keyInput.scoreDimensions,
       keyInput.sorting.column,
       keyInput.sorting.direction,
       keyInput.searchQuery,

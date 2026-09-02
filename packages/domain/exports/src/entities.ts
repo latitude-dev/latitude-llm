@@ -1,4 +1,4 @@
-import type { FilterSet } from "@domain/shared"
+import type { FilterSet, ScoreDimension } from "@domain/shared"
 import { z } from "zod"
 
 /**
@@ -49,7 +49,7 @@ export interface TracesExportPayload extends BaseExportPayload {
 }
 
 /**
- * Signals export job payload (no extra filters for v1).
+ * Signals export job payload.
  */
 export interface SignalsExportPayload extends BaseExportPayload {
   readonly kind: "issues"
@@ -58,6 +58,7 @@ export interface SignalsExportPayload extends BaseExportPayload {
   readonly searchQuery?: string | undefined
   /** Assignee user ids; `"unassigned"` matches issues with no assignee. */
   readonly assigneeIds?: readonly string[] | undefined
+  readonly scoreDimensions?: readonly ScoreDimension[] | undefined
   readonly timeRange?:
     | {
         readonly fromIso?: string | undefined

@@ -1,4 +1,4 @@
-import type { NotFoundError, ProjectId, RepositoryError, SignalId, SqlClient } from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, ScoreDimension, SignalId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Signal, SignalFeedback } from "../entities/signal.ts"
 
@@ -64,6 +64,7 @@ export interface ListSignalsRepositoryInput {
 export interface ListSignalTableRowsRepositoryInput extends ListSignalsRepositoryInput {
   readonly lifecycleGroup?: "active" | "archived"
   readonly assigneeIds?: readonly string[]
+  readonly scoreDimensions?: readonly ScoreDimension[]
   readonly searchQuery?: string
   readonly timeRange?: {
     readonly from?: Date

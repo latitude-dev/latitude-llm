@@ -1,4 +1,4 @@
-import type { FilterSet } from "@domain/shared"
+import type { FilterSet, ScoreDimension } from "@domain/shared"
 import {
   Button,
   CloseTrigger,
@@ -150,6 +150,11 @@ import { parseFilters } from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { AssigneeFilter, UNASSIGNED_FILTER_TOKEN } from "./-components/assignee-filter.tsx"
 import { SignalBuilderModal } from "./-components/builder/signal-builder-modal.tsx"
+import {
+  parseSignalScoreDimensions,
+  ScoreDimensionFilter,
+  serializeSignalScoreDimensions,
+} from "./-components/score-dimension-filter.tsx"
 import { SignalsAnalyticsPanel } from "./-components/signals-analytics-panel.tsx"
 import { SignalsEmptyState } from "./-components/signals-empty-state.tsx"
 import { type SignalsTableSorting, SignalsView } from "./-components/signals-view.tsx"
@@ -204,7 +209,7 @@ function serializeAssignees(tokens: readonly string[]): string {
 }
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/signals/")({
-  // List search params (lifecycle/time/search/sort) live in the URL via `useParamState`,
+  // List search params live in the URL via `useParamState`,
   // so keep a permissive passthrough rather than a typed schema.
   validateSearch: (search: Record<string, unknown>): Record<string, unknown> => search,
   staticData: {
@@ -224,6 +229,7 @@ function SignalsPage() {
     toKey: "signalsTimeTo",
   })
   const [assigneesParam, setAssigneesParam] = useParamState("signalsAssignees", "")
+  const [scoreDimensionsParam, setScoreDimensionsParam] = useParamState("signalsDimensions", "")
   const [searchQuery, setSearchQuery] = useParamState("signalsSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
   const [rawSorting, setRawSorting] = useParamState("signalsSort", serializeSorting(DEFAULT_SORTING), {
@@ -271,12 +277,17 @@ function SignalsPage() {
 
   useEffect(() => {
     setFocusedSignalId(undefined)
-  }, [lifecycleGroup, searchQuery, rawSorting, assigneesParam, tw.timeFrom, tw.timeTo])
+  }, [lifecycleGroup, searchQuery, rawSorting, assigneesParam, scoreDimensionsParam, tw.timeFrom, tw.timeTo])
 
   const assigneeIds = useMemo(() => parseAssignees(assigneesParam), [assigneesParam])
   const setAssigneeIds = useCallback(
     (next: readonly string[]) => setAssigneesParam(serializeAssignees(next)),
     [setAssigneesParam],
+  )
+  const scoreDimensions = useMemo(() => parseSignalScoreDimensions(scoreDimensionsParam), [scoreDimensionsParam])
+  const setScoreDimensions = useCallback(
+    (next: readonly ScoreDimension[]) => setScoreDimensionsParam(serializeSignalScoreDimensions(next)),
+    [setScoreDimensionsParam],
   )
 
   const {
@@ -296,6 +307,7 @@ function SignalsPage() {
     lifecycleGroup,
     sorting,
     ...(assigneeIds.length > 0 ? { assigneeIds } : {}),
+    ...(scoreDimensions.length > 0 ? { scoreDimensions } : {}),
     ...(searchQuery ? { searchQuery } : {}),
     timeRange: tw.listRange,
     histogramMaxSpanDays: defaultProjectTimeWindowDays(project),
@@ -332,6 +344,7 @@ function SignalsPage() {
             direction: sorting.direction,
           },
           ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
+          ...(scoreDimensions.length > 0 ? { scoreDimensions: [...scoreDimensions] } : {}),
           ...(searchQuery ? { searchQuery } : {}),
           timeRange: tw.listRange,
         },
@@ -350,7 +363,17 @@ function SignalsPage() {
     } finally {
       setExporting(false)
     }
-  }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, tw.listRange])
+  }, [
+    assigneeIds,
+    lifecycleGroup,
+    project.id,
+    scoreDimensions,
+    searchQuery,
+    selection,
+    sorting.column,
+    sorting.direction,
+    tw.listRange,
+  ])
 
   const handleBulkLifecycle = useCallback(
     async (command: BulkLifecycleAction, keepMonitoring?: boolean) => {
@@ -371,6 +394,7 @@ function SignalsPage() {
               direction: sorting.direction,
             },
             ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
+            ...(scoreDimensions.length > 0 ? { scoreDimensions: [...scoreDimensions] } : {}),
             ...(searchQuery ? { searchQuery } : {}),
             timeRange: tw.listRange,
           },
@@ -397,11 +421,25 @@ function SignalsPage() {
         setBulkActionLoading(false)
       }
     },
-    [assigneeIds, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, tw.listRange],
+    [
+      assigneeIds,
+      lifecycleGroup,
+      project.id,
+      scoreDimensions,
+      searchQuery,
+      selection,
+      sorting.column,
+      sorting.direction,
+      tw.listRange,
+    ],
   )
 
   const hasActiveFilters =
-    lifecycleGroup !== "active" || searchQuery !== "" || tw.hasExplicitRange || assigneeIds.length > 0
+    lifecycleGroup !== "active" ||
+    searchQuery !== "" ||
+    tw.hasExplicitRange ||
+    assigneeIds.length > 0 ||
+    scoreDimensions.length > 0
   // Derived from the un-substituted data so a placeholder reload (which forces
   // `issues` to []) does not falsely trigger the empty state.
   const hasNoSignals = !hasAnySignals && !hasActiveFilters
@@ -460,6 +498,7 @@ function SignalsPage() {
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
               <AssigneeFilter value={assigneeIds} onChange={setAssigneeIds} />
+              <ScoreDimensionFilter value={scoreDimensions} onChange={setScoreDimensions} />
               <Tabs
                 variant="bordered"
                 size="sm"

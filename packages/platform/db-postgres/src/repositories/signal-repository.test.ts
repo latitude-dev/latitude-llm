@@ -120,6 +120,69 @@ describe("SignalRepositoryLive score evidence", () => {
   })
 })
 
+describe("SignalRepositoryLive.listTableRows score dimension filtering", () => {
+  const CREATED_AT = new Date("2026-03-15T00:00:00.000Z")
+  const OUTCOME = {
+    id: "sig-outcome".padEnd(24, "o"),
+    slug: "outcome",
+    createdAt: CREATED_AT,
+    scoreEvidence: [{ scoreDimension: "outcome", role: "taskOutcome" }] satisfies SignalScoreEvidence[],
+  }
+  const MULTI_DIMENSION = {
+    id: "sig-multi".padEnd(24, "m"),
+    slug: "multi",
+    createdAt: CREATED_AT,
+    scoreEvidence: [
+      { scoreDimension: "reliability", role: "operationalIncident" },
+      { scoreDimension: "cost", role: "spendEfficiency" },
+    ] satisfies SignalScoreEvidence[],
+  }
+  const DIAGNOSTIC = {
+    id: "sig-diagnostic".padEnd(24, "d"),
+    slug: "diagnostic",
+    createdAt: CREATED_AT,
+  }
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+    await seedSignal(OUTCOME)
+    await seedSignal(MULTI_DIMENSION)
+    await seedSignal(DIAGNOSTIC)
+  })
+
+  it("matches any selected dimension and returns each signal once", async () => {
+    const page = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).listTableRows({
+          projectId: PROJECT_ID,
+          limit: 50,
+          offset: 0,
+          scoreDimensions: ["outcome", "cost", "reliability"],
+        })
+      }),
+    )
+
+    expect(page.items.map((issue) => issue.id).sort()).toEqual([OUTCOME.id, MULTI_DIMENSION.id].sort())
+    expect(page.totalCount).toBe(2)
+  })
+
+  it("does not include diagnostic signals in a dimension filter", async () => {
+    const page = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).listTableRows({
+          projectId: PROJECT_ID,
+          limit: 50,
+          offset: 0,
+          scoreDimensions: ["safety"],
+        })
+      }),
+    )
+
+    expect(page.items).toEqual([])
+    expect(page.totalCount).toBe(0)
+  })
+})
+
 describe("SignalRepositoryLive.listScoringEligibleIds", () => {
   const CREATED_AT = new Date("2026-07-01T00:00:00.000Z")
   const LIFECYCLE_AT = new Date("2026-08-01T00:00:00.000Z")

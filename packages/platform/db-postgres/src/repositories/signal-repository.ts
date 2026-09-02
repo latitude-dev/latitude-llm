@@ -264,7 +264,17 @@ const signalRepositoryCoreLive = Layer.effect(
             )
         }),
 
-      listTableRows: ({ projectId, limit, offset, lifecycleGroup, assigneeIds, searchQuery, timeRange, sort }) =>
+      listTableRows: ({
+        projectId,
+        limit,
+        offset,
+        lifecycleGroup,
+        assigneeIds,
+        scoreDimensions,
+        searchQuery,
+        timeRange,
+        sort,
+      }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
@@ -281,6 +291,14 @@ const signalRepositoryCoreLive = Layer.effect(
                   : inArray(signals.assigneeId, assigneeIds)
                 : undefined
               const search = searchQuery?.trim()
+              const scoreDimensionCondition = scoreDimensions?.length
+                ? or(
+                    ...scoreDimensions.map(
+                      (scoreDimension) =>
+                        sql<boolean>`${signals.scoreEvidence} @> ${JSON.stringify([{ scoreDimension }])}::jsonb`,
+                    ),
+                  )
+                : undefined
               const scoreCreatedFromClause = timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``
               const scoreCreatedToClause = timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``
               // A signal belongs in the window if it fired in it OR was created in it, so a
@@ -314,6 +332,7 @@ const signalRepositoryCoreLive = Layer.effect(
                     ? or(isNotNull(signals.resolvedAt), isNotNull(signals.ignoredAt))
                     : undefined,
                 assigneeConditions,
+                scoreDimensionCondition,
                 activityOrCreatedInTimeRange,
                 search ? or(ilike(signals.name, `%${search}%`), ilike(signals.description, `%${search}%`)) : undefined,
               )

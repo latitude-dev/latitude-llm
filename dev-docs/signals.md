@@ -39,7 +39,7 @@ Signals and live taxonomy both use `@domain/shared/centroid` for decayed weighte
 
 `signals.score_evidence` is a non-null JSONB list of dimension and evidence-role pairs. The canonical Signal entity requires the same list, and public project and session signal responses return it as `scoreEvidence`. An empty list means the signal is diagnostic and does not contribute to benchmark scoring. Signal evidence supports outcome, reliability, cost, speed, and safety; the signal safety roles are `confirmedHarm` and `exposure`. `successfulDefense` belongs to the broader score evidence contract but cannot classify a signal because signals represent failures.
 
-Signal detail pages and drawers show the unique dimensions from `scoreEvidence` as chips in canonical dimension order. Multiple evidence roles for the same dimension produce one chip.
+Signal detail pages and drawers show the unique dimensions from `scoreEvidence` as chips in canonical dimension order. The Signals list renders the same chips in one row per signal and provides a URL-backed multi-select dimension filter. Multiple selected dimensions use OR semantics, and multiple evidence roles for the same dimension never duplicate a row or chip. A diagnostic signal does not match a dimension filter.
 
 The database default is `[]`. Signal creation paths initialize the field explicitly, and rows that predate the column receive the empty list from the schema migration. Historical signals are not classified by a model or static mapping.
 

@@ -19,6 +19,7 @@ import {
   SIGNAL_PRIORITY_META,
   type SignalPriorityGroupId,
 } from "../../../../../../components/signals/signal-priority-meta.tsx"
+import { SignalScoreDimensions } from "../../../../../../components/signals/signal-score-dimensions.tsx"
 import { useProjectMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../../../../domains/members/members.functions.ts"
 import type {
@@ -228,6 +229,13 @@ export function SignalsView({
           </div>
         )
       },
+    },
+    {
+      key: "dimensions",
+      header: "Dimensions",
+      width: 190,
+      minWidth: 150,
+      render: (issue) => <SignalScoreDimensions scoreEvidence={issue.scoreEvidence} />,
     },
     {
       key: "tags",

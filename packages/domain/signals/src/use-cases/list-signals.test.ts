@@ -1629,6 +1629,53 @@ describe("listSignalsUseCase", () => {
       expect(result.items.map((item) => item.id)).toEqual([activeAssigned.id])
       expect(result.assigneeCounts).toEqual({ [userA]: 1 })
     })
+
+    it("filters by any selected score dimension without duplicating multi-dimension signals", async () => {
+      const outcome = makeSignal({
+        id: SignalId("a".repeat(24)),
+        scoreEvidence: [{ scoreDimension: "outcome", role: "taskOutcome" }],
+      })
+      const reliabilityAndCost = makeSignal({
+        id: SignalId("b".repeat(24)),
+        scoreEvidence: [
+          { scoreDimension: "reliability", role: "operationalIncident" },
+          { scoreDimension: "cost", role: "spendEfficiency" },
+        ],
+      })
+      const diagnostic = makeSignal({ id: SignalId("c".repeat(24)), scoreEvidence: [] })
+
+      const result = await runTriageList({
+        seeded: [
+          { issue: outcome, occurrences: 2 },
+          { issue: reliabilityAndCost, occurrences: 3 },
+          { issue: diagnostic, occurrences: 4 },
+        ],
+        options: { scoreDimensions: ["outcome", "cost", "reliability"] },
+      })
+
+      expect(result.items.map((item) => item.id)).toEqual([reliabilityAndCost.id, outcome.id])
+      expect(result.totalCount).toBe(2)
+      expect(result.occurrencesSum).toBe(5)
+    })
+
+    it("applies score dimension filters on the optimized table-row path", async () => {
+      const outcome = makeSignal({
+        id: SignalId("a".repeat(24)),
+        scoreEvidence: [{ scoreDimension: "outcome", role: "taskOutcome" }],
+      })
+      const cost = makeSignal({
+        id: SignalId("b".repeat(24)),
+        scoreEvidence: [{ scoreDimension: "cost", role: "spendEfficiency" }],
+      })
+
+      const result = await runTriageList({
+        seeded: [{ issue: outcome }, { issue: cost }],
+        options: { includeAnalytics: false, scoreDimensions: ["cost"] },
+      })
+
+      expect(result.items.map((item) => item.id)).toEqual([cost.id])
+      expect(result.totalCount).toBe(1)
+    })
   })
 
   describe("promotion gate", () => {

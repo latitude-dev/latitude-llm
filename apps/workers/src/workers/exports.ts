@@ -10,6 +10,7 @@ import {
   ProjectId,
   type ProjectId as ProjectIdType,
   putInDisk,
+  type ScoreDimension,
   type StorageDiskPort,
 } from "@domain/shared"
 import { buildSignalsExportUseCase, embedSignalSearchQueryUseCase } from "@domain/signals"
@@ -72,6 +73,7 @@ type SignalsExportInput = {
   readonly selection?: Extract<ExportPayload, { kind: "issues" }>["selection"]
   readonly lifecycleGroup?: "active" | "archived"
   readonly assigneeIds?: readonly string[]
+  readonly scoreDimensions?: readonly ScoreDimension[]
   readonly search?: {
     readonly query: string
     readonly normalizedEmbedding: number[]
@@ -141,6 +143,7 @@ function generateSignalsExport(
     readonly selection?: Extract<ExportPayload, { kind: "issues" }>["selection"]
     readonly lifecycleGroup?: "active" | "archived"
     readonly assigneeIds?: readonly string[]
+    readonly scoreDimensions?: readonly ScoreDimension[]
     readonly searchQuery?: string
     readonly timeRange?: {
       readonly fromIso?: string | undefined
@@ -159,6 +162,7 @@ function generateSignalsExport(
     ...(input.selection ? { selection: input.selection } : {}),
     ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
     ...(input.assigneeIds?.length ? { assigneeIds: input.assigneeIds } : {}),
+    ...(input.scoreDimensions?.length ? { scoreDimensions: input.scoreDimensions } : {}),
     ...(input.sort ? { sort: input.sort } : {}),
     ...(timeRange ? { timeRange } : {}),
   } satisfies Omit<SignalsExportInput, "search">
@@ -212,6 +216,7 @@ function dispatchExport(payload: ExportPayload) {
         ...(payload.selection ? { selection: payload.selection } : {}),
         ...(payload.lifecycleGroup ? { lifecycleGroup: payload.lifecycleGroup } : {}),
         ...(payload.assigneeIds?.length ? { assigneeIds: payload.assigneeIds } : {}),
+        ...(payload.scoreDimensions?.length ? { scoreDimensions: payload.scoreDimensions } : {}),
         ...(payload.searchQuery ? { searchQuery: payload.searchQuery } : {}),
         ...(payload.timeRange ? { timeRange: payload.timeRange } : {}),
         ...(payload.sort ? { sort: payload.sort } : {}),

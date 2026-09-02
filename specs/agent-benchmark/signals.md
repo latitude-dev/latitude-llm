@@ -62,8 +62,9 @@ Signal detail shows dimension chips derived from `scoreEvidence`. The evidence r
 effect appear in the impact section, with "effect not yet measured" when the role is known but the
 consequence is not.
 
-The Signals list can filter by score dimension but does not group by it. A signal that informs
-several dimensions appears once with several chips. The session Signals tab shows the same chips.
+The Signals list can filter by score dimension but does not group by it. Selecting several
+dimensions matches signals that inform any selected dimension. A signal that informs several
+dimensions appears once with several chips. The session Signals tab shows the same chips.
 Session assessment attaches the signal to one chronological evidence item and applies its roles per
 dimension as defined in [`session-assessment.md`](session-assessment.md#signals). Surfaces organized
 into separate dimension sections may show the same signal in each applicable section.
