@@ -1,17 +1,21 @@
-import { purgeOrganizationProjectsUseCase } from "@domain/projects"
+import { teardownOrganizationUseCase } from "@domain/organizations"
 import type { QueueConsumer } from "@domain/queue"
 import { deleteUserUseCase } from "@domain/users"
+import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
 import {
+  ApiKeyRepositoryLive,
   MembershipRepositoryLive,
+  OAuthKeyRepositoryLive,
   OrganizationRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getAdminPostgresClient } from "../../clients.ts"
+import { getAdminPostgresClient, getRedisClient } from "../../clients.ts"
 
 const logger = createLogger("user-deletion")
 
@@ -23,20 +27,27 @@ export const createUserDeletionWorker = ({ consumer }: UserDeletionDeps) => {
   consumer.subscribe("user-deletion", {
     delete: (payload) => {
       const pgClient = getAdminPostgresClient()
+      const redis = getRedisClient()
       const repoLayer = Layer.mergeAll(MembershipRepositoryLive, OrganizationRepositoryLive, UserRepositoryLive)
-      const projectLayer = Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive)
+      const teardownLayer = Layer.mergeAll(
+        ProjectRepositoryLive,
+        OutboxEventWriterLive,
+        ApiKeyRepositoryLive,
+        OAuthKeyRepositoryLive,
+      )
 
       return Effect.gen(function* () {
         const { deletedOrganizationIds } = yield* deleteUserUseCase({ userId: payload.userId }).pipe(
           withPostgres(repoLayer, pgClient),
         )
 
-        // Tear down projects of each sole-member org we deleted. Projects have
-        // no FK to the org, so this must run explicitly — scoped per org so the
-        // RLS / SqlClient context matches the projects being purged.
+        // Projects and API keys have no FK to the org, so each sole-member org we deleted
+        // is torn down explicitly, scoped per org so the SqlClient context matches.
         for (const organizationId of deletedOrganizationIds) {
-          yield* purgeOrganizationProjectsUseCase({ actorUserId: payload.userId }).pipe(
-            withPostgres(projectLayer, pgClient, organizationId),
+          yield* teardownOrganizationUseCase({ actorUserId: payload.userId }).pipe(
+            Effect.provide(ApiKeyCacheInvalidatorLive(redis)),
+            Effect.provide(OAuthTokenCacheInvalidatorLive(redis)),
+            withPostgres(teardownLayer, pgClient, organizationId),
           )
         }
       }).pipe(

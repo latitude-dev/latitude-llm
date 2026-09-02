@@ -4,10 +4,10 @@ import {
   generateUniqueOrganizationSlugUseCase,
   MembershipRepository,
   OrganizationRepository,
+  teardownOrganizationUseCase,
   updateOrganizationRedactionUseCase,
   updateOrganizationUseCase,
 } from "@domain/organizations"
-import { purgeOrganizationProjectsUseCase } from "@domain/projects"
 import {
   BadRequestError,
   ForbiddenError,
@@ -15,16 +15,19 @@ import {
   organizationRedactionSettingSchema,
   UserId,
 } from "@domain/shared"
+import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   ApiKeyRepositoryLive,
   invalidateOrganizationRedactionCache,
   MembershipRepositoryLive,
+  OAuthKeyRepositoryLive,
   OrganizationRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
@@ -299,17 +302,23 @@ export const deleteOrganization = createServerFn({ method: "POST" })
     }
 
     const client = getPostgresClient()
+    const redis = getRedisClient()
     await Effect.runPromise(
       Effect.gen(function* () {
-        // Tear down the org's projects (soft-delete + ProjectDeleted cascade)
-        // before removing the org row. The org delete then cascades members,
-        // invitations, and OAuth apps via FK.
-        yield* purgeOrganizationProjectsUseCase({ actorUserId: userId })
+        yield* teardownOrganizationUseCase({ actorUserId: userId })
         const orgRepo = yield* OrganizationRepository
         yield* orgRepo.delete(targetId)
       }).pipe(
+        Effect.provide(ApiKeyCacheInvalidatorLive(redis)),
+        Effect.provide(OAuthTokenCacheInvalidatorLive(redis)),
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, OrganizationRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(
+            ProjectRepositoryLive,
+            OrganizationRepositoryLive,
+            OutboxEventWriterLive,
+            ApiKeyRepositoryLive,
+            OAuthKeyRepositoryLive,
+          ),
           client,
           targetId,
         ),

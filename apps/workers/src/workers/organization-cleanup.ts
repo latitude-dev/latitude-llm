@@ -1,16 +1,19 @@
-import { OrganizationRepository } from "@domain/organizations"
-import { purgeOrganizationProjectsUseCase } from "@domain/projects"
+import { OrganizationRepository, teardownOrganizationUseCase } from "@domain/organizations"
 import type { QueueConsumer } from "@domain/queue"
+import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
 import {
+  ApiKeyRepositoryLive,
+  OAuthKeyRepositoryLive,
   OrganizationRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getAdminPostgresClient } from "../clients.ts"
+import { getAdminPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("organization-cleanup")
 
@@ -19,10 +22,19 @@ interface OrganizationCleanupDeps {
   postgresClient?: PostgresClient
 }
 
-// Reaps temporary orgs past their claim deadline: per org, soft-delete its projects (ProjectDeleted cascade)
+const teardownLayers = Layer.mergeAll(
+  ProjectRepositoryLive,
+  OrganizationRepositoryLive,
+  OutboxEventWriterLive,
+  ApiKeyRepositoryLive,
+  OAuthKeyRepositoryLive,
+)
+
+// Reaps temporary orgs past their claim deadline: per org, tear it down (revoke API/OAuth keys, purge projects)
 // then hard-delete the org (FK-cascades members/invitations/OAuth). Per-org so one failure never aborts the batch.
 export const createOrganizationCleanupWorker = ({ consumer, postgresClient }: OrganizationCleanupDeps) => {
   const adminClient = postgresClient ?? getAdminPostgresClient()
+  const redis = getRedisClient()
 
   consumer.subscribe("organization-cleanup", {
     reapExpired: () =>
@@ -40,15 +52,13 @@ export const createOrganizationCleanupWorker = ({ consumer, postgresClient }: Or
               .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
             if (current === null || current.expiresAt === null) return
 
-            yield* purgeOrganizationProjectsUseCase({ actorUserId: "system" })
+            yield* teardownOrganizationUseCase({ actorUserId: "system" })
             const deleted = yield* orgRepo.deleteIfExpiredUnclaimed(org.id)
             if (!deleted) return
           }).pipe(
-            withPostgres(
-              Layer.mergeAll(ProjectRepositoryLive, OrganizationRepositoryLive, OutboxEventWriterLive),
-              adminClient,
-              org.id,
-            ),
+            Effect.provide(ApiKeyCacheInvalidatorLive(redis)),
+            Effect.provide(OAuthTokenCacheInvalidatorLive(redis)),
+            withPostgres(teardownLayers, adminClient, org.id),
             Effect.tap(() => Effect.sync(() => logger.info(`Reaped expired unclaimed org ${org.id}`))),
             Effect.catch((error) =>
               Effect.sync(() => logger.error(`Failed to reap expired unclaimed org ${org.id}`, error)),

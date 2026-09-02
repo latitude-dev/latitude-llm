@@ -105,11 +105,12 @@ SELECT t.user_id, t.client_id, t.scopes, t.access_token_expires_at,
        a.organization_id  AS organization_id
 FROM   oauth_access_tokens t
 JOIN   oauth_applications a ON a.client_id = t.client_id
+JOIN   members m            ON m.organization_id = a.organization_id AND m.user_id = t.user_id
 WHERE  t.access_token = $1
 LIMIT  1
 ```
 
-…then rejects the row if any of: not found, expired, `applicationDisabled = true`, or `organizationId IS NULL`. That list IS the entire business logic. Tests in `packages/platform/oauth-token-auth/` pin each rule.
+…then rejects the row if any of: not found (which includes "user is no longer a member"), expired, `applicationDisabled = true`, or `organizationId IS NULL`. That list IS the entire business logic. On a cache hit the validator re-runs the membership and `disabled` checks live (one indexed query, no token lookup), so removing a member or disabling an application takes effect on the next request even inside the cache window. Tests in `packages/platform/oauth-token-auth/` pin each rule.
 
 The platform package imports Drizzle table definitions from `@platform/db-postgres` and a `RedisClient` from `@platform/cache-redis`. No `better-auth` dependency anywhere on the API side. See [`api.md`](./api.md#authentication) for the caching shape and `AuthContext` type.
 
@@ -124,6 +125,10 @@ No reverse proxy needed. Web at `localhost:3000`, API at `localhost:3001`, end-t
 ## Token revocation
 
 Better Auth's MCP plugin has no `/revoke` endpoint. Revocation is implemented on the web app's settings UI as a server function: `DELETE FROM oauth_access_tokens WHERE client_id = ? AND user_id = ?`, and `oauth_applications.disabled = true` if no tokens remain for the application. The API's middleware honors the revocation immediately because validation hits the DB (modulo the 5-minute Redis cache; the cache invalidator in `@platform/oauth-token-auth` busts each removed token's entry at revoke time).
+
+Deleting an organization revokes all of its OAuth keys the same way, through `teardownOrganizationUseCase`, before the org row and its FK-cascaded token rows go (see [`organizations.md`](./organizations.md#how-organizations-get-deleted)).
+
+Better Auth's own `GET /api/auth/mcp/get-session` returns the raw `oauth_access_tokens` row, refresh token included, to any holder of a valid access token and performs none of the checks above. Nothing on our side uses it, so the web auth catch-all (`apps/web/src/routes/api/auth/$.ts`) answers it with a 404 instead of forwarding it to Better Auth.
 
 ## Where the code lives
 

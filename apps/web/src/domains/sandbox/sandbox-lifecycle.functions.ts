@@ -7,10 +7,12 @@ import {
   reactivateSandboxUseCase,
 } from "@domain/sandboxes"
 import { OrganizationId, projectIdSchema } from "@domain/shared"
+import { ApiKeyCacheInvalidatorLive } from "@platform/api-key-auth"
 import {
   ApiKeyRepositoryLive,
   BillingOverrideRepositoryLive,
   MembershipRepositoryLive,
+  OAuthKeyRepositoryLive,
   OrganizationRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
@@ -19,12 +21,13 @@ import {
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 const sandboxWriteLayers = Layer.mergeAll(SandboxRepositoryLive, OrganizationRepositoryLive, MembershipRepositoryLive)
 // createSandbox seeds a default sandbox API key in the same use-case, so its
@@ -37,7 +40,13 @@ const sandboxCapLayers = Layer.mergeAll(
   ApiKeyRepositoryLive,
   OutboxEventWriterLive,
 )
-const sandboxDeleteLayers = Layer.mergeAll(sandboxWriteLayers, ProjectRepositoryLive, OutboxEventWriterLive)
+const sandboxDeleteLayers = Layer.mergeAll(
+  sandboxWriteLayers,
+  ProjectRepositoryLive,
+  OutboxEventWriterLive,
+  ApiKeyRepositoryLive,
+  OAuthKeyRepositoryLive,
+)
 const sandboxProjectWriteLayers = Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive)
 
 export const reactivateSandbox = createServerFn({ method: "POST" })
@@ -100,8 +109,11 @@ export const enterSandboxProject = createServerFn({ method: "POST" })
       // sandbox back so it doesn't orphan (and wrongly hold the single active
       // slot). Best-effort; surface the original error.
       if (createdNow) {
+        const redis = getRedisClient()
         await Effect.runPromise(
           deleteSandboxUseCase({ sandboxOrganizationId, actorUserId: userId }).pipe(
+            Effect.provide(ApiKeyCacheInvalidatorLive(redis)),
+            Effect.provide(OAuthTokenCacheInvalidatorLive(redis)),
             withPostgres(sandboxDeleteLayers, adminClient, sandboxOrganizationId),
             withTracing,
           ),

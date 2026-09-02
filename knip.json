@@ -90,6 +90,14 @@
         "src/calibration/**"
       ]
     },
+    "packages/domain/sandboxes": {
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "@domain/oauth-keys"
+      ]
+    },
     "packages/domain/*": {
       "project": [
         "src/**/*.ts"
