@@ -1,6 +1,7 @@
-import type { ApiKeyRepository } from "@domain/api-keys"
+import { ApiKeyCacheInvalidator, type ApiKeyRepository } from "@domain/api-keys"
 import type { BillingOverrideRepository, StripeSubscriptionLookup } from "@domain/billing"
 import type { OutboxEventWriter } from "@domain/events"
+import { type OAuthKeyRepository, OAuthTokenCacheInvalidator } from "@domain/oauth-keys"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import type { ProjectRepository } from "@domain/projects"
 import {
@@ -25,6 +26,7 @@ import { withPostgres } from "../with-postgres.ts"
 import { ApiKeyRepositoryLive } from "./api-key-repository.ts"
 import { BillingOverrideRepositoryLive } from "./billing-override-repository.ts"
 import { MembershipRepositoryLive } from "./membership-repository.ts"
+import { OAuthKeyRepositoryLive } from "./oauth-key-repository.ts"
 import { OrganizationRepositoryLive } from "./organization-repository.ts"
 import { ProjectRepositoryLive } from "./project-repository.ts"
 import { SandboxRepositoryLive } from "./sandbox-repository.ts"
@@ -39,6 +41,9 @@ process.env.LAT_MASTER_ENCRYPTION_KEY =
 
 const pg = setupTestPostgres()
 
+// The cache invalidators' live layers live in `@platform/api-key-auth` /
+// `@platform/oauth-token-auth`, which depend on this package — no-ops here keep
+// the wiring acyclic, and this suite asserts the DB effects of teardown, not Redis.
 const sandboxLayers = Layer.mergeAll(
   SandboxRepositoryLive,
   OrganizationRepositoryLive,
@@ -49,6 +54,9 @@ const sandboxLayers = Layer.mergeAll(
   ProjectRepositoryLive,
   OutboxEventWriterLive,
   ApiKeyRepositoryLive,
+  OAuthKeyRepositoryLive,
+  Layer.succeed(ApiKeyCacheInvalidator, { delete: () => Effect.void }),
+  Layer.succeed(OAuthTokenCacheInvalidator, { invalidate: () => Effect.void }),
 )
 
 type SandboxEnv =
@@ -61,6 +69,9 @@ type SandboxEnv =
   | ProjectRepository
   | OutboxEventWriter
   | ApiKeyRepository
+  | ApiKeyCacheInvalidator
+  | OAuthKeyRepository
+  | OAuthTokenCacheInvalidator
   | SqlClient
 
 // Sandbox lifecycle is cross-org management, so the use-cases run on the
