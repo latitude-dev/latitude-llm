@@ -1231,7 +1231,9 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       expect(call.prompt).toContain("session-wide union")
       expect(call.prompt).toContain("do not treat another turn's tool as proof")
       expect(call.prompt).toContain("inherently require an external action, a tool, or an unsupported modality")
-      expect(call.prompt).toContain("A tool-dependent request that none of these tools can fulfill is out of capability")
+      expect(call.prompt).toContain(
+        "A tool-dependent request that none of these tools can fulfill is out of capability",
+      )
       expect(call.prompt).toContain("Do not infer extra tools from the agent's role")
       expect(call.prompt).not.toContain("do not apply the declared-tool capability carve-out")
     }
