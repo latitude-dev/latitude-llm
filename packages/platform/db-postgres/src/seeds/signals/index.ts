@@ -1,7 +1,13 @@
 import { AIEmbed, type AIError, EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import { SignalId } from "@domain/shared"
 import { SEED_SIGNAL_FIXTURES, type SeedScope } from "@domain/shared/seeding"
-import { createSignalCentroid, generateSignalSlug, type SignalCentroid, updateSignalCentroid } from "@domain/signals"
+import {
+  createSignalCentroid,
+  generateSignalSlug,
+  type SignalCentroid,
+  signalScoreEvidenceSchema,
+  updateSignalCentroid,
+} from "@domain/signals"
 import { AIEmbedLive } from "@platform/ai"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
@@ -221,6 +227,7 @@ function buildSignalRow(input: {
     name: input.issue.name,
     description: input.issue.description,
     source: input.issue.source,
+    scoreEvidence: signalScoreEvidenceSchema.array().parse(input.issue.scoreEvidence),
     centroid,
     clusteredAt: centroid.clusteredAt,
     promotedAt: input.issue.unpromoted ? null : createdAt,

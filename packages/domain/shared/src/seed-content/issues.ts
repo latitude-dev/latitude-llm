@@ -1,3 +1,4 @@
+import type { ScoreEvidenceContract } from "../score-evidence.ts"
 import {
   SEED_ACCESS_EVALUATION_HASH,
   SEED_ACCESS_EVALUATION_ID,
@@ -29,12 +30,43 @@ import {
   SEED_WARRANTY_EVALUATION_HASH,
 } from "../seeds.ts"
 
+const DIAGNOSTIC_EVIDENCE = [] as const satisfies readonly ScoreEvidenceContract[]
+const OUTCOME_EVIDENCE = [
+  { scoreDimension: "outcome", role: "taskOutcome" },
+] as const satisfies readonly ScoreEvidenceContract[]
+const OUTCOME_COMPLETION_EVIDENCE = [
+  { scoreDimension: "outcome", role: "taskOutcome" },
+  { scoreDimension: "reliability", role: "completionOutcome" },
+] as const satisfies readonly ScoreEvidenceContract[]
+const OUTCOME_COST_EVIDENCE = [
+  { scoreDimension: "outcome", role: "taskOutcome" },
+  { scoreDimension: "cost", role: "spendEfficiency" },
+] as const satisfies readonly ScoreEvidenceContract[]
+const OUTCOME_SAFETY_EVIDENCE = [
+  { scoreDimension: "outcome", role: "taskOutcome" },
+  { scoreDimension: "safety", role: "confirmedHarm" },
+  { scoreDimension: "safety", role: "exposure" },
+] as const satisfies readonly ScoreEvidenceContract[]
+const RELIABILITY_EVIDENCE = [
+  { scoreDimension: "reliability", role: "operationalIncident" },
+] as const satisfies readonly ScoreEvidenceContract[]
+const RESOURCE_INCIDENT_EVIDENCE = [
+  { scoreDimension: "outcome", role: "taskOutcome" },
+  { scoreDimension: "reliability", role: "operationalIncident" },
+  { scoreDimension: "cost", role: "spendEfficiency" },
+  { scoreDimension: "speed", role: "criticalPathEfficiency" },
+] as const satisfies readonly ScoreEvidenceContract[]
+const SAFETY_EXPOSURE_EVIDENCE = [
+  { scoreDimension: "safety", role: "exposure" },
+] as const satisfies readonly ScoreEvidenceContract[]
+
 export type SeedSignalFixture = {
   readonly id: string
   readonly uuid: string
   readonly name: string
   readonly description: string
   readonly source: "annotation" | "flagger" | "custom"
+  readonly scoreEvidence: readonly ScoreEvidenceContract[]
   readonly createdDaysAgo: number
   readonly clusteredDaysAgo: number
   readonly updatedDaysAgo: number
@@ -58,6 +90,8 @@ export type SeedSignalFixture = {
   readonly unpromoted?: true
 }
 
+type SeedSignalBlueprint = Omit<SeedSignalFixture, "id" | "uuid">
+
 const baseSignalFixtures: SeedSignalFixture[] = [
   {
     id: SEED_SIGNAL_ID,
@@ -68,6 +102,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
       "in order status, item identity, customer confirmation, and allowed refund methods. The pattern includes " +
       "returning the wrong item, skipping confirmation, or giving a refund path that does not match policy.",
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
     createdDaysAgo: 82,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -86,6 +121,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
       "authenticating the customer by email or by name plus ZIP code. The pattern is risky because return, exchange, " +
       "and cancellation tools all depend on verified customer identity.",
     source: "annotation",
+    scoreEvidence: OUTCOME_SAFETY_EVIDENCE,
     createdDaysAgo: 71,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -104,6 +140,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
       "fails to verify device/network state after each remediation step, or treats a partial improvement as success " +
       "when the customer's stated success criterion is restored service or excellent data speed.",
     source: "annotation",
+    scoreEvidence: OUTCOME_COMPLETION_EVIDENCE,
     createdDaysAgo: 4,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -123,6 +160,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
       "requires the customer to place a new order or transfer to a human for out-of-scope exceptions. The pattern " +
       "usually appears when customers insist that an accidentally cancelled order is urgent.",
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
     createdDaysAgo: 58,
     clusteredDaysAgo: 2,
     updatedDaysAgo: 2,
@@ -142,6 +180,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
       "qualifies under policy or before account state has been verified. The pattern is distinct from technical " +
       "troubleshooting because the failure is an unsupported commercial commitment.",
     source: "custom",
+    scoreEvidence: OUTCOME_COST_EVIDENCE,
     createdDaysAgo: 46,
     clusteredDaysAgo: 10,
     updatedDaysAgo: 9,
@@ -160,6 +199,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
       "tools and policy. The pattern is especially visible in retail returns and telecom troubleshooting, where a " +
       "correct agent should continue collecting state and executing the next tool step.",
     source: "annotation",
+    scoreEvidence: OUTCOME_COMPLETION_EVIDENCE,
     createdDaysAgo: 34,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -178,6 +218,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
       "subscription status, fee policy, or required knowledge documents. The pattern covers RAG-like support failures " +
       "where the answer sounds plausible but is not grounded in the available policy corpus.",
     source: "custom",
+    scoreEvidence: OUTCOME_EVIDENCE,
     createdDaysAgo: 83,
     clusteredDaysAgo: 2,
     updatedDaysAgo: 2,
@@ -197,6 +238,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
       "of acknowledging the error or asking the customer to retry. The pattern is detected automatically on every " +
       "trace, so this issue is monitored without a separate evaluation.",
     source: "flagger",
+    scoreEvidence: OUTCOME_COMPLETION_EVIDENCE,
     createdDaysAgo: 18,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
@@ -209,7 +251,7 @@ const baseSignalFixtures: SeedSignalFixture[] = [
   },
 ]
 
-const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
+const curatedExtraSignalBlueprints: readonly SeedSignalBlueprint[] = [
   // Unpromoted fixtures read as one occurrence's words, not a summary: that is what a candidate is named from.
   {
     name: "The agent read the customer's local time as UTC and quoted a delivery window a day early",
@@ -225,6 +267,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     mutedDaysAgo: null,
     unpromoted: true,
     source: "flagger",
+    scoreEvidence: DIAGNOSTIC_EVIDENCE,
   },
   {
     name: "A one-line answer was flagged as lazy when brevity was the right call",
@@ -240,6 +283,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     mutedDaysAgo: null,
     unpromoted: true,
     source: "flagger",
+    scoreEvidence: DIAGNOSTIC_EVIDENCE,
   },
   // The fragmentation case, in two halves: one problem that failed to match
   // itself, so neither half can reach the gate alone. Consolidation is what
@@ -258,6 +302,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     mutedDaysAgo: null,
     unpromoted: true,
     source: "flagger",
+    scoreEvidence: DIAGNOSTIC_EVIDENCE,
   },
   {
     name: "The agent made up a restocking charge for an opened item",
@@ -273,6 +318,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     mutedDaysAgo: null,
     unpromoted: true,
     source: "flagger",
+    scoreEvidence: DIAGNOSTIC_EVIDENCE,
   },
   // Past the expiry window with nothing since: what the candidate sweep exists
   // to remove. `clusteredDaysAgo` is the anchor, so it is what ages it out.
@@ -290,6 +336,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     mutedDaysAgo: null,
     unpromoted: true,
     source: "flagger",
+    scoreEvidence: DIAGNOSTIC_EVIDENCE,
   },
   {
     name: "Agent invents enterprise SLAs for standard support plans",
@@ -304,6 +351,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent fabricates export-control clearances",
@@ -318,6 +366,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent guarantees chargeback reversals",
@@ -332,6 +381,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: 22,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent invents procurement onboarding approvals",
@@ -347,6 +397,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     // Muted while still active: incidents keep opening, notifications stay silent.
     mutedDaysAgo: 12,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent overcommits recall reimbursement scope",
@@ -361,6 +412,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: SAFETY_EXPOSURE_EVIDENCE,
   },
   {
     name: "Agent invents reseller discount ladders",
@@ -375,6 +427,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_COST_EVIDENCE,
   },
   {
     name: "Agent promises warehouse stock reservations without hold confirmation",
@@ -389,6 +442,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent fabricates multilingual legal review sign-off",
@@ -403,6 +457,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: 11,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent invents partner-managed installation crews",
@@ -417,6 +472,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent overstates certification renewal status",
@@ -431,6 +487,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent fabricates incident root-cause determinations",
@@ -445,6 +502,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: RELIABILITY_EVIDENCE,
   },
   {
     name: "Agent promises automatic contract renewals with frozen pricing",
@@ -459,6 +517,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_COST_EVIDENCE,
   },
   {
     name: "Agent invents hazardous-goods packaging exemptions",
@@ -473,6 +532,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: SAFETY_EXPOSURE_EVIDENCE,
   },
   {
     name: "Agent overcommits loyalty-tier case escalation rights",
@@ -487,6 +547,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent invents data-retention deletions already completed",
@@ -501,6 +562,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: 7,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent promises API quota boosts without capacity approval",
@@ -515,6 +577,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
   {
     name: "Agent fabricates offline service windows",
@@ -529,6 +592,7 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: RELIABILITY_EVIDENCE,
   },
   {
     name: "Agent invents customer-specific insurance riders",
@@ -543,49 +607,58 @@ const curatedExtraSignalBlueprints: Omit<SeedSignalFixture, "id" | "uuid">[] = [
     regressedDaysAgo: null,
     mutedDaysAgo: null,
     source: "annotation",
+    scoreEvidence: OUTCOME_EVIDENCE,
   },
 ] as const
 
 const generatedSupportSignalFamilies = [
   {
     name: "Retail return eligibility",
+    scoreEvidence: OUTCOME_EVIDENCE,
     pattern:
       "promises or refuses refunds without verifying the delivered item, return window, condition, and refund method",
     risk: "customers receive inconsistent return outcomes for the same policy state",
   },
   {
     name: "Retail account authentication",
+    scoreEvidence: OUTCOME_SAFETY_EVIDENCE,
     pattern: "reveals order details or performs account actions before verifying email or name plus ZIP code",
     risk: "private order and payment details can be exposed to the wrong customer",
   },
   {
     name: "Retail cancelled-order recovery",
+    scoreEvidence: OUTCOME_EVIDENCE,
     pattern: "claims cancelled orders can be reinstated or expedited without a supported policy path",
     risk: "customers are promised fulfillment that the backend cannot execute",
   },
   {
     name: "Telecom connectivity troubleshooting",
+    scoreEvidence: OUTCOME_COMPLETION_EVIDENCE,
     pattern: "ends troubleshooting before checking device state, SIM state, APN settings, or speed-test results",
     risk: "customers leave the interaction with unresolved mobile service problems",
   },
   {
     name: "Telecom credits and billing relief",
+    scoreEvidence: OUTCOME_COST_EVIDENCE,
     pattern: "offers credits, fee waivers, or plan adjustments before verifying account and eligibility",
     risk: "commercial concessions are promised without the required support policy basis",
   },
   {
     name: "Airline reservation changes",
+    scoreEvidence: OUTCOME_EVIDENCE,
     pattern:
       "changes flights, bags, passenger data, or cancellations without grounding the action in reservation and fare rules",
     risk: "travelers receive invalid itinerary commitments or unsupported refund promises",
   },
   {
     name: "Premature human transfer",
+    scoreEvidence: OUTCOME_COMPLETION_EVIDENCE,
     pattern: "hands off to a person while the current support workflow still has actionable tool-backed steps",
     risk: "automation abandons resolvable cases and creates unnecessary escalation load",
   },
   {
     name: "Tool-result grounding",
+    scoreEvidence: RESOURCE_INCIDENT_EVIDENCE,
     pattern: "treats missing, stale, or failed tool output as if it confirmed the customer's requested outcome",
     risk: "the assistant presents unobserved backend state as fact",
   },
@@ -612,7 +685,7 @@ if (GENERATED_EXTRA_SIGNAL_COUNT <= 0) {
   throw new Error("Seed issue target count must exceed the curated base issue set.")
 }
 
-function buildGeneratedExtraSignalBlueprint(index: number): Omit<SeedSignalFixture, "id" | "uuid"> {
+function buildGeneratedExtraSignalBlueprint(index: number): SeedSignalBlueprint {
   const family = generatedSupportSignalFamilies[index % generatedSupportSignalFamilies.length]
   const variant =
     generatedSupportSignalVariants[
@@ -627,6 +700,7 @@ function buildGeneratedExtraSignalBlueprint(index: number): Omit<SeedSignalFixtu
   return {
     name: `${family.name}: agent ${variant}${cohort > 1 ? ` (${cohort})` : ""}`,
     source: "annotation",
+    scoreEvidence: family.scoreEvidence,
     description:
       `The support agent ${family.pattern}. This issue family is linked to tau2-bench ${family.name.toLowerCase()} trajectories. ` +
       `The repeated risk is that ${family.risk}.`,
@@ -660,6 +734,7 @@ const extraSignalFixtures: SeedSignalFixture[] = [
       throw new Error(`Missing extra seed issue UUID for index ${index}`)
     })(),
   ...issue,
+  scoreEvidence: issue.scoreEvidence,
 }))
 
 export const SEED_SIGNAL_FIXTURES: readonly SeedSignalFixture[] = [...baseSignalFixtures, ...extraSignalFixtures]
