@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+## v0.3.88 - 2026-09-02
+
+### Security
+
+- Revoking an API key now actually stops it from authenticating. The token-hash lookup ignored `deleted_at`, so a revoked key kept working on both the API and ingest and re-armed its 5-minute positive cache on every use. The lookup now returns active keys only, the shared validator drops a non-active key as a second guard, and a key whose organization has since been deleted is rejected the same way instead of authenticating against a missing org (the API returned a 404 there, ingest accepted it). Deleting an organization, from the settings danger zone, sandbox deletion, account deletion or the temporary-org reaper, now revokes every one of its API keys and OAuth keys and busts their validation caches before the row goes. OAuth cache hits re-verify that the application is still enabled and bound to the org, not only that the user is still a member. Better Auth's `GET /api/auth/mcp/get-session`, which handed the raw token row including the refresh token to any access-token holder, is blocked at the web auth catch-all (ref: #4538).
+- Webhook agent dispatch connects to the address it validated instead of letting `fetch` re-resolve the hostname at connect time, which left a DNS-rebinding window to internal addresses. Host and SNI stay on the original hostname, redirects are rejected as transport errors, and the 64 KiB and 1s ack limits apply while the response streams (ref: #4500).
+
+### Billing
+
+- Billing usage inserts had been failing since 2026-09-01T00:00:01Z: the partition migration only created partitions through August and the maintenance function was never scheduled. Workers and workflows now run it on boot and a daily billing job keeps the current month plus the next three, so partitions exist before inserts need them. A partition race during concurrent replica boot is logged instead of taking the process down (ref: #4540).
+- Hard-capped imports admit at most the remaining plan credits, rootless trace groups included, and finish as capped with the plan-cap reason when that budget is what stops the page. Already-stored traces stay free so children-then-root pagination or a re-import cannot consume the budget twice, and a plan-truncated page keeps its cursor so Continue import refetches the omitted traces (ref: #4537).
+
+### Signals
+
+- Ignore, resolve and mute no longer reach unpromoted candidates through the public lifecycle; those writes are treated as not found, and a later promotion of a candidate carrying such a stamp does not emit `signal.discovered` (ref: #4530).
+- Promotion re-checks its gate before stamping `promoted_at`. A delayed qualification job re-reads the distinct-session count against the volume-scaled threshold while locking the matching score rows, so evidence removed in the meantime cannot still promote the candidate (ref: #4531).
+- Consolidation's ClickHouse reconciliation retries after a transient failure. The job was published with a bare dedupe key, so an exhausted retry shadowed outbox redelivery and left occurrence counts permanently short after a merge; the marker now expires with a throttle, matching promotion and flagger fan-out (ref: #4495).
+
+### Flaggers and taxonomy
+
+- Reflag classifiers discard matches anchored on non-assistant lines, which had been matching evidence quoted inside user prompts (ref: #4229). User-centric flaggers skip the signal-details dogfood traces, whose user prompt quotes end-user complaints and raised a false frustration signal (LAT-TUA1). The jailbreaking hint extractor now catches safety-rule-override and bulk memory-dump phrasing while ignoring ordinary refund, policy and database-export wording (ORA-RROJ).
+- Topic naming caps the conversation digests it samples. Concatenating up to twelve roughly 24 KB digests made the model follow instructions nested inside the samples and return malformed structured JSON (LAT-XLQ3).
+
+### Traces and memories
+
+- Span ingestion retries are safe for the `traces_mv` rollups: identities already in ClickHouse are skipped before insert so a post-insert retry cannot double counts, tokens, cost or duration. Ingestion jobs retry ten times with exponential backoff on transient storage failures, and a redaction error is terminal rather than retried (ref: d4734266d).
+- A memory store wiped at the same timestamp it was created no longer reads as a net add. Ledger reads and materialization order by end time, start time, ingest time and span id, so create-then-wipe and wipe-then-create resolve deterministically (ref: 76e8f2f4a).
+
+### Telemetry
+
+- Hermes plugin fixes: unfinalized sessions survive the 256-session LRU cap so auxiliary usage reconciliation is not skipped silently (ref: #4511); session finalize waits for the hook-visible ledger flush within the existing 10s teardown budget before deciding to skip auxiliary usage, so approval, compression and title-generation usage is no longer dropped (ref: #4510); a memory tool reporting zero entries while a sister session repopulated the store no longer tombstones or overwrites live records (ref: #4505).
+
+### GitHub integration
+
+- Reference actions apply when an already-merged PR is edited, which never took the closed-and-merged path, and the applied marker clears when the stored action changes so revert and unresolve can run after a push-first absorb (ref: dba91e438).
+
+### Infrastructure
+
+- CloudWatch Logs ingest is cut to stay under the 5 GB cap: Datadog agent and CloudTrail events no longer ship there, RDS Postgres log export is off, and only warn and error application output goes to awslogs. The API access logger writes the incoming line before the handler returns so long requests stay visible in flight (ref: #4539).
+
+### Docs
+
+- Added agent-facing UI design guidance in `design.md`, referenced from the web-frontend skill (ref: #4542), and synced dev-docs for signal terminology, shareable score anchors and the OSS telemetry heartbeat (ref: #4518).
+
 ## v0.3.87 - 2026-09-01
 
 ### Telemetry
