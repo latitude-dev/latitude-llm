@@ -81,7 +81,13 @@ describe("listSessionSignalsUseCase", () => {
   })
 
   it("joins the ClickHouse rollup with the Postgres signal and derives lifecycle states", async () => {
-    const signal = makeSignal({ createdAt: new Date("2020-01-01T00:00:00.000Z") })
+    const signal = makeSignal({
+      createdAt: new Date("2020-01-01T00:00:00.000Z"),
+      scoreEvidence: [
+        { scoreDimension: "outcome", role: "taskOutcome" },
+        { scoreDimension: "speed", role: "criticalPathEfficiency" },
+      ],
+    })
     const layer = buildLayer({
       rollups: [
         {
@@ -110,6 +116,7 @@ describe("listSessionSignalsUseCase", () => {
       slug: "repeated-failure",
       name: "Repeated failure",
       source: "annotation",
+      scoreEvidence: signal.scoreEvidence,
       occurrences: 4,
       states: ["ongoing"],
       resolvedAt: null,

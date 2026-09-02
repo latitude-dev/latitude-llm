@@ -365,7 +365,7 @@ const listSignals = signalEndpoint({
     sdkMethod: "list",
     summary: "List project signals",
     description:
-      "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.",
+      "Returns a cursor-paginated page of signals in the project. Each item includes its `scoreEvidence`, lifecycle `states`, and time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListSignalsQuerySchema },
     responses: typedResponses({ status: 200, schema: PaginatedSignalsSchema, description: "Page of signals" }),
@@ -509,7 +509,7 @@ const getSignal = signalEndpoint({
     sdkMethod: "get",
     summary: "Get project signal",
     description:
-      "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+      "Returns the full-history detail view of one signal, including its `scoreEvidence`, lifecycle `states`, lifetime activity stats, occurrence trend, active evaluations, and current monitoring state.",
     security: PROTECTED_SECURITY,
     request: { params: SignalSlugParamsSchema },
     responses: typedResponses({ status: 200, schema: SignalDetailSchema, description: "Signal" }),

@@ -403,7 +403,7 @@ const listSessionSignals = sessionEndpoint({
     sdkMethod: "listSignals",
     summary: "List session signals",
     description:
-      "Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.",
+      "Returns the signals that occurred in the session, including each signal's `scoreEvidence` and occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.",
     security: PROTECTED_SECURITY,
     request: { params: SessionParamsSchema },
     responses: typedResponses({ status: 200, schema: SessionSignalsSchema, description: "Signals of the session" }),
@@ -452,7 +452,7 @@ const getSessionSignal = sessionEndpoint({
     sdkMethod: "getSignal",
     summary: "Get session signal",
     description:
-      "Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.",
+      "Returns one signal by slug, including its `scoreEvidence` and occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.",
     security: PROTECTED_SECURITY,
     request: {
       params: SessionParamsSchema.extend({ signalSlug: z.string().describe("Signal slug.") }),

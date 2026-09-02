@@ -376,7 +376,7 @@ export class SessionsClient {
     }
 
     /**
-     * Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
+     * Returns the signals that occurred in the session, including each signal's `scoreEvidence` and occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
@@ -462,7 +462,7 @@ export class SessionsClient {
     }
 
     /**
-     * Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
+     * Returns one signal by slug, including its `scoreEvidence` and occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.

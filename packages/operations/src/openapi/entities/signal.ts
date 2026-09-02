@@ -1,6 +1,6 @@
 import { cuidSchema } from "@domain/shared"
 import type { GetSignalTrendResult, SignalDetails, SignalListItem } from "@domain/signals"
-import { SIGNAL_SOURCES, SIGNAL_STATES } from "@domain/signals"
+import { SIGNAL_SOURCES, SIGNAL_STATES, signalScoreEvidenceSchema } from "@domain/signals"
 import { z } from "@hono/zod-openapi"
 import { Paginated } from "../pagination.ts"
 import { EvaluationSchema, toEvaluationResponse } from "./evaluation.ts"
@@ -66,6 +66,10 @@ const SignalMonitoringStateSchema = z
   ])
   .openapi("SignalMonitoringState")
 
+const SignalScoreEvidenceSchema = z
+  .discriminatedUnion("scoreDimension", signalScoreEvidenceSchema.options)
+  .openapi("SignalScoreEvidence")
+
 // Identity fields shared by every signal-returning shape, including the
 // session-scoped `SessionSignal`.
 export const signalIdentityFields = {
@@ -76,6 +80,11 @@ export const signalIdentityFields = {
   name: z.string().describe("Human-readable name."),
   description: z.string().describe("Description of the signal."),
   source: z.enum(SIGNAL_SOURCES).describe("Where the signal originated from."),
+  scoreEvidence: z
+    .array(SignalScoreEvidenceSchema)
+    .describe(
+      "Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only.",
+    ),
   states: z
     .array(z.enum(SIGNAL_STATES))
     .describe("Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`)."),
@@ -170,6 +179,7 @@ export const toSignalResponse = (item: SignalListItem, organizationId: string) =
   name: item.name,
   description: item.description,
   source: item.source,
+  scoreEvidence: item.scoreEvidence.map((evidence) => ({ ...evidence })),
   states: [...item.states] as (typeof SIGNAL_STATES)[number][],
   resolvedAt: item.resolvedAt ? item.resolvedAt.toISOString() : null,
   ignoredAt: item.ignoredAt ? item.ignoredAt.toISOString() : null,
@@ -193,6 +203,7 @@ export const toSignalDetailResponse = (details: SignalDetails, organizationId: s
   name: details.issue.name,
   description: details.issue.description,
   source: details.issue.source,
+  scoreEvidence: details.issue.scoreEvidence.map((evidence) => ({ ...evidence })),
   states: [...details.states],
   resolvedAt: details.issue.resolvedAt ? details.issue.resolvedAt.toISOString() : null,
   ignoredAt: details.issue.ignoredAt ? details.issue.ignoredAt.toISOString() : null,

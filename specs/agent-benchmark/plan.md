@@ -63,7 +63,7 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
 
 ### Product surfaces
 
-- [ ] **P1-10** Expose signal evidence through `@repo/operations`, OpenAPI, MCP, SDK methods, and the
+- [x] **P1-10** Expose signal evidence through `@repo/operations`, OpenAPI, MCP, SDK methods, and the
   CLI. Regenerate generated contracts.
 - [ ] **P1-11** Add dimension chips to signal detail and the signal drawer.
 - [ ] **P1-12** Add dimension filters and chips to the Signals list without grouping or duplicating

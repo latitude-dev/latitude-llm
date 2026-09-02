@@ -577,6 +577,10 @@ describe("listSignalsUseCase", () => {
     const activeSignal = makeSignal({
       id: SignalId("a".repeat(24)),
       name: "Active issue",
+      scoreEvidence: [
+        { scoreDimension: "reliability", role: "operationalIncident" },
+        { scoreDimension: "cost", role: "spendEfficiency" },
+      ],
     })
     const ignoredSignal = makeSignal({
       id: SignalId("b".repeat(24)),
@@ -718,6 +722,7 @@ describe("listSignalsUseCase", () => {
     expect(result.analytics.counts.seenOccurrences).toBe(16)
     expect(result.items.map((item) => item.states)).toEqual([[SignalState.Ongoing]])
     expect(result.items.map((item) => item.id)).toEqual([activeSignal.id])
+    expect(result.items[0]?.scoreEvidence).toEqual(activeSignal.scoreEvidence)
     expect(result.occurrencesSum).toBe(5)
     expect(result.items[0]?.affectedSessionsPercent).toBe(0.5)
     expect(result.items[0]?.evaluations.map((evaluation) => evaluation.id)).toEqual([EvaluationId("1".repeat(24))])

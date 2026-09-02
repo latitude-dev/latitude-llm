@@ -37,7 +37,7 @@ Signals and live taxonomy both use `@domain/shared/centroid` for decayed weighte
 
 ## Scoring metadata
 
-`signals.score_evidence` is a non-null JSONB list of dimension and evidence-role pairs. The canonical Signal entity requires the same list. An empty list means the signal is diagnostic and does not contribute to benchmark scoring. Signal evidence supports outcome, reliability, cost, speed, and safety; the signal safety roles are `confirmedHarm` and `exposure`. `successfulDefense` belongs to the broader score evidence contract but cannot classify a signal because signals represent failures.
+`signals.score_evidence` is a non-null JSONB list of dimension and evidence-role pairs. The canonical Signal entity requires the same list, and public project and session signal responses return it as `scoreEvidence`. An empty list means the signal is diagnostic and does not contribute to benchmark scoring. Signal evidence supports outcome, reliability, cost, speed, and safety; the signal safety roles are `confirmedHarm` and `exposure`. `successfulDefense` belongs to the broader score evidence contract but cannot classify a signal because signals represent failures.
 
 The database default is `[]`. Signal creation paths initialize the field explicitly, and rows that predate the column receive the empty list from the schema migration. Historical signals are not classified by a model or static mapping.
 

@@ -24,7 +24,7 @@ import { pickTraceHistogramBucketSeconds, SessionRepository } from "@domain/span
 import { Effect } from "effect"
 import { z } from "zod"
 import { SIGNAL_PRIORITY_GROUPS, SIGNAL_PRIORITY_ORDER } from "../constants.ts"
-import { type SignalPriority, type SignalSource, SignalState } from "../entities/signal.ts"
+import { type SignalPriority, type SignalScoreEvidence, type SignalSource, SignalState } from "../entities/signal.ts"
 import { deriveSignalLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { buildHistogramBucketScaffold, fillBuckets } from "../histogram-buckets.ts"
 import { SignalRepository, type SignalSearchCandidate, type SignalWithLifecycle } from "../ports/signal-repository.ts"
@@ -127,6 +127,7 @@ export interface SignalListItem {
   readonly name: string
   readonly description: string
   readonly source: SignalSource
+  readonly scoreEvidence: readonly SignalScoreEvidence[]
   readonly states: readonly string[]
   readonly assigneeId: string | null
   readonly priority: SignalPriority | null
@@ -507,6 +508,7 @@ const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem 
     name: issue.name,
     description: issue.description,
     source: issue.source,
+    scoreEvidence: issue.scoreEvidence,
     states,
     assigneeId: issue.assigneeId,
     priority: issue.priority,
@@ -983,6 +985,7 @@ export const listSignalsUseCase = (
           name: candidate.issue.name,
           description: candidate.issue.description,
           source: candidate.issue.source,
+          scoreEvidence: candidate.issue.scoreEvidence,
           states: candidate.lifecycleStates,
           assigneeId: candidate.issue.assigneeId,
           priority: candidate.issue.priority,

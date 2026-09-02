@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.11.0] - 2026-09-02
+
+### Added
+
+- Signal responses from `client.signals.list`, `client.signals.get`, `client.sessions.list_signals`, and `client.sessions.get_signal` include a required `score_evidence` list. Each entry identifies an Agent Score dimension and the role the signal plays in it. An empty list marks a diagnostic signal.
+
 ## [9.10.0] - 2026-08-18
 
 ### Added

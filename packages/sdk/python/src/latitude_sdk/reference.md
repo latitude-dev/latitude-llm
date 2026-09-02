@@ -3920,7 +3920,7 @@ client.saved_searches.list_traces(
 <dl>
 <dd>
 
-Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
+Returns a cursor-paginated page of signals in the project. Each item includes its `scoreEvidence`, lifecycle `states`, and time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
 </dd>
 </dl>
 </dd>
@@ -4178,7 +4178,7 @@ client.signals.create(
 <dl>
 <dd>
 
-Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+Returns the full-history detail view of one signal, including its `scoreEvidence`, lifecycle `states`, lifetime activity stats, occurrence trend, active evaluations, and current monitoring state.
 </dd>
 </dl>
 </dd>
@@ -10305,7 +10305,7 @@ client.sessions.list_traces(
 <dl>
 <dd>
 
-Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
+Returns the signals that occurred in the session, including each signal's `scoreEvidence` and occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
 </dd>
 </dl>
 </dd>
@@ -10387,7 +10387,7 @@ client.sessions.list_signals(
 <dl>
 <dd>
 
-Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
+Returns one signal by slug, including its `scoreEvidence` and occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
 </dd>
 </dl>
 </dd>

@@ -1,4 +1,4 @@
-import { SIGNAL_FEEDBACK_MAX_LENGTH } from "@domain/signals"
+import { SIGNAL_FEEDBACK_MAX_LENGTH, type SignalScoreEvidence } from "@domain/signals"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { signals } from "@platform/db-postgres/schema/signals"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
@@ -32,6 +32,7 @@ const createSignalRecord = async (
   projectId: string,
   slug: string,
   source: "flagger" | "annotation" | "custom" = "flagger",
+  scoreEvidence: readonly SignalScoreEvidence[] = [],
 ): Promise<string> => {
   await database.db.insert(signals).values({
     id: slug.padEnd(24, "0").slice(0, 24),
@@ -42,6 +43,7 @@ const createSignalRecord = async (
     description: `Description for ${slug}`,
     source,
     origin: source === "custom" ? "user" : "system",
+    scoreEvidence: [...scoreEvidence],
     promotedAt: new Date("2026-08-01T00:00:00.000Z"),
   })
   return slug
@@ -125,6 +127,33 @@ describe("Signals Routes Integration", () => {
   it<ApiTestContext>("GET /{signalSlug} rejects unauthenticated requests with 401", async ({ app }) => {
     const res = await app.fetch(new Request("http://localhost/v1/projects/foo/signals/some-issue"))
     expect(res.status).toBe(401)
+  })
+
+  it<ApiTestContext>("GET /{signalSlug} exposes its score evidence as a required list", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "3030000000000000aaaaaaaa"
+    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
+    const scoreEvidence = [
+      { scoreDimension: "reliability", role: "operationalIncident" },
+      { scoreDimension: "cost", role: "spendEfficiency" },
+    ] as const satisfies readonly SignalScoreEvidence[]
+    const signalSlug = await createSignalRecord(
+      database,
+      tenant.organizationId,
+      projectId,
+      "score-evidence-readback",
+      "flagger",
+      scoreEvidence,
+    )
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/signals/${signalSlug}`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ scoreEvidence })
   })
 
   it<ApiTestContext>("POST /export rejects a recipient who is not a member of the organization", async ({

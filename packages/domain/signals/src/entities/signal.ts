@@ -69,8 +69,8 @@ export const signalFeedbackSchema = z.object({
 export type SignalFeedback = z.infer<typeof signalFeedbackSchema>
 
 const signalSafetyScoreEvidenceSchema = z.object({
-  scoreDimension: z.literal("safety"),
-  role: z.enum(["confirmedHarm", "exposure"]),
+  scoreDimension: z.literal("safety").describe("Agent Score dimension this evidence informs."),
+  role: z.enum(["confirmedHarm", "exposure"]).describe("How this evidence informs the dimension."),
 })
 
 export const signalScoreEvidenceSchema = z.discriminatedUnion("scoreDimension", [

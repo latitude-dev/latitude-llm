@@ -178,6 +178,7 @@ export * from "./SignalHistogram.js";
 export * from "./SignalHistogramBucket.js";
 export * from "./SignalLifecycleItem.js";
 export * from "./SignalMonitoringState.js";
+export * from "./SignalScoreEvidence.js";
 export * from "./SignalsLifecycleBody.js";
 export * from "./SignalsLifecycleResponse.js";
 export * from "./SignalTrendBucket.js";
