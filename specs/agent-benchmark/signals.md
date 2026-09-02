@@ -64,7 +64,8 @@ consequence is not.
 
 The Signals list can filter by score dimension but does not group by it. Selecting several
 dimensions matches signals that inform any selected dimension. A signal that informs several
-dimensions appears once with several chips. The session Signals tab shows the same chips.
+dimensions appears once with several chips. The session Signals tab shows the same chips. Surfaces
+show a Diagnostic badge instead of a dimension chip when `scoreEvidence` is empty.
 Session assessment attaches the signal to one chronological evidence item and applies its roles per
 dimension as defined in [`session-assessment.md`](session-assessment.md#signals). Surfaces organized
 into separate dimension sections may show the same signal in each applicable section.

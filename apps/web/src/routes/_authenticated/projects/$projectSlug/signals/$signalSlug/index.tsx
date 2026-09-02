@@ -188,7 +188,7 @@ function SignalDetailPage() {
                 ) : (
                   <Text.H5 color="foregroundMuted">{signal?.description ?? "This signal could not be loaded."}</Text.H5>
                 )}
-                {!isLoading && signal && (signal.scoreEvidence.length > 0 || signal.tags.length > 0) ? (
+                {!isLoading && signal ? (
                   <div className="flex flex-row flex-wrap items-center gap-2">
                     <SignalScoreDimensions scoreEvidence={signal.scoreEvidence} />
                     {signal.tags.length > 0 ? <TagList tags={signal.tags} wrap /> : null}

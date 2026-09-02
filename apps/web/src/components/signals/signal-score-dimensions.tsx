@@ -1,6 +1,6 @@
 import { SCORE_DIMENSIONS, type ScoreDimension } from "@domain/shared"
 import type { SignalScoreEvidence } from "@domain/signals"
-import { Badge, Tooltip } from "@repo/ui"
+import { Badge, Text, Tooltip } from "@repo/ui"
 import { useLayoutEffect, useMemo, useRef, useState } from "react"
 
 const BADGE_GAP_PX = 4
@@ -30,7 +30,7 @@ export function SignalScoreDimensions({
   const [visibleCount, setVisibleCount] = useState(dimensions.length)
 
   useLayoutEffect(() => {
-    if (wrap) return
+    if (wrap || dimensions.length === 0) return
     const container = containerRef.current
     if (!container) return
 
@@ -84,7 +84,20 @@ export function SignalScoreDimensions({
     return () => observer.disconnect()
   }, [dimensions, wrap])
 
-  if (dimensions.length === 0) return null
+  if (dimensions.length === 0) {
+    return (
+      <Tooltip
+        asChild
+        trigger={
+          <Badge variant="muted" noWrap className="cursor-default font-normal">
+            Diagnostic
+          </Badge>
+        }
+      >
+        <Text.H6>Does not contribute to Agent Score.</Text.H6>
+      </Tooltip>
+    )
+  }
 
   const hiddenDimensions = dimensions.slice(visibleCount)
 

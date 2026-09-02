@@ -69,7 +69,7 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
 - [x] **P1-12** Add dimension filters and chips to the Signals list without grouping or duplicating
   signal rows by dimension.
 - [x] **P1-13** Add dimensions to signal rows in the session Signals tab.
-- [ ] **P1-14** Mark signals with no scoring role as diagnostic rather than assigning a fallback
+- [x] **P1-14** Mark signals with no scoring role as diagnostic rather than assigning a fallback
   dimension.
 
 ### Exit gate

@@ -35,10 +35,12 @@ describe("SignalScoreDimensions", () => {
     expect(chips.map((chip) => chip.textContent)).toEqual(["Outcome", "Reliability", "Speed"])
   })
 
-  it("renders nothing for a diagnostic signal", () => {
-    const { container } = render(<SignalScoreDimensions scoreEvidence={[]} />)
+  it("marks a signal without scoring roles as diagnostic", () => {
+    render(<SignalScoreDimensions scoreEvidence={[]} />)
 
-    expect(container.childElementCount).toBe(0)
+    const badgeClassName = screen.getByText("Diagnostic").parentElement?.className
+    expect(badgeClassName).toContain("bg-muted")
+    expect(badgeClassName).toContain("font-normal")
   })
 
   it("uses visible regular-weight badges in a single non-wrapping row", () => {
