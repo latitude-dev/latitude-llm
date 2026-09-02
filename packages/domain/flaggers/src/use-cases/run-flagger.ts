@@ -960,6 +960,18 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
     return { matched: false } satisfies RunFlaggerResult
   }
 
+  // Assistant-response-centric strategies must not anchor on user/system/tool
+  // lines — that pattern is how reflag classifiers latch onto nested evidence
+  // inside the classify prompt instead of the evaluated agent's own output.
+  if (
+    classifiesAssistantResponseOnly(strategy) &&
+    decisions.messageIndex !== undefined &&
+    input.conversation.allMessages[decisions.messageIndex]?.role !== "assistant"
+  ) {
+    yield* Effect.annotateCurrentSpan("flagger.matchRejectedNonAssistantAnchor", true)
+    return { matched: false } satisfies RunFlaggerResult
+  }
+
   const review = yield* ai
     .generate({
       ...flaggerModelConfig,
