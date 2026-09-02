@@ -506,9 +506,31 @@ export const ScoreRepositoryLive = Layer.effect(
             )
         }),
 
-      countDistinctSessionsBySignalId: ({ projectId, signalId, since }) =>
+      countDistinctSessionsBySignalId: ({ projectId, signalId, since, forUpdate }) =>
         Effect.gen(function* () {
           const sqlClient = yield* resolveSqlClient()
+          const where = and(
+            eq(scores.organizationId, sqlClient.organizationId),
+            eq(scores.projectId, projectId),
+            eq(scores.signalId, String(signalId)),
+            isNull(scores.draftedAt),
+            gte(scores.createdAt, since),
+          )
+
+          if (forUpdate) {
+            const locked = yield* sqlClient.query((db) =>
+              db
+                .select({
+                  id: scores.id,
+                  sessionId: scores.sessionId,
+                  traceId: scores.traceId,
+                })
+                .from(scores)
+                .where(where)
+                .for("update"),
+            )
+            return new Set(locked.map((row) => row.sessionId || row.traceId || row.id)).size
+          }
 
           const rows = yield* sqlClient.query((db) =>
             db
@@ -518,15 +540,7 @@ export const ScoreRepositoryLive = Layer.effect(
                 sessions: sql<number>`count(distinct coalesce(nullif(${scores.sessionId}, ''), nullif(${scores.traceId}, ''), ${scores.id}))::int`,
               })
               .from(scores)
-              .where(
-                and(
-                  eq(scores.organizationId, sqlClient.organizationId),
-                  eq(scores.projectId, projectId),
-                  eq(scores.signalId, String(signalId)),
-                  isNull(scores.draftedAt),
-                  gte(scores.createdAt, since),
-                ),
-              ),
+              .where(where),
           )
 
           return rows[0]?.sessions ?? 0

@@ -3,9 +3,21 @@ import { createFakeAI } from "@domain/ai/testing"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { OrganizationId, SignalId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  CacheStore,
+  type CacheStoreShape,
+  ChSqlClient,
+  OrganizationId,
+  SignalId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
+import { createFakeChSqlClient } from "@domain/shared/testing"
+import { SessionRepository } from "@domain/spans"
+import { createFakeSessionRepository } from "@domain/spans/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+import { PROMOTION_MIN_SESSIONS } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 import { createFakeSignalRepository } from "../testing/fake-signal-repository.ts"
@@ -58,12 +70,35 @@ const generated =
   <T>(input: GenerateInput<T>) =>
     Effect.succeed({ object: input.schema.parse({ name, description }), tokens: 10, duration: 5 })
 
-const run = (input: { readonly signal?: Signal; readonly generate?: AIGenerate }) => {
+const promotionGateLayers = (projectSessions = 500) => {
+  const cache: CacheStoreShape = {
+    get: () => Effect.succeed(String(projectSessions)),
+    set: () => Effect.void,
+    delete: () => Effect.void,
+  }
+  const { repository: sessionRepository } = createFakeSessionRepository({
+    countByProjectId: () => Effect.succeed({ totalCount: projectSessions }),
+  })
+
+  return [
+    Effect.provideService(CacheStore, cache),
+    Effect.provideService(SessionRepository, sessionRepository),
+    Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(organizationId) })),
+  ] as const
+}
+
+const run = (input: {
+  readonly signal?: Signal
+  readonly generate?: AIGenerate
+  readonly sessions?: number
+  readonly projectSessions?: number
+}) => {
   const { layer: aiLayer } = createFakeAI(
     input.generate ? { generate: input.generate } : { generate: () => Effect.die("model unavailable") },
   )
   const { repository: signalRepository, issues } = createFakeSignalRepository([input.signal ?? makeSignal()])
   const { repository: scoreRepository } = createFakeScoreRepository({
+    countDistinctSessionsBySignalId: () => Effect.succeed(input.sessions ?? PROMOTION_MIN_SESSIONS),
     listBySignalId: () =>
       Effect.succeed({
         items: [
@@ -92,6 +127,7 @@ const run = (input: { readonly signal?: Signal; readonly generate?: AIGenerate }
             }),
         }),
       ),
+      ...promotionGateLayers(input.projectSessions),
     ),
   ).then((result) => ({ result, outbox, stored: issues.get(signalId) }))
 }
@@ -134,7 +170,9 @@ describe("promoteSignalUseCase", () => {
       generate: generated("Should never be requested", "Nor this."),
     })
     const { repository: signalRepository, issues } = createFakeSignalRepository([makeSignal()])
-    const { repository: scoreRepository } = createFakeScoreRepository()
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      countDistinctSessionsBySignalId: () => Effect.succeed(PROMOTION_MIN_SESSIONS),
+    })
     const outbox: { events: OutboxWriteEvent[] } = { events: [] }
 
     const result = await Effect.runPromise(
@@ -152,6 +190,7 @@ describe("promoteSignalUseCase", () => {
               }),
           }),
         ),
+        ...promotionGateLayers(),
       ),
     )
 
@@ -159,6 +198,91 @@ describe("promoteSignalUseCase", () => {
     expect(calls.generate).toHaveLength(0)
     expect(issues.get(signalId)?.name).toBe(PLACEHOLDER_NAME)
     expect(issues.get(signalId)?.promotedAt).not.toBeNull()
+  })
+
+  it("does not promote when evidence dropped below the threshold after qualification", async () => {
+    const { result, outbox, stored } = await run({
+      sessions: PROMOTION_MIN_SESSIONS - 1,
+      generate: generated("Should never be written", "Nor this."),
+    })
+
+    expect(result.action).toBe("not-qualified")
+    expect(stored?.name).toBe(PLACEHOLDER_NAME)
+    expect(stored?.promotedAt).toBeNull()
+    expect(outbox.events).toHaveLength(0)
+  })
+
+  it("locks matching scores when re-counting under the signal row lock", async () => {
+    const lockedCounts: boolean[] = []
+    const { layer: aiLayer } = createFakeAI({
+      generate: generated("Token leakage in assistant responses", "Secrets reach the user verbatim."),
+    })
+    const { repository: signalRepository } = createFakeSignalRepository([makeSignal()])
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      countDistinctSessionsBySignalId: (input) => {
+        lockedCounts.push(input.forUpdate === true)
+        return Effect.succeed(PROMOTION_MIN_SESSIONS)
+      },
+    })
+    const outbox: { events: OutboxWriteEvent[] } = { events: [] }
+
+    const result = await Effect.runPromise(
+      promoteSignalUseCase({ organizationId, projectId, signalId }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(
+          OutboxEventWriter,
+          OutboxEventWriter.of({
+            write: (event) =>
+              Effect.sync(() => {
+                outbox.events.push(event)
+              }),
+          }),
+        ),
+        ...promotionGateLayers(),
+      ),
+    )
+
+    expect(result.action).toBe("promoted")
+    expect(lockedCounts).toEqual([false, true])
+    expect(outbox.events.filter((event) => event.eventName === "SignalPromoted")).toHaveLength(1)
+  })
+
+  it("does not stamp after a stale job if evidence disappears during naming", async () => {
+    const counts = [PROMOTION_MIN_SESSIONS, PROMOTION_MIN_SESSIONS - 1]
+    const { layer: aiLayer } = createFakeAI({
+      generate: generated("Should never be written", "Nor this."),
+    })
+    const { repository: signalRepository, issues } = createFakeSignalRepository([makeSignal()])
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      countDistinctSessionsBySignalId: () => Effect.succeed(counts.shift() ?? 0),
+    })
+    const outbox: { events: OutboxWriteEvent[] } = { events: [] }
+
+    const result = await Effect.runPromise(
+      promoteSignalUseCase({ organizationId, projectId, signalId }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(
+          OutboxEventWriter,
+          OutboxEventWriter.of({
+            write: (event) =>
+              Effect.sync(() => {
+                outbox.events.push(event)
+              }),
+          }),
+        ),
+        ...promotionGateLayers(),
+      ),
+    )
+
+    expect(result.action).toBe("not-qualified")
+    expect(issues.get(signalId)?.promotedAt).toBeNull()
+    expect(outbox.events).toHaveLength(0)
   })
 
   it("is idempotent for an already-promoted signal", async () => {
