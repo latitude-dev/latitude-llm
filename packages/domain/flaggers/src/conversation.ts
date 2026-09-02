@@ -14,7 +14,7 @@ export interface FlaggerConversation {
   readonly tokensInput: number
   readonly tokensCacheRead: number
   readonly tokensCacheCreate: number
-  /** Tool names declared available to the agent. Absent on the legacy trace path. */
+  /** Session-union of tool names declared on any span. Absent or empty means the toolset was not reported. */
   readonly definedTools?: readonly string[]
 }
 
