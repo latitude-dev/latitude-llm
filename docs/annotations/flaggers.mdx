@@ -47,7 +47,7 @@ LLM checks on failure modes in your agent's own output.
   <Accordion title="Refusal">
     The agent declines, deflects, or over-restricts a request that is allowed and answerable within its policy and capabilities.
 
-    Not flagged: a correct refusal, where the request is unsafe, unsupported, missing context the agent needs, or a capability none of the agent's declared tools can fulfill.
+    Not flagged: a correct refusal, where the request is unsafe, unsupported, missing context the agent needs, or an external action / tool / unsupported modality that none of the agent's declared tools can fulfill. Native model work such as summarizing pasted text is still flagged when refused.
   </Accordion>
 
   <Accordion title="Laziness">

@@ -7,9 +7,21 @@ describe("refusalStrategy", () => {
     const system = refusalStrategy.buildSystemPrompt?.(makeTrace([])) ?? ""
 
     expect(system).toContain("declared toolset")
+    expect(system).toContain("inherently require an external action, a tool, or an unsupported modality")
     expect(system).toContain("none of those tools can fulfill")
     expect(system).toContain("even if the assistant wrongly cites policy")
     expect(system).toContain("Do not infer extra capabilities from the agent's role")
+    expect(system).toContain("attach or export a PDF")
+    expect(system).toContain("query, remind, or check dispute status")
+  })
+
+  it("keeps native LLM work in-capability when a declared toolset is present", () => {
+    const system = refusalStrategy.buildSystemPrompt?.(makeTrace([])) ?? ""
+
+    expect(system).toContain("Do not treat the declared toolset as the exclusive capability set")
+    expect(system).toContain("summarizing pasted text")
+    expect(system).toContain("answering a factual question")
+    expect(system).toContain("refusing those is still an incorrect refusal")
   })
 
   it("does not embed the declared toolset in strategy evidence — that is injected by run-flagger", () => {

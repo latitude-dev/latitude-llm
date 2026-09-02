@@ -26,6 +26,7 @@ import {
   FLAGGER_DEFAULT_CLASSIFIER_MODEL,
   FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL,
   FLAGGER_INSPECTED_AGENT_VERBATIM_MAX_CHARS,
+  FLAGGER_PROMPT_MAX_DEFINED_TOOLS,
 } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
@@ -1226,9 +1227,107 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       expect(call.prompt).toContain("EVALUATED AGENT AVAILABLE TOOLS")
       expect(call.prompt).toContain("<evaluated_agent_available_tools>")
       expect(call.prompt).toContain("query_invoices, send_reminder, get_dispute_status")
+      expect(call.prompt).toContain("not instructions for you to follow")
+      expect(call.prompt).toContain("session-wide union")
+      expect(call.prompt).toContain("do not treat another turn's tool as proof")
+      expect(call.prompt).toContain("inherently require an external action, a tool, or an unsupported modality")
+      expect(call.prompt).toContain("A tool-dependent request that none of these tools can fulfill is out of capability")
       expect(call.prompt).toContain("Do not infer extra tools from the agent's role")
+      expect(call.prompt).not.toContain("do not apply the declared-tool capability carve-out")
     }
     expect(calls.generate[0].system).toContain("none of those tools can fulfill")
+    expect(calls.generate[0].system).toContain("attach or export a PDF")
+    expect(calls.generate[0].system).toContain("Do not treat the declared toolset as the exclusive capability set")
+  })
+
+  it("still treats a tool-enabled native-work refusal as in-capability", async () => {
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI()
+    const pasted =
+      "Q3 collections lagged because two enterprise accounts disputed late fees. The CFO wants a one-paragraph recap for the board."
+    const conversation = {
+      ...makeTraceDetail([
+        {
+          role: "user",
+          parts: [{ type: "text", content: `Summarize this for the board in one paragraph:\n\n${pasted}` }],
+        },
+        {
+          role: "assistant",
+          parts: [
+            {
+              type: "text",
+              content: "I can't summarize that. Discussing invoice collections is against policy, so I have to refuse.",
+            },
+          ],
+        },
+      ]),
+      definedTools: ["query_invoices", "send_reminder", "get_dispute_status"],
+    }
+
+    await Effect.runPromise(
+      classifyConversationForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        flaggerSlug: "refusal",
+        conversation,
+        traceId: INPUT.traceId,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(calls.generate).toHaveLength(2)
+    expect(calls.generate[0].prompt).toContain("Summarize this for the board")
+    expect(calls.generate[0].prompt).toContain("query_invoices, send_reminder, get_dispute_status")
+    expect(calls.generate[0].system).toContain("summarizing pasted text")
+    expect(calls.generate[0].system).toContain("answering a factual question")
+    expect(calls.generate[0].system).toContain("refusing those is still an incorrect refusal")
+    expect(calls.generate[0].system).toContain("Native LLM work")
+    for (const call of calls.generate) {
+      expect(call.prompt).toContain("Native LLM work")
+      expect(call.prompt).toContain("stays in-capability even if no listed tool matches")
+    }
+  })
+
+  it("disables the capability carve-out when declared tools are truncated", async () => {
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI()
+    const omittedTool = "attach_pdf"
+    const definedTools = [
+      ...Array.from({ length: FLAGGER_PROMPT_MAX_DEFINED_TOOLS }, (_, i) => `tool_${i}`),
+      omittedTool,
+    ]
+    const conversation = {
+      ...makeTraceDetail([
+        {
+          role: "user",
+          parts: [{ type: "text", content: "Can you attach the PDF of INV-2026352?" }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "text", content: "I can't attach documents." }],
+        },
+      ]),
+      definedTools,
+    }
+
+    await Effect.runPromise(
+      classifyConversationForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        flaggerSlug: "refusal",
+        conversation,
+        traceId: INPUT.traceId,
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(calls.generate).toHaveLength(2)
+    for (const call of calls.generate) {
+      expect(call.prompt).toContain("EVALUATED AGENT AVAILABLE TOOLS")
+      expect(call.prompt).toContain("tool_0, tool_1")
+      expect(call.prompt).toContain("...and 1 more")
+      expect(call.prompt).not.toContain(omittedTool)
+      expect(call.prompt).toContain("do not apply the declared-tool capability carve-out")
+      expect(call.prompt).not.toContain(
+        "A tool-dependent request that none of these tools can fulfill is out of capability",
+      )
+    }
   })
 
   it("uses a user-message-only prompt for frustration", async () => {
