@@ -53,8 +53,8 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
   running any migration command.
 - [x] **P1-5** Implement the static flagger mapping from
   [`signals.md`](signals.md#assignment-at-promotion).
-- [x] **P1-6** Extend signal detail generation with evidence-role classification for signals that do
-  not have a dominant mapped flagger.
+- [x] **P1-6** Latch empty diagnostic `scoreEvidence` when there is no dominant mapped flagger. Do
+  not persist model-generated scoring roles.
 - [x] **P1-7** Assign and latch `scoreEvidence` during promotion. Detail refresh must not rewrite it.
 - [x] **P1-8** Backfill every existing signal with an empty, non-null `scoreEvidence` list in the
   schema migration. Do not classify historical signals with a model or the static flagger mapping.
@@ -69,14 +69,14 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
 - [x] **P1-12** Add dimension filters and chips to the Signals list without grouping or duplicating
   signal rows by dimension.
 - [x] **P1-13** Add dimensions to signal rows in the session Signals tab.
-- [x] **P1-14** Mark signals with no scoring role as diagnostic rather than assigning a fallback
-  dimension.
+- [x] **P1-14** Mark signals with no scoring role, and ignored signals, as diagnostic rather than
+  assigning a fallback dimension.
 
 ### Exit gate
 
-- [x] **P1-15** Tests cover valid dimension-role pairs, static and generated assignment, promotion
-  latching, generation failure, strict flagger dominance, refresh behavior, the non-null empty
-  backfill, ignored-score exclusion, and promoted-only analytics.
+- [x] **P1-15** Tests cover valid dimension-role pairs, static assignment, unmapped empty latch,
+  promotion latching, generation failure, strict flagger dominance, refresh behavior, the non-null
+  empty backfill, ignored-score exclusion, ignored UI chips, and promoted-only analytics.
 - [x] **P1-16** Signal detail, list filters, and session signal rows render the same dimension set.
 - [x] `pnpm typecheck` and `pnpm test` pass for touched packages. Generated API artifacts are current.
 

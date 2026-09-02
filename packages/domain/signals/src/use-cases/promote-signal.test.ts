@@ -180,14 +180,28 @@ describe("promoteSignalUseCase", () => {
     ])
   })
 
-  it("uses generated evidence without a dominant mapped flagger", async () => {
-    const scoreEvidence: SignalScoreEvidence[] = [{ scoreDimension: "safety", role: "exposure" }]
+  it("latches empty evidence without a dominant mapped flagger", async () => {
     const { stored } = await run({
       flaggerSlugSample: ["unknown", "refusal", null],
-      generate: generated("Unsafe input exposure", "User input contains sensitive content.", scoreEvidence),
+      generate: generated("Unsafe input exposure", "User input contains sensitive content.", [
+        { scoreDimension: "safety", role: "exposure" },
+      ]),
     })
 
-    expect(stored?.scoreEvidence).toEqual(scoreEvidence)
+    expect(stored?.name).toBe("Unsafe input exposure")
+    expect(stored?.scoreEvidence).toEqual([])
+  })
+
+  it("latches empty evidence for an unmapped strict majority", async () => {
+    const { stored } = await run({
+      flaggerSlugSample: ["custom-flagger", "custom-flagger", "custom-flagger"],
+      generate: generated("Custom detector cluster", "A third-party detector found a pattern.", [
+        { scoreDimension: "outcome", role: "taskOutcome" },
+      ]),
+    })
+
+    expect(stored?.name).toBe("Custom detector cluster")
+    expect(stored?.scoreEvidence).toEqual([])
   })
 
   it("does not call the model when generation is switched off", async () => {

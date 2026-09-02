@@ -142,7 +142,6 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
             projectId: input.projectId,
             signalId: input.signalId,
             ignorePreviousDetails: true,
-            classifyScoreEvidence: staticScoreEvidence === null,
           }).pipe(
             Effect.map((generated) => generated),
             // `catchCause`, not `catch`: a provider that throws surfaces as a
@@ -182,7 +181,7 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
         }
 
         const promotedAt = new Date()
-        const scoreEvidence = staticScoreEvidence ?? details?.scoreEvidence ?? []
+        const scoreEvidence = staticScoreEvidence ?? []
         yield* signalRepository.save({
           ...locked.signal,
           ...(details ?? {}),
