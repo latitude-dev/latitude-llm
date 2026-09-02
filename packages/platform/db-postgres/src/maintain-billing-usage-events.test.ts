@@ -69,6 +69,20 @@ const insertForPeriod = (offsetMonths: number) =>
     }),
   )
 
+const insertManyForPeriod = (offsetMonths: number) =>
+  runWithLive(
+    Effect.gen(function* () {
+      const repo = yield* BillingUsageEventRepository
+      return yield* repo.insertMany([
+        {
+          ...makeEvent(offsetMonths),
+          id: "f".repeat(24),
+          idempotencyKey: `trace:partition-batch:${offsetMonths}`,
+        },
+      ])
+    }),
+  )
+
 describe("billing usage event partition maintenance", () => {
   it("recreates a dropped current-month partition so inserts succeed again", async () => {
     await dropPartition(0)
@@ -80,6 +94,16 @@ describe("billing usage event partition maintenance", () => {
 
     expect(await listPartitionNames()).toContain(partitionNameFor(0))
     expect(await insertForPeriod(0)).toBe(true)
+  })
+
+  it("recreates the current-month partition for insertMany (recordTraceUsageBatch path)", async () => {
+    await dropPartition(0)
+
+    await expect(insertManyForPeriod(0)).rejects.toThrow(/no partition of relation/)
+
+    await ensureBillingUsageEventsPartitions(pg.adminPostgresClient)
+
+    expect(await insertManyForPeriod(0)).toBe(1)
   })
 
   it("creates a month outside the migrated window when monthsAhead is raised", async () => {

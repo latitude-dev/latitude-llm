@@ -1073,4 +1073,50 @@ describe("billing runtime integration", () => {
     createBillingWorker({ consumer, postgresClient: pg.adminPostgresClient })
     await consumer.dispatchTask("billing", "maintainUsageEventPartitions", {})
   })
+
+  it("recordTraceUsageBatch insertMany succeeds after recreating a dropped current-month partition", async () => {
+    const consumer = new TestQueueConsumer()
+    const organizationId = generateId()
+    const projectId = generateId()
+    const partitionName = `billing_usage_events_${NOW.getUTCFullYear()}_${String(NOW.getUTCMonth() + 1).padStart(2, "0")}`
+
+    await pg.db.insert(organizations).values({
+      id: organizationId,
+      name: "Trace Batch Missing Partition Org",
+      slug: `trace-batch-missing-partition-${organizationId}`,
+    })
+
+    createBillingWorker({ consumer, postgresClient: pg.adminPostgresClient })
+
+    const recordBatch = () =>
+      Effect.runPromise(
+        recordTraceUsageBatchUseCase({
+          organizationId: OrganizationId(organizationId),
+          traceUsages: [{ projectId: ProjectId(projectId), traceId: TraceId("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1") }],
+          planSlug: "free",
+          planSource: "free-fallback",
+          periodStart: BILLING_PERIOD_START,
+          periodEnd: BILLING_PERIOD_END,
+          includedCredits: PLAN_CONFIGS.free.includedCredits,
+          overageAllowed: false,
+        }).pipe(withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(organizationId)), withTracing),
+      )
+
+    await pg.client.exec(`DROP TABLE IF EXISTS latitude.${partitionName}`)
+    try {
+      await expect(recordBatch()).rejects.toThrow(/no partition of relation/)
+
+      await consumer.dispatchTask("billing", "maintainUsageEventPartitions", {})
+
+      await recordBatch()
+
+      const events = await pg.db
+        .select()
+        .from(billingUsageEvents)
+        .where(eq(billingUsageEvents.organizationId, organizationId))
+      expect(events).toHaveLength(1)
+    } finally {
+      await consumer.dispatchTask("billing", "maintainUsageEventPartitions", {})
+    }
+  })
 })
