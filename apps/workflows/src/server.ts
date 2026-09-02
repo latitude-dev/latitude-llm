@@ -88,7 +88,11 @@ const bootstrap = async () => {
 
   const start = async () => {
     await waitForRedisClientReady(getRedisClient())
-    await maintainBillingUsageEventsRetention(getPostgresClient())
+    try {
+      await maintainBillingUsageEventsRetention(getPostgresClient())
+    } catch (error) {
+      logger.error("Billing usage event partition maintenance failed", { error })
+    }
 
     const temporal = await runTemporalWorker({
       config,

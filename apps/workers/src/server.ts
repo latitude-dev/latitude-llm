@@ -313,7 +313,11 @@ const bootstrap = async () => {
     )
 
     // Repeatable cron first fires at the next 02:00 UTC; create the current month now so a deploy heals a missing partition.
-    await maintainBillingUsageEventsRetention(pgClient)
+    try {
+      await maintainBillingUsageEventsRetention(pgClient)
+    } catch (error) {
+      logger.error("Billing usage event partition maintenance failed", { error })
+    }
     await Effect.runPromise(
       queuePublisher
         .scheduleRepeatable(
