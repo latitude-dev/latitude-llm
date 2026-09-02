@@ -100,7 +100,7 @@ export function SignalScoreDimensions({
           data-dimension-item=""
           style={{ display: !wrap && index >= visibleCount ? "none" : undefined }}
         >
-          <Badge variant="secondary" noWrap>
+          <Badge variant="muted" noWrap className="font-normal">
             {SIGNAL_SCORE_DIMENSION_LABELS[dimension]}
           </Badge>
         </li>
@@ -110,7 +110,7 @@ export function SignalScoreDimensions({
           asChild
           trigger={
             <li data-dimension-overflow="" style={{ display: hiddenDimensions.length > 0 ? "inline-flex" : "none" }}>
-              <Badge variant="muted" noWrap>
+              <Badge variant="muted" noWrap className="font-normal">
                 +{hiddenDimensions.length}
               </Badge>
             </li>
@@ -119,7 +119,7 @@ export function SignalScoreDimensions({
           <ul className="flex flex-row flex-wrap gap-1">
             {hiddenDimensions.map((dimension) => (
               <li key={dimension}>
-                <Badge variant="secondary" noWrap>
+                <Badge variant="muted" noWrap className="font-normal">
                   {SIGNAL_SCORE_DIMENSION_LABELS[dimension]}
                 </Badge>
               </li>

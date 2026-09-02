@@ -41,7 +41,7 @@ describe("SignalScoreDimensions", () => {
     expect(container.childElementCount).toBe(0)
   })
 
-  it("uses neutral badges in a single non-wrapping row", () => {
+  it("uses visible regular-weight badges in a single non-wrapping row", () => {
     render(
       <SignalScoreDimensions
         scoreEvidence={[
@@ -55,6 +55,8 @@ describe("SignalScoreDimensions", () => {
     const list = screen.getByLabelText("Agent Score dimensions")
     expect(list.className).toContain("overflow-hidden")
     expect(list.className).not.toContain("flex-wrap")
-    expect(screen.getByText("Outcome").parentElement?.className).toContain("bg-secondary")
+    const badgeClassName = screen.getByText("Outcome").parentElement?.className
+    expect(badgeClassName).toContain("bg-muted")
+    expect(badgeClassName).toContain("font-normal")
   })
 })
