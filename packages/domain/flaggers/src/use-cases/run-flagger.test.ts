@@ -98,7 +98,10 @@ const flaggerOutputSchema = z
   })
 
 const createClassifyAndApproveAI = (
-  classification = { matched: true, feedback: "Flagger matched with concrete evidence." },
+  classification: { matched: boolean; feedback?: string; messageIndex?: string } = {
+    matched: true,
+    feedback: "Flagger matched with concrete evidence.",
+  },
 ) =>
   createFakeAI({
     generate: <T>(input: { readonly system?: string }) => {
