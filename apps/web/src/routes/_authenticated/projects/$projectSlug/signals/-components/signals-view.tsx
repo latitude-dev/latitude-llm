@@ -235,7 +235,7 @@ export function SignalsView({
       header: "Dimensions",
       width: 190,
       minWidth: 150,
-      render: (issue) => <SignalScoreDimensions scoreEvidence={issue.scoreEvidence} />,
+      render: (issue) => <SignalScoreDimensions scoreEvidence={issue.scoreEvidence} wrap={false} />,
     },
     {
       key: "tags",
