@@ -428,7 +428,7 @@ export function extractJailbreakSuspiciousSnippets(
       reason: "information extraction",
     },
     {
-      pattern: /(?:dump|exfiltrate|export).{0,40}(?:every|all|the entire).{0,40}(?:memor(?:y|ies)|database|records?)/i,
+      pattern: /(?:dump|exfiltrate|export).{0,40}(?:every|all|the entire).{0,40}memor(?:y|ies)/i,
       reason: "bulk record dump",
     },
     { pattern: /\b(?:devtools?|developer tool|inspector|debug console)\b/i, reason: "tool abuse attempt" },
