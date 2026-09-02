@@ -292,6 +292,12 @@ export const TAXONOMY_DEFAULT_NAMING_MODEL = {
 export const TAXONOMY_NAMING_REFRESH_OBSERVATIONS = 25
 export const TAXONOMY_NAMING_TIMEOUT_MS = 60_000
 
+/** Per-sample middle-truncate cap for leaf naming prompts (digests are larger at ingest). */
+export const TAXONOMY_NAMING_SAMPLE_CHAR_CAP = 2_000
+
+/** Hard cap on the serialized `Samples:` block (`N: …` lines joined by newlines). */
+export const TAXONOMY_NAMING_SAMPLES_TOTAL_CHAR_CAP = 12_000
+
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MIN = 4
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 
