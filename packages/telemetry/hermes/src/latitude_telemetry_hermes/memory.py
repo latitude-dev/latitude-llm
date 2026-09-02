@@ -117,7 +117,12 @@ def classify_write(args: Any, result: Any, read_file: Optional[ReadFile] = None)
     # Only the tool's own count may classify a store as emptied. `read_snapshot`
     # returns None for an unreadable file as well as an empty one, and mistaking
     # the first for the second publishes a deletion the ledger turns into a
-    # tombstone for a record the agent had just written to.
+    # tombstone. When the tool reports zero but the read still sees entries, a
+    # sister session repopulated between the flush and our read — suppress the
+    # span; a contentless upsert is a real mutation and a later-finishing span
+    # would overwrite the sister's content hash and token count.
+    if reported == 0 and snapshot is not None and entries > 0:
+        return None
     emptied = reported == 0
     op = {
         "operation": "delete_memory" if emptied else "upsert_memory",

@@ -1197,7 +1197,8 @@ export const TraceRepositoryLive = Layer.effect(
       findLastTraceAt: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
@@ -1322,7 +1323,8 @@ export const TraceRepositoryLive = Layer.effect(
       countAnnotatedByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+          const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+          const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 

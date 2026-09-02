@@ -1671,4 +1671,38 @@ describe("SpanRepository", () => {
       expect(spans.map((span) => span.name)).toEqual(["span-4", "span-3"])
     })
   })
+
+  describe("listExistingIdentities", () => {
+    it("returns only identities already stored for the requested spans", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ span_id: "1111111111111111" }),
+          makeSpanRow({ span_id: "2222222222222222" }),
+        ]),
+      )
+
+      const existing = await runCh(
+        repo.listExistingIdentities({
+          organizationId: ORG_ID,
+          spans: [
+            { projectId: PROJECT_ID, traceId: TRACE_ID, spanId: SpanId("1111111111111111") },
+            { projectId: PROJECT_ID, traceId: TRACE_ID, spanId: SpanId("3333333333333333") },
+          ],
+        }),
+      )
+
+      expect(existing).toEqual([{ projectId: PROJECT_ID, traceId: TRACE_ID, spanId: SpanId("1111111111111111") }])
+    })
+
+    it("returns nothing when none of the identities exist", async () => {
+      const existing = await runCh(
+        repo.listExistingIdentities({
+          organizationId: ORG_ID,
+          spans: [{ projectId: PROJECT_ID, traceId: TRACE_ID, spanId: SpanId("1111111111111111") }],
+        }),
+      )
+
+      expect(existing).toEqual([])
+    })
+  })
 })

@@ -82,6 +82,18 @@ Python mirrors the same helpers on `latitude_telemetry.sdk.tracer` (`get_latitud
 
 Spans carrying `latitude.*` attributes directly are indistinguishable from `capture()`-scoped spans on ingest. This matters on edge runtimes where ambient OTel context cannot be entered across async boundaries.
 
+## Cross-boundary propagation
+
+`injectTraceContext(context?)` and `extractTraceContext()` / `withTraceContext()` carry the active span and Latitude context across a boundary that has no ambient OpenTelemetry context: a Durable Object RPC call, a service binding, a queue message. The carrier is keyed by HTTP header names, so the same object works as an argument and as `fetch` headers. `withParentContext(tracer, context)` is the lower-level piece: it makes a framework-owned tracer attach its first span to a remote parent while leaving its own nesting intact. See [`trace-correlation.md`](trace-correlation.md) for the contract these share with the Hermes and Claude Code emitters.
+
+## Cloudflare helpers
+
+`@latitude-data/telemetry/cloudflare` holds the runtime-specific helpers, which are deliberately absent from the root import:
+
+- `createCodemodeTelemetry()` — nests codemode-internal tool spans under the outer `execute` span.
+- `createDurableObjectTelemetry()` — flushing for a runtime that evicts without warning. Exports are serialized and coalesced, a caller arriving mid-export gets a later one, in-flight exports register with `ctx.waitUntil()`, and a failed export is reported rather than thrown into the work being traced. Durable Objects must flush at each unit of work because the batch processor's timer is not a scheduler the runtime keeps alive.
+- The propagation helpers above, re-exported for discoverability.
+
 ## Project scoping
 
 Project routing uses three layers, highest precedence first:

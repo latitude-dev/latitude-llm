@@ -12,11 +12,16 @@ import latitude_telemetry_hermes.config as config
 import latitude_telemetry_hermes.redact as redact
 
 _ENV_PREFIXES = ("LATITUDE_", "HERMES_")
+# The builder joins a trace whose traceparent is in the environment, so a developer
+# who happens to have one exported would otherwise change what these tests assert.
+_ENV_NAMES = ("TRACEPARENT", "traceparent")
 
 
 @pytest.fixture(autouse=True)
 def clean_config(monkeypatch, tmp_path):
     for name in [n for n in list(__import__("os").environ) if n.startswith(_ENV_PREFIXES)]:
+        monkeypatch.delenv(name, raising=False)
+    for name in _ENV_NAMES:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("LATITUDE_API_KEY", "lat_test")
     monkeypatch.setenv("LATITUDE_PROJECT", "test-project")

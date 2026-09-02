@@ -6,11 +6,12 @@ Evaluations are reliability scripts that produce scores from spans, traces, or s
 
 Evaluations exist to:
 
-- monitor active issues on live traffic
+- monitor active signals on live traffic
 - align machine judgment with human annotations
 - run inside simulations
 - support user-created evaluation authoring
-  Issue-generated evaluations are the mainline monitoring flow, and the system also supports user-authored evaluations.
+
+Signal-generated evaluations are the mainline monitoring flow, and the system also supports user-authored evaluations.
 
 ## Canonical Artifact
 
@@ -47,7 +48,7 @@ The important invariants are:
 - the MVP hosted bridge keeps provider/model selection Latitude-managed
 - if post-MVP runtime-configured execution lands, provider/model resolution should flow from evaluation settings to project settings to organization settings
 - the runtime must enforce resource limits and stay portable across executors
-- issue-generated evaluations may often be simple `llm()`-as-judge scripts, but the runtime is not limited to that subset
+- signal-generated evaluations may often be simple `llm()`-as-judge scripts, but the runtime is not limited to that subset
 
 ## Session runtime context
 
@@ -145,14 +146,14 @@ Rules:
 - payloads carry ids plus minimal trigger/alignment context, not full evaluation rows or full traces
 - workers and workflow activities re-fetch current evaluation/example state before acting
 - the `domain-events` worker is a dispatcher only: it publishes downstream tasks or starts workflows and never runs synchronous business logic inline
-- user-triggered issue generation starts the same aligner pipeline by directly starting the `optimize-evaluation` workflow rather than running alignment in the request itself
+- user-triggered signal generation starts the same aligner pipeline by directly starting the `optimize-evaluation` workflow rather than running alignment in the request itself
 - annotation-driven automatic realignment flows through two throttled BullMQ tasks: `evaluations:automaticRefreshAlignment` (1h throttle) starts `refresh-evaluation-alignment`, and on an incremental alignment-metric drop that workflow publishes `evaluations:automaticOptimization` (8h throttle) which starts `optimize-evaluation`. Workflows never sleep — the queue owns both windows. Throttle (not debounce) semantics: the first publish schedules the fire time; subsequent publishes within the window are dropped by BullMQ, so a constant annotation stream cannot starve the refresh. Worst-case latency is bounded (1h for refresh, 8h for optimize) and fires are capped at once per window per evaluation
 
 User-triggered background generation contract:
 
-- when a user clicks `Generate evaluation`, the server starts the `optimize-evaluation` workflow with a deterministic `evaluations:generate:${issueId}` workflow id and returns immediately — no `jobId` leaks back to the frontend. "Realign now" uses the same workflow with an `evaluations:optimize:${evaluationId}` id so a user-triggered run and the 8h automatic optimize share the same workflow id (any in-flight run blocks the other via Temporal's `workflowIdConflictPolicy: "FAIL"`, which the worker swallows)
+- when a user clicks `Generate evaluation`, the server starts the `optimize-evaluation` workflow with a deterministic `evaluations:generate:${signalId}` workflow id and returns immediately — no `jobId` leaks back to the frontend. "Realign now" uses the same workflow with an `evaluations:optimize:${evaluationId}` id so a user-triggered run and the 8h automatic optimize share the same workflow id (any in-flight run blocks the other via Temporal's `workflowIdConflictPolicy: "FAIL"`, which the worker swallows)
 - progress is tracked by Temporal itself; Temporal is the single source of truth for workflow state, and no Redis-backed status mirror exists
-- the frontend polls `getIssueAlignmentState`, which asks Temporal directly via `workflow.describe()` on three deterministic ids: `evaluations:generate:${issueId}` for the initial-generation run, plus `evaluations:refreshAlignment:${evaluationId}` and `evaluations:optimize:${evaluationId}` per active linked evaluation. A running workflow at any of those ids unambiguously means "actively running" — the new workflows are linear and exit when activities finish, so there is no more "alive-but-napping" window
+- the frontend polls `getSignalAlignmentState`, which asks Temporal directly via `workflow.describe()` on three deterministic ids: `evaluations:generate:${signalId}` for the initial-generation run, plus `evaluations:refreshAlignment:${evaluationId}` and `evaluations:optimize:${evaluationId}` per active linked evaluation. A running workflow at any of those ids unambiguously means "actively running" — the new workflows are linear and exit when activities finish, so there is no more "alive-but-napping" window
 - the response collapses to a minimal UI contract (`idle` / `generating` / `realigning` with `evaluationId`), intentionally omitting internal identifiers like `runId` or `currentJobId`
 - when the workflow terminates, its final status and any error are available through Temporal's own history — the UI infers "just finished" by observing the transition from `generating`/`realigning` back to `idle` across polls
 
@@ -160,22 +161,22 @@ Required Postgres indexes:
 
 - soft-delete-aware unique btree on `(organization_id, project_id, name, deleted_at)` with nulls-not-distinct semantics
 - btree on `(organization_id, project_id, deleted_at, archived_at, created_at)` for active/archived project list views
-- btree on `(organization_id, project_id, issue_id, deleted_at)` for issue-linked evaluation lookups and issue-driven lifecycle updates
-- do not add a unique issue-level constraint; issues may have several linked evaluations
+- btree on `(organization_id, project_id, signal_id, deleted_at)` for signal-linked evaluation lookups and signal-driven lifecycle updates
+- do not add a unique signal-level constraint; signals may have several linked evaluations
 - do not add GIN/JSONB indexes on `trigger` or `alignment`, and do not add text indexes on `script` or `description` in the evaluations foundation phase
 
 ## Generation And Alignment
 
-Evaluations generated from issues (by user demand) are the mainline flow:
+Evaluations generated from signals (by user demand) are the mainline flow:
 
-- signal discovery and issue creation do not automatically create evaluations
-- the issue list and issue details modal/page expose `Generate evaluation`
-- issues may have several linked evaluations, and each trigger starts the same initial generation/alignment flow described below as a background job
+- signal discovery and signal creation do not automatically create evaluations
+- the signal list and signal details drawer expose `Generate evaluation`
+- signals may have several linked evaluations, and each trigger starts the same initial generation/alignment flow described below as a background job
 - after creation, throttled automatic realignment still runs as new annotations arrive for each linked evaluation
 - alignment reads published, non-draft, non-errored canonical score rows from Postgres; aggregate dashboard metrics may still come from ClickHouse score analytics
 
 1. collect annotation-derived truth with at least `1` positive example and any available negatives
-2. create a baseline issue-monitor script
+2. create a baseline signal-monitor script
 3. optimize that script
 4. validate it against held-out examples
 5. persist the best script
@@ -186,7 +187,7 @@ Alignment rules from the proposal:
 - only persisted alignment primitive: confusion matrix
 - the headline alignment metric (currently balanced accuracy), along with recall, specificity, precision, F1, MCC, and accuracy, are all derived from that confusion matrix on read. The decision logic and UI refer to the headline value as the "alignment metric" and never hardcode the underlying formula, so it can be swapped without touching callers
 - drafts and errored scores are excluded from alignment entirely
-- user-triggered initial generation/alignment starts immediately when requested from an issue, but it runs in the background through the `optimize-evaluation` workflow under an `evaluations:generate:${issueId}` workflow id
+- user-triggered initial generation/alignment starts immediately when requested from a signal, but it runs in the background through the `optimize-evaluation` workflow under an `evaluations:generate:${signalId}` workflow id
 - throttled incremental metric recomputation at most once per hour per evaluation; fires at most 1h after the first annotation
 - throttled full realignment at most once per eight hours per evaluation; fires at most 8h after the first alignment-metric-drop escalation
 - manual realignment is available and throttled
@@ -194,20 +195,20 @@ Alignment rules from the proposal:
 - the refresh workflow compares `sha1(evaluation.script)` to `evaluation.alignment.evaluationHash` on every run: when they match, new examples are evaluated and added into the existing confusion-matrix counters; when they diverge (the script was updated outside the atomic alignment write path), the workflow rebuilds the matrix from scratch against all curated examples and persists the freshly computed hash so future refreshes are back on the incremental path
 - throttled automatic refresh runs through `refresh-evaluation-alignment` (started by the 1h-throttled `evaluations:automaticRefreshAlignment` queue task) and escalates into `optimize-evaluation` (started by the 8h-throttled `evaluations:automaticOptimization` queue task) when the incremental evaluator returns `full-reoptimization`; manual background refresh also starts `optimize-evaluation` directly with the same `evaluations:optimize:${evaluationId}` workflow id, so a manual run and a pending automatic optimize collapse into a single in-flight run via Temporal's workflow-id dedupe
 
-These cadence and tuning values, including the default sampling percentage for newly created issue-linked evaluations, should be defined as named constants inside `packages/domain/evaluations` rather than as scattered inline literals.
+These cadence and tuning values, including the default sampling percentage for newly created signal-linked evaluations, should be defined as named constants inside `packages/domain/evaluations` rather than as scattered inline literals.
 
 Positive examples:
 
-- conversations where human annotations indicate the target issue is present, meaning a failed, non-errored, non-draft annotation score linked to the specific issue being aligned
-- minimum required positive-example count for initial issue-linked generation: `1`
+- conversations where human annotations indicate the target signal is present, meaning a failed, non-errored, non-draft annotation score linked to the specific signal being aligned
+- minimum required positive-example count for initial signal-linked generation: `1`
 
 Negative examples, after filtering out drafts and errored scores, in priority order:
 
 1. conversations with no failed scores and at least one passed annotation as long as that score is also non-draft and non-errored
 2. conversations with no failed scores
-3. conversations with scores, either passed or failed, but unrelated to the issue being aligned, as long as those scores are also non-draft and non-errored
+3. conversations with scores, either passed or failed, but unrelated to the signal being aligned, as long as those scores are also non-draft and non-errored
 
-There is no minimum negative-example count for initial issue-linked generation. A monitor may be created from a single positive occurrence with zero negatives, and its alignment may be weak at first. As users add more annotations, the throttled realignment flow should improve that monitor over time.
+There is no minimum negative-example count for initial signal-linked generation. A monitor may be created from a single positive occurrence with zero negatives, and its alignment may be weak at first. As users add more annotations, the throttled realignment flow should improve that monitor over time.
 
 ## Optimizer
 
@@ -229,7 +230,7 @@ Persisted reliability duration stays in a field named `duration` and is stored i
 
 The abstraction must stay multi-objective aware without turning into a full optimizer algorithm by itself. GEPA provides the Pareto-driven concrete implementation; the abstraction preserves the contract for ordered multi-objective optimization.
 
-Evaluations generated from issues (by user demand) should stay script-native and GEPA-backed, and the same runtime/optimizer foundations also support user-authored evaluations.
+Evaluations generated from signals (by user demand) should stay script-native and GEPA-backed, and the same runtime/optimizer foundations also support user-authored evaluations.
 
 Important v1 reuse guidance:
 
@@ -294,7 +295,7 @@ Trigger semantics:
 - `turn`, `debounce`, `sampling`, and `filter` are all part of the evaluation trigger model
 - `filter` uses the shared `FilterSet` described in `./filters.md`, applied against the shared trace field registry
 - an empty `filter` means "match all traces"
-- new evaluations generated from issues initialize `sampling` from a named constant in `packages/domain/evaluations`, with an initial default of `10`
+- new evaluations generated from signals initialize `sampling` from a named constant in `packages/domain/evaluations`, with an initial default of `10`
 
 Live evaluation triggering is incremental:
 
@@ -315,11 +316,11 @@ Live evaluation triggering is incremental:
 - active evaluations run and generate scores
 - paused evaluations use `sampling = 0`
 - archived evaluations are read-only and never trigger
-- if an issue is manually ignored, its linked evaluations are archived immediately
-- if an issue is manually resolved, the confirmation-modal toggle defaulted from `keepMonitoring` decides whether linked evaluations remain active or archive
+- if a signal is manually ignored, its linked evaluations are archived immediately
+- if a signal is manually resolved, the confirmation-modal toggle defaulted from `keepMonitoring` decides whether linked evaluations remain active or archive
 - when project-level `keepMonitoring` is unset, the toggle default falls back to the organization-level `keepMonitoring`
 - deleted evaluations are soft-deleted from management UI but remain represented in historical analytics
-- issue-linked live monitor failures claim `scores.issue_id` during the canonical score write so the failed score is immutable immediately; errored live monitor scores stay unowned with `error != null` and `errored = true`, so they are also immutable immediately; other evaluation-originated failed scores that stay unowned may still flow through the centralized `issues:discovery` task, which resolves the linked issue before similarity search starts
+- signal-linked live monitor failures claim `scores.signal_id` during the canonical score write so the failed score is immutable immediately; errored live monitor scores stay unowned with `error != null` and `errored = true`, so they are also immutable immediately; other evaluation-originated failed scores that stay unowned may still flow through the centralized `issues:discovery` queue task (legacy topic name), which resolves the linked signal before similarity search starts
 
 ## Product Surface
 
@@ -334,7 +335,7 @@ The active evaluations table includes:
 
 - `Name`, with a paused tag when `sampling = 0`
 - `Description`
-- `Issue`
+- `Signal` (linked signal name/slug)
 - `Trend`
 - quick actions for trigger updates, pause/resume, archive, and delete
 

@@ -94,27 +94,35 @@ function getCaptureScope(ctx: Context): CaptureScopeInternal | undefined {
   return isCaptureScope(scope) ? scope : undefined
 }
 
+/**
+ * Merges Latitude context into the value the span processor stamps spans from. Nesting rules match
+ * `capture()`: tags accumulate and dedupe, metadata shallow-merges, scalars are last-write-wins.
+ */
+export function setLatitudeContext(ctx: Context, options: ContextOptions): Context {
+  const existingData = getLatitudeContext(ctx)
+
+  const mergedData: LatitudeContextData = {
+    name: options.name ?? existingData?.name,
+    tags: mergeArrays(existingData?.tags, options.tags),
+    metadata: { ...existingData?.metadata, ...options.metadata },
+    sessionId: options.sessionId ?? existingData?.sessionId,
+    userId: options.userId ?? existingData?.userId,
+    userEmail: options.userEmail ?? existingData?.userEmail,
+    project: options.project ?? options.projectSlug ?? existingData?.project,
+  }
+
+  return ctx.setValue(LATITUDE_CONTEXT_KEY, mergedData)
+}
+
 function buildCaptureContext(name: string, currentContext: Context, options: ContextOptions): Context {
-  const existingData = getLatitudeContext(currentContext)
   const shouldReuseTrace = shouldReuseActiveLatitudeTrace(currentContext)
   const parentContext = shouldReuseTrace ? currentContext : trace.deleteSpan(currentContext)
 
   if (options.project === undefined && options.projectSlug !== undefined) {
     warnProjectSlugDeprecated("capture")
   }
-  const projectFromOptions = options.project ?? options.projectSlug
 
-  const mergedData: LatitudeContextData = {
-    name: options.name ?? name,
-    tags: mergeArrays(existingData?.tags, options.tags),
-    metadata: { ...existingData?.metadata, ...options.metadata },
-    sessionId: options.sessionId ?? existingData?.sessionId,
-    userId: options.userId ?? existingData?.userId,
-    userEmail: options.userEmail ?? existingData?.userEmail,
-    project: projectFromOptions ?? existingData?.project,
-  }
-
-  return parentContext.setValue(LATITUDE_CONTEXT_KEY, mergedData)
+  return setLatitudeContext(parentContext, { ...options, name: options.name ?? name })
 }
 
 function startCaptureScope(name: string, options: ContextOptions = {}): CaptureScope {

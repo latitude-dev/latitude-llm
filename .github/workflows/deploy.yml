@@ -28,7 +28,7 @@ jobs:
       production_should_deploy: ${{ steps.target.outputs.production_should_deploy }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -160,7 +160,7 @@ jobs:
       contents: read
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@6.2.2
+        uses: aws-actions/configure-aws-credentials@v6.2.3
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
@@ -407,15 +407,23 @@ jobs:
                 --query 'taskDefinition' \
                 --output json | jq \
                   --arg image "${IMAGE}" \
-                  --arg name "${SERVICE}" '
+                  --arg name "${SERVICE}" \
+                  --arg logLevel "warn" '
                   .containerDefinitions |= map(
-                    if .name == $name then .image = $image
+                    if .name == $name then
+                      .image = $image |
+                      .environment = (
+                        (.environment // []) |
+                        map(if .name == "LAT_LOG_LEVEL" then .value = $logLevel else . end) |
+                        if any(.[]; .name == "LAT_LOG_LEVEL") then . else . + [{ name: "LAT_LOG_LEVEL", value: $logLevel }] end
+                      )
                     elif .name == "datadog-agent" then
                       .environment = (
                         (.environment // []) |
-                        map(if .name == "DD_LOG_LEVEL" then .value = "info" else . end) |
-                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "info" }] end
-                      )
+                        map(if .name == "DD_LOG_LEVEL" then .value = "error" else . end) |
+                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "error" }] end
+                      ) |
+                      del(.logConfiguration)
                     else . end
                   ) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
@@ -465,7 +473,7 @@ jobs:
       deployment: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.staging-build.outputs.git_commit_sha }}
 
@@ -543,7 +551,7 @@ jobs:
       contents: read
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@6.2.2
+        uses: aws-actions/configure-aws-credentials@v6.2.3
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
@@ -790,15 +798,23 @@ jobs:
                 --query 'taskDefinition' \
                 --output json | jq \
                   --arg image "${IMAGE}" \
-                  --arg name "${SERVICE}" '
+                  --arg name "${SERVICE}" \
+                  --arg logLevel "warn" '
                   .containerDefinitions |= map(
-                    if .name == $name then .image = $image
+                    if .name == $name then
+                      .image = $image |
+                      .environment = (
+                        (.environment // []) |
+                        map(if .name == "LAT_LOG_LEVEL" then .value = $logLevel else . end) |
+                        if any(.[]; .name == "LAT_LOG_LEVEL") then . else . + [{ name: "LAT_LOG_LEVEL", value: $logLevel }] end
+                      )
                     elif .name == "datadog-agent" then
                       .environment = (
                         (.environment // []) |
-                        map(if .name == "DD_LOG_LEVEL" then .value = "info" else . end) |
-                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "info" }] end
-                      )
+                        map(if .name == "DD_LOG_LEVEL" then .value = "error" else . end) |
+                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "error" }] end
+                      ) |
+                      del(.logConfiguration)
                     else . end
                   ) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
@@ -848,7 +864,7 @@ jobs:
       deployment: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ needs.production-build.outputs.git_commit_sha }}
 

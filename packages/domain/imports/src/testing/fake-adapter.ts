@@ -154,11 +154,13 @@ export const createFakeImportAdapter = (options: FakeAdapterOptions = {}) => {
 }
 
 /** Deterministic stand-in for the platform normalizer's hashing, so idempotency is assertable. */
-const fakeHexId = <T extends string>(source: string, length: number): T => {
+export const fakeImportHexId = <T extends string>(source: string, length: number): T => {
   let hex = ""
   for (const char of source) hex += char.charCodeAt(0).toString(16)
   return hex.padEnd(length, "0").slice(0, length) as T
 }
+
+const fakeHexId = fakeImportHexId
 
 export const createFakeImportAdapterRegistry = (
   options: FakeAdapterOptions = {},

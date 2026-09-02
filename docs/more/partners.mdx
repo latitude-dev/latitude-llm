@@ -48,16 +48,16 @@ This is the plain OAuth 2.1 authorization code flow with PKCE, the same one the 
 
 <Steps>
   <Step title="Register a client for this account">
-    `POST https://app.latitude.so/api/auth/mcp/register` with your `client_name` and `redirect_uris`. Use `"token_endpoint_auth_method": "none"` for a public client. Store the `client_id` you get back **with this account** — registration is unauthenticated and instant, and each connected account needs its own client (see [Your client_id](#your-client_id)).
+    `POST https://console.latitude.so/api/auth/mcp/register` with your `client_name` and `redirect_uris`. Use `"token_endpoint_auth_method": "none"` for a public client. Store the `client_id` you get back **with this account** — registration is unauthenticated and instant, and each connected account needs its own client (see [Your client_id](#your-client_id)).
   </Step>
   <Step title="Send the user to authorize">
-    Open `https://app.latitude.so/api/auth/mcp/authorize` with `response_type=code`, your `client_id`, `redirect_uri`, `scope=openid offline_access`, a `state`, and a PKCE `code_challenge` (S256).
+    Open `https://console.latitude.so/api/auth/mcp/authorize` with `response_type=code`, your `client_id`, `redirect_uri`, `scope=openid offline_access`, a `state`, and a PKCE `code_challenge` (S256).
   </Step>
   <Step title="They sign in and consent">
     Latitude asks them to pick which organization to connect and to approve your access.
   </Step>
   <Step title="Exchange the code">
-    They come back to your `redirect_uri` with `?code`. Exchange it at `POST https://app.latitude.so/api/auth/mcp/token` with `grant_type=authorization_code`, the `code`, your `client_id`, and the `code_verifier`.
+    They come back to your `redirect_uri` with `?code`. Exchange it at `POST https://console.latitude.so/api/auth/mcp/token` with `grant_type=authorization_code`, the `code`, your `client_id`, and the `code_verifier`.
   </Step>
 </Steps>
 
@@ -306,7 +306,7 @@ Hand that API key to your telemetry setup and traces start flowing. See [Start t
 Access tokens last **1 hour**, refresh tokens **7 days**. Refresh at the same token endpoint both paths use. Your client is public, so no secret is involved:
 
 ```bash
-curl -X POST https://app.latitude.so/api/auth/mcp/token \
+curl -X POST https://console.latitude.so/api/auth/mcp/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=refresh_token" \
   -d "client_id={client_id}" \
@@ -317,7 +317,7 @@ You get a fresh pair back. Store the new refresh token — the old one is spent.
 
 ## What your users experience
 
-- **They can sign in immediately.** Latitude uses email magic links, so there is no password to set. They go to [app.latitude.so](https://app.latitude.so), enter the email you provisioned, and they are in as the **owner** of their new organization.
+- **They can sign in immediately.** Latitude uses email magic links, so there is no password to set. They go to [console.latitude.so](https://console.latitude.so), enter the email you provisioned, and they are in as the **owner** of their new organization.
 - **They skip our onboarding questionnaire.** Latitude records your platform as where the account came from, so we don't ask them again. This is why the profile fields above are worth sending.
 - **They see you.** Your name and icon appear under **Settings → Keys → OAuth Keys**, with the date they connected.
 - **They can revoke you.** One click, and your tokens stop working within seconds. Handle a sudden `401` on the public API as "this user disconnected us" and stop retrying.

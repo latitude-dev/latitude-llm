@@ -1,11 +1,33 @@
 import { createHmac } from "node:crypto"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+import type { PinnedHttpsResponse, ResolvedPublicWebhookTarget } from "../host-guard.ts"
 import { createWebhookAdapter } from "./webhook-adapter.ts"
 
 const webhookUrl = "https://hooks.example.com/run"
+const pinnedTarget: ResolvedPublicWebhookTarget = {
+  url: new URL(webhookUrl),
+  address: "8.8.8.8",
+}
 
-const dispatchWebhook = async () => {
-  const adapter = createWebhookAdapter(async () => ["8.8.8.8"])
+const makePinnedResponse = (body = "{}", status = 200): PinnedHttpsResponse => ({
+  status,
+  headers: new Headers(),
+  body: new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(body))
+      controller.close()
+    },
+  }),
+  text: async () => body,
+})
+
+const dispatchWebhook = async (
+  postHttps: (
+    target: ResolvedPublicWebhookTarget,
+    init: { readonly headers: Record<string, string>; readonly body: string },
+  ) => Promise<PinnedHttpsResponse> = async () => makePinnedResponse(),
+) => {
+  const adapter = createWebhookAdapter(async () => ["8.8.8.8"], postHttps)
   const { Effect } = await import("effect")
 
   return Effect.runPromise(
@@ -26,52 +48,37 @@ const dispatchWebhook = async () => {
 }
 
 describe("createWebhookAdapter", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
   it("signs the payload with HMAC-SHA256", async () => {
     const secret = "test-secret"
-    const calls: { headers: Headers; body: string }[] = []
+    const calls: { headers: Record<string, string>; body: string; target: ResolvedPublicWebhookTarget }[] = []
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (_url: string, init?: RequestInit) => {
-        calls.push({
-          headers: new Headers(init?.headers),
-          body: init?.body as string,
-        })
-        return new Response("{}", { status: 200 })
-      }),
-    )
-
-    await dispatchWebhook()
+    await dispatchWebhook(async (target, init) => {
+      calls.push({ target, headers: init.headers, body: init.body })
+      return makePinnedResponse()
+    })
 
     expect(calls).toHaveLength(1)
     const call = calls[0]
-    if (!call) throw new Error("expected fetch call")
+    if (!call) throw new Error("expected pinned POST")
+    expect(call.target).toEqual(pinnedTarget)
     const expectedSig = createHmac("sha256", secret).update(call.body).digest("hex")
-    expect(call.headers.get("X-Latitude-Signature")).toBe(`sha256=${expectedSig}`)
-    expect(call.headers.get("X-Latitude-Delivery")).toBe("webhook:incident.opened:src1")
+    expect(call.headers["X-Latitude-Signature"]).toBe(`sha256=${expectedSig}`)
+    expect(call.headers["X-Latitude-Delivery"]).toBe("webhook:incident.opened:src1")
   })
 
   it("returns external run metadata from a successful JSON acknowledgement", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              externalAgentId: "  agent-scope  ",
-              externalRunId: "  run-123  ",
-              deepLinkUrl: "https://agents.example.com/runs/run-123",
-            }),
-            { status: 202, headers: { "Content-Type": "application/json" } },
-          ),
+    await expect(
+      dispatchWebhook(async () =>
+        makePinnedResponse(
+          JSON.stringify({
+            externalAgentId: "  agent-scope  ",
+            externalRunId: "  run-123  ",
+            deepLinkUrl: "https://agents.example.com/runs/run-123",
+          }),
+          202,
+        ),
       ),
-    )
-
-    await expect(dispatchWebhook()).resolves.toEqual({
+    ).resolves.toEqual({
       status: "accepted",
       externalAgentId: "agent-scope",
       externalRunId: "run-123",
@@ -84,22 +91,17 @@ describe("createWebhookAdapter", () => {
     "not a url",
     "   ",
   ])("keeps valid acknowledgement fields when the deep link %j is invalid", async (deepLinkUrl) => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              externalAgentId: "agent-scope",
-              externalRunId: "   ",
-              deepLinkUrl,
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          ),
+    await expect(
+      dispatchWebhook(async () =>
+        makePinnedResponse(
+          JSON.stringify({
+            externalAgentId: "agent-scope",
+            externalRunId: "   ",
+            deepLinkUrl,
+          }),
+        ),
       ),
-    )
-
-    await expect(dispatchWebhook()).resolves.toEqual({
+    ).resolves.toEqual({
       status: "accepted",
       externalAgentId: "agent-scope",
       deepLinkUrl: webhookUrl,
@@ -107,34 +109,49 @@ describe("createWebhookAdapter", () => {
   })
 
   it.each([
-    { name: "empty", response: () => new Response(null, { status: 204 }) },
-    { name: "plain-text", response: () => new Response("accepted", { status: 202 }) },
-    {
-      name: "malformed JSON",
-      response: () => new Response("{", { status: 200, headers: { "Content-Type": "application/json" } }),
-    },
+    { name: "empty", response: () => ({ status: 204, headers: new Headers(), body: null, text: async () => "" }) },
+    { name: "plain-text", response: () => makePinnedResponse("accepted", 202) },
+    { name: "malformed JSON", response: () => makePinnedResponse("{", 200) },
   ])("accepts a $name success response without metadata", async ({ response }) => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => response()),
-    )
-
-    await expect(dispatchWebhook()).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
+    await expect(dispatchWebhook(async () => response())).resolves.toEqual({
+      status: "accepted",
+      deepLinkUrl: webhookUrl,
+    })
   })
 
   it("discards metadata when the acknowledgement body exceeds the read limit", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ externalRunId: "run-123" }) + "x".repeat(64 * 1024), {
-            status: 202,
-            headers: { "Content-Type": "application/json" },
-          }),
+    await expect(
+      dispatchWebhook(async () =>
+        makePinnedResponse(JSON.stringify({ externalRunId: "run-123" }) + "x".repeat(64 * 1024)),
       ),
-    )
+    ).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
+  })
 
-    await expect(dispatchWebhook()).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
+  it.each([301, 302, 303, 307, 308])("rejects HTTP %s redirects as transport errors", async (status) => {
+    await expect(dispatchWebhook(async () => makePinnedResponse("", status))).rejects.toMatchObject({
+      reason: "transport",
+      cause: status,
+    })
+  })
+
+  it("cancels the body when the response is a redirect", async () => {
+    let cancelled = false
+    const body = new ReadableStream<Uint8Array>({
+      start() {},
+      cancel() {
+        cancelled = true
+      },
+    })
+
+    await expect(
+      dispatchWebhook(async () => ({
+        status: 302,
+        headers: new Headers({ Location: "https://evil.example/internal" }),
+        body,
+        text: async () => "",
+      })),
+    ).rejects.toMatchObject({ reason: "transport", cause: 302 })
+    await vi.waitFor(() => expect(cancelled).toBe(true))
   })
 
   it("discards metadata and cancels a response that never finishes", async () => {
@@ -148,12 +165,14 @@ describe("createWebhookAdapter", () => {
       },
     })
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(body, { status: 202 })),
-    )
-
-    await expect(dispatchWebhook()).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
+    await expect(
+      dispatchWebhook(async () => ({
+        status: 202,
+        headers: new Headers(),
+        body,
+        text: async () => "",
+      })),
+    ).resolves.toEqual({ status: "accepted", deepLinkUrl: webhookUrl })
     await vi.waitFor(() => expect(cancelled).toBe(true))
   })
 })

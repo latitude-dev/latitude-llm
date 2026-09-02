@@ -122,7 +122,7 @@ describe("retryImportUseCase", () => {
       status: "capped",
       credentials: null,
       cursor: PARTWAY_CURSOR,
-      stats: CARRIED_STATS,
+      stats: { ...CARRIED_STATS, consumedCreditsAtStart: 19_990 },
       error: "Ran out of plan usage for this billing period.",
     })
     const h = importHarness({ seed: [capped] })
@@ -131,6 +131,7 @@ describe("retryImportUseCase", () => {
 
     expect(retried.cursor).toEqual(PARTWAY_CURSOR)
     expect(retried.stats).toEqual(CARRIED_STATS)
+    expect(retried.stats.consumedCreditsAtStart).toBeUndefined()
     expect(retried.status).toBe("created")
     // The cap reason belongs to the job that stopped, not to the one carrying on.
     expect(retried.error).toBeNull()

@@ -18,6 +18,10 @@
       {
         "name": "MyAgent",
         "class_name": "MyAgent"
+      },
+      {
+        "name": "Planner",
+        "class_name": "Planner"
       }
     ]
   },
@@ -25,6 +29,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["MyAgent"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["Planner"]
     }
   ],
   "vars": {

@@ -80,6 +80,7 @@ export const retryImportUseCase = (input: RetryImportInput) =>
     // Resumes from the failed job's cursor and carries its counts forward: re-reading
     // the whole range would be wasted quota against sources we deliberately rate-limit,
     // and deterministic span ids make picking up mid-range safe.
+    const { consumedCreditsAtStart: _consumedCreditsAtStart, ...carriedStats } = job.stats
     const retryJob = createImportJob({
       organizationId: job.organizationId,
       projectId: job.projectId,
@@ -87,7 +88,7 @@ export const retryImportUseCase = (input: RetryImportInput) =>
       config: job.config,
       credentials: input.credentials,
       cursor: job.cursor,
-      stats: job.stats,
+      stats: carriedStats,
     })
 
     const outboxEventWriter = yield* OutboxEventWriter

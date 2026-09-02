@@ -9,6 +9,7 @@ import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  maintainBillingUsageEventsRetention,
   OutboxEventWriterLive,
   type PostgresClient,
   SettingsReaderLive,
@@ -242,6 +243,17 @@ export const createBillingWorker = ({ consumer, postgresClient }: BillingDeps) =
               ),
               Effect.asVoid,
             ),
+
+      maintainUsageEventPartitions: () =>
+        Effect.tryPromise({
+          try: () => maintainBillingUsageEventsRetention(pgClient),
+          catch: (cause) => cause,
+        }).pipe(
+          withTracing,
+          Effect.tapError((error) =>
+            Effect.sync(() => logger.error("Billing usage event partition maintenance failed", { error })),
+          ),
+        ),
     },
     { concurrency: 50 },
   )

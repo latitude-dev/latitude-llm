@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+import pytest
 from helpers import attr_map
 
 import latitude_telemetry_hermes.hooks as hooks
@@ -138,6 +139,39 @@ def test_on_session_end_only_finalizes_its_own_session(monkeypatch):
     assert len(shipped) == 1, "only the ending session's run ships"
     remaining = list(fresh._runs.values())
     assert len(remaining) == 1 and remaining[0].session_id == "s2", "the other session stays live"
+
+
+def test_session_finalize_flush_keeps_the_full_budget_when_the_ledger_is_ready(monkeypatch):
+    registered = _wire()
+    monkeypatch.setattr(hooks, "_BUILDER", _Builder())
+    monkeypatch.setattr(hooks, "_ship", lambda spans: None)
+    flushed: List[float] = []
+    monkeypatch.setattr(hooks, "_flush", lambda timeout=0: flushed.append(timeout))
+    monkeypatch.setattr(hooks, "_aux_usage", lambda *a, **k: [])
+
+    registered["on_session_finalize"](session_id="s")
+
+    assert flushed == [pytest.approx(hooks._TEARDOWN_FLUSH_SECONDS, abs=0.05)]
+
+
+def test_session_finalize_flush_uses_time_left_after_the_ledger_wait(monkeypatch):
+    registered = _wire()
+    clock = {"now": 0.0}
+    monkeypatch.setattr(hooks.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(hooks, "_BUILDER", _Builder())
+    monkeypatch.setattr(hooks, "_ship", lambda spans: None)
+    flushed: List[float] = []
+    monkeypatch.setattr(hooks, "_flush", lambda timeout=0: flushed.append(timeout))
+
+    def slow_aux(session_id: str, deadline: float | None = None) -> List[_Span]:
+        clock["now"] += 4.0
+        return []
+
+    monkeypatch.setattr(hooks, "_aux_usage", slow_aux)
+
+    registered["on_session_finalize"](session_id="s")
+
+    assert flushed == [pytest.approx(hooks._TEARDOWN_FLUSH_SECONDS - 4.0)]
 
 
 def test_a_failing_handler_never_reaches_the_agent(monkeypatch):

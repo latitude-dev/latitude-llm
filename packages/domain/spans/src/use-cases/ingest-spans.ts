@@ -25,6 +25,9 @@ import { extractSamplingKey } from "../sampling/extract-sampling-key.ts"
 
 const INLINE_PAYLOAD_MAX_BYTES = 50_000 // 50 KB
 
+const SPAN_INGESTION_JOB_ATTEMPTS = 10
+const SPAN_INGESTION_JOB_BACKOFF = { type: "exponential" as const, delayMs: 1_000 }
+
 export interface IngestSpansInput {
   readonly organizationId: OrganizationId
   readonly apiKeyId: string
@@ -262,18 +265,26 @@ export const ingestSpansUseCase = (
       yield* Effect.annotateCurrentSpan("redaction.projects", redactedProjects)
     }
 
-    yield* publisher.publish("span-ingestion", "ingest", {
-      fileKey,
-      inlinePayload,
-      contentType: input.contentType,
-      organizationId: input.organizationId,
-      apiKeyId: input.apiKeyId,
-      ingestedAt: new Date().toISOString(),
-      defaultProjectId,
-      projectIdBySlug,
-      isSandbox: input.isSandbox ?? false,
-      ...(redactedProjects > 0 ? { redaction } : {}),
-    })
+    yield* publisher.publish(
+      "span-ingestion",
+      "ingest",
+      {
+        fileKey,
+        inlinePayload,
+        contentType: input.contentType,
+        organizationId: input.organizationId,
+        apiKeyId: input.apiKeyId,
+        ingestedAt: new Date().toISOString(),
+        defaultProjectId,
+        projectIdBySlug,
+        isSandbox: input.isSandbox ?? false,
+        ...(redactedProjects > 0 ? { redaction } : {}),
+      },
+      {
+        attempts: SPAN_INGESTION_JOB_ATTEMPTS,
+        backoff: SPAN_INGESTION_JOB_BACKOFF,
+      },
+    )
 
     return { totalSpans, acceptedSpans, rejectedSpans }
   }).pipe(Effect.withSpan("spans.ingestSpans"))

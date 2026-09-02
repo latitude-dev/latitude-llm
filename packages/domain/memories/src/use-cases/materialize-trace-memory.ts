@@ -41,8 +41,9 @@ const needsPresentSeed = (span: MemoryOperationSpan): boolean =>
  * Materialize one settled trace's memory-operation spans into the ledger:
  * per mutated record write a content-addressed blob (dedup by sha256), a
  * ledger event, and a `memory_current` projection row; record reads and
- * store-lifecycle events for completeness. Spans arrive ordered by `end_time`
- * so "last-to-finish wins" ([D2]) holds within the trace.
+ * store-lifecycle events for completeness. Spans arrive ordered by the span
+ * repository (`end_time`, `start_time`, `ingested_at`, `span_id`) so
+ * "last-to-finish wins" ([D2]) holds, including same-timestamp ties.
  *
  * A whole-store wipe ([D9]) writes a `remove` row into `memory_current` for
  * each of the store's live records, so the current-state view reflects the wipe

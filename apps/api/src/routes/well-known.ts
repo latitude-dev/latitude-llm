@@ -4,7 +4,7 @@
  * RFC 9728 (OAuth Protected Resource Metadata) lets a protected resource
  * advertise the authorization server(s) trusted to issue tokens for it. Our
  * authorization server is the web app's Better Auth `mcp` plugin, which lives
- * on a different origin (typical: `app.latitude.so` vs `api.latitude.so`).
+ * on a different origin (typical: `console.latitude.so` vs `api.latitude.so`).
  * RFC 9728 explicitly allows the AS to live on a different origin than the
  * protected resource — the AS just has to be listed here so MCP clients know
  * where to start the OAuth dance.

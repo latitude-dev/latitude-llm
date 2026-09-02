@@ -42,7 +42,7 @@ interface RedactSpansInput {
   readonly timeoutMs?: number
 }
 
-/** Fails closed: any error fails the effect so the job retries rather than inserting content a project asked us to strip. */
+/** Fails closed: any error fails the effect so nothing is inserted rather than writing content a project asked us to strip. */
 export const redactSpans = (
   input: RedactSpansInput,
 ): Effect.Effect<{ spans: readonly SpanDetail[]; summary: SpanRedactionSummary }, RedactionError> =>

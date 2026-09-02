@@ -13,8 +13,21 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
       inserted.push([...spans])
       return Effect.void
     },
+    listExistingIdentities: ({ spans }) => {
+      const stored = new Set(
+        inserted.flat().map((span) => `${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+      )
+      return Effect.succeed(
+        spans.filter((span) =>
+          stored.has(`${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+        ),
+      )
+    },
     listByTraceId: () => Effect.succeed([]),
-    listByTraceIds: () => Effect.succeed([]),
+    listByTraceIds: ({ traceIds }) => {
+      const wanted = new Set(traceIds)
+      return Effect.succeed(inserted.flat().filter((span) => wanted.has(span.traceId)))
+    },
     listBySessionId: () => Effect.succeed([]),
     listToolSpansBySessionId: () => Effect.succeed([]),
     listMemoryOperationSpansByTraceId: () => Effect.succeed([]),

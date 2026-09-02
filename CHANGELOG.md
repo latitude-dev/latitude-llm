@@ -2,6 +2,57 @@
 
 ## Unreleased
 
+## v0.3.87 - 2026-09-01
+
+### Telemetry
+
+- A second agent running in its own Cloudflare Durable Object now joins the caller's trace instead of starting one of its own, published as `@latitude-data/telemetry` 4.1.0. A Durable Object gets a fresh isolate with no shared memory and no ambient OpenTelemetry context, so the planner a turn delegated to, often the most useful part of the trace, landed orphaned; the object is also evicted whenever it goes idle with no hook that runs first, so anything still buffered was lost. `injectTraceContext()`, `extractTraceContext()` and `withTraceContext()` carry the active span and Latitude context across the boundary in a carrier keyed by HTTP header names, so one object serves both an RPC argument and `fetch` headers, and injecting from inside a tool's `execute` parents the callee on that tool call, which is what makes it render as a subagent rather than something that merely ran during the same turn. `withParentContext()` covers frameworks that take a tracer instead of a callback, attaching only the first span to the remote parent so the framework's own nesting survives. `createDurableObjectTelemetry()` makes flushing cheap enough to do at every unit of work, the only reliable point on a runtime that evicts without warning: exports are serialized and coalesced, a caller arriving mid-export gets a later one, in-flight exports register with `ctx.waitUntil()`, and a failed export is reported instead of failing the turn. A missing or malformed carrier leaves the callee a root and never throws. Ingest needed no changes (ref: #4529).
+- The Python telemetry dev extra installs on `openai` 3.x again: `openai-agents` moves to 0.21.0, the first release that accepts it, `openinference-semantic-conventions` is pinned to the version the 0.1.56 OpenAI instrumentor requires, and LiteLLM is no longer co-installed because every published version still requires `openai<3`. Install LiteLLM separately for its examples (ref: #4527).
+- Corrected the Claude Code hook docs on why `SessionEnd` was added. A backgrounded `Stop` hook outlives an interactive quit, measured at 11.2s past process exit, so that path was never losing anything: `SessionEnd` is a backstop there and the actual fix on the headless path, where the hook is registered and never spawned (ref: afe2e8855).
+
+### Cost
+
+- The Cost page's All-time view now reports over full history. The chart header already said All-time, but the KPIs, per-session decomposition, cache economics, breakdown table and model impact panel were still reading the roughly 30-day chart window, so the totals disagreed with the label. The KPI window is now separate from the trend slice, matching Tools, and the full-history reads wait for the project's first trace to settle rather than fetching the fallback window and immediately refetching (ref: #4316).
+
+### Traces
+
+- Fixed the Traces page returning a 500 for a percentile filter over All time. `findLastTraceAt` and `countAnnotatedByProjectId` passed `gtePercentile` filters straight to the clause builder without the resolution step every other trace query runs, so a valid filter such as duration >= p99 failed with an unsupported-operator error (ref: #4090).
+
+### Evaluations
+
+- Signals archived by the muted-to-ignored backfill no longer keep running, and billing for, live evaluations. That migration stamped `ignored_at` without archiving the linked evaluations; a follow-up migration soft-deletes them, and live evaluation execution now skips an ignored signal, including jobs already in flight (ref: #4224).
+
+### Models
+
+- Updated the bundled models.dev data (ref: #4444).
+
+### Docs
+
+- Product links now point at `console.latitude.so`. `app.latitude.so` is v1, so the OAuth endpoints documented in the partners guide, the webhook deep-link example and the quick-start signup links were all sending people to the wrong app; the PII redaction curl also moves off the v1 `gateway.latitude.so` host to `api.latitude.so` (ref: #4528).
+- Added the Agent Score benchmark spec: one project-level score computed from telemetry Latitude already collects, needing no per-trace judge and no customer-configured evaluation. It scores five dimensions a user already knows how to reach in the app (Outcome, Reliability, Cost, Speed, Safety), where Cost and Speed measure waste rather than how cheap or fast the agent is, safety acts as a ceiling instead of a weighted term, and every lost point decomposes into named causes each carrying its share of the loss and the points recovered by fixing it alone (ref: #4526).
+
+## v0.3.86 - 2026-09-01
+
+### Partners
+
+- Added a private partner API so a third-party platform can offer "install Latitude" from inside its own product. A staff-registered partner holds an HMAC secret and calls one signed endpoint to create a user, an organization and its own OAuth grant, receiving the same token pair the interactive consent flow would have produced. The registry is a global staff-managed table with no tenant scope, carrying the partner's scopes, an optional IP allowlist and the redirect URLs stamped onto every grant, so a provisioned account can re-authorize later through its own `client_id` instead of accumulating a second entry in the user's Keys settings. Requests are signed Stripe-style with the nonce inside the signed string, claimed only after the signature verifies; every pre-scope refusal returns an identical 401 so the surface cannot be used to enumerate partner ids. Provisioning never touches an existing account: a taken email is a 409 and the partner falls back to the interactive flow. Staff manage partners at `/backoffice/partners` (ref: #4508).
+
+### Billing and self-hosting
+
+- Billing enforcement is now opt-in behind `LAT_BILLING_ENABLED`, default off, so a self-hosted deployment is never rejected at ingest or aged out by a plan's retention. An organization with no override resolves to a new unenforced `self-hosted` plan whose retention comes from `LAT_TELEMETRY_RETENTION_DAYS`; usage events are still recorded, they just gate nothing. A malformed value dies as a configuration defect rather than falling back, because both silent outcomes, metering a self-hoster and not metering Cloud, are worse than a crash. Latitude Cloud sets the flag on every service (ref: #4515, #4516).
+- Hardened the OSS deployment heartbeat: the whole path is wrapped so a Redis failure cannot reject startup, the PostHog project key ships with the build so a production self-host reports without extra configuration, and `LAT_IMAGE_TAG` is passed through the Docker stack so heartbeats carry the compose image tag (ref: #4513).
+
+### Telemetry
+
+- Hermes and Claude Code traces now correlate across processes, published as `latitude-telemetry-hermes` 0.3.0 and the Claude Code hook 0.0.15. Both emitters minted their own trace ids, so a Claude Code session launched by a Hermes turn appeared as an unrelated trace and a shared session id could group them but never show that one launched the other. Both now read a W3C traceparent from the environment and parent their root span on the supplied span, with `LATITUDE_SESSION_ID` joining the parent's session and `LATITUDE_PROJECT` keeping both halves in one project, since ingest is project-scoped and a mismatch splits the trace silently. Hermes publishes its active tool span through `child_env()`, or onto `os.environ` around each tool call behind an opt-in flag so any subprocess inherits it. Joining is capped per session, and a session launched on its own is unaffected (ref: #4524, #4525).
+- Fixed headless Claude Code runs emitting nothing at all, which the correlation feature depends on. The hook was registered only on an async `Stop`, and Claude Code exits before spawning an async Stop hook in headless mode, so `claude -p` was invisible even though headless is how another harness drives it. The installer now also registers a synchronous `SessionEnd`, which additionally catches interactive quit and Ctrl-C; the two never double-count, and both hand their work to a detached worker so session teardown is not delayed. Existing installs need `install` re-run to pick up the entry (ref: #4524).
+- Fixed the Claude Code hook proceeding without its state lock when another hook held it, and the stale-payload sweep deleting files it had not written in a user-configured directory (ref: #4523).
+- Rewrote the Hermes docs around upgrading the plugin, including that a running Hermes must be restarted to pick up a new version (ref: #4504).
+
+### Traces
+
+- Bumped `rosetta-ai` to 2.3.0, adding server tool call request and response parts, a compaction part, the `document` content type and the `compaction` finish reason to the conversation vocabulary. The change is additive (ref: #4501).
+
 ## v0.3.85 - 2026-08-26
 
 ### Signals

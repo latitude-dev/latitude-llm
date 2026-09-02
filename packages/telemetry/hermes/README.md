@@ -194,6 +194,8 @@ plugins:
 | `LATITUDE_HERMES_AGENT_NAME` | `agent.name` | profile name unless `default` | Names the agent: a tag plus `gen_ai.agent.name` |
 | `LATITUDE_HERMES_AGENT_VERSION` | `agent.version` | — | Adds the version as its own tag, plus version metadata |
 | `LATITUDE_HERMES_SERVICE_NAME` | `service_name` | `hermes-agent` | OTLP `service.name` — the Service breakdown/filter axis |
+| `LATITUDE_HERMES_INHERIT_CONTEXT` | `inherit_context` | `true` | Join the trace named by an inherited `TRACEPARENT`, if any |
+| `LATITUDE_HERMES_EXPORT_TRACEPARENT` | `export_traceparent` | `false` | Also scope the child variables onto `os.environ` around each tool call |
 | `LATITUDE_HERMES_TAGS` / `LATITUDE_TAGS` | `tags` | — | Extra tags, comma-separated or a JSON array; appended to the derived ones |
 | `LATITUDE_HERMES_METADATA` / `LATITUDE_METADATA` | `metadata` | — | Extra metadata, a JSON object or `key=value` pairs |
 
@@ -203,6 +205,22 @@ Derived tags (`hermes`, the platform, the agent name, the agent version, `cron:<
 `subagent:<role>`) make several agents in one project distinguishable, and make comparing
 two versions of one agent a single analytics breakdown or a two-variant experiment. See
 [the public docs](https://docs.latitude.so/telemetry/hermes) for the recipe.
+
+## Correlating with a child harness
+
+A tool that launches another agent (Claude Code, Codex, a remote worker) can pass it the current tool span, so the child's spans land under that tool call in one trace rather than in a trace of their own:
+
+```python
+from latitude_telemetry_hermes import child_env
+
+subprocess.run(["claude", "-p", goal], env=child_env())
+```
+
+`child_env()` returns the current environment plus `TRACEPARENT`, `LATITUDE_SESSION_ID` and `LATITUDE_PROJECT`, anchored on the tool span currently executing; `current_traceparent()` returns just the header. Both are correct under Hermes's per-turn worker threads.
+
+`LATITUDE_HERMES_EXPORT_TRACEPARENT=1` scopes those variables onto `os.environ` for the duration of each tool call instead, so any subprocess inherits them without code changes. It is off by default because `os.environ` is process-wide while Hermes runs each turn on its own thread, and the ownership lock cannot fix that: it keeps a concurrent call from corrupting the owner's saved values, but the environment still holds the owner's header, so a subprocess launched by the skipped call inherits the **wrong** parent span rather than none. Safe only when tool calls do not overlap. `child_env()` is the path that is always correct.
+
+The same works in reverse — if something launched *this* Hermes process with a `TRACEPARENT`, its turns join that trace. The full contract, including how far a join is allowed to grow, is in [`dev-docs/trace-correlation.md`](../../../dev-docs/trace-correlation.md).
 
 ## Development
 

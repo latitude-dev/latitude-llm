@@ -177,8 +177,6 @@ This is the recommended setup for most Think apps.
 
 ## Codemode Internal Tools
 
-Requires `@latitude-data/telemetry` 3.6.0 or newer.
-
 Think's codemode `execute` tool appears as a normal AI SDK tool span. Tools
 called from inside codemode run outside the active AI SDK tool-call context, so
 wrap both the internal tool set and the outer `execute` tool with
@@ -273,6 +271,169 @@ const codemode = createCodemodeTelemetry({
 
 ---
 
+## Multiple Agents Across Durable Objects
+
+A second agent in its own Durable Object gets a fresh isolate: no shared memory, no ambient
+OpenTelemetry context. Its spans start a trace of their own, so the planner or researcher you
+delegated to lands in a separate trace from the turn that called it.
+
+Hand the active span over with the call. `injectTraceContext()` serializes it into a carrier, and
+the callee reinstalls it with `withTraceContext()`.
+
+<Steps>
+  <Step title="Send the context with the call">
+    Call `injectTraceContext()` from inside the tool's `execute`. It anchors on whichever span is
+    active, so the second agent parents on that specific tool call.
+
+    ```ts
+    import { injectTraceContext } from "@latitude-data/telemetry/cloudflare"
+    import { getAgentByName } from "agents"
+    import { tool } from "ai"
+    import { z } from "zod"
+
+    export class MyAgent extends Think<Env> {
+      private context: ContextOptions | undefined
+
+      getTools() {
+        return {
+          draftItinerary: tool({
+            description: "Ask the planner agent for a two-day itinerary.",
+            inputSchema: z.object({ goal: z.string() }),
+            execute: async ({ goal }) => {
+              const planner = await getAgentByName(this.env.Planner, this.name)
+              return planner.draftItinerary(goal, injectTraceContext(this.context))
+            },
+          }),
+        }
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Join the trace on the other side">
+    `withTraceContext()` runs the callee's work inside the caller's trace. It also hands you the
+    extracted context, so a framework that wants a tracer instead of an ambient context can get one
+    from `remote.getTracer()`.
+
+    ```ts
+    import { createDurableObjectTelemetry, type TraceContextCarrier, withTraceContext } from "@latitude-data/telemetry/cloudflare"
+    import { Agent } from "agents"
+    import { generateText } from "ai"
+
+    export class Planner extends Agent<Env> {
+      private telemetry = createDurableObjectTelemetry({ latitude: getLatitude(this.env), ctx: this.ctx })
+
+      async draftItinerary(goal: string, trace?: TraceContextCarrier) {
+        return this.telemetry.run(() =>
+          withTraceContext(trace, async (remote) => {
+            const result = await generateText({
+              model: getModel(this.env),
+              prompt: `Draft a two-day itinerary. Goal: ${goal}`,
+              experimental_telemetry: {
+                isEnabled: true,
+                tracer: remote.getTracer(getLatitude(this.env), "cloudflare-planner"),
+                functionId: "planner-turn",
+              },
+            })
+
+            return result.text
+          }),
+        )
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+Both agents now report one trace, and Latitude renders the second agent as a subagent of the tool
+call that invoked it:
+
+```text
+ai.streamText
+  ai.toolCall draftItinerary
+    ai.generateText          ← the planner's Durable Object
+      ai.generateText.doGenerate
+```
+
+The carrier keys are HTTP header names, so the same object works over `fetch` and over a service
+binding:
+
+```ts
+await fetch(url, {
+  headers: { "content-type": "application/json", ...injectTraceContext(this.context) },
+})
+```
+
+On the receiving side, `withTraceContext()` reads a `Request` or a `Headers` directly:
+
+```ts
+export default {
+  async fetch(request: Request, env: Env) {
+    return withTraceContext(request, async (remote) => handle(request, env, remote))
+  },
+}
+```
+
+The carrier moves the trace and the Latitude context: session id, user id, user email, tags, and
+metadata. Two things stay behind. A `capture()` name is not carried, because it labels one capture
+root and would relabel every span the callee emits. The SDK's default `project` is not carried
+either, since each side applies its own — pass `project` in the context explicitly when the two
+agents are configured for different Latitude projects, or their spans will split into two projects
+and the trace will break in half.
+
+<Note>
+  The carrier overrides, it does not replace. What it holds wins over whatever the callee already
+  has; what it leaves out the callee keeps. So an absent or malformed carrier is not an error and
+  not a reset either — the callee behaves exactly as it did before you added propagation, starting
+  its own trace in a plain handler and staying inside an enclosing `capture()` where you have one.
+</Note>
+
+---
+
+## Flushing Before Eviction
+
+A Durable Object is evicted whenever it goes idle, and nothing runs first. Spans still sitting in
+the batch processor at that moment are lost: the batch timer is not a scheduler the Workers runtime
+keeps alive on your behalf.
+
+The fix is to flush at the end of every unit of work the object performs — a turn, an RPC method, a
+`fetch`, an alarm. `createDurableObjectTelemetry()` makes that cheap enough to do every time.
+
+```ts
+import { createDurableObjectTelemetry } from "@latitude-data/telemetry/cloudflare"
+
+export class MyAgent extends Think<Env> {
+  private telemetry = createDurableObjectTelemetry({ latitude: getLatitude(this.env), ctx: this.ctx })
+
+  async onChatResponse() {
+    await this.telemetry.flush()
+  }
+
+  onChatError(error: unknown) {
+    this.telemetry.flushSoon()
+    return error
+  }
+}
+```
+
+- `run(work)` runs a unit of work and flushes once it settles, whether it resolved or threw.
+- `flush()` exports everything buffered so far. Callers arriving together share one export, and a
+  caller arriving mid-export gets a later one rather than the in-flight one, which would miss the
+  spans it is waiting on.
+- `flushSoon()` does not wait. It registers the export with `ctx.waitUntil()` so the runtime keeps
+  the object alive for it.
+
+A failed export goes to `onError` (`console.error` by default) instead of failing the work being
+traced.
+
+<Warning>
+  Keep batching on. `disableBatch: true` sends one HTTP request per span and nothing waits for
+  them, which is worse on Workers, not better. Batching plus one flush per unit of work is a single
+  request per turn.
+</Warning>
+
+---
+
 ## Programmatic Turns
 
 If your app starts Think turns with your own `runTurn()` call, wrap that call
@@ -352,9 +513,10 @@ separate parent `cloudflare-think-turn` span.
 
 The Latitude repository includes a runnable Think example at
 [`examples/cloudflare-think-app`](https://github.com/latitude-dev/latitude-llm/tree/development/packages/telemetry/typescript/examples/cloudflare-think-app).
-It includes an `execute` codemode tool backed by several demo tools, a small QA
-page, and a local verifier that checks model spans, codemode tool spans,
-`userId`, and `sessionId` against local Latitude.
+It includes an `execute` codemode tool backed by several demo tools, a second
+`Planner` agent in its own Durable Object reached over RPC, a small QA page, and
+a local verifier that checks model spans, codemode tool spans, `userId`,
+`sessionId`, and that the planner's turn joins the orchestrator's trace.
 
 ---
 

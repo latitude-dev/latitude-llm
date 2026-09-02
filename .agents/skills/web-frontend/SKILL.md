@@ -7,11 +7,23 @@ description: apps/web UI — routes, @repo/ui, TanStack Start server functions a
 
 **When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, **navigation (`Link` vs `useNavigate`)**, forms (**`useForm`** with **`createFormSubmitHandler`** + **`fieldErrorsAsStrings`** when Zod validation errors should appear on fields), Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.
 
-## Legacy UI reference
+## Required design context
 
-- Before building new UI, inspect the old v1 UI/components and product patterns as a reference when relevant.
-- Reuse as much as possible when the old implementation is still solid.
-- Do not copy v1 UI blindly; review it critically and improve it to match v2 conventions, architecture, and quality expectations when needed.
+Before designing or editing any user-facing UI, read the root [`design.md`](../../../design.md). It defines the Latitude product UI rules for reuse-first discovery, composition, hierarchy, spacing, actions, responsive behavior, and route versus modal versus drawer decisions.
+
+Treat `packages/ui/src/components/`, `packages/ui/src/tokens/`, the live `apps/design-system` inventory, and adjacent `apps/web` routes as the implementation source of truth. Search for an existing component and a comparable in-product pattern before creating a component, introducing custom styling, or adding a new token. Follow `design.md` when deciding whether new UI is justified; follow this skill for the required React, TanStack, route, form, and component APIs.
+
+For project-route UI, use the local `-components/section-header.tsx` `SectionHeader` once for the route-level header, matching the Behaviors page's `Layout.Header` composition. A project overview defaults to the standard variant so its title has the same size and weight as the Behaviors route header; use `variant="xl"` only when the task and a comparable existing route justify it. Import the existing header and layout rather than recreating their structure or classes locally.
+
+Project overview content has a strict default hierarchy: metric values may use `Text.H5`; panels use muted `Text.H6` labels; repeated row and issue titles use compact `Text.H6B`; supporting copy uses muted `Text.H6`. Do not use `Text.H3*`, `Text.H4*`, or `Text.H5*` as panel, row, issue, or block titles. Do not use `SectionHeader` as a panel heading.
+
+For project overview metrics, first inspect the compact `AggregationItem` strips in `users/-components/users-analytics-panel.tsx`, `tools/-components/tools-analytics-panel.tsx`, and `-components/aggregations/general-aggregations.tsx`. Preserve that anatomy and keep metrics in one horizontally scrollable row; do not create a grid, separate `Card` per metric, or a route-local approximation of the existing aggregation item. Detail sections use muted labels plus `divide-y` rows, not nested cards or dashboard-specific mini-panels. Read the `Project Overview Contract` in `design.md` before implementation.
+
+## Existing V2 UI reference
+
+- Before building new UI, inspect comparable V2 routes and components in `apps/web/src/routes/` and `packages/ui/src/components/`.
+- Reuse the closest V2 interaction and composition pattern when it is solid; preserve consistency across the active product rather than recreating the pattern locally.
+- Treat the V2 application and `apps/design-system` as the visual and behavioral reference. Do not use V1 as a default source of UI guidance.
 
 ## React 19
 
