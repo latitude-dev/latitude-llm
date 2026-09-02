@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.89 - 2026-09-02
+
+### Flaggers and taxonomy
+
+- The Refusal flagger now considers tools declared across the session before marking a refusal as inappropriate. Requests requiring unavailable external actions or unsupported modalities, such as attaching or exporting a document, are treated as capability limitations, while native model work such as summarizing supplied text remains eligible for annotation (ref: #4517).
+
 ## v0.3.88 - 2026-09-02
 
 ### Security
