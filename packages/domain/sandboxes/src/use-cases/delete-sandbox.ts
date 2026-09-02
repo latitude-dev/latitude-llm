@@ -1,5 +1,4 @@
-import { OrganizationRepository } from "@domain/organizations"
-import { purgeOrganizationProjectsUseCase } from "@domain/projects"
+import { OrganizationRepository, teardownOrganizationUseCase } from "@domain/organizations"
 import { type OrganizationId, SqlClient, type UserId } from "@domain/shared"
 import { Effect } from "effect"
 import { loadAuthorizedSandboxOrg } from "../helpers.ts"
@@ -26,9 +25,7 @@ export const deleteSandboxUseCase = Effect.fn("sandboxes.deleteSandbox")(functio
     Effect.gen(function* () {
       const sandboxes = yield* SandboxRepository
       const organizations = yield* OrganizationRepository
-      yield* purgeOrganizationProjectsUseCase({
-        actorUserId: input.actorUserId,
-      })
+      yield* teardownOrganizationUseCase({ actorUserId: input.actorUserId })
       yield* sandboxes.delete(input.sandboxOrganizationId)
       yield* organizations.delete(input.sandboxOrganizationId)
     }),

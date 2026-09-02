@@ -1,4 +1,8 @@
+import { revokeApiKeyUseCase } from "@domain/api-keys"
+import { ApiKeyId, OrganizationId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
+import { ApiKeyRepositoryLive, eq, withPostgres } from "@platform/db-postgres"
+import { organizations } from "@platform/db-postgres/schema/better-auth"
 import {
   closeInMemoryPostgres,
   createApiKeyFixture,
@@ -8,7 +12,7 @@ import {
 } from "@platform/testkit"
 import { Effect } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { validateApiKey } from "./validate-api-key.ts"
+import { ApiKeyCacheInvalidatorLive, validateApiKey } from "./validate-api-key.ts"
 
 /** `@repo/utils` crypto helpers require Node 25+ `Uint8Array` hex APIs (see `packages/utils/src/base64.ts`). */
 const nodeSupportsUint8Hex = typeof Uint8Array.fromHex === "function"
@@ -24,6 +28,7 @@ const createFakeRedis = (): RedisClient => {
       store.set(key, value)
       return "OK"
     },
+    del: async (key: string) => (store.delete(key) ? 1 : 0),
   } as unknown as RedisClient
 }
 
@@ -35,6 +40,15 @@ describe("validateApiKey", () => {
 
 describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)", () => {
   let database: InMemoryPostgres
+
+  const revokeApiKey = (organizationId: string, id: string, redis: RedisClient) =>
+    Effect.runPromise(
+      revokeApiKeyUseCase({ id: ApiKeyId(id) }).pipe(
+        Effect.provide(ApiKeyCacheInvalidatorLive(redis)),
+        withPostgres(ApiKeyRepositoryLive, database.adminPostgresClient, OrganizationId(organizationId)),
+        Effect.orDie,
+      ),
+    )
 
   beforeAll(async () => {
     process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
@@ -77,6 +91,95 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)",
         adminClient: database.adminPostgresClient,
       }),
     )
+    expect(result).toBeNull()
+  })
+
+  it("rejects a revoked key on a cold cache", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const apiKey = await Effect.runPromise(
+      createApiKeyFixture(database.postgresDb, {
+        organizationId: organization.id,
+        encryptionKey: TEST_ENCRYPTION_KEY,
+      }),
+    )
+    await revokeApiKey(apiKey.organizationId, apiKey.id, createFakeRedis())
+
+    const touched: string[] = []
+    const result = await Effect.runPromise(
+      validateApiKey(apiKey.token, {
+        redis: createFakeRedis(),
+        adminClient: database.adminPostgresClient,
+        onKeyValidated: (id) => touched.push(id),
+      }),
+    )
+
+    expect(result).toBeNull()
+    expect(touched).toEqual([])
+  })
+
+  it("rejects a revoked key on the request after revocation invalidates the cache", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const apiKey = await Effect.runPromise(
+      createApiKeyFixture(database.postgresDb, {
+        organizationId: organization.id,
+        encryptionKey: TEST_ENCRYPTION_KEY,
+      }),
+    )
+    const redis = createFakeRedis()
+
+    const authenticated = await Effect.runPromise(
+      validateApiKey(apiKey.token, { redis, adminClient: database.adminPostgresClient }),
+    )
+    expect(authenticated).toEqual({ organizationId: apiKey.organizationId, keyId: apiKey.id, isSandbox: false })
+
+    await revokeApiKey(apiKey.organizationId, apiKey.id, redis)
+
+    const afterRevoke = await Effect.runPromise(
+      validateApiKey(apiKey.token, { redis, adminClient: database.adminPostgresClient }),
+    )
+    expect(afterRevoke).toBeNull()
+  })
+
+  it("rejects a key whose organization no longer exists", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const apiKey = await Effect.runPromise(
+      createApiKeyFixture(database.postgresDb, {
+        organizationId: organization.id,
+        encryptionKey: TEST_ENCRYPTION_KEY,
+      }),
+    )
+    await database.postgresDb.delete(organizations).where(eq(organizations.id, organization.id))
+
+    const touched: string[] = []
+    const result = await Effect.runPromise(
+      validateApiKey(apiKey.token, {
+        redis: createFakeRedis(),
+        adminClient: database.adminPostgresClient,
+        onKeyValidated: (id) => touched.push(id),
+      }),
+    )
+
+    expect(result).toBeNull()
+    expect(touched).toEqual([])
+  })
+
+  it("rejects a revoked key on ingest wiring too", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const apiKey = await Effect.runPromise(
+      createApiKeyFixture(database.postgresDb, {
+        organizationId: organization.id,
+        encryptionKey: TEST_ENCRYPTION_KEY,
+      }),
+    )
+    await revokeApiKey(apiKey.organizationId, apiKey.id, createFakeRedis())
+
+    const result = await Effect.runPromise(
+      validateApiKey(apiKey.token, {
+        redis: createFakeRedis(),
+        adminClient: database.adminPostgresClient,
+      }),
+    )
+
     expect(result).toBeNull()
   })
 

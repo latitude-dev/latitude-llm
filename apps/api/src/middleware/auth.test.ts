@@ -1,7 +1,8 @@
 import { generateApiKeyToken } from "@domain/api-keys"
 import { generateId } from "@domain/shared"
+import { eq } from "@platform/db-postgres"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
-import { oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
+import { oauthAccessTokens, oauthApplications, organizations } from "@platform/db-postgres/schema/better-auth"
 import type { InMemoryPostgres } from "@platform/testkit"
 import { encrypt, hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -80,6 +81,42 @@ describe("auth middleware dispatch", () => {
       }),
     )
     expect(res.status).toBe(200)
+  })
+
+  it<ApiTestContext>("rejects a revoked API-key bearer", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const token = generateApiKeyToken()
+    const { id } = await insertApiKey(database, tenant.organizationId, token)
+
+    const authorized = await app.fetch(
+      new Request("http://localhost/v1/api-keys", { headers: { Authorization: `Bearer ${token}` } }),
+    )
+    expect(authorized.status).toBe(200)
+
+    const revoked = await app.fetch(
+      new Request(`http://localhost/v1/api-keys/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    )
+    expect(revoked.status).toBe(204)
+
+    const afterRevoke = await app.fetch(
+      new Request("http://localhost/v1/api-keys", { headers: { Authorization: `Bearer ${token}` } }),
+    )
+    expect(afterRevoke.status).toBe(401)
+  })
+
+  it<ApiTestContext>("rejects an API-key bearer whose organization was deleted", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const token = generateApiKeyToken()
+    await insertApiKey(database, tenant.organizationId, token)
+    await database.db.delete(organizations).where(eq(organizations.id, tenant.organizationId))
+
+    const res = await app.fetch(
+      new Request("http://localhost/v1/api-keys", { headers: { Authorization: `Bearer ${token}` } }),
+    )
+    expect(res.status).toBe(401)
   })
 
   it<ApiTestContext>("rejects an unknown bearer (no API-key match, no OAuth match)", async ({ app, database }) => {

@@ -16,6 +16,7 @@ export {
   type GenerateApiKeyInput,
   generateApiKeyUseCase,
 } from "./use-cases/generate-api-key.ts"
+export { revokeAllApiKeysUseCase } from "./use-cases/revoke-all-api-keys.ts"
 export {
   ApiKeyCacheInvalidator,
   type RevokeApiKeyError,

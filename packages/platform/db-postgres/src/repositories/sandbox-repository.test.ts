@@ -1,6 +1,7 @@
-import type { ApiKeyRepository } from "@domain/api-keys"
+import { ApiKeyCacheInvalidator, type ApiKeyRepository } from "@domain/api-keys"
 import type { BillingOverrideRepository, StripeSubscriptionLookup } from "@domain/billing"
 import type { OutboxEventWriter } from "@domain/events"
+import { type OAuthKeyRepository, OAuthTokenCacheInvalidator } from "@domain/oauth-keys"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import type { ProjectRepository } from "@domain/projects"
 import {
@@ -17,6 +18,7 @@ import { eq } from "drizzle-orm"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { OutboxEventWriterLive } from "../outbox-writer.ts"
+import { apiKeys } from "../schema/api-keys.ts"
 import { members, organizations, subscriptions, users } from "../schema/better-auth.ts"
 import { projects } from "../schema/projects.ts"
 import { sandboxes } from "../schema/sandboxes.ts"
@@ -25,6 +27,7 @@ import { withPostgres } from "../with-postgres.ts"
 import { ApiKeyRepositoryLive } from "./api-key-repository.ts"
 import { BillingOverrideRepositoryLive } from "./billing-override-repository.ts"
 import { MembershipRepositoryLive } from "./membership-repository.ts"
+import { OAuthKeyRepositoryLive } from "./oauth-key-repository.ts"
 import { OrganizationRepositoryLive } from "./organization-repository.ts"
 import { ProjectRepositoryLive } from "./project-repository.ts"
 import { SandboxRepositoryLive } from "./sandbox-repository.ts"
@@ -49,6 +52,9 @@ const sandboxLayers = Layer.mergeAll(
   ProjectRepositoryLive,
   OutboxEventWriterLive,
   ApiKeyRepositoryLive,
+  OAuthKeyRepositoryLive,
+  Layer.succeed(ApiKeyCacheInvalidator, { delete: () => Effect.void }),
+  Layer.succeed(OAuthTokenCacheInvalidator, { invalidate: () => Effect.void }),
 )
 
 type SandboxEnv =
@@ -61,6 +67,9 @@ type SandboxEnv =
   | ProjectRepository
   | OutboxEventWriter
   | ApiKeyRepository
+  | ApiKeyCacheInvalidator
+  | OAuthKeyRepository
+  | OAuthTokenCacheInvalidator
   | SqlClient
 
 // Sandbox lifecycle is cross-org management, so the use-cases run on the
@@ -232,7 +241,7 @@ describe("sandbox lifecycle use-cases", () => {
     expect(failure(refusedExit)).toBeInstanceOf(SandboxActiveCapReachedError)
   })
 
-  it("deleteSandbox removes the org + attrs row and tears down the sandbox's projects", async () => {
+  it("deleteSandbox removes the org + attrs row and tears down the sandbox's projects and API keys", async () => {
     const parent = await seedParentOrg()
     const created = await runScoped(
       parent.parentOrgId,
@@ -264,5 +273,8 @@ describe("sandbox lifecycle use-cases", () => {
     expect(sandboxRows).toHaveLength(0)
     const projectRows = await pg.db.select().from(projects).where(eq(projects.id, projectId))
     expect(projectRows[0]?.deletedAt).not.toBeNull()
+    const apiKeyRows = await pg.db.select().from(apiKeys).where(eq(apiKeys.organizationId, created.organization.id))
+    expect(apiKeyRows.length).toBeGreaterThan(0)
+    expect(apiKeyRows.every((row) => row.deletedAt !== null)).toBe(true)
   })
 })

@@ -843,6 +843,9 @@ importers:
       '@platform/analytics-posthog':
         specifier: workspace:*
         version: link:../../packages/platform/analytics-posthog
+      '@platform/api-key-auth':
+        specifier: workspace:*
+        version: link:../../packages/platform/api-key-auth
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
@@ -870,6 +873,9 @@ importers:
       '@platform/loops':
         specifier: workspace:*
         version: link:../../packages/platform/loops
+      '@platform/oauth-token-auth':
+        specifier: workspace:*
+        version: link:../../packages/platform/oauth-token-auth
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
@@ -1769,6 +1775,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/oauth-keys':
+        specifier: workspace:*
+        version: link:../oauth-keys
       '@domain/projects':
         specifier: workspace:*
         version: link:../projects
@@ -1897,6 +1906,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/oauth-keys':
+        specifier: workspace:*
+        version: link:../oauth-keys
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations

@@ -102,6 +102,10 @@ export {
 } from "./use-cases/list-members.ts"
 export { type RemoveMemberInput, removeMemberUseCase } from "./use-cases/remove-member.ts"
 export {
+  type TeardownOrganizationInput,
+  teardownOrganizationUseCase,
+} from "./use-cases/teardown-organization.ts"
+export {
   type TransferOwnershipInput,
   transferOwnershipUseCase,
 } from "./use-cases/transfer-ownership.ts"

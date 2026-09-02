@@ -4,6 +4,7 @@ export { type OAuthGrantInput, OAuthGrantRepository } from "./ports/oauth-grant-
 export { OAuthKeyRepository, OAuthTokenCacheInvalidator } from "./ports/oauth-key-repository.ts"
 export { type GetOAuthKeyInput, getOAuthKeyUseCase } from "./use-cases/get-oauth-key.ts"
 export { listOAuthKeysUseCase } from "./use-cases/list-oauth-keys.ts"
+export { revokeAllOAuthKeysUseCase } from "./use-cases/revoke-all-oauth-keys.ts"
 export {
   type RevokeOAuthKeyActor,
   type RevokeOAuthKeyInput,

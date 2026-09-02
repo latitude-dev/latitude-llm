@@ -190,13 +190,26 @@ const lookupByToken = (client: PostgresClient, token: string): Promise<DbRow | u
     .limit(1)
     .then((rows) => rows[0])
 
-const hasLiveMembership = (client: PostgresClient, userId: string, organizationId: string): Promise<boolean> =>
+interface CachedGrant {
+  readonly userId: string
+  readonly organizationId: string
+  readonly oauthClientId: string
+}
+
+const hasLiveGrant = (client: PostgresClient, grant: CachedGrant): Promise<boolean> =>
   client.db
-    .select({ id: members.id })
+    .select({ applicationDisabled: oauthApplications.disabled })
     .from(members)
-    .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)))
+    .innerJoin(
+      oauthApplications,
+      and(
+        eq(oauthApplications.clientId, grant.oauthClientId),
+        eq(oauthApplications.organizationId, grant.organizationId),
+      ),
+    )
+    .where(and(eq(members.organizationId, grant.organizationId), eq(members.userId, grant.userId)))
     .limit(1)
-    .then((rows) => rows.length > 0)
+    .then((rows) => rows.length > 0 && rows[0]?.applicationDisabled !== true)
 
 /**
  * Parse a BA-stored `scopes` text field (space-separated per RFC 6749 §3.3)
@@ -247,8 +260,9 @@ export interface ValidateOAuthAccessTokenDeps {
  *     consent-bound to an org — the `/auth/consent` step never happened or
  *     was abandoned)
  *
- * On cache hits, membership is re-verified live so revocation takes effect on
- * the next request rather than waiting for cache TTL (~300 s) to expire.
+ * On cache hits, membership and the application's enabled state are re-verified
+ * live so revocation takes effect on the next request rather than waiting for
+ * cache TTL (~300 s) to expire.
  *
  * The DB query uses the admin Postgres connection (RLS-bypass) because
  * `oauth_applications` has RLS scoped by `organization_id` and the org id
@@ -282,11 +296,11 @@ export const validateOAuthAccessToken = (
       } else {
         if (cached !== null) {
           // catch → error channel; Effect.orDie makes DB errors defects, not a silent false fallback.
-          const isMember = yield* Effect.tryPromise({
-            try: () => hasLiveMembership(adminClient, cached.userId, cached.organizationId),
+          const isLive = yield* Effect.tryPromise({
+            try: () => hasLiveGrant(adminClient, cached),
             catch: () => false,
           }).pipe(Effect.orDie)
-          if (!isMember) {
+          if (!isLive) {
             yield* invalidateCache(redis, tokenHash)
             yield* cache(redis, tokenHash, null, INVALID_TOKEN_TTL_SECONDS)
             yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)

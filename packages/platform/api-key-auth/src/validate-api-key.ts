@@ -1,5 +1,5 @@
-import { ApiKeyCacheInvalidator, ApiKeyRepository } from "@domain/api-keys"
-import { isSandbox, OrganizationRepository } from "@domain/organizations"
+import { type ApiKey, ApiKeyCacheInvalidator, ApiKeyRepository, isActive } from "@domain/api-keys"
+import { isSandbox, type Organization, OrganizationRepository } from "@domain/organizations"
 import { OrganizationId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient } from "@platform/db-postgres"
@@ -119,6 +119,26 @@ const enforceMinimumTime = (startTime: number, minMs: number): Effect.Effect<voi
   return Effect.void
 }
 
+interface ApiKeyGrant {
+  readonly apiKey: ApiKey
+  readonly organization: Organization
+}
+
+const resolveGrant = (tokenHash: string) =>
+  Effect.gen(function* () {
+    const apiKeyRepository = yield* ApiKeyRepository
+    const apiKey = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
+    if (Option.isNone(apiKey) || !isActive(apiKey.value)) return Option.none<ApiKeyGrant>()
+
+    const organizationRepository = yield* OrganizationRepository
+    const organization = yield* Effect.option(
+      organizationRepository.findById(OrganizationId(apiKey.value.organizationId)),
+    )
+    if (Option.isNone(organization)) return Option.none<ApiKeyGrant>()
+
+    return Option.some<ApiKeyGrant>({ apiKey: apiKey.value, organization: organization.value })
+  })
+
 export interface ValidateApiKeyDeps {
   readonly redis: RedisClient
   readonly adminClient: PostgresClient
@@ -128,6 +148,7 @@ export interface ValidateApiKeyDeps {
 
 /**
  * Validate bearer token: hash, Redis cache, optional DB lookup, minimum timing.
+ * Unknown, revoked, and orphaned keys (organization gone) all take the same negative path.
  * Shared by `apps/api` and `apps/ingest` so auth behavior cannot drift.
  */
 export const validateApiKey = (
@@ -147,24 +168,20 @@ export const validateApiKey = (
       return cached
     }
 
-    const apiKeyRepository = yield* ApiKeyRepository
-    const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
+    const grant = yield* resolveGrant(tokenHash)
 
-    if (Option.isNone(apiKeyOption)) {
+    if (Option.isNone(grant)) {
       yield* cacheApiKeyResult(redis, tokenHash, null, INVALID_KEY_TTL_SECONDS)
       yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
       return null
     }
 
-    const apiKey = apiKeyOption.value
-
-    const organizationRepository = yield* OrganizationRepository
-    const organization = yield* Effect.option(organizationRepository.findById(OrganizationId(apiKey.organizationId)))
+    const { apiKey, organization } = grant.value
 
     const result: ApiKeyAuthResult = {
       organizationId: apiKey.organizationId,
       keyId: apiKey.id,
-      isSandbox: Option.isSome(organization) ? isSandbox(organization.value) : false,
+      isSandbox: isSandbox(organization),
     }
 
     yield* cacheApiKeyResult(redis, tokenHash, result, VALID_KEY_TTL_SECONDS)

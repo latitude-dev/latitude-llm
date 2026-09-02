@@ -19,6 +19,7 @@
     "@domain/api-keys": "workspace:*",
     "@domain/billing": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
