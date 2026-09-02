@@ -136,7 +136,7 @@ function createAuroraServerless(
     backupRetentionPeriod: config.rds.backupDays,
     storageEncrypted: true,
     preferredBackupWindow: "03:00-04:00",
-    enabledCloudwatchLogsExports: ["postgresql"],
+    enabledCloudwatchLogsExports: [],
     tags: {
       Name: `${name}-aurora`,
       Environment: config.name,
@@ -288,7 +288,7 @@ function createStandardInstance(
     backupRetentionPeriod: config.rds.backupDays,
     skipFinalSnapshot: config.name === "staging",
     finalSnapshotIdentifier: config.name === "production" ? `${name}-final-snapshot` : undefined,
-    enabledCloudwatchLogsExports: ["postgresql"],
+    enabledCloudwatchLogsExports: [],
     parameterGroupName: parameterGroup.name,
     tags: {
       Name: `${name}-postgres`,

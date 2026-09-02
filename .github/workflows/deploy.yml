@@ -407,15 +407,23 @@ jobs:
                 --query 'taskDefinition' \
                 --output json | jq \
                   --arg image "${IMAGE}" \
-                  --arg name "${SERVICE}" '
+                  --arg name "${SERVICE}" \
+                  --arg logLevel "warn" '
                   .containerDefinitions |= map(
-                    if .name == $name then .image = $image
+                    if .name == $name then
+                      .image = $image |
+                      .environment = (
+                        (.environment // []) |
+                        map(if .name == "LAT_LOG_LEVEL" then .value = $logLevel else . end) |
+                        if any(.[]; .name == "LAT_LOG_LEVEL") then . else . + [{ name: "LAT_LOG_LEVEL", value: $logLevel }] end
+                      )
                     elif .name == "datadog-agent" then
                       .environment = (
                         (.environment // []) |
-                        map(if .name == "DD_LOG_LEVEL" then .value = "info" else . end) |
-                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "info" }] end
-                      )
+                        map(if .name == "DD_LOG_LEVEL" then .value = "error" else . end) |
+                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "error" }] end
+                      ) |
+                      del(.logConfiguration)
                     else . end
                   ) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
@@ -790,15 +798,23 @@ jobs:
                 --query 'taskDefinition' \
                 --output json | jq \
                   --arg image "${IMAGE}" \
-                  --arg name "${SERVICE}" '
+                  --arg name "${SERVICE}" \
+                  --arg logLevel "warn" '
                   .containerDefinitions |= map(
-                    if .name == $name then .image = $image
+                    if .name == $name then
+                      .image = $image |
+                      .environment = (
+                        (.environment // []) |
+                        map(if .name == "LAT_LOG_LEVEL" then .value = $logLevel else . end) |
+                        if any(.[]; .name == "LAT_LOG_LEVEL") then . else . + [{ name: "LAT_LOG_LEVEL", value: $logLevel }] end
+                      )
                     elif .name == "datadog-agent" then
                       .environment = (
                         (.environment // []) |
-                        map(if .name == "DD_LOG_LEVEL" then .value = "info" else . end) |
-                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "info" }] end
-                      )
+                        map(if .name == "DD_LOG_LEVEL" then .value = "error" else . end) |
+                        if any(.[]; .name == "DD_LOG_LEVEL") then . else . + [{ name: "DD_LOG_LEVEL", value: "error" }] end
+                      ) |
+                      del(.logConfiguration)
                     else . end
                   ) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
