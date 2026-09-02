@@ -15,6 +15,7 @@ import {
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, CheckIcon, DatabaseIcon, TextAlignStartIcon } from "lucide-react"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { SignalScoreDimensions } from "../../../../../../components/signals/signal-score-dimensions.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import {
@@ -355,6 +356,7 @@ export function SignalDetailBody({
                   <div className="flex min-w-[33%] max-w-max flex-1">
                     <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
                   </div>
+                  <SignalScoreDimensions scoreEvidence={issue.scoreEvidence} />
                   {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
                 </div>
               )}

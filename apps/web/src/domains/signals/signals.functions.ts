@@ -330,6 +330,7 @@ const toSignalDetailRecord = (input: {
   filters: input.issue.filters ?? null,
   source: input.issue.source,
   origin: input.issue.origin,
+  scoreEvidence: input.issue.scoreEvidence.map((evidence) => ({ ...evidence })),
   assigneeId: input.issue.assigneeId,
   priority: input.issue.priority,
   states: input.states,

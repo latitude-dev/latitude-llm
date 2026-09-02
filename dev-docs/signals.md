@@ -39,6 +39,8 @@ Signals and live taxonomy both use `@domain/shared/centroid` for decayed weighte
 
 `signals.score_evidence` is a non-null JSONB list of dimension and evidence-role pairs. The canonical Signal entity requires the same list, and public project and session signal responses return it as `scoreEvidence`. An empty list means the signal is diagnostic and does not contribute to benchmark scoring. Signal evidence supports outcome, reliability, cost, speed, and safety; the signal safety roles are `confirmedHarm` and `exposure`. `successfulDefense` belongs to the broader score evidence contract but cannot classify a signal because signals represent failures.
 
+Signal detail pages and drawers show the unique dimensions from `scoreEvidence` as chips in canonical dimension order. Multiple evidence roles for the same dimension produce one chip.
+
 The database default is `[]`. Signal creation paths initialize the field explicitly, and rows that predate the column receive the empty list from the schema migration. Historical signals are not classified by a model or static mapping.
 
 Promotion assigns `scoreEvidence` once. It samples up to 200 of the signal's newest published, failed, non-errored scores. A mapped system flagger supplies the static roles only when its slug occurs in a strict majority of the whole sample; scores with missing, unknown, or unmapped slugs remain in the denominator. Without a dominant mapped flagger, the name-and-description generation call also classifies the evidence roles. If generation is disabled, fails, or returns no roles, promotion stores `[]`. Later detail refreshes update only the name and description, so they cannot reclassify the signal.
