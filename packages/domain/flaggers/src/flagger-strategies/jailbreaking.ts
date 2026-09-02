@@ -399,7 +399,7 @@ export function extractJailbreakSuspiciousSnippets(
     },
     {
       pattern:
-        /(?:safety |your )?(?:rules?|guidelines?|policies|restrictions?) (?:do not|don't|dont) apply (?:to you|anymore|here)/i,
+        /(?:safety|jailbreak).{0,20}(?:rules?|guidelines?|policies|restrictions?|guardrails?).{0,20}(?:do not|don't|dont) apply/i,
       reason: "safety-rule override",
     },
     {
