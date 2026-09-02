@@ -106,10 +106,22 @@ def test_the_hook_visible_tasks_are_never_re_emitted(ledger: Path):
     assert tasks == {"approval", "compression", "title_generation", None}
 
 
-def test_it_gives_up_rather_than_risk_double_counting(ledger: Path):
+def test_it_gives_up_rather_than_risk_double_counting(ledger: Path, monkeypatch):
     """If we exported more calls than the hook-visible tasks account for, the
     assumption about which tasks fire hooks no longer holds."""
+    slept: List[float] = []
+    monkeypatch.setattr(aux_usage_module.time, "sleep", lambda seconds: slept.append(seconds))
     assert aux_usage_module.aux_spans("sess-1", _exported(calls=999), {}) == []
+    assert slept == []
+
+
+def test_it_gives_up_when_the_teardown_deadline_expires(ledger: Path, monkeypatch):
+    """A shared teardown deadline bounds the wait; the guard still skips."""
+    clock = {"now": 0.0}
+    monkeypatch.setattr(aux_usage_module.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(aux_usage_module.time, "sleep", lambda seconds: clock.update(now=clock["now"] + seconds))
+    assert aux_usage_module.aux_spans("sess-1", _exported(calls=999), {}, deadline=0.5) == []
+    assert clock["now"] == pytest.approx(0.5)
 
 
 def test_aux_is_emitted_once_the_hook_visible_ledger_catches_up(ledger: Path, monkeypatch):
@@ -127,7 +139,9 @@ def test_aux_is_emitted_once_the_hook_visible_ledger_catches_up(ledger: Path, mo
     monkeypatch.setattr(aux_usage_module, "_query", lagging_query)
     monkeypatch.setattr(aux_usage_module.time, "sleep", lambda _: None)
 
-    spans = aux_usage_module.aux_spans("sess-1", _exported(), {"session.id": "sess-1"})
+    spans = aux_usage_module.aux_spans(
+        "sess-1", _exported(), {"session.id": "sess-1"}, deadline=aux_usage_module.time.monotonic() + 10
+    )
     assert _names(spans) == ["aux:approval", "aux:compression", "aux:title_generation", "interaction"]
 
 

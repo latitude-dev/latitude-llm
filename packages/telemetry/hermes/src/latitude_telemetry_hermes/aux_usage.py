@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .config import _config, _debug
 from .hermes import state_db_path
@@ -40,17 +40,19 @@ _TOKEN_COLUMNS = (
     ("reasoning_tokens", "gen_ai.usage.reasoning_tokens"),
 )
 
-# Session finalize already waits up to 10s for export delivery; match that window
-# so a lagging hook-visible ledger flush does not skip auxiliary reconciliation.
-_READ_RETRIES = 39
 _READ_RETRY_DELAY = 0.25
 
 
-def aux_spans(session_id: str, exported: Dict[str, int], context: Dict[str, Any]) -> List[_Span]:
+def aux_spans(
+    session_id: str,
+    exported: Dict[str, int],
+    context: Dict[str, Any],
+    deadline: Optional[float] = None,
+) -> List[_Span]:
     """One `aux:<task>` span per ledger task that no hook could have reported."""
     if not session_id or not _config().get("aux_usage"):
         return []
-    rows = _read_rows(session_id, exported)
+    rows = _read_rows(session_id, exported, deadline)
     if not rows:
         return []
     exported_calls = int(exported.get("api_call_count") or 0)
@@ -97,20 +99,20 @@ def _calls(row: Dict[str, Any]) -> int:
     return int(row.get("api_call_count") or 0)
 
 
-def _read_rows(session_id: str, exported: Dict[str, int]) -> List[Dict[str, Any]]:
-    """The ledger is written by a background flusher, so a short retry covers
-    the window where our own calls are not on disk yet."""
+def _read_rows(session_id: str, exported: Dict[str, int], deadline: Optional[float] = None) -> List[Dict[str, Any]]:
+    """Poll until hook-visible rows catch up or the teardown deadline expires."""
     expected = int(exported.get("api_call_count") or 0)
     rows: List[Dict[str, Any]] = []
-    for attempt in range(_READ_RETRIES + 1):
+    while True:
         rows = _query(session_id)
         if not rows:
             return []
         if sum(_calls(row) for row in rows if _task(row) in _HOOK_VISIBLE_TASKS) >= expected:
             return rows
-        if attempt < _READ_RETRIES:
-            time.sleep(_READ_RETRY_DELAY)
-    return rows
+        remaining = 0.0 if deadline is None else deadline - time.monotonic()
+        if remaining <= 0:
+            return rows
+        time.sleep(min(_READ_RETRY_DELAY, remaining))
 
 
 def _query(session_id: str) -> List[Dict[str, Any]]:
