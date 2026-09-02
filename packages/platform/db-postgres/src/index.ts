@@ -15,6 +15,10 @@ export {
   type User,
 } from "./create-better-auth.ts"
 export { healthcheckPostgres } from "./health.ts"
+export {
+  ensureBillingUsageEventsPartitions,
+  maintainBillingUsageEventsRetention,
+} from "./maintain-billing-usage-events.ts"
 // Outbox consumer for reliable event publishing
 export {
   createPollingOutboxConsumer,

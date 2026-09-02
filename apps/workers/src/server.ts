@@ -2,6 +2,10 @@ import { createBullBoard } from "@bull-board/api"
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { HonoAdapter } from "@bull-board/hono"
 import {
+  BILLING_USAGE_EVENTS_MAINTENANCE_CRON_KEY,
+  BILLING_USAGE_EVENTS_MAINTENANCE_CRON_PATTERN,
+} from "@domain/billing"
+import {
   DESTINATION_PRUNE_KEY,
   DESTINATION_PRUNE_PATTERN,
   DESTINATION_SWEEPER_KEY,
@@ -24,7 +28,7 @@ import {
 } from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
-import { createPollingOutboxConsumer } from "@platform/db-postgres"
+import { createPollingOutboxConsumer, maintainBillingUsageEventsRetention } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import {
   createBullBoardQueues,
@@ -304,6 +308,23 @@ const bootstrap = async () => {
           "reapExpired",
           {},
           { key: "organization-cleanup:daily", pattern: "0 3 * * *", tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Repeatable cron first fires at the next 02:00 UTC; create the current month now so a deploy heals a missing partition.
+    await maintainBillingUsageEventsRetention(pgClient)
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "billing",
+          "maintainUsageEventPartitions",
+          {},
+          {
+            key: BILLING_USAGE_EVENTS_MAINTENANCE_CRON_KEY,
+            pattern: BILLING_USAGE_EVENTS_MAINTENANCE_CRON_PATTERN,
+            tz: "UTC",
+          },
         )
         .pipe(withTracing),
     )

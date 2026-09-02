@@ -2,6 +2,7 @@ import { existsSync } from "node:fs"
 import { createServer } from "node:http"
 import { join } from "node:path"
 import { waitForRedisClientReady } from "@platform/cache-redis"
+import { maintainBillingUsageEventsRetention } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { loadTemporalConfig } from "@platform/workflows-temporal"
 import { runTemporalWorker } from "@platform/workflows-temporal/worker"
@@ -16,7 +17,7 @@ import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import * as activities from "./activities/index.ts"
-import { getClickhouseClient, getRedisClient } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "./clients.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -87,6 +88,7 @@ const bootstrap = async () => {
 
   const start = async () => {
     await waitForRedisClientReady(getRedisClient())
+    await maintainBillingUsageEventsRetention(getPostgresClient())
 
     const temporal = await runTemporalWorker({
       config,

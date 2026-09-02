@@ -255,3 +255,9 @@ export const calculateMaxReportableOverageCreditsForCap = (
 
 /** TTL for in-memory spend-reservation counters. Comfortably outlasts any single billing period. */
 export const BILLING_SPEND_RESERVATION_TTL_SECONDS = 60 * 60 * 24 * 34
+
+export const BILLING_USAGE_EVENTS_RETENTION_DAYS = 60
+export const BILLING_USAGE_EVENTS_MONTHS_BACK = 2
+export const BILLING_USAGE_EVENTS_MONTHS_AHEAD = 3
+export const BILLING_USAGE_EVENTS_MAINTENANCE_CRON_KEY = "billing:maintain-usage-event-partitions"
+export const BILLING_USAGE_EVENTS_MAINTENANCE_CRON_PATTERN = "0 2 * * *"

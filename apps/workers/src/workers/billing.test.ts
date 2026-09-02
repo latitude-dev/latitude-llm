@@ -1067,4 +1067,10 @@ describe("billing runtime integration", () => {
       expect(otherResults[4]?.allowed).toBe(false)
     })
   })
+
+  it("maintainUsageEventPartitions is idempotent against the migrated window", async () => {
+    const consumer = new TestQueueConsumer()
+    createBillingWorker({ consumer, postgresClient: pg.adminPostgresClient })
+    await consumer.dispatchTask("billing", "maintainUsageEventPartitions", {})
+  })
 })

@@ -815,6 +815,7 @@ const _registry = {
       readonly overageAllowed: boolean
       readonly isSandbox?: boolean
     }
+    maintainUsageEventPartitions: Record<string, never>
   }>(),
 
   "billing-overage": payloads<{
