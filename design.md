@@ -25,6 +25,8 @@ Before writing JSX or classes:
 3. Search `apps/web/src/routes/` for the closest existing interaction, especially for forms, tables, empty states, menus, drawers, and modals.
 4. Reuse the closest established pattern. Match its structure before changing its styling.
 
+Do not "reuse" a pattern by copying a few class names or recreating it from memory. Import the established component when it is available; otherwise begin from the closest route component and preserve its layout, text roles, and interaction model. A locally named `PageHeader`, `MetricCard`, or `SectionTitle` that merely approximates an existing V2 component is a regression, not reuse.
+
 `@repo/ui` is the source of truth for reusable UI. The live component inventory is `apps/design-system` and is published at `design.latitude.so`. Use Tailwind only to compose existing primitives and make route-local layout adjustments. Do not hardcode a colour, font, radius, shadow, z-index, control height, or arbitrary spacing value when an existing token, utility, or component already provides it.
 
 Create or extend a `@repo/ui` component only when a search shows that no existing component can express a pattern that will be reused across more than one feature. A one-off visual difference is not enough. When adding a public component, add its design-system example in the same change.
@@ -53,6 +55,7 @@ Avoid generated-design reflexes:
 - **Tiny-muted rescue text:** shrinking copy or reducing contrast to fit an overcrowded layout. Reorder, split, simplify, or give the content room instead.
 - **Border echo:** putting rounded, bordered cards inside a rounded, bordered section when neither boundary has a distinct job. A parent group and every child must not use the same visual treatment.
 - **Run-on hierarchy:** placing a title, status, metric, and description next to one another until they read as one sentence. Stack distinct information roles; do not rely on typography alone to create separation.
+- **Pattern drift:** changing the type scale, surface treatment, or anatomy of a familiar route because a new page has different data. A new page should feel like another instance of an existing product pattern before it feels original.
 
 ## Layout And Spacing
 
@@ -104,9 +107,11 @@ Treat text styles as roles, not decoration. A heading names a region; a row titl
 - `Text` primitives can render inline. When a text role must start a new line, put it in a flex/grid stack or use the component's block display option. Inspect the rendered result: words from separate roles must never run together.
 - In project routes, `-components/section-header.tsx` `SectionHeader` is the single route-level header, as used by the Behaviors page inside `Layout.Header`. Use it once to identify the page or route context; do not reuse it inside summary panels, cards, analytics blocks, or sidebars.
 - By default, project overview page headers use the standard `SectionHeader` variant, exactly like the Behaviors page. Use `variant="xl"` only when the task needs a different hierarchy and a comparable existing route establishes that pattern. A page title alone is not a reason to choose the larger variant; preserve the familiar Behaviors-size title whenever possible.
-- Supporting block labels are low hierarchy. Use the existing muted small-label treatment (`Text.H6` with `foregroundMuted`) rather than a large, bold, black heading. If a block needs a short description, stack it below that muted label with the same low hierarchy; do not use `SectionHeader` to create a mini page header.
+- In overview content, reserve `Text.H3*`, `Text.H4*`, and `Text.H5*` for the route header and metric values. Do not use them for a section, panel, row, issue, or block title simply to create emphasis.
+- Supporting block labels are low hierarchy: use `Text.H6` with `foregroundMuted`. Repeated row and issue titles use the compact established text treatment, normally `Text.H6B`; use `Text.H6` for their supporting copy. If a block needs a short description, stack it below that muted label with the same low hierarchy; do not use `SectionHeader` to create a mini page header.
 - In JSX, text roles that must appear on separate lines must be direct children of a `flex flex-col` or grid stack. Never place a `Text` title and `Text` description as consecutive children of an unstructured `div`; they will render as a run-on line.
 - Keep a section title close to its content. Add a section description only when it changes how the user reads or acts on that content; do not use a sentence to restate the heading.
+- Do not add an overview paragraph merely to make the header feel substantial. A route header has a title and, at most, one concise description. A section has a muted label and content. If both say the same thing, remove the section description.
 - In repeated panels and rows, use one stable internal order. Do not alternate between title-status-description and title-description-status without a product reason.
 - Use muted text for secondary context, not to hide a necessary distinction between a label, value, and status.
 
@@ -121,6 +126,7 @@ Write UI copy for scanning. State the core concept, status, constraint, or next 
 - Treat tooltips as optional clarification, not hidden documentation. Use one short sentence for an unfamiliar term, abbreviation, icon-only control, or non-obvious consequence. Do not repeat the visible label, explain a familiar control, or hide essential instructions in a tooltip.
 - Prefer concrete words over qualifiers and filler. Say "Deletes all traces in this project" rather than "This action allows you to permanently remove your existing trace data."
 - Name units, scope, and irreversible effects where they matter. Do not add background, implementation detail, or marketing language to routine controls.
+- For mock data, identify the page as sample data once, if needed. Do not repeat that it is fake in headings, descriptions, rows, and notices. Keep each overview row to one factual status or implication; detailed diagnosis belongs on the destination page.
 
 If a description needs several sentences to be understood, simplify the workflow, regroup the controls, or move the task to a surface with room for proper guidance.
 
@@ -178,8 +184,27 @@ Numbers are data, not body copy or decoration. Give each metric a clear, repeata
 - Use one unit and timeframe per metric. Write the scope in the label or context rather than forcing readers to infer it from a nearby paragraph.
 - For a project overview or analytics summary, metrics MUST use one compact horizontal strip, matching the `AggregationItem` composition in the existing users, tools, and sessions analytics panels. Keep every metric in one row with a shared secondary surface, `shrink-0` metric items, and horizontal overflow on narrow screens. Never use a responsive grid that wraps an overview metric strip onto a second row.
 - Do not place a `Card`, rounded border, or separate background behind each metric in a summary strip. The strip owns the surface; metrics are aligned label-value pairs inside it.
+- Build an overview metric strip from the existing V2 `AggregationItem` anatomy: a muted `Text.H6` label, a tabular `Text.H5` value, and only a compact secondary value when the nearest reference includes one. Do not create a route-local metric-card variant with new padding, radius, copy density, or hierarchy.
 - When multiple metrics need comparison outside a summary strip, use a shared table or aligned layout. Do not make a distinct card for every number unless each metric is independently actionable.
 - Before creating a route-local metric component, search for an existing metric, stats strip, analytics panel, table summary, or comparable V2 view. Extract a shared primitive only after the pattern is needed in more than one product area.
+
+### Project Overview Contract
+
+A project home or overview is a new data composition, not a new visual language. Start with these concrete V2 references before writing it:
+
+- Route header: `apps/web/src/routes/_authenticated/projects/$projectSlug/behaviours/-components/behaviours-catalog-page.tsx` and the local `-components/section-header.tsx`.
+- Metric strip: `apps/web/src/routes/_authenticated/projects/$projectSlug/users/-components/users-analytics-panel.tsx`, `tools/-components/tools-analytics-panel.tsx`, or `-components/aggregations/general-aggregations.tsx`.
+- Compact detail rows: the relevant users, tools, sessions, signals, or memory route. Choose the section that owns the data rather than inventing a generic dashboard row.
+
+Use this default anatomy unless the user task proves a different one is needed:
+
+1. `ListingLayout` with one `Layout.Header` and the default `SectionHeader` variant.
+2. One compact horizontal metric strip using the selected V2 aggregation composition.
+3. A small number of flat or secondary-surface sections, each with a muted `Text.H6` block label and `divide-y` rows.
+4. Rows use a compact `Text.H6B` title, optional badge or right-aligned value, and at most one muted supporting line.
+5. Links lead to the existing owning section instead of recreating its diagnostics on the overview.
+
+Do not add a welcome card, a second explanatory summary, a standalone heads-up panel, or a new page-specific header component by default. Add one only when it represents information the header, strip, and destination links cannot carry.
 
 Design complete states, not only the happy path. Account for loading, empty, error, permission-limited, disabled, long-content, and destructive-action states where relevant. An empty state explains what is absent, why it matters, and the next available action without becoming a marketing panel.
 
