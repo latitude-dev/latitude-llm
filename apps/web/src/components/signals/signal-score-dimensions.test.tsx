@@ -61,4 +61,25 @@ describe("SignalScoreDimensions", () => {
     expect(badgeClassName).toContain("bg-muted")
     expect(badgeClassName).toContain("font-normal")
   })
+
+  it("keeps detail and table surfaces on the same dimension set", () => {
+    const scoreEvidence = [
+      { scoreDimension: "safety", role: "exposure" },
+      { scoreDimension: "reliability", role: "completionOutcome" },
+      { scoreDimension: "outcome", role: "taskOutcome" },
+      { scoreDimension: "reliability", role: "operationalIncident" },
+    ] as const
+    const { rerender } = render(<SignalScoreDimensions scoreEvidence={scoreEvidence} />)
+    const detailDimensions = Array.from(
+      screen.getByLabelText("Agent Score dimensions").querySelectorAll("[data-dimension-item]"),
+    ).map((chip) => chip.textContent)
+
+    rerender(<SignalScoreDimensions scoreEvidence={scoreEvidence} wrap={false} />)
+    const tableDimensions = Array.from(
+      screen.getByLabelText("Agent Score dimensions").querySelectorAll("[data-dimension-item]"),
+    ).map((chip) => chip.textContent)
+
+    expect(detailDimensions).toEqual(["Outcome", "Reliability", "Safety"])
+    expect(tableDimensions).toEqual(detailDimensions)
+  })
 })

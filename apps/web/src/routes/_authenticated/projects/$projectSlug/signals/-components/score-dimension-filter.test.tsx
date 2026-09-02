@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   parseSignalScoreDimensions,
@@ -30,5 +30,19 @@ describe("signal score dimension filter state", () => {
 
     rerender(<ScoreDimensionFilter value={["cost", "speed"]} onChange={onChange} />)
     expect(screen.getByRole("button").textContent).toContain("2 dimensions")
+  })
+
+  it("offers the same canonical dimensions rendered on signals", () => {
+    render(<ScoreDimensionFilter value={[]} onChange={() => undefined} />)
+
+    fireEvent.pointerDown(screen.getByRole("button"), { button: 0, ctrlKey: false })
+
+    expect(screen.getAllByRole("menuitemcheckbox").map((item) => item.textContent)).toEqual([
+      "Outcome",
+      "Reliability",
+      "Cost",
+      "Speed",
+      "Safety",
+    ])
   })
 })

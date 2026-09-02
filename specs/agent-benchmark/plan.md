@@ -74,11 +74,11 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
 
 ### Exit gate
 
-- [ ] **P1-15** Tests cover valid dimension-role pairs, static and generated assignment, promotion
+- [x] **P1-15** Tests cover valid dimension-role pairs, static and generated assignment, promotion
   latching, generation failure, strict flagger dominance, refresh behavior, the non-null empty
   backfill, ignored-score exclusion, and promoted-only analytics.
-- [ ] **P1-16** Signal detail, list filters, and session signal rows render the same dimension set.
-- [ ] `pnpm typecheck` and `pnpm test` pass for touched packages. Generated API artifacts are current.
+- [x] **P1-16** Signal detail, list filters, and session signal rows render the same dimension set.
+- [x] `pnpm typecheck` and `pnpm test` pass for touched packages. Generated API artifacts are current.
 
 ## PR 2: session assessment
 
