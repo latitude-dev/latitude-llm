@@ -273,6 +273,36 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     expect(afterRemoval).toBeNull()
   })
 
+  it("returns null on a cache hit once the application is disabled", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const setup = await insertOAuthSetup(database.postgresDb, {
+      organizationId: organization.id,
+    })
+
+    const redis = createFakeRedis()
+    const beforeDisable = await Effect.runPromise(
+      validateOAuthAccessToken(setup.accessToken, {
+        redis,
+        adminClient: database.adminPostgresClient,
+      }),
+    )
+    expect(beforeDisable?.oauthClientId).toBe(setup.clientId)
+
+    await database.postgresDb
+      .update(oauthApplications)
+      .set({ disabled: true })
+      .where(eq(oauthApplications.clientId, setup.clientId))
+
+    const afterDisable = await Effect.runPromise(
+      validateOAuthAccessToken(setup.accessToken, {
+        redis,
+        adminClient: database.adminPostgresClient,
+      }),
+    )
+
+    expect(afterDisable).toBeNull()
+  })
+
   it("serves a cached result without calling onTokenValidated again", async () => {
     const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
     const setup = await insertOAuthSetup(database.postgresDb, {

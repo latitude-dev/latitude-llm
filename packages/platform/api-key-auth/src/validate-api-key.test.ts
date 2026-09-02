@@ -1,7 +1,8 @@
 import { revokeApiKeyUseCase } from "@domain/api-keys"
 import { ApiKeyId, OrganizationId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
-import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, eq, withPostgres } from "@platform/db-postgres"
+import { organizations } from "@platform/db-postgres/schema/better-auth"
 import {
   closeInMemoryPostgres,
   createApiKeyFixture,
@@ -137,6 +138,29 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)",
       validateApiKey(apiKey.token, { redis, adminClient: database.adminPostgresClient }),
     )
     expect(afterRevoke).toBeNull()
+  })
+
+  it("rejects a key whose organization no longer exists", async () => {
+    const organization = await Effect.runPromise(createOrganizationFixture(database.postgresDb))
+    const apiKey = await Effect.runPromise(
+      createApiKeyFixture(database.postgresDb, {
+        organizationId: organization.id,
+        encryptionKey: TEST_ENCRYPTION_KEY,
+      }),
+    )
+    await database.postgresDb.delete(organizations).where(eq(organizations.id, organization.id))
+
+    const touched: string[] = []
+    const result = await Effect.runPromise(
+      validateApiKey(apiKey.token, {
+        redis: createFakeRedis(),
+        adminClient: database.adminPostgresClient,
+        onKeyValidated: (id) => touched.push(id),
+      }),
+    )
+
+    expect(result).toBeNull()
+    expect(touched).toEqual([])
   })
 
   it("rejects a revoked key on ingest wiring too", async () => {

@@ -3,6 +3,16 @@ import { validateOAuthClientRegistrationMetadata } from "../../../lib/oauth-url-
 import { getBetterAuth } from "../../../server/clients.ts"
 
 const MCP_REGISTER_PATH = "/api/auth/mcp/register"
+// BA's get-session echoes the whole token row, refresh token included, to any bearer; nothing of ours calls it.
+const MCP_GET_SESSION_PATH = "/api/auth/mcp/get-session"
+
+const isBlockedAuthPath = (request: Request): boolean => new URL(request.url).pathname === MCP_GET_SESSION_PATH
+
+const notFoundResponse = () =>
+  new Response(JSON.stringify({ error: "not_found" }), {
+    status: 404,
+    headers: { "Content-Type": "application/json" },
+  })
 
 const invalidClientMetadataResponse = (description: string) =>
   new Response(JSON.stringify({ error: "invalid_client_metadata", error_description: description }), {
@@ -29,9 +39,13 @@ export const Route = createFileRoute("/api/auth/$")({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
+        if (isBlockedAuthPath(request)) return notFoundResponse()
+
         return getBetterAuth().handler(request)
       },
       POST: async ({ request }: { request: Request }) => {
+        if (isBlockedAuthPath(request)) return notFoundResponse()
+
         const validationError = await validateMcpRegistrationRequest(request)
         if (validationError) return validationError
 
