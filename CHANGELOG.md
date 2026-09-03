@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.91 - 2026-09-03
+
+### Signals
+
+- Signals promoted before dimension classification shipped can be backfilled. A one-off worker script selects promoted, system-discovered signals that still have no score evidence and at least one published occurrence in the last month, reuses the deterministic flagger mapping when a dominant mapped flagger exists and otherwise classifies the canonical name and description with the LLM. It defaults to a read-only routing preview, takes an advisory lock, and is launched from a confirmation-gated `workflow_dispatch` job so a production run is deliberate (ref: #4549).
+
 ## v0.3.90 - 2026-09-03
 
 ### Monitors
