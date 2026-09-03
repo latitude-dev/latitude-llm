@@ -277,6 +277,7 @@ V1 compared two prompt variants over a dataset. V2 compares two slices of real t
 
 `createExperiment` takes variants with a `filterSet`, a `query` and a `timeRange`. Each variant's tag filter here is `[{"op": "eq", "value": "release-2.1.0"}, {"op": "neq", "value": "simulation"}]`. The comparison covers sessions, users, cost, tokens, latency percentiles, tool usage and signal occurrences per cohort, with deltas against the baseline. Metrics fill in after sessions close, about five minutes after their last trace. Use `updateExperiment` (HTTP `PUT`) to change variants later.
 
+V1's `prompts.chat(conversationUuid, ...)` implied Latitude stored conversation history server-side; V2 has no such storage, so a multi-turn use case now keeps its own message array, keyed by the session id.
 Give each release its own sessions. A session that mixes traces from two releases cannot be assigned to one cohort; the smoke script suffixes session ids with the release for that reason. In our first attempt the regression replays also landed in the 2.1.0 cohort, because they carry the release tag; the `simulation` exclusion fixed it.
 
 ### Annotate, monitor, dispatch
@@ -302,6 +303,7 @@ The V1 human-in-the-loop evaluation becomes ordinary annotation. From the trace 
 - Keep replays out of production cohorts. Regression runs carry the release tag too, so exclude `simulation` in experiment variants and monitors.
 - Signals collect forward and sample at 10 percent by default. Create them first, then generate traffic, and raise sampling in the UI for low-volume projects.
 - No backticks in judge criteria. The criteria is compiled, and a backtick broke it with a syntax error.
+- A V1 prompt with `type: agent` and a Latitude-hosted tool (`latitude/extract` and similar) needs a real implementation and a hand-written tool-call loop in V2; there is no hosted-tool equivalent. The `latitude-migrate` skill's `promptl-to-code.md` has a full example.
 - Flush before exit. Short scripts lose their last batch without `flush()` and `shutdown()`.
 - The MCP is OAuth-only. An API key on the MCP URL returns 401. Use the API key for the SDK, CLI and REST, and OAuth for the MCP.
 - Old docs linger in agent memory. Point coding agents at `docs.latitude.so/llms.txt`.
