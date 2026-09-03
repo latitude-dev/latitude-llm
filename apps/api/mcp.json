@@ -8202,7 +8202,7 @@
     {
       "name": "listSignals",
       "title": "List project signals",
-      "description": "Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.",
+      "description": "Returns a cursor-paginated page of signals in the project. Each item includes its `scoreEvidence`, lifecycle `states`, and time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -8323,6 +8323,120 @@
                     "custom"
                   ],
                   "description": "Where the signal originated from."
+                },
+                "scoreEvidence": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "outcome",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "const": "taskOutcome",
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "reliability",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "completionOutcome",
+                              "operationalIncident"
+                            ],
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "cost",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "const": "spendEfficiency",
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "speed",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "const": "criticalPathEfficiency",
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "safety",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "confirmedHarm",
+                              "exposure"
+                            ],
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "description": "Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only."
                 },
                 "states": {
                   "type": "array",
@@ -8451,6 +8565,7 @@
                 "name",
                 "description",
                 "source",
+                "scoreEvidence",
                 "states",
                 "resolvedAt",
                 "ignoredAt",
@@ -9364,7 +9479,7 @@
     {
       "name": "getSignal",
       "title": "Get project signal",
-      "description": "Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+      "description": "Returns the full-history detail view of one signal, including its `scoreEvidence`, lifecycle `states`, lifetime activity stats, occurrence trend, active evaluations, and current monitoring state.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -9426,6 +9541,120 @@
               "custom"
             ],
             "description": "Where the signal originated from."
+          },
+          "scoreEvidence": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "outcome",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "const": "taskOutcome",
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "reliability",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "completionOutcome",
+                        "operationalIncident"
+                      ],
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "cost",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "const": "spendEfficiency",
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "speed",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "const": "criticalPathEfficiency",
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "safety",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "confirmedHarm",
+                        "exposure"
+                      ],
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only."
           },
           "states": {
             "type": "array",
@@ -9854,6 +10083,7 @@
           "name",
           "description",
           "source",
+          "scoreEvidence",
           "states",
           "resolvedAt",
           "ignoredAt",
@@ -36852,7 +37082,7 @@
     {
       "name": "listSessionSignals",
       "title": "List session signals",
-      "description": "Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.",
+      "description": "Returns the signals that occurred in the session, including each signal's `scoreEvidence` and occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -36920,6 +37150,120 @@
                     "custom"
                   ],
                   "description": "Where the signal originated from."
+                },
+                "scoreEvidence": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "outcome",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "const": "taskOutcome",
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "reliability",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "completionOutcome",
+                              "operationalIncident"
+                            ],
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "cost",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "const": "spendEfficiency",
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "speed",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "const": "criticalPathEfficiency",
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreDimension": {
+                            "type": "string",
+                            "const": "safety",
+                            "description": "Agent Score dimension this evidence informs."
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "confirmedHarm",
+                              "exposure"
+                            ],
+                            "description": "How this evidence informs the dimension."
+                          }
+                        },
+                        "required": [
+                          "scoreDimension",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "description": "Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only."
                 },
                 "states": {
                   "type": "array",
@@ -37018,6 +37362,7 @@
                 "name",
                 "description",
                 "source",
+                "scoreEvidence",
                 "states",
                 "resolvedAt",
                 "ignoredAt",
@@ -37048,7 +37393,7 @@
     {
       "name": "getSessionSignal",
       "title": "Get session signal",
-      "description": "Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.",
+      "description": "Returns one signal by slug, including its `scoreEvidence` and occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -37116,6 +37461,120 @@
               "custom"
             ],
             "description": "Where the signal originated from."
+          },
+          "scoreEvidence": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "outcome",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "const": "taskOutcome",
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "reliability",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "completionOutcome",
+                        "operationalIncident"
+                      ],
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "cost",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "const": "spendEfficiency",
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "speed",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "const": "criticalPathEfficiency",
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "scoreDimension": {
+                      "type": "string",
+                      "const": "safety",
+                      "description": "Agent Score dimension this evidence informs."
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "confirmedHarm",
+                        "exposure"
+                      ],
+                      "description": "How this evidence informs the dimension."
+                    }
+                  },
+                  "required": [
+                    "scoreDimension",
+                    "role"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only."
           },
           "states": {
             "type": "array",
@@ -37214,6 +37673,7 @@
           "name",
           "description",
           "source",
+          "scoreEvidence",
           "states",
           "resolvedAt",
           "ignoredAt",

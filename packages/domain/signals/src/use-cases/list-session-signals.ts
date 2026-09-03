@@ -1,7 +1,7 @@
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, SqlClient, TraceId } from "@domain/shared"
 import { Effect } from "effect"
-import type { Signal } from "../entities/signal.ts"
+import type { Signal, SignalScoreEvidence } from "../entities/signal.ts"
 import { deriveSignalLifecycleStates } from "../helpers.ts"
 import { SignalRepository } from "../ports/signal-repository.ts"
 
@@ -13,6 +13,7 @@ export interface SessionSignal {
   readonly name: string
   readonly description: string
   readonly source: Signal["source"]
+  readonly scoreEvidence: readonly SignalScoreEvidence[]
   readonly states: readonly string[]
   readonly resolvedAt: Date | null
   readonly ignoredAt: Date | null
@@ -86,6 +87,7 @@ export const listSessionSignalsUseCase = (
           name: issue.name,
           description: issue.description,
           source: issue.source,
+          scoreEvidence: issue.scoreEvidence,
           states: [...states],
           resolvedAt: issue.resolvedAt,
           ignoredAt: issue.ignoredAt,

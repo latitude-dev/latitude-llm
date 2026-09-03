@@ -3,6 +3,7 @@ import { eq } from "@tanstack/react-db"
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import { useState } from "react"
+import { SignalScoreDimensions } from "../../../../../../components/signals/signal-score-dimensions.tsx"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { useSignalDetail, useSignalIdBySlug } from "../../../../../../domains/signals/signals.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
@@ -187,7 +188,12 @@ function SignalDetailPage() {
                 ) : (
                   <Text.H5 color="foregroundMuted">{signal?.description ?? "This signal could not be loaded."}</Text.H5>
                 )}
-                {!isLoading && signal && signal.tags.length > 0 ? <TagList tags={signal.tags} wrap /> : null}
+                {!isLoading && signal ? (
+                  <div className="flex flex-row flex-wrap items-center gap-2">
+                    <SignalScoreDimensions scoreEvidence={signal.scoreEvidence} ignored={signal.ignoredAt !== null} />
+                    {signal.tags.length > 0 ? <TagList tags={signal.tags} wrap /> : null}
+                  </div>
+                ) : null}
               </div>
               <SignalSummary projectId={project.id} signalId={signalId} />
             </>

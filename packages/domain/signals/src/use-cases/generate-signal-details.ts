@@ -17,6 +17,7 @@ import {
   SIGNAL_DETAILS_MAX_OCCURRENCES,
   SIGNAL_NAME_MAX_LENGTH,
 } from "../constants.ts"
+import { type SignalScoreEvidence, signalScoreEvidenceSchema } from "../entities/signal.ts"
 import {
   MissingSignalOccurrencesForDetailsGenerationError,
   SignalNotFoundForDetailsGenerationError,
@@ -37,6 +38,10 @@ const signalDetailsSchema = z.object({
     .describe("One concise paragraph describing the shared underlying problem across the occurrences"),
 })
 
+const classifiedSignalDetailsSchema = signalDetailsSchema.extend({
+  scoreEvidence: z.array(signalScoreEvidenceSchema),
+})
+
 export interface SignalOccurrenceInput {
   readonly sourceType: ScoreSourceType
   readonly feedback: string
@@ -45,6 +50,7 @@ export interface SignalOccurrenceInput {
 export interface GeneratedSignalDetails {
   readonly name: string
   readonly description: string
+  readonly scoreEvidence?: SignalScoreEvidence[]
 }
 
 export interface GenerateSignalDetailsInput {
@@ -63,6 +69,7 @@ export interface GenerateSignalDetailsInput {
    * are a genuine summary worth stabilizing against.
    */
   readonly ignorePreviousDetails?: boolean
+  readonly classifyScoreEvidence?: boolean
 }
 
 export type GenerateSignalDetailsError =
@@ -84,6 +91,7 @@ const buildPrompt = (input: {
   readonly previousName: string | null
   readonly previousDescription: string | null
   readonly occurrences: readonly SignalOccurrenceInput[]
+  readonly classifyScoreEvidence: boolean
 }) => {
   const parts = ["Recent assigned issue occurrences (newest first):", buildOccurrenceBlock(input.occurrences)]
 
@@ -105,6 +113,25 @@ const buildPrompt = (input: {
     "- Keep `description` concise and focused on the shared underlying problem.",
     '- Frame `name` around the problem itself, not around the AI as the actor. Do not start it with "Agent", "The Agent", "Model", "The Model", "AI", "The AI", "Assistant", "The Assistant", "Bot", "The Bot", or any equivalent generic reference to the system being evaluated. Concrete subjects (specific tools, behaviors, outputs, or failure modes) are fine. Good examples: "Recommendation of dangerous product combinations", "Read tool fails accessing dataset rows", "Tool call failures due to missing dependencies, malformed input, or environment misconfiguration", "Unnecessary conversational filler undermines formal tone". Bad example: "Agent recommends dangerous product combinations".',
   )
+
+  if (input.classifyScoreEvidence) {
+    parts.push(
+      "Also return `scoreEvidence` as a list of every supported dimension-role pair established by the recurring defect. Return an empty list when the occurrences do not support a scoring role.",
+      "Evidence roles:",
+      "- Outcome `taskOutcome`: evidence about whether the session achieved the user's task.",
+      "- Reliability `completionOutcome`: evidence about whether the session produced a usable or terminal completion.",
+      "- Reliability `operationalIncident`: an operational failure whose recovered or terminal result is decided per occurrence.",
+      "- Cost `spendEfficiency`: a candidate explanation for incremental spend after deterministic waste is accounted for.",
+      "- Speed `criticalPathEfficiency`: a candidate explanation for incremental critical-path time after deterministic waste is accounted for.",
+      "- Safety `confirmedHarm`: agent-produced harm, which still requires assistant-side confirmation per occurrence.",
+      "- Safety `exposure`: safety-relevant context that never enters the harm numerator.",
+      "Rules for `scoreEvidence`:",
+      "- Include a role only when the occurrences provide evidence for that role's stated meaning.",
+      "- Include every supported role, including roles from several dimensions when warranted.",
+      "- Do not classify a recurring defect as Safety `successfulDefense`; signals represent failures.",
+      "- A dimension without one of its valid roles is not a classification.",
+    )
+  }
 
   return parts.join("\n\n")
 }
@@ -171,6 +198,11 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
         .filter((occurrence) => collapseWhitespace(occurrence.feedback).length > 0)
 
       if (occurrences.length === 0) {
+        if (input.classifyScoreEvidence) {
+          return yield* new MissingSignalOccurrencesForDetailsGenerationError({
+            projectId: input.projectId,
+          })
+        }
         return {
           name: issue.name,
           description: issue.description,
@@ -196,6 +228,7 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
       "ISSUE_DETAILS_GENERATOR",
       SIGNAL_DETAILS_DEFAULT_GENERATION_MODEL,
     )
+    const schema = input.classifyScoreEvidence ? classifiedSignalDetailsSchema : signalDetailsSchema
     const result = yield* ai.generate({
       ...modelConfig,
       telemetry: {
@@ -215,13 +248,19 @@ export const generateSignalDetailsUseCase = (input: GenerateSignalDetailsInput) 
         previousName,
         previousDescription,
         occurrences,
+        classifyScoreEvidence: input.classifyScoreEvidence ?? false,
       }),
-      schema: signalDetailsSchema,
+      schema,
     })
+
+    const scoreEvidence = input.classifyScoreEvidence
+      ? classifiedSignalDetailsSchema.parse(result.object).scoreEvidence
+      : undefined
 
     return {
       name: truncateSignalName(result.object.name),
       description: collapseWhitespace(result.object.description),
+      ...(scoreEvidence === undefined ? {} : { scoreEvidence }),
     } satisfies GeneratedSignalDetails
   }).pipe(Effect.withSpan("issues.generateSignalDetails")) as Effect.Effect<
     GeneratedSignalDetails,

@@ -6,6 +6,7 @@ import {
   type SignalFeedback,
   SignalRepository,
   type SignalRepositoryShape,
+  type SignalScoreEvidence,
 } from "@domain/signals"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
@@ -34,11 +35,15 @@ const seedSignal = (input: {
   readonly resolvedAt?: Date | null
   readonly ignoredAt?: Date | null
   readonly regressedAt?: Date | null
+  readonly mutedAt?: Date | null
+  readonly origin?: "user" | "system"
+  readonly source?: "annotation" | "flagger" | "custom"
   /** Omitted means promoted at creation, which is what every read expects to see. Null makes the row a discovered candidate, provenance included. */
   readonly promotedAt?: Date | null
   readonly deletedAt?: Date
   readonly clusteredAt?: Date
   readonly centroidEmbedding?: readonly number[]
+  readonly scoreEvidence?: SignalScoreEvidence[]
 }) =>
   pg.db.insert(signals).values({
     id: input.id,
@@ -47,11 +52,13 @@ const seedSignal = (input: {
     slug: input.slug,
     name: input.slug,
     description: `${input.slug} description`,
-    source: input.promotedAt === null ? "flagger" : "custom",
-    origin: input.promotedAt === null ? "system" : "user",
+    source: input.source ?? (input.promotedAt === null ? "flagger" : "custom"),
+    origin: input.origin ?? (input.promotedAt === null ? "system" : "user"),
+    ...(input.scoreEvidence === undefined ? {} : { scoreEvidence: input.scoreEvidence }),
     resolvedAt: input.resolvedAt ?? null,
     ignoredAt: input.ignoredAt ?? null,
     regressedAt: input.regressedAt ?? null,
+    mutedAt: input.mutedAt ?? null,
     promotedAt: input.promotedAt === undefined ? input.createdAt : input.promotedAt,
     deletedAt: input.deletedAt ?? null,
     ...(input.clusteredAt ? { clusteredAt: input.clusteredAt } : {}),
@@ -72,6 +79,170 @@ const seedSignal = (input: {
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
   })
+
+describe("SignalRepositoryLive score evidence", () => {
+  const SIGNAL = {
+    id: "sig-evidence".padEnd(24, "e"),
+    slug: "evidence",
+    createdAt: new Date("2026-03-15T00:00:00.000Z"),
+  }
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("reads the database default as diagnostic evidence", async () => {
+    await seedSignal(SIGNAL)
+
+    const signal = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).findByIdForUpdate(SignalId(SIGNAL.id))
+      }),
+    )
+
+    expect(signal.scoreEvidence).toEqual([])
+  })
+
+  it("round-trips classified evidence", async () => {
+    const scoreEvidence: SignalScoreEvidence[] = [
+      { scoreDimension: "reliability", role: "completionOutcome" },
+      { scoreDimension: "safety", role: "exposure" },
+    ]
+    await seedSignal({ ...SIGNAL, scoreEvidence })
+
+    const signal = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).findByIdForUpdate(SignalId(SIGNAL.id))
+      }),
+    )
+
+    expect(signal.scoreEvidence).toEqual(scoreEvidence)
+  })
+})
+
+describe("SignalRepositoryLive.listTableRows score dimension filtering", () => {
+  const CREATED_AT = new Date("2026-03-15T00:00:00.000Z")
+  const OUTCOME = {
+    id: "sig-outcome".padEnd(24, "o"),
+    slug: "outcome",
+    createdAt: CREATED_AT,
+    scoreEvidence: [{ scoreDimension: "outcome", role: "taskOutcome" }] satisfies SignalScoreEvidence[],
+  }
+  const MULTI_DIMENSION = {
+    id: "sig-multi".padEnd(24, "m"),
+    slug: "multi",
+    createdAt: CREATED_AT,
+    scoreEvidence: [
+      { scoreDimension: "reliability", role: "operationalIncident" },
+      { scoreDimension: "cost", role: "spendEfficiency" },
+    ] satisfies SignalScoreEvidence[],
+  }
+  const DIAGNOSTIC = {
+    id: "sig-diagnostic".padEnd(24, "d"),
+    slug: "diagnostic",
+    createdAt: CREATED_AT,
+  }
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+    await seedSignal(OUTCOME)
+    await seedSignal(MULTI_DIMENSION)
+    await seedSignal(DIAGNOSTIC)
+  })
+
+  it("matches any selected dimension and returns each signal once", async () => {
+    const page = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).listTableRows({
+          projectId: PROJECT_ID,
+          limit: 50,
+          offset: 0,
+          scoreDimensions: ["outcome", "cost", "reliability"],
+        })
+      }),
+    )
+
+    expect(page.items.map((issue) => issue.id).sort()).toEqual([OUTCOME.id, MULTI_DIMENSION.id].sort())
+    expect(page.totalCount).toBe(2)
+  })
+
+  it("does not include diagnostic signals in a dimension filter", async () => {
+    const page = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).listTableRows({
+          projectId: PROJECT_ID,
+          limit: 50,
+          offset: 0,
+          scoreDimensions: ["safety"],
+        })
+      }),
+    )
+
+    expect(page.items).toEqual([])
+    expect(page.totalCount).toBe(0)
+  })
+})
+
+describe("SignalRepositoryLive.listScoringEligibleIds", () => {
+  const CREATED_AT = new Date("2026-07-01T00:00:00.000Z")
+  const LIFECYCLE_AT = new Date("2026-08-01T00:00:00.000Z")
+
+  beforeEach(async () => {
+    await pg.db.delete(signals)
+  })
+
+  it("returns promoted system signals unless they are ignored or deleted", async () => {
+    const eligible: Parameters<typeof seedSignal>[0][] = [
+      { id: "eligible-open".padEnd(24, "e"), slug: "eligible-open", createdAt: CREATED_AT },
+      {
+        id: "eligible-resolved".padEnd(24, "r"),
+        slug: "eligible-resolved",
+        createdAt: CREATED_AT,
+        resolvedAt: LIFECYCLE_AT,
+        mutedAt: LIFECYCLE_AT,
+      },
+    ]
+    const ineligible: Parameters<typeof seedSignal>[0][] = [
+      {
+        id: "user-created".padEnd(24, "u"),
+        slug: "user-created",
+        createdAt: CREATED_AT,
+        origin: "user",
+      },
+      {
+        id: "unpromoted".padEnd(24, "p"),
+        slug: "unpromoted",
+        createdAt: CREATED_AT,
+        promotedAt: null,
+      },
+      {
+        id: "ignored".padEnd(24, "i"),
+        slug: "ignored-scoring",
+        createdAt: CREATED_AT,
+        ignoredAt: LIFECYCLE_AT,
+      },
+      {
+        id: "deleted".padEnd(24, "d"),
+        slug: "deleted-scoring",
+        createdAt: CREATED_AT,
+        deletedAt: LIFECYCLE_AT,
+      },
+    ]
+
+    for (const signal of [...eligible, ...ineligible]) {
+      const origin = signal.origin ?? "system"
+      await seedSignal({ ...signal, origin, source: origin === "user" ? "custom" : "flagger" })
+    }
+
+    const ids = await run(
+      Effect.gen(function* () {
+        return yield* (yield* SignalRepository).listScoringEligibleIds({ projectId: PROJECT_ID })
+      }),
+    )
+
+    expect([...ids].sort()).toEqual(eligible.map((signal) => signal.id).sort())
+  })
+})
 
 // A signal created inside the window, and one created well before it. Neither
 // has scores, so occurrence-based membership never applies.

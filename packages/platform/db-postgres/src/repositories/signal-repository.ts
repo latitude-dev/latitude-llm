@@ -81,6 +81,8 @@ type AbsorbedLineageQueryResult = { readonly rows?: ReadonlyArray<{ readonly id:
 // and the discovery opt-ins deliberately sit outside it — see the port docs.
 const userVisibleSignal = and(isNull(signals.deletedAt), isNotNull(signals.promotedAt))
 
+const scoringEligibleSignal = and(userVisibleSignal, eq(signals.origin, "system"), isNull(signals.ignoredAt))
+
 // The exact complement, for the two paths that work on candidates: the
 // consolidation neighbor scan and the expiry sweep.
 const candidateSignal = and(isNull(signals.deletedAt), isNull(signals.promotedAt))
@@ -104,6 +106,7 @@ const toDomainSignal = (row: typeof signals.$inferSelect): Signal =>
     description: row.description,
     source: row.source,
     origin: row.origin,
+    scoreEvidence: row.scoreEvidence,
     filters: row.filters,
     assigneeId: row.assigneeId,
     priority: row.priority,
@@ -211,6 +214,7 @@ const toInsertRow = (issue: Signal, centroidEmbedding: readonly number[] | null)
   description: issue.description,
   source: issue.source,
   origin: issue.origin,
+  scoreEvidence: issue.scoreEvidence,
   filters: issue.filters,
   assigneeId: issue.assigneeId,
   priority: issue.priority,
@@ -260,7 +264,17 @@ const signalRepositoryCoreLive = Layer.effect(
             )
         }),
 
-      listTableRows: ({ projectId, limit, offset, lifecycleGroup, assigneeIds, searchQuery, timeRange, sort }) =>
+      listTableRows: ({
+        projectId,
+        limit,
+        offset,
+        lifecycleGroup,
+        assigneeIds,
+        scoreDimensions,
+        searchQuery,
+        timeRange,
+        sort,
+      }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
@@ -277,6 +291,14 @@ const signalRepositoryCoreLive = Layer.effect(
                   : inArray(signals.assigneeId, assigneeIds)
                 : undefined
               const search = searchQuery?.trim()
+              const scoreDimensionCondition = scoreDimensions?.length
+                ? or(
+                    ...scoreDimensions.map(
+                      (scoreDimension) =>
+                        sql<boolean>`${signals.scoreEvidence} @> ${JSON.stringify([{ scoreDimension }])}::jsonb`,
+                    ),
+                  )
+                : undefined
               const scoreCreatedFromClause = timeRange?.from ? sql`and ${scores.createdAt} >= ${timeRange.from}` : sql``
               const scoreCreatedToClause = timeRange?.to ? sql`and ${scores.createdAt} <= ${timeRange.to}` : sql``
               // A signal belongs in the window if it fired in it OR was created in it, so a
@@ -310,6 +332,7 @@ const signalRepositoryCoreLive = Layer.effect(
                     ? or(isNotNull(signals.resolvedAt), isNotNull(signals.ignoredAt))
                     : undefined,
                 assigneeConditions,
+                scoreDimensionCondition,
                 activityOrCreatedInTimeRange,
                 search ? or(ilike(signals.name, `%${search}%`), ilike(signals.description, `%${search}%`)) : undefined,
               )
@@ -425,6 +448,25 @@ const signalRepositoryCoreLive = Layer.effect(
                     userVisibleSignal,
                     timeRange.from ? gte(signals.createdAt, timeRange.from) : undefined,
                     timeRange.to ? lte(signals.createdAt, timeRange.to) : undefined,
+                  ),
+                ),
+            )
+            .pipe(Effect.map((rows) => rows.map((row) => SignalId(row.id))))
+        }),
+
+      listScoringEligibleIds: ({ projectId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select({ id: signals.id })
+                .from(signals)
+                .where(
+                  and(
+                    eq(signals.organizationId, organizationId),
+                    eq(signals.projectId, projectId),
+                    scoringEligibleSignal,
                   ),
                 ),
             )

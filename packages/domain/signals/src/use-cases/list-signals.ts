@@ -16,15 +16,17 @@ import {
   OrganizationId,
   ProjectId,
   type RepositoryError,
+  type ScoreDimension,
   type SignalId,
   type SqlClient,
+  scoreDimensionSchema,
   signalIdSchema,
 } from "@domain/shared"
 import { pickTraceHistogramBucketSeconds, SessionRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { SIGNAL_PRIORITY_GROUPS, SIGNAL_PRIORITY_ORDER } from "../constants.ts"
-import { type SignalPriority, type SignalSource, SignalState } from "../entities/signal.ts"
+import { type SignalPriority, type SignalScoreEvidence, type SignalSource, SignalState } from "../entities/signal.ts"
 import { deriveSignalLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { buildHistogramBucketScaffold, fillBuckets } from "../histogram-buckets.ts"
 import { SignalRepository, type SignalSearchCandidate, type SignalWithLifecycle } from "../ports/signal-repository.ts"
@@ -70,6 +72,7 @@ const listSignalsInputSchema = z.object({
   lifecycleGroup: signalsLifecycleGroupSchema.optional(),
   /** Restrict to issues assigned to any of these users; `"unassigned"` matches `assigneeId: null`. */
   assigneeIds: z.array(signalAssigneeFilterSchema).min(1).optional(),
+  scoreDimensions: z.array(scoreDimensionSchema).min(1).optional(),
   search: signalSearchSchema.optional(),
   textSearchQuery: z.string().min(1).optional(),
   timeRange: signalsTimeRangeSchema.optional(),
@@ -127,6 +130,7 @@ export interface SignalListItem {
   readonly name: string
   readonly description: string
   readonly source: SignalSource
+  readonly scoreEvidence: readonly SignalScoreEvidence[]
   readonly states: readonly string[]
   readonly assigneeId: string | null
   readonly priority: SignalPriority | null
@@ -340,6 +344,14 @@ const matchesAssigneeFilter = (
   return assigneeIds.includes(candidate.issue.assigneeId ?? UNASSIGNED_FILTER)
 }
 
+const matchesScoreDimensionFilter = (
+  candidate: AnalyticsCandidate,
+  scoreDimensions: readonly ScoreDimension[] | undefined,
+): boolean => {
+  if (scoreDimensions === undefined) return true
+  return candidate.issue.scoreEvidence.some((evidence) => scoreDimensions.includes(evidence.scoreDimension))
+}
+
 const toPriorityGroup = (priority: SignalPriority | null): SignalPriorityGroup => priority ?? "none"
 
 const emptyPriorityCounts = (): Record<SignalPriorityGroup, number> =>
@@ -507,6 +519,7 @@ const toLightListItem = (issue: SignalWithLifecycle, now: Date): SignalListItem 
     name: issue.name,
     description: issue.description,
     source: issue.source,
+    scoreEvidence: issue.scoreEvidence,
     states,
     assigneeId: issue.assigneeId,
     priority: issue.priority,
@@ -634,7 +647,8 @@ export const listSignalsUseCase = (
                 } satisfies AnalyticsCandidate
                 return (
                   matchesLifecycleGroup(candidate, parsed.lifecycleGroup) &&
-                  matchesAssigneeFilter(candidate, parsed.assigneeIds)
+                  matchesAssigneeFilter(candidate, parsed.assigneeIds) &&
+                  matchesScoreDimensionFilter(candidate, parsed.scoreDimensions)
                 )
               })
               return {
@@ -652,6 +666,7 @@ export const listSignalsUseCase = (
             offset: parsed.offset,
             ...(parsed.lifecycleGroup ? { lifecycleGroup: parsed.lifecycleGroup } : {}),
             ...(parsed.assigneeIds ? { assigneeIds: parsed.assigneeIds } : {}),
+            ...(parsed.scoreDimensions ? { scoreDimensions: parsed.scoreDimensions } : {}),
             ...(parsed.textSearchQuery
               ? { searchQuery: parsed.textSearchQuery }
               : parsed.search
@@ -869,11 +884,14 @@ export const listSignalsUseCase = (
     const lifecycleCandidates = analyticsCandidates.filter((candidate) =>
       matchesLifecycleGroup(candidate, parsed.lifecycleGroup),
     )
+    const dimensionCandidates = lifecycleCandidates.filter((candidate) =>
+      matchesScoreDimensionFilter(candidate, parsed.scoreDimensions),
+    )
     // Computed before the assignee filter: the "My issues" badge must keep
     // reflecting the lifecycle/search/time scope while its own filter is on.
-    const assigneeCounts = toAssigneeCounts(lifecycleCandidates)
+    const assigneeCounts = toAssigneeCounts(dimensionCandidates)
     const tableCandidates = sortCandidates(
-      lifecycleCandidates.filter((candidate) => matchesAssigneeFilter(candidate, parsed.assigneeIds)),
+      dimensionCandidates.filter((candidate) => matchesAssigneeFilter(candidate, parsed.assigneeIds)),
       {
         field: parsed.sort.field,
         direction: parsed.sort.direction,
@@ -983,6 +1001,7 @@ export const listSignalsUseCase = (
           name: candidate.issue.name,
           description: candidate.issue.description,
           source: candidate.issue.source,
+          scoreEvidence: candidate.issue.scoreEvidence,
           states: candidate.lifecycleStates,
           assigneeId: candidate.issue.assigneeId,
           priority: candidate.issue.priority,

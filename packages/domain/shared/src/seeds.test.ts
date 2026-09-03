@@ -61,6 +61,28 @@ describe("seed timeline helpers", () => {
     expect(SEED_SIGNAL_COUNT).toBeGreaterThanOrEqual(100)
   })
 
+  it("classifies promoted signal fixtures across every score dimension", async () => {
+    vi.setSystemTime(new Date("2026-04-10T11:23:45.000Z"))
+    vi.resetModules()
+
+    const { SCORE_DIMENSIONS } = await import("./score-evidence.ts")
+    const { SEED_SIGNAL_FIXTURES } = await import("./seed-content/issues.ts")
+
+    const promoted = SEED_SIGNAL_FIXTURES.filter((signal) => !signal.unpromoted)
+    const candidates = SEED_SIGNAL_FIXTURES.filter((signal) => signal.unpromoted)
+    const seededDimensions = new Set(
+      promoted.flatMap((signal) => signal.scoreEvidence.map((item) => item.scoreDimension)),
+    )
+
+    expect(promoted.every((signal) => signal.scoreEvidence.length > 0)).toBe(true)
+    expect(candidates.length).toBeGreaterThan(0)
+    expect(candidates.every((signal) => signal.scoreEvidence.length === 0)).toBe(true)
+    expect(SCORE_DIMENSIONS.every((dimension) => seededDimensions.has(dimension))).toBe(true)
+    expect(
+      SEED_SIGNAL_FIXTURES.every((signal) => signal.scoreEvidence.every((item) => item.role !== "successfulDefense")),
+    ).toBe(true)
+  })
+
   it("includes seeded escalating and regressed issue occurrence shapes for histogram demos", async () => {
     vi.setSystemTime(new Date("2026-04-10T11:23:45.000Z"))
     vi.resetModules()

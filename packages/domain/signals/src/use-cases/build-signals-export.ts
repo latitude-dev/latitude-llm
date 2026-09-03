@@ -1,5 +1,5 @@
 import { buildSignalsExportFilename, type ExportSelection } from "@domain/exports"
-import type { OrganizationId, ProjectId } from "@domain/shared"
+import type { OrganizationId, ProjectId, ScoreDimension } from "@domain/shared"
 import { Effect } from "effect"
 import {
   listSignalsUseCase,
@@ -17,6 +17,7 @@ export interface BuildSignalsExportInput {
   readonly selection?: ExportSelection
   readonly lifecycleGroup?: SignalsLifecycleGroup
   readonly assigneeIds?: readonly SignalAssigneeFilter[]
+  readonly scoreDimensions?: readonly ScoreDimension[]
   readonly search?: {
     readonly query: string
     readonly normalizedEmbedding: number[]
@@ -67,6 +68,7 @@ export const buildSignalsExportUseCase = Effect.fn("issues.buildSignalsExport")(
       offset,
       ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
       ...(input.assigneeIds?.length ? { assigneeIds: [...input.assigneeIds] } : {}),
+      ...(input.scoreDimensions?.length ? { scoreDimensions: [...input.scoreDimensions] } : {}),
       ...(input.search ? { search: input.search } : {}),
       ...(input.timeRange ? { timeRange: input.timeRange } : {}),
       ...(input.sort ? { sort: input.sort } : {}),

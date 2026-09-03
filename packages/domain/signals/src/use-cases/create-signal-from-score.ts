@@ -128,6 +128,7 @@ const buildNewSignalFromScore = ({
     description,
     source,
     origin: "system",
+    scoreEvidence: [],
     assigneeId: null,
     priority: null,
     centroid,

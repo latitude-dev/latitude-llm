@@ -165,6 +165,25 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
           return [...lastSeenBySlug.entries()].sort(([, a], [, b]) => b.getTime() - a.getTime()).map(([slug]) => slug)
         })(),
       ),
+    listFlaggerSlugSampleBySignalId: ({ projectId, signalId }) =>
+      Effect.succeed(
+        [...scores.values()]
+          .filter(
+            (score) =>
+              score.projectId === projectId &&
+              score.signalId === signalId &&
+              score.draftedAt === null &&
+              !score.passed &&
+              !score.errored,
+          )
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, SIGNAL_FLAGGER_SLUG_SAMPLE_LIMIT)
+          .map((score) => {
+            if (score.sourceType !== "annotation" || score.sourceId !== "SYSTEM") return null
+            const slug = (score.metadata as { flaggerSlug?: unknown }).flaggerSlug
+            return typeof slug === "string" && slug.length > 0 ? slug : null
+          }),
+      ),
     ...overrides,
   }
 

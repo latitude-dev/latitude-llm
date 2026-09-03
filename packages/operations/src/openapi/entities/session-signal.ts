@@ -28,6 +28,7 @@ export const toSessionSignalResponse = (signal: SessionSignal, organizationId: s
   name: signal.name,
   description: signal.description,
   source: signal.source as (typeof SIGNAL_SOURCES)[number],
+  scoreEvidence: signal.scoreEvidence.map((evidence) => ({ ...evidence })),
   states: [...signal.states] as (typeof SIGNAL_STATES)[number][],
   resolvedAt: signal.resolvedAt ? signal.resolvedAt.toISOString() : null,
   ignoredAt: signal.ignoredAt ? signal.ignoredAt.toISOString() : null,

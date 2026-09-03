@@ -38,6 +38,7 @@ const makeSignal = (id: string, overrides: Partial<Signal> = {}): Signal => ({
   description: "The assistant reveals its system prompt when asked indirectly.",
   source: "annotation",
   origin: "system",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,

@@ -1078,6 +1078,29 @@ describe("ScoreRepositoryLive + score use cases", () => {
           metadata: { rawFeedback: "system without slug" },
           draftedAt: null,
         })
+        const passed = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          sourceType: "annotation",
+          sourceId: "SYSTEM",
+          signalId: signalA,
+          value: 1,
+          passed: true,
+          feedback: "passing score",
+          metadata: { rawFeedback: "passing score", flaggerSlug: "passed" },
+          draftedAt: null,
+        })
+        const errored = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          sourceType: "annotation",
+          sourceId: "SYSTEM",
+          signalId: signalA,
+          value: 0,
+          passed: false,
+          feedback: "errored score",
+          metadata: { rawFeedback: "errored score", flaggerSlug: "errored" },
+          error: "generation failed",
+          draftedAt: null,
+        })
         const otherSignal = yield* writeScoreUseCase({
           projectId: annotationProjectId,
           sourceType: "annotation",
@@ -1089,7 +1112,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
           metadata: { rawFeedback: "different issue", flaggerSlug: "should-be-ignored" },
           draftedAt: null,
         })
-        return { alphaOld, alphaMid, betaNewest, gammaDraft, uiNotSystem, systemNoSlug, otherSignal }
+        return { alphaOld, alphaMid, betaNewest, gammaDraft, uiNotSystem, systemNoSlug, passed, errored, otherSignal }
       }).pipe(createWriteProvider(database, organizationId)),
     )
 
@@ -1118,7 +1141,19 @@ describe("ScoreRepositoryLive + score use cases", () => {
       }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    expect(slugs).toEqual(["beta", "alpha"])
+    expect(slugs).toEqual(["errored", "passed", "beta", "alpha"])
+
+    const sample = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listFlaggerSlugSampleBySignalId({
+          projectId: annotationProjectId,
+          signalId: signalA,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(sample).toEqual([null, null, "beta", "alpha", "alpha"])
   })
 
   it("countDistinctSessionsBySignalId counts sessions, falls back to trace then score id, and honors the window", async () => {

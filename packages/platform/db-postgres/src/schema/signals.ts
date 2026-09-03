@@ -1,6 +1,6 @@
 import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { FilterSet, SignalOrigin } from "@domain/shared"
-import type { SignalCentroid, SignalFeedback, SignalPriority, SignalSource } from "@domain/signals"
+import type { SignalCentroid, SignalFeedback, SignalPriority, SignalScoreEvidence, SignalSource } from "@domain/signals"
 import { sql } from "drizzle-orm"
 import { customType, index, jsonb, text, uniqueIndex, uuid, varchar, vector } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
@@ -21,6 +21,7 @@ export const signals = latitudeSchema.table(
     description: text("description").notNull(), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation
     source: varchar("source", { length: 32 }).$type<SignalSource>().notNull(), // provenance of the first creating score
     origin: varchar("origin", { length: 16 }).$type<SignalOrigin>().default("system").notNull(), // immutable user|system; how the signal was created. Gates annotation assignment; distinct from `source`. Existing rows backfilled to 'system'.
+    scoreEvidence: jsonb("score_evidence").$type<SignalScoreEvidence[]>().default([]).notNull(),
     filters: jsonb("filters").$type<FilterSet>(), // nullable FilterSet pre-gate; only meaningful alongside an evaluation
     assigneeId: cuid("assignee_id", { default: false }), // nullable; user (org member) assigned to triage this issue. No FK (repo convention); not auto-generated.
     priority: varchar("priority", { length: 16 }).$type<SignalPriority>(), // nullable; manual triage priority (low/medium/high/urgent). Null = unset.

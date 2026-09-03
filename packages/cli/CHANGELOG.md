@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.11.0] - 2026-09-02
+
+### Added
+
+- Signal responses from `latitude signals list`, `latitude signals get`, `latitude sessions list-signals`, and `latitude sessions get-signal` include a required `scoreEvidence` list. Each entry identifies an Agent Score dimension and the role the signal plays in it. An empty list marks a diagnostic signal.
+
 ## [7.10.0] - 2026-08-17
 
 ### Added

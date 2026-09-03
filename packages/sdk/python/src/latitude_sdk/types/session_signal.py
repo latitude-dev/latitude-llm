@@ -8,6 +8,7 @@ from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
 from .session_signal_source import SessionSignalSource
 from .session_signal_states_item import SessionSignalStatesItem
+from .signal_score_evidence import SignalScoreEvidence
 
 
 class SessionSignal(UniversalBaseModel):
@@ -46,6 +47,14 @@ class SessionSignal(UniversalBaseModel):
     Where the signal originated from.
     """
 
+    score_evidence: typing_extensions.Annotated[
+        typing.List[SignalScoreEvidence],
+        FieldMetadata(alias="scoreEvidence"),
+        pydantic.Field(
+            alias="scoreEvidence",
+            description="Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only.",
+        ),
+    ]
     states: typing.List[SessionSignalStatesItem] = pydantic.Field()
     """
     Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`).

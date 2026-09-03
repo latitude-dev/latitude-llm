@@ -1,5 +1,15 @@
 import { scoreSourceTypeSchema, scoreValueSchema } from "@domain/scores"
-import { cuidSchema, filterSetSchema, SLUG_MAX_LENGTH, signalIdSchema, signalOriginSchema } from "@domain/shared"
+import {
+  costScoreEvidenceSchema,
+  cuidSchema,
+  filterSetSchema,
+  outcomeScoreEvidenceSchema,
+  reliabilityScoreEvidenceSchema,
+  SLUG_MAX_LENGTH,
+  signalIdSchema,
+  signalOriginSchema,
+  speedScoreEvidenceSchema,
+} from "@domain/shared"
 import { z } from "zod"
 import { SIGNAL_NAME_MAX_LENGTH, SIGNAL_PRIORITIES, SIGNAL_SOURCES, SIGNAL_STATES } from "../constants.ts"
 
@@ -58,6 +68,20 @@ export const signalFeedbackSchema = z.object({
 
 export type SignalFeedback = z.infer<typeof signalFeedbackSchema>
 
+const signalSafetyScoreEvidenceSchema = z.object({
+  scoreDimension: z.literal("safety").describe("Agent Score dimension this evidence informs."),
+  role: z.enum(["confirmedHarm", "exposure"]).describe("How this evidence informs the dimension."),
+})
+
+export const signalScoreEvidenceSchema = z.discriminatedUnion("scoreDimension", [
+  outcomeScoreEvidenceSchema,
+  reliabilityScoreEvidenceSchema,
+  costScoreEvidenceSchema,
+  speedScoreEvidenceSchema,
+  signalSafetyScoreEvidenceSchema,
+])
+export type SignalScoreEvidence = z.infer<typeof signalScoreEvidenceSchema>
+
 export const signalSchema = z.object({
   id: signalIdSchema, // CUID issue identifier
   organizationId: cuidSchema, // owning organization
@@ -67,6 +91,7 @@ export const signalSchema = z.object({
   description: z.string().min(1), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation; helps both human understanding and BM25 matching
   source: signalSourceSchema, // provenance of the first creating score
   origin: signalOriginSchema, // immutable user|system; how the signal was created. Gates annotation assignment; distinct from `source`.
+  scoreEvidence: z.array(signalScoreEvidenceSchema), // latched dimension-role classification; empty means diagnostic
   filters: filterSetSchema.nullish(), // FilterSet pre-gate for the evaluation; null/absent when unset
   assigneeId: cuidSchema.nullable(), // user (org member) manually assigned to triage this issue; null when unassigned
   priority: signalPrioritySchema.nullable(), // manual triage priority; null when unset

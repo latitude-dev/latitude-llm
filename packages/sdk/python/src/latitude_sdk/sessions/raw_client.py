@@ -435,7 +435,7 @@ class RawSessionsClient:
         self, project_slug: str, session_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[SessionSignals]:
         """
-        Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
+        Returns the signals that occurred in the session, including each signal's `scoreEvidence` and occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
 
         Parameters
         ----------
@@ -519,7 +519,7 @@ class RawSessionsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SessionSignal]:
         """
-        Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
+        Returns one signal by slug, including its `scoreEvidence` and occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
 
         Parameters
         ----------
@@ -1177,7 +1177,7 @@ class AsyncRawSessionsClient:
         self, project_slug: str, session_id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[SessionSignals]:
         """
-        Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
+        Returns the signals that occurred in the session, including each signal's `scoreEvidence` and occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
 
         Parameters
         ----------
@@ -1261,7 +1261,7 @@ class AsyncRawSessionsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SessionSignal]:
         """
-        Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
+        Returns one signal by slug, including its `scoreEvidence` and occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
 
         Parameters
         ----------

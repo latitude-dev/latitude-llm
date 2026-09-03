@@ -980,7 +980,7 @@ Returns the memory writes the session made as per-record before/after diffs. Pas
 
 #### `latitude sessions get-signal`
 
-Returns one signal by slug, with occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
+Returns one signal by slug, including its `scoreEvidence` and occurrence stats scoped to the session. Returns 404 when the signal has no occurrences in the session.
 
 `GET /v1/projects/{projectSlug}/sessions/{sessionId}/signals/{signalSlug}`
 
@@ -1003,7 +1003,7 @@ Returns a cursor-paginated page of sessions in the project. A session groups the
 
 #### `latitude sessions list-signals`
 
-Returns the signals that occurred in the session, with occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
+Returns the signals that occurred in the session, including each signal's `scoreEvidence` and occurrence stats scoped to the session's traces. Ordered by most recent occurrence first.
 
 `GET /v1/projects/{projectSlug}/sessions/{sessionId}/signals`
 
@@ -1078,7 +1078,7 @@ Enqueues an asynchronous CSV export. The response returns immediately; the downl
 
 #### `latitude signals get`
 
-Returns the full-history detail view of one signal: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.
+Returns the full-history detail view of one signal, including its `scoreEvidence`, lifecycle `states`, lifetime activity stats, occurrence trend, active evaluations, and current monitoring state.
 
 `GET /v1/projects/{projectSlug}/signals/{signalSlug}`
 
@@ -1100,7 +1100,7 @@ Marks each signal in `signalIds` as ignored, archiving it. Monitoring is stopped
 
 #### `latitude signals list`
 
-Returns a cursor-paginated page of signals in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
+Returns a cursor-paginated page of signals in the project. Each item includes its `scoreEvidence`, lifecycle `states`, and time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedSessionsPercent`, `trend`, and `tags`.
 
 `GET /v1/projects/{projectSlug}/signals`
 

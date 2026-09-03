@@ -29,6 +29,7 @@ const makeUserSignal = (): Signal => ({
   description: "Checkout responses take too long",
   source: "custom",
   origin: "user",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,

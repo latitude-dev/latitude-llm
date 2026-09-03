@@ -79,6 +79,7 @@ export const createSignalUseCase = (input: CreateSignalInput) =>
           // user signals carry no score-provenance; `origin` is the authoritative user|system marker
           source: "custom",
           origin: "user",
+          scoreEvidence: [],
           filters: parsed.filters ?? null,
           assigneeId: null,
           priority: parsed.priority ?? null,

@@ -17,6 +17,8 @@ export interface SignalDetail {
     description: string;
     /** Where the signal originated from. */
     source: SignalDetail.Source;
+    /** Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only. */
+    scoreEvidence: Latitude.SignalScoreEvidence[];
     /** Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`). */
     states: SignalDetail.States.Item[];
     /** ISO-8601 timestamp at which the signal was resolved, or `null`. */

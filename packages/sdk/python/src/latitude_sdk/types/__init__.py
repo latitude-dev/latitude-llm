@@ -780,6 +780,24 @@ if typing.TYPE_CHECKING:
     from .signal_monitoring_state_generating import SignalMonitoringStateGenerating
     from .signal_monitoring_state_idle import SignalMonitoringStateIdle
     from .signal_monitoring_state_realigning import SignalMonitoringStateRealigning
+    from .signal_score_evidence import (
+        SignalScoreEvidence,
+        SignalScoreEvidence_Cost,
+        SignalScoreEvidence_Outcome,
+        SignalScoreEvidence_Reliability,
+        SignalScoreEvidence_Safety,
+        SignalScoreEvidence_Speed,
+    )
+    from .signal_score_evidence_cost import SignalScoreEvidenceCost
+    from .signal_score_evidence_cost_role import SignalScoreEvidenceCostRole
+    from .signal_score_evidence_outcome import SignalScoreEvidenceOutcome
+    from .signal_score_evidence_outcome_role import SignalScoreEvidenceOutcomeRole
+    from .signal_score_evidence_reliability import SignalScoreEvidenceReliability
+    from .signal_score_evidence_reliability_role import SignalScoreEvidenceReliabilityRole
+    from .signal_score_evidence_safety import SignalScoreEvidenceSafety
+    from .signal_score_evidence_safety_role import SignalScoreEvidenceSafetyRole
+    from .signal_score_evidence_speed import SignalScoreEvidenceSpeed
+    from .signal_score_evidence_speed_role import SignalScoreEvidenceSpeedRole
     from .signal_source import SignalSource
     from .signal_states_item import SignalStatesItem
     from .signal_trend_bucket import SignalTrendBucket
@@ -1577,6 +1595,22 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SignalMonitoringState_Generating": ".signal_monitoring_state",
     "SignalMonitoringState_Idle": ".signal_monitoring_state",
     "SignalMonitoringState_Realigning": ".signal_monitoring_state",
+    "SignalScoreEvidence": ".signal_score_evidence",
+    "SignalScoreEvidenceCost": ".signal_score_evidence_cost",
+    "SignalScoreEvidenceCostRole": ".signal_score_evidence_cost_role",
+    "SignalScoreEvidenceOutcome": ".signal_score_evidence_outcome",
+    "SignalScoreEvidenceOutcomeRole": ".signal_score_evidence_outcome_role",
+    "SignalScoreEvidenceReliability": ".signal_score_evidence_reliability",
+    "SignalScoreEvidenceReliabilityRole": ".signal_score_evidence_reliability_role",
+    "SignalScoreEvidenceSafety": ".signal_score_evidence_safety",
+    "SignalScoreEvidenceSafetyRole": ".signal_score_evidence_safety_role",
+    "SignalScoreEvidenceSpeed": ".signal_score_evidence_speed",
+    "SignalScoreEvidenceSpeedRole": ".signal_score_evidence_speed_role",
+    "SignalScoreEvidence_Cost": ".signal_score_evidence",
+    "SignalScoreEvidence_Outcome": ".signal_score_evidence",
+    "SignalScoreEvidence_Reliability": ".signal_score_evidence",
+    "SignalScoreEvidence_Safety": ".signal_score_evidence",
+    "SignalScoreEvidence_Speed": ".signal_score_evidence",
     "SignalSource": ".signal_source",
     "SignalStatesItem": ".signal_states_item",
     "SignalTrendBucket": ".signal_trend_bucket",
@@ -2402,6 +2436,22 @@ __all__ = [
     "SignalMonitoringState_Generating",
     "SignalMonitoringState_Idle",
     "SignalMonitoringState_Realigning",
+    "SignalScoreEvidence",
+    "SignalScoreEvidenceCost",
+    "SignalScoreEvidenceCostRole",
+    "SignalScoreEvidenceOutcome",
+    "SignalScoreEvidenceOutcomeRole",
+    "SignalScoreEvidenceReliability",
+    "SignalScoreEvidenceReliabilityRole",
+    "SignalScoreEvidenceSafety",
+    "SignalScoreEvidenceSafetyRole",
+    "SignalScoreEvidenceSpeed",
+    "SignalScoreEvidenceSpeedRole",
+    "SignalScoreEvidence_Cost",
+    "SignalScoreEvidence_Outcome",
+    "SignalScoreEvidence_Reliability",
+    "SignalScoreEvidence_Safety",
+    "SignalScoreEvidence_Speed",
     "SignalSource",
     "SignalStatesItem",
     "SignalTrendBucket",

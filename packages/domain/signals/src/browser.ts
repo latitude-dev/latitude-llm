@@ -66,12 +66,14 @@ export {
   type SignalCentroid,
   type SignalFeedback,
   SignalPriority,
+  type SignalScoreEvidence,
   type SignalSource,
   type SignalState,
   signalCentroidSchema,
   signalFeedbackSchema,
   signalPrioritySchema,
   signalSchema,
+  signalScoreEvidenceSchema,
   signalSourceSchema,
   signalStateSchema,
 } from "./entities/signal.ts"
@@ -135,6 +137,16 @@ export {
   rankRelatedSignals,
   semanticRelatednessScore,
 } from "./related-signals.ts"
+export {
+  isSignalEligibleForScoring,
+  type SignalScoringEligibility,
+} from "./score-eligibility.ts"
+export {
+  findDominantMappedSignalFlaggerSlug,
+  getSignalScoreEvidenceForFlagger,
+  isMappedSignalFlaggerSlug,
+  type MappedSignalFlaggerSlug,
+} from "./score-evidence.ts"
 export {
   buildSignalGenerationResultKey,
   SIGNAL_GENERATION_RESULT_TTL_SECONDS,

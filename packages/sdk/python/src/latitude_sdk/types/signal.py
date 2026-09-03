@@ -6,6 +6,7 @@ import pydantic
 import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
 from ..core.serialization import FieldMetadata
+from .signal_score_evidence import SignalScoreEvidence
 from .signal_source import SignalSource
 from .signal_states_item import SignalStatesItem
 from .signal_trend_bucket import SignalTrendBucket
@@ -47,6 +48,14 @@ class Signal(UniversalBaseModel):
     Where the signal originated from.
     """
 
+    score_evidence: typing_extensions.Annotated[
+        typing.List[SignalScoreEvidence],
+        FieldMetadata(alias="scoreEvidence"),
+        pydantic.Field(
+            alias="scoreEvidence",
+            description="Agent Score dimension and evidence-role pairs informed by this signal. An empty list means the signal is diagnostic only.",
+        ),
+    ]
     states: typing.List[SignalStatesItem] = pydantic.Field()
     """
     Active lifecycle states. A signal may carry multiple states at once (e.g. `escalating` + `new`).

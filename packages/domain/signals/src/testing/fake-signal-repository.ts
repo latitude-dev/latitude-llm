@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
 import type { SignalLifecycleFlags, SignalRepositoryShape, SignalWithLifecycle } from "../ports/signal-repository.ts"
+import { isSignalEligibleForScoring } from "../score-eligibility.ts"
 
 const DEFAULT_LIFECYCLE: SignalLifecycleFlags = {
   isEscalating: false,
@@ -255,7 +256,17 @@ export const createFakeSignalRepository = (
         }
       }),
 
-    listTableRows: ({ projectId, limit, offset, lifecycleGroup, assigneeIds, searchQuery, timeRange, sort }) =>
+    listTableRows: ({
+      projectId,
+      limit,
+      offset,
+      lifecycleGroup,
+      assigneeIds,
+      scoreDimensions,
+      searchQuery,
+      timeRange,
+      sort,
+    }) =>
       Effect.sync(() => {
         const query = searchQuery?.trim().toLowerCase()
         const filtered = [...issues.values()]
@@ -266,6 +277,12 @@ export const createFakeSignalRepository = (
             if (lifecycleGroup === "active" && archived) return false
             if (lifecycleGroup === "archived" && !archived) return false
             if (assigneeIds?.length && !assigneeIds.includes(issue.assigneeId ?? "unassigned")) return false
+            if (
+              scoreDimensions?.length &&
+              !issue.scoreEvidence.some((evidence) => scoreDimensions.includes(evidence.scoreDimension))
+            ) {
+              return false
+            }
             if (timeRange?.from || timeRange?.to) {
               const inWindow = (date: Date) =>
                 (!timeRange.from || date >= timeRange.from) && (!timeRange.to || date <= timeRange.to)
@@ -307,6 +324,13 @@ export const createFakeSignalRepository = (
               (!timeRange.from || issue.createdAt >= timeRange.from) &&
               (!timeRange.to || issue.createdAt <= timeRange.to),
           )
+          .map((issue) => issue.id),
+      ),
+
+    listScoringEligibleIds: ({ projectId }) =>
+      Effect.sync(() =>
+        [...issues.values()]
+          .filter((issue) => issue.projectId === projectId && isSignalEligibleForScoring(issue))
           .map((issue) => issue.id),
       ),
 

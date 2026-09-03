@@ -44,6 +44,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   description: "The assistant exposes secrets in its replies.",
   source: "flagger",
   origin: "system",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,

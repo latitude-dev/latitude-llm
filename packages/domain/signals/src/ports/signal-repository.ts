@@ -1,4 +1,4 @@
-import type { NotFoundError, ProjectId, RepositoryError, SignalId, SqlClient } from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, ScoreDimension, SignalId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Signal, SignalFeedback } from "../entities/signal.ts"
 
@@ -64,6 +64,7 @@ export interface ListSignalsRepositoryInput {
 export interface ListSignalTableRowsRepositoryInput extends ListSignalsRepositoryInput {
   readonly lifecycleGroup?: "active" | "archived"
   readonly assigneeIds?: readonly string[]
+  readonly scoreDimensions?: readonly ScoreDimension[]
   readonly searchQuery?: string
   readonly timeRange?: {
     readonly from?: Date
@@ -299,6 +300,14 @@ export interface SignalRepositoryShape {
       readonly from?: Date
       readonly to?: Date
     }
+  }): Effect.Effect<readonly SignalId[], RepositoryError, SqlClient>
+  /**
+   * Signal ids whose assigned scores may enter benchmark evidence. A score's
+   * non-null signal id is not enough: the signal must be promoted,
+   * system-origin, non-ignored, and non-deleted.
+   */
+  listScoringEligibleIds(input: {
+    readonly projectId: ProjectId
   }): Effect.Effect<readonly SignalId[], RepositoryError, SqlClient>
 }
 

@@ -54,6 +54,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => ({
   description: "Checkout responses take too long",
   source: "custom",
   origin: "user",
+  scoreEvidence: [],
   filters: null,
   assigneeId: null,
   priority: null,

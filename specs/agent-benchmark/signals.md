@@ -13,7 +13,8 @@ sessions it touches and the consequence measured on those sessions.
 
 ## Scoring metadata
 
-A promoted signal carries a `scoreEvidence` list. Each entry contains:
+Every canonical signal carries a non-null `scoreEvidence` list. It starts empty and is exposed as a
+required list in domain and public contracts. Each entry contains:
 
 ```ts
 type SignalScoreEvidence =
@@ -36,7 +37,9 @@ several dimensions. List length is not a multiplier because the dimensions use d
 and no role owns points.
 
 An empty list means the signal is diagnostic only. It still appears on Signals and can be promoted,
-assigned, resolved, and monitored. It does not silently route to Outcome.
+assigned, resolved, and monitored. It does not silently route to Outcome. Unpromoted candidates,
+user-created signals, historical signals backfilled during this rollout, and promoted signals whose
+model classification and static fallback are unavailable or empty all use an empty list.
 
 ### Role semantics
 
@@ -59,10 +62,16 @@ Signal detail shows dimension chips derived from `scoreEvidence`. The evidence r
 effect appear in the impact section, with "effect not yet measured" when the role is known but the
 consequence is not.
 
-The Signals list can filter and group by score dimension. A signal that informs several dimensions
-appears once with several chips. The session Signals tab shows the same chips. Session assessment
-attaches the signal to one chronological evidence item and applies its roles per dimension as defined
-in [`session-assessment.md`](session-assessment.md#signals).
+The Signals list can filter by score dimension but does not group by it. Selecting several
+dimensions matches signals that inform any selected dimension. A signal that informs several
+dimensions appears once with several chips. The session Signals tab shows the same chips. Surfaces
+show a Diagnostic badge instead of a dimension chip when `scoreEvidence` is empty
+or the signal is ignored. Ignored signals keep any stored classification in the
+API, but list, detail, and session badges do not treat those roles as live
+scoring evidence.
+Session assessment attaches the signal to one chronological evidence item and applies its roles per
+dimension as defined in [`session-assessment.md`](session-assessment.md#signals). Surfaces organized
+into separate dimension sections may show the same signal in each applicable section.
 
 Benchmark evidence lists include only signals with at least one eligible occurrence in the selected
 window. Promotion, lifecycle state, or a historical occurrence does not create a current item.
@@ -73,7 +82,7 @@ window. Promotion, lifecycle state, or a historical occurrence does not create a
 regenerated every eight hours, but scoring roles cannot move between dimensions without a deliberate
 reclassification and scoring-version boundary.
 
-Most flagger-derived signals use a static mapping:
+When model generation fails, flagger-derived signals can use this static fallback mapping:
 
 | Flagger | Evidence roles |
 | --- | --- |
@@ -96,9 +105,23 @@ Most flagger-derived signals use a static mapping:
 The condition on tool, finish, and safety findings is stored on the occurrence. A static signal role
 does not turn every occurrence into a terminal failure or confirmed harm.
 
-Signals with no dominant flagger slug receive roles from the model call that already generates their
-name and description. The prompt defines the estimands and requires evidence for every role. The model
-may return an empty list. No extra generation is needed.
+A mapped flagger slug is dominant when it occurs on more than half of the sample of up to 200 most
+recent assigned scores that are published, failed, and non-errored. The denominator includes every
+qualifying score, including scores with a missing, unknown, or unmapped slug. A tie, a mixed sample
+without a strict majority, or a strict majority for an unmapped slug has no dominant mapped flagger.
+Static fallback classification depends only on this sample and is read only when detail generation
+is skipped or fails.
+
+Every normal promotion uses one model call to generate the signal's name, description, and evidence
+roles together, regardless of whether its scores have a dominant mapped flagger. The prompt defines
+the estimands and requires evidence for every supported role. The model may return an empty list,
+and a successful model classification takes precedence over the static mapping.
+
+Promotion still succeeds when detail generation is skipped or fails. The failure path samples the
+signal's flagger slugs and uses the static roles for a dominant mapped flagger. Otherwise the signal
+is promoted with an empty list and remains diagnostic. The empty list is a valid latched
+classification, so a later detail refresh cannot silently classify the signal or move it between
+dimensions.
 
 ## Which signals enter estimation
 
@@ -217,9 +240,11 @@ estimator diagnostics and are not stored in daily score snapshots.
 
 ## Backfill
 
-Existing promoted signals receive `scoreEvidence` once. The static flagger table handles signals with
-a dominant slug. The remaining annotation-origin and mixed-source signals use the existing details
-generation path, but user-created origin remains ineligible for direct scoring.
+The Postgres migration assigns an empty `scoreEvidence` list to every existing signal and makes the
+column non-null with an empty-list default. The rollout does not run model generation, inspect
+historical flagger slugs, or assign Outcome as a fallback. Existing signals therefore remain
+diagnostic until a future explicit reclassification process changes them at a scoring-version
+boundary.
 
 Backfill does not invent historical screening probabilities. Old occurrences without measurable
 selection remain examples and counts until a full score window of usable decisions accumulates.

@@ -35,6 +35,7 @@ const makeSignal = (overrides: Partial<Signal> = {}): Signal => {
     description: "The assistant leaks API tokens.",
     source: "annotation",
     origin: "system",
+    scoreEvidence: [],
     filters: null,
     assigneeId: null,
     priority: null,

@@ -184,9 +184,10 @@ export const createSignalsWorker = async ({
         ),
         Effect.asVoid,
       ),
-    // Turn a qualified signal into a promoted one: name it from its cluster,
-    // stamp `promoted_at`, emit `SignalPromoted`. The announcements hang off
-    // that event, so nothing is published from here.
+    // Turn a qualified signal into a promoted one: generate its details and
+    // evidence roles from the cluster, stamp `promoted_at`, emit
+    // `SignalPromoted`. The announcements hang off that event, so nothing is
+    // published from here.
     //
     // Billing blocking must not block promotion. The authorization only decides
     // whether a model call is affordable, and `promoteSignalUseCase` already
@@ -216,7 +217,7 @@ export const createSignalsWorker = async ({
 
         if (meteringScope === null) {
           logger.info(
-            `Promoting ${payload.projectId}/${payload.signalId} without a generated name — AI unavailable or billing blocked`,
+            `Promoting ${payload.projectId}/${payload.signalId} without generated details — AI unavailable or billing blocked`,
           )
         }
 

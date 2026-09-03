@@ -35,6 +35,18 @@ Signals and live taxonomy both use `@domain/shared/centroid` for decayed weighte
 - Postgres also stores the canonical score rows and signal assignment state that discovery mutates.
 - ClickHouse stores immutable score analytics rows plus signal trend analytics.
 
+## Scoring metadata
+
+`signals.score_evidence` is a non-null JSONB list of dimension and evidence-role pairs. The canonical Signal entity requires the same list, and public project and session signal responses return it as `scoreEvidence`. An empty list means the signal is diagnostic and does not contribute to benchmark scoring. Signal evidence supports outcome, reliability, cost, speed, and safety; the signal safety roles are `confirmedHarm` and `exposure`. `successfulDefense` belongs to the broader score evidence contract but cannot classify a signal because signals represent failures.
+
+Signal detail pages and drawers show the unique dimensions from `scoreEvidence` as chips in canonical dimension order. The Signals list renders the same chips in one row per signal and provides a URL-backed multi-select dimension filter. The session Signals tab uses the same one-row dimension chips. Multiple selected dimensions use OR semantics, and multiple evidence roles for the same dimension never duplicate a row or chip. A signal with no scoring roles, or an ignored signal, displays a Diagnostic badge with an explanation that it does not contribute to Agent Score. Ignored signals can still store a classification in the API; the badges do not present those roles as live scoring evidence. Diagnostic signals do not match dimension filters.
+
+The database default is `[]`. Signal creation paths initialize the field explicitly, and rows that predate the column receive the empty list from the schema migration. Historical signals are not classified by a model or static mapping.
+
+Promotion assigns `scoreEvidence` once. A normal promotion uses one model call to generate the signal's name, description, and evidence roles together. Successful model output is authoritative even when the signal's scores have a dominant mapped flagger. If generation is disabled or fails, promotion samples up to 200 of the signal's newest published, failed, non-errored scores. A mapped system flagger supplies fallback roles only when its slug occurs in a strict majority of the whole sample; scores with missing, unknown, or unmapped slugs remain in the denominator. Without that fallback, promotion stores `[]`. Later detail refreshes update only the name and description, so they cannot reclassify the signal.
+
+A signal id alone does not make a score eligible for benchmark evidence. The assigned signal must be system-created and promoted, and it cannot be ignored or deleted. Resolution, muting, regression, priority, and assignment state do not affect eligibility. Benchmark readers obtain eligible signal ids from the Signal repository instead of treating every non-empty ClickHouse `signal_id` as evidence. Ignoring a signal excludes all of its assigned scores from current and future calculations without rewriting existing snapshots.
+
 ## Background Tasks
 
 Signal discovery uses the existing Temporal-backed workflow abstraction in `apps/workflows`, while queue tasks in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers` continue to dispatch the upstream single-step triggers, including the throttled `signals:refresh` task.

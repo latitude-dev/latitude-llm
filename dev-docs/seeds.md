@@ -157,6 +157,7 @@ Important rules:
 - negative examples remain part of the same story and act as counter-examples rather than unrelated filler
 - some issues intentionally stop before evaluation creation so that issue-to-evaluation workflows still have real seed targets
 - some issues are evaluation-linked and some are custom-score-backed only so the issue UI can exercise both linked-evaluation and no-linked-evaluation states
+- promoted issues carry explicit score-evidence fixtures spanning every Agent Score dimension; unpromoted candidates remain diagnostic with no score evidence
 - the issue timeline should span roughly the last three months relative to when the seed runs, not a fixed historical week
 - the default issue list should include both visible and intentionally denoised issues so the repository can exercise `MIN_OCCURRENCES_FOR_VISIBILITY` behavior, but new seed work should deepen the focused τ³ support issue families before adding more issue families
 
