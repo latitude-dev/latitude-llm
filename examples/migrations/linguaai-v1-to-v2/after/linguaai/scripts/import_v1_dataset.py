@@ -34,7 +34,7 @@ def main(csv_path: str, dataset_slug: str) -> int:
         for r in rows
     ]
     client.datasets.insert_rows(project, dataset_slug, rows=payload)
-    print(f"inserted {len(payload)} rows into {project}/{dataset_slug}")
+    print(f"inserted {len(payload)} rows into dataset {dataset_slug}")
     return 0
 
 
