@@ -1,20 +1,14 @@
 import { defineConfig } from "tsdown"
 
 export default defineConfig({
-  entry: ["src/server.ts", "src/scripts/backfill-trace-search.ts"],
+  entry: ["src/server.ts", "src/scripts/backfill-trace-search.ts", "src/scripts/backfill-signal-score-evidence.ts"],
   format: ["cjs"],
   target: "node25",
   outDir: "dist",
   platform: "node",
   deps: {
     alwaysBundle: [/@(platform|domain|repo)\/.*/],
-    neverBundle: [
-      "@temporalio/worker",
-      "quickjs-emscripten",
-      /^@traceloop\//,
-      /^@langchain\//,
-      /^langchain($|\/)/,
-    ],
+    neverBundle: ["@temporalio/worker", "quickjs-emscripten", /^@traceloop\//, /^@langchain\//, /^langchain($|\/)/],
   },
   sourcemap: true,
   shims: true,

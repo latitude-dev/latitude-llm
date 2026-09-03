@@ -1,0 +1,166 @@
+name: Backfill Signal Score Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RUN SIGNAL SCORE EVIDENCE BACKFILL"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: signal-score-evidence-backfill-production
+  cancel-in-progress: false
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Validate confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "${CONFIRMATION}" != "RUN SIGNAL SCORE EVIDENCE BACKFILL" ]; then
+            echo "Confirmation did not match. Nothing was launched."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: Launch one-time ECS task
+        env:
+          AWS_REGION: eu-central-1
+          CLUSTER: latitude-production-cluster
+          SERVICE: latitude-production-workers
+          TASK_FAMILY: latitude-production-signal-score-evidence-backfill
+          LOG_GROUP: /ecs/latitude-production/workers
+        run: |
+          set -euo pipefail
+
+          if aws ecs describe-task-definition --task-definition "${TASK_FAMILY}" >/dev/null 2>&1; then
+            echo "${TASK_FAMILY} already exists, so this one-time backfill has already been launched or reserved."
+            exit 1
+          fi
+
+          SERVICE_JSON=$(aws ecs describe-services \
+            --cluster "${CLUSTER}" \
+            --services "${SERVICE}" \
+            --output json)
+
+          if [ "$(echo "${SERVICE_JSON}" | jq '.services | length')" != "1" ]; then
+            echo "Could not resolve the production workers service."
+            exit 1
+          fi
+
+          BASE_TASK_DEF=$(echo "${SERVICE_JSON}" | jq -r '.services[0].taskDefinition')
+          NETWORK=$(echo "${SERVICE_JSON}" | jq -c '.services[0].networkConfiguration.awsvpcConfiguration')
+          TASK_DEF_JSON=$(aws ecs describe-task-definition \
+            --task-definition "${BASE_TASK_DEF}" \
+            --query taskDefinition \
+            --output json)
+          WORKER_IMAGE=$(echo "${TASK_DEF_JSON}" | jq -r '.containerDefinitions[] | select(.name == "workers") | .image')
+          IMAGE_TAG=${WORKER_IMAGE##*:}
+          IMAGE_SHA_PREFIX=${IMAGE_TAG#sha-}
+
+          if ! echo "${IMAGE_SHA_PREFIX}" | grep -Eq '^[0-9a-f]{8}$'; then
+            echo "Production workers image does not have the expected sha-<8 hex> tag: ${WORKER_IMAGE}"
+            exit 1
+          fi
+
+          IMAGE_SHA=$(git rev-parse "${IMAGE_SHA_PREFIX}^{commit}")
+          if ! git cat-file -e "${IMAGE_SHA}:apps/workers/src/scripts/backfill-signal-score-evidence.ts"; then
+            echo "The deployed production workers image predates the backfill entrypoint. Release it before launching."
+            exit 1
+          fi
+          if ! git show "${IMAGE_SHA}:apps/workers/tsdown.config.ts" | grep -Fq 'src/scripts/backfill-signal-score-evidence.ts'; then
+            echo "The deployed production workers image does not bundle the backfill entrypoint."
+            exit 1
+          fi
+
+          REGISTER_INPUT=$(echo "${TASK_DEF_JSON}" | jq \
+            --arg family "${TASK_FAMILY}" '
+              .family = $family |
+              .containerDefinitions |= map(
+                if .name == "workers" then
+                  .command = [
+                    "node",
+                    "--enable-source-maps",
+                    "apps/workers/dist/scripts/backfill-signal-score-evidence.cjs",
+                    "--execute"
+                  ] |
+                  del(.healthCheck)
+                else . end
+              ) |
+              del(
+                .taskDefinitionArn,
+                .revision,
+                .status,
+                .requiresAttributes,
+                .compatibilities,
+                .registeredAt,
+                .registeredBy
+              )
+            ')
+
+          ONE_TIME_TASK_DEF=$(aws ecs register-task-definition \
+            --cli-input-json "${REGISTER_INPUT}" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          SUBNETS=$(echo "${NETWORK}" | jq -r '.subnets | join(",")')
+          SECURITY_GROUPS=$(echo "${NETWORK}" | jq -r '.securityGroups | join(",")')
+          PUBLIC_IP=$(echo "${NETWORK}" | jq -r '.assignPublicIp')
+
+          RUN_RESULT=$(aws ecs run-task \
+            --cluster "${CLUSTER}" \
+            --task-definition "${ONE_TIME_TASK_DEF}" \
+            --launch-type FARGATE \
+            --count 1 \
+            --started-by signal-score-evidence-backfill \
+            --network-configuration "awsvpcConfiguration={subnets=[${SUBNETS}],securityGroups=[${SECURITY_GROUPS}],assignPublicIp=${PUBLIC_IP}}" \
+            --output json)
+
+          FAILURES=$(echo "${RUN_RESULT}" | jq '.failures | length')
+          if [ "${FAILURES}" != "0" ]; then
+            echo "${RUN_RESULT}" | jq '.failures'
+            exit 1
+          fi
+
+          TASK_ARN=$(echo "${RUN_RESULT}" | jq -r '.tasks[0].taskArn')
+          TASK_ID=${TASK_ARN##*/}
+          aws ecs wait tasks-running --cluster "${CLUSTER}" --tasks "${TASK_ARN}"
+
+          ECS_URL="https://${AWS_REGION}.console.aws.amazon.com/ecs/v2/clusters/${CLUSTER}/tasks/${TASK_ID}/configuration"
+          LOG_PREFIX="workers/workers/${TASK_ID}"
+
+          {
+            echo "## Signal score-evidence backfill launched"
+            echo
+            echo "- Task: \`${TASK_ARN}\`"
+            echo "- [Open the ECS task](${ECS_URL})"
+            echo "- CloudWatch log group: \`${LOG_GROUP}\`"
+            echo "- Log stream prefix: \`${LOG_PREFIX}\`"
+            echo
+            echo "The task logs one progress line per signal, including percentage, elapsed time, and ETA."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          echo "Started ${TASK_ARN}"
+          echo "Follow progress with:"
+          echo "aws logs tail '${LOG_GROUP}' --log-stream-name-prefix '${LOG_PREFIX}' --follow --region '${AWS_REGION}'"
