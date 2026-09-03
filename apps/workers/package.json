@@ -82,7 +82,7 @@
     "@repo/operations": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
-    "fflate": "0.8.2",
+    "fflate": "0.8.3",
     "quickjs-emscripten": "catalog:",
     "tsx": "catalog:",
     "voyageai": "catalog:",
