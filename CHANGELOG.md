@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## v0.3.90 - 2026-09-03
+
+### Monitors
+
+- Monitor windows now evaluate on the activity axis instead of the run's start. A check asked "did any matching trace happen in the last 5 minutes?" but answered it against the trace's earliest span, so a run longer than the window was already outside it by the time trace-end triggered the check and could never alert. Rows now qualify when their latest ingested span ended inside the window; `queryAnalytics`, experiment metrics and every dashboard keep plotting by start time, and incidents still backdate `startedAt` to the run's start so the alert points at the right run (ref: #4548).
+- Match monitors alert once per matching run rather than on every check while the run is live, with Redis markers recording what has already been alerted, and monitored predicates drop absolute time conditions that would otherwise silence a monitor for good once a saved search's date range aged out (ref: #4548).
+- Monitor targets created through the API, MCP, SDK or CLI never persisted their filters, so every one of them evaluated against the whole project; the target's filters are now folded into the persisted predicate. The publish throttle also matched the window exactly and raced the previous marker's expiry, leaving roughly half the windows unevaluated; it is now strictly shorter than the window (ref: #4548).
+- The monitor surfaces were realigned with the new axis: the list ranks by when the last incident was raised in SQL as well as on the client, point incidents report when they matched instead of claiming to have closed at a backdated instant, chart markers follow the axis of the bars they sit on, and the matching-sessions panel, its "View all" link, the chart and the incidents now describe the same set. A single-value `eq` filter renders in the filters sidebar instead of appearing blank (ref: #4548).
+
+### Signals
+
+- Signals are classified by Agent Score dimension. Evidence is mapped from flaggers, latched at promotion and exposed through the API, with dimension badges on the signals list, detail view and session rows, and a dimension filter on the list. Only a strict-majority mapped flagger writes dimensions; unmapped and ignored signals show as Diagnostic so a model guess cannot freeze the wrong roles (ref: #4543).
+
+### Imports
+
+- Resuming a capped import no longer inflates rollup counts. Already-stored traces were admitted as billing-free but still re-inserted, and while ReplacingMergeTree dedupes spans, `traces_mv` does not; imports now check existing identities before insert, matching live ingest (ref: 155edd9f1).
+
 ## v0.3.89 - 2026-09-02
 
 ### Flaggers and taxonomy
