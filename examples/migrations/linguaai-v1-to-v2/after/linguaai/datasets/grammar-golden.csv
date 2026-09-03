@@ -1,0 +1,7 @@
+text,language,expected_output
+"I have 25 years old.",English,"I am 25 years old."
+"She don't like apples.",English,"She doesn't like apples."
+"Yo soy muy cansado hoy.",Spanish,"Yo estoy muy cansado hoy."
+"Me gusta los perros.",Spanish,"Me gustan los perros."
+"Ich habe gestern nach Berlin gefahren.",German,"Ich bin gestern nach Berlin gefahren."
+"Less people came than expected.",English,"Fewer people came than expected."

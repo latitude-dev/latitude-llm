@@ -104,6 +104,7 @@
         "group": "Getting Started",
         "pages": [
           "telemetry/start-tracing",
+          "getting-started/migrate-from-v1",
           "telemetry/memory",
           {
             "group": "SDKs",

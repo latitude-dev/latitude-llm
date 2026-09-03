@@ -1,0 +1,2 @@
+latitude-sdk>=5.7.0
+python-dotenv>=1.1.0
