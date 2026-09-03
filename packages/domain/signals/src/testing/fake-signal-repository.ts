@@ -1,4 +1,4 @@
-import { NotFoundError, SignalId } from "@domain/shared"
+import { NotFoundError, OrganizationId, ProjectId, SignalId } from "@domain/shared"
 import { Effect } from "effect"
 import { SIGNAL_PRIORITY_ORDER } from "../constants.ts"
 import type { Signal } from "../entities/signal.ts"
@@ -163,6 +163,47 @@ export const createFakeSignalRepository = (
     save: (issue) =>
       Effect.sync(() => {
         issues.set(issue.id, issue)
+      }),
+
+    listScoreEvidenceBackfillTargets: ({ organizationId, projectId, limit }) =>
+      Effect.sync(() =>
+        [...issues.values()]
+          .filter(
+            (issue) =>
+              issue.origin === "system" &&
+              issue.promotedAt !== null &&
+              issue.deletedAt == null &&
+              issue.scoreEvidence.length === 0 &&
+              (organizationId === undefined || issue.organizationId === organizationId) &&
+              (projectId === undefined || issue.projectId === projectId),
+          )
+          .sort((a, b) =>
+            [a.organizationId, a.projectId, a.id]
+              .join(":")
+              .localeCompare([b.organizationId, b.projectId, b.id].join(":")),
+          )
+          .slice(0, limit ?? Number.POSITIVE_INFINITY)
+          .map((issue) => ({
+            organizationId: OrganizationId(issue.organizationId),
+            projectId: ProjectId(issue.projectId),
+            signalId: SignalId(issue.id),
+          })),
+      ),
+
+    setScoreEvidenceIfEmpty: ({ signalId, scoreEvidence, now }) =>
+      Effect.sync(() => {
+        const issue = issues.get(signalId)
+        if (
+          !issue ||
+          issue.origin !== "system" ||
+          issue.promotedAt === null ||
+          issue.deletedAt != null ||
+          issue.scoreEvidence.length > 0
+        ) {
+          return false
+        }
+        issues.set(signalId, { ...issue, scoreEvidence: [...scoreEvidence], updatedAt: now })
+        return true
       }),
 
     claimReopenOnOccurrence: ({ signalId, occurredAt, now }) =>

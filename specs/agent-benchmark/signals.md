@@ -80,7 +80,7 @@ window. Promotion, lifecycle state, or a historical occurrence does not create a
 
 `scoreEvidence` is assigned when a signal is promoted and then latched. Signal details can be
 regenerated every eight hours, but scoring roles cannot move between dimensions without a deliberate
-reclassification and scoring-version boundary.
+reclassification.
 
 When model generation fails, flagger-derived signals can use this static fallback mapping:
 
@@ -109,8 +109,9 @@ A mapped flagger slug is dominant when it occurs on more than half of the sample
 recent assigned scores that are published, failed, and non-errored. The denominator includes every
 qualifying score, including scores with a missing, unknown, or unmapped slug. A tie, a mixed sample
 without a strict majority, or a strict majority for an unmapped slug has no dominant mapped flagger.
-Static fallback classification depends only on this sample and is read only when detail generation
-is skipped or fails.
+Static fallback classification depends only on this sample. Promotion reads it when detail generation
+is skipped or fails; the historical backfill reads it before deciding whether model classification is
+necessary.
 
 Every normal promotion uses one model call to generate the signal's name, description, and evidence
 roles together, regardless of whether its scores have a dominant mapped flagger. The prompt defines
@@ -241,10 +242,21 @@ estimator diagnostics and are not stored in daily score snapshots.
 ## Backfill
 
 The Postgres migration assigns an empty `scoreEvidence` list to every existing signal and makes the
-column non-null with an empty-list default. The rollout does not run model generation, inspect
-historical flagger slugs, or assign Outcome as a fallback. Existing signals therefore remain
-diagnostic until a future explicit reclassification process changes them at a scoring-version
-boundary.
+column non-null with an empty-list default. A separate one-time job then selects promoted,
+non-deleted, system-discovered signals that have at least one published occurrence in the previous
+30 days and still carry that known rollout value. Lifecycle state does not narrow the selection:
+resolved, ignored, muted, regressed, assigned, and prioritized signals are included.
+
+The job processes signals sequentially. It samples up to 200 of each signal's newest published,
+failed, non-errored scores and applies the static mapping when one mapped flagger has a strict
+majority of the full sample. Otherwise it asks the model to classify only the canonical signal name
+and description; raw scores are not sent to the model. An all-false response leaves the signal
+diagnostic with `scoreEvidence = []`.
+
+No score-evidence version marker is added. Production runs the bundled worker entrypoint as an
+independent ECS task exactly once. A dedicated ECS task-definition family prevents a second launch,
+and a Postgres advisory lock prevents overlapping execution. Per-signal writes are conditional on
+the row still being promoted, system-created, non-deleted, and empty.
 
 Backfill does not invent historical screening probabilities. Old occurrences without measurable
 selection remain examples and counts until a full score window of usable decisions accumulates.
