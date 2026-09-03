@@ -65,7 +65,7 @@ async def main():
     print("Latitude SDK configured successfully!\n")
 
     # List all available prompts
-    prompts = await list_prompts()
+    await list_prompts()
 
     # Uncomment the following to run a specific prompt:
     # result = await run_prompt("your-prompt-path", {"param_name": "param_value"})

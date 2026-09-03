@@ -30,8 +30,6 @@ Reply ONLY with JSON of this shape:
  "summary": "one encouraging sentence"}}
 If the text has no errors, return an empty corrections list and is_correct true."""
 
-# Release 2.0.0 shipped the V1 prompt as-is; 2.1.0 tightened it after the
-# "missed error" signal. Experiments compare the two by metadata.release.
 GRAMMAR_CHECK_VERSIONS = {
     "2.0.0": ("grammar-check@2", GRAMMAR_CHECK_V2),
     "2.1.0": ("grammar-check@3", GRAMMAR_CHECK_V3),

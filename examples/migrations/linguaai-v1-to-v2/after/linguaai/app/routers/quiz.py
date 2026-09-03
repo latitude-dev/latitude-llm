@@ -33,6 +33,7 @@ class QuizGenerateResponse(BaseModel):
 @router.post("/generate", response_model=QuizGenerateResponse)
 def generate_quiz(
     req: QuizGenerateRequest,
+    # Demo only: see the caveat on the equivalent headers in routers/grammar.py.
     x_user_id: str = Header(default="anonymous"),
     x_session_id: str = Header(default="no-session"),
 ):

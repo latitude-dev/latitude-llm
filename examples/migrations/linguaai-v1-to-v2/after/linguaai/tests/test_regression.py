@@ -7,7 +7,6 @@ the agent version so an Experiment can compare releases.
 
     LATITUDE_DATASET_SLUG=grammar-regressions pytest -q
 """
-import json
 import os
 import uuid
 
@@ -15,8 +14,8 @@ import pytest
 from dotenv import load_dotenv
 from latitude_sdk import LatitudeClient
 
+from app.telemetry import latitude  # import before app.services, which constructs the Anthropic client
 from app import prompts, services
-from app.telemetry import latitude
 
 load_dotenv()
 
@@ -73,6 +72,8 @@ def _also_accepts_column():
 
 
 ROWS = [r for r in _rows() if r.expected_output]
+if not ROWS:
+    raise RuntimeError(f"No rows with expected_output in {PROJECT}/{DATASET}, so the regression suite would not test anything")
 ALSO_ACCEPTS = _also_accepts_column()
 
 

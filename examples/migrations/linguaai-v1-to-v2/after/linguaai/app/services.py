@@ -10,7 +10,6 @@ from anthropic import Anthropic
 from latitude_telemetry import capture
 
 from app import prompts
-from app.telemetry import latitude  # noqa: F401  (bootstraps telemetry before the client exists)
 
 client = Anthropic()
 

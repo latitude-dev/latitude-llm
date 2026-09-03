@@ -26,6 +26,8 @@ class GrammarCheckResponse(BaseModel):
 @router.post("/check", response_model=GrammarCheckResponse)
 def check_grammar(
     req: GrammarCheckRequest,
+    # Demo only: these headers are trusted as-is. A real deployment must derive
+    # user_id/session_id from an authenticated session, not a client-set header.
     x_user_id: str = Header(default="anonymous"),
     x_session_id: str = Header(default="no-session"),
 ):

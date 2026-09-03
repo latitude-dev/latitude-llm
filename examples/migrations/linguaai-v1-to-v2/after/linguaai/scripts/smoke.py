@@ -4,11 +4,10 @@ Run twice with different releases to give Experiments two cohorts:
     APP_RELEASE=2.0.0 python -m scripts.smoke
     APP_RELEASE=2.1.0 python -m scripts.smoke
 """
-import json
 import sys
 
+from app.telemetry import latitude  # import before app.services, which constructs the Anthropic client
 from app import prompts, services
-from app.telemetry import latitude
 
 # (user, session, kind, payload). Sessions group turns of one study session.
 LEARNERS = [
