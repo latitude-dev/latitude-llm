@@ -482,7 +482,18 @@ export const processImportPageUseCase =
       }
 
       const importedSpans = redaction.spans
-      for (const batch of chunk(importedSpans, IMPORT_CLICKHOUSE_CHUNK_SIZE)) {
+      const existing = yield* spanRepo.listExistingIdentities({
+        organizationId: OrganizationId(job.organizationId),
+        spans: importedSpans,
+      })
+      const existingKeys = new Set(
+        existing.map((span) => `${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+      )
+      // ReplacingMergeTree collapses duplicate spans; traces_mv/sessions_mv add per insert.
+      const newSpans = importedSpans.filter(
+        (span) => !existingKeys.has(`${span.projectId as string}:${span.traceId as string}:${span.spanId as string}`),
+      )
+      for (const batch of chunk(newSpans, IMPORT_CLICKHOUSE_CHUNK_SIZE)) {
         if (batch.length > 0) yield* spanRepo.insert(batch)
       }
 
@@ -490,7 +501,7 @@ export const processImportPageUseCase =
 
       stats.sessionsImported += admitted.sessions
       stats.tracesImported += tracesInPage
-      stats.spansImported += importedSpans.length
+      stats.spansImported += newSpans.length
       stats.spansSkipped += skipped
 
       if (traceIds.size > 0) {
