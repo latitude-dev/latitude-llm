@@ -82,6 +82,10 @@ Notes:
   `ReplacingMergeTree`, so both sides are read with `FINAL`.
 - **Semantic `query`** (free-text, AND-combined with `filters`) is only valid on `traces` and
   `sessions`.
+- **`range` is start-anchored**, here and on every dashboard: a run belongs to the range it started
+  in, even when it ends after it. Monitors are the one consumer that windows on latest activity
+  instead (see [`monitors.md`](./monitors.md#two-time-axes)), so the same filters can report
+  different numbers there.
 
 ### Response
 

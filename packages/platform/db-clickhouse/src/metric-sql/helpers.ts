@@ -1,8 +1,13 @@
 import type { BehaviorMetric, MomentMetric, MonitorMetric, ScoreMetric } from "@domain/shared"
 import { USAGE_OPERATIONS } from "@domain/spans"
+import type { StreamDescriptor, WindowAnchor } from "./types.ts"
 
 /** ClickHouse `DateTime64` params take a space-separated, zone-naive string (UTC). */
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
+
+/** The column an anchor windows on, falling back to `start` for streams with no end axis. */
+export const anchorColumn = (columns: StreamDescriptor["timeColumns"], anchor: WindowAnchor = "start"): string =>
+  anchor === "end" ? (columns.end ?? columns.start) : columns.start
 
 /** Standard windowing clauses shared by every inner subquery (`[from, to)` on the time axis). */
 export const windowParams = (input: { organizationId: string; projectId: string; from: Date; to: Date }) => ({

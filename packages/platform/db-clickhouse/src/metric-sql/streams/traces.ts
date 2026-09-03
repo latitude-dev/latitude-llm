@@ -4,11 +4,17 @@ import { Effect } from "effect"
 import { runFilterBuild } from "../../filter-builder.ts"
 import { isActiveSearch, planSearch } from "../../repositories/search-plan.ts"
 import { buildTraceFilterClauses, LIST_SELECT, resolvePercentileFilters } from "../../repositories/trace-repository.ts"
-import { type TraceFamilyColumns, traceFamilyAggregate, windowParams } from "../helpers.ts"
+import { anchorColumn, type TraceFamilyColumns, traceFamilyAggregate, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
 
+const TIME_COLUMNS = { start: "start_time", end: "end_time" } as const
+
+// A trace whose spans carry a session id counts as its session, so a session's
+// traces collapse to one entity — `ENTITY_ID_EXPR` must stay at this grain.
+const ENTITY_ID_EXPR = "coalesce(nullIf(session_id, ''), toString(trace_id))"
+
 const COLUMNS: TraceFamilyColumns = {
-  count: "uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id)))",
+  count: `uniqExact(${ENTITY_ID_EXPR})`,
   isError: "error_count > 0",
   duration: "duration_ns",
   cost: "cost_total_microcents",
@@ -31,7 +37,8 @@ const BREAKDOWN = {
 
 /**
  * The grouped per-trace subquery: filters + percentile resolution + an optional
- * semantic-query prefilter, windowed on the aggregated `start_time`.
+ * semantic-query prefilter, windowed on the aggregated `start_time` (or
+ * `end_time` when the caller anchors on activity).
  */
 const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError | ValidationError, ChSqlClient> =>
   Effect.gen(function* () {
@@ -54,9 +61,10 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Repository
       clickhouseSettings = plan.clickhouseSettings
     }
 
+    const windowColumn = anchorColumn(TIME_COLUMNS, input.windowAnchor)
     const having = [
-      "start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')",
-      "start_time < toDateTime64({windowTo:String}, 9, 'UTC')",
+      `${windowColumn} >= toDateTime64({windowFrom:String}, 9, 'UTC')`,
+      `${windowColumn} < toDateTime64({windowTo:String}, 9, 'UTC')`,
       ...havingClauses,
     ].join(" AND ")
 
@@ -87,5 +95,6 @@ export const tracesDescriptor: StreamDescriptor<"traces"> = {
   buildInner,
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,
-  timeColumn: "start_time",
+  timeColumns: TIME_COLUMNS,
+  entityIdExpr: ENTITY_ID_EXPR,
 }

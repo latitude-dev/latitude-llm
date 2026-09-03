@@ -36,6 +36,8 @@ export interface AlertIncidentRecord {
   readonly sourceId: string | null
   readonly startedAt: string
   readonly endedAt: string | null
+  /** When the monitor raised the incident. `startedAt` backdates to the offending run's start. */
+  readonly createdAt: string
   /** Resolved name of the issue tied to the incident; `null` if not found (e.g., deleted). */
   readonly signalName: string | null
   /** Resolved slug of the issue tied to the incident, for the deep link; `null` if not found. */
@@ -74,6 +76,7 @@ const toRecord = (
     sourceId: incident.sourceId,
     startedAt: incident.startedAt.toISOString(),
     endedAt: incident.endedAt?.toISOString() ?? null,
+    createdAt: incident.createdAt.toISOString(),
     signalName: issue?.name ?? null,
     signalSlug: issue?.slug ?? null,
     savedSearchName: savedSearchName ?? null,
@@ -89,7 +92,9 @@ const toRecord = (
 }
 
 /**
- * Returns incidents for the project whose lifetime overlaps `[fromIso, toIso]`,
+ * Returns incidents for the project whose lifetime overlaps `[fromIso, toIso]` or that were
+ * raised inside it (a match incident's lifetime is one instant, backdated to the start of the
+ * run it matched, which can predate the window it fired in),
  * enriched with the issue's name/uuid so the histogram tooltip can show a human label
  * without a follow-up request per incident. Signal lookup is best-effort — incidents
  * whose source issue has been deleted still come back, with `signalName: null`.

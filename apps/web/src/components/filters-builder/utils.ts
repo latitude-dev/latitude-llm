@@ -4,9 +4,22 @@ import type { StatusFilterValue } from "./status-filter.tsx"
 
 const STATUS_VALUES: readonly StatusFilterValue[] = ["ok", "error"]
 
+/**
+ * Selected values for a multi-select field. The controls write `in`, but a predicate can arrive
+ * from anywhere the filter contract is honoured — a monitor target, an API- or MCP-created saved
+ * search — and those spell a single value as `eq`. Reading only `in` left such a filter applied to
+ * the results yet invisible in the sidebar; editing the control rewrites it as `in`.
+ */
 export function getInValues(filters: FilterSet, field: string): readonly string[] {
-  const cond = filters[field]?.find((c) => c.op === "in")
-  return Array.isArray(cond?.value) ? cond.value.map(String) : []
+  const conditions = filters[field]
+  const inCondition = conditions?.find((c) => c.op === "in")
+  if (Array.isArray(inCondition?.value)) return inCondition.value.map(String)
+  const eqCondition = conditions?.find((c) => c.op === "eq")
+  const eqValue = eqCondition?.value
+  if (typeof eqValue === "string" || typeof eqValue === "number" || typeof eqValue === "boolean") {
+    return [String(eqValue)]
+  }
+  return []
 }
 
 export function getTextFilterValue(filters: FilterSet, field: string): string {
@@ -33,9 +46,9 @@ export function getPercentileValue(filters: FilterSet, field: string): number | 
 }
 
 export function getStatusValues(filters: FilterSet, field: string): readonly StatusFilterValue[] {
-  const cond = filters[field]?.find((c) => c.op === "in")
-  const raw = Array.isArray(cond?.value) ? cond.value.map(String) : []
-  return raw.filter((v): v is StatusFilterValue => (STATUS_VALUES as readonly string[]).includes(v))
+  return getInValues(filters, field).filter((v): v is StatusFilterValue =>
+    (STATUS_VALUES as readonly string[]).includes(v),
+  )
 }
 
 /** Set (or, when `conditions` is empty, remove) a field's conditions. */

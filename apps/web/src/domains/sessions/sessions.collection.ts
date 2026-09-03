@@ -76,11 +76,14 @@ export function useSessionsInfiniteScroll({
   sorting,
   filters,
   searchQuery,
+  enabled = true,
 }: {
   readonly projectId: string
   readonly sorting: InfiniteTableSorting
   readonly filters?: FilterSet
   readonly searchQuery?: string
+  /** Hold the query until the caller's predicate is resolved, so it can't fetch with placeholder filters. */
+  readonly enabled?: boolean
 }) {
   const scope = useProjectScope()
   const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
@@ -116,6 +119,7 @@ export function useSessionsInfiniteScroll({
         }
       | undefined,
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
+    enabled,
   })
 
   const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(

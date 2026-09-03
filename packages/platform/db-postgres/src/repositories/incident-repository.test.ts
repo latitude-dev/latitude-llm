@@ -48,6 +48,50 @@ afterEach(async () => {
 })
 
 describe("IncidentRepositoryLive", () => {
+  it("returns a backdated match incident for the window it was raised in", async () => {
+    // A match incident is one instant, backdated to the start of the run it matched: this one
+    // points at 09:00 but only fired at 10:30, so a lifetime-only overlap test would hide it
+    // from the very window a user is looking at.
+    const backdated = makeIncident({
+      startedAt: new Date("2026-06-23T09:00:00.000Z"),
+      endedAt: new Date("2026-06-23T09:00:00.000Z"),
+      createdAt: new Date("2026-06-23T10:30:00.000Z"),
+      condition: null,
+    })
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* IncidentRepositoryTag
+        yield* repo.insert(backdated)
+      }),
+    )
+
+    const raisedWindow = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* IncidentRepositoryTag
+        return yield* repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          from: new Date("2026-06-23T10:00:00.000Z"),
+          to: new Date("2026-06-23T11:00:00.000Z"),
+        })
+      }),
+    )
+    expect(raisedWindow.map((incident) => incident.id)).toEqual([backdated.id])
+
+    const laterWindow = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* IncidentRepositoryTag
+        return yield* repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          from: new Date("2026-06-23T11:00:00.000Z"),
+          to: new Date("2026-06-23T12:00:00.000Z"),
+        })
+      }),
+    )
+    expect(laterWindow).toHaveLength(0)
+  })
+
   it("inserts and finds incidents in the current org scope", async () => {
     const incident = makeIncident()
 

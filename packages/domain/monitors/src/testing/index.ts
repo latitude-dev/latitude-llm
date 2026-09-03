@@ -1,3 +1,5 @@
 export { createFakeAlertIncidentStore } from "./fake-alert-incident-store.ts"
+export { createFakeCacheStore } from "./fake-cache-store.ts"
+export type { FakeMetricEvent, FakeMetricEventInput } from "./fake-metric-series-reader.ts"
 export { createFakeMetricSeriesReader } from "./fake-metric-series-reader.ts"
 export { createFakeMonitorRepository } from "./fake-monitor-repository.ts"

@@ -179,7 +179,7 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
 
   const target = countTarget()
 
-  it("counts only traces whose start_time falls in [from, to)", async () => {
+  it("counts only traces whose activity falls in [from, to)", async () => {
     // [10:00, 11:00) includes t10 + t1030 (and the 'other'-tagged trace at t1030); excludes t11.
     const count = await runCh(
       reader.valueInWindow({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
@@ -214,12 +214,13 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
     expect(first).toBeNull()
   })
 
-  it("returns the latest matching trace start_time", async () => {
-    // [10:00, 11:00) includes t10 + t1030; t11 == the exclusive upper bound is excluded ⇒ latest is t1030.
+  it("returns the latest matching trace end_time", async () => {
+    // [10:00, 11:00) includes t10 + t1030; t11's trace ends past the upper bound and is
+    // excluded ⇒ the latest activity is t1030's 1s-long span.
     const last = await runCh(
       reader.lastEventAt({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
     )
-    expect(last).toEqual(t1030)
+    expect(last).toEqual(new Date(t1030.getTime() + 1_000))
   })
 
   it("returns null from lastEventAt when no trace matches the window", async () => {
@@ -261,10 +262,11 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
   })
 
   it("buckets matches newest-first, zero-filled, aligned to `to`", async () => {
-    // [09:30, 11:00) tiled into 3×30-min buckets aligned to 11:00 (newest-first):
-    //   idx 0 = (10:30, 11:00) → empty (t11 == `to` is excluded)
-    //   idx 1 = (10:00, 10:30] → t1030 (+ the 'other'-tagged trace, no filter applied) → 2
-    //   idx 2 = (09:30, 10:00] → t10 → 1
+    // [09:30, 11:00) tiled into 3×30-min buckets aligned to 11:00 (newest-first). Buckets
+    // key on activity, and every fixture span runs 1s past its start:
+    //   idx 0 = (10:30, 11:00) → t1030 ends 10:30:01 (+ the 'other'-tagged trace) → 2
+    //   idx 1 = (10:00, 10:30] → t10 ends 10:00:01 → 1
+    //   idx 2 = (09:30, 10:00] → empty (t11's trace ends past `to` and is excluded)
     const counts = await runCh(
       reader.seriesPerBucket({
         organizationId: ORG_ID,
@@ -275,7 +277,7 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
         bucketMs: 30 * 60 * 1000,
       }),
     )
-    expect(counts).toEqual([0, 2, 1])
+    expect(counts).toEqual([2, 1, 0])
   })
 
   it("honours the structured filters per bucket", async () => {
@@ -290,8 +292,8 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
         bucketMs: 30 * 60 * 1000,
       }),
     )
-    // The 'other'-tagged trace at 10:30 is dropped by the tag filter → idx 1 falls to 1.
-    expect(counts).toEqual([0, 1, 1])
+    // The 'other'-tagged trace at 10:30 is dropped by the tag filter → idx 0 falls to 1.
+    expect(counts).toEqual([1, 1, 0])
   })
 
   it("computes errorRate / avg / sum / min / max / median over the matched traces", async () => {
@@ -500,5 +502,132 @@ describe("MetricSeriesReaderLive (traces / count)", () => {
       }),
     )
     expect(counts).toEqual([1, 1])
+  })
+})
+
+// Runs whose start and end sit on opposite sides of the window edge.
+describe("MetricSeriesReaderLive (activity window)", () => {
+  let reader: MetricSeriesReaderShape
+
+  beforeAll(async () => {
+    reader = await Effect.runPromise(
+      Effect.gen(function* () {
+        return yield* MetricSeriesReader
+      }).pipe(Effect.provide(MetricSeriesReaderLive)),
+    )
+  })
+
+  const runStart = new Date("2026-06-03T12:00:00.000Z")
+  const runLatestSpan = new Date("2026-06-03T12:58:00.000Z")
+  const runLatestActivity = new Date("2026-06-03T12:58:01.000Z")
+  const windowFrom = new Date("2026-06-03T12:55:00.000Z")
+  const windowTo = new Date("2026-06-03T13:00:00.000Z")
+
+  // Extra spans on an existing trace, so its `start_time` stays old while its `end_time` advances.
+  const spanOnTrace = (spanN: number, traceN: number, startTime: Date, durationMs = 1_000): SpanRow => ({
+    ...span(spanN, startTime, [TAG], durationMs),
+    trace_id: traceId(traceN),
+  })
+
+  const spanInSession = (spanN: number, traceN: number, sessionId: string, startTime: Date): SpanRow => ({
+    ...spanOnTrace(spanN, traceN, startTime),
+    session_id: sessionId,
+  })
+
+  // A 58-minute run that is still emitting, plus a short run that finished before the window.
+  const longRunFixtures = [
+    spanOnTrace(101, 101, runStart),
+    spanOnTrace(102, 101, runLatestSpan),
+    spanOnTrace(201, 201, new Date("2026-06-03T11:58:00.000Z")),
+  ]
+
+  const window = { organizationId: ORG_ID, projectId: PROJECT_ID, from: windowFrom, to: windowTo }
+
+  it("counts a run that started before the window but is still active inside it", async () => {
+    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", longRunFixtures))
+
+    const count = await runCh(reader.valueInWindow({ ...window, target: countTarget() }))
+
+    // The run's start_time (12:00) is 55 min before the window; only its activity is inside.
+    expect(count).toBe(1)
+  })
+
+  it("backdates firstEventAt to the run's start while lastEventAt follows its activity", async () => {
+    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", longRunFixtures))
+
+    expect(await runCh(reader.firstEventAt({ ...window, target: countTarget() }))).toEqual(runStart)
+    expect(await runCh(reader.lastEventAt({ ...window, target: countTarget() }))).toEqual(runLatestActivity)
+  })
+
+  it("itemises matching entities with their start times", async () => {
+    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", longRunFixtures))
+
+    const entities = await runCh(reader.matchingEntities({ ...window, target: countTarget() }))
+
+    expect(entities).toEqual([{ id: traceId(101), startTime: runStart }])
+  })
+
+  it("folds a session's traces into one entity on the traces stream", async () => {
+    // Two traces of one session, each still active inside the window.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        spanInSession(301, 301, "session-a", runStart),
+        spanInSession(302, 301, "session-a", runLatestSpan),
+        spanInSession(303, 302, "session-a", runLatestSpan),
+      ]),
+    )
+
+    const entities = await runCh(reader.matchingEntities({ ...window, target: countTarget() }))
+
+    expect(entities).toEqual([{ id: "session-a", startTime: runStart }])
+    // Same grain the count metric reports.
+    expect(await runCh(reader.valueInWindow({ ...window, target: countTarget() }))).toBe(1)
+  })
+
+  it("itemises sessions by session id on the sessions stream", async () => {
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        spanInSession(301, 301, "session-a", runStart),
+        spanInSession(302, 301, "session-a", runLatestSpan),
+      ]),
+    )
+
+    const entities = await runCh(reader.matchingEntities({ ...window, target: sessionTarget({ kind: "count" }) }))
+
+    expect(entities).toEqual([{ id: "session-a", startTime: runStart }])
+  })
+
+  it("windows the spans stream on the span's own end_time", async () => {
+    // One 38-minute span: starts 55 min before the window, ends inside it.
+    const longSpanStart = new Date("2026-06-03T12:20:00.000Z")
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [spanOnTrace(401, 401, longSpanStart, 38 * 60 * 1000)]),
+    )
+    const spansCount = spanTarget({ kind: "count" }, {})
+
+    expect(await runCh(reader.valueInWindow({ ...window, target: spansCount }))).toBe(1)
+    expect(await runCh(reader.matchingEntities({ ...window, target: spansCount }))).toEqual([
+      { id: spanId(401), startTime: longSpanStart },
+    ])
+  })
+
+  it("buckets a long run by its activity, not by its start", async () => {
+    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", longRunFixtures))
+
+    // [12:00, 13:00) into 2×30-min buckets aligned to 13:00. The run's activity (12:58:01)
+    // lands in the newest bucket; its start (12:00) would fall outside the tiling entirely
+    // and be dropped by the densify loop.
+    const counts = await runCh(
+      reader.seriesPerBucket({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: countTarget(),
+        from: runStart,
+        to: windowTo,
+        bucketMs: 30 * 60 * 1000,
+      }),
+    )
+
+    expect(counts).toEqual([1, 0])
   })
 })

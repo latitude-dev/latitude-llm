@@ -7,10 +7,13 @@ const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
 export function IncidentStatus({
   startedAtIso,
   endedAtIso,
+  createdAtIso,
   onResolve,
 }: {
   readonly startedAtIso: string
   readonly endedAtIso: string | null
+  /** When the incident was raised. Point incidents report this instead of their backdated instant. */
+  readonly createdAtIso?: string
   /** When set on an ongoing incident, hovering the pill fades in a Resolve button over it. */
   readonly onResolve?: () => void
 }) {
@@ -46,6 +49,17 @@ export function IncidentStatus({
           </button>
         </Button>
       </div>
+    )
+  }
+  // A match incident is an instant (`endedAt === startedAt`) backdated to the start of the run it
+  // matched, which can be an hour before it fired — reporting that as a "close" would read as old
+  // news, so point incidents report when the monitor raised them.
+  const isPoint = Date.parse(endedAtIso) === Date.parse(startedAtIso)
+  if (isPoint) {
+    const detectedAt = createdAtIso ?? endedAtIso
+    const stalePoint = Date.now() - Date.parse(detectedAt) > ONE_WEEK_MS
+    return (
+      <Status variant={stalePoint ? "neutral" : "warning"} label={`Matched ${relativeTime(new Date(detectedAt))}`} />
     )
   }
   const stale = Date.now() - Date.parse(endedAtIso) > ONE_WEEK_MS

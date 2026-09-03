@@ -1,17 +1,44 @@
 /**
- * The "current activity" window for `savedSearch.threshold` (multiplier mode) and
- * `savedSearch.match` evaluation. Equals the firing throttle interval — a shorter
- * window would be evaluated less often than it claims to measure.
+ * The "recent activity" window for `savedSearch.threshold` (multiplier mode) and
+ * `savedSearch.match` evaluation. Monitors window on the activity axis, so this
+ * selects entities whose latest ingested span ended in the last 5 minutes —
+ * a 40-minute run qualifies while it progresses and when it finishes.
  */
 export const SAVED_SEARCH_CURRENT_WINDOW_MS = 5 * 60 * 1000
 
 /**
  * Leading-edge throttle window for the per-project `checkSavedSearchMonitors` publish:
- * the first publish runs immediately, then at most one run per 5 min per project. Leading
- * (not trailing) so the check's trailing evaluation window still covers the traces that
- * triggered it — a `throttleMs` delay would slide that window 5 min past the burst.
+ * the first publish runs immediately, then at most one run per project until it lapses.
+ * Leading (not trailing) so the check's trailing evaluation window still covers the traces
+ * that triggered it — a `throttleMs` delay would slide that window past the burst.
+ *
+ * Must stay **strictly shorter** than {@link SAVED_SEARCH_CURRENT_WINDOW_MS}, or consecutive
+ * windows leave gaps: with both at 5 minutes the sweeper's 5-minute tick raced this marker's
+ * expiry and lost, so every other tick published nothing and the real cadence was 10 minutes
+ * against a 5-minute window — activity landing in a skipped window was never evaluated, and
+ * threshold closes were delayed by a full tick. The slack also absorbs cron jitter. Overlapping
+ * windows are harmless: match monitors dedupe per entity ({@link matchAlertedDedupeKey}) and
+ * threshold/escalating incidents stay idempotent per episode.
  */
-export const SAVED_SEARCH_MONITORS_THROTTLE_MS = 5 * 60 * 1000
+export const SAVED_SEARCH_MONITORS_THROTTLE_MS = 4 * 60 * 1000
+
+/**
+ * How long a match monitor remembers having alerted for an entity. Spans the longest
+ * plausible run so a run sitting in the activity window across many checks alerts once;
+ * an entity that starts matching again after it expires alerts again.
+ */
+export const MATCH_ALERT_DEDUPE_TTL_SECONDS = 24 * 60 * 60
+
+/** Per-monitor, per-entity marker recording that a match monitor already alerted for that run. */
+export const matchAlertedDedupeKey = ({
+  organizationId,
+  monitorId,
+  entityId,
+}: {
+  readonly organizationId: string
+  readonly monitorId: string
+  readonly entityId: string
+}): string => `org:${organizationId}:monitors:match-alerted:${monitorId}:${entityId}`
 
 /**
  * How long a `threshold` monitor's condition must stay clear before its open incident

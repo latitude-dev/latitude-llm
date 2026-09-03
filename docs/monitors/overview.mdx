@@ -82,31 +82,42 @@ Alerts each time a new trace matching 'Checkout 5xx errors' is detected.
 
 The alert card has a **severity** selector (**Low**, **Medium**, or **High**) that sets the tone of the incident badge and the notification.
 
+## How monitors measure time
+
+Every alert kind evaluates a **sliding window of recent activity**, and a session enters that window by its **latest activity** rather than by when it started. A session that has been running for 40 minutes is therefore checked while it progresses and again when it finishes, so long agent sessions alert instead of ageing out of the window before they end.
+
+Two things follow from that:
+
+- **Each session alerts at most once per monitor.** A session that stays active across several checks doesn't re-alert, and a monitor can't be flooded by one long session.
+- **An incident points back at the start of the session.** The incident's "started" time is when the offending session began, which can be well before the alert arrived.
+
+Dashboards, the Traces and Sessions pages, and the analytics API all list sessions by their **start** time instead. Same filters, different time axis: a session that just triggered a monitor can appear further back in those views, and a fixed date range saved inside a search is ignored while monitoring it (the sliding activity window is the monitor's only time axis).
 
 ## The three saved-search alert kinds
 
 A saved-search alert can watch its search in one of three ways, shown as tabs on the alert card: **Match**, **Threshold**, and **Escalating**.
 
-### Match: alert when matching traces start arriving
+### Match: alert when a matching session appears
 
-Use **Match** when even one matching trace is worth knowing about, for example a saved search for `status = 5xx in production`.
+Use **Match** when even one matching session is worth knowing about, for example a saved search for `status = 5xx in production`.
 
 ```text
 Alerts each time a new trace matching 'Production 5xx' is detected.
 ```
 
-<Frame caption="A Match alert card: pick the saved search to watch and a severity. It fires each time a new matching trace is detected.">
+<Frame caption="A Match alert card: pick the saved search to watch and a severity. It fires the first time each matching session is detected.">
   <img src="/images/monitors/alert-match.png" alt="A Match alert card with the saved-search selector and severity options" />
 </Frame>
 
-To keep this from becoming noise, matches are **limited to one alert every 5 minutes**:
+Matches are alerted **once per session**, and the monitor is checked at most every 5 minutes:
 
-- A burst of 500 matches arriving at once produces **one** alert, not 500.
-- If matching activity is **continuous**, you'll get a fresh alert **every 5 minutes** for as long as it keeps happening, so an ongoing problem stays visible instead of going quiet after the first alert.
-- After a **quiet period** with no matches, the next match opens a fresh alert again.
+- A burst of 500 matching sessions arriving at once produces **one** alert, not 500.
+- A single long session alerts **once**, at the first check that sees it, however long it keeps going.
+- While **new** matching sessions keep appearing, you keep getting alerts, at most one every 5 minutes, so an ongoing problem stays visible instead of going quiet after the first alert.
+- After a **quiet period** with no matches, the next new session opens a fresh alert again.
 
 <Tip>
-  The 5-minute cadence is deliberate: continuous matching keeps re-surfacing so you don't tune out and forget the problem is still live.
+  Because a session alerts only once, a Match monitor on a busy search reads as a stream of distinct problems rather than the same one repeating.
 </Tip>
 
 ### Threshold: alert at a milestone or a spike
@@ -129,7 +140,7 @@ Alerts when traces matching 'Production 5xx' are detected 100 times.
 
 Spike detection: alert when the current volume rises to some multiple **above a baseline** you choose. Pick the comparison **times more than** and then choose the baseline:
 
-- **The average of the last N hours/days**: the normal-traffic case. Latitude divides the baseline window into 5-minute slices and compares your current rate against the average slice.
+- **The average of the last N hours/days**: the normal-traffic case. Latitude divides the baseline window into 5-minute slices and compares the sessions active in your current slice against the average slice.
 - **The previous period** (yesterday, or the previous week): for traffic that follows **daily or weekly patterns**, where "normal" depends on the day or time.
 
 ```text

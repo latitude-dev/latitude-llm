@@ -8,8 +8,10 @@ import {
   LIST_SELECT,
   resolvePercentileFilters,
 } from "../../repositories/session-repository.ts"
-import { type TraceFamilyColumns, traceFamilyAggregate, windowParams } from "../helpers.ts"
+import { anchorColumn, type TraceFamilyColumns, traceFamilyAggregate, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
+
+const TIME_COLUMNS = { start: "start_time", end: "end_time" } as const
 
 // Sessions share the trace rollup columns; each inner row is already one session,
 // so the count is a plain row count rather than a trace/session dedup.
@@ -38,9 +40,10 @@ const BREAKDOWN = {
 
 /**
  * The grouped per-session subquery. The window is a `HAVING` on the aggregated
- * `start_time`, combined with the target's filters and (optionally) a semantic
- * query: the trace-grained search plan resolves to its sessions via the `traces`
- * rollup, restricting the session set with `session_id IN (…)`.
+ * `start_time` (or `end_time` when the caller anchors on activity), combined with
+ * the target's filters and (optionally) a semantic query: the trace-grained search
+ * plan resolves to its sessions via the `traces` rollup, restricting the session
+ * set with `session_id IN (…)`.
  */
 const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, RepositoryError | ValidationError, ChSqlClient> =>
   Effect.gen(function* () {
@@ -71,9 +74,10 @@ const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, Repository
     }
 
     const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+    const windowColumn = anchorColumn(TIME_COLUMNS, input.windowAnchor)
     const having = [
-      "start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')",
-      "start_time < toDateTime64({windowTo:String}, 9, 'UTC')",
+      `${windowColumn} >= toDateTime64({windowFrom:String}, 9, 'UTC')`,
+      `${windowColumn} < toDateTime64({windowTo:String}, 9, 'UTC')`,
       ...havingClauses,
     ].join(" AND ")
 
@@ -104,5 +108,6 @@ export const sessionsDescriptor: StreamDescriptor<"sessions"> = {
   buildInner,
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,
-  timeColumn: "start_time",
+  timeColumns: TIME_COLUMNS,
+  entityIdExpr: "session_id",
 }

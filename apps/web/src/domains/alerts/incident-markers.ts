@@ -41,8 +41,9 @@ function isRangedIncident(incident: AlertIncidentRecord): boolean {
 
 /**
  * Snaps a moment to the **index** of the bucket whose half-open `[start, start + width)` range
- * contains it. Returns `null` when the moment falls outside `[firstStartMs, firstStartMs + width *
- * (lastIndex + 1))` so callers drop those markers instead of piling them up at the edges.
+ * contains it, clamped into `[0, lastIndex]`. Callers decide what is visible by testing the
+ * incident's whole extent against the chart range, so a monitor incident backdated to the start
+ * of a long run still paints from the left edge instead of vanishing.
  */
 function snapMsToBucketIndex(
   ms: number,
@@ -52,8 +53,26 @@ function snapMsToBucketIndex(
 ): number | null {
   if (!Number.isFinite(ms) || bucketWidthMs <= 0) return null
   const idx = Math.floor((ms - firstBucketStartMs) / bucketWidthMs)
-  if (idx < 0 || idx > lastIndex) return null
-  return idx
+  return Math.min(lastIndex, Math.max(0, idx))
+}
+
+/**
+ * Which moment places an incident on a chart. `start` follows the offending run's `startedAt`,
+ * which lines up with start-anchored bars (the sessions histogram). `raised` follows `createdAt`,
+ * which lines up with activity-anchored bars (the monitor's own chart) — a backdated incident
+ * would otherwise be drawn over an empty bucket, or fall off a short range entirely.
+ */
+type IncidentTimeAxis = "start" | "raised"
+
+/** The moment an incident starts covering buckets, on the requested axis. */
+function incidentStartMs(incident: AlertIncidentRecord, timeAxis: IncidentTimeAxis): number {
+  return timeAxis === "raised" ? Date.parse(incident.createdAt) : Date.parse(incident.startedAt)
+}
+
+/** The moment a ranged incident stops covering buckets: its end, or `now` while it is open. */
+function incidentEndMs(incident: AlertIncidentRecord, startMs: number, nowMs: number): number {
+  if (!isRangedIncident(incident)) return startMs
+  return incident.endedAt ? Date.parse(incident.endedAt) : nowMs
 }
 
 interface IncidentRange {
@@ -63,7 +82,7 @@ interface IncidentRange {
 }
 
 interface IncidentGrouping {
-  /** Lookup of incidents whose `startedAt` snaps into a given bucket index. */
+  /** Lookup of incidents whose placement moment (per the requested axis) snaps into a bucket index. */
   readonly incidentsByBucketIndex: ReadonlyMap<number, readonly AlertIncidentRecord[]>
   /**
    * Per-bucket list of every incident that **touches** the bucket — both point-in-time incidents
@@ -81,6 +100,8 @@ interface GroupIncidentsByBucketInput {
   readonly incidents: readonly AlertIncidentRecord[]
   /** Used to clamp ongoing ranged incidents (`endedAt: null`) to the right edge of the chart. */
   readonly nowMs: number
+  /** Defaults to `start`; pass `raised` when the chart's bars are activity-anchored. */
+  readonly timeAxis?: IncidentTimeAxis
 }
 
 /**
@@ -96,6 +117,7 @@ export function groupIncidentsByBucket({
   bucketWidthMs,
   incidents,
   nowMs,
+  timeAxis = "start",
 }: GroupIncidentsByBucketInput): IncidentGrouping {
   const empty: IncidentGrouping = {
     incidentsByBucketIndex: new Map(),
@@ -117,8 +139,14 @@ export function groupIncidentsByBucket({
     incidentsTouchingBucketIndex.set(bucketIndex, existing)
   }
 
+  const lastBucketEndMs = firstStartMs + bucketWidthMs * (lastIndex + 1)
+
   for (const incident of incidents) {
-    const startMs = Date.parse(incident.startedAt)
+    const startMs = incidentStartMs(incident, timeAxis)
+    const endMs = incidentEndMs(incident, startMs, nowMs)
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) continue
+    // Only incidents whose extent misses the chart range entirely are dropped; the edges clamp.
+    if (endMs < firstStartMs || startMs >= lastBucketEndMs) continue
     const startIdx = snapMsToBucketIndex(startMs, firstStartMs, bucketWidthMs, lastIndex)
     if (startIdx === null) continue
 
@@ -128,10 +156,7 @@ export function groupIncidentsByBucket({
     pushTouching(startIdx, incident)
 
     if (isRangedIncident(incident)) {
-      const endMs = incident.endedAt ? Date.parse(incident.endedAt) : nowMs
-      const snapped = snapMsToBucketIndex(endMs, firstStartMs, bucketWidthMs, lastIndex)
-      // Clamp past-end to the last visible bucket so an in-progress incident paints to the edge.
-      const endIdx = snapped ?? (Number.isFinite(endMs) && endMs >= firstStartMs ? lastIndex : null)
+      const endIdx = snapMsToBucketIndex(endMs, firstStartMs, bucketWidthMs, lastIndex)
       if (endIdx !== null) {
         ranges.push({ startIndex: startIdx, endIndex: endIdx, incident })
         for (let i = startIdx + 1; i <= endIdx; i++) {
@@ -149,6 +174,8 @@ interface BuildIncidentMarkersInput {
   readonly bucketWidthMs: number
   readonly incidents: readonly AlertIncidentRecord[]
   readonly nowMs: number
+  /** Defaults to `start`; pass `raised` when the chart's bars are activity-anchored. */
+  readonly timeAxis?: IncidentTimeAxis
 }
 
 interface BuildIncidentMarkersResult {
@@ -165,7 +192,7 @@ interface BuildIncidentMarkersResult {
 /**
  * Builds eCharts overlays from a list of incidents:
  * - point-in-time incidents (`endedAt === startedAt`) → vertical mark lines snapped to the bucket
- *   containing `startedAt`
+ *   containing their placement moment (`startedAt`, or `createdAt` on the `raised` axis)
  * - ranged incidents (`endedAt > startedAt`, or `endedAt === null` for an open lifecycle) →
  *   translucent mark areas spanning `startedAt → endedAt` (clamped to `nowMs` when ongoing). The
  *   start line is always drawn so a 1-bucket range stays discoverable.
@@ -175,6 +202,7 @@ export function buildIncidentMarkers({
   bucketWidthMs,
   incidents,
   nowMs,
+  timeAxis = "start",
 }: BuildIncidentMarkersInput): BuildIncidentMarkersResult {
   const empty: BuildIncidentMarkersResult = {
     overlay: { lines: [], areas: [] },
@@ -183,7 +211,7 @@ export function buildIncidentMarkers({
   }
   if (bucketStartsMs.length === 0 || incidents.length === 0) return empty
 
-  const grouping = groupIncidentsByBucket({ bucketStartsMs, bucketWidthMs, incidents, nowMs })
+  const grouping = groupIncidentsByBucket({ bucketStartsMs, bucketWidthMs, incidents, nowMs, timeAxis })
 
   const lines: BarChartOverlayLine[] = []
   const areas: BarChartOverlayArea[] = []

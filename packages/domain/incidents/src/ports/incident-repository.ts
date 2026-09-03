@@ -121,13 +121,15 @@ export interface IncidentRepositoryShape {
    */
   closeById(input: SetIncidentEndedAtInput): Effect.Effect<Incident | null, RepositoryError, SqlClient>
   /**
-   * Returns every incident in the project whose lifetime overlaps the optional `[from, to]`
-   * window, ordered ascending by `started_at`. Uses the
-   * `(organization_id, project_id, started_at)` index. An incident overlaps the window when
-   * `started_at <= to` AND (`ended_at IS NULL` OR `ended_at >= from`) — ongoing incidents
-   * (null `ended_at`) overlap as long as they began on or before `to`. Each bound is
-   * skipped when omitted, so passing no bounds returns every incident for the project.
-   * Additional optional filters narrow by `sourceType`, `sourceId`, and `severity`.
+   * Returns every incident in the project that overlaps the optional `[from, to]` window or was
+   * raised inside it, ordered ascending by `started_at`. Uses the
+   * `(organization_id, project_id, started_at)` index. An incident qualifies when
+   * `started_at <= to` AND (`ended_at IS NULL` OR `ended_at >= from` OR `created_at >= from`) —
+   * ongoing incidents (null `ended_at`) qualify as long as they began on or before `to`, and the
+   * `created_at` arm keeps a match incident (one instant, backdated to the start of the run it
+   * matched) visible in the window it actually fired in. Each bound is skipped when omitted, so
+   * passing no bounds returns every incident for the project. Additional optional filters narrow
+   * by `sourceType`, `sourceId`, and `severity`.
    */
   listByProjectId(input: ListIncidentsByProjectInput): Effect.Effect<readonly Incident[], RepositoryError, SqlClient>
   /**

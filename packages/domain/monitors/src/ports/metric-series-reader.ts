@@ -41,16 +41,37 @@ export interface MetricSeriesBucketInput extends MetricSeriesWindowInput {
   readonly bucketMs: number
 }
 
+/** One entity (run, session or span) that matched a target inside the window. */
+export interface MatchingEntity {
+  /** Identity at the `count` metric's dedup grain, so a session's traces are one entity. */
+  readonly id: string
+  /** The entity's earliest span start — the axis an incident backdates to. */
+  readonly startTime: Date
+}
+
 /**
  * The metric value of a target over a window + per-bucket, plus the first/last
  * matching-event times for incident backtracking. A dedicated port (not a trace
  * port widening) keeps the firing concern off the broadly-stubbed trace port.
  * For `metric.kind === 'count'` this is exactly the saved-search match reader it supersedes.
+ *
+ * Every window here is **activity-anchored**: a row falls in `[from, to)` by the
+ * time its latest ingested span ended, so a run that started hours ago is still
+ * evaluated while it progresses and when it finishes. `firstEventAt` is the one
+ * deliberate exception (see its doc).
  */
 export interface MetricSeriesReaderShape {
   /** The metric over rows whose time axis falls in `[from, to)`. */
   valueInWindow(input: MetricSeriesWindowInput): Effect.Effect<number, RepositoryError | ValidationError, ChSqlClient>
-  /** Earliest matching-row time in `[from, to)`, or `null` when none match. Backs the incident's backtraced `started_at`. */
+  /**
+   * The entities matching the target inside `[from, to)`, earliest start first and
+   * capped. Same population `valueInWindow` counts for a `count` metric, itemised
+   * so match monitors can alert once per entity.
+   */
+  matchingEntities(
+    input: MetricSeriesWindowInput,
+  ): Effect.Effect<readonly MatchingEntity[], RepositoryError | ValidationError, ChSqlClient>
+  /** Earliest matching-row **start** time in `[from, to)`, or `null` when none match. Backs the incident's backtraced `started_at`. */
   firstEventAt(
     input: MetricSeriesWindowInput,
   ): Effect.Effect<Date | null, RepositoryError | ValidationError, ChSqlClient>

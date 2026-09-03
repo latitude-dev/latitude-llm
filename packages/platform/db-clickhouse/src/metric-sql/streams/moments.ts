@@ -69,5 +69,5 @@ export const momentsDescriptor: StreamDescriptor<"moments"> = {
   buildInner,
   aggregate: (metric) => momentAggregate(metric),
   breakdowns: BREAKDOWN,
-  timeColumn: "start_time",
+  timeColumns: { start: "start_time" },
 }
