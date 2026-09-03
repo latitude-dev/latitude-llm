@@ -9,6 +9,8 @@ import {
   OrganizationId,
   ProjectId,
   type RedactionPolicy,
+  SessionId,
+  SpanId,
   SqlClient,
   TraceId,
 } from "@domain/shared"
@@ -771,6 +773,31 @@ describe("processImportPageUseCase", () => {
       expect(h.stored()?.stats.tracesImported).toBe(3)
       expect(h.events.at(-1)?.payload.traceIds).toHaveLength(3)
       expect(h.stored()?.cursor).toEqual(insideFirstWindow(null))
+    })
+
+    it("skips spans that already exist in the store", async () => {
+      const rows = fakeImportRows(5)
+      const job = makeJob({ config: { ...BASE_CONFIG, sourcePageSize: 100, maxTraces: 10 } })
+      const seededSpans = rows.map((row) =>
+        stubSpanDetail({
+          organizationId: job.organizationId,
+          projectId: job.projectId,
+          traceId: fakeImportHexId(row.sourceTraceId, 32),
+          spanId: fakeImportHexId(row.sourceSpanId, 16),
+          parentSpanId: row.isRoot ? SpanId("") : fakeImportHexId(`${row.sourceTraceId}-root`, 16),
+          sessionId: SessionId(""),
+          name: row.name,
+          startTime: row.startTime,
+        }),
+      )
+      const h = harness(job, { rows }, { seedSpans: seededSpans })
+
+      const insertedBefore = h.spans.inserted.length
+      await h.run()
+
+      expect(h.spans.inserted).toHaveLength(insertedBefore)
+      expect(h.stored()?.stats.spansImported).toBe(0)
+      expect(h.events.at(-1)?.payload.traceIds).toHaveLength(1)
     })
 
     it("still finishes succeeded when the user's own ceiling is the tighter bound", async () => {
