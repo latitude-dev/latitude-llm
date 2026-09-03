@@ -165,13 +165,14 @@ export const createFakeSignalRepository = (
         issues.set(issue.id, issue)
       }),
 
-    listScoreEvidenceBackfillTargets: ({ organizationId, projectId, limit }) =>
+    listScoreEvidenceBackfillTargets: ({ promotedBefore, organizationId, projectId, limit }) =>
       Effect.sync(() =>
         [...issues.values()]
           .filter(
             (issue) =>
               issue.origin === "system" &&
               issue.promotedAt !== null &&
+              issue.promotedAt < promotedBefore &&
               issue.deletedAt == null &&
               issue.scoreEvidence.length === 0 &&
               (organizationId === undefined || issue.organizationId === organizationId) &&

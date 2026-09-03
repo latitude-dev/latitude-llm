@@ -76,6 +76,7 @@ jobs:
             --query taskDefinition \
             --output json)
           WORKER_IMAGE=$(echo "${TASK_DEF_JSON}" | jq -r '.containerDefinitions[] | select(.name == "workers") | .image')
+          ROLLOUT_CUTOFF=$(echo "${TASK_DEF_JSON}" | jq -r '.registeredAt')
           IMAGE_TAG=${WORKER_IMAGE##*:}
           IMAGE_SHA_PREFIX=${IMAGE_TAG#sha-}
 
@@ -93,9 +94,14 @@ jobs:
             echo "The deployed production workers image does not bundle the backfill entrypoint."
             exit 1
           fi
+          if [ -z "${ROLLOUT_CUTOFF}" ] || [ "${ROLLOUT_CUTOFF}" = "null" ]; then
+            echo "Could not determine the production worker rollout cutoff."
+            exit 1
+          fi
 
           REGISTER_INPUT=$(echo "${TASK_DEF_JSON}" | jq \
-            --arg family "${TASK_FAMILY}" '
+            --arg family "${TASK_FAMILY}" \
+            --arg rolloutCutoff "${ROLLOUT_CUTOFF}" '
               .family = $family |
               .containerDefinitions |= map(
                 if .name == "workers" then
@@ -103,7 +109,9 @@ jobs:
                     "node",
                     "--enable-source-maps",
                     "apps/workers/dist/scripts/backfill-signal-score-evidence.cjs",
-                    "--execute"
+                    "--execute",
+                    "--promoted-before",
+                    $rolloutCutoff
                   ] |
                   del(.healthCheck)
                 else . end

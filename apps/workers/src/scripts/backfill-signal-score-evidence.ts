@@ -36,6 +36,7 @@ Options:
   --organization-id <id>  Restrict the backfill to one organization
   --project-id <id>       Restrict the backfill to one project
   --since <ISO timestamp> Override the default cutoff of CURRENT_TIMESTAMP - INTERVAL '1 month'
+  --promoted-before <ISO> Exclude signals promoted by the score-evidence rollout or later; required with --execute
   --limit <n>              Process at most this many signals
   --help                   Show this help
 `.trim()
@@ -57,13 +58,13 @@ const parsePositiveInteger = (value: string, flagName: string): number => {
   return parsed
 }
 
-const parseSince = (value: string | undefined): Date | undefined => {
+const parseDate = (value: string | undefined, flagName: string): Date | undefined => {
   if (value === undefined) return undefined
-  const since = new Date(value)
-  if (Number.isNaN(since.getTime())) {
-    throw new Error(`--since must be an ISO timestamp, received "${value}"`)
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`${flagName} must be an ISO timestamp, received "${value}"`)
   }
-  return since
+  return date
 }
 
 const listTargets = (
@@ -72,6 +73,7 @@ const listTargets = (
     readonly organizationId?: string
     readonly projectId?: string
     readonly since?: Date
+    readonly promotedBefore: Date
     readonly limit?: number
   },
 ): Promise<readonly SignalScoreEvidenceBackfillTarget[]> =>
@@ -79,6 +81,7 @@ const listTargets = (
     Effect.gen(function* () {
       const repository = yield* SignalRepository
       return yield* repository.listScoreEvidenceBackfillTargets({
+        promotedBefore: filters.promotedBefore,
         ...(filters.organizationId ? { organizationId: OrganizationId(filters.organizationId) } : {}),
         ...(filters.projectId ? { projectId: ProjectId(filters.projectId) } : {}),
         ...(filters.since ? { since: filters.since } : {}),
@@ -137,6 +140,7 @@ const { values, positionals } = parseArgs({
     "organization-id": { type: "string" },
     "project-id": { type: "string" },
     since: { type: "string" },
+    "promoted-before": { type: "string" },
     limit: { type: "string" },
     help: { type: "boolean", default: false },
   },
@@ -154,7 +158,11 @@ if (positionals.length > 0) {
 
 const execute = values.execute ?? false
 const limit = values.limit ? parsePositiveInteger(values.limit, "--limit") : undefined
-const since = parseSince(values.since)
+const since = parseDate(values.since, "--since")
+const promotedBefore = parseDate(values["promoted-before"], "--promoted-before")
+if (execute && promotedBefore === undefined) {
+  throw new Error("--promoted-before is required with --execute")
+}
 const adminPostgres = getAdminPostgresClient()
 const appPostgres = getPostgresClient()
 
@@ -172,6 +180,7 @@ const main = async (): Promise<void> => {
     }
 
     const targets = await listTargets(adminPostgres, {
+      promotedBefore: promotedBefore ?? new Date(),
       ...(values["organization-id"] ? { organizationId: values["organization-id"] } : {}),
       ...(values["project-id"] ? { projectId: values["project-id"] } : {}),
       ...(since ? { since } : {}),

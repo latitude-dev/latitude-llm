@@ -807,6 +807,7 @@ const signalRepositoryCoreLive = Layer.effect(
                 and(
                   userVisibleSignal,
                   eq(signals.origin, "system"),
+                  lt(signals.promotedAt, input.promotedBefore),
                   sql`${signals.scoreEvidence} = '[]'::jsonb`,
                   recentOccurrence,
                   input.organizationId ? eq(signals.organizationId, input.organizationId) : undefined,
