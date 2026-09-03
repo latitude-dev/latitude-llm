@@ -41,7 +41,6 @@ Evidence roles:
 Rules:
 - Include a role only when the recurring defect supports that role's stated meaning.
 - Include every supported role, including roles from several dimensions when warranted.
-- Do not classify a recurring defect as Safety \`successfulDefense\`; signals represent failures.
 - A dimension without one of its valid roles is not a classification.
 `.trim()
 
