@@ -228,7 +228,6 @@ export interface SignalRepositoryShape {
    */
   listScoreEvidenceBackfillTargets(input: {
     readonly since?: Date
-    readonly promotedBefore: Date
     readonly organizationId?: OrganizationId
     readonly projectId?: ProjectId
     readonly limit?: number

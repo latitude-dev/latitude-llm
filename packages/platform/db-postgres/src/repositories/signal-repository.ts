@@ -793,7 +793,7 @@ const signalRepositoryCoreLive = Layer.effect(
               and ${scores.projectId} = ${signals.projectId}
               and ${scores.signalId} = ${signals.id}
               and ${scores.draftedAt} is null
-              and ${scores.createdAt} >= ${input.since ?? sql`current_timestamp - interval '1 month'`}
+              and ${scores.createdAt} >= ${input.since ?? sql`current_timestamp - interval '30 days'`}
           )`
           const rows = yield* sqlClient.query((db) => {
             const query = db
@@ -807,7 +807,6 @@ const signalRepositoryCoreLive = Layer.effect(
                 and(
                   userVisibleSignal,
                   eq(signals.origin, "system"),
-                  lt(signals.promotedAt, input.promotedBefore),
                   sql`${signals.scoreEvidence} = '[]'::jsonb`,
                   recentOccurrence,
                   input.organizationId ? eq(signals.organizationId, input.organizationId) : undefined,

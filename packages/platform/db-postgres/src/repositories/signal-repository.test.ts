@@ -125,7 +125,6 @@ describe("SignalRepositoryLive score evidence", () => {
 
 describe("SignalRepositoryLive score-evidence backfill", () => {
   const SINCE = new Date("2026-08-01T00:00:00.000Z")
-  const PROMOTED_BEFORE = new Date("2026-08-10T00:00:00.000Z")
   const RECENT = new Date("2026-08-15T00:00:00.000Z")
   const OLD = new Date("2026-07-15T00:00:00.000Z")
   const OTHER_ORG_ID = OrganizationId("other-org".padEnd(24, "o"))
@@ -163,7 +162,6 @@ describe("SignalRepositoryLive score-evidence backfill", () => {
       Effect.gen(function* () {
         return yield* (yield* SignalRepository).listScoreEvidenceBackfillTargets({
           since: SINCE,
-          promotedBefore: PROMOTED_BEFORE,
           ...input,
         })
       }),
@@ -180,6 +178,11 @@ describe("SignalRepositoryLive score-evidence backfill", () => {
       { id: "backfill-resolved".padEnd(24, "2"), slug: "backfill-resolved", resolvedAt: RECENT },
       { id: "backfill-ignored".padEnd(24, "3"), slug: "backfill-ignored", ignoredAt: RECENT },
       { id: "backfill-muted".padEnd(24, "4"), slug: "backfill-muted", mutedAt: RECENT },
+      {
+        id: "backfill-new-promotion".padEnd(24, "6"),
+        slug: "backfill-new-promotion",
+        promotedAt: new Date("2026-08-14T00:00:00.000Z"),
+      },
     ]
     for (const signal of eligible) {
       await seedSignal({ ...signal, createdAt: OLD, origin: "system", source: "flagger" })
@@ -216,21 +219,9 @@ describe("SignalRepositoryLive score-evidence backfill", () => {
       { id: "target-first".padEnd(24, "1"), slug: "target-first", occurrenceAt: RECENT },
       { id: "target-second".padEnd(24, "2"), slug: "target-second", occurrenceAt: RECENT },
       { id: "old-occurrence".padEnd(24, "3"), slug: "old-occurrence", occurrenceAt: OLD },
-      {
-        id: "post-rollout".padEnd(24, "4"),
-        slug: "post-rollout",
-        occurrenceAt: RECENT,
-        promotedAt: new Date("2026-08-12T00:00:00.000Z"),
-      },
     ]
     for (const candidate of candidates) {
-      await seedSignal({
-        ...candidate,
-        createdAt: OLD,
-        origin: "system",
-        source: "flagger",
-        ...(candidate.promotedAt ? { promotedAt: candidate.promotedAt } : {}),
-      })
+      await seedSignal({ ...candidate, createdAt: OLD, origin: "system", source: "flagger" })
       await seedOccurrence({
         id: `score-${candidate.id}`.slice(0, 24),
         signalId: candidate.id,

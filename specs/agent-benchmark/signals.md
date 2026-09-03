@@ -244,13 +244,8 @@ estimator diagnostics and are not stored in daily score snapshots.
 The Postgres migration assigns an empty `scoreEvidence` list to every existing signal and makes the
 column non-null with an empty-list default. A separate one-time job then selects promoted,
 non-deleted, system-discovered signals that have at least one published occurrence in the previous
-month and still carry that known rollout value. Lifecycle state does not narrow the selection:
+30 days and still carry that known rollout value. Lifecycle state does not narrow the selection:
 resolved, ignored, muted, regressed, assigned, and prioritized signals are included.
-
-The selection also requires `promotedAt` to predate the production task definition carrying the
-score-evidence rollout. The launch workflow derives this cutoff from that task definition's
-registration timestamp, so a valid empty diagnostic classification created after rollout is never
-treated as historical ungenerated evidence.
 
 The job processes signals sequentially. It samples up to 200 of each signal's newest published,
 failed, non-errored scores and applies the static mapping when one mapped flagger has a strict
