@@ -79,7 +79,7 @@ const make = (): AnalyticsQueryReaderShape => ({
         groupParts.push("key")
       }
       if (input.timeBucket) {
-        selectParts.push(`${bucketExpr(input.timeBucket, descriptor.timeColumn)} AS bucket_start`)
+        selectParts.push(`${bucketExpr(input.timeBucket, descriptor.timeColumns.start)} AS bucket_start`)
         groupParts.push("bucket_start")
       }
       selectParts.push(`${aggregate} AS value`)

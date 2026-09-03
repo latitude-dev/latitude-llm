@@ -36,8 +36,10 @@ export interface MonitorsTableSorting {
 }
 export const DEFAULT_MONITORS_SORTING: MonitorsTableSorting = { column: "lastIncident", direction: "desc" }
 
+// Ranked by when the incident was raised, not by its backdated `startedAt` — a monitor that
+// just fired for a 40-minute run would otherwise sort below older, shorter incidents.
 const lastIncidentMs = (row: MonitorsTableRow): number | null =>
-  row.lastIncident ? Date.parse(row.lastIncident.startedAtIso) : null
+  row.lastIncident ? Date.parse(row.lastIncident.createdAtIso) : null
 
 const comparePrimary = (
   a: MonitorsTableRow,
@@ -90,6 +92,7 @@ function LastIncidentCell({
     <IncidentStatus
       startedAtIso={summary.startedAtIso}
       endedAtIso={summary.endedAtIso}
+      createdAtIso={summary.createdAtIso}
       {...(summary.endedAtIso === null ? { onResolve: () => onResolve(summary.id) } : {})}
     />
   )

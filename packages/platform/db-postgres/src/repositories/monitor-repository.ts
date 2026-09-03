@@ -97,8 +97,13 @@ const toMonitorRow = (monitor: Monitor): typeof monitors.$inferInsert => ({
   targetType: monitor.target.type,
   targetId: monitor.target.id,
   trigger: monitor.rule.trigger,
+  // `config.filterSet` is the persisted home of the target predicate — `toMonitor` reads the
+  // target back out of it — so the target's own filters have to be folded in here or a caller
+  // that only sets `target.filterSet` (the public API's shape) would store an empty predicate
+  // and the monitor would evaluate against the whole project.
   config: toMonitorConfigRow({
     ...monitor.rule.config,
+    ...(monitor.target.filterSet ? { filterSet: monitor.target.filterSet } : {}),
     ...(monitor.target.query === null ? {} : { query: monitor.target.query }),
   }),
   severity: monitor.rule.severity,
@@ -166,10 +171,14 @@ export const MonitorRepositoryLive = Layer.effect(
           )
 
           const [rows, totals] = yield* sqlClient.query((db) => {
+            // Recency is when the incident was raised, not its `started_at`: a match incident
+            // backdates to the start of the run it matched, so ordering by that buries a monitor
+            // that just fired below one whose older alert happens to point further back. The page
+            // is cut server-side, so the client comparator can't repair this ordering.
             const lastIncident = db
               .select({
                 monitorId: incidents.sourceId,
-                lastStartedAt: max(incidents.startedAt).as("last_started_at"),
+                lastCreatedAt: max(incidents.createdAt).as("last_created_at"),
               })
               .from(incidents)
               .where(and(eq(incidents.sourceType, "monitor"), eq(incidents.organizationId, organizationId)))
@@ -181,7 +190,7 @@ export const MonitorRepositoryLive = Layer.effect(
               .from(monitors)
               .leftJoin(lastIncident, eq(lastIncident.monitorId, monitors.id))
               .where(where)
-              .orderBy(sql`${lastIncident.lastStartedAt} desc nulls last`, desc(monitors.createdAt), asc(monitors.id))
+              .orderBy(sql`${lastIncident.lastCreatedAt} desc nulls last`, desc(monitors.createdAt), asc(monitors.id))
               .limit(limit)
               .offset(offset)
             const totalPromise = db.select({ value: count() }).from(monitors).where(where)
@@ -201,6 +210,7 @@ export const MonitorRepositoryLive = Layer.effect(
                 incidentId: incidents.id,
                 startedAt: incidents.startedAt,
                 endedAt: incidents.endedAt,
+                createdAt: incidents.createdAt,
               })
               .from(incidents)
               .where(
@@ -210,7 +220,9 @@ export const MonitorRepositoryLive = Layer.effect(
                   inArray(incidents.sourceId, ids),
                 ),
               )
-              .orderBy(asc(incidents.sourceId), desc(incidents.endedAt), desc(incidents.id)),
+              // Open incidents win (they are the actionable ones), then the most recently raised —
+              // `ended_at` desc would rank a backdated point incident by the instant it points at.
+              .orderBy(asc(incidents.sourceId), sql`(${incidents.endedAt} is null) desc`, desc(incidents.createdAt)),
           )
           const lastIncidentByMonitorId = new Map<string, MonitorLastIncident>()
           for (const row of incidentRows) {
@@ -219,6 +231,7 @@ export const MonitorRepositoryLive = Layer.effect(
                 id: row.incidentId,
                 startedAt: row.startedAt,
                 endedAt: row.endedAt,
+                createdAt: row.createdAt,
               })
             }
           }

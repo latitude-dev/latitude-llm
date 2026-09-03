@@ -6,6 +6,9 @@ import {
   ESCALATING_BUCKET_SMALL_MS,
   maxFailingBuckets,
   pickEscalatingBucketMs,
+  SAVED_SEARCH_CURRENT_WINDOW_MS,
+  SAVED_SEARCH_MONITORS_SWEEPER_PATTERN,
+  SAVED_SEARCH_MONITORS_THROTTLE_MS,
 } from "./constants.ts"
 
 describe("pickEscalatingBucketMs", () => {
@@ -54,5 +57,18 @@ describe("countFailingBuckets", () => {
 
   it("passes a bucket that meets the threshold exactly", () => {
     expect(countFailingBuckets([2, 2, 2], 2)).toBe(0)
+  })
+})
+
+describe("check cadence", () => {
+  // A throttle as long as the window lets the sweeper tick race the previous marker's expiry;
+  // the tick loses, and the window it would have covered is never evaluated.
+  it("throttles publishes for strictly less than the evaluation window", () => {
+    expect(SAVED_SEARCH_MONITORS_THROTTLE_MS).toBeLessThan(SAVED_SEARCH_CURRENT_WINDOW_MS)
+  })
+
+  it("sweeps at least as often as the throttle lapses, so a lapsed throttle is picked up promptly", () => {
+    const everyNMinutes = Number(SAVED_SEARCH_MONITORS_SWEEPER_PATTERN.split(" ")[0]?.replace("*/", ""))
+    expect(everyNMinutes * 60_000).toBeLessThanOrEqual(SAVED_SEARCH_CURRENT_WINDOW_MS)
   })
 })

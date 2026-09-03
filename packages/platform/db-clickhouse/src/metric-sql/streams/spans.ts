@@ -2,8 +2,10 @@ import type { SpanBreakdownField, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
 import { runFilterBuild } from "../../filter-builder.ts"
 import { buildSpanFilterClauses } from "../../registries/span-fields.ts"
-import { type TraceFamilyColumns, traceFamilyAggregate, usageGated, windowParams } from "../helpers.ts"
+import { anchorColumn, type TraceFamilyColumns, traceFamilyAggregate, usageGated, windowParams } from "../helpers.ts"
 import type { BreakdownExpr, InnerQuery, MetricSqlInput, StreamDescriptor } from "../types.ts"
+
+const TIME_COLUMNS = { start: "start_time", end: "end_time" } as const
 
 // Spans are row-grained; cost/tokens are gated to billable operations (NULL
 // otherwise) so sum/avg ignore wrapper + tool spans, while count/errorRate/
@@ -33,21 +35,25 @@ const BREAKDOWN = {
 
 /**
  * Per-span subquery: one row per span, windowed on the span's own `start_time`
- * (plain WHERE — no aggregation), filtered by the row-local span predicate. The
- * outer metric then aggregates these rows (no dedup — same convention as
- * tool-analytics over `execute_tool` spans).
+ * (or `end_time` when the caller anchors on activity) with a plain WHERE — no
+ * aggregation — filtered by the row-local span predicate. The outer metric then
+ * aggregates these rows (no dedup — same convention as tool-analytics over
+ * `execute_tool` spans).
  */
 const buildInner = (input: MetricSqlInput): Effect.Effect<InnerQuery, ValidationError, never> =>
   Effect.gen(function* () {
     const { whereClauses, params: filterParams } = yield* runFilterBuild(() => buildSpanFilterClauses(input.filterSet))
     const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+    // The end anchor forfeits the `start_time` partition/sort-key pruning by design:
+    // bounding `start_time` too would drop spans that outlive the window.
+    const windowColumn = anchorColumn(TIME_COLUMNS, input.windowAnchor)
     return {
-      sql: `SELECT span_id, start_time, status_code, operation, model, provider, service_name, tool_name, tags, duration_ns, cost_total_microcents, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create
+      sql: `SELECT span_id, start_time, end_time, status_code, operation, model, provider, service_name, tool_name, tags, duration_ns, cost_total_microcents, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create
           FROM spans
           WHERE organization_id = {organizationId:String}
             AND project_id = {projectId:String}
-            AND start_time >= toDateTime64({windowFrom:String}, 9, 'UTC')
-            AND start_time < toDateTime64({windowTo:String}, 9, 'UTC')
+            AND ${windowColumn} >= toDateTime64({windowFrom:String}, 9, 'UTC')
+            AND ${windowColumn} < toDateTime64({windowTo:String}, 9, 'UTC')
             ${extraWhere}`,
       params: {
         ...windowParams({
@@ -65,5 +71,6 @@ export const spansDescriptor: StreamDescriptor<"spans"> = {
   buildInner,
   aggregate: (metric) => traceFamilyAggregate(metric, COLUMNS),
   breakdowns: BREAKDOWN,
-  timeColumn: "start_time",
+  timeColumns: TIME_COLUMNS,
+  entityIdExpr: "span_id",
 }

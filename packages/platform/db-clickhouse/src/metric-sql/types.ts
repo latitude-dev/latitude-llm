@@ -13,6 +13,14 @@ import type {
 } from "@domain/shared"
 import type { Effect } from "effect"
 
+/**
+ * Which end of an entity's lifespan the `[from, to)` window filters on. Monitors
+ * window on `"end"` (an entity qualifies when its latest activity lands in the
+ * window, so a long run is still visible when it finishes); analytics,
+ * experiments and the dashboards window on `"start"`.
+ */
+export type WindowAnchor = "start" | "end"
+
 /** The metric vocabulary a given stream accepts — each non-trace stream has its own; the rest are trace-family. */
 export type MetricForStream<S extends AnalyticsStream> = S extends "scores"
   ? ScoreMetric
@@ -49,6 +57,8 @@ export interface MetricSqlInput<S extends AnalyticsStream = AnalyticsStream> {
   readonly from: Date
   /** Exclusive upper bound. */
   readonly to: Date
+  /** The time axis the window filters on. Defaults to `"start"`; only the monitor firing path passes `"end"`. */
+  readonly windowAnchor?: WindowAnchor
 }
 
 export type InnerQuery = {
@@ -81,6 +91,17 @@ export interface StreamDescriptor<S extends AnalyticsStream = AnalyticsStream> {
   aggregate(metric: MetricForStream<S>): string
   /** Breakdown dimensions this stream exposes (logical field → SQL expression). */
   readonly breakdowns: Record<string, BreakdownExpr>
-  /** The inner column to bucket on for time series. */
-  readonly timeColumn: string
+  /**
+   * The inner columns to window and bucket on, per anchor. `end` is absent on
+   * streams whose rows are a point in time rather than a lifespan (a score, a
+   * behavior observation, a moment) — those are unreachable from monitors, so
+   * they never see a non-default anchor.
+   */
+  readonly timeColumns: { readonly start: string; readonly end?: string }
+  /**
+   * The inner expression identifying the entity a row belongs to, at the same
+   * grain as {@link aggregate}'s `count` dedup. Monitors read it to alert once
+   * per matching run; only the monitor streams need it.
+   */
+  readonly entityIdExpr?: string
 }

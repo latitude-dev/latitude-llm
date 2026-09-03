@@ -39,13 +39,21 @@ const SENSITIVITY_MIN = 1
 const SENSITIVITY_MAX = 6
 // Field help copy — written so a non-engineer can predict what each control does.
 const KIND_HELP: Record<UserAlertKind, string> = {
-  "savedSearch.match": "Opens an incident each time a new matching trace is detected",
+  "savedSearch.match": "Opens an incident the first time each matching session is detected",
   "savedSearch.threshold": "Opens an incident once matching traces reach a threshold",
   "savedSearch.escalating": "Opens an incident when matching traces stay elevated for a sustained window",
-  "monitor.match": "Opens an incident each time the monitor target matches",
+  "monitor.match": "Opens an incident the first time each matching session is detected",
   "monitor.threshold": "Opens an incident once the metric crosses a threshold",
   "monitor.escalating": "Opens an incident when the metric stays elevated for a sustained window",
 }
+
+// Monitors window on the activity axis while every other view is start-anchored, so the same
+// filters can read differently here and on the dashboard. Say so wherever a monitor is created.
+const TIME_AXIS_HELP = [
+  "Monitors evaluate sessions by their latest activity, so a long session is checked while it progresses and again when it finishes.",
+  "Each session alerts at most once, and any fixed date range in the search is ignored.",
+  "Dashboards and analytics list sessions by start time, so a session that just alerted can appear further back there.",
+].join(" ")
 
 // Tab label + icon per kind. Saved-search exposes all three; a unified target
 // exposes only threshold/escalating (kindsForDraft drops "match" for targets).
@@ -543,8 +551,11 @@ export function AlertCardForm({
         />
       ) : null}
 
-      <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-center">
-        <Text.H6 color="foregroundMuted">{previewAlertSentence(value, savedSearchName)}</Text.H6>
+      <div className="flex flex-col gap-1.5">
+        <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-center">
+          <Text.H6 color="foregroundMuted">{previewAlertSentence(value, savedSearchName)}</Text.H6>
+        </div>
+        <Text.H6 color="foregroundMuted">{TIME_AXIS_HELP}</Text.H6>
       </div>
 
       <div className="flex flex-col gap-1.5">

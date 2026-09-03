@@ -433,4 +433,19 @@ describe("AnalyticsQueryReaderLive (traces)", () => {
     expect((await run(momentsInput({ metric: { kind: "avg", field: "confidence" } })))[0]?.value).toBeCloseTo(0.6, 5)
     expect((await run(momentsInput({ metric: { kind: "avg", field: "coherence" } })))[0]?.value).toBeCloseTo(0.7, 5)
   })
+
+  it("attributes a trace to the range it started in, even when it ends after it", async () => {
+    // Analytics stays start-anchored while monitors window on activity; a trace that
+    // starts at 23:50 and runs 30 min belongs to the day it started.
+    const day11From = new Date("2026-06-11T00:00:00.000Z")
+    const day11To = new Date("2026-06-12T00:00:00.000Z")
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [
+        span(71, new Date("2026-06-11T23:50:00.000Z"), { durationMs: 30 * 60 * 1000 }),
+      ]),
+    )
+
+    expect(await run(tracesInput({ from: day11From, to: day11To }))).toEqual([{ value: 1 }])
+    expect(await run(tracesInput({ from: day11To, to: new Date("2026-06-13T00:00:00.000Z") }))).toEqual([{ value: 0 }])
+  })
 })

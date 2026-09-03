@@ -16,6 +16,7 @@ import {
   AlertIncidentId,
   type AlertMetricThreshold,
   type AlertMetricThresholdDirection,
+  CacheStore,
   type ChSqlClient,
   DEFAULT_ESCALATION_SENSITIVITY,
   generateId,
@@ -27,10 +28,16 @@ import {
 } from "@domain/shared"
 import { SEASONAL_HISTORY_WEEKS } from "@domain/signals"
 import { Effect } from "effect"
-import { SAVED_SEARCH_CURRENT_WINDOW_MS, THRESHOLD_EXIT_DWELL_MS } from "../constants.ts"
+import {
+  MATCH_ALERT_DEDUPE_TTL_SECONDS,
+  matchAlertedDedupeKey,
+  SAVED_SEARCH_CURRENT_WINDOW_MS,
+  THRESHOLD_EXIT_DWELL_MS,
+} from "../constants.ts"
 import type { Monitor } from "../entities/monitor.ts"
 import { monitorConfigCondition } from "../entities/monitor.ts"
-import type { MetricSeriesReaderShape, MetricSeriesTarget } from "../ports/metric-series-reader.ts"
+import { withoutFixedTimeConditions } from "../helpers.ts"
+import type { MatchingEntity, MetricSeriesReaderShape, MetricSeriesTarget } from "../ports/metric-series-reader.ts"
 import { MetricSeriesReader, makeMetricSeriesReaderSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 
@@ -99,7 +106,7 @@ const seasonalThreshold = (
 
 const inlineMonitorTarget = (monitor: Monitor, metric: MonitorMetric = monitor.target.metric): MetricSeriesTarget => ({
   stream: monitor.target.stream,
-  filterSet: monitor.target.filterSet ?? {},
+  filterSet: withoutFixedTimeConditions(monitor.target.filterSet ?? {}),
   query: monitor.target.query,
   metric,
 })
@@ -135,7 +142,7 @@ const resolveMonitorTargets = (monitors: readonly Monitor[]) =>
 
         return {
           stream: monitor.target.stream,
-          filterSet: predicate.filterSet,
+          filterSet: withoutFixedTimeConditions(predicate.filterSet),
           query: predicate.query,
           metric,
         } satisfies MetricSeriesTarget
@@ -163,31 +170,40 @@ const thresholdMetricTarget = (target: MetricSeriesTarget, condition: ThresholdC
   metric: condition.metric,
 })
 
-const evaluateMatchPoint = (
+/** Redis round-trips for the per-entity dedupe markers; a window normally holds a handful of entities. */
+const DEDUPE_LOOKUP_CONCURRENCY = 16
+
+const earliestStart = (entities: readonly MatchingEntity[], fallback: Date): Date =>
+  entities.reduce<Date>((earliest, entity) => (entity.startTime < earliest ? entity.startTime : earliest), fallback)
+
+const dedupeKey = (monitor: Monitor, entity: MatchingEntity): string =>
+  matchAlertedDedupeKey({ organizationId: monitor.organizationId, monitorId: monitor.id, entityId: entity.id })
+
+/**
+ * The entities matching in the current activity window that this monitor has not
+ * alerted for yet. A long run sits in the window on every check while it progresses,
+ * so without the per-entity markers one run would alert on each of them.
+ */
+const newMatchingEntities = (
   monitor: Monitor,
   target: MetricSeriesTarget,
   metricReader: MetricSeriesReaderShape,
   now: Date,
 ) =>
   Effect.gen(function* () {
-    const from = new Date(now.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS)
-    const matchTarget = { ...target, metric: { kind: "count" as const } }
-    const value = yield* metricReader.valueInWindow({
+    const cacheStore = yield* CacheStore
+    const entities = yield* metricReader.matchingEntities({
       organizationId: monitor.organizationId,
       projectId: monitor.projectId,
-      target: matchTarget,
-      from,
+      target: { ...target, metric: { kind: "count" as const } },
+      from: new Date(now.getTime() - SAVED_SEARCH_CURRENT_WINDOW_MS),
       to: now,
     })
-    if (value <= 0) return null
-    const firstEventAt = yield* metricReader.firstEventAt({
-      organizationId: monitor.organizationId,
-      projectId: monitor.projectId,
-      target: matchTarget,
-      from,
-      to: now,
+    if (entities.length === 0) return []
+    const alerted = yield* Effect.forEach(entities, (entity) => cacheStore.get(dedupeKey(monitor, entity)), {
+      concurrency: DEDUPE_LOOKUP_CONCURRENCY,
     })
-    return { startedAt: firstEventAt ?? now }
+    return entities.filter((_entity, index) => alerted[index] === null)
   })
 
 const computeThresholdValue = (
@@ -286,8 +302,10 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
 
     const checkMatchMonitor = (monitor: Monitor, target: MetricSeriesTarget) =>
       Effect.gen(function* () {
-        const point = yield* evaluateMatchPoint(monitor, target, metricReader, now)
-        if (point === null) return
+        const cacheStore = yield* CacheStore
+        const entities = yield* newMatchingEntities(monitor, target, metricReader, now)
+        if (entities.length === 0) return
+        const startedAt = earliestStart(entities, now)
         yield* sqlClient.transaction(
           Effect.gen(function* () {
             const createdAt = new Date()
@@ -298,8 +316,8 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
               sourceType: "monitor" as const,
               sourceId: monitor.id,
               severity: monitor.rule.severity,
-              startedAt: point.startedAt,
-              endedAt: point.startedAt,
+              startedAt,
+              endedAt: startedAt,
               createdAt,
               entrySignals: null,
               exitEligibleSince: null,
@@ -320,6 +338,15 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
               },
             })
           }),
+        )
+        // Marked only once the incident is committed, so a failed insert retries cleanly. Redis
+        // can't join that transaction, so a marker write that fails after the commit leaves the
+        // entity unmarked and the next check alerts for it again — a duplicate alert, which beats
+        // marking first and silently swallowing the alert when the insert is the thing that fails.
+        yield* Effect.forEach(
+          entities,
+          (entity) => cacheStore.set(dedupeKey(monitor, entity), "1", { ttlSeconds: MATCH_ALERT_DEDUPE_TTL_SECONDS }),
+          { concurrency: DEDUPE_LOOKUP_CONCURRENCY, discard: true },
         )
       })
 
@@ -543,6 +570,7 @@ export const checkMonitorsUseCase = (input: CheckMonitorsInput) =>
     RepositoryError,
     | SqlClient
     | ChSqlClient
+    | CacheStore
     | MonitorRepository
     | IncidentRepository
     | MetricSeriesReader

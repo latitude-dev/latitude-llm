@@ -178,7 +178,12 @@ const makeIncidentRepository = (): IncidentRepositoryShape =>
                 eq(incidents.organizationId, organizationId),
                 eq(incidents.projectId, projectId),
                 to ? lte(incidents.startedAt, to) : undefined,
-                from ? or(isNull(incidents.endedAt), gte(incidents.endedAt, from)) : undefined,
+                // `created_at` widens the lower bound past the incident's own lifetime: a match
+                // incident is a single instant backdated to the start of the run it matched, so
+                // one raised inside the window can have ended before it began.
+                from
+                  ? or(isNull(incidents.endedAt), gte(incidents.endedAt, from), gte(incidents.createdAt, from))
+                  : undefined,
                 sourceTypes && sourceTypes.length > 0 ? inArray(incidents.sourceType, sourceTypes) : undefined,
                 sourceId ? eq(incidents.sourceId, sourceId) : undefined,
                 severities && severities.length > 0 ? inArray(incidents.severity, severities) : undefined,

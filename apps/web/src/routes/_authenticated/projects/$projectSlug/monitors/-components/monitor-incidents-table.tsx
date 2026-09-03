@@ -59,6 +59,7 @@ const incidentColumns = (onResolve?: (incidentId: string) => void): InfiniteTabl
       <IncidentStatus
         startedAtIso={incident.startedAt}
         endedAtIso={incident.endedAt}
+        createdAtIso={incident.createdAt}
         {...(onResolve && incident.endedAt === null ? { onResolve: () => onResolve(incident.id) } : {})}
       />
     ),

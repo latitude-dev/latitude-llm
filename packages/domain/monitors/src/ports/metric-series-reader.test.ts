@@ -30,6 +30,7 @@ const reader: MetricSeriesReaderShape = {
     if (hours(from, to) === 6) return Effect.succeed(72)
     return Effect.succeed(8)
   },
+  matchingEntities: () => Effect.succeed([]),
   firstEventAt: () => Effect.succeed(null),
   lastEventAt: () => Effect.succeed(null),
   seriesPerBucket: () => Effect.succeed([4, 12]),

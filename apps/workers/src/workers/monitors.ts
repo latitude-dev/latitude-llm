@@ -7,6 +7,7 @@ import {
 } from "@domain/monitors"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
+import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, MetricSeriesReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   IncidentRepositoryLive,
@@ -18,7 +19,7 @@ import {
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Cause, Effect, Layer } from "effect"
-import { getAdminPostgresClient, getClickhouseClient, getPostgresClient } from "../clients.ts"
+import { getAdminPostgresClient, getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("monitors")
 
@@ -28,6 +29,7 @@ interface MonitorsDeps {
   postgresClient?: PostgresClient
   adminPostgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
+  redisClient?: RedisClient
 }
 
 const monitorWorkerRepoLayer = Layer.mergeAll(
@@ -42,16 +44,19 @@ export const createMonitorsWorker = ({
   postgresClient,
   adminPostgresClient,
   clickhouseClient,
+  redisClient,
 }: MonitorsDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
   const adminPgClient = adminPostgresClient ?? getAdminPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
+  const rdClient = redisClient ?? getRedisClient()
 
   consumer.subscribe("monitors", {
     checkSavedSearchMonitors: (payload) =>
       checkMonitorsUseCase({ projectId: ProjectId(payload.projectId) }).pipe(
         withPostgres(monitorWorkerRepoLayer, pgClient, OrganizationId(payload.organizationId)),
         withClickHouse(MetricSeriesReaderLive, chClient, OrganizationId(payload.organizationId)),
+        Effect.provide(RedisCacheStoreLive(rdClient)),
         Effect.tap((result) =>
           Effect.sync(() =>
             logger.info(

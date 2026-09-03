@@ -21,6 +21,7 @@ import {
   searchMonitorsUseCase,
   unmuteMonitorUseCase,
   updateMonitorUseCase,
+  withoutFixedTimeConditions,
 } from "@domain/monitors"
 import { listSavedSearches, SavedSearchRepository } from "@domain/saved-searches"
 import {
@@ -190,6 +191,8 @@ export interface MonitorLastIncidentRecord {
   readonly id: string
   readonly startedAtIso: string
   readonly endedAtIso: string | null
+  /** When the incident was raised; `startedAtIso` backdates to the offending run's start. */
+  readonly createdAtIso: string
 }
 
 export interface MonitorListRowRecord {
@@ -204,7 +207,12 @@ const toMonitorListRowRecord = (
 ): MonitorListRowRecord => ({
   monitor: toMonitorRecord(monitor, savedSearchRefs),
   lastIncident: last
-    ? { id: last.id, startedAtIso: last.startedAt.toISOString(), endedAtIso: last.endedAt?.toISOString() ?? null }
+    ? {
+        id: last.id,
+        startedAtIso: last.startedAt.toISOString(),
+        endedAtIso: last.endedAt?.toISOString() ?? null,
+        createdAtIso: last.createdAt.toISOString(),
+      }
     : null,
 })
 
@@ -313,14 +321,14 @@ const resolveMetricTarget = (monitor: Monitor) =>
       if (search === null) return null
       return {
         stream: target.stream,
-        filterSet: search.filterSet,
+        filterSet: withoutFixedTimeConditions(search.filterSet),
         query: search.query,
         metric: target.metric,
       } satisfies MetricSeriesTarget
     }
     return {
       stream: target.stream,
-      filterSet: target.filterSet ?? {},
+      filterSet: withoutFixedTimeConditions(target.filterSet ?? {}),
       query: target.query ?? null,
       metric: target.metric,
     } satisfies MetricSeriesTarget
@@ -862,6 +870,7 @@ const toMonitorIncidentRecord = (
       readonly id: string
       readonly startedAt: Date
       readonly endedAt: Date | null
+      readonly createdAt: Date
       readonly sourceType: string | null
       readonly sourceId: string | null
       readonly severity: string
@@ -875,6 +884,7 @@ const toMonitorIncidentRecord = (
   id: item.incident.id,
   startedAt: item.incident.startedAt.toISOString(),
   endedAt: item.incident.endedAt?.toISOString() ?? null,
+  createdAt: item.incident.createdAt.toISOString(),
   kind:
     item.incident.sourceType === "signal"
       ? "signal.escalating"

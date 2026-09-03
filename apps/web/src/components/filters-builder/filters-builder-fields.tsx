@@ -19,8 +19,18 @@ import { groupFilterSections } from "./group-sections.ts"
 import { MetadataFilter } from "./metadata-filter/metadata-filter.tsx"
 import { type FilterMode, MultiSelectFilter, type StaticFilterItem } from "./multi-select-filter.tsx"
 import { PercentileFilter } from "./percentile-filter.tsx"
-import { StatusFilter, type StatusFilterValue } from "./status-filter.tsx"
+import { StatusFilter } from "./status-filter.tsx"
 import type { DistinctColumn } from "./types.ts"
+import {
+  getInValues,
+  getPercentileValue,
+  getRangeValues,
+  getStatusValues,
+  getTextFilterValue,
+  setFieldConditions,
+  toDisplayUnit,
+  toWireUnit,
+} from "./utils.ts"
 
 export type { FilterMode }
 
@@ -31,44 +41,6 @@ interface FiltersBuilderFieldsProps {
   readonly onFiltersChange: (filters: FilterSet) => void
   /** Field keys to omit from the builder (e.g. custom behaviors exclude `topics`). */
   readonly excludeFields?: readonly string[]
-}
-
-function getInValues(filters: FilterSet, field: string): readonly string[] {
-  const cond = filters[field]?.find((c) => c.op === "in")
-  return Array.isArray(cond?.value) ? cond.value.map(String) : []
-}
-
-function getTextFilterValue(filters: FilterSet, field: string): string {
-  const cond = filters[field]?.find((c) => c.op === "contains")
-  return typeof cond?.value === "string" ? cond.value : ""
-}
-
-function getRangeValues(filters: FilterSet, field: string): { min: number | undefined; max: number | undefined } {
-  const conditions = filters[field]
-  const minVal = conditions?.find((c) => c.op === "gte")?.value
-  const maxVal = conditions?.find((c) => c.op === "lte")?.value
-  return {
-    min: typeof minVal === "number" ? minVal : undefined,
-    max: typeof maxVal === "number" ? maxVal : undefined,
-  }
-}
-
-function toDisplayUnit(value: number | undefined, displayScale: number | undefined): number | undefined {
-  if (value === undefined) return undefined
-  if (!displayScale) return value
-  return value / displayScale
-}
-
-function toWireUnit(value: number | undefined, displayScale: number | undefined): number | undefined {
-  if (value === undefined) return undefined
-  if (!displayScale) return value
-  // Round to avoid float drift on conversions like 123.45 × 100_000_000.
-  return Math.round(value * displayScale)
-}
-
-function getPercentileValue(filters: FilterSet, field: string): number | undefined {
-  const cond = filters[field]?.find((c) => c.op === "gtePercentile")
-  return typeof cond?.value === "number" ? cond.value : undefined
 }
 
 const ANNOTATOR_FIELD = "score.annotatorId"
@@ -83,22 +55,6 @@ const ANNOTATOR_FIELD = "score.annotatorId"
  */
 function getHasAnnotationsOn(filters: FilterSet): boolean {
   return (filters[ANNOTATOR_FIELD] ?? []).some((c) => c.op === "neq")
-}
-
-const STATUS_VALUES: readonly StatusFilterValue[] = ["ok", "error"]
-
-function getStatusValues(filters: FilterSet, field: string): readonly StatusFilterValue[] {
-  const cond = filters[field]?.find((c) => c.op === "in")
-  const raw = Array.isArray(cond?.value) ? cond.value.map(String) : []
-  return raw.filter((v): v is StatusFilterValue => (STATUS_VALUES as readonly string[]).includes(v))
-}
-
-function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
-  if (conditions.length === 0) {
-    const { [field]: _, ...rest } = filters
-    return rest
-  }
-  return { ...filters, [field]: conditions }
 }
 
 function CollapsibleSection({

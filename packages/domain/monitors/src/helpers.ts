@@ -3,10 +3,22 @@ import {
   type AlertDuration,
   type AlertIncidentCondition,
   type AlertMetricThreshold,
+  type FilterSet,
   formatMetricValue,
   type MonitorMetric,
   type MonitorTrigger,
+  TRACE_TIME_FILTER_FIELDS,
 } from "@domain/shared"
+
+/**
+ * A monitored predicate without its absolute time conditions. A saved search's
+ * date-picker range (or an API-created inline range) would fight the monitor's
+ * sliding activity window and silence it for good once the range aged out, so
+ * evaluation and the monitor's own chart both ignore it. The saved search keeps
+ * the range for dashboard use.
+ */
+export const withoutFixedTimeConditions = (filterSet: FilterSet): FilterSet =>
+  Object.fromEntries(Object.entries(filterSet).filter(([field]) => !TRACE_TIME_FILTER_FIELDS.includes(field as never)))
 
 export interface HumanReadableRuleContext {
   readonly savedSearchName?: string

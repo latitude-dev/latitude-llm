@@ -21,8 +21,10 @@ import { MetricSeriesReader } from "../ports/metric-series-reader.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import {
   createFakeAlertIncidentStore,
+  createFakeCacheStore,
   createFakeMetricSeriesReader,
   createFakeMonitorRepository,
+  type FakeMetricEventInput,
 } from "../testing/index.ts"
 import { checkMonitorsUseCase } from "./check-monitors.ts"
 
@@ -94,10 +96,12 @@ const twoMatches = [new Date("2026-06-23T11:57:00.000Z"), new Date("2026-06-23T1
 
 const layersFor = (
   monitors: readonly Monitor[],
-  matches: readonly Date[],
+  matches: readonly FakeMetricEventInput[],
   savedSearch: { readonly query: string | null; readonly filterSet: FilterSet } = { query: null, filterSet: {} },
   metricReaderLayer?: Layer.Layer<MetricSeriesReader>,
   seedIncidents: readonly Incident[] = [],
+  // Threaded in when a test needs two consecutive checks to share the dedupe markers.
+  cacheStore = createFakeCacheStore(),
 ) => {
   const monitorStore = createFakeMonitorRepository(monitors)
   const incidentStore = createFakeAlertIncidentStore(seedIncidents)
@@ -133,11 +137,13 @@ const layersFor = (
     events,
     incidents: incidentStore.incidents,
     metricCalls: metricReader.calls,
+    dedupeKeys: cacheStore.entries,
     layer: Layer.mergeAll(
       Layer.succeed(MonitorRepository, monitorStore.repo),
       Layer.succeed(SavedSearchRepository, savedSearchStore.repository),
       incidentStore.layer,
       metricReaderLayer ?? metricReader.layer,
+      cacheStore.layer,
       outboxLayer,
       sqlLayer,
       chLayer,
@@ -188,6 +194,119 @@ describe("checkMonitorsUseCase", () => {
         sourceId: MonitorId(cuid("m1")),
       },
     })
+  })
+
+  it("alerts on a long run whose activity is recent but which started before the window (LAT-885)", async () => {
+    const longRun = {
+      id: "long-run",
+      startedAt: new Date("2026-06-23T11:22:00.000Z"),
+      endedAt: new Date("2026-06-23T11:59:00.000Z"),
+    }
+    const { incidents, layer } = layersFor(
+      [monitor({ id: MonitorId(cuid("m-long")), rule: { trigger: "match", config: {}, severity: "medium" } })],
+      [longRun],
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    // Windowed on the run's activity, backdated to when the run began.
+    expect(incidents).toHaveLength(1)
+    expect(incidents[0]).toMatchObject({ startedAt: longRun.startedAt, endedAt: longRun.startedAt })
+  })
+
+  it("alerts once for a run that stays in the activity window across checks", async () => {
+    const longRun = {
+      id: "long-run",
+      startedAt: new Date("2026-06-23T11:22:00.000Z"),
+      endedAt: new Date("2026-06-23T11:59:00.000Z"),
+    }
+    const matchMonitor = monitor({
+      id: MonitorId(cuid("m-dedupe")),
+      rule: { trigger: "match", config: {}, severity: "medium" },
+    })
+    const { events, incidents, dedupeKeys, layer } = layersFor([matchMonitor], [longRun])
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(incidents).toHaveLength(1)
+    expect(events).toHaveLength(1)
+    expect([...dedupeKeys.keys()]).toEqual([
+      `org:${organizationId}:monitors:match-alerted:${matchMonitor.id}:${longRun.id}`,
+    ])
+  })
+
+  it("alerts again for a different run, backdated to that run's start", async () => {
+    const firstRun = {
+      id: "run-1",
+      startedAt: new Date("2026-06-23T11:22:00.000Z"),
+      endedAt: new Date("2026-06-23T11:59:00.000Z"),
+    }
+    const secondRun = {
+      id: "run-2",
+      startedAt: new Date("2026-06-23T11:40:00.000Z"),
+      endedAt: new Date("2026-06-23T11:59:30.000Z"),
+    }
+    const matchMonitor = monitor({
+      id: MonitorId(cuid("m-second")),
+      rule: { trigger: "match", config: {}, severity: "medium" },
+    })
+    const sharedCache = createFakeCacheStore()
+    const first = layersFor([matchMonitor], [firstRun], undefined, undefined, [], sharedCache)
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(first.layer)))
+
+    const second = layersFor([matchMonitor], [firstRun, secondRun], undefined, undefined, [], sharedCache)
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(second.layer)))
+
+    expect(first.incidents).toHaveLength(1)
+    expect(first.incidents[0]).toMatchObject({ startedAt: firstRun.startedAt })
+    // Only the new run is alerted for, so the incident backdates to its start, not the first run's.
+    expect(second.incidents).toHaveLength(1)
+    expect(second.incidents[0]).toMatchObject({ startedAt: secondRun.startedAt })
+  })
+
+  it("counts long runs still in the activity window towards a threshold", async () => {
+    const longRuns = [
+      {
+        id: "long-run-1",
+        startedAt: new Date("2026-06-23T11:22:00.000Z"),
+        endedAt: new Date("2026-06-23T11:58:00.000Z"),
+      },
+      {
+        id: "long-run-2",
+        startedAt: new Date("2026-06-23T11:30:00.000Z"),
+        endedAt: new Date("2026-06-23T11:59:00.000Z"),
+      },
+    ]
+    const { incidents, layer } = layersFor([thresholdMonitor()], longRuns)
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(incidents).toHaveLength(1)
+    expect(incidents[0]).toMatchObject({
+      startedAt: longRuns[0]?.startedAt,
+      entrySignals: { evaluatedThreshold: 2 },
+    })
+  })
+
+  it("ignores a monitored predicate's fixed date range", async () => {
+    const savedSearch = {
+      query: null,
+      filterSet: {
+        userId: [{ op: "eq" as const, value: "user-1" }],
+        startTime: [{ op: "gte" as const, value: "2026-06-01T00:00:00.000Z" }],
+      },
+    }
+    const { metricCalls, layer } = layersFor(
+      [monitor({ id: MonitorId(cuid("m-range")), rule: { trigger: "match", config: {}, severity: "medium" } })],
+      [new Date("2026-06-23T11:58:00.000Z")],
+      savedSearch,
+    )
+
+    await Effect.runPromise(checkMonitorsUseCase({ projectId }).pipe(Effect.provide(layer)))
+
+    expect(metricCalls[0]?.target.filterSet).toEqual({ userId: savedSearch.filterSet.userId })
   })
 
   it("resolves saved-search targets from the live saved search", async () => {
@@ -455,6 +574,10 @@ describe("checkMonitorsUseCase", () => {
         input.target.filterSet.userId
           ? Effect.fail(new RepositoryError({ operation: "read metric series", cause: new Error("reader failed") }))
           : Effect.succeed(1),
+      matchingEntities: (input) =>
+        input.target.filterSet.userId
+          ? Effect.fail(new RepositoryError({ operation: "read metric series", cause: new Error("reader failed") }))
+          : Effect.succeed([{ id: "entity-good", startTime: firstMatch }]),
       firstEventAt: () => Effect.succeed(firstMatch),
       lastEventAt: () => Effect.succeed(firstMatch),
       seriesPerBucket: () => Effect.succeed([]),
@@ -505,6 +628,8 @@ describe("checkMonitorsUseCase", () => {
   it("reports all monitor failures so the worker can retry systemic outages", async () => {
     const failingMetricLayer = Layer.succeed(MetricSeriesReader, {
       valueInWindow: () =>
+        Effect.fail(new RepositoryError({ operation: "read metric series", cause: new Error("reader failed") })),
+      matchingEntities: () =>
         Effect.fail(new RepositoryError({ operation: "read metric series", cause: new Error("reader failed") })),
       firstEventAt: () => Effect.succeed(null),
       lastEventAt: () => Effect.succeed(null),

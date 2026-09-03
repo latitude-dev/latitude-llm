@@ -30,6 +30,8 @@ export interface MonitorLastIncident {
   readonly id: string
   readonly startedAt: Date
   readonly endedAt: Date | null
+  /** When the incident was raised. Ranks recency, since `startedAt` backdates to the offending run's start. */
+  readonly createdAt: Date
 }
 
 export interface MonitorListPage {

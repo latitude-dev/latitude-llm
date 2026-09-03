@@ -114,6 +114,9 @@ export function MonitorMetricChart({
       bucketWidthMs: bucketMs,
       incidents: monitorIncidents,
       nowMs: toMs,
+      // These bars are bucketed by latest activity, so markers follow when the monitor fired
+      // rather than the backdated start of the run — otherwise they land on an empty bucket.
+      timeAxis: "raised",
     })
     return { overlay: result.overlay, incidentsTouchingBucketIndex: result.incidentsTouchingBucketIndex }
   }, [series, monitorIncidents, bucketMs, toMs])
@@ -142,7 +145,12 @@ export function MonitorMetricChart({
   return (
     <section className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <Text.H6 color="foregroundMuted">{target ? metricLabel(target) : "Metric"}</Text.H6>
+        <Text.H6 color="foregroundMuted">
+          {target ? metricLabel(target) : "Metric"}
+          <Text.H6 color="foregroundMuted" asChild>
+            <span> · by latest activity</span>
+          </Text.H6>
+        </Text.H6>
         {latestValue !== null && metric ? (
           <Text.H5 color="foreground" className="tabular-nums">
             {formatMetricValue(latestValue, metric)}

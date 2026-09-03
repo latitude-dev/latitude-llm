@@ -96,5 +96,5 @@ export const scoresDescriptor: StreamDescriptor<"scores"> = {
   buildInner,
   aggregate: (metric) => scoreAggregate(metric),
   breakdowns: BREAKDOWN,
-  timeColumn: "created_at",
+  timeColumns: { start: "created_at" },
 }

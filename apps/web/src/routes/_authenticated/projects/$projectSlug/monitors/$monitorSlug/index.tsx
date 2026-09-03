@@ -330,7 +330,12 @@ function MonitorDetailPage() {
 
               {target ? (
                 <div className="shrink-0 px-6 pb-6">
-                  <MonitorMatchingTraces projectSlug={projectSlug} projectId={project.id} target={target} />
+                  <MonitorMatchingTraces
+                    projectSlug={projectSlug}
+                    projectId={project.id}
+                    target={target}
+                    savedSearchSlug={savedSearchTarget?.slug ?? null}
+                  />
                 </div>
               ) : null}
             </>

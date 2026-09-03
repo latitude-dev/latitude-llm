@@ -4,6 +4,8 @@ export {
   ESCALATING_BUCKET_LARGE_MS,
   ESCALATING_BUCKET_SIZE_CUTOFF_MS,
   ESCALATING_BUCKET_SMALL_MS,
+  MATCH_ALERT_DEDUPE_TTL_SECONDS,
+  matchAlertedDedupeKey,
   maxFailingBuckets,
   pickEscalatingBucketMs,
   SAVED_SEARCH_CURRENT_WINDOW_MS,
@@ -28,8 +30,10 @@ export {
   formatHumanReadableRule,
   type HumanReadableRuleContext,
   type HumanReadableRuleInput,
+  withoutFixedTimeConditions,
 } from "./helpers.ts"
 export type {
+  MatchingEntity,
   MetricSeriesBucketInput,
   MetricSeriesReaderAdapterInput,
   MetricSeriesReaderShape,
