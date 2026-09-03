@@ -30,7 +30,8 @@ export interface PromoteSignalInput {
    * it when billing refused the call or the metering scope could not be built:
    * the AI layer resolves that scope through `Effect.serviceOption`, so
    * generating without one runs the model unmetered. Promotion still happens,
-   * under the placeholder.
+   * under the placeholder and with deterministic fallback evidence when
+   * available.
    */
   readonly generateDetails?: boolean
 }
@@ -86,9 +87,10 @@ const countPromotionSessions = (input: {
  * `assignScoreToSignalUseCase` only records that the evidence was reached.
  *
  * Generation failure must not block promotion. A signal promoted under its
- * placeholder is corrected by the throttled `signals:refresh`, which runs for it
- * now that the latch is set; a signal held back because a model call failed is
- * invisible to everyone with nothing scheduled to retry it.
+ * placeholder uses deterministic flagger evidence when available and is
+ * corrected by the throttled `signals:refresh`, which runs for it now that the
+ * latch is set; a signal held back because a model call failed is invisible to
+ * everyone with nothing scheduled to retry it.
  */
 export const promoteSignalUseCase = (input: PromoteSignalInput) =>
   Effect.gen(function* () {
@@ -120,16 +122,6 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
     if (sessions < threshold) {
       return { action: "not-qualified", signalId: input.signalId } satisfies PromoteSignalResult
     }
-
-    const scoreRepository = yield* ScoreRepository
-    const flaggerSlugSample = yield* scoreRepository.listFlaggerSlugSampleBySignalId({
-      projectId: ProjectId(existing.signal.projectId),
-      signalId: existing.signal.id,
-    })
-    const dominantFlaggerSlug = findDominantMappedSignalFlaggerSlug(flaggerSlugSample)
-    const staticScoreEvidence =
-      dominantFlaggerSlug === null ? null : getSignalScoreEvidenceForFlagger(dominantFlaggerSlug)
-
     // Generated before the transaction opens, and read straight from
     // `generateSignalDetailsUseCase` rather than through `refreshSignalDetails`:
     // that one returns early for an unpromoted signal, which is every signal
@@ -142,6 +134,7 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
             projectId: input.projectId,
             signalId: input.signalId,
             ignorePreviousDetails: true,
+            classifyScoreEvidence: true,
           }).pipe(
             Effect.map((generated) => generated),
             // `catchCause`, not `catch`: a provider that throws surfaces as a
@@ -149,6 +142,18 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
             // promotion back any more than a typed failure does.
             Effect.catchCause(() => Effect.succeed(null)),
           )
+
+    let fallbackScoreEvidence: ReturnType<typeof getSignalScoreEvidenceForFlagger> = null
+    if (details === null) {
+      const scoreRepository = yield* ScoreRepository
+      const flaggerSlugSample = yield* scoreRepository.listFlaggerSlugSampleBySignalId({
+        projectId: ProjectId(existing.signal.projectId),
+        signalId: existing.signal.id,
+      })
+      const dominantFlaggerSlug = findDominantMappedSignalFlaggerSlug(flaggerSlugSample)
+      fallbackScoreEvidence =
+        dominantFlaggerSlug === null ? null : getSignalScoreEvidenceForFlagger(dominantFlaggerSlug)
+    }
 
     const sqlClient = yield* SqlClient
 
@@ -181,7 +186,7 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
         }
 
         const promotedAt = new Date()
-        const scoreEvidence = staticScoreEvidence ?? []
+        const scoreEvidence = details?.scoreEvidence ?? fallbackScoreEvidence ?? []
         yield* signalRepository.save({
           ...locked.signal,
           ...(details ?? {}),

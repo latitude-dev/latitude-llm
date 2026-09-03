@@ -38,8 +38,8 @@ and no role owns points.
 
 An empty list means the signal is diagnostic only. It still appears on Signals and can be promoted,
 assigned, resolved, and monitored. It does not silently route to Outcome. Unpromoted candidates,
-user-created signals, historical signals backfilled during this rollout, and promoted signals
-without a dominant mapped flagger all use an empty list.
+user-created signals, historical signals backfilled during this rollout, and promoted signals whose
+model classification and static fallback are unavailable or empty all use an empty list.
 
 ### Role semantics
 
@@ -82,7 +82,7 @@ window. Promotion, lifecycle state, or a historical occurrence does not create a
 regenerated every eight hours, but scoring roles cannot move between dimensions without a deliberate
 reclassification and scoring-version boundary.
 
-Most flagger-derived signals use a static mapping:
+When model generation fails, flagger-derived signals can use this static fallback mapping:
 
 | Flagger | Evidence roles |
 | --- | --- |
@@ -109,17 +109,19 @@ A mapped flagger slug is dominant when it occurs on more than half of the sample
 recent assigned scores that are published, failed, and non-errored. The denominator includes every
 qualifying score, including scores with a missing, unknown, or unmapped slug. A tie, a mixed sample
 without a strict majority, or a strict majority for an unmapped slug has no dominant mapped flagger.
-Static classification depends only on this sample and remains available when detail generation is
-unavailable.
+Static fallback classification depends only on this sample and is read only when detail generation
+is skipped or fails.
 
-Signals with no dominant mapped flagger latch an empty list and remain diagnostic.
-The name-and-description model call does not classify scoring roles. An unmapped
-strict majority, a mixed sample, or a missing slug sample all take this path.
+Every normal promotion uses one model call to generate the signal's name, description, and evidence
+roles together, regardless of whether its scores have a dominant mapped flagger. The prompt defines
+the estimands and requires evidence for every supported role. The model may return an empty list,
+and a successful model classification takes precedence over the static mapping.
 
-Promotion still succeeds when detail generation is skipped or fails. A dominant mapped flagger uses
-the static roles. Otherwise the signal is promoted with an empty list and remains diagnostic. The
-empty list is a valid latched classification, so a later detail refresh cannot silently classify the
-signal or move it between dimensions.
+Promotion still succeeds when detail generation is skipped or fails. The failure path samples the
+signal's flagger slugs and uses the static roles for a dominant mapped flagger. Otherwise the signal
+is promoted with an empty list and remains diagnostic. The empty list is a valid latched
+classification, so a later detail refresh cannot silently classify the signal or move it between
+dimensions.
 
 ## Which signals enter estimation
 

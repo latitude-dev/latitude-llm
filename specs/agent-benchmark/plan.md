@@ -51,10 +51,10 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
   [`signals.md`](signals.md#scoring-metadata).
 - [x] **P1-4** Generate the Postgres migration through the package migration script. Ask before
   running any migration command.
-- [x] **P1-5** Implement the static flagger mapping from
+- [x] **P1-5** Implement the static flagger fallback mapping from
   [`signals.md`](signals.md#assignment-at-promotion).
-- [x] **P1-6** Latch empty diagnostic `scoreEvidence` when there is no dominant mapped flagger. Do
-  not persist model-generated scoring roles.
+- [x] **P1-6** Extend signal detail generation so one model call generates the promoted signal's
+  name, description, and evidence-role classification together.
 - [x] **P1-7** Assign and latch `scoreEvidence` during promotion. Detail refresh must not rewrite it.
 - [x] **P1-8** Backfill every existing signal with an empty, non-null `scoreEvidence` list in the
   schema migration. Do not classify historical signals with a model or the static flagger mapping.
@@ -74,7 +74,7 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
 
 ### Exit gate
 
-- [x] **P1-15** Tests cover valid dimension-role pairs, static assignment, unmapped empty latch,
+- [x] **P1-15** Tests cover valid dimension-role pairs, generated assignment, static fallback,
   promotion latching, generation failure, strict flagger dominance, refresh behavior, the non-null
   empty backfill, ignored-score exclusion, ignored UI chips, and promoted-only analytics.
 - [x] **P1-16** Signal detail, list filters, and session signal rows render the same dimension set.

@@ -95,13 +95,18 @@ const run = (input: {
   readonly projectSessions?: number
   readonly flaggerSlugSample?: readonly (string | null)[]
 }) => {
-  const { layer: aiLayer } = createFakeAI(
+  const { layer: aiLayer, calls } = createFakeAI(
     input.generate ? { generate: input.generate } : { generate: () => Effect.die("model unavailable") },
   )
   const { repository: signalRepository, issues } = createFakeSignalRepository([input.signal ?? makeSignal()])
+  let flaggerSampleReads = 0
   const { repository: scoreRepository } = createFakeScoreRepository({
     countDistinctSessionsBySignalId: () => Effect.succeed(input.sessions ?? PROMOTION_MIN_SESSIONS),
-    listFlaggerSlugSampleBySignalId: () => Effect.succeed(input.flaggerSlugSample ?? []),
+    listFlaggerSlugSampleBySignalId: () =>
+      Effect.sync(() => {
+        flaggerSampleReads += 1
+        return input.flaggerSlugSample ?? []
+      }),
     listBySignalId: () =>
       Effect.succeed({
         items: [
@@ -132,7 +137,7 @@ const run = (input: {
       ),
       ...promotionGateLayers(input.projectSessions),
     ),
-  ).then((result) => ({ result, outbox, stored: issues.get(signalId) }))
+  ).then((result) => ({ result, outbox, stored: issues.get(signalId), calls, flaggerSampleReads }))
 }
 
 describe("promoteSignalUseCase", () => {
@@ -167,20 +172,35 @@ describe("promoteSignalUseCase", () => {
     expect(outbox.events.filter((event) => event.eventName === "SignalPromoted")).toHaveLength(1)
   })
 
-  it("uses static evidence for a dominant mapped flagger", async () => {
-    const { stored } = await run({
+  it("generates details and evidence even for a dominant mapped flagger", async () => {
+    const scoreEvidence: SignalScoreEvidence[] = [{ scoreDimension: "safety", role: "exposure" }]
+    const { stored, calls, flaggerSampleReads } = await run({
       flaggerSlugSample: ["tool-call-errors", "tool-call-errors", "refusal"],
-      generate: generated("Tool call failures", "Tools fail during execution."),
+      generate: generated("Unsafe tool output", "Tool output exposes unsafe input.", scoreEvidence),
     })
 
+    expect(stored?.name).toBe("Unsafe tool output")
+    expect(stored?.description).toBe("Tool output exposes unsafe input.")
+    expect(stored?.scoreEvidence).toEqual(scoreEvidence)
+    expect(calls.generate).toHaveLength(1)
+    expect(flaggerSampleReads).toBe(0)
+  })
+
+  it("uses static evidence for a dominant mapped flagger when generation fails", async () => {
+    const { stored, flaggerSampleReads } = await run({
+      flaggerSlugSample: ["tool-call-errors", "tool-call-errors", "refusal"],
+    })
+
+    expect(stored?.name).toBe(PLACEHOLDER_NAME)
     expect(stored?.scoreEvidence).toEqual([
       { scoreDimension: "reliability", role: "operationalIncident" },
       { scoreDimension: "cost", role: "spendEfficiency" },
       { scoreDimension: "speed", role: "criticalPathEfficiency" },
     ])
+    expect(flaggerSampleReads).toBe(1)
   })
 
-  it("latches empty evidence without a dominant mapped flagger", async () => {
+  it("uses generated evidence without a dominant mapped flagger", async () => {
     const { stored } = await run({
       flaggerSlugSample: ["unknown", "refusal", null],
       generate: generated("Unsafe input exposure", "User input contains sensitive content.", [
@@ -189,10 +209,10 @@ describe("promoteSignalUseCase", () => {
     })
 
     expect(stored?.name).toBe("Unsafe input exposure")
-    expect(stored?.scoreEvidence).toEqual([])
+    expect(stored?.scoreEvidence).toEqual([{ scoreDimension: "safety", role: "exposure" }])
   })
 
-  it("latches empty evidence for an unmapped strict majority", async () => {
+  it("uses generated evidence for an unmapped strict majority", async () => {
     const { stored } = await run({
       flaggerSlugSample: ["custom-flagger", "custom-flagger", "custom-flagger"],
       generate: generated("Custom detector cluster", "A third-party detector found a pattern.", [
@@ -201,7 +221,7 @@ describe("promoteSignalUseCase", () => {
     })
 
     expect(stored?.name).toBe("Custom detector cluster")
-    expect(stored?.scoreEvidence).toEqual([])
+    expect(stored?.scoreEvidence).toEqual([{ scoreDimension: "outcome", role: "taskOutcome" }])
   })
 
   it("does not call the model when generation is switched off", async () => {
