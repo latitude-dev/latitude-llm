@@ -59,15 +59,22 @@ jobs:
             exit 1
           fi
 
-          SERVICE_JSON=$(aws ecs describe-services \
+          SERVICE_ARNS=$(aws ecs list-services \
             --cluster "${CLUSTER}" \
-            --services "${SERVICE}" \
+            --query "serviceArns[?contains(@, '${SERVICE}')]" \
             --output json)
 
-          if [ "$(echo "${SERVICE_JSON}" | jq '.services | length')" != "1" ]; then
-            echo "Could not resolve the production workers service."
+          if [ "$(echo "${SERVICE_ARNS}" | jq 'length')" != "1" ]; then
+            echo "Expected exactly one production workers service matching ${SERVICE}."
+            echo "${SERVICE_ARNS}" | jq
             exit 1
           fi
+
+          SERVICE_ARN=$(echo "${SERVICE_ARNS}" | jq -r '.[0]')
+          SERVICE_JSON=$(aws ecs describe-services \
+            --cluster "${CLUSTER}" \
+            --services "${SERVICE_ARN}" \
+            --output json)
 
           BASE_TASK_DEF=$(echo "${SERVICE_JSON}" | jq -r '.services[0].taskDefinition')
           NETWORK=$(echo "${SERVICE_JSON}" | jq -c '.services[0].networkConfiguration.awsvpcConfiguration')
