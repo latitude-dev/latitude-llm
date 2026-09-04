@@ -126,13 +126,13 @@ const makeOrganization = (): Organization => ({
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
-const makeOrganizationRepository = (organization: Organization): (typeof OrganizationRepository)["Service"] => ({
+const makeOrganizationRepository = (organization: Organization | null): (typeof OrganizationRepository)["Service"] => ({
   findById: (id) =>
-    id === organization.id
+    organization && id === organization.id
       ? Effect.succeed(organization)
       : Effect.fail(new NotFoundError({ entity: "Organization", id })),
   findByIdForUpdate: (id) =>
-    id === organization.id
+    organization && id === organization.id
       ? Effect.succeed(organization)
       : Effect.fail(new NotFoundError({ entity: "Organization", id })),
   listByUserId: () => Effect.die("listByUserId not used"),
@@ -143,11 +143,11 @@ const makeOrganizationRepository = (organization: Organization): (typeof Organiz
   listExpiredUnclaimed: () => Effect.die("listExpiredUnclaimed not used"),
 })
 
-const makeProjectRepository = (project: Project): (typeof ProjectRepository)["Service"] => ({
+const makeProjectRepository = (project: Project | null): (typeof ProjectRepository)["Service"] => ({
   findById: (id) =>
-    id === project.id ? Effect.succeed(project) : Effect.fail(new NotFoundError({ entity: "Project", id })),
+    project && id === project.id ? Effect.succeed(project) : Effect.fail(new NotFoundError({ entity: "Project", id })),
   findByIdForUpdate: (id) =>
-    id === project.id ? Effect.succeed(project) : Effect.fail(new NotFoundError({ entity: "Project", id })),
+    project && id === project.id ? Effect.succeed(project) : Effect.fail(new NotFoundError({ entity: "Project", id })),
   findBySlug: () => Effect.die("findBySlug not used"),
   list: () => Effect.die("list not used"),
   listIncludingDeleted: () => Effect.die("listIncludingDeleted not used"),
@@ -174,12 +174,14 @@ interface TestHarness {
 const setupHarness = (options: {
   readonly members: readonly MemberWithUser[]
   readonly sessions: number
+  readonly projectExists?: boolean
+  readonly organizationExists?: boolean
 }): TestHarness => {
   const { repository: memberships } = createFakeMembershipRepository({
     listMembersWithUser: () => Effect.succeed([...options.members]),
   })
-  const projectRepo = makeProjectRepository(makeProject())
-  const organizationRepo = makeOrganizationRepository(makeOrganization())
+  const projectRepo = makeProjectRepository(options.projectExists === false ? null : makeProject())
+  const organizationRepo = makeOrganizationRepository(options.organizationExists === false ? null : makeOrganization())
   const reader = makeReader({
     countSessionsForProjectInWindow: () => Effect.succeed(options.sessions),
   })
@@ -325,5 +327,35 @@ describe("runWrappedUseCase", () => {
     await runUseCase(harness)
 
     expect(harness.saved[0]?.ownerName).toBe("Acme")
+  })
+
+  it("skips instead of throwing when the project was deleted before the job ran", async () => {
+    // Regression: the fan-out enumerates eligible projects from ClickHouse
+    // ahead of publishing this task, so the project can be deleted by the
+    // time the job runs. `findById` used to propagate `NotFoundError`
+    // uncaught, failing the whole BullMQ job.
+    harness = setupHarness({
+      members: [makeMember("a", "a@test.com", true)],
+      sessions: 5,
+      projectExists: false,
+    })
+
+    const result = await runUseCase(harness)
+
+    expect(result).toEqual({ status: "skipped", reason: "project-not-found" })
+    expect(harness.saved).toHaveLength(0)
+  })
+
+  it("skips instead of throwing when the organization was deleted before the job ran", async () => {
+    harness = setupHarness({
+      members: [makeMember("a", "a@test.com", true)],
+      sessions: 5,
+      organizationExists: false,
+    })
+
+    const result = await runUseCase(harness)
+
+    expect(result).toEqual({ status: "skipped", reason: "organization-not-found" })
+    expect(harness.saved).toHaveLength(0)
   })
 })
