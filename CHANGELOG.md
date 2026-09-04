@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.3.92 - 2026-09-04
+
+### Signals
+
+- Signals with no mapped Agent Score dimension are left untagged instead of being labelled "Diagnostic". The badge read as a classification of its own, while an empty set only means no dimension applies (ref: #4553).
+
+### Maintenance
+
+- The signal score evidence backfill job resolves the production workers service by listing and matching the generated ECS service name, so the confirmation-gated dispatch stops failing on the exact-name lookup (ref: #4550).
+- Bumped `fflate` to 0.8.3 (ref: #4551).
+
 ## v0.3.91 - 2026-09-03
 
 ### Signals
