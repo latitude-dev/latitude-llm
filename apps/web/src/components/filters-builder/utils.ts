@@ -40,6 +40,35 @@ export function getRangeValues(
   }
 }
 
+/**
+ * Score-rollup field both annotator controls write to: the people picker stores an `in` condition,
+ * the "Has scores" toggle an `annotator_id != ''` one. `annotator_id` is non-empty only for human
+ * annotations (evaluation/flagger/custom rows leave it blank), so the toggle alone means "has at
+ * least one human score". Both conditions coexist — they are AND'd in the score subquery — so each
+ * setter edits only its own op.
+ */
+export const ANNOTATOR_FILTER_FIELD = "score.annotatorId"
+
+export function getHasAnnotationsOn(filters: FilterSet): boolean {
+  return (filters[ANNOTATOR_FILTER_FIELD] ?? []).some((c) => c.op === "neq")
+}
+
+export function setAnnotatedBy(filters: FilterSet, values: readonly string[]): FilterSet {
+  // `eq` is dropped along with `in`: `getInValues` reads a single-value `eq` as the selection, so
+  // keeping it would AND a stale annotator onto the new list.
+  const others = (filters[ANNOTATOR_FILTER_FIELD] ?? []).filter((c) => c.op !== "in" && c.op !== "eq")
+  return setFieldConditions(
+    filters,
+    ANNOTATOR_FILTER_FIELD,
+    values.length > 0 ? [{ op: "in", value: [...values] }, ...others] : [...others],
+  )
+}
+
+export function setHasAnnotations(filters: FilterSet, on: boolean): FilterSet {
+  const others = (filters[ANNOTATOR_FILTER_FIELD] ?? []).filter((c) => c.op !== "neq")
+  return setFieldConditions(filters, ANNOTATOR_FILTER_FIELD, on ? [...others, { op: "neq", value: "" }] : [...others])
+}
+
 export function getPercentileValue(filters: FilterSet, field: string): number | undefined {
   const cond = filters[field]?.find((c) => c.op === "gtePercentile")
   return typeof cond?.value === "number" ? cond.value : undefined

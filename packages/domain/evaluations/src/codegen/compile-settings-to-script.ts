@@ -208,6 +208,8 @@ const compileCondition = (c: EvaluationRuleCondition, helpers: Set<HelperName>):
         positive: `Semantically similar to ${lit(c.query)} (${OP_PHRASE[c.operator]} ${c.threshold})`,
         negative: `Not semantically similar to ${lit(c.query)} (${OP_PHRASE[c.operator]} ${c.threshold})`,
       }
+    case "always":
+      return { expr: "true", positive: "Every session in scope", negative: "No session in scope" }
   }
 }
 

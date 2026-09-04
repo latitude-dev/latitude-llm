@@ -4,7 +4,6 @@ import {
   deleteSavedSearchFn,
   getSavedSearchBySlugFn,
   listSavedSearchesByProject,
-  type SavedSearchMonitorInput,
   type SavedSearchRecord,
   type SavedSearchSearchRecord,
   searchSavedSearchesOrgWide,
@@ -69,7 +68,6 @@ export function useCreateSavedSearch(projectId: string) {
       readonly name: string
       readonly query: string | null
       readonly filterSet: SavedSearchRecord["filterSet"]
-      readonly monitor?: SavedSearchMonitorInput
     }) =>
       createSavedSearchFn({
         data: {
@@ -77,14 +75,10 @@ export function useCreateSavedSearch(projectId: string) {
           name: input.name,
           query: input.query,
           filterSet: input.filterSet,
-          ...(input.monitor ? { monitor: input.monitor } : {}),
         },
       }),
-    onSuccess: (_record, variables) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: listKey(projectId) })
-      if (variables.monitor) {
-        void queryClient.invalidateQueries({ queryKey: ["monitors"] })
-      }
     },
   })
 }

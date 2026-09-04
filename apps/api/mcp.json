@@ -8765,7 +8765,7 @@
                           },
                           "conditions": {
                             "minItems": 1,
-                            "maxItems": 10,
+                            "maxItems": 25,
                             "type": "array",
                             "items": {
                               "oneOf": [
@@ -9065,6 +9065,19 @@
                                     "query",
                                     "operator",
                                     "threshold"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "const": "always"
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
                                   ],
                                   "additionalProperties": false
                                 }

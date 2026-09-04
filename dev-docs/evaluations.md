@@ -110,11 +110,13 @@ type EvaluationSettings =
   | {
       kind: "rule"
       match: "all" | "any"
-      conditions: EvaluationRuleCondition[] // 1..10
+      conditions: EvaluationRuleCondition[] // 1..EVALUATION_RULE_MAX_CONDITIONS
     }
 ```
 
-`rule` conditions are deterministic checks over the `session` object. Supported condition types include `text_match`, `empty_output`, `output_length`, `json_output`, `metric` (with `session` / `anyTrace` / `allTraces` aggregation), `tool_used`, `tool_failed`, `tool_call_count`, `error`, `finish_reason`, and `semantic_similarity`. Metric values use base units (`duration` ns, `cost` microcents, counts otherwise). Invalid regex patterns are rejected at settings parse time so codegen does not emit scripts that throw on every trace.
+`rule` conditions are deterministic checks over the `session` object. Supported condition types include `text_match`, `empty_output`, `output_length`, `json_output`, `metric` (with `session` / `anyTrace` / `allTraces` aggregation), `tool_used`, `tool_failed`, `tool_call_count`, `error`, `finish_reason`, `semantic_similarity`, and `always`. Metric values use base units (`duration` ns, `cost` microcents, counts otherwise). Invalid regex patterns are rejected at settings parse time so codegen does not emit scripts that throw on every trace.
+
+`always` compiles to `true`. A rule needs at least one condition, so it is how a signal defined by its scope alone is expressed — the shape a signal created from a saved search with no query takes.
 
 `semantic_similarity` (`{ query, operator, threshold }`) is the one non-pure rule condition: it compiles to `(await semanticSimilarity(query)) OP threshold`, which makes the compiled script an `embedding`-capability run routed through the `semanticSimilarity()` host verb (see the sandbox contract above). The builder exposes named presets (Broad/Balanced/Strict → `SEMANTIC_SIMILARITY_PRESETS`) mapped to the stored `threshold`.
 

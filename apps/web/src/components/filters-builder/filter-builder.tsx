@@ -1,8 +1,9 @@
 import { MOMENT_KINDS } from "@domain/conversation-intelligence"
 import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Icon, Input, Select, Tabs, Text } from "@repo/ui"
+import { Icon, Input, Select, Switch, Tabs, Text } from "@repo/ui"
 import { ChevronDownIcon, ChevronRightIcon, PlusIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type RefObject, useCallback, useEffect, useMemo, useState } from "react"
+import { isHasLlmActivityFilterOn } from "../../domains/sessions/sessions.collection.ts"
 import { useTopicFilterOptions } from "../../domains/taxonomy/taxonomy.collection.ts"
 import { useDebounce } from "../../lib/hooks/useDebounce.ts"
 import { getMultiSelectFieldsForMode, getTextFieldsForMode, NUMBER_RANGE_FIELDS, STATUS_FIELDS } from "./constants.ts"
@@ -12,8 +13,11 @@ import { type FilterMode, MultiSelectFilter, type StaticFilterItem } from "./mul
 import { NumberRangeFilter } from "./number-range-filter.tsx"
 import { StatusFilter } from "./status-filter.tsx"
 import type { DistinctColumn } from "./types.ts"
+import { useAnnotatorFilterItems } from "./use-annotator-items.ts"
 import {
+  ANNOTATOR_FILTER_FIELD,
   applyMetadataEntries,
+  getHasAnnotationsOn,
   getInValues,
   getPercentileValue,
   getRangeValues,
@@ -22,7 +26,9 @@ import {
   hasMetadataFilters,
   metadataEntriesFromFilters,
   removeMetadataFilters,
+  setAnnotatedBy,
   setFieldConditions,
+  setHasAnnotations,
   toDisplayUnit,
   toWireUnit,
 } from "./utils.ts"
@@ -33,17 +39,36 @@ const MOMENT_FILTER_ITEMS: readonly StaticFilterItem[] = MOMENT_KINDS.map((kind)
   label: humanizeKind(kind),
 }))
 
-type FilterKind = "status" | "text" | "userId" | "multiSelect" | "numberRange" | "metadata"
+type FilterKind =
+  | "status"
+  | "text"
+  | "userId"
+  | "multiSelect"
+  | "numberRange"
+  | "metadata"
+  | "annotator"
+  | "hasScores"
+  | "llmActivity"
 
 interface FieldDescriptor {
   readonly kind: FilterKind
   readonly field: string
   readonly label: string
+  /** Section identity, for the two annotator controls that share one field. Defaults to `field`. */
+  readonly key?: string
   readonly placeholder?: string
   readonly percentile?: boolean
   readonly displayScale?: number
   readonly displayStep?: number
 }
+
+const descriptorKey = (descriptor: FieldDescriptor) => descriptor.key ?? descriptor.field
+
+/** The sidebar's Scores group: two controls over the one `score.annotatorId` key. */
+const SCORE_DESCRIPTORS: readonly FieldDescriptor[] = [
+  { kind: "annotator", field: ANNOTATOR_FILTER_FIELD, label: "Scored by" },
+  { kind: "hasScores", field: ANNOTATOR_FILTER_FIELD, key: "hasScores", label: "Has scores" },
+]
 
 function DebouncedInput({
   value,
@@ -199,6 +224,8 @@ interface FilterBuilderProps {
   readonly value: FilterSet
   readonly onChange: (filters: FilterSet) => void
   readonly emptyMessage?: string
+  /** Field keys to omit (e.g. a signal scope hides `score.*`), matching the sidebar's prop. */
+  readonly excludeFields?: readonly string[]
   readonly portalContainer?: RefObject<HTMLElement | null>
   /** Render collapsed by default: a one-row summary of the applied-filter count, expandable via chevron. */
   readonly collapsible?: boolean
@@ -208,9 +235,13 @@ interface FilterBuilderProps {
 
 /**
  * A reusable "define a FilterSet" builder: pick fields from an "Add filter" menu, each rendered as a
- * removable section (status / text / multi-select / number range / metadata). Adding a field never
- * writes an empty condition — a key only appears in `value` once a real value is set — so the output
- * is always `filterSetSchema`-valid even when the consumer persists on every change.
+ * removable section (status / text / multi-select / number range / score / metadata). Adding a field
+ * never writes an empty condition — a key only appears in `value` once a real value is set — so the
+ * output is always `filterSetSchema`-valid even when the consumer persists on every change.
+ *
+ * `mode` decides which fields are offered, so a consumer only sees what its query can apply:
+ * `sessions` adds the session-only fields (`moments`, `topics`, `hasLlmActivity`) that the trace
+ * query drops.
  */
 export function FilterBuilder({
   mode,
@@ -218,6 +249,7 @@ export function FilterBuilder({
   value,
   onChange,
   emptyMessage = "No filters yet.",
+  excludeFields,
   portalContainer,
   collapsible = false,
   initialExpanded = false,
@@ -230,6 +262,7 @@ export function FilterBuilder({
 
   const textFields = useMemo(() => getTextFieldsForMode(mode), [mode])
   const multiSelectFields = useMemo(() => getMultiSelectFieldsForMode(mode), [mode])
+  const annotatorItems = useAnnotatorFilterItems()
 
   const { data: topicOptions = [] } = useTopicFilterOptions(projectId, mode === "sessions")
   const staticItemsByField = useMemo<Readonly<Record<string, readonly StaticFilterItem[]>>>(
@@ -264,16 +297,26 @@ export function FilterBuilder({
         ...(f.displayStep !== undefined ? { displayStep: f.displayStep } : {}),
       })
     }
+    list.push(...SCORE_DESCRIPTORS)
+    // `hasLlmActivity` only resolves on the session query; the trace filter builder drops it.
+    if (mode === "sessions") list.push({ kind: "llmActivity", field: "hasLlmActivity", label: "Has LLM activity" })
     list.push({ kind: "metadata", field: "metadata", label: "Metadata" })
-    return list
-  }, [textFields, multiSelectFields])
+    if (excludeFields === undefined) return list
+    return list.filter(
+      (descriptor) => !excludeFields.includes(descriptor.field) && !excludeFields.includes(descriptorKey(descriptor)),
+    )
+  }, [textFields, multiSelectFields, mode, excludeFields])
 
   const showMetadata = metadataOpen || hasMetadataFilters(value)
   const isActive = useCallback(
-    (descriptor: FieldDescriptor) =>
-      descriptor.kind === "metadata"
-        ? showMetadata
-        : value[descriptor.field] !== undefined || openFields.has(descriptor.field),
+    (descriptor: FieldDescriptor) => {
+      if (descriptor.kind === "metadata") return showMetadata
+      if (openFields.has(descriptorKey(descriptor))) return true
+      // Both annotator controls live on one field, so each reads only the ops it writes.
+      if (descriptor.kind === "annotator") return getInValues(value, descriptor.field).length > 0
+      if (descriptor.kind === "hasScores") return getHasAnnotationsOn(value)
+      return value[descriptor.field] !== undefined
+    },
     [value, openFields, showMetadata],
   )
 
@@ -323,7 +366,7 @@ export function FilterBuilder({
       setMetadataOpen(true)
       return
     }
-    setOpenFields((prev) => new Set(prev).add(descriptor.field))
+    setOpenFields((prev) => new Set(prev).add(descriptorKey(descriptor)))
     setExpanded(true)
   }, [])
 
@@ -336,9 +379,17 @@ export function FilterBuilder({
       }
       setOpenFields((prev) => {
         const next = new Set(prev)
-        next.delete(descriptor.field)
+        next.delete(descriptorKey(descriptor))
         return next
       })
+      if (descriptor.kind === "annotator") {
+        onChange(setAnnotatedBy(value, []))
+        return
+      }
+      if (descriptor.kind === "hasScores") {
+        onChange(setHasAnnotations(value, false))
+        return
+      }
       if (value[descriptor.field] !== undefined) onChange(setFieldConditions(value, descriptor.field, []))
     },
     [value, onChange],
@@ -425,6 +476,51 @@ export function FilterBuilder({
         </FilterSection>
       )
     }
+    if (descriptor.kind === "annotator") {
+      return (
+        <FilterSection key={descriptorKey(descriptor)} label={descriptor.label} onRemove={onRemove}>
+          <MultiSelectFilter
+            mode={mode}
+            projectId={projectId}
+            column={"annotatorId" as DistinctColumn}
+            selected={getInValues(value, descriptor.field)}
+            onChange={(values) => onChange(setAnnotatedBy(value, values))}
+            staticItems={annotatorItems}
+            placeholder="Search members…"
+            {...(portalContainer ? { portalContainer } : {})}
+          />
+        </FilterSection>
+      )
+    }
+    if (descriptor.kind === "hasScores") {
+      const on = getHasAnnotationsOn(value)
+      return (
+        <FilterSection key={descriptorKey(descriptor)} label={descriptor.label} onRemove={onRemove}>
+          <div className="flex items-center justify-between gap-2">
+            <Text.H6 color="foregroundMuted">
+              {on ? "Only items with a human score." : "All items, scored or not."}
+            </Text.H6>
+            <Switch checked={on} onCheckedChange={(next) => onChange(setHasAnnotations(value, next === true))} />
+          </div>
+        </FilterSection>
+      )
+    }
+    if (descriptor.kind === "llmActivity") {
+      const on = isHasLlmActivityFilterOn(value)
+      return (
+        <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
+          <div className="flex items-center justify-between gap-2">
+            <Text.H6 color="foregroundMuted">
+              {on ? "Hiding sessions without any LLM call." : "Including orphan fragments."}
+            </Text.H6>
+            <Switch
+              checked={on}
+              onCheckedChange={(next) => setField(descriptor.field, next === true ? [] : [{ op: "eq", value: false }])}
+            />
+          </div>
+        </FilterSection>
+      )
+    }
     return (
       <FilterSection key={descriptor.field} label={descriptor.label} onRemove={onRemove}>
         <MetadataFilter
@@ -446,10 +542,10 @@ export function FilterBuilder({
         placeholder="Add a filter"
         placeholderIcon={<Icon icon={PlusIcon} size="sm" color="foregroundMuted" />}
         value={undefined}
-        options={availableFilters.map((descriptor) => ({ value: descriptor.field, label: descriptor.label }))}
+        options={availableFilters.map((descriptor) => ({ value: descriptorKey(descriptor), label: descriptor.label }))}
         portalTarget={portalContainer ? "local" : "body"}
-        onChange={(field) => {
-          const descriptor = availableFilters.find((d) => d.field === field)
+        onChange={(key) => {
+          const descriptor = availableFilters.find((d) => descriptorKey(d) === key)
           if (descriptor) addFilter(descriptor)
         }}
       />

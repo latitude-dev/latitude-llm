@@ -800,7 +800,6 @@ export function ProjectExplorer({ projectSlug }: { readonly projectSlug: string 
             setSavedSearchSlug(record.slug)
             setSaveModalOpen(false)
           }}
-          onCreateSignal={createSignalFromSearch}
         />
       ) : null}
     </Layout>

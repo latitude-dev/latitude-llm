@@ -66,6 +66,9 @@ export const evaluationRuleConditionSchema = z
       operator: comparisonOperatorSchema.default("gte"),
       threshold: z.number().min(0).max(1),
     }),
+    // Compiles to `true`: the way to express a signal defined by its scope alone, since a rule needs
+    // at least one condition.
+    z.object({ type: z.literal("always") }),
   ])
   .superRefine((condition, ctx) => {
     // Reject a malformed regex at parse time (400) — codegen would otherwise compile fine and throw on
@@ -106,12 +109,14 @@ export type EvaluationRuleCondition = z.infer<typeof evaluationRuleConditionSche
 export const SEMANTIC_SIMILARITY_PRESETS = { broad: 0.4, balanced: 0.55, strict: 0.7 } as const
 export type SemanticSimilarityPreset = keyof typeof SEMANTIC_SIMILARITY_PRESETS
 
+export const EVALUATION_RULE_MAX_CONDITIONS = 25
+
 export const evaluationSettingsSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("judge"), criteria: z.string().min(1) }),
   z.object({
     kind: z.literal("rule"),
     match: z.enum(["all", "any"]).default("all"),
-    conditions: z.array(evaluationRuleConditionSchema).min(1).max(10),
+    conditions: z.array(evaluationRuleConditionSchema).min(1).max(EVALUATION_RULE_MAX_CONDITIONS),
   }),
 ])
 export type EvaluationSettings = z.infer<typeof evaluationSettingsSchema>
