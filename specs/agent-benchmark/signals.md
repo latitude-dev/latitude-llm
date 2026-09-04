@@ -238,27 +238,8 @@ The estimator uses post-promotion observations or cross-fitting. In cross-fittin
 scored with signal-effect parameters fit without that session's fold. These facts remain current
 estimator diagnostics and are not stored in daily score snapshots.
 
-## Backfill
-
-The Postgres migration assigns an empty `scoreEvidence` list to every existing signal and makes the
-column non-null with an empty-list default. A separate one-time job then selects promoted,
-non-deleted, system-discovered signals that have at least one published occurrence in the previous
-30 days and still carry that known rollout value. Lifecycle state does not narrow the selection:
-resolved, ignored, muted, regressed, assigned, and prioritized signals are included.
-
-The job processes signals sequentially. It samples up to 200 of each signal's newest published,
-failed, non-errored scores and applies the static mapping when one mapped flagger has a strict
-majority of the full sample. Otherwise it asks the model to classify only the canonical signal name
-and description; raw scores are not sent to the model. An all-false response leaves the signal
-diagnostic with `scoreEvidence = []`.
-
-No score-evidence version marker is added. Production runs the bundled worker entrypoint as an
-independent ECS task exactly once. A dedicated ECS task-definition family prevents a second launch,
-and a Postgres advisory lock prevents overlapping execution. Per-signal writes are conditional on
-the row still being promoted, system-created, non-deleted, and empty.
-
-Backfill does not invent historical screening probabilities. Old occurrences without measurable
-selection remain examples and counts until a full score window of usable decisions accumulates.
+Historical occurrences without measurable selection remain examples and counts until a full score
+window of usable decisions accumulates.
 
 ## What the score never reads
 

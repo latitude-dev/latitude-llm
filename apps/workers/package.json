@@ -8,8 +8,6 @@
     "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "signal-score-evidence:backfill": "tsx src/scripts/backfill-signal-score-evidence.ts",
-    "signal-score-evidence:backfill:dist": "node --enable-source-maps dist/scripts/backfill-signal-score-evidence.cjs",
     "trace-search:backfill": "tsx src/scripts/backfill-trace-search.ts",
     "trace-search:backfill:dist": "node --enable-source-maps dist/scripts/backfill-trace-search.cjs",
     "conversation-intelligence:backfill": "tsx src/scripts/backfill-conversation-intelligence.ts",
