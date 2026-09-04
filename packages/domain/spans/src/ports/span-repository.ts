@@ -250,9 +250,9 @@ export interface SpanRepositoryShape {
   }): Effect.Effect<TraceId | null, RepositoryError, ChSqlClient>
 
   /**
-   * Settled-row window read: deduped spans (`LIMIT 1 BY span_id`, newest
-   * `ingested_at` wins) ordered by `(ingested_at, span_id)`, strictly after
-   * the compound cursor and up to `windowEnd` inclusive, capped at `limit`.
+   * Settled-row window read: deduped spans (`LIMIT 1 BY trace_id, span_id`,
+   * newest `ingested_at` wins) ordered by `(ingested_at, span_id)`, strictly
+   * after the compound cursor and up to `windowEnd` inclusive, capped at `limit`.
    * `nextCursor` is the last returned pair (null on an empty window) — resume
    * from it to continue a limit-truncated window without losing spans.
    */
@@ -266,8 +266,8 @@ export interface SpanRepositoryShape {
   }): Effect.Effect<SpanIngestedAtWindow, RepositoryError, ChSqlClient>
 
   /**
-   * The most recent settled spans for a project, deduped (`LIMIT 1 BY span_id`,
-   * newest `ingested_at` wins), newest first. A representative sample for
+   * The most recent settled spans for a project, deduped (`LIMIT 1 BY trace_id,
+   * span_id`, newest `ingested_at` wins), newest first. A representative sample for
    * previews — not a paged read; no cursor.
    */
   listRecentDetailsByProjectId(input: {

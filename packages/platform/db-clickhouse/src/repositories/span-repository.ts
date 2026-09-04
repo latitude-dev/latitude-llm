@@ -868,25 +868,17 @@ export const SpanRepositoryLive = Layer.effect(
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              // Late materialization: the inner `IN` subquery dedups the *whole* window
-              // (`ingested_at` isn't in the sort key, so the cursor can't prune — it scans
-              // every row for the org/project) but reads only `span_id`/`ingested_at`, so
-              // that sort stays in the low MiB. The outer query then reads the wide payload
-              // columns for just the ≤`limit` winning spans. Selecting the payloads inside
-              // the dedup instead made a single window peak multi-GiB and trip the per-query
-              // memory cap on payload-heavy projects (read bytes scaled with the window, not
-              // the page). Keep the two levels: the `IN` set must be deduped to latest-per-
-              // span before the page `LIMIT`, then the detail re-dedups the same rows.
+              // Late materialization: dedup latest-per-trace/span before LIMIT, then re-dedup those rows after loading details.
               query: `SELECT ${columns}
                     FROM (
                       SELECT ${columns}
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
-                        AND span_id IN (
-                          SELECT span_id
+                        AND (trace_id, span_id) IN (
+                          SELECT trace_id, span_id
                           FROM (
-                            SELECT span_id, ingested_at
+                            SELECT trace_id, span_id, ingested_at
                             FROM spans
                             WHERE organization_id = {organizationId:String}
                               AND project_id = {projectId:String}
@@ -898,15 +890,15 @@ export const SpanRepositoryLive = Layer.effect(
                                 )
                               )
                               AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
-                            ORDER BY span_id, ingested_at DESC
-                            LIMIT 1 BY span_id
+                            ORDER BY trace_id, span_id, ingested_at DESC
+                            LIMIT 1 BY trace_id, span_id
                           )
                           ORDER BY ingested_at ASC, span_id ASC
                           LIMIT {limit:UInt32}
                         )
                         AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
-                      ORDER BY span_id, ingested_at DESC
-                      LIMIT 1 BY span_id
+                      ORDER BY trace_id, span_id, ingested_at DESC
+                      LIMIT 1 BY trace_id, span_id
                     )
                     ORDER BY ingested_at ASC, span_id ASC`,
               query_params: {
@@ -1035,8 +1027,8 @@ export const SpanRepositoryLive = Layer.effect(
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                        ORDER BY span_id, ingested_at DESC
-                        LIMIT 1 BY span_id
+                        ORDER BY trace_id, span_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id
                       )
                       ORDER BY ingested_at DESC, span_id DESC
                       LIMIT {limit:UInt32}`,
@@ -1068,13 +1060,13 @@ export const SpanRepositoryLive = Layer.effect(
               const result = await client.query({
                 query: `SELECT ingested_at
                       FROM (
-                        SELECT span_id, ingested_at
+                        SELECT trace_id, span_id, ingested_at
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND ingested_at <= {windowEnd:DateTime64(3, 'UTC')}
-                        ORDER BY span_id, ingested_at DESC
-                        LIMIT 1 BY span_id
+                        ORDER BY trace_id, span_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id
                       )
                       ORDER BY ingested_at DESC, span_id DESC
                       LIMIT 1 OFFSET {limit:UInt32}`,
