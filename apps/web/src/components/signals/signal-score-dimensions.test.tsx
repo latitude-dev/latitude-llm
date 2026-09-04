@@ -35,27 +35,26 @@ describe("SignalScoreDimensions", () => {
     expect(chips.map((chip) => chip.textContent)).toEqual(["Outcome", "Reliability", "Speed"])
   })
 
-  it("marks a signal without scoring roles as diagnostic", () => {
-    render(<SignalScoreDimensions scoreEvidence={[]} />)
+  it("renders nothing when a signal has no score evidence", () => {
+    const { container } = render(<SignalScoreDimensions scoreEvidence={[]} />)
 
-    const badgeClassName = screen.getByText("Diagnostic").parentElement?.className
-    expect(badgeClassName).toContain("bg-muted")
-    expect(badgeClassName).toContain("font-normal")
+    expect(container.firstChild).toBeNull()
+    expect(screen.queryByText("Diagnostic")).toBeNull()
   })
 
-  it("treats an ignored signal as diagnostic even when roles are stored", () => {
+  it("renders nothing for an ignored signal even when roles are stored", () => {
     const scoreEvidence = [
       { scoreDimension: "outcome", role: "taskOutcome" },
       { scoreDimension: "safety", role: "exposure" },
     ] as const
     const { rerender } = render(<SignalScoreDimensions ignored scoreEvidence={scoreEvidence} />)
 
-    expect(screen.getByText("Diagnostic")).toBeTruthy()
+    expect(screen.queryByText("Diagnostic")).toBeNull()
     expect(screen.queryByText("Outcome")).toBeNull()
     expect(screen.queryByText("Safety")).toBeNull()
 
     rerender(<SignalScoreDimensions ignored scoreEvidence={scoreEvidence} wrap={false} />)
-    expect(screen.getByText("Diagnostic")).toBeTruthy()
+    expect(screen.queryByText("Diagnostic")).toBeNull()
     expect(screen.queryByLabelText("Agent Score dimensions")).toBeNull()
   })
 
