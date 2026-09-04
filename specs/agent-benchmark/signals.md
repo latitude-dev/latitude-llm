@@ -109,8 +109,8 @@ recent assigned scores that are published, failed, and non-errored. The denomina
 qualifying score, including scores with a missing, unknown, or unmapped slug. A tie, a mixed sample
 without a strict majority, or a strict majority for an unmapped slug has no dominant mapped flagger.
 Static fallback classification depends only on this sample. Promotion reads it when detail generation
-is skipped or fails; the historical backfill reads it before deciding whether model classification is
-necessary.
+is skipped or fails; the bundled upgrade backfill reads it before deciding whether model classification
+is necessary.
 
 Every normal promotion uses one model call to generate the signal's name, description, and evidence
 roles together, regardless of whether its scores have a dominant mapped flagger. The prompt defines
@@ -238,8 +238,28 @@ The estimator uses post-promotion observations or cross-fitting. In cross-fittin
 scored with signal-effect parameters fit without that session's fold. These facts remain current
 estimator diagnostics and are not stored in daily score snapshots.
 
-Historical occurrences without measurable selection remain examples and counts until a full score
-window of usable decisions accumulates.
+## Backfill
+
+The Postgres migration assigns an empty `scoreEvidence` list to every existing signal and makes the
+column non-null with an empty-list default. A separate upgrade command selects promoted,
+non-deleted, system-discovered signals that have at least one published occurrence in the previous
+30 days and still carry that known migration value. Lifecycle state does not narrow the selection:
+resolved, ignored, muted, regressed, assigned, and prioritized signals are included.
+
+The command processes signals sequentially. It samples up to 200 of each signal's newest published,
+failed, non-errored scores and applies the static mapping when one mapped flagger has a strict
+majority of the full sample. Otherwise it asks the model to classify only the canonical signal name
+and description; raw scores are not sent to the model. An all-false response leaves the signal
+diagnostic with `scoreEvidence = []`.
+
+No score-evidence version marker is added. The command remains bundled in the workers image for
+self-hosted installations upgrading from a release without score evidence. It defaults to a read-only
+preview and requires `--execute` to write. A Postgres advisory lock prevents overlapping execution,
+and per-signal writes are conditional on the row still being promoted, system-created, non-deleted,
+and empty.
+
+Backfill does not invent historical screening probabilities. Old occurrences without measurable
+selection remain examples and counts until a full score window of usable decisions accumulates.
 
 ## What the score never reads
 
