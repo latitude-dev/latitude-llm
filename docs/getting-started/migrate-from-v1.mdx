@@ -1,0 +1,332 @@
+---
+title: Migrate from Latitude V1
+description: "Move an app from the Latitude V1 prompt manager and gateway to Latitude V2: every V1 concept mapped to its V2 equivalent, then a worked migration driven from a coding agent over the Latitude MCP."
+---
+
+Latitude V1 was a prompt engineering platform. You wrote prompts in PromptL, published them, and your app called them through the Latitude gateway. Latitude V2 is an observability and signal-discovery platform for agents you run yourself. Your code calls the model provider directly, and Latitude watches through OpenTelemetry.
+
+This guide is for teams with a V1 workspace who want to move. It maps each V1 concept to its V2 equivalent, then walks through a real migration: LinguaAI, a FastAPI language tutor whose two prompts ran through `sdk.prompts.run()` on V1. The walkthrough drives the control plane from a coding agent over the Latitude MCP, because that is the quickest way to do it. Every MCP call has a REST, CLI, and SDK twin, listed at the end.
+
+<Info>
+  **Do I have to migrate?** V1 keeps running for existing customers, but new features ship only to V2. Treat V2 onboarding as a fresh start rather than a data migration. Your prompts move into your codebase, your golden datasets move over as CSV, and traces, signals and evaluations are rebuilt from live traffic within days.
+</Info>
+
+## What changed
+
+| | V1 | V2 |
+| --- | --- | --- |
+| Where prompts live | Latitude prompt manager (PromptL, drafts, published versions) | Your codebase and your version control |
+| Who calls the model | Latitude gateway (`prompts.run`, `.chat`) | Your app calls OpenAI, Anthropic, Bedrock and so on directly |
+| How Latitude sees traffic | Every gateway call produced a log | Telemetry SDK or any OpenTelemetry exporter sends spans |
+| Unit of analysis | Log (one prompt run) | Trace (one turn), Session (one conversation), User |
+| Finding problems | You defined evaluations per prompt | Latitude groups failed scores into Signals; you can also define signals |
+| Testing changes | Batch experiments over a dataset, run inside Latitude | Replay datasets locally (simulations, regression tests); compare live cohorts with Experiments |
+| Automation | Triggers, webhooks, prompt integrations | Monitors, Slack notifications, agent dispatch to Cursor, Claude Code, Linear or a webhook |
+| Driving Latitude | UI, REST at `gateway.latitude.so/api/v3`, SDK 5.x | UI, MCP server, `latitude` CLI, REST at `api.latitude.so/v1`, SDK 9.x |
+
+Latitude is no longer on the critical path of your application. If Latitude is down, your agent still answers. You lose observability for that window and nothing else.
+
+## Concept map
+
+Use this table as the checklist for your own migration.
+
+| V1 concept | V2 equivalent | Notes |
+| --- | --- | --- |
+| Workspace | Organization | API keys are organization-scoped (Settings, Keys) |
+| Project | Project | One project per agent or AI feature, not per team. Signals are scoped per project |
+| Prompt (PromptL document) | A prompt template in your code | Frontmatter (`provider`, `model`, `temperature`) becomes provider-call arguments; `{{ var }}` becomes string formatting; `<system>` and `<user>` become messages |
+| Version control: drafts, published version, `versionUuid` | Git, plus `metadata.prompt_version` and a release tag on every trace | Latitude tracks versions as tags and metadata on traces, so Experiments can compare them |
+| Playground | Your local dev loop, plus a Sandbox project for dev and staging traces | Sandbox keeps experiments out of production analytics |
+| AI Gateway, `latitude.prompts.run()`, `latitude.prompts.chat()` | Direct provider SDK call inside `capture()` | Removed. Nothing on the Latitude side replaces them |
+| `customIdentifier` on a run | `sessionId` and `userId` on `capture()` | Sessions group multi-turn conversations; Users get their own page |
+| Logs | Traces and Spans | One trace per turn; spans are the LLM calls, tool calls and retrieval steps inside it |
+| `logs.create()` (upload logs) | Telemetry SDK, or trace imports from Langfuse, LangSmith, Braintrust | There is no V1 log import |
+| LLM-as-judge evaluation (live) | Signal with an LLM-judge evaluation | Created with `createSignal` (kind `judge`, see [Create a signal](../signals/create)). Collects forward from creation; default sampling is 10 percent |
+| Programmatic rule evaluation | Signal with a rule evaluation, or a custom script | `text_match`, `empty_output`, `output_length`, `json_output`, `metric` conditions |
+| Human-in-the-loop evaluation | Annotations | Thumbs up or down with feedback, on any trace. Failed annotations feed signal discovery |
+| Composite scores | Scores | Every verdict is a score; custom pipelines submit scores through `createScore` |
+| `evaluations.annotate()` (SDK) | `annotations.create()` and `scores.create()` (SDK 9) | Target a trace by id or by filters |
+| Evaluation results dashboard | Score analytics, Signal detail, Evaluation alignment | Alignment measures agreement between evaluations and human annotations |
+| Dataset (CSV upload, parameter columns, label column) | [Dataset](../datasets/overview) (input, output, expected output, metadata, custom columns) | Map parameter columns into `input`, the label into `expectedOutput` |
+| Save logs to dataset | Add traces to a dataset | From the trace list, search, a signal, or `importDatasetRowsFromTraces` |
+| Batch evaluation over a dataset (experiment) | Local replay: [simulations](../test-and-fix/simulations) and [regression tests](../test-and-fix/regression-testing) | Your runner, your CI. Results come back as tagged sessions and scores |
+| Experiments (prompt A vs B on a dataset) | Experiments (traffic slice A vs B) | Slices are filters on tags, metadata, users, models. Every metric is compared. See [Experiments](../experiments/overview) |
+| Prompt suggestions | [Agent dispatch](../agent-dispatch/overview) | A signal wakes your coding agent with the evidence attached, and the agent proposes the fix |
+| Triggers (email, schedule) | Your scheduler or queue | Removed with the gateway |
+| Webhooks, prompt integrations | [Monitors](../monitors/overview), Slack notifications, agent-dispatch webhooks | Alerts fire on signals, saved searches, tools, or raw traffic |
+| Latitude tools (`latitude/search`), agents, subagents | Your agent framework | Tool calls appear in the Tools view with usage, error rate and latency |
+| Cache configuration | Provider prompt caching | The Cost view shows cache economics per model |
+| `@latitude-data/sdk` 5.x, `latitude-sdk` 5.x | `@latitude-data/telemetry` and `latitude-telemetry` for tracing; `@latitude-data/sdk` 9.x and `latitude-sdk` 9.x for the API | SDK 6 and later are a rewrite; none of the 5.x prompt surface carries over |
+| `gateway.latitude.so/api/v3` | `api.latitude.so/v1`, the MCP server at `api.latitude.so/v1/mcp`, the `latitude` CLI | MCP and CLI are generated from the same API |
+
+## Before you start
+
+1. Export your prompts while your V1 workspace is still active. `latitude.prompts.getAll()` (SDK 5) or `GET https://gateway.latitude.so/api/v3/projects/{projectId}/versions/live/documents` returns every PromptL document with its content and config. Commit them to your repository; they are the source material for [moving the prompts into code](#move-the-prompts-into-code).
+2. Export every dataset. Download the CSV from the Datasets page, or list them with `GET /api/v3/datasets` and pull rows with `GET /api/v3/dataset-rows?datasetId=...&page=1&pageSize=100`. Note which column is the label.
+3. List your evaluations per prompt: name, type (judge, rule, human), criteria, and whether it ran live. Each becomes a signal or an annotation habit.
+4. Write down your `customIdentifier` scheme. It usually maps to a session id or a user id.
+5. Pick a project boundary. V2 projects are per agent. LinguaAI's grammar checker and quiz writer share one project because they share one product surface and one user base.
+6. Connect the [MCP](../getting-started/mcp) to your coding agent. For Claude Code:
+
+   ```bash
+   claude mcp add --transport http latitude https://api.latitude.so/v1/mcp --scope user
+   ```
+
+   Then type `/mcp`, pick `latitude`, authenticate, and choose the organization. Other agents are covered on the [MCP page](../getting-started/mcp). The MCP is OAuth-only; an API key on that URL gets a 401 by design. Revoke the agent any time under Settings, Keys, OAuth Keys.
+
+7. Point your coding agent at the V2 docs. Older V1 pages survive in search caches, and agents sometimes pull them in. Tell the agent to use `https://docs.latitude.so/llms.txt` as its index.
+
+## The example: LinguaAI
+
+LinguaAI is a FastAPI service with two endpoints. `POST /grammar/check` corrects a learner's sentence and `POST /quiz/generate` writes a three-question vocabulary quiz. On V1 both endpoints called `sdk.prompts.run()` against PromptL documents named `grammar-check` and `vocab-quiz`. The grammar prompt had a live LLM-as-judge evaluation ("Misses a grammar error") and a golden dataset (`grammar-golden.csv`) used for batch experiments before publishing.
+
+The before and after code is in the [`examples/migrations/linguaai-v1-to-v2`](https://github.com/latitude-dev/latitude-llm/tree/development/examples/migrations/linguaai-v1-to-v2) folder of the Latitude repository.
+
+### Create the V2 project
+
+Ask your agent:
+
+> Create a Latitude project called LinguaAI and give me its slug.
+
+The agent calls `createProject` with `{"name": "LinguaAI"}` and gets back the slug `linguaai`. Slugs are permanent; renaming never changes them. Put the slug in `.env` as `LATITUDE_PROJECT_SLUG`. Create an organization API key under Settings, Keys and store it as `LATITUDE_API_KEY`.
+
+### Move the prompts into code
+
+The V1 document `grammar-check.promptl`:
+
+```markdown
+---
+provider: anthropic
+model: claude-3-5-sonnet-latest
+temperature: 0
+---
+<system>
+You are LinguaAI's grammar coach. The learner is studying {{ language }}.
+Check the learner's text for grammar errors.
+Reply ONLY with JSON of this shape: ...
+</system>
+
+<user>
+Language: {{ language }}
+Text: {{ text }}
+</user>
+```
+
+becomes a Python template with a version string ([`app/prompts.py`](https://github.com/latitude-dev/latitude-llm/tree/development/examples/migrations/linguaai-v1-to-v2/after/linguaai/app/prompts.py)):
+
+```python
+GRAMMAR_CHECK_V2 = """You are LinguaAI's grammar coach. The learner is studying {language}.
+Check the learner's text for grammar errors.
+Reply ONLY with JSON of this shape: ..."""
+
+GRAMMAR_CHECK_VERSIONS = {
+    "2.0.0": ("grammar-check@2", GRAMMAR_CHECK_V2),
+    "2.1.0": ("grammar-check@3", GRAMMAR_CHECK_V3),
+}
+
+def grammar_check_prompt(language: str) -> tuple[str, str]:
+    version, template = GRAMMAR_CHECK_VERSIONS[APP_RELEASE]
+    return version, template.format(language=language)
+```
+
+The frontmatter became arguments to the provider call, so check each one against the provider SDK you use. The Anthropic Python SDK 1.x, for example, no longer accepts `temperature` on `messages.create()`. `{{ language }}` became `{language}`; the `<system>` block is the `system` argument and the `<user>` block is the first message. The published-version concept became a version string that travels to Latitude as `metadata.prompt_version`, which you can filter and compare on.
+
+### Replace the gateway call with a direct call plus telemetry
+
+V1 ([`backend/routers/grammar.py`](https://github.com/latitude-dev/latitude-llm/tree/development/examples/migrations/linguaai-v1-to-v2/before/linguaai/backend/routers/grammar.py)):
+
+```python
+from latitude_sdk import Latitude, LatitudeOptions, RunPromptOptions
+
+sdk = Latitude(api_key, LatitudeOptions(project_id=int(project_id), version_uuid=version_uuid))
+
+result = await sdk.prompts.run("grammar-check", RunPromptOptions(parameters={"text": req.text, "language": req.language}))
+data = _extract_json(result.response.text)
+```
+
+V2 ([`app/telemetry.py`](https://github.com/latitude-dev/latitude-llm/tree/development/examples/migrations/linguaai-v1-to-v2/after/linguaai/app/telemetry.py) and [`app/services.py`](https://github.com/latitude-dev/latitude-llm/tree/development/examples/migrations/linguaai-v1-to-v2/after/linguaai/app/services.py)):
+
+```python
+# telemetry.py: import this before any Anthropic client exists
+import anthropic
+from latitude_telemetry import Latitude
+
+latitude = Latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations={"anthropic": anthropic},
+)
+```
+
+```python
+# services.py: one capture() per use case
+from anthropic import Anthropic
+from latitude_telemetry import capture
+
+client = Anthropic()
+
+def check_grammar(text, language, *, user_id, session_id):
+    version, system = prompts.grammar_check_prompt(language)
+    raw = capture(
+        "grammar-check",
+        lambda: client.messages.create(
+            model=prompts.MODEL, max_tokens=600, system=system,
+            messages=[{"role": "user", "content": f"Language: {language}\nText: {text}"}],
+        ).content[0].text,
+        {
+            "user_id": user_id,
+            "session_id": session_id,
+            "tags": ["grammar", f"release-{prompts.APP_RELEASE}", "production"],
+            "metadata": {"release": prompts.APP_RELEASE, "prompt_version": version, "language": language},
+        },
+    )
+    return _extract_json(raw)
+```
+
+What to get right:
+
+- Construct `Latitude(...)` once, at import time, before the provider client. Pass the same module your code imports (`anthropic`, not a wrapper around it).
+- Wrap the model call in `capture()`. It creates no spans of its own. It attaches user, session, tags and metadata to the spans the instrumentation creates inside the callback. The route handler reads `X-User-Id` and `X-Session-Id` headers and passes them down; the smoke script passes them directly.
+- Put the release in a tag as well as in metadata. Tags are the cohort key for session filters and Experiments; metadata holds exact values for search.
+- Flush before a short-lived process exits (`latitude.flush()`, then `latitude.shutdown()`). Servers export in the background, but scripts, tests and jobs can exit before the last batch ships.
+
+If you would rather have your coding agent do the whole migration, the `latitude-migrate` skill runs every step in this guide, from exporting your V1 prompts to verifying traces:
+
+> Install the `latitude-migrate` skill from `github.com/latitude-dev/skills` and use it to move this app from Latitude V1 to V2.
+
+To instrument only, the `latitude-telemetry` skill does the audit, the plan, and the verification:
+
+> Install the `latitude-telemetry` skill from `github.com/latitude-dev/skills` and use it to add Latitude tracing to this app.
+
+### Run traffic and verify it with the MCP
+
+Run the smoke script once per release, so there are two cohorts to compare later:
+
+```bash
+APP_RELEASE=2.0.0 python -m scripts.smoke
+APP_RELEASE=2.1.0 python -m scripts.smoke
+```
+
+Then ask your agent:
+
+> List the latest grammar traces in linguaai and open one. Show me the conversation, the metadata, and who the user was.
+
+`listTraces` with `{"filters": {"tags": [{"op": "eq", "value": "grammar"}]}}` returns rows with `traceId`, `sessionId`, `userId`, `tags`, `models`, `tokensInput`, `tokensOutput`, `costTotalMicrocents` and `rootSpanName`. `getTrace` adds `metadata` and the `conversation` in OpenTelemetry GenAI format: system instructions, the user message, the assistant reply. `listSessions` shows each study session with its trace count and cost, and `listUsers` shows the three learners.
+
+On the first trace, check that `metadata.release` and `metadata.prompt_version` carry what you set, and that the conversation renders as system, user, assistant rather than as one blob. If the model and token counts are zero, the instrumentation is not wrapping the client you actually call.
+
+### Recreate the evaluation as a signal
+
+The V1 live evaluation "Misses a grammar error" becomes a signal with a judge evaluation. Ask your agent:
+
+> Create a signal in linguaai called "Missed grammar error" for traces tagged grammar. Use an LLM judge: the behaviour is present when the learner's text has an error that the corrections list does not cover, or when is_correct is true although the text has an error.
+
+`createSignal` takes the name, a description, a pre-gate `filters` set, and `evaluation.settings` of kind `judge` with the criteria in plain language. Latitude returns the slug (`LIN-O84M` in our run) and creates the evaluation behind it. For the V1 programmatic rule "output must be valid JSON", use kind `rule` with a `json_output` condition instead.
+
+Plan for these differences from V1:
+
+- A signal detector collects forward from creation. It does not scan history, so create signals before you generate the traffic you want judged.
+- Judge evaluations default to 10 percent sampling. On a low-traffic demo, open the signal in the UI and set the scope to 100 percent, or it may never fire.
+- The criteria text is compiled into the detector. Avoid backticks in it. In our run, a criteria string with backticks was rejected with a syntax error.
+
+You do not have to define every signal yourself. Annotations, flaggers (frustration, refusal, empty output, tool errors) and custom scores feed discovery, which groups repeated failures into named signals on its own.
+
+### Bring your golden dataset
+
+Two sources feed the V2 dataset: real traces, and the CSV you exported from V1.
+
+> Create a dataset called grammar-regressions in linguaai. Import every grammar trace from release 2.0.0 with no errors as rows.
+
+`createDataset` returns the slug `grammar-regressions`. `importDatasetRowsFromTraces` with `{"traces": {"by": "filters", "filters": {"tags": [...], "metadata.release": [{"op": "eq", "value": "2.0.0"}], "errorCount": [{"op": "eq", "value": 0}]}}}` returned nine row ids. Each row's `input` is the user message list, `output` is the assistant reply, and `metadata.traceId` points back at the trace.
+
+For the V1 CSV, map parameter columns into `input` and the label into `expectedOutput` ([`scripts/import_v1_dataset.py`](https://github.com/latitude-dev/latitude-llm/tree/development/examples/migrations/linguaai-v1-to-v2/after/linguaai/scripts/import_v1_dataset.py)):
+
+```python
+rows = [
+    {"input": {"text": r["text"], "language": r["language"]},
+     "expectedOutput": r["expected_output"],
+     "metadata": {"source": "latitude-v1-golden-dataset"}}
+    for r in csv.DictReader(fh)
+]
+client.datasets.insert_rows(project, "grammar-regressions", rows=rows)
+```
+
+That is `insertDatasetRows`; six rows landed. Then fill expected outputs on the trace-imported rows you want to check precisely:
+
+> Set the expected output of the row whose input contains "If I would have known" to "If I had known, I would have come earlier."
+
+`updateDatasetRow` changes only the cells you send and bumps the dataset version.
+
+### Regression test by replaying the dataset
+
+V1 ran batch evaluations inside Latitude. V2 hands the dataset to your own runner. [`tests/test_regression.py`](https://github.com/latitude-dev/latitude-llm/tree/development/examples/migrations/linguaai-v1-to-v2/after/linguaai/tests/test_regression.py) pulls every row with the SDK, replays the grammar check, applies the returned corrections to the original text, and compares the result with the expected output. Every replay is tagged `simulation` and `agent-<release>` and carries the dataset slug and row id as metadata, so it never counts as production and an Experiment can compare runs.
+
+```bash
+LATITUDE_DATASET_SLUG=grammar-regressions APP_RELEASE=2.1.0 pytest -q
+```
+
+The first full run failed one row. The V1 label read "Yo estoy muy cansado hoy." and the coach returned "Estoy muy cansado hoy.", which is also correct Spanish. Exact-match labels are brittle, which is why the judge evaluation exists for semantic checks. We kept the label, added a custom column `alsoAccepts` with `addDatasetColumn`, filled it on that row with `updateDatasetRow`, and taught the test to accept either answer. Nine of nine pass.
+
+In CI, run the same command on every change to prompts, tools or models. To keep score in Latitude, post each verdict as a custom score with `createScore` and a `sourceId` such as `ci-regression`; failing scores cluster into signals like any other failure. Because the replays carry the same release tag as production traffic, exclude the `simulation` tag from any cohort or monitor that should only see real users (see the experiment below).
+
+### Compare prompt versions with an Experiment
+
+V1 compared two prompt variants over a dataset. V2 compares two slices of real traffic across every metric Latitude tracks. Ask your agent:
+
+> Create an experiment in linguaai comparing sessions tagged release-2.0.0 (baseline) with sessions tagged release-2.1.0, excluding sessions tagged simulation, over the last 7 days.
+
+`createExperiment` takes variants with a `filterSet`, a `query` and a `timeRange`. Each variant's tag filter here is `[{"op": "eq", "value": "release-2.1.0"}, {"op": "neq", "value": "simulation"}]`. The comparison covers sessions, users, cost, tokens, latency percentiles, tool usage and signal occurrences per cohort, with deltas against the baseline. Metrics fill in after sessions close, about five minutes after their last trace. Use `updateExperiment` (HTTP `PUT`) to change variants later.
+
+V1's `prompts.chat(conversationUuid, ...)` implied Latitude stored conversation history server-side; V2 has no such storage, so a multi-turn use case now keeps its own message array, keyed by the session id.
+Give each release its own sessions. A session that mixes traces from two releases cannot be assigned to one cohort; the smoke script suffixes session ids with the release for that reason. In our first attempt the regression replays also landed in the 2.1.0 cohort, because they carry the release tag; the `simulation` exclusion fixed it.
+
+### Annotate, monitor, dispatch
+
+The V1 human-in-the-loop evaluation becomes ordinary annotation. From the trace view, or through the MCP:
+
+> Annotate trace 2a27c6f2... in linguaai as passed with the feedback "Correctly recognised a well-formed sentence and returned is_correct=true with no spurious corrections."
+
+`createAnnotation` takes `value` (0 to 1), `passed`, `feedback` and the trace. Failed annotations are the primary input to signal discovery. Once a signal matters, monitor it. A monitor opens an incident and notifies in-app, by email or in Slack, and agent dispatch can send the signal with its example traces to Cursor, Claude Code or Linear.
+
+### Decommission V1
+
+- Remove `latitude-sdk<6` (Python) or `@latitude-data/sdk<6` (TypeScript) and every `prompts.run`, `prompts.chat`, `logs.create` and `evaluations.annotate` call.
+- Delete `LATITUDE_PROJECT_ID` and `LATITUDE_VERSION_UUID` from your environment. V2 uses `LATITUDE_PROJECT_SLUG`.
+- Keep the exported PromptL files in your repository history and delete them once every prompt has a code owner.
+- Rotate the V1 API key.
+
+## Gotchas from this migration
+
+- Provider parameters are yours now. The PromptL frontmatter hid provider differences; Anthropic's Python SDK 1.x rejected `temperature` on `messages.create()`. Check each setting you carry over.
+- Sessions belong to one release. Reusing session ids across releases produced sessions that no cohort filter could own. Suffix the id or start new sessions on deploy.
+- Split cohorts on tags. Tag filters worked on sessions and in Experiments in our run, while a `metadata.release` filter on sessions did not match even though the sessions showed the field. Metadata is for search and for filtering traces.
+- Keep replays out of production cohorts. Regression runs carry the release tag too, so exclude `simulation` in experiment variants and monitors.
+- Signals collect forward and sample at 10 percent by default. Create them first, then generate traffic, and raise sampling in the UI for low-volume projects.
+- No backticks in judge criteria. The criteria is compiled, and a backtick broke it with a syntax error.
+- A V1 prompt with `type: agent` and a Latitude-hosted tool (`latitude/extract` and similar) needs a real implementation and a hand-written tool-call loop in V2; there is no hosted-tool equivalent. The `latitude-migrate` skill's `promptl-to-code.md` has a full example.
+- Flush before exit. Short scripts lose their last batch without `flush()` and `shutdown()`.
+- The MCP is OAuth-only. An API key on the MCP URL returns 401. Use the API key for the SDK, CLI and REST, and OAuth for the MCP.
+- Old docs linger in agent memory. Point coding agents at `docs.latitude.so/llms.txt`.
+
+## Frequently asked
+
+**Can I import my V1 logs?** No. V2 imports exist for Langfuse, LangSmith and Braintrust. Start V2 from live traffic; a week of production gives discovery enough to work with.
+
+**Where do non-technical teammates edit prompts now?** They do not. Prompts live in code. Product and domain experts work through annotations, signals, datasets and expected outputs, which is where their judgment changes the agent's behaviour.
+
+**What replaces prompt suggestions?** Agent dispatch. A signal carries the evidence to your coding agent, which proposes the fix as a pull request, and the GitHub integration resolves the signal when the PR merges.
+
+**What about self-hosting?** V2 self-hosts from a single Docker host to a Kubernetes cluster; see [Deployment](../deployment/overview).
+
+## Reference: the MCP calls used in this guide
+
+| Step | MCP tool | REST twin |
+| --- | --- | --- |
+| Create project | `createProject` | `POST /v1/projects` |
+| Verify traffic | `listTraces`, `getTrace`, `listSessions`, `listUsers` | `POST /v1/projects/{slug}/traces/list`, `GET .../traces/{id}`, `POST .../sessions/list`, `GET .../users` |
+| Recreate evaluation | `createSignal`, `getSignal`, `updateSignal` | `POST /v1/projects/{slug}/signals`, `GET .../signals/{signalSlug}`, `PATCH .../signals/{signalSlug}` |
+| Dataset | `createDataset`, `importDatasetRowsFromTraces`, `insertDatasetRows`, `listDatasetRows`, `updateDatasetRow`, `addDatasetColumn` | `POST .../datasets`, `POST .../datasets/{ds}/rows/import/traces`, `POST .../datasets/{ds}/rows`, `GET .../datasets/{ds}/rows`, `PATCH .../datasets/{ds}/rows/{rowId}`, `POST .../datasets/{ds}/columns` |
+| Compare releases | `createExperiment`, `getExperiment`, `updateExperiment` | `POST .../experiments`, `GET .../experiments/{slug}`, `PUT .../experiments/{slug}` |
+| Human feedback | `createAnnotation`, `createScore` | `POST .../annotations`, `POST .../scores` |
+
+The same operations are available as `latitude <resource> <command>` in the CLI and as `client.<resource>.<method>()` in the SDKs.
