@@ -2,8 +2,7 @@ import { EMBEDDING_DIMENSIONS, resolveEmbeddingConfig } from "@domain/ai"
 import { EvaluationSignalRepository } from "@domain/evaluations"
 import {
   NotFoundError,
-  OrganizationId,
-  ProjectId,
+  type ProjectId,
   RepositoryError,
   SignalId,
   SqlClient,
@@ -781,68 +780,6 @@ const signalRepositoryCoreLive = Layer.effect(
                 },
               }),
           )
-        }),
-
-      listScoreEvidenceBackfillTargets: (input) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const recentOccurrence = sql<boolean>`exists (
-            select 1
-            from ${scores}
-            where ${scores.organizationId} = ${signals.organizationId}
-              and ${scores.projectId} = ${signals.projectId}
-              and ${scores.signalId} = ${signals.id}
-              and ${scores.draftedAt} is null
-              and ${scores.createdAt} >= ${input.since ?? sql`current_timestamp - interval '30 days'`}
-          )`
-          const rows = yield* sqlClient.query((db) => {
-            const query = db
-              .select({
-                organizationId: signals.organizationId,
-                projectId: signals.projectId,
-                signalId: signals.id,
-              })
-              .from(signals)
-              .where(
-                and(
-                  userVisibleSignal,
-                  eq(signals.origin, "system"),
-                  sql`${signals.scoreEvidence} = '[]'::jsonb`,
-                  recentOccurrence,
-                  input.organizationId ? eq(signals.organizationId, input.organizationId) : undefined,
-                  input.projectId ? eq(signals.projectId, input.projectId) : undefined,
-                ),
-              )
-              .orderBy(asc(signals.organizationId), asc(signals.projectId), asc(signals.id))
-              .$dynamic()
-            return input.limit === undefined ? query : query.limit(input.limit)
-          })
-          return rows.map((row) => ({
-            organizationId: OrganizationId(row.organizationId),
-            projectId: ProjectId(row.projectId),
-            signalId: SignalId(row.signalId),
-          }))
-        }),
-
-      setScoreEvidenceIfEmpty: ({ signalId, scoreEvidence, now }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const rows = yield* sqlClient.query((db, organizationId) =>
-            db
-              .update(signals)
-              .set({ scoreEvidence: [...scoreEvidence], updatedAt: now })
-              .where(
-                and(
-                  eq(signals.organizationId, organizationId),
-                  eq(signals.id, signalId),
-                  userVisibleSignal,
-                  eq(signals.origin, "system"),
-                  sql`${signals.scoreEvidence} = '[]'::jsonb`,
-                ),
-              )
-              .returning({ id: signals.id }),
-          )
-          return rows.length > 0
         }),
 
       claimReopenOnOccurrence: ({ signalId, occurredAt, now }) =>

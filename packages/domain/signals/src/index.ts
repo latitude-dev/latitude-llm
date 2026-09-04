@@ -21,13 +21,6 @@ export {
 } from "./signal-generation-schema.ts"
 export { generateSignalSlug } from "./slug.ts"
 export {
-  type BackfillSignalScoreEvidenceInput,
-  type BackfillSignalScoreEvidenceResult,
-  backfillSignalScoreEvidenceUseCase,
-  type ClassifySignalScoreEvidenceInput,
-  classifySignalScoreEvidenceUseCase,
-} from "./use-cases/backfill-signal-score-evidence.ts"
-export {
   type CreateSignalError,
   type CreateSignalInput,
   type CreateSignalResult,
