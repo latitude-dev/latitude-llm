@@ -98,6 +98,8 @@ Restart Claude Code after saving.
 
 Treat this as full-fidelity telemetry. Latitude receives the content needed to reconstruct Claude Code turns, including prompts, responses, tool input/output, and system context when available.
 
+The integration also emits memory operation spans when Claude Code reads or writes its auto memory, so those changes show up in [Memory](../observability/memory) with per-record history and diffs.
+
 - Telemetry runs for each turn until disabled or uninstalled.
 - Disable telemetry before working with sensitive material you do not want sent to Latitude.
 
