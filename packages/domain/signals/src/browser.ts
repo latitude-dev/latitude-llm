@@ -137,6 +137,7 @@ export {
   rankRelatedSignals,
   semanticRelatednessScore,
 } from "./related-signals.ts"
+export { type SavedSearchSignalDraft, savedSearchSignalDraft } from "./saved-search-signal.ts"
 export {
   isSignalEligibleForScoring,
   type SignalScoringEligibility,

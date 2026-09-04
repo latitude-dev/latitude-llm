@@ -1,7 +1,7 @@
 import type { SignalPreviewResult } from "@domain/evaluations"
 import type { SignalDimension } from "@domain/scores"
-import type { ScoreDimension } from "@domain/shared"
-import type { SignalGenerationResult } from "@domain/signals"
+import type { FilterSet, ScoreDimension } from "@domain/shared"
+import { type SignalGenerationResult, savedSearchSignalDraft } from "@domain/signals"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -533,6 +533,32 @@ export function useCreateSignal(projectId: string) {
           evaluation: input.evaluation,
         },
       }),
+    onSuccess: () => invalidateSignalQueries(projectId),
+  })
+}
+
+/**
+ * Creates the signal that tracks a saved search: `savedSearchSignalDraft` maps the search's filters
+ * to the detector's scope and its query to the detector's conditions.
+ */
+export function useCreateSignalFromSearch(projectId: string) {
+  return useMutation({
+    mutationFn: (input: {
+      readonly name: string
+      readonly query: string | null
+      readonly filterSet: FilterSet
+    }): Promise<CreateSignalRecord> => {
+      const draft = savedSearchSignalDraft(input)
+      return createSignal({
+        data: {
+          projectId,
+          name: draft.name,
+          description: draft.description,
+          ...(draft.filters !== null ? { filters: draft.filters } : {}),
+          evaluation: { settings: draft.settings },
+        },
+      })
+    },
     onSuccess: () => invalidateSignalQueries(projectId),
   })
 }

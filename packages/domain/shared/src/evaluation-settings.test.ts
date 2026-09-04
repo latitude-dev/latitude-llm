@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  EVALUATION_RULE_MAX_CONDITIONS,
   type EvaluationRuleCondition,
   evaluationRuleConditionSchema,
   evaluationSettingsSchema,
@@ -52,8 +53,8 @@ describe("evaluationSettingsSchema", () => {
       { type: "error" },
       { type: "finish_reason", value: "stop" },
       { type: "semantic_similarity", query: "frustration", operator: "gte", threshold: 0.5 },
+      { type: "always" },
     ]
-    // More condition types than a rule's max(10), so validate each against the condition schema directly.
     for (const condition of conditions) {
       expect(evaluationRuleConditionSchema.safeParse(condition).success).toBe(true)
     }
@@ -89,7 +90,16 @@ describe("evaluationSettingsSchema", () => {
   it("rejects invalid rules", () => {
     expect(evaluationSettingsSchema.safeParse({ kind: "rule", conditions: [] }).success).toBe(false)
     expect(
-      evaluationSettingsSchema.safeParse({ kind: "rule", conditions: Array(11).fill({ type: "error" }) }).success,
+      evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        conditions: Array(EVALUATION_RULE_MAX_CONDITIONS).fill({ type: "error" }),
+      }).success,
+    ).toBe(true)
+    expect(
+      evaluationSettingsSchema.safeParse({
+        kind: "rule",
+        conditions: Array(EVALUATION_RULE_MAX_CONDITIONS + 1).fill({ type: "error" }),
+      }).success,
     ).toBe(false)
     expect(
       evaluationSettingsSchema.safeParse({

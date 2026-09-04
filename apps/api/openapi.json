@@ -5029,11 +5029,25 @@
                                     "query",
                                     "threshold"
                                   ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "always"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ]
                                 }
                               ]
                             },
                             "minItems": 1,
-                            "maxItems": 10
+                            "maxItems": 25
                           }
                         },
                         "required": [

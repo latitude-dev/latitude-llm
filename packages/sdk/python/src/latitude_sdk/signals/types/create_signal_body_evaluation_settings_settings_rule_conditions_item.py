@@ -132,6 +132,12 @@ class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimil
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
 
 
+class CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Always(UniversalBaseModel):
+    type: typing.Literal["always"] = "always"
+
+    model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)
+
+
 CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem = typing_extensions.Annotated[
     typing.Union[
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_TextMatch,
@@ -145,6 +151,7 @@ CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem = typing_extensions
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_SemanticSimilarity,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Always,
     ],
     pydantic.Field(discriminator="type"),
 ]

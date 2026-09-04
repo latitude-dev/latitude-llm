@@ -187,7 +187,7 @@ const draftToMetricThreshold = (draft: AlertDraft): AlertMetricThreshold => {
   return { mode: "multiplier", factor: draft.amount, baseline: draftBaseline(draft) }
 }
 
-export const draftToCondition = (draft: AlertDraft): AlertIncidentCondition | null => {
+const draftToCondition = (draft: AlertDraft): AlertIncidentCondition | null => {
   const window = { minutes: windowToMinutes(draft.windowAmount, draft.windowUnit) }
   if (draft.target !== null) {
     if (draft.kind === "monitor.match") return null

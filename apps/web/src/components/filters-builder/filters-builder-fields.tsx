@@ -3,10 +3,8 @@ import type { FilterCondition, FilterSet, TraceFilterGroupId } from "@domain/sha
 import { Button, cn, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, SearchIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
-import { useProjectMembersCollection } from "../../domains/members/members.collection.ts"
 import { isHasLlmActivityFilterOn } from "../../domains/sessions/sessions.collection.ts"
 import { useTopicFilterOptions } from "../../domains/taxonomy/taxonomy.collection.ts"
-import { authClient } from "../../lib/auth-client.ts"
 import { useDebounce } from "../../lib/hooks/useDebounce.ts"
 import {
   getMultiSelectFieldsForMode,
@@ -21,13 +19,18 @@ import { type FilterMode, MultiSelectFilter, type StaticFilterItem } from "./mul
 import { PercentileFilter } from "./percentile-filter.tsx"
 import { StatusFilter } from "./status-filter.tsx"
 import type { DistinctColumn } from "./types.ts"
+import { useAnnotatorFilterItems } from "./use-annotator-items.ts"
 import {
+  ANNOTATOR_FILTER_FIELD,
+  getHasAnnotationsOn,
   getInValues,
   getPercentileValue,
   getRangeValues,
   getStatusValues,
   getTextFilterValue,
+  setAnnotatedBy,
   setFieldConditions,
+  setHasAnnotations,
   toDisplayUnit,
   toWireUnit,
 } from "./utils.ts"
@@ -41,20 +44,6 @@ interface FiltersBuilderFieldsProps {
   readonly onFiltersChange: (filters: FilterSet) => void
   /** Field keys to omit from the builder (e.g. custom behaviors exclude `topics`). */
   readonly excludeFields?: readonly string[]
-}
-
-const ANNOTATOR_FIELD = "score.annotatorId"
-
-/**
- * The "Has annotations" toggle stores a single `annotator_id != ''` condition on
- * the shared `score.annotatorId` field. `annotator_id` is non-empty only for human
- * annotations (evaluation/flagger/custom rows leave it blank), so this alone means
- * "has at least one human annotation" — no source filter needed. It coexists with
- * the people picker's `in` condition on the same field; both are AND'd in the score
- * rollup subquery, and each control edits only its own condition op.
- */
-function getHasAnnotationsOn(filters: FilterSet): boolean {
-  return (filters[ANNOTATOR_FIELD] ?? []).some((c) => c.op === "neq")
 }
 
 function CollapsibleSection({
@@ -451,37 +440,7 @@ export function FiltersBuilderFields({
     [setField],
   )
 
-  // Read the current user from the auth client (not the `/_authenticated` route
-  // loader) so the score filters work in the sandbox shell too, where a dev can
-  // create scores via the API. `meId` is undefined until the session resolves.
-  const { data: session } = authClient.useSession()
-  const meId = session?.user.id
-  const { data: members } = useProjectMembersCollection()
-  const annotatorItems = useMemo<readonly StaticFilterItem[]>(() => {
-    const active = (members ?? []).filter((m) => m.status === "active" && m.userId)
-    const others = active
-      .filter((m) => m.userId !== meId)
-      .map((m) => ({ value: m.userId as string, label: m.name?.trim() || m.email }))
-      .sort((a, b) => a.label.localeCompare(b.label))
-    // Current user pinned on top as "Your scores" once the session resolves.
-    return meId ? [{ value: meId, label: "Your scores" }, ...others] : others
-  }, [members, meId])
-
-  const setAnnotatedBy = useCallback(
-    (values: string[]) => {
-      const others = (filters[ANNOTATOR_FIELD] ?? []).filter((c) => c.op !== "in")
-      setField(ANNOTATOR_FIELD, values.length > 0 ? [{ op: "in", value: values }, ...others] : [...others])
-    },
-    [filters, setField],
-  )
-
-  const setHasAnnotations = useCallback(
-    (on: boolean) => {
-      const others = (filters[ANNOTATOR_FIELD] ?? []).filter((c) => c.op !== "neq")
-      setField(ANNOTATOR_FIELD, on ? [...others, { op: "neq", value: "" }] : [...others])
-    },
-    [filters, setField],
-  )
+  const annotatorItems = useAnnotatorFilterItems()
 
   const metadataEntries = useMemo(() => {
     const entries: { key: string; value: string }[] = []
@@ -618,22 +577,22 @@ export function FiltersBuilderFields({
     })
   }
 
-  if (!isExcluded(ANNOTATOR_FIELD)) {
+  if (!isExcluded(ANNOTATOR_FILTER_FIELD)) {
     entries.push({
       group: "scores",
       label: "Scored by",
       node: (
         <CollapsibleSection
-          key={ANNOTATOR_FIELD}
+          key={ANNOTATOR_FILTER_FIELD}
           label="Scored by"
-          defaultOpen={getInValues(filters, ANNOTATOR_FIELD).length > 0}
+          defaultOpen={getInValues(filters, ANNOTATOR_FILTER_FIELD).length > 0}
         >
           <MultiSelectFilter
             mode={mode}
             projectId={projectId}
             column={"annotatorId" as DistinctColumn}
-            selected={getInValues(filters, ANNOTATOR_FIELD)}
-            onChange={setAnnotatedBy}
+            selected={getInValues(filters, ANNOTATOR_FILTER_FIELD)}
+            onChange={(values) => onFiltersChange(setAnnotatedBy(filters, values))}
             staticItems={annotatorItems}
             placeholder="Search members..."
           />
@@ -653,7 +612,7 @@ export function FiltersBuilderFields({
             </Text.H7>
             <Switch
               checked={getHasAnnotationsOn(filters)}
-              onCheckedChange={(next) => setHasAnnotations(next === true)}
+              onCheckedChange={(next) => onFiltersChange(setHasAnnotations(filters, next === true))}
             />
           </div>
         </CollapsibleSection>

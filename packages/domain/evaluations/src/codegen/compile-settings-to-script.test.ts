@@ -371,3 +371,25 @@ describe("compileSettingsToScript — semantic_similarity", () => {
     expect(failed).toEqual({ passed: false, feedback: 'Not semantically similar to "refund" (at least 0.6)' })
   })
 })
+
+describe("compileSettingsToScript — always", () => {
+  it("compiles to a pure always-true check", () => {
+    const script = compileSettingsToScript(rule("all", [{ type: "always" }]))
+    expect(script).toContain("if (!(true))")
+    expect(detectScriptCapabilities(script)).toEqual([])
+  })
+
+  it("passes every session under match:all", () => {
+    expect(runRule(rule("all", [{ type: "always" }]), makeSession())).toEqual({
+      passed: true,
+      feedback: "All conditions matched",
+    })
+  })
+
+  it("passes an empty session under match:any", () => {
+    expect(runRule(rule("any", [{ type: "always" }]), makeSession({ traces: [] }))).toEqual({
+      passed: true,
+      feedback: "Every session in scope",
+    })
+  })
+})

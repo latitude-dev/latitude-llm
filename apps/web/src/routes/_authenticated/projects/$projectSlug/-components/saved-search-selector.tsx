@@ -23,6 +23,7 @@ import {
   FlaskConicalIcon,
   PencilIcon,
   SearchIcon,
+  ShieldAlertIcon,
   SlidersHorizontalIcon,
   Trash2Icon,
   XIcon,
@@ -36,6 +37,7 @@ import {
   useSavedSearchesList,
 } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../domains/saved-searches/saved-searches.functions.ts"
+import { useCreateSignalFromSearch } from "../../../../../domains/signals/signals.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { targetAlertDraft } from "../monitors/-components/alert-form-helpers.ts"
 import { MonitorCreateModal } from "../monitors/-components/monitor-create-modal.tsx"
@@ -74,6 +76,7 @@ export function SavedSearchSelector({
   const [rowToRename, setRowToRename] = useState<SavedSearchRecord | null>(null)
   const [rowToMonitor, setRowToMonitor] = useState<SavedSearchRecord | null>(null)
   const [rowToCompare, setRowToCompare] = useState<SavedSearchRecord | null>(null)
+  const [rowToTrack, setRowToTrack] = useState<SavedSearchRecord | null>(null)
 
   const { data: savedSearches } = useSavedSearchesList(projectId)
 
@@ -248,6 +251,21 @@ export function SavedSearchSelector({
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label={`Create a signal from ${record.name}`}
+                              onClick={() => setRowToTrack(record)}
+                            >
+                              <Icon icon={ShieldAlertIcon} size="sm" color="foregroundMuted" />
+                            </Button>
+                          }
+                        >
+                          Signal
+                        </Tooltip>
+                        <Tooltip
+                          asChild
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               aria-label={`Create an experiment from ${record.name}`}
                               onClick={() => setRowToCompare(record)}
                             >
@@ -342,6 +360,15 @@ export function SavedSearchSelector({
           onClose={() => setRowToMonitor(null)}
         />
       ) : null}
+      {rowToTrack ? (
+        <SignalFromSavedSearchModal
+          row={rowToTrack}
+          projectId={projectId}
+          projectSlug={projectSlug}
+          onClose={() => setRowToTrack(null)}
+          onCreated={() => setOpen(false)}
+        />
+      ) : null}
       {rowToCompare ? (
         <CompareSavedSearchModal
           row={rowToCompare}
@@ -352,6 +379,59 @@ export function SavedSearchSelector({
         />
       ) : null}
     </>
+  )
+}
+
+function SignalFromSavedSearchModal({
+  row,
+  projectId,
+  projectSlug,
+  onClose,
+  onCreated,
+}: {
+  readonly row: SavedSearchRecord
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly onClose: () => void
+  readonly onCreated: () => void
+}) {
+  const navigate = useNavigate()
+  const createSignal = useCreateSignalFromSearch(projectId)
+
+  const handleCreate = async () => {
+    try {
+      const signal = await createSignal.mutateAsync({ name: row.name, query: row.query, filterSet: row.filterSet })
+      onCreated()
+      onClose()
+      void navigate({
+        to: "/projects/$projectSlug/signals/$signalSlug",
+        params: { projectSlug, signalSlug: signal.slug },
+      })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Could not create signal", description: toUserMessage(error) })
+    }
+  }
+
+  return (
+    <Modal
+      open
+      dismissible
+      onOpenChange={onClose}
+      title="Create signal from search"
+      description="The search's filters become the signal's scope and its query becomes the rule that detects new sessions."
+      footer={
+        <>
+          <CloseTrigger />
+          <Button
+            onClick={() => void handleCreate()}
+            disabled={createSignal.isPending}
+            isLoading={createSignal.isPending}
+          >
+            Create signal
+          </Button>
+        </>
+      }
+    />
   )
 }
 

@@ -18,6 +18,7 @@ if typing.TYPE_CHECKING:
     from .create_signal_body_evaluation_settings_settings_rule import CreateSignalBodyEvaluationSettingsSettingsRule
     from .create_signal_body_evaluation_settings_settings_rule_conditions_item import (
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem,
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Always,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_EmptyOutput,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason,
@@ -29,6 +30,9 @@ if typing.TYPE_CHECKING:
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolCallCount,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolFailed,
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_ToolUsed,
+    )
+    from .create_signal_body_evaluation_settings_settings_rule_conditions_item_always import (
+        CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemAlways,
     )
     from .create_signal_body_evaluation_settings_settings_rule_conditions_item_empty_output import (
         CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemEmptyOutput,
@@ -109,6 +113,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationSettingsSettingsJudge": ".create_signal_body_evaluation_settings_settings_judge",
     "CreateSignalBodyEvaluationSettingsSettingsRule": ".create_signal_body_evaluation_settings_settings_rule",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemAlways": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_always",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemEmptyOutput": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_empty_output",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemError": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_error",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemFinishReason": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_finish_reason",
@@ -130,6 +135,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolCallCountOperator": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_call_count_operator",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolFailed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_failed",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolUsed": ".create_signal_body_evaluation_settings_settings_rule_conditions_item_tool_used",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Always": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_EmptyOutput": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason": ".create_signal_body_evaluation_settings_settings_rule_conditions_item",
@@ -181,6 +187,7 @@ __all__ = [
     "CreateSignalBodyEvaluationSettingsSettingsJudge",
     "CreateSignalBodyEvaluationSettingsSettingsRule",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemAlways",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemEmptyOutput",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemError",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemFinishReason",
@@ -202,6 +209,7 @@ __all__ = [
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolCallCountOperator",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolFailed",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItemToolUsed",
+    "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Always",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_EmptyOutput",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_Error",
     "CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem_FinishReason",

@@ -583,6 +583,14 @@ const semantic_similarity: ConditionTypeMeta<"semantic_similarity"> = {
   Editor: SemanticSimilarityEditor,
 }
 
+const always: ConditionTypeMeta<"always"> = {
+  label: "Always",
+  description: "Match every session, so the scope alone decides what the signal tracks.",
+  create: () => ({ type: "always" }),
+  summarize: () => "Every session in scope",
+  Editor: () => null,
+}
+
 export const CONDITION_META: { readonly [K in ConditionType]: ConditionTypeMeta<K> } = {
   text_match,
   empty_output,
@@ -595,6 +603,7 @@ export const CONDITION_META: { readonly [K in ConditionType]: ConditionTypeMeta<
   error,
   finish_reason,
   semantic_similarity,
+  always,
 }
 
 export const CONDITION_TYPE_ORDER: readonly ConditionType[] = [
@@ -609,6 +618,7 @@ export const CONDITION_TYPE_ORDER: readonly ConditionType[] = [
   "tool_call_count",
   "error",
   "finish_reason",
+  "always",
 ]
 
 export const summarizeCondition = (condition: EvaluationRuleCondition): string =>
@@ -636,6 +646,7 @@ export const isConditionValid = (c: EvaluationRuleCondition): boolean => {
     case "json_output":
     case "tool_failed":
     case "error":
+    case "always":
       return true
   }
 }

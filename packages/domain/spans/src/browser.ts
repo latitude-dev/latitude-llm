@@ -24,6 +24,7 @@ export {
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
+  TRACE_SEARCH_MIN_RELEVANCE_SCORE,
 } from "./constants.ts"
 export type { Session, SessionDetail } from "./entities/session.ts"
 export { sessionConversationMessages, sessionDetailSchema, sessionSchema } from "./entities/session.ts"

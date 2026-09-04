@@ -13,7 +13,8 @@ export type CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem =
     | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.ToolCallCount
     | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.Error
     | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.FinishReason
-    | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.SemanticSimilarity;
+    | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.SemanticSimilarity
+    | Latitude.CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem.Always;
 
 export namespace CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem {
     export interface TextMatch {
@@ -166,5 +167,9 @@ export namespace CreateSignalBodyEvaluationSettingsSettingsRuleConditionsItem {
             Lte: "lte",
         } as const;
         export type Operator = (typeof Operator)[keyof typeof Operator];
+    }
+
+    export interface Always {
+        type: "always";
     }
 }
