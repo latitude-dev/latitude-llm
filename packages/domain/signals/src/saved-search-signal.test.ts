@@ -64,25 +64,35 @@ describe("savedSearchSignalDraft", () => {
     ])
   })
 
-  // In a mixed query the phrases are search's precision gate and similarity only ranks the hits
-  // (`search-plan.ts` applies no semantic floor), so the rule is the phrases under match:all.
-  it("keeps only the phrase clauses when a query mixes them with free text", () => {
+  it("turns every clause of a mixed query into a condition", () => {
     const draft = savedSearchSignalDraft({
       name: "Mixed",
-      query: 'refund loop "401" `payment failed`',
+      query: 'this is semantic "this is literal" `this is phrase`',
       filterSet: {},
     })
     const settings = ruleConditions(draft)
 
     expect(settings.match).toBe("all")
     expect(settings.conditions).toEqual([
-      { type: "text_match", scope: "conversation", operator: "contains", value: "401", caseSensitive: true },
       {
         type: "text_match",
         scope: "conversation",
         operator: "contains",
-        value: "payment failed",
+        value: "this is literal",
+        caseSensitive: true,
+      },
+      {
+        type: "text_match",
+        scope: "conversation",
+        operator: "contains",
+        value: "this is phrase",
         caseSensitive: false,
+      },
+      {
+        type: "semantic_similarity",
+        query: "this is semantic",
+        operator: "gte",
+        threshold: TRACE_SEARCH_MIN_RELEVANCE_SCORE,
       },
     ])
   })
@@ -92,6 +102,22 @@ describe("savedSearchSignalDraft", () => {
     const draft = savedSearchSignalDraft({ name: "Many phrases", query, filterSet: {} })
 
     expect(ruleConditions(draft).conditions).toHaveLength(EVALUATION_RULE_MAX_CONDITIONS)
+  })
+
+  // Truncation takes phrases, never the free-text clause, which would otherwise be dropped for
+  // being last in the list.
+  it("keeps the semantic clause when the phrases alone would fill the rule", () => {
+    const phrases = Array.from({ length: EVALUATION_RULE_MAX_CONDITIONS + 3 }, (_, i) => `"phrase ${i}"`).join(" ")
+    const draft = savedSearchSignalDraft({ name: "Many phrases", query: `free text ${phrases}`, filterSet: {} })
+    const conditions = ruleConditions(draft).conditions
+
+    expect(conditions).toHaveLength(EVALUATION_RULE_MAX_CONDITIONS)
+    expect(conditions.at(-1)).toEqual({
+      type: "semantic_similarity",
+      query: "free text",
+      operator: "gte",
+      threshold: TRACE_SEARCH_MIN_RELEVANCE_SCORE,
+    })
   })
 
   it("drops the search's time window from the signal scope", () => {

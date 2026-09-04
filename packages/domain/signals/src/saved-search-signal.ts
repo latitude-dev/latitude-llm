@@ -19,10 +19,12 @@ export interface SavedSearchSignalDraft {
 }
 
 /**
- * Maps a saved search onto the signal that tracks it. Each query shape becomes the rule that matches
- * what search itself matches (`search-plan.ts`): phrase clauses are search's precision gate, so a
- * query holding any becomes those `text_match` conditions alone; free text on its own becomes a
- * `semantic_similarity` condition at search's relevance floor; an empty query becomes `always`.
+ * Maps a saved search onto the signal that tracks it: every clause of the query becomes a condition,
+ * `"literal"` and `` `phrase` `` a `text_match`, free text a `semantic_similarity` one, an empty
+ * query `always`. The similarity threshold is search's own relevance floor, the cosine a
+ * semantic-only search admits a match at, so the signal does not silently sit stricter than the
+ * search it came from. (Search itself applies no floor once a phrase is present — it ranks by
+ * similarity instead — but a detector has no ranking, so its choice is predicate or discard.)
  *
  * The scope keeps only keys the live pre-gate can act on: the date picker's absolute window would
  * freeze a detector that keeps running, session-only keys never reach the trace query it matches on,
@@ -53,14 +55,14 @@ export const savedSearchSignalDraft = (input: {
     operator: "gte",
     threshold: TRACE_SEARCH_MIN_RELEVANCE_SCORE,
   }
-  // More phrases than a rule holds keeps the first ones: broader than the search, but the signal
-  // still gets created.
-  const conditions: readonly EvaluationRuleCondition[] =
-    phraseConditions.length > 0
-      ? phraseConditions.slice(0, EVALUATION_RULE_MAX_CONDITIONS)
-      : semanticPrompt.length > 0
-        ? [semanticCondition]
-        : [{ type: "always" }]
+  const hasSemantic = semanticPrompt.length > 0
+  // More phrases than a rule holds keeps the first ones (broader than the search, but the signal
+  // still gets created); the free-text clause keeps its slot rather than losing it to phrase order.
+  const phraseLimit = EVALUATION_RULE_MAX_CONDITIONS - (hasSemantic ? 1 : 0)
+  const conditions: readonly EvaluationRuleCondition[] = [
+    ...phraseConditions.slice(0, phraseLimit),
+    ...(hasSemantic ? [semanticCondition] : []),
+  ]
 
   const scoped: Record<string, readonly FilterCondition[]> = {}
   for (const [field, filterConditions] of Object.entries(input.filterSet)) {
@@ -74,6 +76,10 @@ export const savedSearchSignalDraft = (input: {
     name: name.slice(0, SIGNAL_NAME_MAX_LENGTH),
     description: `Sessions matching the saved search “${name}”.`,
     filters: Object.keys(scoped).length > 0 ? scoped : null,
-    settings: { kind: "rule", match: "all", conditions: [...conditions] },
+    settings: {
+      kind: "rule",
+      match: "all",
+      conditions: conditions.length > 0 ? [...conditions] : [{ type: "always" }],
+    },
   }
 }
