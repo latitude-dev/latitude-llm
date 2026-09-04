@@ -12,7 +12,6 @@ import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { projects } from "../schema/projects.ts"
-import { scores } from "../schema/scores.ts"
 import { signals } from "../schema/signals.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
@@ -33,8 +32,6 @@ const seedSignal = (input: {
   readonly id: string
   readonly slug: string
   readonly createdAt: Date
-  readonly organizationId?: string
-  readonly projectId?: string
   readonly resolvedAt?: Date | null
   readonly ignoredAt?: Date | null
   readonly regressedAt?: Date | null
@@ -50,8 +47,8 @@ const seedSignal = (input: {
 }) =>
   pg.db.insert(signals).values({
     id: input.id,
-    organizationId: input.organizationId ?? ORG_ID,
-    projectId: input.projectId ?? PROJECT_ID,
+    organizationId: ORG_ID,
+    projectId: PROJECT_ID,
     slug: input.slug,
     name: input.slug,
     description: `${input.slug} description`,
@@ -120,178 +117,6 @@ describe("SignalRepositoryLive score evidence", () => {
     )
 
     expect(signal.scoreEvidence).toEqual(scoreEvidence)
-  })
-})
-
-describe("SignalRepositoryLive score-evidence backfill", () => {
-  const SINCE = new Date("2026-08-01T00:00:00.000Z")
-  const RECENT = new Date("2026-08-15T00:00:00.000Z")
-  const OLD = new Date("2026-07-15T00:00:00.000Z")
-  const OTHER_ORG_ID = OrganizationId("other-org".padEnd(24, "o"))
-  const OTHER_PROJECT_ID = ProjectId("other-project".padEnd(24, "p"))
-
-  const seedOccurrence = (input: {
-    readonly id: string
-    readonly signalId: string
-    readonly createdAt: Date
-    readonly organizationId?: string
-    readonly projectId?: string
-    readonly draftedAt?: Date | null
-  }) =>
-    pg.db.insert(scores).values({
-      id: input.id,
-      organizationId: input.organizationId ?? ORG_ID,
-      projectId: input.projectId ?? PROJECT_ID,
-      signalId: input.signalId,
-      sourceType: "annotation",
-      sourceId: "SYSTEM",
-      value: 0,
-      passed: false,
-      feedback: "failure",
-      metadata: { rawFeedback: "failure" },
-      errored: false,
-      draftedAt: input.draftedAt ?? null,
-      createdAt: input.createdAt,
-      updatedAt: input.createdAt,
-    })
-
-  const listTargets = (
-    input: { readonly organizationId?: OrganizationId; readonly projectId?: ProjectId; readonly limit?: number } = {},
-  ) =>
-    run(
-      Effect.gen(function* () {
-        return yield* (yield* SignalRepository).listScoreEvidenceBackfillTargets({
-          since: SINCE,
-          ...input,
-        })
-      }),
-    )
-
-  beforeEach(async () => {
-    await pg.db.delete(scores)
-    await pg.db.delete(signals)
-  })
-
-  it("finds promoted system signals with a recent published occurrence across organizations", async () => {
-    const eligible = [
-      { id: "backfill-open".padEnd(24, "1"), slug: "backfill-open" },
-      { id: "backfill-resolved".padEnd(24, "2"), slug: "backfill-resolved", resolvedAt: RECENT },
-      { id: "backfill-ignored".padEnd(24, "3"), slug: "backfill-ignored", ignoredAt: RECENT },
-      { id: "backfill-muted".padEnd(24, "4"), slug: "backfill-muted", mutedAt: RECENT },
-      {
-        id: "backfill-new-promotion".padEnd(24, "6"),
-        slug: "backfill-new-promotion",
-        promotedAt: new Date("2026-08-14T00:00:00.000Z"),
-      },
-    ]
-    for (const signal of eligible) {
-      await seedSignal({ ...signal, createdAt: OLD, origin: "system", source: "flagger" })
-      await seedOccurrence({ id: `score-${signal.id}`.slice(0, 24), signalId: signal.id, createdAt: RECENT })
-    }
-
-    const otherSignal = {
-      id: "backfill-other-org".padEnd(24, "5"),
-      slug: "backfill-other-org",
-      createdAt: OLD,
-      origin: "system" as const,
-      source: "flagger" as const,
-      organizationId: OTHER_ORG_ID,
-      projectId: OTHER_PROJECT_ID,
-    }
-    await seedSignal(otherSignal)
-    await seedOccurrence({
-      id: "score-other-org".padEnd(24, "5"),
-      signalId: otherSignal.id,
-      createdAt: RECENT,
-      organizationId: OTHER_ORG_ID,
-      projectId: OTHER_PROJECT_ID,
-    })
-
-    const targets = await listTargets()
-
-    expect(targets.map((target) => target.signalId).sort()).toEqual(
-      [...eligible.map((signal) => SignalId(signal.id)), SignalId(otherSignal.id)].sort(),
-    )
-  })
-
-  it("excludes ineligible signals and honors scope and limit filters", async () => {
-    const candidates = [
-      { id: "target-first".padEnd(24, "1"), slug: "target-first", occurrenceAt: RECENT },
-      { id: "target-second".padEnd(24, "2"), slug: "target-second", occurrenceAt: RECENT },
-      { id: "old-occurrence".padEnd(24, "3"), slug: "old-occurrence", occurrenceAt: OLD },
-    ]
-    for (const candidate of candidates) {
-      await seedSignal({ ...candidate, createdAt: OLD, origin: "system", source: "flagger" })
-      await seedOccurrence({
-        id: `score-${candidate.id}`.slice(0, 24),
-        signalId: candidate.id,
-        createdAt: candidate.occurrenceAt,
-      })
-    }
-
-    const userSignal = { id: "user-signal".padEnd(24, "u"), slug: "user-signal", createdAt: OLD }
-    const candidateSignal = {
-      id: "candidate-signal".padEnd(24, "c"),
-      slug: "candidate-signal",
-      createdAt: OLD,
-      promotedAt: null,
-    }
-    const classifiedSignal = {
-      id: "classified-signal".padEnd(24, "e"),
-      slug: "classified-signal",
-      createdAt: OLD,
-      origin: "system" as const,
-      source: "flagger" as const,
-      scoreEvidence: [{ scoreDimension: "outcome", role: "taskOutcome" }] satisfies SignalScoreEvidence[],
-    }
-    await seedSignal(userSignal)
-    await seedSignal(candidateSignal)
-    await seedSignal(classifiedSignal)
-    for (const signal of [userSignal, candidateSignal, classifiedSignal]) {
-      await seedOccurrence({ id: `score-${signal.id}`.slice(0, 24), signalId: signal.id, createdAt: RECENT })
-    }
-
-    const targets = await listTargets({ organizationId: ORG_ID, projectId: PROJECT_ID, limit: 1 })
-
-    expect(targets).toHaveLength(1)
-    expect([candidates[0]?.id, candidates[1]?.id]).toContain(targets[0]?.signalId)
-  })
-
-  it("conditionally writes evidence through the organization-scoped repository", async () => {
-    const signal = {
-      id: "backfill-write".padEnd(24, "w"),
-      slug: "backfill-write",
-      createdAt: OLD,
-      origin: "system" as const,
-      source: "flagger" as const,
-    }
-    const evidence = [{ scoreDimension: "reliability", role: "operationalIncident" }] satisfies SignalScoreEvidence[]
-    await seedSignal(signal)
-
-    const applied = await run(
-      Effect.gen(function* () {
-        return yield* (yield* SignalRepository).setScoreEvidenceIfEmpty({
-          signalId: SignalId(signal.id),
-          scoreEvidence: evidence,
-          now: RECENT,
-        })
-      }),
-    )
-    const second = await run(
-      Effect.gen(function* () {
-        return yield* (yield* SignalRepository).setScoreEvidenceIfEmpty({
-          signalId: SignalId(signal.id),
-          scoreEvidence: [{ scoreDimension: "outcome", role: "taskOutcome" }],
-          now: new Date("2026-08-16T00:00:00.000Z"),
-        })
-      }),
-    )
-    const [stored] = await pg.db.select().from(signals).where(eq(signals.id, signal.id))
-
-    expect(applied).toBe(true)
-    expect(second).toBe(false)
-    expect(stored?.scoreEvidence).toEqual(evidence)
-    expect(stored?.updatedAt).toEqual(RECENT)
   })
 })
 

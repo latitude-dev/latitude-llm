@@ -125,7 +125,6 @@ export {
   type SignalListPage,
   SignalRepository,
   type SignalRepositoryShape,
-  type SignalScoreEvidenceBackfillTarget,
   type SignalSearchCandidate,
   type SignalWithLifecycle,
 } from "./ports/signal-repository.ts"

@@ -1,14 +1,6 @@
-import type {
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-  RepositoryError,
-  ScoreDimension,
-  SignalId,
-  SqlClient,
-} from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, ScoreDimension, SignalId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Signal, SignalFeedback, SignalScoreEvidence } from "../entities/signal.ts"
+import type { Signal, SignalFeedback } from "../entities/signal.ts"
 
 /**
  * Lifecycle flags derived from `alert_incidents` rows joined onto an issue
@@ -39,12 +31,6 @@ export interface SignalSearchCandidate {
   readonly name: string
   readonly description: string
   readonly score: number
-}
-
-export interface SignalScoreEvidenceBackfillTarget {
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly signalId: SignalId
 }
 
 /**
@@ -221,26 +207,6 @@ export interface SignalRepositoryShape {
     readonly excludeSignalId?: SignalId
   }): Effect.Effect<number, RepositoryError, SqlClient>
   save(issue: Signal): Effect.Effect<void, RepositoryError, SqlClient>
-  /**
-   * Platform-wide admin scan for the score-evidence backfill. Returns only
-   * tenant and entity ids so each target is re-read through its organization-
-   * scoped repository before classification.
-   */
-  listScoreEvidenceBackfillTargets(input: {
-    readonly since?: Date
-    readonly organizationId?: OrganizationId
-    readonly projectId?: ProjectId
-    readonly limit?: number
-  }): Effect.Effect<readonly SignalScoreEvidenceBackfillTarget[], RepositoryError, SqlClient>
-  /**
-   * Writes the generated classification only while score evidence is still
-   * empty. Returns whether the conditional update matched the row.
-   */
-  setScoreEvidenceIfEmpty(input: {
-    readonly signalId: SignalId
-    readonly scoreEvidence: readonly SignalScoreEvidence[]
-    readonly now: Date
-  }): Effect.Effect<boolean, RepositoryError, SqlClient>
   /**
    * Atomic reopen-on-occurrence claim: clears `resolved_at` and stamps
    * `regressed_at` in one conditional UPDATE guarded on "currently resolved,
