@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { filterSetSchema, spanRowFilterSetSchema, traceFilterSetSchema } from "./filter.ts"
+import { filterSetSchema, noMetadataFilterSetSchema, spanRowFilterSetSchema, traceFilterSetSchema } from "./filter.ts"
 
 describe("filterSetSchema", () => {
   it("parses a valid filter set", () => {
@@ -164,5 +164,32 @@ describe("traceFilterSetSchema", () => {
   it("accepts absolute thresholds on non-percentile-eligible fields", () => {
     const result = traceFilterSetSchema.safeParse({ tokensInput: [{ op: "gte", value: 100 }] })
     expect(result.success).toBe(true)
+  })
+})
+
+describe("noMetadataFilterSetSchema", () => {
+  it("rejects a metadata.* filter key", () => {
+    const result = noMetadataFilterSetSchema.safeParse({ "metadata.agentVersion": [{ op: "eq", value: "2" }] })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toContain("metadata.* filters are not supported")
+    }
+  })
+
+  it("rejects a nested metadata.* filter key", () => {
+    const result = noMetadataFilterSetSchema.safeParse({ "metadata.runtime.env": [{ op: "eq", value: "prod" }] })
+    expect(result.success).toBe(false)
+  })
+
+  it("accepts non-metadata filter fields", () => {
+    const result = noMetadataFilterSetSchema.safeParse({
+      kind: [{ op: "eq", value: "escalation" }],
+      confidence: [{ op: "gte", value: 0.5 }],
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it("accepts an empty filter set", () => {
+    expect(noMetadataFilterSetSchema.safeParse({}).success).toBe(true)
   })
 })
