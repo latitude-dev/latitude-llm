@@ -128,7 +128,7 @@ const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = CONVERSATION_INTELLIGENCE_LLM_MAX_
 const TRUNCATION_MARKER = "\n[...truncated...]\n"
 
 const middleTruncate = (value: string, maxLength: number): string => {
-  if (value.length <= maxLength) return value
+  if (value.length <= maxLength) return stripLoneSurrogates(value)
   if (maxLength <= TRUNCATION_MARKER.length) return stripLoneSurrogates(value.slice(0, maxLength))
   const head = Math.floor((maxLength - TRUNCATION_MARKER.length) / 2)
   const tail = maxLength - TRUNCATION_MARKER.length - head
@@ -155,7 +155,7 @@ const renderMomentClassifierTranscript = (
 ): string | null => {
   const promptMessages = messages.map((message) => ({ ...message, text: escapePromptDelimiters(message.text) }))
   const fullTranscript = documentFromMessages(promptMessages)
-  if (fullTranscript.length <= maxLength) return fullTranscript
+  if (fullTranscript.length <= maxLength) return stripLoneSurrogates(fullTranscript)
 
   const contextIndexes = new Set<number>()
   for (const candidate of candidates) {
