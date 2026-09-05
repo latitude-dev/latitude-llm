@@ -1,4 +1,4 @@
-import { Button, Chart, type ChartSeries, HistogramSkeleton, Icon, Skeleton, Text } from "@repo/ui"
+import { Button, Chart, type ChartSeries, EmptyState, HistogramSkeleton, Icon, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { BarChart2, ChevronDown, ChevronUp } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -228,9 +228,7 @@ export function MemoryAnalyticsPanel({
             <HistogramSkeleton height={160} />
           </div>
         ) : isEmpty ? (
-          <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-            <Text.H6 color="foregroundMuted">No memory activity in this time window</Text.H6>
-          </div>
+          <EmptyState icon={BarChart2} message="No memory activity in this time window" />
         ) : (
           <>
             <ChartHeader

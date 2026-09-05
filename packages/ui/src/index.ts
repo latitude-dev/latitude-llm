@@ -173,6 +173,7 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "./components/dropdown-menu/primitives.tsx"
+export { EmptyState } from "./components/empty-state/empty-state.tsx"
 export {
   FormField,
   type FormFieldProps,

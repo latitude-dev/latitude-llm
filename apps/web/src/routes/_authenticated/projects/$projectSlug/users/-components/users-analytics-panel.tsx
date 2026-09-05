@@ -1,4 +1,4 @@
-import { Button, Chart, type ChartSeries, HistogramSkeleton, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Button, Chart, type ChartSeries, EmptyState, HistogramSkeleton, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { ChevronDown, ChevronUp, UsersRoundIcon } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -188,9 +188,7 @@ export function UsersAnalyticsPanel({
             <HistogramSkeleton height={160} />
           </div>
         ) : histogram.length === 0 || histogram.every((bucket) => bucket.sessionCount === 0) ? (
-          <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-            <Text.H6 color="foregroundMuted">No user sessions in this time window</Text.H6>
-          </div>
+          <EmptyState icon={UsersRoundIcon} message="No user sessions in this time window" />
         ) : (
           <>
             <ChartHeader

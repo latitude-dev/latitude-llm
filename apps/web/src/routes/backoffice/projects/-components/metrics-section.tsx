@@ -1,4 +1,4 @@
-import { Chart, type ChartSeries, HistogramSkeleton, Text } from "@repo/ui"
+import { Chart, type ChartSeries, EmptyState, HistogramSkeleton, Text } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { type AdminProjectMetricsDto, adminGetProjectMetrics } from "../../../../domains/admin/projects.functions.ts"
@@ -139,11 +139,7 @@ function ActivityChart({ activity }: { readonly activity: AdminProjectMetricsDto
   const isEmpty = activity.every((p) => p.traceCount === 0 && p.annotationsPassed === 0 && p.annotationsFailed === 0)
 
   if (isEmpty) {
-    return (
-      <div className="flex min-h-[120px] items-center justify-center">
-        <Text.H6 color="foregroundMuted">No activity in this window.</Text.H6>
-      </div>
-    )
+    return <EmptyState message="No activity in this window." />
   }
 
   return (
@@ -203,11 +199,7 @@ function SignalsLifecycleChart({ points }: { readonly points: AdminProjectMetric
   )
 
   if (points.every((p) => p.untracked === 0 && p.tracked === 0 && p.resolved === 0)) {
-    return (
-      <div className="flex min-h-[120px] items-center justify-center">
-        <Text.H6 color="foregroundMuted">No issues yet.</Text.H6>
-      </div>
-    )
+    return <EmptyState message="No issues yet." />
   }
 
   return (

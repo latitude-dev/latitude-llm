@@ -3,6 +3,7 @@ import type { BadgeProps } from "@repo/ui"
 import {
   Badge,
   cn,
+  EmptyState,
   Icon,
   Table,
   TableBody,
@@ -48,7 +49,6 @@ import {
 import { microcentsToUsd } from "./cost-formatters.ts"
 import { callsSeriesColor, trendColor } from "./cost-series-colors.ts"
 import { CostTableHead } from "./cost-table-head.tsx"
-import { EmptyState } from "./empty-state.tsx"
 import { SplitValue } from "./split-value.tsx"
 import { useGoToModelSessions } from "./use-go-to-model-sessions.ts"
 
