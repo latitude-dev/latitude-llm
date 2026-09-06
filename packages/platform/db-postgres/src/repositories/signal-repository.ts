@@ -744,6 +744,7 @@ const signalRepositoryCoreLive = Layer.effect(
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const centroidEmbedding = yield* toCentroidEmbedding(issue)
           const row = toInsertRow(issue, centroidEmbedding)
+          const scoreEvidenceJson = JSON.stringify(row.scoreEvidence)
 
           yield* sqlClient.query((db) =>
             db
@@ -758,6 +759,7 @@ const signalRepositoryCoreLive = Layer.effect(
                   description: row.description,
                   source: row.source,
                   origin: row.origin,
+                  scoreEvidence: sql`CASE WHEN jsonb_array_length(${scoreEvidenceJson}::jsonb) > 0 THEN ${scoreEvidenceJson}::jsonb ELSE ${signals.scoreEvidence} END`,
                   filters: row.filters,
                   assigneeId: row.assigneeId,
                   priority: row.priority,
