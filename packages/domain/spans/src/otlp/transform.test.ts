@@ -103,3 +103,108 @@ describe("transformOtlpToSpans — int64 precision", () => {
     expect(span?.attrInt["gen_ai.usage.input_tokens"]).toBe(215813)
   })
 })
+
+describe("transformOtlpToSpans — lone UTF-16 surrogate sanitization", () => {
+  it("strips a lone surrogate from a direct string span attribute value", () => {
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([{ key: "user.note", value: { stringValue: "before\uD83Dafter" } }]),
+      context,
+    )
+
+    expect(spans[0]?.attrString["user.note"]).toBe("before�after")
+  })
+
+  it("strips a lone surrogate from a string nested inside a structured attribute value", () => {
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([
+        {
+          key: "gen_ai.memory.records",
+          value: {
+            arrayValue: {
+              values: [{ kvlistValue: { values: [{ key: "content", value: { stringValue: "hi\uD83D" } }] } }],
+            },
+          },
+        },
+      ]),
+      context,
+    )
+
+    const records = spans[0]?.attrString["gen_ai.memory.records"]
+    expect(JSON.parse(records as string)).toEqual([{ content: "hi�" }])
+  })
+
+  it("strips a lone surrogate from a resource attribute value, including the promoted service name", () => {
+    const request: OtlpExportTraceServiceRequest = {
+      resourceSpans: [
+        {
+          resource: { attributes: [{ key: "service.name", value: { stringValue: "checkout\uD83D" } }] },
+          scopeSpans: [
+            {
+              scope: { name: "test-scope", version: "1" },
+              spans: [
+                {
+                  traceId: "0".repeat(32),
+                  spanId: "0".repeat(16),
+                  name: "span",
+                  startTimeUnixNano: "1",
+                  endTimeUnixNano: "2",
+                  attributes: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { spans } = transformOtlpToSpans(request, context)
+
+    expect(spans[0]?.serviceName).toBe("checkout�")
+    expect(spans[0]?.resourceString["service.name"]).toBe("checkout�")
+  })
+
+  it("strips a lone surrogate from instrumentation scope name and version", () => {
+    const request: OtlpExportTraceServiceRequest = {
+      resourceSpans: [
+        {
+          resource: { attributes: [] },
+          scopeSpans: [
+            {
+              scope: { name: "scope\uD83D", version: "v1\uD83D" },
+              spans: [
+                {
+                  traceId: "0".repeat(32),
+                  spanId: "0".repeat(16),
+                  name: "span",
+                  startTimeUnixNano: "1",
+                  endTimeUnixNano: "2",
+                  attributes: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { spans } = transformOtlpToSpans(request, context)
+
+    expect(spans[0]?.scopeName).toBe("scope�")
+    expect(spans[0]?.scopeVersion).toBe("v1�")
+  })
+
+  it("strips a lone surrogate reintroduced by JSON-parsing a gen_ai message attribute", () => {
+    // The OTLP-level pass sees only the escaped text `\ud83d` (no real surrogate code unit yet),
+    // so it can't sanitize this; the surrogate only becomes real once JSON.parse decodes it below.
+    const stringValue = JSON.stringify([{ role: "user", parts: [{ type: "text", content: "hi\uD83D" }] }])
+
+    const { spans } = transformOtlpToSpans(
+      requestWithSpanAttributes([{ key: "gen_ai.input.messages", value: { stringValue } }]),
+      context,
+    )
+
+    const [message] = spans[0]?.inputMessages ?? []
+    const part = (message as { parts?: readonly { type: string; content?: unknown }[] } | undefined)?.parts?.[0]
+    expect(part?.content).toBe("hi�")
+  })
+})

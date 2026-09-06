@@ -10,6 +10,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
+import { deepStripLoneSurrogates } from "../helpers/normalize-literal-phrase.ts"
 import { shouldReportUnpricedSpan } from "../helpers/should-report-unpriced.ts"
 import { anyValueToPlain } from "./any-value.ts"
 import { attrArray, stringAttr } from "./attributes.ts"
@@ -19,6 +20,7 @@ import { resolveAttributes } from "./resolvers/index.ts"
 import { resolvePerformance } from "./resolvers/performance.ts"
 import { resolveStatusCode } from "./resolvers/status.ts"
 import { resolveToolExecution } from "./resolvers/tool-execution.ts"
+import { sanitizeOtlpRequest } from "./sanitize.ts"
 import type { OtlpAnyValue, OtlpExportTraceServiceRequest, OtlpKeyValue, OtlpResource, OtlpSpan } from "./types.ts"
 
 const INT_TO_SPAN_KIND: Record<number, SpanKind> = {
@@ -172,7 +174,7 @@ function transformSpan({
   const otelStatusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
   const statusCode = resolveStatusCode(spanAttrs, otelStatusCode, scopeName)
 
-  const resolved = resolveAttributes({
+  const resolvedRaw = resolveAttributes({
     spanAttrs,
     statusCode,
     events: spanEvents,
@@ -180,7 +182,13 @@ function transformSpan({
     scopeName,
     hasParent: hasParentSpan(span.parentSpanId),
   })
-  const content = parseContent(spanAttrs)
+  // JSON.parse of an OTLP string (e.g. `gen_ai.input.messages`) can reintroduce a surrogate the OTLP-level pass escaped.
+  const resolved = {
+    ...resolvedRaw,
+    tags: deepStripLoneSurrogates(resolvedRaw.tags),
+    metadata: deepStripLoneSurrogates(resolvedRaw.metadata),
+  }
+  const content = deepStripLoneSurrogates(parseContent(spanAttrs))
   const serviceName = stringAttr(resourceAttrs, "service.name") ?? ""
   const performance = resolvePerformance({
     spanAttrs,
@@ -283,9 +291,12 @@ function transformSpan({
 }
 
 export function transformOtlpToSpans(
-  request: OtlpExportTraceServiceRequest,
+  rawRequest: OtlpExportTraceServiceRequest,
   context: TransformContext,
 ): TransformResult {
+  // Sanitized once, up front, so every reader downstream (attr_string capture, content parsers,
+  // tags/metadata enrichment, promoted service/scope names) sees the same clean attributes.
+  const request = sanitizeOtlpRequest(rawRequest)
   const spans: SpanDetail[] = []
   let rejectedSpans = 0
   const unpricedByKey = new Map<string, { projectId: string; provider: string; model: string; spans: number }>()

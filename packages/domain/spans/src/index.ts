@@ -143,7 +143,11 @@ export {
 export { parseMessagePayload, stringifyPayload } from "./helpers/message-payload.ts"
 export { modelCacheBreakEvenRate } from "./helpers/model-cache-break-even.ts"
 export { type ModelRegistryPricing, modelRegistryPricing } from "./helpers/model-registry-pricing.ts"
-export { normalizeLiteralPhrase, stripLoneSurrogates } from "./helpers/normalize-literal-phrase.ts"
+export {
+  deepStripLoneSurrogates,
+  normalizeLiteralPhrase,
+  stripLoneSurrogates,
+} from "./helpers/normalize-literal-phrase.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,

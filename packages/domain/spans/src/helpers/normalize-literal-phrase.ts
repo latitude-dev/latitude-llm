@@ -22,3 +22,20 @@ export function stripLoneSurrogates(text: string): string {
 export function normalizeLiteralPhrase(text: string): string {
   return stripLoneSurrogates(text.trim().replace(/\s+/g, " "))
 }
+
+/** Recursively strips lone surrogates from every string (object keys included) in a JSON-shaped value. */
+export function deepStripLoneSurrogates<T>(value: T): T {
+  if (typeof value === "string") return stripLoneSurrogates(value) as T
+  if (Array.isArray(value)) return value.map(deepStripLoneSurrogates) as T
+  if (value !== null && typeof value === "object") {
+    const result: Record<string, unknown> = {}
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      let sanitizedKey = stripLoneSurrogates(key)
+      // Two distinct raw keys can sanitize to the same string; disambiguate instead of overwriting.
+      while (sanitizedKey in result) sanitizedKey += "�"
+      result[sanitizedKey] = deepStripLoneSurrogates(val)
+    }
+    return result as T
+  }
+  return value
+}
