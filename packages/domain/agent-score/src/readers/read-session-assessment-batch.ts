@@ -8,7 +8,7 @@ import {
 import { resolveSessionAssessment } from "../resolver/resolve-session-assessment.ts"
 import { readSessionAssessmentSources } from "./read-session-assessment-sources.ts"
 
-export const readSessionAssessmentBatch = (input: SessionAssessmentBulkScope) =>
+export const readSessionAssessmentInputBatch = (input: SessionAssessmentBulkScope) =>
   Effect.gen(function* () {
     if (input.sessionIds.length === 0) return []
 
@@ -34,8 +34,11 @@ export const readSessionAssessmentBatch = (input: SessionAssessmentBulkScope) =>
           ...facts,
           scores: judgment?.scores ?? [],
           signals: judgment?.signals ?? [],
-        }).pipe(Effect.map(resolveSessionAssessment))
+        })
       },
       { concurrency: "unbounded" },
     )
   })
+
+export const readSessionAssessmentBatch = (input: SessionAssessmentBulkScope) =>
+  readSessionAssessmentInputBatch(input).pipe(Effect.map((assessments) => assessments.map(resolveSessionAssessment)))

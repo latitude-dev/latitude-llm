@@ -13,6 +13,11 @@ export interface ResolvedAssessmentItem {
   readonly independentHumanEvidence: boolean
 }
 
+export interface ResolvedAssessmentItemOrder {
+  readonly item: Pick<SessionAssessmentItem, "id" | "evidenceKey">
+  readonly chronology: AssessmentFindingChronology
+}
+
 const completionEffects = (status: "usable" | "terminalFailure"): SessionDimensionEffect[] => [
   {
     scoreDimension: "reliability",
@@ -298,7 +303,10 @@ export const resolveAssessmentFinding = (finding: AssessmentFinding): ResolvedAs
   independentHumanEvidence: finding.independentHumanEvidence,
 })
 
-export const compareResolvedAssessmentItems = (left: ResolvedAssessmentItem, right: ResolvedAssessmentItem): number => {
+export const compareResolvedAssessmentItems = (
+  left: ResolvedAssessmentItemOrder,
+  right: ResolvedAssessmentItemOrder,
+): number => {
   const leftAt = left.chronology.occurredAt?.getTime()
   const rightAt = right.chronology.occurredAt?.getTime()
   if (leftAt !== undefined || rightAt !== undefined) {
@@ -313,7 +321,12 @@ export const compareResolvedAssessmentItems = (left: ResolvedAssessmentItem, rig
     if (rightMessage === undefined) return -1
     if (leftMessage !== rightMessage) return leftMessage - rightMessage
   }
-  return left.item.evidenceKey.localeCompare(right.item.evidenceKey)
+  const byEvidenceKey = left.item.evidenceKey.localeCompare(right.item.evidenceKey)
+  if (byEvidenceKey !== 0) return byEvidenceKey
+  const leftIsPrimary = left.item.id === left.item.evidenceKey
+  const rightIsPrimary = right.item.id === right.item.evidenceKey
+  if (leftIsPrimary !== rightIsPrimary) return leftIsPrimary ? -1 : 1
+  return left.item.id.localeCompare(right.item.id)
 }
 
 const sourcePriority = {
@@ -396,6 +409,9 @@ export const deduplicateResolvedAssessmentItems = (
 }
 
 export const resolveSessionAssessmentItems = (findings: readonly AssessmentFinding[]): SessionAssessmentItem[] =>
-  deduplicateResolvedAssessmentItems(findings.map(resolveAssessmentFinding))
-    .sort(compareResolvedAssessmentItems)
-    .map(({ item }) => item)
+  resolveSessionAssessmentItemsWithChronology(findings).map(({ item }) => item)
+
+export const resolveSessionAssessmentItemsWithChronology = (
+  findings: readonly AssessmentFinding[],
+): ResolvedAssessmentItem[] =>
+  deduplicateResolvedAssessmentItems(findings.map(resolveAssessmentFinding)).sort(compareResolvedAssessmentItems)

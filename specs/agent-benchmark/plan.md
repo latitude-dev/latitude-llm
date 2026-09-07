@@ -222,7 +222,7 @@ does not display per-session dimension scores.
 - [x] **P2-35** Implement the project-scoped session-assessment use-case. Resolve all trace ids for
   the session, include orphan score relationships where authorized, and enforce organization and
   project scope on every source read.
-- [ ] **P2-36** Add stable cursor pagination over chronology plus `evidenceKey`, with complete
+- [x] **P2-36** Add stable cursor pagination over chronology plus `evidenceKey`, with complete
   dimension summaries and coverage returned alongside each page. The input contains project,
   session, and optional cursor only; it has no assessment filters.
 - [ ] **P2-37** Define the public operation through `@repo/operations` with anchor-only payloads and

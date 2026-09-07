@@ -35,6 +35,12 @@ export type {
   NormalizedSessionAssessmentInput,
 } from "./entities/session-assessment-input.ts"
 export {
+  chronologyFromSessionAssessmentCursor,
+  decodeSessionAssessmentCursor,
+  encodeSessionAssessmentCursor,
+  type SessionAssessmentPageCursor,
+} from "./pagination/session-assessment-cursor.ts"
+export {
   type SessionAssessmentBulkJudgmentScope,
   SessionAssessmentBulkJudgmentSource,
   type SessionAssessmentBulkJudgmentSourceShape,
@@ -60,7 +66,10 @@ export {
   SessionSpanSource,
   type SessionSpanSourceShape,
 } from "./ports/session-assessment-sources.ts"
-export { readSessionAssessmentBatch } from "./readers/read-session-assessment-batch.ts"
+export {
+  readSessionAssessmentBatch,
+  readSessionAssessmentInputBatch,
+} from "./readers/read-session-assessment-batch.ts"
 export {
   type ReadSessionAssessmentSourcesInput,
   readSessionAssessmentSources,
@@ -79,11 +88,16 @@ export {
   compareResolvedAssessmentItems,
   deduplicateResolvedAssessmentItems,
   type ResolvedAssessmentItem,
+  type ResolvedAssessmentItemOrder,
   resolveAssessmentFinding,
   resolveAssessmentFindingEffects,
   resolveSessionAssessmentItems,
+  resolveSessionAssessmentItemsWithChronology,
 } from "./resolver/resolve-assessment-findings.ts"
-export { resolveSessionAssessment } from "./resolver/resolve-session-assessment.ts"
+export {
+  resolveSessionAssessment,
+  resolveSessionAssessmentPage,
+} from "./resolver/resolve-session-assessment.ts"
 export {
   type GetSessionAssessmentInput,
   getSessionAssessment,

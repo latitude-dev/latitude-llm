@@ -88,4 +88,22 @@ describe("getSessionAssessment", () => {
 
     expect(result).toMatchObject({ _tag: "NotFoundError", entity: "Session", id: sessionId })
   })
+
+  it("rejects an invalid cursor before reading sources", async () => {
+    const result = await Effect.runPromise(
+      Effect.flip(
+        getSessionAssessment({ organizationId, projectId, sessionId, cursor: "invalid" }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              clientLayer,
+              Layer.succeed(SessionAssessmentBulkTelemetrySource, { read: () => Effect.die("unexpected read") }),
+              Layer.succeed(SessionAssessmentBulkJudgmentSource, { read: () => Effect.die("unexpected read") }),
+            ),
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toMatchObject({ _tag: "BadRequestError", message: "Invalid session assessment cursor" })
+  })
 })
