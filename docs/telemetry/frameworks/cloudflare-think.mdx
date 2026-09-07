@@ -12,7 +12,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 Cloudflare Think uses the Vercel AI SDK internally. Think owns the `streamText`
 call, so add Latitude telemetry in `beforeTurn()` instead of at a model call
-site.
+site. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 Start with the basic setup. Add context only if you need traces to include
 user, session, tags, or metadata from your app.

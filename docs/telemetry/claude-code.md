@@ -3,7 +3,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Claude Code telemetry
 
-Stream Claude Code conversations into Latitude as traces. After setup, Claude Code turns appear in your project's **Traces** view with prompts, responses, tool calls, and tool results.
+Stream Claude Code conversations into Latitude as traces. After setup, Claude Code turns appear in your project's **Traces** view with prompts, responses, tool calls, and tool results. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 <SkillsCallout />
 

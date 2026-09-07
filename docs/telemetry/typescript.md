@@ -8,7 +8,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # TypeScript SDK
 
-Use `@latitude-data/telemetry` to send LLM traces from TypeScript and JavaScript applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one.
+Use `@latitude-data/telemetry` to send LLM traces from TypeScript and JavaScript applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 <SkillsCallout />
 

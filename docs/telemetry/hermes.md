@@ -3,7 +3,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Hermes telemetry
 
-Stream [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research's open-source agent harness) runs into Latitude as traces. After setup, each Hermes turn appears in your project's **Traces** view with user prompts, model turns, tool calls and results, the tools the agent was offered, memory reads and writes, delegated subagents, token usage, cost, timing, and the real system prompt that reached the model.
+Stream [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research's open-source agent harness) runs into Latitude as traces. After setup, each Hermes turn appears in your project's **Traces** view with user prompts, model turns, tool calls and results, the tools the agent was offered, memory reads and writes, delegated subagents, token usage, cost, timing, and the real system prompt that reached the model. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 <SkillsCallout />
 

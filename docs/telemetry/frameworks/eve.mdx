@@ -10,7 +10,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 ## Overview
 
-This guide shows you how to send traces from an agent built with **[Eve](https://eve.dev)** to Latitude.
+This guide shows you how to send traces from an agent built with **[Eve](https://eve.dev)** to Latitude. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 Eve is built on the **Vercel AI SDK** and exports standard OpenTelemetry spans (`ai.streamText`, `ai.toolCall`, …) through whatever exporter you register in `agent/instrumentation.ts`. Because Latitude already understands Vercel AI SDK spans, you can point Eve's OTel exporter straight at Latitude's OTLP endpoint — no Latitude SDK required.
 

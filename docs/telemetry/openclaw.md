@@ -3,7 +3,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # OpenClaw telemetry
 
-Stream OpenClaw agent runs into Latitude as traces. After setup, agent runs appear in your project's **Traces** view with model calls, tool calls, token usage, cost, timing, and nested subagent activity — as a proper `invoke_agent → chat → execute_tool` tree.
+Stream OpenClaw agent runs into Latitude as traces. After setup, agent runs appear in your project's **Traces** view with model calls, tool calls, token usage, cost, timing, and nested subagent activity — as a proper `invoke_agent → chat → execute_tool` tree. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 The recommended way is OpenClaw's **official OpenTelemetry exporter** (the bundled `@openclaw/diagnostics-otel` plugin), pointed at Latitude's OTLP ingest. It follows OpenTelemetry GenAI semantic conventions and is maintained by OpenClaw — see [OpenClaw's OpenTelemetry docs](https://docs.openclaw.ai/gateway/opentelemetry).
 

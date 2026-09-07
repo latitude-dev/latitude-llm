@@ -10,7 +10,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 ## Overview
 
-This guide shows you how to send traces from a [**LiveKit Agents**](https://docs.livekit.io/agents/) application to Latitude.
+This guide shows you how to send traces from a [**LiveKit Agents**](https://docs.livekit.io/agents/) application to Latitude. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 LiveKit Agents ships with built-in OpenTelemetry support and owns its own tracer provider. Instead of bootstrapping telemetry with the `Latitude` class, you attach a **`LatitudeSpanProcessor`** to LiveKit's provider — Latitude then receives the same spans LiveKit emits for LLM, agent, and tool activity. This works the same way for the **Python** (`livekit-agents`) and **Node.js** (`@livekit/agents`) SDKs.
 

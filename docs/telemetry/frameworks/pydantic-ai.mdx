@@ -10,7 +10,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 ## Overview
 
-This guide shows you how to send traces from a **[Pydantic AI](https://ai.pydantic.dev)** agent to Latitude.
+This guide shows you how to send traces from a **[Pydantic AI](https://ai.pydantic.dev)** agent to Latitude. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 Pydantic AI has OpenTelemetry support built in. Calling `Agent.instrument_all()` makes it emit standard `gen_ai.*` spans for every agent run, model call, and tool execution. Latitude's Python SDK registers the global OpenTelemetry provider those spans flow into, so you get full traces without a dedicated instrumentor — Latitude reads Pydantic AI's native spans directly.
 
