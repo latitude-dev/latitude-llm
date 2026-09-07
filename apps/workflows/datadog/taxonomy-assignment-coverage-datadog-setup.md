@@ -20,9 +20,11 @@ Retention filters and span metrics are not retroactive. `setup-datadog.sh`
 converges these objects alongside the adaptive-rollout and tree-quality ones, so
 one run sets up all three:
 
+```bash
+./apps/workflows/datadog/setup-datadog.sh
 ```
-DD_APP_KEY=xxx DD_API_KEY=yyy ./apps/workflows/datadog/setup-datadog.sh
-```
+
+Both keys must already be in the environment — load them from the secret store rather than assigning inline. An inline `DD_API_KEY=… ./setup-datadog.sh` persists the key in shell history, CI logs and command-audit tooling.
 
 The script also asserts the **execution order**, promoting all three taxonomy filters
 (adaptive shadow, quality, coverage) above everything else. Filters are evaluated
@@ -54,11 +56,14 @@ telemetry with the threshold change means Datadog's first data point is already
 post-change for the adaptive arm. That is fine, because the exact baseline comes
 from ClickHouse instead:
 
+```bash
+pnpm --filter @app/workers exec tsx \
+  scripts/taxonomy/snapshot-assignment-baseline.ts baseline.local.json
 ```
-LAT_CLICKHOUSE_URL=… LAT_CLICKHOUSE_USER=… LAT_CLICKHOUSE_PASSWORD=… \
-  pnpm --filter @app/workers exec tsx \
-  scripts/taxonomy/snapshot-assignment-baseline.ts taxonomy-assignment-baseline.json
-```
+
+Same rule for the `LAT_CLICKHOUSE_*` variables it reads: export them from the secret
+store first, never inline — `LAT_CLICKHOUSE_PASSWORD` in shell history is a production
+credential in a logfile.
 
 Run it **before the deploy**. `taxonomy_observations` is retained for 30 days, so the
 rows recording what the old floor admitted are destroyed by retention, not by the

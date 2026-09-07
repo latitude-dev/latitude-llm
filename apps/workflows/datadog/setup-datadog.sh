@@ -26,7 +26,11 @@
 # Requires a Datadog API key and Application key (read/write APM config). They are
 # read from the environment and never printed; do not paste them into shared logs.
 #
-#   DD_APP_KEY=xxx DD_API_KEY=yyy ./apps/workflows/datadog/setup-datadog.sh
+#   export DD_API_KEY DD_APP_KEY   # already loaded from the secret store
+#   ./apps/workflows/datadog/setup-datadog.sh
+#
+# Assigning them inline on the command line persists them in shell history, CI logs
+# and command-audit tooling; the script fails fast if either is unset.
 #
 # Idempotent: every object is deleted (if present) and recreated on each run, so
 # re-running repairs a drifted definition instead of leaving the stale one in

@@ -22,7 +22,8 @@ de-nesting, sibling merging and contrastive naming have a measured before/after;
 these objects are created after those builds ship, there is no "before" and the
 whole enabler is wasted. Order:
 
-1. `DD_APP_KEY=xxx DD_API_KEY=yyy ./apps/workflows/datadog/setup-datadog.sh` —
+1. `./apps/workflows/datadog/setup-datadog.sh` (with `DD_API_KEY`/`DD_APP_KEY` exported
+   from the secret store, not assigned inline) —
    creates the `Taxonomy quality spans` retention filter and the `taxonomy.quality.*`
    span metrics (alongside the adaptive-rollout objects it already managed).
    Idempotent: every object is deleted and recreated, so re-running repairs drift.
