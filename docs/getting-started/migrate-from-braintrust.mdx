@@ -1,0 +1,153 @@
+---
+title: Migrate from Braintrust
+description: "Move an LLM app from Braintrust to Latitude: every Braintrust concept mapped to its Latitude equivalent, the telemetry switch, and the built-in import that brings your project logs along."
+---
+
+Braintrust is built around offline evaluation: you write `Eval()` runs over datasets with scorers, and production logging feeds that loop. Latitude starts from the other end: it watches your live agent through OpenTelemetry and turns the traffic into sessions, users, scores and signals, with offline testing handed to your own runner. Both platforms speak OpenTelemetry, so the migration is mostly a matter of re-pointing telemetry — and Latitude has a built-in [Braintrust import](../telemetry/imports/braintrust) for the project logs you already collected.
+
+This guide maps each Braintrust concept to its Latitude equivalent, switches your live telemetry, imports your history, and covers what has to be rebuilt rather than moved.
+
+<Info>
+  The whole migration is three moves: point your telemetry at Latitude, run the
+  [Braintrust import](../telemetry/imports/braintrust) for history, and recreate your
+  online scorers as [signals](../signals/create). Nothing in your application's request
+  path changes — neither platform sits between you and your model provider.
+</Info>
+
+## Concept map
+
+Use this table as the checklist for your own migration.
+
+| Braintrust concept | Latitude equivalent | Notes |
+| --- | --- | --- |
+| Organization | Organization | API keys are organization-scoped (Settings, Keys) |
+| Project | Project | One project per agent or AI feature. The import targets one Latitude project per Braintrust project |
+| Project logs | [Traces](../observability/traces) and [Spans](../observability/spans) | The import maps each Braintrust span to a Latitude span |
+| `metadata.session_id`, `metadata.user_id` | [Session](../observability/sessions), [User](../observability/users) | First-class in Latitude: set `session_id` and `user_id` on `capture()`, or the `session.id` and `user.id` span attributes |
+| Tags, metadata | Tags, metadata | Map directly, both live and in the import |
+| Score (from a scorer) | [Score](../scores/overview) | Every verdict in Latitude is a score; custom pipelines submit scores through `createScore` |
+| Online scoring | [Signal](../signals/overview) with a judge or rule evaluation | Created with `createSignal`; failed scores group into signals |
+| `Eval()` run (task + dataset + scorers) | Your own runner over a [Dataset](../datasets/overview) | See [simulations](../test-and-fix/simulations) and [regression tests](../test-and-fix/regression-testing); verdicts post back as scores |
+| Scorers, autoevals | Judge and rule [evaluations](../evaluations/overview), [custom scripts](../evaluations/custom-scripts) | Rule conditions cover text match, JSON validity, output length and metrics |
+| Experiments (two eval runs compared) | [Experiments](../experiments/overview) (two slices of live traffic compared) | Same word, different object — see below |
+| Human review | [Annotations](../annotations/overview) | Thumbs up or down with feedback on any trace; failed annotations feed signal discovery |
+| Datasets | [Dataset](../datasets/overview) | `input`, `output`, `expectedOutput`, metadata and custom columns |
+| Prompts, playground, functions | Your codebase | Latitude has no prompt registry or hosted functions; prompts and tools live in code |
+| Dashboards, monitor page | Traces, Sessions, Users, Tools and Cost views; [Monitors](../monitors/overview) | Monitors alert on signals, saved searches, tools or raw traffic |
+
+Two structural differences worth internalizing before you start:
+
+- **"Experiment" means something different.** A Braintrust experiment is an offline eval run over a dataset, compared with another run. A Latitude [Experiment](../experiments/overview) compares two slices of **live traffic** — release A against release B by tag, user, model or metadata — across every metric Latitude tracks. The offline half of the Braintrust workflow maps to your own runner over a Latitude dataset, not to Latitude Experiments.
+- **No hosted eval runner.** `Eval()` executes your task inside Braintrust's tooling. Latitude never runs your code: datasets are handed to your runner ([simulations](../test-and-fix/simulations), [regression tests](../test-and-fix/regression-testing)) in your CI, and results come back as tagged traces and scores. You trade a hosted runner for tests that live next to your code and run on every change.
+
+## Switch the live telemetry
+
+### If you use the Braintrust SDK
+
+Replace the Braintrust logger (wrapped clients, traced decorators, logger initialization) with the Latitude telemetry SDK. Latitude instruments the provider SDK you already call — there is no wrapper client to thread through your code.
+
+```python
+# pip install latitude-telemetry
+import openai
+from openai import OpenAI
+
+from latitude_telemetry import Latitude, capture
+
+latitude = Latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations={"openai": openai},
+)
+
+client = OpenAI()
+
+capture(
+    "handle-user-request",
+    lambda: client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": user_message}],
+    ),
+    {
+        "user_id": user_id,        # was metadata.user_id in Braintrust
+        "session_id": session_id,  # was metadata.session_id in Braintrust
+        "tags": ["production"],
+        "metadata": {"request_id": request_id},
+    },
+)
+```
+
+The TypeScript setup is the same shape with `@latitude-data/telemetry`; see the [TypeScript SDK](../telemetry/typescript) and [Python SDK](../telemetry/python) pages. If you followed Braintrust's `metadata.session_id` / `metadata.user_id` convention, promote those values to `session_id` and `user_id` on `capture()` — in Latitude they are first-class: sessions group multi-turn conversations and users get their own page.
+
+### If you already export OTLP
+
+If your app sends OpenTelemetry — your own OTel SDK setup, or an OTLP exporter pointed at Braintrust — retarget the exporter at Latitude's ingest endpoint:
+
+```bash
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://ingest.latitude.so/v1/traces"
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=YOUR_PROJECT_SLUG"
+```
+
+Latitude ingests standard OTLP over HTTP and reads the [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) for model, tokens, cost and messages. Set `session.id` and `user.id` span attributes for sessions and users. The [OpenTelemetry exporter](../telemetry/otel-exporter) page has per-language examples, the Latitude-specific span attributes, and troubleshooting.
+
+### During the cutover
+
+Run both platforms in parallel for as long as you like: keep your existing Braintrust logging and add Latitude as a second OTLP exporter, or let the Latitude SDK attach to your existing OpenTelemetry provider (it does this automatically when one is registered — see [existing observability stack](../telemetry/otel-exporter#existing-observability-stack)). Logs that land in Braintrust during the overlap can still be picked up by re-running the import later — imports are idempotent, so nothing duplicates.
+
+<Note>
+  If you log to Braintrust over OpenTelemetry today, set
+  `braintrust.otel.preserve_attributes: true` in your instrumentation before importing —
+  Braintrust flattens OTel-logged messages and can drop reasoning blocks otherwise. Logs
+  written with Braintrust's own SDK are unaffected. Details on the
+  [import page](../telemetry/imports/braintrust).
+</Note>
+
+## Import your Braintrust history
+
+Latitude reads the logs in your Braintrust project (queried through BTQL) and maps each span to a Latitude span, so you do not start from an empty project. The import runs from **Project settings → Imports** with a Braintrust API key and your data plane (EU or US); it only reads from Braintrust, and credentials are discarded when it finishes.
+
+Messages, tool calls, tags and metadata come through directly, along with token usage and Braintrust's own cost estimate. Session and user identity are read from `metadata.session_id` and `metadata.user_id`. Images and files are fetched during the import and stored with the message (up to 2 MB each), so imported conversations do not depend on your Braintrust account afterwards. Imported traces are marked with `import.*` metadata naming Braintrust and the original ids, and go through the same pipeline as live traffic — grouped into sessions, embedded for search, evaluated by flaggers.
+
+Follow the [Braintrust import guide](../telemetry/imports/braintrust) for the steps, and the [imports overview](../telemetry/imports/overview) for limits, retries and billing. One constraint to know up front: **scores do not import**, and neither do datasets, experiment results, prompts or functions. Traces and spans move; judgments are rebuilt (next section).
+
+## Rebuild what does not import
+
+**Online scorers become signals.** For each scorer you ran on live traffic, create a signal: LLM-judge scorers become kind `judge` with the criteria in plain language, deterministic scorers become kind `rule` (text match, JSON validity, output length, metric conditions) — see [Create a signal](../signals/create). Scorers that need real code keep running in your pipeline and post verdicts with `createScore` ([custom scripts](../evaluations/custom-scripts)). Two behavioral differences: signals collect **forward from creation** — they do not scan imported history — and judge evaluations default to 10 percent sampling, so create signals before you cut traffic over, and raise sampling in the UI on low-volume projects.
+
+**Datasets** move as data. Export each Braintrust dataset and insert the rows with `insertDatasetRows`, mapping `input` to `input` and `expected` to `expectedOutput` — the same pattern as the [V1 dataset import](./migrate-from-v1#bring-your-golden-dataset). You can also build datasets directly from imported traces with [add traces to a dataset](../datasets/add-traces).
+
+**`Eval()` runs become replay tests in your CI.** Port each eval: the task is your own code calling your own model, the dataset is the Latitude dataset, and the scorers are assertions plus `createScore` calls. Tag every replay (for example `simulation`) so it stays out of production cohorts, monitors and experiment variants. The [regression testing](../test-and-fix/regression-testing) guide covers the pattern end to end.
+
+**Experiment comparisons move to live traffic.** Where you compared two eval runs in Braintrust, tag each release's traffic and create a Latitude [Experiment](../experiments/overview) comparing the two cohorts — sessions, cost, tokens, latency percentiles, tool usage and signal occurrences, with deltas against the baseline.
+
+**Prompts and functions** move into your codebase. Prompts become templates in code with the version in trace metadata and a release tag ([the V1 guide shows the pattern](./migrate-from-v1#move-the-prompts-into-code)); tools become ordinary functions in your agent, which Latitude observes in the [Tools view](../observability/tools) with usage, error rate and latency.
+
+## Differences to plan for
+
+- Latitude has **no hosted eval runner, no playground and no prompt registry**. Offline evaluation is your runner plus datasets plus scores; prompts and functions are code.
+- **Historical scores and experiment results stay in Braintrust.** Only traces and spans import. Export anything you need for an audit before you decommission.
+- **Signals collect forward.** Create them before generating the traffic you want judged.
+- **Latitude Experiments need live traffic** in each cohort; they are not a dataset-run comparison.
+- Cost figures in Latitude are **estimates** computed from the usage and model information in telemetry; see [token and cost tracking](../observability/features/token-cost-tracking). The import carries Braintrust's own cost estimates through on historical spans.
+
+## Why teams switch
+
+Reasons teams have given us, stated plainly so you can check them against your own situation:
+
+- **Production-first instead of eval-first.** Braintrust's loop starts from datasets you curate; Latitude's loop starts from what real users actually hit. Flaggers, annotations and evaluations turn live failures into named signals with example traces, and [agent dispatch](../agent-dispatch/overview) carries the evidence to your coding agent. Datasets and regression tests then lock the fix in — the curation step comes second, seeded from real traffic.
+- **The whole team can work in it.** Product managers and domain experts review sessions, annotate traces and curate expected outputs in the UI without touching an SDK or writing a scorer.
+- **Product-level answers.** Sessions, users, behaviors and signal discovery answer "what is going wrong for whom, how often" — not just how one experiment scored against another.
+- **Tests live in your repo.** Replacing a hosted `Eval()` runner with your own runner means regression tests run in your CI on every change, next to the code they protect.
+
+## For regulated and EU teams
+
+Latitude is [MIT-licensed](https://github.com/latitude-dev/latitude-llm/blob/development/LICENSE) and [self-hostable](../deployment/overview) from a single Docker host to a Kubernetes cluster. Hosted Latitude stores and processes customer data in AWS eu-central-1 (Frankfurt); see [GDPR](../security/compliance/gdpr) for the current readiness status, and [PII redaction](../security/pii-redaction) for redaction controls — which apply to imported Braintrust traces exactly as they do to live ones.
+
+## Frequently asked
+
+**Do I lose my Braintrust history?** No. The [import](../telemetry/imports/braintrust) brings traces, spans, messages, tool calls, attachments, token usage and cost into your Latitude project, with sessions and users read from your metadata. Scores, datasets, experiments and prompts do not import; this guide covers rebuilding each.
+
+**Can I run both during the transition?** Yes. Both platforms consume OpenTelemetry, so a second exporter — or the Latitude SDK attached to your existing OTel provider — sends the same spans to both. Re-run the import at the end to backfill the overlap; imports are idempotent.
+
+**What replaces `Eval()` in CI?** Your test runner replaying a Latitude dataset, posting verdicts as scores. The [regression testing](../test-and-fix/regression-testing) and [simulations](../test-and-fix/simulations) guides show the full pattern, including keeping replays out of production cohorts.
+
+**Where do prompts and functions go?** Into your codebase. Latitude tracks prompt versions as trace metadata and release tags rather than hosting a registry, and observes your tools from telemetry rather than hosting them.
