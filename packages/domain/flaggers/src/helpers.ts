@@ -128,6 +128,7 @@ export interface ToolCallErrorFinding {
   readonly responsePartIndex?: number | undefined
   readonly recovered?: boolean
   readonly sameSubjectRecovered?: boolean
+  readonly terminal?: boolean
 }
 
 interface SuccessfulToolResponse {
@@ -285,10 +286,13 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
       finalAssistantTurn !== null &&
       finalAssistantTurn.messageIndex > finding.responseMessageIndex
 
+    const recovered = hasUsableCompletion && (laterSuccessfulResponses.length > 0 || laterUsableCompletion)
+
     return {
       ...finding,
-      recovered: hasUsableCompletion && (laterSuccessfulResponses.length > 0 || laterUsableCompletion),
+      recovered,
       sameSubjectRecovered: laterSuccessfulResponses.some((response) => response.toolName === finding.toolName),
+      terminal: !recovered,
     }
   })
 }

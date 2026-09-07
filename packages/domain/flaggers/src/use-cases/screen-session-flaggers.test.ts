@@ -633,6 +633,50 @@ describe("screenSessionFlaggersUseCase", () => {
     expect([...scores.values()]).toEqual([])
   })
 
+  it("does not publish a score for a recovered tool failure", async () => {
+    const failedCall = assistantToolCall("search", { q: "primary" })
+    const failedCallId = (failedCall.parts[0] as { id: string }).id
+    const fallbackCall = assistantToolCall("fetch", { q: "fallback" })
+    const fallbackCallId = (fallbackCall.parts[0] as { id: string }).id
+    const session = makeSessionDetail([
+      user("Find the result."),
+      failedCall,
+      tool(failedCallId, { error: "timeout" }),
+      fallbackCall,
+      tool(fallbackCallId, { result: "found" }),
+      assistant("Here is the result."),
+    ])
+
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("tool-call-errors", 0)],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "tool-call-errors")).toEqual({
+      slug: "tool-call-errors",
+      action: "dropped",
+      reason: "unmatched",
+    })
+    expect([...scores.values()]).toEqual([])
+  })
+
+  it("publishes a score for an unrecovered terminal tool failure", async () => {
+    const failedCall = assistantToolCall("search", { q: "primary" })
+    const failedCallId = (failedCall.parts[0] as { id: string }).id
+    const session = makeSessionDetail([user("Find the result."), failedCall, tool(failedCallId, { error: "timeout" })])
+
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("tool-call-errors", 0)],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "tool-call-errors")?.action).toBe("matched-issue")
+    expect([...scores.values()]).toHaveLength(1)
+    expect([...scores.values()][0]?.feedback).toContain("timeout")
+  })
+
   it("writes only the primary score when the deterministic reader returns several findings", async () => {
     const session = makeSessionDetail([
       user("Run the searches."),

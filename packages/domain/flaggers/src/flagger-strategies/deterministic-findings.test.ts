@@ -212,6 +212,7 @@ describe("deterministic finding readers", () => {
       findingKind: "error",
       recovered: true,
       sameSubjectRecovered: false,
+      terminal: false,
     })
   })
 
@@ -248,6 +249,7 @@ describe("deterministic finding readers", () => {
       findingKind: "error",
       recovered: false,
       sameSubjectRecovered: true,
+      terminal: true,
     })
   })
 
@@ -268,7 +270,7 @@ describe("deterministic finding readers", () => {
       outputMessages: [finalAnswer],
     })
 
-    expect(result.findings[0]).toMatchObject({ recovered: true, sameSubjectRecovered: false })
+    expect(result.findings[0]).toMatchObject({ recovered: true, sameSubjectRecovered: false, terminal: false })
   })
 
   it("keeps a tool finding key stable when its message position changes", async () => {

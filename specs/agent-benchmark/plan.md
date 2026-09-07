@@ -134,7 +134,7 @@ does not display per-session dimension scores.
 - [x] **P2-9** Calculate both recovery meanings from session chronology: `recovered` requires later
   successful progress and a usable completion; `sameSubjectRecovered` requires later success by the
   same tool or provider subject.
-- [ ] **P2-10** Keep recovered tool findings out of automatic `ScoreCreated` publication while
+- [x] **P2-10** Keep recovered tool findings out of automatic `ScoreCreated` publication while
   returning them as Reliability context. Unrecovered terminal findings and structural defects retain
   the existing discovery policy.
 - [ ] **P2-11** Return structured output-schema damage with final-versus-intermediate position so a

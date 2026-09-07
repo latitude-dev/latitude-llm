@@ -27,8 +27,10 @@ describe("flaggerFindingSchema", () => {
         toolCallId: "call-1",
         responseMessageIndex: 3,
         recovered: true,
+        sameSubjectRecovered: false,
+        terminal: false,
       }),
-    ).toMatchObject({ findingKind: "error", recovered: true })
+    ).toMatchObject({ findingKind: "error", recovered: true, sameSubjectRecovered: false, terminal: false })
   })
 
   it("rejects fields that do not belong to the selected finding kind", () => {
