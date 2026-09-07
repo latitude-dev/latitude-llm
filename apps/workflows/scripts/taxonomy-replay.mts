@@ -37,6 +37,8 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import {
   type ClusteringTreeNode,
+  createTaxonomyCentroid,
+  normalizeTaxonomyCentroid,
   type PriorClusterNode,
   type LineageOldCluster,
   matchTaxonomyLineage,
@@ -45,6 +47,7 @@ import {
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS,
   TAXONOMY_NAME_REUSE_THRESHOLD,
+  updateTaxonomyCentroid,
 } from "@domain/taxonomy"
 
 const SAMPLE_CAP = 1_500
@@ -128,9 +131,57 @@ const toPrior = (node: ClusteringTreeNode): PriorClusterNode => ({
   children: node.children.map(toPrior),
 })
 
+/**
+ * Rebuild the prior tree the way PRODUCTION would read it back, rather than from
+ * the builder's in-memory centroids.
+ *
+ * Production seeds from `taxonomy_clusters.centroid`, which is not a plain mean:
+ * it is accumulated by `createTaxonomyCentroid` + one `updateTaxonomyCentroid`
+ * per member, so each member is weighted by 0.5^(age / 30d) and the stored value
+ * is a running decayed sum that `normalizeTaxonomyCentroid` turns back into a
+ * direction. The in-memory centroid is an unweighted L2-normalized mean over the
+ * same members. Same members, different weighting — so the arms differ only by
+ * the seeding SOURCE, which is exactly the production-fidelity question.
+ */
+const toPriorPersisted = (
+  node: ClusteringTreeNode,
+  memberTimes: readonly Date[],
+  embeddingOf: (i: number) => number[],
+  now: Date,
+): PriorClusterNode => {
+  let centroid = createTaxonomyCentroid("replay")
+  let clusteredAt = now
+  for (const index of node.memberIndices) {
+    const updated = updateTaxonomyCentroid({
+      centroid: { ...centroid, clusteredAt },
+      embedding: embeddingOf(index),
+      weight: 1,
+      timestamp: memberTimes[index] ?? now,
+      operation: "add",
+      previousClusteredAt: clusteredAt,
+    })
+    const { clusteredAt: next, ...rest } = updated
+    centroid = rest
+    clusteredAt = next
+  }
+  return {
+    centroid: normalizeTaxonomyCentroid(centroid),
+    children: node.children.map((child) => toPriorPersisted(child, memberTimes, embeddingOf, now)),
+  }
+}
+
 let previous: LineageOldCluster[] = []
 let priorTree: PriorClusterNode | undefined
 let previousId = 0
+
+// Chain tracking. The aggregate continuation rate is a mean-field number: it
+// cannot distinguish "every behaviour is moderately unstable" from "most are
+// rock-solid and a churny minority drags the average down". Those have opposite
+// product consequences, so track each lineage individually.
+let lineageId = 0
+const lineageOfCluster = new Map<string, string>()
+const chains = new Map<string, { first: number; last: number; passes: number; maxMembers: number; depth: number }>()
+let passIndex = 0
 const records: Record<string, unknown>[] = []
 
 console.log(`${projectId} arm=${arm} seed=${seed} passes every ${24 / passesPerDay}h`)
@@ -200,9 +251,43 @@ while (cursor <= lastTime) {
 
   // Carry this pass's tree forward. Ids only need to be unique per pass — the
   // matcher compares centroids, never names or identities.
-  priorTree = toPrior(root)
-  previous = nodes.map((n) => ({
-    id: `c${previousId++}`,
+  priorTree =
+    process.env.TAXONOMY_WARM_PERSISTED === "1"
+      ? toPriorPersisted(
+          root,
+          members.map((m) => new Date(m.time)),
+          (i) => embeddingAt(members[i]?.index ?? 0),
+          new Date(cursor),
+        )
+      : toPrior(root)
+  const assignedIds = nodes.map(() => `c${previousId++}`)
+  const nextLineageOf = new Map<string, string>()
+  nodes.forEach((n, i) => {
+    const decision = match.decisions[i]
+    const inherited = decision?.transition === "continuation" ? lineageOfCluster.get(decision.reuseId) : undefined
+    const chain = inherited ?? `L${lineageId++}`
+    nextLineageOf.set(assignedIds[i] ?? "", chain)
+    const existing = chains.get(chain)
+    if (existing) {
+      existing.last = passIndex
+      existing.passes += 1
+      existing.maxMembers = Math.max(existing.maxMembers, n.memberIndices.length)
+    } else {
+      chains.set(chain, {
+        first: passIndex,
+        last: passIndex,
+        passes: 1,
+        maxMembers: n.memberIndices.length,
+        depth: n.depth,
+      })
+    }
+  })
+  lineageOfCluster.clear()
+  for (const [k, v] of nextLineageOf) lineageOfCluster.set(k, v)
+  passIndex += 1
+
+  previous = nodes.map((n, i) => ({
+    id: assignedIds[i] ?? "",
     depth: n.depth,
     centroid: n.centroid,
     isLeaf: n.children.length === 0,
@@ -213,6 +298,10 @@ while (cursor <= lastTime) {
 }
 
 await writeFile(join(dir, `replay-${arm}.json`), JSON.stringify(records, null, 2))
+await writeFile(
+  join(dir, `chains-${arm}.json`),
+  JSON.stringify([...chains.entries()].map(([id, c]) => ({ id, ...c })), null, 2),
+)
 
 const withP = records.filter((r) => r.p !== null).map((r) => r.p as number)
 const roots = records.map((r) => r.rootChildCount as number)
