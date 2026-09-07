@@ -26,7 +26,7 @@ npx skills add https://github.com/latitude-dev/skills --skill latitude-setup,lat
 | `latitude-artifacts` | Builds [Artifacts](/more/artifacts): self-contained HTML reports and KPI dashboards from your Latitude data, in the Latitude design language with light and dark themes. |
 
 <Info>
-  `latitude-setup` builds on `latitude-cli` and `latitude-telemetry`, and ends by offering a first Artifact through `latitude-artifacts`, so the command above installs all four for the from-scratch flow.
+  `latitude-setup` builds on `latitude-cli` and `latitude-telemetry`, and ends by building a first Artifact through `latitude-artifacts`, so the command above installs all four for the from-scratch flow.
 </Info>
 
 ## No account yet
@@ -44,7 +44,7 @@ The `latitude-setup` skill orchestrates the whole zero-account flow:
 3. Instruments your app (via the `latitude-telemetry` skill) against that project.
 4. Runs your real code and inspects the resulting traces, iterating until they look right.
 5. Cleans up the trace noise and hands you a **claim link**.
-6. Offers to build your first [Artifact](/more/artifacts), an HTML report of the traces that just landed, through the `latitude-artifacts` skill.
+6. Builds your first [Artifact](/more/artifacts), an HTML report of the traces that just landed, through the `latitude-artifacts` skill, and hands it back with the claim link.
 
 Open the claim link in your browser to take ownership of the temporary account and keep it. Unclaimed temporary accounts expire automatically.
 
