@@ -46,6 +46,21 @@ describe("flaggerFindingSchema", () => {
     ).toThrow()
   })
 
+  it("requires output-schema findings to identify the affected generation position", () => {
+    const finding = {
+      findingKey: "a".repeat(64),
+      flaggerSlug: "output-schema-validation",
+      findingKind: "invalidJson",
+      feedback: "Assistant output failed JSON parse",
+      messageIndex: 2,
+    }
+
+    expect(() => flaggerFindingSchema.parse(finding)).toThrow()
+    expect(flaggerFindingSchema.parse({ ...finding, generationPosition: "final" })).toMatchObject({
+      generationPosition: "final",
+    })
+  })
+
   it("rejects unbounded finding kinds", () => {
     expect(() =>
       flaggerFindingSchema.parse({

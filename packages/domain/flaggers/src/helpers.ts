@@ -434,54 +434,92 @@ function looksLikeStructuredJsonOutput(content: string): boolean {
   return afterBracket.startsWith("true") || afterBracket.startsWith("false") || afterBracket.startsWith("null")
 }
 
-export function detectOutputSchemaValidationFlagger(
-  conversation: ConversationMessagesOnly,
-): DeterministicFlaggerMatch<"trailingComma" | "unclosedString" | "invalidJson"> {
+export type OutputSchemaDamageKind = "trailingComma" | "unclosedString" | "invalidJson"
+
+export interface OutputSchemaDamageFinding {
+  readonly kind: OutputSchemaDamageKind
+  readonly feedback: string
+  readonly messageIndex: number
+  readonly partIndex: number
+  readonly generationPosition: "final" | "intermediate"
+}
+
+const classifyOutputSchemaDamage = (content: string): Pick<OutputSchemaDamageFinding, "kind" | "feedback"> | null => {
+  if (content.endsWith(",")) {
+    return {
+      kind: "trailingComma",
+      feedback: "Assistant output ended with a trailing comma, suggesting truncated JSON",
+    }
+  }
+
+  let inString = false
+  let escaped = false
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i]
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (char === "\\") {
+      escaped = true
+      continue
+    }
+    if (char === '"') inString = !inString
+  }
+  if (inString) {
+    return {
+      kind: "unclosedString",
+      feedback: "Assistant output contains an unclosed JSON string, suggesting truncated output",
+    }
+  }
+
+  try {
+    JSON.parse(content)
+    return null
+  } catch {
+    return {
+      kind: "invalidJson",
+      feedback: "Assistant output failed JSON parse (malformed or truncated structured output)",
+    }
+  }
+}
+
+export function collectOutputSchemaDamageFindings(
+  conversation: Pick<FlaggerConversation, "allMessages" | "outputMessages">,
+): readonly OutputSchemaDamageFinding[] {
+  const finalAssistantTurn = findFinalCapturedAssistantTurn(conversation)
+  if (!finalAssistantTurn) return []
+
+  const findings: OutputSchemaDamageFinding[] = []
   for (let msgIdx = 0; msgIdx < conversation.allMessages.length; msgIdx++) {
     const message = conversation.allMessages[msgIdx]!
     if (message.role !== "assistant") continue
-    for (const rawPart of iterMessageParts(message.parts)) {
+    const parts = iterMessageParts(message.parts)
+    for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+      const rawPart = parts[partIndex]
       if (!isRecord(rawPart) || rawPart.type !== "text") continue
       const content = typeof rawPart.content === "string" ? rawPart.content.trim() : ""
       if (!content || !looksLikeStructuredJsonOutput(content)) continue
 
-      if (content.endsWith(","))
-        return match("trailingComma", "Assistant output ended with a trailing comma, suggesting truncated JSON", msgIdx)
-
-      let inString = false
-      let escaped = false
-      for (let i = 0; i < content.length; i++) {
-        const char = content[i]
-        if (escaped) {
-          escaped = false
-          continue
-        }
-        if (char === "\\") {
-          escaped = true
-          continue
-        }
-        if (char === '"') inString = !inString
-      }
-      if (inString)
-        return match(
-          "unclosedString",
-          "Assistant output contains an unclosed JSON string, suggesting truncated output",
-          msgIdx,
-        )
-
-      try {
-        JSON.parse(content)
-      } catch {
-        return match(
-          "invalidJson",
-          "Assistant output failed JSON parse (malformed or truncated structured output)",
-          msgIdx,
-        )
-      }
+      const damage = classifyOutputSchemaDamage(content)
+      if (!damage) continue
+      findings.push({
+        ...damage,
+        messageIndex: msgIdx,
+        partIndex,
+        generationPosition: msgIdx === finalAssistantTurn.messageIndex ? "final" : "intermediate",
+      })
     }
   }
 
-  return NO_MATCH
+  return findings
+}
+
+export function detectOutputSchemaValidationFlagger(
+  conversation: Pick<FlaggerConversation, "allMessages" | "outputMessages">,
+): DeterministicFlaggerMatch<OutputSchemaDamageKind> {
+  const finding = collectOutputSchemaDamageFindings(conversation)[0]
+  return finding ? match(finding.kind, finding.feedback, finding.messageIndex) : NO_MATCH
 }
 
 export function detectEmptyResponseFlagger(

@@ -34,14 +34,14 @@ telemetry:
 | Current reader | Source helper result | Current strategy reduction |
 | --- | --- | --- |
 | `empty-response` | one generic match | writes that match as the discovery score |
-| `output-schema-validation` | first damaged assistant output | writes that match as the discovery score |
+| `output-schema-validation` | every damaged assistant output, with generation position | writes the first match as the discovery score |
 | `tool-call-errors` | `collectToolCallErrorFindings` already returns every defect | selects the first structural or unrecovered defect for discovery |
 | deterministic `trashing` | longest qualifying identical-call run | writes that loop as the discovery score |
 | `low-cache-hit-rate` | one session-wide generic match | writes that match as the discovery score |
 
 The shared contract makes the complete reader result available without changing that discovery
-policy. Readers that currently produce one result return a zero-or-one-element list. The tool reader
-keeps its complete list.
+policy. Readers that currently produce one result return a zero-or-one-element list. Tool-call and
+output-schema readers keep their complete lists.
 
 ```ts
 type FlaggerFinding = {
@@ -59,6 +59,7 @@ type FlaggerFinding = {
   recovered?: boolean
   sameSubjectRecovered?: boolean
   terminal?: boolean
+  generationPosition?: "final" | "intermediate"
   redundancy?: "confirmed" | "unconfirmed"
   exposure?: boolean
   confirmedHarm?: boolean
@@ -217,7 +218,7 @@ contains observable damage reported by `output-schema-validation`.
 Content filters, guardrail interventions, and malformed function calls do not need a second finding.
 They have no equivalent healthy configured cause.
 
-The structured finding records whether the affected generation was final. A final broken generation
+The structured finding records `generationPosition: "final" | "intermediate"`. A final broken generation
 is terminal Outcome and Reliability evidence. An earlier broken generation that the session replaced
 is measured as avoidable Cost and Speed where resource telemetry exists.
 

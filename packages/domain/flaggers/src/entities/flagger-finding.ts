@@ -33,6 +33,7 @@ const outputSchemaValidationFindingSchema = z
     ...messageAnchorFields,
     flaggerSlug: z.literal("output-schema-validation"),
     findingKind: z.enum(["trailingComma", "unclosedString", "invalidJson"]),
+    generationPosition: z.enum(["final", "intermediate"]),
   })
   .strict()
 

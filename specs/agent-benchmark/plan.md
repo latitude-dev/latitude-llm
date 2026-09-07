@@ -137,7 +137,7 @@ does not display per-session dimension scores.
 - [x] **P2-10** Keep recovered tool findings out of automatic `ScoreCreated` publication while
   returning them as Reliability context. Unrecovered terminal findings and structural defects retain
   the existing discovery policy.
-- [ ] **P2-11** Return structured output-schema damage with final-versus-intermediate position so a
+- [x] **P2-11** Return structured output-schema damage with final-versus-intermediate position so a
   length finish reason is terminal only when observable damage confirms truncation.
 
 ### Step 3: classify span endpoints

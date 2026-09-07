@@ -291,4 +291,27 @@ describe("deterministic finding readers", () => {
     expect(original.findings[0]).toMatchObject({ messageIndex: 0 })
     expect(shifted.findings[0]).toMatchObject({ messageIndex: 1 })
   })
+
+  it("returns every output-schema damage finding with generation position", async () => {
+    const finalOutput = assistant('{"answer":"unfinished')
+    const result = await read(outputSchemaValidationStrategy, {
+      ...makeTrace([user("Return JSON"), assistant('{"attempt":'), user("Try again"), finalOutput]),
+      outputMessages: [finalOutput],
+    })
+
+    expect(result.readable).toBe(true)
+    expect(result.findings).toHaveLength(2)
+    expect(result.findings[0]).toMatchObject({
+      findingKind: "invalidJson",
+      messageIndex: 1,
+      partIndex: 0,
+      generationPosition: "intermediate",
+    })
+    expect(result.findings[1]).toMatchObject({
+      findingKind: "unclosedString",
+      messageIndex: 3,
+      partIndex: 0,
+      generationPosition: "final",
+    })
+  })
 })

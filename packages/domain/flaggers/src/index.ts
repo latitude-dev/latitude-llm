@@ -79,12 +79,15 @@ export {
 export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
 export {
   buildFlaggerFinding,
+  collectOutputSchemaDamageFindings,
   collectToolCallErrorFindings,
   type DeterministicFlaggerMatch,
   detectEmptyResponseFlagger,
   detectLowCacheHitRateFlagger,
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
+  type OutputSchemaDamageFinding,
+  type OutputSchemaDamageKind,
   type ToolCallErrorFinding,
   type ToolCallErrorFindingKind,
 } from "./helpers.ts"

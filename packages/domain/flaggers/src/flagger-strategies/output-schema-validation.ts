@@ -1,5 +1,9 @@
 import type { FlaggerConversation } from "../conversation.ts"
-import { buildMessageFlaggerFindingRead, detectOutputSchemaValidationFlagger } from "../helpers.ts"
+import {
+  buildMessageFlaggerFindingRead,
+  collectOutputSchemaDamageFindings,
+  detectOutputSchemaValidationFlagger,
+} from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 /**
@@ -14,7 +18,7 @@ export const outputSchemaValidationStrategy: FlaggerStrategy = {
   },
 
   hasRequiredContext(conversation: FlaggerConversation): boolean {
-    return conversation.outputMessages.length > 0
+    return conversation.outputMessages.some((message) => message.role === "assistant")
   },
 
   detectDeterministically(conversation: FlaggerConversation): DetectionResult {
@@ -25,22 +29,19 @@ export const outputSchemaValidationStrategy: FlaggerStrategy = {
   },
 
   readDeterministically({ scope, conversation }) {
-    const result = detectOutputSchemaValidationFlagger(conversation)
-    if (!result.matched) return buildMessageFlaggerFindingRead({ scope, conversation, findings: [] })
-    if (result.messageIndex === undefined) throw new Error("Output-schema finding has no anchor")
     return buildMessageFlaggerFindingRead({
       scope,
       conversation,
-      findings: [
-        {
-          finding: {
-            flaggerSlug: "output-schema-validation",
-            findingKind: result.findingKind,
-            feedback: result.feedback,
-            messageIndex: result.messageIndex,
-          },
+      findings: collectOutputSchemaDamageFindings(conversation).map((finding) => ({
+        finding: {
+          flaggerSlug: "output-schema-validation" as const,
+          findingKind: finding.kind,
+          feedback: finding.feedback,
+          messageIndex: finding.messageIndex,
+          partIndex: finding.partIndex,
+          generationPosition: finding.generationPosition,
         },
-      ],
+      })),
     })
   },
 }
