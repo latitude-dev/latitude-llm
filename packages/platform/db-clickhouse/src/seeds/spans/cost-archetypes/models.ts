@@ -75,11 +75,7 @@ const FREE_MODEL_CANDIDATES: readonly ModelConfig[] = [
   model({ provider: "openrouter", model: "nvidia/nemotron-nano-9b-v2:free" }),
 ]
 
-/**
- * Kept to the candidates the registry still prices at zero. A free tier is the listing models.dev
- * retires most readily, and a retired one would seed this archetype with the very unpriced rows it
- * exists to contrast against. Archetype F's own test fails if the catalog ever drops all of them.
- */
+/** Only those still priced at zero: a retired free tier would seed the unpriced rows archetype F contrasts against. */
 export const FREE_MODELS: readonly ModelConfig[] = FREE_MODEL_CANDIDATES.filter((config) => {
   const pricing = modelRegistryPricing(config)
   return pricing?.input === 0 && pricing.output === 0

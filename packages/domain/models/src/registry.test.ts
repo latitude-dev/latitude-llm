@@ -147,14 +147,7 @@ describe("getModelsForProvider", () => {
   })
 })
 
-/**
- * A Vercel AI Gateway listing (`<vendor>/<model>`, the only shape the gateway's catalog uses) whose
- * vendor is itself a provider pricing the bare model. Both sides pricing is what makes gateway
- * precedence observable: the lookup has a real alternative to fall through to, so answering with
- * Vercel's entry is a choice rather than the only entry there was. Read out of the bundled catalog
- * rather than hardcoded, because models.dev retires individual gateway listings (`xai/grok-4.5` was
- * one) and that churn is not a code regression. Sorted so a failure names the same slug every run.
- */
+/** The vendor must price the bare model too, or the precedence assertions have no alternative to rule out. */
 function findGatewaySlugAlsoSoldByItsVendor(): { slug: string; vendor: string; bareId: string } {
   for (const slug of getModelsForProvider("gateway")
     .map((m) => m.id)
@@ -371,9 +364,7 @@ describe("getCostSpec", () => {
     expect(result.cost).toHaveProperty("output")
   })
 
-  // A frontier listing arrives priced or it does not arrive at all. Asserted on the entry the
-  // lookup landed on rather than on its rates: a prefix fallback onto a neighbouring `gpt-6` would
-  // report `costImplemented` just as readily, at a price that is not this model's.
+  // Asserted on the entry, not the rates: a prefix fallback onto a neighbouring `gpt-6` also reports a cost.
   it("prices GPT-6 Astra from its own catalog entry", () => {
     const spec = getCostSpec("openai", "gpt-6-astra")
 
