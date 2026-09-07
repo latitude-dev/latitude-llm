@@ -655,6 +655,7 @@ describe("screenSessionFlaggersUseCase", () => {
         parts: [{ type: "tool_call", id: "call-3", name: "search", arguments: { q: "third" } }],
       },
       { role: "tool", parts: [{ type: "tool_call_response", id: "call-3", response: { error: "broken" } }] },
+      assistant("Done with the available results."),
     ])
     const { result, scores } = await runScreening({
       session,

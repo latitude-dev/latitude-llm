@@ -8,8 +8,8 @@ import {
 
 type TraceMessage = TraceDetail["allMessages"][number]
 
-function makeTrace(allMessages: TraceDetail["allMessages"]): Pick<TraceDetail, "allMessages"> {
-  return { allMessages }
+function makeTrace(allMessages: TraceDetail["allMessages"]): Pick<TraceDetail, "allMessages" | "outputMessages"> {
+  return { allMessages, outputMessages: allMessages }
 }
 
 function assistantToolCall(id: string, name = "get_weather", argumentsValue: unknown = { city: "BCN" }): TraceMessage {
@@ -27,7 +27,7 @@ function toolResponse(id: string, response: unknown): TraceMessage {
 }
 
 function makeAssistantTrace(allMessages: TraceDetail["allMessages"]): TraceDetail {
-  return { allMessages } as TraceDetail
+  return { allMessages, outputMessages: allMessages } as TraceDetail
 }
 
 function assistantText(content: string): TraceDetail["outputMessages"][number] {

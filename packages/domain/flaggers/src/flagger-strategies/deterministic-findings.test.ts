@@ -185,6 +185,92 @@ describe("deterministic finding readers", () => {
     expect(result.findings[4]).toMatchObject({ toolCallId: "failed-1", recovered: false })
   })
 
+  it("distinguishes session recovery from same-tool recovery", async () => {
+    const finalAnswer = assistant("I used the fallback source.")
+    const result = await read(toolCallErrorsStrategy, {
+      ...makeTrace([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "failed-search", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "failed-search", response: { error: "timeout" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "fallback", name: "fetch", arguments: {} }],
+        },
+        { role: "tool", parts: [{ type: "tool_call_response", id: "fallback", response: { ok: true } }] },
+        finalAnswer,
+      ]),
+      outputMessages: [finalAnswer],
+    })
+
+    expect(result.findings).toHaveLength(1)
+    expect(result.findings[0]).toMatchObject({
+      findingKind: "error",
+      recovered: true,
+      sameSubjectRecovered: false,
+    })
+  })
+
+  it("records same-tool recovery even when the session has no usable completion", async () => {
+    const reasoningOnly = {
+      role: "assistant" as const,
+      parts: [{ type: "reasoning" as const, content: "The retry worked." }],
+    }
+    const result = await read(toolCallErrorsStrategy, {
+      ...makeTrace([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "failed-search", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "failed-search", response: { error: "timeout" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "retry-search", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "retry-search", response: { ok: true } }],
+        },
+        reasoningOnly,
+      ]),
+      outputMessages: [reasoningOnly],
+    })
+
+    expect(result.findings).toHaveLength(1)
+    expect(result.findings[0]).toMatchObject({
+      findingKind: "error",
+      recovered: false,
+      sameSubjectRecovered: true,
+    })
+  })
+
+  it("treats a later usable assistant completion as successful progress", async () => {
+    const finalAnswer = assistant("I could not use the tool, but here is the answer.")
+    const result = await read(toolCallErrorsStrategy, {
+      ...makeTrace([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "failed-search", name: "search", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "failed-search", response: { error: "timeout" } }],
+        },
+        finalAnswer,
+      ]),
+      outputMessages: [finalAnswer],
+    })
+
+    expect(result.findings[0]).toMatchObject({ recovered: true, sameSubjectRecovered: false })
+  })
+
   it("keeps a tool finding key stable when its message position changes", async () => {
     const messages = [
       {

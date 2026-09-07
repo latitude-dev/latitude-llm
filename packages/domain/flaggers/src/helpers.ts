@@ -10,7 +10,7 @@ import { type FlaggerFindingDraft, type FlaggerFindingScope, flaggerFindingSchem
 import { isRecord, iterMessageParts } from "./flagger-strategies/shared.ts"
 
 type ConversationMessagesOnly = Pick<FlaggerConversation, "allMessages">
-type ToolErrorConversation = Pick<FlaggerConversation, "allMessages" | "definedTools">
+type ToolErrorConversation = Pick<FlaggerConversation, "allMessages" | "definedTools" | "outputMessages">
 
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 const EXPECTED_TOOL_HTTP_STATUS_MIN = 400
@@ -126,13 +126,22 @@ export interface ToolCallErrorFinding {
   readonly toolCallId?: string | undefined
   readonly responseMessageIndex?: number | undefined
   readonly responsePartIndex?: number | undefined
-  /**
-   * A later tool call succeeded, so the agent carried on working after this
-   * error. Only meaningful for `kind: "error"`; structural defects (malformed,
-   * duplicate, undeclared) are not something a run recovers from.
-   */
   readonly recovered?: boolean
+  readonly sameSubjectRecovered?: boolean
 }
+
+interface SuccessfulToolResponse {
+  readonly toolName: string
+  readonly messageIndex: number
+  readonly partIndex: number
+}
+
+const isLaterMessagePart = (
+  candidate: Pick<SuccessfulToolResponse, "messageIndex" | "partIndex">,
+  reference: Pick<SuccessfulToolResponse, "messageIndex" | "partIndex">,
+): boolean =>
+  candidate.messageIndex > reference.messageIndex ||
+  (candidate.messageIndex === reference.messageIndex && candidate.partIndex > reference.partIndex)
 
 const conversationHasAnyToolCall = (conversation: ConversationMessagesOnly): boolean =>
   conversation.allMessages.some((message) => {
@@ -149,7 +158,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
   const findings: ToolCallErrorFinding[] = []
   const callById = new Map<string, { name: string; messageIndex: number; partIndex: number }>()
   const successfulCallIds = new Set<string>()
-  let lastSuccessfulResponseIndex = -1
+  const successfulResponses: SuccessfulToolResponse[] = []
   const hasAnyToolCall = conversationHasAnyToolCall(conversation)
   const definedTools =
     conversation.definedTools && conversation.definedTools.length > 0 ? new Set(conversation.definedTools) : null
@@ -246,9 +255,8 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
           responsePartIndex: partIndex,
         })
       } else if (toolCallId) {
-        // Successful execution proves availability; incomplete definedTools must not flag it.
         successfulCallIds.add(toolCallId)
-        lastSuccessfulResponseIndex = msgIdx
+        successfulResponses.push({ toolName: call.name, messageIndex: msgIdx, partIndex })
       }
     }
   }
@@ -259,15 +267,30 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
       !(finding.kind === "undeclared" && finding.toolCallId && successfulCallIds.has(finding.toolCallId)),
   )
 
-  // A tool error followed by a later successful call is one the agent worked
-  // through — an agent that runs hundreds of tools hits these constantly and
-  // the user never sees them. Marked here rather than dropped, because the hint
-  // gatherer still wants every defect.
-  return kept.map((finding) =>
-    finding.kind === "error" && finding.responseMessageIndex !== undefined
-      ? { ...finding, recovered: lastSuccessfulResponseIndex > finding.responseMessageIndex }
-      : finding,
-  )
+  const finalAssistantTurn = findFinalCapturedAssistantTurn(conversation)
+  const hasUsableCompletion = finalAssistantTurn ? assistantTurnHasOutputContent(finalAssistantTurn.message) : false
+
+  return kept.map((finding) => {
+    if (finding.kind !== "error" || finding.responseMessageIndex === undefined) return finding
+
+    const failurePosition = {
+      messageIndex: finding.responseMessageIndex,
+      partIndex: finding.responsePartIndex ?? 0,
+    }
+    const laterSuccessfulResponses = successfulResponses.filter((response) =>
+      isLaterMessagePart(response, failurePosition),
+    )
+    const laterUsableCompletion =
+      hasUsableCompletion &&
+      finalAssistantTurn !== null &&
+      finalAssistantTurn.messageIndex > finding.responseMessageIndex
+
+    return {
+      ...finding,
+      recovered: hasUsableCompletion && (laterSuccessfulResponses.length > 0 || laterUsableCompletion),
+      sameSubjectRecovered: laterSuccessfulResponses.some((response) => response.toolName === finding.toolName),
+    }
+  })
 }
 
 /**

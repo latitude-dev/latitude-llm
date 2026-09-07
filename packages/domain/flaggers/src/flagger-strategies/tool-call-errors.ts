@@ -53,6 +53,7 @@ const toFindingDraft = (finding: ToolCallErrorFinding): ToolCallErrorFindingDraf
         responseMessageIndex: finding.responseMessageIndex,
         ...(finding.responsePartIndex !== undefined ? { responsePartIndex: finding.responsePartIndex } : {}),
         ...(finding.recovered !== undefined ? { recovered: finding.recovered } : {}),
+        ...(finding.sameSubjectRecovered !== undefined ? { sameSubjectRecovered: finding.sameSubjectRecovered } : {}),
       }
   }
 }

@@ -131,7 +131,7 @@ does not display per-session dimension scores.
   unreadable rather than failed.
 - [x] **P2-8** Make the tool-call reader return every malformed call, duplicate id, orphan response,
   undeclared tool, and explicit failure instead of only the first discovery-worthy finding.
-- [ ] **P2-9** Calculate both recovery meanings from session chronology: `recovered` requires later
+- [x] **P2-9** Calculate both recovery meanings from session chronology: `recovered` requires later
   successful progress and a usable completion; `sameSubjectRecovered` requires later success by the
   same tool or provider subject.
 - [ ] **P2-10** Keep recovered tool findings out of automatic `ScoreCreated` publication while
