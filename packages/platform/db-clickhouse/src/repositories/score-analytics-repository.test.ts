@@ -228,6 +228,45 @@ describe("ScoreAnalyticsRepository", () => {
         flagger_path: "deterministic",
       })
     })
+
+    it("leaves provenance null for readable legacy flagger annotations", async () => {
+      const id = "llllllllllllllllllllllll" as ScoreId
+      const now = new Date("2026-09-07T10:00:00.000Z")
+      const score = {
+        id,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionId: SessionId("legacy-session"),
+        traceId: TraceId("t".repeat(32)),
+        spanId: null,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        simulationId: null,
+        signalId: null,
+        value: 0,
+        passed: false,
+        feedback: "Legacy flagger annotation.",
+        error: null,
+        errored: false,
+        duration: 0,
+        tokens: 0,
+        cost: 0,
+        draftedAt: null,
+        annotatorId: null,
+        metadata: { rawFeedback: "Legacy flagger annotation.", flaggerSlug: "empty-response" },
+        createdAt: now,
+        updatedAt: now,
+      } satisfies Score
+
+      await fixture.runCh(fixture.repo.insert(score))
+
+      expect(await fixture.readScoreProvenance(id)).toEqual({
+        flagger_slug: "empty-response",
+        scoring_artifact_version: null,
+        flagger_finding_key: null,
+        flagger_path: null,
+      })
+    })
   })
 
   // ------------------------------------------------------------------

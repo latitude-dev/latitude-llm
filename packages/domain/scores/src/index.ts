@@ -46,7 +46,7 @@ export {
   scoringArtifactVersionSchema,
 } from "./entities/score.ts"
 export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"
-export { isImmutableScore } from "./helpers.ts"
+export { type FlaggerScoreProvenanceRead, isImmutableScore, readFlaggerScoreProvenance } from "./helpers.ts"
 export {
   type DimensionConditionalRate,
   type ScoreAggregate,

@@ -159,7 +159,10 @@ The metadata field is not intended for heavy analytical querying.
 ClickHouse dual-writes only `flagger_slug`, `scoring_artifact_version`, `flagger_finding_key`, and
 `flagger_path` from new SYSTEM annotation scores. Those columns are nullable so rows written before
 the provenance contract remain explicitly unknown. Detailed deterministic finding fields stay in
-their source telemetry and are recalculated by the assessment reader.
+their source telemetry and are recalculated by the assessment reader. `readFlaggerScoreProvenance`
+returns `compatible` only for a complete deterministic `(path, finding key)` tuple or sampled `(path,
+artifact version)` tuple. Historical and partial tuples remain `legacy` raw evidence; no Postgres or
+ClickHouse backfill is performed.
 
 ## Postgres Indexing
 

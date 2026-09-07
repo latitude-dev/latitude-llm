@@ -166,7 +166,7 @@ does not display per-session dimension scores.
 - [x] **P2-19** Add only the bounded ClickHouse score columns defined in
   [`flaggers.md`](flaggers.md#clickhouse-score-fields), using `ch:create`. Make historical absence
   explicit with nullable or unknown values and dual-write the fields for new scores.
-- [ ] **P2-20** Do not backfill historical Postgres metadata or ClickHouse score rows. Verify that
+- [x] **P2-20** Do not backfill historical Postgres metadata or ClickHouse score rows. Verify that
   legacy scores remain readable as annotations or raw evidence and cannot be mistaken for compatible
   structured observations.
 
