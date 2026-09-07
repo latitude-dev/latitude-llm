@@ -38,10 +38,10 @@ import { join } from "node:path"
 import {
   type ClusteringTreeNode,
   createTaxonomyCentroid,
-  normalizeTaxonomyCentroid,
-  type PriorClusterNode,
   type LineageOldCluster,
   matchTaxonomyLineage,
+  normalizeTaxonomyCentroid,
+  type PriorClusterNode,
   runTaxonomyClusterBuild,
   TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
@@ -194,16 +194,23 @@ while (cursor <= lastTime) {
   }
 
   const started = performance.now()
-  // Root-only warm start seeds from depth 1; full-tree seeds from the whole prior shape.
+  // Root-only warm start seeds from depth 1; full-tree seeds from the whole prior
+  // shape. `runTaxonomyClusterBuild` only accepts a `priorTree`, so root-only is
+  // expressed as a one-level prior: childless children stop the descent at depth 1,
+  // leaving every interior split cold.
   const priorRootCentroids = previous.filter((c) => c.depth === 1).map((c) => c.centroid)
+  const priorRootOnly: PriorClusterNode | undefined =
+    priorRootCentroids.length > 0
+      ? { centroid: [], children: priorRootCentroids.map((centroid) => ({ centroid, children: [] })) }
+      : undefined
   const warmOn = process.env.TAXONOMY_WARM_START === "1"
   const fullTree = process.env.TAXONOMY_WARM_FULL === "1"
+  const warmPrior = warmOn ? (fullTree ? priorTree : priorRootOnly) : undefined
   const { root, diagnostics } = runTaxonomyClusterBuild({
     mode: "enforced",
     embeddings: members.map((m) => embeddingAt(m.index)),
     seed,
-    ...(warmOn && fullTree && priorTree ? { priorTree } : {}),
-    ...(warmOn && !fullTree && priorRootCentroids.length > 0 ? { priorRootCentroids } : {}),
+    ...(warmPrior ? { priorTree: warmPrior } : {}),
   })
   const durationMs = performance.now() - started
 
@@ -245,7 +252,7 @@ while (cursor <= lastTime) {
     byDepth,
     durationMs: Number(durationMs.toFixed(1)),
     bestRootSeparation: diagnostics?.bestRootSeparation ?? null,
-    warmSeeded: priorRootCentroids.length,
+    warmSeeded: warmPrior?.children.length ?? 0,
     rootSearchKs: (diagnostics as { rootSearchKs?: number } | null)?.rootSearchKs ?? null,
   })
 
@@ -300,7 +307,11 @@ while (cursor <= lastTime) {
 await writeFile(join(dir, `replay-${arm}.json`), JSON.stringify(records, null, 2))
 await writeFile(
   join(dir, `chains-${arm}.json`),
-  JSON.stringify([...chains.entries()].map(([id, c]) => ({ id, ...c })), null, 2),
+  JSON.stringify(
+    [...chains.entries()].map(([id, c]) => ({ id, ...c })),
+    null,
+    2,
+  ),
 )
 
 const withP = records.filter((r) => r.p !== null).map((r) => r.p as number)
@@ -309,6 +320,8 @@ const leaves = records.map((r) => r.leafCount as number)
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)
 console.log(`\n${records.length} passes → replay-${arm}.json`)
 console.log(`  p (continuation)   mean ${mean(withP).toFixed(3)}  min ${Math.min(...withP).toFixed(3)}`)
-console.log(`  rootChildCount     ${Math.min(...roots)}..${Math.max(...roots)}  spread ${Math.max(...roots) - Math.min(...roots)}  mean ${mean(roots).toFixed(2)}`)
+console.log(
+  `  rootChildCount     ${Math.min(...roots)}..${Math.max(...roots)}  spread ${Math.max(...roots) - Math.min(...roots)}  mean ${mean(roots).toFixed(2)}`,
+)
 console.log(`  leafCount          ${Math.min(...leaves)}..${Math.max(...leaves)}  mean ${mean(leaves).toFixed(2)}`)
 console.log(`  build ms           mean ${mean(records.map((r) => r.durationMs as number)).toFixed(0)}`)
