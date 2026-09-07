@@ -4,6 +4,7 @@ description: Connect your Eve-powered agent to Latitude for observability.
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -26,7 +27,7 @@ Eve is built on the **Vercel AI SDK** and exports standard OpenTelemetry spans (
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - An **Eve** project (with an `agent/instrumentation.ts` file)
 
@@ -118,3 +119,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Each turn shows input/output messages, model, token usage, latency, and errors
 3. Eve turns, model calls, and tool executions appear as nested spans, grouped by session
+
+## See what was captured
+
+<FirstArtifact />

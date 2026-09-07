@@ -4,6 +4,7 @@ description: Connect Cloudflare AI Gateway to Latitude for observability.
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -22,7 +23,7 @@ token usage, cost, and prompt/response messages.
 
 ## Requirements
 
-- A Latitude API key
+- A Latitude API key, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A Latitude project slug
 - A Cloudflare AI Gateway with OpenTelemetry export available in its settings
 
@@ -106,3 +107,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your project in the Latitude dashboard
 2. Send a request through your AI Gateway
 3. The request appears with its model, messages, latency, token usage, and cost
+
+## See what was captured
+
+<FirstArtifact />

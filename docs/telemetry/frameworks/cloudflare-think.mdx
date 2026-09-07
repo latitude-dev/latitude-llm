@@ -4,6 +4,7 @@ description: Connect Cloudflare Think agents to Latitude for observability.
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -20,7 +21,7 @@ user, session, tags, or metadata from your app.
 
 ## Requirements
 
-- A Latitude API key
+- A Latitude API key, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A Latitude project slug
 - A Cloudflare Workers project using `@cloudflare/think`
 - The `nodejs_compat` compatibility flag enabled in your Worker
@@ -531,3 +532,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your project in the Latitude dashboard
 2. Send a message to your Think agent
 3. The turn appears with model calls, tool calls, messages, latency, token usage, and errors
+
+## See what was captured
+
+<FirstArtifact />

@@ -4,6 +4,7 @@ description: Connect your Amazon SageMaker-powered application to Latitude for o
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -25,7 +26,7 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A project that uses **boto3** with a deployed SageMaker endpoint
 - AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`) and a `SAGEMAKER_ENDPOINT_NAME`
@@ -93,3 +94,7 @@ Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
 2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+## See what was captured
+
+<FirstArtifact />

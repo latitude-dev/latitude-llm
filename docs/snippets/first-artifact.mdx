@@ -1,0 +1,7 @@
+Once a real run has landed, ask your agent for your first [Artifact](/more/artifacts): a single HTML page, in the Latitude look, with everything the telemetry captured from that session: model calls, tool calls, tokens, cost, timing, and the conversation as the model saw it. It is the fastest way to check the integration end to end and to see what Latitude will have to work with.
+
+The `latitude-setup` skill builds it as its last step from its bundled `first-artifact.html` template, filling the page with the values the `latitude` CLI returns for the trace, and adds a **Claim your workspace** button when the account is temporary. If you set things up by hand, the same template and instructions live in the [skills repo](https://github.com/latitude-dev/skills/tree/main/skills/latitude-setup). Prompt:
+
+```text
+Build my first Latitude Artifact from the session that just landed, using the first-artifact.html template from the latitude-setup skill (github.com/latitude-dev/skills).
+```

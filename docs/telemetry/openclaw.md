@@ -1,4 +1,5 @@
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # OpenClaw telemetry
 
@@ -12,7 +13,7 @@ The recommended way is OpenClaw's **official OpenTelemetry exporter** (the bundl
 
 ## Prerequisites
 
-- A [Latitude account](https://console.latitude.so/login) with a project
+- A [Latitude account](https://console.latitude.so/login) with a project, or none yet: your agent can create a temporary one with the [`latitude-setup` skill](/getting-started/skills), no signup, and fill in the values below
 - OpenClaw 2026.6 or newer
 - A Latitude **API key** and your **project slug** (project sidebar → **Settings → API Keys**)
 
@@ -73,6 +74,10 @@ openclaw gateway restart
 ```
 
 Send a message to an agent, then open your Latitude project and go to **Traces** — the run should appear within a few seconds.
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Structural-only telemetry
 
