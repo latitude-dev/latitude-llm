@@ -371,6 +371,17 @@ describe("getCostSpec", () => {
     expect(result.cost).toHaveProperty("output")
   })
 
+  // A frontier listing arrives priced or it does not arrive at all. Asserted on the entry the
+  // lookup landed on rather than on its rates: a prefix fallback onto a neighbouring `gpt-6` would
+  // report `costImplemented` just as readily, at a price that is not this model's.
+  it("prices GPT-6 Astra from its own catalog entry", () => {
+    const spec = getCostSpec("openai", "gpt-6-astra")
+
+    expect(spec).toMatchObject({ costImplemented: true, pricedProvider: "openai", pricedModel: "gpt-6-astra" })
+    expect(computeTokenCost(spec.cost, 1_000_000, "input")).toBeGreaterThan(0)
+    expect(computeTokenCost(spec.cost, 1_000_000, "output")).toBeGreaterThan(0)
+  })
+
   it("normalizes Vercel provider suffixes for cost lookup", () => {
     const result = getCostSpec("openai.responses", "gpt-4o")
     expect(result.costImplemented).toBe(true)
