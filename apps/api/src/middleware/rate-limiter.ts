@@ -29,66 +29,58 @@ const getNumericPipelineValue = (result: [unknown, unknown]): number | null => {
   return typeof value === "number" ? value : null
 }
 
-/**
- * Create a Redis-backed rate limiting middleware
- */
+const enforceRedisRateLimit = async (c: Context, next: Next, config: RateLimitConfig, key: string) => {
+  const redis = c.get("redis")
+  const pipeline = redis.pipeline()
+  pipeline.incr(key)
+  pipeline.ttl(key)
+
+  const results = await pipeline.exec()
+  if (!results) {
+    await next()
+    return
+  }
+
+  const [incrResult, ttlResult] = results
+  if (incrResult[0] || ttlResult[0]) {
+    await next()
+    return
+  }
+
+  const count = getNumericPipelineValue(incrResult)
+  let ttl = getNumericPipelineValue(ttlResult)
+  if (count === null || ttl === null) {
+    await next()
+    return
+  }
+
+  if (count === 1 || ttl === -1) {
+    await redis.expire(key, config.windowSeconds)
+    ttl = config.windowSeconds
+  }
+
+  if (count > config.maxRequests) {
+    const retryAfter = ttl
+    return c.json(
+      {
+        error: config.errorMessage || "Too many requests",
+        retryAfter,
+      },
+      429,
+      { "Retry-After": String(retryAfter) },
+    )
+  }
+
+  await next()
+}
+
 const createRedisRateLimiter = (config: RateLimitConfig) => {
   return async (c: Context, next: Next) => {
-    const redis = c.get("redis")
     const key = `${config.keyPrefix}:${config.keyGenerator(c)}`
 
     try {
-      // Use Redis multi to atomically increment and set expiry
-      const pipeline = redis.pipeline()
-      pipeline.incr(key)
-      pipeline.ttl(key)
-
-      const results = await pipeline.exec()
-
-      if (!results) {
-        // Redis error, allow request but log warning
-        await next()
-        return
-      }
-
-      const [incrResult, ttlResult] = results
-
-      // Check for errors
-      if (incrResult[0] || ttlResult[0]) {
-        await next()
-        return
-      }
-
-      const count = getNumericPipelineValue(incrResult)
-      let ttl = getNumericPipelineValue(ttlResult)
-
-      if (count === null || ttl === null) {
-        await next()
-        return
-      }
-
-      // Set expiry on first request
-      if (count === 1 || ttl === -1) {
-        await redis.expire(key, config.windowSeconds)
-        ttl = config.windowSeconds
-      }
-
-      // Check if limit exceeded
-      if (count > config.maxRequests) {
-        const retryAfter = ttl
-        return c.json(
-          {
-            error: config.errorMessage || "Too many requests",
-            retryAfter,
-          },
-          429,
-          { "Retry-After": String(retryAfter) },
-        )
-      }
-
-      await next()
+      return await enforceRedisRateLimit(c, next, config, key)
     } catch (_error) {
-      // Redis error - fail open (allow request) to avoid blocking legitimate users
       await next()
     }
   }
