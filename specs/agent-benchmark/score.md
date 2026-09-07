@@ -31,11 +31,12 @@ Each dimension and reader may narrow that base. A session is readable for one ob
 the required telemetry was captured and the relevant detector could have run. Missing evidence is
 never converted to a healthy verdict.
 
-The session-end event triggers the analysis that creates scores, signals, and metrics; it does not
-freeze a session record. Eligibility is derived from the session activity timestamp and the shared
-debounce constant rather than a persisted session assessment. The daily calculation reads current
-persisted sources when it runs. Pending or failed analysis is unexamined evidence and can prevent
-publication. Results arriving later affect future daily snapshots, not earlier ones.
+The session-end event triggers analysis that can create scores, signals, and screening decisions; it
+does not freeze a session record or persist deterministic observations. Eligibility is derived from
+the session activity timestamp and the shared debounce constant rather than a persisted session
+assessment. The daily calculation reads retained telemetry and current persisted judgments when it
+runs. Pending or failed sampled analysis is unexamined evidence and can prevent publication. Results
+arriving later affect future daily snapshots, not earlier ones.
 
 ### The window
 
@@ -240,12 +241,13 @@ The scoring version changes when any of these changes:
 - a reader floor or applicability rule;
 - a detector change that materially alters observation coverage.
 
-Each scoring version declares the compatible `scoringArtifactVersion` values for every persisted
-flagger reader. The daily job never labels a mixture of incompatible Task Success, Safety, or other
-flagger evidence as one version. It re-evaluates retained session inputs with the target artifact
-where supported; evidence that cannot be re-evaluated is unreadable for that reader. Publication is
-withheld until the compatible window passes coverage and confidence gates. A scoring-version change
-therefore creates a marked boundary, not a gradual blend of old and new verdicts.
+Each scoring version pins its deterministic telemetry readers and declares compatible
+`scoringArtifactVersion` values for persisted model-produced flagger results. The daily job never
+labels a mixture of incompatible Task Success, Safety, or other sampled evidence as one version. It
+re-evaluates retained session inputs with the target artifact where supported; evidence that cannot
+be re-evaluated is unreadable for that reader. Publication is withheld until the compatible window
+passes coverage and confidence gates. A scoring-version change therefore creates a marked boundary,
+not a gradual blend of old and new verdicts.
 
 The trend chart marks a version boundary. Snapshots on opposite sides remain visible but are not
 presented as a continuous measurement.

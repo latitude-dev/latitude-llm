@@ -14,7 +14,7 @@ Every metric definition specifies:
 
 | Field | Meaning |
 | --- | --- |
-| ID | stable identifier used in evidence, filters, and cause rows |
+| ID | stable identifier used in evidence, deduplication, and cause rows |
 | dimensions | estimands the observation can inform |
 | evidence role | endpoint, outcome feature, resource evidence, or confirmed harm |
 | reader | telemetry and grouping used to produce the observation |
@@ -99,16 +99,22 @@ failed score can create or join a signal. A passed score never enters signal dis
 
 - Dimensions: Outcome, Reliability.
 - Evidence role: terminal task failure and terminal operational failure.
-- Reader: the `empty-response` flagger on the last assistant turn.
+- Reader: the shared deterministic output-content reader used by the `empty-response` flagger on the
+  last assistant turn.
 
-A turn containing a tool call or reasoning is production. Blank and whitespace-only final text are
-terminal no-output findings. Non-empty repeated-character output requires explicit schema,
-requested-output-contract, or semantic usability evidence that it could not satisfy the task. This
-keeps valid compact answers such as `111` out of the terminal path.
+A final assistant turn contains delivered output when it has non-whitespace response text or at
+least one tool call. Reasoning alone is not a delivered result. A turn with neither response text nor
+a tool call is a terminal no-output finding. Non-empty repeated-character output requires explicit
+schema, requested-output-contract, or semantic usability evidence that it could not satisfy the
+task. This keeps valid compact answers such as `111` out of the terminal path.
 
-Blank text and confirmed unusable patterns anchor Outcome success at zero and fail Reliability
-because no usable completion was delivered. An unconfirmed pattern is modeled Outcome evidence or
-diagnostic context; it is not a terminal failure.
+A malformed tool call still prevents a no-output finding because the assistant produced a tool call;
+the structural reader can independently classify that call as terminal when it prevented usable
+completion.
+
+Blank-only turns with no tool call and confirmed unusable patterns anchor Outcome success at zero
+and fail Reliability because no usable completion was delivered. An unconfirmed pattern is modeled
+Outcome evidence or diagnostic context; it is not a terminal failure.
 
 The flagger returns no match when no assistant message was captured. That case is unreadable rather
 than failed. [`flaggers.md`](flaggers.md#repeated-character-output-needs-usability-evidence) defines
@@ -193,7 +199,7 @@ This compares the same produced output rather than rewarding short answers.
 
 - Dimensions: Reliability, Cost, Speed.
 - Evidence role: terminal endpoint when unrecovered; resource evidence when recovered.
-- Reader: error findings from `tool-call-errors`.
+- Reader: the shared deterministic error-finding reader used by `tool-call-errors`.
 
 The flagger pairs tool calls with responses and excludes HTTP statuses the caller declared expected.
 A later successful call or other successful progress can recover the session even when it used a
@@ -210,7 +216,8 @@ completed; the tool-specific marker tells the user which integration needs work.
 
 - Dimensions: Reliability, Cost, Speed.
 - Evidence role: terminal endpoint only when completion failed; otherwise resource evidence.
-- Reader: malformed, duplicate-id, and unknown-id findings from `tool-call-errors`.
+- Reader: malformed, duplicate-id, and unknown-id findings from the shared deterministic tool reader
+  used by `tool-call-errors`.
 
 A call with a missing id or name, duplicate call id, or response referencing no known call qualifies.
 A tool absent from captured definitions does not. Missing definitions usually indicate incomplete

@@ -1,5 +1,5 @@
 import type { FlaggerConversation } from "../conversation.ts"
-import { detectOutputSchemaValidationFlagger } from "../helpers.ts"
+import { buildMessageFlaggerFindingRead, detectOutputSchemaValidationFlagger } from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 /**
@@ -22,5 +22,25 @@ export const outputSchemaValidationStrategy: FlaggerStrategy = {
     return result.matched
       ? { kind: "matched", feedback: result.feedback, messageIndex: result.messageIndex }
       : { kind: "unmatched" }
+  },
+
+  readDeterministically({ scope, conversation }) {
+    const result = detectOutputSchemaValidationFlagger(conversation)
+    if (!result.matched) return buildMessageFlaggerFindingRead({ scope, conversation, findings: [] })
+    if (result.messageIndex === undefined) throw new Error("Output-schema finding has no anchor")
+    return buildMessageFlaggerFindingRead({
+      scope,
+      conversation,
+      findings: [
+        {
+          finding: {
+            flaggerSlug: "output-schema-validation",
+            findingKind: result.findingKind,
+            feedback: result.feedback,
+            messageIndex: result.messageIndex,
+          },
+        },
+      ],
+    })
   },
 }

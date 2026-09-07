@@ -1,5 +1,5 @@
 import type { FlaggerConversation } from "../conversation.ts"
-import { detectLowCacheHitRateFlagger } from "../helpers.ts"
+import { buildSessionFlaggerFindingRead, detectLowCacheHitRateFlagger } from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 /**
@@ -22,5 +22,21 @@ export const lowCacheHitRateStrategy: FlaggerStrategy = {
   detectDeterministically(conversation: FlaggerConversation): DetectionResult {
     const result = detectLowCacheHitRateFlagger(conversation)
     return result.matched ? { kind: "matched", feedback: result.feedback } : { kind: "unmatched" }
+  },
+
+  readDeterministically({ scope, conversation }) {
+    const result = detectLowCacheHitRateFlagger(conversation)
+    return buildSessionFlaggerFindingRead({
+      scope,
+      findings: result.matched
+        ? [
+            {
+              flaggerSlug: "low-cache-hit-rate",
+              findingKind: result.findingKind,
+              feedback: result.feedback,
+            },
+          ]
+        : [],
+    })
   },
 }

@@ -454,6 +454,7 @@ describe("malformed message parts", () => {
     ).not.toThrow()
     expect(detectEmptyResponseFlagger(makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage]))).toEqual({
       matched: true,
+      findingKind: "blank",
       feedback: "Assistant response was empty or whitespace only",
       messageIndex: 0,
     })

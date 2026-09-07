@@ -1,6 +1,6 @@
 # Agent Score
 
-> **Status**: design. No code is written.
+> **Status**: design and staged implementation; progress is tracked in [`plan.md`](plan.md).
 >
 > **Durable homes after this stabilizes**: `dev-docs/signals.md` for signal evidence,
 > `dev-docs/flaggers.md` for observation coverage, `dev-docs/conversation-intelligence.md` for
@@ -134,6 +134,7 @@ ignored signal are excluded from future calculations. Existing daily snapshots a
 | dimension | Outcome, Reliability, Cost, Speed, or Safety |
 | estimand | the real-world quantity a dimension estimates |
 | metric | a named telemetry reading such as `tools.thrashing` |
+| observation | a normalized fact resolved from telemetry or a persisted judgment; it is not necessarily a database row |
 | signal | a recurring cluster of related findings |
 | evidence role | how a metric or signal informs one dimension |
 | session assessment | the dimension-aware evidence story for one session, without per-session scores |
@@ -171,7 +172,9 @@ Read them in this order:
 | Signals carry per-dimension evidence roles | Dimension membership alone cannot say how a signal affects an estimand |
 | A shared session-assessment resolver serves single-session and bulk reads | Sessions and the benchmark interpret evidence consistently |
 | Flagger screening decisions and selection probabilities are stored | Sampled findings need a real or corrected denominator |
-| Recovered findings remain observable without opening signals automatically | Cost and Speed need retry waste without flooding signal discovery |
+| Deterministic findings are recalculated from retained telemetry | Session assessment and bulk scoring see every fact without turning observations into score rows |
+| Discovery scores can link to their deterministic source finding | Scores and signals join the session story without duplicating the full finding |
+| Recovered findings remain observable without opening signals automatically | Dynamic readers expose retry waste without flooding signal discovery |
 | Provider errors and finish reasons receive shared classifiers | Raw provider strings cannot define terminal failure consistently |
 | Cost and duration readers expose session-level resource use | Waste must be capped and deduplicated before window aggregation |
 | A sampled Task Success flagger persists passed and failed scores | Outcome needs a direct holistic reference verdict, not a union of defect counts |

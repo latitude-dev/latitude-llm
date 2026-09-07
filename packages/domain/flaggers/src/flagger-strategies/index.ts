@@ -134,5 +134,6 @@ export {
   type FlaggerSlug,
   type FlaggerStrategy,
   type FlaggerSuppressor,
+  readDeterministicFlaggerFindings,
   suppressorSlug,
 } from "./types.ts"

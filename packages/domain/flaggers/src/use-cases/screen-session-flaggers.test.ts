@@ -633,6 +633,43 @@ describe("screenSessionFlaggersUseCase", () => {
     expect([...scores.values()]).toEqual([])
   })
 
+  it("writes only the primary score when the deterministic reader returns several findings", async () => {
+    const session = makeSessionDetail([
+      user("Run the searches."),
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-1", name: "search", arguments: { q: "first" } }],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "call-1", response: { error: "timeout" } }] },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-2", name: "search", arguments: { q: "second" } }],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "call-2", response: { ok: true } }] },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-2", name: "search", arguments: { q: "duplicate" } }],
+      },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-3", name: "search", arguments: { q: "third" } }],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "call-3", response: { error: "broken" } }] },
+    ])
+    const { result, scores } = await runScreening({
+      session,
+      flaggers: [makeFlagger("tool-call-errors", 0)],
+      deps: fakeDeps.deps,
+    })
+
+    expect(decisionFor(result.decisions, "tool-call-errors")).toEqual({
+      slug: "tool-call-errors",
+      action: "matched-issue",
+    })
+    expect([...scores.values()]).toHaveLength(1)
+    expect([...scores.values()][0]?.feedback).toContain("Duplicate tool_call id")
+  })
+
   it("hints trashing (tool:error) from a failed tool response", async () => {
     const session = makeSessionDetail([
       user("Fetch the data."),

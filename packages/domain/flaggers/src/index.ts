@@ -20,6 +20,17 @@ export {
 } from "./conversation.ts"
 export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema } from "./entities/flagger.ts"
 export {
+  type DeterministicFlaggerFindingRead,
+  deterministicFlaggerFindingReadSchema,
+  type FlaggerFinding,
+  type FlaggerFindingDraft,
+  type FlaggerFindingKind,
+  type FlaggerFindingScope,
+  flaggerFindingSchema,
+  flaggerFindingScopeSchema,
+  unreadableDeterministicFlaggerFindingRead,
+} from "./entities/flagger-finding.ts"
+export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
   FLAGGER_DISPLAY,
   type FlaggerDisplay,
@@ -52,6 +63,7 @@ export {
   outputSchemaValidationStrategy,
   piiLeakageStrategy,
   rankStagesByRefusalLikelihood,
+  readDeterministicFlaggerFindings,
   refusalStrategy,
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
@@ -63,6 +75,7 @@ export {
 } from "./flagger-strategies/index.ts"
 export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
 export {
+  buildFlaggerFinding,
   collectToolCallErrorFindings,
   type DeterministicFlaggerMatch,
   detectEmptyResponseFlagger,

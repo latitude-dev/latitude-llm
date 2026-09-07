@@ -85,70 +85,196 @@ list keeps one row per signal and shows dimensions as chips rather than grouping
 evidence, failures, recovered incidents, signal occurrences, safety context, and missing coverage. It
 does not display per-session dimension scores.
 
-### Structured observations
+### PR 2 decisions and boundaries
 
-- [ ] **P2-1** Extend flagger detection results and score metadata with the structured fields in
-  [`flaggers.md`](flaggers.md#structured-findings), including confirmed versus unconfirmed
-  repeated-character output.
-- [ ] **P2-2** Surface tool finding kinds and both recovery meanings. Separate measurement
-  persistence from signal-discovery publication for recovered incidents.
-- [ ] **P2-3** Give flagger observations stable identities across re-screening.
-- [ ] **P2-4** Add the finish-reason and provider-error classifiers required by
-  [`metrics.md`](metrics.md#spans).
-- [ ] **P2-5** Expose classified finish and provider error fields in span and session registries,
-  filters, and detail views.
-- [ ] **P2-6** Add the bounded ClickHouse score columns required by
-  [`flaggers.md`](flaggers.md#clickhouse-score-fields), including scoring-artifact provenance. Create
-  migrations only through `ch:create`.
-- [ ] **P2-7** Backfill fields that historical metadata can establish. Do not infer unavailable
-  recovery, terminal, or safety facts.
+- Deterministic observations are calculated from retained telemetry by shared readers. They are not
+  persisted as scores, measurement rows, or assessment snapshots.
+- Scores remain authored or classifier-produced records. A discovery score can store a stable link
+  to its deterministic source finding, but it does not copy the full finding into Score.
+- Screening decisions are persisted because a missing score cannot distinguish no match from no
+  examination.
+- A delivered completion requires non-whitespace response text or at least one tool call. Reasoning
+  alone is not a completion. A malformed tool call is output but can fail Reliability independently.
+- The assessment exposes every finding returned by a deterministic reader even when only one primary
+  finding was selected for signal discovery.
+- The assessment has no dimension, direction, source, or measured-state filters. Its items are one
+  chronological cursor-paginated feed.
+- PR 2 defines no generic evidence-confidence field. PRs 3, 4, and 5 add uncertainty beside the
+  concrete estimates they introduce; PR 6 owns project-level score intervals.
+- ClickHouse changes are forward-only. Historical score rows are not backfilled, and absent
+  structured fields remain unknown rather than false or healthy.
 
-### Observation coverage
+### Step 1: normalize deterministic finding contracts
 
-- [ ] **P2-8** Add the append-only flagger screening-decision table from
-  [`flaggers.md`](flaggers.md#screening-decisions), including selection reason, inclusion
-  probability, analysis-generation identity, append-only revision identity, attempt, and structured
-  execution outcome.
-- [ ] **P2-9** Write screening decisions before sampled model execution, reuse one sampling draw
-  across retries, implement latest-generation consolidation, and preserve the existing summary log.
-- [ ] **P2-10** Add coverage repositories and a per-flagger coverage view in Settings.
+- [x] **P2-1** Inventory the existing deterministic helpers and flagger adapters for empty output,
+  schema damage, tool-call errors, and thrashing. Record which helper already calculates multiple
+  findings and which adapter currently reduces those findings to one discovery score.
+- [x] **P2-2** Define Zod-first source-domain finding contracts. Each finding carries a stable
+  `findingKey`, a bounded `findingKind`, readable feedback, temporal anchors, and only the conditional
+  fields valid for that kind.
+- [x] **P2-3** Define deterministic reader results as a readability result plus a list of findings.
+  An empty list from a readable reader means examined with no finding; unreadable input is a coverage
+  result and never a healthy observation.
+- [x] **P2-4** Generate `findingKey` from the immutable source fact: span id and kind, tool-call id and
+  kind, message content hash and kind, or the equivalent stable source anchor. Do not use feedback,
+  a mutable signal id, or list position as identity.
+- [x] **P2-5** Keep the existing flagger adapters as discovery policy. They may select one primary
+  finding from a deterministic reader and create the existing system annotation score, while the
+  assessment and future bulk path consume the complete finding list.
 
-### Assessment domain and readers
+### Step 2: establish completion and operational findings
 
-- [ ] **P2-11** Create `@domain/agent-score` with the Zod-first session-assessment entities defined
-  in [`session-assessment.md`](session-assessment.md#assessment-model).
-- [ ] **P2-12** Implement the pure session-assessment resolver, including multi-dimension effects,
-  benchmark-use classification, chronological ordering, deduplication, and coverage.
-- [ ] **P2-13** Add single-session evidence ports and platform adapters for scores, signals, spans,
-  moments, and screening decisions.
-- [ ] **P2-14** Add bulk evidence contracts for later benchmark jobs. The single-session use-case and
-  bulk path must share resolution logic without an N-plus-one query loop.
-- [ ] **P2-15** Implement the project-scoped public session-assessment operation with stable cursor
-  pagination, complete dimension summaries, and anchor-only payloads; regenerate HTTP, OpenAPI, MCP,
-  SDK, CLI, and in-process tool contracts.
+- [ ] **P2-6** Implement the shared output-content predicate over the final captured assistant turn:
+  non-whitespace response text or at least one tool call is content; reasoning alone is not.
+- [ ] **P2-7** Update `empty-response` to return `blank`, `confirmedUnusablePattern`, or
+  `unconfirmedPattern`. A tool-call-only turn is not empty, and no captured assistant turn is
+  unreadable rather than failed.
+- [ ] **P2-8** Make the tool-call reader return every malformed call, duplicate id, orphan response,
+  undeclared tool, and explicit failure instead of only the first discovery-worthy finding.
+- [ ] **P2-9** Calculate both recovery meanings from session chronology: `recovered` requires later
+  successful progress and a usable completion; `sameSubjectRecovered` requires later success by the
+  same tool or provider subject.
+- [ ] **P2-10** Keep recovered tool findings out of automatic `ScoreCreated` publication while
+  returning them as Reliability context. Unrecovered terminal findings and structural defects retain
+  the existing discovery policy.
+- [ ] **P2-11** Return structured output-schema damage with final-versus-intermediate position so a
+  length finish reason is terminal only when observable damage confirms truncation.
 
-### Scores panel
+### Step 3: classify span endpoints
 
-- [ ] **P2-16** Add the Session assessment section to the existing Scores panel as specified in
-  [`session-assessment.md`](session-assessment.md#scores-panel).
-- [ ] **P2-17** Render dimension summaries, chronological evidence, direction, measured state,
-  coverage, and occurrence counts.
-- [ ] **P2-18** Add dimension, direction, source, and measured-state filters without duplicating
-  multi-dimension items.
-- [ ] **P2-19** Link signal, message, span, tool, and score evidence to their existing destinations.
-- [ ] **P2-20** Preserve the current annotation and evaluation forms and the separate session Signals
-  tab.
+- [ ] **P2-12** Add the shared finish-reason classifier required by
+  [`metrics.md`](metrics.md#spans), mapping provider-native values to `clean`, `unreliable`, or
+  `unmapped` without treating a configured length stop as damaged output by itself.
+- [ ] **P2-13** Add the named provider-error classifier for rate limiting, overload, service failure,
+  and provider rejection. Generic span error status remains insufficient.
+- [ ] **P2-14** Expose raw and classified values through browser-safe span and session contracts and
+  their existing detail registries. Unmapped values remain visible and lower coverage.
+- [ ] **P2-15** Resolve provider recovery and final-versus-intermediate position from the full session
+  chronology without writing a provider-finding score.
 
-### Exit gate
+### Step 4: add minimal score provenance and linkage
 
-- [ ] **P2-21** Resolver tests cover positive evidence, negative evidence, recovered incidents,
-  multi-dimension items, source deduplication, missing coverage, and stable evidence keys.
-- [ ] **P2-22** Integration fixtures cover no output, malformed final output, provider recovery,
-  terminal tool failure, overlapping signals, and unexamined flaggers.
-- [ ] **P2-23** The web panel and public operation return the same assessment semantics.
-- [ ] **P2-24** Verify that session assessment is resolved dynamically and no session score or
-  assessment snapshot is persisted.
-- [ ] `pnpm typecheck` and `pnpm test` pass. ClickHouse schema dump contains only the expected changes.
+- [ ] **P2-16** Extend flagger-authored annotation metadata only with the stable source-finding link
+  and scoring-artifact provenance needed for persisted classifier or discovery results. Keep legacy
+  metadata valid and optional.
+- [ ] **P2-17** Ensure a deterministic discovery score references its selected `findingKey`; the
+  resolver uses that reference to merge the score and any assigned signal into the calculated
+  finding's assessment item.
+- [ ] **P2-18** Persist structured model verdicts only when the result cannot be reconstructed. Do
+  not copy telemetry-derived recovery, terminal, resource, or safety fields into the generic Score
+  entity.
+- [ ] **P2-19** Add only the bounded ClickHouse score columns defined in
+  [`flaggers.md`](flaggers.md#clickhouse-score-fields), using `ch:create`. Make historical absence
+  explicit with nullable or unknown values and dual-write the fields for new scores.
+- [ ] **P2-20** Do not backfill historical Postgres metadata or ClickHouse score rows. Verify that
+  legacy scores remain readable as annotations or raw evidence and cannot be mistaken for compatible
+  structured observations.
+
+### Step 5: persist examination coverage
+
+- [ ] **P2-21** Add the append-only flagger screening-decision ClickHouse table from
+  [`flaggers.md`](flaggers.md#screening-decisions), including organization and project scope,
+  deterministic decision id, analysis hash, artifact version, attempt, revision version, selection,
+  selection reason, inclusion probability, hint kinds, outcome, timestamp, and retention TTL.
+- [ ] **P2-22** Write the initial decision before sampled model execution. A terminal outcome appends
+  a higher revision with the same decision and selection fields.
+- [ ] **P2-23** Reuse one sampling draw and inclusion probability across retries. Increment attempts
+  without redrawing selection, and preserve the existing human-readable summary log.
+- [ ] **P2-24** Implement repository consolidation that selects the latest revision of the newest
+  analysis generation per session and flagger at the query cutoff. Never fall back to an older
+  successful generation when the newest is pending or failed.
+- [ ] **P2-25** Map disabled, suppressed, missing-flagger, and missing-context policy outcomes to the
+  single public coverage limitation `skipped`. Preserve statistically distinct `notSelected`,
+  `rateLimited`, `executionFailed`, and missing-telemetry states.
+- [ ] **P2-26** Add organization- and project-scoped coverage repositories plus the Settings view for
+  eligible, examined, readable, selection-path, rate-limited, finding-kind, and calibration-readiness
+  counts.
+
+### Step 6: build the assessment domain
+
+- [ ] **P2-27** Create `@domain/agent-score` and implement the Zod-first assessment item, effect,
+  impact, dimension-summary, reader-coverage, anchor, destination-list, and pagination contracts from
+  [`session-assessment.md`](session-assessment.md#assessment-model). Do not add per-session scores,
+  filter inputs, or a generic confidence type.
+- [ ] **P2-28** Define single-session source ports for conversation and tool telemetry, spans,
+  scores, signals, moments, and screening decisions. Ports return source facts; platform adapters do
+  not assign benchmark meaning.
+- [ ] **P2-29** Implement source readers that normalize telemetry-derived findings and persisted
+  judgments into the shared assessment input. A page request must not run an LLM classifier.
+- [ ] **P2-30** Implement the pure resolver for multi-dimension effects, direction, measurement state,
+  benchmark use, impact, anchors, destinations, and chronological ordering. One deduplicated item can
+  expose several destinations.
+- [ ] **P2-31** Deduplicate by the underlying source fact. Merge a metric, its discovery score, and
+  assigned signals into one item; group repeated identical calls with `occurrenceCount`; never merge
+  independent human evidence into an automatic observation.
+- [ ] **P2-32** Build all five dimension summaries from deduplicated effects. Keep direction and
+  measurement counts separate, distinguish zero from unknown native values, and never emit a
+  per-session dimension number.
+- [ ] **P2-33** Build reader-level coverage. Distinguish examined with zero findings, partial
+  readability, not examined, and not applicable; derive each dimension's coverage from its relevant
+  readers without an assessment-wide complete flag.
+- [ ] **P2-34** Add bulk source contracts and adapters for later benchmark jobs. Batch by organization,
+  project, session ids, and cutoff; feed the same pure readers and resolver without calling the
+  interactive use-case or creating an N-plus-one query loop.
+
+### Step 7: expose the operation
+
+- [ ] **P2-35** Implement the project-scoped session-assessment use-case. Resolve all trace ids for
+  the session, include orphan score relationships where authorized, and enforce organization and
+  project scope on every source read.
+- [ ] **P2-36** Add stable cursor pagination over chronology plus `evidenceKey`, with complete
+  dimension summaries and coverage returned alongside each page. The input contains project,
+  session, and optional cursor only; it has no assessment filters.
+- [ ] **P2-37** Define the public operation through `@repo/operations` with anchor-only payloads and
+  descriptions suitable for HTTP, OpenAPI, MCP, SDKs, CLI, and in-process tools. Regenerate and
+  verify every generated contract.
+
+### Step 8: build the Scores panel
+
+- [ ] **P2-38** Add the Session assessment section above the existing annotations and evaluations in
+  the stable Scores tab.
+- [ ] **P2-39** Render the five dimension summaries, reader coverage, and one chronological evidence
+  feed with direction, measurement state, native impact, and occurrence count. Do not add assessment
+  filter controls.
+- [ ] **P2-40** Link message, span, tool-call, score, and signal anchors to their existing authorized
+  destinations without copying raw content into the assessment response.
+- [ ] **P2-41** Render legacy or custom records without benchmark semantics in Raw evidence, and keep
+  the existing editable annotation forms, evaluation cards, and separate session Signals tab intact.
+- [ ] **P2-42** Support cursor-driven incremental loading and virtualization so sessions with more
+  than 100 evidence items are not truncated.
+
+### Step 9: verification and exit gate
+
+- [ ] **P2-43** Unit tests cover the text-or-tool-call completion predicate, reasoning-only output,
+  tool-call-only output, malformed tool calls, no captured assistant turn, blank output, and confirmed
+  versus unconfirmed repeated-character output.
+- [ ] **P2-44** Reader tests cover every tool finding kind, multiple findings in one session, both
+  recovery meanings, provider recovery, finish-reason damage pairing, unmapped telemetry, and stable
+  finding keys across recomputation.
+- [ ] **P2-45** Persistence tests prove that multiple deterministic findings do not create additional
+  score rows or discovery events, the selected discovery score links to its finding, model verdicts
+  retain provenance, and legacy scores remain unknown rather than falsely classified.
+- [ ] **P2-46** Screening tests cover pre-execution writes, retries without resampling, append-only
+  revisions, newest-generation consolidation, skipped-policy normalization, sampled-out sessions,
+  rate limits, failures, and known inclusion probabilities.
+- [ ] **P2-47** Resolver tests cover positive and negative evidence, recovered context,
+  multi-dimension effects, score/signal/finding deduplication, occurrence grouping, missing coverage,
+  dimension summaries, stable chronology, and cursor pagination.
+- [ ] **P2-48** Run identical fixtures through single-session and bulk adapters and assert byte-level
+  parity of normalized facts and resolved semantics, excluding pagination envelopes.
+- [ ] **P2-49** Integration fixtures cover no output, malformed final output, several tool failures
+  with only one discovery score, provider recovery, terminal tool failure, overlapping signals,
+  ignored signal scores, and unexamined flaggers.
+- [ ] **P2-50** Verify the web panel and public operation render the same assessment semantics and
+  that the operation exposes no assessment-filter or confidence fields.
+- [ ] **P2-51** Verify dynamically that loading an assessment writes no score, observation,
+  measurement, or assessment row and invokes no model. Only the already-authorized screening
+  workflow writes screening decisions and classifier scores.
+- [ ] **P2-52** Measure the largest representative single-session and bulk fixture to confirm bounded
+  query count, no N-plus-one reads, stable page size, and acceptable resolver memory use.
+- [ ] `pnpm typecheck` and `pnpm test` pass for every touched package. Generated API artifacts are
+  current, and the ClickHouse schema dump contains only the forward-only score and screening-decision
+  changes.
 
 ## PR 3: Cost and Speed efficiency
 
@@ -184,7 +310,9 @@ avoidable money and critical-path time.
   overlapping work from being counted twice.
 - [ ] **P3-11** Implement matched residual Cost and Speed signal effects with sampling correction,
   shrinkage, and effect-not-measured results as specified in [`signals.md`](signals.md#cost-and-speed).
-- [ ] **P3-12** Add exact and estimated resource effects to the session-assessment resolver.
+- [ ] **P3-12** Add exact and estimated resource effects to the session-assessment resolver. Define
+  Cost and Speed uncertainty beside the concrete microcent or nanosecond estimate in this PR rather
+  than introducing a target-based generic confidence field.
 
 ### Product surfaces
 
@@ -236,7 +364,8 @@ accomplished the requested task.
 
 ### Product surfaces
 
-- [ ] **P4-9** Add Outcome evidence and calibrated effects to session assessment.
+- [ ] **P4-9** Add Outcome evidence and calibrated effects to session assessment, defining
+  probability uncertainty beside the concrete probability or probability-change estimate.
 - [ ] **P4-10** Add success estimates and evidence coverage to Behaviors by topic cluster.
 - [ ] **P4-11** Add measured Outcome association, independent observation count, and confidence to
   eligible signal details.

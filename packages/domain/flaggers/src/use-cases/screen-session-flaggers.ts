@@ -1,5 +1,12 @@
 import type { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "@domain/scores"
-import { type BadRequestError, deterministicSampling, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
+import {
+  type BadRequestError,
+  deterministicSampling,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  TraceId,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { computeFlaggerAnchorContentHash, type FlaggerSessionContext } from "../conversation.ts"
 import {
@@ -8,6 +15,7 @@ import {
   getFlaggerStrategy,
   isLlmCapableStrategy,
   listFlaggerStrategySlugs,
+  readDeterministicFlaggerFindings,
   suppressorSlug,
 } from "../flagger-strategies/index.ts"
 import { gatherSessionHintsUseCase } from "../hints/gatherers.ts"
@@ -294,9 +302,36 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
       return { slug: args.slug, action: "dropped", reason: "missing-context" } satisfies SessionFlaggerDecision
     }
 
-    const result = strategy.detectDeterministically
-      ? strategy.detectDeterministically(args.context.conversation)
-      : ({ kind: "unmatched" } as const)
+    if (strategy.readDeterministically) {
+      const read = yield* readDeterministicFlaggerFindings(strategy, {
+        scope: {
+          organizationId: OrganizationId(args.input.organizationId),
+          projectId: args.context.session.projectId,
+          sessionId: args.context.session.sessionId,
+        },
+        conversation: args.context.conversation,
+      })
+
+      if (!read.readable) {
+        return { slug: args.slug, action: "dropped", reason: "missing-context" } satisfies SessionFlaggerDecision
+      }
+
+      const finding = strategy.selectDeterministicDiscoveryFinding
+        ? strategy.selectDeterministicDiscoveryFinding(read.findings)
+        : (read.findings[0] ?? null)
+
+      if (finding) {
+        return yield* handleMatched(
+          args,
+          finding.feedback,
+          "messageIndex" in finding ? finding.messageIndex : undefined,
+        )
+      }
+
+      return yield* handleUnmatched(args, flagger, strategy)
+    }
+
+    const result = strategy.detectDeterministically?.(args.context.conversation) ?? ({ kind: "unmatched" } as const)
 
     if (result.kind === "matched") {
       return yield* handleMatched(args, result.feedback, result.messageIndex)

@@ -1,5 +1,7 @@
-import { cacheHitRate, formatCount, formatPercentage } from "@repo/utils"
-import type { FlaggerConversation } from "./conversation.ts"
+import { cacheHitRate, formatCount, formatPercentage, hash } from "@repo/utils"
+import { Effect } from "effect"
+import { computeFlaggerAnchorContentHash, type FlaggerConversation } from "./conversation.ts"
+import { type FlaggerFindingDraft, type FlaggerFindingScope, flaggerFindingSchema } from "./entities/flagger-finding.ts"
 import { isRecord, iterMessageParts } from "./flagger-strategies/shared.ts"
 
 type ConversationMessagesOnly = Pick<FlaggerConversation, "allMessages">
@@ -23,13 +25,87 @@ const MIN_TOTAL_INPUT_TOKENS = 20_000
 // expected there, not broken. Four messages guarantees at least one follow-up.
 const MIN_CACHEABLE_MESSAGES = 4
 
-export type DeterministicFlaggerMatch =
-  | { readonly matched: true; readonly feedback: string; readonly messageIndex?: number | undefined }
+interface BuildFlaggerFindingInput {
+  readonly scope: FlaggerFindingScope
+  readonly sourceIdentity: string
+  readonly finding: FlaggerFindingDraft
+}
+
+export const buildFlaggerFinding = (input: BuildFlaggerFindingInput) =>
+  hash({
+    namespace: "flagger-finding-v1",
+    organizationId: input.scope.organizationId,
+    projectId: input.scope.projectId,
+    sessionId: input.scope.sessionId,
+    flaggerSlug: input.finding.flaggerSlug,
+    findingKind: input.finding.findingKind,
+    sourceIdentity: input.sourceIdentity,
+  }).pipe(
+    Effect.map((findingKey) =>
+      flaggerFindingSchema.parse({
+        ...input.finding,
+        findingKey,
+      }),
+    ),
+  )
+
+type MessageFlaggerFindingDraft = Extract<FlaggerFindingDraft, { readonly messageIndex: number }>
+
+interface BuildMessageFlaggerFindingReadInput {
+  readonly scope: FlaggerFindingScope
+  readonly conversation: FlaggerConversation
+  readonly findings: readonly {
+    readonly finding: MessageFlaggerFindingDraft
+    readonly sourceAnchor?: string | undefined
+  }[]
+}
+
+export const buildMessageFlaggerFindingRead = (input: BuildMessageFlaggerFindingReadInput) =>
+  Effect.forEach(input.findings, ({ finding, sourceAnchor }) =>
+    computeFlaggerAnchorContentHash(input.conversation, finding.messageIndex).pipe(
+      Effect.flatMap((contentHash) =>
+        buildFlaggerFinding({
+          scope: input.scope,
+          sourceIdentity:
+            sourceAnchor ??
+            `message:${contentHash}${finding.partIndex === undefined ? "" : `\0part:${finding.partIndex}`}`,
+          finding,
+        }),
+      ),
+    ),
+  ).pipe(Effect.map((findings) => ({ readable: true, findings }) as const))
+
+export const buildSessionFlaggerFindingRead = (input: {
+  readonly scope: FlaggerFindingScope
+  readonly findings: readonly FlaggerFindingDraft[]
+}) =>
+  Effect.forEach(input.findings, (finding) =>
+    buildFlaggerFinding({
+      scope: input.scope,
+      sourceIdentity: "session",
+      finding,
+    }),
+  ).pipe(Effect.map((findings) => ({ readable: true, findings }) as const))
+
+export type DeterministicFlaggerMatch<
+  FindingKind extends FlaggerFindingDraft["findingKind"] = FlaggerFindingDraft["findingKind"],
+> =
+  | {
+      readonly matched: true
+      readonly feedback: string
+      readonly findingKind: FindingKind
+      readonly messageIndex?: number | undefined
+    }
   | { readonly matched: false }
 
-const NO_MATCH: DeterministicFlaggerMatch = { matched: false }
-const match = (feedback: string, messageIndex?: number): DeterministicFlaggerMatch => ({
+const NO_MATCH = { matched: false } as const
+const match = <FindingKind extends FlaggerFindingDraft["findingKind"]>(
+  findingKind: FindingKind,
+  feedback: string,
+  messageIndex?: number,
+): DeterministicFlaggerMatch<FindingKind> => ({
   matched: true,
+  findingKind,
   feedback,
   ...(messageIndex !== undefined ? { messageIndex } : {}),
 })
@@ -40,8 +116,11 @@ export interface ToolCallErrorFinding {
   readonly kind: ToolCallErrorFindingKind
   readonly feedback: string
   readonly messageIndex: number
+  readonly partIndex: number
   readonly toolName?: string | undefined
   readonly toolCallId?: string | undefined
+  readonly responseMessageIndex?: number | undefined
+  readonly responsePartIndex?: number | undefined
   /**
    * A later tool call succeeded, so the agent carried on working after this
    * error. Only meaningful for `kind: "error"`; structural defects (malformed,
@@ -62,8 +141,8 @@ const conversationHasAnyToolCall = (conversation: ConversationMessagesOnly): boo
 // Every tool-call defect in encounter order; the deterministic flagger
 // annotates the first, the `tool:error` hint gatherer surfaces them all.
 export function collectToolCallErrorFindings(conversation: ToolErrorConversation): readonly ToolCallErrorFinding[] {
-  const findings: (ToolCallErrorFinding & { responseIndex?: number })[] = []
-  const callById = new Map<string, { name: string; messageIndex: number }>()
+  const findings: ToolCallErrorFinding[] = []
+  const callById = new Map<string, { name: string; messageIndex: number; partIndex: number }>()
   const successfulCallIds = new Set<string>()
   let lastSuccessfulResponseIndex = -1
   const hasAnyToolCall = conversationHasAnyToolCall(conversation)
@@ -74,7 +153,9 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
     const message = conversation.allMessages[msgIdx]!
     if (message.role !== "assistant" && message.role !== "tool" && message.role !== "function") continue
 
-    for (const rawPart of iterMessageParts(message.parts)) {
+    const parts = iterMessageParts(message.parts)
+    for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+      const rawPart = parts[partIndex]
       if (!isRecord(rawPart) || typeof rawPart.type !== "string") continue
       const part = rawPart
 
@@ -89,6 +170,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
             kind: "malformed",
             feedback: `Malformed tool call: ${label} with missing or empty tool_call id`,
             messageIndex: msgIdx,
+            partIndex,
             ...(toolName ? { toolName } : {}),
           })
           continue
@@ -99,19 +181,21 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
             kind: "duplicate",
             feedback: `Duplicate tool_call id emitted for tool "${toolName}"`,
             messageIndex: msgIdx,
+            partIndex,
             toolName,
             toolCallId,
           })
           continue
         }
 
-        callById.set(toolCallId, { name: toolName, messageIndex: msgIdx })
+        callById.set(toolCallId, { name: toolName, messageIndex: msgIdx, partIndex })
 
         if (definedTools && !definedTools.has(toolName)) {
           findings.push({
             kind: "undeclared",
             feedback: `Assistant called tool "${toolName}" which is not in the declared toolset`,
             messageIndex: msgIdx,
+            partIndex,
             toolName,
             toolCallId,
           })
@@ -132,6 +216,7 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
           kind: "unknown-id",
           feedback: `Tool response references an unknown tool_call id "${toolCallId || "<empty>"}"`,
           messageIndex: msgIdx,
+          partIndex,
           ...(toolCallId ? { toolCallId } : {}),
         })
         continue
@@ -145,9 +230,11 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
             ? `Tool "${call.name}" returned error: ${snippet}`
             : `Tool "${call.name}" returned an error`,
           messageIndex: call.messageIndex,
+          partIndex: call.partIndex,
           toolName: call.name,
           toolCallId,
-          responseIndex: msgIdx,
+          responseMessageIndex: msgIdx,
+          responsePartIndex: partIndex,
         })
       } else if (toolCallId) {
         // Successful execution proves availability; incomplete definedTools must not flag it.
@@ -168,8 +255,8 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
   // the user never sees them. Marked here rather than dropped, because the hint
   // gatherer still wants every defect.
   return kept.map((finding) =>
-    finding.kind === "error" && finding.responseIndex !== undefined
-      ? { ...finding, recovered: lastSuccessfulResponseIndex > finding.responseIndex }
+    finding.kind === "error" && finding.responseMessageIndex !== undefined
+      ? { ...finding, recovered: lastSuccessfulResponseIndex > finding.responseMessageIndex }
       : finding,
   )
 }
@@ -182,11 +269,13 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
  * duplicate, undeclared, unknown id) always flag: they are bugs in how the
  * agent calls tools, not transient failures.
  */
-export function detectToolCallErrorsFlagger(conversation: ToolErrorConversation): DeterministicFlaggerMatch {
+export function detectToolCallErrorsFlagger(
+  conversation: ToolErrorConversation,
+): DeterministicFlaggerMatch<ToolCallErrorFindingKind> {
   const finding = collectToolCallErrorFindings(conversation).find(
     (candidate) => candidate.kind !== "error" || candidate.recovered !== true,
   )
-  return finding ? match(finding.feedback, finding.messageIndex) : NO_MATCH
+  return finding ? match(finding.kind, finding.feedback, finding.messageIndex) : NO_MATCH
 }
 
 function toNonEmptyString(value: unknown): string | null {
@@ -309,7 +398,9 @@ function looksLikeStructuredJsonOutput(content: string): boolean {
   return afterBracket.startsWith("true") || afterBracket.startsWith("false") || afterBracket.startsWith("null")
 }
 
-export function detectOutputSchemaValidationFlagger(conversation: ConversationMessagesOnly): DeterministicFlaggerMatch {
+export function detectOutputSchemaValidationFlagger(
+  conversation: ConversationMessagesOnly,
+): DeterministicFlaggerMatch<"trailingComma" | "unclosedString" | "invalidJson"> {
   for (let msgIdx = 0; msgIdx < conversation.allMessages.length; msgIdx++) {
     const message = conversation.allMessages[msgIdx]!
     if (message.role !== "assistant") continue
@@ -319,7 +410,7 @@ export function detectOutputSchemaValidationFlagger(conversation: ConversationMe
       if (!content || !looksLikeStructuredJsonOutput(content)) continue
 
       if (content.endsWith(","))
-        return match("Assistant output ended with a trailing comma, suggesting truncated JSON", msgIdx)
+        return match("trailingComma", "Assistant output ended with a trailing comma, suggesting truncated JSON", msgIdx)
 
       let inString = false
       let escaped = false
@@ -336,12 +427,20 @@ export function detectOutputSchemaValidationFlagger(conversation: ConversationMe
         if (char === '"') inString = !inString
       }
       if (inString)
-        return match("Assistant output contains an unclosed JSON string, suggesting truncated output", msgIdx)
+        return match(
+          "unclosedString",
+          "Assistant output contains an unclosed JSON string, suggesting truncated output",
+          msgIdx,
+        )
 
       try {
         JSON.parse(content)
       } catch {
-        return match("Assistant output failed JSON parse (malformed or truncated structured output)", msgIdx)
+        return match(
+          "invalidJson",
+          "Assistant output failed JSON parse (malformed or truncated structured output)",
+          msgIdx,
+        )
       }
     }
   }
@@ -349,7 +448,9 @@ export function detectOutputSchemaValidationFlagger(conversation: ConversationMe
   return NO_MATCH
 }
 
-export function detectEmptyResponseFlagger(conversation: ConversationMessagesOnly): DeterministicFlaggerMatch {
+export function detectEmptyResponseFlagger(
+  conversation: ConversationMessagesOnly,
+): DeterministicFlaggerMatch<"blank" | "unconfirmedPattern"> {
   // Only the most recent assistant turn matters — earlier "empty-looking" entries
   // are intermediate agentic-loop steps in `lastInput` history, not the final response.
   // `reasoning` and `tool_call` parts both signal model activity, so a message containing
@@ -383,9 +484,12 @@ export function detectEmptyResponseFlagger(conversation: ConversationMessagesOnl
   if (hasNonTextProduction) return NO_MATCH
 
   const accumulatedText = textParts.join("").trim()
-  if (accumulatedText === "") return match("Assistant response was empty or whitespace only", lastAssistantIdx)
+  if (accumulatedText === "") {
+    return match("blank", "Assistant response was empty or whitespace only", lastAssistantIdx)
+  }
   if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) {
     return match(
+      "unconfirmedPattern",
       `Assistant response was degenerate: only the character "${accumulatedText[0]}" repeated`,
       lastAssistantIdx,
     )
@@ -407,7 +511,9 @@ type CacheConversation = Pick<
  * single-turn or tiny-input traces, and traces where no cache was ever written,
  * never match. Never calls an LLM.
  */
-export function detectLowCacheHitRateFlagger(conversation: CacheConversation): DeterministicFlaggerMatch {
+export function detectLowCacheHitRateFlagger(
+  conversation: CacheConversation,
+): DeterministicFlaggerMatch<"lowCacheHitRate"> {
   if (conversation.allMessages.length < MIN_CACHEABLE_MESSAGES) return NO_MATCH
   if (conversation.tokensCacheCreate <= 0) return NO_MATCH
 
@@ -422,6 +528,7 @@ export function detectLowCacheHitRateFlagger(conversation: CacheConversation): D
   if (rate === null || rate >= LOW_CACHE_HIT_RATE_THRESHOLD) return NO_MATCH
 
   return match(
+    "lowCacheHitRate",
     `Low cache hit rate (${formatPercentage(rate)}) on a large multi-turn trace (${formatCount(totalInput)} input tokens): most context was re-sent uncached instead of read from cache. This usually means a broken cache implementation (nondeterministic prompt or tool-payload ordering, session resets, or context compaction) and can multiply token cost.`,
   )
 }
