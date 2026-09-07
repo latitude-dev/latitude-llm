@@ -71,6 +71,7 @@ import {
   buildRelativeHierarchicalClusters,
   buildStaticHierarchicalClusters,
   type ClusteringTreeNode,
+  type PriorClusterNode,
   type RelativeClusteringDiagnostics,
 } from "../clustering.ts"
 import {
@@ -94,6 +95,7 @@ import {
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
   TAXONOMY_TREE_STATIC_DEPTH_SCHEDULE,
+  TAXONOMY_WARM_START_BONUS,
 } from "../constants.ts"
 import type { TaxonomyCluster, TaxonomyClusterState } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
@@ -151,6 +153,8 @@ export interface TaxonomyClusterBuildRequest {
   readonly mode: TaxonomyAdaptiveClusteringMode
   readonly embeddings: readonly (readonly number[])[]
   readonly seed: number
+  /** Previous pass's tree, seeding every split so identity survives the rebuild. */
+  readonly priorTree?: PriorClusterNode
 }
 
 export interface TaxonomyClusterBuildResult {
@@ -167,6 +171,7 @@ export type TaxonomyClusterBuilder = (
 export const runTaxonomyClusterBuild = (input: TaxonomyClusterBuildRequest): TaxonomyClusterBuildResult => {
   if (isAdaptiveModeActive(input.mode)) {
     const { root, diagnostics } = buildRelativeHierarchicalClusters({
+      ...(input.priorTree ? { priorTree: input.priorTree, warmStartBonus: TAXONOMY_WARM_START_BONUS } : {}),
       embeddings: input.embeddings,
       depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
@@ -355,6 +360,35 @@ export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResul
 
 const lookbackStart = (now: Date): Date =>
   new Date(now.getTime() - TAXONOMY_GARDENING_SAMPLE_LOOKBACK_DAYS * 24 * 60 * 60_000)
+
+/**
+ * Rebuild the previously-active tree as centroid-only nodes so each split can be
+ * seeded from the shape it had last pass.
+ *
+ * `normalizeTaxonomyCentroid` is required, not cosmetic: the stored centroid is a
+ * running weighted-decayed sum, and seeding from its raw `base` would place the
+ * warm candidate in a different space from every cold one, so it would never win
+ * and warm-starting would look inert rather than wrong.
+ */
+const priorTreeFromClusters = (clusters: readonly TaxonomyCluster[]): PriorClusterNode | undefined => {
+  if (clusters.length === 0) return undefined
+  const childrenByParent = new Map<string | null, TaxonomyCluster[]>()
+  for (const cluster of clusters) {
+    const key = cluster.parentClusterId ?? null
+    const bucket = childrenByParent.get(key)
+    if (bucket) bucket.push(cluster)
+    else childrenByParent.set(key, [cluster])
+  }
+  const build = (cluster: TaxonomyCluster): PriorClusterNode => ({
+    centroid: normalizeTaxonomyCentroid(cluster.centroid),
+    children: (childrenByParent.get(cluster.id) ?? []).map(build),
+  })
+  const roots = childrenByParent.get(null) ?? []
+  if (roots.length === 0) return undefined
+  // No row exists for the hidden depth-0 root, so stand one in whose children are
+  // the top-level clusters; that is what seeds the root split.
+  return { centroid: [], children: roots.map(build) }
+}
 
 const seedFromProjectId = (projectId: string): number => {
   let hash = 0
@@ -708,6 +742,14 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       `${input.projectId}${scopedBehaviorId ? `:${scopedBehaviorId}` : ""}${scopedFacetId ? `:facet:${scopedFacetId}` : ""}`,
     )
 
+    const previouslyActive = yield* clustersRepo.listActiveByProject({
+      projectId: input.projectId,
+      dimension,
+      ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
+      ...(input.facetId ? { facetId: input.facetId } : {}),
+    })
+    const priorTree = priorTreeFromClusters(previouslyActive)
+
     // The adaptive build is best-effort: a builder failure (worker crash,
     // timeout, thrown error) degrades to `null` rather than aborting the whole
     // garden, so the run can still fall back to the static tree.
@@ -716,7 +758,7 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // `buildError` otherwise, and telling them apart is the whole diagnosis.
     const adaptiveTimed = buildAdaptive
       ? yield* Effect.timed(
-          clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed }).pipe(
+          clusterBuilder({ mode, embeddings: normalizedEmbeddings, seed, ...(priorTree ? { priorTree } : {}) }).pipe(
             Effect.map((build) => ({ build, error: null as string | null })),
             Effect.catch((error) => Effect.succeed({ build: null, error: error.message })),
           ),
@@ -747,9 +789,9 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     // failure IS fatal (nothing left to persist), so unlike adaptive it is uncaught.
     const persisted = acceptedAdaptiveBuild
       ? { build: acceptedAdaptiveBuild, staticDurationMs: 0 }
-      : yield* Effect.timed(clusterBuilder({ mode: "off", embeddings: normalizedEmbeddings, seed })).pipe(
-          Effect.map(([elapsed, build]) => ({ build, staticDurationMs: Duration.toMillis(elapsed) })),
-        )
+      : yield* Effect.timed(
+          clusterBuilder({ mode: "off", embeddings: normalizedEmbeddings, seed, ...(priorTree ? { priorTree } : {}) }),
+        ).pipe(Effect.map(([elapsed, build]) => ({ build, staticDurationMs: Duration.toMillis(elapsed) })))
     const staticDurationMs = persisted.staticDurationMs
     // On the whole-project topic tree a fresh id is born `staging`: it becomes
     // visible to reads only in the swap, once it is named AND ClickHouse points
@@ -764,12 +806,6 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
     const descriptors: NodeDescriptor[] = []
     collectNodes(tree, null, { value: 0 }, descriptors)
 
-    const previouslyActive = yield* clustersRepo.listActiveByProject({
-      projectId: input.projectId,
-      dimension,
-      ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
-      ...(input.facetId ? { facetId: input.facetId } : {}),
-    })
     const { oldById, decisionByTempId, finalIdByTempId, reusedIds, matchedOldIds } = resolveTaxonomyLineage({
       descriptors,
       previouslyActive,

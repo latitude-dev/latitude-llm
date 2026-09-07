@@ -105,6 +105,10 @@ export interface ClusteringTreeNode {
 }
 
 export interface BuildRelativeHierarchicalClustersInput {
+  /** Previous pass's tree; warm-starts every split so identity survives a rebuild. */
+  readonly priorTree?: PriorClusterNode
+  /** Relative score advantage the warm candidate carries at each split. */
+  readonly warmStartBonus?: number
   /** L2-normalized embeddings; all same dimension. */
   readonly embeddings: readonly (readonly number[])[]
   /** One entry per depth (depth 0 = root). When recursion exceeds the array
@@ -450,6 +454,20 @@ export const quantile = (values: readonly number[], q: number): number => {
 }
 
 // ---------------------------------------------------------------------------
+/**
+ * Centroid-only mirror of the previous pass's tree, used to seed each split.
+ *
+ * Which prior node is "this" node is resolved by descending in lockstep: the
+ * root is unambiguous, and each new child pairs with the prior child it most
+ * resembles. Pairing on similarity rather than child index is load-bearing —
+ * the accepted K can differ from the prior K and a cold restart can win a split
+ * outright, so index pairing would seed a subtree from an unrelated branch.
+ */
+export interface PriorClusterNode {
+  readonly centroid: readonly number[]
+  readonly children: readonly PriorClusterNode[]
+}
+
 // chooseBestRelativeK — sweep K, run multi-restart spherical k-means, accept
 // the K that maximizes CH score while satisfying the node-relative gate:
 // minimum child size, dominant-child protection, minimum split score, and
@@ -486,6 +504,10 @@ interface ChooseBestRelativeKInput {
   readonly onCandidateScore?: (k: number, score: number) => void
   /** When set, only these K are swept; absent sweeps 2..maxChildren. */
   readonly restrictToK?: ReadonlySet<number>
+  /** Previous pass's children of this node; seeds one extra attempt at the matching K. */
+  readonly warmStartCentroids?: readonly (readonly number[])[]
+  /** Relative score advantage the warm candidate carries. 0 = wins only on merit. */
+  readonly warmStartBonus?: number
 }
 
 /**
@@ -512,16 +534,25 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
     onCandidateSeparation,
     onCandidateScore,
     restrictToK,
+    warmStartCentroids,
+    warmStartBonus = 0,
   } = input
   const n = memberIndices.length
   const { minClusterSize, maxK } = sweepBounds(n, schedule)
   if (n < minClusterSize * 2) return null
 
   let best: RelativeCandidate | null = null
+  let bestIsWarm = false
   for (let k = 2; k <= maxK; k++) {
     if (restrictToK && !restrictToK.has(k)) continue
-    for (let restart = 0; restart < restarts; restart++) {
-      const initial = kmeansPlusPlusInit(embeddings, memberIndices, k, rng)
+    const warm = warmStartCentroids && warmStartCentroids.length === k ? warmStartCentroids : null
+    // The warm attempt runs LAST and draws no rng, so every cold restart gets
+    // exactly the seeds it would have without warm-starting.
+    for (let restart = 0; restart < restarts + (warm ? 1 : 0); restart++) {
+      const isWarm = warm !== null && restart === restarts
+      const initial = isWarm
+        ? (warm as readonly (readonly number[])[]).map((c) => [...c])
+        : kmeansPlusPlusInit(embeddings, memberIndices, k, rng)
       if (initial.length !== k) continue
       const { assignments, centroids } = sphericalKmeans({
         embeddings,
@@ -615,8 +646,11 @@ const chooseBestRelativeK = (input: ChooseBestRelativeKInput): RelativeCandidate
       const minChildThreshold = childThresholds.length > 0 ? Math.min(...childThresholds) : globalAbsoluteThreshold
       const splitLinkThreshold = Math.max(globalAbsoluteThreshold, minChildThreshold)
 
-      if (!best || score > best.score) {
+      const effective = isWarm ? score * (1 + warmStartBonus) : score
+      const incumbent = best ? (bestIsWarm ? best.score * (1 + warmStartBonus) : best.score) : Number.NEGATIVE_INFINITY
+      if (!best || effective > incumbent) {
         best = { k, assignments, centroids, score, relativeSeparation, splitLinkThreshold, clusterMemberIndices }
+        bestIsWarm = isWarm
       }
     }
   }
@@ -640,7 +674,17 @@ const buildRelativeOnce = (
   /** Best score each root K reached, so a re-search can spend its budget on the promising ones. */
   onRootCandidateScore?: (k: number, score: number) => void,
 ): BuildRelativeHierarchicalClustersResult => {
-  const { embeddings, depthSchedule, restarts, maxIter, tolerance, seed, globalAbsoluteThreshold } = input
+  const {
+    embeddings,
+    depthSchedule,
+    restarts,
+    maxIter,
+    tolerance,
+    seed,
+    globalAbsoluteThreshold,
+    priorTree,
+    warmStartBonus,
+  } = input
   const dimensions = embeddings[0]?.length ?? 0
   const allIndices = embeddings
     .map((vector, index) => (vector && vector.length === dimensions ? index : -1))
@@ -663,7 +707,7 @@ const buildRelativeOnce = (
   let rejectedCandidates = 0
   let bestRootSeparation = 0
 
-  const recurse = (memberIndices: readonly number[], depth: number): ClusteringTreeNode => {
+  const recurse = (memberIndices: readonly number[], depth: number, prior?: PriorClusterNode): ClusteringTreeNode => {
     nodeCount++
     if (depth > maxDepth) maxDepth = depth
     const centroid = meanOverIndices(embeddings, memberIndices, dimensions)
@@ -682,6 +726,9 @@ const buildRelativeOnce = (
       globalAbsoluteThreshold,
       rng,
       ...(depth === 0 && rootReSearch?.restrictToK ? { restrictToK: rootReSearch.restrictToK } : {}),
+      ...(prior && prior.children.length > 0
+        ? { warmStartCentroids: prior.children.map((c) => c.centroid), ...(warmStartBonus ? { warmStartBonus } : {}) }
+        : {}),
       onReject: (reason) => {
         rejectedCandidates++
         rejectionReasonCounts[reason]++
@@ -707,11 +754,25 @@ const buildRelativeOnce = (
     selectedKByDepth[depth] = depthKs
     acceptedRelativeSeparations.push(best.relativeSeparation)
     routingThresholds.push(best.splitLinkThreshold)
-    const children = best.clusterMemberIndices.map((childIndices) => recurse(childIndices, depth + 1))
+    const priorChildren = prior?.children ?? []
+    const children = best.clusterMemberIndices.map((childIndices) => {
+      if (priorChildren.length === 0) return recurse(childIndices, depth + 1)
+      const childCentroid = meanOverIndices(embeddings, childIndices, dimensions)
+      let nearest: PriorClusterNode | undefined
+      let bestSimilarity = Number.NEGATIVE_INFINITY
+      for (const candidate of priorChildren) {
+        const similarity = cosineSimilarityNormalized(childCentroid, candidate.centroid)
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity
+          nearest = candidate
+        }
+      }
+      return recurse(childIndices, depth + 1, nearest)
+    })
     return { memberIndices, centroid, children, depth, splitLinkThreshold: best.splitLinkThreshold }
   }
 
-  const root = recurse(allIndices, 0)
+  const root = recurse(allIndices, 0, priorTree)
 
   const fellBackToStatic =
     acceptedRelativeSeparations.some((value) => !Number.isFinite(value)) ||

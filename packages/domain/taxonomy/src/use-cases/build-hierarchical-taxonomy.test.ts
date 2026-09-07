@@ -533,4 +533,26 @@ describe("planHierarchicalTaxonomyUseCase facet-scoped (scope × facet)", () => 
     // leaves it untouched (no cross-facet deprecation).
     expect(plan.deprecatedClusterIds).toEqual([])
   })
+
+  it("never warm-starts a facet build from a cluster outside its scope", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    const observations = Array.from({ length: 20 }, (_, index) => makeProjection(index, E2, now))
+    const outOfScope = makeCluster({
+      id: "b".repeat(24) as TaxonomyClusterId,
+      facetId: null,
+      centroid: centroidFrom(E1, new Date("2026-01-01T00:00:00.000Z")),
+    })
+
+    const [unseeded, seeded] = await Promise.all([
+      runFacetPlan({ facetObservations: observations, customBehaviorId, now }),
+      runFacetPlan({ facetObservations: observations, customBehaviorId, seededClusters: [outOfScope], now }),
+    ])
+
+    // A whole-project topic cluster is present but belongs to a different scope,
+    // so it must not seed the split. Identical trees prove it never reached the
+    // builder — a scope leak here would be silent, not an error.
+    expect(seeded.clusters.map((cluster) => cluster.path)).toEqual(unseeded.clusters.map((cluster) => cluster.path))
+    expect(seeded.clustersBorn).toBe(unseeded.clustersBorn)
+    expect(seeded.clustersContinued).toBe(0)
+  })
 })

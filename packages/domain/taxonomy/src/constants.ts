@@ -61,6 +61,18 @@ export const TAXONOMY_ADAPTIVE_POLICY_VERSION = "relative-v1"
  */
 export const TAXONOMY_ADAPTIVE_STRUCTURAL_MAX_NODES = 1_024
 
+/**
+ * Score advantage the previous pass's partition carries when it is re-offered as
+ * a k-means seed, so a rebuild keeps the tree it already published unless a fresh
+ * search beats it clearly.
+ *
+ * Swept 0 / 0.10 / 0.25 / 0.50 / 1.0 / 2.0 over five projects' real gardening
+ * history. Continuation rate saturates by 1.0, but above 0.5 the stable projects
+ * regress and their collapse floor returns — so this is the last value that helps
+ * churny projects without costing healthy ones, not the maximum.
+ */
+export const TAXONOMY_WARM_START_BONUS = 0.5
+
 /** Batch size for bounded ClickHouse assignment writes during full-window reassignment. */
 export const TAXONOMY_REASSIGNMENT_BATCH_SIZE = 1_000
 
