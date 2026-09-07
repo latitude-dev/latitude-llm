@@ -240,7 +240,7 @@ does not display per-session dimension scores.
   destinations without copying raw content into the assessment response.
 - [x] **P2-41** Render legacy or custom records without benchmark semantics in Raw evidence, and keep
   the existing editable annotation forms, evaluation cards, and separate session Signals tab intact.
-- [ ] **P2-42** Support cursor-driven incremental loading and virtualization so sessions with more
+- [x] **P2-42** Support cursor-driven incremental loading and virtualization so sessions with more
   than 100 evidence items are not truncated.
 
 ### Step 9: verification and exit gate

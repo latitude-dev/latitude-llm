@@ -5,8 +5,11 @@ import type {
   SessionDimensionSummary,
   SessionEvidenceDestination,
 } from "@domain/agent-score"
-import { Badge, cn, Skeleton, Text } from "@repo/ui"
+import { SESSION_ASSESSMENT_PAGE_SIZE } from "@domain/agent-score"
+import { Badge, Button, cn, Skeleton, Text } from "@repo/ui"
 import { formatDuration, formatPercentage, formatPrice } from "@repo/utils"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import { type UIEvent, useRef } from "react"
 import { useSessionAssessment } from "../../../../../../domains/session-assessments/session-assessments.collection.ts"
 
 const DIMENSION_LABELS = {
@@ -232,6 +235,93 @@ function EvidenceItem({
   )
 }
 
+function VirtualizedEvidenceList({
+  items,
+  onOpenDestination,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+}: {
+  readonly items: readonly SessionAssessmentItem[]
+  readonly onOpenDestination?: SessionAssessmentDestinationHandler | undefined
+  readonly hasMore: boolean
+  readonly isLoadingMore: boolean
+  readonly onLoadMore?: (() => unknown) | undefined
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 112,
+    getItemKey: (index) => items[index]?.id ?? index,
+    overscan: 6,
+  })
+
+  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMore || isLoadingMore || !onLoadMore) return
+    const target = event.currentTarget
+    if (target.scrollHeight - target.scrollTop - target.clientHeight < 400) onLoadMore()
+  }
+
+  return (
+    <div
+      ref={scrollRef}
+      data-testid="virtualized-evidence-list"
+      className="overflow-y-auto rounded-lg border border-border bg-secondary/10 p-2"
+      style={{ height: Math.min(Math.max(items.length * 112, 112), 512) }}
+      onScroll={handleScroll}
+    >
+      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((virtualItem) => {
+          const item = items[virtualItem.index]
+          if (!item) return null
+          return (
+            <div
+              key={virtualItem.key}
+              ref={virtualizer.measureElement}
+              data-index={virtualItem.index}
+              className="absolute left-0 top-0 w-full pb-2"
+              style={{ transform: `translateY(${virtualItem.start}px)` }}
+            >
+              <EvidenceItem item={item} onOpenDestination={onOpenDestination} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function EvidenceList({
+  items,
+  virtualized,
+  onOpenDestination,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+}: {
+  readonly items: readonly SessionAssessmentItem[]
+  readonly virtualized: boolean
+  readonly onOpenDestination?: SessionAssessmentDestinationHandler | undefined
+  readonly hasMore: boolean
+  readonly isLoadingMore: boolean
+  readonly onLoadMore?: (() => unknown) | undefined
+}) {
+  if (virtualized) {
+    return (
+      <VirtualizedEvidenceList
+        items={items}
+        onOpenDestination={onOpenDestination}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
+        onLoadMore={onLoadMore}
+      />
+    )
+  }
+
+  return items.map((item) => <EvidenceItem key={item.id} item={item} onOpenDestination={onOpenDestination} />)
+}
+
 function ReaderCoverage({ assessment }: { readonly assessment: SessionAssessment }) {
   const readers = assessment.coverage.readers
   const examined = readers.filter((reader) => reader.status === "examined").length
@@ -259,12 +349,19 @@ function ReaderCoverage({ assessment }: { readonly assessment: SessionAssessment
 export function SessionAssessmentContent({
   assessment,
   onOpenDestination,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
 }: {
   readonly assessment: SessionAssessment
   readonly onOpenDestination?: SessionAssessmentDestinationHandler | undefined
+  readonly hasMore?: boolean
+  readonly isLoadingMore?: boolean
+  readonly onLoadMore?: (() => unknown) | undefined
 }) {
   const evidenceItems = assessment.items.filter((item) => item.effects.length > 0)
   const rawItems = assessment.items.filter((item) => item.effects.length === 0)
+  const virtualized = assessment.items.length > SESSION_ASSESSMENT_PAGE_SIZE || hasMore
 
   return (
     <div className="flex flex-col gap-4">
@@ -277,7 +374,14 @@ export function SessionAssessmentContent({
       <div className="flex flex-col gap-2">
         <Text.H5M>Evidence</Text.H5M>
         {evidenceItems.length > 0 ? (
-          evidenceItems.map((item) => <EvidenceItem key={item.id} item={item} onOpenDestination={onOpenDestination} />)
+          <EvidenceList
+            items={evidenceItems}
+            virtualized={virtualized}
+            onOpenDestination={onOpenDestination}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={onLoadMore}
+          />
         ) : (
           <Text.H6 color="foregroundMuted">No benchmark evidence was found for this session.</Text.H6>
         )}
@@ -287,11 +391,24 @@ export function SessionAssessmentContent({
         <details className="group rounded-lg border border-border px-3 py-2">
           <summary className="cursor-pointer text-xs text-muted-foreground">Raw evidence ({rawItems.length})</summary>
           <div className="flex flex-col gap-2 pt-3">
-            {rawItems.map((item) => (
-              <EvidenceItem key={item.id} item={item} onOpenDestination={onOpenDestination} />
-            ))}
+            <EvidenceList
+              items={rawItems}
+              virtualized={virtualized}
+              onOpenDestination={onOpenDestination}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+              onLoadMore={onLoadMore}
+            />
           </div>
         </details>
+      ) : null}
+
+      {hasMore && onLoadMore ? (
+        <div className="flex justify-center">
+          <Button type="button" variant="outline" size="sm" disabled={isLoadingMore} onClick={onLoadMore}>
+            {isLoadingMore ? "Loading evidence…" : "Load more evidence"}
+          </Button>
+        </div>
       ) : null}
 
       <ReaderCoverage assessment={assessment} />
@@ -327,7 +444,13 @@ export function SessionAssessmentSection({
       ) : assessment.isError ? (
         <Text.H6 color="foregroundMuted">Could not load the session assessment.</Text.H6>
       ) : assessment.data ? (
-        <SessionAssessmentContent assessment={assessment.data} onOpenDestination={onOpenDestination} />
+        <SessionAssessmentContent
+          assessment={assessment.data}
+          onOpenDestination={onOpenDestination}
+          hasMore={assessment.hasNextPage}
+          isLoadingMore={assessment.isFetchingNextPage}
+          onLoadMore={assessment.fetchNextPage}
+        />
       ) : null}
     </div>
   )

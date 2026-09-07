@@ -125,4 +125,26 @@ describe("SessionAssessmentContent", () => {
     ])
     expect(screen.queryByText(/tool-call-1/)).toBeNull()
   })
+
+  it("virtualizes large evidence feeds and loads the next cursor page on demand", () => {
+    const firstItem = assessment.items[0]
+    if (!firstItem) throw new Error("expected assessment fixture item")
+    const onLoadMore = vi.fn()
+    const largeAssessment: SessionAssessment = {
+      ...assessment,
+      items: Array.from({ length: 101 }, (_, index) => ({
+        ...firstItem,
+        id: `item-${index}`,
+        evidenceKey: `item-${index}`,
+        label: `Finding ${index}`,
+      })),
+    }
+
+    render(<SessionAssessmentContent assessment={largeAssessment} hasMore onLoadMore={onLoadMore} />)
+
+    expect(screen.getByTestId("virtualized-evidence-list")).toBeTruthy()
+    expect(screen.queryAllByText(/^Finding /).length).toBeLessThan(largeAssessment.items.length)
+    fireEvent.click(screen.getByRole("button", { name: "Load more evidence" }))
+    expect(onLoadMore).toHaveBeenCalledOnce()
+  })
 })
