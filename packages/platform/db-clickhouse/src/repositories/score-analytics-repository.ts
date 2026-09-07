@@ -71,28 +71,39 @@ const SIGNAL_DIMENSION_VALUE_EXPR: Record<SignalDimension, string> = {
 
 const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
 
-const toAnalyticsRow = (score: Score) => ({
-  id: score.id,
-  organization_id: score.organizationId,
-  project_id: score.projectId,
-  session_id: score.sessionId ?? "",
-  trace_id: score.traceId ?? "",
-  span_id: score.spanId ?? "",
-  source: score.sourceType,
-  source_id: score.sourceId,
-  annotator_id: score.annotatorId ?? "",
-  simulation_id: score.simulationId ?? "",
-  signal_id: score.signalId ?? "",
-  // Dual-write the legacy column so reads/rollback stay correct until issue_id is dropped (Phase 9).
-  issue_id: score.signalId ?? "",
-  value: score.value,
-  passed: score.passed,
-  errored: score.errored,
-  duration: score.duration,
-  tokens: score.tokens,
-  cost: score.cost,
-  created_at: toClickHouseDateTime64(score.createdAt),
-})
+const toAnalyticsRow = (score: Score) => {
+  const flaggerMetadata =
+    score.sourceType === "annotation" && score.sourceId === "SYSTEM" && score.metadata.flaggerSlug !== undefined
+      ? score.metadata
+      : null
+
+  return {
+    id: score.id,
+    organization_id: score.organizationId,
+    project_id: score.projectId,
+    session_id: score.sessionId ?? "",
+    trace_id: score.traceId ?? "",
+    span_id: score.spanId ?? "",
+    source: score.sourceType,
+    source_id: score.sourceId,
+    flagger_slug: flaggerMetadata?.flaggerSlug ?? null,
+    scoring_artifact_version: flaggerMetadata?.scoringArtifactVersion ?? null,
+    flagger_finding_key: flaggerMetadata?.flaggerFindingKey ?? null,
+    flagger_path: flaggerMetadata?.flaggerPath ?? null,
+    annotator_id: score.annotatorId ?? "",
+    simulation_id: score.simulationId ?? "",
+    signal_id: score.signalId ?? "",
+    // Dual-write the legacy column so reads/rollback stay correct until issue_id is dropped (Phase 9).
+    issue_id: score.signalId ?? "",
+    value: score.value,
+    passed: score.passed,
+    errored: score.errored,
+    duration: score.duration,
+    tokens: score.tokens,
+    cost: score.cost,
+    created_at: toClickHouseDateTime64(score.createdAt),
+  }
+}
 
 /** Returns a SQL fragment that excludes simulation-generated scores when requested. */
 const simulationClause = (options?: ScoreAnalyticsOptions): string =>

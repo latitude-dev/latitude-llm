@@ -156,6 +156,11 @@ Opening a session from a signal occurrence uses the same mechanism: the session 
 
 The metadata field is not intended for heavy analytical querying.
 
+ClickHouse dual-writes only `flagger_slug`, `scoring_artifact_version`, `flagger_finding_key`, and
+`flagger_path` from new SYSTEM annotation scores. Those columns are nullable so rows written before
+the provenance contract remain explicitly unknown. Detailed deterministic finding fields stay in
+their source telemetry and are recalculated by the assessment reader.
+
 ## Postgres Indexing
 
 Because most operational score reads now live in Postgres, score indexing is part of the core model:

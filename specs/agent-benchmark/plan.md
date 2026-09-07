@@ -163,7 +163,7 @@ does not display per-session dimension scores.
 - [x] **P2-18** Persist structured model verdicts only when the result cannot be reconstructed. Do
   not copy telemetry-derived recovery, terminal, resource, or safety fields into the generic Score
   entity.
-- [ ] **P2-19** Add only the bounded ClickHouse score columns defined in
+- [x] **P2-19** Add only the bounded ClickHouse score columns defined in
   [`flaggers.md`](flaggers.md#clickhouse-score-fields), using `ch:create`. Make historical absence
   explicit with nullable or unknown values and dual-write the fields for new scores.
 - [ ] **P2-20** Do not backfill historical Postgres metadata or ClickHouse score rows. Verify that
