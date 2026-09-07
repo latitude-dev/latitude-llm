@@ -13,10 +13,13 @@ export {
   FLAGGER_SAMPLED_RATE_LIMIT,
 } from "./constants.ts"
 export {
+  assistantTurnHasOutputContent,
   buildFlaggerSessionContext,
+  type CapturedAssistantTurn,
   computeFlaggerAnchorContentHash,
   type FlaggerConversation,
   type FlaggerSessionContext,
+  findFinalCapturedAssistantTurn,
 } from "./conversation.ts"
 export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema } from "./entities/flagger.ts"
 export {

@@ -124,7 +124,7 @@ does not display per-session dimension scores.
 
 ### Step 2: establish completion and operational findings
 
-- [ ] **P2-6** Implement the shared output-content predicate over the final captured assistant turn:
+- [x] **P2-6** Implement the shared output-content predicate over the final captured assistant turn:
   non-whitespace response text or at least one tool call is content; reasoning alone is not.
 - [ ] **P2-7** Update `empty-response` to return `blank`, `confirmedUnusablePattern`, or
   `unconfirmedPattern`. A tool-call-only turn is not empty, and no captured assistant turn is

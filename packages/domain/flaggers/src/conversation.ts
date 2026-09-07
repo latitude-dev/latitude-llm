@@ -39,6 +39,33 @@ export const buildFlaggerSessionContext = (session: SessionDetail, latestTraceId
   },
 })
 
+export interface CapturedAssistantTurn {
+  readonly message: GenAIMessage
+  readonly messageIndex: number
+}
+
+export const findFinalCapturedAssistantTurn = (
+  conversation: Pick<FlaggerConversation, "allMessages" | "outputMessages">,
+): CapturedAssistantTurn | null => {
+  const outputOffset = conversation.allMessages.length - conversation.outputMessages.length
+  for (let outputIndex = conversation.outputMessages.length - 1; outputIndex >= 0; outputIndex--) {
+    const message = conversation.outputMessages[outputIndex]!
+    if (message.role !== "assistant") continue
+    return { message, messageIndex: outputOffset + outputIndex }
+  }
+  return null
+}
+
+export const assistantTurnHasOutputContent = (message: GenAIMessage): boolean => {
+  if (message.role !== "assistant") return false
+  for (const part of iterMessageParts(message.parts)) {
+    if (!isRecord(part)) continue
+    if (part.type === "tool_call") return true
+    if (part.type === "text" && typeof part.content === "string" && part.content.trim() !== "") return true
+  }
+  return false
+}
+
 const messageAnchorText = (message: GenAIMessage): string => {
   const chunks: string[] = []
   for (const part of iterMessageParts(message.parts)) {
