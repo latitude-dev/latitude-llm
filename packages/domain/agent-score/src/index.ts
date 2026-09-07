@@ -27,3 +27,20 @@ export {
   sessionReaderCoverageSchema,
   sessionReaderSelectionSchema,
 } from "./entities/session-assessment.ts"
+export {
+  type SessionAssessmentSourceScope,
+  type SessionAssessmentTraceScope,
+  SessionConversationSource,
+  type SessionConversationSourceShape,
+  type SessionMomentFacts,
+  SessionMomentSource,
+  type SessionMomentSourceShape,
+  SessionScoreSource,
+  type SessionScoreSourceShape,
+  SessionScreeningDecisionSource,
+  type SessionScreeningDecisionSourceShape,
+  SessionSignalSource,
+  type SessionSignalSourceShape,
+  SessionSpanSource,
+  type SessionSpanSourceShape,
+} from "./ports/session-assessment-sources.ts"

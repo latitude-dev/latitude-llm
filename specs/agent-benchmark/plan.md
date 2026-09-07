@@ -196,7 +196,7 @@ does not display per-session dimension scores.
   impact, dimension-summary, reader-coverage, anchor, destination-list, and pagination contracts from
   [`session-assessment.md`](session-assessment.md#assessment-model). Do not add per-session scores,
   filter inputs, or a generic confidence type.
-- [ ] **P2-28** Define single-session source ports for conversation and tool telemetry, spans,
+- [x] **P2-28** Define single-session source ports for conversation and tool telemetry, spans,
   scores, signals, moments, and screening decisions. Ports return source facts; platform adapters do
   not assign benchmark meaning.
 - [ ] **P2-29** Implement source readers that normalize telemetry-derived findings and persisted

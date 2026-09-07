@@ -15,7 +15,13 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/conversation-intelligence": "workspace:*",
+    "@domain/flaggers": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/signals": "workspace:*",
+    "@domain/spans": "workspace:*",
+    "effect": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -1138,9 +1138,27 @@ importers:
 
   packages/domain/agent-score:
     dependencies:
+      '@domain/conversation-intelligence':
+        specifier: workspace:*
+        version: link:../conversation-intelligence
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../flaggers
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../signals
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
       zod:
         specifier: 'catalog:'
         version: 4.3.6
