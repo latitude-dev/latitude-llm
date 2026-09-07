@@ -56,6 +56,11 @@ export {
   readSessionAssessmentSources,
 } from "./readers/read-session-assessment-sources.ts"
 export {
+  type BuildSessionAssessmentCoverageInput,
+  buildSessionAssessmentCoverage,
+  type ResolvedSessionAssessmentCoverage,
+} from "./resolver/build-assessment-coverage.ts"
+export {
   type BuildSessionDimensionSummariesInput,
   buildSessionDimensionSummaries,
   type SessionDimensionCoverage,

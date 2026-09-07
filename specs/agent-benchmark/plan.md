@@ -210,7 +210,7 @@ does not display per-session dimension scores.
 - [x] **P2-32** Build all five dimension summaries from deduplicated effects. Keep direction and
   measurement counts separate, distinguish zero from unknown native values, and never emit a
   per-session dimension number.
-- [ ] **P2-33** Build reader-level coverage. Distinguish examined with zero findings, partial
+- [x] **P2-33** Build reader-level coverage. Distinguish examined with zero findings, partial
   readability, not examined, and not applicable; derive each dimension's coverage from its relevant
   readers without an assessment-wide complete flag.
 - [ ] **P2-34** Add bulk source contracts and adapters for later benchmark jobs. Batch by organization,
