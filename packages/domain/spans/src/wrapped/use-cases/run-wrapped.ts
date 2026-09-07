@@ -14,7 +14,7 @@ export interface RunWrappedInput {
   readonly windowEnd: Date
 }
 
-export type RunWrappedSkippedReason = "no-activity"
+export type RunWrappedSkippedReason = "no-activity" | "project-not-found" | "organization-not-found"
 
 export type RunWrappedResult =
   | {
@@ -66,8 +66,22 @@ export const runWrappedUseCase = Effect.fn("wrapped.runForProject")(function* (i
   const projectRepo = yield* ProjectRepository
   const membershipRepo = yield* MembershipRepository
   const organizationRepo = yield* OrganizationRepository
-  const project = yield* projectRepo.findById(input.projectId)
-  const organization = yield* organizationRepo.findById(input.organizationId)
+  // The fan-out enumerates eligible projects from ClickHouse ahead of publishing
+  // this task, so the project (or its org) may be deleted by the time the job
+  // runs — treat that race as a skip, not a failure, same as
+  // `requestAgentDispatchUseCase`'s handling of the equivalent race.
+  const project = yield* projectRepo
+    .findById(input.projectId)
+    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+  if (project === null) {
+    return { status: "skipped", reason: "project-not-found" } satisfies RunWrappedResult
+  }
+  const organization = yield* organizationRepo
+    .findById(input.organizationId)
+    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+  if (organization === null) {
+    return { status: "skipped", reason: "organization-not-found" } satisfies RunWrappedResult
+  }
   // Fetch the full member list to snapshot the org owner's display name
   // onto the persisted row (`owner_name` anchors the web view's greeting).
   // Recipient resolution + delivery happens downstream in the notification
