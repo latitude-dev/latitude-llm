@@ -56,6 +56,11 @@ export {
   readSessionAssessmentSources,
 } from "./readers/read-session-assessment-sources.ts"
 export {
+  type BuildSessionDimensionSummariesInput,
+  buildSessionDimensionSummaries,
+  type SessionDimensionCoverage,
+} from "./resolver/build-dimension-summaries.ts"
+export {
   compareResolvedAssessmentItems,
   deduplicateResolvedAssessmentItems,
   type ResolvedAssessmentItem,
