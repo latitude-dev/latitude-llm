@@ -349,8 +349,9 @@ describe("buildRelativeHierarchicalClusters — near-gate re-search", () => {
 // check would branch differently on a slow host and break Temporal replay.
 describe("buildRelativeHierarchicalClusters — the re-search work budget", () => {
   const corpus = buildNarrowDomainCorpus()
-  const buildWithBudget = (maxSearchWork: number) =>
+  const buildWithBudget = (maxSearchWork: number, priorTree?: PriorClusterNode) =>
     buildRelativeHierarchicalClusters({
+      ...(priorTree ? { priorTree } : {}),
       embeddings: corpus.embeddings,
       depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
@@ -375,6 +376,39 @@ describe("buildRelativeHierarchicalClusters — the re-search work budget", () =
       expect(result.diagnostics.escalationSkipped).toBe(false)
       expect(result.diagnostics.projectedRootSearchWork).toBeGreaterThan(0)
       expect(result.diagnostics.projectedRootSearchWork).toBeLessThanOrEqual(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
+    },
+    RE_SEARCH_TIMEOUT_MS,
+  )
+
+  it(
+    "charges the warm attempt, and only when its K is one the sweep offers",
+    () => {
+      const cold = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK)
+      expect(cold.diagnostics.projectedRootSearchWork).toBeGreaterThan(0)
+      const children: PriorClusterNode[] = cold.root.children.map((child) => ({
+        centroid: child.centroid,
+        children: [],
+      }))
+      const warmK = children.length
+
+      // K=1 is never offered — the sweep starts at 2 — so nothing may be charged and
+      // the projection has to match the un-warmed build exactly, not merely closely.
+      const outOfRange = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK, {
+        centroid: cold.root.centroid,
+        children: children.slice(0, 1),
+      })
+      expect(outOfRange.diagnostics.projectedRootSearchWork).toBe(cold.diagnostics.projectedRootSearchWork)
+
+      // A prior at a swept K adds one attempt at that K to at least one of the two
+      // root sweeps, so the projection rises by at least one attempt's worth of work.
+      const inRange = buildWithBudget(TAXONOMY_ADAPTIVE_ESCALATION_MAX_WORK, {
+        centroid: cold.root.centroid,
+        children,
+      })
+      const oneAttempt = warmK * TAXONOMY_KMEANS_MAX_ITER * corpus.embeddings.length * corpus.dimensions
+      expect(
+        inRange.diagnostics.projectedRootSearchWork - cold.diagnostics.projectedRootSearchWork,
+      ).toBeGreaterThanOrEqual(oneAttempt)
     },
     RE_SEARCH_TIMEOUT_MS,
   )
