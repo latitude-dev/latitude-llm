@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.94 - 2026-09-07
+
+### Models
+
+- Refreshed the bundled models.dev catalog and unblocked its daily refresh. Four gateway assertions and a cost-archetype seed named individual models.dev listings by hand, so the suite broke whenever the catalog retired one and the automated update stalled; both now pick their fixtures out of the bundled catalog. The refresh adds OpenAI's GPT-6 Astra pricing and retires `vercel / xai/grok-4.5` (ref: #4589).
+
 ## v0.3.93 - 2026-09-07
 
 ### Signals
