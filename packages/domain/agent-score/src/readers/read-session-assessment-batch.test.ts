@@ -1,4 +1,5 @@
-import { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
+import { ChSqlClient, OrganizationId, ProjectId, SessionId, SqlClient, TraceId } from "@domain/shared"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import type { SessionDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -61,7 +62,16 @@ describe("readSessionAssessmentBatch", () => {
         projectId: ProjectId("project-1"),
         sessionIds: sessions.map(({ sessionId }) => sessionId),
         cutoff: new Date("2026-01-02T00:00:00.000Z"),
-      }).pipe(Effect.provide(Layer.merge(telemetryLayer, judgmentLayer))),
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            telemetryLayer,
+            judgmentLayer,
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId("org-1") })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("org-1") })),
+          ),
+        ),
+      ),
     )
 
     expect(telemetryReads).toBe(1)
@@ -83,9 +93,11 @@ describe("readSessionAssessmentBatch", () => {
         cutoff: new Date("2026-01-02T00:00:00.000Z"),
       }).pipe(
         Effect.provide(
-          Layer.merge(
+          Layer.mergeAll(
             Layer.succeed(SessionAssessmentBulkTelemetrySource, { read: fail }),
             Layer.succeed(SessionAssessmentBulkJudgmentSource, { read: fail }),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId("org-1") })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("org-1") })),
           ),
         ),
       ),

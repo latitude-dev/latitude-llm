@@ -1,7 +1,16 @@
 import type { SessionMomentLabel, SessionSemanticMoment } from "@domain/conversation-intelligence"
 import type { FlaggerScreeningDecision } from "@domain/flaggers"
 import type { Score } from "@domain/scores"
-import type { NotFoundError, OrganizationId, ProjectId, RepositoryError, SessionId, TraceId } from "@domain/shared"
+import type {
+  ChSqlClient,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SessionId,
+  SqlClient,
+  TraceId,
+} from "@domain/shared"
 import type { SignalWithLifecycle } from "@domain/signals"
 import type { SessionDetail, Span } from "@domain/spans"
 import { Context, type Effect } from "effect"
@@ -102,7 +111,9 @@ export class SessionScreeningDecisionSource extends Context.Service<
 >()("@domain/agent-score/SessionScreeningDecisionSource") {}
 
 export interface SessionAssessmentBulkTelemetrySourceShape {
-  read(input: SessionAssessmentBulkScope): Effect.Effect<readonly SessionAssessmentBulkTelemetry[], RepositoryError>
+  read(
+    input: SessionAssessmentBulkScope,
+  ): Effect.Effect<readonly SessionAssessmentBulkTelemetry[], RepositoryError, ChSqlClient>
 }
 
 export class SessionAssessmentBulkTelemetrySource extends Context.Service<
@@ -113,7 +124,7 @@ export class SessionAssessmentBulkTelemetrySource extends Context.Service<
 export interface SessionAssessmentBulkJudgmentSourceShape {
   read(
     input: SessionAssessmentBulkJudgmentScope,
-  ): Effect.Effect<readonly SessionAssessmentBulkJudgments[], RepositoryError>
+  ): Effect.Effect<readonly SessionAssessmentBulkJudgments[], RepositoryError, SqlClient>
 }
 
 export class SessionAssessmentBulkJudgmentSource extends Context.Service<

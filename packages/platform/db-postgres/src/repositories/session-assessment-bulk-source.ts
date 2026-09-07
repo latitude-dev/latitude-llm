@@ -1,6 +1,6 @@
 import { SessionAssessmentBulkJudgmentSource, type SessionAssessmentBulkJudgmentSourceShape } from "@domain/agent-score"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { type SessionId, SignalId, SqlClient } from "@domain/shared"
+import { type SessionId, SignalId } from "@domain/shared"
 import { SignalRepository, type SignalWithLifecycle } from "@domain/signals"
 import { Effect, Layer } from "effect"
 
@@ -13,7 +13,6 @@ const append = <Value>(map: Map<string, Value[]>, key: string, value: Value) => 
 export const SessionAssessmentBulkJudgmentSourceLive = Layer.effect(
   SessionAssessmentBulkJudgmentSource,
   Effect.gen(function* () {
-    const sqlClient = yield* SqlClient
     const scoreRepository = yield* ScoreRepository
     const signalRepository = yield* SignalRepository
 
@@ -60,7 +59,7 @@ export const SessionAssessmentBulkJudgmentSourceLive = Layer.effect(
             })
             return { sessionId, scores: sessionScores, signals: sessionSignals }
           })
-        }).pipe(Effect.provideService(SqlClient, sqlClient)),
+        }),
     } satisfies SessionAssessmentBulkJudgmentSourceShape
   }),
 )

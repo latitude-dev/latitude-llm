@@ -11,7 +11,7 @@ import {
   SessionSemanticMomentRepository,
 } from "@domain/conversation-intelligence"
 import { type FlaggerScreeningDecision, FlaggerScreeningDecisionRepository } from "@domain/flaggers"
-import { ChSqlClient, type SessionId, TraceId } from "@domain/shared"
+import { type SessionId, TraceId } from "@domain/shared"
 import { SessionRepository, type Span, SpanRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
 
@@ -24,7 +24,6 @@ const append = <Value>(map: Map<string, Value[]>, key: string, value: Value) => 
 export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
   SessionAssessmentBulkTelemetrySource,
   Effect.gen(function* () {
-    const chSqlClient = yield* ChSqlClient
     const sessionRepository = yield* SessionRepository
     const spanRepository = yield* SpanRepository
     const analysisRepository = yield* SessionAnalysisRepository
@@ -123,7 +122,7 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
               },
             ]
           })
-        }).pipe(Effect.provideService(ChSqlClient, chSqlClient)),
+        }),
     } satisfies SessionAssessmentBulkTelemetrySourceShape
   }),
 )
