@@ -31,7 +31,7 @@ class AnalyticsClient:
         self, project_slug: str, *, request: AnalyticsQuery, request_options: typing.Optional[RequestOptions] = None
     ) -> AnalyticsSeries:
         """
-        Compute a metric over a filtered stream (`traces`/`sessions`/`spans`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and dashboards.
+        Compute a metric over a filtered stream (`traces`, `sessions`, `spans`, `scores`, `behaviors`, `moments`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and reports.
 
         Parameters
         ----------
@@ -100,7 +100,7 @@ class AsyncAnalyticsClient:
         self, project_slug: str, *, request: AnalyticsQuery, request_options: typing.Optional[RequestOptions] = None
     ) -> AnalyticsSeries:
         """
-        Compute a metric over a filtered stream (`traces`/`sessions`/`spans`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and dashboards.
+        Compute a metric over a filtered stream (`traces`, `sessions`, `spans`, `scores`, `behaviors`, `moments`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and reports.
 
         Parameters
         ----------

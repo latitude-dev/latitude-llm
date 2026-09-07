@@ -4,6 +4,10 @@
     { "source": "/issues/:slug*", "destination": "/signals/:slug*" },
     { "source": "/search/behaviours", "destination": "/behaviours/overview" },
     {
+      "source": "/observability/guides/build-a-dashboard",
+      "destination": "/more/artifacts"
+    },
+    {
       "source": "/more/data-destinations",
       "destination": "/more/data-destinations/overview"
     },
@@ -97,7 +101,8 @@
         "pages": [
           "getting-started/introduction",
           "getting-started/how-to-use-latitude",
-          "getting-started/self-healing-agents"
+          "getting-started/self-healing-agents",
+          "getting-started/concepts"
         ]
       },
       {
@@ -222,8 +227,7 @@
           {
             "group": "Guides",
             "pages": [
-              "observability/guides/group-traces-by-project",
-              "observability/guides/build-a-dashboard"
+              "observability/guides/group-traces-by-project"
             ]
           }
         ]
@@ -331,10 +335,11 @@
       {
         "group": "More",
         "pages": [
-          "getting-started/concepts",
           "getting-started/mcp",
           "getting-started/cli",
           "getting-started/skills",
+          "more/api-reference",
+          "more/artifacts",
           "more/slack",
           "more/github",
           {
@@ -344,7 +349,6 @@
               "more/data-destinations/posthog"
             ]
           },
-          "more/api-reference",
           "more/partners"
         ]
       }

@@ -1,5 +1,5 @@
 ---
-title: Observability overview
+title: Overview
 description: Inspect agent traces, spans, sessions, and telemetry metadata in Latitude.
 ---
 

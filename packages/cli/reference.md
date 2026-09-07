@@ -52,7 +52,7 @@ Returns the caller's account snapshot: the organization the request is scoped to
 
 #### `latitude analytics query`
 
-Compute a metric over a filtered stream (`traces`/`sessions`/`spans`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and dashboards.
+Compute a metric over a filtered stream (`traces`, `sessions`, `spans`, `scores`, `behaviors`, `moments`), optionally broken down by a dimension and/or bucketed over time. Returns a tidy series — one point per breakdown value and/or time bucket — suitable for charts and reports.
 
 `POST /v1/projects/{projectSlug}/analytics/query`
 
