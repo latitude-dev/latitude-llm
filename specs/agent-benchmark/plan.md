@@ -236,7 +236,7 @@ does not display per-session dimension scores.
 - [x] **P2-39** Render the five dimension summaries, reader coverage, and one chronological evidence
   feed with direction, measurement state, native impact, and occurrence count. Do not add assessment
   filter controls.
-- [ ] **P2-40** Link message, span, tool-call, score, and signal anchors to their existing authorized
+- [x] **P2-40** Link message, span, tool-call, score, and signal anchors to their existing authorized
   destinations without copying raw content into the assessment response.
 - [ ] **P2-41** Render legacy or custom records without benchmark semantics in Raw evidence, and keep
   the existing editable annotation forms, evaluation cards, and separate session Signals tab intact.

@@ -337,6 +337,8 @@ export function SessionSlot({
               traceNumberById={traceNumberById}
               onOpenInConversation={onOpenInConversation}
               onOpenTrace={onOpenTrace}
+              onOpenSpan={navigateToSpan}
+              onOpenSignal={onOpenSignal}
             />
           </div>
         )}

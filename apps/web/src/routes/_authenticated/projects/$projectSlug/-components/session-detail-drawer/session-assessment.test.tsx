@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import type { SessionAssessment } from "@domain/agent-score"
 import { SessionId } from "@domain/shared"
-import { cleanup, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { SessionAssessmentContent } from "./session-assessment.tsx"
 
 afterEach(cleanup)
@@ -47,8 +47,22 @@ const assessment: SessionAssessment = {
           impact: { kind: "spend", observedMicrocents: 1_000_000, avoidableMicrocents: 250_000 },
         },
       ],
-      anchors: [],
-      destinations: [],
+      anchors: [
+        {
+          kind: "toolCall",
+          traceId: "trace-1",
+          toolCallId: "tool-call-1",
+          toolName: "searchCatalog",
+          messageIndex: 4,
+        },
+      ],
+      destinations: [
+        { kind: "sessionMessage", traceId: "trace-1", messageIndex: 2 },
+        { kind: "span", traceId: "trace-1", spanId: "span-123456789" },
+        { kind: "toolCall", traceId: "trace-1", toolCallId: "tool-call-1" },
+        { kind: "score", scoreId: "score-123456789" },
+        { kind: "signal", signalId: "sig-123456789" },
+      ],
     },
   ],
   coverage: {
@@ -76,5 +90,24 @@ describe("SessionAssessmentContent", () => {
     expect(screen.getByText("Observed")).toBeTruthy()
     expect(screen.getAllByText(/avoidable/).length).toBeGreaterThan(0)
     expect(screen.getByText("Reader coverage: 1 examined")).toBeTruthy()
+  })
+
+  it("exposes authorized evidence destinations without rendering payload content", () => {
+    const onOpenDestination = vi.fn()
+    render(<SessionAssessmentContent assessment={assessment} onOpenDestination={onOpenDestination} />)
+
+    for (const label of ["Message 3", "Span span-12", "searchCatalog", "Score score-1", "Signal sig-123"]) {
+      fireEvent.click(screen.getByRole("button", { name: label }))
+    }
+
+    expect(onOpenDestination).toHaveBeenCalledTimes(5)
+    expect(onOpenDestination.mock.calls.map(([destination]) => destination.kind)).toEqual([
+      "sessionMessage",
+      "span",
+      "toolCall",
+      "score",
+      "signal",
+    ])
+    expect(screen.queryByText(/tool-call-1/)).toBeNull()
   })
 })

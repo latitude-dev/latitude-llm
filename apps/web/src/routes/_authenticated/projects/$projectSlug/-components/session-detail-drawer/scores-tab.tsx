@@ -1,3 +1,4 @@
+import type { SessionAssessmentItem, SessionEvidenceDestination } from "@domain/agent-score"
 import { Text } from "@repo/ui"
 import {
   useCreateAnnotation,
@@ -5,6 +6,7 @@ import {
 } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
 import { useScoresBySession } from "../../../../../../domains/scores/scores.collection.ts"
+import { flashElement } from "../conversation-timeline/flash-highlight.ts"
 import { ScoreList } from "../scores/score-list.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
 import { SessionAssessmentSection } from "./session-assessment.tsx"
@@ -22,6 +24,8 @@ export function ScoresTab({
   traceNumberById,
   onOpenInConversation,
   onOpenTrace,
+  onOpenSpan,
+  onOpenSignal,
 }: {
   readonly projectId: string
   readonly sessionId: string
@@ -30,10 +34,60 @@ export function ScoresTab({
   readonly traceNumberById: ReadonlyMap<string, number>
   readonly onOpenInConversation: (scoreId: string) => void
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
+  readonly onOpenSpan: (spanId: string, traceId?: string) => void
+  readonly onOpenSignal: (signalId: string) => void
 }) {
   const { data, isLoading, isError } = useScoresBySession({ projectId, traceIds })
   const createMutation = useCreateAnnotation()
   const updateMutation = useUpdateAnnotation()
+
+  const openScore = (scoreId: string) => {
+    const score = data?.items.find((candidate) => candidate.id === scoreId)
+    const traceId = score?.traceId ?? ""
+    if (score?.source === "annotation" && traceId) {
+      if (traceId === latestTraceId) onOpenInConversation(score.id)
+      else onOpenTrace(traceId, { focusScoreId: score.id })
+      return
+    }
+
+    const element = [...document.querySelectorAll<HTMLElement>("[data-score-id]")].find(
+      (candidate) => candidate.dataset.scoreId === scoreId,
+    )
+    if (!element) return
+    element.scrollIntoView({ block: "center", behavior: "smooth" })
+    flashElement(element)
+  }
+
+  const openAssessmentDestination = (destination: SessionEvidenceDestination, item: SessionAssessmentItem) => {
+    switch (destination.kind) {
+      case "sessionMessage":
+        onOpenTrace(destination.traceId, { focusMessageIndex: destination.messageIndex })
+        return
+      case "span":
+        onOpenSpan(destination.spanId, destination.traceId)
+        return
+      case "toolCall": {
+        const anchor = item.anchors.find(
+          (candidate) => candidate.kind === "toolCall" && candidate.toolCallId === destination.toolCallId,
+        )
+        onOpenTrace(destination.traceId, {
+          targetTab: "conversation",
+          ...(anchor?.kind === "toolCall" && anchor.messageIndex !== undefined
+            ? { focusMessageIndex: anchor.messageIndex }
+            : {}),
+        })
+        return
+      }
+      case "score":
+        openScore(destination.scoreId)
+        return
+      case "signal":
+        onOpenSignal(destination.signalId)
+        return
+      case "memoryEvent":
+        return
+    }
+  }
 
   return (
     <ScoreList
@@ -43,7 +97,11 @@ export function ScoresTab({
       isError={isError}
       intro={
         <div className="flex flex-col gap-6">
-          <SessionAssessmentSection projectId={projectId} sessionId={sessionId} />
+          <SessionAssessmentSection
+            projectId={projectId}
+            sessionId={sessionId}
+            onOpenDestination={openAssessmentDestination}
+          />
           <div className="flex flex-col gap-1">
             <Text.H4M>Annotations and evaluations</Text.H4M>
             <Text.H6 color="foregroundMuted">Review or add judgments attached to this session.</Text.H6>

@@ -163,6 +163,7 @@ function ConversationContent({
   const clearSelectionRef = useRef<(() => void) | null>(null)
   const autoLoadingMoreRef = useRef(false)
   const hasScrolledToSearchRef = useRef<string | null>(null)
+  const focusedMessageKeyRef = useRef<string | null>(null)
 
   const pendingFocusLoad = focusMessageIndex !== undefined && focusMessageIndex >= messages.length
 
@@ -514,6 +515,23 @@ function ConversationContent({
     if (focusMessageIndex === undefined || focusMessageIndex < messages.length) return
     loadMoreMessages()
   }, [focusMessageIndex, messages.length, loadMoreMessages])
+
+  // TODO(frontend-use-effect-policy): the message anchor mounts after paginated conversation data arrives.
+  useEffect(() => {
+    if (!isActive || focusMessageIndex === undefined || focusMessageIndex >= messages.length) return
+    const container = scrollRef.current
+    if (!container) return
+    const key = `${traceDetail.traceId}:${focusMessageIndex}`
+    if (focusedMessageKeyRef.current === key) return
+    const frame = window.requestAnimationFrame(() => {
+      const anchor = findNearestMessageAnchor(container, focusMessageIndex)
+      if (!anchor) return
+      focusedMessageKeyRef.current = key
+      anchor.scrollIntoView({ block: "center", behavior: "smooth" })
+      flashElement(anchor)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [focusMessageIndex, isActive, messages.length, scrollRef, traceDetail.traceId])
 
   const searchScrollTarget = useMemo(
     () =>

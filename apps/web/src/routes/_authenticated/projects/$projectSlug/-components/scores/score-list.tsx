@@ -89,6 +89,7 @@ export function ScoreList({
                 /* biome-ignore lint/a11y/noStaticElementInteractions: only interactive for navigable annotations */
                 <div
                   key={`${score.id}:${score.draftedAt !== null ? "draft" : "pub"}`}
+                  data-score-id={score.id}
                   data-annotation-navigation={clickable ? "true" : undefined}
                   className={cn(
                     "rounded-lg",

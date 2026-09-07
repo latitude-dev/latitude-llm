@@ -3,6 +3,7 @@ import type {
   SessionAssessmentItem,
   SessionDimensionEffect,
   SessionDimensionSummary,
+  SessionEvidenceDestination,
 } from "@domain/agent-score"
 import { Badge, cn, Skeleton, Text } from "@repo/ui"
 import { formatDuration, formatPercentage, formatPrice } from "@repo/utils"
@@ -140,8 +141,45 @@ function EvidenceEffect({ effect }: { readonly effect: SessionDimensionEffect })
   )
 }
 
-function EvidenceItem({ item }: { readonly item: SessionAssessmentItem }) {
+export type SessionAssessmentDestinationHandler = (
+  destination: SessionEvidenceDestination,
+  item: SessionAssessmentItem,
+) => void
+
+const shortId = (value: string) => value.slice(0, 7)
+
+function destinationLabel(destination: SessionEvidenceDestination, item: SessionAssessmentItem): string {
+  switch (destination.kind) {
+    case "sessionMessage":
+      return `Message ${destination.messageIndex + 1}`
+    case "span":
+      return `Span ${shortId(destination.spanId)}`
+    case "toolCall": {
+      const anchor = item.anchors.find(
+        (candidate) => candidate.kind === "toolCall" && candidate.toolCallId === destination.toolCallId,
+      )
+      return anchor?.kind === "toolCall" && anchor.toolName
+        ? anchor.toolName
+        : `Tool call ${shortId(destination.toolCallId)}`
+    }
+    case "score":
+      return `Score ${shortId(destination.scoreId)}`
+    case "signal":
+      return `Signal ${shortId(destination.signalId)}`
+    case "memoryEvent":
+      return `Memory event ${shortId(destination.memoryEventId)}`
+  }
+}
+
+function EvidenceItem({
+  item,
+  onOpenDestination,
+}: {
+  readonly item: SessionAssessmentItem
+  readonly onOpenDestination?: SessionAssessmentDestinationHandler | undefined
+}) {
   const direction = directionFor(item)
+  const navigableDestinations = item.destinations.filter((destination) => destination.kind !== "memoryEvent")
   return (
     <div
       className={cn(
@@ -176,6 +214,20 @@ function EvidenceItem({ item }: { readonly item: SessionAssessmentItem }) {
       ) : (
         <Text.H6 color="foregroundMuted">No benchmark dimension assigned.</Text.H6>
       )}
+      {onOpenDestination && navigableDestinations.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {navigableDestinations.map((destination) => (
+            <button
+              key={JSON.stringify(destination)}
+              type="button"
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => onOpenDestination(destination, item)}
+            >
+              {destinationLabel(destination, item)}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -204,7 +256,13 @@ function ReaderCoverage({ assessment }: { readonly assessment: SessionAssessment
   )
 }
 
-export function SessionAssessmentContent({ assessment }: { readonly assessment: SessionAssessment }) {
+export function SessionAssessmentContent({
+  assessment,
+  onOpenDestination,
+}: {
+  readonly assessment: SessionAssessment
+  readonly onOpenDestination?: SessionAssessmentDestinationHandler | undefined
+}) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
@@ -216,7 +274,9 @@ export function SessionAssessmentContent({ assessment }: { readonly assessment: 
       <div className="flex flex-col gap-2">
         <Text.H5M>Evidence</Text.H5M>
         {assessment.items.length > 0 ? (
-          assessment.items.map((item) => <EvidenceItem key={item.id} item={item} />)
+          assessment.items.map((item) => (
+            <EvidenceItem key={item.id} item={item} onOpenDestination={onOpenDestination} />
+          ))
         ) : (
           <Text.H6 color="foregroundMuted">No evidence was found for this session.</Text.H6>
         )}
@@ -230,9 +290,11 @@ export function SessionAssessmentContent({ assessment }: { readonly assessment: 
 export function SessionAssessmentSection({
   projectId,
   sessionId,
+  onOpenDestination,
 }: {
   readonly projectId: string
   readonly sessionId: string
+  readonly onOpenDestination?: SessionAssessmentDestinationHandler | undefined
 }) {
   const assessment = useSessionAssessment({ projectId, sessionId })
 
@@ -253,7 +315,7 @@ export function SessionAssessmentSection({
       ) : assessment.isError ? (
         <Text.H6 color="foregroundMuted">Could not load the session assessment.</Text.H6>
       ) : assessment.data ? (
-        <SessionAssessmentContent assessment={assessment.data} />
+        <SessionAssessmentContent assessment={assessment.data} onOpenDestination={onOpenDestination} />
       ) : null}
     </div>
   )
