@@ -65,9 +65,10 @@ Same rule for the `LAT_CLICKHOUSE_*` variables it reads: export them from the se
 store first, never inline — `LAT_CLICKHOUSE_PASSWORD` in shell history is a production
 credential in a logfile.
 
-Run it **before the deploy**. `taxonomy_observations` is retained for 30 days, so the
-rows recording what the old floor admitted are destroyed by retention, not by the
-deploy — there is no querying them later.
+Run it **before the deploy**: the rows recording what the old floor admitted are lost to
+retention, not to the deploy, so once they age out the comparison is unrecoverable.
+
+Nominally 30 days (`TAXONOMY_OBSERVATION_RETENTION_DAYS`), but ClickHouse deletes on merge, so rows are observed surviving well past it — 60-day-old rows were still queryable on 2026-09-07. Treat the horizon as a policy, not a guarantee, in either direction: do not rely on the rows being gone, and do not rely on them being there.
 
 The raw output is **not committable**. It carries counts and confidence quantiles per
 (organization, project, method) — no embeddings, summaries or session ids, but a tenant

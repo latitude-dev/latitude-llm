@@ -1,5 +1,5 @@
 {
-  "_comment": "Pre-change assignment baseline for LAT-866, measured on Latitude V2 PRODUCTION ClickHouse. taxonomy_observations is retained 30 days, so the rows behind this no longer exist after 2026-09-16 \u2014 this file is the only surviving record of what the 0.65 floor admitted. Reproduce the shape with scripts/taxonomy/snapshot-assignment-baseline.ts.",
+  "_comment": "Pre-change assignment baseline for LAT-866, measured on Latitude V2 PRODUCTION ClickHouse over the 7 days to 2026-08-17. Kept because the rows behind it are lost to retention rather than to the deploy. Reproduce the shape with scripts/taxonomy/snapshot-assignment-baseline.ts.",
   "capturedAt": "2026-08-17",
   "service": "Latitude V2 PRODUCTION",
   "window": "start_time >= now() - INTERVAL 7 DAY",
@@ -133,5 +133,6 @@
       "Centroid drift measured at up to +/-0.07 on project-A, so a per-row verdict near the boundary is unreliable; aggregate shares stay roughly unbiased because the error is near-symmetric (mean +0.003)."
     ]
   },
-  "_anonymized": "Projects are labelled, not identified: this repository is PUBLIC, and a tenant id beside that tenant's session volume and fit quality is customer operational data even though the ids are opaque. The script's raw output DOES carry organization_id/project_id and must stay local \u2014 same rule as pull-fresh-pilot.ts. Re-run it to recover the mapping while the rows still exist."
+  "_anonymized": "Projects are labelled, not identified: this repository is PUBLIC, and a tenant id beside that tenant's session volume and fit quality is customer operational data even though the ids are opaque. The script's raw output DOES carry organization_id/project_id and must stay local \u2014 same rule as pull-fresh-pilot.ts. Re-run it to recover the mapping while the rows still exist.",
+  "_retention": "Nominally 30 days (TAXONOMY_OBSERVATION_RETENTION_DAYS), but ClickHouse deletes on merge, so rows are observed surviving well past it \u2014 60-day-old rows were still queryable on 2026-09-07. Treat the horizon as a policy, not a guarantee, in either direction: do not rely on the rows being gone, and do not rely on them being there."
 }

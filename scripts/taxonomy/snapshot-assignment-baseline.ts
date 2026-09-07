@@ -2,11 +2,11 @@
 /**
  * Snapshot the pre-change assignment baseline for the fit floor (LAT-866).
  *
- * `taxonomy_observations` is retained for TAXONOMY_OBSERVATION_RETENTION_DAYS (30),
- * so the rows that record what the old floor admitted stop existing about a month
- * from now — the baseline is destroyed by retention, not by the deploy, and there is
- * no querying it later. Run this BEFORE the floor change reaches production and
- * commit the output next to the PR.
+ * The rows that record what the old floor admitted are lost to retention, not to the
+ * deploy, so run this BEFORE the floor change reaches production. Nominally that is
+ * TAXONOMY_OBSERVATION_RETENTION_DAYS (30), but ClickHouse deletes on merge and rows
+ * are observed surviving well past it, so the horizon is a policy rather than a
+ * guarantee — do not rely on the rows being gone, or on them still being there.
  *
  * This pulls no embeddings, summaries or session ids — only per-(organization,
  * project, method) counts and confidence quantiles. It is still CUSTOMER DATA and the
