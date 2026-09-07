@@ -233,7 +233,7 @@ does not display per-session dimension scores.
 
 - [x] **P2-38** Add the Session assessment section above the existing annotations and evaluations in
   the stable Scores tab.
-- [ ] **P2-39** Render the five dimension summaries, reader coverage, and one chronological evidence
+- [x] **P2-39** Render the five dimension summaries, reader coverage, and one chronological evidence
   feed with direction, measurement state, native impact, and occurrence count. Do not add assessment
   filter controls.
 - [ ] **P2-40** Link message, span, tool-call, score, and signal anchors to their existing authorized

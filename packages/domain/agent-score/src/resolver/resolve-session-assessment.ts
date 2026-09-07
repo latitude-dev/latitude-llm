@@ -24,6 +24,7 @@ export const resolveSessionAssessment = (input: NormalizedSessionAssessmentInput
       items,
       coverage: coverage.dimensions,
       observedMicrocents: input.observedMicrocents,
+      observedCriticalPathNs: input.observedDurationNs,
     }),
     coverage: coverage.coverage,
   }
@@ -62,6 +63,7 @@ export const resolveSessionAssessmentPage = (
       items: allItems,
       coverage: coverage.dimensions,
       observedMicrocents: input.observedMicrocents,
+      observedCriticalPathNs: input.observedDurationNs,
     }),
     coverage: coverage.coverage,
   }
