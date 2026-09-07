@@ -42,12 +42,13 @@ import {
   requestDestinationBackfillUseCase,
   resumeDestinationUseCase,
   SpansSourceReadersLive,
+  spanUrlBuilder,
   type TestDestinationConnectionResult,
   testDestinationConnectionUseCase,
   updateDestinationUseCase,
 } from "@domain/destinations"
+import { ProjectRepository } from "@domain/projects"
 import { DestinationId, DestinationSyncRunId, NotFoundError, type OrganizationId, ProjectId } from "@domain/shared"
-import type { SpanDetail } from "@domain/spans"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { createPosthogDeliverer } from "@platform/data-destinations"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -57,6 +58,7 @@ import {
   DestinationSourceStateRepositoryLive,
   DestinationSyncRunRepositoryLive,
   OrganizationRepositoryLive,
+  ProjectRepositoryLive,
   resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -794,10 +796,17 @@ export const previewDestinationDelivery = createServerFn({ method: "GET" })
     const { organizationId } = await requireSession()
 
     const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
-    const buildSpanUrl = (span: SpanDetail) =>
-      `${webUrl}/projects/${data.projectId}?traceId=${encodeURIComponent(span.traceId)}&spanId=${encodeURIComponent(span.spanId)}`
+    const projectSlug = await Effect.runPromise(
+      Effect.gen(function* () {
+        const projects = yield* ProjectRepository
+        return yield* projects.findById(ProjectId(data.projectId)).pipe(
+          Effect.map((project) => project.slug),
+          Effect.orElseSucceed(() => data.projectId),
+        )
+      }).pipe(withPostgres(ProjectRepositoryLive, getPostgresClient(), organizationId), withTracing),
+    )
     const mapperRegistry: DestinationMapperRegistry = {
-      posthog: { spans: createPosthogMapper({ buildSpanUrl }) },
+      posthog: { spans: createPosthogMapper({ buildSpanUrl: spanUrlBuilder(webUrl, projectSlug) }) },
     }
 
     const result = await Effect.runPromise(

@@ -150,7 +150,7 @@ querySpans({
 })
 ```
 
-Row-level responses use wire units (`durationNs`, `costTotalMicrocents`); the skill normalizes them before rendering. Row-level data can also carry conversation content, so the skill embeds ids and summaries by default and links to the trace in Latitude rather than copying the messages.
+Row-level responses use wire units: traces carry `durationNs` and `costTotalMicrocents`, while spans carry `costTotalMicrocents` plus `startTime` and `endTime`, so a span's duration is the difference between the two timestamps. The skill normalizes all of it to seconds and dollars before rendering. Row-level data can also carry conversation content, so the skill embeds ids and summaries by default and links to the trace in Latitude rather than copying the messages.
 
 ## A worked example: memory
 
