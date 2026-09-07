@@ -1,4 +1,5 @@
 import type { ModelConfig } from "@domain/shared/seeding"
+import { modelRegistryPricing } from "@domain/spans"
 
 /**
  * Model identities only. Every rate a cohort is costed at comes from the
@@ -66,14 +67,23 @@ export const COST_LONG_TAIL_MODELS: readonly ModelConfig[] = [
 ]
 
 /**
- * Priced at zero in the registry, which is the whole point of archetype F: a $0
- * total with 100% priced coverage and no warnings, so "free" is visibly not the
- * same reading as "unpriced".
+ * Free tiers, which is the whole point of archetype F: a $0 total with 100% priced
+ * coverage and no warnings, so "free" is visibly not the same reading as "unpriced".
  */
-export const FREE_MODELS: readonly ModelConfig[] = [
+const FREE_MODEL_CANDIDATES: readonly ModelConfig[] = [
   model({ provider: "openrouter", model: "google/gemma-4-31b-it:free" }),
   model({ provider: "openrouter", model: "nvidia/nemotron-nano-9b-v2:free" }),
 ]
+
+/**
+ * Kept to the candidates the registry still prices at zero. A free tier is the listing models.dev
+ * retires most readily, and a retired one would seed this archetype with the very unpriced rows it
+ * exists to contrast against. Archetype F's own test fails if the catalog ever drops all of them.
+ */
+export const FREE_MODELS: readonly ModelConfig[] = FREE_MODEL_CANDIDATES.filter((config) => {
+  const pricing = modelRegistryPricing(config)
+  return pricing?.input === 0 && pricing.output === 0
+})
 
 /**
  * A model the registry has never heard of, served by a provider it has never heard
