@@ -192,7 +192,7 @@ does not display per-session dimension scores.
 
 ### Step 6: build the assessment domain
 
-- [ ] **P2-27** Create `@domain/agent-score` and implement the Zod-first assessment item, effect,
+- [x] **P2-27** Create `@domain/agent-score` and implement the Zod-first assessment item, effect,
   impact, dimension-summary, reader-coverage, anchor, destination-list, and pagination contracts from
   [`session-assessment.md`](session-assessment.md#assessment-model). Do not add per-session scores,
   filter inputs, or a generic confidence type.
