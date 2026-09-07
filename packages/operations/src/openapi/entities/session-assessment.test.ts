@@ -1,0 +1,51 @@
+import type { SessionAssessment } from "@domain/agent-score"
+import { SessionId } from "@domain/shared"
+import { describe, expect, it } from "vitest"
+import { SessionAssessmentSchema, toSessionAssessmentResponse } from "./session-assessment.ts"
+
+describe("session assessment response", () => {
+  it("serializes evidence references without raw telemetry content", () => {
+    const assessment = {
+      sessionId: SessionId("session-1"),
+      items: [
+        {
+          id: "finding-1",
+          evidenceKey: "finding-1",
+          label: "Tool call failed",
+          source: "metric",
+          metricId: "tools.call_failed",
+          signalIds: [],
+          scoreIds: [],
+          occurrenceCount: 1,
+          effects: [],
+          anchors: [
+            {
+              kind: "toolCall",
+              traceId: "trace-1",
+              toolCallId: "call-1",
+              toolName: "search",
+              arguments: { query: "private input" },
+            },
+          ],
+          destinations: [{ kind: "toolCall", traceId: "trace-1", toolCallId: "call-1" }],
+          rawContent: "private output",
+        },
+      ],
+      dimensions: [
+        {
+          scoreDimension: "outcome",
+          evidenceCounts: { positive: 0, negative: 0, context: 0 },
+          measurementCounts: { observed: 0, estimated: 0, notMeasured: 0 },
+          coverage: "notExamined",
+        },
+      ],
+      coverage: { readers: [] },
+    } as unknown as SessionAssessment
+
+    const response = toSessionAssessmentResponse(assessment)
+
+    expect(SessionAssessmentSchema.parse(response)).toEqual(response)
+    expect(response.items[0]).not.toHaveProperty("rawContent")
+    expect(response.items[0]?.anchors[0]).not.toHaveProperty("arguments")
+  })
+})

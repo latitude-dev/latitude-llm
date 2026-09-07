@@ -281,6 +281,100 @@ export class SessionsClient {
     }
 
     /**
+     * Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} sessionId - Session identifier lifted from instrumentation. Up to 128 characters.
+     * @param {Latitude.GetAssessmentSessionsRequest} request
+     * @param {SessionsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.sessions.getAssessment("projectSlug", "sessionId")
+     */
+    public getAssessment(
+        projectSlug: string,
+        sessionId: string,
+        request: Latitude.GetAssessmentSessionsRequest = {},
+        requestOptions?: SessionsClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.SessionAssessment> {
+        return core.HttpResponsePromise.fromPromise(
+            this.__getAssessment(projectSlug, sessionId, request, requestOptions),
+        );
+    }
+
+    private async __getAssessment(
+        projectSlug: string,
+        sessionId: string,
+        request: Latitude.GetAssessmentSessionsRequest = {},
+        requestOptions?: SessionsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.SessionAssessment>> {
+        const { cursor } = request;
+        const _queryParams: Record<string, unknown> = {
+            cursor,
+        };
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/sessions/${core.url.encodePathParam(sessionId)}/assessment`,
+            ),
+            method: "GET",
+            headers: _headers,
+            queryString: core.url
+                .queryBuilder()
+                .addMany(_queryParams)
+                .mergeAdditional(requestOptions?.queryParams)
+                .build(),
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.SessionAssessment, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "GET",
+            "/v1/projects/{projectSlug}/sessions/{sessionId}/assessment",
+        );
+    }
+
+    /**
      * Returns a cursor-paginated page of the traces that belong to the session. Rows match the trace list shape and exclude per-message LLM content — use `getTrace` for the full conversation view.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)

@@ -56,11 +56,19 @@ The benchmark uses separate bulk ports so it never calls an interactive use-case
 
 `readSessionAssessmentBatch` invokes each bulk port once and feeds every returned session through the same source readers and resolver used by the single-session path.
 
+`getSessionAssessment` uses the same bulk-capable source boundary for one session. A missing session returns `NotFoundError`; the score read occurs only after the authorized session has supplied its trace ids.
+
 The ClickHouse adapter performs a bounded set of bulk reads for session details, spans, latest conversation-analysis generations, moments, labels, and screening decisions. It excludes sessions ending after the cutoff, excludes facts indexed after the cutoff, and filters moments and labels to the latest analyzed generation. A newer failed or skipped analysis does not fall back to stale moments.
 
 The Postgres adapter reads scores by both session ids and resolved trace ids so scores attached to orphan traces remain visible. It applies the calculation cutoff to score creation time, loads linked signals once, and groups the results back to their owning assessment session.
 
 Missing requested sessions are omitted from the bulk result. Empty batches perform no source reads.
+
+## Pagination and public access
+
+The project-scoped public operation is `GET /v1/projects/{projectSlug}/sessions/{sessionId}/assessment`. Its only optional input is an opaque cursor. The response contains identifiers and structured assessment data, but never embeds message text, tool arguments or results, or span payloads.
+
+Evidence pages contain at most 100 items. The cursor records the read cutoff and the last item's chronology, evidence key, and stable item id. Reusing the cutoff keeps later pages on the first page's data snapshot. Dimension summaries and reader coverage are calculated from the complete assessment and repeated unchanged on every page.
 
 ## Persistence boundary
 

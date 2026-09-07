@@ -225,7 +225,7 @@ does not display per-session dimension scores.
 - [x] **P2-36** Add stable cursor pagination over chronology plus `evidenceKey`, with complete
   dimension summaries and coverage returned alongside each page. The input contains project,
   session, and optional cursor only; it has no assessment filters.
-- [ ] **P2-37** Define the public operation through `@repo/operations` with anchor-only payloads and
+- [x] **P2-37** Define the public operation through `@repo/operations` with anchor-only payloads and
   descriptions suitable for HTTP, OpenAPI, MCP, SDKs, CLI, and in-process tools. Regenerate and
   verify every generated contract.
 

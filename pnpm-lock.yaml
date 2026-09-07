@@ -2231,6 +2231,9 @@ importers:
       '@domain/annotations':
         specifier: workspace:*
         version: link:../domain/annotations
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../domain/agent-score
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../domain/api-keys

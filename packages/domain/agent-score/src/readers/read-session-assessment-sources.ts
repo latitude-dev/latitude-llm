@@ -403,7 +403,6 @@ const readMomentFindings = (facts: SessionMomentFacts): AssessmentFinding[] => {
       {
         evidenceKey: `moment:${momentId}`,
         label: first?.summary || "Conversation moment",
-        ...(first?.evidence ? { description: first.evidence } : {}),
         source: "moment",
         metricId: "moments.conversation",
         signalIds: [],

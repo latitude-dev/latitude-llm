@@ -10252,6 +10252,96 @@ client.sessions.get(
 </dl>
 </details>
 
+<details><summary><code>client.sessions.<a href="src/latitude_sdk/sessions/client.py">get_assessment</a>(...) -> SessionAssessment</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.sessions.get_assessment(
+    project_slug="projectSlug",
+    session_id="sessionId",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**session_id:** `str` — Session identifier lifted from instrumentation. Up to 128 characters.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**cursor:** `typing.Optional[str]` — Opaque cursor returned by a previous assessment page. Omit for the first page.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 <details><summary><code>client.sessions.<a href="src/latitude_sdk/sessions/client.py">list_traces</a>(...) -> PaginatedTraces</code></summary>
 <dl>
 <dd>
