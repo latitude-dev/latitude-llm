@@ -60,12 +60,16 @@ LAT_CLICKHOUSE_URL=… LAT_CLICKHOUSE_USER=… LAT_CLICKHOUSE_PASSWORD=… \
   scripts/taxonomy/snapshot-assignment-baseline.ts taxonomy-assignment-baseline.json
 ```
 
-Run it **before the deploy** and commit the output. `taxonomy_observations` is
-retained for 30 days, so the rows recording what the old floor admitted are
-destroyed by retention, not by the deploy — there is no querying them later. The
-snapshot is counts and confidence quantiles per (organization, project, method):
-no embeddings, summaries or session ids, which is why it is committable where
-`pull-fresh-pilot.ts` output is not.
+Run it **before the deploy**. `taxonomy_observations` is retained for 30 days, so the
+rows recording what the old floor admitted are destroyed by retention, not by the
+deploy — there is no querying them later.
+
+The raw output is **not committable**. It carries counts and confidence quantiles per
+(organization, project, method) — no embeddings, summaries or session ids, but a tenant
+id beside that tenant's volume and fit quality is still customer operational data, and
+this repository is public. Keep it local (same rule as `pull-fresh-pilot.ts`) and commit
+a **labelled** digest, which is what `taxonomy-assignment-baseline.json` is: every
+measurement, projects as `project-A…D`, mapping not in the repo.
 
 Its `wouldRejectAtFloor` column is the **per-project prediction** — the share of
 currently-assigned observations below the new floor. Checking `assigned_share`

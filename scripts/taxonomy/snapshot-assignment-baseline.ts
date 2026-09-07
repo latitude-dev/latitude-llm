@@ -8,9 +8,13 @@
  * no querying it later. Run this BEFORE the floor change reaches production and
  * commit the output next to the PR.
  *
- * Unlike `pull-fresh-pilot.ts` this pulls no embeddings, summaries or session ids —
- * only per-(organization, project, method) counts and confidence quantiles — so the
- * output is safe to commit.
+ * This pulls no embeddings, summaries or session ids — only per-(organization,
+ * project, method) counts and confidence quantiles. It is still CUSTOMER DATA and the
+ * raw output must stay local, same rule as `pull-fresh-pilot.ts`: a tenant id beside
+ * that tenant's session volume and fit quality is operational data, and this
+ * repository is public. Commit a LABELLED digest instead (see
+ * `apps/workflows/datadog/taxonomy-assignment-baseline.json`), and keep the
+ * label→id mapping out of the repo.
  *
  * `wouldRejectAtFloor` is the prediction: the share of currently-ASSIGNED
  * observations sitting below the new floor. Comparing it per project against the

@@ -1,5 +1,5 @@
 {
-  "_comment": "Pre-change assignment baseline for LAT-866, captured from Latitude V2 PRODUCTION ClickHouse. taxonomy_observations is retained 30 days, so these rows no longer exist after 2026-09-16 \u2014 this file is the only surviving record of what the 0.65 floor admitted. Reproduce the shape with scripts/taxonomy/snapshot-assignment-baseline.ts.",
+  "_comment": "Pre-change assignment baseline for LAT-866, measured on Latitude V2 PRODUCTION ClickHouse. taxonomy_observations is retained 30 days, so the rows behind this no longer exist after 2026-09-16 \u2014 this file is the only surviving record of what the 0.65 floor admitted. Reproduce the shape with scripts/taxonomy/snapshot-assignment-baseline.ts.",
   "capturedAt": "2026-08-17",
   "service": "Latitude V2 PRODUCTION",
   "window": "start_time >= now() - INTERVAL 7 DAY",
@@ -50,11 +50,10 @@
     "projectsLosingOver50PctAt075": 0
   },
   "arms": {
-    "_comment": "Exactly one project is on the full-window reassignment path, so change 2's blast radius today is 154 observations/week. Every other project is affected only by the online gate.",
+    "_comment": "Exactly one project was on the full-window reassignment path, so change 2's blast radius at the time of measurement was 154 observations/week. Every other project is affected only by the online gate.",
     "fullWindowRouting": {
-      "projectId": "adaptive-pilot",
-      "organizationId": "adaptive-pilot-org",
-      "note": "the narrow-domain ads-analytics pilot, the only adaptive project",
+      "project": "adaptive-pilot",
+      "note": "the single project on the full-window reassignment path",
       "observations": 193,
       "gardeningReassign": 154,
       "centroidOnline": 38,
@@ -66,28 +65,31 @@
   },
   "worstHitProjects": [
     {
-      "projectId": "project-A",
+      "_comment": "Ordered worst-first. A is the project that ruled out 0.81; D is the largest project, included as the healthy control."
+    },
+    {
+      "project": "project-A",
       "onlineRows": 776,
       "confidenceP50": 0.7525,
       "rejectedShareAt081": 0.8814,
       "rejectedShareAt075": 0.4768
     },
     {
-      "projectId": "project-B",
+      "project": "project-B",
       "onlineRows": 395,
       "confidenceP50": 0.779,
       "rejectedShareAt081": 0.7241,
       "rejectedShareAt075": 0.3063
     },
     {
-      "projectId": "project-C",
+      "project": "project-C",
       "onlineRows": 3212,
       "confidenceP50": 0.8506,
       "rejectedShareAt081": 0.2463,
       "rejectedShareAt075": 0.0576
     },
     {
-      "projectId": "project-D",
+      "project": "project-D",
       "onlineRows": 8257,
       "confidenceP50": 0.9434,
       "rejectedShareAt081": 0.0465,
@@ -130,5 +132,6 @@
       "27 of 162 clusters holding online rows (5,836 of 15,665, ~37%) are no longer active and are excluded entirely -- gardening retires the tree every ~6h.",
       "Centroid drift measured at up to +/-0.07 on project-A, so a per-row verdict near the boundary is unreliable; aggregate shares stay roughly unbiased because the error is near-symmetric (mean +0.003)."
     ]
-  }
+  },
+  "_anonymized": "Projects are labelled, not identified: this repository is PUBLIC, and a tenant id beside that tenant's session volume and fit quality is customer operational data even though the ids are opaque. The script's raw output DOES carry organization_id/project_id and must stay local \u2014 same rule as pull-fresh-pilot.ts. Re-run it to recover the mapping while the rows still exist."
 }
