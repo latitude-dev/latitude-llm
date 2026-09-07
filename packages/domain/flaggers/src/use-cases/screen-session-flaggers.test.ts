@@ -121,6 +121,7 @@ interface RunOptions {
   readonly momentLabels?: readonly SessionMomentLabel[]
   readonly analyses?: readonly ReturnType<typeof analyzedAnalysis>[]
   readonly deps: ReturnType<typeof makeDeps>["deps"]
+  readonly attempt?: number
 }
 
 const runScreening = async (options: RunOptions) => {
@@ -159,7 +160,7 @@ const runScreening = async (options: RunOptions) => {
         projectId: PROJECT_ID,
         sessionId: SESSION_ID,
         analysisHash: ANALYSIS_HASH,
-        attempt: 1,
+        attempt: options.attempt ?? 1,
       },
       options.deps,
     ).pipe(Effect.provide(layer)),
@@ -427,6 +428,31 @@ describe("screenSessionFlaggersUseCase", () => {
       hintKinds: ["pattern:frustration"],
     })
     expect(result.classifications).toEqual([])
+  })
+
+  it("reuses the deterministic sampling draw and inclusion probability across retries", async () => {
+    const session = makeSessionDetail([user("Can you help me with this?"), assistant("Sure, what do you need?")])
+    const flaggers = [makeFlagger("frustration", 37)]
+
+    const first = await runScreening({ session, flaggers, deps: fakeDeps.deps, attempt: 1 })
+    const retry = await runScreening({ session, flaggers, deps: fakeDeps.deps, attempt: 2 })
+    const firstDecision = first.screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")
+    const retryDecision = retry.screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")
+
+    expect(firstDecision).toMatchObject({
+      attempt: 1,
+      version: 1,
+      reason: "ordinary-sample",
+      inclusionProbability: 0.37,
+    })
+    expect(retryDecision).toMatchObject({
+      decisionId: firstDecision?.decisionId,
+      attempt: 2,
+      version: 1,
+      selected: firstDecision?.selected,
+      reason: firstDecision?.reason,
+      inclusionProbability: firstDecision?.inclusionProbability,
+    })
   })
 
   it("hints forgetting from a current-generation clarification_loop moment label", async () => {

@@ -178,7 +178,7 @@ does not display per-session dimension scores.
   selection reason, inclusion probability, hint kinds, outcome, timestamp, and retention TTL.
 - [x] **P2-22** Write the initial decision before sampled model execution. A terminal outcome appends
   a higher revision with the same decision and selection fields.
-- [ ] **P2-23** Reuse one sampling draw and inclusion probability across retries. Increment attempts
+- [x] **P2-23** Reuse one sampling draw and inclusion probability across retries. Increment attempts
   without redrawing selection, and preserve the existing human-readable summary log.
 - [ ] **P2-24** Implement repository consolidation that selects the latest revision of the newest
   analysis generation per session and flagger at the query cutoff. Never fall back to an older

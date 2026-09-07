@@ -31,16 +31,25 @@ describe("recordFlaggerScreeningOutcomeUseCase", () => {
     )
 
     await Effect.runPromise(
-      recordFlaggerScreeningOutcomeUseCase({ selection, attempt: 3, outcome: "matched" }).pipe(Effect.provide(layer)),
+      Effect.gen(function* () {
+        yield* recordFlaggerScreeningOutcomeUseCase({ selection, attempt: 1, outcome: "error" })
+        yield* recordFlaggerScreeningOutcomeUseCase({ selection, attempt: 3, outcome: "matched" })
+      }).pipe(Effect.provide(layer)),
     )
 
-    expect(decisions).toHaveLength(1)
+    expect(decisions).toHaveLength(2)
     expect(decisions[0]).toMatchObject({
+      ...selection,
+      attempt: 1,
+      version: 2,
+      outcome: "error",
+    })
+    expect(decisions[1]).toMatchObject({
       ...selection,
       attempt: 3,
       version: 2,
       outcome: "matched",
     })
-    expect(decisions[0]?.createdAt).toBeInstanceOf(Date)
+    expect(decisions[1]?.createdAt).toBeInstanceOf(Date)
   })
 })

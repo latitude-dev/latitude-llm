@@ -95,6 +95,8 @@ The screening activity writes version 1 for every per-flagger selection before i
 
 Deterministic hash, not RNG (`@domain/shared/deterministic-sampling`): stable hash of `[org, project, slug, sessionId, analysisHash]` compared against the sampling %. Each session **generation** re-rolls once; re-published jobs for the same generation decide identically.
 
+The activity attempt is recorded but is not part of the sampling or decision-id key. A screening retry therefore appends the same selection and inclusion probability with a higher attempt. Classification retries receive that selection as workflow input and append their outcome with the classifier activity's current attempt; they never sample again.
+
 ### Rate limiting
 
 Three independent Redis fixed windows per org+slug (`org:${org}:ratelimit:flagger-llm:${bucket}:${slug}`, fail-open):
