@@ -79,7 +79,7 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
     const key = `${config.keyPrefix}:${config.keyGenerator(c)}`
 
     try {
-      await enforceRedisRateLimit(c, next, config, key)
+      return await enforceRedisRateLimit(c, next, config, key)
     } catch (_error) {
       await next()
     }
