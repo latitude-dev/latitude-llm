@@ -14,6 +14,7 @@ export {
   FLAGGER_SCORING_ARTIFACT_VERSION,
   FLAGGER_SCREENING_ARTIFACT_VERSION,
   FLAGGER_SCREENING_OUTCOMES,
+  FLAGGER_SCREENING_RETENTION_DAYS,
   FLAGGER_SCREENING_SELECTION_REASONS,
 } from "./constants.ts"
 export {
@@ -40,10 +41,12 @@ export {
 export {
   type FlaggerScreeningDecision,
   type FlaggerScreeningOutcome,
+  type FlaggerScreeningSelection,
   type FlaggerScreeningSelectionReason,
   flaggerScreeningDecisionSchema,
   flaggerScreeningOutcomeSchema,
   flaggerScreeningSelectionReasonSchema,
+  flaggerScreeningSelectionSchema,
 } from "./entities/flagger-screening-decision.ts"
 export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
@@ -179,6 +182,11 @@ export {
   type ProvisionFlaggersInput,
   provisionFlaggersUseCase,
 } from "./use-cases/provision-flaggers.ts"
+export {
+  type RecordFlaggerScreeningOutcomeError,
+  type RecordFlaggerScreeningOutcomeInput,
+  recordFlaggerScreeningOutcomeUseCase,
+} from "./use-cases/record-flagger-screening-outcome.ts"
 export {
   type ClassifyConversationForFlaggerInput,
   type ClassifyTraceForFlaggerInput,

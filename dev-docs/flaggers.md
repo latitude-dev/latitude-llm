@@ -89,6 +89,8 @@ Every screening path is represented by an append-only row in ClickHouse. `flagge
 
 The table keeps source data for the session retention period plus the standard 30-day deletion buffer. Readers must scope queries by organization and project, collapse revisions for each decision, and then select the newest analysis generation for each session × flagger. A newer pending or failed generation remains authoritative; readers must not fall back to a successful older generation.
 
+The screening activity writes version 1 for every per-flagger selection before it returns classification requests to the workflow. Deterministic matches and misses are already terminal in that row. A model classification activity appends version 2 with `matched`, `unmatched`, or `error`, reusing the decision id and every selection field from version 1. These writes happen inside the existing activities, so the workflow history does not gain a new activity command.
+
 ### Sampling
 
 Deterministic hash, not RNG (`@domain/shared/deterministic-sampling`): stable hash of `[org, project, slug, sessionId, analysisHash]` compared against the sampling %. Each session **generation** re-rolls once; re-published jobs for the same generation decide identically.

@@ -1,4 +1,5 @@
 import type { ClassifySessionFlaggerResult } from "@domain/flaggers"
+import { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const FLAGGER_TRACE_ID = "f".repeat(32)
@@ -43,6 +44,20 @@ const INPUT = {
   flaggerSlug: "refusal",
   reason: "hinted" as const,
   hints: [],
+  screeningSelection: {
+    decisionId: "d".repeat(64),
+    organizationId: OrganizationId("o".repeat(24)),
+    projectId: ProjectId("p".repeat(24)),
+    sessionId: SessionId("session-1"),
+    flaggerSlug: "refusal" as const,
+    analysisHash: "a".repeat(64),
+    scoringArtifactVersion: "flagger-screening-v1",
+    selected: true,
+    reason: "hinted" as const,
+    inclusionProbability: 1,
+    hintKinds: [],
+    retentionDays: 90,
+  },
 }
 
 describe("flaggerClassificationWorkflow", () => {
@@ -54,6 +69,9 @@ describe("flaggerClassificationWorkflow", () => {
     const result = await flaggerClassificationWorkflow(INPUT)
 
     expect(result).toMatchObject({ result: "annotated", scoreId: "score-1" })
+    expect(mockActivities.classifySessionFlagger).toHaveBeenCalledWith(
+      expect.objectContaining({ screeningSelection: INPUT.screeningSelection }),
+    )
     expect(mockActivities.saveSessionFlaggerAnnotation).toHaveBeenCalledWith(
       expect.objectContaining({
         flaggerTraceId: FLAGGER_TRACE_ID,

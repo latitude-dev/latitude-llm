@@ -3,6 +3,7 @@ export const FLAGGER_DEFAULT_SAMPLING = 10
 export const FLAGGER_SCORING_ARTIFACT_VERSION = "flagger-classification-v1"
 
 export const FLAGGER_SCREENING_ARTIFACT_VERSION = "flagger-screening-v1"
+export const FLAGGER_SCREENING_RETENTION_DAYS = 90
 
 export const FLAGGER_SCREENING_SELECTION_REASONS = [
   "deterministic",

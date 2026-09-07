@@ -30,7 +30,9 @@ import type { Flagger } from "../entities/flagger.ts"
 import type { FlaggerSlug } from "../flagger-strategies/index.ts"
 import { assistant, assistantToolCall, makeSessionDetail, tool, user } from "../flagger-strategies/test-helpers.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
+import { FlaggerScreeningDecisionRepository } from "../ports/flagger-screening-decision-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
+import { createFakeFlaggerScreeningDecisionRepository } from "../testing/fake-flagger-screening-decision-repository.ts"
 import {
   type CheckFlaggerLlmRateLimit,
   type ScreenSessionFlaggersResult,
@@ -122,8 +124,9 @@ interface RunOptions {
 }
 
 const runScreening = async (options: RunOptions) => {
+  const session = options.session
   const { repository: sessionRepo } = createFakeSessionRepository(
-    options.session ? { findBySessionId: () => Effect.succeed(options.session!) } : {},
+    session ? { findBySessionId: () => Effect.succeed(session) } : {},
   )
   const { repository: spanRepo } = createFakeSpanRepository()
   const { repository: flaggerRepo } = createFakeFlaggerRepository(options.flaggers)
@@ -131,6 +134,8 @@ const runScreening = async (options: RunOptions) => {
   const { repository: scoreAnalyticsRepo } = createFakeScoreAnalyticsRepository()
   const { repository: analysisRepo } = createFakeSessionAnalysisRepository(options.analyses ?? [])
   const { repository: labelRepo } = createFakeSessionMomentLabelRepository(options.momentLabels ?? [])
+  const { repository: screeningDecisionRepo, decisions: screeningDecisions } =
+    createFakeFlaggerScreeningDecisionRepository()
 
   const layer = Layer.mergeAll(
     Layer.succeed(SessionRepository, sessionRepo),
@@ -140,6 +145,7 @@ const runScreening = async (options: RunOptions) => {
     Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepo),
     Layer.succeed(SessionAnalysisRepository, analysisRepo),
     Layer.succeed(SessionMomentLabelRepository, labelRepo),
+    Layer.succeed(FlaggerScreeningDecisionRepository, screeningDecisionRepo),
     Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
@@ -148,12 +154,18 @@ const runScreening = async (options: RunOptions) => {
 
   const result: ScreenSessionFlaggersResult = await Effect.runPromise(
     screenSessionFlaggersUseCase(
-      { organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: SESSION_ID, analysisHash: ANALYSIS_HASH },
+      {
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionId: SESSION_ID,
+        analysisHash: ANALYSIS_HASH,
+        attempt: 1,
+      },
       options.deps,
     ).pipe(Effect.provide(layer)),
   )
 
-  return { result, scores }
+  return { result, scores, screeningDecisions }
 }
 
 const decisionFor = (decisions: readonly SessionFlaggerDecision[], slug: string) =>
@@ -279,7 +291,7 @@ describe("screenSessionFlaggersUseCase", () => {
 
   it("writes a session-anchored score with contentHash on a deterministic match", async () => {
     const session = makeSessionDetail([user("Please help me with this."), assistant("")])
-    const { result, scores } = await runScreening({
+    const { result, scores, screeningDecisions } = await runScreening({
       session,
       flaggers: [makeFlagger("empty-response", 0)],
       deps: fakeDeps.deps,
@@ -299,6 +311,19 @@ describe("screenSessionFlaggersUseCase", () => {
       contentHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       flaggerFindingKey: expect.stringMatching(/^[0-9a-f]{64}$/),
       flaggerPath: "deterministic",
+    })
+    expect(screeningDecisions.find((decision) => decision.flaggerSlug === "empty-response")).toMatchObject({
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      sessionId: SESSION_ID,
+      analysisHash: ANALYSIS_HASH,
+      scoringArtifactVersion: "flagger-screening-v1",
+      attempt: 1,
+      version: 1,
+      selected: true,
+      reason: "deterministic",
+      inclusionProbability: 1,
+      outcome: "matched",
     })
   })
 
@@ -320,6 +345,7 @@ describe("screenSessionFlaggersUseCase", () => {
     const { repository: scoreAnalyticsRepo } = createFakeScoreAnalyticsRepository()
     const { repository: analysisRepo } = createFakeSessionAnalysisRepository()
     const { repository: labelRepo } = createFakeSessionMomentLabelRepository()
+    const { repository: screeningDecisionRepo } = createFakeFlaggerScreeningDecisionRepository()
 
     const layer = Layer.mergeAll(
       Layer.succeed(SessionRepository, sessionRepo),
@@ -329,6 +355,7 @@ describe("screenSessionFlaggersUseCase", () => {
       Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepo),
       Layer.succeed(SessionAnalysisRepository, analysisRepo),
       Layer.succeed(SessionMomentLabelRepository, labelRepo),
+      Layer.succeed(FlaggerScreeningDecisionRepository, screeningDecisionRepo),
       Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
       Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
@@ -337,7 +364,13 @@ describe("screenSessionFlaggersUseCase", () => {
 
     const rerun = await Effect.runPromise(
       screenSessionFlaggersUseCase(
-        { organizationId: ORG_ID, projectId: PROJECT_ID, sessionId: SESSION_ID, analysisHash: "e".repeat(64) },
+        {
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          sessionId: SESSION_ID,
+          analysisHash: "e".repeat(64),
+          attempt: 1,
+        },
         fakeDeps.deps,
       ).pipe(Effect.provide(layer)),
     )
@@ -349,7 +382,7 @@ describe("screenSessionFlaggersUseCase", () => {
   it("routes a pattern-hinted strategy to classification without sampling", async () => {
     // sampling=0 would drop an unhinted session; the hint must bypass it.
     const session = makeSessionDetail([user("I already told you, the deadline is Friday."), assistant("Sorry!")])
-    const { result } = await runScreening({
+    const { result, screeningDecisions } = await runScreening({
       session,
       flaggers: [makeFlagger("frustration", 0)],
       deps: fakeDeps.deps,
@@ -363,6 +396,17 @@ describe("screenSessionFlaggersUseCase", () => {
     )
     expect(fakeDeps.rateLimitCalls).toContainEqual(
       expect.objectContaining({ flaggerSlug: "frustration", reason: "hinted" }),
+    )
+    const screeningDecision = screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")
+    expect(screeningDecision).toMatchObject({
+      selected: true,
+      reason: "hinted",
+      inclusionProbability: 1,
+      hintKinds: ["pattern:frustration"],
+    })
+    expect(screeningDecision).not.toHaveProperty("outcome")
+    expect(result.classifications[0]?.screeningSelection).toEqual(
+      expect.objectContaining({ decisionId: screeningDecision?.decisionId, reason: "hinted", selected: true }),
     )
   })
 

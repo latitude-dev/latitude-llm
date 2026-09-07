@@ -176,7 +176,7 @@ does not display per-session dimension scores.
   [`flaggers.md`](flaggers.md#screening-decisions), including organization and project scope,
   deterministic decision id, analysis hash, artifact version, attempt, revision version, selection,
   selection reason, inclusion probability, hint kinds, outcome, timestamp, and retention TTL.
-- [ ] **P2-22** Write the initial decision before sampled model execution. A terminal outcome appends
+- [x] **P2-22** Write the initial decision before sampled model execution. A terminal outcome appends
   a higher revision with the same decision and selection fields.
 - [ ] **P2-23** Reuse one sampling draw and inclusion probability across retries. Increment attempts
   without redrawing selection, and preserve the existing human-readable summary log.

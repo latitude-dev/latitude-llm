@@ -10,6 +10,8 @@ import {
   FLAGGER_SAMPLED_RATE_LIMIT,
   type FlaggerAnnotateOutput,
   type FlaggerClassificationReason,
+  type FlaggerScreeningSelection,
+  recordFlaggerScreeningOutcomeUseCase,
   type ScreenSessionFlaggersResult,
   type SessionHint,
   saveFlaggerAnnotationUseCase,
@@ -19,6 +21,7 @@ import { OrganizationId } from "@domain/shared"
 import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { checkRedisRateLimit, RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
+  FlaggerScreeningDecisionRepositoryLive,
   ScoreAnalyticsRepositoryLive,
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
@@ -28,11 +31,20 @@ import {
 } from "@platform/db-clickhouse"
 import { FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
+import { Context as ActivityContext } from "@temporalio/activity"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { billingMeteringRepositoriesLive, withActivityAIMetering } from "./ai-metering.ts"
 
 const logger = createLogger("workflows-flagger-session")
+
+const currentActivityAttempt = () => {
+  try {
+    return ActivityContext.current().info.attempt
+  } catch {
+    return 1
+  }
+}
 
 const rateLimitBucket = (reason: FlaggerClassificationReason, hasPositiveHints: boolean) => {
   if (reason === "hinted") return { bucket: "hinted", limit: FLAGGER_HINTED_RATE_LIMIT }
@@ -69,7 +81,7 @@ export const screenSessionFlaggers = async (
   input: ScreenSessionFlaggersActivityInput,
 ): Promise<ScreenSessionFlaggersResult> =>
   Effect.runPromise(
-    screenSessionFlaggersUseCase(input, { checkRateLimit }).pipe(
+    screenSessionFlaggersUseCase({ ...input, attempt: currentActivityAttempt() }, { checkRateLimit }).pipe(
       withPostgres(
         Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
         getPostgresClient(),
@@ -78,6 +90,7 @@ export const screenSessionFlaggers = async (
       withClickHouse(
         Layer.mergeAll(
           ScoreAnalyticsRepositoryLive,
+          FlaggerScreeningDecisionRepositoryLive,
           SessionRepositoryLive,
           SpanRepositoryLive,
           SessionAnalysisRepositoryLive,
@@ -120,6 +133,7 @@ export interface ClassifySessionFlaggerActivityInput {
   readonly sessionId: string
   readonly flaggerSlug: string
   readonly hints: readonly SessionHint[]
+  readonly screeningSelection?: FlaggerScreeningSelection | undefined
 }
 
 export const classifySessionFlagger = async (
@@ -132,6 +146,24 @@ export const classifySessionFlagger = async (
         projectId: input.projectId,
         label: "flagger-classify",
       }),
+      Effect.tap((result) =>
+        input.screeningSelection
+          ? recordFlaggerScreeningOutcomeUseCase({
+              selection: input.screeningSelection,
+              attempt: currentActivityAttempt(),
+              outcome: result.matched ? "matched" : "unmatched",
+            })
+          : Effect.void,
+      ),
+      Effect.tapError(() =>
+        input.screeningSelection
+          ? recordFlaggerScreeningOutcomeUseCase({
+              selection: input.screeningSelection,
+              attempt: currentActivityAttempt(),
+              outcome: "error",
+            })
+          : Effect.void,
+      ),
       withPostgres(
         Layer.mergeAll(FlaggerRepositoryLive, billingMeteringRepositoriesLive),
         getPostgresClient(),
@@ -139,7 +171,7 @@ export const classifySessionFlagger = async (
       ),
       Effect.provide(RedisBillingSpendReservationLive(getRedisClient())),
       withClickHouse(
-        Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive),
+        Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive, FlaggerScreeningDecisionRepositoryLive),
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
