@@ -13,7 +13,7 @@
     "@cloudflare/think": "^0.12.1",
     "@latitude-data/telemetry": "file:../..",
     "@opentelemetry/api": "^1.9.1",
-    "agents": "^0.17.1",
+    "agents": "^0.22.0",
     "ai": "^6.0.214",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
