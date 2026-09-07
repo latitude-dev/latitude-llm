@@ -15,6 +15,8 @@ export const readSessionAssessmentBatch = (input: SessionAssessmentBulkScope) =>
     const telemetrySource = yield* SessionAssessmentBulkTelemetrySource
     const judgmentSource = yield* SessionAssessmentBulkJudgmentSource
     const telemetry = yield* telemetrySource.read(input)
+    if (telemetry.length === 0) return []
+
     const judgments = yield* judgmentSource.read({
       ...input,
       sessions: telemetry.map(({ session }) => ({

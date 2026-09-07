@@ -219,7 +219,7 @@ does not display per-session dimension scores.
 
 ### Step 7: expose the operation
 
-- [ ] **P2-35** Implement the project-scoped session-assessment use-case. Resolve all trace ids for
+- [x] **P2-35** Implement the project-scoped session-assessment use-case. Resolve all trace ids for
   the session, include orphan score relationships where authorized, and enforce organization and
   project scope on every source read.
 - [ ] **P2-36** Add stable cursor pagination over chronology plus `evidenceKey`, with complete

@@ -84,3 +84,7 @@ export {
   resolveSessionAssessmentItems,
 } from "./resolver/resolve-assessment-findings.ts"
 export { resolveSessionAssessment } from "./resolver/resolve-session-assessment.ts"
+export {
+  type GetSessionAssessmentInput,
+  getSessionAssessment,
+} from "./use-cases/get-session-assessment.ts"
