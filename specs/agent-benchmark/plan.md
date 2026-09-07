@@ -172,7 +172,7 @@ does not display per-session dimension scores.
 
 ### Step 5: persist examination coverage
 
-- [ ] **P2-21** Add the append-only flagger screening-decision ClickHouse table from
+- [x] **P2-21** Add the append-only flagger screening-decision ClickHouse table from
   [`flaggers.md`](flaggers.md#screening-decisions), including organization and project scope,
   deterministic decision id, analysis hash, artifact version, attempt, revision version, selection,
   selection reason, inclusion probability, hint kinds, outcome, timestamp, and retention TTL.

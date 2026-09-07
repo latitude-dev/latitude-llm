@@ -83,6 +83,12 @@ trace-end (90s debounce) ─► session-end (5-min session debounce)
 
 The activity logs one summary line per pass (decision counts, fired hint kinds, started classifications) — the hinted-vs-sampled match-rate comparison is readable off plain logs; there is no dedicated analytics pipeline.
 
+### Screening decision history
+
+Every screening path is represented by an append-only row in ClickHouse. `flagger_screening_decisions` records the organization, project, session generation, flagger, stable decision id, screening artifact version, attempt, revision, selection path, inclusion probability, hint kinds, terminal outcome, and source retention period. The decision id is stable for one organization × project × session × flagger × analysis hash, so retries and terminal updates append revisions instead of mutating earlier evidence.
+
+The table keeps source data for the session retention period plus the standard 30-day deletion buffer. Readers must scope queries by organization and project, collapse revisions for each decision, and then select the newest analysis generation for each session × flagger. A newer pending or failed generation remains authoritative; readers must not fall back to a successful older generation.
+
 ### Sampling
 
 Deterministic hash, not RNG (`@domain/shared/deterministic-sampling`): stable hash of `[org, project, slug, sessionId, analysisHash]` compared against the sampling %. Each session **generation** re-rolls once; re-published jobs for the same generation decide identically.

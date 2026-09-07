@@ -2598,6 +2598,9 @@ importers:
       '@domain/experiments':
         specifier: workspace:*
         version: link:../../domain/experiments
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../../domain/flaggers
       '@domain/memories':
         specifier: workspace:*
         version: link:../../domain/memories
