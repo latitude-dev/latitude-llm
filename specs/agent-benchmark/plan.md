@@ -183,7 +183,7 @@ does not display per-session dimension scores.
 - [x] **P2-24** Implement repository consolidation that selects the latest revision of the newest
   analysis generation per session and flagger at the query cutoff. Never fall back to an older
   successful generation when the newest is pending or failed.
-- [ ] **P2-25** Map disabled, suppressed, missing-flagger, and missing-context policy outcomes to the
+- [x] **P2-25** Map disabled, suppressed, missing-flagger, and missing-context policy outcomes to the
   single public coverage limitation `skipped`. Preserve statistically distinct `notSelected`,
   `rateLimited`, `executionFailed`, and missing-telemetry states.
 - [ ] **P2-26** Add organization- and project-scoped coverage repositories plus the Settings view for

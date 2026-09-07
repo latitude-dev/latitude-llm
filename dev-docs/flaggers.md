@@ -91,6 +91,8 @@ The table keeps source data for the session retention period plus the standard 3
 
 Repository reads are cutoff-aware and perform those steps in that order. A decision revision is ordered by version, then attempt, then timestamp. An analysis generation is ordered by the earliest row for its decision, not its latest terminal update, so a slow result from an older generation cannot displace a newer pending generation.
 
+Public coverage deliberately hides internal policy subreasons: disabled flaggers, suppressor decisions, unprovisioned flaggers, and missing required context all become `skipped`. Sampling losses are `notSelected`; rate-limit rejection is `rateLimited`; a terminal error is `executionFailed`; an initial selection without a terminal revision is `pending`; and no compatible decision is `missingTelemetry`. Only a selected decision with a non-error terminal outcome is `examined`.
+
 The screening activity writes version 1 for every per-flagger selection before it returns classification requests to the workflow. Deterministic matches and misses are already terminal in that row. A model classification activity appends version 2 with `matched`, `unmatched`, or `error`, reusing the decision id and every selection field from version 1. These writes happen inside the existing activities, so the workflow history does not gain a new activity command.
 
 ### Sampling

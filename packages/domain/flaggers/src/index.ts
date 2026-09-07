@@ -39,6 +39,16 @@ export {
   unreadableDeterministicFlaggerFindingRead,
 } from "./entities/flagger-finding.ts"
 export {
+  FLAGGER_SCREENING_COVERAGE_LIMITATIONS,
+  type FlaggerScreeningCoverage,
+  type FlaggerScreeningCoverageLimitation,
+  type FlaggerScreeningSelectionEvidence,
+  flaggerScreeningCoverageLimitationSchema,
+  flaggerScreeningCoverageSchema,
+  flaggerScreeningSelectionEvidenceSchema,
+  resolveFlaggerScreeningCoverage,
+} from "./entities/flagger-screening-coverage.ts"
+export {
   type FlaggerScreeningDecision,
   type FlaggerScreeningOutcome,
   type FlaggerScreeningSelection,
