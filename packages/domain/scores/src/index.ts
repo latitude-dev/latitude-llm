@@ -1,5 +1,6 @@
 export {
   ANNOTATION_SCORE_PARTIAL_SOURCE_IDS,
+  FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH,
   SCORE_PUBLICATION_DEBOUNCE,
   SCORE_SOURCE_ID_MAX_LENGTH,
   SCORE_SOURCE_TYPES,
@@ -30,13 +31,19 @@ export {
   type EvaluationScoreMetadata,
   evaluationScoreMetadataSchema,
   evaluationScoreSchema,
+  type FlaggerFindingKey,
+  type FlaggerPath,
+  flaggerFindingKeySchema,
+  flaggerPathSchema,
   type Score,
   type ScoreMetadata,
   type ScoreSourceType,
+  type ScoringArtifactVersion,
   scoreMetadataSchemas,
   scoreSchema,
   scoreSourceTypeSchema,
   scoreValueSchema,
+  scoringArtifactVersionSchema,
 } from "./entities/score.ts"
 export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"
 export { isImmutableScore } from "./helpers.ts"

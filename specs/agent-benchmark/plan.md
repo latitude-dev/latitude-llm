@@ -154,7 +154,7 @@ does not display per-session dimension scores.
 
 ### Step 4: add minimal score provenance and linkage
 
-- [ ] **P2-16** Extend flagger-authored annotation metadata only with the stable source-finding link
+- [x] **P2-16** Extend flagger-authored annotation metadata only with the stable source-finding link
   and scoring-artifact provenance needed for persisted classifier or discovery results. Keep legacy
   metadata valid and optional.
 - [ ] **P2-17** Ensure a deterministic discovery score references its selected `findingKey`; the
