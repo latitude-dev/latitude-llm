@@ -918,4 +918,79 @@ describe("SignalRepositoryLive.save promotion latch", () => {
 
     expect((await load(id))?.promotedAt?.toISOString()).toBe(PROMOTED_AT.toISOString())
   })
+
+  it("persists classified score evidence when a candidate is promoted", async () => {
+    const id = "sig-evdnc".padEnd(24, "e")
+    const scoreEvidence: SignalScoreEvidence[] = [{ scoreDimension: "safety", role: "exposure" }]
+    await pg.db.insert(signals).values({
+      id,
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      slug: "LAT-EVDN",
+      name: "candidate",
+      description: "candidate description",
+      source: "flagger",
+      origin: "system",
+      scoreEvidence: [],
+      promotedAt: null,
+      createdAt: WINDOW_FROM,
+      updatedAt: WINDOW_FROM,
+    })
+
+    const row = await load(id)
+    if (!row) throw new Error("seed row missing")
+
+    await run(
+      Effect.gen(function* () {
+        yield* (yield* SignalRepository).save({
+          ...row,
+          name: "Unsafe tool output",
+          description: "Tool output exposes unsafe input.",
+          scoreEvidence,
+          promotedAt: PROMOTED_AT,
+          updatedAt: PROMOTED_AT,
+        } as never)
+      }),
+    )
+
+    const after = await load(id)
+    expect(after?.promotedAt?.toISOString()).toBe(PROMOTED_AT.toISOString())
+    expect(after?.scoreEvidence).toEqual(scoreEvidence)
+  })
+
+  it("keeps latched score evidence when a caller saves a stale empty copy", async () => {
+    const id = "sig-evlch".padEnd(24, "h")
+    const scoreEvidence: SignalScoreEvidence[] = [{ scoreDimension: "outcome", role: "taskOutcome" }]
+    await pg.db.insert(signals).values({
+      id,
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      slug: "LAT-EVLC",
+      name: "classified",
+      description: "classified description",
+      source: "flagger",
+      origin: "system",
+      scoreEvidence,
+      promotedAt: PROMOTED_AT,
+      createdAt: WINDOW_FROM,
+      updatedAt: WINDOW_FROM,
+    })
+
+    const stale = await load(id)
+    if (!stale) throw new Error("seed row missing")
+
+    await run(
+      Effect.gen(function* () {
+        yield* (yield* SignalRepository).save({
+          ...stale,
+          scoreEvidence: [],
+          name: "renamed by a stale writer",
+        } as never)
+      }),
+    )
+
+    const after = await load(id)
+    expect(after?.name).toBe("renamed by a stale writer")
+    expect(after?.scoreEvidence).toEqual(scoreEvidence)
+  })
 })
