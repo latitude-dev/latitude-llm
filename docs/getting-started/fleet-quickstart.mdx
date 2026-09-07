@@ -1,0 +1,110 @@
+---
+title: Your first 30 minutes with a fleet
+description: Connect two or more agents as separate projects, watch traces arrive, set up your first signal, and know exactly when Behaviors and discovery will start paying off.
+---
+
+This guide is for teams running **several agents** — a support agent, a research agent, a couple of background workers — who want all of them in Latitude from the start. In 30 minutes you will have each agent reporting to its own project, live traces you can read, and a first signal that catches real failures.
+
+Just as important: this guide is honest about what you will *not* see in the first 30 minutes. Some of Latitude's most useful surfaces (Behaviors, signal discovery) are built from analyzed traffic and need volume and a little time. Knowing when they populate is the difference between "it's warming up" and "it's broken."
+
+## Prerequisites
+
+- A Latitude account ([console.latitude.so](https://console.latitude.so/login))
+- Two or more agents you can run, each using a supported provider or framework
+
+## Minutes 0–5: one project per agent
+
+Create a project for each agent. Signal discovery, behaviors, search, evaluations, and flaggers are all scoped to a project, and mixing unrelated agents in one project muddies all of them: frustration in a support agent and frustration in a code-review agent are different failures and should be tracked separately.
+
+The rule of thumb: **one project per agent or product surface**. Keep agents together only when they share the same user experience and should share signal discovery. The full reasoning and edge cases are in [Group traces by project](../observability/guides/group-traces-by-project).
+
+Name each project after the agent it monitors — `support-agent`, `research-agent` — so the project switcher reads like your fleet roster.
+
+## Minutes 5–15: connect telemetry, routed per agent
+
+Set up tracing for each agent. The fastest path is your coding agent: paste this into Claude Code, Cursor, Codex, or any other agent, once per codebase:
+
+```text
+Install the `latitude-setup` skill from `github.com/latitude-dev/skills` and use it to set up Latitude tracing here, following best practices.
+```
+
+For manual setup, use the [TypeScript](../telemetry/typescript) or [Python](../telemetry/python) SDK, or the [OpenTelemetry exporter](../telemetry/otel-exporter) for other languages. See [Start tracing](../telemetry/start-tracing).
+
+The fleet-specific part is **routing each agent's traces to its own project**:
+
+- **One agent per process**: set `project` once, in the SDK constructor or the `X-Latitude-Project` export header.
+- **Several agents in one process**: set `project` per agent run, through the `capture()` option or the `latitude.project` span attribute.
+
+Both patterns, in every SDK and raw OTEL, are shown in [Group traces by project](../observability/guides/group-traces-by-project#sdk-examples).
+
+While you are in there, send two more identifiers with `capture()` — they cost nothing now and unlock whole views later:
+
+- **`sessionId`**: groups traces into multi-turn conversations. Without it there is no [Sessions](../observability/sessions) view, and behaviors have nothing to cluster.
+- **`userId`**: powers the [Users](../observability/users) view and per-signal affected-user counts.
+
+If some of your agents share a codebase, [tags](../observability/features/tags) (for example `["production", "support-agent"]`) give you an extra filterable label on top of the project split.
+
+## Minutes 15–20: watch traces arrive
+
+Run one real request through each agent. Then open each project in Latitude: the **Sessions** page is the project's landing view, and the tab toggle at the top switches to **Traces**.
+
+The first trace should appear **within a few seconds** of the agent call. If it does not:
+
+- check the API key and project routing (a typo in `latitude.project` silently creates traces in the wrong place — check your other projects and the project switcher)
+- check the [provider or framework page](../telemetry/start-tracing) for instrumentation caveats
+
+One timing detail worth knowing up front: a trace appears immediately, but Latitude waits until it **stops receiving new spans** (on the order of a couple of minutes of span inactivity) before treating it as complete. Search indexing, [flaggers](../annotations/flaggers), evaluations, and signal discovery all run on completed traces, so a trace you can already read may take a few more minutes to become searchable and scored. Sessions settle similarly: a session is considered ended after roughly five minutes without new activity, and session-level analysis runs after that.
+
+## Minutes 20–25: per-agent and portfolio views
+
+Each project's sidebar is your **per-agent view**. Under **Observe** you get [Sessions](../observability/sessions), [Users](../observability/users), [Tools](../observability/tools), [Memory](../observability/memory), and Cost for that agent alone; under **Understand**, its [Signals](../signals/overview) and [Behaviors](../behaviours/overview). Because you split by project, every number you see belongs to one agent — a spike in tool errors points at a specific agent, not the fleet average.
+
+For the **portfolio view** across agents, be aware Latitude does not ship a cross-project dashboard in the web app. The supported pattern is [Artifacts](../more/artifacts): everything in the web app is also exposed through the [MCP](./mcp), [CLI](./cli), and [API](../more/api-reference), so your coding agent can pull numbers from every project and build a fleet report or a refreshable dashboard. A useful first prompt once traffic is flowing:
+
+```text
+Build an artifact comparing all my Latitude projects over the last 7 days: traces, error rate, p95 latency, and spend per project.
+```
+
+Day to day, the project switcher plus consistent project naming is the low-tech portfolio view — and it works from minute one.
+
+## Minutes 25–30: your first signal
+
+Signal *discovery* — Latitude grouping failures it finds on its own — needs failed scores to accumulate, so it starts paying off after real traffic, not in your first half hour. Your project's default [flaggers](../annotations/flaggers) are already annotating completed traces for frustration, refusals, tool errors, and other common failures, and discovered signals will form from those over the coming days.
+
+What you *can* have working before minute 30 is a signal you define yourself. On the Signals page of your busiest agent's project, select **New signal** and choose **Configure manually** with a **set of conditions** — conditions are free, deterministic, and run instantly on every new session, so they work at any traffic volume:
+
+- **Tool failed** (leave the tool name empty to match any tool) — the classic first signal for an agent fleet, catching every session where a tool call errored
+- or **Error** — sessions that ended in an error state
+- or **Metric**: cost or duration above a threshold you'd want to know about
+
+Set sampling to 100% (conditions cost nothing), use the **Test** step to preview it against the sessions you just sent, and give it a name your team will recognize. From now on every matching session is counted, trended, and inspectable. The full builder walkthrough is in [Create a signal](../signals/create).
+
+Repeat in your other projects if their failure modes differ — that per-agent scoping is exactly why you split them.
+
+## What fills in later, and when
+
+Everything above is live within your first session. The rest of the product builds itself from analyzed traffic, on roughly this schedule:
+
+| Surface | When it populates |
+| --- | --- |
+| Traces | Seconds after each agent call |
+| Search, flaggers, scores | Minutes after a trace completes (a trace completes a couple of minutes after its last span) |
+| Sessions analysis | After a session ends — about five minutes of inactivity — plus processing time |
+| [Behaviors](../behaviours/overview) (Topics) | After roughly **15 analyzed sessions**, on the next scheduled grouping pass — passes run every few hours, so expect first groups the same day at moderate traffic, or after a few days at a trickle |
+| Discovered [signals](../signals/overview) | As failed scores accumulate — days of real traffic, faster if you [annotate](../annotations/overview) failures yourself |
+| System [monitors](../monitors/overview) | Active immediately; they notify when signals are discovered, escalate, or regress, so they fire once signals exist |
+
+Two practical consequences:
+
+- **A blank Behaviors page in your first hours is expected**, not a failure. It is waiting on session volume and the next grouping pass. See [when behaviors populate](../behaviours/overview#when-behaviors-populate) for what to check if it stays empty.
+- **Don't judge signal discovery on day one.** Until failed scores accumulate, the Signals page shows only what you created yourself and what flaggers have caught so far. You can speed discovery up considerably by spending ten minutes annotating bad sessions with specific feedback — human annotations are a primary discovery input.
+
+If a surface stays empty well past these windows with steady traffic flowing — for example, no behaviors after a day and hundreds of sessions — something may genuinely be stuck; write to [hello@latitude.so](mailto:hello@latitude.so) and the team can check your project's analysis pipeline.
+
+## Next steps
+
+- [Group traces by project](../observability/guides/group-traces-by-project): the full routing reference for fleets
+- [Cost](../observability/cost): find what each agent, model, and conversation costs
+- [How to use Latitude](./how-to-use-latitude): the observe → understand → refine loop once data is flowing
+- [Artifacts](../more/artifacts): build cross-project fleet reports and dashboards
+- [Monitors](../monitors/overview): get notified in Slack or email when a signal fires

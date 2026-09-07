@@ -109,6 +109,7 @@
         "group": "Getting Started",
         "pages": [
           "telemetry/start-tracing",
+          "getting-started/fleet-quickstart",
           "getting-started/migrate-from-v1",
           "telemetry/memory",
           {
@@ -194,6 +195,7 @@
           "observability/users",
           "observability/tools",
           "observability/memory",
+          "observability/cost",
           "observability/traces",
           "observability/spans",
           "observability/tool-calls",
