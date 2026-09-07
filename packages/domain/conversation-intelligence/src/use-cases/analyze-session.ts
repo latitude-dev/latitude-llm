@@ -20,6 +20,7 @@ import {
   hashMessageContent,
   MessageEmbeddingRepository,
   type MessageEmbeddingUpsert,
+  type SessionDetail,
   SessionRepository,
   sessionConversationMessages,
   stripLoneSurrogates,
@@ -61,7 +62,11 @@ import {
 import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
 import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
 import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
-import { type SemanticSegmentationTurn, segmentSemanticMoments } from "../semantic-segmentation.ts"
+import {
+  type SemanticMomentSegment,
+  type SemanticSegmentationTurn,
+  segmentSemanticMoments,
+} from "../semantic-segmentation.ts"
 
 export interface AnalyzeSessionInput {
   readonly organizationId: string
@@ -540,10 +545,72 @@ const cosineSimilarity = (a: readonly number[], b: readonly number[]): number =>
   return a.reduce((sum, value, index) => sum + value * (b[index] ?? 0), 0) / denominator
 }
 
+type AnchorMatch = {
+  readonly turn: SemanticSegmentationTurn
+  readonly positiveScore: number
+  readonly margin: number
+}
+
+const sourceTurnsForAnchor = (
+  segment: SemanticMomentSegment,
+  turnsByIndex: ReadonlyMap<number, SemanticSegmentationTurn>,
+  roles: EmbeddedMomentLabelAnchor["config"]["roles"],
+): SemanticSegmentationTurn[] =>
+  segment.turnIndexes.flatMap((index) => {
+    const turn = turnsByIndex.get(index)
+    return turn && roles.includes(turn.role) ? [turn] : []
+  })
+
+const scoreTurnAgainstAnchors = (
+  turn: SemanticSegmentationTurn,
+  positive: readonly number[][],
+  contrast: readonly number[][],
+): Omit<AnchorMatch, "turn"> => {
+  const positiveScore = Math.max(...positive.map((anchor) => cosineSimilarity(turn.embedding, anchor)), 0)
+  const contrastScore = Math.max(...contrast.map((anchor) => cosineSimilarity(turn.embedding, anchor)), 0)
+  return { positiveScore, margin: positiveScore - contrastScore }
+}
+
+const isStrongerAnchorMatch = (candidate: AnchorMatch, current: AnchorMatch | null): boolean =>
+  current === null || candidate.positiveScore + candidate.margin > current.positiveScore + current.margin
+
+const bestMatchingTurn = (
+  sourceTurns: readonly SemanticSegmentationTurn[],
+  positive: readonly number[][],
+  contrast: readonly number[][],
+  config: EmbeddedMomentLabelAnchor["config"],
+): AnchorMatch | null => {
+  let best: AnchorMatch | null = null
+  for (const turn of sourceTurns) {
+    const scored = scoreTurnAgainstAnchors(turn, positive, contrast)
+    if (scored.positiveScore < config.threshold || scored.margin < config.margin) continue
+    const candidate = { turn, ...scored }
+    if (isStrongerAnchorMatch(candidate, best)) best = candidate
+  }
+  return best
+}
+
+const toAnchorDetectedMoment = (
+  best: AnchorMatch,
+  config: EmbeddedMomentLabelAnchor["config"],
+  messagesByIndex: ReadonlyMap<number, NormalizedMessage>,
+): z.infer<typeof extractionMomentSchema> => {
+  const evidence = stripLoneSurrogates((messagesByIndex.get(best.turn.index)?.text ?? best.turn.content).slice(0, 240))
+  return {
+    kind: config.kind,
+    firstMessageIndex: best.turn.index,
+    lastMessageIndex: best.turn.index,
+    actor: config.actor,
+    summary: config.summary,
+    evidence,
+    confidence: Math.max(0, Math.min(1, 0.5 + best.margin / 2 + best.positiveScore / 2)),
+  }
+}
+
 const detectEmbeddingAnchorMoments = (input: {
   readonly messages: readonly NormalizedMessage[]
   readonly turns: readonly SemanticSegmentationTurn[]
-  readonly segments: ReturnType<typeof segmentSemanticMoments>
+  readonly segments: readonly SemanticMomentSegment[]
 }): Effect.Effect<readonly z.infer<typeof extractionMomentSchema>[], unknown, AI> =>
   Effect.gen(function* () {
     const embeddedAnchors = yield* resolveEmbeddedMomentLabelAnchors()
@@ -553,45 +620,333 @@ const detectEmbeddingAnchorMoments = (input: {
 
     for (const segment of input.segments) {
       for (const { config, positive, contrast } of embeddedAnchors) {
-        const sourceTurns = segment.turnIndexes.flatMap((index) => {
-          const turn = turnsByIndex.get(index)
-          return turn && config.roles.includes(turn.role) ? [turn] : []
-        })
+        const sourceTurns = sourceTurnsForAnchor(segment, turnsByIndex, config.roles)
         if (sourceTurns.length === 0) continue
         // Score each turn individually instead of the segment centroid: with
         // multi-turn moments the centroid dilutes localized events below the
         // anchor threshold (QA: 184 labels across 500 support sessions, with
         // resolution detected 3 times). The label anchors to the best turn.
-        let best: {
-          readonly turn: SemanticSegmentationTurn
-          readonly positiveScore: number
-          readonly margin: number
-        } | null = null
-        for (const turn of sourceTurns) {
-          const positiveScore = Math.max(...positive.map((anchor) => cosineSimilarity(turn.embedding, anchor)), 0)
-          const contrastScore = Math.max(...contrast.map((anchor) => cosineSimilarity(turn.embedding, anchor)), 0)
-          const margin = positiveScore - contrastScore
-          if (positiveScore < config.threshold || margin < config.margin) continue
-          if (!best || positiveScore + margin > best.positiveScore + best.margin) {
-            best = { turn, positiveScore, margin }
-          }
-        }
+        const best = bestMatchingTurn(sourceTurns, positive, contrast, config)
         if (!best) continue
-        const evidence = stripLoneSurrogates(
-          (messagesByIndex.get(best.turn.index)?.text ?? best.turn.content).slice(0, 240),
-        )
-        labels.push({
-          kind: config.kind,
-          firstMessageIndex: best.turn.index,
-          lastMessageIndex: best.turn.index,
-          actor: config.actor,
-          summary: config.summary,
-          evidence,
-          confidence: Math.max(0, Math.min(1, 0.5 + best.margin / 2 + best.positiveScore / 2)),
-        })
+        labels.push(toAnchorDetectedMoment(best, config, messagesByIndex))
       }
     }
     return labels
+  })
+
+type SkippedConversationStatus = "skipped_empty" | "skipped_too_short" | "skipped_non_conversation"
+
+const failedSessionAnalysisResult = (input: AnalyzeSessionInput): AnalyzeSessionResult => ({
+  action: "recorded",
+  status: "failed",
+  momentCount: 0,
+  analysisHash: failedResultAnalysisKey(input.triggeringTraceId),
+})
+
+const triggeringTraceIds = (triggeringTraceId: string) =>
+  triggeringTraceId.length === 32 ? [TraceId(triggeringTraceId)] : []
+
+const upsertFailedSessionAnalysis = (input: AnalyzeSessionInput, statusReason: string) =>
+  Effect.gen(function* () {
+    const analyses = yield* SessionAnalysisRepository
+    const startTime = new Date(input.triggeringStartTime)
+    yield* analyses.upsert({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      sessionId: SessionId(input.sessionId),
+      startTime,
+      endTime: startTime,
+      traceIds: triggeringTraceIds(input.triggeringTraceId),
+      analysisHash: "0".repeat(64),
+      analysisStatus: "failed",
+      statusReason,
+      retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
+      indexedAt: new Date(),
+    })
+    return failedSessionAnalysisResult(input)
+  })
+
+const recoverFromAnalyzeSessionError = (input: AnalyzeSessionInput, error: unknown) => {
+  if (error instanceof MomentClassifierError) return Effect.fail(error)
+  return upsertFailedSessionAnalysis(input, error instanceof Error ? error.message : "Session analysis failed")
+}
+
+const skippedConversationAnalysis = (
+  messages: readonly NormalizedMessage[],
+  document: string,
+): { readonly analysisStatus: SkippedConversationStatus; readonly statusReason: string } | null => {
+  if (messages.length === 0 || document.length === 0) {
+    return { analysisStatus: "skipped_empty", statusReason: "No semantic messages" }
+  }
+  if (document.length < CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH) {
+    return { analysisStatus: "skipped_too_short", statusReason: "Below content floor" }
+  }
+  if (!isConversation(messages)) {
+    return {
+      analysisStatus: "skipped_non_conversation",
+      statusReason: "Session does not contain both user and assistant messages",
+    }
+  }
+  return null
+}
+
+const recordSkippedConversationAnalysis = (
+  baseAnalysis: Omit<SessionAnalysis, "analysisStatus">,
+  skip: { readonly analysisStatus: SkippedConversationStatus; readonly statusReason: string },
+) =>
+  Effect.gen(function* () {
+    const analyses = yield* SessionAnalysisRepository
+    yield* analyses.upsert({ ...baseAnalysis, ...skip })
+    return {
+      action: "recorded",
+      status: skip.analysisStatus,
+      momentCount: 0,
+      analysisHash: baseAnalysis.analysisHash,
+    } satisfies AnalyzeSessionResult
+  })
+
+const resolveSemanticMomentTraceId = (traceIds: readonly TraceId[], triggeringTraceId: string) => {
+  const first = traceIds[0]
+  if (first !== undefined) return Effect.succeed(first)
+  if (triggeringTraceId.length === 32) return Effect.succeed(TraceId(triggeringTraceId))
+  return hash(triggeringTraceId).pipe(Effect.map((value) => TraceId(value.slice(0, 32))))
+}
+
+const toSemanticMomentRow = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly sessionId: SessionId
+  readonly analysisHash: string
+  readonly session: SessionDetail
+  readonly traceIds: readonly TraceId[]
+  readonly triggeringTraceId: string
+  readonly segment: SemanticMomentSegment
+  readonly retentionDays: number
+  readonly indexedAt: Date
+}) =>
+  Effect.gen(function* () {
+    const momentId = yield* hash(
+      `${input.analysisHash}\0semantic\0${input.segment.firstTurnIndex}\0${input.segment.lastTurnIndex}`,
+    )
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      sessionId: input.sessionId,
+      analysisHash: input.analysisHash,
+      momentId,
+      // The schema requires a 32-char trace id; when the session has no
+      // trace details and the triggering id is non-standard, a stable
+      // 32-hex surrogate keeps the analysis from failing permanently.
+      traceId: yield* resolveSemanticMomentTraceId(input.traceIds, input.triggeringTraceId),
+      startTime: input.session.startTime,
+      endTime: input.session.endTime,
+      firstMessageIndex: input.segment.firstTurnIndex,
+      lastMessageIndex: input.segment.lastTurnIndex,
+      // The segment's own reason is kept — overwriting the last segment
+      // with "session_end" destroyed genuine max_length/semantic_drift
+      // boundaries (and labeled single-moment sessions as "end").
+      boundaryReason: input.segment.boundaryReason,
+      embedding: [...input.segment.centroidEmbedding],
+      coherenceScore: input.segment.coherenceScore,
+      retentionDays: input.retentionDays,
+      indexedAt: input.indexedAt,
+    } satisfies SessionSemanticMoment
+  })
+
+const semanticMomentDistance = (moment: DetectedMoment, segment: SessionSemanticMoment): number =>
+  Math.min(
+    Math.abs(moment.firstMessageIndex - segment.lastMessageIndex),
+    Math.abs(segment.firstMessageIndex - moment.lastMessageIndex),
+  )
+
+const findLabelSemanticMoment = (
+  moment: DetectedMoment,
+  semanticMomentRows: readonly SessionSemanticMoment[],
+): SessionSemanticMoment | undefined =>
+  semanticMomentRows.find(
+    (segment) =>
+      moment.firstMessageIndex >= segment.firstMessageIndex && moment.lastMessageIndex <= segment.lastMessageIndex,
+  ) ??
+  [...semanticMomentRows].sort(
+    (left, right) => semanticMomentDistance(moment, left) - semanticMomentDistance(moment, right),
+  )[0]
+
+const toLabelRow = (input: {
+  readonly moment: DetectedMoment
+  readonly semanticMomentRows: readonly SessionSemanticMoment[]
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly sessionId: SessionId
+  readonly analysisHash: string
+  readonly retentionDays: number
+  readonly indexedAt: Date
+}) =>
+  Effect.gen(function* () {
+    // Containment first; otherwise the nearest segment by index distance
+    // (never blindly the first moment of the session).
+    const semanticMoment = findLabelSemanticMoment(input.moment, input.semanticMomentRows)
+    if (semanticMoment === undefined) return null
+    const labelId = yield* hash(`${input.moment.analysisHash}\0label\0${input.moment.momentId}`)
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      sessionId: input.sessionId,
+      analysisHash: input.analysisHash,
+      labelId,
+      momentId: semanticMoment.momentId,
+      kind: input.moment.kind,
+      actor: input.moment.actor,
+      firstMessageIndex: input.moment.firstMessageIndex,
+      lastMessageIndex: input.moment.lastMessageIndex,
+      summary: input.moment.summary,
+      evidence: input.moment.evidence,
+      confidence: input.moment.confidence,
+      retentionDays: input.retentionDays,
+      indexedAt: input.indexedAt,
+    } satisfies SessionMomentLabel
+  })
+
+const buildSessionTaxonomyObservations = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly sessionId: SessionId
+  readonly analysisHash: string
+  readonly session: SessionDetail
+  readonly messages: readonly NormalizedMessage[]
+  readonly previousTaxonomyObservations: readonly TaxonomyMomentObservation[]
+  readonly indexedAt: Date
+}) =>
+  Effect.gen(function* () {
+    const projectionText = buildSessionConversationProjectionText(input.messages)
+    if (projectionText.length === 0) return [] as TaxonomyMomentObservation[]
+
+    const embeddingConfig = yield* resolveEmbeddingConfig()
+    const dimension = "topic" as const
+    const sessionMomentId = (yield* hash(`${input.sessionId}\0session_topic`)).slice(0, 24)
+    const projectionHash = yield* hash(
+      `${input.sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0${embeddingConfig.model}\0${projectionText}`,
+    )
+    const observationId = (yield* hash(
+      `${input.organizationId}\0${input.projectId}\0${input.sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0observation`,
+    )).slice(0, 24)
+    const previousObservation = input.previousTaxonomyObservations.find(
+      (observation) => observation.observationId === observationId && observation.projectionHash === projectionHash,
+    )
+    const projectionVector =
+      previousObservation?.embedding ??
+      (yield* Effect.gen(function* () {
+        const ai = yield* AI
+        const projectionEmbedding = yield* ai.embed({
+          text: projectionText,
+          provider: embeddingConfig.provider,
+          model: embeddingConfig.model,
+          inputType: "document",
+        })
+        return normalizeTaxonomyEmbedding(projectionEmbedding.embedding)
+      }))
+    if (projectionVector.length === 0) return [] as TaxonomyMomentObservation[]
+    const decision = yield* routeToDeepestClusterUseCase({
+      projectId: input.projectId,
+      dimension,
+      queryVector: projectionVector,
+    })
+
+    return [
+      {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        observationId,
+        sessionId: input.sessionId,
+        analysisHash: input.analysisHash,
+        momentId: sessionMomentId,
+        projectionMethod: TaxonomyProjectionMethod.MomentTextEmbedding,
+        projectionHash,
+        projectionMetadata: {
+          projectionKind: "session_conversation",
+          summary: projectionText,
+        },
+        embedding: [...projectionVector],
+        assignedClusterId: decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId),
+        assignmentConfidence: decision.confidence,
+        assignmentMethod:
+          decision.method === "centroid_online"
+            ? TaxonomyObservationAssignmentMethod.CentroidOnline
+            : TaxonomyObservationAssignmentMethod.Noise,
+        reassignmentRunId: null,
+        startTime: input.session.startTime,
+        endTime: input.session.endTime,
+        retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
+        indexedAt: input.indexedAt,
+      } satisfies TaxonomyMomentObservation,
+    ]
+  })
+
+const applyTaxonomyCentroidUpdateForRow = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly indexedAt: Date
+  readonly previous: TaxonomyMomentObservation | undefined
+  readonly row: TaxonomyMomentObservation
+}) => {
+  const { row, previous } = input
+  if (row.assignmentMethod !== TaxonomyObservationAssignmentMethod.CentroidOnline) return Effect.void
+  if (row.assignedClusterId === null) return Effect.void
+
+  const isIdenticalRetry =
+    previous?.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
+    previous.assignedClusterId === row.assignedClusterId &&
+    previous.analysisHash === row.analysisHash &&
+    previous.projectionHash === row.projectionHash
+  if (isIdenticalRetry) return Effect.void
+
+  if (
+    previous?.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
+    previous.assignedClusterId === row.assignedClusterId
+  ) {
+    return replaceObservationInClusterUseCase({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      clusterId: row.assignedClusterId,
+      previousEmbedding: previous.embedding,
+      previousObservedAt: previous.startTime,
+      embedding: row.embedding,
+      observedAt: row.startTime,
+      assignedAt: input.indexedAt,
+    }).pipe(Effect.map(() => undefined))
+  }
+
+  return assignObservationToClusterUseCase({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    clusterId: row.assignedClusterId,
+    embedding: row.embedding,
+    observedAt: row.startTime,
+    assignedAt: input.indexedAt,
+  }).pipe(Effect.map(() => undefined))
+}
+
+const applyTaxonomyCentroidUpdates = (input: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly indexedAt: Date
+  readonly previousObservations: readonly TaxonomyMomentObservation[]
+  readonly taxonomyObservationRows: readonly TaxonomyMomentObservation[]
+}) =>
+  Effect.gen(function* () {
+    const taxonomyObservations = yield* TaxonomyObservationRepository
+    const previousObservationById = new Map(
+      input.previousObservations.map((observation) => [observation.observationId, observation] as const),
+    )
+    yield* taxonomyObservations.upsertMany(input.taxonomyObservationRows)
+    yield* Effect.forEach(input.taxonomyObservationRows, (row) =>
+      applyTaxonomyCentroidUpdateForRow({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        indexedAt: input.indexedAt,
+        previous: previousObservationById.get(row.observationId),
+        row,
+      }),
+    )
   })
 
 export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
@@ -610,27 +965,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       .findBySessionId({ organizationId, projectId, sessionId })
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
     if (session === null) {
-      const indexedAt = new Date()
-      const startTime = new Date(input.triggeringStartTime)
-      yield* analyses.upsert({
-        organizationId,
-        projectId,
-        sessionId,
-        startTime,
-        endTime: startTime,
-        traceIds: input.triggeringTraceId.length === 32 ? [TraceId(input.triggeringTraceId)] : [],
-        analysisHash: "0".repeat(64),
-        analysisStatus: "failed",
-        statusReason: "Session not found",
-        retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
-        indexedAt,
-      })
-      return {
-        action: "recorded",
-        status: "failed",
-        momentCount: 0,
-        analysisHash: failedResultAnalysisKey(input.triggeringTraceId),
-      } satisfies AnalyzeSessionResult
+      return yield* upsertFailedSessionAnalysis(input, "Session not found")
     }
 
     const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
@@ -649,7 +984,6 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
 
     const indexedAt = new Date()
     const retentionDays = input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS
-    const canAnalyzeConversation = isConversation(normalizedMessages)
 
     const baseAnalysis = {
       organizationId,
@@ -664,41 +998,8 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       indexedAt,
     } satisfies Omit<SessionAnalysis, "analysisStatus">
 
-    if (normalizedMessages.length === 0 || document.length === 0) {
-      yield* analyses.upsert({ ...baseAnalysis, analysisStatus: "skipped_empty", statusReason: "No semantic messages" })
-      return {
-        action: "recorded",
-        status: "skipped_empty",
-        momentCount: 0,
-        analysisHash,
-      } satisfies AnalyzeSessionResult
-    }
-    if (document.length < CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH) {
-      yield* analyses.upsert({
-        ...baseAnalysis,
-        analysisStatus: "skipped_too_short",
-        statusReason: "Below content floor",
-      })
-      return {
-        action: "recorded",
-        status: "skipped_too_short",
-        momentCount: 0,
-        analysisHash,
-      } satisfies AnalyzeSessionResult
-    }
-    if (!canAnalyzeConversation) {
-      yield* analyses.upsert({
-        ...baseAnalysis,
-        analysisStatus: "skipped_non_conversation",
-        statusReason: "Session does not contain both user and assistant messages",
-      })
-      return {
-        action: "recorded",
-        status: "skipped_non_conversation",
-        momentCount: 0,
-        analysisHash,
-      } satisfies AnalyzeSessionResult
-    }
+    const skip = skippedConversationAnalysis(normalizedMessages, document)
+    if (skip !== null) return yield* recordSkippedConversationAnalysis(baseAnalysis, skip)
 
     const embeddedTurns = yield* resolveTurnEmbeddings({ organizationId, projectId, messages: normalizedMessages })
     const semanticSegments = segmentSemanticMoments({
@@ -731,78 +1032,29 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     })
 
     const semanticMomentRows = yield* Effect.forEach(semanticSegments, (segment) =>
-      Effect.gen(function* () {
-        const momentId = yield* hash(`${analysisHash}\0semantic\0${segment.firstTurnIndex}\0${segment.lastTurnIndex}`)
-        return {
-          organizationId,
-          projectId,
-          sessionId,
-          analysisHash,
-          momentId,
-          // The schema requires a 32-char trace id; when the session has no
-          // trace details and the triggering id is non-standard, a stable
-          // 32-hex surrogate keeps the analysis from failing permanently.
-          traceId:
-            traceIds[0] ??
-            (input.triggeringTraceId.length === 32
-              ? TraceId(input.triggeringTraceId)
-              : TraceId((yield* hash(input.triggeringTraceId)).slice(0, 32))),
-          startTime: session.startTime,
-          endTime: session.endTime,
-          firstMessageIndex: segment.firstTurnIndex,
-          lastMessageIndex: segment.lastTurnIndex,
-          // The segment's own reason is kept — overwriting the last segment
-          // with "session_end" destroyed genuine max_length/semantic_drift
-          // boundaries (and labeled single-moment sessions as "end").
-          boundaryReason: segment.boundaryReason,
-          embedding: [...segment.centroidEmbedding],
-          coherenceScore: segment.coherenceScore,
-          retentionDays,
-          indexedAt,
-        } satisfies SessionSemanticMoment
+      toSemanticMomentRow({
+        organizationId,
+        projectId,
+        sessionId,
+        analysisHash,
+        session,
+        traceIds,
+        triggeringTraceId: input.triggeringTraceId,
+        segment,
+        retentionDays,
+        indexedAt,
       }),
     )
     const labelRows = yield* Effect.forEach(validatedMoments, (moment) =>
-      Effect.gen(function* () {
-        // Containment first; otherwise the nearest segment by index distance
-        // (never blindly the first moment of the session).
-        const semanticMoment =
-          semanticMomentRows.find(
-            (segment) =>
-              moment.firstMessageIndex >= segment.firstMessageIndex &&
-              moment.lastMessageIndex <= segment.lastMessageIndex,
-          ) ??
-          [...semanticMomentRows].sort(
-            (a, b) =>
-              Math.min(
-                Math.abs(moment.firstMessageIndex - a.lastMessageIndex),
-                Math.abs(a.firstMessageIndex - moment.lastMessageIndex),
-              ) -
-              Math.min(
-                Math.abs(moment.firstMessageIndex - b.lastMessageIndex),
-                Math.abs(b.firstMessageIndex - moment.lastMessageIndex),
-              ),
-          )[0]
-        const labelId = yield* hash(`${moment.analysisHash}\0label\0${moment.momentId}`)
-        return semanticMoment === undefined
-          ? null
-          : ({
-              organizationId,
-              projectId,
-              sessionId,
-              analysisHash,
-              labelId,
-              momentId: semanticMoment.momentId,
-              kind: moment.kind,
-              actor: moment.actor,
-              firstMessageIndex: moment.firstMessageIndex,
-              lastMessageIndex: moment.lastMessageIndex,
-              summary: moment.summary,
-              evidence: moment.evidence,
-              confidence: moment.confidence,
-              retentionDays,
-              indexedAt,
-            } satisfies SessionMomentLabel)
+      toLabelRow({
+        moment,
+        semanticMomentRows,
+        organizationId,
+        projectId,
+        sessionId,
+        analysisHash,
+        retentionDays,
+        indexedAt,
       }),
     ).pipe(Effect.map((labels) => labels.filter((label): label is SessionMomentLabel => label !== null)))
 
@@ -811,69 +1063,15 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       projectId,
       sessionId,
     })
-    const taxonomyObservationRows = yield* Effect.gen(function* () {
-      const projectionText = buildSessionConversationProjectionText(normalizedMessages)
-      if (projectionText.length === 0) return [] as TaxonomyMomentObservation[]
-
-      const embeddingConfig = yield* resolveEmbeddingConfig()
-      const dimension = "topic" as const
-      const sessionMomentId = (yield* hash(`${sessionId}\0session_topic`)).slice(0, 24)
-      const projectionHash = yield* hash(
-        `${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0${embeddingConfig.model}\0${projectionText}`,
-      )
-      const observationId = (yield* hash(
-        `${organizationId}\0${projectId}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0observation`,
-      )).slice(0, 24)
-      const previousObservation = previousTaxonomyObservations.find(
-        (observation) => observation.observationId === observationId && observation.projectionHash === projectionHash,
-      )
-      const projectionVector =
-        previousObservation?.embedding ??
-        (yield* Effect.gen(function* () {
-          const ai = yield* AI
-          const projectionEmbedding = yield* ai.embed({
-            text: projectionText,
-            provider: embeddingConfig.provider,
-            model: embeddingConfig.model,
-            inputType: "document",
-          })
-          return normalizeTaxonomyEmbedding(projectionEmbedding.embedding)
-        }))
-      if (projectionVector.length === 0) return [] as TaxonomyMomentObservation[]
-      const decision = yield* routeToDeepestClusterUseCase({
-        projectId,
-        dimension,
-        queryVector: projectionVector,
-      })
-
-      return [
-        {
-          organizationId,
-          projectId,
-          observationId,
-          sessionId,
-          analysisHash,
-          momentId: sessionMomentId,
-          projectionMethod: TaxonomyProjectionMethod.MomentTextEmbedding,
-          projectionHash,
-          projectionMetadata: {
-            projectionKind: "session_conversation",
-            summary: projectionText,
-          },
-          embedding: [...projectionVector],
-          assignedClusterId: decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId),
-          assignmentConfidence: decision.confidence,
-          assignmentMethod:
-            decision.method === "centroid_online"
-              ? TaxonomyObservationAssignmentMethod.CentroidOnline
-              : TaxonomyObservationAssignmentMethod.Noise,
-          reassignmentRunId: null,
-          startTime: session.startTime,
-          endTime: session.endTime,
-          retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
-          indexedAt,
-        } satisfies TaxonomyMomentObservation,
-      ]
+    const taxonomyObservationRows = yield* buildSessionTaxonomyObservations({
+      organizationId,
+      projectId,
+      sessionId,
+      analysisHash,
+      session,
+      messages: normalizedMessages,
+      previousTaxonomyObservations,
+      indexedAt,
     })
 
     // Centroid increments are not idempotent, but the activity retries are:
@@ -881,47 +1079,12 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     // retry skips the increment for any id that already existed, and a crash
     // between the two at worst loses one increment (gardening self-corrects)
     // instead of double-counting it.
-    const previousObservations = taxonomyObservationRows.length === 0 ? [] : previousTaxonomyObservations
-    const previousObservationById = new Map(
-      previousObservations.map((observation) => [observation.observationId, observation] as const),
-    )
-    yield* taxonomyObservations.upsertMany(taxonomyObservationRows)
-    yield* Effect.forEach(taxonomyObservationRows, (row) => {
-      if (row.assignmentMethod !== TaxonomyObservationAssignmentMethod.CentroidOnline) return Effect.void
-      if (row.assignedClusterId === null) return Effect.void
-
-      const previous = previousObservationById.get(row.observationId)
-      const isIdenticalRetry =
-        previous?.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
-        previous.assignedClusterId === row.assignedClusterId &&
-        previous.analysisHash === row.analysisHash &&
-        previous.projectionHash === row.projectionHash
-      if (isIdenticalRetry) return Effect.void
-
-      if (
-        previous?.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
-        previous.assignedClusterId === row.assignedClusterId
-      ) {
-        return replaceObservationInClusterUseCase({
-          organizationId,
-          projectId,
-          clusterId: row.assignedClusterId,
-          previousEmbedding: previous.embedding,
-          previousObservedAt: previous.startTime,
-          embedding: row.embedding,
-          observedAt: row.startTime,
-          assignedAt: indexedAt,
-        }).pipe(Effect.map(() => undefined))
-      }
-
-      return assignObservationToClusterUseCase({
-        organizationId,
-        projectId,
-        clusterId: row.assignedClusterId,
-        embedding: row.embedding,
-        observedAt: row.startTime,
-        assignedAt: indexedAt,
-      }).pipe(Effect.map(() => undefined))
+    yield* applyTaxonomyCentroidUpdates({
+      organizationId,
+      projectId,
+      indexedAt,
+      previousObservations: taxonomyObservationRows.length === 0 ? [] : previousTaxonomyObservations,
+      taxonomyObservationRows,
     })
 
     const analysis: SessionAnalysis = {
@@ -938,35 +1101,6 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       analysisHash,
     } satisfies AnalyzeSessionResult
   }).pipe(
-    Effect.catch((error: unknown) =>
-      Effect.gen(function* () {
-        if (error instanceof MomentClassifierError) return yield* Effect.fail(error)
-        const analyses = yield* SessionAnalysisRepository
-        const organizationId = OrganizationId(input.organizationId)
-        const projectId = ProjectId(input.projectId)
-        const sessionId = SessionId(input.sessionId)
-        const indexedAt = new Date()
-        const startTime = new Date(input.triggeringStartTime)
-        yield* analyses.upsert({
-          organizationId,
-          projectId,
-          sessionId,
-          startTime,
-          endTime: startTime,
-          traceIds: input.triggeringTraceId.length === 32 ? [TraceId(input.triggeringTraceId)] : [],
-          analysisHash: "0".repeat(64),
-          analysisStatus: "failed",
-          statusReason: error instanceof Error ? error.message : "Session analysis failed",
-          retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
-          indexedAt,
-        })
-        return {
-          action: "recorded",
-          status: "failed",
-          momentCount: 0,
-          analysisHash: failedResultAnalysisKey(input.triggeringTraceId),
-        } satisfies AnalyzeSessionResult
-      }),
-    ),
+    Effect.catch((error: unknown) => recoverFromAnalyzeSessionError(input, error)),
     Effect.withSpan("conversationIntelligence.analyzeSession"),
   )
