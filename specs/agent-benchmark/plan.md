@@ -180,7 +180,7 @@ does not display per-session dimension scores.
   a higher revision with the same decision and selection fields.
 - [x] **P2-23** Reuse one sampling draw and inclusion probability across retries. Increment attempts
   without redrawing selection, and preserve the existing human-readable summary log.
-- [ ] **P2-24** Implement repository consolidation that selects the latest revision of the newest
+- [x] **P2-24** Implement repository consolidation that selects the latest revision of the newest
   analysis generation per session and flagger at the query cutoff. Never fall back to an older
   successful generation when the newest is pending or failed.
 - [ ] **P2-25** Map disabled, suppressed, missing-flagger, and missing-context policy outcomes to the

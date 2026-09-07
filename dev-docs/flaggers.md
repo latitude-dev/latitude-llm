@@ -89,6 +89,8 @@ Every screening path is represented by an append-only row in ClickHouse. `flagge
 
 The table keeps source data for the session retention period plus the standard 30-day deletion buffer. Readers must scope queries by organization and project, collapse revisions for each decision, and then select the newest analysis generation for each session × flagger. A newer pending or failed generation remains authoritative; readers must not fall back to a successful older generation.
 
+Repository reads are cutoff-aware and perform those steps in that order. A decision revision is ordered by version, then attempt, then timestamp. An analysis generation is ordered by the earliest row for its decision, not its latest terminal update, so a slow result from an older generation cannot displace a newer pending generation.
+
 The screening activity writes version 1 for every per-flagger selection before it returns classification requests to the workflow. Deterministic matches and misses are already terminal in that row. A model classification activity appends version 2 with `matched`, `unmatched`, or `error`, reusing the decision id and every selection field from version 1. These writes happen inside the existing activities, so the workflow history does not gain a new activity command.
 
 ### Sampling

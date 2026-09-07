@@ -100,4 +100,122 @@ describe("FlaggerScreeningDecisionRepositoryLive", () => {
       },
     ])
   })
+  it("collapses revisions before selecting the newest analysis generation at the cutoff", async () => {
+    const oldDecisionId = "a".repeat(64)
+    const newDecisionId = "b".repeat(64)
+    const at = (minute: number, second = 0) =>
+      new Date(`2026-09-07T10:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}.000Z`)
+
+    await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerScreeningDecisionRepository
+        yield* repository.saveMany([
+          makeDecision({ decisionId: oldDecisionId, analysisHash: "c".repeat(64), createdAt: at(0) }),
+          makeDecision({
+            decisionId: newDecisionId,
+            analysisHash: "e".repeat(64),
+            createdAt: at(1),
+          }),
+          makeDecision({
+            decisionId: oldDecisionId,
+            analysisHash: "c".repeat(64),
+            version: 2,
+            outcome: "matched",
+            createdAt: at(1, 15),
+          }),
+          makeDecision({
+            decisionId: newDecisionId,
+            analysisHash: "e".repeat(64),
+            version: 2,
+            outcome: "error",
+            createdAt: at(2),
+          }),
+          makeDecision({
+            decisionId: newDecisionId,
+            analysisHash: "e".repeat(64),
+            attempt: 2,
+            version: 2,
+            outcome: "unmatched",
+            createdAt: at(4),
+          }),
+        ])
+      }),
+    )
+
+    const pending = await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerScreeningDecisionRepository
+        return yield* repository.listLatestBySessions({
+          organizationId,
+          projectId,
+          sessionIds: [SessionId("session-1")],
+          cutoff: at(1, 30),
+        })
+      }),
+    )
+    expect(pending).toHaveLength(1)
+    expect(pending[0]).toMatchObject({ decisionId: newDecisionId, version: 1 })
+    expect(pending[0]).not.toHaveProperty("outcome")
+
+    const failed = await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerScreeningDecisionRepository
+        return yield* repository.listLatestBySessions({
+          organizationId,
+          projectId,
+          sessionIds: [SessionId("session-1")],
+          cutoff: at(3),
+        })
+      }),
+    )
+    expect(failed[0]).toMatchObject({ decisionId: newDecisionId, attempt: 1, version: 2, outcome: "error" })
+
+    const retried = await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerScreeningDecisionRepository
+        return yield* repository.listLatestBySessions({
+          organizationId,
+          projectId,
+          sessionIds: [SessionId("session-1")],
+          cutoff: at(5),
+        })
+      }),
+    )
+    expect(retried[0]).toMatchObject({
+      decisionId: newDecisionId,
+      attempt: 2,
+      version: 2,
+      outcome: "unmatched",
+    })
+  })
+
+  it("requires organization, project, session, and cutoff scope", async () => {
+    const otherProjectId = ProjectId("q".repeat(24))
+    await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerScreeningDecisionRepository
+        yield* repository.saveMany([
+          makeDecision({ sessionId: SessionId("wanted"), outcome: "matched" }),
+          makeDecision({ decisionId: "e".repeat(64), sessionId: SessionId("other-session") }),
+          makeDecision({ decisionId: "f".repeat(64), projectId: otherProjectId }),
+          makeDecision({ decisionId: "c".repeat(64), createdAt: new Date("2026-09-07T11:00:00.000Z") }),
+        ])
+      }),
+    )
+
+    const rows = await run(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerScreeningDecisionRepository
+        return yield* repository.listLatestBySessions({
+          organizationId,
+          projectId,
+          sessionIds: [SessionId("wanted")],
+          cutoff: new Date("2026-09-07T10:30:00.000Z"),
+        })
+      }),
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ projectId, sessionId: "wanted" })
+  })
 })
