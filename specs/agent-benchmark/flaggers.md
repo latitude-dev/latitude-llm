@@ -339,7 +339,7 @@ spans so disabling an overlapping flagger cannot hide operational failure.
 
 ## User-facing coverage
 
-The Flaggers settings page shows, per flagger and selected window:
+The Flaggers settings page keeps enablement and sampling controls primary. Each enabled flagger shows a muted 28-day observation summary, with the complete coverage breakdown available through inline progressive disclosure:
 
 - eligible sessions;
 - deterministic, hinted, uniformly sampled, ordinarily sampled, skipped, and rate-limited counts;
