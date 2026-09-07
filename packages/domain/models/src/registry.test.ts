@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { computeTokenCost } from "./entities/cost.ts"
 import type { Model } from "./entities/model.ts"
+import { resolveProviderName } from "./provider-aliases.ts"
 import {
   costBreakdownKey,
   estimateCost,
@@ -146,6 +147,34 @@ describe("getModelsForProvider", () => {
   })
 })
 
+/**
+ * A Vercel AI Gateway listing (`<vendor>/<model>`, the only shape the gateway's catalog uses) whose
+ * vendor is itself a provider pricing the bare model. Both sides pricing is what makes gateway
+ * precedence observable: the lookup has a real alternative to fall through to, so answering with
+ * Vercel's entry is a choice rather than the only entry there was. Read out of the bundled catalog
+ * rather than hardcoded, because models.dev retires individual gateway listings (`xai/grok-4.5` was
+ * one) and that churn is not a code regression. Sorted so a failure names the same slug every run.
+ */
+function findGatewaySlugAlsoSoldByItsVendor(): { slug: string; vendor: string; bareId: string } {
+  for (const slug of getModelsForProvider("gateway")
+    .map((m) => m.id)
+    .sort()) {
+    const separator = slug.indexOf("/")
+    if (separator <= 0) continue
+
+    const vendor = resolveProviderName(slug.slice(0, separator))
+    const bareId = slug.slice(separator + 1)
+    if (vendor === "vercel") continue
+    if (!getCostSpec("gateway", slug).costImplemented) continue
+    // Exact id, not a prefix neighbour: the vendor has to sell this very model to be an alternative.
+    if (getCostSpec(vendor, bareId).pricedModel !== bareId) continue
+
+    return { slug, vendor, bareId }
+  }
+
+  throw new Error("bundled catalog lists no priced Vercel gateway slug whose vendor prices the bare model")
+}
+
 describe("getModelForProvider", () => {
   it("finds a model for a provider", () => {
     const model = getModelForProvider("openai", "gpt-4o")
@@ -188,8 +217,10 @@ describe("getModelForProvider", () => {
   })
 
   it("prices the Vercel AI Gateway's own model ids under the gateway provider", () => {
-    expect(getModelForProvider("gateway", "xai/grok-4.5")?.id).toBe("xai/grok-4.5")
-    expect(getCostSpec("gateway", "xai/grok-4.5").costImplemented).toBe(true)
+    const { slug } = findGatewaySlugAlsoSoldByItsVendor()
+
+    expect(getModelForProvider("gateway", slug)?.id).toBe(slug)
+    expect(getCostSpec("gateway", slug).costImplemented).toBe(true)
   })
 
   it("ignores a vendor prefix that names the provider it was reported under", () => {
@@ -214,7 +245,13 @@ describe("getModelForProvider", () => {
   })
 
   it("prefers the reported provider over the slug vendor when it lists the model", () => {
-    expect(getModelForProvider("gateway", "xai/grok-4.5")?.provider).toBe("vercel")
+    const { slug, vendor, bareId } = findGatewaySlugAlsoSoldByItsVendor()
+
+    // The vendor is a live alternative: it prices this model under its own name.
+    expect(getCostSpec(vendor, bareId)).toMatchObject({ costImplemented: true, pricedProvider: vendor })
+
+    expect(getModelForProvider("gateway", slug)?.provider).toBe("vercel")
+    expect(getCostSpec("gateway", slug)).toMatchObject({ pricedProvider: "vercel", pricedModel: slug })
   })
 
   // Only a vendor that lists the model itself can price it. Anything else is open-weights territory,
@@ -253,7 +290,6 @@ describe("getCostSpec against production pairs that recorded no cost", () => {
   it.each([
     ["openai", "openai/gpt-5.4", "vendor prefix duplicates the provider"],
     ["stripe", "openai/gpt-5.4", "billing label prices nothing; the slug vendor does"],
-    ["gateway", "xai/grok-4.5", "Vercel AI Gateway slug"],
     ["gateway", "openai/gpt-5.4-mini", "Vercel AI Gateway slug"],
     ["gateway", "openai/gpt-4.1-mini", "Vercel AI Gateway slug"],
     ["xai-oauth", "grok-4.5", "provider naming variant"],
@@ -290,7 +326,6 @@ describe("getCostSpec against production pairs that recorded no cost", () => {
   // separately: either can differ from what was reported, and a dated model id resolves to its base.
   it.each([
     ["stripe", "openai/gpt-5.4", "openai", "gpt-5.4"],
-    ["gateway", "xai/grok-4.5", "vercel", "xai/grok-4.5"],
     ["nous", "x-ai/grok-4.5", "xai", "grok-4.5"],
     ["xai-oauth", "grok-4.5", "xai", "grok-4.5"],
     ["openai", "gpt-4.1-2025-04-14", "openai", "gpt-4.1"],
