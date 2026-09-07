@@ -27,6 +27,13 @@ export {
   sessionReaderCoverageSchema,
   sessionReaderSelectionSchema,
 } from "./entities/session-assessment.ts"
+export type {
+  AssessmentFinding,
+  AssessmentFindingChronology,
+  AssessmentFindingReference,
+  AssessmentReaderFact,
+  NormalizedSessionAssessmentInput,
+} from "./entities/session-assessment-input.ts"
 export {
   type SessionAssessmentSourceScope,
   type SessionAssessmentTraceScope,
@@ -44,3 +51,7 @@ export {
   SessionSpanSource,
   type SessionSpanSourceShape,
 } from "./ports/session-assessment-sources.ts"
+export {
+  type ReadSessionAssessmentSourcesInput,
+  readSessionAssessmentSources,
+} from "./readers/read-session-assessment-sources.ts"
