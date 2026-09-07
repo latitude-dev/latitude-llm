@@ -4,6 +4,7 @@ description: Connect any OpenTelemetry-instrumented application to Latitude, reg
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Connect with Any OpenTelemetry Exporter
 
@@ -19,7 +20,7 @@ If your language has an OpenTelemetry SDK (Go, Java, Ruby, Rust, .NET, Elixir, P
 
 ## Prerequisites
 
-1. A **Latitude API key** — generate one from your project settings in the Latitude dashboard.
+1. A **Latitude API key** — generate one from your project settings in the Latitude dashboard, or let your agent create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup.
 2. Your **project slug** — visible in the project settings or URL.
 
 ## Endpoint and Headers
@@ -71,6 +72,10 @@ curl -X POST https://ingest.latitude.so/v1/traces \
 ```
 
 A `202` response with `{}` means the endpoint accepted your payload.
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Language Examples
 

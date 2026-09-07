@@ -4,6 +4,7 @@ description: Connect your Haystack application to Latitude for observability.
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -26,7 +27,7 @@ Latitude includes dedicated instrumentation for Haystack, so pipeline runs, gene
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A project that uses **Haystack** (`haystack-ai`)
 - A model provider key — the example below uses **OpenAI** (`OPENAI_API_KEY`)
@@ -101,3 +102,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Each run shows the full hierarchy of component → generation → tool calls
 3. Token usage and latency are aggregated at every level
+
+## See what was captured
+
+<FirstArtifact />

@@ -1,4 +1,5 @@
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Hermes telemetry
 
@@ -8,13 +9,13 @@ Stream [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Resear
 
 ## Prerequisites
 
-- A [Latitude account](https://console.latitude.so/login) with a project
+- A [Latitude account](https://console.latitude.so/login) with a project, or none yet: your agent can create a temporary one with the [`latitude-setup` skill](/getting-started/skills), no signup, and fill in the values below
 - Hermes Agent installed locally
 - `pip` (Hermes already runs on Python — the plugin uses only the standard library plus `certifi`, which Hermes already ships)
 
 ## Install
 
-1. In Latitude, copy your project slug from the project sidebar.
+1. In Latitude, copy your project slug from the project sidebar (or let the `latitude-setup` skill create a temporary account and project for you).
 2. Create or copy an API key from **Settings → API Keys**.
 3. Install the plugin:
 
@@ -163,6 +164,10 @@ come from the code that is executing, so they settle it.
 Run Hermes and send a message to your agent, then open your Latitude project and go to **Traces**. The new trace should appear within a few seconds.
 
 If nothing arrives, set `LATITUDE_DEBUG=true` in `~/.hermes/.env` and run again to see the plugin's logging: it logs every export with its HTTP status. (`hermes plugins list` does **not** show pip-installed plugins — see the install note — so it can't be used to confirm the plugin is loaded.)
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Structural-only telemetry
 

@@ -4,6 +4,7 @@ description: Connect your Vercel AI SDK v7 powered application to Latitude for o
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -31,7 +32,7 @@ In v7, OpenTelemetry collection **moved out of the `ai` package** into the separ
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A Node.js project that uses **Vercel AI SDK v7** (`ai@7`) and the matching **`@ai-sdk/otel`**
 
@@ -271,3 +272,7 @@ Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
 2. Each execution shows input/output messages, model, token usage, latency, and errors
+
+## See what was captured
+
+<FirstArtifact />

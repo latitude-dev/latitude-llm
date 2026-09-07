@@ -4,6 +4,7 @@ description: Instrument Python apps with Latitude Telemetry.
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Python SDK
 
@@ -12,6 +13,8 @@ Use `latitude-telemetry` to send LLM traces from Python applications to Latitude
 <SkillsCallout />
 
 ## Installation
+
+You need a Latitude API key and a project slug. No account yet? Your agent can create a temporary one with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 ```bash
 pip install latitude-telemetry
@@ -46,6 +49,10 @@ latitude.shutdown()
 ```
 
 `instrumentations` should use the same package module your application imports for the actual LLM call.
+
+## See what was captured
+
+<FirstArtifact />
 
 ## Add context with `capture()`
 

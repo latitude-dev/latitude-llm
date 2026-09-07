@@ -4,6 +4,7 @@ description: Connect your DSPy program to Latitude for observability.
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -27,7 +28,7 @@ DSPy has no dedicated instrumentor — it routes every language-model call throu
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A project that uses **DSPy** (`dspy`, which depends on `litellm`)
 - A key for whichever provider your `dspy.LM` targets (e.g. `OPENAI_API_KEY`)
@@ -92,3 +93,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Each execution shows input/output messages, model, token usage, latency, and errors
 3. Wrap a request with `capture()` to group every model call DSPy makes into one trace
+
+## See what was captured
+
+<FirstArtifact />

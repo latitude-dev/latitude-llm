@@ -4,6 +4,7 @@ description: Connect your OpenAI Agents SDK application to Latitude for observab
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -22,7 +23,7 @@ Latitude includes dedicated instrumentation for the OpenAI Agents SDK, so agent 
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A project that uses the **OpenAI Agents SDK**
 
@@ -165,3 +166,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Each agent run shows the full hierarchy of agent → generation/response → tool calls and handoffs
 3. Token usage and latency are aggregated at every level
+
+## See what was captured
+
+<FirstArtifact />

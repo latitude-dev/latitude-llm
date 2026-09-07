@@ -4,6 +4,7 @@ description: Connect your Pydantic AI agent to Latitude for observability.
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -26,7 +27,7 @@ Pydantic AI has OpenTelemetry support built in. Calling `Agent.instrument_all()`
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A Python project that uses **Pydantic AI** (`pydantic-ai`)
 
@@ -151,3 +152,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Run your agent with at least one model call or tool call
 3. Confirm the agent → model → tool hierarchy appears with model metadata, token usage, and latency
+
+## See what was captured
+
+<FirstArtifact />

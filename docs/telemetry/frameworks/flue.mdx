@@ -4,6 +4,7 @@ description: Connect your Flue workflows and agents to Latitude for observabilit
 ---
 
 import SkillsCallout from "/snippets/skills-callout.mdx"
+import FirstArtifact from "/snippets/first-artifact.mdx"
 
 <SkillsCallout />
 
@@ -24,7 +25,7 @@ Flue exposes an OpenTelemetry observer through `@flue/opentelemetry`. The observ
 
 ## Requirements
 
-- A **Latitude account** and **API key**
+- A **Latitude account** and **API key**, or none yet: your agent can create a temporary account with the [`latitude-setup` skill](/getting-started/skills), no signup
 - A **Latitude project slug**
 - A Flue project that uses `@flue/runtime`
 
@@ -192,3 +193,7 @@ Once connected, traces appear automatically in Latitude:
 1. Open your **project** in the Latitude dashboard
 2. Run a Flue workflow with at least one model turn or tool call
 3. Confirm the workflow, operation, model turn, tool, task, and compaction spans appear with Flue correlation attributes, model metadata, token usage, latency, and errors
+
+## See what was captured
+
+<FirstArtifact />
