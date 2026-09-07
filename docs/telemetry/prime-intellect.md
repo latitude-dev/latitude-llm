@@ -3,7 +3,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Prime Intellect (Verifiers) telemetry
 
-Stream [Prime Intellect Verifiers](https://github.com/PrimeIntellect-ai/verifiers) eval rollouts into Latitude as traces. After setup, each rollout appears in your project's **Traces** view with prompts, model calls, tool calls, token usage, timing, and rewards — optionally as Latitude custom scores.
+Stream [Prime Intellect Verifiers](https://github.com/PrimeIntellect-ai/verifiers) eval rollouts into Latitude as traces. After setup, each rollout appears in your project's **Traces** view with prompts, model calls, tool calls, token usage, timing, and rewards — optionally as Latitude custom scores. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 <SkillsCallout />
 

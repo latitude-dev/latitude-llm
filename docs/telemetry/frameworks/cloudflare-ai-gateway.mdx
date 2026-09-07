@@ -13,7 +13,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) proxies requests to your
 LLM providers and can export an OpenTelemetry span for every request it handles. Those spans
 follow the OpenTelemetry [GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/),
-so Latitude ingests them directly over OTLP — no SDK or code change in your application.
+so Latitude ingests them directly over OTLP — no SDK or code change in your application. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 You configure the exporter once in the AI Gateway dashboard, pointing it at Latitude's OTLP
 endpoint. Every model call routed through the gateway then shows up in Latitude with its model,

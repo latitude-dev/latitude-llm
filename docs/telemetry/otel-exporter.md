@@ -8,7 +8,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Connect with Any OpenTelemetry Exporter
 
-Latitude's ingestion endpoint speaks standard **OTLP over HTTP**. 
+Latitude's ingestion endpoint speaks standard **OTLP over HTTP**. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 If your language has an OpenTelemetry SDK (Go, Java, Ruby, Rust, .NET, Elixir, PHP, etc.), you can send traces to Latitude without a Latitude-specific library.
 

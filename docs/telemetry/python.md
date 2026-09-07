@@ -8,7 +8,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Python SDK
 
-Use `latitude-telemetry` to send LLM traces from Python applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one.
+Use `latitude-telemetry` to send LLM traces from Python applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 <SkillsCallout />
 

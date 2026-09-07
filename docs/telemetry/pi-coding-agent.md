@@ -3,7 +3,7 @@ import FirstArtifact from "/snippets/first-artifact.mdx"
 
 # Pi coding agent telemetry
 
-Stream [pi coding agent](https://pi.dev) sessions into Latitude as traces with the first-party `@latitude-data/pi-telemetry` extension.
+Stream [pi coding agent](https://pi.dev) sessions into Latitude as traces with the first-party `@latitude-data/pi-telemetry` extension. No Latitude account yet? Your agent can create a temporary one and do this whole setup with the [`latitude-setup` skill](/getting-started/skills), no signup.
 
 After setup, pi prompts appear in your Latitude project's **Traces** view with model calls, prompts, responses, token usage, tool calls, and tool results.
 
