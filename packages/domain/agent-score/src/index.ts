@@ -57,6 +57,7 @@ export {
 } from "./readers/read-session-assessment-sources.ts"
 export {
   compareResolvedAssessmentItems,
+  deduplicateResolvedAssessmentItems,
   type ResolvedAssessmentItem,
   resolveAssessmentFinding,
   resolveAssessmentFindingEffects,

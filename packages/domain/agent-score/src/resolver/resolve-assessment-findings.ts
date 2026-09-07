@@ -281,7 +281,7 @@ const destinationKey = (destination: SessionEvidenceDestination): string => JSON
 
 export const resolveAssessmentFinding = (finding: AssessmentFinding): ResolvedAssessmentItem => ({
   item: {
-    id: finding.evidenceKey,
+    id: finding.independentHumanEvidence ? `human:${finding.scoreIds[0] ?? finding.evidenceKey}` : finding.evidenceKey,
     evidenceKey: finding.evidenceKey,
     label: finding.label,
     ...(finding.description ? { description: finding.description } : {}),
@@ -316,8 +316,86 @@ export const compareResolvedAssessmentItems = (left: ResolvedAssessmentItem, rig
   return left.item.evidenceKey.localeCompare(right.item.evidenceKey)
 }
 
+const sourcePriority = {
+  metric: 0,
+  signal: 1,
+  flagger: 2,
+  score: 3,
+  moment: 4,
+} as const satisfies Record<SessionAssessmentItem["source"], number>
+
+const benchmarkPriority = {
+  direct: 0,
+  modeled: 1,
+  attributionOnly: 2,
+  contextOnly: 3,
+} as const satisfies Record<SessionDimensionEffect["benchmarkUse"], number>
+
+const measurementPriority = {
+  observed: 0,
+  estimated: 1,
+  notMeasured: 2,
+} as const satisfies Record<SessionDimensionEffect["measurement"], number>
+
+const effectKey = (effect: SessionDimensionEffect): string => `${effect.scoreDimension}:${effect.role}`
+
+const preferEffect = (left: SessionDimensionEffect, right: SessionDimensionEffect): SessionDimensionEffect => {
+  const byBenchmark = benchmarkPriority[left.benchmarkUse] - benchmarkPriority[right.benchmarkUse]
+  if (byBenchmark !== 0) return byBenchmark < 0 ? left : right
+  const byMeasurement = measurementPriority[left.measurement] - measurementPriority[right.measurement]
+  return byMeasurement <= 0 ? left : right
+}
+
+const mergeEffects = (
+  left: readonly SessionDimensionEffect[],
+  right: readonly SessionDimensionEffect[],
+): SessionDimensionEffect[] => {
+  const effects = new Map<string, SessionDimensionEffect>()
+  for (const effect of [...left, ...right]) {
+    const key = effectKey(effect)
+    const previous = effects.get(key)
+    effects.set(key, previous ? preferEffect(previous, effect) : effect)
+  }
+  return [...effects.values()]
+}
+
+const mergeResolvedItems = (left: ResolvedAssessmentItem, right: ResolvedAssessmentItem): ResolvedAssessmentItem => {
+  const primary = sourcePriority[left.item.source] <= sourcePriority[right.item.source] ? left : right
+  const secondary = primary === left ? right : left
+  return {
+    item: {
+      ...primary.item,
+      ...(!primary.item.description && secondary.item.description ? { description: secondary.item.description } : {}),
+      ...(!primary.item.metricId && secondary.item.metricId ? { metricId: secondary.item.metricId } : {}),
+      signalIds: [...new Set([...left.item.signalIds, ...right.item.signalIds])],
+      scoreIds: [...new Set([...left.item.scoreIds, ...right.item.scoreIds])],
+      occurrenceCount: Math.max(left.item.occurrenceCount, right.item.occurrenceCount),
+      effects: mergeEffects(left.item.effects, right.item.effects),
+      anchors: deduplicate([...left.item.anchors, ...right.item.anchors], anchorKey),
+      destinations: deduplicate([...left.item.destinations, ...right.item.destinations], destinationKey),
+    },
+    chronology: compareResolvedAssessmentItems(left, right) <= 0 ? left.chronology : right.chronology,
+    independentHumanEvidence: false,
+  }
+}
+
+export const deduplicateResolvedAssessmentItems = (
+  resolved: readonly ResolvedAssessmentItem[],
+): ResolvedAssessmentItem[] => {
+  const automatic = new Map<string, ResolvedAssessmentItem>()
+  const independent: ResolvedAssessmentItem[] = []
+  for (const item of resolved) {
+    if (item.independentHumanEvidence) {
+      independent.push(item)
+      continue
+    }
+    const previous = automatic.get(item.item.evidenceKey)
+    automatic.set(item.item.evidenceKey, previous ? mergeResolvedItems(previous, item) : item)
+  }
+  return [...automatic.values(), ...independent]
+}
+
 export const resolveSessionAssessmentItems = (findings: readonly AssessmentFinding[]): SessionAssessmentItem[] =>
-  findings
-    .map(resolveAssessmentFinding)
+  deduplicateResolvedAssessmentItems(findings.map(resolveAssessmentFinding))
     .sort(compareResolvedAssessmentItems)
     .map(({ item }) => item)

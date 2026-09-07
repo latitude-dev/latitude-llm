@@ -72,4 +72,64 @@ describe("assessment finding resolver", () => {
       ]).map((item) => item.evidenceKey),
     ).toEqual(["earlier", "later", "message", "session-wide"])
   })
+
+  it("merges metric, discovery score, and assigned signal by underlying evidence key", () => {
+    const metric: AssessmentFinding = {
+      ...base,
+      evidenceKey: "shared-fact",
+      signalIds: [],
+      scoreIds: [],
+      occurrenceCount: 3,
+      kind: "toolRepetition",
+      redundancy: "unconfirmed",
+    }
+    const signal: AssessmentFinding = {
+      ...base,
+      evidenceKey: "shared-fact",
+      label: "Repeated searches",
+      source: "signal",
+      signalIds: ["signal-1", "signal-2"],
+      scoreIds: ["score-1"],
+      occurrenceCount: 1,
+      kind: "classifiedJudgment",
+      roles: [
+        { scoreDimension: "cost", role: "spendEfficiency" },
+        { scoreDimension: "speed", role: "criticalPathEfficiency" },
+      ],
+      negative: true,
+    }
+
+    const items = resolveSessionAssessmentItems([metric, signal])
+
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({
+      evidenceKey: "shared-fact",
+      source: "metric",
+      metricId: "spans.provider_error",
+      signalIds: ["signal-1", "signal-2"],
+      scoreIds: ["score-1"],
+      occurrenceCount: 3,
+    })
+    expect(items[0]?.effects).toHaveLength(2)
+  })
+
+  it("keeps independent human evidence separate from an automatic observation", () => {
+    const automatic: AssessmentFinding = {
+      ...base,
+      evidenceKey: "shared-fact",
+      kind: "standaloneScore",
+      negative: true,
+    }
+    const human: AssessmentFinding = {
+      ...automatic,
+      source: "score",
+      scoreIds: ["human-score"],
+      independentHumanEvidence: true,
+    }
+
+    const items = resolveSessionAssessmentItems([automatic, human])
+
+    expect(items).toHaveLength(2)
+    expect(items.map((item) => item.id)).toEqual(["shared-fact", "human:human-score"])
+  })
 })
