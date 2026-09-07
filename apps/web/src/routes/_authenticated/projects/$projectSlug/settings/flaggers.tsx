@@ -257,32 +257,34 @@ function ProjectFlaggersSettingsPage() {
                                 />
                               </div>
                             </div>
-                            {isDeterministic ? (
-                              <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible sessions</Text.H6>
-                            ) : (
-                              <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
-                                <div className="flex flex-row items-center gap-3">
-                                  <div className="w-48">
-                                    <Slider
-                                      min={0}
-                                      max={100}
-                                      step={1}
-                                      value={[row.viewSampling]}
-                                      onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
-                                      disabled={!row.viewEnabled}
-                                      aria-label={`Sampling rate for ${row.name}`}
-                                    />
+                            <div className="flex flex-col gap-1">
+                              {isDeterministic ? (
+                                <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible sessions</Text.H6>
+                              ) : (
+                                <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
+                                  <div className="flex flex-row items-center gap-3">
+                                    <div className="w-48">
+                                      <Slider
+                                        min={0}
+                                        max={100}
+                                        step={1}
+                                        value={[row.viewSampling]}
+                                        onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
+                                        disabled={!row.viewEnabled}
+                                        aria-label={`Sampling rate for ${row.name}`}
+                                      />
+                                    </div>
+                                    <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
                                   </div>
-                                  <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
+                                  <Text.H6 color="foregroundMuted">
+                                    Billed by AI usage · runs on {row.viewSampling}% of eligible sessions
+                                  </Text.H6>
                                 </div>
-                                <Text.H6 color="foregroundMuted">
-                                  Billed by AI usage · runs on {row.viewSampling}% of eligible sessions
-                                </Text.H6>
-                              </div>
-                            )}
-                            {row.viewEnabled && coverageRow ? (
-                              <FlaggerObservationStatus flaggerSlug={row.slug} coverage={coverageRow} />
-                            ) : null}
+                              )}
+                              {row.viewEnabled && coverageRow ? (
+                                <FlaggerObservationStatus flaggerSlug={row.slug} coverage={coverageRow} />
+                              ) : null}
+                            </div>
                           </div>
                         )
                       })}

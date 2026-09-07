@@ -1,6 +1,6 @@
 import type { FlaggerCoverageRow } from "@domain/flaggers"
 import { Button, Icon, Text, Tooltip } from "@repo/ui"
-import { ActivityIcon, ChevronDownIcon, ChevronRightIcon, TriangleAlertIcon } from "lucide-react"
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import { useState } from "react"
 
 const formatCount = (value: number) => new Intl.NumberFormat().format(value)
@@ -75,16 +75,11 @@ export function FlaggerObservationStatus({
           <Button
             variant="ghost"
             size="sm"
-            className="w-fit px-1.5"
+            className="w-fit px-1.5 font-normal"
             aria-expanded={expanded}
             aria-controls={detailsId}
             onClick={() => setExpanded((current) => !current)}
           >
-            <Icon
-              icon={rateLimited ? TriangleAlertIcon : ActivityIcon}
-              size="xs"
-              color={rateLimited ? "warningMutedForeground" : "foregroundMuted"}
-            />
             <span className="tabular-nums">{observationSummary}</span>
             {rateLimited ? <span className="text-warning-muted-foreground">· Rate limited</span> : null}
             <Icon icon={expanded ? ChevronDownIcon : ChevronRightIcon} size="xs" color="foregroundMuted" />
