@@ -38,6 +38,16 @@ export {
   spanStatusCodeSchema,
   toolDefinitionSchema,
 } from "./entities/span.ts"
+export type {
+  FinishReasonClassification,
+  ProviderErrorClassification,
+  SpanEndpointClassification,
+} from "./entities/span-endpoint.ts"
+export {
+  finishReasonClassificationSchema,
+  providerErrorClassificationSchema,
+  spanEndpointClassificationSchema,
+} from "./entities/span-endpoint.ts"
 export type { Trace, TraceConversationChunk, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
@@ -76,6 +86,9 @@ export {
   cacheBreakEvenRate,
   classifyCacheState,
 } from "./helpers/cache-economics.ts"
+export { classifyFinishReason, normalizeFinishReason } from "./helpers/classify-finish-reason.ts"
+export { classifyProviderError, normalizeProviderErrorType } from "./helpers/classify-provider-error.ts"
+export { classifySpanEndpoint } from "./helpers/classify-span-endpoint.ts"
 export type {
   CostPerSessionDecomposition,
   DecomposeCostPerSessionInput,

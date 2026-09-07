@@ -67,8 +67,16 @@ export {
   toolDefinitionSchema,
   USAGE_OPERATIONS,
 } from "./entities/span.ts"
-export type { FinishReasonClassification, ProviderErrorClassification } from "./entities/span-endpoint.ts"
-export { finishReasonClassificationSchema, providerErrorClassificationSchema } from "./entities/span-endpoint.ts"
+export type {
+  FinishReasonClassification,
+  ProviderErrorClassification,
+  SpanEndpointClassification,
+} from "./entities/span-endpoint.ts"
+export {
+  finishReasonClassificationSchema,
+  providerErrorClassificationSchema,
+  spanEndpointClassificationSchema,
+} from "./entities/span-endpoint.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { RedactionError, SpanDecodingError } from "./errors.ts"
@@ -109,6 +117,7 @@ export {
 } from "./helpers/cache-economics.ts"
 export { classifyFinishReason, normalizeFinishReason } from "./helpers/classify-finish-reason.ts"
 export { classifyProviderError, normalizeProviderErrorType } from "./helpers/classify-provider-error.ts"
+export { classifySpanEndpoint } from "./helpers/classify-span-endpoint.ts"
 export type { ClassifiedUnpricedPair, UnpricedCause, UnpricedUsageSummary } from "./helpers/classify-unpriced-cost.ts"
 export {
   classifyUnpricedPair,

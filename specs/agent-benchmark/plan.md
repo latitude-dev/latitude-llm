@@ -147,7 +147,7 @@ does not display per-session dimension scores.
   `unmapped` without treating a configured length stop as damaged output by itself.
 - [x] **P2-13** Add the named provider-error classifier for rate limiting, overload, service failure,
   and provider rejection. Generic span error status remains insufficient.
-- [ ] **P2-14** Expose raw and classified values through browser-safe span and session contracts and
+- [x] **P2-14** Expose raw and classified values through browser-safe span and session contracts and
   their existing detail registries. Unmapped values remain visible and lower coverage.
 - [ ] **P2-15** Resolve provider recovery and final-versus-intermediate position from the full session
   chronology without writing a provider-finding score.

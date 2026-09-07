@@ -149,6 +149,10 @@ Speed if the session recovered. Position is metadata on one metric, not a second
 
 Unmapped values lower coverage. A periodic fleet report keeps the classifier current.
 
+Span responses expose raw finish reasons beside their classifications. The same browser-safe span
+contract is used by trace and session span readers, so detail views show known and unmapped endpoint
+values consistently without persisting derived classifier columns.
+
 ## `spans.provider_error`
 
 - Dimensions: Reliability, Cost, Speed.

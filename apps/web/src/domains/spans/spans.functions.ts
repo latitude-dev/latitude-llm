@@ -1,6 +1,16 @@
 import { ProjectId, SpanId, TraceId } from "@domain/shared"
-import type { CostSource, Operation, Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode } from "@domain/spans"
-import { SpanRepository } from "@domain/spans"
+import type {
+  CostSource,
+  FinishReasonClassification,
+  Operation,
+  ProviderErrorClassification,
+  Span,
+  SpanDetail,
+  SpanKind,
+  SpanMessagesData,
+  SpanStatusCode,
+} from "@domain/spans"
+import { classifySpanEndpoint, SpanRepository } from "@domain/spans"
 import { SpanRepositoryLive } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -28,6 +38,8 @@ export interface SpanRecord {
   readonly kind: SpanKind
   readonly statusCode: SpanStatusCode
   readonly statusMessage: string
+  readonly errorType: string
+  readonly providerErrorClassification: ProviderErrorClassification | null
   readonly operation: Operation
   readonly provider: string
   readonly model: string
@@ -40,6 +52,8 @@ export interface SpanRecord {
   readonly costTotalMicrocents: number
   readonly timeToFirstTokenNs: number
   readonly isStreaming: boolean
+  readonly finishReasons: readonly string[]
+  readonly finishReasonClassifications: readonly FinishReasonClassification[]
   readonly startTime: string
   readonly endTime: string
   readonly ingestedAt: string
@@ -52,7 +66,6 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly responseModel: string
   readonly traceFlags: number
   readonly traceState: string
-  readonly errorType: string
   readonly tags: readonly string[]
   readonly metadata: Readonly<Record<string, string>>
   readonly eventsJson: string
@@ -68,7 +81,6 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly costPricedProvider: string
   readonly costPricedModel: string
   readonly responseId: string
-  readonly finishReasons: readonly string[]
   readonly attrString: Readonly<Record<string, string>>
   readonly attrInt: Readonly<Record<string, number>>
   readonly attrFloat: Readonly<Record<string, number>>
@@ -84,34 +96,41 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly toolOutput: string
 }
 
-const serializeSpan = (span: Span): SpanRecord => ({
-  organizationId: span.organizationId,
-  projectId: span.projectId,
-  traceId: span.traceId,
-  spanId: span.spanId,
-  parentSpanId: span.parentSpanId,
-  simulationId: span.simulationId,
-  name: span.name,
-  serviceName: span.serviceName,
-  kind: span.kind,
-  statusCode: span.statusCode,
-  statusMessage: span.statusMessage,
-  operation: span.operation,
-  provider: span.provider,
-  model: span.model,
-  agentName: span.agentName,
-  toolName: span.toolName,
-  toolNames: span.toolNames,
-  toolCallId: span.toolCallId,
-  tokensInput: span.tokensInput,
-  tokensOutput: span.tokensOutput,
-  costTotalMicrocents: span.costTotalMicrocents,
-  timeToFirstTokenNs: span.timeToFirstTokenNs,
-  isStreaming: span.isStreaming,
-  startTime: span.startTime.toISOString(),
-  endTime: span.endTime.toISOString(),
-  ingestedAt: span.ingestedAt.toISOString(),
-})
+const serializeSpan = (span: Span): SpanRecord => {
+  const endpoint = classifySpanEndpoint(span)
+  return {
+    organizationId: span.organizationId,
+    projectId: span.projectId,
+    traceId: span.traceId,
+    spanId: span.spanId,
+    parentSpanId: span.parentSpanId,
+    simulationId: span.simulationId,
+    name: span.name,
+    serviceName: span.serviceName,
+    kind: span.kind,
+    statusCode: span.statusCode,
+    statusMessage: span.statusMessage,
+    errorType: span.errorType,
+    providerErrorClassification: endpoint.providerError,
+    operation: span.operation,
+    provider: span.provider,
+    model: span.model,
+    agentName: span.agentName,
+    toolName: span.toolName,
+    toolNames: span.toolNames,
+    toolCallId: span.toolCallId,
+    tokensInput: span.tokensInput,
+    tokensOutput: span.tokensOutput,
+    costTotalMicrocents: span.costTotalMicrocents,
+    timeToFirstTokenNs: span.timeToFirstTokenNs,
+    isStreaming: span.isStreaming,
+    finishReasons: span.finishReasons,
+    finishReasonClassifications: endpoint.finishReasons,
+    startTime: span.startTime.toISOString(),
+    endTime: span.endTime.toISOString(),
+    ingestedAt: span.ingestedAt.toISOString(),
+  }
+}
 
 const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   ...serializeSpan(span),
@@ -121,7 +140,6 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   responseModel: span.responseModel,
   traceFlags: span.traceFlags,
   traceState: span.traceState,
-  errorType: span.errorType,
   tags: span.tags,
   metadata: span.metadata,
   eventsJson: span.eventsJson,
@@ -137,7 +155,6 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   costPricedProvider: span.costPricedProvider,
   costPricedModel: span.costPricedModel,
   responseId: span.responseId,
-  finishReasons: span.finishReasons,
   attrString: span.attrString,
   attrInt: span.attrInt,
   attrFloat: span.attrFloat,

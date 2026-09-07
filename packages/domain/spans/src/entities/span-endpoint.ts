@@ -48,3 +48,12 @@ export const providerErrorClassificationSchema = z.discriminatedUnion("classific
 ])
 
 export type ProviderErrorClassification = z.infer<typeof providerErrorClassificationSchema>
+
+export const spanEndpointClassificationSchema = z
+  .object({
+    finishReasons: z.array(finishReasonClassificationSchema).readonly(),
+    providerError: providerErrorClassificationSchema.nullable(),
+  })
+  .strict()
+
+export type SpanEndpointClassification = z.infer<typeof spanEndpointClassificationSchema>
