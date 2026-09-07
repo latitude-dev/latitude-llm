@@ -27,3 +27,24 @@ export const finishReasonClassificationSchema = z.discriminatedUnion("classifica
 ])
 
 export type FinishReasonClassification = z.infer<typeof finishReasonClassificationSchema>
+
+const baseProviderErrorClassificationSchema = z.object({
+  rawValue: z.string().min(1),
+  normalizedValue: z.string().min(1),
+})
+
+export const providerErrorClassificationSchema = z.discriminatedUnion("classification", [
+  baseProviderErrorClassificationSchema
+    .extend({
+      classification: z.literal("providerError"),
+      kind: z.enum(["rateLimit", "overload", "serviceFailure", "providerRejection"]),
+    })
+    .strict(),
+  baseProviderErrorClassificationSchema
+    .extend({
+      classification: z.literal("unmapped"),
+    })
+    .strict(),
+])
+
+export type ProviderErrorClassification = z.infer<typeof providerErrorClassificationSchema>

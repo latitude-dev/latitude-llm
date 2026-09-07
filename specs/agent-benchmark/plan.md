@@ -145,7 +145,7 @@ does not display per-session dimension scores.
 - [x] **P2-12** Add the shared finish-reason classifier required by
   [`metrics.md`](metrics.md#spans), mapping provider-native values to `clean`, `unreliable`, or
   `unmapped` without treating a configured length stop as damaged output by itself.
-- [ ] **P2-13** Add the named provider-error classifier for rate limiting, overload, service failure,
+- [x] **P2-13** Add the named provider-error classifier for rate limiting, overload, service failure,
   and provider rejection. Generic span error status remains insufficient.
 - [ ] **P2-14** Expose raw and classified values through browser-safe span and session contracts and
   their existing detail registries. Unmapped values remain visible and lower coverage.

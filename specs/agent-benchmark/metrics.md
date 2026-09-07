@@ -158,6 +158,11 @@ Unmapped values lower coverage. A periodic fleet report keeps the classifier cur
 Rate limiting, overload, service failure, and provider rejection qualify. Generic span error status
 does not, because SDKs disagree about whether handled exceptions set it.
 
+The named classifier returns `rateLimit`, `overload`, `serviceFailure`, or `providerRejection` only
+from a recognized `error_type`. An absent type produces no provider-error observation. An unknown or
+generic type remains visible as `unmapped` and lowers reader coverage; status code alone cannot
+promote it.
+
 The reader pairs the error with later successful progress:
 
 - no later successful generation or usable completion: terminal Reliability failure;
