@@ -3,6 +3,8 @@ title: OpenTelemetry Exporter (OTEL)
 description: Connect any OpenTelemetry-instrumented application to Latitude, regardless of language or framework.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+
 # Connect with Any OpenTelemetry Exporter
 
 Latitude's ingestion endpoint speaks standard **OTLP over HTTP**. 
@@ -12,6 +14,8 @@ If your language has an OpenTelemetry SDK (Go, Java, Ruby, Rust, .NET, Elixir, P
 <Info>
   Using **TypeScript** or **Python**? The dedicated SDKs handle all of this for you with a single function call. See the [TypeScript SDK](/telemetry/typescript) or [Python SDK](/telemetry/python) instead.
 </Info>
+
+<SkillsCallout />
 
 ## Prerequisites
 

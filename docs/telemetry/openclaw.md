@@ -1,3 +1,5 @@
+import SkillsCallout from "/snippets/skills-callout.mdx"
+
 # OpenClaw telemetry
 
 Stream OpenClaw agent runs into Latitude as traces. After setup, agent runs appear in your project's **Traces** view with model calls, tool calls, token usage, cost, timing, and nested subagent activity — as a proper `invoke_agent → chat → execute_tool` tree.
@@ -5,6 +7,8 @@ Stream OpenClaw agent runs into Latitude as traces. After setup, agent runs appe
 The recommended way is OpenClaw's **official OpenTelemetry exporter** (the bundled `@openclaw/diagnostics-otel` plugin), pointed at Latitude's OTLP ingest. It follows OpenTelemetry GenAI semantic conventions and is maintained by OpenClaw — see [OpenClaw's OpenTelemetry docs](https://docs.openclaw.ai/gateway/opentelemetry).
 
 > **Note:** OpenClaw's official exporter is the preferred setup and is documented below. If you need to group a multi-turn conversation into a Latitude **session**, the Latitude-maintained [`@latitude-data/openclaw-telemetry`](https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/openclaw) plugin remains the only option that emits a session id today — the native exporter doesn't yet ([openclaw/openclaw#91927](https://github.com/openclaw/openclaw/issues/91927)).
+
+<SkillsCallout />
 
 ## Prerequisites
 

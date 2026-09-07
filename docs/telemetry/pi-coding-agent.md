@@ -1,8 +1,12 @@
+import SkillsCallout from "/snippets/skills-callout.mdx"
+
 # Pi coding agent telemetry
 
 Stream [pi coding agent](https://pi.dev) sessions into Latitude as traces with the first-party `@latitude-data/pi-telemetry` extension.
 
 After setup, pi prompts appear in your Latitude project's **Traces** view with model calls, prompts, responses, token usage, tool calls, and tool results.
+
+<SkillsCallout />
 
 ## Prerequisites
 

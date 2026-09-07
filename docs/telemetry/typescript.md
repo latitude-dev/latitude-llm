@@ -3,9 +3,13 @@ title: TypeScript SDK
 description: Instrument TypeScript and JavaScript apps with Latitude Telemetry.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+
 # TypeScript SDK
 
 Use `@latitude-data/telemetry` to send LLM traces from TypeScript and JavaScript applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one.
+
+<SkillsCallout />
 
 ## Installation
 
@@ -142,22 +146,22 @@ If you need lower-level OpenTelemetry wiring or a non-TypeScript runtime, see th
 
 ## Supported integrations
 
-Set the integration key on `instrumentations` to the SDK module your app imports.
+Import each factory from its opt-in subpath under `@latitude-data/telemetry/instrumentations/` and pass the SDK module your app imports.
 
-| Integration | Package | Example |
-| --- | --- | --- |
-| OpenAI | `openai` | `{ openai: OpenAI }` |
-| OpenAI Agents SDK | `@openai/agents` | `{ "openai-agents": OpenAIAgentsSDK }` |
-| Anthropic | `@anthropic-ai/sdk` | `{ anthropic: AnthropicSDK }` |
-| Amazon Bedrock | `@aws-sdk/client-bedrock-runtime` | `{ bedrock: BedrockSDK }` |
-| Cohere | `cohere-ai` | `{ cohere: CohereSDK }` |
-| LangChain | `langchain` | `{ langchain: LangChain }` |
-| LlamaIndex | `llamaindex` | `{ llamaindex: LlamaIndex }` |
-| Together AI | `together-ai` | `{ togetherai: TogetherSDK }` |
-| Vertex AI | `@google-cloud/vertexai` | `{ vertexai: VertexAISDK }` |
-| Google AI Platform | `@google-cloud/aiplatform` | `{ aiplatform: AIPlatformSDK }` |
+| Integration | Subpath | Factory | LLM SDK |
+| --- | --- | --- | --- |
+| OpenAI (and Azure OpenAI) | `openai` | `createOpenAIInstrumentation` | `openai` |
+| OpenAI Agents SDK | `openai-agents` | `createOpenAIAgentsInstrumentation` | `@openai/agents` |
+| Anthropic | `anthropic` | `createAnthropicInstrumentation` | `@anthropic-ai/sdk` |
+| Amazon Bedrock | `bedrock` | `createBedrockInstrumentation` | `@aws-sdk/client-bedrock-runtime` |
+| Cohere | `cohere` | `createCohereInstrumentation` | `cohere-ai` |
+| LangChain | `langchain` | `createLangChainInstrumentation` | `@langchain/core` (pass the `@langchain/core/callbacks/manager` module) |
+| LlamaIndex | `llamaindex` | `createLlamaIndexInstrumentation` | `llamaindex` |
+| Together AI | `togetherai` | `createTogetherAIInstrumentation` | `together-ai` |
+| Vertex AI | `vertexai` | `createVertexAIInstrumentation` | `@google-cloud/vertexai` |
+| Google AI Platform | `aiplatform` | `createAIPlatformInstrumentation` | `@google-cloud/aiplatform` |
 
-For provider-specific setup notes, use the provider and framework pages in the Observability sidebar.
+Frameworks that run their own OpenTelemetry (Vercel AI SDK, Cloudflare Think, Flue, LiveKit, Mastra, Eve) and providers without a TypeScript factory are covered by their own pages in the Getting Started sidebar, or by the [OpenTelemetry exporter](/telemetry/otel-exporter).
 
 ## Troubleshooting
 
