@@ -846,7 +846,9 @@ const projectedRootSweepWork = (input: {
   readonly restarts: number
   readonly maxIter: number
   readonly kSum: number
-}): number => input.restarts * input.maxIter * input.memberCount * input.dimensions * input.kSum
+  /** K of the extra warm attempt; 0 when the prior K falls outside this sweep. */
+  readonly warmK: number
+}): number => (input.restarts * input.kSum + input.warmK) * input.maxIter * input.memberCount * input.dimensions
 
 /** The K a root sweep visits when nothing restricts it. */
 const rootKRange = (memberCount: number, schedule: RelativeDepthSchedule): number[] => {
@@ -887,16 +889,24 @@ export const buildRelativeHierarchicalClusters = (
   )
   const rootSchedule = input.depthSchedule[0]
   const shared = { memberCount, dimensions, maxIter: input.maxIter }
+  // A warm candidate adds one attempt at the K matching the prior child count, so
+  // it is charged only to the sweeps whose K range actually reaches that K.
+  const warmRootK = input.priorTree?.children.length ?? 0
+  const chargeWarm = (ks: readonly number[]): number => (ks.includes(warmRootK) ? warmRootK : 0)
+  const sweptKs = rootSchedule ? rootKRange(memberCount, rootSchedule) : []
+  const escalationKs = restrictToK.size > 0 ? [...restrictToK] : sweptKs
   const projectedRootSearchWork = rootSchedule
     ? projectedRootSweepWork({
         ...shared,
         restarts: input.restarts,
-        kSum: sumOf(rootKRange(memberCount, rootSchedule)),
+        kSum: sumOf(sweptKs),
+        warmK: chargeWarm(sweptKs),
       }) +
       projectedRootSweepWork({
         ...shared,
         restarts: escalation.restarts,
-        kSum: sumOf(restrictToK.size > 0 ? restrictToK : rootKRange(memberCount, rootSchedule)),
+        kSum: sumOf(escalationKs),
+        warmK: chargeWarm(escalationKs),
       })
     : 0
 
