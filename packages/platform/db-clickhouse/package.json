@@ -29,6 +29,7 @@
   "dependencies": {
     "@clickhouse/client": "catalog:",
     "@domain/admin": "workspace:*",
+    "@domain/agent-score": "workspace:*",
     "@domain/ai": "workspace:*",
     "@domain/conversation-intelligence": "workspace:*",
     "@domain/datasets": "workspace:*",

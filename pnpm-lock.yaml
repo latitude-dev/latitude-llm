@@ -2614,6 +2614,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../domain/admin
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../../domain/agent-score
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
@@ -2690,6 +2693,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../domain/admin
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../../domain/agent-score
       '@domain/agent-dispatch':
         specifier: workspace:*
         version: link:../../domain/agent-dispatch

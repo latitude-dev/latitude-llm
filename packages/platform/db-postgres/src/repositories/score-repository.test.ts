@@ -137,6 +137,58 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(persistedRows).toHaveLength(0)
   })
 
+  it("lists session and orphan-trace scores in one cutoff-bounded read", async () => {
+    const organizationId = OrganizationId("b".repeat(24))
+    const projectId = ProjectId("c".repeat(24))
+    const sessionId = SessionId("bulk-session")
+    const traceId = TraceId("d".repeat(32))
+    const cutoff = new Date("2026-01-02T00:00:00.000Z")
+    const makeScore = (id: string, createdAt: Date, target: "session" | "trace") =>
+      scoreSchema.parse({
+        id: ScoreId(id.repeat(24)),
+        organizationId,
+        projectId,
+        sessionId: target === "session" ? sessionId : null,
+        traceId: target === "trace" ? traceId : null,
+        spanId: null,
+        sourceType: "annotation",
+        sourceId: "SYSTEM",
+        simulationId: null,
+        signalId: null,
+        value: 0,
+        passed: false,
+        feedback: id,
+        metadata: { rawFeedback: id },
+        error: null,
+        errored: false,
+        duration: 0,
+        tokens: 0,
+        cost: 0,
+        draftedAt: null,
+        annotatorId: null,
+        createdAt,
+        updatedAt: createdAt,
+      })
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        yield* repository.save(makeScore("e", new Date("2026-01-01T00:00:00.000Z"), "session"))
+        yield* repository.save(makeScore("f", new Date("2026-01-01T01:00:00.000Z"), "trace"))
+        yield* repository.save(makeScore("g", new Date("2026-01-03T00:00:00.000Z"), "session"))
+        return yield* repository.listBySessionsAndTraces({
+          organizationId,
+          projectId,
+          sessionIds: [sessionId],
+          traceIds: [traceId],
+          createdAtTo: cutoff,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, organizationId)),
+    )
+
+    expect(result.map(({ id }) => id)).toEqual(["e".repeat(24), "f".repeat(24)])
+  })
+
   it("writes ScoreCreated with status=draft for draft writes and status=published for published writes", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const scoreId = "ssssssssssssssssssssssss"

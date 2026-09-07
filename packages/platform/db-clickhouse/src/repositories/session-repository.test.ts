@@ -140,6 +140,43 @@ describe("SessionRepository", () => {
     )
   })
 
+  it("lists session details in one cutoff-bounded read", async () => {
+    const sessionId = SessionId("bulk-session")
+    const traceId = "f".repeat(32)
+    const startTime = new Date("2026-01-01T10:00:00.000Z")
+    await insertSpans([
+      makeSpanRow({
+        traceId,
+        spanId: "f".repeat(16),
+        sessionId,
+        startTime,
+        outputMessages: JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]),
+      }),
+    ])
+
+    const beforeEnd = await runCh(
+      repo.listDetailsBySessionIds({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionIds: [sessionId],
+        endTimeTo: new Date("2026-01-01T10:00:00.500Z"),
+      }),
+    )
+    const afterEnd = await runCh(
+      repo.listDetailsBySessionIds({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionIds: [sessionId],
+        endTimeTo: new Date("2026-01-01T10:00:02.000Z"),
+      }),
+    )
+
+    expect(beforeEnd).toEqual([])
+    expect(afterEnd).toHaveLength(1)
+    expect(afterEnd[0]?.sessionId).toBe(sessionId)
+    expect(afterEnd[0]?.outputMessages).toEqual([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }])
+  })
+
   describe("orphan-trace-as-session", () => {
     it("synthesizes a 1-trace session for spans without gen_ai.conversation.id", async () => {
       const traceId = "a".repeat(32)

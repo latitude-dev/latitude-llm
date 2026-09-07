@@ -22,6 +22,35 @@ export interface SessionMomentFacts {
   readonly labels: readonly SessionMomentLabel[]
 }
 
+export interface SessionAssessmentBulkScope {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly sessionIds: readonly SessionId[]
+  readonly cutoff: Date
+}
+
+export interface SessionAssessmentBulkSessionRef {
+  readonly sessionId: SessionId
+  readonly traceIds: readonly TraceId[]
+}
+
+export interface SessionAssessmentBulkJudgmentScope extends SessionAssessmentBulkScope {
+  readonly sessions: readonly SessionAssessmentBulkSessionRef[]
+}
+
+export interface SessionAssessmentBulkTelemetry {
+  readonly session: SessionDetail
+  readonly spans: readonly Span[]
+  readonly moments: SessionMomentFacts
+  readonly screeningDecisions: readonly FlaggerScreeningDecision[]
+}
+
+export interface SessionAssessmentBulkJudgments {
+  readonly sessionId: SessionId
+  readonly scores: readonly Score[]
+  readonly signals: readonly SignalWithLifecycle[]
+}
+
 export interface SessionConversationSourceShape {
   read(input: SessionAssessmentSourceScope): Effect.Effect<SessionDetail, NotFoundError | RepositoryError>
 }
@@ -71,3 +100,23 @@ export class SessionScreeningDecisionSource extends Context.Service<
   SessionScreeningDecisionSource,
   SessionScreeningDecisionSourceShape
 >()("@domain/agent-score/SessionScreeningDecisionSource") {}
+
+export interface SessionAssessmentBulkTelemetrySourceShape {
+  read(input: SessionAssessmentBulkScope): Effect.Effect<readonly SessionAssessmentBulkTelemetry[], RepositoryError>
+}
+
+export class SessionAssessmentBulkTelemetrySource extends Context.Service<
+  SessionAssessmentBulkTelemetrySource,
+  SessionAssessmentBulkTelemetrySourceShape
+>()("@domain/agent-score/SessionAssessmentBulkTelemetrySource") {}
+
+export interface SessionAssessmentBulkJudgmentSourceShape {
+  read(
+    input: SessionAssessmentBulkJudgmentScope,
+  ): Effect.Effect<readonly SessionAssessmentBulkJudgments[], RepositoryError>
+}
+
+export class SessionAssessmentBulkJudgmentSource extends Context.Service<
+  SessionAssessmentBulkJudgmentSource,
+  SessionAssessmentBulkJudgmentSourceShape
+>()("@domain/agent-score/SessionAssessmentBulkJudgmentSource") {}

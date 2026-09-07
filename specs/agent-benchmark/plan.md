@@ -213,7 +213,7 @@ does not display per-session dimension scores.
 - [x] **P2-33** Build reader-level coverage. Distinguish examined with zero findings, partial
   readability, not examined, and not applicable; derive each dimension's coverage from its relevant
   readers without an assessment-wide complete flag.
-- [ ] **P2-34** Add bulk source contracts and adapters for later benchmark jobs. Batch by organization,
+- [x] **P2-34** Add bulk source contracts and adapters for later benchmark jobs. Batch by organization,
   project, session ids, and cutoff; feed the same pure readers and resolver without calling the
   interactive use-case or creating an N-plus-one query loop.
 

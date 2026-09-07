@@ -36,7 +36,7 @@ import {
   SessionRepository,
   type SessionRepositoryShape,
 } from "@domain/spans"
-import { normalizeCHString, parseCHDate } from "@repo/utils"
+import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
@@ -1000,6 +1000,37 @@ export const SessionRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((rows): readonly Session[] => rows.map(toDomainSession)),
               Effect.mapError((error) => toRepositoryError(error, "listBySessionIds")),
+            )
+        }),
+
+      listDetailsBySessionIds: ({ organizationId, projectId, sessionIds, endTimeTo }) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${DETAIL_SELECT}
+                      FROM sessions
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND session_id IN ({sessionIds:Array(String)})
+                      GROUP BY organization_id, project_id, session_id
+                      HAVING end_time <= parseDateTime64BestEffort({endTimeTo:String}, 9, 'UTC')
+                      ORDER BY session_id ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionIds: sessionIds.map((sessionId) => sessionId as string),
+                  endTimeTo: formatCHDate(endTimeTo),
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionDetailRow>()
+            })
+            .pipe(
+              Effect.map((rows): readonly SessionDetail[] => rows.map(toDomainSessionDetail)),
+              Effect.mapError((error) => toRepositoryError(error, "listDetailsBySessionIds")),
             )
         }),
 

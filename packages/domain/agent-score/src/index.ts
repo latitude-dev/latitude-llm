@@ -35,6 +35,15 @@ export type {
   NormalizedSessionAssessmentInput,
 } from "./entities/session-assessment-input.ts"
 export {
+  type SessionAssessmentBulkJudgmentScope,
+  SessionAssessmentBulkJudgmentSource,
+  type SessionAssessmentBulkJudgmentSourceShape,
+  type SessionAssessmentBulkJudgments,
+  type SessionAssessmentBulkScope,
+  type SessionAssessmentBulkSessionRef,
+  type SessionAssessmentBulkTelemetry,
+  SessionAssessmentBulkTelemetrySource,
+  type SessionAssessmentBulkTelemetrySourceShape,
   type SessionAssessmentSourceScope,
   type SessionAssessmentTraceScope,
   SessionConversationSource,
@@ -51,6 +60,7 @@ export {
   SessionSpanSource,
   type SessionSpanSourceShape,
 } from "./ports/session-assessment-sources.ts"
+export { readSessionAssessmentBatch } from "./readers/read-session-assessment-batch.ts"
 export {
   type ReadSessionAssessmentSourcesInput,
   readSessionAssessmentSources,
@@ -73,3 +83,4 @@ export {
   resolveAssessmentFindingEffects,
   resolveSessionAssessmentItems,
 } from "./resolver/resolve-assessment-findings.ts"
+export { resolveSessionAssessment } from "./resolver/resolve-session-assessment.ts"
