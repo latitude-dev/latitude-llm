@@ -19,10 +19,38 @@ type ServerFnErrorInfo = {
 const errorTag = (e: unknown): string | undefined =>
   typeof e === "object" && e !== null && "_tag" in (e as DomainError) ? (e as DomainError)._tag : undefined
 
+interface StandardSchemaIssue {
+  readonly message: string
+  readonly path?: readonly unknown[]
+}
+
+const isStandardSchemaIssue = (issue: unknown): issue is StandardSchemaIssue =>
+  typeof issue === "object" &&
+  issue !== null &&
+  typeof (issue as StandardSchemaIssue).message === "string" &&
+  Array.isArray((issue as StandardSchemaIssue).path)
+
+/**
+ * TanStack's `execValidator` throws a plain `Error` whose message is the
+ * JSON-encoded Standard Schema issues array when an `inputValidator` (e.g.
+ * zod) rejects the request — rejected input, not a server fault, so it must
+ * be duck-typed from the message shape rather than an exception type.
+ */
+const isInputValidationError = (e: unknown): boolean => {
+  if (!(e instanceof Error)) return false
+  try {
+    const parsed = JSON.parse(e.message)
+    return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isStandardSchemaIssue)
+  } catch {
+    return false
+  }
+}
+
 const errorStatus = (e: unknown): number => {
   if (isHttpError(e)) return e.httpStatus
   // Stale-tab server-fn hashes after a deploy — expected 404, not a 500.
   if (isMissingServerFnError(e)) return 404
+  if (isInputValidationError(e)) return 400
   return 500
 }
 
@@ -91,7 +119,7 @@ export const recordServerFnError = (span: Span, e: unknown): ServerFnErrorInfo =
   const httpError = isHttpError(e)
   const tag = errorTag(e)
   const message = httpError ? e.httpMessage : e instanceof Error ? e.message : "Unknown error occurred"
-  const status = httpError ? e.httpStatus : 500
+  const status = errorStatus(e)
   const isClientError = isExpectedClientError(status)
 
   if (!isClientError) {
