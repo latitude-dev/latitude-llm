@@ -69,17 +69,31 @@ export {
 } from "./entities/span.ts"
 export type {
   FinishReasonClassification,
+  GenerationPosition,
   ProviderErrorClassification,
+  ProviderErrorFinding,
+  RecognizedProviderErrorClassification,
+  SessionGenerationEndpoint,
+  SessionSpanEndpointResolution,
   SpanEndpointClassification,
 } from "./entities/span-endpoint.ts"
 export {
   finishReasonClassificationSchema,
+  generationPositionSchema,
   providerErrorClassificationSchema,
+  providerErrorFindingSchema,
+  recognizedProviderErrorClassificationSchema,
+  sessionGenerationEndpointSchema,
+  sessionSpanEndpointResolutionSchema,
   spanEndpointClassificationSchema,
 } from "./entities/span-endpoint.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { RedactionError, SpanDecodingError } from "./errors.ts"
+export {
+  assistantMessageHasOutputContent,
+  hasUsableAssistantCompletion,
+} from "./helpers/assistant-output-content.ts"
 export type {
   CacheCadence,
   CacheCadenceHistogram,
@@ -162,6 +176,10 @@ export {
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export {
+  type ResolveSessionSpanEndpointsInput,
+  resolveSessionSpanEndpoints,
+} from "./helpers/resolve-session-span-endpoints.ts"
 export { toolDefinitionsFrom } from "./helpers/resolve-tool-definitions.ts"
 export {
   shouldReportUnpricedSpan,

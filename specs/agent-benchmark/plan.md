@@ -149,7 +149,7 @@ does not display per-session dimension scores.
   and provider rejection. Generic span error status remains insufficient.
 - [x] **P2-14** Expose raw and classified values through browser-safe span and session contracts and
   their existing detail registries. Unmapped values remain visible and lower coverage.
-- [ ] **P2-15** Resolve provider recovery and final-versus-intermediate position from the full session
+- [x] **P2-15** Resolve provider recovery and final-versus-intermediate position from the full session
   chronology without writing a provider-finding score.
 
 ### Step 4: add minimal score provenance and linkage

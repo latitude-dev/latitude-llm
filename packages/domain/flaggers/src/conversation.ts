@@ -1,4 +1,4 @@
-import { type SessionDetail, sessionConversationMessages } from "@domain/spans"
+import { assistantMessageHasOutputContent, type SessionDetail, sessionConversationMessages } from "@domain/spans"
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -56,15 +56,7 @@ export const findFinalCapturedAssistantTurn = (
   return null
 }
 
-export const assistantTurnHasOutputContent = (message: GenAIMessage): boolean => {
-  if (message.role !== "assistant") return false
-  for (const part of iterMessageParts(message.parts)) {
-    if (!isRecord(part)) continue
-    if (part.type === "tool_call") return true
-    if (part.type === "text" && typeof part.content === "string" && part.content.trim() !== "") return true
-  }
-  return false
-}
+export const assistantTurnHasOutputContent = assistantMessageHasOutputContent
 
 const messageAnchorText = (message: GenAIMessage): string => {
   const chunks: string[] = []

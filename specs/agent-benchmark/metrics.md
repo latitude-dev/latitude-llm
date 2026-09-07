@@ -167,13 +167,28 @@ from a recognized `error_type`. An absent type produces no provider-error observ
 generic type remains visible as `unmapped` and lowers reader coverage; status code alone cannot
 promote it.
 
-The reader pairs the error with later successful progress:
+The browser-safe session endpoint resolver orders the complete session span list by end time, start
+time, trace id, and span id. It assigns both the full chronology's `spanIndex` and the generation-only
+`generationIndex`, and marks only the last generation `final`. A generation counts as later progress
+only when it starts after the failed generation ended, so overlapping sibling calls cannot be
+mistaken for a retry. A successful generation has no error status, no error type, and no unreliable
+or unmapped finish reason.
 
-- no later successful generation or usable completion: terminal Reliability failure;
-- later success: retry spend and retry critical-path duration for Cost and Speed.
+The reader pairs the error with that later successful progress and the shared usable-completion
+predicate:
 
-The finding carries `recovered`, the failed span index, the successful span index when present, cost,
-and critical-path duration. Recovery is factual metadata, not a score band.
+- no later successful generation or no usable completion: terminal Reliability failure;
+- later success plus usable completion: recovered retry evidence for Cost and Speed.
+
+The finding carries `recovered`, `sameSubjectRecovered`, the failed span index, successful span
+indices when present, exact stored cost, and elapsed duration derived from the retained span
+timestamps. The same-subject marker compares non-empty normalized provider names and remains a
+separate fact: a provider may recover even when the session never delivers a completion. Unmapped
+errors stay on the classified endpoint but do not become provider-error findings or prove a
+successful retry.
+
+This resolver is pure and runs from retained spans and the captured session output. It writes no
+provider-finding score, event, or other derived row. Recovery is factual metadata, not a score band.
 
 ## `spans.ttft`
 
