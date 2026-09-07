@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.95 - 2026-09-07
+
+### Docs
+
+- Every telemetry getting-started page (providers, frameworks, agent harnesses, imports, SDKs, OTel exporter) opens with a callout pointing agents and users at the `latitude-setup` skill, which bootstraps an account when there is none, instruments the app or harness, verifies traces and offers a first Artifact. The agent-only line is hidden in the rendered page and kept in the markdown export. The TypeScript integrations table no longer shows the object-map syntax removed in telemetry v4 (ref: #4590).
+
 ## v0.3.94 - 2026-09-07
 
 ### Models
