@@ -64,6 +64,19 @@ const assessment: SessionAssessment = {
         { kind: "signal", signalId: "sig-123456789" },
       ],
     },
+    {
+      id: "raw-item-1",
+      evidenceKey: "raw-item-1",
+      label: "Legacy quality score",
+      description: "Stored before benchmark semantics were available.",
+      source: "score",
+      signalIds: [],
+      scoreIds: ["legacy-score-1"],
+      occurrenceCount: 1,
+      effects: [],
+      anchors: [{ kind: "score", scoreId: "legacy-score-1" }],
+      destinations: [{ kind: "score", scoreId: "legacy-score-1" }],
+    },
   ],
   coverage: {
     readers: [
@@ -89,6 +102,8 @@ describe("SessionAssessmentContent", () => {
     expect(screen.getByText("3×")).toBeTruthy()
     expect(screen.getByText("Observed")).toBeTruthy()
     expect(screen.getAllByText(/avoidable/).length).toBeGreaterThan(0)
+    expect(screen.getByText("Raw evidence (1)")).toBeTruthy()
+    expect(screen.getByText("Legacy quality score").closest("details")).toBeTruthy()
     expect(screen.getByText("Reader coverage: 1 examined")).toBeTruthy()
   })
 

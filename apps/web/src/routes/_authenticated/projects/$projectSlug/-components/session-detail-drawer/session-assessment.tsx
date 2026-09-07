@@ -263,6 +263,9 @@ export function SessionAssessmentContent({
   readonly assessment: SessionAssessment
   readonly onOpenDestination?: SessionAssessmentDestinationHandler | undefined
 }) {
+  const evidenceItems = assessment.items.filter((item) => item.effects.length > 0)
+  const rawItems = assessment.items.filter((item) => item.effects.length === 0)
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
@@ -273,14 +276,23 @@ export function SessionAssessmentContent({
 
       <div className="flex flex-col gap-2">
         <Text.H5M>Evidence</Text.H5M>
-        {assessment.items.length > 0 ? (
-          assessment.items.map((item) => (
-            <EvidenceItem key={item.id} item={item} onOpenDestination={onOpenDestination} />
-          ))
+        {evidenceItems.length > 0 ? (
+          evidenceItems.map((item) => <EvidenceItem key={item.id} item={item} onOpenDestination={onOpenDestination} />)
         ) : (
-          <Text.H6 color="foregroundMuted">No evidence was found for this session.</Text.H6>
+          <Text.H6 color="foregroundMuted">No benchmark evidence was found for this session.</Text.H6>
         )}
       </div>
+
+      {rawItems.length > 0 ? (
+        <details className="group rounded-lg border border-border px-3 py-2">
+          <summary className="cursor-pointer text-xs text-muted-foreground">Raw evidence ({rawItems.length})</summary>
+          <div className="flex flex-col gap-2 pt-3">
+            {rawItems.map((item) => (
+              <EvidenceItem key={item.id} item={item} onOpenDestination={onOpenDestination} />
+            ))}
+          </div>
+        </details>
+      ) : null}
 
       <ReaderCoverage assessment={assessment} />
     </div>
