@@ -1,6 +1,6 @@
 import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
-import type { MiddlewareHandler } from "hono"
+import type { Context, MiddlewareHandler } from "hono"
 import type { IngestEnv, TracePayload } from "./types.ts"
 
 interface TracePayloadLimits {
@@ -169,57 +169,60 @@ const cancelReader = async (reader: ReadableStreamDefaultReader<Uint8Array>) => 
   } catch {}
 }
 
-export const readTracePayload = async ({
-  stream,
+const emptyStreamResult = (declaredBytes?: number): ReadTracePayloadResult => {
+  if (declaredBytes !== undefined && declaredBytes !== 0) {
+    return { kind: "length_mismatch", observedBytes: 0 }
+  }
+  return { kind: "success", payload: new Uint8Array() }
+}
+
+type StreamedChunkResult =
+  | { readonly kind: "continue" }
+  | Extract<ReadTracePayloadResult, { kind: "too_large" | "length_mismatch" | "capacity_exceeded" }>
+
+const applyStreamedChunk = ({
+  chunk,
+  observedBytes,
   declaredBytes,
+  declaredPayload,
+  chunks,
   maxPayloadBytes,
   capacity,
-}: ReadTracePayloadInput): Promise<ReadTracePayloadResult> => {
-  if (!stream) {
-    if (declaredBytes !== undefined && declaredBytes !== 0) {
-      return { kind: "length_mismatch", observedBytes: 0 }
-    }
-    return { kind: "success", payload: new Uint8Array() }
+}: {
+  chunk: Uint8Array
+  observedBytes: number
+  declaredBytes?: number | undefined
+  declaredPayload?: Uint8Array | undefined
+  chunks: Uint8Array[]
+  maxPayloadBytes: number
+  capacity?: Pick<TracePayloadLease, "reserve" | "releaseReserved"> | undefined
+}): StreamedChunkResult => {
+  if (observedBytes > maxPayloadBytes) {
+    return { kind: "too_large", observedBytes }
   }
-
-  const reader = stream.getReader()
-  const declaredPayload = declaredBytes === undefined ? undefined : new Uint8Array(declaredBytes)
-  const chunks: Uint8Array[] = []
-  let observedBytes = 0
-
-  try {
-    while (true) {
-      const chunk = await reader.read()
-      if (chunk.done) break
-
-      observedBytes += chunk.value.byteLength
-      if (observedBytes > maxPayloadBytes) {
-        await cancelReader(reader)
-        return { kind: "too_large", observedBytes }
-      }
-      if (declaredBytes !== undefined && observedBytes > declaredBytes) {
-        await cancelReader(reader)
-        return { kind: "length_mismatch", observedBytes }
-      }
-
-      if (declaredPayload !== undefined) {
-        declaredPayload.set(chunk.value, observedBytes - chunk.value.byteLength)
-      } else {
-        if (capacity && !capacity.reserve(chunk.value.byteLength)) {
-          await cancelReader(reader)
-          return { kind: "capacity_exceeded", observedBytes }
-        }
-        chunks.push(chunk.value)
-      }
-    }
-  } finally {
-    reader.releaseLock()
+  if (declaredBytes !== undefined && observedBytes > declaredBytes) {
+    return { kind: "length_mismatch", observedBytes }
   }
-
   if (declaredPayload !== undefined) {
-    if (observedBytes !== declaredPayload.byteLength) return { kind: "length_mismatch", observedBytes }
-    return { kind: "success", payload: declaredPayload }
+    declaredPayload.set(chunk, observedBytes - chunk.byteLength)
+    return { kind: "continue" }
   }
+  if (capacity && !capacity.reserve(chunk.byteLength)) {
+    return { kind: "capacity_exceeded", observedBytes }
+  }
+  chunks.push(chunk)
+  return { kind: "continue" }
+}
+
+const assembleUndeclaredPayload = ({
+  chunks,
+  observedBytes,
+  capacity,
+}: {
+  chunks: Uint8Array[]
+  observedBytes: number
+  capacity?: Pick<TracePayloadLease, "reserve" | "releaseReserved"> | undefined
+}): ReadTracePayloadResult => {
   if (!observedBytes) return { kind: "success", payload: new Uint8Array() }
   if (capacity && !capacity.reserve(observedBytes)) return { kind: "capacity_exceeded", observedBytes }
 
@@ -238,6 +241,64 @@ export const readTracePayload = async ({
   chunks.length = 0
   capacity?.releaseReserved(observedBytes)
   return { kind: "success", payload }
+}
+
+const finalizeTracePayload = ({
+  declaredPayload,
+  observedBytes,
+  chunks,
+  capacity,
+}: {
+  declaredPayload?: Uint8Array | undefined
+  observedBytes: number
+  chunks: Uint8Array[]
+  capacity?: Pick<TracePayloadLease, "reserve" | "releaseReserved"> | undefined
+}): ReadTracePayloadResult => {
+  if (declaredPayload !== undefined) {
+    if (observedBytes !== declaredPayload.byteLength) return { kind: "length_mismatch", observedBytes }
+    return { kind: "success", payload: declaredPayload }
+  }
+  return assembleUndeclaredPayload({ chunks, observedBytes, capacity })
+}
+
+export const readTracePayload = async ({
+  stream,
+  declaredBytes,
+  maxPayloadBytes,
+  capacity,
+}: ReadTracePayloadInput): Promise<ReadTracePayloadResult> => {
+  if (!stream) return emptyStreamResult(declaredBytes)
+
+  const reader = stream.getReader()
+  const declaredPayload = declaredBytes === undefined ? undefined : new Uint8Array(declaredBytes)
+  const chunks: Uint8Array[] = []
+  let observedBytes = 0
+
+  try {
+    while (true) {
+      const chunk = await reader.read()
+      if (chunk.done) break
+
+      observedBytes += chunk.value.byteLength
+      const applied = applyStreamedChunk({
+        chunk: chunk.value,
+        observedBytes,
+        declaredBytes,
+        declaredPayload,
+        chunks,
+        maxPayloadBytes,
+        capacity,
+      })
+      if (applied.kind !== "continue") {
+        await cancelReader(reader)
+        return applied
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  return finalizeTracePayload({ declaredPayload, observedBytes, chunks, capacity })
 }
 
 interface TracePayloadProtectionInput {
@@ -307,6 +368,109 @@ const annotateProcessingMemory = (
   })
 }
 
+type PayloadAnnotation = {
+  span: TracePayloadSpan | undefined
+  runtime: TracePayloadRuntime
+  contentType: string
+  declaredBytes?: number | undefined
+}
+
+type TimedReadTracePayloadResult = ReadTracePayloadResult & { readonly bodyReadDurationMs: number }
+
+const invalidTraceLengthResponse = (c: Context<IngestEnv>, kind: "invalid" | "too_large") =>
+  c.json({ error: "Invalid trace payload length." }, kind === "too_large" ? 413 : 400)
+
+const admissionRejectedResponse = (
+  c: Context<IngestEnv>,
+  annotation: PayloadAnnotation,
+  limitedBy: "bytes" | "concurrency",
+) => {
+  annotatePayloadSpan({
+    ...annotation,
+    outcome: "admission_rejected",
+    observedBytes: 0,
+    bodyReadDurationMs: 0,
+    admissionLimitedBy: limitedBy,
+  })
+  return c.json({ error: "Trace ingestion is temporarily at capacity. Please retry later." }, 503, {
+    "Retry-After": "1",
+  })
+}
+
+const payloadReadFailureResponse = (
+  c: Context<IngestEnv>,
+  annotation: PayloadAnnotation,
+  result: Extract<TimedReadTracePayloadResult, { kind: "too_large" | "length_mismatch" | "capacity_exceeded" }>,
+  maxPayloadBytes: number,
+) => {
+  switch (result.kind) {
+    case "too_large":
+      annotatePayloadSpan({
+        ...annotation,
+        outcome: "streamed_too_large",
+        observedBytes: result.observedBytes,
+        bodyReadDurationMs: result.bodyReadDurationMs,
+      })
+      return c.json({ error: `Trace payload exceeds the ${maxPayloadBytes}-byte limit.` }, 413)
+    case "length_mismatch":
+      annotatePayloadSpan({
+        ...annotation,
+        outcome: "content_length_mismatch",
+        observedBytes: result.observedBytes,
+        bodyReadDurationMs: result.bodyReadDurationMs,
+      })
+      return c.json({ error: "Content-Length does not match the trace payload." }, 400)
+    case "capacity_exceeded":
+      annotatePayloadSpan({
+        ...annotation,
+        outcome: "stream_admission_rejected",
+        observedBytes: result.observedBytes,
+        bodyReadDurationMs: result.bodyReadDurationMs,
+        admissionLimitedBy: "bytes",
+      })
+      return c.json({ error: "Trace ingestion is temporarily at capacity. Please retry later." }, 503, {
+        "Retry-After": "1",
+      })
+    default: {
+      const _exhaustive: never = result
+      return _exhaustive
+    }
+  }
+}
+
+const readTracePayloadOrAnnotate = async ({
+  annotation,
+  stream,
+  declaredBytes,
+  maxPayloadBytes,
+  capacity,
+}: {
+  annotation: PayloadAnnotation
+  stream: ReadableStream<Uint8Array> | null
+  declaredBytes?: number | undefined
+  maxPayloadBytes: number
+  capacity: Pick<TracePayloadLease, "reserve" | "releaseReserved">
+}): Promise<TimedReadTracePayloadResult> => {
+  const startedAt = annotation.runtime.now()
+  try {
+    const result = await readTracePayload({
+      stream,
+      declaredBytes,
+      maxPayloadBytes,
+      capacity,
+    })
+    return { ...result, bodyReadDurationMs: annotation.runtime.now() - startedAt }
+  } catch (error) {
+    annotatePayloadSpan({
+      ...annotation,
+      outcome: "read_error",
+      observedBytes: 0,
+      bodyReadDurationMs: annotation.runtime.now() - startedAt,
+    })
+    throw error
+  }
+}
+
 export interface TracePayloadProtection {
   readonly rejectOversizedHeaders: MiddlewareHandler<IngestEnv>
   readonly readPayload: MiddlewareHandler<IngestEnv>
@@ -352,89 +516,31 @@ export const createTracePayloadProtection = ({
     const contentType = c.req.header("Content-Type") ?? "application/json"
     const parsed = parseTraceContentLength(c.req.header("Content-Length"), limits.maxPayloadBytes)
     if (parsed.kind !== "valid") {
-      return c.json({ error: "Invalid trace payload length." }, parsed.kind === "too_large" ? 413 : 400)
+      return invalidTraceLengthResponse(c, parsed.kind)
     }
 
     const span = runtime.getActiveSpan()
     const acquired = admission.tryAcquire(parsed.declaredBytes ?? 0)
+    const annotation = {
+      span,
+      runtime,
+      contentType,
+      declaredBytes: parsed.declaredBytes,
+    }
     if (acquired.kind === "rejected") {
-      annotatePayloadSpan({
-        span,
-        runtime,
-        contentType,
-        outcome: "admission_rejected",
-        observedBytes: 0,
-        declaredBytes: parsed.declaredBytes,
-        bodyReadDurationMs: 0,
-        admissionLimitedBy: acquired.limitedBy,
-      })
-      return c.json({ error: "Trace ingestion is temporarily at capacity. Please retry later." }, 503, {
-        "Retry-After": "1",
-      })
+      return admissionRejectedResponse(c, annotation, acquired.limitedBy)
     }
 
-    let startedAt = 0
     try {
-      startedAt = runtime.now()
-      let result: ReadTracePayloadResult
-      try {
-        result = await readTracePayload({
-          stream: c.req.raw.body,
-          declaredBytes: parsed.declaredBytes,
-          maxPayloadBytes: limits.maxPayloadBytes,
-          capacity: acquired.lease,
-        })
-      } catch (error) {
-        annotatePayloadSpan({
-          span,
-          runtime,
-          contentType,
-          outcome: "read_error",
-          observedBytes: 0,
-          declaredBytes: parsed.declaredBytes,
-          bodyReadDurationMs: runtime.now() - startedAt,
-        })
-        throw error
-      }
-      const bodyReadDurationMs = runtime.now() - startedAt
-
-      if (result.kind === "too_large") {
-        annotatePayloadSpan({
-          span,
-          runtime,
-          contentType,
-          outcome: "streamed_too_large",
-          observedBytes: result.observedBytes,
-          declaredBytes: parsed.declaredBytes,
-          bodyReadDurationMs,
-        })
-        return c.json({ error: `Trace payload exceeds the ${limits.maxPayloadBytes}-byte limit.` }, 413)
-      }
-      if (result.kind === "length_mismatch") {
-        annotatePayloadSpan({
-          span,
-          runtime,
-          contentType,
-          outcome: "content_length_mismatch",
-          observedBytes: result.observedBytes,
-          declaredBytes: parsed.declaredBytes,
-          bodyReadDurationMs,
-        })
-        return c.json({ error: "Content-Length does not match the trace payload." }, 400)
-      }
-      if (result.kind === "capacity_exceeded") {
-        annotatePayloadSpan({
-          span,
-          runtime,
-          contentType,
-          outcome: "stream_admission_rejected",
-          observedBytes: result.observedBytes,
-          bodyReadDurationMs,
-          admissionLimitedBy: "bytes",
-        })
-        return c.json({ error: "Trace ingestion is temporarily at capacity. Please retry later." }, 503, {
-          "Retry-After": "1",
-        })
+      const result = await readTracePayloadOrAnnotate({
+        annotation,
+        stream: c.req.raw.body,
+        declaredBytes: parsed.declaredBytes,
+        maxPayloadBytes: limits.maxPayloadBytes,
+        capacity: acquired.lease,
+      })
+      if (result.kind !== "success") {
+        return payloadReadFailureResponse(c, annotation, result, limits.maxPayloadBytes)
       }
 
       const tracePayload: TracePayload = {
@@ -443,13 +549,10 @@ export const createTracePayloadProtection = ({
       }
       c.set("tracePayload", tracePayload)
       annotatePayloadSpan({
-        span,
-        runtime,
-        contentType,
+        ...annotation,
         outcome: "accepted",
         observedBytes: result.payload.byteLength,
-        declaredBytes: parsed.declaredBytes,
-        bodyReadDurationMs,
+        bodyReadDurationMs: result.bodyReadDurationMs,
       })
       await next()
     } finally {
