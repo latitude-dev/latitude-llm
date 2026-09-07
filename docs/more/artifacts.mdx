@@ -1,0 +1,246 @@
+---
+title: Artifacts
+description: Ask your coding agent for a report or a dashboard, and get a self-contained HTML page built from your Latitude data through the MCP and the API.
+---
+
+## Overview
+
+An **Artifact** is a self-contained HTML page that your coding agent builds from your Latitude data: a one-off report that answers a specific question, or a KPI dashboard you reopen every morning with fresh numbers.
+
+Latitude doesn't ship a dashboard builder. Instead, everything you see in the Latitude web app is exposed as operations over the [MCP](/getting-started/mcp), the [CLI](/getting-started/cli), the [API](/more/api-reference) and the SDKs: traces, sessions, spans, tools, users, memory, signals, incidents, experiments, saved searches, and a composable analytics query on top of all of it. You ask your agent a question, the agent makes the calls, renders the page and writes the findings. Latitude provides the data; the agent provides the page. You may never need to open the Latitude web app.
+
+<Tip>
+  Install the [`latitude-artifacts` skill](https://github.com/latitude-dev/skills/tree/main/skills/latitude-artifacts) so your agent asks the right questions, pulls the right data and renders every artifact in the same Latitude design language, with light and dark themes:
+
+  ```bash
+  npx skills add https://github.com/latitude-dev/skills --skill latitude-artifacts
+  ```
+</Tip>
+
+## Three ways to build one
+
+| Modality | How it works | Good for |
+| --- | --- | --- |
+| **One-off report** | You ask in the conversation. The agent calls the MCP, embeds the results in the HTML and writes the findings. | A specific question, a post-mortem, "what happened this week" |
+| **Refreshable dashboard** | The agent writes the page once, plus a small script that re-pulls the data through the API and rewrites the page's data blob. You run it, or cron or CI runs it. | KPIs you open every morning |
+| **Agent-refreshed** | A scheduled agent run executes the refresh script and rewrites the findings too. | A dashboard with fresh commentary |
+
+The page is the same in all three. It embeds the data as a JSON blob, so a refresh never touches the layout, and it never calls the Latitude API from the browser. Refreshable artifacts need an [API key](/getting-started/cli#authentication) in the environment.
+
+## Example prompts
+
+Paste any of these into an agent connected to the Latitude MCP (or with the CLI authenticated). Each one gives the agent a question, a window and a target; the `latitude-artifacts` skill fills in the rest, and asks a couple of short questions when something is unclear.
+
+### One-off reports
+
+```text
+Build an artifact of this project's LLM reliability and cost over the last 30 days: volume, error rate, p95 latency and spend, broken down by model and by tool, with what changed versus the previous 30 days.
+```
+
+```text
+How are users interacting with my agent's memory? Build an artifact for the last 14 days: which memory stores exist and how big they are, how much they change per day, who reads and writes them, what gets retrieved most, and what memory costs per session.
+```
+
+```text
+Which of my agent's tools fail the most, and why? Build an artifact with per-tool call volume, error rate and p95 latency, the clustered error messages for the three worst tools, and the ten slowest tool calls.
+```
+
+```text
+Yesterday's error rate spiked. Build a post-mortem artifact: when it started and ended, which models, tools and users were affected, the signals and incidents that fired, and the most likely root cause with links to example traces.
+```
+
+```text
+Compare gpt-4.1 and claude-sonnet-4 in this project over the last two weeks: latency percentiles, cost per trace, error rate, cache hit rate and tool-call counts, as an artifact with a short recommendation.
+```
+
+```text
+Build a weekly quality digest artifact: ongoing, new and escalating signals with their occurrence trends, incidents by severity, behaviour clusters that grew or shrank, and the pass rate of every signal broken down by model.
+```
+
+### Refreshable dashboards
+
+```text
+Create a refreshable artifact I can open every morning with yesterday's numbers: traces, sessions, unique users, error rate, p95 latency, spend and tokens, each with a 14-day trend, plus the top 10 tools by calls and the ongoing signals. Save it to artifacts/daily.html with a refresh script I can run from this repo.
+```
+
+```text
+Set up a weekly ops artifact for this project that refreshes on a GitHub Actions schedule every Monday at 08:00 UTC and publishes to GitHub Pages. Sections: reliability, cost by model and provider, tool failures, new users, and incidents.
+```
+
+```text
+Build a per-customer usage artifact refreshed daily: for each identified user, traces, sessions, tokens, cost and the tools they hit most, sorted by spend, with a cost histogram and the users whose spend grew fastest week over week.
+```
+
+## What the agent can query
+
+Every read below is one operation with the same name on the MCP, the CLI, the API and the SDKs: the MCP tool `listTools` is `latitude tools list` on the CLI, `GET /v1/projects/{projectSlug}/tools` on the API and `client.tools.list(...)` in the SDKs. The agent reads each operation's schema before calling it; the live catalog is the [API reference](https://api.latitude.so/docs).
+
+| Question | Operations |
+| --- | --- |
+| Any aggregate over traces, sessions, spans, scores, behaviours or moments: counts, rates, latency percentiles, cost, tokens, by any dimension, over time | `queryAnalytics` |
+| The overview series the Latitude UI shows, in 12-hour buckets | `getTraceAnalytics`, `getSessionAnalytics`, `getSignalAnalytics` |
+| Rows: slowest or most expensive traces, failing sessions, individual spans across traces | `listTraces`, `listSessions`, `querySpans`, `listSessionTraces` |
+| The conversation behind one row | `getTrace`, `getSession`, `listTraceSpans`, `getTraceSpan` |
+| Tools: catalog with usage metrics, call histograms, parameters, error clusters, co-occurrence, where a tool is used, recent calls | `listTools`, `getTool`, `getToolCallHistogram`, `getToolParameters`, `getToolErrors`, `getToolCoOccurrence`, `getToolContext`, `listToolCalls` |
+| Users: unique and new users, leaderboards by cost and volume, one user's profile, activity, usage mix, signals, behaviours, memory stores | `getUsersOverview`, `listUsers`, `getUser`, `getUserActivity`, `getUserUsage`, `listUserSignals`, `listUserBehaviours`, `listUserMemoryStores` |
+| Memory: stores and their size, snapshots at a point in time, diffs between two dates, record history and reads, who accesses what, per-session and per-trace footprint | `listMemoryStores`, `getMemoryStore`, `getMemoryStoreDiff`, `listMemoryStoreUsers`, `getMemoryRecord`, `getMemoryRecordChange`, `listMemoryRecordReads`, `listMemoryRecordUsers`, `getSessionMemory`, `getSessionMemoryChanges`, `getTraceMemory`, `getTraceMemoryChanges` |
+| Signals and incidents: lifecycle groups, trends, evidence, contributing traces, incidents by severity, monitors | `listSignals`, `getSignal`, `getSignalTrend`, `listSignalTraces`, `listIncidents`, `listMonitors`, `listMonitorIncidents` |
+| Experiments, saved searches, annotations | `listExperiments`, `getExperiment`, `listSavedSearches`, `listSavedSearchTraces`, `listTraceAnnotations` |
+
+All of these are read-only. The write operations (creating signals, monitors, datasets, annotations) are available to the same agent, so an artifact can end with an action: "create a monitor on this" or "save this search".
+
+## The aggregate query: `queryAnalytics`
+
+Most tiles and charts in an artifact are one `queryAnalytics` call: a **metric** over a filtered **stream**, optionally split by a **breakdown** and bucketed over **time**.
+
+- **Metric**: the number each row reduces to (`count`, `errorRate`, `percentile(duration)`, `sum(cost)`, …).
+- **Breakdown**: the dimension to split across, one row per value (`model`, `tool`, `signalId`, …).
+- **Time bucket**: optional granularity (`hour`, `day`, `week`) that turns a number into a trend.
+
+"Error rate by model, weekly" is metric `errorRate` × breakdown `model` × bucket `week`. Swap any axis for the next chart; there is no new endpoint to learn.
+
+| Stream | What it measures | Metrics | Break down by |
+| --- | --- | --- | --- |
+| `traces` / `sessions` / `spans` | requests, conversations, operations | `count`, `errorRate`, `cacheHitRate`, `sum`/`min`/`max`/`avg`/`median` of `duration`\|`cost`\|`tokens`, plus `percentile` (`{ kind: "percentile", field, p }`, `p` 1–99) | `model`, `provider`, `service`, `tool`, `tag`, `status` (+ `name`/`userId` on traces, `operation` on spans) |
+| `scores` (signals) | scored occurrences | `count`, `passRate`, `errorRate`, `avg`/`min`/`max`/`median` of `value` | `signalId`, `source`, `model`, `provider`, `service`, `tool`, `tag` |
+| `behaviors` | clustered behaviours | `count`, `avg`/`min`/`max`/`median` of `confidence` | `cluster`, `session`, `method` |
+| `moments` | labeled conversation moments | `count`, `avg`/`min`/`max`/`median` of `confidence`\|`coherence` | `kind`, `actor`, `session` |
+
+Values come back in human units: `duration` in **seconds**, `cost` in **dollars**, rates (`errorRate`, `cacheHitRate`, `passRate`) as a **0–1 fraction**. Opaque breakdown keys such as `signalId` and `cluster` carry a human `label`. `filters` accepts the same DSL as `listTraces` (see [Filters](/observability/filters)).
+
+```jsonc
+// Error rate by model, weekly, last 30 days
+queryAnalytics({
+  stream: "traces", metric: { kind: "errorRate" }, breakdown: "model",
+  timeBucket: { unit: "week" },
+  range: { fromIso: "2026-08-08T00:00:00Z", toIso: "2026-09-07T00:00:00Z" }
+})
+
+// 95th-percentile latency by tool, last 7 days
+queryAnalytics({
+  stream: "traces", metric: { kind: "percentile", field: "duration", p: 95 }, breakdown: "tool",
+  range: { fromIso: "2026-08-31T00:00:00Z", toIso: "2026-09-07T00:00:00Z" }
+})
+
+// Cost by provider
+queryAnalytics({
+  stream: "traces", metric: { kind: "sum", field: "cost" }, breakdown: "provider",
+  range: { fromIso: "2026-08-31T00:00:00Z", toIso: "2026-09-07T00:00:00Z" }
+})
+
+// Conversation fallout: moment count by kind
+queryAnalytics({
+  stream: "moments", metric: { kind: "count" }, breakdown: "kind",
+  range: { fromIso: "2026-08-31T00:00:00Z", toIso: "2026-09-07T00:00:00Z" }
+})
+```
+
+Each returns a tidy series, `[{ key?, label?, bucketStart?, value }]`, small enough to embed inline no matter how many traces it spans. For a "versus the previous period" delta, the agent runs the same query with the range shifted back and computes the difference.
+
+## Row-level widgets
+
+For a "top 10 slowest tool calls" table, the agent needs rows rather than an aggregate. `querySpans` lists individual spans across traces; `listTraces` and `listSessions` do the same at trace and session grain.
+
+```jsonc
+querySpans({
+  filters: { operation: [{ op: "eq", value: "execute_tool" }] },
+  range: { fromIso: "2026-08-31T00:00:00Z", toIso: "2026-09-07T00:00:00Z" },
+  orderBy: { field: "duration", direction: "desc" },
+  limit: 10
+})
+```
+
+Row-level responses use wire units (`durationNs`, `costTotalMicrocents`); the skill normalizes them before rendering. Row-level data can also carry conversation content, so the skill embeds ids and summaries by default and links to the trace in Latitude rather than copying the messages.
+
+## A worked example: memory
+
+"How are users interacting with my agent's memory?" becomes five questions, each mapped to an operation:
+
+| Question | Call | Widget |
+| --- | --- | --- |
+| Which stores exist, how big are they, how many sessions and users touch them? | `listMemoryStores` | table with inline bars |
+| How much did each store change over the window? | `getMemoryStoreDiff` per store, `from` → `to` | stacked bar: added, updated, removed |
+| Who reads and writes the busiest store? | `listMemoryStoreUsers`, `listMemoryRecordUsers` | table |
+| What do users actually retrieve? | `listMemoryRecordReads` on the top records | table of query texts and token counts |
+| What does memory cost per session? | `getSessionMemory` on a sample, `queryAnalytics` on `sessions` for the baseline | KPI tiles with deltas |
+
+The agent renders those five widgets, then writes the findings: which store is growing fastest, whether reads keep up with writes, which records nobody retrieves, and what to do about it.
+
+## The same data over the API
+
+Everything the agent calls over the MCP is a plain HTTP endpoint, which is what makes refreshable artifacts possible. The refresh script the agent writes uses the API key from the environment and rewrites the page's data blob:
+
+<CodeGroup>
+
+```bash curl
+curl -s https://api.latitude.so/v1/projects/$LATITUDE_PROJECT_SLUG/analytics/query \
+  -H "Authorization: Bearer $LATITUDE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stream": "traces",
+    "metric": { "kind": "errorRate" },
+    "breakdown": "model",
+    "timeBucket": { "unit": "day" },
+    "range": { "fromIso": "2026-08-31T00:00:00Z", "toIso": "2026-09-07T00:00:00Z" }
+  }'
+```
+
+```bash CLI
+latitude analytics query --project-slug "$LATITUDE_PROJECT_SLUG" --format json --json '{
+  "stream": "traces",
+  "metric": { "kind": "errorRate" },
+  "breakdown": "model",
+  "timeBucket": { "unit": "day" },
+  "range": { "fromIso": "2026-08-31T00:00:00Z", "toIso": "2026-09-07T00:00:00Z" }
+}'
+```
+
+```ts TypeScript
+import { LatitudeClient } from "@latitude-data/sdk"
+
+const client = new LatitudeClient({ apiKey: process.env.LATITUDE_API_KEY! })
+
+const { series } = await client.analytics.query(process.env.LATITUDE_PROJECT_SLUG!, {
+  body: {
+    stream: "traces",
+    metric: { kind: "errorRate" },
+    breakdown: "model",
+    timeBucket: { unit: "day" },
+    range: { fromIso: "2026-08-31T00:00:00Z", toIso: "2026-09-07T00:00:00Z" },
+  },
+})
+```
+
+```python Python
+import json, os, urllib.request
+
+req = urllib.request.Request(
+    f"https://api.latitude.so/v1/projects/{os.environ['LATITUDE_PROJECT_SLUG']}/analytics/query",
+    data=json.dumps({
+        "stream": "traces",
+        "metric": {"kind": "errorRate"},
+        "breakdown": "model",
+        "timeBucket": {"unit": "day"},
+        "range": {"fromIso": "2026-08-31T00:00:00Z", "toIso": "2026-09-07T00:00:00Z"},
+    }).encode(),
+    headers={"Authorization": f"Bearer {os.environ['LATITUDE_API_KEY']}", "Content-Type": "application/json"},
+)
+with urllib.request.urlopen(req) as res:
+    series = json.load(res)["series"]
+```
+
+</CodeGroup>
+
+Run the script by hand, from cron, from a GitHub Actions schedule that publishes the page, or from a scheduled agent run that also rewrites the findings. The `latitude-artifacts` skill ships working recipes for all of them.
+
+## Rendering and design
+
+The skill renders every artifact from one template: the Latitude design tokens (Inter, the `#0080FF` primary, neutral surfaces, the same series palette the Latitude charts use), a light and a dark theme that follow your OS setting, KPI tiles with deltas, ECharts charts, tables with inline bars, and a findings section. Nothing is rendered by Latitude, which keeps the page portable: commit it to your repo, drop it in a shared folder, or publish it wherever you like.
+
+A good prompt without the skill is simply: *"Build a self-contained HTML artifact of this project's LLM reliability and cost over the last 30 days."* The agent discovers the right `queryAnalytics` calls on its own. The skill adds the intake questions, the data-source map, the shared theme and the refresh recipes.
+
+## Related
+
+- [Agent dispatch](/agent-dispatch/overview#investigate-a-signal): the investigation counterpart, where an agent uses the same tools to root-cause a signal.
+- [MCP](/getting-started/mcp), [CLI](/getting-started/cli), [API](https://api.latitude.so/docs) and the SDKs it documents: the surfaces an artifact can be built from.
+- [Skills](/getting-started/skills): the full list of Latitude agent skills.

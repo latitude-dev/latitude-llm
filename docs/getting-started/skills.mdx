@@ -14,7 +14,7 @@ There are two entry points, depending on whether you already have a Latitude acc
 All skills live in the public [`latitude-dev/skills`](https://github.com/latitude-dev/skills) repo. Most agents can install them with the `skills` CLI:
 
 ```bash
-npx skills add https://github.com/latitude-dev/skills --skill latitude-setup,latitude-cli,latitude-telemetry
+npx skills add https://github.com/latitude-dev/skills --skill latitude-setup,latitude-cli,latitude-telemetry,latitude-artifacts
 ```
 
 | Skill | What it does |
@@ -23,9 +23,10 @@ npx skills add https://github.com/latitude-dev/skills --skill latitude-setup,lat
 | `latitude-telemetry` | Adds Latitude / OpenTelemetry instrumentation to your app. |
 | `latitude-cli` | Installs and drives the [`latitude` CLI](/getting-started/cli). |
 | `latitude-migrate` | Moves an app from Latitude V1 (prompt manager and gateway) to V2. See [Migrate from Latitude V1](/getting-started/migrate-from-v1). |
+| `latitude-artifacts` | Builds [Artifacts](/more/artifacts): self-contained HTML reports and KPI dashboards from your Latitude data, in the Latitude design language with light and dark themes. |
 
 <Info>
-  `latitude-setup` builds on the other two, so install all three together for the from-scratch flow.
+  `latitude-setup` builds on `latitude-cli` and `latitude-telemetry`, and ends by offering a first Artifact through `latitude-artifacts`, so the command above installs all four for the from-scratch flow.
 </Info>
 
 ## No account yet
@@ -43,6 +44,7 @@ The `latitude-setup` skill orchestrates the whole zero-account flow:
 3. Instruments your app (via the `latitude-telemetry` skill) against that project.
 4. Runs your real code and inspects the resulting traces, iterating until they look right.
 5. Cleans up the trace noise and hands you a **claim link**.
+6. Offers to build your first [Artifact](/more/artifacts), an HTML report of the traces that just landed, through the `latitude-artifacts` skill.
 
 Open the claim link in your browser to take ownership of the temporary account and keep it. Unclaimed temporary accounts expire automatically.
 
@@ -62,4 +64,4 @@ Give the agent your `LATITUDE_API_KEY` and `LATITUDE_PROJECT_SLUG` when it asks 
 
 ---
 
-Once traces are flowing, head to the [telemetry guides](/telemetry/start-tracing) for provider-specific details, or the [CLI](/getting-started/cli) and [MCP server](/getting-started/mcp) pages to keep driving Latitude from your terminal or agent.
+Once traces are flowing, head to the [telemetry guides](/telemetry/start-tracing) for provider-specific details, the [CLI](/getting-started/cli) and [MCP server](/getting-started/mcp) pages to keep driving Latitude from your terminal or agent, or [Artifacts](/more/artifacts) to turn that data into reports and dashboards without opening the web app.

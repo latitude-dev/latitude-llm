@@ -110,7 +110,7 @@ const resolveDevSafetyLagMs = (): number | undefined => {
 const spanUrlBuilder =
   (webUrl: string, projectSlug: string) =>
   (span: SpanDetail): string =>
-    `${webUrl}/projects/${projectSlug}?traceId=${encodeURIComponent(span.traceId)}&spanId=${encodeURIComponent(span.spanId)}`
+    `${webUrl}/projects/${projectSlug}?tab=traces&traceId=${encodeURIComponent(span.traceId)}&spanId=${encodeURIComponent(span.spanId)}`
 
 /** Sanitized to status + our taxonomy; delivery errors never carry upstream response bodies. */
 const finalFailureMessage = (error: Error): string => {
