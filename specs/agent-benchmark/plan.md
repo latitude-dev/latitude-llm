@@ -201,7 +201,7 @@ does not display per-session dimension scores.
   not assign benchmark meaning.
 - [x] **P2-29** Implement source readers that normalize telemetry-derived findings and persisted
   judgments into the shared assessment input. A page request must not run an LLM classifier.
-- [ ] **P2-30** Implement the pure resolver for multi-dimension effects, direction, measurement state,
+- [x] **P2-30** Implement the pure resolver for multi-dimension effects, direction, measurement state,
   benchmark use, impact, anchors, destinations, and chronological ordering. One deduplicated item can
   expose several destinations.
 - [ ] **P2-31** Deduplicate by the underlying source fact. Merge a metric, its discovery score, and

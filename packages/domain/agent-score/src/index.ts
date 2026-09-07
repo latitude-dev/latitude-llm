@@ -55,3 +55,10 @@ export {
   type ReadSessionAssessmentSourcesInput,
   readSessionAssessmentSources,
 } from "./readers/read-session-assessment-sources.ts"
+export {
+  compareResolvedAssessmentItems,
+  type ResolvedAssessmentItem,
+  resolveAssessmentFinding,
+  resolveAssessmentFindingEffects,
+  resolveSessionAssessmentItems,
+} from "./resolver/resolve-assessment-findings.ts"
