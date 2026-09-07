@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## v0.3.93 - 2026-09-07
+
+### Signals
+
+- A signal can be created from a saved search, from the save-search modal or from the saved-search row action. The search's filters become the signal's scope and its query becomes the conditions: free text is a semantic check at search's own relevance floor, quoted phrases a case-sensitive text match, backtick phrases a case-insensitive one. A query-less search compiles to an `always` condition. The scope step now uses the shared filter builder, so an imported scope is fully visible and editable (ref: #4554).
+- A saved-search query that mixes free text with quoted phrases keeps its free-text clause instead of dropping it when turned into a signal (ref: #4556).
+- Removed the completed one-off score evidence backfill job, script and repository methods (ref: #4555).
+
+### Artifacts
+
+- The "build a dashboard" guide became the Artifacts page under More, covering one-off reports over the MCP, refreshable dashboards driven by an API script, the full read-tool catalog and copyable prompts. The MCP server instructions now point agents at the Artifacts and Skills docs, and the `queryAnalytics` description lists all six streams (SDKs, CLI and manifests regenerated). A companion `latitude-artifacts` skill ships in the skills repo (ref: #4586).
+
+### Destinations
+
+- PostHog cross-links open the trace drawer: the span URL now includes `tab=traces`, and the worker and the "What gets sent" preview share one URL builder, with the preview resolving the project slug the same way the worker does (ref: #4586).
+
+### Docs
+
+- Added the Migrate from Latitude V1 guide, mapping every V1 concept to its V2 equivalent, with a runnable LinguaAI before/after example and the `latitude-migrate` skill (ref: #4547).
+
+### Maintenance
+
+- Enabled Biome's cognitive complexity rule (max 15) and refactored the handlers it flagged across the API, ingest, operations, notification producers, Temporal client helpers and conversation intelligence (ref: #4577, #4579, #4580, #4581, #4582, #4583, #4585).
+- Bumped `hono` to 4.13.5 in the workspace catalog, the Python telemetry instrumentations to 0.62.3 and `pydantic` to 2.13.5, plus routine example-app and GitHub Actions bumps (ref: #4560 to #4576).
+
 ## v0.3.92 - 2026-09-04
 
 ### Signals
