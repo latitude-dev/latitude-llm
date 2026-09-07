@@ -28,18 +28,38 @@ const toNonEmptyString = (value: unknown): string | undefined => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
+const isJsonPrimitive = (value: unknown): value is string | number | boolean | bigint | null =>
+  value === null ||
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "boolean" ||
+  typeof value === "bigint"
+
+const serializeError = (value: Error, depth: number): Record<string, unknown> => {
+  const record: Record<string, unknown> = {
+    constructorName: value.constructor.name,
+    name: value.name,
+    message: value.message,
+  }
+
+  if (value.stack) record.stack = value.stack
+  if ("cause" in value && value.cause !== undefined) {
+    record.cause = toSerializableValue(value.cause, depth + 1)
+  }
+
+  for (const key of Object.keys(value)) {
+    record[key] = toSerializableValue(value[key as keyof Error], depth + 1)
+  }
+
+  return record
+}
+
 const toSerializableValue = (value: unknown, depth = 0): unknown => {
   if (depth >= 4) {
     return typeof value === "object" && value !== null ? `[${value.constructor?.name ?? "Object"}]` : value
   }
 
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    typeof value === "bigint"
-  ) {
+  if (isJsonPrimitive(value)) {
     return value
   }
 
@@ -52,22 +72,7 @@ const toSerializableValue = (value: unknown, depth = 0): unknown => {
   }
 
   if (value instanceof Error) {
-    const record: Record<string, unknown> = {
-      constructorName: value.constructor.name,
-      name: value.name,
-      message: value.message,
-    }
-
-    if (value.stack) record.stack = value.stack
-    if ("cause" in value && value.cause !== undefined) {
-      record.cause = toSerializableValue(value.cause, depth + 1)
-    }
-
-    for (const key of Object.keys(value)) {
-      record[key] = toSerializableValue(value[key as keyof Error], depth + 1)
-    }
-
-    return record
+    return serializeError(value, depth)
   }
 
   if (isRecord(value)) {
@@ -77,34 +82,44 @@ const toSerializableValue = (value: unknown, depth = 0): unknown => {
   return String(value)
 }
 
+const formatErrorInstance = (error: Error): string => {
+  const message = toNonEmptyString(error.message)
+  const causeMessage = "cause" in error ? formatUnknownError(error.cause) : undefined
+
+  if (message !== undefined && message !== OPAQUE_TEMPORAL_ERROR_MESSAGE) {
+    return causeMessage ? `${message} (cause: ${causeMessage})` : message
+  }
+
+  if (causeMessage) {
+    return causeMessage
+  }
+
+  return toNonEmptyString(error.name) ?? OPAQUE_TEMPORAL_ERROR_MESSAGE
+}
+
+const formatErrorRecord = (error: Record<string, unknown>): string | undefined => {
+  const message = toNonEmptyString(error.message)
+  const code = toNonEmptyString(error.code)
+  const details = toNonEmptyString(error.details)
+  const causeMessage = "cause" in error ? formatUnknownError(error.cause) : undefined
+  const pieces = [message, code, details, causeMessage ? `cause: ${causeMessage}` : undefined].filter(
+    (value): value is string => value !== undefined && value !== OPAQUE_TEMPORAL_ERROR_MESSAGE,
+  )
+
+  if (pieces.length === 0) {
+    return undefined
+  }
+
+  return pieces.join(" | ")
+}
+
 const formatUnknownError = (error: unknown): string => {
   if (error instanceof Error) {
-    const message = toNonEmptyString(error.message)
-    const causeMessage = "cause" in error ? formatUnknownError(error.cause) : undefined
-
-    if (message !== undefined && message !== OPAQUE_TEMPORAL_ERROR_MESSAGE) {
-      return causeMessage ? `${message} (cause: ${causeMessage})` : message
-    }
-
-    if (causeMessage) {
-      return causeMessage
-    }
-
-    return toNonEmptyString(error.name) ?? OPAQUE_TEMPORAL_ERROR_MESSAGE
+    return formatErrorInstance(error)
   }
 
   if (isRecord(error)) {
-    const message = toNonEmptyString(error.message)
-    const code = toNonEmptyString(error.code)
-    const details = toNonEmptyString(error.details)
-    const causeMessage = "cause" in error ? formatUnknownError(error.cause) : undefined
-    const pieces = [message, code, details, causeMessage ? `cause: ${causeMessage}` : undefined].filter(
-      (value): value is string => value !== undefined && value !== OPAQUE_TEMPORAL_ERROR_MESSAGE,
-    )
-
-    if (pieces.length > 0) {
-      return pieces.join(" | ")
-    }
+    return formatErrorRecord(error) ?? String(error)
   }
 
   return String(error)
@@ -324,6 +339,13 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
   }
 }
 
+const isAlreadyStoppedWorkflowError = (error: unknown): boolean => {
+  if (error instanceof WorkflowNotFoundError) return true
+  // Temporal reports a closed run as a plain Error naming the terminal state.
+  const message = error instanceof Error ? error.message.toLowerCase() : ""
+  return message.includes("completed") || message.includes("not found") || message.includes("terminated")
+}
+
 /**
  * Hard-stop a running workflow (e.g. a facet garden the user chose to stop or
  * refine). Best-effort: a workflow that finished or was GC'd between the user's
@@ -336,10 +358,7 @@ export function createWorkflowTerminator(client: Client): WorkflowTerminatorShap
         try {
           await client.workflow.getHandle(workflowId).terminate(reason)
         } catch (error) {
-          if (error instanceof WorkflowNotFoundError) return
-          // A completed/terminated workflow can't be terminated again. Nothing to stop.
-          const message = error instanceof Error ? error.message.toLowerCase() : ""
-          if (message.includes("completed") || message.includes("not found") || message.includes("terminated")) return
+          if (isAlreadyStoppedWorkflowError(error)) return
           throw error
         }
       }),
