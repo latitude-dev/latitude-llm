@@ -295,7 +295,11 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(written).toHaveLength(1)
     expect(written[0]?.sessionId).toBe(SESSION_ID)
     expect(written[0]?.traceId).toBe(TRACE_ID)
-    expect(written[0]?.metadata).toMatchObject({ contentHash: expect.stringMatching(/^[0-9a-f]{64}$/) })
+    expect(written[0]?.metadata).toMatchObject({
+      contentHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+      flaggerFindingKey: expect.stringMatching(/^[0-9a-f]{64}$/),
+      flaggerPath: "deterministic",
+    })
   })
 
   it("does not duplicate the score when the session is re-screened after growing", async () => {
@@ -713,6 +717,10 @@ describe("screenSessionFlaggersUseCase", () => {
     })
     expect([...scores.values()]).toHaveLength(1)
     expect([...scores.values()][0]?.feedback).toContain("Duplicate tool_call id")
+    expect([...scores.values()][0]?.metadata).toMatchObject({
+      flaggerFindingKey: expect.stringMatching(/^[0-9a-f]{64}$/),
+      flaggerPath: "deterministic",
+    })
   })
 
   it("hints trashing (tool:error) from a failed tool response", async () => {

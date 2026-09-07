@@ -31,6 +31,8 @@ const makeHarness = () => {
     readonly contentHash?: string
     readonly sessionId?: string | null
     readonly flaggerTraceId?: string
+    readonly flaggerFindingKey?: string
+    readonly flaggerPath?: "deterministic" | "sampled"
   }) =>
     Effect.runPromise(
       upsertFlaggerAnnotationScore({
@@ -42,6 +44,8 @@ const makeHarness = () => {
         flaggerSlug: input.flaggerSlug ?? "frustration",
         contentHash: input.contentHash,
         flaggerTraceId: input.flaggerTraceId,
+        flaggerFindingKey: input.flaggerFindingKey,
+        flaggerPath: input.flaggerPath,
       }).pipe(Effect.provide(layer)),
     )
 
@@ -103,6 +107,24 @@ describe("upsertFlaggerAnnotationScore anchor dedup", () => {
     await upsert({ feedback: "Deterministic flag.", contentHash: ANCHOR_A })
 
     expect([...scores.values()][0]?.metadata).not.toHaveProperty("flaggerTraceId")
+  })
+
+  it("stores a deterministic finding link without copying the finding", async () => {
+    const { upsert, scores } = makeHarness()
+    const flaggerFindingKey = "f".repeat(64)
+
+    await upsert({
+      feedback: "Deterministic flag.",
+      contentHash: ANCHOR_A,
+      flaggerFindingKey,
+      flaggerPath: "deterministic",
+    })
+
+    expect([...scores.values()][0]?.metadata).toMatchObject({
+      flaggerFindingKey,
+      flaggerPath: "deterministic",
+    })
+    expect([...scores.values()][0]?.metadata).not.toHaveProperty("finding")
   })
 
   it("falls back to exact-feedback dedup when no anchor is available", async () => {

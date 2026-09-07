@@ -157,7 +157,7 @@ does not display per-session dimension scores.
 - [x] **P2-16** Extend flagger-authored annotation metadata only with the stable source-finding link
   and scoring-artifact provenance needed for persisted classifier or discovery results. Keep legacy
   metadata valid and optional.
-- [ ] **P2-17** Ensure a deterministic discovery score references its selected `findingKey`; the
+- [x] **P2-17** Ensure a deterministic discovery score references its selected `findingKey`; the
   resolver uses that reference to merge the score and any assigned signal into the calculated
   finding's assessment item.
 - [ ] **P2-18** Persist structured model verdicts only when the result cannot be reconstructed. Do

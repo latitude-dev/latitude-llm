@@ -140,7 +140,9 @@ Source-specific metadata stays intentionally lightweight:
   source fact with `flaggerFindingKey`, while sampled model results identify their compatible prompt,
   judge configuration, and result schema with `scoringArtifactVersion`. All four fields are optional
   so rows predating structured provenance remain readable. `flaggerTraceId` is absent on deterministic
-  detections, cached generations, and rows predating it.
+  detections, cached generations, and rows predating it. A deterministic score stores only the key of
+  the primary finding selected by the strategy; the full finding set is recalculated from session
+  telemetry when the assessment report is resolved.
 - custom scores store arbitrary user-defined metadata
 
 ### Shareable conversation anchors

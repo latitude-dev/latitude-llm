@@ -325,6 +325,7 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
           args,
           finding.feedback,
           "messageIndex" in finding ? finding.messageIndex : undefined,
+          finding.findingKey,
         )
       }
 
@@ -340,7 +341,7 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
     return yield* handleUnmatched(args, flagger, strategy)
   })
 
-const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIndex?: number) =>
+const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIndex?: number, findingKey?: string) =>
   Effect.gen(function* () {
     const session = args.context.session
     const contentHash = yield* computeFlaggerAnchorContentHash(args.context.conversation, messageIndex)
@@ -354,6 +355,7 @@ const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIn
       flaggerSlug: args.slug,
       messageIndex,
       contentHash,
+      ...(findingKey !== undefined ? { flaggerFindingKey: findingKey, flaggerPath: "deterministic" } : {}),
     })
 
     return { slug: args.slug, action: "matched-issue" } satisfies SessionFlaggerDecision
