@@ -1,4 +1,4 @@
-import type { FlaggerConversation } from "../conversation.ts"
+import { type FlaggerConversation, findFinalCapturedAssistantTurn } from "../conversation.ts"
 import { buildMessageFlaggerFindingRead, detectEmptyResponseFlagger } from "../helpers.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
@@ -14,7 +14,7 @@ export const emptyResponseStrategy: FlaggerStrategy = {
   },
 
   hasRequiredContext(conversation: FlaggerConversation): boolean {
-    return conversation.outputMessages.length > 0
+    return findFinalCapturedAssistantTurn(conversation) !== null
   },
 
   detectDeterministically(conversation: FlaggerConversation): DetectionResult {

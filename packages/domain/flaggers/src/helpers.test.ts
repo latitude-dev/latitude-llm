@@ -443,16 +443,20 @@ describe("malformed message parts", () => {
   })
 
   it("detectEmptyResponseFlagger skips messages without iterable parts", () => {
+    const messages = [
+      { role: "user", parts: null } as unknown as TraceMessage,
+      { role: "assistant" } as unknown as TraceMessage,
+      assistantText("done"),
+    ]
     expect(() =>
-      detectEmptyResponseFlagger(
-        makeAssistantTrace([
-          { role: "user", parts: null } as unknown as TraceMessage,
-          { role: "assistant" } as unknown as TraceMessage,
-          assistantText("done"),
-        ]),
-      ),
+      detectEmptyResponseFlagger({ ...makeAssistantTrace(messages), outputMessages: messages }),
     ).not.toThrow()
-    expect(detectEmptyResponseFlagger(makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage]))).toEqual({
+    expect(
+      detectEmptyResponseFlagger({
+        ...makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage]),
+        outputMessages: [{ role: "assistant" } as unknown as TraceMessage],
+      }),
+    ).toEqual({
       matched: true,
       findingKind: "blank",
       feedback: "Assistant response was empty or whitespace only",

@@ -28,10 +28,27 @@ describe("deterministic finding readers", () => {
     await expect(read(emptyResponseStrategy, makeTrace([]))).resolves.toEqual({ readable: false, findings: [] })
   })
 
+  it("returns unreadable when captured output contains no assistant turn", async () => {
+    await expect(read(emptyResponseStrategy, makeTrace([user("No assistant output")]))).resolves.toEqual({
+      readable: false,
+      findings: [],
+    })
+  })
+
   it("returns readable with no findings when eligible source data has no issue", async () => {
     await expect(read(emptyResponseStrategy, makeTrace([user("Hi"), assistant("Hello")]))).resolves.toEqual({
       readable: true,
       findings: [],
+    })
+  })
+
+  it("returns repeated-character output as an unconfirmed usability pattern", async () => {
+    const result = await read(emptyResponseStrategy, makeTrace([user("Hi"), assistant("aaa")]))
+
+    expect(result.findings).toHaveLength(1)
+    expect(result.findings[0]).toMatchObject({
+      flaggerSlug: "empty-response",
+      findingKind: "unconfirmedPattern",
     })
   })
 

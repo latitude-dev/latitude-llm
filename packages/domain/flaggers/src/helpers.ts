@@ -1,6 +1,11 @@
 import { cacheHitRate, formatCount, formatPercentage, hash } from "@repo/utils"
 import { Effect } from "effect"
-import { computeFlaggerAnchorContentHash, type FlaggerConversation } from "./conversation.ts"
+import {
+  assistantTurnHasOutputContent,
+  computeFlaggerAnchorContentHash,
+  type FlaggerConversation,
+  findFinalCapturedAssistantTurn,
+} from "./conversation.ts"
 import { type FlaggerFindingDraft, type FlaggerFindingScope, flaggerFindingSchema } from "./entities/flagger-finding.ts"
 import { isRecord, iterMessageParts } from "./flagger-strategies/shared.ts"
 
@@ -449,49 +454,32 @@ export function detectOutputSchemaValidationFlagger(
 }
 
 export function detectEmptyResponseFlagger(
-  conversation: ConversationMessagesOnly,
+  conversation: Pick<FlaggerConversation, "allMessages" | "outputMessages">,
 ): DeterministicFlaggerMatch<"blank" | "unconfirmedPattern"> {
-  // Only the most recent assistant turn matters — earlier "empty-looking" entries
-  // are intermediate agentic-loop steps in `lastInput` history, not the final response.
-  // `reasoning` and `tool_call` parts both signal model activity, so a message containing
-  // either is not empty regardless of whether a text part is present.
-  let lastAssistantIdx = -1
-  for (let i = conversation.allMessages.length - 1; i >= 0; i--) {
-    if (conversation.allMessages[i]!.role === "assistant") {
-      lastAssistantIdx = i
-      break
-    }
-  }
-  if (lastAssistantIdx === -1) return NO_MATCH
+  const finalTurn = findFinalCapturedAssistantTurn(conversation)
+  if (!finalTurn) return NO_MATCH
 
-  const message = conversation.allMessages[lastAssistantIdx]!
-  let hasNonTextProduction = false
+  const message = finalTurn.message
   const textParts: string[] = []
 
   for (const rawPart of iterMessageParts(message.parts)) {
     if (!isRecord(rawPart) || typeof rawPart.type !== "string") continue
     const part = rawPart
-    if (part.type === "tool_call" || part.type === "reasoning") {
-      hasNonTextProduction = true
-      continue
-    }
     if (part.type === "text") {
       const content = part.content
       if (typeof content === "string") textParts.push(content)
     }
   }
 
-  if (hasNonTextProduction) return NO_MATCH
-
   const accumulatedText = textParts.join("").trim()
-  if (accumulatedText === "") {
-    return match("blank", "Assistant response was empty or whitespace only", lastAssistantIdx)
+  if (!assistantTurnHasOutputContent(message)) {
+    return match("blank", "Assistant response was empty or whitespace only", finalTurn.messageIndex)
   }
   if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) {
     return match(
       "unconfirmedPattern",
       `Assistant response was degenerate: only the character "${accumulatedText[0]}" repeated`,
-      lastAssistantIdx,
+      finalTurn.messageIndex,
     )
   }
 
