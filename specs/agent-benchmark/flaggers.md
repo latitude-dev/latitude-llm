@@ -348,5 +348,9 @@ The Flaggers settings page shows, per flagger and selected window:
 - whether the finding can enter a calibrated score;
 - unknown selection probability or missing telemetry warnings.
 
+PR 2 groups persisted positive decisions by flagger kind in this view. More specific deterministic
+sub-kinds are calculated from retained telemetry by the shared readers; they are not copied into the
+screening-decision aggregate.
+
 The session and signal pages name the finding kind rather than displaying a raw feedback paragraph as
 the primary label.

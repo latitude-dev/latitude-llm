@@ -93,6 +93,10 @@ Repository reads are cutoff-aware and perform those steps in that order. A decis
 
 Public coverage deliberately hides internal policy subreasons: disabled flaggers, suppressor decisions, unprovisioned flaggers, and missing required context all become `skipped`. Sampling losses are `notSelected`; rate-limit rejection is `rateLimited`; a terminal error is `executionFailed`; an initial selection without a terminal revision is `pending`; and no compatible decision is `missingTelemetry`. Only a selected decision with a non-error terminal outcome is `examined`.
 
+`FlaggerCoverageRepository` provides the organization- and project-scoped window aggregate used by Settings. The eligible base is settled, non-simulation sessions with LLM activity, using the same five-minute session-end debounce as screening. `examinedSessions` includes selected terminal non-error decisions; `readableSessions` additionally requires a positive inclusion probability and excludes policy skips and rate limits. Missing decisions and unknown probabilities stay visible and never count as readable.
+
+The Settings table uses 7-, 14-, 21-, or 28-day windows and keeps one row per flagger kind. A positive `matched` or `failure` decision contributes to that row's finding count. `calibrationReadyFindings` is the subset with usable selection evidence; it reports readiness, not a score or confidence estimate. Detailed deterministic sub-kinds remain dynamically calculated source facts and are not persisted by this aggregate.
+
 The screening activity writes version 1 for every per-flagger selection before it returns classification requests to the workflow. Deterministic matches and misses are already terminal in that row. A model classification activity appends version 2 with `matched`, `unmatched`, or `error`, reusing the decision id and every selection field from version 1. These writes happen inside the existing activities, so the workflow history does not gain a new activity command.
 
 ### Sampling

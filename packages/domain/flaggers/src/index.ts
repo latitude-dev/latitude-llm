@@ -28,6 +28,15 @@ export {
 } from "./conversation.ts"
 export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema, flaggerSlugSchema } from "./entities/flagger.ts"
 export {
+  emptyFlaggerCoverageRow,
+  type FlaggerCoverageReport,
+  type FlaggerCoverageRow,
+  type FlaggerSelectionPathCounts,
+  flaggerCoverageReportSchema,
+  flaggerCoverageRowSchema,
+  flaggerSelectionPathCountsSchema,
+} from "./entities/flagger-coverage.ts"
+export {
   type DeterministicFlaggerFindingRead,
   deterministicFlaggerFindingReadSchema,
   type FlaggerFinding,
@@ -131,6 +140,11 @@ export {
   type SessionHintGatherer,
   type SessionHintKind,
 } from "./hints/types.ts"
+export {
+  FlaggerCoverageRepository,
+  type FlaggerCoverageRepositoryShape,
+  type GetFlaggerCoverageInput,
+} from "./ports/flagger-coverage-repository.ts"
 export {
   type FindFlaggerByProjectAndSlugInput,
   FlaggerRepository,

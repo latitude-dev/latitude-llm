@@ -15,6 +15,7 @@ import { useDirtyGuard } from "../../../../../lib/hooks/use-dirty-guard.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { DirtyActions } from "./-components/dirty-actions.tsx"
+import { FlaggerCoverageSection } from "./-components/flagger-coverage-section.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/flaggers")({
@@ -172,6 +173,8 @@ function ProjectFlaggersSettingsPage() {
           <Text.H5 color="foregroundMuted">No flaggers have been provisioned for this project yet</Text.H5>
         ) : (
           <>
+            <FlaggerCoverageSection projectId={currentProject.id} flaggers={flaggers} />
+
             <div className="flex flex-col gap-2">
               <Text.H6 color="foregroundMuted">Apply a use-case preset</Text.H6>
               <div className="flex flex-row flex-wrap gap-2">
