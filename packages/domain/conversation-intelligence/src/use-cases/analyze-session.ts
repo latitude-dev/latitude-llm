@@ -666,10 +666,11 @@ const upsertFailedSessionAnalysis = (input: AnalyzeSessionInput, statusReason: s
     return failedSessionAnalysisResult(input)
   })
 
-const recoverFromAnalyzeSessionError = (input: AnalyzeSessionInput, error: unknown) => {
-  if (error instanceof MomentClassifierError) return Effect.fail(error)
-  return upsertFailedSessionAnalysis(input, error instanceof Error ? error.message : "Session analysis failed")
-}
+const recoverFromAnalyzeSessionError = (input: AnalyzeSessionInput, error: unknown) =>
+  Effect.gen(function* () {
+    if (error instanceof MomentClassifierError) return yield* Effect.fail(error)
+    return yield* upsertFailedSessionAnalysis(input, error instanceof Error ? error.message : "Session analysis failed")
+  })
 
 const skippedConversationAnalysis = (
   messages: readonly NormalizedMessage[],
