@@ -330,10 +330,6 @@ describe("runWrappedUseCase", () => {
   })
 
   it("skips instead of throwing when the project was deleted before the job ran", async () => {
-    // Regression: the fan-out enumerates eligible projects from ClickHouse
-    // ahead of publishing this task, so the project can be deleted by the
-    // time the job runs. `findById` used to propagate `NotFoundError`
-    // uncaught, failing the whole BullMQ job.
     harness = setupHarness({
       members: [makeMember("a", "a@test.com", true)],
       sessions: 5,

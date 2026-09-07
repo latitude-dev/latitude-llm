@@ -66,10 +66,7 @@ export const runWrappedUseCase = Effect.fn("wrapped.runForProject")(function* (i
   const projectRepo = yield* ProjectRepository
   const membershipRepo = yield* MembershipRepository
   const organizationRepo = yield* OrganizationRepository
-  // The fan-out enumerates eligible projects from ClickHouse ahead of publishing
-  // this task, so the project (or its org) may be deleted by the time the job
-  // runs — treat that race as a skip, not a failure, same as
-  // `requestAgentDispatchUseCase`'s handling of the equivalent race.
+  // The project or its org may be deleted between fan-out and this job running, so treat that as a skip, not a failure.
   const project = yield* projectRepo
     .findById(input.projectId)
     .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
