@@ -1,6 +1,10 @@
+import SkillsCallout from "/snippets/skills-callout.mdx"
+
 # Claude Code telemetry
 
 Stream Claude Code conversations into Latitude as traces. After setup, Claude Code turns appear in your project's **Traces** view with prompts, responses, tool calls, and tool results.
+
+<SkillsCallout />
 
 ## Prerequisites
 

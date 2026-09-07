@@ -1,6 +1,10 @@
+import SkillsCallout from "/snippets/skills-callout.mdx"
+
 # Prime Intellect (Verifiers) telemetry
 
 Stream [Prime Intellect Verifiers](https://github.com/PrimeIntellect-ai/verifiers) eval rollouts into Latitude as traces. After setup, each rollout appears in your project's **Traces** view with prompts, model calls, tool calls, token usage, timing, and rewards — optionally as Latitude custom scores.
+
+<SkillsCallout />
 
 ## Prerequisites
 

@@ -3,9 +3,13 @@ title: Python SDK
 description: Instrument Python apps with Latitude Telemetry.
 ---
 
+import SkillsCallout from "/snippets/skills-callout.mdx"
+
 # Python SDK
 
 Use `latitude-telemetry` to send LLM traces from Python applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one.
+
+<SkillsCallout />
 
 ## Installation
 
