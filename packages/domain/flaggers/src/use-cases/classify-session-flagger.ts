@@ -1,6 +1,7 @@
 import { NotFoundError, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { Effect } from "effect"
+import { FLAGGER_SCORING_ARTIFACT_VERSION } from "../constants.ts"
 import {
   buildFlaggerSessionContext,
   computeFlaggerAnchorContentHash,
@@ -33,6 +34,7 @@ export type ClassifySessionFlaggerResult =
       readonly latestTraceId: string
       readonly sessionStartedAt: string
       readonly simulationId: string | null
+      readonly scoringArtifactVersion: string
     }
 
 // Fails NotFoundError when the session is missing or has no traces: the scores
@@ -141,5 +143,6 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     latestTraceId: context.latestTraceId,
     sessionStartedAt: session.startTime.toISOString(),
     simulationId: session.simulationId === "" ? null : session.simulationId,
+    scoringArtifactVersion: FLAGGER_SCORING_ARTIFACT_VERSION,
   } satisfies ClassifySessionFlaggerResult
 })

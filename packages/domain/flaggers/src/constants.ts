@@ -1,5 +1,7 @@
 export const FLAGGER_DEFAULT_SAMPLING = 10
 
+export const FLAGGER_SCORING_ARTIFACT_VERSION = "flagger-classification-v1"
+
 // Independent fixed windows per org+slug; sampled sessions with positive hints
 // (satisfaction/resolution) get the smallest budget.
 export const FLAGGER_HINTED_RATE_LIMIT = {

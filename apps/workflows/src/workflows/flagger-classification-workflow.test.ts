@@ -13,6 +13,7 @@ const { mockActivities } = vi.hoisted(() => {
     latestTraceId: "t".repeat(32),
     sessionStartedAt: "2026-08-17T12:00:00.000Z",
     simulationId: null,
+    scoringArtifactVersion: "flagger-classification-v1",
   }
   const mockActivities = {
     classifySessionFlagger: vi.fn(async (): Promise<ClassifySessionFlaggerResult> => matched),
@@ -54,7 +55,10 @@ describe("flaggerClassificationWorkflow", () => {
 
     expect(result).toMatchObject({ result: "annotated", scoreId: "score-1" })
     expect(mockActivities.saveSessionFlaggerAnnotation).toHaveBeenCalledWith(
-      expect.objectContaining({ flaggerTraceId: FLAGGER_TRACE_ID }),
+      expect.objectContaining({
+        flaggerTraceId: FLAGGER_TRACE_ID,
+        scoringArtifactVersion: "flagger-classification-v1",
+      }),
     )
   })
 
@@ -67,6 +71,7 @@ describe("flaggerClassificationWorkflow", () => {
       latestTraceId: "t".repeat(32),
       sessionStartedAt: "2026-08-17T12:00:00.000Z",
       simulationId: null,
+      scoringArtifactVersion: "flagger-classification-v1",
     }))
 
     await flaggerClassificationWorkflow(INPUT)

@@ -142,7 +142,10 @@ Source-specific metadata stays intentionally lightweight:
   so rows predating structured provenance remain readable. `flaggerTraceId` is absent on deterministic
   detections, cached generations, and rows predating it. A deterministic score stores only the key of
   the primary finding selected by the strategy; the full finding set is recalculated from session
-  telemetry when the assessment report is resolved.
+  telemetry when the assessment report is resolved. A sampled binary flagger verdict uses the score's
+  existing `passed`, `value`, and `feedback` fields and records `flagger-classification-v1` as its
+  current scoring artifact version. Change that version whenever the classifier prompt contract,
+  supported judge configuration, or result schema changes.
 - custom scores store arbitrary user-defined metadata
 
 ### Shareable conversation anchors

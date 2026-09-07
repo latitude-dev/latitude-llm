@@ -160,7 +160,7 @@ does not display per-session dimension scores.
 - [x] **P2-17** Ensure a deterministic discovery score references its selected `findingKey`; the
   resolver uses that reference to merge the score and any assigned signal into the calculated
   finding's assessment item.
-- [ ] **P2-18** Persist structured model verdicts only when the result cannot be reconstructed. Do
+- [x] **P2-18** Persist structured model verdicts only when the result cannot be reconstructed. Do
   not copy telemetry-derived recovery, terminal, resource, or safety fields into the generic Score
   entity.
 - [ ] **P2-19** Add only the bounded ClickHouse score columns defined in

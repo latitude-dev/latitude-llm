@@ -225,6 +225,7 @@ export interface SaveSessionFlaggerAnnotationActivityInput {
   readonly contentHash: string
   readonly messageIndex?: number | undefined
   readonly flaggerTraceId?: string | undefined
+  readonly scoringArtifactVersion: string
 }
 
 export const saveSessionFlaggerAnnotation = async (
@@ -245,6 +246,7 @@ export const saveSessionFlaggerAnnotation = async (
       messageIndex: input.messageIndex,
       contentHash: input.contentHash,
       flaggerTraceId: input.flaggerTraceId,
+      scoringArtifactVersion: input.scoringArtifactVersion,
     }).pipe(
       withPostgres(
         Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),

@@ -33,6 +33,7 @@ const makeHarness = () => {
     readonly flaggerTraceId?: string
     readonly flaggerFindingKey?: string
     readonly flaggerPath?: "deterministic" | "sampled"
+    readonly scoringArtifactVersion?: string
   }) =>
     Effect.runPromise(
       upsertFlaggerAnnotationScore({
@@ -46,6 +47,7 @@ const makeHarness = () => {
         flaggerTraceId: input.flaggerTraceId,
         flaggerFindingKey: input.flaggerFindingKey,
         flaggerPath: input.flaggerPath,
+        scoringArtifactVersion: input.scoringArtifactVersion,
       }).pipe(Effect.provide(layer)),
     )
 
@@ -125,6 +127,27 @@ describe("upsertFlaggerAnnotationScore anchor dedup", () => {
       flaggerPath: "deterministic",
     })
     expect([...scores.values()][0]?.metadata).not.toHaveProperty("finding")
+  })
+
+  it("stores sampled model provenance without copying telemetry-derived facts", async () => {
+    const { upsert, scores } = makeHarness()
+
+    await upsert({
+      feedback: "Sampled flag.",
+      contentHash: ANCHOR_A,
+      flaggerPath: "sampled",
+      scoringArtifactVersion: "flagger-classification-v1",
+    })
+
+    const score = [...scores.values()][0]
+    expect(score).toMatchObject({ passed: false, value: 0, feedback: "Sampled flag." })
+    expect(score?.metadata).toMatchObject({
+      flaggerPath: "sampled",
+      scoringArtifactVersion: "flagger-classification-v1",
+    })
+    expect(score?.metadata).not.toEqual(
+      expect.objectContaining({ recovered: expect.anything(), terminal: expect.anything() }),
+    )
   })
 
   it("falls back to exact-feedback dedup when no anchor is available", async () => {

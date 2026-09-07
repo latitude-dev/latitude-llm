@@ -11,6 +11,7 @@ export {
   FLAGGER_PROMPT_MAX_HINTS,
   FLAGGER_SAMPLED_POSITIVE_RATE_LIMIT,
   FLAGGER_SAMPLED_RATE_LIMIT,
+  FLAGGER_SCORING_ARTIFACT_VERSION,
 } from "./constants.ts"
 export {
   assistantTurnHasOutputContent,

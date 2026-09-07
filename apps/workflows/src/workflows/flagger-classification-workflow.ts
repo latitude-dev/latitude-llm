@@ -78,6 +78,7 @@ export const flaggerClassificationWorkflow = async (input: FlaggerClassification
     feedback: draft.feedback,
     traceCreatedAt: result.sessionStartedAt,
     contentHash: result.contentHash,
+    scoringArtifactVersion: result.scoringArtifactVersion,
     ...(draft.messageIndex !== undefined ? { messageIndex: draft.messageIndex } : {}),
     ...(result.flaggerTraceId !== undefined ? { flaggerTraceId: result.flaggerTraceId } : {}),
   })
