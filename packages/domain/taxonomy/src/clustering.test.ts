@@ -7,6 +7,7 @@
  * and matches the calibrated candidate byte-for-byte on the partition signature.
  */
 
+import { normalizeEmbedding } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import {
   buildImbalancedLongTailCorpus,
@@ -19,7 +20,12 @@ import {
   loadNarrowPilotCorpus,
 } from "./calibration/fixtures.ts"
 import { partitionSignature, rootChildMajorityLabels, treeShape } from "./calibration/metrics.ts"
-import { buildRelativeHierarchicalClusters, quantile } from "./clustering.ts"
+import {
+  buildRelativeHierarchicalClusters,
+  type ClusteringTreeNode,
+  type PriorClusterNode,
+  quantile,
+} from "./clustering.ts"
 import {
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN,
   TAXONOMY_ADAPTIVE_ESCALATION_MARGIN_FLOOR,
@@ -31,6 +37,7 @@ import {
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
   TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+  TAXONOMY_WARM_START_BONUS,
 } from "./constants.ts"
 
 // Multi-corpus k-means builds run 1-1.5s locally and ~3x that on CI hardware,
@@ -433,6 +440,142 @@ describe("buildRelativeHierarchicalClusters — the re-search work budget", () =
       expect(partitionSignature(allowedAgain.root)).toBe(partitionSignature(allowedFirst.root))
     },
     RE_SEARCH_TIMEOUT_MS,
+  )
+})
+
+// ---------------------------------------------------------------------------
+// Warm start.
+//
+// The three properties below fail *silently* — a regression stops warm-starting
+// from helping rather than producing a wrong tree, so nothing else in this file
+// would go red. They are asserted directly on the builder because that is where
+// they live; the use-case tests only prove a prior tree reaches it.
+//
+// Not covered: similarity-based child pairing. Making it observable needs a
+// corpus where a depth-1 split changes with its seeds, and every fixture here
+// either stops at depth 1 or splits identically however it is seeded — a test
+// over them would pass under index pairing too.
+// ---------------------------------------------------------------------------
+
+const asPrior = (node: ClusteringTreeNode): PriorClusterNode => ({
+  centroid: node.centroid,
+  children: node.children.map(asPrior),
+})
+
+const buildWarm = (corpus: LabeledCorpus, priorTree: PriorClusterNode, warmStartBonus: number) =>
+  buildRelativeHierarchicalClusters({
+    embeddings: corpus.embeddings,
+    depthSchedule: TAXONOMY_TREE_RELATIVE_DEPTH_SCHEDULE,
+    restarts: TAXONOMY_KMEANS_RESTARTS,
+    maxIter: TAXONOMY_KMEANS_MAX_ITER,
+    tolerance: TAXONOMY_KMEANS_TOLERANCE,
+    seed: corpus.seed,
+    globalAbsoluteThreshold: TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
+    priorTree,
+    warmStartBonus,
+  })
+
+/** Collapses the two most similar centroids into one, giving a valid prior at K-1. */
+const mergedNearestPair = (centroids: readonly (readonly number[])[]): readonly number[][] => {
+  let left = 0
+  let right = 1
+  let best = Number.NEGATIVE_INFINITY
+  for (let i = 0; i < centroids.length; i++) {
+    for (let j = i + 1; j < centroids.length; j++) {
+      const a = centroids[i]
+      const b = centroids[j]
+      if (!a || !b) continue
+      let dot = 0
+      for (let d = 0; d < a.length; d++) dot += (a[d] ?? 0) * (b[d] ?? 0)
+      if (dot > best) {
+        best = dot
+        left = i
+        right = j
+      }
+    }
+  }
+  const a = centroids[left] ?? []
+  const b = centroids[right] ?? []
+  const merged = normalizeEmbedding(a.map((value, d) => value + (b[d] ?? 0)))
+  return centroids
+    .filter((_, i) => i !== left && i !== right)
+    .map((c) => [...c])
+    .concat([merged])
+}
+
+describe("buildRelativeHierarchicalClusters — warm start", () => {
+  it(
+    "consumes no rng: a prior reproducing the cold winner leaves the whole tree untouched",
+    () => {
+      // A two-level corpus, so a warm attempt that drew from the shared rng would
+      // shift the stream and move the depth-1 splits even when the root held.
+      const corpus = buildRareIntentDuplicateCorpus()
+      const cold = build(corpus)
+      expect(cold.diagnostics.maxDepth).toBeGreaterThan(1)
+
+      const wholeTree = buildWarm(corpus, asPrior(cold.root), 0)
+      expect(partitionSignature(wholeTree.root)).toBe(partitionSignature(cold.root))
+      expect(wholeTree.diagnostics.selectedKByDepth).toEqual(cold.diagnostics.selectedKByDepth)
+
+      // Root-only prior: the descent stops at depth 1, so the deeper splits are
+      // cold and would diverge on their own if the root attempt had drawn.
+      const rootOnly: PriorClusterNode = {
+        centroid: cold.root.centroid,
+        children: cold.root.children.map((child) => ({ centroid: child.centroid, children: [] })),
+      }
+      const seededRoot = buildWarm(corpus, rootOnly, 0)
+      expect(partitionSignature(seededRoot.root)).toBe(partitionSignature(cold.root))
+    },
+    HEAVY_BUILD_TIMEOUT_MS,
+  )
+
+  it(
+    "a cold restart keeps the split when the warm candidate carries no bonus",
+    () => {
+      const corpus = buildRetailSupportCorpus()
+      const cold = build(corpus)
+      const prior: PriorClusterNode = {
+        centroid: cold.root.centroid,
+        children: mergedNearestPair(cold.root.children.map((child) => child.centroid)).map((centroid) => ({
+          centroid,
+          children: [],
+        })),
+      }
+      expect(prior.children.length).toBe(cold.root.children.length - 1)
+
+      // Same K on offer as the tie-break below, but unweighted the warm candidate
+      // loses on raw score and the incumbent survives.
+      const unweighted = buildWarm(corpus, prior, 0)
+      expect(unweighted.root.children.length).toBe(cold.root.children.length)
+      expect(unweighted.diagnostics.selectedKByDepth).toEqual(cold.diagnostics.selectedKByDepth)
+      expect(partitionSignature(unweighted.root)).toBe(partitionSignature(cold.root))
+    },
+    HEAVY_BUILD_TIMEOUT_MS,
+  )
+
+  it(
+    "the shipped bonus is the only thing that lets the prior's K win",
+    () => {
+      const corpus = buildRetailSupportCorpus()
+      const cold = build(corpus)
+      const prior: PriorClusterNode = {
+        centroid: cold.root.centroid,
+        children: mergedNearestPair(cold.root.children.map((child) => child.centroid)).map((centroid) => ({
+          centroid,
+          children: [],
+        })),
+      }
+
+      // Identical inputs to the zero-bonus case above; only the multiplier differs,
+      // and the root now keeps the prior's shape instead of the cold winner's.
+      // Asserted on root shape, not `partitionSignature`: the merged child splits
+      // again a level down, so the leaf partition is unchanged by the flip.
+      const weighted = buildWarm(corpus, prior, TAXONOMY_WARM_START_BONUS)
+      expect(weighted.root.children.length).toBe(prior.children.length)
+      expect(weighted.root.children.length).not.toBe(cold.root.children.length)
+      expect(weighted.diagnostics.selectedKByDepth[0]).toEqual([prior.children.length])
+    },
+    HEAVY_BUILD_TIMEOUT_MS,
   )
 })
 
