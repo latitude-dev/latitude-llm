@@ -136,6 +136,55 @@ describe("deterministic finding readers", () => {
     expect(selected).toMatchObject({ findingKind: "duplicate", toolCallId: "call-2" })
   })
 
+  it("returns every supported tool-call finding in encounter order", async () => {
+    const conversation = {
+      ...makeTrace([
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "malformed-1", name: "", arguments: {} }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "duplicate-1", name: "search", arguments: { q: "first" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "duplicate-1", name: "search", arguments: { q: "second" } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "undeclared-1", name: "missing_tool", arguments: {} }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "orphan-1", response: { ok: true } }],
+        },
+        {
+          role: "assistant",
+          parts: [{ type: "tool_call", id: "failed-1", name: "search", arguments: { q: "third" } }],
+        },
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "failed-1", response: { error: "timeout" } }],
+        },
+      ]),
+      definedTools: ["search"],
+    }
+
+    const result = await read(toolCallErrorsStrategy, conversation)
+
+    expect(result.readable).toBe(true)
+    expect(result.findings.map((finding) => finding.findingKind)).toEqual([
+      "malformed",
+      "duplicate",
+      "undeclared",
+      "unknown-id",
+      "error",
+    ])
+    expect(result.findings[0]).toMatchObject({ toolCallId: "malformed-1" })
+    expect(result.findings[4]).toMatchObject({ toolCallId: "failed-1", recovered: false })
+  })
+
   it("keeps a tool finding key stable when its message position changes", async () => {
     const messages = [
       {

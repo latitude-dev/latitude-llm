@@ -129,7 +129,7 @@ does not display per-session dimension scores.
 - [x] **P2-7** Update `empty-response` to return `blank`, `confirmedUnusablePattern`, or
   `unconfirmedPattern`. A tool-call-only turn is not empty, and no captured assistant turn is
   unreadable rather than failed.
-- [ ] **P2-8** Make the tool-call reader return every malformed call, duplicate id, orphan response,
+- [x] **P2-8** Make the tool-call reader return every malformed call, duplicate id, orphan response,
   undeclared tool, and explicit failure instead of only the first discovery-worthy finding.
 - [ ] **P2-9** Calculate both recovery meanings from session chronology: `recovered` requires later
   successful progress and a usable completion; `sameSubjectRecovered` requires later success by the

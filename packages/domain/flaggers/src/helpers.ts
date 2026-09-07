@@ -170,13 +170,17 @@ export function collectToolCallErrorFindings(conversation: ToolErrorConversation
         const toolName = typeof part.name === "string" ? part.name.trim() : ""
 
         if (!toolCallId || !toolName) {
-          const label = toolName ? `tool "${toolName}"` : "an unnamed tool"
+          const missingFields = [!toolName ? "tool name" : null, !toolCallId ? "tool_call id" : null]
+            .filter((field): field is string => field !== null)
+            .join(" and ")
+          const subject = toolName ? ` for tool "${toolName}"` : toolCallId ? ` "${toolCallId}"` : ""
           findings.push({
             kind: "malformed",
-            feedback: `Malformed tool call: ${label} with missing or empty tool_call id`,
+            feedback: `Malformed tool call${subject}: missing or empty ${missingFields}`,
             messageIndex: msgIdx,
             partIndex,
             ...(toolName ? { toolName } : {}),
+            ...(toolCallId ? { toolCallId } : {}),
           })
           continue
         }
