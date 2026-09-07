@@ -440,6 +440,9 @@ importers:
       '@domain/agent-dispatch':
         specifier: workspace:*
         version: link:../../packages/domain/agent-dispatch
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../../packages/domain/agent-score
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations

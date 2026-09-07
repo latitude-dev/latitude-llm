@@ -231,7 +231,7 @@ does not display per-session dimension scores.
 
 ### Step 8: build the Scores panel
 
-- [ ] **P2-38** Add the Session assessment section above the existing annotations and evaluations in
+- [x] **P2-38** Add the Session assessment section above the existing annotations and evaluations in
   the stable Scores tab.
 - [ ] **P2-39** Render the five dimension summaries, reader coverage, and one chronological evidence
   feed with direction, measurement state, native impact, and occurrence count. Do not add assessment

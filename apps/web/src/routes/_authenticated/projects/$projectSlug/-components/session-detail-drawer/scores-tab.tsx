@@ -7,6 +7,7 @@ import type { AnnotationRecord } from "../../../../../../domains/annotations/ann
 import { useScoresBySession } from "../../../../../../domains/scores/scores.collection.ts"
 import { ScoreList } from "../scores/score-list.tsx"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
+import { SessionAssessmentSection } from "./session-assessment.tsx"
 
 /**
  * Session-wide scores — every score source across the session's traces.
@@ -15,6 +16,7 @@ import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
  */
 export function ScoresTab({
   projectId,
+  sessionId,
   traceIds,
   latestTraceId,
   traceNumberById,
@@ -22,6 +24,7 @@ export function ScoresTab({
   onOpenTrace,
 }: {
   readonly projectId: string
+  readonly sessionId: string
   readonly traceIds: readonly string[]
   readonly latestTraceId: string
   readonly traceNumberById: ReadonlyMap<string, number>
@@ -38,6 +41,15 @@ export function ScoresTab({
       scores={data?.items ?? []}
       isLoading={isLoading}
       isError={isError}
+      intro={
+        <div className="flex flex-col gap-6">
+          <SessionAssessmentSection projectId={projectId} sessionId={sessionId} />
+          <div className="flex flex-col gap-1">
+            <Text.H4M>Annotations and evaluations</Text.H4M>
+            <Text.H6 color="foregroundMuted">Review or add judgments attached to this session.</Text.H6>
+          </div>
+        </div>
+      }
       showCreateForm={latestTraceId.length > 0}
       createPending={createMutation.isPending}
       onCreate={(annotationData) => {

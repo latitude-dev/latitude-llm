@@ -331,6 +331,7 @@ export function SessionSlot({
           <div className={effectiveActiveTab === "scores" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
             <ScoresTab
               projectId={projectId}
+              sessionId={session.sessionId}
               traceIds={traceIds}
               latestTraceId={latestTraceId}
               traceNumberById={traceNumberById}
