@@ -67,6 +67,8 @@ export {
   toolDefinitionSchema,
   USAGE_OPERATIONS,
 } from "./entities/span.ts"
+export type { FinishReasonClassification } from "./entities/span-endpoint.ts"
+export { finishReasonClassificationSchema } from "./entities/span-endpoint.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { RedactionError, SpanDecodingError } from "./errors.ts"
@@ -105,6 +107,7 @@ export {
   cacheBreakEvenRate,
   classifyCacheState,
 } from "./helpers/cache-economics.ts"
+export { classifyFinishReason, normalizeFinishReason } from "./helpers/classify-finish-reason.ts"
 export type { ClassifiedUnpricedPair, UnpricedCause, UnpricedUsageSummary } from "./helpers/classify-unpriced-cost.ts"
 export {
   classifyUnpricedPair,

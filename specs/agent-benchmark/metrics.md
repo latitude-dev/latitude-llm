@@ -134,6 +134,10 @@ Clean includes normal stops, caller-forced stops, tool-call continuations, and e
 Whether a refusal was correct belongs to Outcome signal evidence. Unreliable includes truncation,
 provider content filters, guardrail intervention, and malformed function calls.
 
+The classified value retains the raw and normalized reason plus a bounded kind. Length-related kinds
+carry `requiresOutputDamage: true`; other unreliable kinds carry `false`. Unmapped raw values remain
+visible rather than being guessed into a known category.
+
 Truncation requires two observations: an unreliable length-related finish reason and malformed or
 incomplete output from `output-schema-validation`. A deliberately short output limit can end with
 `length` while still returning a complete value. Content filters, guardrail interventions, and

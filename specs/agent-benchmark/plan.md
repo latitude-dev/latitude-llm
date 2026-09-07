@@ -142,7 +142,7 @@ does not display per-session dimension scores.
 
 ### Step 3: classify span endpoints
 
-- [ ] **P2-12** Add the shared finish-reason classifier required by
+- [x] **P2-12** Add the shared finish-reason classifier required by
   [`metrics.md`](metrics.md#spans), mapping provider-native values to `clean`, `unreliable`, or
   `unmapped` without treating a configured length stop as damaged output by itself.
 - [ ] **P2-13** Add the named provider-error classifier for rate limiting, overload, service failure,
