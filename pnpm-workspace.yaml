@@ -65,7 +65,7 @@ catalog:
   fast-json-stable-stringify: 2.1.0
   "@effect/opentelemetry": 4.0.0-beta.57
   effect: 4.0.0-beta.57
-  hono: 4.12.34
+  hono: 4.13.5
   ioredis: 5.10.1
   jose: 6.2.3
   js-tiktoken: 1.0.21
