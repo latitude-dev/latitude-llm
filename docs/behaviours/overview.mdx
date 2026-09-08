@@ -47,8 +47,20 @@ When you add a behavior, Latitude analyses a sample of your sessions through it 
 <Note>
   A behavior keeps itself up to date on a schedule as new sessions arrive. A brand-new behavior,
   or one on a project without enough traffic yet, shows a waiting state until it has clustered
-  enough sessions.
+  enough sessions. The timings are covered just below.
 </Note>
+
+## When behaviors populate
+
+On a freshly connected project, the Behaviors page starts **blank**. That is the expected cold-start state, not a broken one — groupings are built from analyzed sessions, and three things have to happen first:
+
+1. **Sessions have to exist and end.** Behaviors cluster [sessions](../observability/sessions), so your telemetry must send a `sessionId`. A session is analyzed after it ends, which happens after roughly five minutes without new activity, plus processing time.
+2. **Enough sessions have to accumulate.** The first grouping needs a minimum volume of analyzed sessions — currently around 15 — before clustering produces anything meaningful.
+3. **A grouping pass has to run.** Groupings are built and refreshed by scheduled passes that run every few hours, so there can be a gap between crossing the volume threshold and the first groups appearing.
+
+In practice: with moderate traffic, expect the first Topics groups **the same day** you connect; with a trickle of traffic, it can take a few days to reach the threshold. The same applies to a newly added behavior, which shows a waiting state until its first pass completes.
+
+If Behaviors stays empty longer than that with steady traffic — for example, hundreds of sessions over more than a day and still no groups — check that sessions (not just traces) are appearing on the Sessions page, and if they are, contact [hello@latitude.so](mailto:hello@latitude.so) so the team can check your project's analysis pipeline.
 
 ## Inspect a behavior
 

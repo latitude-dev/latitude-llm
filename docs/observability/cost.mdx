@@ -1,0 +1,58 @@
+---
+title: Cost
+description: Find what a conversation, a trace, a user, a model, or your whole project costs.
+---
+
+Latitude estimates cost from the token usage and model information in your telemetry, and surfaces it at every level: per trace, per session, per user, per model, and per project. This page answers the practical questions — starting with the most common one.
+
+## How much did this conversation cost?
+
+A conversation is a [session](./sessions), and session cost is on the main **Sessions** view — the landing page of every project:
+
+1. Open your project. The Sessions tab is the default view.
+2. Each row has a **cost** column: the estimated total across every trace in that session.
+3. Click a row to open the session detail, where each trace keeps its own cost, so you can see which turn was expensive.
+
+To find the expensive conversations rather than look one up, add a **Cost** [filter](./filters) (for example, cost greater than `$1`) or sort by cost. Filters combine, so "Status is error **and** Cost > $1" finds your expensive failures.
+
+<Note>
+  Sessions only exist if your app sends a `sessionId` with telemetry. Without it you still get
+  per-trace cost on the Traces tab — see [Sessions](./sessions) for how to send one.
+</Note>
+
+## How much did this trace cost?
+
+Switch to the **Traces** tab (the toggle at the top of the Sessions page). The traces table has the same cost column per trace, and the trace detail view breaks usage down across the trace's LLM spans: input tokens, output tokens, model, and estimated cost per call. See [Token and cost tracking](./features/token-cost-tracking) for exactly which fields are captured.
+
+## How much does this user cost?
+
+The [Users](./users) view aggregates activity per `userId`, including cost, so you can see which users drive spend.
+
+## Where is the money going overall? The Cost view
+
+The **Cost** section in the project sidebar (under Observe) is the project-wide spend dashboard:
+
+- **Overview**: total spend for the selected time window, average per day, average per trace, top spend model, and spend over time.
+- **Session**: cost per session, decomposed into its drivers — traces per session, LLM calls per trace, tokens per call, which models, prompt vs output split, and prompt/output prices — so when cost per conversation moves, you can see *which* driver moved it.
+- **Model**: spend against usage per model, and a breakdown table (by model, provider, operation, or service) with input, output, and cache costs per row.
+- **Cache**: cache economics per model, with break-even points showing what prompt caching is actually saving you.
+
+Cost values are **estimates** built from the usage your instrumentation reports and known model pricing; the view shows how much of the window's usage is provider-verified versus estimated. Usage from models Latitude cannot price appears as unpriced rather than being silently guessed at.
+
+<Note>
+  The Cost view is rolling out per workspace. If you don't see **Cost** in your project sidebar
+  yet, the per-session and per-trace costs above are available to everyone — and you can ask for
+  access at [hello@latitude.so](mailto:hello@latitude.so).
+</Note>
+
+## Cost beyond the UI
+
+- **Alerts**: a [monitor](../monitors/overview) can watch a saved search that includes a cost filter, and a [signal](../signals/create) can use a cost condition — for example, sessions above a spend threshold.
+- **Reports**: cost is exposed through the [MCP, CLI, and API](../more/artifacts), so your coding agent can build cost reports and dashboards, including across projects.
+
+## Related
+
+- [Token and cost tracking](./features/token-cost-tracking): what usage data Latitude captures
+- [Sessions](./sessions): the conversation-level view
+- [Filters](./filters): filter by cost, tokens, and duration
+- [Percentile cohorts](./features/percentile-cohorts): compare a trace's cost against similar traces
