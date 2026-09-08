@@ -635,9 +635,6 @@ importers:
       '@tanstack/react-query':
         specifier: 5.90.21
         version: 5.90.21(react@19.2.5)
-      '@tanstack/react-virtual':
-        specifier: 3.14.5
-        version: 3.14.5(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@tanstack/react-router':
         specifier: 1.168.10
         version: 1.168.10(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
