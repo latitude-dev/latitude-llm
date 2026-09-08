@@ -270,7 +270,7 @@ does not display per-session dimension scores.
 - [x] **P2-51** Verify dynamically that loading an assessment writes no score, observation,
   measurement, or assessment row and invokes no model. Only the already-authorized screening
   workflow writes screening decisions and classifier scores.
-- [ ] **P2-52** Measure the largest representative single-session and bulk fixture to confirm bounded
+- [x] **P2-52** Measure the largest representative single-session and bulk fixture to confirm bounded
   query count, no N-plus-one reads, stable page size, and acceptable resolver memory use.
 - [ ] `pnpm typecheck` and `pnpm test` pass for every touched package. Generated API artifacts are
   current, and the ClickHouse schema dump contains only the forward-only score and screening-decision
