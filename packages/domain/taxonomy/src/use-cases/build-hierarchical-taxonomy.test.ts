@@ -22,7 +22,13 @@ import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
-import { computeSplitLinkThreshold, planHierarchicalTaxonomyUseCase } from "./build-hierarchical-taxonomy.ts"
+import {
+  computeSplitLinkThreshold,
+  planHierarchicalTaxonomyUseCase,
+  runTaxonomyClusterBuild,
+  type TaxonomyClusterBuilder,
+  type TaxonomyClusterBuildRequest,
+} from "./build-hierarchical-taxonomy.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -433,6 +439,7 @@ describe("planHierarchicalTaxonomyUseCase facet-scoped (scope × facet)", () => 
   const runFacetPlan = (input: {
     readonly facetObservations: ReadonlyArray<ReturnType<typeof makeProjection>>
     readonly seededClusters?: readonly TaxonomyCluster[]
+    readonly clusterBuilder?: TaxonomyClusterBuilder
     readonly customBehaviorId?: CustomBehaviorId
     readonly filterSet?: Record<string, unknown>
     readonly now: Date
@@ -451,6 +458,7 @@ describe("planHierarchicalTaxonomyUseCase facet-scoped (scope × facet)", () => 
         facetObservations: input.facetObservations,
         ...(input.customBehaviorId ? { customBehaviorId: input.customBehaviorId } : {}),
         ...(input.filterSet ? { filterSet: input.filterSet as never } : {}),
+        ...(input.clusterBuilder ? { clusterBuilder: input.clusterBuilder } : {}),
       }).pipe(
         Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
@@ -532,5 +540,68 @@ describe("planHierarchicalTaxonomyUseCase facet-scoped (scope × facet)", () => 
     // The topic cohort cluster belongs to a different facet, so the facet run
     // leaves it untouched (no cross-facet deprecation).
     expect(plan.deprecatedClusterIds).toEqual([])
+  })
+
+  it("hands the previously-active tree to the builder as warm-start seeds", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    const priorParent = makeCluster({
+      id: "d".repeat(24) as TaxonomyClusterId,
+      customBehaviorId,
+      facetId,
+      depth: 1,
+      parentClusterId: null,
+      centroid: centroidFrom(E1, new Date("2026-01-01T00:00:00.000Z")),
+    })
+    const priorChild = makeCluster({
+      id: "e".repeat(24) as TaxonomyClusterId,
+      customBehaviorId,
+      facetId,
+      depth: 2,
+      parentClusterId: priorParent.id,
+      centroid: centroidFrom(E2, new Date("2026-01-01T00:00:00.000Z")),
+    })
+
+    let seen: TaxonomyClusterBuildRequest | undefined
+    await runFacetPlan({
+      facetObservations: Array.from({ length: 20 }, (_, index) => makeProjection(index, E2, now)),
+      customBehaviorId,
+      seededClusters: [priorParent, priorChild],
+      clusterBuilder: (request) => {
+        seen = request
+        return Effect.sync(() => runTaxonomyClusterBuild(request))
+      },
+      now,
+    })
+
+    // Nested under a synthetic depth-0 root, since no row exists for it.
+    expect(seen?.priorTree?.children).toHaveLength(1)
+    expect(seen?.priorTree?.children[0]?.children).toHaveLength(1)
+    // Normalized, not the raw running-sum `base` the column stores — seeding from
+    // that would put the warm candidate in a different space and never win.
+    const seeded = seen?.priorTree?.children[0]?.centroid ?? []
+    expect(seeded).toHaveLength(E1.length)
+    expect(Math.hypot(...seeded)).toBeCloseTo(1, 5)
+  })
+
+  it("never warm-starts a facet build from a cluster outside its scope", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    const observations = Array.from({ length: 20 }, (_, index) => makeProjection(index, E2, now))
+    const outOfScope = makeCluster({
+      id: "b".repeat(24) as TaxonomyClusterId,
+      facetId: null,
+      centroid: centroidFrom(E1, new Date("2026-01-01T00:00:00.000Z")),
+    })
+
+    const [unseeded, seeded] = await Promise.all([
+      runFacetPlan({ facetObservations: observations, customBehaviorId, now }),
+      runFacetPlan({ facetObservations: observations, customBehaviorId, seededClusters: [outOfScope], now }),
+    ])
+
+    // A whole-project topic cluster is present but belongs to a different scope,
+    // so it must not seed the split. Identical trees prove it never reached the
+    // builder — a scope leak here would be silent, not an error.
+    expect(seeded.clusters.map((cluster) => cluster.path)).toEqual(unseeded.clusters.map((cluster) => cluster.path))
+    expect(seeded.clustersBorn).toBe(unseeded.clustersBorn)
+    expect(seeded.clustersContinued).toBe(0)
   })
 })
