@@ -17,6 +17,22 @@ const base = {
 }
 
 describe("assessment finding resolver", () => {
+  it.each([
+    { verdict: "success" as const, polarity: "positive" as const, direction: "positive" as const },
+    { verdict: "failure" as const, polarity: "negative" as const, direction: "negative" as const },
+  ])("resolves $verdict task evidence as $polarity", ({ verdict, polarity, direction }) => {
+    const resolved = resolveAssessmentFinding({
+      ...base,
+      kind: "taskOutcome",
+      verdict,
+    })
+
+    expect(resolved.item).toMatchObject({ polarity, impactLevel: "high" })
+    expect(resolved.item.effects).toEqual([
+      expect.objectContaining({ scoreDimension: "outcome", direction, measurement: "observed" }),
+    ])
+  })
+
   it("maps one recovered provider fact to reliability, cost, and speed effects", () => {
     const resolved = resolveAssessmentFinding({
       ...base,
@@ -173,5 +189,29 @@ describe("assessment finding resolver", () => {
 
     expect(items).toHaveLength(2)
     expect(items.map((item) => item.id)).toEqual(["shared-fact", "human:human-score"])
+  })
+
+  it("groups repeated occurrences without collapsing distinct evidence", () => {
+    const toolFailure = (evidenceKey: string, occurrenceCount: number): AssessmentFinding => ({
+      ...base,
+      evidenceKey,
+      label: "Search failed",
+      signalIds: [],
+      scoreIds: [],
+      occurrenceCount,
+      kind: "toolFailure",
+      recovered: true,
+      sameSubjectRecovered: false,
+      terminal: false,
+    })
+
+    const items = resolveSessionAssessmentItems([toolFailure("call-1", 2), toolFailure("call-2", 4)])
+
+    expect(items).toHaveLength(2)
+    expect(items.map((resolved) => resolved.groupKey)).toEqual([
+      "issue:tool-failure:search-failed",
+      "issue:tool-failure:search-failed",
+    ])
+    expect(items.map((resolved) => resolved.occurrenceCount)).toEqual([2, 4])
   })
 })

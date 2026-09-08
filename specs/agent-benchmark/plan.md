@@ -257,7 +257,7 @@ does not display per-session dimension scores.
 - [x] **P2-46** Screening tests cover pre-execution writes, retries without resampling, append-only
   revisions, newest-generation consolidation, skipped-policy normalization, sampled-out sessions,
   rate limits, failures, and known inclusion probabilities.
-- [ ] **P2-47** Resolver tests cover positive and negative evidence, recovered context,
+- [x] **P2-47** Resolver tests cover positive and negative evidence, recovered context,
   multi-dimension effects, score/signal/finding deduplication, occurrence grouping, missing coverage,
   dimension summaries, stable chronology, and cursor pagination.
 - [ ] **P2-48** Run identical fixtures through single-session and bulk adapters and assert byte-level

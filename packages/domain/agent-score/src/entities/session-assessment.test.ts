@@ -16,12 +16,15 @@ describe("session assessment contracts", () => {
         {
           id: "tool:call-1:error",
           evidenceKey: "tool:call-1:error",
+          groupKey: "signal:signal-1",
           label: "Tool call failed and recovered",
           source: "metric",
           metricId: "tools.call_failed",
           signalIds: ["signal-1"],
           scoreIds: ["score-1"],
           occurrenceCount: 1,
+          polarity: "negative",
+          impactLevel: "medium",
           effects: [
             {
               scoreDimension: "reliability",
