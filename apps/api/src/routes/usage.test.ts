@@ -122,6 +122,68 @@ describe("Usage routes", () => {
     ])
   })
 
+  it<ApiTestContext>("returns one project's usage by slug and 404s for unknown or foreign slugs", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const other = await createTenantSetup(database)
+    const org = tenant.organizationId
+    const agentId = generateId()
+    const otherProjectId = generateId()
+    await database.db.insert(projects).values([
+      { id: agentId, organizationId: org, name: "Support Agent", slug: "support-agent" },
+      { id: otherProjectId, organizationId: other.organizationId, name: "Foreign", slug: "foreign" },
+    ])
+    await seedUsage(database, org, [
+      { projectId: agentId, action: "trace", credits: 1, idempotencyKey: `trace:${org}:${agentId}:t1` },
+      {
+        projectId: agentId,
+        action: "llm-call",
+        credits: 9,
+        idempotencyKey: `llm-call:${org}:session-analysis:run1:1:0`,
+      },
+      { projectId: generateId(), action: "llm-call", credits: 4, idempotencyKey: `llm-call:${org}:flagger:x:s:h:0` },
+    ])
+    const headers = createApiKeyAuthHeaders(tenant.apiKeyToken)
+
+    const response = await app.fetch(new Request("http://localhost/v1/projects/support-agent/usage", { headers }))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      id: agentId,
+      slug: "support-agent",
+      name: "Support Agent",
+      credits: 10,
+      categories: [
+        { category: "behaviors", credits: 9 },
+        { category: "traces", credits: 1 },
+      ],
+      period: { start: PERIOD_START.toISOString(), end: PERIOD_END.toISOString() },
+    })
+
+    const unknown = await app.fetch(new Request("http://localhost/v1/projects/nope/usage", { headers }))
+    expect(unknown.status).toBe(404)
+    const foreign = await app.fetch(new Request("http://localhost/v1/projects/foreign/usage", { headers }))
+    expect(foreign.status).toBe(404)
+  })
+
+  it<ApiTestContext>("returns zero usage for a project with no ledger rows", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = generateId()
+    await database.db
+      .insert(projects)
+      .values({ id: projectId, organizationId: tenant.organizationId, name: "Quiet", slug: "quiet" })
+
+    const response = await app.fetch(
+      new Request("http://localhost/v1/projects/quiet/usage", { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { credits: number; categories: unknown[] }
+    expect(body.credits).toBe(0)
+    expect(body.categories).toEqual([])
+  })
+
   it<ApiTestContext>("folds credits the period counter holds beyond the ledger into `other`", async ({
     app,
     database,

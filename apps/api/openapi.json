@@ -14054,6 +14054,39 @@
           "credits",
           "categories"
         ]
+      },
+      "ProjectUsageResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/UsageProject"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "period": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "string",
+                    "description": "ISO-8601 start of the current billing period."
+                  },
+                  "end": {
+                    "type": "string",
+                    "description": "ISO-8601 end of the current billing period, exclusive."
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "description": "Billing period the usage figures cover."
+              }
+            },
+            "required": [
+              "period"
+            ]
+          }
+        ]
       }
     },
     "parameters": {}
@@ -25512,6 +25545,77 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UsageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/usage": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "x-fern-sdk-group-name": "projects",
+        "x-fern-sdk-method-name": "usage",
+        "summary": "Get project usage",
+        "description": "Returns the credits one project spent in the current billing period, broken down by product area.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getProjectUsage",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current period usage for the project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectUsageResponse"
                 }
               }
             }

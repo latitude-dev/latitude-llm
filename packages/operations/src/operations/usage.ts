@@ -27,12 +27,24 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineOperation } from "../core/define-operation.ts"
 import type { OperationModule } from "../core/mount.ts"
-import { PROTECTED_SECURITY, typedResponses } from "../openapi/schemas.ts"
+import { PROTECTED_SECURITY, ProjectParamsSchema, typedResponses } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const usagePath = "/usage"
+const projectUsagePath = "/projects/:projectSlug/usage"
 
 const usageOperation = defineOperation<OrganizationScopedEnv>(usagePath)
+const projectUsageOperation = defineOperation<OrganizationScopedEnv>(projectUsagePath)
+
+const billingLayers = Layer.mergeAll(
+  BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
+  BillingUsagePeriodRepositoryLive,
+  OrganizationRepositoryLive,
+  ProjectRepositoryLive,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
+)
 
 const UsageCategorySchema = z
   .object({
@@ -51,15 +63,17 @@ const UsageProjectSchema = z
   })
   .openapi("UsageProject")
 
+const UsagePeriodSchema = z
+  .object({
+    start: z.string().describe("ISO-8601 start of the current billing period."),
+    end: z.string().describe("ISO-8601 end of the current billing period, exclusive."),
+  })
+  .describe("Billing period the usage figures cover.")
+
 const UsageResponseSchema = z
   .object({
     plan: z.enum(PLAN_SLUGS).describe("Billing plan the organization is on."),
-    period: z
-      .object({
-        start: z.string().describe("ISO-8601 start of the current billing period."),
-        end: z.string().describe("ISO-8601 end of the current billing period, exclusive."),
-      })
-      .describe("Billing period the usage figures cover."),
+    period: UsagePeriodSchema,
     credits: z
       .object({
         included: z
@@ -80,6 +94,10 @@ const UsageResponseSchema = z
     projects: z.array(UsageProjectSchema).describe("Credits by project, largest first."),
   })
   .openapi("UsageResponse")
+
+const ProjectUsageResponseSchema = UsageProjectSchema.extend({ period: UsagePeriodSchema }).openapi(
+  "ProjectUsageResponse",
+)
 
 const getUsage = usageOperation({
   route: createRoute({
@@ -119,19 +137,57 @@ const getUsage = usageOperation({
         }),
       } as const
     }).pipe(
-      withPostgres(
-        Layer.mergeAll(
-          BillingOverrideRepositoryLive,
-          BillingUsageEventRepositoryLive,
-          BillingUsagePeriodRepositoryLive,
-          OrganizationRepositoryLive,
-          ProjectRepositoryLive,
-          SettingsReaderLive,
-          StripeSubscriptionLookupLive,
-        ),
-        ctx.postgresClient,
-        ctx.organization.id,
-      ),
+      withPostgres(billingLayers, ctx.postgresClient, ctx.organization.id),
+      Effect.provide(RedisCacheStoreLive(ctx.redis)),
+      withTracing,
+    ),
+})
+
+const getProjectUsage = projectUsageOperation({
+  route: createRoute({
+    method: "get",
+    path: "/",
+    name: "getProjectUsage",
+    tags: ["Projects"],
+    group: "projects",
+    sdkMethod: "usage",
+    summary: "Get project usage",
+    description: "Returns the credits one project spent in the current billing period, broken down by product area.",
+    security: PROTECTED_SECURITY,
+    request: { params: ProjectParamsSchema },
+    responses: typedResponses({
+      status: 200,
+      schema: ProjectUsageResponseSchema,
+      description: "Current period usage for the project",
+    }),
+  }),
+  access: "read-only",
+  rateLimitTier: "low",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(input.params.projectSlug)
+      const orgPlan = yield* resolveEffectivePlanCached(ctx.organization.id)
+      const rows = yield* getBillingUsageBreakdownUseCase({
+        organizationId: ctx.organization.id,
+        periodStart: orgPlan.periodStart,
+        periodEnd: orgPlan.periodEnd,
+      })
+      const usage = summarizeBillingUsageByProject(rows.filter((row) => row.projectId === project.id))[0]
+
+      return {
+        status: 200,
+        body: {
+          id: project.id as string,
+          slug: project.slug,
+          name: project.name,
+          credits: usage?.credits ?? 0,
+          categories: (usage?.categories ?? []).map((entry) => ({ category: entry.category, credits: entry.credits })),
+          period: { start: orgPlan.periodStart.toISOString(), end: orgPlan.periodEnd.toISOString() },
+        },
+      } as const
+    }).pipe(
+      withPostgres(billingLayers, ctx.postgresClient, ctx.organization.id),
       Effect.provide(RedisCacheStoreLive(ctx.redis)),
       withTracing,
     ),
@@ -170,4 +226,9 @@ const toResponse = (input: {
 export const usageModule: OperationModule = {
   path: usagePath,
   operations: [getUsage],
+}
+
+export const projectUsageModule: OperationModule = {
+  path: projectUsagePath,
+  operations: [getProjectUsage],
 }

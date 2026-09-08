@@ -839,6 +839,16 @@ Updates a project's name and/or settings. Renaming never changes the slug, and t
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
+#### `latitude projects usage`
+
+Returns the credits one project spent in the current billing period, broken down by product area.
+
+`GET /v1/projects/{projectSlug}/usage`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
 ---
 
 ### `latitude saved-searches`

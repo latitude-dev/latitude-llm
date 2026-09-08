@@ -40547,6 +40547,127 @@
         "readOnlyHint": true,
         "destructiveHint": false
       }
+    },
+    {
+      "name": "getProjectUsage",
+      "title": "Get project usage",
+      "description": "Returns the credits one project spent in the current billing period, broken down by product area.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable project identifier."
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Project slug. `null` when the project no longer exists."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Project name. `null` when the project no longer exists."
+          },
+          "credits": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Credits the project spent during the period."
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "traces",
+                    "flaggers",
+                    "signals",
+                    "behaviors",
+                    "annotations",
+                    "other"
+                  ],
+                  "description": "Product area the credits were spent on."
+                },
+                "credits": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Credits spent in this category during the period."
+                }
+              },
+              "required": [
+                "category",
+                "credits"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The project's credits by product area, largest first."
+          },
+          "period": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string",
+                "description": "ISO-8601 start of the current billing period."
+              },
+              "end": {
+                "type": "string",
+                "description": "ISO-8601 end of the current billing period, exclusive."
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ],
+            "additionalProperties": false,
+            "description": "Billing period the usage figures cover."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "credits",
+          "categories",
+          "period"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
     }
   ]
 }

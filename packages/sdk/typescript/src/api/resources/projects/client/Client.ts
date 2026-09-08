@@ -395,4 +395,85 @@ export class ProjectsClient {
 
         return handleNonStatusCodeError(_response.error, _response.rawResponse, "PATCH", "/v1/projects/{projectSlug}");
     }
+
+    /**
+     * Returns the credits one project spent in the current billing period, broken down by product area.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {Latitude.UsageProjectsRequest} request
+     * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Latitude.BadRequestError}
+     * @throws {@link Latitude.UnauthorizedError}
+     * @throws {@link Latitude.NotFoundError}
+     *
+     * @example
+     *     await client.projects.usage("projectSlug")
+     */
+    public usage(
+        projectSlug: string,
+        request: Latitude.UsageProjectsRequest = {},
+        requestOptions?: ProjectsClient.RequestOptions,
+    ): core.HttpResponsePromise<Latitude.ProjectUsageResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__usage(projectSlug, request, requestOptions));
+    }
+
+    private async __usage(
+        projectSlug: string,
+        _request: Latitude.UsageProjectsRequest = {},
+        requestOptions?: ProjectsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Latitude.ProjectUsageResponse>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/usage`,
+            ),
+            method: "GET",
+            headers: _headers,
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Latitude.ProjectUsageResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Latitude.BadRequestError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                case 401:
+                    throw new Latitude.UnauthorizedError(
+                        _response.error.body as Latitude.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new Latitude.NotFoundError(_response.error.body as Latitude.Error_, _response.rawResponse);
+                default:
+                    throw new errors.LatitudeError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "GET",
+            "/v1/projects/{projectSlug}/usage",
+        );
+    }
 }
