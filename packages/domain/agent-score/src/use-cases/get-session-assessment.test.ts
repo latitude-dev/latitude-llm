@@ -106,4 +106,54 @@ describe("getSessionAssessment", () => {
 
     expect(result).toMatchObject({ _tag: "BadRequestError", message: "Invalid session assessment cursor" })
   })
+
+  it("recalculates from read sources without persisting an assessment or invoking a classifier", async () => {
+    let telemetryReads = 0
+    let judgmentReads = 0
+    let output = ""
+    const persisted = {
+      scores: Object.freeze([]),
+      screeningDecisions: Object.freeze([]),
+      observations: Object.freeze([]),
+      measurements: Object.freeze([]),
+      assessments: Object.freeze([]),
+    }
+    const before = JSON.stringify(persisted)
+    const telemetryLayer = Layer.succeed(SessionAssessmentBulkTelemetrySource, {
+      read: () => {
+        telemetryReads += 1
+        return Effect.succeed([
+          {
+            session: {
+              ...session,
+              outputMessages: [{ role: "assistant", parts: [{ type: "text", content: output }] }],
+            } as SessionDetail,
+            spans: Object.freeze([]),
+            moments: { moments: Object.freeze([]), labels: Object.freeze([]) },
+            screeningDecisions: persisted.screeningDecisions,
+          },
+        ])
+      },
+    })
+    const judgmentLayer = Layer.succeed(SessionAssessmentBulkJudgmentSource, {
+      read: () => {
+        judgmentReads += 1
+        return Effect.succeed([{ sessionId, scores: persisted.scores, signals: Object.freeze([]) }])
+      },
+    })
+    const layer = Layer.mergeAll(clientLayer, telemetryLayer, judgmentLayer)
+
+    const blank = await Effect.runPromise(
+      getSessionAssessment({ organizationId, projectId, sessionId }).pipe(Effect.provide(layer)),
+    )
+    output = "Done"
+    const completed = await Effect.runPromise(
+      getSessionAssessment({ organizationId, projectId, sessionId }).pipe(Effect.provide(layer)),
+    )
+
+    expect(blank.items.some((item) => item.metricId === "sessions.no_output")).toBe(true)
+    expect(completed.items.some((item) => item.metricId === "sessions.usable_completion")).toBe(true)
+    expect({ telemetryReads, judgmentReads }).toEqual({ telemetryReads: 2, judgmentReads: 2 })
+    expect(JSON.stringify(persisted)).toBe(before)
+  })
 })

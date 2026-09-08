@@ -267,7 +267,7 @@ does not display per-session dimension scores.
   ignored signal scores, and unexamined flaggers.
 - [x] **P2-50** Verify the web panel and public operation render the same assessment semantics and
   that the operation exposes no assessment-filter or confidence fields.
-- [ ] **P2-51** Verify dynamically that loading an assessment writes no score, observation,
+- [x] **P2-51** Verify dynamically that loading an assessment writes no score, observation,
   measurement, or assessment row and invokes no model. Only the already-authorized screening
   workflow writes screening decisions and classifier scores.
 - [ ] **P2-52** Measure the largest representative single-session and bulk fixture to confirm bounded
