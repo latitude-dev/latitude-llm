@@ -137,9 +137,11 @@ export const promoteSignalUseCase = (input: PromoteSignalInput) =>
             classifyScoreEvidence: true,
           }).pipe(
             Effect.map((generated) => generated),
-            // `catchCause`, not `catch`: a provider that throws surfaces as a
-            // defect rather than an `AIError`, and a defect must not hold
-            // promotion back any more than a typed failure does.
+            Effect.catchTags({
+              MissingSignalOccurrencesForDetailsGenerationError: () => Effect.succeed(null),
+              AIError: () => Effect.succeed(null),
+              AICredentialError: () => Effect.succeed(null),
+            }),
             Effect.catchCause(() => Effect.succeed(null)),
           )
 

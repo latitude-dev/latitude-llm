@@ -1,4 +1,5 @@
 import type { GenerateInput, GenerateResult } from "@domain/ai"
+import { AIError } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { ScoreRepository } from "@domain/scores"
@@ -169,6 +170,95 @@ describe("promoteSignalUseCase", () => {
     expect(stored?.name).toBe(PLACEHOLDER_NAME)
     expect(stored?.promotedAt).not.toBeNull()
     expect(stored?.scoreEvidence).toEqual([])
+    expect(outbox.events.filter((event) => event.eventName === "SignalPromoted")).toHaveLength(1)
+  })
+
+  it("promotes under the placeholder when classification has no usable feedback", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: generated("Should never be requested", "Nor this."),
+    })
+    const { repository: signalRepository, issues } = createFakeSignalRepository([makeSignal()])
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      countDistinctSessionsBySignalId: () => Effect.succeed(PROMOTION_MIN_SESSIONS),
+      listBySignalId: () =>
+        Effect.succeed({
+          items: [
+            { ...makeSignal(), sourceType: "annotation", feedback: "   " },
+            { ...makeSignal(), sourceType: "annotation", feedback: "" },
+          ] as never,
+          hasMore: false,
+          limit: 25,
+          offset: 0,
+        }),
+    })
+    const outbox: { events: OutboxWriteEvent[] } = { events: [] }
+
+    const result = await Effect.runPromise(
+      promoteSignalUseCase({ organizationId, projectId, signalId }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(
+          OutboxEventWriter,
+          OutboxEventWriter.of({
+            write: (event) =>
+              Effect.sync(() => {
+                outbox.events.push(event)
+              }),
+          }),
+        ),
+        ...promotionGateLayers(),
+      ),
+    )
+
+    expect(result.action).toBe("promoted")
+    expect(issues.get(signalId)?.promotedAt).not.toBeNull()
+    expect(calls.generate).toHaveLength(0)
+    expect(outbox.events.filter((event) => event.eventName === "SignalPromoted")).toHaveLength(1)
+  })
+
+  it("promotes under the placeholder when the model returns AIError", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: () => Effect.fail(new AIError({ message: "rate limited" })),
+    })
+    const { repository: signalRepository, issues } = createFakeSignalRepository([makeSignal()])
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      countDistinctSessionsBySignalId: () => Effect.succeed(PROMOTION_MIN_SESSIONS),
+      listBySignalId: () =>
+        Effect.succeed({
+          items: [
+            { ...makeSignal(), sourceType: "annotation", feedback: "Secrets appeared verbatim in the reply." },
+          ] as never,
+          hasMore: false,
+          limit: 25,
+          offset: 0,
+        }),
+    })
+    const outbox: { events: OutboxWriteEvent[] } = { events: [] }
+
+    const result = await Effect.runPromise(
+      promoteSignalUseCase({ organizationId, projectId, signalId }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(SignalRepository, signalRepository),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(
+          OutboxEventWriter,
+          OutboxEventWriter.of({
+            write: (event) =>
+              Effect.sync(() => {
+                outbox.events.push(event)
+              }),
+          }),
+        ),
+        ...promotionGateLayers(),
+      ),
+    )
+
+    expect(result.action).toBe("promoted")
+    expect(issues.get(signalId)?.name).toBe(PLACEHOLDER_NAME)
+    expect(calls.generate).toHaveLength(1)
     expect(outbox.events.filter((event) => event.eventName === "SignalPromoted")).toHaveLength(1)
   })
 
