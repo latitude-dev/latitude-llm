@@ -108,6 +108,17 @@ export interface BillingUsageBreakdownRow {
   readonly credits: number
 }
 
+export interface BillingUsageCategoryTotal {
+  readonly category: BillingUsageCategory
+  readonly credits: number
+}
+
+export interface BillingUsageProjectTotal {
+  readonly projectId: ProjectId
+  readonly credits: number
+  readonly categories: readonly BillingUsageCategoryTotal[]
+}
+
 /** Folds ledger summary rows into one row per project and category, largest first. */
 export const summarizeBillingUsageBreakdown = (
   rows: readonly BillingUsageLedgerSummaryRow[],
@@ -126,4 +137,57 @@ export const summarizeBillingUsageBreakdown = (
   }
 
   return [...byProjectAndCategory.values()].sort((a, b) => b.credits - a.credits)
+}
+
+const byCreditsDesc = <T extends { readonly credits: number }>(a: T, b: T) => b.credits - a.credits
+
+/**
+ * Category totals across projects, largest first. Credits the period counter holds
+ * beyond what the ledger attributes are folded into "other" so the list adds up to
+ * `consumedCredits`.
+ */
+export const summarizeBillingUsageByCategory = (
+  rows: readonly BillingUsageBreakdownRow[],
+  consumedCredits: number,
+): readonly BillingUsageCategoryTotal[] => {
+  const totals = new Map<BillingUsageCategory, number>()
+  for (const row of rows) {
+    totals.set(row.category, (totals.get(row.category) ?? 0) + row.credits)
+  }
+
+  const attributed = [...totals.values()].reduce((sum, credits) => sum + credits, 0)
+  const unattributed = consumedCredits - attributed
+  if (unattributed > 0) {
+    totals.set("other", (totals.get("other") ?? 0) + unattributed)
+  }
+
+  return BILLING_USAGE_CATEGORIES.flatMap((category) => {
+    const credits = totals.get(category) ?? 0
+    return credits > 0 ? [{ category, credits }] : []
+  }).sort(byCreditsDesc)
+}
+
+/** Per-project totals with each project's own category split, largest first. */
+export const summarizeBillingUsageByProject = (
+  rows: readonly BillingUsageBreakdownRow[],
+): readonly BillingUsageProjectTotal[] => {
+  const byProject = new Map<ProjectId, BillingUsageBreakdownRow[]>()
+  for (const row of rows) {
+    const existing = byProject.get(row.projectId)
+    if (existing) existing.push(row)
+    else byProject.set(row.projectId, [row])
+  }
+
+  return [...byProject.entries()]
+    .map(([projectId, projectRows]) => {
+      const categories = projectRows
+        .map((row) => ({ category: row.category, credits: row.credits }))
+        .sort(byCreditsDesc)
+      return {
+        projectId,
+        credits: categories.reduce((sum, entry) => sum + entry.credits, 0),
+        categories,
+      }
+    })
+    .sort(byCreditsDesc)
 }

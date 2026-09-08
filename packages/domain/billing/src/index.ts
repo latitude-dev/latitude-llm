@@ -114,9 +114,13 @@ export {
   type BillingMeteringLabel,
   type BillingUsageBreakdownRow,
   type BillingUsageCategory,
+  type BillingUsageCategoryTotal,
   type BillingUsageLedgerSummaryRow,
+  type BillingUsageProjectTotal,
   billingUsageCategoryFor,
   summarizeBillingUsageBreakdown,
+  summarizeBillingUsageByCategory,
+  summarizeBillingUsageByProject,
 } from "./usage-breakdown.ts"
 export {
   type AuthorizeBillableActionInput,
@@ -129,6 +133,7 @@ export {
   checkCreditAvailabilityUseCase,
 } from "./use-cases/check-credit-availability.ts"
 export { checkTraceIngestionBillingUseCase } from "./use-cases/check-trace-ingestion-billing.ts"
+export { type BillingOverview, getBillingOverviewUseCase } from "./use-cases/get-billing-overview.ts"
 export {
   type GetBillingUsageBreakdownInput,
   getBillingUsageBreakdownUseCase,

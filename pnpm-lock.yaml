@@ -2203,6 +2203,9 @@ importers:
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../domain/api-keys
+      '@domain/billing':
+        specifier: workspace:*
+        version: link:../domain/billing
       '@domain/datasets':
         specifier: workspace:*
         version: link:../domain/datasets

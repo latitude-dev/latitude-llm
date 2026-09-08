@@ -31,6 +31,7 @@ if typing.TYPE_CHECKING:
     from .spans.client import AsyncSpansClient, SpansClient
     from .tools.client import AsyncToolsClient, ToolsClient
     from .traces.client import AsyncTracesClient, TracesClient
+    from .usage.client import AsyncUsageClient, UsageClient
     from .users.client import AsyncUsersClient, UsersClient
 
 
@@ -141,6 +142,7 @@ class LatitudeClient:
         self._sessions: typing.Optional[SessionsClient] = None
         self._memory: typing.Optional[MemoryClient] = None
         self._imports: typing.Optional[ImportsClient] = None
+        self._usage: typing.Optional[UsageClient] = None
 
     @property
     def account(self):
@@ -310,6 +312,14 @@ class LatitudeClient:
             self._imports = ImportsClient(client_wrapper=self._client_wrapper)
         return self._imports
 
+    @property
+    def usage(self):
+        if self._usage is None:
+            from .usage.client import UsageClient  # noqa: E402
+
+            self._usage = UsageClient(client_wrapper=self._client_wrapper)
+        return self._usage
+
 
 def _make_default_async_client(
     timeout: typing.Optional[float],
@@ -439,6 +449,7 @@ class AsyncLatitudeClient:
         self._sessions: typing.Optional[AsyncSessionsClient] = None
         self._memory: typing.Optional[AsyncMemoryClient] = None
         self._imports: typing.Optional[AsyncImportsClient] = None
+        self._usage: typing.Optional[AsyncUsageClient] = None
 
     @property
     def account(self):
@@ -607,6 +618,14 @@ class AsyncLatitudeClient:
 
             self._imports = AsyncImportsClient(client_wrapper=self._client_wrapper)
         return self._imports
+
+    @property
+    def usage(self):
+        if self._usage is None:
+            from .usage.client import AsyncUsageClient  # noqa: E402
+
+            self._usage = AsyncUsageClient(client_wrapper=self._client_wrapper)
+        return self._usage
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: LatitudeEnvironment) -> str:

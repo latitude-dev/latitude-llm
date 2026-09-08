@@ -1,10 +1,13 @@
-import { BILLING_USAGE_CATEGORIES, BILLING_USAGE_CATEGORY_LABELS, type BillingUsageCategory } from "@domain/billing"
+import {
+  BILLING_USAGE_CATEGORY_LABELS,
+  type BillingUsageCategory,
+  summarizeBillingUsageByCategory,
+  summarizeBillingUsageByProject,
+} from "@domain/billing"
 import { SegmentBar, type SegmentBarItem, Skeleton, Text } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
 import { getBillingUsageBreakdown } from "../../../domains/billing/billing.functions.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
-
-type BillingUsageBreakdown = Awaited<ReturnType<typeof getBillingUsageBreakdown>>
 
 const CATEGORY_COLORS: Record<BillingUsageCategory, string> = {
   traces: "hsl(var(--viz-blue))",
@@ -31,51 +34,6 @@ const formatShare = (credits: number, total: number) => {
   if (total <= 0) return ""
   const share = credits / total
   return share > 0 && share < 0.01 ? "<1%" : percentFormatter.format(share)
-}
-
-interface CategoryUsage {
-  readonly category: BillingUsageCategory
-  readonly credits: number
-}
-
-interface ProjectUsage {
-  readonly projectId: string
-  readonly credits: number
-}
-
-/**
- * Category and project totals from the ledger rows, folding any credits the period
- * counter holds beyond what the ledger attributes into "other" so the list adds up
- * to the headline number.
- */
-function buildUsageBreakdown(
-  rows: BillingUsageBreakdown["rows"],
-  consumedCredits: number,
-): { readonly byCategory: readonly CategoryUsage[]; readonly byProject: readonly ProjectUsage[] } {
-  const categoryTotals = new Map<BillingUsageCategory, number>()
-  const projectTotals = new Map<string, number>()
-
-  for (const row of rows) {
-    categoryTotals.set(row.category, (categoryTotals.get(row.category) ?? 0) + row.credits)
-    projectTotals.set(row.projectId, (projectTotals.get(row.projectId) ?? 0) + row.credits)
-  }
-
-  const attributed = [...categoryTotals.values()].reduce((sum, credits) => sum + credits, 0)
-  const unattributed = consumedCredits - attributed
-  if (unattributed > 0) {
-    categoryTotals.set("other", (categoryTotals.get("other") ?? 0) + unattributed)
-  }
-
-  const byCategory = BILLING_USAGE_CATEGORIES.flatMap((category) => {
-    const credits = categoryTotals.get(category) ?? 0
-    return credits > 0 ? [{ category, credits }] : []
-  }).sort((a, b) => b.credits - a.credits)
-
-  const byProject = [...projectTotals.entries()]
-    .map(([projectId, credits]) => ({ projectId, credits }))
-    .sort((a, b) => b.credits - a.credits)
-
-  return { byCategory, byProject }
 }
 
 function BreakdownRow({
@@ -150,7 +108,8 @@ export function BillingUsageBreakdown({
 
   if (!breakdown) return <BreakdownSkeleton />
 
-  const { byCategory, byProject } = buildUsageBreakdown(breakdown.rows, consumedCredits)
+  const byCategory = summarizeBillingUsageByCategory(breakdown.rows, consumedCredits)
+  const byProject = summarizeBillingUsageByProject(breakdown.rows)
   const total = byCategory.reduce((sum, entry) => sum + entry.credits, 0)
 
   if (total <= 0) {
