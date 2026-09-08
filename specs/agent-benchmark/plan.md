@@ -251,7 +251,7 @@ does not display per-session dimension scores.
 - [x] **P2-44** Reader tests cover every tool finding kind, multiple findings in one session, both
   recovery meanings, provider recovery, finish-reason damage pairing, unmapped telemetry, and stable
   finding keys across recomputation.
-- [ ] **P2-45** Persistence tests prove that multiple deterministic findings do not create additional
+- [x] **P2-45** Persistence tests prove that multiple deterministic findings do not create additional
   score rows or discovery events, the selected discovery score links to its finding, model verdicts
   retain provenance, and legacy scores remain unknown rather than falsely classified.
 - [ ] **P2-46** Screening tests cover pre-execution writes, retries without resampling, append-only

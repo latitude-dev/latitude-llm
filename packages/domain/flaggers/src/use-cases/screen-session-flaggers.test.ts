@@ -26,8 +26,13 @@ import { type SessionDetail, SessionRepository, SpanRepository } from "@domain/s
 import { createFakeSessionRepository, createFakeSpanRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
+import { buildFlaggerSessionContext } from "../conversation.ts"
 import type { Flagger } from "../entities/flagger.ts"
-import type { FlaggerSlug } from "../flagger-strategies/index.ts"
+import {
+  type FlaggerSlug,
+  readDeterministicFlaggerFindings,
+  toolCallErrorsStrategy,
+} from "../flagger-strategies/index.ts"
 import { assistant, assistantToolCall, makeSessionDetail, tool, user } from "../flagger-strategies/test-helpers.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { FlaggerScreeningDecisionRepository } from "../ports/flagger-screening-decision-repository.ts"
@@ -137,6 +142,7 @@ const runScreening = async (options: RunOptions) => {
   const { repository: labelRepo } = createFakeSessionMomentLabelRepository(options.momentLabels ?? [])
   const { repository: screeningDecisionRepo, decisions: screeningDecisions } =
     createFakeFlaggerScreeningDecisionRepository()
+  const outboxEvents: unknown[] = []
 
   const layer = Layer.mergeAll(
     Layer.succeed(SessionRepository, sessionRepo),
@@ -147,7 +153,9 @@ const runScreening = async (options: RunOptions) => {
     Layer.succeed(SessionAnalysisRepository, analysisRepo),
     Layer.succeed(SessionMomentLabelRepository, labelRepo),
     Layer.succeed(FlaggerScreeningDecisionRepository, screeningDecisionRepo),
-    Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
+    Layer.succeed(OutboxEventWriter, {
+      write: (event) => Effect.sync(() => void outboxEvents.push(event)),
+    }),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(ORG_ID) })),
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
     fakeCacheStore,
@@ -166,7 +174,7 @@ const runScreening = async (options: RunOptions) => {
     ).pipe(Effect.provide(layer)),
   )
 
-  return { result, scores, screeningDecisions }
+  return { result, scores, screeningDecisions, outboxEvents }
 }
 
 const decisionFor = (decisions: readonly SessionFlaggerDecision[], slug: string) =>
@@ -779,20 +787,33 @@ describe("screenSessionFlaggersUseCase", () => {
       { role: "tool", parts: [{ type: "tool_call_response", id: "call-3", response: { error: "broken" } }] },
       assistant("Done with the available results."),
     ])
-    const { result, scores } = await runScreening({
+    const { result, scores, outboxEvents } = await runScreening({
       session,
       flaggers: [makeFlagger("tool-call-errors", 0)],
       deps: fakeDeps.deps,
     })
+    const conversation = buildFlaggerSessionContext(session, TRACE_ID).conversation
+    const read = await Effect.runPromise(
+      readDeterministicFlaggerFindings(toolCallErrorsStrategy, {
+        scope: {
+          organizationId: OrganizationId(ORG_ID),
+          projectId: ProjectId(PROJECT_ID),
+          sessionId: SessionId(SESSION_ID),
+        },
+        conversation,
+      }),
+    )
+    const selected = toolCallErrorsStrategy.selectDeterministicDiscoveryFinding?.(read.findings)
 
     expect(decisionFor(result.decisions, "tool-call-errors")).toEqual({
       slug: "tool-call-errors",
       action: "matched-issue",
     })
     expect([...scores.values()]).toHaveLength(1)
+    expect(outboxEvents).toHaveLength(1)
     expect([...scores.values()][0]?.feedback).toContain("Duplicate tool_call id")
     expect([...scores.values()][0]?.metadata).toMatchObject({
-      flaggerFindingKey: expect.stringMatching(/^[0-9a-f]{64}$/),
+      flaggerFindingKey: selected?.findingKey,
       flaggerPath: "deterministic",
     })
   })
