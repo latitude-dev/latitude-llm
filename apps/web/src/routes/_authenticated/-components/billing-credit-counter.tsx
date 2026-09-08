@@ -1,26 +1,33 @@
 import { PRO_PLAN_CONFIG } from "@domain/billing"
-import { Button, cn, Icon, Text, Tooltip, useToast } from "@repo/ui"
+import { Button, cn, Icon, Popover, PopoverContent, PopoverTrigger, Text, useToast } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
 import { Flame } from "lucide-react"
 import { useState } from "react"
 import { createBillingCheckoutSession, getBillingOverview } from "../../../domains/billing/billing.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { BillingUsageBreakdown } from "./billing-usage-breakdown.tsx"
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
 })
+const periodDateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })
 const BILLING_COUNTER_RADIUS = 8
 const BILLING_COUNTER_CIRCUMFERENCE = 2 * Math.PI * BILLING_COUNTER_RADIUS
 const FREE_PLAN_UPGRADE_USAGE_THRESHOLD = 0.8
 
 type BillingOverview = Awaited<ReturnType<typeof getBillingOverview>>
 
+const formatPeriodRange = (periodStart: string, periodEnd: string) =>
+  `${periodDateFormatter.format(new Date(periodStart))} to ${periodDateFormatter.format(new Date(periodEnd))}`
+
 export function BillingCreditCounter({
   organizationId,
+  projectId,
   initialOverview,
 }: {
   readonly organizationId: string
+  readonly projectId: string
   readonly initialOverview?: BillingOverview | null
 }) {
   const { toast } = useToast()
@@ -44,9 +51,9 @@ export function BillingCreditCounter({
   const consumedLabel = numberFormatter.format(overview.consumedCredits)
   const includedLabel = includedCredits === null ? "custom" : numberFormatter.format(includedCredits)
   const usageLabel = includedCredits === null ? consumedLabel : `${consumedLabel}/${includedLabel}`
-  const tooltip = isOverage
-    ? `${numberFormatter.format(overview.consumedCredits)} credits used: ${numberFormatter.format(overview.includedUsedCredits)} included credits plus ${numberFormatter.format(overview.overageCredits)} metered overage credits. Usage can exceed the included limit because this plan allows overage billing.`
-    : `${numberFormatter.format(overview.consumedCredits)} of ${includedLabel} credits used this period`
+  const headline = isOverage
+    ? `${consumedLabel} credits used: ${numberFormatter.format(overview.includedUsedCredits)} included plus ${numberFormatter.format(overview.overageCredits)} metered overage`
+    : `${consumedLabel} of ${includedLabel} credits used`
   const showUpgradeCta =
     overview.planSlug === "free" && hasIncludedCredits && overview.usageProgress >= FREE_PLAN_UPGRADE_USAGE_THRESHOLD
 
@@ -69,10 +76,16 @@ export function BillingCreditCounter({
 
   return (
     <div className="flex flex-col gap-4">
-      <Tooltip
-        asChild
-        trigger={
-          <div className="flex items-center justify-between gap-2 px-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Usage: ${headline}. Open breakdown.`}
+            className={cn(
+              "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-muted cursor-pointer",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-muted",
+            )}
+          >
             <span className="flex items-center gap-1 text-muted-foreground">
               <Icon icon={Flame} size="xs" weight="L" />
               <Text.H6 color="foregroundMuted" weight="medium">
@@ -112,11 +125,32 @@ export function BillingCreditCounter({
                 {usageLabel}
               </Text.H6>
             </span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="right" align="end" sideOffset={12} className="w-80">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <Text.H5M color="foreground">Usage this period</Text.H5M>
+                <Text.H7 color="foregroundMuted" noWrap>
+                  {formatPeriodRange(overview.periodStart, overview.periodEnd)}
+                </Text.H7>
+              </div>
+              <Text.H6 color={showLimitState ? "destructive" : "foregroundMuted"}>{headline}</Text.H6>
+            </div>
+            <BillingUsageBreakdown
+              organizationId={organizationId}
+              currentProjectId={projectId}
+              consumedCredits={overview.consumedCredits}
+            />
+            {isOverage ? (
+              <Text.H7 color="foregroundMuted">
+                Usage can exceed the included limit because this plan allows overage billing.
+              </Text.H7>
+            ) : null}
           </div>
-        }
-      >
-        {tooltip}
-      </Tooltip>
+        </PopoverContent>
+      </Popover>
       {showUpgradeCta ? (
         <Button size="sm" className="w-full" isLoading={isUpgradePending} onClick={() => void openUpgrade()}>
           Upgrade now

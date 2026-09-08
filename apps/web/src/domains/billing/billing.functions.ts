@@ -1,6 +1,8 @@
 import {
+  type BillingUsageCategory,
   BillingUsagePeriodRepository,
   calculatePlanSpendMills,
+  getBillingUsageBreakdownUseCase,
   PLAN_SLUGS,
   type PlanSlug,
   updateSpendingLimitUseCase,
@@ -9,6 +11,7 @@ import { BadRequestError, OrganizationId, type UserId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   BillingOverrideRepositoryLive,
+  BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   invalidateEffectivePlanCache,
   MembershipRepositoryLive,
@@ -110,6 +113,50 @@ export const getBillingOverview = createServerFn({ method: "GET" }).handler(asyn
     ),
   )
 })
+
+interface BillingUsageBreakdownDto {
+  periodStart: string
+  periodEnd: string
+  /** One entry per project and category with credits in the current period, largest first. */
+  rows: readonly { projectId: string; category: BillingUsageCategory; credits: number }[]
+}
+
+export const getBillingUsageBreakdown = createServerFn({ method: "GET" }).handler(
+  async (): Promise<BillingUsageBreakdownDto> => {
+    const { organizationId: orgId } = await requireSession()
+    const client = getPostgresClient()
+    const organizationId = OrganizationId(orgId)
+
+    const billingLayers = Layer.mergeAll(
+      BillingOverrideRepositoryLive,
+      BillingUsageEventRepositoryLive,
+      SettingsReaderLive,
+      StripeSubscriptionLookupLive,
+      OrganizationRepositoryLive,
+    )
+
+    return await Effect.runPromise(
+      Effect.gen(function* () {
+        const orgPlan = yield* resolveEffectivePlanCached(organizationId)
+        const rows = yield* getBillingUsageBreakdownUseCase({
+          organizationId,
+          periodStart: orgPlan.periodStart,
+          periodEnd: orgPlan.periodEnd,
+        })
+
+        return {
+          periodStart: orgPlan.periodStart.toISOString(),
+          periodEnd: orgPlan.periodEnd.toISOString(),
+          rows,
+        } satisfies BillingUsageBreakdownDto
+      }).pipe(
+        withPostgres(billingLayers, client, organizationId),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
+    )
+  },
+)
 
 export const getFreshBillingOverview = createServerFn({ method: "GET" }).handler(
   async (): Promise<BillingOverviewDto> => {

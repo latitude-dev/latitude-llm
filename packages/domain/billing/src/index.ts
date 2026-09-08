@@ -91,7 +91,10 @@ export {
   type BillingSpendReservationInput,
   type BillingSpendReservationShape,
 } from "./ports/billing-spend-reservation.ts"
-export { BillingUsageEventRepository } from "./ports/billing-usage-event-repository.ts"
+export {
+  BillingUsageEventRepository,
+  type SummarizeBillingUsageEventsInput,
+} from "./ports/billing-usage-event-repository.ts"
 export { BillingUsagePeriodRepository } from "./ports/billing-usage-period-repository.ts"
 export {
   type CheckOverageItemInput,
@@ -103,6 +106,19 @@ export {
   type StripeSubscriptionRow,
 } from "./ports/stripe-subscription-lookup.ts"
 export {
+  BILLING_METERING_LABEL_CATEGORIES,
+  BILLING_METERING_LABELS,
+  BILLING_USAGE_CATEGORIES,
+  BILLING_USAGE_CATEGORY_LABELS,
+  type BillingMeteringKeyParts,
+  type BillingMeteringLabel,
+  type BillingUsageBreakdownRow,
+  type BillingUsageCategory,
+  type BillingUsageLedgerSummaryRow,
+  billingUsageCategoryFor,
+  summarizeBillingUsageBreakdown,
+} from "./usage-breakdown.ts"
+export {
   type AuthorizeBillableActionInput,
   type AuthorizeBillableActionResult,
   type AuthorizedBillableActionContext,
@@ -113,6 +129,10 @@ export {
   checkCreditAvailabilityUseCase,
 } from "./use-cases/check-credit-availability.ts"
 export { checkTraceIngestionBillingUseCase } from "./use-cases/check-trace-ingestion-billing.ts"
+export {
+  type GetBillingUsageBreakdownInput,
+  getBillingUsageBreakdownUseCase,
+} from "./use-cases/get-billing-usage-breakdown.ts"
 export {
   type RecordBillableActionInput,
   recordBillableActionUseCase,

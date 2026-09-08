@@ -1,6 +1,7 @@
 import { ApiKeyRepository } from "@domain/api-keys"
 import {
   authorizeBillableAction,
+  type BillingMeteringKeyParts,
   buildBillingIdempotencyKey,
   makeAIMeteringScope,
   provideAIMeteringScope,
@@ -138,7 +139,7 @@ export const createSignalsWorker = async ({
         // No stable per-refresh identity exists in the payload; the random suffix
         // makes each refresh bill separately, while a retried job's generate hits
         // the 24h AI cache and is never re-charged.
-        const keyParts = ["signal-refresh", payload.signalId, crypto.randomUUID()]
+        const keyParts: BillingMeteringKeyParts = ["signal-refresh", payload.signalId, crypto.randomUUID()]
         const authorization = yield* authorizeBillableAction({
           organizationId,
           action: "llm-call",
@@ -197,7 +198,7 @@ export const createSignalsWorker = async ({
     promoteSignal: (payload) =>
       Effect.gen(function* () {
         const organizationId = OrganizationId(payload.organizationId)
-        const keyParts = ["signal-promotion", payload.signalId]
+        const keyParts: BillingMeteringKeyParts = ["signal-promotion", payload.signalId]
         const authorization = yield* authorizeBillableAction({
           organizationId,
           action: "llm-call",
