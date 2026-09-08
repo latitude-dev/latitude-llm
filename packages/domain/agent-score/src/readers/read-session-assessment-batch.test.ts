@@ -2,12 +2,13 @@ import { ChSqlClient, OrganizationId, ProjectId, SessionId, SqlClient, TraceId }
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import type { SessionDetail } from "@domain/spans"
 import { Effect, Layer } from "effect"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
   SessionAssessmentBulkJudgmentSource,
   SessionAssessmentBulkTelemetrySource,
 } from "../ports/session-assessment-sources.ts"
-import { readSessionAssessmentBatch } from "./read-session-assessment-batch.ts"
+import { getSessionAssessment } from "../use-cases/get-session-assessment.ts"
+import { readSessionAssessmentBatch, readSessionAssessmentInputBatch } from "./read-session-assessment-batch.ts"
 
 const makeSession = (sessionId: string, traceId: string): SessionDetail =>
   ({
@@ -104,5 +105,68 @@ describe("readSessionAssessmentBatch", () => {
     )
 
     expect(result).toEqual([])
+  })
+
+  it("keeps normalized facts and resolved semantics byte-identical between single and bulk reads", async () => {
+    vi.useFakeTimers()
+    const cutoff = new Date("2026-01-02T00:00:00.000Z")
+    vi.setSystemTime(cutoff)
+    const sessions = [makeSession("session-1", "trace-1"), makeSession("session-2", "trace-2")]
+    const telemetryLayer = Layer.succeed(SessionAssessmentBulkTelemetrySource, {
+      read: (input) =>
+        Effect.succeed(
+          sessions
+            .filter((session) => input.sessionIds.includes(session.sessionId))
+            .map((session) => ({
+              session,
+              spans: [],
+              moments: { moments: [], labels: [] },
+              screeningDecisions: [],
+            })),
+        ),
+    })
+    const judgmentLayer = Layer.succeed(SessionAssessmentBulkJudgmentSource, {
+      read: (input) => Effect.succeed(input.sessions.map(({ sessionId }) => ({ sessionId, scores: [], signals: [] }))),
+    })
+    const layer = Layer.mergeAll(
+      telemetryLayer,
+      judgmentLayer,
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId("org-1") })),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId("org-1") })),
+    )
+    const scope = {
+      organizationId: OrganizationId("org-1"),
+      projectId: ProjectId("project-1"),
+      cutoff,
+    }
+
+    try {
+      const [singleFacts, bulkFacts, singleAssessment, bulkAssessments] = await Effect.runPromise(
+        Effect.all([
+          readSessionAssessmentInputBatch({ ...scope, sessionIds: [SessionId("session-1")] }),
+          readSessionAssessmentInputBatch({
+            ...scope,
+            sessionIds: [SessionId("session-1"), SessionId("session-2")],
+          }),
+          getSessionAssessment({
+            organizationId: scope.organizationId,
+            projectId: scope.projectId,
+            sessionId: SessionId("session-1"),
+          }),
+          readSessionAssessmentBatch({
+            ...scope,
+            sessionIds: [SessionId("session-1"), SessionId("session-2")],
+          }),
+        ]).pipe(Effect.provide(layer)),
+      )
+      const bulkSessionFacts = bulkFacts.find((facts) => facts.sessionId === "session-1")
+      const bulkSessionAssessment = bulkAssessments.find((assessment) => assessment.sessionId === "session-1")
+      const { nextCursor: _nextCursor, ...singleSemantics } = singleAssessment
+
+      expect(JSON.stringify(singleFacts[0])).toBe(JSON.stringify(bulkSessionFacts))
+      expect(JSON.stringify(singleSemantics)).toBe(JSON.stringify(bulkSessionAssessment))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
