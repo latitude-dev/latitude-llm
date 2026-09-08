@@ -8,6 +8,13 @@ import type {
 } from "@domain/agent-score"
 import { z } from "@hono/zod-openapi"
 
+export const SessionAssessmentQuerySchema = z.object({
+  cursor: z
+    .string()
+    .optional()
+    .describe("Opaque cursor returned by a previous assessment page. Omit for the first page."),
+})
+
 const ScoreDimensionSchema = z
   .enum(["outcome", "reliability", "cost", "speed", "safety"])
   .describe("Agent Score dimension informed by this evidence.")

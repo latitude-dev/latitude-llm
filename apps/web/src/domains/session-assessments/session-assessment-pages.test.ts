@@ -47,4 +47,14 @@ describe("mergeSessionAssessmentPages", () => {
   it("clears the cursor when the final page is exhausted", () => {
     expect(mergeSessionAssessmentPages([page(["item-1"], "cursor-2"), page(["item-2"])])?.nextCursor).toBeUndefined()
   })
+
+  it("preserves the domain assessment semantics used by the web panel", () => {
+    const assessment = page(["item-1"], "cursor-2")
+    const merged = mergeSessionAssessmentPages([assessment])
+
+    expect(merged?.sessionId).toBe(assessment.sessionId)
+    expect(merged?.items).toEqual(assessment.items)
+    expect(merged?.dimensions).toBe(assessment.dimensions)
+    expect(merged?.coverage).toBe(assessment.coverage)
+  })
 })

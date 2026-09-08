@@ -265,7 +265,7 @@ does not display per-session dimension scores.
 - [x] **P2-49** Integration fixtures cover no output, malformed final output, several tool failures
   with only one discovery score, provider recovery, terminal tool failure, overlapping signals,
   ignored signal scores, and unexamined flaggers.
-- [ ] **P2-50** Verify the web panel and public operation render the same assessment semantics and
+- [x] **P2-50** Verify the web panel and public operation render the same assessment semantics and
   that the operation exposes no assessment-filter or confidence fields.
 - [ ] **P2-51** Verify dynamically that loading an assessment writes no score, observation,
   measurement, or assessment row and invokes no model. Only the already-authorized screening

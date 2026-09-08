@@ -56,7 +56,11 @@ import {
   toSessionResponse,
 } from "../openapi/entities/session.ts"
 import { SessionAnalyticsResponseSchema, toSessionAnalyticsResponse } from "../openapi/entities/session-analytics.ts"
-import { SessionAssessmentSchema, toSessionAssessmentResponse } from "../openapi/entities/session-assessment.ts"
+import {
+  SessionAssessmentQuerySchema,
+  SessionAssessmentSchema,
+  toSessionAssessmentResponse,
+} from "../openapi/entities/session-assessment.ts"
 import {
   SessionSignalSchema,
   SessionSignalsSchema,
@@ -302,13 +306,6 @@ const getSession = sessionEndpoint({
       withClickHouse(Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive), ctx.clickhouse, ctx.organization.id),
       withTracing,
     ),
-})
-
-const SessionAssessmentQuerySchema = z.object({
-  cursor: z
-    .string()
-    .optional()
-    .describe("Opaque cursor returned by a previous assessment page. Omit for the first page."),
 })
 
 const getSessionAssessmentOperation = sessionEndpoint({
