@@ -3,6 +3,5 @@
 import typing
 
 UsageCategoryCategory = typing.Union[
-    typing.Literal["traces", "moments", "flaggers", "signals", "behaviors", "evaluations", "annotations", "other"],
-    typing.Any,
+    typing.Literal["traces", "flaggers", "signals", "behaviors", "annotations", "other"], typing.Any
 ]

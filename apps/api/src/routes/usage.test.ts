@@ -113,8 +113,8 @@ describe("Usage routes", () => {
       overageAllowed: false,
     })
     expect(body.categories).toEqual([
-      { category: "moments", credits: 9 },
-      { category: "evaluations", credits: 7 },
+      { category: "behaviors", credits: 9 },
+      { category: "signals", credits: 7 },
       { category: "flaggers", credits: 4 },
       { category: "traces", credits: 2 },
     ])
@@ -125,8 +125,8 @@ describe("Usage routes", () => {
         name: "Support Agent",
         credits: 18,
         categories: [
-          { category: "moments", credits: 9 },
-          { category: "evaluations", credits: 7 },
+          { category: "behaviors", credits: 9 },
+          { category: "signals", credits: 7 },
           { category: "traces", credits: 2 },
         ],
       },

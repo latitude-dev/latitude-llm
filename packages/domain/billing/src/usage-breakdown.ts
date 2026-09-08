@@ -28,39 +28,28 @@ export type BillingMeteringLabel = (typeof BILLING_METERING_LABELS)[number]
 
 export type BillingMeteringKeyParts = readonly [BillingMeteringLabel, ...string[]]
 
-export const BILLING_USAGE_CATEGORIES = [
-  "traces",
-  "moments",
-  "flaggers",
-  "signals",
-  "behaviors",
-  "evaluations",
-  "annotations",
-  "other",
-] as const
+export const BILLING_USAGE_CATEGORIES = ["traces", "flaggers", "signals", "behaviors", "annotations", "other"] as const
 
 export type BillingUsageCategory = (typeof BILLING_USAGE_CATEGORIES)[number]
 
 export const BILLING_USAGE_CATEGORY_LABELS: Record<BillingUsageCategory, string> = {
   traces: "Traces",
-  moments: "Moments",
   flaggers: "Flaggers",
   signals: "Signals",
   behaviors: "Behaviors",
-  evaluations: "Evaluations",
   annotations: "Annotations",
   other: "Other",
 }
 
 export const BILLING_METERING_LABEL_CATEGORIES: Record<BillingMeteringLabel, BillingUsageCategory> = {
   "annotation-enrich": "annotations",
-  "eval-align-baseline": "evaluations",
-  "eval-align-incremental": "evaluations",
-  "eval-optimize": "evaluations",
+  "eval-align-baseline": "signals",
+  "eval-align-incremental": "signals",
+  "eval-optimize": "signals",
   flagger: "flaggers",
   "flagger-classify": "flaggers",
-  "live-eval": "evaluations",
-  "session-analysis": "moments",
+  "live-eval": "signals",
+  "session-analysis": "behaviors",
   "signal-assign": "signals",
   // Retired label; rows from before promotion-time naming stay in the ledger for its retention window.
   "signal-create": "signals",
@@ -74,8 +63,9 @@ const isMeteringLabel = (value: string): value is BillingMeteringLabel =>
   (BILLING_METERING_LABELS as readonly string[]).includes(value)
 
 /**
- * Trace and eval-scan rows are classified by action; AI rows by the metering label
- * their scope stamped as the third key segment.
+ * Trace and eval-scan rows are classified by action (evaluations bill under the
+ * signals they serve); AI rows by the metering label their scope stamped as the
+ * third key segment.
  */
 export const billingUsageCategoryFor = (input: {
   readonly action: ChargeableAction
@@ -85,7 +75,7 @@ export const billingUsageCategoryFor = (input: {
     case "trace":
       return "traces"
     case "eval-scan":
-      return "evaluations"
+      return "signals"
     case "llm-call":
     case "semantic-query":
       return input.meteringLabel !== null && isMeteringLabel(input.meteringLabel)

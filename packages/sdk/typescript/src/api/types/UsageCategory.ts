@@ -11,11 +11,9 @@ export namespace UsageCategory {
     /** Product area the credits were spent on. */
     export const Category = {
         Traces: "traces",
-        Moments: "moments",
         Flaggers: "flaggers",
         Signals: "signals",
         Behaviors: "behaviors",
-        Evaluations: "evaluations",
         Annotations: "annotations",
         Other: "other",
     } as const;

@@ -11,9 +11,7 @@ import { useProjectsCollection } from "../../../domains/projects/projects.collec
 
 const CATEGORY_COLORS: Record<BillingUsageCategory, string> = {
   traces: "hsl(var(--viz-blue))",
-  moments: "hsl(var(--viz-blue-soft))",
-  evaluations: "hsl(var(--viz-gold))",
-  flaggers: "hsl(var(--viz-gold-soft))",
+  flaggers: "hsl(var(--viz-gold))",
   signals: "hsl(var(--viz-violet))",
   behaviors: "hsl(var(--viz-green))",
   annotations: "hsl(var(--viz-gold-faint))",

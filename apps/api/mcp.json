@@ -40434,11 +40434,9 @@
                   "type": "string",
                   "enum": [
                     "traces",
-                    "moments",
                     "flaggers",
                     "signals",
                     "behaviors",
-                    "evaluations",
                     "annotations",
                     "other"
                   ],
@@ -40505,11 +40503,9 @@
                         "type": "string",
                         "enum": [
                           "traces",
-                          "moments",
                           "flaggers",
                           "signals",
                           "behaviors",
-                          "evaluations",
                           "annotations",
                           "other"
                         ],
