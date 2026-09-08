@@ -9,8 +9,11 @@ describe("session assessment cursor", () => {
         item: {
           id: "human:score-ü",
           evidenceKey: "finding-ü",
+          groupKey: "judgment:score-ü",
           label: "Finding",
           source: "score",
+          polarity: "unknown",
+          impactLevel: "low",
           signalIds: [],
           scoreIds: ["score-ü"],
           occurrenceCount: 1,

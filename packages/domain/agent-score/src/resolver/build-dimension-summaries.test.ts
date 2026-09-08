@@ -5,8 +5,11 @@ import { buildSessionDimensionSummaries } from "./build-dimension-summaries.ts"
 const item = (effects: SessionAssessmentItem["effects"]): SessionAssessmentItem => ({
   id: "item-1",
   evidenceKey: "item-1",
+  groupKey: "issue:item-1",
   label: "Finding",
   source: "metric",
+  polarity: "negative",
+  impactLevel: "medium",
   signalIds: [],
   scoreIds: [],
   occurrenceCount: 1,

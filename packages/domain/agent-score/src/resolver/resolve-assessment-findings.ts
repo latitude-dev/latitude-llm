@@ -1,6 +1,8 @@
 import type { ScoreEvidenceContract } from "@domain/shared"
 import type {
+  SessionAssessmentImpactLevel,
   SessionAssessmentItem,
+  SessionAssessmentPolarity,
   SessionDimensionEffect,
   SessionEvidenceAnchor,
   SessionEvidenceDestination,
@@ -284,24 +286,142 @@ const deduplicate = <Value>(values: readonly Value[], key: (value: Value) => str
 const anchorKey = (anchor: SessionEvidenceAnchor): string => JSON.stringify(anchor)
 const destinationKey = (destination: SessionEvidenceDestination): string => JSON.stringify(destination)
 
-export const resolveAssessmentFinding = (finding: AssessmentFinding): ResolvedAssessmentItem => ({
-  item: {
-    id: finding.independentHumanEvidence ? `human:${finding.scoreIds[0] ?? finding.evidenceKey}` : finding.evidenceKey,
-    evidenceKey: finding.evidenceKey,
-    label: finding.label,
-    ...(finding.description ? { description: finding.description } : {}),
-    source: finding.source,
-    ...(finding.metricId ? { metricId: finding.metricId } : {}),
-    signalIds: [...new Set(finding.signalIds)],
-    scoreIds: [...new Set(finding.scoreIds)],
-    occurrenceCount: finding.occurrenceCount,
-    effects: resolveAssessmentFindingEffects(finding),
-    anchors: deduplicate(finding.anchors, anchorKey),
-    destinations: deduplicate(finding.destinations, destinationKey),
-  },
-  chronology: finding.chronology,
-  independentHumanEvidence: finding.independentHumanEvidence,
-})
+const normalizedGroupLabel = (label: string): string => label.trim().toLowerCase().replace(/\s+/g, "-")
+
+const findingGroupKey = (finding: AssessmentFinding): string => {
+  const signalId = finding.signalIds[0]
+  if (signalId) return `signal:${signalId}`
+
+  switch (finding.kind) {
+    case "usableCompletion":
+      return "fact:usable-completion"
+    case "noOutput":
+      return `issue:no-output:${finding.findingKind}`
+    case "outputDamage":
+      return `issue:output-damage:${finding.findingKind}`
+    case "toolFailure":
+      return `issue:tool-failure:${normalizedGroupLabel(finding.label)}`
+    case "toolStructuralDefect":
+      return `issue:tool-structure:${finding.findingKind}:${normalizedGroupLabel(finding.label)}`
+    case "toolRepetition":
+      return "issue:tool-repetition"
+    case "cacheGap":
+      return "issue:cache-gap"
+    case "finishFailure":
+      return `issue:finish-failure:${finding.findingKind}`
+    case "providerError":
+      return `issue:provider-error:${finding.findingKind}`
+    case "taskOutcome":
+      return "fact:task-outcome"
+    case "classifiedJudgment":
+    case "standaloneScore":
+      return `judgment:${finding.scoreIds[0] ?? finding.evidenceKey}`
+    case "moment":
+      return finding.evidenceKey
+  }
+}
+
+const findingPolarity = (
+  finding: AssessmentFinding,
+  effects: readonly SessionDimensionEffect[],
+): SessionAssessmentPolarity => {
+  switch (finding.kind) {
+    case "usableCompletion":
+      return "positive"
+    case "noOutput":
+      return finding.findingKind === "unconfirmedPattern" ? "unknown" : "negative"
+    case "outputDamage":
+    case "toolFailure":
+    case "toolStructuralDefect":
+    case "toolRepetition":
+    case "cacheGap":
+    case "finishFailure":
+    case "providerError":
+      return "negative"
+    case "taskOutcome":
+      return finding.verdict === "success" ? "positive" : "negative"
+    case "classifiedJudgment":
+    case "standaloneScore":
+      if (finding.signalOrigin === "system") return "negative"
+      if (finding.judgmentKind !== "annotation") return "unknown"
+      return finding.negative ? "negative" : "positive"
+    case "moment":
+      if (effects.some((effect) => effect.direction === "negative")) return "negative"
+      if (effects.some((effect) => effect.direction === "positive")) return "positive"
+      return "unknown"
+  }
+}
+
+const hasHighImpact = (effects: readonly SessionDimensionEffect[]): boolean =>
+  effects.some(
+    (effect) =>
+      (effect.impact?.kind === "taskOutcome" && effect.impact.verdict === "failure") ||
+      (effect.impact?.kind === "completion" && effect.impact.status === "terminalFailure") ||
+      (effect.impact?.kind === "incident" && effect.impact.status === "unrecovered") ||
+      (effect.impact?.kind === "safety" && effect.impact.status === "confirmedHarm"),
+  )
+
+const findingImpactLevel = (
+  finding: AssessmentFinding,
+  effects: readonly SessionDimensionEffect[],
+  polarity: SessionAssessmentPolarity,
+): SessionAssessmentImpactLevel => {
+  if (hasHighImpact(effects)) return "high"
+
+  switch (finding.kind) {
+    case "taskOutcome":
+      return "high"
+    case "noOutput":
+      return finding.findingKind === "unconfirmedPattern" ? "low" : "high"
+    case "outputDamage":
+      return finding.generationPosition === "final" ? "high" : "medium"
+    case "toolFailure":
+      return finding.terminal || !finding.recovered ? "high" : "medium"
+    case "toolStructuralDefect":
+      return finding.terminal ? "high" : "medium"
+    case "finishFailure":
+      return finding.generationPosition === "final" ? "high" : "medium"
+    case "providerError":
+      return finding.terminal || !finding.recovered ? "high" : "medium"
+    case "usableCompletion":
+    case "toolRepetition":
+    case "classifiedJudgment":
+    case "standaloneScore":
+      return polarity === "unknown" ? "low" : "medium"
+    case "cacheGap":
+    case "moment":
+      return "low"
+  }
+}
+
+export const resolveAssessmentFinding = (finding: AssessmentFinding): ResolvedAssessmentItem => {
+  const effects = resolveAssessmentFindingEffects(finding)
+  const polarity = findingPolarity(finding, effects)
+  return {
+    item: {
+      id: finding.independentHumanEvidence
+        ? `human:${finding.scoreIds[0] ?? finding.evidenceKey}`
+        : finding.evidenceKey,
+      evidenceKey: finding.evidenceKey,
+      groupKey: findingGroupKey(finding),
+      label: finding.label,
+      ...(finding.description ? { description: finding.description } : {}),
+      ...(finding.chronology.occurredAt ? { occurredAt: finding.chronology.occurredAt } : {}),
+      source: finding.source,
+      polarity,
+      impactLevel: findingImpactLevel(finding, effects, polarity),
+      ...(finding.metricId ? { metricId: finding.metricId } : {}),
+      signalIds: [...new Set(finding.signalIds)],
+      scoreIds: [...new Set(finding.scoreIds)],
+      occurrenceCount: finding.occurrenceCount,
+      effects,
+      anchors: deduplicate(finding.anchors, anchorKey),
+      destinations: deduplicate(finding.destinations, destinationKey),
+    },
+    chronology: finding.chronology,
+    independentHumanEvidence: finding.independentHumanEvidence,
+  }
+}
 
 export const compareResolvedAssessmentItems = (
   left: ResolvedAssessmentItemOrder,
@@ -372,13 +492,40 @@ const mergeEffects = (
   return [...effects.values()]
 }
 
+const polarityPriority = {
+  positive: 0,
+  unknown: 1,
+  negative: 2,
+} as const satisfies Record<SessionAssessmentPolarity, number>
+
+const impactPriority = {
+  low: 0,
+  medium: 1,
+  high: 2,
+} as const satisfies Record<SessionAssessmentImpactLevel, number>
+
+const mergePolarity = (left: SessionAssessmentPolarity, right: SessionAssessmentPolarity): SessionAssessmentPolarity =>
+  polarityPriority[left] >= polarityPriority[right] ? left : right
+
+const mergeImpactLevel = (
+  left: SessionAssessmentImpactLevel,
+  right: SessionAssessmentImpactLevel,
+): SessionAssessmentImpactLevel => (impactPriority[left] >= impactPriority[right] ? left : right)
+
 const mergeResolvedItems = (left: ResolvedAssessmentItem, right: ResolvedAssessmentItem): ResolvedAssessmentItem => {
   const primary = sourcePriority[left.item.source] <= sourcePriority[right.item.source] ? left : right
   const secondary = primary === left ? right : left
+  const signalItem = [left, right].find(({ item }) => item.source === "signal")
+  const chronology = compareResolvedAssessmentItems(left, right) <= 0 ? left.chronology : right.chronology
   return {
     item: {
       ...primary.item,
+      ...(signalItem ? { label: signalItem.item.label } : {}),
+      groupKey: signalItem?.item.groupKey ?? primary.item.groupKey,
+      polarity: mergePolarity(left.item.polarity, right.item.polarity),
+      impactLevel: mergeImpactLevel(left.item.impactLevel, right.item.impactLevel),
       ...(!primary.item.description && secondary.item.description ? { description: secondary.item.description } : {}),
+      ...(chronology.occurredAt ? { occurredAt: chronology.occurredAt } : {}),
       ...(!primary.item.metricId && secondary.item.metricId ? { metricId: secondary.item.metricId } : {}),
       signalIds: [...new Set([...left.item.signalIds, ...right.item.signalIds])],
       scoreIds: [...new Set([...left.item.scoreIds, ...right.item.scoreIds])],
@@ -387,7 +534,7 @@ const mergeResolvedItems = (left: ResolvedAssessmentItem, right: ResolvedAssessm
       anchors: deduplicate([...left.item.anchors, ...right.item.anchors], anchorKey),
       destinations: deduplicate([...left.item.destinations, ...right.item.destinations], destinationKey),
     },
-    chronology: compareResolvedAssessmentItems(left, right) <= 0 ? left.chronology : right.chronology,
+    chronology,
     independentHumanEvidence: false,
   }
 }

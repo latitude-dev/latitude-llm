@@ -32,8 +32,13 @@ const assessment: SessionAssessment = {
     {
       id: "item-1",
       evidenceKey: "item-1",
+      groupKey: "issue:tool-repetition",
       label: "Repeated tool calls",
+      occurredAt: new Date("2026-01-01T10:05:00.000Z"),
       source: "metric",
+      polarity: "negative",
+      impactLevel: "medium",
+      metricId: "tools.thrashing",
       signalIds: [],
       scoreIds: [],
       occurrenceCount: 3,
@@ -47,29 +52,41 @@ const assessment: SessionAssessment = {
           impact: { kind: "spend", observedMicrocents: 1_000_000, avoidableMicrocents: 250_000 },
         },
       ],
-      anchors: [
+      anchors: [],
+      destinations: [{ kind: "sessionMessage", traceId: "trace-1", messageIndex: 2 }],
+    },
+    {
+      id: "signal-item",
+      evidenceKey: "signal-item",
+      groupKey: "signal:signal-1",
+      label: "Tool response did not match a call",
+      source: "signal",
+      polarity: "negative",
+      impactLevel: "medium",
+      signalIds: ["signal-1"],
+      scoreIds: ["score-1"],
+      occurrenceCount: 1,
+      effects: [
         {
-          kind: "toolCall",
-          traceId: "trace-1",
-          toolCallId: "tool-call-1",
-          toolName: "searchCatalog",
-          messageIndex: 4,
+          scoreDimension: "reliability",
+          role: "operationalIncident",
+          direction: "negative",
+          measurement: "observed",
+          benchmarkUse: "direct",
         },
       ],
-      destinations: [
-        { kind: "sessionMessage", traceId: "trace-1", messageIndex: 2 },
-        { kind: "span", traceId: "trace-1", spanId: "span-123456789" },
-        { kind: "toolCall", traceId: "trace-1", toolCallId: "tool-call-1" },
-        { kind: "score", scoreId: "score-123456789" },
-        { kind: "signal", signalId: "sig-123456789" },
-      ],
+      anchors: [{ kind: "signal", signalId: "signal-1" }],
+      destinations: [{ kind: "signal", signalId: "signal-1" }],
     },
     {
       id: "raw-item-1",
       evidenceKey: "raw-item-1",
+      groupKey: "judgment:legacy-score-1",
       label: "Legacy quality score",
       description: "Stored before benchmark semantics were available.",
       source: "score",
+      polarity: "unknown",
+      impactLevel: "low",
       signalIds: [],
       scoreIds: ["legacy-score-1"],
       occurrenceCount: 1,
@@ -85,66 +102,87 @@ const assessment: SessionAssessment = {
         label: "Tool-call failures",
         scoreDimensions: ["reliability", "cost", "speed"],
         status: "examined",
-        findingCount: 1,
+        findingCount: 2,
       },
     ],
   },
 }
 
 describe("SessionAssessmentContent", () => {
-  it("renders all dimensions, native impacts, occurrences, and reader coverage", () => {
+  it("separates directional findings and only shows useful metrics", () => {
     render(<SessionAssessmentContent assessment={assessment} />)
 
-    for (const dimension of ["Outcome", "Reliability", "Cost", "Speed", "Safety"]) {
-      expect(screen.getAllByText(dimension).length).toBeGreaterThan(0)
-    }
+    expect(screen.getByText("Needs attention")).toBeTruthy()
+    expect(screen.getByText("Needs interpretation")).toBeTruthy()
+    expect(screen.getByText("Positive evidence")).toBeTruthy()
     expect(screen.getByText("Repeated tool calls")).toBeTruthy()
-    expect(screen.getByText("3×")).toBeTruthy()
-    expect(screen.getByText("Observed")).toBeTruthy()
-    expect(screen.getAllByText(/avoidable/).length).toBeGreaterThan(0)
-    expect(screen.getByText("Raw evidence (1)")).toBeTruthy()
-    expect(screen.getByText("Legacy quality score").closest("details")).toBeTruthy()
-    expect(screen.getByText("Reader coverage: 1 examined")).toBeTruthy()
+    expect(screen.getByText("Tool response did not match a call")).toBeTruthy()
+    expect(screen.getByText("Legacy quality score")).toBeTruthy()
+    expect(screen.getByText("Avoidable cost")).toBeTruthy()
+    expect(screen.getByText("Avoidable time")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Positive evidence" }))
+    expect(screen.getByText("Succeeded")).toBeTruthy()
+    expect(screen.queryByText(/total/)).toBeNull()
+    expect(screen.queryByText(/Coverage:/)).toBeNull()
   })
 
-  it("exposes authorized evidence destinations without rendering payload content", () => {
+  it("opens grouped issue evidence and links directly to a signal", () => {
     const onOpenDestination = vi.fn()
     render(<SessionAssessmentContent assessment={assessment} onOpenDestination={onOpenDestination} />)
 
-    for (const label of ["Message 3", "Span span-12", "searchCatalog", "Score score-1", "Signal sig-123"]) {
-      fireEvent.click(screen.getByRole("button", { name: label }))
-    }
+    fireEvent.click(screen.getByRole("button", { name: "Repeated tool calls" }))
+    fireEvent.click(screen.getByRole("button", { name: "View in conversation" }))
+    fireEvent.click(screen.getByRole("button", { name: "Open signal Tool response did not match a call" }))
 
-    expect(onOpenDestination).toHaveBeenCalledTimes(5)
-    expect(onOpenDestination.mock.calls.map(([destination]) => destination.kind)).toEqual([
-      "sessionMessage",
-      "span",
-      "toolCall",
-      "score",
-      "signal",
-    ])
-    expect(screen.queryByText(/tool-call-1/)).toBeNull()
+    expect(onOpenDestination.mock.calls.map(([destination]) => destination.kind)).toEqual(["sessionMessage", "signal"])
+    expect(screen.queryByText(/Msg /)).toBeNull()
   })
 
-  it("virtualizes large evidence feeds and loads the next cursor page on demand", () => {
-    const firstItem = assessment.items[0]
-    if (!firstItem) throw new Error("expected assessment fixture item")
+  it("aggregates repeated issues and keeps pagination explicit", () => {
+    const repeated = assessment.items[0]
+    if (!repeated) throw new Error("expected assessment fixture item")
     const onLoadMore = vi.fn()
     const largeAssessment: SessionAssessment = {
       ...assessment,
       items: Array.from({ length: 101 }, (_, index) => ({
-        ...firstItem,
+        ...repeated,
         id: `item-${index}`,
         evidenceKey: `item-${index}`,
-        label: `Finding ${index}`,
       })),
     }
 
     render(<SessionAssessmentContent assessment={largeAssessment} hasMore onLoadMore={onLoadMore} />)
 
-    expect(screen.getByTestId("virtualized-evidence-list")).toBeTruthy()
-    expect(screen.queryAllByText(/^Finding /).length).toBeLessThan(largeAssessment.items.length)
-    fireEvent.click(screen.getByRole("button", { name: "Load more evidence" }))
+    expect(screen.getAllByText("Repeated tool calls")).toHaveLength(1)
+    expect(screen.getByText("303 occurrences")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Load more findings" }))
     expect(onLoadMore).toHaveBeenCalledOnce()
+  })
+
+  it("does not imply a positive result when nothing meaningful was evaluated", () => {
+    const notEvaluated: SessionAssessment = {
+      ...assessment,
+      items: [],
+      dimensions: assessment.dimensions.map((summary) => {
+        if (summary.scoreDimension === "outcome") return { ...summary, taskOutcome: undefined }
+        if (summary.scoreDimension === "reliability") return { ...summary, completion: "undetermined" as const }
+        if (summary.scoreDimension === "cost") {
+          return { ...summary, measuredAvoidableMicrocents: undefined, estimatedAvoidableMicrocents: undefined }
+        }
+        if (summary.scoreDimension === "speed") {
+          return { ...summary, measuredAvoidableNs: undefined, estimatedAvoidableNs: undefined }
+        }
+        if (summary.scoreDimension === "safety") {
+          return { ...summary, successfulDefenseCount: 0, coverage: "notExamined" as const }
+        }
+        return summary
+      }),
+    }
+
+    render(<SessionAssessmentContent assessment={notEvaluated} />)
+
+    expect(screen.getByText("No findings were detected for this session.")).toBeTruthy()
+    expect(screen.queryByText("Positive evidence")).toBeNull()
+    expect(screen.queryByText("No harm observed")).toBeNull()
   })
 })

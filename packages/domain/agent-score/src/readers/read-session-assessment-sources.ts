@@ -97,15 +97,47 @@ const messageReferences = (finding: MessageFlaggerFinding, traceId: string) => {
   }
 }
 
+const flaggerFindingLabel = (finding: FlaggerFinding): string => {
+  switch (finding.findingKind) {
+    case "blank":
+      return "No assistant output"
+    case "confirmedUnusablePattern":
+      return "Assistant output was unusable"
+    case "unconfirmedPattern":
+      return "Assistant output may be unusable"
+    case "trailingComma":
+      return "Response contained a trailing JSON comma"
+    case "unclosedString":
+      return "Response ended with an unfinished string"
+    case "invalidJson":
+      return "Response was not valid JSON"
+    case "error":
+      return `${finding.toolName} failed`
+    case "malformed":
+      return `${finding.toolName ?? "Tool call"} was malformed`
+    case "duplicate":
+      return `${finding.toolName} reused a call ID`
+    case "undeclared":
+      return `${finding.toolName} was not declared`
+    case "unknown-id":
+      return "Tool response did not match a call"
+    case "identicalCallLoop":
+      return "Repeated identical tool calls"
+    case "lowCacheHitRate":
+      return "Prompt cache use was low"
+  }
+}
+
 const findingBase = (finding: FlaggerFinding, traceId: string) => {
   const references =
     "messageIndex" in finding
       ? messageReferences(finding as MessageFlaggerFinding, traceId)
       : { chronology: {}, anchors: [], destinations: [] }
+  const label = flaggerFindingLabel(finding)
   return {
     evidenceKey: finding.findingKey,
-    label: finding.feedback,
-    description: finding.feedback,
+    label,
+    ...(finding.feedback.trim() !== label ? { description: finding.feedback } : {}),
     source: "metric" as const,
     signalIds: [],
     scoreIds: [],
@@ -378,11 +410,21 @@ const readScoreFindings = (scores: readonly Score[], signals: readonly SignalWit
           kind: "classifiedJudgment",
           roles: signal.scoreEvidence,
           negative: !score.passed,
+          judgmentKind: score.sourceType,
+          signalOrigin: signal.origin,
           ...(metadata?.flaggerSlug ? { findingKind: metadata.flaggerSlug } : {}),
         },
       ]
     }
-    return [{ ...base, kind: "standaloneScore", negative: !score.passed }]
+    return [
+      {
+        ...base,
+        kind: "standaloneScore",
+        negative: !score.passed,
+        judgmentKind: score.sourceType,
+        ...(signal ? { signalOrigin: signal.origin } : {}),
+      },
+    ]
   })
 }
 

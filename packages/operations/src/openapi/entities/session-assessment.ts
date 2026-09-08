@@ -166,9 +166,19 @@ const AssessmentItemSchema = z
   .object({
     id: z.string().describe("Stable identifier for this assessment item."),
     evidenceKey: z.string().describe("Stable identity of the underlying fact across recomputation."),
+    groupKey: z.string().describe("Stable identity used to group equivalent findings and linked judgments."),
     label: z.string().describe("Short human-readable explanation of the evidence."),
     description: z.string().optional().describe("Additional explanation when available; never raw telemetry content."),
+    occurredAt: z
+      .string()
+      .datetime()
+      .optional()
+      .describe("ISO-8601 timestamp for when the evidence occurred, when telemetry provides one."),
     source: z.enum(["metric", "signal", "flagger", "score", "moment"]).describe("Source that identified the fact."),
+    polarity: z
+      .enum(["negative", "unknown", "positive"])
+      .describe("Whether the finding is harmful, beneficial, or requires interpretation."),
+    impactLevel: z.enum(["low", "medium", "high"]).describe("Coarse impact level for ordering and display."),
     metricId: z.string().optional().describe("Canonical metric identifier when the item has benchmark semantics."),
     signalIds: z.array(z.string()).describe("Signals linked to the same underlying fact."),
     scoreIds: z.array(z.string()).describe("Scores linked to the same underlying fact."),
@@ -312,6 +322,8 @@ export const SessionAssessmentSchema = z
   })
   .openapi("SessionAssessment")
 
+type SessionAssessmentResponse = z.infer<typeof SessionAssessmentSchema>
+
 const toAnchorResponse = (anchor: SessionEvidenceAnchor) => {
   switch (anchor.kind) {
     case "message":
@@ -417,12 +429,16 @@ const toEffectResponse = (effect: SessionDimensionEffect): SessionDimensionEffec
     ...(effect.impact ? { impact: toImpactResponse(effect.impact) } : {}),
   }) as SessionDimensionEffect
 
-const toItemResponse = (item: SessionAssessmentItem): SessionAssessmentItem => ({
+const toItemResponse = (item: SessionAssessmentItem): SessionAssessmentResponse["items"][number] => ({
   id: item.id,
   evidenceKey: item.evidenceKey,
+  groupKey: item.groupKey,
   label: item.label,
   ...(item.description !== undefined ? { description: item.description } : {}),
+  ...(item.occurredAt !== undefined ? { occurredAt: item.occurredAt.toISOString() } : {}),
   source: item.source,
+  polarity: item.polarity,
+  impactLevel: item.impactLevel,
   ...(item.metricId !== undefined ? { metricId: item.metricId } : {}),
   signalIds: [...item.signalIds],
   scoreIds: [...item.scoreIds],
@@ -432,7 +448,7 @@ const toItemResponse = (item: SessionAssessmentItem): SessionAssessmentItem => (
   destinations: item.destinations.map(toDestinationResponse),
 })
 
-export const toSessionAssessmentResponse = (assessment: SessionAssessment): SessionAssessment => ({
+export const toSessionAssessmentResponse = (assessment: SessionAssessment): SessionAssessmentResponse => ({
   sessionId: assessment.sessionId,
   items: assessment.items.map(toItemResponse),
   ...(assessment.nextCursor ? { nextCursor: assessment.nextCursor } : {}),

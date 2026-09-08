@@ -35,6 +35,12 @@ describe("assessment finding resolver", () => {
       expect.objectContaining({ scoreDimension: "speed", direction: "negative", measurement: "observed" }),
     ])
     expect(resolved.item.destinations).toEqual(base.destinations)
+    expect(resolved.item.occurredAt).toEqual(base.chronology.occurredAt)
+    expect(resolved.item).toMatchObject({
+      groupKey: "signal:signal-1",
+      polarity: "negative",
+      impactLevel: "medium",
+    })
   })
 
   it("does not turn an unconfirmed output pattern into terminal failure", () => {
@@ -52,6 +58,7 @@ describe("assessment finding resolver", () => {
         benchmarkUse: "modeled",
       }),
     ])
+    expect(resolved.item).toMatchObject({ polarity: "unknown", impactLevel: "low" })
   })
 
   it("orders timed facts first, then message-only and session-wide facts", () => {
@@ -61,16 +68,23 @@ describe("assessment finding resolver", () => {
       chronology,
       kind: "standaloneScore",
       negative: false,
+      judgmentKind: "annotation",
     })
 
-    expect(
-      resolveSessionAssessmentItems([
-        finding("session-wide", {}),
-        finding("message", { messageIndex: 2 }),
-        finding("later", { occurredAt: new Date("2026-01-01T00:00:02.000Z") }),
-        finding("earlier", { occurredAt: new Date("2026-01-01T00:00:01.000Z") }),
-      ]).map((item) => item.evidenceKey),
-    ).toEqual(["earlier", "later", "message", "session-wide"])
+    const items = resolveSessionAssessmentItems([
+      finding("session-wide", {}),
+      finding("message", { messageIndex: 2 }),
+      finding("later", { occurredAt: new Date("2026-01-01T00:00:02.000Z") }),
+      finding("earlier", { occurredAt: new Date("2026-01-01T00:00:01.000Z") }),
+    ])
+
+    expect(items.map((item) => item.evidenceKey)).toEqual(["earlier", "later", "message", "session-wide"])
+    expect(items.map((item) => item.occurredAt)).toEqual([
+      new Date("2026-01-01T00:00:01.000Z"),
+      new Date("2026-01-01T00:00:02.000Z"),
+      undefined,
+      undefined,
+    ])
   })
 
   it("merges metric, discovery score, and assigned signal by underlying evidence key", () => {
@@ -97,6 +111,8 @@ describe("assessment finding resolver", () => {
         { scoreDimension: "speed", role: "criticalPathEfficiency" },
       ],
       negative: true,
+      judgmentKind: "annotation",
+      signalOrigin: "system",
     }
 
     const items = resolveSessionAssessmentItems([metric, signal])
@@ -104,7 +120,10 @@ describe("assessment finding resolver", () => {
     expect(items).toHaveLength(1)
     expect(items[0]).toMatchObject({
       evidenceKey: "shared-fact",
+      groupKey: "signal:signal-1",
+      label: "Repeated searches",
       source: "metric",
+      polarity: "negative",
       metricId: "spans.provider_error",
       signalIds: ["signal-1", "signal-2"],
       scoreIds: ["score-1"],
@@ -119,6 +138,7 @@ describe("assessment finding resolver", () => {
       evidenceKey: "shared-fact",
       kind: "standaloneScore",
       negative: true,
+      judgmentKind: "annotation",
     }
     const human: AssessmentFinding = {
       ...automatic,

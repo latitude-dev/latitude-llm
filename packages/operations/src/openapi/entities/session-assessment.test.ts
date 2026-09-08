@@ -11,8 +11,12 @@ describe("session assessment response", () => {
         {
           id: "finding-1",
           evidenceKey: "finding-1",
+          groupKey: "issue:tool-failure:search",
           label: "Tool call failed",
+          occurredAt: new Date("2026-01-01T12:34:56.000Z"),
           source: "metric",
+          polarity: "negative",
+          impactLevel: "medium",
           metricId: "tools.call_failed",
           signalIds: [],
           scoreIds: [],
@@ -47,5 +51,6 @@ describe("session assessment response", () => {
     expect(SessionAssessmentSchema.parse(response)).toEqual(response)
     expect(response.items[0]).not.toHaveProperty("rawContent")
     expect(response.items[0]?.anchors[0]).not.toHaveProperty("arguments")
+    expect(response.items[0]?.occurredAt).toBe("2026-01-01T12:34:56.000Z")
   })
 })

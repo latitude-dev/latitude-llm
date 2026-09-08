@@ -1,5 +1,6 @@
 import type { FlaggerScreeningDecision } from "@domain/flaggers"
-import type { ScoreEvidenceContract, SessionId } from "@domain/shared"
+import type { ScoreSourceType } from "@domain/scores"
+import type { ScoreEvidenceContract, SessionId, SignalOrigin } from "@domain/shared"
 import type {
   SessionAssessmentSource,
   SessionEvidenceAnchor,
@@ -72,9 +73,16 @@ export type AssessmentFinding = AssessmentFindingReference &
         readonly kind: "classifiedJudgment"
         readonly roles: readonly ScoreEvidenceContract[]
         readonly negative: boolean
+        readonly judgmentKind: ScoreSourceType
+        readonly signalOrigin?: SignalOrigin
         readonly findingKind?: string
       }
-    | { readonly kind: "standaloneScore"; readonly negative: boolean }
+    | {
+        readonly kind: "standaloneScore"
+        readonly negative: boolean
+        readonly judgmentKind: ScoreSourceType
+        readonly signalOrigin?: SignalOrigin
+      }
     | {
         readonly kind: "moment"
         readonly momentKinds: readonly string[]

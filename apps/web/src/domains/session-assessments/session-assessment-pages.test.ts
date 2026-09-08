@@ -10,8 +10,11 @@ const page = (itemIds: readonly string[], nextCursor?: string): SessionAssessmen
   items: itemIds.map((id) => ({
     id,
     evidenceKey: id,
+    groupKey: `judgment:${id}`,
     label: id,
     source: "score",
+    polarity: "unknown",
+    impactLevel: "low",
     signalIds: [],
     scoreIds: [],
     occurrenceCount: 1,

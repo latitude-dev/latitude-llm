@@ -6,6 +6,12 @@ export const SESSION_ASSESSMENT_PAGE_SIZE = 100
 export const sessionAssessmentSourceSchema = z.enum(["metric", "signal", "flagger", "score", "moment"])
 export type SessionAssessmentSource = z.infer<typeof sessionAssessmentSourceSchema>
 
+export const sessionAssessmentPolaritySchema = z.enum(["negative", "unknown", "positive"])
+export type SessionAssessmentPolarity = z.infer<typeof sessionAssessmentPolaritySchema>
+
+export const sessionAssessmentImpactLevelSchema = z.enum(["low", "medium", "high"])
+export type SessionAssessmentImpactLevel = z.infer<typeof sessionAssessmentImpactLevelSchema>
+
 export const sessionEvidenceAnchorSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("message"),
@@ -129,9 +135,13 @@ export type SessionDimensionEffect = z.infer<typeof sessionDimensionEffectSchema
 export const sessionAssessmentItemSchema = z.object({
   id: z.string().min(1),
   evidenceKey: z.string().min(1),
+  groupKey: z.string().min(1),
   label: z.string().min(1),
   description: z.string().min(1).optional(),
+  occurredAt: z.date().optional(),
   source: sessionAssessmentSourceSchema,
+  polarity: sessionAssessmentPolaritySchema,
+  impactLevel: sessionAssessmentImpactLevelSchema,
   metricId: z.string().min(1).optional(),
   signalIds: z.array(z.string().min(1)),
   scoreIds: z.array(z.string().min(1)),

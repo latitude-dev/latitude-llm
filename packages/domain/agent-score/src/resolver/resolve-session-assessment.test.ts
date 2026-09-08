@@ -17,6 +17,7 @@ const finding = (index: number): AssessmentFinding => ({
   independentHumanEvidence: false,
   kind: "standaloneScore",
   negative: false,
+  judgmentKind: "annotation",
 })
 
 const input: NormalizedSessionAssessmentInput = {

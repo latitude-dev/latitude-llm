@@ -7,12 +7,20 @@ export interface SessionAssessmentItem {
     id: string;
     /** Stable identity of the underlying fact across recomputation. */
     evidenceKey: string;
+    /** Stable identity used to group equivalent findings and linked judgments. */
+    groupKey: string;
     /** Short human-readable explanation of the evidence. */
     label: string;
     /** Additional explanation when available; never raw telemetry content. */
     description?: string | undefined;
+    /** ISO-8601 timestamp for when the evidence occurred, when telemetry provides one. */
+    occurredAt?: string | undefined;
     /** Source that identified the fact. */
     source: SessionAssessmentItem.Source;
+    /** Whether the finding is harmful, beneficial, or requires interpretation. */
+    polarity: SessionAssessmentItem.Polarity;
+    /** Coarse impact level for ordering and display. */
+    impactLevel: SessionAssessmentItem.ImpactLevel;
     /** Canonical metric identifier when the item has benchmark semantics. */
     metricId?: string | undefined;
     /** Signals linked to the same underlying fact. */
@@ -39,4 +47,18 @@ export namespace SessionAssessmentItem {
         Moment: "moment",
     } as const;
     export type Source = (typeof Source)[keyof typeof Source];
+    /** Whether the finding is harmful, beneficial, or requires interpretation. */
+    export const Polarity = {
+        Negative: "negative",
+        Unknown: "unknown",
+        Positive: "positive",
+    } as const;
+    export type Polarity = (typeof Polarity)[keyof typeof Polarity];
+    /** Coarse impact level for ordering and display. */
+    export const ImpactLevel = {
+        Low: "low",
+        Medium: "medium",
+        High: "high",
+    } as const;
+    export type ImpactLevel = (typeof ImpactLevel)[keyof typeof ImpactLevel];
 }

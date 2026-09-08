@@ -36838,6 +36838,10 @@
                   "type": "string",
                   "description": "Stable identity of the underlying fact across recomputation."
                 },
+                "groupKey": {
+                  "type": "string",
+                  "description": "Stable identity used to group equivalent findings and linked judgments."
+                },
                 "label": {
                   "type": "string",
                   "description": "Short human-readable explanation of the evidence."
@@ -36845,6 +36849,12 @@
                 "description": {
                   "description": "Additional explanation when available; never raw telemetry content.",
                   "type": "string"
+                },
+                "occurredAt": {
+                  "description": "ISO-8601 timestamp for when the evidence occurred, when telemetry provides one.",
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
                 },
                 "source": {
                   "type": "string",
@@ -36856,6 +36866,24 @@
                     "moment"
                   ],
                   "description": "Source that identified the fact."
+                },
+                "polarity": {
+                  "type": "string",
+                  "enum": [
+                    "negative",
+                    "unknown",
+                    "positive"
+                  ],
+                  "description": "Whether the finding is harmful, beneficial, or requires interpretation."
+                },
+                "impactLevel": {
+                  "type": "string",
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ],
+                  "description": "Coarse impact level for ordering and display."
                 },
                 "metricId": {
                   "description": "Canonical metric identifier when the item has benchmark semantics.",
@@ -38432,8 +38460,11 @@
               "required": [
                 "id",
                 "evidenceKey",
+                "groupKey",
                 "label",
                 "source",
+                "polarity",
+                "impactLevel",
                 "signalIds",
                 "scoreIds",
                 "occurrenceCount",

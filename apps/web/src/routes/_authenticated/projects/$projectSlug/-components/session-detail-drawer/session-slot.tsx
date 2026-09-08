@@ -339,6 +339,7 @@ export function SessionSlot({
               onOpenTrace={onOpenTrace}
               onOpenSpan={navigateToSpan}
               onOpenSignal={onOpenSignal}
+              onOpenConversation={() => onActiveTabChange("conversation")}
             />
           </div>
         )}

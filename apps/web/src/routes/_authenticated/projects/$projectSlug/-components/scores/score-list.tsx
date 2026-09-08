@@ -24,6 +24,7 @@ export function ScoreList({
   isLoading,
   isError,
   intro,
+  listLabel,
   showCreateForm = true,
   createPending = false,
   onCreate,
@@ -38,6 +39,7 @@ export function ScoreList({
   readonly isLoading: boolean
   readonly isError: boolean
   readonly intro?: ReactNode
+  readonly listLabel?: string
   readonly showCreateForm?: boolean
   readonly createPending?: boolean
   readonly onCreate: (data: AnnotationSaveData) => void
@@ -79,6 +81,7 @@ export function ScoreList({
           </Text.H6>
         ) : sortedScores.length > 0 ? (
           <div className="flex flex-col gap-2 pt-4">
+            {listLabel ? <Text.H6 color="foregroundMuted">{listLabel}</Text.H6> : null}
             {sortedScores.map((score) => {
               const isSelected = selectedScoreId === score.id
               const annotation = isAnnotationScore(score) ? asAnnotationRecord(score) : null

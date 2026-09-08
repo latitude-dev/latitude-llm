@@ -911,6 +911,8 @@ if typing.TYPE_CHECKING:
         SessionAssessmentEvidenceImpactTaskOutcomeVerdict,
     )
     from .session_assessment_item import SessionAssessmentItem
+    from .session_assessment_item_impact_level import SessionAssessmentItemImpactLevel
+    from .session_assessment_item_polarity import SessionAssessmentItemPolarity
     from .session_assessment_item_source import SessionAssessmentItemSource
     from .session_assessment_reader_coverage import (
         SessionAssessmentReaderCoverage,
@@ -1893,6 +1895,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SessionAssessmentEvidenceImpact_Spend": ".session_assessment_evidence_impact",
     "SessionAssessmentEvidenceImpact_TaskOutcome": ".session_assessment_evidence_impact",
     "SessionAssessmentItem": ".session_assessment_item",
+    "SessionAssessmentItemImpactLevel": ".session_assessment_item_impact_level",
+    "SessionAssessmentItemPolarity": ".session_assessment_item_polarity",
     "SessionAssessmentItemSource": ".session_assessment_item_source",
     "SessionAssessmentReaderCoverage": ".session_assessment_reader_coverage",
     "SessionAssessmentReaderCoverageExamined": ".session_assessment_reader_coverage_examined",
@@ -2875,6 +2879,8 @@ __all__ = [
     "SessionAssessmentEvidenceImpact_Spend",
     "SessionAssessmentEvidenceImpact_TaskOutcome",
     "SessionAssessmentItem",
+    "SessionAssessmentItemImpactLevel",
+    "SessionAssessmentItemPolarity",
     "SessionAssessmentItemSource",
     "SessionAssessmentReaderCoverage",
     "SessionAssessmentReaderCoverageExamined",
