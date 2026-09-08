@@ -110,6 +110,8 @@
         "pages": [
           "telemetry/start-tracing",
           "getting-started/migrate-from-v1",
+          "getting-started/migrate-from-langfuse",
+          "getting-started/migrate-from-braintrust",
           "telemetry/memory",
           {
             "group": "SDKs",
