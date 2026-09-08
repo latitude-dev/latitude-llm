@@ -40409,18 +40409,13 @@
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991,
                 "description": "Credits used beyond the included allowance."
-              },
-              "overageAllowed": {
-                "type": "boolean",
-                "description": "Whether usage can continue once the included credits are spent."
               }
             },
             "required": [
               "included",
               "consumed",
               "remaining",
-              "overage",
-              "overageAllowed"
+              "overage"
             ],
             "additionalProperties": false,
             "description": "Credit position for the period."

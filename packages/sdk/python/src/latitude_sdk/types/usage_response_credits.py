@@ -3,9 +3,7 @@
 import typing
 
 import pydantic
-import typing_extensions
 from ..core.pydantic_utilities import UniversalBaseModel
-from ..core.serialization import FieldMetadata
 
 
 class UsageResponseCredits(UniversalBaseModel):
@@ -32,13 +30,5 @@ class UsageResponseCredits(UniversalBaseModel):
     """
     Credits used beyond the included allowance.
     """
-
-    overage_allowed: typing_extensions.Annotated[
-        bool,
-        FieldMetadata(alias="overageAllowed"),
-        pydantic.Field(
-            alias="overageAllowed", description="Whether usage can continue once the included credits are spent."
-        ),
-    ]
 
     model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)

@@ -74,7 +74,6 @@ const UsageResponseSchema = z
           .nullable()
           .describe("Included credits still available. `null` when the plan is unlimited."),
         overage: z.number().int().describe("Credits used beyond the included allowance."),
-        overageAllowed: z.boolean().describe("Whether usage can continue once the included credits are spent."),
       })
       .describe("Credit position for the period."),
     categories: z.array(UsageCategorySchema).describe("Credits by product area across all projects, largest first."),
@@ -154,7 +153,6 @@ const toResponse = (input: {
     consumed: input.overview.consumedCredits,
     remaining: input.overview.remainingCredits,
     overage: input.overview.overageCredits,
-    overageAllowed: input.overview.overageAllowed,
   },
   categories: input.categories.map((entry) => ({ category: entry.category, credits: entry.credits })),
   projects: input.projects.map((entry) => {

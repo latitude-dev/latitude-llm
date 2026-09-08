@@ -13956,18 +13956,13 @@
               "overage": {
                 "type": "integer",
                 "description": "Credits used beyond the included allowance."
-              },
-              "overageAllowed": {
-                "type": "boolean",
-                "description": "Whether usage can continue once the included credits are spent."
               }
             },
             "required": [
               "included",
               "consumed",
               "remaining",
-              "overage",
-              "overageAllowed"
+              "overage"
             ],
             "description": "Credit position for the period."
           },

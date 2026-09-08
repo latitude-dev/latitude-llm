@@ -12,13 +12,7 @@ const PERIOD_END = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1
 type UsageResponse = {
   plan: string
   period: { start: string; end: string }
-  credits: {
-    included: number | null
-    consumed: number
-    remaining: number | null
-    overage: number
-    overageAllowed: boolean
-  }
+  credits: { included: number | null; consumed: number; remaining: number | null; overage: number }
   categories: { category: string; credits: number }[]
   projects: {
     id: string
@@ -105,13 +99,7 @@ describe("Usage routes", () => {
     const body = (await response.json()) as UsageResponse
     expect(body.plan).toBe("free")
     expect(body.period).toEqual({ start: PERIOD_START.toISOString(), end: PERIOD_END.toISOString() })
-    expect(body.credits).toEqual({
-      included: 20_000,
-      consumed: 22,
-      remaining: 19_978,
-      overage: 0,
-      overageAllowed: false,
-    })
+    expect(body.credits).toEqual({ included: 20_000, consumed: 22, remaining: 19_978, overage: 0 })
     expect(body.categories).toEqual([
       { category: "behaviors", credits: 9 },
       { category: "signals", credits: 7 },

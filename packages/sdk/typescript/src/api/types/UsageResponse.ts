@@ -47,7 +47,5 @@ export namespace UsageResponse {
         remaining: number | null;
         /** Credits used beyond the included allowance. */
         overage: number;
-        /** Whether usage can continue once the included credits are spent. */
-        overageAllowed: boolean;
     }
 }
