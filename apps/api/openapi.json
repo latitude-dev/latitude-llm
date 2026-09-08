@@ -12814,6 +12814,1748 @@
           "conversation"
         ]
       },
+      "SessionAssessment": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Session represented by this assessment."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAssessmentItem"
+            },
+            "description": "Chronological page of deduplicated evidence items."
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Opaque cursor for the next evidence page. Absent when there are no more items."
+          },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAssessmentDimensionSummary"
+            },
+            "description": "Complete summaries for all five Agent Score dimensions, repeated on every page."
+          },
+          "coverage": {
+            "type": "object",
+            "properties": {
+              "readers": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SessionAssessmentReaderCoverage"
+                },
+                "description": "Coverage status for each evidence reader."
+              }
+            },
+            "required": [
+              "readers"
+            ],
+            "description": "Complete reader coverage for the session, repeated on every page."
+          }
+        },
+        "required": [
+          "sessionId",
+          "items",
+          "dimensions",
+          "coverage"
+        ]
+      },
+      "SessionAssessmentItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier for this assessment item."
+          },
+          "evidenceKey": {
+            "type": "string",
+            "description": "Stable identity of the underlying fact across recomputation."
+          },
+          "groupKey": {
+            "type": "string",
+            "description": "Stable identity used to group equivalent findings and linked judgments."
+          },
+          "label": {
+            "type": "string",
+            "description": "Short human-readable explanation of the evidence."
+          },
+          "description": {
+            "type": "string",
+            "description": "Additional explanation when available; never raw telemetry content."
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO-8601 timestamp for when the evidence occurred, when telemetry provides one."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "metric",
+              "signal",
+              "flagger",
+              "score",
+              "moment"
+            ],
+            "description": "Source that identified the fact."
+          },
+          "polarity": {
+            "type": "string",
+            "enum": [
+              "negative",
+              "unknown",
+              "positive"
+            ],
+            "description": "Whether the finding is harmful, beneficial, or requires interpretation."
+          },
+          "impactLevel": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Coarse impact level for ordering and display."
+          },
+          "metricId": {
+            "type": "string",
+            "description": "Canonical metric identifier when the item has benchmark semantics."
+          },
+          "signalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Signals linked to the same underlying fact."
+          },
+          "scoreIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Scores linked to the same underlying fact."
+          },
+          "occurrenceCount": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Number of equivalent occurrences represented by this item."
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAssessmentDimensionEffect"
+            },
+            "description": "Dimension-specific interpretations of this evidence."
+          },
+          "anchors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAssessmentEvidenceAnchor"
+            },
+            "description": "Positions where the fact occurred, represented only by identifiers."
+          },
+          "destinations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionAssessmentEvidenceDestination"
+            },
+            "description": "Authorized product records that a caller can open for the underlying details."
+          }
+        },
+        "required": [
+          "id",
+          "evidenceKey",
+          "groupKey",
+          "label",
+          "source",
+          "polarity",
+          "impactLevel",
+          "signalIds",
+          "scoreIds",
+          "occurrenceCount",
+          "effects",
+          "anchors",
+          "destinations"
+        ]
+      },
+      "SessionAssessmentDimensionEffect": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "outcome"
+                ],
+                "description": "Outcome dimension."
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "taskOutcome"
+                ],
+                "description": "Evidence about whether the task succeeded."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "How the evidence affects this dimension."
+              },
+              "measurement": {
+                "type": "string",
+                "enum": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Whether the impact was measured, estimated, or left unquantified."
+              },
+              "benchmarkUse": {
+                "type": "string",
+                "enum": [
+                  "direct",
+                  "modeled",
+                  "attributionOnly",
+                  "contextOnly"
+                ],
+                "description": "How this evidence may be used in benchmark calculations."
+              },
+              "impact": {
+                "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "role",
+              "direction",
+              "measurement",
+              "benchmarkUse"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "reliability"
+                ],
+                "description": "Reliability dimension."
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "completionOutcome",
+                  "operationalIncident"
+                ],
+                "description": "Reliability evidence channel informed by this item."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "How the evidence affects this dimension."
+              },
+              "measurement": {
+                "type": "string",
+                "enum": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Whether the impact was measured, estimated, or left unquantified."
+              },
+              "benchmarkUse": {
+                "type": "string",
+                "enum": [
+                  "direct",
+                  "modeled",
+                  "attributionOnly",
+                  "contextOnly"
+                ],
+                "description": "How this evidence may be used in benchmark calculations."
+              },
+              "impact": {
+                "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "role",
+              "direction",
+              "measurement",
+              "benchmarkUse"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "cost"
+                ],
+                "description": "Cost dimension."
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "spendEfficiency"
+                ],
+                "description": "Evidence about useful versus avoidable spend."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "How the evidence affects this dimension."
+              },
+              "measurement": {
+                "type": "string",
+                "enum": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Whether the impact was measured, estimated, or left unquantified."
+              },
+              "benchmarkUse": {
+                "type": "string",
+                "enum": [
+                  "direct",
+                  "modeled",
+                  "attributionOnly",
+                  "contextOnly"
+                ],
+                "description": "How this evidence may be used in benchmark calculations."
+              },
+              "impact": {
+                "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "role",
+              "direction",
+              "measurement",
+              "benchmarkUse"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "speed"
+                ],
+                "description": "Speed dimension."
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "criticalPathEfficiency"
+                ],
+                "description": "Evidence about critical-path efficiency."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "How the evidence affects this dimension."
+              },
+              "measurement": {
+                "type": "string",
+                "enum": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Whether the impact was measured, estimated, or left unquantified."
+              },
+              "benchmarkUse": {
+                "type": "string",
+                "enum": [
+                  "direct",
+                  "modeled",
+                  "attributionOnly",
+                  "contextOnly"
+                ],
+                "description": "How this evidence may be used in benchmark calculations."
+              },
+              "impact": {
+                "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "role",
+              "direction",
+              "measurement",
+              "benchmarkUse"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "safety"
+                ],
+                "description": "Safety dimension."
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "confirmedHarm",
+                  "exposure",
+                  "successfulDefense"
+                ],
+                "description": "Safety evidence channel informed by this item."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "How the evidence affects this dimension."
+              },
+              "measurement": {
+                "type": "string",
+                "enum": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Whether the impact was measured, estimated, or left unquantified."
+              },
+              "benchmarkUse": {
+                "type": "string",
+                "enum": [
+                  "direct",
+                  "modeled",
+                  "attributionOnly",
+                  "contextOnly"
+                ],
+                "description": "How this evidence may be used in benchmark calculations."
+              },
+              "impact": {
+                "$ref": "#/components/schemas/SessionAssessmentEvidenceImpact"
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "role",
+              "direction",
+              "measurement",
+              "benchmarkUse"
+            ]
+          }
+        ]
+      },
+      "SessionAssessmentEvidenceImpact": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "taskOutcome"
+                ]
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "success",
+                  "failure"
+                ],
+                "description": "Observed task outcome."
+              },
+              "probability": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Estimated success probability when available."
+              }
+            },
+            "required": [
+              "kind",
+              "verdict"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "completion"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "usable",
+                  "terminalFailure"
+                ],
+                "description": "Whether the session delivered usable output."
+              }
+            },
+            "required": [
+              "kind",
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "incident"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "recovered",
+                  "unrecovered"
+                ],
+                "description": "Whether execution recovered after the incident."
+              },
+              "sameSubjectRecovered": {
+                "type": "boolean",
+                "description": "Whether the same operation or tool later succeeded."
+              }
+            },
+            "required": [
+              "kind",
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "spend"
+                ]
+              },
+              "observedMicrocents": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Observed spend in microcents."
+              },
+              "avoidableMicrocents": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Spend attributed as avoidable when measured."
+              }
+            },
+            "required": [
+              "kind",
+              "observedMicrocents"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "duration"
+                ]
+              },
+              "observedNs": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Observed duration in nanoseconds."
+              },
+              "avoidableNs": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Duration attributed as avoidable when measured."
+              }
+            },
+            "required": [
+              "kind",
+              "observedNs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "outcomeAssociation"
+                ]
+              },
+              "probabilityChange": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 1,
+                "description": "Modeled change in success probability."
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "safety"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "exposure",
+                  "successfulDefense",
+                  "confirmedHarm"
+                ],
+                "description": "Observed safety result."
+              },
+              "findingKind": {
+                "type": "string",
+                "description": "Machine-readable safety finding category."
+              }
+            },
+            "required": [
+              "kind",
+              "status",
+              "findingKind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "observation"
+                ]
+              },
+              "value": {
+                "type": "number",
+                "description": "Native numeric observation when available."
+              },
+              "unit": {
+                "type": "string",
+                "description": "Unit of the native observation when available."
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        ],
+        "description": "Native structured impact carried by this evidence."
+      },
+      "SessionAssessmentEvidenceAnchor": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "message"
+                ]
+              },
+              "traceId": {
+                "type": "string",
+                "description": "Trace containing the referenced message."
+              },
+              "messageIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Zero-based message position in the trace conversation."
+              },
+              "partIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Zero-based content-part position within the message."
+              },
+              "contentHash": {
+                "type": "string",
+                "description": "Stable hash used to recognize the referenced message content."
+              }
+            },
+            "required": [
+              "kind",
+              "traceId",
+              "messageIndex"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "span"
+                ]
+              },
+              "traceId": {
+                "type": "string",
+                "description": "Trace containing the referenced span."
+              },
+              "spanId": {
+                "type": "string",
+                "description": "Identifier of the referenced span."
+              }
+            },
+            "required": [
+              "kind",
+              "traceId",
+              "spanId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "toolCall"
+                ]
+              },
+              "traceId": {
+                "type": "string",
+                "description": "Trace containing the referenced tool call."
+              },
+              "toolCallId": {
+                "type": "string",
+                "description": "Provider or SDK identifier of the referenced tool call."
+              },
+              "toolName": {
+                "type": "string",
+                "description": "Name of the invoked tool when available."
+              },
+              "messageIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Message position containing the tool call."
+              }
+            },
+            "required": [
+              "kind",
+              "traceId",
+              "toolCallId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "memoryEvent"
+                ]
+              },
+              "memoryEventId": {
+                "type": "string",
+                "description": "Identifier of the referenced memory event."
+              }
+            },
+            "required": [
+              "kind",
+              "memoryEventId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "score"
+                ]
+              },
+              "scoreId": {
+                "type": "string",
+                "description": "Identifier of the referenced score."
+              }
+            },
+            "required": [
+              "kind",
+              "scoreId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "signal"
+                ]
+              },
+              "signalId": {
+                "type": "string",
+                "description": "Identifier of the referenced signal."
+              }
+            },
+            "required": [
+              "kind",
+              "signalId"
+            ]
+          }
+        ]
+      },
+      "SessionAssessmentEvidenceDestination": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "sessionMessage"
+                ]
+              },
+              "traceId": {
+                "type": "string",
+                "description": "Trace containing the destination message."
+              },
+              "messageIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Zero-based message position to open."
+              },
+              "partIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Zero-based content-part position to open."
+              }
+            },
+            "required": [
+              "kind",
+              "traceId",
+              "messageIndex"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "span"
+                ]
+              },
+              "traceId": {
+                "type": "string",
+                "description": "Trace containing the destination span."
+              },
+              "spanId": {
+                "type": "string",
+                "description": "Identifier of the destination span."
+              }
+            },
+            "required": [
+              "kind",
+              "traceId",
+              "spanId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "toolCall"
+                ]
+              },
+              "traceId": {
+                "type": "string",
+                "description": "Trace containing the destination tool call."
+              },
+              "toolCallId": {
+                "type": "string",
+                "description": "Identifier of the destination tool call."
+              }
+            },
+            "required": [
+              "kind",
+              "traceId",
+              "toolCallId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "memoryEvent"
+                ]
+              },
+              "memoryEventId": {
+                "type": "string",
+                "description": "Identifier of the destination memory event."
+              }
+            },
+            "required": [
+              "kind",
+              "memoryEventId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "score"
+                ]
+              },
+              "scoreId": {
+                "type": "string",
+                "description": "Identifier of the destination score."
+              }
+            },
+            "required": [
+              "kind",
+              "scoreId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "signal"
+                ]
+              },
+              "signalId": {
+                "type": "string",
+                "description": "Identifier of the destination signal."
+              }
+            },
+            "required": [
+              "kind",
+              "signalId"
+            ]
+          }
+        ]
+      },
+      "SessionAssessmentDimensionSummary": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "outcome"
+                ],
+                "description": "Outcome dimension."
+              },
+              "evidenceCounts": {
+                "type": "object",
+                "properties": {
+                  "positive": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of positive evidence effects."
+                  },
+                  "negative": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of negative evidence effects."
+                  },
+                  "context": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of contextual evidence effects."
+                  }
+                },
+                "required": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "Evidence counts grouped by direction."
+              },
+              "measurementCounts": {
+                "type": "object",
+                "properties": {
+                  "observed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of directly observed effects."
+                  },
+                  "estimated": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of estimated effects."
+                  },
+                  "notMeasured": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of effects without a numeric measurement."
+                  }
+                },
+                "required": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Evidence counts grouped by measurement state."
+              },
+              "coverage": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "partial",
+                  "notExamined"
+                ],
+                "description": "Reader coverage for this dimension."
+              },
+              "taskOutcome": {
+                "type": "object",
+                "properties": {
+                  "verdict": {
+                    "type": "string",
+                    "enum": [
+                      "success",
+                      "failure"
+                    ],
+                    "description": "Observed task verdict when available."
+                  },
+                  "probability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Estimated success probability when available."
+                  }
+                },
+                "description": "Resolved task outcome when available."
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "evidenceCounts",
+              "measurementCounts",
+              "coverage"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "reliability"
+                ],
+                "description": "Reliability dimension."
+              },
+              "evidenceCounts": {
+                "type": "object",
+                "properties": {
+                  "positive": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of positive evidence effects."
+                  },
+                  "negative": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of negative evidence effects."
+                  },
+                  "context": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of contextual evidence effects."
+                  }
+                },
+                "required": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "Evidence counts grouped by direction."
+              },
+              "measurementCounts": {
+                "type": "object",
+                "properties": {
+                  "observed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of directly observed effects."
+                  },
+                  "estimated": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of estimated effects."
+                  },
+                  "notMeasured": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of effects without a numeric measurement."
+                  }
+                },
+                "required": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Evidence counts grouped by measurement state."
+              },
+              "coverage": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "partial",
+                  "notExamined"
+                ],
+                "description": "Reader coverage for this dimension."
+              },
+              "completion": {
+                "type": "string",
+                "enum": [
+                  "usable",
+                  "terminalFailure",
+                  "undetermined"
+                ],
+                "description": "Resolved completion status."
+              },
+              "recoveredIncidentCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of recovered operational incidents."
+              },
+              "unrecoveredIncidentCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of unrecovered operational incidents."
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "evidenceCounts",
+              "measurementCounts",
+              "coverage",
+              "completion",
+              "recoveredIncidentCount",
+              "unrecoveredIncidentCount"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "cost"
+                ],
+                "description": "Cost dimension."
+              },
+              "evidenceCounts": {
+                "type": "object",
+                "properties": {
+                  "positive": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of positive evidence effects."
+                  },
+                  "negative": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of negative evidence effects."
+                  },
+                  "context": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of contextual evidence effects."
+                  }
+                },
+                "required": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "Evidence counts grouped by direction."
+              },
+              "measurementCounts": {
+                "type": "object",
+                "properties": {
+                  "observed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of directly observed effects."
+                  },
+                  "estimated": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of estimated effects."
+                  },
+                  "notMeasured": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of effects without a numeric measurement."
+                  }
+                },
+                "required": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Evidence counts grouped by measurement state."
+              },
+              "coverage": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "partial",
+                  "notExamined"
+                ],
+                "description": "Reader coverage for this dimension."
+              },
+              "observedMicrocents": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Total observed session spend in microcents."
+              },
+              "measuredAvoidableMicrocents": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Directly measured avoidable spend."
+              },
+              "estimatedAvoidableMicrocents": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Estimated avoidable spend."
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "evidenceCounts",
+              "measurementCounts",
+              "coverage"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "speed"
+                ],
+                "description": "Speed dimension."
+              },
+              "evidenceCounts": {
+                "type": "object",
+                "properties": {
+                  "positive": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of positive evidence effects."
+                  },
+                  "negative": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of negative evidence effects."
+                  },
+                  "context": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of contextual evidence effects."
+                  }
+                },
+                "required": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "Evidence counts grouped by direction."
+              },
+              "measurementCounts": {
+                "type": "object",
+                "properties": {
+                  "observed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of directly observed effects."
+                  },
+                  "estimated": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of estimated effects."
+                  },
+                  "notMeasured": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of effects without a numeric measurement."
+                  }
+                },
+                "required": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Evidence counts grouped by measurement state."
+              },
+              "coverage": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "partial",
+                  "notExamined"
+                ],
+                "description": "Reader coverage for this dimension."
+              },
+              "observedCriticalPathNs": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Observed critical-path duration in nanoseconds."
+              },
+              "measuredAvoidableNs": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Directly measured avoidable duration."
+              },
+              "estimatedAvoidableNs": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Estimated avoidable duration."
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "evidenceCounts",
+              "measurementCounts",
+              "coverage"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scoreDimension": {
+                "type": "string",
+                "enum": [
+                  "safety"
+                ],
+                "description": "Safety dimension."
+              },
+              "evidenceCounts": {
+                "type": "object",
+                "properties": {
+                  "positive": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of positive evidence effects."
+                  },
+                  "negative": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of negative evidence effects."
+                  },
+                  "context": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of contextual evidence effects."
+                  }
+                },
+                "required": [
+                  "positive",
+                  "negative",
+                  "context"
+                ],
+                "description": "Evidence counts grouped by direction."
+              },
+              "measurementCounts": {
+                "type": "object",
+                "properties": {
+                  "observed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of directly observed effects."
+                  },
+                  "estimated": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of estimated effects."
+                  },
+                  "notMeasured": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of effects without a numeric measurement."
+                  }
+                },
+                "required": [
+                  "observed",
+                  "estimated",
+                  "notMeasured"
+                ],
+                "description": "Evidence counts grouped by measurement state."
+              },
+              "coverage": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "partial",
+                  "notExamined"
+                ],
+                "description": "Reader coverage for this dimension."
+              },
+              "exposureCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of safety exposures."
+              },
+              "successfulDefenseCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of successful safety defenses."
+              },
+              "confirmedHarmCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of confirmed harmful outcomes."
+              }
+            },
+            "required": [
+              "scoreDimension",
+              "evidenceCounts",
+              "measurementCounts",
+              "coverage",
+              "exposureCount",
+              "successfulDefenseCount",
+              "confirmedHarmCount"
+            ]
+          }
+        ]
+      },
+      "SessionAssessmentReaderCoverage": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "readerId": {
+                "type": "string",
+                "description": "Stable identifier of the evidence reader."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable reader name."
+              },
+              "scoreDimensions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "outcome",
+                    "reliability",
+                    "cost",
+                    "speed",
+                    "safety"
+                  ],
+                  "description": "Agent Score dimension informed by this evidence."
+                },
+                "description": "Dimensions the reader can inform."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "examined"
+                ]
+              },
+              "findingCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of findings produced by the reader."
+              },
+              "selection": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "deterministic",
+                      "hinted",
+                      "uniform-sample",
+                      "ordinary-sample"
+                    ],
+                    "description": "Selection method."
+                  },
+                  "inclusionProbability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Probability that this session was selected."
+                  }
+                },
+                "required": [
+                  "method",
+                  "inclusionProbability"
+                ],
+                "description": "Sampling details when this reader is not deterministic."
+              }
+            },
+            "required": [
+              "readerId",
+              "label",
+              "scoreDimensions",
+              "status",
+              "findingCount"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "readerId": {
+                "type": "string",
+                "description": "Stable identifier of the evidence reader."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable reader name."
+              },
+              "scoreDimensions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "outcome",
+                    "reliability",
+                    "cost",
+                    "speed",
+                    "safety"
+                  ],
+                  "description": "Agent Score dimension informed by this evidence."
+                },
+                "description": "Dimensions the reader can inform."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "partiallyExamined"
+                ]
+              },
+              "findingCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of findings produced by readable inputs."
+              },
+              "readableCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of inputs the reader could examine."
+              },
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total candidate inputs for the reader."
+              },
+              "limitation": {
+                "type": "string",
+                "enum": [
+                  "skipped",
+                  "notSelected",
+                  "rateLimited",
+                  "executionFailed",
+                  "pending",
+                  "missingTelemetry",
+                  "unmappedTelemetry",
+                  "missingPricing",
+                  "criticalPathUnavailable"
+                ],
+                "description": "Reason the reader could not completely examine the session."
+              },
+              "selection": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "deterministic",
+                      "hinted",
+                      "uniform-sample",
+                      "ordinary-sample"
+                    ],
+                    "description": "Selection method."
+                  },
+                  "inclusionProbability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Probability that this session was selected."
+                  }
+                },
+                "required": [
+                  "method",
+                  "inclusionProbability"
+                ],
+                "description": "Sampling details when this reader is not deterministic."
+              }
+            },
+            "required": [
+              "readerId",
+              "label",
+              "scoreDimensions",
+              "status",
+              "findingCount",
+              "readableCount",
+              "totalCount",
+              "limitation"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "readerId": {
+                "type": "string",
+                "description": "Stable identifier of the evidence reader."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable reader name."
+              },
+              "scoreDimensions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "outcome",
+                    "reliability",
+                    "cost",
+                    "speed",
+                    "safety"
+                  ],
+                  "description": "Agent Score dimension informed by this evidence."
+                },
+                "description": "Dimensions the reader can inform."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "notExamined"
+                ]
+              },
+              "limitation": {
+                "type": "string",
+                "enum": [
+                  "skipped",
+                  "notSelected",
+                  "rateLimited",
+                  "executionFailed",
+                  "pending",
+                  "missingTelemetry",
+                  "unmappedTelemetry",
+                  "missingPricing",
+                  "criticalPathUnavailable"
+                ],
+                "description": "Reason the reader could not completely examine the session."
+              },
+              "selection": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "deterministic",
+                      "hinted",
+                      "uniform-sample",
+                      "ordinary-sample"
+                    ],
+                    "description": "Selection method."
+                  },
+                  "inclusionProbability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Probability that this session was selected."
+                  }
+                },
+                "required": [
+                  "method",
+                  "inclusionProbability"
+                ],
+                "description": "Sampling details when this reader is not deterministic."
+              }
+            },
+            "required": [
+              "readerId",
+              "label",
+              "scoreDimensions",
+              "status",
+              "limitation"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "readerId": {
+                "type": "string",
+                "description": "Stable identifier of the evidence reader."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable reader name."
+              },
+              "scoreDimensions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "outcome",
+                    "reliability",
+                    "cost",
+                    "speed",
+                    "safety"
+                  ],
+                  "description": "Agent Score dimension informed by this evidence."
+                },
+                "description": "Dimensions the reader can inform."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "notApplicable"
+                ]
+              }
+            },
+            "required": [
+              "readerId",
+              "label",
+              "scoreDimensions",
+              "status"
+            ]
+          }
+        ]
+      },
       "SessionSignals": {
         "type": "object",
         "properties": {
@@ -23791,6 +25533,98 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SessionDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/sessions/{sessionId}/assessment": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "x-fern-sdk-group-name": "sessions",
+        "x-fern-sdk-method-name": "getAssessment",
+        "summary": "Get session assessment",
+        "description": "Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSessionAssessment",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+            },
+            "required": true,
+            "description": "Session identifier lifted from instrumentation. Up to 128 characters.",
+            "name": "sessionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor returned by a previous assessment page. Omit for the first page."
+            },
+            "required": false,
+            "description": "Opaque cursor returned by a previous assessment page. Omit for the first page.",
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session assessment page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionAssessment"
                 }
               }
             }

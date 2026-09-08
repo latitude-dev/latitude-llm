@@ -49,33 +49,33 @@ const dyingLayers = (flaggerRepo?: ReturnType<typeof createFakeFlaggerRepository
 }
 
 describe("classifySessionFlaggerUseCase gating", () => {
-  it("returns { matched: false } for an unknown slug without touching repositories or AI", async () => {
+  it("returns not applicable for an unknown slug without touching repositories or AI", async () => {
     const result = await Effect.runPromise(
       classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "not-a-real-flagger" }).pipe(
         Effect.provide(dyingLayers()),
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, outcome: "notApplicable" })
   })
 
-  it("returns { matched: false } for the legacy resource-outliers slug without touching repositories or AI", async () => {
+  it("returns not applicable for the legacy resource-outliers slug without touching repositories or AI", async () => {
     const result = await Effect.runPromise(
       classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "resource-outliers" }).pipe(Effect.provide(dyingLayers())),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, outcome: "notApplicable" })
   })
 
-  it("returns { matched: false } for a deterministic-only slug without touching repositories or AI", async () => {
+  it("returns not applicable for a deterministic-only slug without touching repositories or AI", async () => {
     const result = await Effect.runPromise(
       classifySessionFlaggerUseCase({ ...INPUT, flaggerSlug: "empty-response" }).pipe(Effect.provide(dyingLayers())),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, outcome: "notApplicable" })
   })
 
-  it("returns { matched: false } when the flagger is disabled, without loading the session or calling AI", async () => {
+  it("returns not applicable when the flagger is disabled, without loading the session or calling AI", async () => {
     const { repository: disabledFlaggerRepo } = createFakeFlaggerRepository([], {
       findByProjectAndSlug: () =>
         Effect.succeed({
@@ -94,13 +94,13 @@ describe("classifySessionFlaggerUseCase gating", () => {
       classifySessionFlaggerUseCase(INPUT).pipe(Effect.provide(dyingLayers(disabledFlaggerRepo))),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, outcome: "notApplicable" })
   })
 
   it.each([
     { tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify], label: "flagger.classify" },
     { tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes], label: "taxonomy:propose-themes" },
-  ])("returns { matched: false } for frustration on a $label session without calling AI", async ({ tags }) => {
+  ])("returns not applicable for frustration on a $label session without calling AI", async ({ tags }) => {
     const session = makeSessionDetail(
       [
         user("I just honestly don't understand why you couldn't get this done for me — nested sample wording"),
@@ -151,6 +151,6 @@ describe("classifySessionFlaggerUseCase gating", () => {
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, outcome: "notApplicable" })
   })
 })

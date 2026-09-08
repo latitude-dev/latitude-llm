@@ -88,6 +88,17 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     listBySourceId: () => Effect.succeed(EMPTY_PAGE),
     listByTraceId: () => Effect.succeed(EMPTY_PAGE),
     listByTraceIds: () => Effect.succeed(EMPTY_PAGE),
+    listBySessionsAndTraces: ({ organizationId, projectId, sessionIds, traceIds, createdAtTo }) =>
+      Effect.succeed(
+        [...scores.values()].filter(
+          (score) =>
+            score.organizationId === organizationId &&
+            score.projectId === projectId &&
+            score.createdAt <= createdAtTo &&
+            ((score.sessionId !== null && sessionIds.includes(score.sessionId)) ||
+              (score.traceId !== null && traceIds.includes(score.traceId))),
+        ),
+      ),
     countAnnotationsByTraceIds: () => Effect.succeed([]),
     listBySessionId: () => Effect.succeed(EMPTY_PAGE),
     listBySpanId: () => Effect.succeed(EMPTY_PAGE),

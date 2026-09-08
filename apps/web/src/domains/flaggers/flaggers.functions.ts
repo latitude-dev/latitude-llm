@@ -1,22 +1,27 @@
 import {
   configureProjectFlaggersForOnboardingUseCase,
+  emptyFlaggerCoverageRow,
   FLAGGER_DEFAULT_SAMPLING,
   FLAGGER_DISPLAY,
   FLAGGER_STRATEGY_SLUGS,
+  FlaggerCoverageRepository,
+  type FlaggerCoverageRow,
   FlaggerRepository,
   type FlaggerSlug,
   updateFlaggerUseCase,
 } from "@domain/flaggers"
 import { ProjectId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
+import { FlaggerCoverageRepositoryLive } from "@platform/db-clickhouse"
 import { FlaggerRepositoryLive, OutboxEventWriterLive } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import { requireScopedSession, resolveOrgScope } from "../../server/resolve-org-scope.ts"
+import { withScopedClickHouse } from "../../server/scoped-clickhouse.ts"
 import { withScopedPostgres } from "../../server/scoped-postgres.ts"
 
 const humanizeSlug = (slug: string) => slug.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
@@ -51,6 +56,27 @@ const toFlaggerRecord = (flagger: {
 }
 
 export type FlaggerRecord = ReturnType<typeof toFlaggerRecord>
+
+const MAX_FLAGGER_COVERAGE_WINDOW_MS = 28 * 24 * 60 * 60 * 1000
+
+const flaggerCoverageInputSchema = z
+  .object({
+    projectId: z.string(),
+    fromIso: z.string().datetime(),
+    toIso: z.string().datetime(),
+  })
+  .refine(({ fromIso, toIso }) => Date.parse(fromIso) < Date.parse(toIso), {
+    message: "Coverage window must end after it starts",
+  })
+  .refine(({ fromIso, toIso }) => Date.parse(toIso) - Date.parse(fromIso) <= MAX_FLAGGER_COVERAGE_WINDOW_MS, {
+    message: "Coverage window cannot exceed 28 days",
+  })
+
+type FlaggerCoverageRecord = {
+  readonly fromIso: string
+  readonly toIso: string
+  readonly rows: readonly FlaggerCoverageRow[]
+}
 
 // A registered strategy a project has no stored row for yet: shown disabled in
 // settings without writing to the DB. The placeholder id is the slug; the real
@@ -95,6 +121,34 @@ export const listAvailableFlaggers = createServerFn({ method: "GET" }).handler(
     return FLAGGER_STRATEGY_SLUGS.map(toAvailableFlaggerRecord)
   },
 )
+
+export const getProjectFlaggerCoverage = createServerFn({ method: "GET" })
+  .inputValidator(flaggerCoverageInputSchema)
+  .handler(async ({ data, context }): Promise<FlaggerCoverageRecord> => {
+    const orgId = await resolveOrgScope(context)
+    const projectId = ProjectId(data.projectId)
+    const report = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* FlaggerCoverageRepository
+        return yield* repository.getProjectCoverage({
+          organizationId: orgId,
+          projectId,
+          from: new Date(data.fromIso),
+          to: new Date(data.toIso),
+        })
+      }).pipe(withScopedClickHouse(FlaggerCoverageRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+    const rowsBySlug = new Map(report.rows.map((row) => [row.flaggerSlug, row]))
+    return {
+      fromIso: report.from.toISOString(),
+      toIso: report.to.toISOString(),
+      rows: FLAGGER_STRATEGY_SLUGS.map(
+        (flaggerSlug) =>
+          rowsBySlug.get(flaggerSlug) ??
+          emptyFlaggerCoverageRow({ flaggerSlug, eligibleSessions: report.eligibleSessions }),
+      ),
+    }
+  })
 
 export const listFlaggersByProject = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))

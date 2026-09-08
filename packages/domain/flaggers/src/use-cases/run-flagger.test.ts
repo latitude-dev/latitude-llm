@@ -435,7 +435,7 @@ describe("runFlaggerUseCase", () => {
       }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(0)
   })
 
@@ -609,7 +609,7 @@ describe("runFlaggerUseCase", () => {
       }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     const contentKey = buildContentKey(INPUT.organizationId, longSystemPrompt)
     const cachedWrite = cache.writes.find((write) => write.key === contentKey)
     expect(cachedWrite?.value).toContain("[redacted]")
@@ -698,7 +698,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(1)
   })
 
@@ -1141,7 +1141,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(0)
   })
 
@@ -1431,7 +1431,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(0)
   })
 
@@ -1533,7 +1533,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
   })
 
   it("drops matched annotations when the adversarial reviewer rejects the feedback", async () => {
@@ -1632,7 +1632,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0].maxTokens).toBe(FLAGGER_DEFAULT_CLASSIFIER_MODEL.maxTokens)
   })
@@ -1697,7 +1697,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(1)
   })
 
@@ -1743,7 +1743,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
   })
 
   it("recovers to matched=false when the SDK reports no output generated", async () => {
@@ -1791,7 +1791,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
   })
 
   it("recovers to matched=false when the trace evidence exceeds the model's context window", async () => {
@@ -1841,7 +1841,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
   })
 
   it("drops matched annotations when the reviewer call fails because the evidence is too long for the model", async () => {
@@ -1900,7 +1900,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(2)
   })
 
@@ -1949,7 +1949,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(1)
   })
 
@@ -2007,7 +2007,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(result).toEqual({ matched: false })
+    expect(result).toEqual({ matched: false, classificationOutcome: "indeterminate" })
     expect(calls.generate).toHaveLength(2)
   })
 

@@ -440,6 +440,9 @@ importers:
       '@domain/agent-dispatch':
         specifier: workspace:*
         version: link:../../packages/domain/agent-dispatch
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../../packages/domain/agent-score
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -1132,6 +1135,37 @@ importers:
       '@types/mustache':
         specifier: 'catalog:'
         version: 4.2.6
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.4.1)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.16(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/domain/agent-score:
+    dependencies:
+      '@domain/conversation-intelligence':
+        specifier: workspace:*
+        version: link:../conversation-intelligence
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../flaggers
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@domain/signals':
+        specifier: workspace:*
+        version: link:../signals
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
       vitest:
         specifier: 'catalog:'
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@26.4.1)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.16(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
@@ -2200,6 +2234,9 @@ importers:
       '@domain/annotations':
         specifier: workspace:*
         version: link:../domain/annotations
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../domain/agent-score
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../domain/api-keys
@@ -2583,6 +2620,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../domain/admin
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../../domain/agent-score
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
@@ -2598,6 +2638,9 @@ importers:
       '@domain/experiments':
         specifier: workspace:*
         version: link:../../domain/experiments
+      '@domain/flaggers':
+        specifier: workspace:*
+        version: link:../../domain/flaggers
       '@domain/memories':
         specifier: workspace:*
         version: link:../../domain/memories
@@ -2656,6 +2699,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../domain/admin
+      '@domain/agent-score':
+        specifier: workspace:*
+        version: link:../../domain/agent-score
       '@domain/agent-dispatch':
         specifier: workspace:*
         version: link:../../domain/agent-dispatch

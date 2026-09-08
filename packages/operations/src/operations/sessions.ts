@@ -1,3 +1,4 @@
+import { getSessionAssessment } from "@domain/agent-score"
 import { computeSessionMemoryDiffUseCase, computeSessionMemorySummaryUseCase } from "@domain/memories"
 import { ProjectRepository } from "@domain/projects"
 import {
@@ -15,9 +16,14 @@ import { expandTopicFilterSetUseCase } from "@domain/taxonomy"
 import { createRoute, z } from "@hono/zod-openapi"
 import { AIEmbedLive, withAi } from "@platform/ai"
 import {
+  FlaggerScreeningDecisionRepositoryLive,
   MemoryRepositoryLive,
   ScoreAnalyticsRepositoryLive,
+  SessionAnalysisRepositoryLive,
+  SessionAssessmentBulkTelemetrySourceLive,
+  SessionMomentLabelRepositoryLive,
   SessionRepositoryLive,
+  SessionSemanticMomentRepositoryLive,
   SpanRepositoryLive,
   TraceRepositoryLive,
   withClickHouse,
@@ -25,6 +31,7 @@ import {
 import {
   ProjectRepositoryLive,
   ScoreRepositoryLive,
+  SessionAssessmentBulkJudgmentSourceLive,
   SignalRepositoryLive,
   TaxonomyClusterRepositoryLive,
   withPostgres,
@@ -49,6 +56,11 @@ import {
   toSessionResponse,
 } from "../openapi/entities/session.ts"
 import { SessionAnalyticsResponseSchema, toSessionAnalyticsResponse } from "../openapi/entities/session-analytics.ts"
+import {
+  SessionAssessmentQuerySchema,
+  SessionAssessmentSchema,
+  toSessionAssessmentResponse,
+} from "../openapi/entities/session-assessment.ts"
 import {
   SessionSignalSchema,
   SessionSignalsSchema,
@@ -292,6 +304,70 @@ const getSession = sessionEndpoint({
     }).pipe(
       withPostgres(ProjectRepositoryLive, ctx.postgresClient, ctx.organization.id),
       withClickHouse(Layer.mergeAll(SessionRepositoryLive, SpanRepositoryLive), ctx.clickhouse, ctx.organization.id),
+      withTracing,
+    ),
+})
+
+const getSessionAssessmentOperation = sessionEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/{sessionId}/assessment",
+    name: "getSessionAssessment",
+    tags: ["Sessions"],
+    group: "sessions",
+    sdkMethod: "getAssessment",
+    summary: "Get session assessment",
+    description:
+      "Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.",
+    security: PROTECTED_SECURITY,
+    request: { params: SessionParamsSchema, query: SessionAssessmentQuerySchema },
+    responses: typedResponses({
+      status: 200,
+      schema: SessionAssessmentSchema,
+      description: "Session assessment page",
+    }),
+  }),
+  access: "read-only",
+  rateLimitTier: "medium",
+  execute: (input, ctx) =>
+    Effect.gen(function* () {
+      const projectRepo = yield* ProjectRepository
+      const project = yield* projectRepo.findBySlug(input.params.projectSlug)
+      const assessment = yield* getSessionAssessment({
+        organizationId: OrganizationId(ctx.organization.id as string),
+        projectId: ProjectId(project.id as string),
+        sessionId: SessionId(input.params.sessionId),
+        ...(input.query.cursor ? { cursor: input.query.cursor } : {}),
+      })
+
+      return { status: 200, body: toSessionAssessmentResponse(assessment) } as const
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          ProjectRepositoryLive,
+          SessionAssessmentBulkJudgmentSourceLive.pipe(
+            Layer.provideMerge(Layer.mergeAll(ScoreRepositoryLive, SignalRepositoryLive)),
+          ),
+        ),
+        ctx.postgresClient,
+        ctx.organization.id,
+      ),
+      withClickHouse(
+        SessionAssessmentBulkTelemetrySourceLive.pipe(
+          Layer.provideMerge(
+            Layer.mergeAll(
+              SessionRepositoryLive,
+              SpanRepositoryLive,
+              SessionAnalysisRepositoryLive,
+              SessionSemanticMomentRepositoryLive,
+              SessionMomentLabelRepositoryLive,
+              FlaggerScreeningDecisionRepositoryLive,
+            ),
+          ),
+        ),
+        ctx.clickhouse,
+        ctx.organization.id,
+      ),
       withTracing,
     ),
 })
@@ -599,6 +675,7 @@ export const sessionsModule: OperationModule = {
     listSessions,
     getSessionAnalytics,
     getSession,
+    getSessionAssessmentOperation,
     listSessionTraces,
     listSessionSignals,
     getSessionSignal,

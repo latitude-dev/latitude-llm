@@ -1,4 +1,4 @@
-import type { SessionHint } from "@domain/flaggers"
+import type { FlaggerScreeningSelection, SessionHint } from "@domain/flaggers"
 import { log, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
@@ -18,6 +18,7 @@ export interface FlaggerClassificationWorkflowInput {
   readonly flaggerSlug: string
   readonly reason: "hinted" | "sampled"
   readonly hints: readonly SessionHint[]
+  readonly screeningSelection?: FlaggerScreeningSelection | undefined
 }
 
 /**
@@ -33,6 +34,7 @@ export const flaggerClassificationWorkflow = async (input: FlaggerClassification
     sessionId: input.sessionId,
     flaggerSlug: input.flaggerSlug,
     hints: input.hints,
+    ...(input.screeningSelection ? { screeningSelection: input.screeningSelection } : {}),
   })
 
   const logContext = {
@@ -78,6 +80,7 @@ export const flaggerClassificationWorkflow = async (input: FlaggerClassification
     feedback: draft.feedback,
     traceCreatedAt: result.sessionStartedAt,
     contentHash: result.contentHash,
+    scoringArtifactVersion: result.scoringArtifactVersion,
     ...(draft.messageIndex !== undefined ? { messageIndex: draft.messageIndex } : {}),
     ...(result.flaggerTraceId !== undefined ? { flaggerTraceId: result.flaggerTraceId } : {}),
   })

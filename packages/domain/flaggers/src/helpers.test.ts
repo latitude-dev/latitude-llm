@@ -8,8 +8,8 @@ import {
 
 type TraceMessage = TraceDetail["allMessages"][number]
 
-function makeTrace(allMessages: TraceDetail["allMessages"]): Pick<TraceDetail, "allMessages"> {
-  return { allMessages }
+function makeTrace(allMessages: TraceDetail["allMessages"]): Pick<TraceDetail, "allMessages" | "outputMessages"> {
+  return { allMessages, outputMessages: allMessages }
 }
 
 function assistantToolCall(id: string, name = "get_weather", argumentsValue: unknown = { city: "BCN" }): TraceMessage {
@@ -27,7 +27,7 @@ function toolResponse(id: string, response: unknown): TraceMessage {
 }
 
 function makeAssistantTrace(allMessages: TraceDetail["allMessages"]): TraceDetail {
-  return { allMessages } as TraceDetail
+  return { allMessages, outputMessages: allMessages } as TraceDetail
 }
 
 function assistantText(content: string): TraceDetail["outputMessages"][number] {
@@ -443,17 +443,22 @@ describe("malformed message parts", () => {
   })
 
   it("detectEmptyResponseFlagger skips messages without iterable parts", () => {
+    const messages = [
+      { role: "user", parts: null } as unknown as TraceMessage,
+      { role: "assistant" } as unknown as TraceMessage,
+      assistantText("done"),
+    ]
     expect(() =>
-      detectEmptyResponseFlagger(
-        makeAssistantTrace([
-          { role: "user", parts: null } as unknown as TraceMessage,
-          { role: "assistant" } as unknown as TraceMessage,
-          assistantText("done"),
-        ]),
-      ),
+      detectEmptyResponseFlagger({ ...makeAssistantTrace(messages), outputMessages: messages }),
     ).not.toThrow()
-    expect(detectEmptyResponseFlagger(makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage]))).toEqual({
+    expect(
+      detectEmptyResponseFlagger({
+        ...makeAssistantTrace([{ role: "assistant" } as unknown as TraceMessage]),
+        outputMessages: [{ role: "assistant" } as unknown as TraceMessage],
+      }),
+    ).toEqual({
       matched: true,
+      findingKind: "blank",
       feedback: "Assistant response was empty or whitespace only",
       messageIndex: 0,
     })

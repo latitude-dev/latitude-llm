@@ -14,7 +14,7 @@ Every metric definition specifies:
 
 | Field | Meaning |
 | --- | --- |
-| ID | stable identifier used in evidence, filters, and cause rows |
+| ID | stable identifier used in evidence, deduplication, and cause rows |
 | dimensions | estimands the observation can inform |
 | evidence role | endpoint, outcome feature, resource evidence, or confirmed harm |
 | reader | telemetry and grouping used to produce the observation |
@@ -99,16 +99,22 @@ failed score can create or join a signal. A passed score never enters signal dis
 
 - Dimensions: Outcome, Reliability.
 - Evidence role: terminal task failure and terminal operational failure.
-- Reader: the `empty-response` flagger on the last assistant turn.
+- Reader: the shared deterministic output-content reader used by the `empty-response` flagger on the
+  last assistant turn.
 
-A turn containing a tool call or reasoning is production. Blank and whitespace-only final text are
-terminal no-output findings. Non-empty repeated-character output requires explicit schema,
-requested-output-contract, or semantic usability evidence that it could not satisfy the task. This
-keeps valid compact answers such as `111` out of the terminal path.
+A final assistant turn contains delivered output when it has non-whitespace response text or at
+least one tool call. Reasoning alone is not a delivered result. A turn with neither response text nor
+a tool call is a terminal no-output finding. Non-empty repeated-character output requires explicit
+schema, requested-output-contract, or semantic usability evidence that it could not satisfy the
+task. This keeps valid compact answers such as `111` out of the terminal path.
 
-Blank text and confirmed unusable patterns anchor Outcome success at zero and fail Reliability
-because no usable completion was delivered. An unconfirmed pattern is modeled Outcome evidence or
-diagnostic context; it is not a terminal failure.
+A malformed tool call still prevents a no-output finding because the assistant produced a tool call;
+the structural reader can independently classify that call as terminal when it prevented usable
+completion.
+
+Blank-only turns with no tool call and confirmed unusable patterns anchor Outcome success at zero
+and fail Reliability because no usable completion was delivered. An unconfirmed pattern is modeled
+Outcome evidence or diagnostic context; it is not a terminal failure.
 
 The flagger returns no match when no assistant message was captured. That case is unreadable rather
 than failed. [`flaggers.md`](flaggers.md#repeated-character-output-needs-usability-evidence) defines
@@ -128,6 +134,10 @@ Clean includes normal stops, caller-forced stops, tool-call continuations, and e
 Whether a refusal was correct belongs to Outcome signal evidence. Unreliable includes truncation,
 provider content filters, guardrail intervention, and malformed function calls.
 
+The classified value retains the raw and normalized reason plus a bounded kind. Length-related kinds
+carry `requiresOutputDamage: true`; other unreliable kinds carry `false`. Unmapped raw values remain
+visible rather than being guessed into a known category.
+
 Truncation requires two observations: an unreliable length-related finish reason and malformed or
 incomplete output from `output-schema-validation`. A deliberately short output limit can end with
 `length` while still returning a complete value. Content filters, guardrail interventions, and
@@ -139,6 +149,10 @@ Speed if the session recovered. Position is metadata on one metric, not a second
 
 Unmapped values lower coverage. A periodic fleet report keeps the classifier current.
 
+Span responses expose raw finish reasons beside their classifications. The same browser-safe span
+contract is used by trace and session span readers, so detail views show known and unmapped endpoint
+values consistently without persisting derived classifier columns.
+
 ## `spans.provider_error`
 
 - Dimensions: Reliability, Cost, Speed.
@@ -148,13 +162,33 @@ Unmapped values lower coverage. A periodic fleet report keeps the classifier cur
 Rate limiting, overload, service failure, and provider rejection qualify. Generic span error status
 does not, because SDKs disagree about whether handled exceptions set it.
 
-The reader pairs the error with later successful progress:
+The named classifier returns `rateLimit`, `overload`, `serviceFailure`, or `providerRejection` only
+from a recognized `error_type`. An absent type produces no provider-error observation. An unknown or
+generic type remains visible as `unmapped` and lowers reader coverage; status code alone cannot
+promote it.
 
-- no later successful generation or usable completion: terminal Reliability failure;
-- later success: retry spend and retry critical-path duration for Cost and Speed.
+The browser-safe session endpoint resolver orders the complete session span list by end time, start
+time, trace id, and span id. It assigns both the full chronology's `spanIndex` and the generation-only
+`generationIndex`, and marks only the last generation `final`. A generation counts as later progress
+only when it starts after the failed generation ended, so overlapping sibling calls cannot be
+mistaken for a retry. A successful generation has no error status, no error type, and no unreliable
+or unmapped finish reason.
 
-The finding carries `recovered`, the failed span index, the successful span index when present, cost,
-and critical-path duration. Recovery is factual metadata, not a score band.
+The reader pairs the error with that later successful progress and the shared usable-completion
+predicate:
+
+- no later successful generation or no usable completion: terminal Reliability failure;
+- later success plus usable completion: recovered retry evidence for Cost and Speed.
+
+The finding carries `recovered`, `sameSubjectRecovered`, the failed span index, successful span
+indices when present, exact stored cost, and elapsed duration derived from the retained span
+timestamps. The same-subject marker compares non-empty normalized provider names and remains a
+separate fact: a provider may recover even when the session never delivers a completion. Unmapped
+errors stay on the classified endpoint but do not become provider-error findings or prove a
+successful retry.
+
+This resolver is pure and runs from retained spans and the captured session output. It writes no
+provider-finding score, event, or other derived row. Recovery is factual metadata, not a score band.
 
 ## `spans.ttft`
 
@@ -193,7 +227,7 @@ This compares the same produced output rather than rewarding short answers.
 
 - Dimensions: Reliability, Cost, Speed.
 - Evidence role: terminal endpoint when unrecovered; resource evidence when recovered.
-- Reader: error findings from `tool-call-errors`.
+- Reader: the shared deterministic error-finding reader used by `tool-call-errors`.
 
 The flagger pairs tool calls with responses and excludes HTTP statuses the caller declared expected.
 A later successful call or other successful progress can recover the session even when it used a
@@ -210,7 +244,8 @@ completed; the tool-specific marker tells the user which integration needs work.
 
 - Dimensions: Reliability, Cost, Speed.
 - Evidence role: terminal endpoint only when completion failed; otherwise resource evidence.
-- Reader: malformed, duplicate-id, and unknown-id findings from `tool-call-errors`.
+- Reader: malformed, duplicate-id, and unknown-id findings from the shared deterministic tool reader
+  used by `tool-call-errors`.
 
 A call with a missing id or name, duplicate call id, or response referencing no known call qualifies.
 A tool absent from captured definitions does not. Missing definitions usually indicate incomplete

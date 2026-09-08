@@ -1,6 +1,7 @@
 import { NotFoundError, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { Effect } from "effect"
+import { FLAGGER_SCORING_ARTIFACT_VERSION } from "../constants.ts"
 import {
   buildFlaggerSessionContext,
   computeFlaggerAnchorContentHash,
@@ -22,7 +23,10 @@ export interface ClassifySessionFlaggerInput {
 }
 
 export type ClassifySessionFlaggerResult =
-  | { readonly matched: false }
+  | {
+      readonly matched: false
+      readonly outcome: "unmatched" | "indeterminate" | "notApplicable"
+    }
   | {
       readonly matched: true
       readonly feedback?: string | undefined
@@ -33,6 +37,7 @@ export type ClassifySessionFlaggerResult =
       readonly latestTraceId: string
       readonly sessionStartedAt: string
       readonly simulationId: string | null
+      readonly scoringArtifactVersion: string
     }
 
 // Fails NotFoundError when the session is missing or has no traces: the scores
@@ -86,7 +91,7 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
 
   const strategy = getFlaggerStrategy(input.flaggerSlug)
   if (!strategy || !isLlmCapableStrategy(strategy)) {
-    return { matched: false } satisfies ClassifySessionFlaggerResult
+    return { matched: false, outcome: "notApplicable" } satisfies ClassifySessionFlaggerResult
   }
 
   const flaggerRepo = yield* FlaggerRepository
@@ -95,7 +100,7 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     slug: input.flaggerSlug as FlaggerSlug,
   })
   if (!flagger || !flagger.enabled) {
-    return { matched: false } satisfies ClassifySessionFlaggerResult
+    return { matched: false, outcome: "notApplicable" } satisfies ClassifySessionFlaggerResult
   }
 
   const context: FlaggerSessionContext | null = yield* loadFlaggerSessionContextUseCase(input).pipe(
@@ -104,15 +109,17 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     ),
   )
   if (context === null) {
-    return { matched: false } satisfies ClassifySessionFlaggerResult
+    return { matched: false, outcome: "indeterminate" } satisfies ClassifySessionFlaggerResult
   }
 
-  if (
-    isUserCentricReflagInapplicable(context.conversation.tags, strategy.classifiesAssistantResponseOnly) ||
-    !strategy.hasRequiredContext(context.conversation)
-  ) {
+  if (isUserCentricReflagInapplicable(context.conversation.tags, strategy.classifiesAssistantResponseOnly)) {
+    yield* Effect.annotateCurrentSpan("flagger.skipped", "not-applicable")
+    return { matched: false, outcome: "notApplicable" } satisfies ClassifySessionFlaggerResult
+  }
+
+  if (!strategy.hasRequiredContext(context.conversation)) {
     yield* Effect.annotateCurrentSpan("flagger.skipped", "missing-context")
-    return { matched: false } satisfies ClassifySessionFlaggerResult
+    return { matched: false, outcome: "indeterminate" } satisfies ClassifySessionFlaggerResult
   }
 
   const result = yield* classifyConversationForFlaggerUseCase({
@@ -126,7 +133,10 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
   })
 
   if (!result.matched) {
-    return { matched: false } satisfies ClassifySessionFlaggerResult
+    return {
+      matched: false,
+      outcome: result.classificationOutcome ?? "unmatched",
+    } satisfies ClassifySessionFlaggerResult
   }
 
   const contentHash = yield* computeFlaggerAnchorContentHash(context.conversation, result.messageIndex)
@@ -141,5 +151,6 @@ export const classifySessionFlaggerUseCase = Effect.fn("flaggers.classifySession
     latestTraceId: context.latestTraceId,
     sessionStartedAt: session.startTime.toISOString(),
     simulationId: session.simulationId === "" ? null : session.simulationId,
+    scoringArtifactVersion: FLAGGER_SCORING_ARTIFACT_VERSION,
   } satisfies ClassifySessionFlaggerResult
 })

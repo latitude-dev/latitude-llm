@@ -83,9 +83,27 @@ trace-end (90s debounce) ─► session-end (5-min session debounce)
 
 The activity logs one summary line per pass (decision counts, fired hint kinds, started classifications) — the hinted-vs-sampled match-rate comparison is readable off plain logs; there is no dedicated analytics pipeline.
 
+### Screening decision history
+
+Every screening path is represented by an append-only row in ClickHouse. `flagger_screening_decisions` records the organization, project, session generation, flagger, stable decision id, screening artifact version, attempt, revision, selection path, inclusion probability, hint kinds, terminal outcome, and source retention period. The decision id is stable for one organization × project × session × flagger × analysis hash, so retries and terminal updates append revisions instead of mutating earlier evidence.
+
+The table keeps source data for the session retention period plus the standard 30-day deletion buffer. Readers must scope queries by organization and project, collapse revisions for each decision, and then select the newest analysis generation for each session × flagger. A newer pending or failed generation remains authoritative; readers must not fall back to a successful older generation.
+
+Repository reads are cutoff-aware and perform those steps in that order. A decision revision is ordered by version, then attempt, then timestamp. An analysis generation is ordered by the earliest row for its decision, not its latest terminal update, so a slow result from an older generation cannot displace a newer pending generation.
+
+Public coverage deliberately hides internal policy subreasons: disabled flaggers, suppressor decisions, unprovisioned flaggers, and missing required context all become `skipped`. Sampling losses are `notSelected`; rate-limit rejection is `rateLimited`; a terminal error is `executionFailed`; an initial selection without a terminal revision is `pending`; and no compatible decision is `missingTelemetry`. Only a selected decision with a non-error terminal outcome is `examined`.
+
+`FlaggerCoverageRepository` provides the organization- and project-scoped window aggregate used by Settings. The eligible base is settled, non-simulation sessions with LLM activity, using the same five-minute session-end debounce as screening. `examinedSessions` includes selected terminal non-error decisions; `readableSessions` additionally requires a positive inclusion probability and excludes policy skips and rate limits. Missing decisions and unknown probabilities stay visible and never count as readable.
+
+Flagger Settings keeps configuration as the primary task and presents coverage as secondary feedback inside each enabled flagger row. The collapsed state reports how many eligible sessions were examined over the fixed 28-day window; detailed selection paths, unavailable observations, readable evidence, findings, and sampling-data completeness are progressively disclosed. Normal activity stays visually muted, while concrete operational limits such as rate limiting receive warning treatment. A positive `matched` or `failure` decision contributes to the finding count. `calibrationReadyFindings` is the subset with usable selection evidence; it reports readiness, not a score or confidence estimate. Detailed deterministic sub-kinds remain dynamically calculated source facts and are not persisted by this aggregate.
+
+The screening activity writes version 1 for every per-flagger selection before it returns classification requests to the workflow. Deterministic matches and misses are already terminal in that row. A model classification activity appends version 2 with `matched`, `unmatched`, or `error`, reusing the decision id and every selection field from version 1. These writes happen inside the existing activities, so the workflow history does not gain a new activity command.
+
 ### Sampling
 
 Deterministic hash, not RNG (`@domain/shared/deterministic-sampling`): stable hash of `[org, project, slug, sessionId, analysisHash]` compared against the sampling %. Each session **generation** re-rolls once; re-published jobs for the same generation decide identically.
+
+The activity attempt is recorded but is not part of the sampling or decision-id key. A screening retry therefore appends the same selection and inclusion probability with a higher attempt. Classification retries receive that selection as workflow input and append their outcome with the classifier activity's current attempt; they never sample again.
 
 ### Rate limiting
 

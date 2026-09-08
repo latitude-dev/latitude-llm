@@ -1,5 +1,6 @@
 import type {
   NotFoundError,
+  OrganizationId,
   ProjectId,
   RepositoryError,
   ScoreId,
@@ -123,6 +124,13 @@ export interface ScoreRepositoryShape {
     readonly signalId?: SignalId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
+  listBySessionsAndTraces(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+    readonly traceIds: readonly TraceId[]
+    readonly createdAtTo: Date
+  }): Effect.Effect<readonly Score[], RepositoryError, SqlClient>
   /** Per-trace +/- score counts. Omit `source` for all sources; pass `"annotation"` for the public API fields. Signal-less absent evaluation runs are excluded from the negative count. */
   countAnnotationsByTraceIds(input: {
     readonly projectId: ProjectId

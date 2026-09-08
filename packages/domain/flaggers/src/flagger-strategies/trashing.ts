@@ -1,4 +1,5 @@
 import type { FlaggerConversation } from "../conversation.ts"
+import { buildMessageFlaggerFindingRead, type DeterministicFlaggerMatch } from "../helpers.ts"
 import { isMessagePart, iterMessageParts } from "./shared.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
@@ -233,6 +234,24 @@ const longestConsecutiveSignatureRun = (
   return { count: bestCount, messageIndex: bestMessageIndex }
 }
 
+const detectIdenticalCallLoop = (
+  conversation: FlaggerConversation,
+): DeterministicFlaggerMatch<"identicalCallLoop"> & { readonly occurrenceCount?: number | undefined } => {
+  const entries = extractToolCallSequence(conversation)
+  if (entries.length < MIN_TOOL_CALLS_FOR_DETECTION) return { matched: false }
+
+  const signatureRun = longestConsecutiveSignatureRun(entries)
+  if (signatureRun.count < MATCHED_IDENTICAL_CALL_THRESHOLD) return { matched: false }
+
+  return {
+    matched: true,
+    findingKind: "identicalCallLoop",
+    feedback: `Thrashing: identical tool+args invocation repeated ${signatureRun.count} times`,
+    messageIndex: signatureRun.messageIndex,
+    occurrenceCount: signatureRun.count,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Thrashing Strategy implementation
 // ---------------------------------------------------------------------------
@@ -252,24 +271,33 @@ export const trashingStrategy: FlaggerStrategy = {
   },
 
   detectDeterministically(conversation: FlaggerConversation): DetectionResult {
-    const entries = extractToolCallSequence(conversation)
-    if (entries.length < MIN_TOOL_CALLS_FOR_DETECTION) {
-      return { kind: "unmatched" }
+    const result = detectIdenticalCallLoop(conversation)
+    return result.matched
+      ? { kind: "matched", feedback: result.feedback, messageIndex: result.messageIndex }
+      : { kind: "unmatched" }
+  },
+
+  readDeterministically({ scope, conversation }) {
+    const result = detectIdenticalCallLoop(conversation)
+    if (!result.matched) return buildMessageFlaggerFindingRead({ scope, conversation, findings: [] })
+    if (result.messageIndex === undefined || result.occurrenceCount === undefined) {
+      throw new Error("Thrashing finding has no anchor")
     }
-
-    const signatureRun = longestConsecutiveSignatureRun(entries)
-
-    if (signatureRun.count >= MATCHED_IDENTICAL_CALL_THRESHOLD) {
-      return {
-        kind: "matched",
-        feedback: `Thrashing: identical tool+args invocation repeated ${signatureRun.count} times`,
-        messageIndex: signatureRun.messageIndex,
-      }
-    }
-
-    // Dominance-shaped suspicion (one tool ≥60% of ≥5 calls) is the
-    // `tool:loop` hint's job (findDominantToolUsage), not this detector's.
-    return { kind: "unmatched" }
+    return buildMessageFlaggerFindingRead({
+      scope,
+      conversation,
+      findings: [
+        {
+          finding: {
+            flaggerSlug: "trashing",
+            findingKind: result.findingKind,
+            feedback: result.feedback,
+            messageIndex: result.messageIndex,
+            occurrenceCount: result.occurrenceCount,
+          },
+        },
+      ],
+    })
   },
 
   buildSystemPrompt(): string {

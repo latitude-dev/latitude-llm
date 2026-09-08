@@ -76,6 +76,13 @@ export interface SessionRepositoryShape {
     readonly sessionIds: readonly SessionId[]
   }): Effect.Effect<readonly Session[], RepositoryError, ChSqlClient>
 
+  listDetailsBySessionIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+    readonly cutoff: Date
+  }): Effect.Effect<readonly SessionDetail[], RepositoryError, ChSqlClient>
+
   distinctFilterValues(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

@@ -67,9 +67,33 @@ export {
   toolDefinitionSchema,
   USAGE_OPERATIONS,
 } from "./entities/span.ts"
+export type {
+  FinishReasonClassification,
+  GenerationPosition,
+  ProviderErrorClassification,
+  ProviderErrorFinding,
+  RecognizedProviderErrorClassification,
+  SessionGenerationEndpoint,
+  SessionSpanEndpointResolution,
+  SpanEndpointClassification,
+} from "./entities/span-endpoint.ts"
+export {
+  finishReasonClassificationSchema,
+  generationPositionSchema,
+  providerErrorClassificationSchema,
+  providerErrorFindingSchema,
+  recognizedProviderErrorClassificationSchema,
+  sessionGenerationEndpointSchema,
+  sessionSpanEndpointResolutionSchema,
+  spanEndpointClassificationSchema,
+} from "./entities/span-endpoint.ts"
 export type { Trace, TraceConversationChunk, TraceDetail, TraceMetadataDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { RedactionError, SpanDecodingError } from "./errors.ts"
+export {
+  assistantMessageHasOutputContent,
+  hasUsableAssistantCompletion,
+} from "./helpers/assistant-output-content.ts"
 export type {
   CacheCadence,
   CacheCadenceHistogram,
@@ -105,6 +129,9 @@ export {
   cacheBreakEvenRate,
   classifyCacheState,
 } from "./helpers/cache-economics.ts"
+export { classifyFinishReason, normalizeFinishReason } from "./helpers/classify-finish-reason.ts"
+export { classifyProviderError, normalizeProviderErrorType } from "./helpers/classify-provider-error.ts"
+export { classifySpanEndpoint } from "./helpers/classify-span-endpoint.ts"
 export type { ClassifiedUnpricedPair, UnpricedCause, UnpricedUsageSummary } from "./helpers/classify-unpriced-cost.ts"
 export {
   classifyUnpricedPair,
@@ -149,6 +176,10 @@ export {
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export {
+  type ResolveSessionSpanEndpointsInput,
+  resolveSessionSpanEndpoints,
+} from "./helpers/resolve-session-span-endpoints.ts"
 export { toolDefinitionsFrom } from "./helpers/resolve-tool-definitions.ts"
 export {
   shouldReportUnpricedSpan,

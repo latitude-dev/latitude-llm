@@ -1,17 +1,36 @@
 import type { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "@domain/scores"
-import { type BadRequestError, deterministicSampling, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
+import {
+  type BadRequestError,
+  deterministicSampling,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  SessionId,
+  TraceId,
+} from "@domain/shared"
+import { type CryptoError, hash } from "@repo/utils"
 import { Effect } from "effect"
+import { FLAGGER_SCREENING_ARTIFACT_VERSION, FLAGGER_SCREENING_RETENTION_DAYS } from "../constants.ts"
 import { computeFlaggerAnchorContentHash, type FlaggerSessionContext } from "../conversation.ts"
+import { flaggerSlugSchema } from "../entities/flagger.ts"
+import type {
+  FlaggerScreeningDecision,
+  FlaggerScreeningOutcome,
+  FlaggerScreeningSelection,
+  FlaggerScreeningSelectionReason,
+} from "../entities/flagger-screening-decision.ts"
 import {
   type FlaggerStrategy,
   type FlaggerSuppressor,
   getFlaggerStrategy,
   isLlmCapableStrategy,
   listFlaggerStrategySlugs,
+  readDeterministicFlaggerFindings,
   suppressorSlug,
 } from "../flagger-strategies/index.ts"
 import { gatherSessionHintsUseCase } from "../hints/gatherers.ts"
 import { isPositiveSessionHintKind, type SessionHint, type SessionHintKind } from "../hints/types.ts"
+import { FlaggerScreeningDecisionRepository } from "../ports/flagger-screening-decision-repository.ts"
 import { isReflagSuppressed, isUserCentricReflagInapplicable } from "../reflag.ts"
 import { loadFlaggerSessionContextUseCase } from "./classify-session-flagger.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
@@ -21,7 +40,8 @@ export interface ScreenSessionFlaggersInput {
   readonly organizationId: string
   readonly projectId: string
   readonly sessionId: string
-  readonly analysisHash?: string | undefined // part of the sampling key, so each generation re-rolls
+  readonly analysisHash: string // part of the sampling key, so each generation re-rolls
+  readonly attempt: number
 }
 
 export type FlaggerClassificationReason = "hinted" | "sampled"
@@ -67,7 +87,10 @@ export interface FlaggerClassificationRequest {
   readonly flaggerId: string
   readonly flaggerSlug: string
   readonly reason: FlaggerClassificationReason
+  readonly screeningSelection: FlaggerScreeningSelection
 }
+
+type PendingFlaggerClassificationRequest = Omit<FlaggerClassificationRequest, "screeningSelection">
 
 export interface ScreenSessionFlaggersResult {
   readonly skipped?: "session-not-found" | "reflag-suppressed"
@@ -82,6 +105,7 @@ export type ScreenSessionFlaggersError =
   | BadRequestError
   | ScoreDraftClosedError
   | ScoreDraftUpdateConflictError
+  | CryptoError
 
 // The deterministic screening pass: runs on 100% of sessions after moments,
 // writes `matched` scores directly, routes `hinted`/`sampled` to the LLM pass.
@@ -154,7 +178,7 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
     }
   }
 
-  const classifications: FlaggerClassificationRequest[] = []
+  const classifications: PendingFlaggerClassificationRequest[] = []
 
   const runOne = (slug: string, suppressorDecisions: ReadonlyMap<string, SessionFlaggerDecision>) =>
     screenOneStrategy({
@@ -192,9 +216,25 @@ export const screenSessionFlaggersUseCase = Effect.fn("flaggers.screenSessionFla
     concurrency: "unbounded",
   })
 
+  const decisions = [...phase1Decisions, ...phase2Decisions]
+  const screeningDecisions = yield* Effect.forEach(decisions, (decision) =>
+    buildInitialScreeningDecision({
+      input,
+      decision,
+      flagger: flaggerBySlug.get(decision.slug) ?? null,
+    }),
+  )
+  const screeningDecisionRepository = yield* FlaggerScreeningDecisionRepository
+  yield* screeningDecisionRepository.saveMany(screeningDecisions)
+
+  const classificationRequests = classifications.map((classification) => ({
+    ...classification,
+    screeningSelection: toSelection(findScreeningDecision(screeningDecisions, classification.flaggerSlug)),
+  }))
+
   return {
-    decisions: [...phase1Decisions, ...phase2Decisions],
-    classifications,
+    decisions,
+    classifications: classificationRequests,
     hints,
     latestTraceId,
   } satisfies ScreenSessionFlaggersResult
@@ -230,7 +270,7 @@ interface ScreenOneStrategyInput {
   readonly flagger: FlaggerCacheEntry | null
   readonly deps: ScreenSessionFlaggersDeps
   readonly suppressorDecisions: ReadonlyMap<string, SessionFlaggerDecision>
-  readonly classifications: FlaggerClassificationRequest[]
+  readonly classifications: PendingFlaggerClassificationRequest[]
 }
 
 const strategyHintKindsFired = (
@@ -294,9 +334,37 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
       return { slug: args.slug, action: "dropped", reason: "missing-context" } satisfies SessionFlaggerDecision
     }
 
-    const result = strategy.detectDeterministically
-      ? strategy.detectDeterministically(args.context.conversation)
-      : ({ kind: "unmatched" } as const)
+    if (strategy.readDeterministically) {
+      const read = yield* readDeterministicFlaggerFindings(strategy, {
+        scope: {
+          organizationId: OrganizationId(args.input.organizationId),
+          projectId: args.context.session.projectId,
+          sessionId: args.context.session.sessionId,
+        },
+        conversation: args.context.conversation,
+      })
+
+      if (!read.readable) {
+        return { slug: args.slug, action: "dropped", reason: "missing-context" } satisfies SessionFlaggerDecision
+      }
+
+      const finding = strategy.selectDeterministicDiscoveryFinding
+        ? strategy.selectDeterministicDiscoveryFinding(read.findings)
+        : (read.findings[0] ?? null)
+
+      if (finding) {
+        return yield* handleMatched(
+          args,
+          finding.feedback,
+          "messageIndex" in finding ? finding.messageIndex : undefined,
+          finding.findingKey,
+        )
+      }
+
+      return yield* handleUnmatched(args, flagger, strategy)
+    }
+
+    const result = strategy.detectDeterministically?.(args.context.conversation) ?? ({ kind: "unmatched" } as const)
 
     if (result.kind === "matched") {
       return yield* handleMatched(args, result.feedback, result.messageIndex)
@@ -305,7 +373,7 @@ const screenOneStrategy = (args: ScreenOneStrategyInput) =>
     return yield* handleUnmatched(args, flagger, strategy)
   })
 
-const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIndex?: number) =>
+const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIndex?: number, findingKey?: string) =>
   Effect.gen(function* () {
     const session = args.context.session
     const contentHash = yield* computeFlaggerAnchorContentHash(args.context.conversation, messageIndex)
@@ -319,6 +387,7 @@ const handleMatched = (args: ScreenOneStrategyInput, feedback: string, messageIn
       flaggerSlug: args.slug,
       messageIndex,
       contentHash,
+      ...(findingKey !== undefined ? { flaggerFindingKey: findingKey, flaggerPath: "deterministic" } : {}),
     })
 
     return { slug: args.slug, action: "matched-issue" } satisfies SessionFlaggerDecision
@@ -342,7 +411,7 @@ const handleUnmatched = (args: ScreenOneStrategyInput, flagger: FlaggerCacheEntr
             args.input.projectId,
             args.slug,
             args.input.sessionId,
-            args.input.analysisHash ?? "",
+            args.input.analysisHash,
           ],
         }),
       )
@@ -374,3 +443,101 @@ const handleUnmatched = (args: ScreenOneStrategyInput, flagger: FlaggerCacheEntr
 
     return { slug: args.slug, action: "classify", reason, hintKinds: fired } satisfies SessionFlaggerDecision
   })
+
+interface BuildInitialScreeningDecisionInput {
+  readonly input: ScreenSessionFlaggersInput
+  readonly decision: SessionFlaggerDecision
+  readonly flagger: FlaggerCacheEntry | null
+}
+
+const toSelection = ({
+  attempt: _attempt,
+  version: _version,
+  outcome: _outcome,
+  createdAt: _createdAt,
+  ...selection
+}: FlaggerScreeningDecision): FlaggerScreeningSelection => selection
+
+const findScreeningDecision = (decisions: readonly FlaggerScreeningDecision[], flaggerSlug: string) => {
+  const decision = decisions.find((candidate) => candidate.flaggerSlug === flaggerSlug)
+  if (!decision) throw new Error(`Missing screening decision for ${flaggerSlug}`)
+  return decision
+}
+
+const selectionFacts = (
+  decision: SessionFlaggerDecision,
+  flagger: FlaggerCacheEntry | null,
+): {
+  readonly selected: boolean
+  readonly reason: FlaggerScreeningSelectionReason
+  readonly inclusionProbability?: number | undefined
+  readonly hintKinds: readonly SessionHintKind[]
+  readonly outcome?: FlaggerScreeningOutcome | undefined
+} => {
+  if (decision.action === "matched-issue") {
+    return { selected: true, reason: "deterministic", inclusionProbability: 1, hintKinds: [], outcome: "matched" }
+  }
+  if (decision.action === "classify") {
+    return {
+      selected: true,
+      reason: decision.reason === "hinted" ? "hinted" : "ordinary-sample",
+      inclusionProbability: decision.reason === "hinted" ? 1 : (flagger?.sampling ?? 0) / 100,
+      hintKinds: decision.hintKinds,
+    }
+  }
+  if (decision.action === "suppressed") {
+    return { selected: false, reason: "skipped", hintKinds: [] }
+  }
+  if (decision.action === "failed") {
+    return { selected: true, reason: "deterministic", inclusionProbability: 1, hintKinds: [], outcome: "error" }
+  }
+  if (decision.reason === "sampled-out") {
+    return {
+      selected: false,
+      reason: "ordinary-sample",
+      inclusionProbability: (flagger?.sampling ?? 0) / 100,
+      hintKinds: [],
+    }
+  }
+  if (decision.reason === "rate-limited") {
+    return {
+      selected: false,
+      reason: "rate-limited",
+      inclusionProbability: decision.hinted === true ? 1 : (flagger?.sampling ?? 0) / 100,
+      hintKinds: decision.hintKinds ?? [],
+    }
+  }
+  const strategy = getFlaggerStrategy(decision.slug)
+  if (decision.reason === "unmatched" && strategy && !isLlmCapableStrategy(strategy)) {
+    return { selected: true, reason: "deterministic", inclusionProbability: 1, hintKinds: [], outcome: "unmatched" }
+  }
+  return { selected: false, reason: "skipped", hintKinds: [] }
+}
+
+const buildInitialScreeningDecision = Effect.fn("flaggers.buildInitialScreeningDecision")(function* (
+  args: BuildInitialScreeningDecisionInput,
+) {
+  const decisionId = yield* hash({
+    namespace: "flagger-screening-decision-v1",
+    organizationId: args.input.organizationId,
+    projectId: args.input.projectId,
+    sessionId: args.input.sessionId,
+    flaggerSlug: args.decision.slug,
+    analysisHash: args.input.analysisHash,
+  })
+
+  return {
+    decisionId,
+    organizationId: OrganizationId(args.input.organizationId),
+    projectId: ProjectId(args.input.projectId),
+    sessionId: SessionId(args.input.sessionId),
+    flaggerSlug: flaggerSlugSchema.parse(args.decision.slug),
+    analysisHash: args.input.analysisHash,
+    scoringArtifactVersion: FLAGGER_SCREENING_ARTIFACT_VERSION,
+    attempt: args.input.attempt,
+    version: 1,
+    ...selectionFacts(args.decision, args.flagger),
+    createdAt: new Date(),
+    retentionDays: FLAGGER_SCREENING_RETENTION_DAYS,
+  } satisfies FlaggerScreeningDecision
+})

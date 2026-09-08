@@ -9,6 +9,12 @@ export interface SessionMomentLabelRepositoryShape {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
   }) => Effect.Effect<readonly SessionMomentLabel[], RepositoryError, ChSqlClient>
+  readonly listBySessions: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionIds: readonly SessionId[]
+    readonly indexedAtTo: Date
+  }) => Effect.Effect<readonly SessionMomentLabel[], RepositoryError, ChSqlClient>
   readonly listByMoment: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

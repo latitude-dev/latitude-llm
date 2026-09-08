@@ -12,7 +12,7 @@ import {
   type TraceId,
 } from "@domain/shared"
 import { createLogger } from "@repo/observability"
-import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, type SQL, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { scores } from "../schema/scores.ts"
@@ -579,6 +579,32 @@ export const ScoreRepositoryLive = Layer.effect(
           options,
         })
       },
+
+      listBySessionsAndTraces: ({ organizationId, projectId, sessionIds, traceIds, createdAtTo }) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0 && traceIds.length === 0) return []
+          const sqlClient = yield* resolveSqlClient()
+          const membership = or(
+            ...(sessionIds.length > 0 ? [inArray(scores.sessionId, sessionIds.map(String))] : []),
+            ...(traceIds.length > 0 ? [inArray(scores.traceId, traceIds.map(String))] : []),
+          )
+          return yield* sqlClient
+            .query((db) =>
+              db
+                .select()
+                .from(scores)
+                .where(
+                  and(
+                    eq(scores.organizationId, organizationId),
+                    eq(scores.projectId, projectId),
+                    lte(scores.createdAt, createdAtTo),
+                    membership,
+                  ),
+                )
+                .orderBy(scores.createdAt, scores.id),
+            )
+            .pipe(Effect.map((rows) => rows.map(toDomainScore)))
+        }),
 
       listBySessionId: ({
         projectId,

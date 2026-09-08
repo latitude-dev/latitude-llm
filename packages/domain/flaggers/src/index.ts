@@ -11,14 +11,62 @@ export {
   FLAGGER_PROMPT_MAX_HINTS,
   FLAGGER_SAMPLED_POSITIVE_RATE_LIMIT,
   FLAGGER_SAMPLED_RATE_LIMIT,
+  FLAGGER_SCORING_ARTIFACT_VERSION,
+  FLAGGER_SCREENING_ARTIFACT_VERSION,
+  FLAGGER_SCREENING_OUTCOMES,
+  FLAGGER_SCREENING_RETENTION_DAYS,
+  FLAGGER_SCREENING_SELECTION_REASONS,
 } from "./constants.ts"
 export {
+  assistantTurnHasOutputContent,
   buildFlaggerSessionContext,
+  type CapturedAssistantTurn,
   computeFlaggerAnchorContentHash,
   type FlaggerConversation,
   type FlaggerSessionContext,
+  findFinalCapturedAssistantTurn,
 } from "./conversation.ts"
-export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema } from "./entities/flagger.ts"
+export { FLAGGER_DEFAULT_ENABLED, type Flagger, flaggerSchema, flaggerSlugSchema } from "./entities/flagger.ts"
+export {
+  emptyFlaggerCoverageRow,
+  type FlaggerCoverageReport,
+  type FlaggerCoverageRow,
+  type FlaggerSelectionPathCounts,
+  flaggerCoverageReportSchema,
+  flaggerCoverageRowSchema,
+  flaggerSelectionPathCountsSchema,
+} from "./entities/flagger-coverage.ts"
+export {
+  type DeterministicFlaggerFindingRead,
+  deterministicFlaggerFindingReadSchema,
+  type FlaggerFinding,
+  type FlaggerFindingDraft,
+  type FlaggerFindingKind,
+  type FlaggerFindingScope,
+  flaggerFindingSchema,
+  flaggerFindingScopeSchema,
+  unreadableDeterministicFlaggerFindingRead,
+} from "./entities/flagger-finding.ts"
+export {
+  FLAGGER_SCREENING_COVERAGE_LIMITATIONS,
+  type FlaggerScreeningCoverage,
+  type FlaggerScreeningCoverageLimitation,
+  type FlaggerScreeningSelectionEvidence,
+  flaggerScreeningCoverageLimitationSchema,
+  flaggerScreeningCoverageSchema,
+  flaggerScreeningSelectionEvidenceSchema,
+  resolveFlaggerScreeningCoverage,
+} from "./entities/flagger-screening-coverage.ts"
+export {
+  type FlaggerScreeningDecision,
+  type FlaggerScreeningOutcome,
+  type FlaggerScreeningSelection,
+  type FlaggerScreeningSelectionReason,
+  flaggerScreeningDecisionSchema,
+  flaggerScreeningOutcomeSchema,
+  flaggerScreeningSelectionReasonSchema,
+  flaggerScreeningSelectionSchema,
+} from "./entities/flagger-screening-decision.ts"
 export {
   DETERMINISTIC_FLAGGER_INSTRUCTIONS,
   FLAGGER_DISPLAY,
@@ -52,6 +100,7 @@ export {
   outputSchemaValidationStrategy,
   piiLeakageStrategy,
   rankStagesByRefusalLikelihood,
+  readDeterministicFlaggerFindings,
   refusalStrategy,
   type SuspiciousSnippet,
   scoreRefusalLikelihood,
@@ -63,12 +112,16 @@ export {
 } from "./flagger-strategies/index.ts"
 export { FLAGGER_STRATEGY_SLUGS } from "./flagger-strategies/types.ts"
 export {
+  buildFlaggerFinding,
+  collectOutputSchemaDamageFindings,
   collectToolCallErrorFindings,
   type DeterministicFlaggerMatch,
   detectEmptyResponseFlagger,
   detectLowCacheHitRateFlagger,
   detectOutputSchemaValidationFlagger,
   detectToolCallErrorsFlagger,
+  type OutputSchemaDamageFinding,
+  type OutputSchemaDamageKind,
   type ToolCallErrorFinding,
   type ToolCallErrorFindingKind,
 } from "./helpers.ts"
@@ -88,6 +141,11 @@ export {
   type SessionHintKind,
 } from "./hints/types.ts"
 export {
+  FlaggerCoverageRepository,
+  type FlaggerCoverageRepositoryShape,
+  type GetFlaggerCoverageInput,
+} from "./ports/flagger-coverage-repository.ts"
+export {
   type FindFlaggerByProjectAndSlugInput,
   FlaggerRepository,
   type FlaggerRepositoryShape,
@@ -96,6 +154,10 @@ export {
   type UpdateFlaggerEnabledForProjectInput,
   type UpdateFlaggerInput as RepositoryUpdateFlaggerInput,
 } from "./ports/flagger-repository.ts"
+export {
+  FlaggerScreeningDecisionRepository,
+  type FlaggerScreeningDecisionRepositoryShape,
+} from "./ports/flagger-screening-decision-repository.ts"
 export {
   isFlaggerGeneratedTrace,
   isReflagSuppressed,
@@ -144,6 +206,11 @@ export {
   type ProvisionFlaggersInput,
   provisionFlaggersUseCase,
 } from "./use-cases/provision-flaggers.ts"
+export {
+  type RecordFlaggerScreeningOutcomeError,
+  type RecordFlaggerScreeningOutcomeInput,
+  recordFlaggerScreeningOutcomeUseCase,
+} from "./use-cases/record-flagger-screening-outcome.ts"
 export {
   type ClassifyConversationForFlaggerInput,
   type ClassifyTraceForFlaggerInput,

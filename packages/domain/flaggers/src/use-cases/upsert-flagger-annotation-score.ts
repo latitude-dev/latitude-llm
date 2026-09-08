@@ -1,4 +1,10 @@
-import { ScoreRepository, writeScoreUseCase } from "@domain/scores"
+import {
+  type FlaggerFindingKey,
+  type FlaggerPath,
+  ScoreRepository,
+  type ScoringArtifactVersion,
+  writeScoreUseCase,
+} from "@domain/scores"
 import type { ProjectId, ScoreId, SessionId, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { FLAGGER_DRAFT_DEFAULTS } from "../constants.ts"
@@ -13,6 +19,9 @@ interface UpsertFlaggerAnnotationScoreInput {
   readonly flaggerSlug: string
   readonly messageIndex?: number | undefined
   readonly contentHash?: string | undefined
+  readonly flaggerFindingKey?: FlaggerFindingKey | undefined
+  readonly flaggerPath?: FlaggerPath | undefined
+  readonly scoringArtifactVersion?: ScoringArtifactVersion | undefined
   /** Absent for deterministic detections and cached generations — neither leaves a trace to grade. */
   readonly flaggerTraceId?: string | undefined
 }
@@ -97,6 +106,9 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
         ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
         ...(input.contentHash !== undefined ? { contentHash: input.contentHash } : {}),
         ...(input.flaggerTraceId !== undefined ? { flaggerTraceId: input.flaggerTraceId } : {}),
+        ...(input.flaggerFindingKey !== undefined ? { flaggerFindingKey: input.flaggerFindingKey } : {}),
+        ...(input.flaggerPath !== undefined ? { flaggerPath: input.flaggerPath } : {}),
+        ...(input.scoringArtifactVersion !== undefined ? { scoringArtifactVersion: input.scoringArtifactVersion } : {}),
       },
       error: null,
       draftedAt: null,

@@ -965,6 +965,18 @@ Returns a single session by id, including its `conversation`: the system instruc
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
 
+#### `latitude sessions get-assessment`
+
+Explains a session across outcome, reliability, cost, speed, and safety with complete summaries, reader coverage, and a chronological page of evidence. Evidence contains identifiers for authorized records rather than raw message, tool, or span content.
+
+`GET /v1/projects/{projectSlug}/sessions/{sessionId}/assessment`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+| `--session-id` | `string` | Yes | Session identifier lifted from instrumentation. Up to 128 characters. |
+| `--cursor` | `string` | No | Opaque cursor returned by a previous assessment page. Omit for the first page. |
+
 #### `latitude sessions get-memory`
 
 Returns the session's memory footprint: per-record read, added, and removed token metrics plus session-wide totals. Pass `traceId` to restrict the footprint to a single trace of the session.

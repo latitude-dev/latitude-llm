@@ -140,6 +140,61 @@ describe("SessionRepository", () => {
     )
   })
 
+  it("lists a cutoff-bounded session snapshot after later activity", async () => {
+    const sessionId = SessionId("bulk-session")
+    const firstTraceId = "f".repeat(32)
+    const laterTraceId = "e".repeat(32)
+    const startTime = new Date("2026-01-01T10:00:00.000Z")
+    await insertSpans([
+      makeSpanRow({
+        traceId: firstTraceId,
+        spanId: "f".repeat(16),
+        sessionId,
+        startTime,
+        outputMessages: JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }]),
+      }),
+    ])
+
+    const beforeStart = await runCh(
+      repo.listDetailsBySessionIds({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionIds: [sessionId],
+        cutoff: new Date("2026-01-01T09:59:59.999Z"),
+      }),
+    )
+
+    const cutoff = new Date("2026-01-01T10:00:00.500Z")
+    await insertSpans([
+      makeSpanRow({
+        traceId: laterTraceId,
+        spanId: "e".repeat(16),
+        sessionId,
+        startTime: new Date("2026-01-01T10:01:00.000Z"),
+        outputMessages: JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "Later" }] }]),
+      }),
+    ])
+
+    const snapshot = await runCh(
+      repo.listDetailsBySessionIds({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionIds: [sessionId],
+        cutoff,
+      }),
+    )
+
+    expect(beforeStart).toEqual([])
+    expect(snapshot).toHaveLength(1)
+    expect(snapshot[0]).toMatchObject({
+      sessionId,
+      traceCount: 1,
+      traceIds: [firstTraceId],
+      spanCount: 1,
+      outputMessages: [{ role: "assistant", parts: [{ type: "text", content: "Done" }] }],
+    })
+  })
+
   describe("orphan-trace-as-session", () => {
     it("synthesizes a 1-trace session for spans without gen_ai.conversation.id", async () => {
       const traceId = "a".repeat(32)

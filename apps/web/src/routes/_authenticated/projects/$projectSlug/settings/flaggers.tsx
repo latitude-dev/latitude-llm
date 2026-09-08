@@ -2,7 +2,11 @@ import { Button, cn, Slider, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import { useMemo, useRef, useState } from "react"
-import { updateFlaggerMutation, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
+import {
+  updateFlaggerMutation,
+  useProjectFlaggerCoverage,
+  useProjectFlaggers,
+} from "../../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../../domains/flaggers/flaggers.functions.ts"
 import {
   FLAGGER_GROUPS,
@@ -15,6 +19,7 @@ import { useDirtyGuard } from "../../../../../lib/hooks/use-dirty-guard.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { DirtyActions } from "./-components/dirty-actions.tsx"
+import { FlaggerObservationStatus } from "./-components/flagger-observation-status.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/flaggers")({
@@ -25,6 +30,8 @@ interface PendingFlagger {
   readonly enabled: boolean
   readonly sampling: number
 }
+
+const FLAGGER_COVERAGE_WINDOW_MS = 28 * 24 * 60 * 60 * 1000
 
 function ProjectFlaggersSettingsPage() {
   const { projectSlug } = Route.useParams()
@@ -40,6 +47,15 @@ function ProjectFlaggersSettingsPage() {
 
   const currentProject = project ?? routeProject
   const { data: flaggers = [], isLoading: isLoadingFlaggers } = useProjectFlaggers(currentProject.id)
+  const [coverageWindow] = useState(() => {
+    const to = Date.now()
+    return {
+      fromIso: new Date(to - FLAGGER_COVERAGE_WINDOW_MS).toISOString(),
+      toIso: new Date(to).toISOString(),
+    }
+  })
+  const { data: coverage } = useProjectFlaggerCoverage({ projectId: currentProject.id, ...coverageWindow })
+  const coverageBySlug = new Map((coverage?.rows ?? []).map((row) => [row.flaggerSlug, row]))
 
   const flaggersById = useMemo(() => {
     const map = new Map<string, FlaggerRecord>()
@@ -209,6 +225,7 @@ function ProjectFlaggersSettingsPage() {
                       {groupRows.map((row) => {
                         const isTarget = targetFlaggerSlug !== "" && row.slug === targetFlaggerSlug
                         const isDeterministic = row.mode === "deterministic"
+                        const coverageRow = coverageBySlug.get(row.slug)
                         return (
                           <div
                             key={row.id}
@@ -240,29 +257,34 @@ function ProjectFlaggersSettingsPage() {
                                 />
                               </div>
                             </div>
-                            {isDeterministic ? (
-                              <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible sessions</Text.H6>
-                            ) : (
-                              <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
-                                <div className="flex flex-row items-center gap-3">
-                                  <div className="w-48">
-                                    <Slider
-                                      min={0}
-                                      max={100}
-                                      step={1}
-                                      value={[row.viewSampling]}
-                                      onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
-                                      disabled={!row.viewEnabled}
-                                      aria-label={`Sampling rate for ${row.name}`}
-                                    />
+                            <div className="flex flex-col gap-1">
+                              {isDeterministic ? (
+                                <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible sessions</Text.H6>
+                              ) : (
+                                <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
+                                  <div className="flex flex-row items-center gap-3">
+                                    <div className="w-48">
+                                      <Slider
+                                        min={0}
+                                        max={100}
+                                        step={1}
+                                        value={[row.viewSampling]}
+                                        onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
+                                        disabled={!row.viewEnabled}
+                                        aria-label={`Sampling rate for ${row.name}`}
+                                      />
+                                    </div>
+                                    <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
                                   </div>
-                                  <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
+                                  <Text.H6 color="foregroundMuted">
+                                    Billed by AI usage · runs on {row.viewSampling}% of eligible sessions
+                                  </Text.H6>
                                 </div>
-                                <Text.H6 color="foregroundMuted">
-                                  Billed by AI usage · runs on {row.viewSampling}% of eligible sessions
-                                </Text.H6>
-                              </div>
-                            )}
+                              )}
+                              {row.viewEnabled && coverageRow ? (
+                                <FlaggerObservationStatus flaggerSlug={row.slug} coverage={coverageRow} />
+                              ) : null}
+                            </div>
                           </div>
                         )
                       })}

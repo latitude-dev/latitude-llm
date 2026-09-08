@@ -1,6 +1,11 @@
 import { cuidSchema, scoreIdSchema, sessionIdSchema, spanIdSchema, traceIdSchema } from "@domain/shared"
 import { z } from "zod"
-import { ANNOTATION_SCORE_PARTIAL_SOURCE_IDS, SCORE_SOURCE_ID_MAX_LENGTH, SCORE_SOURCE_TYPES } from "../constants.ts"
+import {
+  ANNOTATION_SCORE_PARTIAL_SOURCE_IDS,
+  FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH,
+  SCORE_SOURCE_ID_MAX_LENGTH,
+  SCORE_SOURCE_TYPES,
+} from "../constants.ts"
 
 const scoreSourceIdSchema = z.string().min(1).max(SCORE_SOURCE_ID_MAX_LENGTH)
 
@@ -17,6 +22,15 @@ export const scoreValueSchema = z.number().min(0).max(1)
 
 export const ANNOTATION_ANCHOR_TEXT_FORMATS = ["pretty-json"] as const
 export type AnnotationAnchorTextFormat = (typeof ANNOTATION_ANCHOR_TEXT_FORMATS)[number]
+
+export const flaggerFindingKeySchema = z.string().regex(/^[0-9a-f]{64}$/)
+export type FlaggerFindingKey = z.infer<typeof flaggerFindingKeySchema>
+
+export const flaggerPathSchema = z.enum(["deterministic", "sampled"])
+export type FlaggerPath = z.infer<typeof flaggerPathSchema>
+
+export const scoringArtifactVersionSchema = z.string().min(1).max(FLAGGER_SCORING_ARTIFACT_VERSION_MAX_LENGTH)
+export type ScoringArtifactVersion = z.infer<typeof scoringArtifactVersionSchema>
 
 type AnnotationAnchorInput = {
   readonly messageIndex?: number | undefined
@@ -93,6 +107,9 @@ export const annotationScoreMetadataSchema = baseScoreMetadataSchema
     rawFeedback: z.string(), // original feedback text before enrichment; human-authored for human drafts/published annotations, model-authored for system-created drafts
     flaggerSlug: z.string().optional(), // slug of the automatic flagger that authored this annotation (only set for flagger-created `sourceId: "SYSTEM"` rows); lets the UI name the flagger and link to its project settings
     flaggerTraceId: z.string().optional(), // Latitude trace of the flagger generation that produced this annotation (flagger rows only, and only when the decision came from a captured LLM call); the way back from a detection to the decision behind it
+    flaggerFindingKey: flaggerFindingKeySchema.optional(), // stable calculated finding selected for deterministic discovery
+    scoringArtifactVersion: scoringArtifactVersionSchema.optional(), // prompt, judge configuration, and result-schema version for persisted model evidence
+    flaggerPath: flaggerPathSchema.optional(), // whether the persisted result came from a deterministic reader or sampled model call
     ...annotationAnchorFields,
   })
   .superRefine(validateAnnotationAnchor)

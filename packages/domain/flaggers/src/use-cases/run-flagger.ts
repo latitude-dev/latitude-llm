@@ -39,6 +39,7 @@ export interface RunFlaggerResult {
   readonly matched: boolean
   readonly feedback?: string | undefined
   readonly messageIndex?: number | undefined
+  readonly classificationOutcome?: "indeterminate" | undefined
   /** Latitude trace of the classification generation behind this decision, matched or not; absent for uncaptured and cached calls. */
   readonly flaggerTraceId?: string | undefined
 }
@@ -909,9 +910,8 @@ const parseFlaggerOutput = (input: unknown, flaggerTraceId: string | undefined):
 // when the model returns output that does not materialize as the requested schema,
 // `AI_APICallError` with a "prompt is too long" message when the trace evidence
 // exceeds the model's context window, and Bedrock "Grammar compilation timed out"
-// when structured-output grammar compilation fails. The flagger treats these as a
-// "no match" signal instead of propagating the failure — the model effectively
-// failed to classify, which for a triage flagger is indistinguishable from matched=false.
+// when structured-output grammar compilation fails. The flagger keeps matched=false
+// for callers while marking the result indeterminate for screening coverage.
 const isSchemaMismatchCause = (cause: unknown): boolean => {
   if (!(cause instanceof Error)) return false
   if (cause.name === "AI_NoObjectGeneratedError" || cause.name === "AI_NoOutputGeneratedError") return true
@@ -937,7 +937,7 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
   const strategy = input.strategyOverride ?? getFlaggerStrategy(input.flaggerSlug)
 
   if (!strategy || !isLlmCapableStrategy(strategy) || !strategy.hasRequiredContext(input.conversation)) {
-    return { matched: false }
+    return { matched: false, classificationOutcome: "indeterminate" } satisfies RunFlaggerResult
   }
 
   const ai = yield* AI
@@ -954,7 +954,7 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
   if (!inspectedAgentContext.available) {
     yield* Effect.annotateCurrentSpan("flagger.skipped", "missing-inspected-agent-context")
     yield* Effect.annotateCurrentSpan("flagger.inspectedAgentContextReason", inspectedAgentContext.reason)
-    return { matched: false } satisfies RunFlaggerResult
+    return { matched: false, classificationOutcome: "indeterminate" } satisfies RunFlaggerResult
   }
 
   const classificationSystemPrompt = buildClassificationSystemPrompt(strategy, input.conversation)
@@ -986,7 +986,7 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
-            return { matched: false } satisfies RunFlaggerResult
+            return { matched: false, classificationOutcome: "indeterminate" } satisfies RunFlaggerResult
           }),
       ),
     )
@@ -1035,14 +1035,18 @@ export const classifyConversationForFlaggerUseCase = Effect.fn("flaggers.classif
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.annotationReviewSchemaMismatch", true)
-            return { annotationMakesSense: false }
+            return { annotationMakesSense: false, classificationOutcome: "indeterminate" as const }
           }),
       ),
     )
 
   if (!review.annotationMakesSense) {
     yield* Effect.annotateCurrentSpan("flagger.annotationReviewRejected", true)
-    return { matched: false } satisfies RunFlaggerResult
+    const result: RunFlaggerResult = {
+      matched: false,
+      ...("classificationOutcome" in review ? { classificationOutcome: review.classificationOutcome } : {}),
+    }
+    return result
   }
 
   return decisions satisfies RunFlaggerResult
