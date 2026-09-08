@@ -40,6 +40,8 @@ import { formatCHDate, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
+import { USAGE_OPERATIONS_SQL } from "../metric-sql/helpers.ts"
+import { MESSAGE_OPERATION_FILTER, SYSTEM_INSTRUCTION_OPERATION_FILTER } from "../registries/helpers.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
@@ -107,6 +109,74 @@ const DETAIL_SELECT = `${LIST_SELECT},
   argMaxIfMerge(last_input_messages)   AS last_input_messages,
   argMaxIfMerge(output_messages)       AS output_messages,
   argMinIfMerge(system_instructions)   AS system_instructions
+`
+
+const ROOT_SPAN_FILTER = "((parent_span_id = '') OR (parent_span_id = '0000000000000000'))"
+const ROOT_DURATION = `if(${ROOT_SPAN_FILTER} AND evidence_end_time > evidence_start_time,
+  reinterpretAsInt64(evidence_end_time) - reinterpretAsInt64(evidence_start_time),
+  toInt64(0))`
+const FIRST_TOKEN_TIME = `if(time_to_first_token_ns > 0,
+  addNanoseconds(evidence_start_time, toInt64(time_to_first_token_ns)),
+  toDateTime64('2261-01-01 00:00:00.000000000', 9, 'UTC'))`
+
+const BOUNDED_DETAIL_SELECT = `
+  organization_id,
+  project_id,
+  resolved_session_id AS session_id,
+  uniqExact(trace_id) AS trace_count,
+  groupUniqArray(trace_id) AS trace_ids,
+  count() AS span_count,
+  countIf(status_code = 2) AS error_count,
+  min(evidence_start_time) AS start_time,
+  max(evidence_end_time) AS end_time,
+  max(evidence_start_time) AS last_activity_time,
+  if(sum(${ROOT_DURATION}) > 0,
+     sum(${ROOT_DURATION}),
+     greatest(0, reinterpretAsInt64(max(evidence_end_time)) - reinterpretAsInt64(min(evidence_start_time)))) AS duration_ns,
+  if(
+    min(${FIRST_TOKEN_TIME}) < toDateTime64('2261-01-01', 9, 'UTC')
+      AND min(${FIRST_TOKEN_TIME}) > min(evidence_start_time),
+    reinterpretAsInt64(min(${FIRST_TOKEN_TIME})) - reinterpretAsInt64(min(evidence_start_time)),
+    0
+  ) AS time_to_first_token_ns,
+  sumIf(tokens_input, operation IN ${USAGE_OPERATIONS_SQL}) AS tokens_input,
+  sumIf(tokens_output, operation IN ${USAGE_OPERATIONS_SQL}) AS tokens_output,
+  sumIf(tokens_cache_read, operation IN ${USAGE_OPERATIONS_SQL}) AS tokens_cache_read,
+  sumIf(tokens_cache_create, operation IN ${USAGE_OPERATIONS_SQL}) AS tokens_cache_create,
+  sumIf(tokens_reasoning, operation IN ${USAGE_OPERATIONS_SQL}) AS tokens_reasoning,
+  sumIf(tokens_total, operation IN ${USAGE_OPERATIONS_SQL}) AS tokens_total,
+  sumIf(cost_input_microcents, operation IN ${USAGE_OPERATIONS_SQL}) AS cost_input_microcents,
+  sumIf(cost_output_microcents, operation IN ${USAGE_OPERATIONS_SQL}) AS cost_output_microcents,
+  sumIf(cost_total_microcents, operation IN ${USAGE_OPERATIONS_SQL}) AS cost_total_microcents,
+  countIf(cost_source = 'unpriced' AND operation IN ${USAGE_OPERATIONS_SQL}) AS unpriced_span_count,
+  argMaxIf(user_id, evidence_start_time, user_id != '') AS user_id,
+  argMaxIf(user_email, evidence_start_time, user_email != '') AS user_email,
+  groupUniqArrayArray(tags) AS tags,
+  maxMap(metadata) AS metadata,
+  groupUniqArrayIf(model, model != '') AS models,
+  groupUniqArrayIf(provider, provider != '') AS providers,
+  groupUniqArrayIf(service_name, service_name != '') AS service_names,
+  groupUniqArrayIf(agent_name, agent_name != '') AS agent_names,
+  groupUniqArrayIf(tool_name, operation = 'execute_tool' AND tool_name != '') AS tools,
+  groupUniqArrayArray(arrayFilter(tool -> tool != '', tool_names)) AS defined_tools,
+  argMaxIf(simulation_id, evidence_start_time, simulation_id != '') AS simulation_id,
+  argMinIf(span_id, evidence_start_time, ${ROOT_SPAN_FILTER}) AS root_span_id,
+  argMinIf(name, evidence_start_time, ${ROOT_SPAN_FILTER}) AS root_span_name,
+  argMinIf(evidence_input_messages, evidence_start_time, evidence_input_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS input_messages,
+  argMaxIf(evidence_input_messages, evidence_end_time, evidence_output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS last_input_messages,
+  argMaxIf(evidence_output_messages, evidence_end_time, evidence_output_messages != '' AND ${MESSAGE_OPERATION_FILTER}) AS output_messages,
+  argMinIf(evidence_system_instructions, evidence_start_time, evidence_system_instructions != '' AND ${SYSTEM_INSTRUCTION_OPERATION_FILTER}) AS system_instructions
+`
+
+const BOUNDED_SESSION_SPAN_COLUMNS = `
+  organization_id, project_id, session_id, user_id, user_email, trace_id, span_id, parent_span_id,
+  simulation_id, start_time AS evidence_start_time, end_time AS evidence_end_time, name, service_name,
+  status_code, tags, metadata, operation,
+  provider, model, agent_name, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create,
+  tokens_reasoning, tokens_total, cost_input_microcents, cost_output_microcents, cost_total_microcents,
+  cost_source, time_to_first_token_ns, input_messages AS evidence_input_messages,
+  output_messages AS evidence_output_messages, system_instructions AS evidence_system_instructions,
+  tool_name, tool_names, ingested_at
 `
 
 type SessionListRow = {
@@ -1003,26 +1073,36 @@ export const SessionRepositoryLive = Layer.effect(
             )
         }),
 
-      listDetailsBySessionIds: ({ organizationId, projectId, sessionIds, endTimeTo }) =>
+      listDetailsBySessionIds: ({ organizationId, projectId, sessionIds, cutoff }) =>
         Effect.gen(function* () {
           if (sessionIds.length === 0) return []
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT ${DETAIL_SELECT}
-                      FROM sessions
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        AND session_id IN ({sessionIds:Array(String)})
-                      GROUP BY organization_id, project_id, session_id
-                      HAVING end_time <= parseDateTime64BestEffort({endTimeTo:String}, 9, 'UTC')
+                query: `SELECT ${BOUNDED_DETAIL_SELECT}
+                      FROM (
+                        SELECT
+                          ${BOUNDED_SESSION_SPAN_COLUMNS},
+                          coalesce(nullIf(session_id, ''), toString(trace_id)) AS resolved_session_id
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND start_time <= parseDateTime64BestEffort({cutoff:String}, 9, 'UTC')
+                          AND (
+                            session_id IN ({sessionIds:Array(String)})
+                            OR (session_id = '' AND toString(trace_id) IN ({sessionIds:Array(String)}))
+                          )
+                        ORDER BY trace_id, span_id, ingested_at DESC
+                        LIMIT 1 BY trace_id, span_id
+                      )
+                      GROUP BY organization_id, project_id, resolved_session_id
                       ORDER BY session_id ASC`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   sessionIds: sessionIds.map((sessionId) => sessionId as string),
-                  endTimeTo: formatCHDate(endTimeTo),
+                  cutoff: formatCHDate(cutoff),
                 },
                 format: "JSONEachRow",
               })

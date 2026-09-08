@@ -74,7 +74,7 @@ describe("SessionAssessmentBulkTelemetrySourceLive", () => {
     const sessionRepository = createFakeSessionRepository({
       listDetailsBySessionIds: (input) => {
         reads.sessions += 1
-        expect(input).toMatchObject({ organizationId, projectId, sessionIds: [sessionId], endTimeTo: cutoff })
+        expect(input).toMatchObject({ organizationId, projectId, sessionIds: [sessionId], cutoff })
         return Effect.succeed([session])
       },
     }).repository

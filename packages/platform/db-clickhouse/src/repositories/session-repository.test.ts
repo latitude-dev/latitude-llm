@@ -140,13 +140,14 @@ describe("SessionRepository", () => {
     )
   })
 
-  it("lists session details in one cutoff-bounded read", async () => {
+  it("lists a cutoff-bounded session snapshot after later activity", async () => {
     const sessionId = SessionId("bulk-session")
-    const traceId = "f".repeat(32)
+    const firstTraceId = "f".repeat(32)
+    const laterTraceId = "e".repeat(32)
     const startTime = new Date("2026-01-01T10:00:00.000Z")
     await insertSpans([
       makeSpanRow({
-        traceId,
+        traceId: firstTraceId,
         spanId: "f".repeat(16),
         sessionId,
         startTime,
@@ -154,27 +155,44 @@ describe("SessionRepository", () => {
       }),
     ])
 
-    const beforeEnd = await runCh(
+    const beforeStart = await runCh(
       repo.listDetailsBySessionIds({
         organizationId: ORG_ID,
         projectId: PROJECT_ID,
         sessionIds: [sessionId],
-        endTimeTo: new Date("2026-01-01T10:00:00.500Z"),
-      }),
-    )
-    const afterEnd = await runCh(
-      repo.listDetailsBySessionIds({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        sessionIds: [sessionId],
-        endTimeTo: new Date("2026-01-01T10:00:02.000Z"),
+        cutoff: new Date("2026-01-01T09:59:59.999Z"),
       }),
     )
 
-    expect(beforeEnd).toEqual([])
-    expect(afterEnd).toHaveLength(1)
-    expect(afterEnd[0]?.sessionId).toBe(sessionId)
-    expect(afterEnd[0]?.outputMessages).toEqual([{ role: "assistant", parts: [{ type: "text", content: "Done" }] }])
+    const cutoff = new Date("2026-01-01T10:00:00.500Z")
+    await insertSpans([
+      makeSpanRow({
+        traceId: laterTraceId,
+        spanId: "e".repeat(16),
+        sessionId,
+        startTime: new Date("2026-01-01T10:01:00.000Z"),
+        outputMessages: JSON.stringify([{ role: "assistant", parts: [{ type: "text", content: "Later" }] }]),
+      }),
+    ])
+
+    const snapshot = await runCh(
+      repo.listDetailsBySessionIds({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        sessionIds: [sessionId],
+        cutoff,
+      }),
+    )
+
+    expect(beforeStart).toEqual([])
+    expect(snapshot).toHaveLength(1)
+    expect(snapshot[0]).toMatchObject({
+      sessionId,
+      traceCount: 1,
+      traceIds: [firstTraceId],
+      spanCount: 1,
+      outputMessages: [{ role: "assistant", parts: [{ type: "text", content: "Done" }] }],
+    })
   })
 
   describe("orphan-trace-as-session", () => {

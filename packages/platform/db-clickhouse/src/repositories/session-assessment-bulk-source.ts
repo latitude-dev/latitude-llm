@@ -38,7 +38,7 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
             organizationId: input.organizationId,
             projectId: input.projectId,
             sessionIds: input.sessionIds,
-            endTimeTo: input.cutoff,
+            cutoff: input.cutoff,
           })
           const traceIds = [...new Set(sessions.flatMap((session) => session.traceIds.map(TraceId)))]
           const [spans, analyses, moments, labels, screeningDecisions] = yield* Effect.all(
