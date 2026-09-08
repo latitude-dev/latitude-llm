@@ -11,7 +11,8 @@ const numberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
 })
-const periodDateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })
+// Period bounds are UTC midnights; local-time formatting would shift them a day back west of Greenwich.
+const periodDateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
 const BILLING_COUNTER_RADIUS = 8
 const BILLING_COUNTER_CIRCUMFERENCE = 2 * Math.PI * BILLING_COUNTER_RADIUS
 const FREE_PLAN_UPGRADE_USAGE_THRESHOLD = 0.8

@@ -131,11 +131,7 @@ export const summarizeBillingUsageBreakdown = (
 
 const byCreditsDesc = <T extends { readonly credits: number }>(a: T, b: T) => b.credits - a.credits
 
-/**
- * Category totals across projects, largest first. Credits the period counter holds
- * beyond what the ledger attributes are folded into "other" so the list adds up to
- * `consumedCredits`.
- */
+/** Largest first; any gap between the ledger and `consumedCredits` lands in "other" so the totals agree. */
 export const summarizeBillingUsageByCategory = (
   rows: readonly BillingUsageBreakdownRow[],
   consumedCredits: number,

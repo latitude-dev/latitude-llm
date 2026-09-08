@@ -69,6 +69,7 @@ const formatPeriodDate = (value: string) =>
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   })
 
 function BillingOverviewCards() {
