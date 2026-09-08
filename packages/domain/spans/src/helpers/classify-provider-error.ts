@@ -35,14 +35,48 @@ const PROVIDER_REJECTION_ERROR_TYPES = new Set([
   "unprocessable_entity_error",
 ])
 
-export const normalizeProviderErrorType = (rawValue: string): string =>
-  rawValue
-    .trim()
-    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
-    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
+const isUppercaseAscii = (character: string | undefined): boolean =>
+  character !== undefined && character >= "A" && character <= "Z"
+
+const isLowercaseAscii = (character: string | undefined): boolean =>
+  character !== undefined && character >= "a" && character <= "z"
+
+const isDigitAscii = (character: string | undefined): boolean =>
+  character !== undefined && character >= "0" && character <= "9"
+
+const startsUppercaseWord = (previousCharacter: string | undefined, nextCharacter: string | undefined): boolean =>
+  isLowercaseAscii(previousCharacter) ||
+  isDigitAscii(previousCharacter) ||
+  (isUppercaseAscii(previousCharacter) && isLowercaseAscii(nextCharacter))
+
+const appendSeparator = (value: string): string => (value && !value.endsWith("_") ? `${value}_` : value)
+
+export const normalizeProviderErrorType = (rawValue: string): string => {
+  let normalizedValue = ""
+
+  for (let index = 0; index < rawValue.length; index += 1) {
+    const character = rawValue[index]
+    const previousCharacter = rawValue[index - 1]
+    const nextCharacter = rawValue[index + 1]
+
+    if (isUppercaseAscii(character)) {
+      if (startsUppercaseWord(previousCharacter, nextCharacter)) {
+        normalizedValue = appendSeparator(normalizedValue)
+      }
+      normalizedValue += character.toLowerCase()
+      continue
+    }
+
+    if (isLowercaseAscii(character) || isDigitAscii(character)) {
+      normalizedValue += character
+      continue
+    }
+
+    normalizedValue = appendSeparator(normalizedValue)
+  }
+
+  return normalizedValue.endsWith("_") ? normalizedValue.slice(0, -1) : normalizedValue
+}
 
 const matchesErrorType = (normalizedValue: string, knownValues: ReadonlySet<string>): boolean => {
   if (knownValues.has(normalizedValue)) return true

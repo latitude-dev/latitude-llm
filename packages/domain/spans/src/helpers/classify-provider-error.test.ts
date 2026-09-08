@@ -34,4 +34,10 @@ describe("classifyProviderError", () => {
   it("normalizes class names and namespaces without losing the raw value", () => {
     expect(normalizeProviderErrorType(" openai.APIConnectionError ")).toBe("openai_api_connection_error")
   })
+
+  it("normalizes long repeated input without regular-expression backtracking", () => {
+    const prefix = "A".repeat(100_000)
+
+    expect(normalizeProviderErrorType(`${prefix}Error`)).toBe(`${prefix.toLowerCase()}_error`)
+  })
 })
