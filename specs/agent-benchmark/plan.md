@@ -254,7 +254,7 @@ does not display per-session dimension scores.
 - [x] **P2-45** Persistence tests prove that multiple deterministic findings do not create additional
   score rows or discovery events, the selected discovery score links to its finding, model verdicts
   retain provenance, and legacy scores remain unknown rather than falsely classified.
-- [ ] **P2-46** Screening tests cover pre-execution writes, retries without resampling, append-only
+- [x] **P2-46** Screening tests cover pre-execution writes, retries without resampling, append-only
   revisions, newest-generation consolidation, skipped-policy normalization, sampled-out sessions,
   rate limits, failures, and known inclusion probabilities.
 - [ ] **P2-47** Resolver tests cover positive and negative evidence, recovered context,

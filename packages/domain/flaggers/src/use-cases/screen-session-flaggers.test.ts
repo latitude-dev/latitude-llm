@@ -422,7 +422,7 @@ describe("screenSessionFlaggersUseCase", () => {
   it("drops a hinted strategy when the rate limit rejects (still counts as suppressing)", async () => {
     const denied = makeDeps(false)
     const session = makeSessionDetail([user("I already told you, the deadline is Friday."), assistant("Sorry!")])
-    const { result } = await runScreening({
+    const { result, screeningDecisions } = await runScreening({
       session,
       flaggers: [makeFlagger("frustration", 0)],
       deps: denied.deps,
@@ -436,6 +436,12 @@ describe("screenSessionFlaggersUseCase", () => {
       hintKinds: ["pattern:frustration"],
     })
     expect(result.classifications).toEqual([])
+    expect(screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")).toMatchObject({
+      selected: false,
+      reason: "rate-limited",
+      inclusionProbability: 1,
+      hintKinds: ["pattern:frustration"],
+    })
   })
 
   it("reuses the deterministic sampling draw and inclusion probability across retries", async () => {
@@ -549,6 +555,11 @@ describe("screenSessionFlaggersUseCase", () => {
       action: "dropped",
       reason: "sampled-out",
     })
+    expect(dropped.screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")).toMatchObject({
+      selected: false,
+      reason: "ordinary-sample",
+      inclusionProbability: 0,
+    })
 
     const sampled = await runScreening({
       session,
@@ -558,6 +569,11 @@ describe("screenSessionFlaggersUseCase", () => {
     expect(decisionFor(sampled.result.decisions, "frustration")).toMatchObject({
       action: "classify",
       reason: "sampled",
+    })
+    expect(sampled.screeningDecisions.find((decision) => decision.flaggerSlug === "frustration")).toMatchObject({
+      selected: true,
+      reason: "ordinary-sample",
+      inclusionProbability: 1,
     })
   })
 
