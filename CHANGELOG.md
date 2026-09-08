@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## v0.3.96 - 2026-09-08
+
+### Billing
+
+- The sidebar usage counter opens a popover showing where the period's credits went: a split by product area (Traces, Signals, Behaviors, Flaggers, Annotations, Other) and by project, with the current project highlighted. The breakdown is derived from the usage-event ledger with no migration; AI charges are classified by the metering label in their idempotency key, which is now a typed set so a new charge point cannot compile without a category. Period dates render in UTC on the popover and the billing settings page (ref: #4603).
+- Public usage API: `GET /v1/usage` returns the organization's plan, period bounds, credit position and the same category and project splits; `GET /v1/projects/{projectSlug}/usage` returns one project's slice. Both reach the MCP server (`getUsage`, `getProjectUsage`), the TypeScript and Python SDKs 9.12.0 (`client.usage.get`, `client.projects.usage`) and the CLI 7.12.0 (`latitude usage get`, `latitude projects usage`) (ref: #4603).
+
+### Behaviors
+
+- Raised the topic assignment fit floor from 0.65 to 0.75 and applied it to full-window reassignment, which previously attached every observation to its nearest leaf regardless of distance; observations below the floor are written as noise instead of forced into a cluster. A new per-run assignment-coverage span, retention filter, span metrics and a coverage group on the taxonomy quality dashboard make the resulting coverage cost visible in Datadog, with a ClickHouse baseline of the pre-change admissions committed for comparison (ref: #4467).
+
+### Docs
+
+- Every telemetry page now states in its first paragraph that an agent can create a temporary account and complete setup through the `latitude-setup` skill, so the route survives tools that strip callouts; the skill docs say it builds the first Artifact from its own template and hands back the claim link (ref: #4595, #4596, #4598, #4599).
+
 ## v0.3.95 - 2026-09-07
 
 ### Docs
