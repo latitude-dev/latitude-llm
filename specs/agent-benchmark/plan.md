@@ -248,7 +248,7 @@ does not display per-session dimension scores.
 - [x] **P2-43** Unit tests cover the text-or-tool-call completion predicate, reasoning-only output,
   tool-call-only output, malformed tool calls, no captured assistant turn, blank output, and confirmed
   versus unconfirmed repeated-character output.
-- [ ] **P2-44** Reader tests cover every tool finding kind, multiple findings in one session, both
+- [x] **P2-44** Reader tests cover every tool finding kind, multiple findings in one session, both
   recovery meanings, provider recovery, finish-reason damage pairing, unmapped telemetry, and stable
   finding keys across recomputation.
 - [ ] **P2-45** Persistence tests prove that multiple deterministic findings do not create additional
