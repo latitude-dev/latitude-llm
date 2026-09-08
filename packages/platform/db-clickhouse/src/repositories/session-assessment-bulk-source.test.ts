@@ -1,5 +1,6 @@
 import { SessionAssessmentBulkTelemetrySource } from "@domain/agent-score"
 import {
+  type SessionAnalysis,
   SessionAnalysisRepository,
   SessionMomentLabelRepository,
   SessionSemanticMomentRepository,
@@ -9,7 +10,7 @@ import {
   createFakeSessionMomentLabelRepository,
   createFakeSessionSemanticMomentRepository,
 } from "@domain/conversation-intelligence/testing"
-import { FlaggerScreeningDecisionRepository } from "@domain/flaggers"
+import { type FlaggerScreeningDecision, FlaggerScreeningDecisionRepository } from "@domain/flaggers"
 import { createFakeFlaggerScreeningDecisionRepository } from "@domain/flaggers/testing"
 import { ChSqlClient, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { createFakeChSqlClient } from "@domain/shared/testing"
@@ -24,6 +25,7 @@ const projectId = ProjectId("project-1")
 const sessionId = SessionId("session-1")
 const traceId = TraceId("trace-1")
 const cutoff = new Date("2026-01-02T00:00:00.000Z")
+const analysisHash = "a".repeat(64)
 const session = {
   organizationId,
   projectId,
@@ -31,6 +33,40 @@ const session = {
   traceIds: [traceId],
   outputMessages: [],
 } as unknown as SessionDetail
+
+const analysis = {
+  organizationId,
+  projectId,
+  sessionId,
+  startTime: new Date("2026-01-01T00:00:00.000Z"),
+  endTime: new Date("2026-01-01T00:01:00.000Z"),
+  traceIds: [traceId],
+  analysisHash,
+  analysisStatus: "analyzed",
+  statusReason: "Analyzed",
+  retentionDays: 90,
+  indexedAt: new Date("2026-01-01T00:02:00.000Z"),
+} satisfies SessionAnalysis
+
+const decision = (overrides: Partial<FlaggerScreeningDecision> = {}): FlaggerScreeningDecision => ({
+  decisionId: "d".repeat(64),
+  organizationId,
+  projectId,
+  sessionId,
+  flaggerSlug: "refusal",
+  analysisHash,
+  scoringArtifactVersion: "flagger-screening-v1",
+  attempt: 1,
+  version: 1,
+  selected: true,
+  reason: "hinted",
+  inclusionProbability: 1,
+  hintKinds: ["pattern:refusal"],
+  outcome: "unmatched",
+  createdAt: new Date("2026-01-01T00:03:00.000Z"),
+  retentionDays: 90,
+  ...overrides,
+})
 
 describe("SessionAssessmentBulkTelemetrySourceLive", () => {
   it("loads each ClickHouse source once for the whole batch", async () => {
@@ -96,5 +132,39 @@ describe("SessionAssessmentBulkTelemetrySourceLive", () => {
 
     expect(reads).toEqual({ sessions: 1, spans: 1, analyses: 1, moments: 1, labels: 1, screening: 1 })
     expect(result).toEqual([{ session, spans: [], moments: { moments: [], labels: [] }, screeningDecisions: [] }])
+  })
+
+  it("attaches screening decisions only from the authoritative analysis generation", async () => {
+    const currentDecision = decision({ flaggerSlug: "laziness" })
+    const staleDecision = decision({ analysisHash: "b".repeat(64) })
+    const dependencies = Layer.mergeAll(
+      Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+      Layer.succeed(
+        SessionRepository,
+        createFakeSessionRepository({ listDetailsBySessionIds: () => Effect.succeed([session]) }).repository,
+      ),
+      Layer.succeed(SpanRepository, createFakeSpanRepository({ listByTraceIds: () => Effect.succeed([]) }).repository),
+      Layer.succeed(
+        SessionAnalysisRepository,
+        createFakeSessionAnalysisRepository([], { listLatestBySessions: () => Effect.succeed([analysis]) }).repository,
+      ),
+      Layer.succeed(SessionSemanticMomentRepository, createFakeSessionSemanticMomentRepository().repository),
+      Layer.succeed(SessionMomentLabelRepository, createFakeSessionMomentLabelRepository().repository),
+      Layer.succeed(
+        FlaggerScreeningDecisionRepository,
+        createFakeFlaggerScreeningDecisionRepository([], {
+          listLatestBySessions: () => Effect.succeed([staleDecision, currentDecision]),
+        }).repository,
+      ),
+    )
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const source = yield* SessionAssessmentBulkTelemetrySource
+        return yield* source.read({ organizationId, projectId, sessionIds: [sessionId], cutoff })
+      }).pipe(Effect.provide(SessionAssessmentBulkTelemetrySourceLive.pipe(Layer.provideMerge(dependencies)))),
+    )
+
+    expect(result[0]?.screeningDecisions).toEqual([currentDecision])
   })
 })

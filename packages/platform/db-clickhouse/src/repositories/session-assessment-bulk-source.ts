@@ -104,7 +104,12 @@ export const SessionAssessmentBulkTelemetrySourceLive = Layer.effect(
               append(labelsBySession, label.sessionId, label)
             }
           }
-          for (const decision of screeningDecisions) append(screeningBySession, decision.sessionId, decision)
+          for (const decision of screeningDecisions) {
+            const analysis = analysesBySession.get(decision.sessionId)
+            if (analysis?.analysisHash === decision.analysisHash) {
+              append(screeningBySession, decision.sessionId, decision)
+            }
+          }
 
           const sessionsById = new Map(sessions.map((session) => [session.sessionId, session]))
           return input.sessionIds.flatMap((sessionId: SessionId) => {
