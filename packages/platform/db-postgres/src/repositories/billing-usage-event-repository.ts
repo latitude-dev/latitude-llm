@@ -1,6 +1,11 @@
-import { type BillingUsageEvent, BillingUsageEventRepository } from "@domain/billing"
+import {
+  type BillingUsageEvent,
+  BillingUsageEventRepository,
+  type BillingUsageLedgerSummaryRow,
+  type SummarizeBillingUsageEventsInput,
+} from "@domain/billing"
 import { OrganizationId, ProjectId, SqlClient, type SqlClientShape, TraceId } from "@domain/shared"
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { billingUsageEvents } from "../schema/billing.ts"
@@ -113,5 +118,41 @@ export const BillingUsageEventRepositoryLive = Layer.succeed(BillingUsageEventRe
     )
 
     return result ? toDomain(result) : null
+  }),
+  summarizeByPeriod: Effect.fn("dbPostgres.billingUsageEvent.summarizeByPeriod")(function* (
+    input: SummarizeBillingUsageEventsInput,
+  ) {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    const meteringLabel = sql<
+      string | null
+    >`case when ${billingUsageEvents.action} in ('llm-call', 'semantic-query') then split_part(${billingUsageEvents.idempotencyKey}, ':', 3) end`
+
+    const rows = yield* sqlClient.query((db) =>
+      db
+        .select({
+          projectId: billingUsageEvents.projectId,
+          action: billingUsageEvents.action,
+          meteringLabel,
+          credits: sql<number>`sum(${billingUsageEvents.credits})::int`,
+        })
+        .from(billingUsageEvents)
+        .where(
+          and(
+            eq(billingUsageEvents.organizationId, input.organizationId),
+            eq(billingUsageEvents.billingPeriodStart, input.periodStart),
+            eq(billingUsageEvents.billingPeriodEnd, input.periodEnd),
+          ),
+        )
+        .groupBy(billingUsageEvents.projectId, billingUsageEvents.action, meteringLabel),
+    )
+
+    return rows.map(
+      (row): BillingUsageLedgerSummaryRow => ({
+        projectId: ProjectId(row.projectId),
+        action: row.action as BillingUsageLedgerSummaryRow["action"],
+        meteringLabel: row.meteringLabel,
+        credits: row.credits,
+      }),
+    )
   }),
 })

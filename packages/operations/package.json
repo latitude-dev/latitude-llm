@@ -21,6 +21,7 @@
     "@clickhouse/client": "catalog:",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
+    "@domain/billing": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/experiments": "workspace:*",

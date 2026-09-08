@@ -530,6 +530,79 @@ client.projects.update(
 </dl>
 </details>
 
+<details><summary><code>client.projects.<a href="src/latitude_sdk/projects/client.py">usage</a>(...) -> ProjectUsageResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the credits one project spent in the current billing period, broken down by product area.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.projects.usage(
+    project_slug="projectSlug",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_slug:** `str` — Project slug (human-readable identifier)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 ## Scores
 <details><summary><code>client.scores.<a href="src/latitude_sdk/scores/client.py">create</a>(...) -> ScoreResponse</code></summary>
 <dl>
@@ -11856,6 +11929,70 @@ client.imports.retry(
     
 </dd>
 </dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+## Usage
+<details><summary><code>client.usage.<a href="src/latitude_sdk/usage/client.py">get</a>() -> UsageResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the organization's credit usage for the current billing period, broken down by product area and by project.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from latitude_sdk import LatitudeClient
+from latitude_sdk.environment import LatitudeClientEnvironment
+
+client = LatitudeClient(
+    api_key="<token>",
+    environment=LatitudeClientEnvironment.PRODUCTION,
+)
+
+client.usage.get()
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
 
 <dl>
 <dd>

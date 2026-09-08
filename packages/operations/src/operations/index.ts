@@ -19,6 +19,7 @@ import { signalsModule } from "./signals.ts"
 import { spansModule } from "./spans.ts"
 import { toolsModule } from "./tools.ts"
 import { tracesModule } from "./traces.ts"
+import { projectUsageModule, usageModule } from "./usage.ts"
 import { usersModule } from "./users.ts"
 
 // Order is load-bearing: `openapi.json` path order and `mcp.json` tool order
@@ -45,4 +46,6 @@ export const operationModules: ReadonlyArray<OperationModule> = [
   sessionsModule,
   memoryModule,
   importsModule,
+  usageModule,
+  projectUsageModule,
 ]

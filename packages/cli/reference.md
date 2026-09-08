@@ -24,6 +24,7 @@ Full command reference for `latitude`.
 - [`latitude spans`](#latitude-spans)
 - [`latitude tools`](#latitude-tools)
 - [`latitude traces`](#latitude-traces)
+- [`latitude usage`](#latitude-usage)
 - [`latitude users`](#latitude-users)
 
 ---
@@ -838,6 +839,16 @@ Updates a project's name and/or settings. Renaming never changes the slug, and t
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--json` | `JSON` | Yes | Request body as JSON (or use individual body-field flags) |
 
+#### `latitude projects usage`
+
+Returns the credits one project spent in the current billing period, broken down by product area.
+
+`GET /v1/projects/{projectSlug}/usage`
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
+
 ---
 
 ### `latitude saved-searches`
@@ -1498,6 +1509,16 @@ Returns every span belonging to the trace, ordered by `startTime` ascending. Spa
 |------|------|----------|-------------|
 | `--project-slug` | `string` | Yes | Project slug (human-readable identifier) |
 | `--trace-id` | `string` | Yes | 32-character trace identifier. |
+
+---
+
+### `latitude usage`
+
+#### `latitude usage get`
+
+Returns the organization's credit usage for the current billing period, broken down by product area and by project.
+
+`GET /v1/usage`
 
 ---
 

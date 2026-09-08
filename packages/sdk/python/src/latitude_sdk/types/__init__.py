@@ -715,6 +715,8 @@ if typing.TYPE_CHECKING:
     from .project import Project
     from .project_settings import ProjectSettings
     from .project_settings_patch import ProjectSettingsPatch
+    from .project_usage_response import ProjectUsageResponse
+    from .project_usage_response_period import ProjectUsageResponsePeriod
     from .project_user import ProjectUser
     from .query_spans import QuerySpans
     from .recent_tool_call import RecentToolCall
@@ -852,6 +854,13 @@ if typing.TYPE_CHECKING:
     from .traces_ref_ids import TracesRefIds
     from .update_dataset_row_response import UpdateDatasetRowResponse
     from .update_signal_response import UpdateSignalResponse
+    from .usage_category import UsageCategory
+    from .usage_category_category import UsageCategoryCategory
+    from .usage_project import UsageProject
+    from .usage_response import UsageResponse
+    from .usage_response_credits import UsageResponseCredits
+    from .usage_response_period import UsageResponsePeriod
+    from .usage_response_plan import UsageResponsePlan
     from .user_activity_bucket import UserActivityBucket
     from .user_activity_response import UserActivityResponse
     from .user_behaviour import UserBehaviour
@@ -1530,6 +1539,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "Project": ".project",
     "ProjectSettings": ".project_settings",
     "ProjectSettingsPatch": ".project_settings_patch",
+    "ProjectUsageResponse": ".project_usage_response",
+    "ProjectUsageResponsePeriod": ".project_usage_response_period",
     "ProjectUser": ".project_user",
     "QuerySpans": ".query_spans",
     "RecentToolCall": ".recent_tool_call",
@@ -1669,6 +1680,13 @@ _dynamic_imports: typing.Dict[str, str] = {
     "TracesRef_Ids": ".traces_ref",
     "UpdateDatasetRowResponse": ".update_dataset_row_response",
     "UpdateSignalResponse": ".update_signal_response",
+    "UsageCategory": ".usage_category",
+    "UsageCategoryCategory": ".usage_category_category",
+    "UsageProject": ".usage_project",
+    "UsageResponse": ".usage_response",
+    "UsageResponseCredits": ".usage_response_credits",
+    "UsageResponsePeriod": ".usage_response_period",
+    "UsageResponsePlan": ".usage_response_plan",
     "UserActivityBucket": ".user_activity_bucket",
     "UserActivityResponse": ".user_activity_response",
     "UserBehaviour": ".user_behaviour",
@@ -2371,6 +2389,8 @@ __all__ = [
     "Project",
     "ProjectSettings",
     "ProjectSettingsPatch",
+    "ProjectUsageResponse",
+    "ProjectUsageResponsePeriod",
     "ProjectUser",
     "QuerySpans",
     "RecentToolCall",
@@ -2510,6 +2530,13 @@ __all__ = [
     "TracesRef_Ids",
     "UpdateDatasetRowResponse",
     "UpdateSignalResponse",
+    "UsageCategory",
+    "UsageCategoryCategory",
+    "UsageProject",
+    "UsageResponse",
+    "UsageResponseCredits",
+    "UsageResponsePeriod",
+    "UsageResponsePlan",
     "UserActivityBucket",
     "UserActivityResponse",
     "UserBehaviour",
