@@ -43,14 +43,19 @@ describe("assessment finding resolver", () => {
     })
   })
 
-  it("does not turn an unconfirmed output pattern into terminal failure", () => {
-    const resolved = resolveAssessmentFinding({
+  it("distinguishes confirmed from unconfirmed repeated-character output", () => {
+    const unconfirmed = resolveAssessmentFinding({
       ...base,
       kind: "noOutput",
       findingKind: "unconfirmedPattern",
     })
+    const confirmed = resolveAssessmentFinding({
+      ...base,
+      kind: "noOutput",
+      findingKind: "confirmedUnusablePattern",
+    })
 
-    expect(resolved.item.effects).toEqual([
+    expect(unconfirmed.item.effects).toEqual([
       expect.objectContaining({
         scoreDimension: "outcome",
         direction: "context",
@@ -58,7 +63,24 @@ describe("assessment finding resolver", () => {
         benchmarkUse: "modeled",
       }),
     ])
-    expect(resolved.item).toMatchObject({ polarity: "unknown", impactLevel: "low" })
+    expect(unconfirmed.item).toMatchObject({ polarity: "unknown", impactLevel: "low" })
+    expect(confirmed.item.effects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scoreDimension: "outcome",
+          direction: "negative",
+          measurement: "observed",
+          impact: { kind: "taskOutcome", verdict: "failure" },
+        }),
+        expect.objectContaining({
+          scoreDimension: "reliability",
+          direction: "negative",
+          measurement: "observed",
+          impact: { kind: "completion", status: "terminalFailure" },
+        }),
+      ]),
+    )
+    expect(confirmed.item).toMatchObject({ polarity: "negative", impactLevel: "high" })
   })
 
   it("orders timed facts first, then message-only and session-wide facts", () => {
