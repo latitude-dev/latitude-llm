@@ -75,6 +75,7 @@ const originalAwsBearerTokenBedrock = process.env.LAT_AWS_BEARER_TOKEN_BEDROCK
 const originalOpenAiApiKey = process.env.LAT_OPENAI_API_KEY
 const originalGoogleApiKey = process.env.LAT_GOOGLE_API_KEY
 const originalCustomAiBaseUrl = process.env.LAT_CUSTOM_AI_BASE_URL
+const originalOrcaRouterApiKey = process.env.LAT_ORCAROUTER_API_KEY
 
 beforeEach(() => {
   process.env.LAT_AWS_REGION = "eu-central-1"
@@ -90,6 +91,7 @@ beforeEach(() => {
   delete process.env.LAT_OPENAI_API_KEY
   delete process.env.LAT_GOOGLE_API_KEY
   delete process.env.LAT_CUSTOM_AI_BASE_URL
+  delete process.env.LAT_ORCAROUTER_API_KEY
   embedMock.mockReset()
   rerankMock.mockReset()
 })
@@ -103,6 +105,7 @@ afterEach(() => {
   process.env.LAT_OPENAI_API_KEY = originalOpenAiApiKey
   process.env.LAT_GOOGLE_API_KEY = originalGoogleApiKey
   process.env.LAT_CUSTOM_AI_BASE_URL = originalCustomAiBaseUrl
+  process.env.LAT_ORCAROUTER_API_KEY = originalOrcaRouterApiKey
 })
 
 describe("createProviderModel", () => {
@@ -144,6 +147,14 @@ describe("createProviderModel", () => {
     expect(typeof model).toBe("object")
     expect(bedrockModelFactoryMock).toHaveBeenCalledWith("eu.anthropic.claude-sonnet-4-20250514-v1:0")
     expect(fromNodeProviderChainMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("fails with a clear error when the OrcaRouter API key is missing", async () => {
+    await expect(Effect.runPromise(createProviderModel("orcarouter", "orcarouter/auto"))).rejects.toMatchObject({
+      _tag: "AICredentialError",
+      provider: "orcarouter",
+      message: "OrcaRouter is unavailable: set LAT_ORCAROUTER_API_KEY.",
+    })
   })
 
   it("rewrites already-scoped Bedrock model IDs to the configured AWS geography", async () => {
@@ -347,6 +358,11 @@ describe("embedWithVercel", () => {
     await expect(Effect.runPromise(embedWithVercel({ ...EMBED_INPUT, provider: "custom" }))).rejects.toMatchObject({
       _tag: "AIError",
       message: "The custom AI provider is unavailable: set LAT_CUSTOM_AI_BASE_URL.",
+    })
+
+    await expect(Effect.runPromise(embedWithVercel({ ...EMBED_INPUT, provider: "orcarouter" }))).rejects.toMatchObject({
+      _tag: "AIError",
+      message: "OrcaRouter is unavailable: set LAT_ORCAROUTER_API_KEY.",
     })
   })
 
