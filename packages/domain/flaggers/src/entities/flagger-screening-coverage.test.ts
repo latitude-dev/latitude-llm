@@ -62,6 +62,10 @@ describe("resolveFlaggerScreeningCoverage", () => {
       status: "notExamined",
       limitation: "executionFailed",
     })
+    expect(resolveFlaggerScreeningCoverage(makeDecision({ outcome: "indeterminate" }))).toMatchObject({
+      status: "notExamined",
+      limitation: "executionFailed",
+    })
     expect(resolveFlaggerScreeningCoverage(makeDecision({ outcome: undefined }))).toMatchObject({
       status: "notExamined",
       limitation: "pending",

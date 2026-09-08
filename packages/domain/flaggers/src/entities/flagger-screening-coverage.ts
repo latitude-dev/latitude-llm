@@ -47,6 +47,9 @@ const selectionEvidence = (decision: FlaggerScreeningDecision): FlaggerScreening
   }
 }
 
+const isExecutionFailure = (decision: FlaggerScreeningDecision): boolean =>
+  decision.outcome === "error" || decision.outcome === "indeterminate"
+
 export const resolveFlaggerScreeningCoverage = (
   decision: FlaggerScreeningDecision | null,
 ): FlaggerScreeningCoverage => {
@@ -68,7 +71,7 @@ export const resolveFlaggerScreeningCoverage = (
       ...(selection ? { selection } : {}),
     }
   }
-  if (decision.outcome === "error") {
+  if (isExecutionFailure(decision)) {
     return {
       status: "notExamined",
       limitation: "executionFailed",

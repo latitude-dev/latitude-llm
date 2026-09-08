@@ -151,7 +151,7 @@ export const classifySessionFlagger = async (
           ? recordFlaggerScreeningOutcomeUseCase({
               selection: input.screeningSelection,
               attempt: currentActivityAttempt(),
-              outcome: result.matched ? "matched" : "unmatched",
+              outcome: result.matched ? "matched" : result.outcome,
             })
           : Effect.void,
       ),
