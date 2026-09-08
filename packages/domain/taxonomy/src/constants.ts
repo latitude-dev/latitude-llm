@@ -51,7 +51,7 @@ export const TAXONOMY_ADAPTIVE_CLUSTERING_MODES = ["off", "enforced"] as const
  * by the policy that produced a run. Bump it whenever the relative schedule or
  * routing constants change so old and new calibrations are separable in Logs.
  */
-export const TAXONOMY_ADAPTIVE_POLICY_VERSION = "relative-v1"
+export const TAXONOMY_ADAPTIVE_POLICY_VERSION = "relative-v2"
 
 /**
  * Structural node-count ceiling used as a fallback guardrail: an adaptive tree
@@ -219,7 +219,15 @@ export const TAXONOMY_OBSERVATION_WEIGHT_SCHEME: TaxonomyObservationWeightScheme
 export const TAXONOMY_OBSERVATION_DEBOUNCE_MS = 5 * 60_000
 
 export const TAXONOMY_ASSIGN_TOPK = 10
-export const TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD = 0.65
+/**
+ * Minimum cosine to a cluster's centroid for an observation to join it. Read by the
+ * online gate, as the floor under every per-node `splitLinkThreshold`, and by
+ * full-window reassignment. Note the paths apply it at different tree levels —
+ * online routing gates at depth 0 before any leaf is reachable, reassignment scores
+ * leaf centroids — so a shared value is not an identical test. Calibration and the
+ * measured cost of changing it: `dev-docs/taxonomy.md`.
+ */
+export const TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD = 0.75
 export const TAXONOMY_ASSIGN_RELATIVE_MARGIN = 0.06
 export const TAXONOMY_ASSIGN_TEMPERATURE = 0.08
 
