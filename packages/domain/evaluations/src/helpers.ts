@@ -1,4 +1,5 @@
 import { deterministicSampling, type FilterSet, filterSetSchema, type ResolvedSettings } from "@domain/shared"
+import { compileSettingsToScript } from "./codegen/compile-settings-to-script.ts"
 import { ALIGNMENT_METRIC_TOLERANCE } from "./constants.ts"
 import type { ConfusionMatrix, Evaluation } from "./entities/evaluation.ts"
 import { isPausedEvaluation } from "./entities/evaluation.ts"
@@ -238,6 +239,16 @@ export const applySignalIgnoreToEvaluation = (input: {
         },
   )
 }
+
+/**
+ * The script to execute for an evaluation. `settings` is the declarative source of truth when
+ * present, so it is recompiled rather than trusting the stored `script` snapshot, which stays
+ * frozen at whatever a past compiler version produced and otherwise drifts silently out of sync
+ * with the current codegen (e.g. a template/placeholder change). A `null` settings means a raw
+ * or detached script, used as-is.
+ */
+export const resolveEvaluationScript = (evaluation: Pick<Evaluation, "script" | "settings">): string =>
+  evaluation.settings ? compileSettingsToScript(evaluation.settings) : evaluation.script
 
 export const getLiveEvaluationEligibility = (
   evaluation: Pick<Evaluation, "archivedAt" | "deletedAt" | "trigger">,

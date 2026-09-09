@@ -143,7 +143,15 @@ function makeEvaluation(
   overrides?: Partial<
     Pick<
       Evaluation,
-      "id" | "organizationId" | "projectId" | "signalId" | "script" | "trigger" | "archivedAt" | "deletedAt"
+      | "id"
+      | "organizationId"
+      | "projectId"
+      | "signalId"
+      | "script"
+      | "settings"
+      | "trigger"
+      | "archivedAt"
+      | "deletedAt"
     >
   >,
 ) {
@@ -155,6 +163,7 @@ function makeEvaluation(
     name: "Live evaluation",
     description: "Detects the linked issue on live traces.",
     script: overrides?.script ?? "const result = true",
+    settings: overrides?.settings ?? null,
     trigger: overrides?.trigger ?? defaultEvaluationTrigger(),
     alignment: emptyEvaluationAlignment("hash"),
     alignedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -1078,6 +1087,77 @@ describe("runLiveEvaluationUseCase", () => {
       expect.objectContaining({ action: "eval-scan", credits: 1 }),
     ])
     expect(scriptRuntime.calls.run).toHaveLength(1)
+  })
+
+  it("recompiles from settings instead of running a stale stored script", async () => {
+    const legacyPlaceholder = ["${", "conversation}"].join("")
+    const staleLegacyScript = wrapPromptAsEvaluationScript(
+      ["Review the conversation for the linked issue.", "", "Conversation:", legacyPlaceholder].join("\n"),
+    )
+    const evaluation = makeEvaluation({
+      script: staleLegacyScript,
+      settings: { kind: "judge", criteria: "Flags responses that omit deployment steps." },
+    })
+    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 1, feedback: "ok", duration: 1, tokens: 0, cost: 0 }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            scriptRuntimeLayer: scriptRuntime.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    expect(scriptRuntime.calls.compile).toHaveLength(1)
+    const compiledSource = scriptRuntime.calls.compile[0]?.source ?? ""
+    expect(compiledSource).toContain(EVALUATION_CONVERSATION_PLACEHOLDER)
+    expect(compiledSource).not.toContain(legacyPlaceholder)
+    expect(compiledSource).not.toBe(staleLegacyScript)
+  })
+
+  it("runs the stored script as-is when the evaluation has no settings", async () => {
+    const evaluation = makeEvaluation({ script: VALID_SCRIPT, settings: null })
+    const issue = makeSignal({ id: SignalId(evaluation.signalId) })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const signalRepository = createSignalRepository(() => Effect.succeed(issue))
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 1, feedback: "ok", duration: 1, tokens: 0, cost: 0 }),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            signalRepository,
+            scriptRuntimeLayer: scriptRuntime.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    expect(scriptRuntime.calls.compile[0]?.source).toBe(VALID_SCRIPT)
   })
 
   const EMBEDDING_SCRIPT = "return Passed((await semanticSimilarity('frustration')) >= 0.5 ? 1 : 0)"

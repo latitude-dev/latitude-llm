@@ -50,7 +50,7 @@ import {
 } from "@domain/spans"
 import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
-import { getLiveEvaluationEligibility } from "../../helpers.ts"
+import { getLiveEvaluationEligibility, resolveEvaluationScript } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import { EvaluationSignalRepository } from "../../ports/evaluation-signal-repository.ts"
 import { buildEvaluationJudgeLiveTelemetryCapture } from "../../runtime/ai-telemetry.ts"
@@ -238,7 +238,8 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     }
 
     const liveEvaluationEligibility = getLiveEvaluationEligibility(evaluation)
-    const scriptCapabilities = detectScriptCapabilities(evaluation.script)
+    const script = resolveEvaluationScript(evaluation)
+    const scriptCapabilities = detectScriptCapabilities(script)
 
     if (!liveEvaluationEligibility.eligible) {
       return {
@@ -418,7 +419,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       organizationId: input.organizationId,
       projectId: input.projectId,
       evaluationId: evaluation.id,
-      script: evaluation.script,
+      script,
       session,
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
