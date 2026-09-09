@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { type MonitorMetric, monitorMetricSchema } from "./alert-incident-condition.ts"
-import { filterSetSchema, spanRowFilterSetSchema } from "./filter.ts"
+import { filterSetSchema, noMetadataFilterSetSchema, spanRowFilterSetSchema } from "./filter.ts"
 
 /**
  * Breakdown dimensions per stream — logical names the API accepts, mapped to
@@ -204,6 +204,11 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
         "The metric: `count`, `passRate`, `errorRate` (over the pass/error flags), or `{avg|min|max|median}` of the 0–1 score `value`.",
       ),
       ...commonFields,
+      filters: noMetadataFilterSetSchema
+        .optional()
+        .describe(
+          "Structured filter set applied to the stream (same DSL as `listTraces`). `metadata.*` filters are not supported on this stream.",
+        ),
     })
     .strict(),
   z
@@ -219,6 +224,11 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
         "The metric: `count`, or `{avg|min|max|median}` of the 0–1 assignment `confidence`.",
       ),
       ...commonFields,
+      filters: noMetadataFilterSetSchema
+        .optional()
+        .describe(
+          "Structured filter set applied to the stream (same DSL as `listTraces`). `metadata.*` filters are not supported on this stream.",
+        ),
     })
     .strict(),
   z
@@ -234,6 +244,11 @@ export const analyticsQuerySchema = z.discriminatedUnion("stream", [
         "The metric: `count`, or `{avg|min|max|median}` of the 0–1 label `confidence` or moment `coherence`.",
       ),
       ...commonFields,
+      filters: noMetadataFilterSetSchema
+        .optional()
+        .describe(
+          "Structured filter set applied to the stream (same DSL as `listTraces`). `metadata.*` filters are not supported on this stream.",
+        ),
     })
     .strict(),
 ])

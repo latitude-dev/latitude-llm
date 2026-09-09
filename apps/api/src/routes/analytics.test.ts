@@ -64,6 +64,37 @@ describe("Analytics Routes Integration", () => {
           range: RANGE,
         },
       },
+      // Regression: scores/behaviors/moments back onto tables with no `metadata`
+      // column (session_moment_labels/session_semantic_moments/taxonomy_observations/
+      // scores) — a metadata.* filter previously reached ClickHouse unresolved and
+      // 500'd with "Unknown expression or function identifier `metadata`".
+      {
+        name: "metadata.* filter on the scores stream",
+        body: {
+          stream: "scores",
+          metric: { kind: "count" },
+          filters: { "metadata.agentVersion": [{ op: "eq", value: "2" }] },
+          range: RANGE,
+        },
+      },
+      {
+        name: "metadata.* filter on the behaviors stream",
+        body: {
+          stream: "behaviors",
+          metric: { kind: "count" },
+          filters: { "metadata.agentVersion": [{ op: "eq", value: "2" }] },
+          range: RANGE,
+        },
+      },
+      {
+        name: "metadata.* filter on the moments stream",
+        body: {
+          stream: "moments",
+          metric: { kind: "count" },
+          filters: { "metadata.agentVersion": [{ op: "eq", value: "2" }] },
+          range: RANGE,
+        },
+      },
       {
         name: "inverted range",
         body: { stream: "traces", metric: { kind: "count" }, range: { fromIso: RANGE.toIso, toIso: RANGE.fromIso } },
@@ -97,6 +128,25 @@ describe("Analytics Routes Integration", () => {
           stream: "traces",
           metric: { kind: "count" },
           filters: { duration: [{ op: "gtePercentile", value: 90 }] },
+          range: RANGE,
+        },
+        tenant.apiKeyToken,
+      )
+      expect(res.status).not.toBe(400)
+    })
+
+    it<ApiTestContext>("accepts a metadata.* filter on the traces stream (its table carries metadata)", async ({
+      app,
+      database,
+    }) => {
+      const tenant = await createTenantSetup(database)
+      const res = await post(
+        app,
+        "any-project",
+        {
+          stream: "traces",
+          metric: { kind: "count" },
+          filters: { "metadata.agentVersion": [{ op: "eq", value: "2" }] },
           range: RANGE,
         },
         tenant.apiKeyToken,

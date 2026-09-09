@@ -171,3 +171,23 @@ export const traceFilterSetSchema: z.ZodType<FilterSet> = filterSetSchema.superR
     })
   }
 })
+
+export const NO_METADATA_FILTER_MESSAGE =
+  'metadata.* filters are not supported on this stream — its backing table carries no metadata column. Use stream "traces", "sessions", or "spans" for metadata filters.'
+
+/**
+ * Rejects `metadata.*` filter keys at the boundary. For streams whose backing table
+ * carries no `metadata` column (the analytics `scores`/`behaviors`/`moments` streams),
+ * a `metadata.*` filter would otherwise reach the ClickHouse filter builder unresolved
+ * and fail with an "Unknown expression or function identifier `metadata`" 500.
+ */
+export const noMetadataFilterSetSchema: z.ZodType<FilterSet> = filterSetSchema.superRefine((filters, ctx) => {
+  for (const field of Object.keys(filters)) {
+    if (!field.startsWith("metadata.")) continue
+    ctx.addIssue({
+      code: "custom",
+      message: NO_METADATA_FILTER_MESSAGE,
+      path: [field],
+    })
+  }
+})
