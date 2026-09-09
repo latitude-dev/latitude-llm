@@ -181,7 +181,7 @@ export function buildCacheHitRateClause(
   }
 }
 
-const HAS_LLM_ACTIVITY_FRAGMENT = "(tokens_total > 0 OR length(models) > 0)"
+export const HAS_LLM_ACTIVITY_SQL = "(tokens_total > 0 OR length(models) > 0)"
 
 export function buildHasLlmActivityClause(
   cond: FilterCondition,
@@ -191,9 +191,9 @@ export function buildHasLlmActivityClause(
 
   switch (cond.op) {
     case "eq":
-      return { clause: truthy ? HAS_LLM_ACTIVITY_FRAGMENT : `NOT ${HAS_LLM_ACTIVITY_FRAGMENT}`, params: {} }
+      return { clause: truthy ? HAS_LLM_ACTIVITY_SQL : `NOT ${HAS_LLM_ACTIVITY_SQL}`, params: {} }
     case "neq":
-      return { clause: truthy ? `NOT ${HAS_LLM_ACTIVITY_FRAGMENT}` : HAS_LLM_ACTIVITY_FRAGMENT, params: {} }
+      return { clause: truthy ? `NOT ${HAS_LLM_ACTIVITY_SQL}` : HAS_LLM_ACTIVITY_SQL, params: {} }
     default:
       throw new Error(`Unsupported hasLlmActivity filter operator: ${cond.op}`)
   }
