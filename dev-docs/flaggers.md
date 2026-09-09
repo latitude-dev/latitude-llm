@@ -126,7 +126,7 @@ Hints (`src/hints/`) are cheap, deterministic, session-scoped evidence — gathe
 | span-errors | `span:error` | `session.errorCount > 0` |
 | tool-errors | `tool:error` (≤10, anchored) | `collectToolCallErrorFindings` |
 | tool-loop | `tool:loop` | one tool ≥60% of ≥5 calls (`findDominantToolUsage`) |
-| analytical-outliers | `outlier:duration/ttft/tokens/cost` | session value ≥ project p90 (`getCohortBaseline`, gated ≥30 samples, Redis-cached 15 min per project) |
+| analytical-outliers | `outlier:duration/ttft/tokens/cost` | session value ≥ the LLM-active project cohort's p90 (`getCohortBaseline`, gated ≥30 samples, Redis-cached 15 min per project) |
 | moment-labels | `moment:<kind>` (10 kinds, anchored to the label range) | `SessionMomentLabelRepository`, pinned to the latest **analyzed** generation |
 | frustration/refusal/deferral/injection/nsfw/pii patterns | `pattern:*` | strategy-tuned regex/scoring extractors (the pattern extractors used by jailbreaking/nsfw/pii prompts are shared with their strategies) — a regex miss drops the hint, so `jailbreaking`/`nsfw` evidence prompts fall back to the real conversation text rather than an empty block |
 
